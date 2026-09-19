@@ -119,6 +119,12 @@ export class ExperimentalI80386 {
   get protectedMode() {
     return !!(this.cr0 & 1);
   }
+  get virtual8086() {
+    return this.protectedMode && !!(this.eflags & 0x20000);
+  }
+  get currentPrivilegeLevel() {
+    return this.virtual8086 ? 3 : this.protectedMode ? this.cs & 3 : 0;
+  }
   get pc() {
     return (this.segmentCaches[SEG_CS].base + this.eip) >>> 0;
   }
@@ -261,6 +267,17 @@ export class ExperimentalI80386 {
     const n = ["es", "cs", "ss", "ds", "fs", "gs"][id];
     this[n] = v & 0xffff;
   }
+  _virtualSegmentCache(id, selector) {
+    return {
+      base: ((selector & 0xffff) << 4) >>> 0,
+      limit: 0xffff,
+      default32: false,
+      present: true,
+      code: id === SEG_CS,
+      readable: true,
+      writable: id !== SEG_CS,
+    };
+  }
   _linear(seg, off, size = 1) {
     const c = this.segmentCaches[seg];
     const end = off + size - 1;
@@ -339,13 +356,13 @@ export class ExperimentalI80386 {
   }
   _read(seg, off, width) {
     const cache = this.segmentCaches[seg];
-    if (this.protectedMode && cache.code && !cache.readable)
+    if (this.protectedMode && !this.virtual8086 && cache.code && !cache.readable)
       throw new I80386Fault(13, 0, "read from execute-only segment");
     return this._readLinear(this._linear(seg, off, width >>> 3), width >>> 3);
   }
   _write(seg, off, width, v) {
     const cache = this.segmentCaches[seg];
-    if (this.protectedMode && !cache.writable)
+    if (this.protectedMode && !this.virtual8086 && !cache.writable)
       throw new I80386Fault(13, 0, "write to non-writable segment");
     this._writeLinear(this._linear(seg, off, width >>> 3), width >>> 3, v);
   }
@@ -475,7 +492,7 @@ export class ExperimentalI80386 {
     this[kind] = cache;
   }
   _loadSeg(id, selector) {
-    if (!this.protectedMode) {
+    if (!this.protectedMode || this.virtual8086) {
       this._setSegValue(id, selector);
       this.segmentCaches[id] = {
         base: (selector << 4) >>> 0,
@@ -643,7 +660,7 @@ export class ExperimentalI80386 {
   _operandPreflightWrite(ea, width) {
     if (ea.isReg) return;
     const cache = this.segmentCaches[ea.seg];
-    if (this.protectedMode && !cache.writable)
+    if (this.protectedMode && !this.virtual8086 && !cache.writable)
       throw new I80386Fault(13, 0, "write to non-writable segment");
     const bytes = width >>> 3,
       linear = this._linear(ea.seg, ea.off, bytes);
@@ -821,7 +838,7 @@ export class ExperimentalI80386 {
 
   _checkIo(port, width) {
     if (!this.protectedMode) return;
-    if ((this.cs & 3) <= ((this.eflags >>> 12) & 3)) return;
+    if (this.currentPrivilegeLevel <= ((this.eflags >>> 12) & 3)) return;
     if (!this.tr.present || (this.tr.type !== 9 && this.tr.type !== 11))
       throw new I80386Fault(13, 0, "I/O requires a current 386 TSS");
     if (this.tr.limit < 0x67)
@@ -847,7 +864,7 @@ export class ExperimentalI80386 {
   _popFlags(width) {
     const value = this._pop(width);
     const old = this.eflags >>> 0;
-    const cpl = this.protectedMode ? this.cs & 3 : 0;
+    const cpl = this.currentPrivilegeLevel;
     const iopl = (old >>> 12) & 3;
     let writable = 0x7fd5;
     if (cpl !== 0) writable &= ~0x3000;
@@ -966,12 +983,12 @@ export class ExperimentalI80386 {
         throw new I80386Fault(6, null, "far indirect transfer requires memory");
       const bytes = width >>> 3;
       const sourceCache = this.segmentCaches[ea.seg];
-      if (this.protectedMode && sourceCache.code && !sourceCache.readable)
+      if (this.protectedMode && !this.virtual8086 && sourceCache.code && !sourceCache.readable)
         throw new I80386Fault(13, 0, "read from execute-only segment");
       const address = this._linear(ea.seg, ea.off, bytes + 2);
       const target = this._readLinear(address, bytes);
       const selector = this._readLinear((address + bytes) >>> 0, 2);
-      if (this.protectedMode)
+      if (this.protectedMode && !this.virtual8086)
         this._protectedFarTransfer(selector, target, width, ea.reg === 3);
       else this._farRealTransfer(selector, target, width, ea.reg === 3);
       return;
@@ -998,7 +1015,8 @@ export class ExperimentalI80386 {
   }
 
   _farRealReturn(width, discard) {
-    if (this.protectedMode) return this._protectedFarReturn(width, discard);
+    if (this.protectedMode && !this.virtual8086)
+      return this._protectedFarReturn(width, discard);
     const bytes = width >>> 3;
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
     const old = stack32 ? this.esp : this.sp;
@@ -1234,7 +1252,7 @@ export class ExperimentalI80386 {
     if (ea.isReg)
       throw new I80386Fault(6, null, "far pointer load requires memory");
     const cache = this.segmentCaches[ea.seg];
-    if (this.protectedMode && cache.code && !cache.readable)
+    if (this.protectedMode && !this.virtual8086 && cache.code && !cache.readable)
       throw new I80386Fault(13, 0, "read from execute-only segment");
     const bytes = width >>> 3;
     const address = this._linear(ea.seg, ea.off, bytes + 2);
@@ -1731,6 +1749,10 @@ export class ExperimentalI80386 {
   }
 
   _deliver(vector, returnEip, errorCode = null, options = {}) {
+    if (this.virtual8086)
+      throw new UnsupportedI80386(
+        "VM86 interrupt delivery is outside the bounded profile",
+      );
     if (this.protectedMode)
       this._deliverProtected(vector, returnEip, errorCode, options);
     else this._deliverReal(vector, returnEip);
@@ -1887,8 +1909,33 @@ export class ExperimentalI80386 {
     const target = this._readLinear(address, bytes);
     const selector = this._readLinear(address + bytes, bytes) & 0xffff;
     const flags = this._readLinear(address + bytes * 2, bytes);
-    if (this.protectedMode && currentCpl === 0 && flags & 0x20000)
-      throw new UnsupportedI80386("VM86 IRET is outside the bounded profile");
+    if (this.protectedMode && currentCpl === 0 && flags & 0x20000) {
+      if (width !== 32)
+        throw new I80386Fault(13, 0, "VM86 return requires IRETD");
+      this._linear(SEG_SS, old, 9 * 4);
+      if (target > 0xffff)
+        throw new I80386Fault(13, 0, "VM86 return EIP exceeds 16 bits");
+      const newEsp = this._readLinear(address + 12, 4);
+      const selectors = [
+        this._readLinear(address + 20, 4) & 0xffff,
+        selector,
+        this._readLinear(address + 16, 4) & 0xffff,
+        this._readLinear(address + 24, 4) & 0xffff,
+        this._readLinear(address + 28, 4) & 0xffff,
+        this._readLinear(address + 32, 4) & 0xffff,
+      ];
+      const restored = ((flags & 0x00037fd7) | 2 | 0x20000) >>> 0;
+      this.eip = target >>> 0;
+      this.esp = newEsp >>> 0;
+      this.eflags = restored;
+      for (let id = 0; id < selectors.length; id++) {
+        this._setSegValue(id, selectors[id]);
+        this.segmentCaches[id] = this._virtualSegmentCache(id, selectors[id]);
+      }
+      this._preserveRf = true;
+      this._nmiActive = false;
+      return;
+    }
     if (this.protectedMode) {
       const returnCpl = selector & 3;
       if (returnCpl < currentCpl)
@@ -2329,11 +2376,11 @@ export class ExperimentalI80386 {
       this._deliver(vector, this.eip, null, { software: true });
     } else if (op === 0xcf) this._iret(width);
     else if (op === 0xfa) {
-      if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
+      if (this.protectedMode && this.currentPrivilegeLevel > ((this.eflags >>> 12) & 3))
         throw new I80386Fault(13, 0, "CLI requires CPL <= IOPL");
       this.eflags &= ~IF;
     } else if (op === 0xfb) {
-      if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
+      if (this.protectedMode && this.currentPrivilegeLevel > ((this.eflags >>> 12) & 3))
         throw new I80386Fault(13, 0, "STI requires CPL <= IOPL");
       this.eflags |= IF;
       this._interruptShadow = 2;
@@ -2343,7 +2390,7 @@ export class ExperimentalI80386 {
     else if (op === 0xf9) this.eflags |= CF;
     else if (op === 0xf5) this.eflags ^= CF;
     else if (op === 0xf4) {
-      if (this.protectedMode && (this.cs & 3) !== 0)
+      if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "HLT requires CPL 0");
       this.halted = true;
     } else if (op === 0x8c || op === 0x8e) {
@@ -2368,21 +2415,21 @@ export class ExperimentalI80386 {
     } else if (op === 0x9a) {
       const target = this._fetchN(width >>> 3);
       const selector = this._fetchN(2);
-      if (this.protectedMode)
+      if (this.protectedMode && !this.virtual8086)
         this._protectedFarTransfer(selector, target, width, true);
       else this._farRealTransfer(selector, target, width, true);
     } else if (op === 0xea) {
       const raw = this._fetchN(width >>> 3),
         off = width === 32 ? raw : raw & 0xffff,
         sel = this._fetchN(2);
-      if (this.protectedMode) {
+      if (this.protectedMode && !this.virtual8086) {
         this._protectedFarTransfer(sel, off, width, false);
       } else {
         if (off > 0xffff)
           throw new UnsupportedI80386("real-mode far target exceeds CS limit");
         this._loadSeg(SEG_CS, sel);
       }
-      if (!this.protectedMode) this.eip = off;
+      if (!this.protectedMode || this.virtual8086) this.eip = off;
     } else if (op === 0x0f) this._step0f(address32, override, width);
     else
       throw new UnsupportedI80386(`opcode ${op.toString(16).padStart(2, "0")}`);
@@ -2482,7 +2529,7 @@ export class ExperimentalI80386 {
         if (ea.isReg)
           throw new I80386Fault(6, null, "SGDT/SIDT require a memory operand");
         const cache = this.segmentCaches[ea.seg];
-        if (this.protectedMode && !cache.writable)
+        if (this.protectedMode && !this.virtual8086 && !cache.writable)
           throw new I80386Fault(13, 0, "write to non-writable segment");
         const linear = this._linear(ea.seg, ea.off, 6);
         const physical = Array.from({ length: 6 }, (_, index) =>
@@ -2506,7 +2553,7 @@ export class ExperimentalI80386 {
         return;
       }
       if (ea.reg === 6) {
-        if (this.protectedMode && (this.cs & 3) !== 0)
+        if (this.protectedMode && this.currentPrivilegeLevel !== 0)
           throw new I80386Fault(13, 0, "LMSW requires CPL0");
         const value = this._operandRead(ea, 16);
         this.cr0 = ((this.cr0 & ~15) | (value & 15) | (this.cr0 & 1)) >>> 0;
@@ -2514,10 +2561,10 @@ export class ExperimentalI80386 {
       }
       if (ea.isReg || (ea.reg !== 2 && ea.reg !== 3))
         throw new UnsupportedI80386("0F 01 system extension");
-      if (this.protectedMode && (this.cs & 3) !== 0)
+      if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "LGDT/LIDT require CPL0");
       const cache = this.segmentCaches[ea.seg];
-      if (this.protectedMode && cache.code && !cache.readable)
+      if (this.protectedMode && !this.virtual8086 && cache.code && !cache.readable)
         throw new I80386Fault(13, 0, "read from execute-only segment");
       const a = this._linear(ea.seg, ea.off, 6);
       const limit = this._readLinear(a, 2);
@@ -2538,7 +2585,7 @@ export class ExperimentalI80386 {
         register = m & 7;
       if (![0, 2, 3].includes(control))
         throw new I80386Fault(6, null, "invalid control register");
-      if (this.protectedMode && (this.cs & 3) !== 0)
+      if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "MOV CR requires CPL0");
       if (op === 0x20) this._setReg(register, 32, this[`cr${control}`]);
       else {

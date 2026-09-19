@@ -518,7 +518,7 @@ test("STI/MOV SS inhibit interrupts while MOV SS suppresses only its own debug b
   nmi.cpu._iret(16);
 });
 
-test("32-bit POP SS advances ESP by four and unsupported IRET modes are atomic", () => {
+test("32-bit POP SS advances ESP by four and invalid IRET modes are atomic", () => {
   const pop = protectedFixture();
   pop.put(0x100000, [0x17]);
   pop.put(0x120400, [0x10, 0, 0, 0]);
@@ -534,8 +534,8 @@ test("32-bit POP SS advances ESP by four and unsupported IRET modes are atomic",
   const vm = protectedFixture();
   vm.put(0x100000, [0xcf]);
   vm.put(0x120400, [1, 0, 0, 0, 8, 0, 0, 0, 2, 0, 2, 0]);
-  assert.throws(() => vm.cpu.step(), /VM86 IRET/);
-  assert.deepEqual([vm.cpu.eip, vm.cpu.esp], [0, 0x400]);
+  vm.cpu.step();
+  assert.deepEqual([vm.cpu.virtual8086, vm.cpu.eip, vm.cpu.cs], [true, 1, 8]);
 
   const real = fixture();
   real.cpu.ss = 0x100;
