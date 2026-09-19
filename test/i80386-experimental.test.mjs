@@ -127,6 +127,29 @@ test('LGDT through execute-only CS faults before operand reads',()=>{
   assert.equal(f.reads.length,0);
 });
 
+test('SGDT and SIDT store all six bytes for both operand sizes',()=>{
+  const f=fixture();
+  f.cpu.gdtr={limit:0x3456,base:0x89abcdef};
+  f.cpu.idtr={limit:0x1234,base:0x76543210};
+  f.put(0,[0x0f,1,0x06,0x00,0x01,0x66,0x0f,1,0x0e,0x06,0x01]);
+  f.cpu.step();
+  f.cpu.step();
+  assert.deepEqual(Array.from({length:6},(_,i)=>f.mem.get(0x100+i)),[0x56,0x34,0xef,0xcd,0xab,0x89]);
+  assert.deepEqual(Array.from({length:6},(_,i)=>f.mem.get(0x106+i)),[0x34,0x12,0x10,0x32,0x54,0x76]);
+
+  const register=fixture();register.put(0,[0x0f,1,0xc0]);
+  assert.throws(()=>register.cpu.step(),error=>error instanceof I80386Fault&&error.vector===6);
+
+  const readonly=fixture();readonly.put(0,[0x0f,1,0x06,0x00,0x01]);readonly.cpu.cr0=1;
+  readonly.cpu.segmentCaches[3].writable=false;
+  assert.throws(()=>readonly.cpu.step(),error=>error instanceof I80386Fault&&error.vector===13&&error.errorCode===0);
+  assert.equal(readonly.writes.length,0);
+
+  const short=fixture();short.put(0,[0x0f,1,0x06,0xfd,0xff]);short.cpu.gdtr={limit:1,base:2};
+  assert.throws(()=>short.cpu.step(),error=>error instanceof I80386Fault&&error.vector===13);
+  assert.equal(short.writes.length,0,'the complete six-byte destination is admitted before any write');
+});
+
 test('faulting PUSH preserves ESP and MOV stores do not read their destination',()=>{
   const push=fixture();push.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
   push.cpu.segmentCaches[2]={base:0,limit:0xff,default32:true,present:true,code:false,writable:true};push.cpu.esp=2;push.put(0,[0x50]);

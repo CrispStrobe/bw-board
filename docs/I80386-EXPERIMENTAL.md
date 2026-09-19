@@ -200,8 +200,17 @@ POP r/m supports word and dword register/memory destinations. With 32-bit
 addressing and an ESP-based destination, the effective address uses ESP after
 the pop; operand size and SS stack-address size remain independent. Invalid
 group extensions raise #UD before the stack read, while destination faults
-restore architectural stack state after the source access.
+restore architectural stack state after the source access. The original 386
+manual specifies the source, destination, and stack-pointer operations and the
+destination faults; pinned PCjs independently snapshots the pre-pop stack
+pointer specifically so a destination page fault remains restartable. Its
+decoder also computes an ESP-based effective address after performing the pop.
 PUSH imm8 sign-extends its source to the selected word or dword operand size.
+
+SGDT and SIDT store the complete six-byte pseudo-descriptor after validating
+the complete writable destination. Original 386 behavior writes all 32 base
+bits with either operand size; a cross-page destination fault may update page
+table accessed/dirty state but commits no pseudo-descriptor bytes.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index

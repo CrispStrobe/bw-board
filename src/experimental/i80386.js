@@ -2004,6 +2004,29 @@ export class ExperimentalI80386 {
     }
     if (op === 0x01) {
       const ea = this._decodeEA(address32, override);
+      if (ea.reg === 0 || ea.reg === 1) {
+        if (ea.isReg)
+          throw new I80386Fault(6, null, "SGDT/SIDT require a memory operand");
+        const cache = this.segmentCaches[ea.seg];
+        if (this.protectedMode && !cache.writable)
+          throw new I80386Fault(13, 0, "write to non-writable segment");
+        const linear = this._linear(ea.seg, ea.off, 6);
+        const physical = Array.from({ length: 6 }, (_, index) =>
+          this._translate((linear + index) >>> 0, { write: true }),
+        );
+        const table = ea.reg === 0 ? this.gdtr : this.idtr;
+        const bytes = [
+          table.limit & 0xff,
+          (table.limit >>> 8) & 0xff,
+          table.base & 0xff,
+          (table.base >>> 8) & 0xff,
+          (table.base >>> 16) & 0xff,
+          (table.base >>> 24) & 0xff,
+        ];
+        for (let index = 0; index < bytes.length; index++)
+          this.write(physical[index], bytes[index]);
+        return;
+      }
       if (ea.reg === 4) {
         this._operandWrite(ea, 16, this.cr0 & 0xffff);
         return;

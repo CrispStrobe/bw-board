@@ -344,6 +344,25 @@ test("LGDT reads its six-byte operand in address order across a page fault", () 
   assert.equal(f.reads.includes(0x6fff), true);
 });
 
+test("SGDT preflights all six destination bytes before guest-memory writes", () => {
+  const f = fixture();
+  f.map(0, 0x3000);
+  f.map(0x4000, 0x6000);
+  f.put(0x3000, [0x0f, 0x01, 0x05, 0xff, 0x4f, 0x00, 0x00]);
+  f.cpu.gdtr = { limit: 0x1234, base: 0x56789abc };
+  assert.throws(
+    () => f.cpu.step(),
+    (error) => error instanceof I80386Fault && error.vector === 14,
+  );
+  assert.equal(f.cpu.cr2, 0x5000);
+  assert.equal(f.memory.has(0x6fff), false);
+  assert.equal(
+    f.writes.some(([address]) => address === 0x6fff),
+    false,
+    "page-walk A/D writes may occur, but no pseudo-descriptor byte commits",
+  );
+});
+
 test("far-pointer load faults in address order without partial register/cache commit", () => {
   const f = fixture();
   f.map(0, 0x3000);
