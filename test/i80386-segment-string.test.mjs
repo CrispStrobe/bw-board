@@ -29,7 +29,7 @@ function descriptor(base, access, flags = 0x40) {
   ].map((value) => value & 0xff);
 }
 
-test("MOV from segment register is always 16-bit and admits FS/GS", () => {
+test("MOV from segment register keeps the bounded 8C upper-word policy", () => {
   const { cpu, writes } = fixture([
     0x66, 0x8c, 0xd8,
     0x8c, 0x26, 0x00, 0x01,
@@ -48,6 +48,34 @@ test("MOV from segment register is always 16-bit and admits FS/GS", () => {
   assert.equal(cpu.cx, 0x5678);
   cpu.step();
   assert.equal(cpu.cx, 0x9abc);
+});
+
+test("LDT selectors 4..7 are not mistaken for null data selectors", () => {
+  const { cpu } = fixture([0x8e, 0xd8]);
+  cpu.cr0 = 1;
+  cpu.ax = 4;
+  assert.throws(
+    () => cpu.step(),
+    (error) =>
+      error instanceof Error &&
+      error.constructor.name === "UnsupportedI80386" &&
+      /LDT/.test(error.message),
+  );
+  assert.equal(cpu.ds, 0);
+});
+
+test("readable conforming code loads as data without RPL/DPL admission", () => {
+  const { cpu, memory } = fixture([0x8e, 0xd8]);
+  cpu.cr0 = 1;
+  cpu.cs = 3;
+  cpu.gdtr = { base: 0x200, limit: 0x17 };
+  descriptor(0x4000, 0x9e).forEach((value, index) =>
+    memory.set(0x208 + index, value),
+  );
+  cpu.ax = 0x0b;
+  cpu.step();
+  assert.equal(cpu.ds, 0x0b);
+  assert.equal(cpu.segmentCaches[3].base, 0x4000);
 });
 
 test("MOV to segment rejects invalid encodings and null SS architecturally", () => {

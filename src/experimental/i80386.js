@@ -428,7 +428,7 @@ export class ExperimentalI80386 {
       };
       return;
     }
-    if (id !== SEG_CS && !(selector & 0xfff8)) {
+    if (id !== SEG_CS && !(selector & 0xfffc)) {
       if (id === SEG_SS)
         throw new I80386Fault(13, 0, "null stack selector");
       this._setSegValue(id, selector);
@@ -478,8 +478,6 @@ export class ExperimentalI80386 {
           (rpl > dpl || cpl > dpl)
         )
           throw new I80386Fault(13, errorCode, "data selector privilege");
-        if (code && conformingOrExpandDown && dpl > cpl)
-          throw new I80386Fault(13, errorCode, "conforming selector privilege");
       }
       if (!(access & 0x80))
         throw new I80386Fault(
