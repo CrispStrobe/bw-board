@@ -9,9 +9,9 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
-isolated worktree `/mnt/volume1/code/wt/bwb-nmos-ac-level1`, branch
-`lane/nmos-ac-level1`, exact base `b14d0092db8603a2c7909391e5a86628e2002fc6`.
+2026-09-19 DONE — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
+replayed worktree `/mnt/volume1/code/wt/bwb-nmos-ac-level1-v2`, branch
+`lane/nmos-ac-level1-v2`, exact base `4bf004e1f5d4fca7f94427d793cc94c6b39b2876`.
 Owns only the exact-NMOS branch of `src/ac.js`, one focused AC model test, and
 this ledger entry. Current measurement: bypassing CUI's deliberate
 semiconductor qualification guard executes all 160 exact ADI-v5 NMOS AC rows,
@@ -22,8 +22,17 @@ model helpers at the converged bias for explicit `model:'level1'` grounded-bulk
 NMOS with the corpus' zero/default body effect; keep the legacy generic MOS and
 PMOS paths unchanged. Prove complex node response against self-authored
 ngspice in saturation and triode, unchanged DC/public state, and isolated
-legacy-k/flat-gds mutations. CUI admission and the exact 160-row replay follow
-only after Board qualification. No importer, tolerance, grid, oracle, Newton,
+legacy-k/flat-gds mutations. Implemented at `0b419df`: exact grounded-bulk
+Level-1 NMOS now linearises the converged DC law in saturation or triode,
+including `KP*W/(2L)`, lambda and the physical region boundary; generic
+interactive MOS and PMOS retain their compatibility path. Focused AC/source/DC
+surface passes 28/28; both isolated mutations are red. The exact 160-row replay
+passes native and oracle OP+AC for every row and all 130,240/130,240 observations
+at unchanged tolerances (baseline: 62,628 failures), raw CIFS SHA-256
+`be655b6f...`, run `a27c2ec0...`. Exact-head qualification at `6014c04` passed
+CI `35461265154` and Harris `35461265165`; replayed source/test blobs are
+identical and only the intervening protected-ISA ledger claim differs. CUI
+admission follows separately. No importer, tolerance, grid, oracle, Newton,
 capacitance invention, richer MOS fields, workflow, or unrelated AC change.
 
 2026-09-19 DONE — bwcx: exact Level-1 MOS triode/saturation boundary, isolated
