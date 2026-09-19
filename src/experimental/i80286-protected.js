@@ -33,18 +33,40 @@ const ERROR_CODE_VECTORS = new Set([10, 11, 12, 13]);
 export class ProtectedI80286 extends I8086 {
     constructor(bus, {deliverProtectedFaults = false} = {}) {
         super(bus, {variant: '80286'});
+        const initialCs=this.cs;
+        this._visibleCs=initialCs;
+        Object.defineProperty(this,'cs',{
+            configurable:true,
+            get:()=>this._visibleCs,
+            set:value=>{this._visibleCs=value&0xffff;this._resetCodeBase=null;},
+        });
         this._protectedCapable = true;
         this.deliverProtectedFaults = !!deliverProtectedFaults;
         this._deliveringProtected = false;
         this._pmStiShadow = 0;
+        this.shutdown = false;
+        this._shutdownNmiFailed = false;
+        this._resetCodeBase = null;
     }
 
     reset() {
         super.reset();
-        this.cpl = 0; this._pmStiShadow = 0;
+        this.cpl = 0; this._pmStiShadow = 0; this.shutdown = false; this._shutdownNmiFailed = false;
         this.ldtr = {selector:0,valid:false,base:0,limit:0};
         this.tr = {selector:0,valid:false,base:0,limit:0};
         this._initRealCaches();
+    }
+
+    hardwareReset() {
+        this.reset();
+        this.flags=0x0002;
+        this.msw=0xfff0;
+        this.cs=0xf000;
+        this.ip=0xfff0;
+        this.idtr={base:0,limit:0x03ff};
+        this._initRealCaches();
+        this.segmentCaches[SEG_CS].base=0xff0000;
+        this._resetCodeBase=0xff0000;
     }
 
     canTakeInterrupt() {
@@ -165,8 +187,38 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _phys(id, off) {
+        // The inherited real-mode decoder fetches its opcode directly through
+        // _phys(), while subsequent bytes use _fetch8(). Restrict the reset
+        // base to the live instruction-stream offset so an equal numeric DS,
+        // ES, or SS selector cannot acquire CS's hidden base.
+        if (!(this.msw & 1) && this._resetCodeBase !== null && id === this.cs && (off & 0xffff) === this.ip)
+            return (this._resetCodeBase + (off & 0xffff)) & 0xffffff;
         if (!(this.msw & 1)) return super._phys(id, off);
         return this._linear(id, off, 1, id === SEG_CS ? 'fetch' : 'read');
+    }
+
+    _fetch8() {
+        if ((this.msw & 1) || this._resetCodeBase === null) return super._fetch8();
+        if (this.busTrace !== null) return this._fetch8Traced();
+        if (this._ibytes >= 10) return super._fetch8();
+        this._ibytes++;
+        const value=this.fetch((this._resetCodeBase+this.ip)&0xffffff)&0xff;
+        this.ip=(this.ip+1)&0xffff;
+        return value;
+    }
+
+    _fetch8Traced() {
+        if ((this.msw & 1) || this._resetCodeBase === null) return super._fetch8Traced();
+        if (this._ibytes >= 10) return super._fetch8Traced();
+        this._ibytes++;
+        const address=(this._resetCodeBase+this.ip)&0xffffff;
+        this.busTrace.push(this._fsOpcodeSeen?5:0,address);
+        this._fsOpcodeSeen=true;
+        this._seqIp=(this.ip+1)&0xffff;
+        this._seqCs=this.cs;
+        const value=this.fetch(address)&0xff;
+        this.ip=(this.ip+1)&0xffff;
+        return value;
     }
     _rd8(id, off) {
         if (!(this.msw & 1)) return super._rd8(id, off);
@@ -1289,6 +1341,9 @@ export class ProtectedI80286 extends I8086 {
         state.segmentCaches = Object.fromEntries(Object.entries(this.segmentCaches ?? {}).map(([id, cache]) => [id, {...cache}]));
         state.halted = this.halted; state.cycles = this.cycles; state.intShadow = this.intShadow;
         state.pmStiShadow = this._pmStiShadow;
+        state.shutdown = this.shutdown;
+        state.shutdownNmiFailed = this._shutdownNmiFailed;
+        state.resetCodeBase = this._resetCodeBase;
         return state;
     }
 
@@ -1300,6 +1355,9 @@ export class ProtectedI80286 extends I8086 {
         this.segmentCaches = Object.fromEntries(Object.entries(state.segmentCaches).map(([id, cache]) => [id, {...cache}]));
         this.halted = state.halted; this.cycles = state.cycles; this.intShadow = state.intShadow;
         this._pmStiShadow = state.pmStiShadow ?? 0;
+        this.shutdown = state.shutdown ?? false;
+        this._shutdownNmiFailed = state.shutdownNmiFailed ?? false;
+        this._resetCodeBase = state.resetCodeBase ?? null;
     }
 }
 
