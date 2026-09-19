@@ -60,6 +60,10 @@ const PROFILES={
     samples:{'C0.0':[66],'C0.1':[67]},
     scope:'two exact physical ROL/ROR byte count-eight cases grading defined CF while the published mask excludes undefined OF',
   },
+  lea:{
+    files:['8D','668D','678D','67668D'],
+    scope:'12 fixed deterministic LEA samples spanning operand/address-size forms',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

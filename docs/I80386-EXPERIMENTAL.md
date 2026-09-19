@@ -183,6 +183,10 @@ atomicity. A pinned PCjs comparison grades a ring-0 LDT load, short-TSS busy
 marking, selector stores, and one LDT data-segment load. Task switching,
 privilege transitions, and TSS I/O-map use remain outside this stage.
 
+LEA implements all admitted 16-bit and 32-bit effective-address forms with an
+independent destination operand size. It returns the offset without checking a
+segment or issuing an operand bus read; the register ModRM encoding raises #UD.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

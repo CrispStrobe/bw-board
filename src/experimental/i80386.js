@@ -1599,6 +1599,11 @@ export class ExperimentalI80386 {
       this._operandWrite(ea, exchangeWidth, register);
       if (exchangeWidth === 8) this._setReg8(ea.reg, memoryOrRegister);
       else this._setReg(ea.reg, exchangeWidth, memoryOrRegister);
+    } else if (op === 0x8d) {
+      const ea = this._decodeEA(address32, override);
+      if (ea.isReg)
+        throw new I80386Fault(6, null, "LEA requires a memory encoding");
+      this._setReg(ea.reg, width, ea.off);
     } else if (
       (op < 0x40 && (op & 7) <= 3 && !(op & 1)) ||
       op === 0x88 ||
