@@ -7,7 +7,8 @@ the production 8086/186/286 CPU.
 The current profile implements 16- and 32-bit register aliases, independent
 operand- and address-size prefixes, 16-bit ModR/M and 32-bit ModR/M plus SIB
 addressing, bounded arithmetic and moves, near branches/calls, and 16/32-bit
-stacks. ES, CS, SS, DS, FS, and GS have independent visible selectors and
+stack operands with stack addressing selected independently by SS.B. ES, CS,
+SS, DS, FS, and GS have independent visible selectors and
 hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
 MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
 

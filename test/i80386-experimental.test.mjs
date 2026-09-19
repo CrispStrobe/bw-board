@@ -37,6 +37,25 @@ test('register aliases preserve upper halves and operand/address overrides selec
   f.cpu.segmentCaches[3]={base:0,limit:0xffff,default32:false,present:true,code:false,writable:true};
   f.cpu.ebx=0x100;f.cpu.esi=4;f.put(0,[0x66,0x67,0x8b,0x00,0xf4]);f.put(0x104,[0x34,0x12]);
   f.cpu.step();assert.equal(f.cpu.eax,0x11221234);f.cpu.step();assert.equal(f.cpu.halted,true);
+
+  const stack=fixture();stack.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  stack.cpu.segmentCaches[2]={base:0,limit:0x1ffff,default32:true,present:true,code:false,writable:true};
+  stack.cpu.esp=0x10000;stack.cpu.eax=0x12345678;stack.put(0,[0x66,0x50]);stack.cpu.step();
+  assert.equal(stack.cpu.esp,0xfffe,'SS.B controls stack addressing independently of 16-bit operand width');
+  assert.deepEqual([stack.mem.get(0xfffe),stack.mem.get(0xffff)],[0x78,0x56]);
+
+  const stack16=fixture();stack16.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  stack16.cpu.segmentCaches[2]={base:0x20000,limit:0xffff,default32:false,present:true,code:false,writable:true};
+  stack16.cpu.esp=0x12340008;stack16.cpu.eax=0x89abcdef;stack16.put(0,[0x50]);stack16.cpu.step();
+  assert.equal(stack16.cpu.esp,0x12340004,'B=0 updates SP while preserving the upper ESP half for a dword push');
+  assert.equal(stack16.dword(0x20004),0x89abcdef);
+  stack16.cpu.eip=0;stack16.cpu.esp=0x12340002;
+  assert.throws(()=>stack16.cpu.step(),/segment limit/,'wrapped dword does not bypass the SS limit');
+
+  const repeated=fixture();repeated.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  repeated.cpu.ebx=0x100;repeated.cpu.esi=4;repeated.put(0,[0x66,0x66,0xb8,0x34,0x12,0x67,0x67,0x8b,0]);
+  repeated.put(0x104,[0x78,0x56,0x34,0x12]);repeated.cpu.step();assert.equal(repeated.cpu.eax,0x1234);
+  repeated.cpu.step();assert.equal(repeated.cpu.eax,0x12345678,'repeated 67 remains one address-size override');
 });
 
 test('bounded system profile refuses paging and unsupported descriptors without partial mode claims',()=>{

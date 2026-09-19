@@ -61,7 +61,11 @@ export class ExperimentalI80386 {
   _writeLinear(a,size,v){for(let i=0;i<size;i++)this.write((a+i)>>>0,(v>>>(8*i))&255);}
   _read(seg,off,width){return this._readLinear(this._linear(seg,off,width>>>3),width>>>3);}
   _write(seg,off,width,v){this._writeLinear(this._linear(seg,off,width>>>3),width>>>3,v);}
-  _fetch8(){const a=this._linear(SEG_CS,this.eip,1),v=this.fetch(a)&255;this.eip=(this.eip+1)>>>0;return v;}
+  _fetch8(){
+    const a=this._linear(SEG_CS,this.eip,1),v=this.fetch(a)&255;
+    this.eip=this.segmentCaches[SEG_CS].default32?(this.eip+1)>>>0:(this.eip+1)&0xffff;
+    return v;
+  }
   _fetchN(size){let v=0;for(let i=0;i<size;i++)v+=(this._fetch8())*(2**(8*i));return v>>>0;}
 
   _descriptor(selector){
@@ -109,21 +113,31 @@ export class ExperimentalI80386 {
   _setLogic(v,width){const mask=maskFor(width),r=v&mask;this.eflags&=~(CF|PF|AF|ZF|SF|OF);if(!r)this.eflags|=ZF;if(r&(width===32?0x80000000:0x8000))this.eflags|=SF;if(parity8(r))this.eflags|=PF;return width===32?r>>>0:r;}
   _add(a,b,width,subtract=false){
     const mask=maskFor(width),sign=width===32?0x80000000:0x8000;
-    const raw=subtract?a-b:a+b,r=width===32?raw>>>0:raw&mask;
+    const am=width===32?a>>>0:a&mask,bm=width===32?b>>>0:b&mask;
+    const raw=subtract?am-bm:am+bm,r=width===32?raw>>>0:raw&mask;
     this.eflags&=~(CF|PF|AF|ZF|SF|OF);
-    if(subtract?a>>>0<b>>>0:raw>mask)this.eflags|=CF;if(((a^b^r)&0x10)!==0)this.eflags|=AF;
+    if(subtract?am<bm:raw>mask)this.eflags|=CF;if(((am^bm^r)&0x10)!==0)this.eflags|=AF;
     if(!r)this.eflags|=ZF;if(r&sign)this.eflags|=SF;if(parity8(r))this.eflags|=PF;
-    if(subtract?((a^b)&(a^r)&sign)!==0:((~(a^b)&(a^r)&sign)!==0))this.eflags|=OF;
+    if(subtract?((am^bm)&(am^r)&sign)!==0:((~(am^bm)&(am^r)&sign)!==0))this.eflags|=OF;
     return r;
   }
-  _push(v,width){const bytes=width>>>3;if(width===32)this.esp=(this.esp-bytes)>>>0;else this.sp=(this.sp-bytes)&0xffff;this._write(SEG_SS,width===32?this.esp:this.sp,width,v);}
-  _pop(width){const off=width===32?this.esp:this.sp,v=this._read(SEG_SS,off,width),bytes=width>>>3;if(width===32)this.esp=(this.esp+bytes)>>>0;else this.sp=(this.sp+bytes)&0xffff;return v;}
+  _push(v,width){
+    const bytes=width>>>3,stack32=!!this.segmentCaches[SEG_SS].default32;
+    if(stack32)this.esp=(this.esp-bytes)>>>0;else this.sp=(this.sp-bytes)&0xffff;
+    this._write(SEG_SS,stack32?this.esp:this.sp,width,v);
+  }
+  _pop(width){
+    const bytes=width>>>3,stack32=!!this.segmentCaches[SEG_SS].default32,off=stack32?this.esp:this.sp;
+    const v=this._read(SEG_SS,off,width);
+    if(stack32)this.esp=(this.esp+bytes)>>>0;else this.sp=(this.sp+bytes)&0xffff;
+    return v;
+  }
   _condition(code){const f=this.eflags;const z=!!(f&ZF),s=!!(f&SF),o=!!(f&OF),c=!!(f&CF),p=!!(f&PF);return [o,!o,c,!c,z,!z,c||z,!c&&!z,s,!s,p,!p,s!==o,s===o,z||s!==o,!z&&s===o][code];}
 
   step(){
     if(this.halted)return 0;
     const default32=!!this.segmentCaches[SEG_CS].default32;let operand32=default32,address32=default32,override=null,op;
-    do{op=this._fetch8();if(op===0x66)operand32=!operand32;else if(op===0x67)address32=!address32;else if(op===0x26)override=SEG_ES;else if(op===0x2e)override=SEG_CS;else if(op===0x36)override=SEG_SS;else if(op===0x3e)override=SEG_DS;else if(op===0x64)override=SEG_FS;else if(op===0x65)override=SEG_GS;else break;}while(true);
+    do{op=this._fetch8();if(op===0x66)operand32=!default32;else if(op===0x67)address32=!default32;else if(op===0x26)override=SEG_ES;else if(op===0x2e)override=SEG_CS;else if(op===0x36)override=SEG_SS;else if(op===0x3e)override=SEG_DS;else if(op===0x64)override=SEG_FS;else if(op===0x65)override=SEG_GS;else break;}while(true);
     const width=operand32?32:16;
     if(op>=0xb8&&op<=0xbf)this._setReg(op-0xb8,width,this._fetchN(width>>>3));
     else if(op>=0x50&&op<=0x57)this._push(this._reg(op-0x50,width),width);
