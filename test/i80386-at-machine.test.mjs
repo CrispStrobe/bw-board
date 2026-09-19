@@ -126,17 +126,30 @@ test('experimental 386 AT does not charge idle horizons or fault-only delivery a
   const idle = new ExperimentalI80386ATMachine();
   idle.cpu.halted = true;
   const idleCpuCycles = idle.cpu.cycles;
+  const idleMachineCycles = idle.cycles;
   const idleElapsed = idle.step();
   assert.ok(idleElapsed > 0);
   assert.equal(idle.cpu.cycles, idleCpuCycles, 'an idle horizon completes no instruction');
+  assert.equal(idle.cycles - idleMachineCycles, idleElapsed,
+    'idle receives its horizon without an extra instruction charge');
 
   const fault = new ExperimentalI80386ATMachine();
+  fault.cpu.cs = 0;
+  fault.cpu._loadSeg(1, 0);
+  fault.cpu.eip = 0;
+  fault.cpu.ss = 0x100;
+  fault.cpu._loadSeg(2, 0x100);
+  fault.cpu.sp = 0x100;
+  fault.cpu.eflags = 0x202;
+  fault.mem.set([0x00, 0x02, 0x00, 0x20], 6 * 4);
+  fault.mem.set([0x8e, 0xc8], 0); // MOV CS is #UD on 386.
   const faultCpuCycles = fault.cpu.cycles;
-  const originalStep = fault.cpu.step;
-  fault.cpu.step = () => 1; // Models a delivered fault whose instruction did not retire.
-  assert.equal(fault.step(), 1);
+  const faultMachineCycles = fault.cycles;
+  assert.equal(fault.step(), 0);
   assert.equal(fault.cpu.cycles, faultCpuCycles);
-  fault.cpu.step = originalStep;
+  assert.equal(fault.cycles, faultMachineCycles,
+    'architectural fault delivery receives no instruction charge');
+  assert.deepEqual([fault.cpu.cs, fault.cpu.ip, fault.cpu.sp], [0x2000, 0x200, 0xfa]);
 });
 
 test('experimental 386 AT shutdown does not consume pending interrupt state', () => {
