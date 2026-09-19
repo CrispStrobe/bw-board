@@ -37,6 +37,8 @@ the 8042 interface with `ADh`/`AEh` does not manufacture another BAT byte;
 completed keyboard bytes remain held while the clock is disabled and are
 released by `AEh`. An `FFh` BAT countdown starts when the ACK reaches the
 enabled controller path, so a held ACK cannot make ACK and BAT arrive together.
+Forwarding an `FFh` keyboard command also releases the keyboard clock, matching
+the BIOS sequence that sends `FFh` after `ADh` without a separate `AEh`.
 `E0h` reports both idle-high keyboard test inputs, with the
 clock input low while disabled; serial clock/data transitions are not modeled.
 The boot profile also declares the physical keyboard-inhibit switch unlocked,

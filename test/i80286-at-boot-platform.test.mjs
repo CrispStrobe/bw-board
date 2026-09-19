@@ -147,6 +147,14 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
         'controller and keyboard events retain chronological queue order across batching');
     assert.deepEqual(combinedOne.outputQueue.map(entry=>[entry.value,entry.keyboard]),
         [[0xaa,true],[0,false]]);
+
+    const biosReset=new AT8042A20({keyboardAckCycles:60_000,keyboardBatCycles:4_200_000});
+    biosReset.writeCommand(0xad);
+    biosReset.writeData(0xff);
+    assert.equal(biosReset.commandByte&0x10,0,
+        'forwarding FFh automatically enables the keyboard interface');
+    biosReset.advance(60_000);
+    assert.equal(biosReset.readData(),0xfa);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {

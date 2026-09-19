@@ -154,8 +154,12 @@ export class AT8042A20 {
             this._releaseKeyboardSchedule();this._publish();return;
         }
         if(this.pendingCommand===null&&value===0xff&&this.keyboardAckCycles!==null) {
+            // Forwarding a host command to the keyboard releases its clock;
+            // the IBM BIOS sends FFh after ADh without a separate AEh.
+            this.commandByte&=~0x10;
             this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa,
                 afterRelease:this.keyboardBatCycles}];
+            this._publish();
             return;
         }
         if(this.pendingCommand!==0xd1)throw new Error('AT 8042 data write refused: no D1 output-port command, 60h command-byte command, or configured keyboard reset is pending');
