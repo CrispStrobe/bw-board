@@ -837,16 +837,12 @@ export class ExperimentalI80386 {
     try {
       const result = this._stepInstruction();
       this.eip >>>= 0;
+      const suppressDebug = debugInhibited || this._debugShadow > 0;
       if (this._interruptShadow) this._interruptShadow--;
       if (this._nmiShadow) this._nmiShadow--;
       if (this._debugShadow) this._debugShadow--;
       if (!this._preserveRf) this.eflags &= ~RF;
-      if (
-        trace &&
-        !debugInhibited &&
-        !this._debugShadow &&
-        !this._suppressTrace
-      )
+      if (trace && !suppressDebug && !this._suppressTrace)
         this._deliverFault(new I80386Fault(1, null, "single-step"), this.eip, {
           trap: true,
         });
@@ -1051,7 +1047,7 @@ export class ExperimentalI80386 {
       this._loadSeg(SEG_SS, this._pop(width) & 0xffff);
       this._interruptShadow = 2;
       this._nmiShadow = 2;
-      this._debugShadow = 2;
+      this._debugShadow = 1;
     } else if (op === 0xf4) this.halted = true;
     else if (op === 0x8e) {
       const ea = this._decodeEA(address32, override),
@@ -1062,7 +1058,7 @@ export class ExperimentalI80386 {
       if (ea.reg === 2) {
         this._interruptShadow = 2;
         this._nmiShadow = 2;
-        this._debugShadow = 2;
+        this._debugShadow = 1;
       }
     } else if (op === 0xea) {
       const raw = this._fetchN(width >>> 3),

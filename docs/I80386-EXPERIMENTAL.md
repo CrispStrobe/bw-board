@@ -19,8 +19,9 @@ benign/contributory/page-fault pairing table: contributory followed by
 contributory, or page fault followed by contributory/page fault, becomes #DF;
 a fault during #DF delivery enters CPU shutdown. Fault stack images set RF,
 while traps and software INT do not. STI and MOV/POP SS interrupt shadows are
-modeled; MOV/POP SS also inhibit NMI and debug delivery through the following
-instruction. Accepted NMI is blocked until IRET. Gate/frame checks complete before frame writes, and host bus
+modeled; MOV/POP SS also inhibit NMI through the following instruction and
+suppress debug delivery at the segment-load boundary. Accepted NMI is blocked
+until IRET. Gate/frame checks complete before frame writes, and host bus
 callback errors remain host errors rather than guest exceptions.
 
 This stage deliberately refuses paging, VM86, LDT selectors, system

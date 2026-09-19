@@ -330,7 +330,7 @@ test("fault frames set RF while traps/software interrupts do not, and TF uses th
   );
 });
 
-test("STI and MOV SS inhibit interrupts and MOV SS inhibits debug through the following instruction", () => {
+test("STI/MOV SS inhibit interrupts while MOV SS suppresses only its own debug boundary", () => {
   const irq = fixture({ deliverFaults: true });
   irq.put(0, [0xfb, 0x40]);
   irq.put(0x20 * 4, [0x00, 0x02, 0x00, 0x20]);
@@ -352,37 +352,44 @@ test("STI and MOV SS inhibit interrupts and MOV SS inhibits debug through the fo
   debug.cpu.eflags = 0x102;
   debug.cpu.step();
   assert.equal(debug.cpu.ip, 2);
-  assert.equal(debug.cpu.interrupt(2, { nmi: true }), false);
   debug.cpu.step();
-  assert.equal(debug.cpu.ip, 3);
-  assert.equal(debug.cpu.interrupt(2, { nmi: true }), true);
+  assert.deepEqual(
+    [debug.cpu.cs, debug.cpu.ip, debug.cpu.ax],
+    [0x2000, 0x200, 0x101],
+  );
   assert.equal(
-    debug.cpu.interrupt(2, { nmi: true }),
+    debug.word(0x10fa),
+    3,
+    "TF traps after the instruction following MOV SS",
+  );
+
+  const nmi = fixture({ deliverFaults: true });
+  nmi.put(0, [0x8e, 0xd0, 0x40]);
+  nmi.cpu.ax = 0x100;
+  nmi.cpu.ss = 0x100;
+  nmi.cpu._loadSeg(2, 0x100);
+  nmi.cpu.sp = 0x100;
+  nmi.cpu.step();
+  assert.equal(nmi.cpu.interrupt(2, { nmi: true }), false);
+  nmi.cpu.step();
+  assert.equal(nmi.cpu.interrupt(2, { nmi: true }), true);
+  assert.equal(
+    nmi.cpu.interrupt(2, { nmi: true }),
     false,
     "NMI remains blocked until IRET",
   );
   assert.equal(
-    debug.cpu.ip,
+    nmi.cpu.ip,
     0,
     "accepted NMI uses the real-mode vector after the MOV SS shadow",
   );
-  debug.cpu._iret(16);
+  nmi.cpu._iret(16);
   assert.equal(
-    debug.cpu.interrupt(2, { nmi: true }),
+    nmi.cpu.interrupt(2, { nmi: true }),
     true,
     "IRET releases NMI blocking",
   );
-  debug.cpu._iret(16);
-  debug.cpu.step();
-  assert.deepEqual(
-    [debug.cpu.cs, debug.cpu.ip, debug.cpu.ax],
-    [0x2000, 0x200, 0x102],
-  );
-  assert.equal(
-    debug.word(0x10fa),
-    4,
-    "debug trap after MOV SS shadow saves the following instruction boundary",
-  );
+  nmi.cpu._iret(16);
 });
 
 test("32-bit POP SS advances ESP by four and unsupported IRET modes are atomic", () => {
