@@ -1,0 +1,265 @@
+name: 80286 qualification
+
+on:
+  push:
+    branches: ['lane/astra-286-integration']
+  workflow_dispatch:
+    inputs:
+      evidence:
+        description: Evidence to collect from the exact dispatched revision
+        required: true
+        type: choice
+        default: both
+        options:
+          - both
+          - full-semantic
+          - wired-bios
+      run_dos:
+        description: Run the long reference wired DOS boot (manual dispatch only)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harris-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fast-full:
+    if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'full-semantic')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out the pinned public SST286 corpus
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/80286
+          ref: 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          path: 80286-vectors
+      - name: Grade the fast core against every pinned real-mode vector
+        env:
+          I80286_VECTORS: ${{ github.workspace }}/80286-vectors
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/fast-80286-semantic.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C 80286-vectors rev-parse HEAD)" = 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,suiteRevision:"37c73caf53dcd22d3dd369ff09305d13d117a4fe",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"fast-core real-mode semantic state only",timingGraded:false,physicalBoardGraded:false},null,2)+"\n",{flag:"wx"});'
+          node scripts/grind-i8086-286.mjs --report "$RECEIPT_DIR/fast80286-full.json" \
+            | tee "$RECEIPT_DIR/grind.log"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/fast80286-full.json')).summary;
+          assert.equal(r.suiteRevision,'37c73caf53dcd22d3dd369ff09305d13d117a4fe');
+          assert.equal(r.fullSuite,true);
+          assert.equal(r.files,326);
+          assert.equal(r.selected,1478000);
+          assert.equal(r.revoked,3);
+          assert.equal(r.executed,r.pass);
+          assert.equal(r.pass,1477997);
+          assert.deepEqual({fail:r.fail,unsupported:r.unsupported,budget:r.budget},{fail:0,unsupported:0,budget:0});
+          assert.equal(r.accepted,true);
+          assert.equal(r.timingGraded,false);
+          assert.equal(r.physicalBoardGraded,false);
+          for(const [key,file] of [['../src/i8086.js','src/i8086.js'],['./lib/sst286.mjs','scripts/lib/sst286.mjs'],['./lib/fast286-verdict.mjs','scripts/lib/fast286-verdict.mjs'],['./grind-i8086-286.mjs','scripts/grind-i8086-286.mjs']]){
+            assert.equal(r.sourceHashes[key],createHash('sha256').update(fs.readFileSync(file)).digest('hex'),key);
+          }
+          NODE
+      - name: Upload the fast-core full semantic receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fast80286-full-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  full-semantic:
+    if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'full-semantic')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out the pinned public SST286 corpus
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/80286
+          ref: 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          path: 80286-vectors
+      - name: Prepare an exact-source receipt
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-286-semantic.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C 80286-vectors rev-parse HEAD)" = 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,suiteRevision:"37c73caf53dcd22d3dd369ff09305d13d117a4fe",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"real-mode semantic state only",timingGraded:false,physicalBoardGraded:false,coprocessorGraded:false},null,2)+"\n",{flag:"wx"});'
+      - name: Grade every pinned real-mode vector
+        env:
+          I80286_VECTORS: ${{ github.workspace }}/80286-vectors
+        run: |
+          set -euo pipefail
+          node scripts/grind-i80286.mjs --report "$RECEIPT_DIR/SST286-REAL-MODE-REPORT.json" \
+            | tee "$RECEIPT_DIR/grind.log"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/SST286-REAL-MODE-REPORT.json')).summary;
+          assert.equal(report.suiteRevision,'37c73caf53dcd22d3dd369ff09305d13d117a4fe');
+          assert.equal(report.fullSuite,true);
+          assert.equal(report.files,326);
+          assert.equal(report.selected,1478000);
+          assert.equal(report.revoked,3);
+          assert.equal(report.executed,report.pass);
+          assert.deepEqual({fail:report.fail,unsupported:report.unsupported,budget:report.budget},{fail:0,unsupported:0,budget:0});
+          assert.equal(report.accepted,true);
+          assert.equal(report.timingGraded,false);
+          assert.equal(report.physicalBoardGraded,false);
+          const cpu=fs.readFileSync('src/experimental/harris-80c286-boot-cpu.js');
+          assert.equal(report.sourceHashes['../src/experimental/harris-80c286-boot-cpu.js'],createHash('sha256').update(cpu).digest('hex'));
+          NODE
+      - name: Upload the fresh semantic receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-286-full-semantic-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  wired-bios:
+    if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'wired-bios')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Prepare an exact-source receipt
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-286-wired-bios.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"bounded owned-BIOS wired diagnostic",accepted:false,dosBoot:false,timingGraded:false,physicalBoardGraded:false},null,2)+"\n",{flag:"wx"});'
+      - name: Run the bounded wired BIOS diagnostic
+        run: |
+          set -uo pipefail
+          node scripts/probe-harris-bios.mjs \
+            --max-clocks 20000 \
+            --pic-mode single-unbuffered --ram-kib 640 \
+            --fdc-mode control --dma-mode registers \
+            > "$RECEIPT_DIR/wired-bios.json" 2> "$RECEIPT_DIR/wired-bios.progress.log"
+          status=$?
+          set -e
+          test "$status" -eq 2
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/wired-bios.json'));
+          assert.equal(report.accepted,false);
+          assert.equal(report.diagnosticOnly,true);
+          assert.equal(report.maxClocks,20000);
+          assert.ok(report.completedClocks>0 && report.completedClocks<=report.maxClocks);
+          assert.deepEqual(report.outcome,{status:'budget-exhausted'});
+          assert.ok(report.retired>=1700,'owned BIOS did not reach the programmed peripheral path');
+          assert.equal(report.configuration.picMode,'single-unbuffered');
+          assert.equal(report.configuration.fdcMode,'control');
+          assert.equal(report.configuration.dmaMode,'registers');
+          assert.equal(report.pic.initialized,true);
+          assert.ok(report.pic.writes>=4);
+          assert.equal(report.timer.configured,true);
+          assert.ok(report.timer.writes>=3);
+          assert.ok(report.recentTransfers.length>0);
+          const cpu=fs.readFileSync('src/experimental/harris-80c286-boot-cpu.js');
+          assert.equal(report.sourceHashes['../src/experimental/harris-80c286-boot-cpu.js'],createHash('sha256').update(cpu).digest('hex'));
+          NODE
+      - name: Upload the wired diagnostic receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-286-wired-bios-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  wired-dos:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dos }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out exact MIT-licensed DOS 2.0 inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: microsoft/MS-DOS
+          ref: 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          path: ms-dos
+      - name: Run the reference wired DOS boot
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/ms-dos/v2.0/bin
+          HARRIS_NET_BACKEND: reference
+          HARRIS_BUS_TRACE: 'on'
+          HARRIS_MEMORY_SCHEDULING: 'off'
+          HARRIS_MEMORY_JOURNAL: 'off'
+          HARRIS_DECODER_SPECIALIZATION: 'off'
+          HARRIS_DEVICE_SCHEDULING: 'off'
+          HARRIS_PACKED_BUS: 'off'
+          HARRIS_DRIVE_LAYOUTS: 'off'
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-286-wired-dos.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C ms-dos rev-parse HEAD)" = 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,dosRevision:"2d04cacc5322951f187bb17e017c12920ac8ebe2",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"functional wired DOS prompt on the reference net backend",timingGraded:false,physicalBoardGraded:false},null,2)+"\n",{flag:"wx"});'
+          node scripts/probe-harris-dos.mjs 10000000 "$RECEIPT_DIR/wired-dos.json" \
+            2> >(tee "$RECEIPT_DIR/wired-dos.progress.log" >&2) \
+            | tee "$RECEIPT_DIR/wired-dos.stdout.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/wired-dos.json'));
+          assert.equal(r.accepted,true);
+          assert.equal(r.outcome.status,'dos-prompt');
+          assert.equal(r.bootSectorEntered,true);
+          assert.equal(r.commandMatches,true);
+          assert.equal(r.netBackend,'reference');
+          assert.equal(r.busTraceEnabled,true);
+          for(const key of ['memoryScheduling','memoryWriteJournal','decoderSpecialization','deviceScheduling','packedBus','driveLayouts'])assert.equal(r[key],false,key);
+          assert.deepEqual(r.inputHashes,{msdos:'1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1',command:'4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a',sysinit:'56d9d59d8cf6dbec648c3b391d3532bf4dffa8b615a096aca76312acbeecc7aa'});
+          const cpu=fs.readFileSync('src/experimental/harris-80c286-boot-cpu.js');
+          assert.equal(r.sourceHashes['../src/experimental/harris-80c286-boot-cpu.js'],createHash('sha256').update(cpu).digest('hex'));
+          NODE
+      - name: Upload the wired DOS receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-286-wired-dos-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30

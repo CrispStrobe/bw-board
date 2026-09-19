@@ -1,5 +1,51 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Refreshing evidence for a current candidate
+
+The checked-in reports below are immutable historical receipts. Their embedded
+source hashes decide which implementation they qualify; a green current native
+workflow does not refresh them. In particular, do not carry the 1,477,997-pass
+claim to a newer Harris CPU source until that source has completed a fresh full
+semantic run.
+
+The `80286 qualification` workflow runs three separate exact-revision jobs on
+the integration branch: the fast core's full real-mode corpus, the Harris
+backend's full real-mode corpus, and a bounded diagnostic on the wired board
+with the repository-owned BIOS. Manual dispatch can select the two Harris jobs;
+the fast and Harris full-corpus jobs run as a semantic pair, while `wired-bios`
+selects only the bounded wired diagnostic. A dedicated DOS dispatch skips those
+three already-qualified jobs.
+The Harris semantic job has a conservative 180-minute ceiling; no hosted
+runtime estimate is claimed. Its artifact contains the full per-file report,
+grinder log and a context file naming the dispatched commit. The wired job
+defaults to 20,000 clocks, enough to require PIC/timer setup and continued BIOS
+execution without turning a longer diagnostic into a routine branch cost. It
+retains the diagnostic JSON, progress log and exact commit.
+
+The wired job expects the probe's deliberate exit code 2 and records
+`accepted:false`. It proves CPU, bus and memory execution plus PIC/timer
+configuration with the FDC and DMA adapters attached. It does not prove FDC or
+DMA data flow, and it does not
+claim POST completion, DOS boot, physical hardware, timing accuracy or general
+machine compatibility. The semantic report likewise keeps
+`timingGraded:false`, `physicalBoardGraded:false` and the inactive-coprocessor
+profile. These artifacts should be reviewed together; neither substitutes for
+the other.
+
+A separate `run_dos` manual input adds the long reference-backend wired DOS
+boot. It checks out Microsoft's MIT-licensed DOS 2.0 inputs at commit
+`2d04cacc5322951f187bb17e017c12920ac8ebe2`, leaves every optional performance
+switch off, and requires the real disk path, COMMAND.COM image and `A>` prompt.
+It is not enabled for branch pushes: the historical reference run took about
+105 minutes, and the newer optimized combinations have not yet earned an
+equivalent full-boot receipt. A passing result remains functional evidence,
+not instruction timing or physical-board certification.
+
+Dispatch only after the combined candidate SHA is frozen. Normal branch
+qualification produces three artifacts; a narrower manual selection produces
+only its named artifacts. Verify every `context.json` revision equals the
+candidate before citing it or replacing a checked-in historical report.
+
 ## HOLD/physical DMA follow-up, 2026-09-09
 
 The [physical DMA increment](HARRIS-286-PHYSICAL-DMA.md) adds an implicit-lock
