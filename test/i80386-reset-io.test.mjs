@@ -54,13 +54,16 @@ test("PUSHFD/POPFD mask system and reserved flags with privilege rules", () => {
   [0xff, 0xff, 0xff, 0xff].forEach((value, index) => memory.set(0x100 + index, value));
   const pop = new I80386(bus);
   pop.esp = 0x100;
-  pop.eflags = 0x00030002;
+  // Exercise protected-mode CPL3 flag masking. VM86 POPFD behavior has its
+  // own focused coverage; setting VM in the live image would make this a
+  // VM86 instruction with a different IOPL admission rule.
+  pop.eflags = 0x00010002;
   pop.cr0 = 1;
   pop.cs = 3;
   pop.step();
   assert.equal(pop.eflags & 0x3000, 0);
   assert.equal(pop.eflags & 0x200, 0);
-  assert.equal(pop.eflags & 0x30000, 0x30000);
+  assert.equal(pop.eflags & 0x30000, 0x10000);
   assert.equal(pop.eflags & 0xfff80028, 0);
 });
 

@@ -1355,62 +1355,72 @@ export class ExperimentalI80386 {
   }
 
   _snapshotInstruction() {
-    const state = {};
-    for (const name of REG_NAMES) state[name] = this[name];
-    for (const name of [
-      "eip",
-      "eflags",
-      "cs",
-      "ds",
-      "es",
-      "ss",
-      "fs",
-      "gs",
-      "halted",
-      "_interruptShadow",
-      "_nmiShadow",
-      "_debugShadow",
-      "_nmiActive",
-    ])
-      state[name] = this[name];
-    state.segmentCaches = Object.fromEntries(
-      Object.entries(this.segmentCaches).map(([id, cache]) => [
-        id,
-        { ...cache },
-      ]),
-    );
-    state.repeatContext = this._repeatContext
-      ? { ...this._repeatContext }
-      : null;
-    state.ldtr = { ...this.ldtr };
-    state.tr = { ...this.tr };
-    return state;
+    return {
+      eax: this.eax,
+      ecx: this.ecx,
+      edx: this.edx,
+      ebx: this.ebx,
+      esp: this.esp,
+      ebp: this.ebp,
+      esi: this.esi,
+      edi: this.edi,
+      eip: this.eip,
+      eflags: this.eflags,
+      cs: this.cs,
+      ds: this.ds,
+      es: this.es,
+      ss: this.ss,
+      fs: this.fs,
+      gs: this.gs,
+      halted: this.halted,
+      interruptShadow: this._interruptShadow,
+      nmiShadow: this._nmiShadow,
+      debugShadow: this._debugShadow,
+      nmiActive: this._nmiActive,
+      segmentCaches: [
+        { ...this.segmentCaches[0] },
+        { ...this.segmentCaches[1] },
+        { ...this.segmentCaches[2] },
+        { ...this.segmentCaches[3] },
+        { ...this.segmentCaches[4] },
+        { ...this.segmentCaches[5] },
+      ],
+      repeatContext: this._repeatContext ? { ...this._repeatContext } : null,
+      ldtr: { ...this.ldtr },
+      tr: { ...this.tr },
+    };
   }
 
   _restoreInstruction(state) {
-    for (const name of REG_NAMES) this[name] = state[name];
-    for (const name of [
-      "eip",
-      "eflags",
-      "cs",
-      "ds",
-      "es",
-      "ss",
-      "fs",
-      "gs",
-      "halted",
-      "_interruptShadow",
-      "_nmiShadow",
-      "_debugShadow",
-      "_nmiActive",
-    ])
-      this[name] = state[name];
-    this.segmentCaches = Object.fromEntries(
-      Object.entries(state.segmentCaches).map(([id, cache]) => [
-        id,
-        { ...cache },
-      ]),
-    );
+    this.eax = state.eax;
+    this.ecx = state.ecx;
+    this.edx = state.edx;
+    this.ebx = state.ebx;
+    this.esp = state.esp;
+    this.ebp = state.ebp;
+    this.esi = state.esi;
+    this.edi = state.edi;
+    this.eip = state.eip;
+    this.eflags = state.eflags;
+    this.cs = state.cs;
+    this.ds = state.ds;
+    this.es = state.es;
+    this.ss = state.ss;
+    this.fs = state.fs;
+    this.gs = state.gs;
+    this.halted = state.halted;
+    this._interruptShadow = state.interruptShadow;
+    this._nmiShadow = state.nmiShadow;
+    this._debugShadow = state.debugShadow;
+    this._nmiActive = state.nmiActive;
+    this.segmentCaches = {
+      0: { ...state.segmentCaches[0] },
+      1: { ...state.segmentCaches[1] },
+      2: { ...state.segmentCaches[2] },
+      3: { ...state.segmentCaches[3] },
+      4: { ...state.segmentCaches[4] },
+      5: { ...state.segmentCaches[5] },
+    };
     this._repeatContext = state.repeatContext
       ? { ...state.repeatContext }
       : null;
