@@ -34,8 +34,8 @@ const romSha256 = sha256(rom);
 if (rom.length !== 0x10000 || romSha256 !== EXPECTED_ROM_SHA256)
   throw new Error(`AT BIOS ROM identity mismatch: ${rom.length} bytes, SHA-256 ${romSha256}`);
 const stepLimit = process.env.I80386_AT_STEPS === undefined ? 2_000_000 : Number(process.env.I80386_AT_STEPS);
-if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 20_000_000)
-  throw new Error('I80386_AT_STEPS must be an integer from 1 through 20000000');
+if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 80_000_000)
+  throw new Error('I80386_AT_STEPS must be an integer from 1 through 80000000');
 const profileName = process.env.I80386_AT_PROFILE ?? 'bounded';
 const profile = profileName === 'bounded' ? PCAT80386_EXPERIMENTAL
   : profileName === '4m' ? PCAT80386_EXPERIMENTAL_4M
