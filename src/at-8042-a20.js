@@ -1,11 +1,22 @@
-/** Bounded, synchronous IBM AT 8042 keyboard/system-control model. */
+/** Bounded, cycle-driven IBM AT 8042 keyboard/system-control model. */
 export class AT8042A20 {
-    constructor({a20Enabled=false,onA20Change=null,onIRQ=null,queueLimit=16}={}) {
+    constructor({a20Enabled=false,onA20Change=null,onIRQ=null,onResetRequest=null,allowReset=false,
+        queueLimit=16,inputBusyCycles=0,responseDelayCycles=0,inputPort=0xb0}={}) {
         if (!Number.isInteger(queueLimit)||queueLimit<1||queueLimit>256) throw new Error('AT 8042 queueLimit must be 1..256');
         this.initialA20Enabled=!!a20Enabled;
         this.onA20Change=onA20Change;
         this.onIRQ=onIRQ;
+        this.onResetRequest=onResetRequest;
+        this.allowReset=!!allowReset;
         this.queueLimit=queueLimit;
+        if(!Number.isInteger(responseDelayCycles)||responseDelayCycles<0||responseDelayCycles>1_000_000)
+            throw new Error('AT 8042 responseDelayCycles must be 0..1000000');
+        this.responseDelayCycles=responseDelayCycles;
+        if(!Number.isInteger(inputBusyCycles)||inputBusyCycles<0||inputBusyCycles>responseDelayCycles)
+            throw new Error('AT 8042 inputBusyCycles must be 0..responseDelayCycles');
+        this.inputBusyCycles=inputBusyCycles;
+        if(!Number.isInteger(inputPort)||inputPort<0||inputPort>255)throw new Error('AT 8042 inputPort must be a byte');
+        this.inputPort=inputPort;
         this.reset();
     }
     reset() {
@@ -13,6 +24,10 @@ export class AT8042A20 {
         this.commandByte=0;
         this.pendingCommand=null;
         this.outputQueue=[];
+        this.responseCyclesRemaining=0;
+        this.inputBusyCyclesRemaining=0;
+        this.delayedResponse=null;
+        this.systemFlag=false;
         this._publish();
     }
     _publish() {
@@ -28,8 +43,26 @@ export class AT8042A20 {
         this.outputQueue.push({value:value&255,keyboard:!!keyboard});
         this._publish();
     }
+    _respond(value) {
+        if(!this.responseDelayCycles){this._queue(value);return;}
+        if(this.delayedResponse)throw new Error('AT 8042 response refused: another response is pending');
+        this.responseCyclesRemaining=this.responseDelayCycles;
+        this.inputBusyCyclesRemaining=this.inputBusyCycles;
+        this.delayedResponse={value:value&255};
+    }
     setA20Enabled(enabled) { this.outputPort=(this.outputPort&~2)|(enabled?2:0); this._publish(); }
-    readStatus() { return this.outputQueue.length?1:0; }
+    readStatus() {
+        return (this.outputQueue.length?1:0)|(this.inputBusyCyclesRemaining>0?2:0)|(this.systemFlag?4:0);
+    }
+    advance(cycles) {
+        if(!this.delayedResponse||!Number.isFinite(cycles)||cycles<=0)return;
+        this.responseCyclesRemaining-=cycles;
+        this.inputBusyCyclesRemaining=Math.max(0,this.inputBusyCyclesRemaining-cycles);
+        if(this.responseCyclesRemaining>0)return;
+        const value=this.delayedResponse.value;
+        this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
+    }
+    nextWake() { return this.delayedResponse?this.responseCyclesRemaining:Infinity; }
     readData() {
         if(!this.outputQueue.length)return 0xff;
         const entry=this.outputQueue.shift();
@@ -45,19 +78,28 @@ export class AT8042A20 {
     }
     writeCommand(value) {
         value&=255;
-        if(value===0x20){this._queue(this.commandByte);this.pendingCommand=null;return;}
+        if(value===0x20){this._respond(this.commandByte);this.pendingCommand=null;return;}
         if(value===0x60){this.pendingCommand=0x60;return;}
         if(value===0xad){this.commandByte|=0x10;this._publish();return;}
         if(value===0xae){this.commandByte&=~0x10;this._publish();return;}
-        if(value===0xaa){this._queue(0x55);this.pendingCommand=null;return;}
-        if(value===0xab){this._queue(0x00);this.pendingCommand=null;return;}
-        if(value===0xd0){if(this.outputQueue.length)throw new Error('AT 8042 D0 refused: output buffer is full');this.pendingCommand=null;this._queue(this.outputPort);return;}
+        if(value===0xaa){this.systemFlag=true;this._respond(0x55);this.pendingCommand=null;return;}
+        if(value===0xab){this._respond(0x00);this.pendingCommand=null;return;}
+        if(value===0xc0){this._respond(this.inputPort);this.pendingCommand=null;return;}
+        if(value===0xd0){if(this.outputQueue.length)throw new Error('AT 8042 D0 refused: output buffer is full');this.pendingCommand=null;this._respond(this.outputPort);return;}
         if(value===0xd1){this.pendingCommand=0xd1;return;}
+        if(value===0xfe){
+            if(!this.allowReset)throw new Error('AT 8042 command feh is outside the bounded A20 subset unless CPU reset is enabled');
+            this.pendingCommand=null;
+            this.onResetRequest?.();
+            return;
+        }
         throw new Error(`AT 8042 command ${value.toString(16).padStart(2,'0')}h is outside the bounded A20 subset and keyboard extension`);
     }
     writeData(value) {
         value&=255;
-        if(this.pendingCommand===0x60){this.pendingCommand=null;this.commandByte=value;this._publish();return;}
+        if(this.pendingCommand===0x60){
+            this.pendingCommand=null;this.commandByte=value;this.systemFlag=!!(value&4);this._publish();return;
+        }
         if(this.pendingCommand!==0xd1)throw new Error('AT 8042 data write refused: no D1 output-port command or 60h command-byte command is pending');
         if(!(value&1))throw new Error('AT 8042 output-port write refused: bit 0 low requests unsupported CPU reset');
         this.pendingCommand=null;this.outputPort=value;this._publish();
@@ -69,15 +111,26 @@ export class AT8042A20 {
         return true;
     }
     getState() {
-        return {v:2,outputPort:this.outputPort,commandByte:this.commandByte,
-            pendingCommand:this.pendingCommand,outputQueue:this.outputQueue.map(e=>({...e}))};
+        return {v:3,outputPort:this.outputPort,commandByte:this.commandByte,
+            pendingCommand:this.pendingCommand,outputQueue:this.outputQueue.map(e=>({...e})),
+            responseCyclesRemaining:this.responseCyclesRemaining,inputBusyCyclesRemaining:this.inputBusyCyclesRemaining,
+            delayedResponse:this.delayedResponse&&{...this.delayedResponse},
+            systemFlag:this.systemFlag};
     }
     validateState(s) {
-        if(!s||s.v!==2||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
+        if(!s||s.v!==3||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
             !Number.isInteger(s.commandByte)||s.commandByte<0||s.commandByte>255||
             ![null,0x60,0xd1].includes(s.pendingCommand)||!Array.isArray(s.outputQueue)||
             s.outputQueue.length>this.queueLimit||s.outputQueue.some(e=>!e||!Number.isInteger(e.value)||
-                e.value<0||e.value>255||typeof e.keyboard!=='boolean'))throw new Error('AT 8042 state is invalid');
+                e.value<0||e.value>255||typeof e.keyboard!=='boolean')||
+            !Number.isFinite(s.responseCyclesRemaining)||s.responseCyclesRemaining<0||
+            s.responseCyclesRemaining>this.responseDelayCycles||
+            !Number.isFinite(s.inputBusyCyclesRemaining)||s.inputBusyCyclesRemaining<0||
+            s.inputBusyCyclesRemaining>this.inputBusyCycles||
+            !(s.delayedResponse===null||(s.delayedResponse&&Number.isInteger(s.delayedResponse.value)&&
+                s.delayedResponse.value>=0&&s.delayedResponse.value<=255))||
+            (!!s.delayedResponse)!==(s.responseCyclesRemaining>0)||
+            typeof s.systemFlag!=='boolean')throw new Error('AT 8042 state is invalid');
     }
     setState(s) {
         this.validateState(s);
@@ -85,6 +138,10 @@ export class AT8042A20 {
         this.commandByte=s.commandByte;
         this.pendingCommand=s.pendingCommand;
         this.outputQueue=s.outputQueue.map(e=>({...e}));
+        this.responseCyclesRemaining=s.responseCyclesRemaining;
+        this.inputBusyCyclesRemaining=s.inputBusyCyclesRemaining;
+        this.delayedResponse=s.delayedResponse&&{...s.delayedResponse};
+        this.systemFlag=s.systemFlag;
         this._irq=undefined;
         this._publish();
     }

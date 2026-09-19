@@ -38,6 +38,7 @@
 import { I8086 } from './i8086.js';
 import ProtectedI80286 from './experimental/i80286-protected.js';
 import { AT8042A20 } from './at-8042-a20.js';
+import { ATDMAPageRegisters, ATSystemControl } from './at-system-control.js';
 import {
     MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport,
     checkpointTopology, cloneCheckpointValue, statePair, validateCheckpointEnvelope,
@@ -161,6 +162,8 @@ const REGS = {
     // same chip, which is why it is its own kind rather than a wider span: the
     // two blocks are 0x70 ports apart and nothing decodes the gap.
     dmapage: 16,
+    atdmapage: 16,
+    atsystem: 1,
     fdc: 8,          // the uPD765 card's 3F0h-3F7h (DOR 3F2h, MSR 3F4h, data 3F5h)
     // The Sound Blaster's 2x0h-2xFh block: reset 2x6h, read 2xAh, write 2xCh,
     // read-status 2xEh. The OPL at 388h is a SEPARATE chip and a separate
@@ -300,6 +303,36 @@ export const PCAT80286 = Object.freeze({
         {kind:'pic',name:'pic1',at:0x20},
         {kind:'pic',name:'pic2',at:0xa0,cascadeTo:'pic1',cascadeIrq:2},
         {kind:'rtc',name:'rtc1',at:0x70,pic:'pic2',irq:0,initialUnixSeconds:0},
+    ],
+});
+
+/** Genuine-reset IBM 5170-shaped profile for externally supplied AT BIOS ROMs. */
+export const PCAT80286_BOOT = Object.freeze({
+    clockHz:6_000_000,variant:'80286',cpuBackend:'protected286-experimental',memoryBytes:16<<20,
+    a20:{controller:'8042',enabled:true,queueLimit:16,inputBusyCycles:12,responseDelayCycles:32,inputPort:0xb0,
+        allowReset:true},
+    hardwareReset:true,
+    regions:[
+        {kind:'ram',start:0,end:0x7ffff},
+        {kind:'ram',start:0xb8000,end:0xbffff},
+        {kind:'rom',start:0xf0000,end:0xfffff},
+        {kind:'ram',start:0x100000,end:0x17ffff},
+        {kind:'rom',start:0xff0000,end:0xffffff},
+    ],
+    chips:[
+        {kind:'dma',name:'dma1',at:0x00},
+        {kind:'pic',name:'pic1',at:0x20},
+        {kind:'pit',name:'pit1',at:0x40,irq:0,refreshChannel:1,systemControl:'sysctl'},
+        {kind:'atsystem',name:'sysctl',at:0x61,pit:'pit1'},
+        {kind:'atdmapage',name:'dmapg',at:0x80,primary:'dma1',secondary:'dma2'},
+        {kind:'pic',name:'pic2',at:0xa0,cascadeTo:'pic1',cascadeIrq:2},
+        {kind:'dma',name:'dma2',at:0xc0,stride:2,atWordTransfersUnsupported:true},
+        {kind:'rtc',name:'rtc1',at:0x70,pic:'pic2',irq:0,initialUnixSeconds:0,
+            initialCmos:[[0x10,0x20],[0x14,0x21],[0x15,0x00],[0x16,0x02],
+                [0x17,0x00],[0x18,0x02],[0x2e,0x00],[0x2f,0x45],
+                [0x30,0x00],[0x31,0x02],[0x32,0x19]]},
+        {kind:'cga',name:'cga1',at:0x3d0},
+        {kind:'fdc',name:'fdc1',at:0x3f0,pic:'pic1',irq:6,dma:'dma1',dmaChannel:2},
     ],
 });
 
@@ -619,6 +652,7 @@ export class I8086Machine {
         this._pinLevels = {};
         this._nmiPending = false;
         this._nmiMasked = false;
+        this._cpuResetPending = false;
         /** Regions of the memory space, in declaration order. */
         this._mem = config.regions.map((r) => ({ ...r }));
         /** Decoded windows, split by which bus they answer on. */
@@ -636,10 +670,12 @@ export class I8086Machine {
         // The DMA page latch names the 8237 it extends, which may be declared
         // after it, so it is built in the same second pass as the speaker.
         const pageConfigs = [];
+        const atPageConfigs = [];
 
         for (const c of config.chips || []) {
             if (c.kind === 'pcspeaker') { speakerConfigs.push(c); continue; }
             if (c.kind === 'dmapage') { pageConfigs.push(c); continue; }
+            if (c.kind === 'atdmapage') { atPageConfigs.push(c); continue; }
             const regs = REGS[c.kind];
             if (!regs) throw new Error(`machine config: unknown chip kind ${c.kind}`);
             const span = c.span || regs;
@@ -666,6 +702,8 @@ export class I8086Machine {
                     onOutput: (channel, level) => this._pitOutput(c, channel, level),
                     variant: c.variant,   // '8253' for the original PC/XT part (no read-back)
                 });
+            } else if (c.kind === 'atsystem') {
+                chip = new ATSystemControl();
             } else if (c.kind === 'pic') {
                 // The INTR output is polled in step(); the hook is only a
                 // convenience for a test or UI that wants the edge.
@@ -674,6 +712,7 @@ export class I8086Machine {
                 });
             } else if (c.kind === 'rtc') {
                 chip = new MC146818(config.clockHz, {initialUnixSeconds:c.initialUnixSeconds ?? 0,
+                    initialCmos:c.initialCmos??[],
                     onNmiMask:(masked)=>{if(!this._restoring)this._nmiMasked=masked;},
                     onIRQ:(active)=>{if(this._restoring)return;const p=this.chips[c.pic]||this._pic;p?.setIRQ(c.irq??0,active?1:0);}});
             } else if (c.kind === 'usart8251') {
@@ -708,6 +747,9 @@ export class I8086Machine {
                     onTerminalCount: (ch) => { if (this.hooks.onDmaComplete) this.hooks.onDmaComplete(c.name, ch); },
                     onHrq: (active) => { if (this.hooks.onDmaRequest) this.hooks.onDmaRequest(c.name, active); },
                 });
+                if(c.atWordTransfersUnsupported) {
+                    chip.transfer=()=>{throw new Error('AT secondary DMA transfer is unsupported: word addressing, page bit 0, and cascade are not implemented');};
+                }
             } else if (c.kind === 'opl2') {
                 chip = new YM3812();
             } else if (c.kind === 'sb') {
@@ -785,6 +827,11 @@ export class I8086Machine {
                     throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${w.name}" at port 60h or 64h`);
             }
             this._a20Controller=new AT8042A20({a20Enabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                responseDelayCycles:this.config.a20.responseDelayCycles??0,
+                inputBusyCycles:this.config.a20.inputBusyCycles??0,
+                inputPort:this.config.a20.inputPort??0xb0,
+                allowReset:!!this.config.a20.allowReset,
+                onResetRequest:()=>{this._cpuResetPending=true;},
                 onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
                 onIRQ:(active)=>{if(!this._restoring)this._pic?.setIRQ(1,active?1:0);}});
         } else this._a20Controller=null;
@@ -857,6 +904,22 @@ export class I8086Machine {
                 chip: { read: (r) => dma.readPage(r), write: (r, v) => dma.writePage(r, v) },
                 start: c.at, end: c.at + stride * span - 1,
             });
+        }
+
+        for (const c of atPageConfigs) {
+            const primary=this.chips[c.primary],secondary=this.chips[c.secondary];
+            const chip=new ATDMAPageRegisters({primary,secondary});
+            this.chips[c.name]=chip;
+            this._io.push({name:c.name,regs:REGS.atdmapage,stride:1,chip,
+                start:c.at,end:c.at+(c.span||REGS.atdmapage)-1});
+        }
+
+        for (const c of config.chips || []) {
+            if(c.kind!=='atsystem')continue;
+            const system=this.chips[c.name],pit=this.chips[c.pit];
+            if(!pit)throw new Error(`machine config: atsystem '${c.name}' names missing pit '${c.pit}'`);
+            system.onTimer2Gate=(level)=>pit.counters[2].setGate(level);
+            system.onTimer2Gate(!!(system.latch&1));
         }
 
         // The EGA framebuffer: a SECOND, memory-bus window onto the already-built
@@ -1276,6 +1339,11 @@ export class I8086Machine {
         if (wiring && wiring.channel === channel && this._pic) {
             this._pic.setIRQ(wiring.irq, level ? 1 : 0);
         }
+        const system=config.systemControl&&this.chips[config.systemControl];
+        if(system instanceof ATSystemControl) {
+            if(channel===(config.refreshChannel??1))system.setRefresh(level);
+            if(channel===2)system.setTimer2(level);
+        }
         if (this.hooks.onPitOutput) this.hooks.onPitOutput(config.name, channel, level);
     }
 
@@ -1300,7 +1368,12 @@ export class I8086Machine {
      */
     reset() {
         this._chipDebt = 0;
-        this.cpu.reset();
+        this._cpuResetPending = false;
+        if(this.config.hardwareReset) {
+            if(typeof this.cpu.hardwareReset!=='function')
+                throw new Error('machine config: hardwareReset requires a CPU backend with hardwareReset()');
+            this.cpu.hardwareReset();
+        } else this.cpu.reset();
         if (this._a20Controller) this._a20Controller.reset();
         this.cycles += 4;
         this._advanceChips(4);
@@ -1340,6 +1413,7 @@ export class I8086Machine {
             if (chip.advanceMs) { list.push(chip, 1); anyMs = true; }
             else if (chip.advance) list.push(chip, 0);
         }
+        if(this._a20Controller?.advance)list.push(this._a20Controller,0);
         if (this.devices) {
             for (const name of Object.keys(this.devices)) {
                 const dev = this.devices[name];
@@ -1584,7 +1658,7 @@ export class I8086Machine {
         // the UART.
         if (this._chipDebt >= this._chipDeadline) this._flushChips();
         this._serviceInterrupts();
-        if (this.cpu.halted) {
+        if (this.cpu.halted || this.cpu.shutdown) {
             // A halted CPU jumps straight to the horizon. Settle any debt first
             // so the jump is measured from where the chips actually are.
             this._flushChips();
@@ -1597,6 +1671,12 @@ export class I8086Machine {
         const n = this._cycleEst === null ? this.cpu.step() : this._stepTimed();
         this.cycles += n;
         this._chipDebt += n;      // accrued, not charged: see the deadline batch above
+        if(this._cpuResetPending) {
+            this._cpuResetPending=false;
+            if(typeof this.cpu.hardwareReset!=='function')
+                throw new Error('AT 8042 reset requires a CPU backend with hardwareReset()');
+            this.cpu.hardwareReset();
+        }
         return n;
     }
 
@@ -2045,7 +2125,8 @@ export class I8086Machine {
             variant: this.variant,
             cpuBackend:this.cpuBackend,
             memoryBytes:this.memoryBytes,
-            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16} : null,
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                responseDelayStatusReads:this.config.a20.responseDelayStatusReads??0,inputPort:this.config.a20.inputPort??0xb0} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
@@ -2084,7 +2165,8 @@ export class I8086Machine {
         // envelope before the state is even inspected.
         return checkpointTopology('i8086', this.config, this.chips, this.devices, {
             variant:this.variant,cpuBackend:this.cpuBackend,memoryBytes:this.memoryBytes,
-            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16} : null
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                responseDelayStatusReads:this.config.a20.responseDelayStatusReads??0,inputPort:this.config.a20.inputPort??0xb0} : null
         });
     }
 

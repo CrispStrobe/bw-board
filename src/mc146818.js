@@ -1,10 +1,16 @@
 /** Deterministic, cycle-driven MC146818 subset for the opt-in AT profile. */
 export class MC146818 {
-    constructor(clockHz,{initialUnixSeconds=0,onIRQ=null,onNmiMask=null}={}) {
+    constructor(clockHz,{initialUnixSeconds=0,initialCmos=[],onIRQ=null,onNmiMask=null}={}) {
         if(!Number.isInteger(clockHz)||clockHz<1)throw new Error('MC146818 clockHz must be positive');
         if(!Number.isSafeInteger(initialUnixSeconds)||initialUnixSeconds<0||initialUnixSeconds>8640000000)throw new Error('MC146818 initialUnixSeconds is outside the supported Date range');
         this.clockHz=clockHz;
         this.initialUnixSeconds=initialUnixSeconds;
+        if(!Array.isArray(initialCmos)||initialCmos.some(entry=>!Array.isArray(entry)||entry.length!==2||
+            !Number.isInteger(entry[0])||entry[0]<0x0e||entry[0]>0x3f||
+            !Number.isInteger(entry[1])||entry[1]<0||entry[1]>255)||
+            new Set(initialCmos.map(entry=>entry[0])).size!==initialCmos.length)
+            throw new Error('MC146818 initialCmos must contain unique [0Eh..3Fh, byte] entries');
+        this.initialCmos=initialCmos.map(entry=>[...entry]);
         this.onIRQ=onIRQ;
         this.onNmiMask=onNmiMask;
         this.reset();
@@ -20,6 +26,7 @@ export class MC146818 {
         this.ram[0x0b]=0x02;
         this.ram[0x0c]=0;
         this.ram[0x0d]=0x80;
+        for(const [address,value] of this.initialCmos)this.ram[address]=value;
         this._irq=false;
         this._publish();
     }
