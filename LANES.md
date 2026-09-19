@@ -34,7 +34,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implementation; qualification pending) — Astra/Sol bounded 386
+2026-09-19 DONE (qualified; landed at `28911b2`) — Astra/Sol bounded 386
 and AT keyboard POST milestone; exact candidate is the commit carrying this row.
 Adds opt-in native 32-bit execution, prefixes/SIB/aliases/stack widths, same-ring
 interrupt and trap gates, restartable admitted faults, IRET, RF/SS/NMI boundaries,
@@ -58,7 +58,13 @@ qualification `35467798125`; CI `35467798130` had one failure: the new optional
 MOO parser test lacked its external-input census row (5429 pass, 272 skip).
 The corrected candidate registers the exact pinned corpus with explicit-env
 discovery matching both consumers. Focused census checks and required-input
-present/absent checks pass; fresh hosted qualification gates the corrected head.
+present/absent checks pass. Corrected candidate `d284b40` passed CI
+`35468118560` (5430 pass, 272 skip, zero fail), CPU `35468118562` (fast and
+Harris each 1,477,997 pass, three revoked; bounded 386 jobs green), and native
+`35468118561`. Landing `28911b2` preserves upstream `eaa56d0` README/isolated
+LabWired benchmark changes; qualified x86, workflow and test blobs are unchanged.
+Tag `milestones/x86-386-core-at-keyboard-20260919` records that qualification.
+Continuation below/above retains later AT disk boot, paging and ISA work.
 
 2026-09-19 DONE (qualified and landed at `3cd5927`) — Astra/Sol AT reset and 286 recovery milestone;
 exact candidate is the commit carrying this row. The active continuation claim

@@ -85,7 +85,7 @@ quotient mutation. Owned tests cover #DE delivery and boundary failures.
 `scripts/run-i80386-test386-diagnostic.mjs` runs the unchanged 64 KiB capture
 build from pinned `barotto/test386.asm` revision
 `cfd052d1e64d5375dea5a681c1eadeed64ceda2c`. It requires a clean source checkout
-and exact ROM/provenance hashes, records POST port 80 and debug port e9 output,
+and exact ROM/provenance hashes, and records POST port 80 and debug port e9 output.
 The GPL-3.0-or-later guest derives from PCjs test386; it is an external
 software diagnostic, not an independent hardware oracle. The capture build
 changes only POST/debug output ports through configuration. It stops at the
