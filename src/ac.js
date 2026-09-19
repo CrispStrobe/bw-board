@@ -24,6 +24,7 @@
 
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA,
+  mosGds, mosK, mosTriode, mosVth,
   shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
@@ -322,15 +323,44 @@ export function acSweep(args) {
           const nG = netOf(part.id, 'gate');
           const nD = netOf(part.id, 'drain');
           const nS = netOf(part.id, 'source');
-          const vth = P.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0);
-          const k = P.k ?? 0.5;
           const vgs = part.kind === 'nmos'
             ? vOp(nG) - vOp(nS)
             : vOp(nS) - vOp(nG);
-          const [vovS, dVovS] = smoothVov(vgs - Math.abs(vth));
-          const gm = 2 * k * vovS * dVovS;
-          const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
-          const gds = 0.001 * taper * taper + 1e-9;
+          let gm;
+          let gds;
+          const exactGroundedLevel1Nmos = part.kind === 'nmos' && P.model === 'level1'
+            && P.bulkAtGround === true && Number(P.gamma ?? 0) === 0
+            && Number.isFinite(P.vth) && Number.isFinite(P.kp) && P.kp > 0
+            && Number.isFinite(P.w) && P.w > 0 && Number.isFinite(P.l) && P.l > 0
+            && Number.isFinite(P.lambda) && P.lambda >= 0;
+          if (exactGroundedLevel1Nmos) {
+            // The strict DC domain already proves the bulk is the reference.
+            // Linearise the SAME Level-1 law at that converged point instead
+            // of substituting the old generic k=0.5 / flat-gds approximation.
+            const vth = mosVth(P, vOp(nS));
+            const k = mosK(P);
+            const [vovS, dVovS] = smoothVov(vgs - vth);
+            const vds = vOp(nD) - vOp(nS);
+            const vdsEff = Math.min(Math.max(vds, 0), Math.max(vovS, 0));
+            if (vds < vovS) {
+              ({ gm, gds } = mosTriode(k, vovS, vdsEff, dVovS, P));
+              gds += 1e-12;
+            } else {
+              const id0 = k * vovS * vovS;
+              const lambda = P.lambda > 0 ? P.lambda : 0;
+              gm = 2 * k * vovS * dVovS * (1 + lambda * vds);
+              gds = mosGds(P, id0, dVovS);
+            }
+          } else {
+            // Compatibility model for generic interactive MOS parts. Its
+            // behavior predates the strict Level-1 source-analysis contract.
+            const vth = P.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0);
+            const k = P.k ?? 0.5;
+            const [vovS, dVovS] = smoothVov(vgs - Math.abs(vth));
+            gm = 2 * k * vovS * dVovS;
+            const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
+            gds = 0.001 * taper * taper + 1e-9;
+          }
           addG2(nD, nS, gds);
           const iD = idxOf(nD);
           const iG = idxOf(nG);
