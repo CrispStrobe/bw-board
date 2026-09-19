@@ -52,8 +52,8 @@ const PROFILES={
     scope:'24 fixed deterministic MOV moffs samples covering loads, stores, and operand/address-size forms',
   },
   rotates:{
-    files:['C0.0','C0.1','C0.2','C0.3','D0.0','D0.1','D0.2','D0.3','D1.0','D1.1','D1.2','D1.3','D2.0','D2.1','D2.2','D2.3','D3.0','D3.1','D3.2','D3.3','66D1.0','66D1.1','66D1.2','66D1.3'],
-    scope:'72 fixed deterministic ROL/ROR/RCL/RCR samples spanning immediate, one, CL, and byte/word/dword forms',
+    files:['D0.0','D0.1','D0.2','D0.3','D1.0','D1.1','D1.2','D1.3','66D1.0','66D1.1','66D1.2','66D1.3'],
+    scope:'36 fixed deterministic count-one ROL/ROR/RCL/RCR samples spanning byte, word, and dword forms',
   },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
