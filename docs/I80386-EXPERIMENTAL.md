@@ -196,6 +196,12 @@ wrapped operand read; general dword stack operands retain full-span admission.
 Segment-load faults restore the pre-instruction stack/register state,
 and POP SS establishes interrupt, NMI, and debug shadows.
 
+POP r/m supports word and dword register/memory destinations. With 32-bit
+addressing and an ESP-based destination, the effective address uses ESP after
+the pop; operand size and SS stack-address size remain independent. Invalid
+group extensions raise #UD before the stack read, while destination faults
+restore architectural stack state after the source access.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

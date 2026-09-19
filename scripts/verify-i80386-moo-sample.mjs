@@ -68,6 +68,10 @@ const PROFILES={
     files:['06','07','0E','16','17','1E','1F','0FA0','0FA1','0FA8','0FA9','6606','6607','660E','6616','6617','661E','661F','660FA0','660FA1','660FA8','660FA9'],
     scope:'66 fixed deterministic PUSH/POP segment-register samples spanning word and dword operand sizes',
   },
+  'pop-rm':{
+    files:['8F','668F','678F','67668F'],
+    scope:'12 fixed deterministic POP r/m samples spanning operand/address-size forms',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

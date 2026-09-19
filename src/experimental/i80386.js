@@ -568,7 +568,8 @@ export class ExperimentalI80386 {
       rm = modrm & 7;
     if (mod === 3) return { reg, rm, isReg: true };
     let off = 0,
-      seg = SEG_DS;
+      seg = SEG_DS,
+      usesEsp = false;
     if (address32) {
       if (rm === 4) {
         const sib = this._fetch8(),
@@ -580,6 +581,7 @@ export class ExperimentalI80386 {
         if (base === 5 && mod === 0) off = (off + this._fetchN(4)) >>> 0;
         else {
           off = (off + this._reg(base, 32)) >>> 0;
+          usesEsp = base === 4;
           if (base === 4 || base === 5) seg = SEG_SS;
         }
       } else if (rm === 5 && mod === 0) off = this._fetchN(4);
@@ -608,7 +610,7 @@ export class ExperimentalI80386 {
       if (mod === 2) off += this._fetchN(2);
       off &= 0xffff;
     }
-    return { reg, rm, isReg: false, off: off >>> 0, seg: override ?? seg };
+    return { reg, rm, isReg: false, off: off >>> 0, seg: override ?? seg, usesEsp };
   }
   _operandRead(ea, width) {
     return ea.isReg
@@ -1634,6 +1636,15 @@ export class ExperimentalI80386 {
       this._operandWrite(ea, exchangeWidth, register);
       if (exchangeWidth === 8) this._setReg8(ea.reg, memoryOrRegister);
       else this._setReg(ea.reg, exchangeWidth, memoryOrRegister);
+    } else if (op === 0x8f) {
+      const oldEsp = this.esp >>> 0;
+      const ea = this._decodeEA(address32, override);
+      if (ea.reg !== 0)
+        throw new I80386Fault(6, null, "invalid POP r/m extension");
+      const value = this._pop(width);
+      if (ea.usesEsp)
+        ea.off = (ea.off - oldEsp + this.esp) >>> 0;
+      this._operandWrite(ea, width, value);
     } else if (op === 0x8d) {
       const ea = this._decodeEA(address32, override);
       if (ea.isReg)
