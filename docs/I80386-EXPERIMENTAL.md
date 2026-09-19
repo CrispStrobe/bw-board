@@ -20,8 +20,8 @@ hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
 LIDT, MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
 
 The opt-in `deliverFaults` profile adds precise instruction restart for
-architectural faults, real-mode IVT delivery, same-ring ring-0 16- and 32-bit
-interrupt/trap gates, and same-ring IRET. It implements the 80386
+architectural faults, real-mode IVT delivery, 16- and 32-bit
+interrupt/trap gates, TSS-based inner-ring entry, and same-task IRET. It implements the 80386
 benign/contributory/page-fault pairing table: contributory followed by
 contributory, or page fault followed by contributory/page fault, becomes #DF;
 a fault during #DF delivery enters CPU shutdown. Fault stack images set RF,
@@ -31,11 +31,13 @@ suppress debug delivery at the segment-load boundary. Accepted NMI is blocked
 until IRET. Gate/frame checks complete before frame writes, and host bus
 callback errors remain host errors rather than guest exceptions.
 
-This stage deliberately refuses VM86, LDT selectors, system
-segments, privilege-changing gates/IRET, tasking, and unimplemented opcodes.
+This stage deliberately refuses VM86, task switching, expand-down privilege
+stacks, and unimplemented opcodes. LDT lookup, LLDT/LTR, protected call gates,
+conforming code, and privilege-changing interrupt/return paths are implemented
+within the bounded contracts below.
 Only architecturally invalid encodings implemented by this profile raise #UD;
 valid instructions outside the profile still throw `UnsupportedI80386`.
-Descriptor and exception checks cover the flat, same-ring owned-program path;
+Descriptor and exception checks cover the owned protected-mode programs below;
 they are not a complete 80386 protection model. Cycle counts are placeholders
 and make no 386DX or 386EX timing claim.
 
@@ -61,15 +63,15 @@ operand read, including zero-count shifts. The pinned PCjs group decoder also
 executes its memory writeback path when the shift helper returns the unchanged
 operand for count zero.
 
-PSE, CR0.WP behavior from later processors, VM86, task/ring transitions, and
+PSE, CR0.WP behavior from later processors, VM86, task switching, and
 TLB timing are outside this stage. Reloading CR3 takes effect immediately
 because this functional executor does not cache translations.
 
 The bounded I/O profile provides explicit `inPort(port, width)` and
 `outPort(port, value, width)` bus callbacks for 8-, 16-, and 32-bit IN/OUT.
-Real mode and protected execution at or above IOPL are admitted. An access
-which requires a TSS I/O-permission bitmap is an explicit implementation
-refusal; the executor does not silently grant it.
+Real mode and protected execution with CPL no greater than IOPL are admitted.
+Less privileged scalar I/O checks the current 386 TSS permission bitmap as
+described below; denied transfers make no device callback.
 
 The F6/F7 group-3 profile implements TEST, NOT, NEG, MUL, IMUL, DIV, and
 IDIV at 8, 16, and 32 bits. Products and double-width dividends use exact
@@ -377,3 +379,19 @@ The exact external test386 reaches POST20 and refuses outer IRET. The genuine
 386 AT BIOS reaches POST2A, then enters its CLI/HLT error path at F000:0C93;
 the diagnostic budget result does not establish successful POST or boot.
 Later privilege transitions and platform work require separate receipts.
+
+## Ring, far-control and I/O continuation receipt
+
+The source-bound [protection receipt](receipts/2026-09-19-386-protection.json)
+records the integrated ring, far-call, conforming-code and I/O stage. The
+unchanged test386 ROM reaches POST21 and stops at VM86 IRET after 805,601
+steps; this is diagnostic progression, not full-ROM acceptance.
+
+The pinned PCjs gate implementation derives a new CPL from the gate target
+selector RPL (`segx86.js`, line 856). For the owned conforming interrupt it
+therefore selects an inner stack, while original-386 semantics retain CPL3
+and the current stack. The comparator separately requires the exact expected
+local result and the exact known reference result; it does not claim equality
+for that case. Denied I/O requires entry into the owned #GP handler, error
+code zero, the restart EIP and saved CS, and zero port callbacks. A generic
+reference abort is never accepted as proof of a protection fault.

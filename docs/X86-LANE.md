@@ -39,9 +39,11 @@ System selectors, descriptor stores, LEA and additional stack instructions
 are now landed. Continuation adds privilege-changing interrupt/return paths,
 protected far calls and call gates, and TSS I/O permissions; these later
 changes await their own qualification. The unchanged external CPU diagnostic
-now reaches conforming-code tests, which remain an explicit boundary in the
-current worker snapshot. FreeDOS reaches its shell prompt on the 286 AT
-profile; a file round trip remains pending. Windows and Doom remain
+now reaches VM86 IRET after 805,601 steps. The integrated protection stage
+passes 133 focused tests and awaits hosted qualification; see its
+[source-bound receipt](receipts/2026-09-19-386-protection.json). FreeDOS has
+completed a shell write and fresh-remount read on the 286 AT worker; its
+separate evidence integration remains pending. Windows and Doom remain
 unexecuted acceptance targets. Earlier milestones remain in history.
 
 ## Earlier milestone: common ISA, gates, tasks and existing binaries
