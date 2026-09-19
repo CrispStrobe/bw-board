@@ -1158,6 +1158,11 @@ export class ExperimentalI80386 {
   }
 
   _stackFrame(width, values) {
+    const frame = this._prepareStackFrame(width, values);
+    this._commitStackFrame(frame);
+  }
+
+  _prepareStackFrame(width, values) {
     const bytes = width >>> 3,
       stack32 = !!this.segmentCaches[SEG_SS].default32,
       old = stack32 ? this.esp : this.sp,
@@ -1168,14 +1173,18 @@ export class ExperimentalI80386 {
     const physical = Array.from({ length: bytes * values.length }, (_, i) =>
       this._translate((address + i) >>> 0, { write: true }),
     );
-    for (let i = 0; i < values.length; i++)
-      for (let byte = 0; byte < bytes; byte++)
+    return { bytes, stack32, next, physical, values };
+  }
+
+  _commitStackFrame(frame) {
+    for (let i = 0; i < frame.values.length; i++)
+      for (let byte = 0; byte < frame.bytes; byte++)
         this.write(
-          physical[i * bytes + byte],
-          (values[i] >>> (8 * byte)) & 255,
+          frame.physical[i * frame.bytes + byte],
+          (frame.values[i] >>> (8 * byte)) & 255,
         );
-    if (stack32) this.esp = next;
-    else this.sp = next;
+    if (frame.stack32) this.esp = frame.next;
+    else this.sp = frame.next;
   }
 
   _protectedCodeDescriptor(selector, external) {
@@ -1257,7 +1266,7 @@ export class ExperimentalI80386 {
   _ringStackDescriptor(selector, cpl, { external = false, returnPath = false } = {}) {
     const code = (selector & 0xfffc) | (external ? 1 : 0);
     if (!(selector & 0xfffc))
-      throw new I80386Fault(returnPath ? 13 : 10, 0, "null stack selector");
+      throw new I80386Fault(13, returnPath ? 0 : external ? 1 : 0, "null stack selector");
     let raw;
     try { raw = this._descriptorBytes(selector); }
     catch (error) {
@@ -1301,7 +1310,7 @@ export class ExperimentalI80386 {
       : ((esp & 0xffff) - bytes * values.length) & 0xffff;
     const end = next + bytes * values.length - 1;
     if (end > descriptor.limit || end > 0xffffffff)
-      throw new I80386Fault(12, external ? 1 : 0, "new privilege stack limit");
+      throw new I80386Fault(12, 0, "new privilege stack limit");
     const linear = (descriptor.base + next) >>> 0;
     const physical = Array.from({ length: bytes * values.length }, (_, index) =>
       this._translate((linear + index) >>> 0, { write: true, supervisor: true }),
@@ -1374,21 +1383,24 @@ export class ExperimentalI80386 {
         (b[1] << 8) |
         (width === 32 ? (b[6] | (b[7] << 8)) * 0x10000 : 0)) >>>
       0;
-    if (offset > descriptor.limit)
-      throw new I80386Fault(13, 0, "handler offset outside code segment");
     const savedFlags = fault ? this.eflags | RF : this.eflags;
     const values = [returnEip, this.cs, savedFlags];
-    let innerFrame = null;
+    let innerFrame = null, sameFrame = null;
     if (targetCpl < oldCpl) {
       values.push(this.esp, this.ss);
       if (errorCode !== null) values.unshift(errorCode);
       innerFrame = this._innerInterruptStack(targetCpl, width, values, external);
     }
-    else if (errorCode !== null) values.unshift(errorCode);
+    else {
+      if (errorCode !== null) values.unshift(errorCode);
+      sameFrame = this._prepareStackFrame(width, values);
+    }
+    if (offset > descriptor.limit)
+      throw new I80386Fault(13, 0, "handler offset outside code segment");
     this._markAccessed(descriptor);
     if (innerFrame) this._markAccessed(innerFrame.descriptor);
     if (innerFrame) this._commitInnerInterruptStack(innerFrame);
-    else this._stackFrame(width, values);
+    else this._commitStackFrame(sameFrame);
     this.cs = (selector & 0xfffc) | targetCpl;
     this.segmentCaches[SEG_CS] = descriptor;
     this.eip = width === 32 ? offset : offset & 0xffff;
@@ -1553,7 +1565,7 @@ export class ExperimentalI80386 {
     const target = this._readLinear(address, bytes);
     const selector = this._readLinear(address + bytes, bytes) & 0xffff;
     const flags = this._readLinear(address + bytes * 2, bytes);
-    if (this.protectedMode && flags & 0x20000)
+    if (this.protectedMode && currentCpl === 0 && flags & 0x20000)
       throw new UnsupportedI80386("VM86 IRET is outside the bounded profile");
     if (this.protectedMode) {
       const returnCpl = selector & 3;
@@ -1608,6 +1620,7 @@ export class ExperimentalI80386 {
     let restored = width === 32
       ? flags >>> 0
       : ((this.eflags & 0xffff0000) | flags) >>> 0;
+    restored &= 0x00037fd7;
     if (this.protectedMode) {
       const oldIopl = (this.eflags >>> 12) & 3;
       if (currentCpl !== 0) restored = (restored & ~0x3000) | (this.eflags & 0x3000);

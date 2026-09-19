@@ -195,6 +195,22 @@ test("external inner-stack selector faults carry EXT without an old-stack frame"
   assert.deepEqual([f.cpu.cs, f.cpu.ss, f.cpu.esp], [3, 0x13, 0x800]);
 });
 
+test("inner interrupt stack faults precede target-offset faults and use exact error codes", () => {
+  const make = (ss, esp) => {
+    const f=fixture();f.cpu.cr0=1;f.cpu.gdtr={base:0x200,limit:0x17};f.cpu.idtr={base:0x400,limit:0x7ff};
+    f.put(0x208,descriptor(0x100000,0x9a,0xff,0x40));f.put(0x210,descriptor(0x120000,0x92));
+    f.put(0x400+0x20*8,gate(0x100,8));f.cpu.tr={selector:0x18,base:0x600,limit:0x67,present:true,type:11};
+    f.put(0x604,[esp,esp>>>8,esp>>>16,esp>>>24,ss,ss>>>8]);f.cpu.cs=3;f.cpu.ss=0x13;f.cpu.esp=0x800;
+    return f;
+  };
+  const badSelector=make(0x30,0x400);
+  assert.throws(()=>badSelector.cpu._deliverProtected(0x20,0x44,null,{external:true}),
+    error=>error instanceof I80386Fault&&error.vector===10&&error.errorCode===0x31);
+  const shortStack=make(0x10,8);
+  assert.throws(()=>shortStack.cpu._deliverProtected(0x20,0x44,null,{external:true}),
+    error=>error instanceof I80386Fault&&error.vector===12&&error.errorCode===0);
+});
+
 test("IRETD restores full ESP independently of the returned stack B bit", () => {
   const f = fixture();
   f.cpu.cr0 = 1;
@@ -210,6 +226,19 @@ test("IRETD restores full ESP independently of the returned stack B bit", () => 
   f.put(0x120300,[1,0,0,0, 0x1b,0,0,0, 2,0,0,0, 0x00,0x08,0x34,0x12, 0x23,0,0,0]);
   f.cpu.step();
   assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,1,0x23,0x12340800]);
+});
+
+test("ring-3 IRETD ignores stacked VM and reserved bits and cannot raise IOPL or IF",()=>{
+  const f=fixture();f.cpu.cr0=1;f.cpu.gdtr={base:0x200,limit:0x27};
+  f.put(0x218,descriptor(0x140000,0xfa));f.put(0x220,descriptor(0x160000,0xf2));
+  f.cpu.cs=0x1b;f.cpu.ss=0x23;f.cpu.esp=0x300;f.cpu.eflags=2;
+  f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(0x1b);
+  f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x23,3,{returnPath:true});
+  f.put(0x140000,[0xcf]);
+  f.put(0x160300,[1,0,0,0, 0x1b,0,0,0, 0xff,0xff,0xff,0xff]);
+  f.cpu.step();
+  assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.esp],[0x1b,1,0x30c]);
+  assert.equal(f.cpu.eflags,0x14dd7,'defined user-modifiable flags restore while VM/IOPL/IF/reserved bits do not');
 });
 
 test("fault delivery distinguishes benign replacement, contributory #DF, and failed #DF shutdown", () => {
@@ -289,8 +318,8 @@ test("stack preflight faults have no frame writes and host bus errors are never 
   const effects = preflight.writes.slice(before);
   assert.deepEqual(
     effects.map(([address]) => address),
-    [0x20d],
-    "descriptor accessed state precedes frame admission, but failed frames write no stack bytes",
+    [],
+    "frame admission precedes descriptor accessed and stack writes",
   );
 
   const marker = new Error("host write failed");
