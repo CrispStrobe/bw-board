@@ -176,14 +176,20 @@ export class SparseLU {
         const prow = perm[pcol];
         if (!mark[prow]) { mark[prow] = 1; touched[nTouched++] = prow; w[prow] = 0; }
         const xj = w[prow];
-        if (xj !== 0) {
-          const Lrows = LiCols[pcol];
-          const Lvals = LxCols[pcol];
-          for (let k = 0; k < Lrows.length; k++) {
-            const rr = Lrows[k];
-            if (!mark[rr]) { mark[rr] = 1; touched[nTouched++] = rr; w[rr] = 0; }
-            w[rr] -= Lvals[k] * xj;
-          }
+        const Lrows = LiCols[pcol];
+        const Lvals = LxCols[pcol];
+        for (let k = 0; k < Lrows.length; k++) {
+          const rr = Lrows[k];
+          // Reach is structural, even when this factorization happens to see
+          // a numerical zero.  If the row is not retained here, a later
+          // same-pattern refactor can make xj non-zero and create fill for
+          // which L/U have no slot.  The solve then looks plausible at its
+          // node voltages but can violate an MNA source row.  A MOS Newton
+          // sequence exposed exactly that: the first cut-off stamp had gm=0;
+          // the conducting stamp reused the incomplete factor and missed
+          // 6.964 mA from the voltage-source unknown.
+          if (!mark[rr]) { mark[rr] = 1; touched[nTouched++] = rr; w[rr] = 0; }
+          if (xj !== 0) w[rr] -= Lvals[k] * xj;
         }
       }
 
