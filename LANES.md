@@ -20,6 +20,24 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-19 DONE (implementation; qualification pending) — Astra/Sol AT reset and 286 recovery milestone;
+exact candidate is the commit carrying this row. The active continuation claim
+above remains for firmware disk boot, 386 and versioned application acceptance.
+Adds opt-in hardware reset and AT boot profile, warm CPU reset preserving board
+state, timed 8042 responses, primary/secondary DMA register diagnostics, refresh
+status and seeded CMOS. Unmodified external IBM AT Rev1 reaches its protected
+memory test from physical FFFFF0; this is diagnostic progression, not full POST
+or DOS boot. Adds 286 contributory-fault escalation, #DF task entry, shutdown/
+NMI/reset recovery, TF/SS/STI boundaries and inactive-NPX exception handling.
+Root audit corrected reset-cache identity and fault/trap transition defects.
+Focused combined CPU/AT/DOS regression: 159/159; six owned PCjs comparisons pass,
+seven external images have zero unexpected differences under the published
+known-reference-difference contract. Current-source BIOS and DOS receipts and
+final affected checks (32/32), checkpoint regression (38/38) and both rejecting
+BIOS grader mutations accompany this candidate. Full hosted CI, real-mode fast/
+Harris corpora and native contracts are the landing gate. No complete AT, 386,
+Windows, Doom or physical-timing claim. External BIOS/media remain external.
+
 2026-09-19 DONE — bwcx: exact explicit-NPN Ebers–Moll small-signal AC,
 isolated worktree `/mnt/volume1/code/wt/bwb-npn-ac-level1`, branch
 `lane/npn-ac-ebers-moll`, exact base `aec83d458ed5f638728148f9b389178e85716745`.

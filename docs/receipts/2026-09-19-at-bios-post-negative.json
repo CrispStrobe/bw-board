@@ -1,0 +1,50 @@
+{
+  "scope": "strict grader negative controls after genuine firmware execution",
+  "expected": "both controls reject",
+  "controls": {
+    "dma-checkpoint": {
+      "passed": false,
+      "mutation": "dma-checkpoint",
+      "executionRevision": "9f99607fdbe8a6600ad4de0b11438a4b6d5899c4",
+      "sourceSha256": {
+        "src/i8086-machine.js": "e68f01684963879de58ccc1e77d16073247e9eb404a5e047333af3d27cfc1747",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "246c2915d5095c7ce3330d3fa023baf58e20b5673e357cec9c87b193013593a7",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f618a3ada8708f03cf7ea73a4afd85cea8794aff1141b42efac1e2338b968083",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/run-at-bios-post.mjs": "cbe56709fb73e7ddc7f5f4fdbd773d7baf9fcf205951e305b14f3d9b51ffb121"
+      },
+      "steps": 2000000
+    },
+    "reset-preservation": {
+      "passed": false,
+      "mutation": "reset-preservation",
+      "executionRevision": "9f99607fdbe8a6600ad4de0b11438a4b6d5899c4",
+      "sourceSha256": {
+        "src/i8086-machine.js": "e68f01684963879de58ccc1e77d16073247e9eb404a5e047333af3d27cfc1747",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "246c2915d5095c7ce3330d3fa023baf58e20b5673e357cec9c87b193013593a7",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f618a3ada8708f03cf7ea73a4afd85cea8794aff1141b42efac1e2338b968083",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/run-at-bios-post.mjs": "cbe56709fb73e7ddc7f5f4fdbd773d7baf9fcf205951e305b14f3d9b51ffb121"
+      },
+      "steps": 2000000
+    }
+  }
+}

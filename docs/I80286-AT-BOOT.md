@@ -60,3 +60,9 @@ Primary hardware references are the *IBM Personal Computer AT Technical
 Reference* (1984), system-board memory map and system-control schematics, and
 Intel's *80286 and 80287 Programmer's Reference Manual* (1987), processor
 initialization chapter.
+
+Current source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)
+records execution at `9f99607fdbe8a6600ad4de0b11438a4b6d5899c4`.
+Both [negative controls](receipts/2026-09-19-at-bios-post-negative.json) reject
+the same source when an acceptance fact is corrupted. The controller self-test
+returns 55h; command-byte bit 2 controls the status system flag.

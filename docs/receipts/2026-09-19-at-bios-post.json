@@ -1,0 +1,1447 @@
+{
+  "schema": "astra.at-bios-post.v1",
+  "passed": true,
+  "stepLimit": 2000000,
+  "steps": 2000000,
+  "scope": "bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30",
+  "diagnosticOnly": true,
+  "fullBootAccepted": false,
+  "mutation": null,
+  "stopReason": null,
+  "input": {
+    "name": "IBM 5170 Rev1 BIOS 1984-01-10",
+    "bytes": 65536,
+    "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "expectedSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "distribution": "external; ROM bytes are not stored by this repository"
+  },
+  "reset": {
+    "cs": 61440,
+    "ip": 65520,
+    "pc": 16777200,
+    "fetchPhysical": 16777200
+  },
+  "firstFetchTrace": [
+    0,
+    16777200,
+    5,
+    16777201,
+    5,
+    16777202,
+    5,
+    16777203,
+    5,
+    16777204,
+    6,
+    1040475
+  ],
+  "resetRequests": [
+    {
+      "step": 1463441,
+      "cs": 64,
+      "ip": 5968
+    }
+  ],
+  "resetApplications": [
+    {
+      "step": 1463441,
+      "cs": 61440,
+      "ip": 65520,
+      "pc": 16777200,
+      "cmosShutdown": 1
+    }
+  ],
+  "checkpoint30": [
+    {
+      "step": 207365,
+      "cs": 61440,
+      "ip": 836
+    },
+    {
+      "step": 1798452,
+      "cs": 61440,
+      "ip": 3484
+    }
+  ],
+  "controller": {
+    "state": {
+      "v": 3,
+      "outputPort": 3,
+      "commandByte": 93,
+      "pendingCommand": null,
+      "outputQueue": [],
+      "responseCyclesRemaining": 0,
+      "inputBusyCyclesRemaining": 0,
+      "delayedResponse": null,
+      "systemFlag": true
+    },
+    "writes": [
+      {
+        "step": 247187,
+        "cs": 61440,
+        "ip": 1032,
+        "dir": "out",
+        "port": 100,
+        "value": 170
+      },
+      {
+        "step": 247212,
+        "cs": 61440,
+        "ip": 1032,
+        "dir": "out",
+        "port": 100,
+        "value": 192
+      },
+      {
+        "step": 247232,
+        "cs": 61440,
+        "ip": 1032,
+        "dir": "out",
+        "port": 100,
+        "value": 96
+      },
+      {
+        "step": 247240,
+        "cs": 61440,
+        "ip": 1026,
+        "dir": "out",
+        "port": 96,
+        "value": 93
+      },
+      {
+        "step": 1463441,
+        "cs": 64,
+        "ip": 5968,
+        "dir": "out",
+        "port": 100,
+        "value": 254
+      },
+      {
+        "step": 1463772,
+        "cs": 61440,
+        "ip": 1032,
+        "dir": "out",
+        "port": 100,
+        "value": 96
+      },
+      {
+        "step": 1463779,
+        "cs": 61440,
+        "ip": 2705,
+        "dir": "out",
+        "port": 96,
+        "value": 77
+      },
+      {
+        "step": 1562092,
+        "cs": 61440,
+        "ip": 1032,
+        "dir": "out",
+        "port": 100,
+        "value": 173
+      }
+    ],
+    "recentPorts": [
+      {
+        "step": 1561713,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561716,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561719,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561722,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561725,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561728,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561731,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561734,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561737,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561740,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561743,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561746,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561749,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561752,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561755,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561758,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561761,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561764,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561767,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561770,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561773,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561776,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561779,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561782,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561785,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561788,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561791,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561794,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561797,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561800,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561803,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561806,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561809,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561812,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561815,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561818,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561821,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561824,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561827,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561830,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561833,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561836,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561839,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561842,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561845,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561848,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561851,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561854,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561857,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561860,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561863,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561866,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561869,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561872,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561875,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561878,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561881,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561884,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561887,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561890,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561893,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561896,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561899,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561902,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561905,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561908,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561911,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561914,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561917,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561920,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561923,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561926,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561929,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561932,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561935,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561938,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561941,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561944,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561947,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561950,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561953,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561956,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561959,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561962,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561965,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561968,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561971,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561974,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561977,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561980,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561983,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561986,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561989,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561992,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561995,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1561998,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562001,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562004,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562007,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562010,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562013,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562016,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562019,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562022,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562025,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562028,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562031,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562034,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562037,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562040,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562043,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562046,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562049,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562052,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562055,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562058,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562061,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562064,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562067,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562070,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562073,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562076,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562079,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562082,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562085,
+        "cs": 61440,
+        "ip": 2715,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1562092,
+        "cs": 61440,
+        "ip": 1032,
+        "dir": "out",
+        "port": 100,
+        "value": 173
+      },
+      {
+        "step": 1562094,
+        "cs": 61440,
+        "ip": 1036,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      },
+      {
+        "step": 1798438,
+        "cs": 61440,
+        "ip": 3450,
+        "dir": "in",
+        "port": 100,
+        "value": 4
+      }
+    ]
+  },
+  "final": {
+    "cs": 64,
+    "ip": 6690,
+    "pc": 989730,
+    "halted": false,
+    "shutdown": false,
+    "a20Enabled": true,
+    "cmosShutdown": 2
+  },
+  "progress": {
+    "ax": 0,
+    "bx": 32768,
+    "cx": 32164,
+    "dx": 21930,
+    "si": 1208,
+    "di": 0,
+    "bp": 0,
+    "sp": 65527,
+    "ds": 96,
+    "es": 72,
+    "ss": 88,
+    "flags": 70,
+    "samples": [
+      {
+        "step": 100000,
+        "cs": 61440,
+        "ip": 5811,
+        "ax": 61549,
+        "bp": 0,
+        "cx": 32281,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 200000,
+        "cs": 61440,
+        "ip": 859,
+        "ax": 3085,
+        "bp": 0,
+        "cx": 245,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 300000,
+        "cs": 61440,
+        "ip": 6695,
+        "ax": 0,
+        "bp": 0,
+        "cx": 19637,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 400000,
+        "cs": 61440,
+        "ip": 6695,
+        "ax": 0,
+        "bp": 0,
+        "cx": 27412,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 500000,
+        "cs": 61440,
+        "ip": 6695,
+        "ax": 0,
+        "bp": 0,
+        "cx": 2412,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 600000,
+        "cs": 61440,
+        "ip": 6691,
+        "ax": 257,
+        "bp": 0,
+        "cx": 10186,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 700000,
+        "cs": 61440,
+        "ip": 6760,
+        "ax": 43690,
+        "bp": 0,
+        "cx": 4537,
+        "es": 0,
+        "di": 47388,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 800000,
+        "cs": 61440,
+        "ip": 6783,
+        "ax": 43690,
+        "bp": 0,
+        "cx": 5340,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 900000,
+        "cs": 61440,
+        "ip": 6856,
+        "ax": 0,
+        "bp": 0,
+        "cx": 17118,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 1000000,
+        "cs": 64,
+        "ip": 2184,
+        "ax": 0,
+        "bp": 0,
+        "cx": 4167,
+        "es": 72,
+        "di": 57202,
+        "esBase": 65536,
+        "dsBase": 55456
+      },
+      {
+        "step": 1100000,
+        "cs": 64,
+        "ip": 2184,
+        "ax": 0,
+        "bp": 0,
+        "cx": 2549,
+        "es": 72,
+        "di": 60438,
+        "esBase": 262144,
+        "dsBase": 55456
+      },
+      {
+        "step": 1200000,
+        "cs": 64,
+        "ip": 2184,
+        "ax": 0,
+        "bp": 0,
+        "cx": 931,
+        "es": 72,
+        "di": 63674,
+        "esBase": 458752,
+        "dsBase": 55456
+      },
+      {
+        "step": 1300000,
+        "cs": 64,
+        "ip": 2352,
+        "ax": 0,
+        "bp": 0,
+        "cx": 32149,
+        "es": 72,
+        "di": 1238,
+        "esBase": 1245184,
+        "dsBase": 55456
+      },
+      {
+        "step": 1400000,
+        "cs": 64,
+        "ip": 2352,
+        "ax": 0,
+        "bp": 0,
+        "cx": 30531,
+        "es": 72,
+        "di": 4474,
+        "esBase": 1441792,
+        "dsBase": 55456
+      },
+      {
+        "step": 1500000,
+        "cs": 61440,
+        "ip": 2715,
+        "ax": 4,
+        "bp": 0,
+        "cx": 20696,
+        "es": 0,
+        "di": 0,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 1600000,
+        "cs": 61440,
+        "ip": 6691,
+        "ax": 257,
+        "bp": 0,
+        "cx": 3151,
+        "es": 47104,
+        "di": 8192,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 1700000,
+        "cs": 61440,
+        "ip": 3195,
+        "ax": 38,
+        "bp": 0,
+        "cx": 32367,
+        "es": 47104,
+        "di": 80,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 1800000,
+        "cs": 61440,
+        "ip": 8228,
+        "ax": 0,
+        "bp": 8351,
+        "cx": 13,
+        "es": 0,
+        "di": 55352,
+        "esBase": 0,
+        "dsBase": 0
+      },
+      {
+        "step": 1900000,
+        "cs": 64,
+        "ip": 6690,
+        "ax": 0,
+        "bp": 0,
+        "cx": 16197,
+        "es": 72,
+        "di": 0,
+        "esBase": 65536,
+        "dsBase": 65536
+      }
+    ]
+  },
+  "memory": {
+    "addressSpaceBytes": 16777216,
+    "installedRamBytes": 1048576,
+    "baseRamBytes": 524288,
+    "extendedRamBytes": 524288
+  },
+  "executionRevision": "9f99607fdbe8a6600ad4de0b11438a4b6d5899c4",
+  "sourceSha256": {
+    "src/i8086-machine.js": "e68f01684963879de58ccc1e77d16073247e9eb404a5e047333af3d27cfc1747",
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+    "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+    "src/at-8042-a20.js": "246c2915d5095c7ce3330d3fa023baf58e20b5673e357cec9c87b193013593a7",
+    "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/mc146818.js": "f618a3ada8708f03cf7ea73a4afd85cea8794aff1141b42efac1e2338b968083",
+    "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+    "scripts/run-at-bios-post.mjs": "cbe56709fb73e7ddc7f5f4fdbd773d7baf9fcf205951e305b14f3d9b51ffb121"
+  }
+}

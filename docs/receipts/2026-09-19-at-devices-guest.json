@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "revision": "e403306bd90b5acd78de866f562f1c22874fd09c",
+  "revision": "9f99607fdbe8a6600ad4de0b11438a4b6d5899c4",
   "node": "v22.23.2",
   "accepted": true,
   "scope": "owned real-mode 80286 guest IRQ8 handler through MC146818 and cascaded 8259s; not full AT BIOS evidence",
   "sourceHashes": {
     "scripts/run-at-devices-guest.mjs": "6094a5b9a1572dbe563e5428abddfbd4a950f32393a2248b44e36703f09d8aba",
-    "src/i8086-machine.js": "e5b24e9b732b2afcc67b2147263f941b0cfb92dd5666c4f0ad27ad15e273a036",
-    "src/at-8042-a20.js": "da5b3ab21d008357856cd8d8697f7de38579b855c9df002e9c97cf4f3694aea3",
-    "src/mc146818.js": "df92deced8591a30d0e0b55108d311b4844891629cfa3addb7c32f001d18b9e1",
+    "src/i8086-machine.js": "e68f01684963879de58ccc1e77d16073247e9eb404a5e047333af3d27cfc1747",
+    "src/at-8042-a20.js": "246c2915d5095c7ce3330d3fa023baf58e20b5673e357cec9c87b193013593a7",
+    "src/mc146818.js": "f618a3ada8708f03cf7ea73a4afd85cea8794aff1141b42efac1e2338b968083",
     "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
-    "src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9"
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a"
   },
   "expected": {
     "halted": true,

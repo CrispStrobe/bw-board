@@ -5,6 +5,21 @@ in separate worktrees. The user assigned 8086/8088 through 80286, eventual
 80386DX, protected mode, performance and real software including Doom and
 Windows. FPGA and SPICE/ASC schematic import/export belong to other lanes.
 
+## Active continuation: AT boot through applications
+
+The user authorized continued implementation toward genuine AT boot, 386DX,
+Windows and Doom. The [acceptance roadmap](X86-COMPATIBILITY-ROADMAP.md) fixes
+observable milestones and distinguishes the first Windows target from broader
+compatibility. Two Sol workers now own AT platform integration and the new
+386 core; Astra audits, integrates and maintains source-bound evidence.
+
+The pending candidate adds genuine 286 reset state, exception escalation,
+#DF task entry, shutdown/NMI recovery and TF delivery. The unmodified IBM AT
+Rev1 firmware reaches warm-reset dispatch and its protected memory scan on
+the opt-in [AT boot profile](I80286-AT-BOOT.md). These are bounded progress
+results: POST completion and a firmware-driven DOS boot are still pending.
+The last completed milestone below remains the current qualified baseline.
+
 ## Latest: common ISA, gates, tasks and existing binaries
 
 The opt-in protected executor now implements the common multiply/divide,

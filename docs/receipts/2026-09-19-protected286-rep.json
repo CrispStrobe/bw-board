@@ -5,8 +5,8 @@
   "scope": "owned ring-0 REP MOVSW with a delivered #GP, descriptor repair, IRET restart, and completion; architectural state only",
   "sourceHashes": {
     "./compare-pcjs-protected286-rep.mjs": "6278f582a4eb180966548c68f01847e4a1bd7e2d7e63c0dbe1e25b62e1a67ac4",
-    "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
-    "../src/experimental/i80286-protected.js": "9999564423d1af55b88aff91f707a076891ce4659a23e8a6ecc7b24ccebdb97c"
+    "../src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "../src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
   },
   "mutation": null,
   "status": "pass",
@@ -47,5 +47,5 @@
     ]
   },
   "differences": [],
-  "executionRevision": "974f088b0b94a6000eb676b7ec83b9b716efa4e2"
+  "executionRevision": "da0a27a61befe1a9751ed64082244a896cd6b3a4"
 }

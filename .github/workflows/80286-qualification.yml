@@ -2,7 +2,7 @@ name: 80286 qualification
 
 on:
   push:
-    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa', 'lane/astra-x86-protection-at', 'lane/astra-x86-tasks']
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa', 'lane/astra-x86-protection-at', 'lane/astra-x86-tasks', 'lane/astra-x86-at-boot']
   workflow_dispatch:
     inputs:
       evidence:

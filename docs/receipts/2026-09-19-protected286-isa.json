@@ -5,8 +5,8 @@
   "scope": "owned ring-0 arithmetic loop, 16-bit ModR/M high-memory RMW, near CALL/RET, and HLT; no timing, privilege, REP, or broad ISA claim",
   "sourceHashes": {
     "./compare-pcjs-protected286-isa.mjs": "7b0dfab95737d68ce1d077ed776bcad37f47d75e614b49f5e66ddaa650e44bb8",
-    "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
-    "../src/experimental/i80286-protected.js": "9999564423d1af55b88aff91f707a076891ce4659a23e8a6ecc7b24ccebdb97c"
+    "../src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "../src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
   },
   "mutation": null,
   "status": "pass",
@@ -39,5 +39,5 @@
     "result": 17
   },
   "differences": [],
-  "executionRevision": "974f088b0b94a6000eb676b7ec83b9b716efa4e2"
+  "executionRevision": "da0a27a61befe1a9751ed64082244a896cd6b3a4"
 }

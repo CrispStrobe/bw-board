@@ -56,8 +56,9 @@ types clear TF and NT; interrupt gates also clear IF, while trap gates preserve
 IF. Faults save the restarting IP. Software interrupts save the following IP.
 Ring-0 IRET may restore IOPL and NT, clears reserved bits 15, 5, and 3, and
 forces FLAGS bit 1. IRET with NT set performs a nested-task return through
-the current TSS backlink. TF single-step delivery remains unsupported, so a
-subsequent instruction with restored TF also refuses before execution.
+the current TSS backlink. TF is sampled before each instruction and delivered
+after completion, with separate SS and STI shadow behavior. See the
+[exception/recovery contract](I80286-EXCEPTION-ESCALATION.md).
 
 LLDT/LTR cache 286 LDT and available-TSS descriptors; SLDT/STR expose their
 visible selectors. LTR sets the descriptor busy bit but does not perform or
@@ -96,8 +97,9 @@ const checkpoint = cpu.getProtectedState();
 cpu.setProtectedState(checkpoint);
 ```
 
-This slice still refuses nested/double-fault recovery, TF single-step,
-NPX execution, and instructions outside its documented subset. No cycle or
+This slice implements bounded exception escalation, double-fault task entry,
+shutdown/NMI/reset recovery and single-step delivery. Numeric-extension
+arithmetic and instructions outside its documented subset remain unsupported. No cycle or
 physical-bus timing qualification is claimed for this protected decoder.
 With delivery disabled, a supported protection fault is surfaced as
 `ProtectedModeFault` with vector, error code and restart IP. Ordinary instruction
@@ -107,12 +109,11 @@ push error codes.
 
 Task switches have an explicit commit boundary: faults after TR/image replacement
 retain the incoming context and any already-loaded caches, rather than rolling
-back to the outgoing task. A later failure to deliver that exception remains a
-diagnostic refusal with the committed state retained. See the task document for
-the Intel Appendix B basis and known boundaries. Malformed public hardware
-interrupt entry still surfaces a diagnostic fault. TF on the instruction that
-sets PE commits LMSW and refuses post-instruction delivery without falling
-through the real-mode IVT.
+back to the outgoing task. Replacement exceptions and double faults use that
+committed context. See the task document for the Intel Appendix B basis.
+Malformed public interrupt entry delivers the protection fault with EXT set;
+failure to enter #DF shuts down the CPU. TF on the instruction setting PE
+commits LMSW and uses protected post-instruction delivery.
 
 The implementation uses a small protected decoder above the existing
 real-mode core. An earlier attempt to thread segment-identity tokens through
