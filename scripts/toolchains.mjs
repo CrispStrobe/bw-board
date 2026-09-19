@@ -139,7 +139,7 @@ export function runToolchain(id, source, opts = {}, hooks = {}) {
     const flavor = opts.flavor && FLAVORS[opts.flavor] ? opts.flavor : DEFAULT_FLAVOR;
     const m = FLAVORS[flavor];
     const run = opts.run !== false;
-    const common = { variant: m.variant, preset: m.preset, max: opts.max || 40_000_000 };
+    const common = { variant: m.variant, preset: m.preset, max: opts.max || 40_000_000, keys: opts.keys || '' };
     const base = { toolchain: id, flavor };
 
     if (tc.kind === 'native') {
