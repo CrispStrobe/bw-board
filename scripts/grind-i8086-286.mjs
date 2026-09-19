@@ -8,6 +8,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {SST286_REVISION, parseSST286, parseRevocations} from './lib/sst286.mjs';
 import {fast286ExitCode, fast286Verdict} from './lib/fast286-verdict.mjs';
 import {I8086} from '../src/i8086.js';
@@ -94,7 +95,9 @@ function executeVariant(t, fileMasks) {
 
 export {executeVariant};
 
-if (process.env.FAST286_RUNNER_TEST !== '1') try {
+const invokedAsCLI = process.argv[1] !== undefined
+    && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedAsCLI) try {
     const args = process.argv.slice(2), root = process.env.I80286_VECTORS;
     if (!root) throw new Error('Set I80286_VECTORS to an external SingleStepTests/80286 checkout (e.g. ~/code/80286-vectors)');
     let limit = Infinity, reportPath;

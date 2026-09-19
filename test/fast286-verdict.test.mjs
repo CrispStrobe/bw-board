@@ -33,9 +33,7 @@ test('missing, incomplete and malformed accounting cannot pass vacuously', () =>
 });
 
 test('consecutive vectors see fresh zero-filled memory', async () => {
-    process.env.FAST286_RUNNER_TEST = '1';
     const {executeVariant} = await import('../scripts/grind-i8086-286.mjs');
-    delete process.env.FAST286_RUNNER_TEST;
     const regs = () => Object.fromEntries(['ax','bx','cx','dx','cs','ss','ds','es','sp','bp','si','di','ip','flags']
         .map(name => [name, name === 'flags' ? 2 : name === 'ip' ? 0x100 : 0]));
     const firstRegs = regs(); firstRegs.ax = 0xbeef;
