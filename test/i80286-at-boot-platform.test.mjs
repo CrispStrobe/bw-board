@@ -97,6 +97,8 @@ test('second-pass AT page windows participate in I/O conflict validation', () =>
     config.chips.pop();config.chips[2].at=0x60;
     config.a20={controller:'8042'};
     assert.throws(()=>new I8086Machine(config),/8042 A20 controller conflicts.*"pages"/);
+    config.chips[2].at=0x62;config.chips[2].span=1;
+    assert.doesNotThrow(()=>new I8086Machine(config));
 });
 
 test('boot profile separates 16MiB address space from one MiB installed RAM', () => {

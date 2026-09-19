@@ -906,7 +906,8 @@ export class I8086Machine {
             };
             const overlap=this._io.find(other=>window.start<=other.end&&other.start<=window.end);
             if(overlap)throw new Error(`machine config: "${overlap.name}" and "${window.name}" both claim I/O address ${Math.max(overlap.start,window.start).toString(16).toUpperCase()}h`);
-            if(this._a20Controller&&window.start<=0x64&&window.end>=0x60)
+            if(this._a20Controller&&((window.start<=0x60&&window.end>=0x60)||
+                (window.start<=0x64&&window.end>=0x64)))
                 throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${window.name}" at port 60h or 64h`);
             this._io.push(window);
         }
@@ -919,7 +920,8 @@ export class I8086Machine {
                 start:c.at,end:c.at+(c.span||REGS.atdmapage)-1};
             const overlap=this._io.find(other=>window.start<=other.end&&other.start<=window.end);
             if(overlap)throw new Error(`machine config: "${overlap.name}" and "${window.name}" both claim I/O address ${Math.max(overlap.start,window.start).toString(16).toUpperCase()}h`);
-            if(this._a20Controller&&window.start<=0x64&&window.end>=0x60)
+            if(this._a20Controller&&((window.start<=0x60&&window.end>=0x60)||
+                (window.start<=0x64&&window.end>=0x64)))
                 throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${window.name}" at port 60h or 64h`);
             this._io.push(window);
         }
