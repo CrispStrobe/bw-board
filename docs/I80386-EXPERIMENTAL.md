@@ -130,9 +130,10 @@ encodings therefore raise architectural #UD rather than an implementation
 refusal. REP INS/OUTS are on that permitted list but remain explicit
 implementation refusals until their per-iteration I/O semantics are added.
 If a later REPE/REPNE iteration faults before its comparison completes, this
-model retains the flags from the last completed iteration. That behavior is
-specified by later Intel manuals but is not presented as independently
-verified original-386 hardware evidence here.
+model retains the flags from the last completed iteration. Later Intel manuals
+instead specify restoration of the flags from before the entire instruction;
+the current behavior is therefore an explicit unqualified limitation, not
+evidence of original-386 behavior.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the
