@@ -98,9 +98,9 @@ MOV to and from ES/CS/SS/DS/FS/GS uses a 16-bit segment operand, independent
 of the general operand-size default. Invalid encodings raise #UD. Protected
 data-register loads admit null selectors with an unusable cache, distinguish
 #GP, #NP, and #SS for the bounded GDT path, and leave LDT and expand-down data
-as explicit valid-but-unsupported paths. The original Intel 80386 manual lists
-8C as a 16-bit memory write and zero-extends a 32-bit register destination
-when 66 selects 32-bit operand size. That distinction is graded against pinned
+as explicit valid-but-unsupported paths. Opcode 8C writes 16 bits to memory
+and zero-extends a register destination under 32-bit operand size. The original
+manual lists only the r/m16 form; the register upper-half policy follows pinned
 PCjs and fixed samples from the pinned SST386 physical 386EX capture; the
 hardware profile makes no protected-mode or timing claim.
 
@@ -141,7 +141,8 @@ Additional bounded profiles cover byte XOR/MOV and byte MOVZX/MOVSX (36
 samples), and immediate SHL/SHR/SAR across operand/address sizes (36 samples).
 The three profiles exclude 888, 2,600 and 3,111 published exception cases,
 respectively, before deterministic selection. Those cases are neither passes
-nor evidence of exception compatibility. The admitted total is only 84
+nor evidence of exception compatibility. Six additional segment-move samples pass, with 46 exception inputs excluded.
+The admitted total is only 90
 samples, not the full 386 corpus. Owned IMUL tests pass, but IMUL hardware
 qualification remains pending. Unsupported instruction/protection paths still
 raise a diagnostic refusal. The bounded same-ring recovery above does not
