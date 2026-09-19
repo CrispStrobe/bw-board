@@ -9,6 +9,16 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-19 CLAIM — bwcx: Level-1 MOS reverse-VDS channel symmetry, isolated
+worktree `/mnt/volume1/code/wt/bwb-mos-reverse-vds-symmetry`, branch
+`lane/mos-reverse-vds-symmetry`, exact base
+`d128b384a9f9df986ae38db72bc7dae33a6b092e`. Owns only the bounded MOS channel
+bias/stamp/region/current readers in `src/mna.js`, one focused self-authored
+reverse-terminal test, and this row. Prove ngspice source/drain-role agreement
+for negative authored VDS while preserving explicit bulk topology and ordinary
+positive-VDS behavior. Excludes junction constants, tolerance/solver policy,
+CUI/corpus/pins, PMOS model broadening, GAMMA/PHI admission and x86 work.
+
 2026-09-19 DONE — bwcx: exact Level-1 MOS bulk-junction default-temperature
 alignment, isolated worktree `/mnt/volume1/code/wt/bwb-mos-bulk-temperature`,
 branch `lane/mos-bulk-temperature`, exact base
