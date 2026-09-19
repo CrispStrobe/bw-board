@@ -69,7 +69,7 @@ const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const NPN_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'beta', 'br', 'n', 'vaf', 'rb', '_model']);
 const NMOS_OPERATING_POINT_PARAMS = new Set([
-  'model', 'vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround', '_model',
+  'model', 'vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround', 'bulkOnSource', '_model',
 ]);
 const PMOS_OPERATING_POINT_PARAMS = new Set([
   'model', 'vth', 'kp', 'w', 'l', 'lambda', '_model',
@@ -2546,9 +2546,14 @@ export class BoardImpl {
           throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
             + 'lambda must be an explicit finite number greater than or equal to zero');
         }
-        if (params.bulkAtGround !== true) {
+        const groundedBulk = params.bulkAtGround === true
+          && !Object.prototype.hasOwnProperty.call(params, 'bulkOnSource');
+        const sourceTiedBulk = params.bulkOnSource === true
+          && !Object.prototype.hasOwnProperty.call(params, 'bulkAtGround');
+        if (!groundedBulk && !sourceTiedBulk) {
           throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
-            + 'bulkAtGround must explicitly prove the fourth terminal is the reference net');
+            + 'bulkAtGround must explicitly prove the fourth terminal is the reference net, '
+            + 'or bulkOnSource must exclusively prove it is tied to source');
         }
         if (Object.prototype.hasOwnProperty.call(params, '_model')
             && (typeof params._model !== 'string' || !params._model.length)) {
@@ -2722,6 +2727,28 @@ export class BoardImpl {
       tSeconds: 0,
       dcSources: waveformBias === 'dc-value',
     });
+    const nmosBulkModes = new Set(parts.filter(part => part.kind === 'nmos').map(part =>
+      part.params?.bulkOnSource === true ? 'source' : 'ground'));
+    const nmosMetadata = nmosBulkModes.size === 1 && nmosBulkModes.has('source') ? {
+      model: 'explicit-spice-level1-source-tied-bulk',
+      requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkOnSource'],
+      defaults: { bulkIs: 1e-14, bulkN: 1 },
+      thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+      temperatureModel: 'fixed',
+    } : nmosBulkModes.size > 1 ? {
+      model: 'explicit-spice-level1-known-bulk',
+      requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
+      admittedBulkTopologies: ['ground', 'source'],
+      defaults: { bulkIs: 1e-14, bulkN: 1 },
+      thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+      temperatureModel: 'fixed',
+    } : {
+      model: 'explicit-spice-level1-grounded-bulk',
+      requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
+      defaults: { bulkIs: 1e-14, bulkN: 1 },
+      thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+      temperatureModel: 'fixed',
+    };
     return {
       analysis: {
         kind: 'dc-operating-point',
@@ -2752,13 +2779,7 @@ export class BoardImpl {
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },
-        nmos: {
-          model: 'explicit-spice-level1-grounded-bulk',
-          requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
-          defaults: { bulkIs: 1e-14, bulkN: 1 },
-          thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
-          temperatureModel: 'fixed',
-        },
+        nmos: nmosMetadata,
         pmos: {
           model: 'explicit-spice-level1-explicit-bulk-terminal',
           requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
