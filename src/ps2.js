@@ -175,4 +175,34 @@ export function ps2OnVia(keyboard, via, opts = {}) {
     return cap;
 }
 
+/**
+ * The XT-shape wiring for the 8086/80286 tier: the captured scancode byte onto
+ * an 8255 port's eight inputs (port A by default — where a PC latches the
+ * keyboard byte at 0x60), and DATA AVAILABLE onto one bit of another port (a
+ * port C status bit, since a PPI has no dedicated control line like the VIA's
+ * CA1). A program polls the strobe bit (or the machine raises IRQ1 off it) and
+ * reads the byte at port A — the same capture chain, frame timing and Code
+ * Set 2 the VIA build uses. Returns the PS2Capture; advance() it per machine
+ * cycle-batch, exactly as ps2OnVia's result is advanced on the 6502.
+ *
+ * @param {PS2Keyboard} keyboard
+ * @param {import('./i8255.js').I8255} ppi
+ * @param {{ port?: 'a'|'b'|'c', strobePort?: 'a'|'b'|'c', strobeBit?: number, gapCycles?: number }} [opts]
+ */
+export function ps2On8255(keyboard, ppi, opts = {}) {
+    const port = opts.port || 'a';
+    const strobePort = opts.strobePort || 'c';
+    const strobeBit = opts.strobeBit ?? 0;
+    const cap = new PS2Capture(keyboard, {
+        gapCycles: opts.gapCycles,
+        onByte: (byte) => {
+            for (let i = 0; i < 8; i++) ppi.setInput(port, i, (byte >> i) & 1);
+        },
+        onDa: (level) => ppi.setInput(strobePort, strobeBit, level),
+    });
+    for (let i = 0; i < 8; i++) ppi.setInput(port, i, 0);
+    ppi.setInput(strobePort, strobeBit, 0);
+    return cap;
+}
+
 export default PS2Keyboard;
