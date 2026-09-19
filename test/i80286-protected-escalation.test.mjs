@@ -45,6 +45,26 @@ test('TF traps completed instructions with SS and explicit control-transfer supp
   halt.cpu.step();assert.equal(halt.cpu.ip,0x100);assert.equal(halt.cpu.halted,false);
 });
 
+test('TF on LMSW delivers a malformed #DB gate replacement from the completed boundary',()=>{
+  const mem=new Map();
+  const cpu=new ProtectedI80286({
+    read:a=>mem.get(a)??0,fetch:a=>mem.get(a)??0,write:(a,v)=>mem.set(a,v&255),
+  },{deliverProtectedFaults:true});
+  const put=(a,bytes)=>bytes.forEach((v,i)=>mem.set(a+i,v));
+  put(0,[0x0f,0x01,0xf0]);
+  put(0x208,[0xff,0xff,0,0x10,0,0x9a,0,0]);
+  put(0x408,[0,0,0,0,0,0x86,0,0]);
+  put(0x468,[0,1,8,0,0,0x86,0,0]);
+  cpu.gdtr={base:0x200,limit:0x0f};cpu.idtr={base:0x400,limit:0x6f};
+  cpu.cs=0;cpu.ip=0;cpu.ax=1;cpu.flags=0x0102;
+  cpu.step();
+  assert.deepEqual([cpu.msw&1,cpu.ip,cpu.sp],[1,0x100,0xfff8]);
+  assert.equal((mem.get(0xfff8)??0)|((mem.get(0xfff9)??0)<<8),1,
+    '#GP for malformed external #DB entry retains EXT');
+  assert.equal((mem.get(0xfffa)??0)|((mem.get(0xfffb)??0)<<8),3,
+    'replacement handler saves the completed LMSW IP');
+});
+
 test('a contributory delivery fault escalates to #DF with a zero error word',()=>{
   const f=fixture([0x8b,0x06,0x10,0]);
   f.cpu.segmentCaches[SEG_DS].limit=0x10;
@@ -132,6 +152,16 @@ test('host failures during #DF delivery stay visible and do not become shutdown'
   f.cpu.write=()=>{throw hostFailure;};
   assert.throws(()=>f.cpu.step(),error=>error===hostFailure);
   assert.equal(f.cpu.shutdown,false);
+});
+
+test('host failures during shutdown NMI do not invent an architectural NMI lockout',()=>{
+  const f=fixture();f.cpu.shutdown=true;f.gate(2,0x1a0);
+  const hostFailure=new Error('host NMI bus failure');let calls=0;
+  f.cpu.write=()=>{calls++;throw hostFailure;};
+  assert.throws(()=>f.cpu.interrupt(2),error=>error===hostFailure);
+  assert.equal(f.cpu._shutdownNmiFailed,false);
+  assert.throws(()=>f.cpu.interrupt(2),error=>error===hostFailure);
+  assert.ok(calls>=2,'the second NMI is attempted because no architectural entry fault occurred');
 });
 
 test('WAIT and ESC expose the bounded 286 #NM controls',()=>{

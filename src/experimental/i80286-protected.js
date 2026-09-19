@@ -1341,8 +1341,18 @@ export class ProtectedI80286 extends I8086 {
 
     _fault(vector) {
         if (!(this.msw & 1)) return super._fault(vector);
-        if (this.deliverProtectedFaults)
-            return this._deliverProtected(vector, {external:vector===1||vector===7||vector===9,returnIp:this.ip});
+        if (this.deliverProtectedFaults) {
+            try {
+                return this._deliverProtected(vector, {
+                    external:vector===1||vector===7||vector===9,
+                    returnIp:this.ip,
+                });
+            } catch (error) {
+                if (!(error instanceof ProtectedModeFault)) throw error;
+                error.restartIp=this.ip;
+                return this._deliverFaultWithEscalation(error);
+            }
+        }
         this._pmFault(vector, 0, 'IDT exception delivery is not implemented');
     }
 
@@ -1362,7 +1372,7 @@ export class ProtectedI80286 extends I8086 {
                 return result;
             } catch (error) {
                 this.shutdown=true;
-                this._shutdownNmiFailed=true;
+                if (error instanceof ProtectedModeFault) this._shutdownNmiFailed=true;
                 throw error;
             }
         }
