@@ -1345,6 +1345,47 @@ export class ExperimentalI80386 {
     }
   }
 
+  _stringIo(op, width, address32, override) {
+    const input = op === 0x6c || op === 0x6d;
+    const byte = op === 0x6c || op === 0x6e;
+    const ioWidth = byte ? 8 : width;
+    const bytes = ioWidth >>> 3;
+    const port = this.dx;
+    this._checkIo(port, ioWidth);
+    if (input) {
+      const offset = address32 ? this.edi : this.di;
+      const cache = this.segmentCaches[SEG_ES];
+      if (this.protectedMode && !this.virtual8086 && !cache.writable)
+        throw new I80386Fault(13, 0, "INS destination is not writable");
+      const linear = this._linear(SEG_ES, offset, bytes);
+      const physical = Array.from({ length: bytes }, (_, index) =>
+        this._translate((linear + index) >>> 0, { write: true }),
+      );
+      const value = this.inPort(port, ioWidth) >>> 0;
+      for (let index = 0; index < bytes; index++)
+        this.write(physical[index], (value >>> (index * 8)) & 0xff);
+      const delta = this.eflags & DF ? -bytes : bytes;
+      if (address32) this.edi = (this.edi + delta) >>> 0;
+      else this.di = (this.di + delta) & 0xffff;
+      return;
+    }
+    const offset = address32 ? this.esi : this.si;
+    const value = this._read(override ?? SEG_DS, offset, ioWidth);
+    this.outPort(port, value, ioWidth);
+    const delta = this.eflags & DF ? -bytes : bytes;
+    if (address32) this.esi = (this.esi + delta) >>> 0;
+    else this.si = (this.si + delta) & 0xffff;
+  }
+
+  _repeatIo(op, width, address32, override, instructionStart) {
+    const count = address32 ? this.ecx : this.cx;
+    if (count === 0) return;
+    this._stringIo(op, width, address32, override);
+    if (address32) this.ecx = (this.ecx - 1) >>> 0;
+    else this.cx = (this.cx - 1) & 0xffff;
+    if ((address32 ? this.ecx : this.cx) !== 0) this.eip = instructionStart;
+  }
+
   _repeatString(op, width, address32, override, repeat, instructionStart) {
     const count = address32 ? this.ecx : this.cx;
     if (count === 0) {
@@ -2210,6 +2251,9 @@ export class ExperimentalI80386 {
         if (byte) this.al = result;
         else this._setReg(0, operandWidth, result);
       }
+    } else if (repeatIoOpcodes.includes(op)) {
+      if (repeat === null) this._stringIo(op, width, address32, override);
+      else this._repeatIo(op, width, address32, override, instructionStart);
     } else if (stringOpcodes.includes(op)) {
       if (repeat === null) this._string(op, width, address32, override);
       else

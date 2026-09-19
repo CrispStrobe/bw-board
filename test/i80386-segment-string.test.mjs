@@ -355,10 +355,83 @@ test("zero-count REP avoids memory and invalid REP encoding raises #UD", () => {
   const invalid = fixture([0xf3, 0x90]).cpu;
   assert.throws(() => invalid.step(), (error) => error?.vector === 6);
   assert.equal(invalid.eip, 0);
-  const validButUnsupported = fixture([0xf3, 0x6c]).cpu;
-  assert.throws(
-    () => validButUnsupported.step(),
-    (error) =>
-      error?.constructor.name === "UnsupportedI80386" && /6c/.test(error.message),
+  const io = [];
+  const zeroIo = new I80386({
+    fetch: address => [0xf3, 0x6c][address] ?? 0,
+    inPort: (...args) => { io.push(args); return 0; },
+  });
+  zeroIo.cx = 0;
+  zeroIo.step();
+  assert.deepEqual([zeroIo.eip, zeroIo.di, io], [2, 0, []]);
+});
+
+test("INS/OUTS honor operand/address sizes, direction, and segment override", () => {
+  const memory = new Map();
+  const input = [];
+  const output = [];
+  const bytes = [
+    0x6c,             // INSB
+    0x66, 0x67, 0x6d, // INSD with EDI
+    0x64, 0x6f,       // OUTSW FS:[SI]
+  ];
+  bytes.forEach((value, index) => memory.set(index, value));
+  const cpu = new I80386({
+    fetch: address => memory.get(address) ?? 0,
+    read: address => memory.get(address) ?? 0,
+    write: (address, value) => memory.set(address, value & 0xff),
+    inPort: (port, width) => {
+      input.push([port, width]);
+      return width === 8 ? 0x5a : 0x12345678;
+    },
+    outPort: (...args) => output.push(args),
+  });
+  cpu.dx = 0x1f0;
+  cpu.di = 0x100;
+  cpu.step();
+  assert.deepEqual([memory.get(0x100), cpu.di], [0x5a, 0x101]);
+  cpu.edi = 0x200;
+  cpu.eflags |= 0x400;
+  cpu.step();
+  assert.deepEqual(
+    [[0, 1, 2, 3].map(index => memory.get(0x200 + index)), cpu.edi],
+    [[[0x78, 0x56, 0x34, 0x12][0], 0x56, 0x34, 0x12], 0x1fc],
   );
+  cpu.segmentCaches[4].base = 0x300;
+  cpu.si = 0x10;
+  memory.set(0x310, 0xcd);
+  memory.set(0x311, 0xab);
+  cpu.step();
+  assert.deepEqual(input, [[0x1f0, 8], [0x1f0, 32]]);
+  assert.deepEqual(output, [[0x1f0, 0xabcd, 16]]);
+  assert.equal(cpu.si, 0x0e);
+});
+
+test("REP INS commits one interruptible iteration per step", () => {
+  const memory = new Map([[0, 0xf3], [1, 0x6c]]);
+  let value = 0x40;
+  const cpu = new I80386({
+    fetch: address => memory.get(address) ?? 0,
+    read: address => memory.get(address) ?? 0,
+    write: (address, byte) => memory.set(address, byte),
+    inPort: () => value++,
+  });
+  cpu.cx = 2;
+  cpu.di = 0x100;
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di, memory.get(0x100)], [0, 1, 0x101, 0x40]);
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di, memory.get(0x101)], [2, 0, 0x102, 0x41]);
+});
+
+test("INS destination faults occur before a device read", () => {
+  let inputs = 0;
+  const cpu = fixture([0x6d]).cpu;
+  cpu.inPort = () => { inputs++; return 0; };
+  cpu.cr0 = 1;
+  cpu.segmentCaches[0].writable = false;
+  assert.throws(
+    () => cpu.step(),
+    error => error?.vector === 13 && error.errorCode === 0,
+  );
+  assert.deepEqual([inputs, cpu.di, cpu.eip], [0, 0, 0]);
 });
