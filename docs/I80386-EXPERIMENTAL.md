@@ -408,3 +408,16 @@ local result and the exact known reference result; it does not claim equality
 for that case. Denied I/O requires entry into the owned #GP handler, error
 code zero, the restart EIP and saved CS, and zero port callbacks. A generic
 reference abort is never accepted as proof of a protection fault.
+
+## Functional AT platform continuation
+
+The [platform receipt](receipts/2026-09-19-at-freedos-386-platform.json)
+records a six-million-step run on the integrated 4MiB profile. POST31 samples
+show successive DS bases 10000h, 20000h and 30000h, with about 852,831 executor
+steps per 64KiB scan. This demonstrates forward RAM-test progress; it does not
+qualify full POST or DOS boot. The separately accepted FreeDOS round trip uses
+the functional 286 AT profile.
+
+A one-million-step BIOS CPU profile attributes 70.3% of sampled self time to
+instruction-state copying and 5.1% to garbage collection. This identifies an
+optimization candidate; no speedup or fault-recovery simplification is claimed.

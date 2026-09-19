@@ -38,6 +38,21 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-19 DONE (implemented; exact-head qualification pending) — Astra/Sol
+FreeDOS persistence and bounded 386 AT platform. Candidate is the commit
+containing this row; platform diagnostic source is `46f1d04`. Unchanged official
+FreeDOS 1.4 boots through IBM AT BIOS, declines installation, writes FDBOOT.TXT,
+and reads its exact bytes after a fresh machine remount. The two actual source
+revisions and media hashes are retained in the tracked evidence fixture.
+The 386 adapter adds explicit functional four-clock instruction pacing and an
+opt-in 4MiB installed-RAM profile with matching CMOS sizes/checksum. Pacing tests
+exercise real IRQ wake, idle and architectural fault delivery. Twelve focused
+checks pass. A 6M-step source-bound BIOS diagnostic proves increasing 64KiB test
+addresses, not full 386 POST or DOS boot. Receipt:
+`docs/receipts/2026-09-19-at-freedos-386-platform.json`. No VM86, tasking,
+Windows, Doom or silicon timing claim. Snapshot copying is a measured future
+performance target, not a speedup included in this stage.
+
 2026-09-19 DONE (qualified and landed) — Astra/Sol
 386 ring, far-control and I/O continuation. Candidate and landing are
 `14d59084f14fdde5dba158e5ac2a3b25884e56e0`; executed source is
@@ -51,7 +66,7 @@ Pinned PCjs protection comparison passes its declared checks; conforming
 stack selection and saved RF remain explicit reference differences. Eight
 negative controls reject. Unchanged test386 reaches POST21/VM86 IRET after
 805,601 steps, not full-ROM acceptance. Source-bound receipt:
-`docs/receipts/2026-09-19-386-protection.json`. No full386DX, Windows, Doom,
+`docs/receipts/2026-09-19-386-protection.json`. No full 386DX, Windows, Doom,
 physical bus or timing claim. FreeDOS persistence, functional device pacing,
 VM86 and larger-memory platform work remain outside this freeze.
 Exact candidate CI `35475646953` passed (5,554 pass, 272 skip, zero fail),

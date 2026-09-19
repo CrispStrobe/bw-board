@@ -204,3 +204,7 @@ the IBM CGA BIOS does not initialize a VGA card. A later Doom platform needs a
 licensed external VGA ROM/INT10 path plus the planar/Mode-X behavior required
 by the selected unchanged binary. These are concrete missing platform pieces,
 not capabilities implied by the current 386 CPU or AT adapter.
+
+The combined [platform receipt](receipts/2026-09-19-at-freedos-386-platform.json)
+records the FreeDOS evidence audit, functional 386 pacing checks and the
+separate larger-memory BIOS diagnostic. The latter remains incomplete.
