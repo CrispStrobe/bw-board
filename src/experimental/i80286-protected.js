@@ -217,9 +217,15 @@ export class ProtectedI80286 extends I8086 {
 
     _pmFetch8() {
         if (this._pmBytes++ >= 10) this._pmFault(13, 0, 'instruction exceeds 10 bytes');
-        const a = this._linear(SEG_CS, this.ip, 1, 'fetch');
+        // IP is a 16-bit register, but wrapping it while decoding one
+        // instruction would turn the byte after CS:FFFF into CS:0000.  The
+        // 286 checks the logical instruction-stream offset against the cached
+        // CS limit instead and faults before that wrapped fetch occurs.
+        const logicalOffset = this._instrStartIp + this._pmBytes - 1;
+        if (logicalOffset > 0xffff) this._pmFault(13, 0, 'instruction crosses segment end');
+        const a = this._linear(SEG_CS, logicalOffset, 1, 'fetch');
         if (this.busTrace !== null) this.busTrace.push(0, a);
-        const value = this.fetch(a) & 0xff; this.ip = (this.ip + 1) & 0xffff; return value;
+        const value = this.fetch(a) & 0xff; this.ip = (logicalOffset + 1) & 0xffff; return value;
     }
     _pmFetch16() { return this._pmFetch8() | (this._pmFetch8() << 8); }
     _pmFetchS8() { const v = this._pmFetch8(); return v & 0x80 ? v - 0x100 : v; }

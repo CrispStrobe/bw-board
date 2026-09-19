@@ -14,8 +14,10 @@ overrides are supported for those direct data accesses.
 
 Each of CS, SS, DS, and ES has its own hidden descriptor cache. A load reads a
 286 descriptor, validates the bounded capability, sets the descriptor's
-accessed bit in memory, and retains its 24-bit base and 16-bit limit. Fetch,
-data, and stack word accesses check the full span before the first bus cycle.
+accessed bit in memory, and retains its 24-bit base and 16-bit limit. Data and
+stack word accesses check the full span before the first bus cycle. Instruction
+fetch checks every byte against the unwrapped logical CS offset, so decoding at
+`CS:FFFF` cannot continue from `CS:0000`.
 `pc` reports cached-CS-base plus IP. `getProtectedState()` and
 `setProtectedState()` include the visible registers, hidden caches, MSW,
 GDTR/IDTR, CPL, halt state, interrupt shadow, and cycle counter.

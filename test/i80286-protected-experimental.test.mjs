@@ -186,6 +186,21 @@ test('protected instructions retain the 286 length cap and HLT performs no later
   assert.deepEqual(halt.cpu.getProtectedState(), state, 'halted step is inert');
 });
 
+test('protected instruction fetch faults instead of wrapping from CS:FFFF to CS:0000', () => {
+  const f=fixture(); installBootstrap(f, []);
+  // Change the entry far jump to 0008:FFFF and place MOV AX,1234 there. The
+  // opcode byte is legal; its first immediate byte would wrap the logical
+  // instruction stream and must not be fetched from offset zero.
+  f.mem.set(12,0xff); f.mem.set(13,0xff);
+  f.put(0x10ffff,[0xb8]); f.put(0x100000,[0x34,0x12]);
+  for(let i=0;i<4;i++)f.cpu.step();
+  const reads=f.reads.length;
+  assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===13);
+  assert.equal(f.cpu.ip,0xffff);
+  assert.deepEqual(f.reads.slice(reads),[0x10ffff],'only the legal opcode byte reached the bus');
+  assert.equal(f.cpu.ax,1,'faulting instruction did not commit its immediate');
+});
+
 test('TF on the PE transition refuses trap delivery without touching the real-mode IVT', () => {
   const f=fixture(); f.put(0, [0x0f,0x01,0xf0]);
   f.cpu.cs=0; f.cpu.ip=0; f.cpu.ax=1; f.cpu.flags=0x0102;
