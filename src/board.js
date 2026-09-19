@@ -61,11 +61,12 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'inductor', 'diode', 'vsource', 'isource',
+  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'vsource', 'isource',
   'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
 
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
+const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
 
 const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
@@ -2357,8 +2358,9 @@ export class BoardImpl {
 
   /**
    * Compute, but do not adopt, a DC operating point for the first proven
-   * public domain: grounded static native R/C/L/D/V/I/E/G networks. Diodes must
-   * explicitly select the Shockley model and its complete DC parameter set.
+   * public domain: grounded static native R/C/L/D/Z/V/I/E/G networks. Diodes
+   * and zeners must explicitly select the Shockley model and their complete DC
+   * parameter sets.
    * This is not
    * an instantaneous read: capacitors are open, independent of stored charge.
    * Positive current means current INTO the named part terminal.
@@ -2373,7 +2375,7 @@ export class BoardImpl {
     for (const part of this._solveParts) {
       if (!OPERATING_POINT_KINDS.has(part.kind)) {
         throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
-          + 'the supported domain is static R/C/L/V/I, explicit Shockley D, '
+          + 'the supported domain is static R/C/L/V/I, explicit Shockley D/Z, '
           + 'plus ideal VCVS/VCCS only');
       }
       if (part.kind === 'vsource' || part.kind === 'isource') {
@@ -2429,6 +2431,35 @@ export class BoardImpl {
         for (const terminal of ['anode', 'cathode']) {
           if (this._netForTerminal(part.id, terminal) === undefined) {
             throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'zener') {
+        const params = part.params ?? {};
+        if (params.model !== 'shockley') {
+          throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+            + "model must be explicitly 'shockley'");
+        }
+        for (const name of ['is', 'n', 'vz', 'ibv']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.rs !== 'number' || !Number.isFinite(params.rs) || params.rs < 0) {
+          throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+            + 'rs must be an explicit finite number greater than or equal to zero');
+        }
+        const extra = Object.keys(params).find(name => !ZENER_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+            + `parameter ${extra} is outside the explicit Shockley breakdown DC domain`);
+        }
+        for (const terminal of ['anode', 'cathode']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported zener ${part.id}; `
               + `terminal ${terminal} is not connected to a supplied net`);
           }
         }
@@ -2552,7 +2583,7 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-l-d-v-i-e-g-exact-ideal-l-explicit-shockley-d',
+        scope: 'grounded-static-native-r-c-l-d-z-v-i-e-g-exact-ideal-l-explicit-shockley-d-z',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
@@ -2562,6 +2593,12 @@ export class BoardImpl {
         diodes: {
           model: 'explicit-shockley',
           parameters: ['is', 'n', 'rs'],
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        zeners: {
+          model: 'explicit-shockley-with-breakdown',
+          parameters: ['is', 'n', 'rs', 'vz', 'ibv'],
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },

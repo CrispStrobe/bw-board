@@ -115,7 +115,7 @@ test('the comment stripper removes prose and keeps code', () => {
     assert.match(stripComments('const s = "a/*b*/c";'), /a\/\*b\*\/c/);
 });
 
-test('zener and BJT stamps do NOT convert their vf, and cannot reach the exponential path', () => {
+test('zener and BJT stamps do not apply the LED rated-current knee conversion', () => {
     const mna = stripComments(read('src/mna.js'));
     const fnBody = name => {
         const i = mna.indexOf(`function ${name}(`);
@@ -135,15 +135,18 @@ test('zener and BJT stamps do NOT convert their vf, and cannot reach the exponen
             + 'the conversion would change its behaviour with nothing to check it against. If a '
             + 'rated current has been given to this class, say so here and make the decision.');
     }
-    // The zener alone keeps the exclusion. The BJTs deliberately reach an
-    // exponential path now (Ebers-Moll); see the header.
+    // An explicit zener now deliberately reaches the same Shockley companion
+    // as an ordinary diode in forward bias. This source assertion makes that
+    // routing decision load-bearing beside the independent ngspice test; the
+    // no-model zener remains on the legacy piecewise branch.
     {
         const body = fnBody('stampZener');
-        assert.ok(!/\b(?:junctionOpts|shockleyCompanion|ebersMollParams)\s*\(/.test(body)
-            && !/model\s*:\s*['"]shockley['"]/.test(body),
-            'stampZener now reaches an exponential path. Reason 1 for excluding it has expired: '
-            + 'it now HAS a second answer to agree with, so revisit the exclusion — and add the '
-            + 'driven check the BJTs got, because a name list cannot see the name nobody wrote yet.');
+        assert.match(body, /junctionModelOf\(part, undefined\) === ['"]shockley['"]/,
+            'the explicit zener Shockley route disappeared');
+        assert.match(body, /diodeCompanion\(vAcross, vf, rd, junctionOpts\(part\)\)/,
+            'the explicit zener forward route no longer shares the diode companion');
+        assert.match(body, /else if \(vAcross >= vf\)/,
+            'the legacy no-model zener knee disappeared');
     }
     for (const name of ['stampNPN', 'stampPNP']) {
         assert.match(fnBody(name), /diodeCompanion\(vAcross,\s*vbe,\s*rd\)/,
