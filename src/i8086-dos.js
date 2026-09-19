@@ -208,6 +208,14 @@ export function createDos8086(machine, io = {}) {
     let claimed = null;
     /** Next free paragraph for INT 21h/48h. Above a .COM's 64K arena. */
     let allocTop = 0x1800;
+    /** The memory-block chain (a lightweight MCB): each 48h block by segment ->
+     *  its size in paragraphs, and a free list of released blocks. 49h returns a
+     *  block (reclaiming the arena top when it was the last one, else adding to
+     *  the free list); 48h reuses a free block before bumping the top; 4Ah
+     *  resizes in place, freeing the tail on a shrink. Enough for programs that
+     *  allocate, free and resize — not a coalescing arena. */
+    const blocks = new Map();
+    const freeList = [];
     /** Top of the conventional-memory arena (640K), the paragraph past the last
      *  one a program owns. DOS writes it into PSP:0002 so a program that sizes
      *  its heap from there (LINK, MASM's larger passes) sees the whole arena
@@ -470,22 +478,52 @@ export function createDos8086(machine, io = {}) {
                 return ok();
             }
             case 0x48: {                                  // allocate memory
-                // A bump allocator over the space above the program. DOS
-                // answers a FAILED request with the LARGEST BLOCK AVAILABLE in
-                // BX, and a program that asks for everything to find out how
-                // much there is depends on that -- returning only carry makes
-                // it conclude there is no memory at all.
+                // Reuse a released block big enough (first fit, split the
+                // remainder) before bumping the arena top. DOS answers a FAILED
+                // request with the LARGEST BLOCK AVAILABLE in BX — a program
+                // that asks for everything to size the heap depends on it.
                 const want = cpu.bx;
-                const avail = (0xa000 - allocTop) & 0xffff;
-                if (want > avail) { cpu.bx = avail; return fail(8); }
-                cpu.ax = allocTop; allocTop += want; return ok();
+                const idx = freeList.findIndex((b) => b.paras >= want);
+                if (idx >= 0) {
+                    const b = freeList[idx];
+                    const seg = b.seg;
+                    if (b.paras > want) { b.seg = (b.seg + want) & 0xffff; b.paras -= want; }
+                    else freeList.splice(idx, 1);
+                    blocks.set(seg, want); cpu.ax = seg; return ok();
+                }
+                const topGap = (0xa000 - allocTop) & 0xffff;
+                if (want <= topGap) { const seg = allocTop; allocTop = (allocTop + want) & 0xffff; blocks.set(seg, want); cpu.ax = seg; return ok(); }
+                cpu.bx = Math.max(topGap, ...freeList.map((b) => b.paras), 0); return fail(8);
             }
-            case 0x49: return ok();                       // free: this allocator never reuses
+            case 0x49: {                                  // free a block
+                const seg = cpu.es, paras = blocks.get(seg);
+                if (paras != null) {
+                    blocks.delete(seg);
+                    if (((seg + paras) & 0xffff) === allocTop) allocTop = seg;   // reclaim the top
+                    else freeList.push({ seg, paras });
+                }
+                return ok();   // freeing an untracked block (e.g. the PSP) still succeeds
+            }
             case 0x4a: {                                  // resize a block
-                const want = cpu.bx;
-                const avail = (0xa000 - allocTop) & 0xffff;
-                if (want > avail + 0x1000) { cpu.bx = avail; return fail(8); }
-                return ok();
+                const seg = cpu.es, want = cpu.bx, cur = blocks.get(seg);
+                if (cur == null) {                        // untracked block (the program's own): size against the arena top
+                    const avail = (0xa000 - seg) & 0xffff;
+                    if (want > avail) { cpu.bx = avail; return fail(8); }
+                    return ok();
+                }
+                if (want <= cur) {                        // shrink: release the tail
+                    if (want < cur) {
+                        const tail = (seg + want) & 0xffff;
+                        if (((seg + cur) & 0xffff) === allocTop) allocTop = tail; else freeList.push({ seg: tail, paras: cur - want });
+                    }
+                    blocks.set(seg, want); return ok();
+                }
+                if (((seg + cur) & 0xffff) === allocTop) {   // grow in place only at the top
+                    const maxParas = (0xa000 - seg) & 0xffff;
+                    if (want <= maxParas) { allocTop = (seg + want) & 0xffff; blocks.set(seg, want); return ok(); }
+                    cpu.bx = maxParas; return fail(8);
+                }
+                cpu.bx = cur; return fail(8);              // boxed in: the most this block can be is its current size
             }
             case 0x35: {                                  // get interrupt vector
                 cpu.bx = rd16(0, cpu.al * 4);
