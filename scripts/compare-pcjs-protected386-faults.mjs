@@ -395,7 +395,7 @@ for(const [engine,value] of Object.entries(cases.ioDenied)) {
     differences.push({case:"ioDeniedExpected",engine,expected,actual:value});
 }
 const expectedConformingLocal={cs:0x1b,eip:2,ss:0x23,esp:0x800,handlerCs:0x0b,completed:true,
-  currentStackFrame:[2,0x1b,2],innerStackFrame:[0,0,0,0,0]};
+  currentStackFrame:[2,0x1b,2],innerStackFrame:[0,0x1b,2,0x800,0x23]};
 const expectedConformingPCjs={cs:0x1b,eip:2,ss:0x23,esp:0x800,handlerCs:8,completed:true,
   currentStackFrame:[0,0,0],innerStackFrame:[2,0x1b,2,0x800,0x23]};
 for(const [engine,expected] of [["actual",expectedConformingLocal],["reference",expectedConformingPCjs]]) {
