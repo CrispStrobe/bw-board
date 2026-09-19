@@ -410,6 +410,7 @@ export class ProtectedI80286 extends I8086 {
             }
             if(word&&(ea.reg===3||ea.reg===5)){
                 if(ea.isReg)this._pmFault(6,0,'far control transfer requires memory pointer');
+                this._linear(ea.id,ea.off,4,'read');
                 const ip=this._rd16(ea.id,ea.off),selector=this._rd16(ea.id,(ea.off+2)&0xffff);
                 this._farTransfer(ip,selector,ea.reg===3);
                 return ea.reg===3?28:15;
@@ -665,12 +666,12 @@ export class ProtectedI80286 extends I8086 {
         return (this.read(address) & 0xff) | ((this.read((address + 1) & 0xffffff) & 0xff) << 8);
     }
 
-    _callGate(selector) {
-        const raw=this._rawDescriptor(selector),type=raw.access&0x0f;
+    _callGate(selector,raw=this._rawDescriptor(selector)) {
+        const type=raw.access&0x0f;
         if((raw.access&0x10)||type!==4)this._pmFault(13,selector&0xfffc,'far CALL requires code or 286 call gate');
         if(Math.max(this.cpl,selector&3)>((raw.access>>5)&3))this._pmFault(13,selector&0xfffc,'call gate privilege');
         if(!(raw.access&0x80))this._pmFault(11,selector&0xfffc,'call gate not present');
-        if(raw.bytes[4]&0xe0||raw.bytes[6]||raw.bytes[7])
+        if(raw.bytes[6]||raw.bytes[7])
             this._pmFault(13,selector&0xfffc,'malformed 286 call gate');
         return{offset:raw.bytes[0]|raw.bytes[1]<<8,selector:raw.bytes[2]|raw.bytes[3]<<8,
             words:raw.bytes[4]&31};
@@ -680,28 +681,35 @@ export class ProtectedI80286 extends I8086 {
         let descriptor,gate=null;
         const raw=this._rawDescriptor(selector);
         if(!(raw.access&0x10)) {
-            if(!call)this._pmFault(13,selector&0xfffc,'far JMP through system descriptor unsupported');
-            gate=this._callGate(selector);
+            gate=this._callGate(selector,raw);
             descriptor=this._descriptor(gate.selector,SEG_CS,{ignoreRpl:true});
             offset=gate.offset;
         } else descriptor=this._descriptor(selector,SEG_CS);
         const targetCpl=(descriptor.access>>5)&3;
         if(targetCpl>this.cpl||(!gate&&targetCpl!==this.cpl))
             this._pmFault(13,(gate?.selector??selector)&0xfffc,'far transfer privilege');
-        if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
-        if(!call){this._commitDescriptor(SEG_CS,descriptor);this.ip=offset;return;}
+        if(!call){
+            if(targetCpl!==this.cpl)this._pmFault(13,gate?.selector??selector,'far JMP cannot change privilege');
+            if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
+            this._commitDescriptor(SEG_CS,descriptor);this.ip=offset;return;
+        }
         const oldIp=this.ip,oldCs=this.cs,oldSs=this.ss,oldSp=this.sp;
         if(targetCpl===this.cpl){
             const newSp=(oldSp-4)&0xffff,frame=this._cacheAddress(this.segmentCaches[SEG_SS],newSp,4,12);
+            if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
             this._commitDescriptor(SEG_CS,descriptor);
             this._writeFrameWord(frame+2,oldCs);this._writeFrameWord(frame,oldIp);
             this.sp=newSp;this.ip=offset;return;
         }
-        const stack=this._tssStack(targetCpl),stackDescriptor=this._descriptor(stack.ss,SEG_SS,{privilegeCpl:targetCpl});
+        const stack=this._tssStack(targetCpl);
+        let stackDescriptor;
+        try{stackDescriptor=this._descriptor(stack.ss,SEG_SS,{privilegeCpl:targetCpl});}
+        catch(e){if(e instanceof ProtectedModeFault){if(e.vector===11)e.vector=12;else if(e.vector===13)e.vector=10;}throw e;}
         const words=gate.words,bytes=8+words*2,newSp=(stack.sp-bytes)&0xffff;
         const frame=this._cacheAddress(stackDescriptor,newSp,bytes,12);
-        this._linear(SEG_SS,oldSp,words*2,'read');
+        if(words)this._linear(SEG_SS,oldSp,words*2,'read');
         const params=Array.from({length:words},(_,i)=>this._rd16(SEG_SS,(oldSp+i*2)&0xffff));
+        if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
         descriptor.selector=(gate.selector&0xfffc)|targetCpl;
         this._commitDescriptor(SEG_SS,stackDescriptor);this._commitDescriptor(SEG_CS,descriptor);
         this._writeFrameWord(frame+bytes-2,oldSs);this._writeFrameWord(frame+bytes-4,oldSp);
@@ -716,15 +724,17 @@ export class ProtectedI80286 extends I8086 {
         const ip=this._rd16(SEG_SS,this.sp),selector=this._rd16(SEG_SS,(this.sp+2)&0xffff);
         const newCpl=selector&3;
         if(newCpl<this.cpl)this._pmFault(13,selector&0xfffc,'far RET cannot return inward');
-        const descriptor=this._descriptor(selector,SEG_CS,{privilegeCpl:newCpl});
-        if(ip>descriptor.limit)this._pmFault(13,0,'far RET offset outside code segment');
         if(newCpl===this.cpl){
+            const descriptor=this._descriptor(selector,SEG_CS,{privilegeCpl:newCpl});
+            if(ip>descriptor.limit)this._pmFault(13,0,'far RET offset outside code segment');
             this._commitDescriptor(SEG_CS,descriptor);this.ip=ip;this.sp=(this.sp+4+discard)&0xffff;return;
         }
         const frameBytes=8+discard;
         this._linear(SEG_SS,this.sp,frameBytes,'read');
         const outerSp=this._rd16(SEG_SS,(this.sp+4+discard)&0xffff);
         const outerSs=this._rd16(SEG_SS,(this.sp+6+discard)&0xffff);
+        const descriptor=this._descriptor(selector,SEG_CS,{privilegeCpl:newCpl});
+        if(ip>descriptor.limit)this._pmFault(13,0,'far RET offset outside code segment');
         let stackDescriptor;
         try{stackDescriptor=this._descriptor(outerSs,SEG_SS,{privilegeCpl:newCpl});}
         catch(e){if(e instanceof ProtectedModeFault&&e.vector===11)e.vector=12;throw e;}

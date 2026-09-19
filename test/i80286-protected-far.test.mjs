@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import ProtectedI80286,{SEG_CS,SEG_DS,SEG_SS}from'../src/experimental/i80286-protected.js';
 
 function fixture(){
-  const mem=new Map(),cpu=new ProtectedI80286({read:a=>mem.get(a)??0,fetch:a=>mem.get(a)??0,write:(a,v)=>mem.set(a,v&255)});
+  const mem=new Map(),reads=[],cpu=new ProtectedI80286({read:a=>{reads.push(a);return mem.get(a)??0;},fetch:a=>mem.get(a)??0,write:(a,v)=>mem.set(a,v&255)});
   const put=(a,b)=>b.forEach((v,i)=>mem.set(a+i,v));
   const desc=(a,base,access,limit=0xffff)=>put(a,[limit&255,limit>>8,base&255,base>>8&255,base>>16&255,access,0,0]);
   put(0,[0x0f,1,0x16,0,1,0xb8,1,0,0x0f,1,0xf0,0xea,0,0,8,0]);put(0x100,[0x37,0,0,2,0]);
   desc(0x208,0x100000,0x9a);desc(0x210,0x120000,0x92);desc(0x218,0x130000,0x92);
   desc(0x220,0x140000,0xfa);desc(0x228,0x150000,0xf2);desc(0x230,0x160000,0xf2);
   cpu.cs=0;cpu.ip=0;for(let i=0;i<5;i++)cpu.step();
-  return{cpu,mem,put,desc};
+  return{cpu,mem,reads,put,desc};
 }
 
 test('same-ring immediate far CALL and RET preserve CS:IP and stack',()=>{
@@ -19,6 +19,20 @@ test('same-ring immediate far CALL and RET preserve CS:IP and stack',()=>{
   f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.ip,f.cpu.sp],[8,0x10,0x1fc]);
   assert.deepEqual([f.cpu._rd16(SEG_SS,0x1fc),f.cpu._rd16(SEG_SS,0x1fe)],[5,8]);
   f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.ip,f.cpu.sp],[8,5,0x200]);
+});
+
+test('JMP through a same-ring call gate transfers without building a frame',()=>{
+  const f=fixture();f.put(0x230,[0x20,0,8,0,0xff,0x84,0,0]);f.put(0x100000,[0xea,0,0,0x30,0]);
+  f.cpu.ip=0;f.cpu.ss=0x18;f.cpu.segmentCaches[SEG_SS]=f.cpu._descriptor(0x18,SEG_SS);f.cpu.sp=0x200;
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.ip,f.cpu.sp],[8,0x20,0x200]);
+});
+
+test('FF far pointer preflights all four bytes before reading the first word',()=>{
+  const f=fixture();f.put(0x100000,[0xff,0x1e,0xfe,0xff]);f.cpu.ip=0;
+  f.cpu.segmentCaches[SEG_DS]=f.cpu._descriptor(0x10,SEG_DS);f.cpu.segmentCaches[SEG_DS].limit=0xffff;
+  const before=f.reads.length;
+  assert.throws(()=>f.cpu.step(),e=>e.vector===13&&/limit/.test(e.reason));
+  assert.ok(!f.reads.slice(before).includes(0x12fffe),'operand bus was untouched');
 });
 
 test('DPL3 call gate copies parameters to ring0 and RETF imm returns to outer stack',()=>{
