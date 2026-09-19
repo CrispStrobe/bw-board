@@ -169,6 +169,11 @@ MOV moffs implements A0-A3 with independent operand and address sizes plus
 segment overrides. Stores do not read their destination, and complete segment
 spans are admitted before load or store effects.
 
+BOUND compares a signed 16-bit or 32-bit register against two inclusive signed
+bounds from memory. It admits the complete pair within the source segment
+before reading either value, rejects register encodings with #UD, and raises a
+restartable #BR without changing the tested register or guest memory.
+
 ROL, ROR, RCL, and RCR support the immediate, one, and CL-count groups at all
 three operand widths. Counts are masked to five bits, then reduced by the data
 width for ROL/ROR or the carry-ring width for 8/16-bit RCL/RCR. A masked count

@@ -2188,6 +2188,28 @@ export class ExperimentalI80386 {
       );
     else if (op === 0x60) this._pusha(width);
     else if (op === 0x61) this._popa(width);
+    else if (op === 0x62) {
+      const ea = this._decodeEA(address32, override);
+      if (ea.isReg)
+        throw new I80386Fault(6, null, "BOUND requires a memory operand");
+      const cache = this.segmentCaches[ea.seg];
+      if (
+        this.protectedMode &&
+        !this.virtual8086 &&
+        cache.code &&
+        !cache.readable
+      )
+        throw new I80386Fault(13, 0, "BOUND source is execute-only");
+      const bytes = width >>> 3;
+      const address = this._linear(ea.seg, ea.off, bytes * 2);
+      const signed = (value) =>
+        width === 32 ? value | 0 : (value << 16) >> 16;
+      const lower = signed(this._readLinear(address, bytes));
+      const upper = signed(this._readLinear((address + bytes) >>> 0, bytes));
+      const value = signed(this._reg(ea.reg, width));
+      if (value < lower || value > upper)
+        throw new I80386Fault(5, null, "BOUND range exceeded");
+    }
     else if (op >= 0x90 && op <= 0x97) {
       const register = op - 0x90;
       const accumulator = this._reg(0, width);
