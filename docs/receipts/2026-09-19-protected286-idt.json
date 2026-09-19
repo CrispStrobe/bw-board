@@ -1,7 +1,7 @@
 {
   "oracle": "PCjs",
   "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-  "executionRevision": "c08e23ed01cee4bf47eb5fc631551c70b383f3a4",
+  "executionRevision": "974f088b0b94a6000eb676b7ec83b9b716efa4e2",
   "node": "v22.23.2",
   "scope": "ring-0 16-bit 80286 interrupt/trap gates, same-ring IRET, delivered #GP frame; architectural state only",
   "knownOracleLimitations": {
@@ -32,7 +32,7 @@
   "sourceHashes": {
     "./compare-pcjs-protected286-idt.mjs": "5a8db5b399dfc2c99f5336ceed959033346b8676c5c18b1253cb6e1486bd3b82",
     "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
-    "../src/experimental/i80286-protected.js": "7de93597db1c93ae7ed1a223d54cd1143acbdd5034166d54fbdc7b7968e310b7",
+    "../src/experimental/i80286-protected.js": "9999564423d1af55b88aff91f707a076891ce4659a23e8a6ecc7b24ccebdb97c",
     "pcjs:x86help.js": "b69065dfd377e3037a54eeec0e42aedd8d77779e7c9511659c44c5d8d0556529",
     "pcjs:segx86.js": "664eeaab6867e4e65d99f228cc38c03d68e6ccc7236802c018c6df00591b738e",
     "pcjs:x86ops.js": "400acb7ed6a937c043eb2edee0fdf6c5b5a07016482fc50064b7e5d99d106b53"

@@ -5,9 +5,63 @@ in separate worktrees. The user assigned 8086/8088 through 80286, eventual
 80386DX, protected mode, performance and real software including Doom and
 Windows. FPGA and SPICE/ASC schematic import/export belong to other lanes.
 
+## Latest: common ISA, gates, tasks and existing binaries
+
+The opt-in protected executor now implements the common multiply/divide,
+frame/stack, pointer, bounds, BCD, port-string and selector-query families;
+far CALL/JMP/RETF; call gates with parameter copying; and 286 hardware task
+CALL/JMP, task gates and nested-task IRET. Conforming code, expand-down stack
+limits, MSW.TS/CLTS, outgoing TSS saves, busy/backlink/NT behavior and incoming
+LDTR/cache loading are covered. Task faults after the commit point retain the
+incoming context; they do not restore the outgoing task. The detailed Intel
+Appendix B sequence is the documented basis where its overview table differs.
+See [the common ISA](I80286-PROTECTED-COMMON-ISA.md) and
+[far/task contracts](I80286-FAR-CONTROL-EXPERIMENT.md).
+
+Eight unchanged MIT-licensed JA1UMI boot images now complete their declared
+local acceptance checks. Five finish their own text-output loops; two complete
+repeated dispatch/return through two tasks; the eighth completes two interrupt
+task entries and returns across privilege levels. Inputs, original upstream
+revision and license are pinned in the repository. The harness supplies a BIOS
+handoff and deterministic retrace input; it does not execute an AT BIOS or
+claim a protected DOS application result.
+
+Seven images are also compared against exact pinned PCjs. The result is
+`pass-with-known-oracle-differences`, not full equality: PCjs retains inaccessible
+DS/ES after outer RETF, loses dispatcher IOPL on task return, and differs in
+seven saved-TSS bytes per dispatch example. The grader requires the exact
+manual-derived local state and the exact observed reference differences;
+every other graded byte/field must agree. The eighth PCjs image is a separately
+identified historical reset diagnostic. See [the image qualification](I80286-PROTECTED-EXTERNAL-IMAGES.md)
+and [receipt](receipts/2026-09-19-protected286-external-images.json).
+
+Local combined validation: 120 protected/image/AT tests passed; 31 current
+BASIC/C/menu/toolchain tests passed; 15 DOS tests passed, with one optional
+Turbo C test skipped because TCC.EXE is absent. Real Microsoft DOS/MASM/LINK/
+EXE2BIN execution remains green. Six owned PCjs comparisons passed; the external
+comparison has zero unexpected differences. Five external result mutations
+(video, task return, input hash, sector and saved task state) were each rejected
+at their exact expected fields. Affected protected and AT-memory receipts were
+rerun against the combined source; unchanged DOS/device dependencies retain
+their earlier source-bound receipts.
+
+Astra integrated concurrent BASIC/C and NMOS work before freezing qualification.
+Hosted CI, full real-mode 286 corpora and Harris native contracts qualify the
+frozen combined head before landing. The milestone tag records their links.
+No new wired speed result or production fast-core change is claimed.
+
+Next separate acceptance work is complete exception/trap/double-fault recovery,
+NPX boundaries and broader protected OS software, plus AT BIOS/reset/disk/DMA
+integration. The 386DX register/address/operand and paging model is still a
+separate implementation, followed by versioned Windows and Doom application
+runs. None of those results follows automatically from these eight programs.
+
+The sections below retain the milestone history; their “next” paragraphs refer
+to the state at each earlier increment.
+
 ## Starting evidence
 
-The qualified implementation is `84842a8678ef08766a6447618e0662c0f7cd40f2`;
+The initial qualified implementation was `84842a8678ef08766a6447618e0662c0f7cd40f2`;
 `acb68f2` corrects documentation only. Both independent fast286 and Harris
 semantic adapters passed 1,477,997 real-mode vectors (three revoked) in
 [run 35438804417](https://github.com/CrispStrobe/bw-board/actions/runs/35438804417).
@@ -19,7 +73,7 @@ Harris has a historical source-pinned DOS-prompt receipt. See
 fast-machine memory map remains one MiB with no PC/AT A20 or extended-memory
 model. The real DOS persistence test initially covered only 8086 and 80186.
 
-## Current increment
+## Initial DOS/protected increment
 
 The real DOS 2 kernel and shell now exercise persistence on 80286 as well as
 8086/80186. On fast 286, the actual Microsoft MASM, LINK and EXE2BIN binaries

@@ -1,8 +1,8 @@
 # Experimental 80286 protected-mode slice
 
 `ProtectedI80286` is an opt-in CPU helper. It executes a bounded 16-bit
-protected-mode subset with GDT/LDT segments and ring-0/ring-3 interrupt
-transitions without changing the production `i80286` target, which remains
+protected-mode subset with GDT/LDT segments, privilege transitions, call
+gates and 286 task switching without changing the production `i80286` target, which remains
 the vector-qualified real-mode core. Pass
 `{deliverProtectedFaults:true}` as the second constructor argument to enable
 the supported IDT and privilege-transition subset. The default preserves
@@ -30,7 +30,10 @@ grading beyond those preflight and architectural-state guarantees.
 
 The bounded common subset also includes CLD/STD, CLC/STC/CMC, LAHF/SAHF,
 PUSHF/POPF, CLI/STI, byte and word IN/OUT, immediate and segment PUSH/POP,
-XCHG, CBW/CWD, immediate TEST, NOT/NEG, and register/immediate shifts. CLI,
+XCHG, CBW/CWD, immediate TEST, NOT/NEG, and register/immediate shifts.
+The [common ISA extension](I80286-PROTECTED-COMMON-ISA.md) adds MUL/IMUL,
+DIV/IDIV, immediate IMUL, PUSHA/POPA, ENTER/LEAVE, LDS/LES, BOUND, XLAT,
+BCD adjusts, REP INS/OUTS, ARPL, LAR/LSL and VERR/VERW. CLI,
 STI, and I/O enforce CPL against IOPL. STI has a maskable-interrupt-only shadow;
 the existing MOV/POP SS shadow remains distinct because it also inhibits NMI.
 `canTakeInterrupt()` exposes both constraints and `canTakeNmi()` exposes only
@@ -41,18 +44,19 @@ architectural instruction. That choice follows the manual's instruction-level
 wording; the PCjs receipt does not grade interrupt-shadow timing.
 
 The optional IDT subset supports 286 interrupt gates (type 6) and trap gates
-(type 7) targeting present nonconforming code in the GDT. It implements
+(type 7) targeting present code in the GDT or LDT. Conforming targets retain
+the caller privilege; nonconforming inner targets switch stacks. It implements
 `INT imm8`, `INT3`, `INTO`, public hardware interrupt entry, same-ring and
 ring-3-to-ring-0 entry, and same-ring or outer `IRET`. Software interrupts
 enforce the gate DPL. The gate selector's RPL is
 ignored on entry and visible CS is normalized to CPL. Entry preflights the
-entire six-byte frame, plus the two-byte error code where applicable, before
-writing. The observable push order is FLAGS, CS, IP, then error code. Both gate
+entire six-byte same-ring or ten-byte inner-ring frame, plus the two-byte
+error code where applicable, before writing. The observable push order is FLAGS, CS, IP, then error code. Both gate
 types clear TF and NT; interrupt gates also clear IF, while trap gates preserve
 IF. Faults save the restarting IP. Software interrupts save the following IP.
 Ring-0 IRET may restore IOPL and NT, clears reserved bits 15, 5, and 3, and
-forces FLAGS bit 1. A later IRET while NT is set explicitly refuses the
-unsupported task return. TF single-step delivery remains unsupported, so a
+forces FLAGS bit 1. IRET with NT set performs a nested-task return through
+the current TSS backlink. TF single-step delivery remains unsupported, so a
 subsequent instruction with restored TF also refuses before execution.
 
 LLDT/LTR cache 286 LDT and available-TSS descriptors; SLDT/STR expose their
@@ -62,9 +66,14 @@ CPL/RPL/DPL checks are supported for the bounded segment forms. A ring-3
 interrupt or trap may enter a nonconforming ring-0 handler using SS0:SP0 from
 the current TSS. The complete new frame is validated before descriptor or
 stack writes. Outer IRET validates the ten-byte old frame and restores the
-outer CS:IP and SS:SP; inaccessible cached DS/ES values become null. Full task
-switches, task gates, call gates, conforming segments, and expand-down segments
-remain unsupported.
+outer CS:IP and SS:SP; inaccessible cached DS/ES values become null.
+
+[Far control transfers and task switching](I80286-FAR-CONTROL-EXPERIMENT.md)
+cover far CALL/JMP/RETF, type-4 call gates with parameter copying, direct TSS
+CALL/JMP, GDT/LDT and IDT task gates, and NT IRET. Task state saves preserve
+the static TSS fields; the incoming task loads LDTR and segment caches. Busy,
+backlink, NT and MSW.TS changes depend on the transfer kind. CLTS requires
+CPL 0. Conforming code and expand-down data/stack limits are supported.
 
 Each of CS, SS, DS, and ES has its own hidden descriptor cache. A load reads a
 286 descriptor, validates the bounded capability, sets the descriptor's
@@ -87,19 +96,23 @@ const checkpoint = cpu.getProtectedState();
 cpu.setProtectedState(checkpoint);
 ```
 
-This slice refuses full task switches, task/call gates and task returns,
-conforming and expand-down segments, nested/double-fault delivery,
-far `CALL`/`RET`, TF single-step delivery, and all opcodes or address forms
-outside the lists above. With delivery disabled, a supported protection fault
-is surfaced as `ProtectedModeFault` with vector, error code, and restart IP.
-With delivery enabled, #UD, #TS, #NP, #SS, and #GP raised by the bounded decoder are
-restored to their instruction boundary and delivered through a valid supported
-gate; #NP/#SS/#GP push their error code. A malformed public hardware-interrupt
-gate still surfaces the diagnostic fault instead of recursively synthesizing
-#GP. Unsupported features raise `UnsupportedProtectedMode` before architectural
-data or stack writes. If TF requests a trap on the instruction that sets PE,
-LMSW commits and post-instruction delivery is refused without falling through
-the real-mode IVT.
+This slice still refuses nested/double-fault recovery, TF single-step,
+NPX execution, and instructions outside its documented subset. No cycle or
+physical-bus timing qualification is claimed for this protected decoder.
+With delivery disabled, a supported protection fault is surfaced as
+`ProtectedModeFault` with vector, error code and restart IP. Ordinary instruction
+faults restore their instruction boundary. With delivery enabled, supported
+#DE, #BR, #UD, #TS, #NP, #SS and #GP faults use a valid IDT gate; #TS/#NP/#SS/#GP
+push error codes.
+
+Task switches have an explicit commit boundary: faults after TR/image replacement
+retain the incoming context and any already-loaded caches, rather than rolling
+back to the outgoing task. A later failure to deliver that exception remains a
+diagnostic refusal with the committed state retained. See the task document for
+the Intel Appendix B basis and known boundaries. Malformed public hardware
+interrupt entry still surfaces a diagnostic fault. TF on the instruction that
+sets PE commits LMSW and refuses post-instruction delivery without falling
+through the real-mode IVT.
 
 The implementation uses a small protected decoder above the existing
 real-mode core. An earlier attempt to thread segment-identity tokens through
@@ -145,3 +158,9 @@ TSS stack, checks the full inner frame, IRETs outward, and enters a second
 ring-0 handler that halts. It compares selectors, privilege, registers, stack,
 both observed frames, and completion with the exact pinned PCjs revision. It
 does not claim hardware task switching.
+
+The pinned, unchanged [JA1UMI boot images](../test/fixtures/ja1umi-286/README.md)
+provide existing protected-mode programs beyond owned guests. Their harness
+starts at the documented BIOS handoff, verifies completed text output or repeated
+task dispatch/return, and records explicit deterministic retrace input. These
+are CPU-program results, not a complete AT BIOS boot or DOS application claim.
