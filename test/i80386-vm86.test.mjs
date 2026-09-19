@@ -166,12 +166,23 @@ test("VM86 INT3 bypasses the IOPL check and enters its ring-0 gate", () => {
   put(memory, 0x208, descriptor(0x100000, 0x9a));
   put(memory, 0x210, descriptor(0x120000, 0x92));
   put(memory, 0x604, [0,4,0,0,0x10,0]);
-  put(memory, 0x300 + 3 * 8, [0,1,8,0,0,0x8e,0,0]);
+  put(memory, 0x300 + 3 * 8, [0,1,8,0,0,0xee,0,0]);
   put(memory, 0x12350, [0xcc]);
   cpu.step();
   cpu.eflags &= ~0x3000;
   cpu.step();
   assert.deepEqual([cpu.virtual8086,cpu.cs,cpu.eip,cpu.esp],[false,8,0x100,0x3dc]);
+
+  const denied=fixture();
+  denied.cpu.idtr={base:0x300,limit:0x7ff};
+  put(denied.memory,0x300+3*8,[0,1,8,0,0,0x8e,0,0]);
+  put(denied.memory,0x12350,[0xcc]);
+  denied.cpu.step();
+  denied.cpu.eflags&=~0x3000;
+  assert.throws(
+    ()=>denied.cpu.step(),
+    (error)=>error instanceof I80386Fault&&error.vector===13&&error.errorCode===(3*8+2),
+  );
 });
 
 test("VM86 IRET preserves IOPL and VM while 32-bit IRET can restore RF", () => {

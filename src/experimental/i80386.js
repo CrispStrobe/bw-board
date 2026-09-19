@@ -2430,7 +2430,7 @@ export class ExperimentalI80386 {
       );
     } else if (op === 0xcc) {
       this._suppressTrace = true;
-      this._deliver(3, this.eip, null);
+      this._deliver(3, this.eip, null, { software: true });
     } else if (op === 0xcd) {
       const vector = this._fetch8();
       this._checkVmIopl("INT");
