@@ -1056,18 +1056,18 @@ export class ExperimentalI80386 {
         targetSelector & 0xfffc,
         "call gate target privilege",
       );
-    if (!descriptor.present)
-      throw new I80386Fault(
-        11,
-        targetSelector & 0xfffc,
-        "call gate code not present",
-      );
     if (!call) {
       if (targetCpl !== cpl)
         throw new I80386Fault(
           13,
           targetSelector & 0xfffc,
           "call gate JMP cannot change privilege",
+        );
+      if (!descriptor.present)
+        throw new I80386Fault(
+          11,
+          targetSelector & 0xfffc,
+          "call gate code not present",
         );
       if (targetOffset > descriptor.limit)
         throw new I80386Fault(13, 0, "call gate offset outside code segment");
@@ -1077,6 +1077,12 @@ export class ExperimentalI80386 {
       this.eip = targetOffset;
       return;
     }
+    if (!descriptor.present)
+      throw new I80386Fault(
+        11,
+        targetSelector & 0xfffc,
+        "call gate code not present",
+      );
     if (targetCpl === cpl) {
       const frame = this._prepareStackFrame(gateWidth, [this.eip, this.cs]);
       if (targetOffset > descriptor.limit)
@@ -1105,9 +1111,9 @@ export class ExperimentalI80386 {
       false,
       true,
     );
-    if (count) this._linear(SEG_SS, oldStack, count * bytes);
     if (targetOffset > descriptor.limit)
       throw new I80386Fault(13, 0, "call gate offset outside code segment");
+    if (count) this._linear(SEG_SS, oldStack, count * bytes);
     for (let index = 0; index < count; index++)
       values[2 + index] = this._read(
         SEG_SS,

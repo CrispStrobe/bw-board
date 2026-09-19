@@ -61,6 +61,18 @@ test('call-gate null inner SS raises TS(0) before old parameter admission',()=>{
   assert.deepEqual([f.cpu.cs,f.cpu.ss,f.cpu.esp],[0x1b,0x23,0xffffffff]);
 });
 
+test('call-gate JMP privilege and CALL target checks precede later faults',()=>{
+  const jump=protectedFixture();jump.put(0x208,descriptor(0x100000,0x1a));jump.put(0x228,gate(0x100,8,0));
+  jump.cpu.cs=0x1b;jump.cpu.ss=0x23;jump.cpu.esp=0x800;jump.cpu.segmentCaches[1]=jump.cpu._ringCodeDescriptor(0x1b);jump.cpu.segmentCaches[2]=jump.cpu._ringStackDescriptor(0x23,3,{returnPath:true});
+  jump.put(0x140000,[0xea,0,0,0,0,0x2b,0]);
+  assert.throws(()=>jump.cpu.step(),error=>error?.vector===13&&error.errorCode===8);
+
+  const call=protectedFixture();call.put(0x208,descriptor(0x100000,0x9a,0xff,0x40));call.put(0x228,gate(0x100,8,1));
+  call.cpu.cs=0x1b;call.cpu.ss=0x23;call.cpu.esp=0xffffffff;call.cpu.segmentCaches[1]=call.cpu._ringCodeDescriptor(0x1b);call.cpu.segmentCaches[2]=call.cpu._ringStackDescriptor(0x23,3,{returnPath:true});
+  call.put(0x140000,[0x9a,0,0,0,0,0x2b,0]);
+  assert.throws(()=>call.cpu.step(),error=>error?.vector===13&&error.errorCode===0);
+});
+
 test('ring-3 32-bit call gate copies parameters and RETF imm returns to the outer stack',()=>{
   const f=protectedFixture();f.put(0x228,gate(0x100,8,2));
   f.cpu.cs=0x1b;f.cpu.ss=0x23;f.cpu.esp=0x800;
