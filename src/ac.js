@@ -23,7 +23,7 @@
  */
 
 import {
-  findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA,
+  findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
   mosGds, mosK, mosTriode, mosVth,
   shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
@@ -344,7 +344,7 @@ export function acSweep(args) {
             const vdsEff = Math.min(Math.max(vds, 0), Math.max(vovS, 0));
             if (vds < vovS) {
               ({ gm, gds } = mosTriode(k, vovS, vdsEff, dVovS, P));
-              gds += 1e-12;
+              gds += MOS_GDS_FLOOR;
             } else {
               const id0 = k * vovS * vovS;
               const lambda = P.lambda > 0 ? P.lambda : 0;
