@@ -84,6 +84,16 @@ test('ring-3 32-bit call gate copies parameters and RETF imm returns to the oute
   f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,7,0x23,0x808]);
 });
 
+test('a 16-bit call gate controls frame and parameter width from 32-bit caller code',()=>{
+  const f=protectedFixture();f.put(0x228,gate(0x100,8,1,4));
+  f.cpu.cs=0x1b;f.cpu.ss=0x23;f.cpu.esp=0x800;
+  f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(0x1b);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x23,3,{returnPath:true});
+  f.put(0x140000,[0x9a,0,0,0,0,0x2b,0]);f.put(0x100100,[0x66,0xca,2,0]);f.put(0x160800,[0x34,0x12]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[8,0x100,0x10,0x3f6]);
+  assert.deepEqual(Array.from({length:5},(_,index)=>(f.memory.get(0x1203f6+index*2)??0)|((f.memory.get(0x1203f7+index*2)??0)<<8)),[7,0x1b,0x1234,0x800,0x23]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,7,0x23,0x802]);
+});
+
 test('protected far task descriptors remain explicit refusals without stack mutation',()=>{
   const f=protectedFixture();f.put(0x228,descriptor(0x600,0x89,0x67,0));
   f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x400;f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});

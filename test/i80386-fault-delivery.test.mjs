@@ -159,6 +159,17 @@ test("ring-3 interrupt gates switch to the TSS stack and IRETD returns outward",
     [0x1b, 2, 0x23, 0x800, 0x202]);
 });
 
+test("a 16-bit inner interrupt gate builds a word frame from 32-bit caller code",()=>{
+  const f=fixture({deliverFaults:true});f.cpu.cr0=1;f.cpu.gdtr={base:0x200,limit:0x2f};f.cpu.idtr={base:0x400,limit:0x7ff};
+  f.put(0x208,descriptor(0x100000,0x9a));f.put(0x210,descriptor(0x120000,0x92));f.put(0x218,descriptor(0x140000,0xfa));f.put(0x220,descriptor(0x160000,0xf2));
+  f.put(0x400+0x20*8,gate(0x100,8,6,3));f.cpu.tr={selector:0x28,base:0x600,limit:0x67,present:true,type:11};f.put(0x604,[0,4,0,0,0x10,0]);
+  f.cpu.cs=0x1b;f.cpu.ss=0x23;f.cpu.esp=0x800;f.cpu.eflags=0x202;f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(0x1b);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x23,3,{returnPath:true});
+  f.put(0x140000,[0xcd,0x20]);f.put(0x100100,[0x66,0xcf]);f.cpu.step();
+  assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[8,0x100,0x10,0x3f6]);
+  assert.deepEqual(Array.from({length:5},(_,index)=>f.word(0x1203f6+index*2)),[2,0x1b,0x202,0x800,0x23]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,2,0x23,0x800]);
+});
+
 test("outer IRET validates the return stack selector before the target offset", () => {
   const f = fixture();
   f.cpu.cr0 = 1;
