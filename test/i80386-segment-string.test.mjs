@@ -196,6 +196,58 @@ test("an external interrupt resumes REP with completed progress preserved", () =
   assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [2, 0, 0x302]);
 });
 
+test("STI shadow spans REP while MOV SS shadow expires after its first iteration", () => {
+  const sti = fixture([0xfb, 0xf3, 0xaa]).cpu;
+  sti.cx = 2;
+  sti.di = 0x100;
+  sti.step();
+  sti.step();
+  assert.equal(sti.eip, 1);
+  assert.equal(sti.interrupt(0x20), false);
+  sti.step();
+  assert.equal(sti.eip, 3);
+  assert.equal(sti.interrupt(0x20), true);
+
+  const ss = fixture([0x8e, 0xd0, 0xf3, 0xaa]).cpu;
+  ss.ax = 0x10;
+  ss.cx = 2;
+  ss.di = 0x100;
+  ss.eflags |= 0x200;
+  ss.step();
+  assert.equal(ss.interrupt(0x20), false);
+  ss.step();
+  assert.equal(ss.eip, 2);
+  assert.equal(ss.interrupt(0x20), true);
+});
+
+test("TF traps after each completed REP iteration with restart EIP", () => {
+  const memory = new Map();
+  const put = (at, bytes) =>
+    bytes.forEach((value, index) => memory.set(at + index, value));
+  put(0x1000, [0xf3, 0xaa]);
+  put(4, [0x00, 0x02, 0x00, 0x00]);
+  put(0x200, [0xf4]);
+  const cpu = new I80386(
+    {
+      read: (address) => memory.get(address) ?? 0,
+      fetch: (address) => memory.get(address) ?? 0,
+      write: (address, value) => memory.set(address, value & 0xff),
+    },
+    { deliverFaults: true },
+  );
+  cpu.cs = 0x100;
+  cpu.segmentCaches[1].base = 0x1000;
+  cpu.sp = 0x100;
+  cpu.cx = 2;
+  cpu.di = 0x300;
+  cpu.al = 0x55;
+  cpu.eflags |= 0x100;
+  cpu.step();
+  assert.deepEqual([cpu.cs, cpu.eip, cpu.cx, cpu.di], [0, 0x200, 1, 0x301]);
+  const word = (at) => (memory.get(at) ?? 0) | ((memory.get(at + 1) ?? 0) << 8);
+  assert.equal(word(0xfa), 0);
+});
+
 test("REP fault restarts only the uncompleted iteration", () => {
   const { cpu, memory } = fixture([0x67, 0xf3, 0xaa]);
   cpu.ecx = 2;

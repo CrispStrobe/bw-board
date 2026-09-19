@@ -112,6 +112,13 @@ count/index/memory effects, which exposes a real external-interrupt boundary.
 A fault restarts only the uncompleted iteration, and zero-count repeats make
 no operand access. This is functional restart evidence, not a cycle count or
 prefetch/timing claim.
+The STI interrupt shadow spans every iteration of the following REP until the
+instruction completes. MOV/POP SS inhibition expires after the first repeat
+boundary, and TF can trap after each completed iteration with restart EIP at
+the prefix. Intel's original REP exception table specifies #UD/interrupt 6
+when the prefix precedes an instruction outside its permitted list; those
+encodings therefore raise architectural #UD rather than an implementation
+refusal.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the

@@ -98,6 +98,7 @@ export class ExperimentalI80386 {
     this.idtr = { base: 0, limit: 0x3ff };
     this.shutdown = false;
     this._interruptShadow = 0;
+    this._stiShadow = 0;
     this._nmiShadow = 0;
     this._debugShadow = 0;
     this._nmiActive = false;
@@ -836,6 +837,7 @@ export class ExperimentalI80386 {
     const condition =
       !compare || (repeat === 0xf3 ? !!(this.eflags & ZF) : !(this.eflags & ZF));
     if (remaining !== 0 && condition) this.eip = instructionStart;
+    this._repeatContinues = remaining !== 0 && condition;
   }
 
   _snapshotInstruction() {
@@ -852,6 +854,7 @@ export class ExperimentalI80386 {
       "gs",
       "halted",
       "_interruptShadow",
+      "_stiShadow",
       "_nmiShadow",
       "_debugShadow",
       "_nmiActive",
@@ -879,6 +882,7 @@ export class ExperimentalI80386 {
       "gs",
       "halted",
       "_interruptShadow",
+      "_stiShadow",
       "_nmiShadow",
       "_debugShadow",
       "_nmiActive",
@@ -1081,7 +1085,7 @@ export class ExperimentalI80386 {
       this.shutdown ||
       (nmi
         ? this._nmiShadow || this._nmiActive
-        : !(this.eflags & IF) || this._interruptShadow)
+        : !(this.eflags & IF) || this._interruptShadow || this._stiShadow)
     )
       return false;
     if (nmi) this._nmiActive = true;
@@ -1191,11 +1195,13 @@ export class ExperimentalI80386 {
       debugInhibited = this._debugShadow > 0;
     this._suppressTrace = false;
     this._preserveRf = false;
+    this._repeatContinues = false;
     try {
       const result = this._stepInstruction();
       this.eip >>>= 0;
       const suppressDebug = debugInhibited || this._debugShadow > 0;
       if (this._interruptShadow) this._interruptShadow--;
+      if (this._stiShadow && !this._repeatContinues) this._stiShadow--;
       if (this._nmiShadow) this._nmiShadow--;
       if (this._debugShadow) this._debugShadow--;
       if (!this._preserveRf) this.eflags &= ~RF;
@@ -1507,7 +1513,7 @@ export class ExperimentalI80386 {
       if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
         throw new I80386Fault(13, 0, "STI requires CPL <= IOPL");
       this.eflags |= IF;
-      this._interruptShadow = 2;
+      this._stiShadow = 2;
     } else if (op === 0xfc) this.eflags &= ~DF;
     else if (op === 0xfd) this.eflags |= DF;
     else if (op === 0x17) {
