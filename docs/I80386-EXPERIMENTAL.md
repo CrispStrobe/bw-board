@@ -37,6 +37,25 @@ descriptor cases as implementation refusals. This stage does not claim their
 architectural fault delivery; gate target and frame failures within the
 admitted same-ring profile do use architectural exceptions.
 
+The paging profile implements original-80386 two-level 4 KiB translation
+through CR3. It combines PDE/PTE present, U/S, and R/W permissions, applies
+the original supervisor-writes-ignore-R/W rule, records CR2 and the 386
+three-bit #PF error code, and translates instruction, data, stack, GDT, and
+IDT accesses. Present PDEs acquire A before a missing-PTE fault; present PTEs
+acquire A after permission admission, and writable accesses acquire D before
+the data write. Cross-page operations retain completed bus and page-table
+side effects if a later page faults, while architectural register state
+restarts at the instruction boundary. Interrupt frames translate and preflight
+their complete span before writing frame bytes.
+
+PSE, CR0.WP behavior from later processors, VM86, task/ring transitions, and
+TLB timing are outside this stage. Reloading CR3 takes effect immediately
+because this functional executor does not cache translations.
+The pinned PCjs comparisons currently keep PG clear, so they guard the
+non-paged execution and fault paths rather than serving as a paging oracle.
+Paging expectations in this stage come directly from the Intel 80386 page
+entry, protection-combination, and #PF error-code definitions.
+
 `scripts/compare-pcjs-protected386-faults.mjs` binds a clean PCjs revision
 `c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70` and compares independent 32-bit
 interrupt- and trap-gate frames, IF/TF behavior, and IRET state. The owned

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import I80386,{UnsupportedI80386} from '../src/experimental/i80386.js';
+import I80386,{I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
 
 function fixture(){
   const mem=new Map(),reads=[],writes=[];
@@ -59,9 +59,9 @@ test('register aliases preserve upper halves and operand/address overrides selec
   repeated.cpu.step();assert.equal(repeated.cpu.eax,0x12345678,'repeated 67 remains one address-size override');
 });
 
-test('bounded system profile refuses paging and unsupported descriptors without partial mode claims',()=>{
-  const f=fixture();f.put(0,[0x0f,0x22,0xc0]);f.cpu.eax=0x80000001;
-  assert.throws(()=>f.cpu.step(),e=>e instanceof UnsupportedI80386&&/paging/.test(e.message));
+test('bounded system profile requires PE before paging and refuses unsupported descriptors without partial mode claims',()=>{
+  const f=fixture();f.put(0,[0x0f,0x22,0xc0]);f.cpu.eax=0x80000000;
+  assert.throws(()=>f.cpu.step(),e=>e instanceof I80386Fault&&e.vector===13);
   assert.equal(f.cpu.cr0,0);
 });
 

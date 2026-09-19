@@ -53,6 +53,8 @@ export class ExperimentalI80386 {
     this.eip = 0;
     this.eflags = 2;
     this.cr0 = 0;
+    this.cr2 = 0;
+    this.cr3 = 0;
     this.halted = false;
     this.cycles = 0;
     this.cs = 0;
@@ -238,15 +240,67 @@ export class ExperimentalI80386 {
       throw new I80386Fault(seg === SEG_SS ? 12 : 13, 0, "segment limit fault");
     return (c.base + (off >>> 0)) >>> 0;
   }
-  _readLinear(a, size) {
+  _readPhysical(a, size) {
     let v = 0;
     for (let i = 0; i < size; i++)
       v += (this.read((a + i) >>> 0) & 255) * 2 ** (8 * i);
     return v >>> 0;
   }
-  _writeLinear(a, size, v) {
+  _writePhysical(a, size, v) {
     for (let i = 0; i < size; i++)
       this.write((a + i) >>> 0, (v >>> (8 * i)) & 255);
+  }
+  _pageFault(linear, write, user, protection) {
+    this.cr2 = linear >>> 0;
+    throw new I80386Fault(
+      14,
+      (protection ? 1 : 0) | (write ? 2 : 0) | (user ? 4 : 0),
+      protection ? "page protection fault" : "page not present",
+    );
+  }
+  _translate(linear, { write = false, supervisor = false } = {}) {
+    linear >>>= 0;
+    if (!(this.cr0 & 0x80000000)) return linear;
+    const user = !supervisor && (this.cs & 3) === 3;
+    const pdeAddress =
+      ((this.cr3 & 0xfffff000) + ((linear >>> 20) & 0xffc)) >>> 0;
+    let pde = this._readPhysical(pdeAddress, 4);
+    if (!(pde & 1)) this._pageFault(linear, write, user, false);
+    if (!(pde & 0x20)) {
+      pde |= 0x20;
+      this._writePhysical(pdeAddress, 4, pde);
+    }
+    const pteAddress = ((pde & 0xfffff000) + ((linear >>> 10) & 0xffc)) >>> 0;
+    let pte = this._readPhysical(pteAddress, 4);
+    if (!(pte & 1)) this._pageFault(linear, write, user, false);
+    const userPage = !!(pde & 4) && !!(pte & 4);
+    const writable = !!(pde & 2) && !!(pte & 2);
+    if ((user && !userPage) || (user && write && !writable))
+      this._pageFault(linear, write, user, true);
+    if (!(pte & 0x20)) {
+      pte |= 0x20;
+      this._writePhysical(pteAddress, 4, pte);
+    }
+    if (write && !(pte & 0x40)) {
+      pte |= 0x40;
+      this._writePhysical(pteAddress, 4, pte);
+    }
+    return ((pte & 0xfffff000) | (linear & 0xfff)) >>> 0;
+  }
+  _readLinear(a, size, options) {
+    let value = 0;
+    for (let i = 0; i < size; i++)
+      value +=
+        (this.read(this._translate((a + i) >>> 0, options)) & 255) *
+        2 ** (8 * i);
+    return value >>> 0;
+  }
+  _writeLinear(a, size, v, options) {
+    for (let i = 0; i < size; i++)
+      this.write(
+        this._translate((a + i) >>> 0, { ...options, write: true }),
+        (v >>> (8 * i)) & 255,
+      );
   }
   _read(seg, off, width) {
     const cache = this.segmentCaches[seg];
@@ -264,7 +318,7 @@ export class ExperimentalI80386 {
     if ((this._instructionBytes ?? 0) >= 15)
       throw new I80386Fault(13, 0, "instruction exceeds 15-byte limit");
     const a = this._linear(SEG_CS, this.eip, 1),
-      v = this.fetch(a) & 255;
+      v = this.fetch(this._translate(a)) & 255;
     this._instructionBytes = (this._instructionBytes ?? 0) + 1;
     this.eip += 1;
     return v;
@@ -286,7 +340,9 @@ export class ExperimentalI80386 {
     if (off + 7 > this.gdtr.limit)
       throw new UnsupportedI80386("selector outside GDT");
     const a = (this.gdtr.base + off) >>> 0,
-      b = Array.from({ length: 8 }, (_, i) => this.read((a + i) >>> 0) & 255);
+      b = Array.from({ length: 8 }, (_, i) =>
+        this._readLinear((a + i) >>> 0, 1, { supervisor: true }),
+      );
     const access = b[5],
       flags = b[6],
       dpl = (access >>> 5) & 3;
@@ -317,7 +373,12 @@ export class ExperimentalI80386 {
   }
   _markAccessed(descriptor) {
     if (!(descriptor.access & 1)) {
-      this.write((descriptor.address + 5) >>> 0, descriptor.access | 1);
+      this._writeLinear(
+        (descriptor.address + 5) >>> 0,
+        1,
+        descriptor.access | 1,
+        { supervisor: true },
+      );
       descriptor.access |= 1;
     }
   }
@@ -563,8 +624,15 @@ export class ExperimentalI80386 {
         ? (old - bytes * values.length) >>> 0
         : (old - bytes * values.length) & 0xffff;
     const address = this._linear(SEG_SS, next, bytes * values.length);
+    const physical = Array.from({ length: bytes * values.length }, (_, i) =>
+      this._translate((address + i) >>> 0, { write: true }),
+    );
     for (let i = 0; i < values.length; i++)
-      this._writeLinear(address + i * bytes, bytes, values[i]);
+      for (let byte = 0; byte < bytes; byte++)
+        this.write(
+          physical[i * bytes + byte],
+          (values[i] >>> (8 * byte)) & 255,
+        );
     if (stack32) this.esp = next;
     else this.sp = next;
   }
@@ -581,9 +649,8 @@ export class ExperimentalI80386 {
     if (off + 7 > this.gdtr.limit)
       throw new I80386Fault(13, code, "handler selector outside GDT");
     const a = (this.gdtr.base + off) >>> 0;
-    const b = Array.from(
-      { length: 8 },
-      (_, i) => this.read((a + i) >>> 0) & 255,
+    const b = Array.from({ length: 8 }, (_, i) =>
+      this._readLinear((a + i) >>> 0, 1, { supervisor: true }),
     );
     const access = b[5],
       flags = b[6];
@@ -621,8 +688,8 @@ export class ExperimentalI80386 {
     if (entry + 3 > this.idtr.limit)
       throw new I80386Fault(13, 0, "real-mode interrupt outside IDT");
     const address = (this.idtr.base + entry) >>> 0;
-    const ip = this._readLinear(address, 2),
-      cs = this._readLinear(address + 2, 2);
+    const ip = this._readLinear(address, 2, { supervisor: true }),
+      cs = this._readLinear(address + 2, 2, { supervisor: true });
     this._stackFrame(16, [returnEip & 0xffff, this.cs, this.eflags]);
     this.eflags &= ~(IF | TF);
     this._loadSeg(SEG_CS, cs);
@@ -640,9 +707,8 @@ export class ExperimentalI80386 {
     if (entry + 7 > this.idtr.limit)
       throw new I80386Fault(13, idtCode, "interrupt outside IDT");
     const a = (this.idtr.base + entry) >>> 0;
-    const b = Array.from(
-      { length: 8 },
-      (_, i) => this.read((a + i) >>> 0) & 255,
+    const b = Array.from({ length: 8 }, (_, i) =>
+      this._readLinear((a + i) >>> 0, 1, { supervisor: true }),
     );
     const access = b[5],
       type = access & 31,
@@ -1135,13 +1201,23 @@ export class ExperimentalI80386 {
     }
     if (op === 0x20 || op === 0x22) {
       const m = this._fetch8();
-      if (m !== 0xc0)
-        throw new UnsupportedI80386("only MOV EAX,CR0 / MOV CR0,EAX");
-      if (op === 0x20) this.eax = this.cr0 >>> 0;
+      if (m >>> 6 !== 3)
+        throw new I80386Fault(6, null, "MOV CR requires a register");
+      const control = (m >>> 3) & 7,
+        register = m & 7;
+      if (![0, 2, 3].includes(control))
+        throw new I80386Fault(6, null, "invalid control register");
+      if (op === 0x20) this._setReg(register, 32, this[`cr${control}`]);
       else {
-        if (this.eax & 0x80000000)
-          throw new UnsupportedI80386("paging is not implemented");
-        this.cr0 = this.eax >>> 0;
+        const value = this._reg(register, 32);
+        if (control === 0 && value & 0x80000000 && !(value & 1))
+          throw new I80386Fault(13, 0, "paging requires protected mode");
+        this[`cr${control}`] =
+          control === 3
+            ? value & 0xfffff000
+            : control === 0
+              ? value & 0x8000001f
+              : value;
       }
       return;
     }
