@@ -1168,6 +1168,14 @@ export class I8086 {
             // discard the slot rather than having to undo a decrement.
             case 0x60: {
                 const sp0 = this.sp;
+                // The 286 validates the complete eight-word stack footprint
+                // before committing any PUSHA write. If one word would start
+                // at offset FFFF, #GP restarts with no partial stack image.
+                if (this._is286) {
+                    for (let i = 1; i <= 8; i++) {
+                        if (((sp0 - i * 2) & 0xffff) === 0xffff) throw new RealModeFault(13);
+                    }
+                }
                 this._push(this.ax); this._push(this.cx);
                 this._push(this.dx); this._push(this.bx);
                 this._push(sp0);

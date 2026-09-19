@@ -112,6 +112,21 @@ test('286 POP destination #GP retains the completed stack pop before fault entry
   assert.equal(mem.get(0x200fc) | (mem.get(0x200fd) << 8), 0x0100, 'fault restarts POP');
 });
 
+test('286 PUSHA preflights its full stack footprint before a segment-top #GP', () => {
+  const {cpu, mem} = makeCpu('80286');
+  cpu.cs = 0x1000; cpu.ip = 0x100; cpu.ss = 0x2000; cpu.sp = 15; cpu.flags = 2;
+  cpu.ax = 0x1111; cpu.cx = 0x2222; cpu.dx = 0x3333; cpu.bx = 0x4444;
+  cpu.bp = 0x5555; cpu.si = 0x6666; cpu.di = 0x7777;
+  mem.set(0x10100, 0x60);
+  mem.set(13 * 4, 0x00); mem.set(13 * 4 + 1, 0x03);
+  let vector = null; cpu.onInterrupt = e => { vector = e.vector; };
+  cpu.step();
+  assert.equal(vector, 13); assert.equal(cpu.sp, 9);
+  for (let offset = 1; offset <= 8; offset++) {
+    assert.equal(mem.has(0x20000 + offset), false, `PUSHA leaked a pre-fault write at SS:${offset}`);
+  }
+});
+
 test('286 AAM-zero flags and signed divide endpoints match fault microcode boundaries', () => {
   const aam = makeCpu('80286');
   aam.cpu.cs = 0x1000; aam.cpu.ip = 0x100; aam.cpu.ss = 0x2000; aam.cpu.sp = 0x100;
