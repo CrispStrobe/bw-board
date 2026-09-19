@@ -63,3 +63,49 @@ test('bounded system profile refuses paging and unsupported descriptors without 
   assert.throws(()=>f.cpu.step(),e=>e instanceof UnsupportedI80386&&/paging/.test(e.message));
   assert.equal(f.cpu.cr0,0);
 });
+
+test('near branch targets use post-displacement EIP and truncate for 16-bit operands',()=>{
+  const short=fixture();short.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  short.put(0,[0xeb,2,0xf4,0xf4,0xb8,1,0,0,0]);short.cpu.step();assert.equal(short.cpu.eip,4,'EB is relative to the following instruction');
+
+  for(const [bytes,setup,expected]of[
+    [[0x66,0xe9,1,0],()=>{},5],
+    [[0x66,0x75,1],cpu=>{cpu.eflags&=~0x40;},4],
+  ]){
+    const f=fixture();f.cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,present:true,code:true,writable:false};
+    f.cpu.eip=0xffff0000;f.put(0xffff0000,bytes);setup(f.cpu);f.cpu.step();assert.equal(f.cpu.eip,expected);
+  }
+  const call=fixture();call.cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,present:true,code:true,writable:false};
+  call.cpu.segmentCaches[2]={base:0,limit:0xffff,default32:true,present:true,code:false,writable:true};
+  call.cpu.eip=0xffff0000;call.cpu.esp=0x100;call.put(0xffff0000,[0x66,0xe8,1,0]);call.cpu.step();
+  assert.deepEqual([call.cpu.eip,call.cpu.esp,call.word(0xfe)],[5,0xfe,4]);
+});
+
+test('LGDT width, descriptor boundaries, and instruction length fail explicitly',()=>{
+  const narrow=fixture();narrow.put(0,[0x0f,1,0x16,0x20,0]);narrow.put(0x20,[0xff,0,0x78,0x56,0x34,0x12]);narrow.cpu.step();
+  assert.deepEqual(narrow.cpu.gdtr,{limit:0xff,base:0x345678});
+  const wide=fixture();wide.put(0,[0x66,0x0f,1,0x16,0x20,0]);wide.put(0x20,[0xff,0,0x78,0x56,0x34,0x12]);wide.cpu.step();
+  assert.deepEqual(wide.cpu.gdtr,{limit:0xff,base:0x12345678});
+
+  for(const access of [0xba,0x9e,0x96]){
+    const f=fixture();f.cpu.cr0=1;f.cpu.gdtr={base:0x200,limit:0x0f};f.put(0x208,descriptor(0x100000,access));
+    const before={...f.cpu.segmentCaches[1]};
+    assert.throws(()=>f.cpu._loadSeg(1,8),e=>e instanceof UnsupportedI80386);
+    assert.deepEqual(f.cpu.segmentCaches[1],before);
+  }
+  const rpl=fixture();rpl.cpu.cr0=1;rpl.cpu.gdtr={base:0x200,limit:0x0f};rpl.put(0x208,descriptor(0x100000,0x9a));
+  assert.throws(()=>rpl.cpu._loadSeg(1,0x0b),/ring-0/);
+
+  const long=fixture();long.put(0,[...Array(15).fill(0x66),0x90]);const reads=[];long.cpu.fetch=a=>{reads.push(a);return long.mem.get(a)??0;};
+  assert.throws(()=>long.cpu.step(),/15-byte/);assert.equal(reads.length,15);
+});
+
+test('faulting PUSH preserves ESP and MOV stores do not read their destination',()=>{
+  const push=fixture();push.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  push.cpu.segmentCaches[2]={base:0,limit:0xff,default32:true,present:true,code:false,writable:true};push.cpu.esp=2;push.put(0,[0x50]);
+  assert.throws(()=>push.cpu.step(),/segment limit/);assert.equal(push.cpu.esp,2);assert.equal(push.writes.length,0);
+
+  const store=fixture();store.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  store.cpu.eax=0x12345678;store.cpu.ebx=0x200;store.put(0,[0x89,3]);store.cpu.step();
+  assert.deepEqual(store.reads,[],'MOV r/m,r performs no destination read');assert.equal(store.dword(0x200),0x12345678);
+});

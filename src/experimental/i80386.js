@@ -62,7 +62,9 @@ export class ExperimentalI80386 {
   _read(seg,off,width){return this._readLinear(this._linear(seg,off,width>>>3),width>>>3);}
   _write(seg,off,width,v){this._writeLinear(this._linear(seg,off,width>>>3),width>>>3,v);}
   _fetch8(){
+    if((this._instructionBytes??0)>=15)throw new UnsupportedI80386('instruction exceeds 15-byte limit');
     const a=this._linear(SEG_CS,this.eip,1),v=this.fetch(a)&255;
+    this._instructionBytes=(this._instructionBytes??0)+1;
     this.eip=this.segmentCaches[SEG_CS].default32?(this.eip+1)>>>0:(this.eip+1)&0xffff;
     return v;
   }
@@ -73,7 +75,10 @@ export class ExperimentalI80386 {
     if(selector&4)throw new UnsupportedI80386('LDT selectors are outside the bounded 386 profile');
     const off=selector&0xfff8;if(off+7>this.gdtr.limit)throw new UnsupportedI80386('selector outside GDT');
     const a=(this.gdtr.base+off)>>>0,b=Array.from({length:8},(_,i)=>this.read((a+i)>>>0)&255);
-    const access=b[5],flags=b[6];if(!(access&0x80)||!(access&0x10))throw new UnsupportedI80386('non-present or system descriptor');
+    const access=b[5],flags=b[6],dpl=(access>>>5)&3;
+    if(!(access&0x80)||!(access&0x10))throw new UnsupportedI80386('non-present or system descriptor');
+    if((selector&3)!==0||dpl!==0)throw new UnsupportedI80386('only ring-0 descriptors are supported');
+    if(access&4)throw new UnsupportedI80386((access&8)?'conforming code is unsupported':'expand-down data is unsupported');
     let limit=(b[0]|b[1]<<8|(flags&15)<<16)>>>0;if(flags&0x80)limit=((limit<<12)|0xfff)>>>0;
     return{base:(b[2]|b[3]<<8|b[4]<<16|b[7]*0x1000000)>>>0,limit,default32:!!(flags&0x40),
       present:true,code:!!(access&8),writable:!!(access&2)};
@@ -123,8 +128,10 @@ export class ExperimentalI80386 {
   }
   _push(v,width){
     const bytes=width>>>3,stack32=!!this.segmentCaches[SEG_SS].default32;
-    if(stack32)this.esp=(this.esp-bytes)>>>0;else this.sp=(this.sp-bytes)&0xffff;
-    this._write(SEG_SS,stack32?this.esp:this.sp,width,v);
+    const next=stack32?(this.esp-bytes)>>>0:(this.sp-bytes)&0xffff;
+    this._linear(SEG_SS,next,bytes);
+    if(stack32)this.esp=next;else this.sp=next;
+    this._write(SEG_SS,next,width,v);
   }
   _pop(width){
     const bytes=width>>>3,stack32=!!this.segmentCaches[SEG_SS].default32,off=stack32?this.esp:this.sp;
@@ -136,6 +143,7 @@ export class ExperimentalI80386 {
 
   step(){
     if(this.halted)return 0;
+    this._instructionBytes=0;
     const default32=!!this.segmentCaches[SEG_CS].default32;let operand32=default32,address32=default32,override=null,op;
     do{op=this._fetch8();if(op===0x66)operand32=!default32;else if(op===0x67)address32=!default32;else if(op===0x26)override=SEG_ES;else if(op===0x2e)override=SEG_CS;else if(op===0x36)override=SEG_SS;else if(op===0x3e)override=SEG_DS;else if(op===0x64)override=SEG_FS;else if(op===0x65)override=SEG_GS;else break;}while(true);
     const width=operand32?32:16;
@@ -145,28 +153,31 @@ export class ExperimentalI80386 {
     else if(op>=0x40&&op<=0x47){const n=op-0x40,cf=this.eflags&CF;this._setReg(n,width,this._add(this._reg(n,width),1,width));this.eflags=(this.eflags&~CF)|cf;}
     else if(op>=0x48&&op<=0x4f){const n=op-0x48,cf=this.eflags&CF;this._setReg(n,width,this._add(this._reg(n,width),1,width,true));this.eflags=(this.eflags&~CF)|cf;}
     else if([0x01,0x03,0x29,0x2b,0x31,0x33,0x39,0x3b,0x89,0x8b].includes(op)){
-      const ea=this._decodeEA(address32,override),toReg=!!(op&2),src=toReg?this._operandRead(ea,width):this._reg(ea.reg,width),dst=toReg?this._reg(ea.reg,width):this._operandRead(ea,width);let out=src;
+      const ea=this._decodeEA(address32,override),toReg=!!(op&2);
+      if(op===0x89){this._operandWrite(ea,width,this._reg(ea.reg,width));this.cycles++;return 1;}
+      if(op===0x8b){this._setReg(ea.reg,width,this._operandRead(ea,width));this.cycles++;return 1;}
+      const src=toReg?this._operandRead(ea,width):this._reg(ea.reg,width),dst=toReg?this._reg(ea.reg,width):this._operandRead(ea,width);let out=src;
       if(op<0x20)out=this._add(dst,src,width);else if(op<0x30)out=this._add(dst,src,width,true);else if(op<0x38)out=this._setLogic(dst^src,width);else if(op<0x40){this._add(dst,src,width,true);out=null;}
-      if(op===0x89||op===0x8b)out=src;if(out!==null){if(toReg)this._setReg(ea.reg,width,out);else this._operandWrite(ea,width,out);}
+      if(out!==null){if(toReg)this._setReg(ea.reg,width,out);else this._operandWrite(ea,width,out);}
     } else if(op===0xc7){const ea=this._decodeEA(address32,override);if(ea.reg!==0)throw new UnsupportedI80386('C7 extension');this._operandWrite(ea,width,this._fetchN(width>>>3));}
     else if(op===0x83){const ea=this._decodeEA(address32,override),imm=(this._fetch8()<<24)>>24,dst=this._operandRead(ea,width);let out;if(ea.reg===0)out=this._add(dst,imm,width);else if(ea.reg===1)out=this._setLogic(dst|imm,width);else if(ea.reg===5)out=this._add(dst,imm,width,true);else if(ea.reg===7){this._add(dst,imm,width,true);out=null;}else throw new UnsupportedI80386('83 extension');if(out!==null)this._operandWrite(ea,width,out);}
     else if(op===0x68)this._push(this._fetchN(width>>>3),width);
-    else if(op===0xe8){const d=this._fetchN(width>>>3),next=this.eip;this._push(next,width);this.eip=(next+(width===32?(d|0):((d<<16)>>16)))>>>0;}
-    else if(op===0xe9){const d=this._fetchN(width>>>3);this.eip=(this.eip+(width===32?(d|0):((d<<16)>>16)))>>>0;}
-    else if(op===0xeb)this.eip=(this.eip+((this._fetch8()<<24)>>24))>>>0;
-    else if(op>=0x70&&op<=0x7f){const d=(this._fetch8()<<24)>>24;if(this._condition(op&15))this.eip=(this.eip+d)>>>0;}
+    else if(op===0xe8){const d=this._fetchN(width>>>3),next=this.eip,target=next+(width===32?(d|0):((d<<16)>>16));this._push(next,width);this.eip=width===32?target>>>0:target&0xffff;}
+    else if(op===0xe9){const d=this._fetchN(width>>>3),target=this.eip+(width===32?(d|0):((d<<16)>>16));this.eip=width===32?target>>>0:target&0xffff;}
+    else if(op===0xeb){const d=(this._fetch8()<<24)>>24,target=this.eip+d;this.eip=width===32?target>>>0:target&0xffff;}
+    else if(op>=0x70&&op<=0x7f){const d=(this._fetch8()<<24)>>24;if(this._condition(op&15)){const target=this.eip+d;this.eip=width===32?target>>>0:target&0xffff;}}
     else if(op===0xc3)this.eip=this._pop(width)>>>0;
     else if(op===0xf4)this.halted=true;
     else if(op===0x8e){const ea=this._decodeEA(address32,override),ids=[SEG_ES,SEG_CS,SEG_SS,SEG_DS,SEG_FS,SEG_GS];if(ea.reg===1||ea.reg>5)throw new UnsupportedI80386('invalid MOV segment register');this._loadSeg(ids[ea.reg],this._operandRead(ea,16));}
     else if(op===0xea){const off=this._fetchN(width>>>3),sel=this._fetchN(2);this._loadSeg(SEG_CS,sel);this.eip=width===32?off:off&0xffff;}
-    else if(op===0x0f)this._step0f(address32,override);
+    else if(op===0x0f)this._step0f(address32,override,width);
     else throw new UnsupportedI80386(`opcode ${op.toString(16).padStart(2,'0')}`);
     this.cycles++;return 1;
   }
 
-  _step0f(address32,override){
+  _step0f(address32,override,width){
     const op=this._fetch8();
-    if(op===0x01){const ea=this._decodeEA(address32,override);if(ea.isReg||ea.reg!==2)throw new UnsupportedI80386('only LGDT is supported');const a=this._linear(ea.seg,ea.off,6);this.gdtr={limit:this._readLinear(a,2),base:this._readLinear((a+2)>>>0,4)};return;}
+    if(op===0x01){const ea=this._decodeEA(address32,override);if(ea.isReg||ea.reg!==2)throw new UnsupportedI80386('only LGDT is supported');const a=this._linear(ea.seg,ea.off,6),base=this._readLinear((a+2)>>>0,4);this.gdtr={limit:this._readLinear(a,2),base:width===16?base&0xffffff:base};return;}
     if(op===0x20||op===0x22){const m=this._fetch8();if(m!==0xc0)throw new UnsupportedI80386('only MOV EAX,CR0 / MOV CR0,EAX');if(op===0x20)this.eax=this.cr0>>>0;else {if(this.eax&0x80000000)throw new UnsupportedI80386('paging is not implemented');this.cr0=this.eax>>>0;}return;}
     throw new UnsupportedI80386(`0f ${op.toString(16).padStart(2,'0')}`);
   }
