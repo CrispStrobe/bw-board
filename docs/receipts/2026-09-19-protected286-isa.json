@@ -1,0 +1,43 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "node": "v22.23.2",
+  "scope": "owned ring-0 arithmetic loop, 16-bit ModR/M high-memory RMW, near CALL/RET, and HLT; no timing, privilege, REP, or broad ISA claim",
+  "sourceHashes": {
+    "./compare-pcjs-protected286-isa.mjs": "7b0dfab95737d68ce1d077ed776bcad37f47d75e614b49f5e66ddaa650e44bb8",
+    "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
+    "../src/experimental/i80286-protected.js": "3c962e792de34eb2ebe1459d9adfdd9fc7cb254a9750cfcad519618e5f14dc60"
+  },
+  "mutation": null,
+  "status": "pass",
+  "reference": {
+    "ax": 24,
+    "bx": 32,
+    "cx": 0,
+    "si": 4,
+    "sp": 512,
+    "cs": 8,
+    "ds": 16,
+    "ss": 24,
+    "ip": 36,
+    "flags": 4,
+    "halted": true,
+    "result": 17
+  },
+  "actual": {
+    "ax": 24,
+    "bx": 32,
+    "cx": 0,
+    "si": 4,
+    "sp": 512,
+    "cs": 8,
+    "ds": 16,
+    "ss": 24,
+    "ip": 36,
+    "flags": 4,
+    "halted": true,
+    "result": 17
+  },
+  "differences": [],
+  "sourceRevision": "c993a58179d412183a82c5fdfe22f89d9f71f869"
+}

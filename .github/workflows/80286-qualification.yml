@@ -78,6 +78,10 @@ jobs:
           assert.equal(report.status,'fail');
           assert.deepEqual(report.differences.map(d=>d.field),['result']);
           NODE
+          node --test test/i8086-at-memory.test.mjs \
+            | tee "$RECEIPT_DIR/i8086-at-memory-tests.log"
+          node scripts/run-at-memory-guest.mjs \
+            | tee "$RECEIPT_DIR/at-memory-guest.json"
           for mutation in frame if restart; do
             if IDT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-idt.mjs \
               > "$RECEIPT_DIR/rejected-$mutation.json"; then
