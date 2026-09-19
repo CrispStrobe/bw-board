@@ -89,8 +89,38 @@ const cpu = new I80386(
 );
 let steps = 0;
 let blocker = null;
+const recentInstructions = [];
+const traceState = () => ({
+  step: steps,
+  cs: cpu.cs & 0xffff,
+  eip: cpu.eip >>> 0,
+  physical: cpu.pc,
+  opcode: read(cpu.pc),
+  eflags: cpu.eflags >>> 0,
+  eax: cpu.eax >>> 0,
+  ebx: cpu.ebx >>> 0,
+  ecx: cpu.ecx >>> 0,
+  edx: cpu.edx >>> 0,
+  esp: cpu.esp >>> 0,
+  ss: cpu.ss & 0xffff,
+});
 try {
   while (steps < budget && !cpu.halted && !cpu.shutdown) {
+    const state = traceState();
+    recentInstructions.push(state);
+    if (recentInstructions.length > 32) recentInstructions.shift();
+    if (state.physical === 0xffe7f || state.physical === 0xffe86) {
+      blocker = {
+        name: "GuestAssertionFailure",
+        message:
+          state.physical === 0xffe7f
+            ? "pinned test386 entered its error routine"
+            : "pinned test386 entered its ring-3 error loop",
+        ...state,
+        recentInstructions,
+      };
+      break;
+    }
     cpu.step();
     steps++;
   }
@@ -103,6 +133,14 @@ try {
     eip: cpu.eip,
     physical: cpu.pc,
     opcode: read(cpu.pc),
+  };
+}
+if (!blocker && cpu.halted) {
+  blocker = {
+    name: "GuestHaltBoundary",
+    message: "pinned test386 executed HLT before its final POST FF completion",
+    ...traceState(),
+    recentInstructions,
   };
 }
 if (!blocker && !cpu.halted) {
