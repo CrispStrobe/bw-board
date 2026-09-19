@@ -58,6 +58,37 @@ test('RTC flags latch while disabled and checkpoint restore is exact and atomic'
   assert.equal(m.restoreCheckpoint(bad).code,'INVALID_CHECKPOINT');assert.deepEqual(m.saveState(),before);
 });
 
+test('RTC BCD/binary 12-hour, SET, UIP, alarm and enable gating are deterministic',()=>{
+  const noon=Date.UTC(1970,0,1,13,2,3)/1000,r=new MC146818(1_000_000,{initialUnixSeconds:noon});
+  r.write(0,4);assert.equal(r.read(1),0x13); // BCD 24-hour
+  r.write(0,0x0b);r.write(1,0x04);r.write(0,4);assert.equal(r.read(1),0x81); // binary 12-hour: 1 PM
+  r.write(0,1);r.write(1,0xc0);r.write(0,3);r.write(1,0xc0);r.write(0,5);r.write(1,0xc0);
+  r.write(0,0x0b);r.write(1,0x26);r.advance(1_000_000);assert.equal(r.ram[0x0c]&0x20,0x20);assert.equal(r._irq,true);
+  r.write(0,0x0b);r.write(1,0x86);const held=r.seconds;r.advance(2_000_000);assert.equal(r.seconds,held);
+  r.write(0,0x0a);r.cyclePhase=999_800;assert.equal(r.read(1)&0x80,0); // SET suppresses UIP
+  r.write(0,0x0b);r.write(1,0x06);r.write(0,0x0a);assert.equal(r.read(1)&0x80,0x80);
+});
+
+test('checkpoint rejects invalid RTC before CPU/RAM mutation and preserves acknowledged IRQ state',()=>{
+  const m=new I8086Machine(PCAT80286);initPic(m.chips.pic1,0x20,4);initPic(m.chips.pic2,0x28,2);
+  m._out(0x64,0x60);m._out(0x60,1);m.keyIn(0x1e);m.cpu.canTakeInterrupt=()=>true;m.cpu.interrupt=()=>{};m._serviceInterrupts();
+  const acknowledged=m.captureCheckpoint(),exact=structuredClone(acknowledged.state);
+  m._in(0x60);m.chips.pic1.write(0,0x20);assert.equal(m.restoreCheckpoint(acknowledged),undefined);
+  assert.deepEqual(m.saveState(),exact,'restore preserves IRR cleared with IRQ1 still queued and ISR active');
+  const bad=structuredClone(acknowledged);bad.state.chips.rtc1.seconds=-1;bad.state.mem[0]=99;bad.state.cpu.ax=77;
+  const before=m.saveState();assert.equal(m.restoreCheckpoint(bad).code,'INVALID_CHECKPOINT');assert.deepEqual(m.saveState(),before);
+  const inconsistent=structuredClone(acknowledged);inconsistent.state.chips.rtc1.nmiMasked=!inconsistent.state.machine.nmiMasked;
+  assert.equal(m.restoreCheckpoint(inconsistent).code,'INVALID_CHECKPOINT');assert.deepEqual(m.saveState(),before);
+
+  const r=new I8086Machine(PCAT80286);initPic(r.chips.pic1,0x20,4);initPic(r.chips.pic2,0x28,2);
+  r.cpu.canTakeInterrupt=()=>true;r.cpu.interrupt=()=>{};r.chips.rtc1.write(0,0x0b);r.chips.rtc1.write(1,0x42);
+  r.chips.rtc1.advance(Math.ceil(r.clockHz/1024));r._serviceInterrupts();
+  const rtcAck=r.captureCheckpoint(),rtcExact=structuredClone(rtcAck.state);
+  r.chips.rtc1.write(0,0x0c);r.chips.rtc1.read(1);r.chips.pic2.write(0,0x20);r.chips.pic1.write(0,0x20);
+  assert.equal(r.restoreCheckpoint(rtcAck),undefined);
+  assert.deepEqual(r.saveState(),rtcExact,'restore preserves acknowledged IRQ8 with status C still latched');
+});
+
 test('machine key path polls IBF clear and routes set-1 through the AT controller',()=>{
   const m=new I8086Machine(PCAT80286);initPic(m.chips.pic1,0x20,4);initPic(m.chips.pic2,0x28,2);
   m._out(0x64,0x60);assert.equal(m._in(0x64)&2,0);m._out(0x60,1);

@@ -674,8 +674,8 @@ export class I8086Machine {
                 });
             } else if (c.kind === 'rtc') {
                 chip = new MC146818(config.clockHz, {initialUnixSeconds:c.initialUnixSeconds ?? 0,
-                    onNmiMask:(masked)=>{this._nmiMasked=masked;},
-                    onIRQ:(active)=>{const p=this.chips[c.pic]||this._pic;p?.setIRQ(c.irq??0,active?1:0);}});
+                    onNmiMask:(masked)=>{if(!this._restoring)this._nmiMasked=masked;},
+                    onIRQ:(active)=>{if(this._restoring)return;const p=this.chips[c.pic]||this._pic;p?.setIRQ(c.irq??0,active?1:0);}});
             } else if (c.kind === 'usart8251') {
                 chip = new I8251({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
@@ -786,7 +786,7 @@ export class I8086Machine {
             }
             this._a20Controller=new AT8042A20({a20Enabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
                 onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
-                onIRQ:(active)=>this._pic?.setIRQ(1,active?1:0)});
+                onIRQ:(active)=>{if(!this._restoring)this._pic?.setIRQ(1,active?1:0);}});
         } else this._a20Controller=null;
 
         // The master PIC — the one step() polls to deliver INTR. A breadboard
@@ -2244,12 +2244,17 @@ export class I8086Machine {
             if (!statePair(this.chips[name])) {
                 throw new Error(`8086 checkpoint refused: component '${name}' has no state API`);
             }
+            if(this.chips[name] instanceof MC146818)this.chips[name].validateState(s.chips[name]);
         }
         for (const name of deviceNames) {
             if (!statePair(this.devices[name])) {
                 throw new Error(`8086 checkpoint refused: component 'device:${name}' has no state API`);
             }
         }
+        const rtc=Object.values(this.chips).find(c=>c instanceof MC146818);
+        if(rtc&&s.machine.nmiMasked!==s.chips[Object.keys(this.chips).find(n=>this.chips[n]===rtc)].nmiMasked)
+            throw new Error('8086 checkpoint refused: NMI mask and RTC port 70 state disagree');
+        this._restoring=true;
         for (const k of I8086Machine.CPU_STATE) this.cpu[k] = s.cpu[k];
         this.cycles = s.cycles;
         this.mem.set(s.mem);
@@ -2270,8 +2275,7 @@ export class I8086Machine {
             const pair = statePair(this.devices[name]);
             this.devices[name][pair[1]](s.devices[name]);
         }
-        this._a20Controller?._publish();
-        if(this._picCascade)this._picCascade.master.setIRQ(this._picCascade.line,this._picCascade.slave.intActive?1:0);
+        this._restoring=false;
         // The restored chips are at the restored cycle: no debt is owed, and the
         // deadline is re-armed from their fresh state.
         this._chipDebt = 0;
