@@ -21,7 +21,7 @@
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
-  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, kneeFromVf,
+  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
   sourceDcValue, sourceVoltage,
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
@@ -2756,7 +2756,7 @@ export class BoardImpl {
           model: 'explicit-spice-level1-grounded-bulk',
           requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
           defaults: { bulkIs: 1e-14, bulkN: 1 },
-          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },
         pmos: {
@@ -2764,7 +2764,7 @@ export class BoardImpl {
           requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
           requiredTerminals: ['gate', 'drain', 'source', 'bulk'],
           defaults: { bulkIs: 1e-14, bulkN: 1 },
-          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },
         sourceDefaults: { vsourceVolts: this.vcc, isourceAmps: 0.001 },

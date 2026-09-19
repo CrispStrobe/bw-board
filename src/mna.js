@@ -555,7 +555,7 @@ export function mosGds(params, id0, taper) {
  */
 export function mosBulkJunction(vAcross, params = {}) {
   const is = Number.isFinite(params.bulkIs) && params.bulkIs > 0 ? params.bulkIs : MOS_BULK_IS;
-  const p = { is, nVt: MOS_BULK_N * JUNCTION_THERMAL_VOLTAGE, rs: 0 };
+  const p = { is, nVt: MOS_BULK_N * MOS_BULK_THERMAL_VOLTAGE, rs: 0 };
   const { i, gj } = shockleyEval(vAcross, p);
   return { gEq: gj, iEq: i - gj * vAcross };
 }
@@ -563,6 +563,8 @@ export function mosBulkJunction(vAcross, params = {}) {
 /** SPICE's default bulk-junction saturation current and ideality. */
 const MOS_BULK_IS = 1e-14;
 const MOS_BULK_N = 1;
+/** Effective ngspice 42 default-temperature voltage for the MOS body junction. */
+export const MOS_BULK_THERMAL_VOLTAGE = 0.025865002516330077;
 
 export function mosVth(params = {}, vsb = 0) {
   const vth = Number(params.vth ?? 2.0);
