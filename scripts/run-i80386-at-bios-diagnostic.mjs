@@ -48,7 +48,26 @@ const interrupts = [];
 const machine = new ExperimentalI80386ATMachine(profile, {
   onPortAccess(event) {
     if (event.port === 0x80 && event.dir === 'out' && post.length < 512)
-      post.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value});
+      post.push({
+        step: steps,
+        cs: machine.cpu.cs,
+        eip: machine.cpu.eip,
+        value: event.value,
+        registers: {
+          eax: machine.cpu.eax,
+          ebx: machine.cpu.ebx,
+          ecx: machine.cpu.ecx,
+          edx: machine.cpu.edx,
+          esi: machine.cpu.esi,
+          edi: machine.cpu.edi,
+          ebp: machine.cpu.ebp,
+          esp: machine.cpu.esp,
+        },
+        segmentBases: Object.fromEntries(
+          ['es', 'cs', 'ss', 'ds', 'fs', 'gs'].map((name, index) =>
+            [name, machine.cpu.segmentCaches[index]?.base ?? null]),
+        ),
+      });
   },
   onInterrupt(event) {
     if (interrupts.length < 128) interrupts.push({step: steps, ...event});
