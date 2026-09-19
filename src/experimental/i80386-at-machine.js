@@ -14,6 +14,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this.config = config;
     this.variant = '80386';
     this.cpuBackend = 'i80386-experimental';
+    this.functionalInstructionCycles = config.functionalInstructionCycles ?? 1;
+    if (!Number.isInteger(this.functionalInstructionCycles) ||
+        this.functionalInstructionCycles < 1 || this.functionalInstructionCycles > 16)
+      throw new Error('experimental 386 functionalInstructionCycles must be 1 through 16');
     const bus = {
       read: address => this._read386(address),
       fetch: address => this._read386(address),
@@ -86,6 +90,16 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     return true;
   }
 
+  step() {
+    const executed = !this.cpu.halted && !this.cpu.shutdown;
+    const cycles = super.step();
+    if (!executed || cycles !== 1 || this.functionalInstructionCycles === 1) return cycles;
+    const extra = this.functionalInstructionCycles - 1;
+    this.cycles += extra;
+    this._chipDebt += extra;
+    return this.functionalInstructionCycles;
+  }
+
   enableI8088CycleTiming() {
     throw new Error('experimental 386 AT refuses 8088 cycle timing');
   }
@@ -107,6 +121,10 @@ export const PCAT80386_EXPERIMENTAL = Object.freeze({
   ...PCAT80286_BOOT_640K,
   variant: '80386',
   cpuBackend: 'i80386-experimental',
+  // Functional device pacing only. The instruction executor does not yet
+  // provide measured 80386 timings, so board time advances by a declared,
+  // deterministic four clocks per completed instruction.
+  functionalInstructionCycles: 4,
   // The installed memory remains the AT profile's sparse 640KiB + 512KiB.
   // The reset ROM alias is decoded by the adapter without a 4GiB allocation.
 });

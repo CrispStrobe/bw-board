@@ -108,3 +108,19 @@ test('experimental 386 AT shutdown does not consume pending interrupt state', ()
   assert.equal(machine._nmiPending, true);
   assert.equal(machine.chips.pic1.intActive, true);
 });
+
+test('experimental 386 AT functional pacing lets a bounded PIT poll observe terminal count', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  machine.cpu.reset();
+  machine.mem.fill(0x90, 0, 0x100); // NOP polling body
+  machine._out(0x21, 0xff);         // retain IRQ0 in IRR for observation
+  machine._out(0x43, 0x30);         // counter 0, lsb/msb, mode 0
+  machine._out(0x40, 44);
+  machine._out(0x40, 0);
+  const start = machine.cycles;
+  for (let instruction = 0; instruction < 60; instruction++)
+    assert.equal(machine.step(), 4);
+  assert.equal(machine.cycles - start, 240);
+  assert.ok(machine.chips.pic1.irr & 1,
+    '44 PIT ticks expire within a 60-instruction functional polling window');
+});
