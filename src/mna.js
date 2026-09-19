@@ -2192,12 +2192,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // other and needs the same limiter; the flat NR_MAX_STEP clamp was
       // written for the knee, which has no exponential to overshoot.
       const emLim = bjtVbc.has(part.id) ? ebersMollParams(part) : null;
+      const explicitShockleyZener = part.kind === 'zener'
+        && junctionModelOf(part, undefined) === 'shockley' && vNew >= 0;
       const lim = emLim
         ? { p: { nVt: emLim.nVt, is: emLim.is, rs: 0 }, nVt: emLim.nVt,
             vcrit: junctionVcrit(emLim.is, emLim.nVt), noRs: true }
-        : (part.kind === 'led' || part.kind === 'diode')
+        : (part.kind === 'led' || part.kind === 'diode' || explicitShockleyZener)
           ? junctionLimitParams(part,
-              effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0))))
+              effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'led' ? 2.0 : 0.7))))
           : null;
       if (lim) {
         // The solve gives TOTAL branch volts; the NR state is the
@@ -2762,7 +2764,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // not is the exact signature of one of the two moving without the other,
       // and it has cost this engine real debugging time before.
       let i;
-      if (vAcross >= vf) i = (vAcross - vf) / rd;
+      if (junctionModelOf(part, undefined) === 'shockley' && vAcross >= 0) {
+        i = junctionCurrent(part, vAcross, vf, rd);
+      } else if (vAcross >= vf) i = (vAcross - vf) / rd;
       else if (ibv > 0 && vAcross < 0) {
         const nB = Number.isFinite(Number(part.params.n)) && Number(part.params.n) > 0
           ? Number(part.params.n) : 1;
@@ -4031,7 +4035,13 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const vAcross = diodeVoltages.get(part.id) ?? 0;
 
   let gEq, iEq;
-  if (vAcross >= vf) {
+  if (junctionModelOf(part, undefined) === 'shockley' && vAcross >= 0) {
+    // An explicit SPICE zener is still an ordinary Shockley junction in the
+    // forward direction. Reuse the diode's composite junction+RS law rather
+    // than the legacy teaching-model knee. `diodeVoltages` carries junction
+    // voltage on this path, exactly as stampDiode's state does.
+    ({ gEq, iEq } = diodeCompanion(vAcross, vf, rd, junctionOpts(part)));
+  } else if (vAcross >= vf) {
     // Forward conduction
     gEq = 1 / rd;
     iEq = -vf / rd;

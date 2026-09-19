@@ -180,7 +180,7 @@ describe('BoardImpl.operatingPoint', () => {
       const second = board.operatingPoint();
       assert.equal(first.converged, true);
       assert.equal(first.analysis.scope,
-        'grounded-static-native-r-c-l-d-v-i-e-g-exact-ideal-l-explicit-shockley-d');
+        'grounded-static-native-r-c-l-d-z-v-i-e-g-exact-ideal-l-explicit-shockley-d-z');
       assert.equal(first.analysis.controlledSources, 'ideal-explicit-finite-parameters-only');
       assert.ok(first.analysis.supportedKinds.includes('vcvs'));
       assert.ok(first.analysis.supportedKinds.includes('vccs'));
