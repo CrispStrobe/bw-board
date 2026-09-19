@@ -350,6 +350,45 @@ function conformingResult(cpu,read,pcjs,handlerCs,completed){
 function runConformingLocal(){const memory=new Uint8Array(1<<24),cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;}},{deliverFaults:true});installConforming((a,v)=>{memory[a]=v;});let handlerCs=null;for(let steps=0;steps<80&&!(cpu.cs===0x1b&&cpu.eip===2);steps++){if(cpu.eip===0x100)handlerCs=cpu.cs;cpu.step();}return conformingResult(cpu,a=>memory[a],false,handlerCs,cpu.cs===0x1b&&cpu.eip===2);}
 function runConformingPCjs(){const cpu=new CPU({id:"fault386.conforming",model:80386}),bus=new QuietBus({id:"fault386.conforming.bus",busWidth:32},cpu);if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;installConforming((a,v)=>bus.setByteDirect(a,v));cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let handlerCs=null;for(let steps=0;steps<80&&!(cpu.getCS()===0x1b&&cpu.getIP()===2);steps++){if(cpu.getIP()===0x100)handlerCs=cpu.getCS();cpu.stepCPU(0);}return conformingResult(cpu,a=>bus.getByteDirect(a),true,handlerCs,cpu.getCS()===0x1b&&cpu.getIP()===2);}
 
+function installVm86(write) {
+  installRing(write);
+  put(write, CODE, [
+    0x66,0xb8,0x10,0,0x8e,0xd0,0x8e,0xd8,0xbc,0,4,0,0,
+    0x68,0,0x60,0,0,0x68,0,0x50,0,0,0x68,0,0x40,0,0,
+    0x68,0,0x30,0,0,0x68,0,0x20,0,0,0x68,0,2,0,0,
+    0x68,2,0x32,2,0,0x68,0,0xf0,0,0,0x68,0,1,0,0,0xcf,
+  ]);
+  put(write,0x300+3*8,[0x80,1,8,0,0,0xee,0,0]);
+  put(write,0xf0100,[0xcc]);
+  put(write,CODE+0x180,[0xcf]);
+}
+function vm86Result(cpu,read,pcjs,visited,completed) {
+  const dword=address=>(read(address)|(read(address+1)<<8)|(read(address+2)<<16)|(read(address+3)*0x1000000))>>>0;
+  return {
+    cs:pcjs?cpu.getCS():cpu.cs,eip:(pcjs?cpu.getIP():cpu.eip)>>>0,
+    ss:pcjs?cpu.getSS():cpu.ss,esp:(pcjs?cpu.getSP():cpu.esp)>>>0,
+    vm:!!((pcjs?cpu.getPS():cpu.eflags)&0x20000),visited,completed,
+    frame:Array.from({length:9},(_,index)=>dword(STACK+0x3dc+index*4)),
+  };
+}
+function runVm86Local() {
+  const memory=new Uint8Array(1<<24),cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;}},{deliverFaults:true});
+  installVm86((a,v)=>{memory[a]=v;});let visited=false;
+  for(let steps=0;steps<100&&!(cpu.virtual8086&&cpu.cs===0xf000&&cpu.eip===0x101);steps++) {
+    if(cpu.cs===8&&cpu.eip===0x180)visited=true;cpu.step();
+  }
+  return vm86Result(cpu,a=>memory[a],false,visited,cpu.virtual8086&&cpu.cs===0xf000&&cpu.eip===0x101);
+}
+function runVm86PCjs() {
+  const cpu=new CPU({id:"fault386.vm86",model:80386}),bus=new QuietBus({id:"fault386.vm86.bus",busWidth:32},cpu);
+  if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;
+  installVm86((a,v)=>bus.setByteDirect(a,v));cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let visited=false;
+  for(let steps=0;steps<100&&!((cpu.getPS()&0x20000)&&cpu.getCS()===0xf000&&cpu.getIP()===0x101);steps++) {
+    if(cpu.getCS()===8&&cpu.getIP()===0x180)visited=true;cpu.stepCPU(0);
+  }
+  return vm86Result(cpu,a=>bus.getByteDirect(a),true,visited,!!(cpu.getPS()&0x20000)&&cpu.getCS()===0xf000&&cpu.getIP()===0x101);
+}
+
 const cases = {};
 for (const [name, type] of [
   ["interrupt32", 14],
@@ -365,6 +404,7 @@ cases.callGate = { reference:runCallGatePCjs(), actual:runCallGateLocal() };
 cases.ioAllowed={reference:runIoPCjs(false),actual:runIoLocal(false)};
 cases.ioDenied={reference:runIoPCjs(true),actual:runIoLocal(true)};
 cases.conformingInterrupt={reference:runConformingPCjs(),actual:runConformingLocal()};
+cases.vm86RoundTrip={reference:runVm86PCjs(),actual:runVm86Local()};
 const mutation = process.env.I386_FAULT_ORACLE_MUTATION ?? null;
 if (mutation === "frame") cases.interrupt32.actual.entry.frame[0] ^= 1;
 else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
@@ -372,6 +412,7 @@ else if (mutation === "ring-stack") cases.ringTransition.actual.frame[3] ^= 1;
 else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
 else if (mutation === "io-access") cases.ioDenied.actual.ports.push([0x20,8]);
 else if (mutation === "conforming-cpl") cases.conformingInterrupt.actual.handlerCs=8;
+else if (mutation === "vm-frame") cases.vm86RoundTrip.actual.frame[5]^=1;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
@@ -403,6 +444,11 @@ for(const [engine,expected] of [["actual",expectedConformingLocal],["reference",
   if(JSON.stringify(value)!==JSON.stringify(expected))
     differences.push({case:"conformingExpected",engine,expected,actual:value});
 }
+const expectedVm86={cs:0xf000,eip:0x101,ss:0x2000,esp:0x200,vm:true,visited:true,completed:true,
+  frame:[0x101,0xf000,0x23202,0x200,0x2000,0x3000,0x4000,0x5000,0x6000]};
+for(const [engine,value] of Object.entries(cases.vm86RoundTrip))
+  if(JSON.stringify(value)!==JSON.stringify(expectedVm86))
+    differences.push({case:"vm86Expected",engine,expected:expectedVm86,actual:value});
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);
@@ -444,7 +490,7 @@ console.log(
       executionRevision,
       node: process.version,
       scope:
-        "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "same-ring, ring-3-to-ring-0, and VM86-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
       knownOracleLimitations: {
         resumeFlag: {
           graded: false,
