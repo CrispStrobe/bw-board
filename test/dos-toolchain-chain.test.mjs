@@ -12,8 +12,11 @@ import { runChain, runDos } from '../scripts/run-dos.mjs';
 
 const BIN = process.env.MSDOS_BIN_DIR;
 const have = !!BIN && existsSync(join(BIN, 'MASM.EXE')) && existsSync(join(BIN, 'LINK.EXE'));
-// A .COM-style source (ORG 100h) so EXE2BIN can flatten the .EXE to a .COM.
-const SOURCE = 'CODE\tSEGMENT\r\n\tASSUME CS:CODE,DS:CODE\r\n\tORG 100H\r\nSTART:\tMOV AH,4CH\r\n\tINT 21H\r\nCODE\tENDS\r\n\tEND START\r\n';
+// A .COM-style source (ORG 100h) that prints "OK" and exits 0, so the whole
+// chain — assemble, link, flatten, run — can be verified by its own output.
+const SOURCE = 'CODE\tSEGMENT\r\n\tASSUME CS:CODE,DS:CODE\r\n\tORG 100H\r\n'
+    + 'START:\tMOV DX,OFFSET MSG\r\n\tMOV AH,09H\r\n\tINT 21H\r\n\tMOV AX,4C00H\r\n\tINT 21H\r\n'
+    + 'MSG:\tDB "OK$"\r\nCODE\tENDS\r\n\tEND START\r\n';
 
 test('MASM -> LINK -> EXE2BIN -> run: the 80286 assembles, links, converts, and runs its own program',
     { skip: have ? false : 'set MSDOS_BIN_DIR to the MS-DOS 2.0 binaries (MASM.EXE, LINK.EXE, EXE2BIN.EXE)' }, () => {
@@ -21,8 +24,9 @@ test('MASM -> LINK -> EXE2BIN -> run: the 80286 assembles, links, converts, and 
         const src = join(dir, 'PROG.ASM');
         writeFileSync(src, SOURCE);
 
-        // Assemble + link + convert on the 286.
-        const c = runChain({ source: src, variant: '80286', exe2bin: true }, { write() {} });
+        // Assemble + link + convert + RUN on the 286, capturing the program's output.
+        let out = '';
+        const c = runChain({ source: src, variant: '80286', exe2bin: true, run: true }, { write: (s) => { out += s; } });
         assert.ok(c.ok, 'the chain produced an .EXE');
         assert.equal(c.stages[0].tool, 'masm');
         assert.ok(c.stages[0].terminated && c.stages[0].exitCode === 0, 'MASM exited 0');
@@ -35,11 +39,15 @@ test('MASM -> LINK -> EXE2BIN -> run: the 80286 assembles, links, converts, and 
         assert.ok(c.stages[2].terminated && c.stages[2].exitCode === 0, 'EXE2BIN exited 0');
         assert.ok(c.bin && c.bin.length > 0, 'EXE2BIN produced a flat binary');
         assert.notEqual(c.bin[0], 0x4d, 'the .BIN is flat code, not an MZ image');
+        assert.equal(c.stages[3].tool, 'run');
+        assert.ok(c.ran && c.ran.terminated && c.ran.exitCode === 0, 'the 286-built .COM ran and exited 0');
+        assert.equal(out, 'OK', 'and printed its own message — the full source-to-output round-trip');
 
-        // Run the 286-built .COM (the flattened binary) on the 286.
+        // The saved .COM is standalone: run it again from disk.
         const dir2 = mkdtempSync(join(tmpdir(), 'dos-chain-run-'));
         const comPath = join(dir2, 'PROG.COM');
         writeFileSync(comPath, c.bin);
-        const r = runDos({ program: comPath, variant: '80286', preset: 'at', max: 1_000_000, keys: '', files: [] }, { write() {} });
-        assert.ok(r.result.terminated && r.result.exitCode === 0, 'the 286-built .COM ran and exited 0');
+        let out2 = '';
+        const r = runDos({ program: comPath, variant: '80286', preset: 'at', max: 1_000_000, keys: '', files: [] }, { write: (s) => { out2 += s; } });
+        assert.ok(r.result.terminated && r.result.exitCode === 0 && out2 === 'OK', 'the standalone .COM runs the same');
     });

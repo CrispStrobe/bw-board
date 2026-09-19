@@ -73,7 +73,7 @@ export function importDosboxConf(confPath) {
 }
 
 function parseArgs(argv) {
-    const o = { program: null, variant: '8086', preset: 'at', max: 20_000_000, keys: '', screen: false, quiet: false, conf: null, files: [], out: null, chain: null, masm: null, link: null, exe2bin: false };
+    const o = { program: null, variant: '8086', preset: 'at', max: 20_000_000, keys: '', screen: false, quiet: false, conf: null, files: [], out: null, chain: null, masm: null, link: null, exe2bin: false, run: false };
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
         if (a === '--variant') o.variant = argv[++i];
@@ -89,6 +89,7 @@ function parseArgs(argv) {
         else if (a === '--masm') o.masm = argv[++i];        // path to MASM.EXE (else $MSDOS_BIN_DIR)
         else if (a === '--link') o.link = argv[++i];        // path to LINK.EXE (else $MSDOS_BIN_DIR)
         else if (a === '--exe2bin') o.exe2bin = true;       // also run EXE2BIN (.EXE -> .BIN) as a chain stage
+        else if (a === '--run') o.run = true;               // also RUN the built artifact in the same invocation
         else if (a.startsWith('--')) throw new Error(`unknown option ${a}`);
         else o.program = a;
     }
@@ -171,6 +172,8 @@ export function runDos(opts, { write = (s) => process.stdout.write(s) } = {}) {
  *
  * @returns {{ ok, stem, exe, exeName, obj, bin, binName, stages: object[] }}
  */
+const QUIET = { write() {} };   // chain tool stages run silently; only the RUN stage streams to the caller
+
 export function runChain(opts, hooks = {}) {
     const dir = opts.bin || process.env.MSDOS_BIN_DIR;
     const masm = opts.masm || (dir && join(dir, 'MASM.EXE'));
@@ -183,7 +186,7 @@ export function runChain(opts, hooks = {}) {
 
     // Stage 1 — MASM: prompts are Source / Object / Listing / Cross-ref; STEM
     // then defaults. Mount the source as STEM.ASM.
-    const asm = runDos({ ...common, program: masm, keys: `${stem}\r\r\r\r`, files: [`${stem}.ASM=${opts.source}`] }, hooks);
+    const asm = runDos({ ...common, program: masm, keys: `${stem}\r\r\r\r`, files: [`${stem}.ASM=${opts.source}`] }, QUIET);
     stages.push({ tool: 'masm', ...summary(asm) });
     const objName = asm.created.find((n) => /\.OBJ$/i.test(n));
     if (!asm.result.terminated || !objName) return fail();
@@ -191,7 +194,7 @@ export function runChain(opts, hooks = {}) {
 
     // Stage 2 — LINK: prompts are Objects / Run file / List / Libraries. Feed
     // the .OBJ in memory as STEM.OBJ.
-    const lnk = runDos({ ...common, program: link, keys: `${stem}\r\r\r\r`, preloaded: { [`${stem}.OBJ`]: obj } }, hooks);
+    const lnk = runDos({ ...common, program: link, keys: `${stem}\r\r\r\r`, preloaded: { [`${stem}.OBJ`]: obj } }, QUIET);
     stages.push({ tool: 'link', ...summary(lnk) });
     const exeName = lnk.created.find((n) => /\.EXE$/i.test(n));
     const exe = exeName ? lnk.files.get(exeName) : null;
@@ -202,15 +205,36 @@ export function runChain(opts, hooks = {}) {
     if (opts.exe2bin) {
         const e2b = typeof opts.exe2bin === 'string' ? opts.exe2bin : (dir && join(dir, 'EXE2BIN.EXE'));
         if (!e2b) return fail({ obj, exe, exeName });
-        const conv = runDos({ ...common, program: e2b, args: `${stem}.EXE ${stem}.BIN`, preloaded: { [`${stem}.EXE`]: exe } }, hooks);
+        const conv = runDos({ ...common, program: e2b, args: `${stem}.EXE ${stem}.BIN`, preloaded: { [`${stem}.EXE`]: exe } }, QUIET);
         stages.push({ tool: 'exe2bin', ...summary(conv) });
         binName = conv.created.find((n) => /\.(BIN|COM)$/i.test(n));
         bin = binName ? conv.files.get(binName) : null;
     }
-    return { ok: true, stem, exe, exeName, obj, bin, binName, stages };
+
+    // Stage 4 (optional) — RUN the freshly built artifact in the same
+    // invocation: the flattened .COM if EXE2BIN produced one, else the .EXE.
+    let ran = null;
+    if (opts.run) {
+        const r = bin ? runImage(bin, 'com', common, hooks) : runImage(exe, 'exe', common, hooks);
+        stages.push({ tool: 'run', ...summary(r) });
+        ran = r.result;
+    }
+    return { ok: true, stem, exe, exeName, obj, bin, binName, ran, stages };
 }
 
-const summary = (r) => ({ terminated: r.result.terminated, exitCode: r.result.exitCode, steps: r.result.steps, created: r.created });
+const summary = (r) => ({ terminated: r.result.terminated, exitCode: r.result.exitCode, steps: r.result.steps, created: r.created ?? [] });
+
+/** Run an in-memory program image (no host file) — used to run a chain's own
+ *  freshly built artifact in the same invocation. */
+export function runImage(bytes, kind, opts = {}, { write = (s) => process.stdout.write(s) } = {}) {
+    const { variant = '8086', preset = 'at', max = 20_000_000 } = opts;
+    const machine = new I8086Machine({ ...PRESETS[preset], variant });
+    let streamed = 0;
+    const dos = createDos8086(machine, { onChar: (ch) => { streamed++; write(ch); } }).install();
+    (kind === 'exe' ? dos.loadExe : dos.loadCom).call(dos, bytes);
+    const result = dos.run(max);
+    return { result, dos, machine, streamed };
+}
 
 // ── CLI entry ────────────────────────────────────────────────────────────
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -231,9 +255,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         if (!opts.quiet) {
             for (const s of c.stages) process.stderr.write(`[run-dos:chain] ${s.tool}: ${s.terminated ? `exit ${s.exitCode}` : 'DID NOT TERMINATE'} in ${s.steps} — wrote [${s.created.join(', ')}]\n`);
             const art = c.ok ? `${c.stem}.EXE (${c.exe.length} bytes)${c.bin ? ` + ${c.stem}.BIN (${c.bin.length} bytes)` : ''}${opts.out ? ` in ${opts.out}` : ''}` : 'FAILED';
-            process.stderr.write(`[run-dos:chain] ${opts.chain} -> ${art}\n`);
+            process.stderr.write(`[run-dos:chain] ${opts.chain} -> ${art}${c.ran ? ` — ran: exit ${c.ran.exitCode}` : ''}\n`);
         }
-        process.exit(c.ok ? 0 : 2);
+        process.exit(!c.ok ? 2 : (c.ran ? (c.ran.terminated ? c.ran.exitCode : 2) : 0));
     }
 
     if (!opts.program && !opts.conf) {
