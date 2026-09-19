@@ -97,7 +97,7 @@ test('phase schedule has a positive isolated producer identity',native,async()=>
 test('external producer has a positive isolated changed identity',native,async()=>{
     const fixture=await createBusCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});
     fixture.initialize();fixture.kernel.resetWorkCounters();fixture.kernel.resetProducerCounters();
-    const result=fixture.period({...fixture.passive,cpu_ready:1});if(result.error)throw result.error;
+    const result=fixture.period({...fixture.passive,ready_n:1});if(result.error)throw result.error;
     const receipt={work:fixture.kernel.inspectWorkCounters(),diagnostic:fixture.kernel.inspectProducerCounters()};
     reconcile(receipt);
     assert.deepEqual(receipt.diagnostic.producers.busExternal,{attempts:1,changes:1});
