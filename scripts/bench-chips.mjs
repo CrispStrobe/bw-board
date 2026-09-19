@@ -8,6 +8,7 @@ import { M6502Machine } from '../src/m6502-machine.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--'+k); return i>=0 ? +process.argv[i+1] : d; };
 const STEPS = arg('instructions', 20_000_000);
+const ONLY = process.argv.includes('--only-labwired');
 const timed = (fn) => { const t=process.hrtime.bigint(); const cy=fn(); return { cy, secs:Number(process.hrtime.bigint()-t)/1e9 }; };
 
 function benchZ80() {
@@ -113,12 +114,18 @@ async function benchLabwired() {
   // as this STM32F0 fixture.
   if (process.env.LABWIRED_EXACT_TICK !== '1'
       && sim.recommended_tick_interval && sim.set_peripheral_tick_interval) {
-    sim.set_peripheral_tick_interval(sim.recommended_tick_interval());
+    const tick = Number(process.env.LABWIRED_TICK || sim.recommended_tick_interval());
+    sim.set_peripheral_tick_interval(tick);
   }
   const BATCH = 50_000;
   const N = Math.min(STEPS, 8_000_000);                  // rate-based; cap so the heavy engine stays quick
   sim.step_batch(BATCH);                                  // warm up + fail fast on a bad image
+  if (process.env.LABWIRED_PROFILE === '1') wasm.profile_start?.();
   const { cy, secs } = timed(() => { let c=0; for(let i=0;i<N;i+=BATCH){ sim.step_batch(BATCH); c+=BATCH; } return c; });
+  if (process.env.LABWIRED_PROFILE === '1') {
+    wasm.profile_stop?.();
+    console.error(sim.profile_report?.());
+  }
   return { name:'labwired STM32F0 (48 MHz)', realHz:HZ, cyPerSec: cy/secs };
 }
 async function tryBench(fn, label) {
@@ -126,12 +133,14 @@ async function tryBench(fn, label) {
 }
 
 const rows = [];
-rows.push(await tryBench(benchZ80, 'Z80'));
-rows.push(await tryBench(bench6502, '6502'));
-rows.push(await tryBench(benchAVR, 'AVR ATmega328P'));
-// WASM/firmware-gated cores: honestly reported as needing their engine.
-rows.push(await tryBench(benchRP2040, 'RP2040 Cortex-M0+'));
-rows.push(await tryBench(bench8051, '8051 (emu8051 STC)'));
+if (!ONLY) {
+  rows.push(await tryBench(benchZ80, 'Z80'));
+  rows.push(await tryBench(bench6502, '6502'));
+  rows.push(await tryBench(benchAVR, 'AVR ATmega328P'));
+  // WASM/firmware-gated cores: honestly reported as needing their engine.
+  rows.push(await tryBench(benchRP2040, 'RP2040 Cortex-M0+'));
+  rows.push(await tryBench(bench8051, '8051 (emu8051 STC)'));
+}
 rows.push(await tryBench(benchLabwired, 'labwired STM32F0 (48 MHz)'));
 
 // Two decimals below 10x, one below 100x, whole above — so a sub-real-time
