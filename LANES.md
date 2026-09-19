@@ -38,7 +38,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implementation; hosted qualification pending) — Astra/Sol
+2026-09-19 DONE (qualified; landing record below) — Astra/Sol
 386 REP/ISA and RTC continuation. Frozen integration worktree
 `/mnt/volume1/code/wt/astra-x86-rep-rtc-land`, branch
 `lane/astra-x86-rep-rtc-land`; candidate is the commit containing this row.
@@ -57,6 +57,11 @@ pass with identical 12-byte output and linked image SHA, all 15 executed source
 hashes matching this tree; earlier c5 evidence remains historical. AT/device/
 acceptance focused tests pass. Later system-register and 386 BIOS runner work
 stays outside this freeze. No full 386DX, Windows, Doom or timing claim.
+Candidate `3fa9afacbca4fb8b9ba02c59ab9003f8f56bf03d` passed CI
+`35472633235` (5,507 pass, 272 skip, zero fail), CPU qualification
+`35472633257` (full fast/Harris corpora, 266 bounded 386 samples and PCjs
+oracles), and native `35472633215`. The landing adds only this qualification
+record and its documentation status to that exact candidate.
 
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol functional
 AT DOS disk boot and 386 paging/reset/ISA stage; candidate is the commit carrying
