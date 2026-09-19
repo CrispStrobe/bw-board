@@ -13,7 +13,7 @@ usable and publish its exact source, input and qualification revisions.
 | AT BIOS POST | Unmodified external IBM 5170 ROM executes timer, controller, memory and device checks; no host interception of firmware services | Rev1 completes POST and reaches INT19 without displayed errors; the owned DOS image requires the explicit 640KiB profile for its 9F84h SYSINIT relocation |
 | AT disk boot | Firmware reads actual mounted sectors via emulated controller/DMA and reaches an identifiable DOS shell; command/file round trip persists across reboot | Source-bound DOS2.00/Command2.02 ECHO/TYPE and fresh-boot TYPE pass, with exact file bytes, final prompts and linked image hashes; named functional AT profile only |
 | 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Landed at `3cd5927`; all three hosted qualification workflows green |
-| 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; original386 4KiB paging, reset, port I/O and group3 arithmetic now have bounded tests; complete ISA, privilege transitions, tasking and v86 remain |
+| 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; original386 4KiB paging, reset, scalar I/O, privilege transitions and VM86 have bounded tests; complete ISA, tasking and full OS acceptance remain |
 | Windows | First Windows 3.0 standard mode on 286; then a separately identified 386 enhanced-mode configuration, desktop plus keyboard-driven application open/edit/save/reopen | Not demonstrated; exact external media must be identified |
 | Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Original shareware 1.9 inputs pinned externally; not executed; a banner does not pass |
 
@@ -96,26 +96,31 @@ configuration; `PCAT80286_BOOT_640K` now supplies it explicitly. The default
 
 ## Platform work after the first DOS boot
 
-The 286 DOS2 acceptance does not establish a 386 application platform. The
-experimental 386 adapter still charges one device clock per completed CPU
-instruction. Its current IBM timer POST failure needs a declared functional
-pacing policy and device-observable tests; any such policy must remain distinct
-from measured 386 instruction or bus timing.
+The 286 DOS2 and FreeDOS persistence acceptance do not establish a 386
+application platform. The experimental 386 adapter now charges four functional
+device clocks per completed CPU instruction, with actual IRQ-wake, idle and
+fault-delivery checks. This resolves the observed IBM timer POST failure; it
+makes no measured instruction or bus timing claim. The separate 4MiB installed
+memory profile has corresponding CMOS sizes and checksum.
 
-The Doom target also requires a larger, separately named memory configuration
-and corresponding CMOS report, persistent storage large enough for the pinned
-EXE/WAD, and a VGA implementation matched to actual guest accesses. The current
-AT profile provides 640KiB conventional plus 512KiB extended RAM. Repository
-inspection found no AT hard-disk controller implementation. The existing
-`vga-card.js` handles VGA registers and a linear mode-13h framebuffer, but does
-not interpret planar VRAM. Reuse its valid device behavior while filling those
-gaps; do not count a linear framebuffer demo as original Doom graphics proof.
-A VGA option ROM or another explicitly identified firmware configuration must
-supply the required BIOS services through guest execution.
+The current 386 BIOS continuation has passed memory scanning and BOUND, then
+reached its VERR/VERW and ARPL processor self-tests. Each missing instruction
+is implemented and checked before a fresh source-bound firmware run. This is
+not yet full 386 POST or DOS acceptance. Snapshot copying is now optimized;
+the isolated million-step BIOS benchmark and its limits are recorded in the
+[snapshot receipt](receipts/2026-09-19-386-snapshot-performance.json).
 
-FreeDOS's untouched installer medium reaches its prompt. Declining installation
-must lead to an actual shell command/file round trip before acceptance; a
-stopped banner or echoed choice is diagnostic progress only. Keep the original
-image hash, saved-media hash, exact keyboard events and fresh-reboot receipt
-linked. Windows acceptance still requires identified external installation
+An experimental ATA16 controller now supplies native word PIO and persistent
+media bytes. IBM fixed-disk setup and an owned BIOS INT13 sector round trip
+are the next disk acceptance boundary. The pinned Doom EXE/WAD needs that
+storage and a VGA implementation matched to actual guest accesses. Existing
+`vga-card.js` handles registers and a linear mode-13h framebuffer but does not
+interpret planar VRAM. A VGA option ROM or another explicitly identified
+firmware configuration must supply BIOS services through guest execution.
+
+FreeDOS's unchanged installer medium now boots, declines installation, reaches
+a shell, writes a file and reads it after a fresh machine remount. The tracked
+fixture links original/saved media hashes, exact keyboard events and both
+execution revisions. This accepted result uses the functional 286 AT profile.
+Windows acceptance still requires identified external installation
 media; no Windows version has been executed by this lane.
