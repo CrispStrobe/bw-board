@@ -46,9 +46,9 @@ export class MC146818 {
         this.onNmiMask?.(this.nmiMasked);
     }
     _enc(n) { return(this.ram[0x0b]&4)?n:((n/10|0)<<4)|(n%10); }
-    _dec(value,max,name) {
-        const n=(this.ram[0x0b]&4)?value:((value>>4)*10+(value&15));
-        if((!(this.ram[0x0b]&4)&&((value&15)>9||(value>>4)>9))||n<0||n>max)
+    _dec(value,max,name,mode=this.ram[0x0b]) {
+        const n=(mode&4)?value:((value>>4)*10+(value&15));
+        if((!(mode&4)&&((value&15)>9||(value>>4)>9))||n<0||n>max)
             throw new Error(`MC146818 invalid ${name}`);
         return n;
     }
@@ -65,9 +65,27 @@ export class MC146818 {
         this.seconds=Math.floor(d.getTime()/1000);this.dayOfWeek=c.dayOfWeek;
         return true;
     }
+    _decodeCalendarRaw(raw,mode) {
+        let hour;
+        if(mode&2) {
+            if(raw[4]&0x80)throw new Error('MC146818 invalid hour');
+            hour=this._dec(raw[4],23,'hour',mode);
+        } else {
+            const pm=!!(raw[4]&0x80);
+            hour=this._dec(raw[4]&0x7f,12,'hour',mode);
+            if(hour<1)throw new Error('MC146818 invalid hour');
+            hour=hour%12+(pm?12:0);
+        }
+        const c={second:this._dec(raw[0],59,'second',mode),minute:this._dec(raw[2],59,'minute',mode),hour,
+            dayOfWeek:this._dec(raw[6],7,'day of week',mode),day:this._dec(raw[7],31,'day',mode),
+            month:this._dec(raw[8],12,'month',mode),year:this._dec(raw[9],99,'year',mode)};
+        if(c.dayOfWeek<1||c.day<1||c.month<1)throw new Error('MC146818 invalid staged calendar date');
+        return c;
+    }
     _timeReg(r) {
         const d=new Date(this.seconds*1000);
-        const c=this.setCalendar??this.pendingCalendar;
+        if(this.setCalendar)return this.setCalendar[r];
+        const c=this.pendingCalendar;
         let v=c?{0:c.second,2:c.minute,4:c.hour,6:c.dayOfWeek,7:c.day,8:c.month,9:c.year}[r]:
             {0:d.getUTCSeconds(),2:d.getUTCMinutes(),4:d.getUTCHours(),6:this.dayOfWeek,
                 7:d.getUTCDate(),8:d.getUTCMonth()+1,9:d.getUTCFullYear()%100}[r];
@@ -106,8 +124,10 @@ export class MC146818 {
         }
         const r=this.index;
         if([0,2,4,6,7,8,9].includes(r)) {
-            const calendar=this.setCalendar??this.pendingCalendar??this._calendar();
+            if(this.setCalendar) { this.setCalendar[r]=value;return; }
+            const calendar=this.pendingCalendar??this._calendar();
             if(r===4) {
+                if((this.ram[0x0b]&2)&&(value&0x80))throw new Error('MC146818 invalid hour');
                 const pm=!(this.ram[0x0b]&2)&&!!(value&0x80);
                 let hour=this._dec(value&0x7f,(this.ram[0x0b]&2)?23:12,'hour');
                 if(!(this.ram[0x0b]&2)) {
@@ -123,8 +143,7 @@ export class MC146818 {
                 if((r===6||r===7||r===8)&&decoded<1)throw new Error(`MC146818 invalid ${name}`);
                 calendar[field]=decoded;
             }
-            if(this.setCalendar)this.setCalendar=calendar;
-            else if(this._commitCalendar(calendar))this.pendingCalendar=null;
+            if(this._commitCalendar(calendar))this.pendingCalendar=null;
             else this.pendingCalendar=calendar;
             return;
         }
@@ -139,10 +158,11 @@ export class MC146818 {
             if(value&0x09)throw new Error('MC146818 DSE/square-wave modes are outside the bounded subset');
             const wasSet=!!(this.ram[r]&0x80),willSet=!!(value&0x80);
             if(!wasSet&&willSet) {
-                this.setCalendar=this.pendingCalendar??this._calendar();this.pendingCalendar=null;
+                this.setCalendar=Object.fromEntries([0,2,4,6,7,8,9].map(register=>[register,this._timeReg(register)]));
+                this.pendingCalendar=null;value&=~0x10;
             }
             if(wasSet&&!willSet) {
-                const c=this.setCalendar;
+                const c=this._decodeCalendarRaw(this.setCalendar,value);
                 if(!this._commitCalendar(c))
                     throw new Error('MC146818 invalid staged calendar date');
                 this.setCalendar=null;
@@ -170,6 +190,10 @@ export class MC146818 {
                 }
                 if(this.seconds%86400===86399)this.dayOfWeek=this.dayOfWeek%7+1;
                 this.seconds++;
+                const advanced=new Date(this.seconds*1000);
+                if(advanced.getUTCFullYear()===2100) {
+                    advanced.setUTCFullYear(2000);this.seconds=Math.floor(advanced.getTime()/1000);
+                }
                 this._raise(0x10);
                 const match=[[1,0],[3,2],[5,4]].every(([a,t])=>(this.ram[a]&0xc0)===0xc0||
                     this.ram[a]===this._timeReg(t));
@@ -199,7 +223,13 @@ export class MC146818 {
             pendingCalendar:this.pendingCalendar&&{...this.pendingCalendar},
             cyclePhase:this.cyclePhase,periodicPhase:this.periodicPhase,ram:Array.from(this.ram)};
     }
-    validateState(s) {
+    _upgradeState(s) {
+        if(s?.v!==1||s?.ram?.[0x0b]&0x80)return s;
+        return {...s,v:2,dayOfWeek:new Date(s.seconds*1000).getUTCDay()+1,
+            setCalendar:null,pendingCalendar:null};
+    }
+    validateState(input) {
+        const s=this._upgradeState(input);
         const rate=s?.ram?.[0x0a]&15;
         const irq=((s?.ram?.[0x0c]&0x40)&&(s?.ram?.[0x0b]&0x40))||
             ((s?.ram?.[0x0c]&0x20)&&(s?.ram?.[0x0b]&0x20))||
@@ -209,11 +239,8 @@ export class MC146818 {
             typeof s.nmiMasked!=='boolean'||!Number.isSafeInteger(s.seconds)||s.seconds<0||s.seconds>8640000000||
             !Number.isInteger(s.dayOfWeek)||s.dayOfWeek<1||s.dayOfWeek>7||
             (!!(s.ram?.[0x0b]&0x80)!==!!calendar)||
-            !(calendar===null||(calendar&&Object.values(calendar).every(Number.isInteger)&&
-                calendar.second>=0&&calendar.second<=59&&calendar.minute>=0&&calendar.minute<=59&&
-                calendar.hour>=0&&calendar.hour<=23&&calendar.dayOfWeek>=1&&calendar.dayOfWeek<=7&&
-                calendar.day>=1&&calendar.day<=31&&calendar.month>=1&&calendar.month<=12&&
-                calendar.year>=0&&calendar.year<=99))||
+            !(calendar===null||(calendar&&Object.keys(calendar).length===7&&
+                [0,2,4,6,7,8,9].every(r=>Number.isInteger(calendar[r])&&calendar[r]>=0&&calendar[r]<=255)))||
             !(pending===null||(pending&&Object.values(pending).every(Number.isInteger)&&
                 pending.second>=0&&pending.second<=59&&pending.minute>=0&&pending.minute<=59&&
                 pending.hour>=0&&pending.hour<=23&&pending.dayOfWeek>=1&&pending.dayOfWeek<=7&&
@@ -227,7 +254,8 @@ export class MC146818 {
             (s.ram[0x0c]&0x0f)||!!(s.ram[0x0c]&0x80)!==!!irq||s.ram[0x0d]!==0x80)
             throw new Error('MC146818 state is invalid');
     }
-    setState(s) {
+    setState(input) {
+        const s=this._upgradeState(input);
         this.validateState(s);
         this.index=s.index;
         this.nmiMasked=s.nmiMasked;

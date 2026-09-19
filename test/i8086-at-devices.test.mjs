@@ -86,7 +86,7 @@ test('RTC SET stages calendar writes, preserves independent weekday and commits 
   write(0x0b,0x80);write(4,0x81); // BCD, 12-hour, 1 PM
   r.write(0,4);assert.equal(r.read(1),0x81);
   write(8,0x02);write(7,0x31);
-  assert.throws(()=>write(0x0b,0x02),/invalid staged calendar date/);
+  assert.throws(()=>write(0x0b,0x00),/invalid staged calendar date/);
   assert.equal(r.ram[0x0b]&0x80,0x80,'failed commit leaves SET transaction intact');
 
   const live=new MC146818(100,{initialUnixSeconds:Date.UTC(2024,2,31,0,0,0)/1000});
@@ -97,6 +97,20 @@ test('RTC SET stages calendar writes, preserves independent weekday and commits 
   assert(live.pendingCalendar);const pending=live.getState(),pendingCopy=new MC146818(100);
   pendingCopy.setState(pending);assert.deepEqual(pendingCopy.getState(),pending);
   liveWrite(7,0x29);assert.equal(live.pendingCalendar,null,'a later field completes the valid leap date');
+
+  const format=new MC146818(100,{initialUnixSeconds:0});
+  const fw=(register,value)=>{format.write(0,register);format.write(1,value);};
+  fw(0x0b,0x90);assert.equal(format.ram[0x0b]&0x10,0,'SET clears update-ended interrupts');
+  for(const [register,value] of [[9,24],[8,2],[7,29],[6,5],[4,13],[2,40],[0,39]])fw(register,value);
+  fw(0x0b,0x06);format.write(0,2);assert.equal(format.read(1),40,
+    'SET bytes are interpreted using the final binary mode, not the old BCD mode');
+
+  const rollover=new MC146818(1,{initialUnixSeconds:Date.UTC(2099,11,31,23,59,59)/1000});
+  rollover.advance(1);rollover.write(0,9);assert.equal(rollover.read(1),0);
+  rollover.write(0,8);assert.equal(rollover.read(1),1);
+  const legacy=rollover.getState();legacy.v=1;delete legacy.dayOfWeek;
+  delete legacy.setCalendar;delete legacy.pendingCalendar;
+  const migrated=new MC146818(1);migrated.setState(legacy);assert.equal(migrated.getState().v,2);
 });
 
 test('checkpoint rejects invalid RTC before CPU/RAM mutation and preserves acknowledged IRQ state',()=>{
