@@ -250,6 +250,36 @@ function runRingPCjs() {
   return ringResult(cpu,a=>bus.getByteDirect(a),true,visitedHandler,cpu.getCS()===0x1b&&cpu.getIP()===2);
 }
 
+function installCallGate(write){
+  installRing(write);write(0x100,0x37);
+  put(write,0x230,[0x00,0x01,0x08,0x00,1,0xec,0,0]);
+  put(write,CODE+0x100,[0xca,4,0]);
+  put(write,0x140000,[0x9a,0,0,0,0,0x33,0]);
+  put(write,0x160800,[0x44,0x33,0x22,0x11,0x88,0x77,0x66,0x55]);
+}
+function callGateResult(cpu,read,pcjs,visitedHandler,completed){
+  return{cs:pcjs?cpu.getCS():cpu.cs,eip:(pcjs?cpu.getIP():cpu.eip)>>>0,
+    ss:pcjs?cpu.getSS():cpu.ss,esp:(pcjs?cpu.getSP():cpu.esp)>>>0,
+    visitedHandler,completed,frame:[0,4,8,12,16].map(delta=>{
+      const address=STACK+0x3ec+delta;return(read(address)|(read(address+1)<<8)|
+        (read(address+2)<<16)|(read(address+3)*0x1000000))>>>0;})};
+}
+function runCallGateLocal(){
+  const memory=new Uint8Array(1<<24),cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;}},{deliverFaults:true});
+  installCallGate((a,v)=>{memory[a]=v;});let visited=false;
+  const budget=Number(process.env.I386_FAULT_ORACLE_GATE_BUDGET??80);
+  for(let steps=0;steps<budget&&!(cpu.cs===0x1b&&cpu.eip===7);steps++){if(cpu.cs===8&&cpu.eip===0x100)visited=true;cpu.step();}
+  return callGateResult(cpu,a=>memory[a],false,visited,cpu.cs===0x1b&&cpu.eip===7);
+}
+function runCallGatePCjs(){
+  const cpu=new CPU({id:"fault386.callgate",model:80386}),bus=new QuietBus({id:"fault386.callgate.bus",busWidth:32},cpu);
+  if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;installCallGate((a,v)=>bus.setByteDirect(a,v));
+  cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let visited=false;
+  const budget=Number(process.env.I386_FAULT_ORACLE_GATE_BUDGET??80);
+  for(let steps=0;steps<budget&&!(cpu.getCS()===0x1b&&cpu.getIP()===7);steps++){if(cpu.getCS()===8&&cpu.getIP()===0x100)visited=true;cpu.stepCPU(0);}
+  return callGateResult(cpu,a=>bus.getByteDirect(a),true,visited,cpu.getCS()===0x1b&&cpu.getIP()===7);
+}
+
 const cases = {};
 for (const [name, type] of [
   ["interrupt32", 14],
@@ -261,10 +291,12 @@ cases.generalProtection = {
   actual: runLocal(14, true),
 };
 cases.ringTransition = { reference: runRingPCjs(), actual: runRingLocal() };
+cases.callGate = { reference:runCallGatePCjs(), actual:runCallGateLocal() };
 const mutation = process.env.I386_FAULT_ORACLE_MUTATION ?? null;
 if (mutation === "frame") cases.interrupt32.actual.entry.frame[0] ^= 1;
 else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
 else if (mutation === "ring-stack") cases.ringTransition.actual.frame[3] ^= 1;
+else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
@@ -272,6 +304,11 @@ const expectedRing={cs:0x1b,eip:2,ss:0x23,esp:0x800,flags:2,visitedHandler:true,
 for(const [engine,value] of Object.entries(cases.ringTransition))
   if(JSON.stringify(value)!==JSON.stringify(expectedRing))
     differences.push({case:"ringTransitionExpected",engine,expected:expectedRing,actual:value});
+const expectedGate={cs:0x1b,eip:7,ss:0x23,esp:0x804,visitedHandler:true,completed:true,
+  frame:[7,0x1b,0x11223344,0x800,0x23]};
+for(const [engine,value] of Object.entries(cases.callGate))
+  if(JSON.stringify(value)!==JSON.stringify(expectedGate))
+    differences.push({case:"callGateExpected",engine,expected:expectedGate,actual:value});
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);

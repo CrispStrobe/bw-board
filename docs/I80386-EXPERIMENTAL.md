@@ -225,6 +225,14 @@ then target offset; it does not eagerly validate the returned stack pointer.
 Task gates, nested-task returns, VM86 returns, conforming transitions, and
 expand-down privilege stacks remain explicit refusals.
 
+Protected far CALL/JMP and RETF support nonconforming same-ring code
+transfers. A 16-bit or 32-bit call gate can enter an inner ring through a
+386 TSS stack, copying the gate's bounded parameter count at the gate width;
+RETF with an immediate returns outward and releases the copied parameters on
+both stacks. Complete pointer, old/new stack, descriptor, and target-limit
+checks precede visible control-state changes. Direct task descriptors and
+task gates remain explicit refusals.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

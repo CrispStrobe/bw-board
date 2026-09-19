@@ -932,15 +932,12 @@ export class ExperimentalI80386 {
     if (ea.reg === 3 || ea.reg === 5) {
       if (ea.isReg)
         throw new I80386Fault(6, null, "far indirect transfer requires memory");
-      if (this.protectedMode)
-        throw new UnsupportedI80386(
-          "protected far indirect transfer is outside the bounded 386 profile",
-        );
       const bytes = width >>> 3;
       const address = this._linear(ea.seg, ea.off, bytes + 2);
       const target = this._readLinear(address, bytes);
       const selector = this._readLinear((address + bytes) >>> 0, 2);
-      this._farRealTransfer(selector, target, width, ea.reg === 3);
+      if(this.protectedMode)this._protectedFarTransfer(selector,target,width,ea.reg===3);
+      else this._farRealTransfer(selector, target, width, ea.reg === 3);
       return;
     }
     if (ea.reg === 6) {
@@ -965,10 +962,7 @@ export class ExperimentalI80386 {
   }
 
   _farRealReturn(width, discard) {
-    if (this.protectedMode)
-      throw new UnsupportedI80386(
-        "protected far return is outside the bounded 386 profile",
-      );
+    if(this.protectedMode)return this._protectedFarReturn(width,discard);
     const bytes = width >>> 3;
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
     const old = stack32 ? this.esp : this.sp;
@@ -984,6 +978,106 @@ export class ExperimentalI80386 {
     if (stack32) this.esp = next;
     else this.sp = next;
     this.eip = target;
+  }
+
+  _protectedFarTransfer(selector, offset, operandWidth, call) {
+    const cpl=this.cs&3,errorCode=selector&0xfffc;
+    if(!errorCode)throw new I80386Fault(13,0,"null far selector");
+    const raw=this._descriptorBytes(selector),access=raw.bytes[5],type=access&15;
+    if(access&0x10){
+      const descriptor=this._ringCodeDescriptor(selector,false,true);
+      if((selector&3)>cpl||descriptor.dpl!==cpl)
+        throw new I80386Fault(13,errorCode,"far code privilege");
+      if(!descriptor.present)throw new I80386Fault(11,errorCode,"far code not present");
+      const target=operandWidth===32?offset>>>0:offset&0xffff;
+      let frame=null;
+      if(call)frame=this._prepareStackFrame(operandWidth,[this.eip,this.cs]);
+      if(target>descriptor.limit)throw new I80386Fault(13,0,"far target outside code segment");
+      this._markAccessed(descriptor);
+      if(frame)this._commitStackFrame(frame);
+      this.cs=(selector&0xfffc)|cpl;this.segmentCaches[SEG_CS]=descriptor;this.eip=target;
+      return;
+    }
+    if(!call||!([4,12].includes(type))) {
+      if([1,3,5,9,11].includes(type))
+        throw new UnsupportedI80386("protected task transfer is outside the bounded 386 profile");
+      throw new I80386Fault(13,errorCode,"invalid protected far descriptor");
+    }
+    const gateDpl=(access>>>5)&3;
+    if(cpl>gateDpl||(selector&3)>gateDpl)
+      throw new I80386Fault(13,errorCode,"call gate privilege");
+    if(!(access&0x80))throw new I80386Fault(11,errorCode,"call gate not present");
+    const gateWidth=type===12?32:16,bytes=gateWidth>>>3;
+    const targetSelector=raw.bytes[2]|(raw.bytes[3]<<8);
+    const targetOffset=(raw.bytes[0]|(raw.bytes[1]<<8)|
+      (gateWidth===32?(raw.bytes[6]|(raw.bytes[7]<<8))*0x10000:0))>>>0;
+    const count=raw.bytes[4]&31;
+    const descriptor=this._ringCodeDescriptor(targetSelector,false,true);
+    const targetCpl=descriptor.dpl;
+    if(targetCpl>cpl)throw new I80386Fault(13,targetSelector&0xfffc,"call gate target privilege");
+    if(!descriptor.present)throw new I80386Fault(11,targetSelector&0xfffc,"call gate code not present");
+    if(targetCpl===cpl){
+      const frame=this._prepareStackFrame(gateWidth,[this.eip,this.cs]);
+      if(targetOffset>descriptor.limit)throw new I80386Fault(13,0,"call gate offset outside code segment");
+      this._markAccessed(descriptor);this._commitStackFrame(frame);
+      this.cs=(targetSelector&0xfffc)|cpl;this.segmentCaches[SEG_CS]=descriptor;this.eip=targetOffset;return;
+    }
+    const oldStack=!!this.segmentCaches[SEG_SS].default32?this.esp:this.sp;
+    if(count)this._linear(SEG_SS,oldStack,count*bytes);
+    const values=[this.eip,this.cs,...Array(count).fill(0),this.esp,this.ss];
+    const frame=this._innerInterruptStack(targetCpl,gateWidth,values,false);
+    if(targetOffset>descriptor.limit)throw new I80386Fault(13,0,"call gate offset outside code segment");
+    for(let index=0;index<count;index++)
+      values[2+index]=this._read(SEG_SS,(oldStack+index*bytes)>>>0,gateWidth);
+    this._markAccessed(descriptor);this._markAccessed(frame.descriptor);
+    this._commitInnerInterruptStack(frame);
+    this.cs=(targetSelector&0xfffc)|targetCpl;this.segmentCaches[SEG_CS]=descriptor;this.eip=targetOffset;
+  }
+
+  _protectedFarReturn(width, discard) {
+    const bytes=width>>>3,stack32=!!this.segmentCaches[SEG_SS].default32;
+    const old=stack32?this.esp:this.sp;
+    this._linear(SEG_SS,old,bytes*2);
+    const address=this._linear(SEG_SS,old,bytes*2);
+    const target=this._readLinear(address,bytes);
+    const selector=this._readLinear(address+bytes,bytes)&0xffff;
+    const currentCpl=this.cs&3,returnCpl=selector&3;
+    if(returnCpl<currentCpl)throw new I80386Fault(13,selector&0xfffc,"far return privilege");
+    const outer=returnCpl>currentCpl;
+    if(outer)this._linear(SEG_SS,old,bytes*4+(discard&0xffff));
+    const descriptor=this._ringCodeDescriptor(selector,false,true);
+    if(descriptor.dpl!==returnCpl)throw new I80386Fault(13,selector&0xfffc,"far return code privilege");
+    if(!descriptor.present)throw new I80386Fault(11,selector&0xfffc,"far return code not present");
+    let newSp,newSs,stackDescriptor;
+    if(outer){
+      newSp=this._readLinear(address+bytes*2+(discard&0xffff),bytes);
+      newSs=this._readLinear(address+bytes*3+(discard&0xffff),bytes)&0xffff;
+      stackDescriptor=this._ringStackDescriptor(newSs,returnCpl,{returnPath:true});
+    }
+    if(target>descriptor.limit)throw new I80386Fault(13,0,"far return target outside code segment");
+    this._markAccessed(descriptor);if(stackDescriptor)this._markAccessed(stackDescriptor);
+    this.cs=selector;this.segmentCaches[SEG_CS]=descriptor;this.eip=width===32?target>>>0:target&0xffff;
+    if(outer){
+      this.ss=newSs;this.segmentCaches[SEG_SS]=stackDescriptor;
+      if(width===32)this.esp=(newSp+(discard&0xffff))>>>0;else this.sp=(newSp+(discard&0xffff))&0xffff;
+      this._invalidateOuterDataSegments(returnCpl);
+    }else{
+      const next=stack32?(old+bytes*2+(discard&0xffff))>>>0:(old+bytes*2+(discard&0xffff))&0xffff;
+      if(stack32)this.esp=next;else this.sp=next;
+    }
+  }
+
+  _invalidateOuterDataSegments(cpl) {
+    for (const id of [SEG_ES, SEG_DS, SEG_FS, SEG_GS]) {
+      const cache=this.segmentCaches[id];
+      if(cache.null)continue;
+      const dpl=(cache.access>>>5)&3,conformingCode=cache.code&&!!(cache.access&4);
+      if(!conformingCode&&(cpl>dpl||(this._segValue(id)&3)>dpl)){
+        this._setSegValue(id,0);
+        this.segmentCaches[id]={base:0,limit:0,default32:false,present:false,
+          null:true,code:false,readable:false,writable:false};
+      }
+    }
   }
 
   _farPointerLoad(segment, width, address32, override) {
@@ -1595,17 +1689,7 @@ export class ExperimentalI80386 {
         this.segmentCaches[SEG_SS] = stackDescriptor;
         if (width === 32) this.esp = newEsp >>> 0;
         else this.sp = newEsp & 0xffff;
-        for (const id of [SEG_ES, SEG_DS, SEG_FS, SEG_GS]) {
-          const cache = this.segmentCaches[id];
-          if (cache.null) continue;
-          const dpl = (cache.access >>> 5) & 3;
-          const conformingCode = cache.code && !!(cache.access & 4);
-          if (!conformingCode && (returnCpl > dpl || (this._segValue(id) & 3) > dpl)) {
-            this._setSegValue(id, 0);
-            this.segmentCaches[id] = { base: 0, limit: 0, default32: false,
-              present: false, null: true, code: false, readable: false, writable: false };
-          }
-        }
+        this._invalidateOuterDataSegments(returnCpl);
       }
     } else {
       if (target > 0xffff)
@@ -2051,30 +2135,20 @@ export class ExperimentalI80386 {
     } else if (op === 0x9a) {
       const target = this._fetchN(width >>> 3);
       const selector = this._fetchN(2);
-      if (this.protectedMode)
-        throw new UnsupportedI80386(
-          "protected far call is outside the bounded 386 profile",
-        );
-      this._farRealTransfer(selector, target, width, true);
+      if(this.protectedMode)this._protectedFarTransfer(selector,target,width,true);
+      else this._farRealTransfer(selector, target, width, true);
     } else if (op === 0xea) {
       const raw = this._fetchN(width >>> 3),
         off = width === 32 ? raw : raw & 0xffff,
         sel = this._fetchN(2);
       if (this.protectedMode) {
-        const descriptor = this._descriptor(sel);
-        if (!descriptor.code)
-          throw new UnsupportedI80386("CS requires code descriptor");
-        if (off > descriptor.limit)
-          throw new UnsupportedI80386("far target exceeds CS limit");
-        this._markAccessed(descriptor);
-        this._setSegValue(SEG_CS, sel);
-        this.segmentCaches[SEG_CS] = descriptor;
+        this._protectedFarTransfer(sel,off,width,false);
       } else {
         if (off > 0xffff)
           throw new UnsupportedI80386("real-mode far target exceeds CS limit");
         this._loadSeg(SEG_CS, sel);
       }
-      this.eip = off;
+      if(!this.protectedMode)this.eip = off;
     } else if (op === 0x0f) this._step0f(address32, override, width);
     else
       throw new UnsupportedI80386(`opcode ${op.toString(16).padStart(2, "0")}`);

@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import I80386,{UnsupportedI80386} from '../src/experimental/i80386.js';
+
+function fixture(){
+  const memory=new Map(),writes=[];
+  const cpu=new I80386({read:a=>memory.get(a>>>0)??0,fetch:a=>memory.get(a>>>0)??0,write:(a,v)=>{writes.push([a>>>0,v&255]);memory.set(a>>>0,v&255);}});
+  const put=(at,bytes)=>bytes.forEach((value,index)=>memory.set(at+index,value));
+  const dword=at=>((memory.get(at)??0)|((memory.get(at+1)??0)<<8)|((memory.get(at+2)??0)<<16)|((memory.get(at+3)??0)*0x1000000))>>>0;
+  return{cpu,memory,writes,put,dword};
+}
+function descriptor(base,access,limit=0xfffff,flags=0xc0){return[limit,limit>>>8,base,base>>>8,base>>>16,access,flags|((limit>>>16)&15),base>>>24].map(v=>v&255);}
+function gate(offset,selector,count=0,type=12,dpl=3){return[offset,offset>>>8,selector,selector>>>8,count&31,0x80|(dpl<<5)|type,offset>>>16,offset>>>24].map(v=>v&255);}
+function protectedFixture(){
+  const f=fixture();f.cpu.cr0=1;f.cpu.gdtr={base:0x200,limit:0x2f};
+  f.put(0x208,descriptor(0x100000,0x9a));f.put(0x210,descriptor(0x120000,0x92));
+  f.put(0x218,descriptor(0x140000,0xfa));f.put(0x220,descriptor(0x160000,0xf2));
+  f.cpu.tr={selector:0x30,base:0x600,limit:0x67,present:true,type:11};
+  f.put(0x604,[0,4,0,0,0x10,0]);return f;
+}
+
+test('same-ring protected far CALL and RETF preserve a padded 32-bit return pointer',()=>{
+  const f=protectedFixture();f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x400;
+  f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
+  f.put(0x100000,[0x9a,0,1,0,0,8,0,0xf4]);f.put(0x100100,[0xcb]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.esp],[8,0x100,0x3f8]);
+  assert.deepEqual([f.dword(0x1203f8),f.dword(0x1203fc)],[7,8]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.esp],[8,7,0x400]);f.cpu.step();assert.equal(f.cpu.halted,true);
+});
+
+test('direct and indirect protected far JMP validate and load same-ring code',()=>{
+  const direct=protectedFixture();direct.cpu.cs=8;direct.cpu.ss=0x10;direct.cpu.esp=0x400;
+  direct.cpu.segmentCaches[1]=direct.cpu._ringCodeDescriptor(8);direct.cpu.segmentCaches[2]=direct.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
+  direct.put(0x100000,[0xea,0,1,0,0,8,0]);direct.cpu.step();
+  assert.deepEqual([direct.cpu.cs,direct.cpu.eip,direct.cpu.esp],[8,0x100,0x400]);
+  const indirect=protectedFixture();indirect.cpu.cs=8;indirect.cpu.ss=0x10;indirect.cpu.esp=0x400;indirect.cpu.ebx=0x300;
+  indirect.cpu.segmentCaches[1]=indirect.cpu._ringCodeDescriptor(8);indirect.cpu.segmentCaches[2]=indirect.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
+  indirect.put(0x100000,[0xff,0x2b]);indirect.put(0x300,[0x00,0x01,0,0,8,0]);indirect.cpu.step();
+  assert.deepEqual([indirect.cpu.cs,indirect.cpu.eip,indirect.cpu.esp],[8,0x100,0x400]);
+});
+
+test('ring-3 32-bit call gate copies parameters and RETF imm returns to the outer stack',()=>{
+  const f=protectedFixture();f.put(0x228,gate(0x100,8,2));
+  f.cpu.cs=0x1b;f.cpu.ss=0x23;f.cpu.esp=0x800;
+  f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(0x1b);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x23,3,{returnPath:true});
+  f.put(0x140000,[0x9a,0,0,0,0,0x2b,0,0xf4]);f.put(0x100100,[0xca,8,0]);
+  f.put(0x160800,[0x44,0x33,0x22,0x11,0x88,0x77,0x66,0x55]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[8,0x100,0x10,0x3e8]);
+  assert.deepEqual(Array.from({length:6},(_,index)=>f.dword(0x1203e8+index*4)),[7,0x1b,0x11223344,0x55667788,0x800,0x23]);
+  f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,7,0x23,0x808]);
+});
+
+test('protected far task descriptors remain explicit refusals without stack mutation',()=>{
+  const f=protectedFixture();f.put(0x228,descriptor(0x600,0x89,0x67,0));
+  f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x400;f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
+  f.put(0x100000,[0x9a,0,0,0,0,0x28,0]);
+  assert.throws(()=>f.cpu.step(),error=>error instanceof UnsupportedI80386&&/task/.test(error.message));assert.equal(f.cpu.esp,0x400);
+});
