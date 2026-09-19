@@ -88,6 +88,45 @@ describe('SparseLU vs dense reference', () => {
     }
   });
 
+  it('retains structural fill when a later refactor activates a zero stamp', () => {
+    // MNA-shaped reduction of a MOS Newton sequence.  The first iteration's
+    // controlled-source cells exist structurally but are numerically zero;
+    // the second iteration activates them without changing the COO pattern.
+    // Dropping zero-reachable fill during factorization left only row 0 with
+    // a 6.964 mA residual while every node voltage looked converged.
+    const matrix = (active) => {
+      const A = new CooMatrix(5);
+      const b = new Float64Array(5);
+      const add = (r, c, v) => A.add(r, c, v);
+      const resistor = (a, z, ohms) => {
+        const g = 1 / ohms;
+        add(a, a, g);
+        if (z >= 0) { add(z, z, g); add(a, z, -g); add(z, a, -g); }
+      };
+      resistor(0, 1, 11000); resistor(1, -1, 6800);
+      resistor(0, 2, 910); resistor(3, -1, 180);
+      const gm = active ? 0.0072785 : 0;
+      const gds = active ? 0.00005298 : 0;
+      add(2, 2, gds); add(3, 3, gds); add(2, 3, -gds); add(3, 2, -gds);
+      add(2, 1, gm); add(2, 3, -gm); add(3, 1, -gm); add(3, 3, gm);
+      b[2] = active ? 0.012576 : 0; b[3] = -b[2];
+      add(4, 0, 1); add(0, 4, 1); b[4] = 9;
+      for (let i = 0; i < 4; i++) add(i, i, 1e-12);
+      return { A, b };
+    };
+    const initial = matrix(false);
+    const active = matrix(true);
+    const reused = new SparseLU();
+    reused.factor(toCSC(initial.A));
+    assert.equal(reused.refactor(toCSC(active.A)), true);
+    const actual = reused.solve(active.b);
+    const expected = denseSolve(active.A, active.b);
+    for (let i = 0; i < actual.length; i++) {
+      assert.ok(Math.abs(actual[i] - expected[i]) < 1e-11,
+        `row ${i}: refactored ${actual[i]} vs dense ${expected[i]}`);
+    }
+  });
+
   it('throws the dense singular contract on a floating block', () => {
     const A = new CooMatrix(3);
     A.add(0, 0, 1);      // row 1/2 empty → singular at column 1

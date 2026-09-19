@@ -61,13 +61,16 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'npn', 'vsource', 'isource',
+  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'npn', 'nmos', 'vsource', 'isource',
   'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
 
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const NPN_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'beta', 'br', 'n', 'vaf', '_model']);
+const NMOS_OPERATING_POINT_PARAMS = new Set([
+  'model', 'vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround', '_model',
+]);
 const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
 
 const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
@@ -2359,9 +2362,9 @@ export class BoardImpl {
 
   /**
    * Compute, but do not adopt, a DC operating point for the first proven
-   * public domain: grounded static native R/C/L/D/Z/V/I/E/G networks. Diodes
-   * and zeners must explicitly select the Shockley model and their complete DC
-   * parameter sets.
+   * public domain: grounded static native R/C/L/D/Z/Q/M/V/I/E/G networks.
+   * Semiconductor devices must explicitly select a supported model and its
+   * complete admitted DC parameter set.
    * This is not
    * an instantaneous read: capacitors are open, independent of stored charge.
    * Positive current means current INTO the named part terminal.
@@ -2377,6 +2380,7 @@ export class BoardImpl {
       if (!OPERATING_POINT_KINDS.has(part.kind)) {
         throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
           + 'the supported domain is static R/C/L/V/I, explicit Shockley D/Z/NPN, '
+          + 'explicit grounded-bulk Level-1 NMOS, '
           + 'plus ideal VCVS/VCCS only');
       }
       if (part.kind === 'vsource' || part.kind === 'isource') {
@@ -2503,6 +2507,49 @@ export class BoardImpl {
           }
         }
       }
+      if (part.kind === 'nmos') {
+        const params = part.params ?? {};
+        if (params.model !== 'level1') {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + "model must be explicitly 'level1'");
+        }
+        if (typeof params.vth !== 'number' || !Number.isFinite(params.vth)) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'vth must be an explicit finite number');
+        }
+        for (const name of ['kp', 'w', 'l']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.lambda !== 'number' || !Number.isFinite(params.lambda)
+            || params.lambda < 0) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'lambda must be an explicit finite number greater than or equal to zero');
+        }
+        if (params.bulkAtGround !== true) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'bulkAtGround must explicitly prove the fourth terminal is the reference net');
+        }
+        if (Object.prototype.hasOwnProperty.call(params, '_model')
+            && (typeof params._model !== 'string' || !params._model.length)) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + '_model must be a non-empty inert source-model name when retained');
+        }
+        const extra = Object.keys(params).find(name => !NMOS_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + `parameter ${extra} is outside the explicit grounded-bulk Level-1 DC domain`);
+        }
+        for (const terminal of ['gate', 'drain', 'source']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
       if (part.kind === 'inductor') {
         const params = part.params ?? {};
         if (typeof params.henrys !== 'number' || !Number.isFinite(params.henrys)
@@ -2622,7 +2669,7 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-l-d-z-q-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn',
+        scope: 'grounded-static-native-r-c-l-d-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn-level1-nmos',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
@@ -2646,6 +2693,13 @@ export class BoardImpl {
           requiredParameters: ['is', 'beta'],
           optionalParameters: ['br', 'n', 'vaf'],
           defaults: { br: 1, n: 1, vaf: 'infinite' },
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        nmos: {
+          model: 'explicit-spice-level1-grounded-bulk',
+          requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
+          defaults: { bulkIs: 1e-14, bulkN: 1 },
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },
