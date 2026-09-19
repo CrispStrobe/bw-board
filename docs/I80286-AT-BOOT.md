@@ -166,3 +166,6 @@ bounded run distinguishes slow logo/menu drawing from a stable wait. Write
 acceptance requires exact FAT12 file bytes and a final prompt; persistence
 requires a fresh machine mounting the saved-image hash and issuing only the
 read command.
+Guest HLT is not a stop condition in this runner: the machine advances to its
+next device deadline and may wake on an interrupt. Architectural shutdown
+remains a hard diagnostic stop.
