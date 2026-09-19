@@ -563,8 +563,8 @@ export function mosBulkJunction(vAcross, params = {}) {
 /** SPICE's default bulk-junction saturation current and ideality. */
 const MOS_BULK_IS = 1e-14;
 const MOS_BULK_N = 1;
-/** Effective ngspice 42 default-temperature voltage for the MOS body junction. */
-export const MOS_BULK_THERMAL_VOLTAGE = 0.025865002516330077;
+/** ngspice 42's thermal voltage at its 27 C default for a MOS body junction. */
+export const MOS_BULK_THERMAL_VOLTAGE = 0.025864925786328753;
 
 export function mosVth(params = {}, vsb = 0) {
   const vth = Number(params.vth ?? 2.0);

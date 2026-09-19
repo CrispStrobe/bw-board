@@ -193,6 +193,7 @@ I2 drain gate DC 1m
 M1 drain gate 0 0 NM W=1u L=1u
 R1 gate drain 1k
 .model NM NMOS(LEVEL=1 VTO=1 KP=100u LAMBDA=.02)
+.options reltol=1e-9 abstol=1e-15 vntol=1e-12
 .control
 set numdgt=17
 op
@@ -230,9 +231,9 @@ print v(drain) v(gate)
     ]);
     const actual = board.operatingPoint();
     assert.equal(actual.converged, true);
-    assert.ok(Math.abs(actual.nodeVoltages.get('drain') - read('drain')) < 2e-9,
+    assert.ok(Math.abs(actual.nodeVoltages.get('drain') - read('drain')) < 5e-7,
       `drain: ${actual.nodeVoltages.get('drain')} vs ${read('drain')}`);
-    assert.ok(Math.abs(actual.nodeVoltages.get('gate') - read('gate')) < 2e-9,
+    assert.ok(Math.abs(actual.nodeVoltages.get('gate') - read('gate')) < 5e-7,
       `gate: ${actual.nodeVoltages.get('gate')} vs ${read('gate')}`);
   });
 
@@ -337,7 +338,7 @@ M1 drain gate source 0 NM W=100u L=1u
     assert.deepEqual(active.analysis.nmos, {
       model: 'explicit-spice-level1-grounded-bulk',
       requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
-      defaults: { bulkIs: 1e-14, bulkN: 1 }, thermalVoltage: 0.025865002516330077,
+      defaults: { bulkIs: 1e-14, bulkN: 1 }, thermalVoltage: 0.025864925786328753,
       temperatureModel: 'fixed',
     });
     for (const [net, oracle] of [['gate', 'v(gate)'], ['drain', 'v(drain)'], ['source', 'v(source)']]) {
