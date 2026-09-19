@@ -925,6 +925,12 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
+| lane | owner/session | worktree | exact scope | base SHA | status |
+| --- | --- | --- | --- | --- | --- |
+| bw-board PR #11 integration | `/root` (2026-09-19) | `/mnt/volume1/code/wt/bwb-pr11-zener-20260919` | Audit current PR #11 checks, mergeability, and land `lane/zener-ibv-default-and-ideality`; no unrelated source changes | `9058d51f84e3e9021dd9a3e39e7916e316acd19d` (`origin/master`) | CLAIMED; merge pending final remote gate |
+| Brickwright Lite PR #194 integration | `/root` (2026-09-19) | `/mnt/volume1/code/lego/wt-lite-pr194-20260919` | Audit current PR #194 checks and mergeability, then land `lane/fpga-memory-rf`; no engine or package-pin changes | `6343c4e09` (`origin/main`) | CLAIMED; merge pending final remote gate |
+| Harris/native qualification restack | `/root` (2026-09-19) | `/mnt/volume1/code/wt/bwb-harris-qualification-20260919` | Restack `ci/harris-native-qualification` onto current `origin/master`, run focused contract proof and hosted qualification, then land only the two workflow/test files | `9058d51f84e3e9021dd9a3e39e7916e316acd19d` (`origin/master`) | CLAIMED; restack and qualification pending |
+
 Native 286 memory bus component (P7-R1 prerequisite): delegated Codex subagent,
 2026-09-12, isolated `feat/native-286-memory-bus` from `63359b8`. Owned standalone
 C/JS sequencer, portable differential helper and optional tests; no phase-circuit
