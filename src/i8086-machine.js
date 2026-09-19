@@ -805,7 +805,7 @@ export class I8086Machine {
             const master=this.chips[c.cascadeTo],slave=this.chips[c.name],line=c.cascadeIrq;
             if(!(master instanceof I8259)||master===slave||!Number.isInteger(line)||line<0||line>7)throw new Error(`machine config: invalid PIC cascade ${c.name}`);
             this._picCascade={master,slave,line};
-            const prior=slave.hooks.onInterrupt;slave.hooks.onInterrupt=(active)=>{prior?.(active);master.setIRQ(line,active?1:0);};
+            const prior=slave.hooks.onInterrupt;slave.hooks.onInterrupt=(active)=>{prior?.(active);if(!this._restoring)master.setIRQ(line,active?1:0);};
             master.setIRQ(line,slave.intActive?1:0);
             const masterWrite=master.write.bind(master),slaveWrite=slave.write.bind(slave);
             master.write=(reg,val)=>{if((reg&1)&&master.initPhase===2&&!(val&(1<<line)))throw new Error(`8259 cascade ICW3 must mark master IR${line}`);return masterWrite(reg,val);};
@@ -2255,6 +2255,7 @@ export class I8086Machine {
         if(rtc&&s.machine.nmiMasked!==s.chips[Object.keys(this.chips).find(n=>this.chips[n]===rtc)].nmiMasked)
             throw new Error('8086 checkpoint refused: NMI mask and RTC port 70 state disagree');
         this._restoring=true;
+        try {
         for (const k of I8086Machine.CPU_STATE) this.cpu[k] = s.cpu[k];
         this.cycles = s.cycles;
         this.mem.set(s.mem);
@@ -2275,7 +2276,9 @@ export class I8086Machine {
             const pair = statePair(this.devices[name]);
             this.devices[name][pair[1]](s.devices[name]);
         }
-        this._restoring=false;
+        } finally {
+            this._restoring=false;
+        }
         // The restored chips are at the restored cycle: no debt is owed, and the
         // deadline is re-armed from their fresh state.
         this._chipDebt = 0;

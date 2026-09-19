@@ -17,7 +17,11 @@ export class AT8042A20 {
     }
     _publish() {
         this.onA20Change?.(!!(this.outputPort&2));
-        this.onIRQ?.(!!((this.commandByte&1)&&this.outputQueue[0]?.keyboard));
+        const active=!!((this.commandByte&1)&&this.outputQueue[0]?.keyboard);
+        if(active!==this._irq) {
+            this._irq=active;
+            this.onIRQ?.(active);
+        }
     }
     _queue(value,keyboard=false) {
         if(this.outputQueue.length>=this.queueLimit) throw new Error('AT 8042 output queue full');
@@ -28,7 +32,14 @@ export class AT8042A20 {
     readStatus() { return this.outputQueue.length?1:0; }
     readData() {
         if(!this.outputQueue.length)return 0xff;
-        const v=this.outputQueue.shift().value;
+        const entry=this.outputQueue.shift();
+        const v=entry.value;
+        // Two queued keyboard bytes are two edges. The first acknowledge may
+        // have cleared the PIC IRR while the controller output stayed full.
+        if(entry.keyboard&&this._irq&&this.outputQueue[0]?.keyboard) {
+            this._irq=false;
+            this.onIRQ?.(false);
+        }
         this._publish();
         return v;
     }
@@ -74,6 +85,7 @@ export class AT8042A20 {
         this.commandByte=s.commandByte;
         this.pendingCommand=s.pendingCommand;
         this.outputQueue=s.outputQueue.map(e=>({...e}));
+        this._irq=undefined;
         this._publish();
     }
 }

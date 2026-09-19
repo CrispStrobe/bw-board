@@ -95,6 +95,16 @@ test('machine key path polls IBF clear and routes set-1 through the AT controlle
   assert.equal(m.keyIn(0x1c),true);assert.equal(m._in(0x64)&1,1);assert.equal(m._in(0x60),0x1c);
 });
 
+test('acknowledged keyboard IRQ is not reasserted by A20 and queued keys form distinct IRQs',()=>{
+  const m=new I8086Machine(PCAT80286),pic=m.chips.pic1;initPic(pic,0x20,4);initPic(m.chips.pic2,0x28,2);
+  m._out(0x64,0x60);m._out(0x60,1);m.cpu.canTakeInterrupt=()=>true;m.cpu.interrupt=()=>{};
+  m.keyIn(0x1e);m._serviceInterrupts();assert.equal(pic.irr&2,0);
+  m._out(0x64,0xd1);m._out(0x60,3);assert.equal(pic.irr&2,0,'unrelated A20 change cannot duplicate IRQ1');
+  assert.equal(m._in(0x60),0x1e);pic.write(0,0x20);
+  m.keyIn(0x20);m.keyIn(0x21);m._serviceInterrupts();assert.equal(m._in(0x60),0x20);
+  pic.write(0,0x20);assert.equal(m._serviceInterrupts(),true);assert.equal(m._in(0x60),0x21);
+});
+
 test('real guest IRQ8 handler reads status C, EOIs both PICs, IRETs and halts',()=>{
   const m=new I8086Machine(PCAT80286),rtc=m.chips.rtc1;
   initPic(m.chips.pic1,0x20,4);initPic(m.chips.pic2,0x28,2);

@@ -93,6 +93,9 @@ export class MC146818 {
     _raise(flag) { this.ram[0x0c]|=flag; }
     advance(n) {
         if(!Number.isFinite(n)||n<0)return;
+        const elapsed=Math.floor((this.cyclePhase+n)/this.clockHz);
+        if(!(this.ram[0x0b]&0x80)&&this.seconds+elapsed>8640000000)
+            throw new Error('MC146818 deterministic time exceeds supported Date range');
         this.cyclePhase+=n;
         while(this.cyclePhase>=this.clockHz) {
             this.cyclePhase-=this.clockHz;
@@ -127,13 +130,16 @@ export class MC146818 {
     }
     validateState(s) {
         const rate=s?.ram?.[0x0a]&15;
+        const irq=((s?.ram?.[0x0c]&0x40)&&(s?.ram?.[0x0b]&0x40))||
+            ((s?.ram?.[0x0c]&0x20)&&(s?.ram?.[0x0b]&0x20))||
+            ((s?.ram?.[0x0c]&0x10)&&(s?.ram?.[0x0b]&0x10));
         if(!s||s.v!==1||!Number.isInteger(s.index)||s.index<0||s.index>127||
             typeof s.nmiMasked!=='boolean'||!Number.isSafeInteger(s.seconds)||s.seconds<0||s.seconds>8640000000||
             !Number.isFinite(s.cyclePhase)||s.cyclePhase<0||s.cyclePhase>=this.clockHz||
             !Number.isFinite(s.periodicPhase)||s.periodicPhase<0||s.periodicPhase>=this.clockHz||
             !Array.isArray(s.ram)||s.ram.length!==128||s.ram.some(v=>!Number.isInteger(v)||v<0||v>255)||
-            (s.ram[0x0a]&0x70)!==0x20||rate===1||rate===2||(s.ram[0x0b]&0x09)||
-            (s.ram[0x0c]&0x0f)||s.ram[0x0d]!==0x80)
+            (s.ram[0x0a]&0xf0)!==0x20||rate===1||rate===2||(s.ram[0x0b]&0x09)||
+            (s.ram[0x0c]&0x0f)||!!(s.ram[0x0c]&0x80)!==!!irq||s.ram[0x0d]!==0x80)
             throw new Error('MC146818 state is invalid');
     }
     setState(s) {

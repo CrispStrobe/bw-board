@@ -18,7 +18,9 @@ let steps=0;while(!m.cpu.halted&&steps<30){m.step();steps++;}
 const observed={halted:m.cpu.halted,handlerCount:m.mem[0x300],rtcStatusC:rtc.ram[0x0c],masterISR:m.chips.pic1.isr,slaveISR:m.chips.pic2.isr,steps};
 const expected={halted:true,handlerCount:1,rtcStatusC:0,masterISR:0,slaveISR:0};
 const accepted=Object.entries(expected).every(([k,v])=>observed[k]===v);
-const paths=['scripts/run-at-devices-guest.mjs','src/i8086-machine.js','src/at-8042-a20.js','src/mc146818.js','src/i8086.js'];
+// Explicit manual inventory of the modules executed by this bounded receipt.
+const paths=['scripts/run-at-devices-guest.mjs','src/i8086-machine.js','src/at-8042-a20.js',
+    'src/mc146818.js','src/i8259.js','src/i8086.js'];
 const sourceHashes=Object.fromEntries(await Promise.all(paths.map(async p=>[p,createHash('sha256').update(await readFile(resolve(p))).digest('hex')])));
 const receipt={schemaVersion:1,revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),node:process.version,accepted,
     scope:'owned real-mode 80286 guest IRQ8 handler through MC146818 and cascaded 8259s; not full AT BIOS evidence',sourceHashes,expected,observed};
