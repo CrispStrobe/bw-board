@@ -825,6 +825,19 @@ export class ExperimentalI80386 {
     }
   }
 
+  _repeatString(op, width, address32, override, repeat, instructionStart) {
+    const count = address32 ? this.ecx : this.cx;
+    if (count === 0) return;
+    this._string(op, width, address32, override);
+    if (address32) this.ecx = (this.ecx - 1) >>> 0;
+    else this.cx = (this.cx - 1) & 0xffff;
+    const remaining = address32 ? this.ecx : this.cx;
+    const compare = op === 0xa6 || op === 0xa7 || op === 0xae || op === 0xaf;
+    const condition =
+      !compare || (repeat === 0xf3 ? !!(this.eflags & ZF) : !(this.eflags & ZF));
+    if (remaining !== 0 && condition) this.eip = instructionStart;
+  }
+
   _snapshotInstruction() {
     const state = {};
     for (const name of REG_NAMES) state[name] = this[name];
@@ -1207,10 +1220,12 @@ export class ExperimentalI80386 {
   _stepInstruction() {
     if (this.halted) return 0;
     this._instructionBytes = 0;
+    const instructionStart = this.eip >>> 0;
     const default32 = !!this.segmentCaches[SEG_CS].default32;
     let operand32 = default32,
       address32 = default32,
       override = null,
+      repeat = null,
       op;
     do {
       op = this._fetch8();
@@ -1222,9 +1237,15 @@ export class ExperimentalI80386 {
       else if (op === 0x3e) override = SEG_DS;
       else if (op === 0x64) override = SEG_FS;
       else if (op === 0x65) override = SEG_GS;
+      else if (op === 0xf2 || op === 0xf3) repeat = op;
       else break;
     } while (true);
     const width = operand32 ? 32 : 16;
+    const stringOpcodes = [
+      0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
+    ];
+    if (repeat !== null && !stringOpcodes.includes(op))
+      throw new I80386Fault(6, null, "REP prefix on non-string instruction");
     if (
       [
         0x04, 0x05, 0x0c, 0x0d, 0x24, 0x25, 0x2c, 0x2d, 0x34, 0x35, 0x3c, 0x3d,
@@ -1250,8 +1271,17 @@ export class ExperimentalI80386 {
         if (byte) this.al = result;
         else this._setReg(0, operandWidth, result);
       }
-    } else if ([0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf].includes(op)) {
-      this._string(op, width, address32, override);
+    } else if (stringOpcodes.includes(op)) {
+      if (repeat === null) this._string(op, width, address32, override);
+      else
+        this._repeatString(
+          op,
+          width,
+          address32,
+          override,
+          repeat,
+          instructionStart,
+        );
     } else if (op === 0xa8 || op === 0xa9) {
       const testWidth = op === 0xa8 ? 8 : width;
       const left = testWidth === 8 ? this.al : this._reg(0, testWidth);

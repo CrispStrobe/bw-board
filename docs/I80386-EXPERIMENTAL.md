@@ -106,8 +106,12 @@ hardware profile makes no protected-mode or timing claim.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
-direction. REP/REPE/REPNE remains explicit unsupported work because precise
-mid-string fault and interrupt restart state is not yet modeled.
+direction. REP/REPE/REPNE execute one string iteration per executor step. A
+continuing repeat leaves EIP at the prefix while retaining the completed
+count/index/memory effects, which exposes a real external-interrupt boundary.
+A fault restarts only the uncompleted iteration, and zero-count repeats make
+no operand access. This is functional restart evidence, not a cycle count or
+prefetch/timing claim.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the

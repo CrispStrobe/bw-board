@@ -150,3 +150,101 @@ test("single string operations honor sizes, overrides, and DF index direction", 
   assert.equal(cpu.di, 0x2ff);
   assert.equal(cpu.eflags & 0x40, 0x40);
 });
+
+test("REP exposes every completed iteration as an interruptible boundary", () => {
+  const { cpu, memory } = fixture([0xf3, 0xaa, 0xf4]);
+  cpu.cx = 3;
+  cpu.di = 0x100;
+  cpu.al = 0x5a;
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [0, 2, 0x101]);
+  assert.equal(memory.get(0x100), 0x5a);
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [0, 1, 0x102]);
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [2, 0, 0x103]);
+  cpu.step();
+  assert.equal(cpu.halted, true);
+});
+
+test("an external interrupt resumes REP with completed progress preserved", () => {
+  const memory = new Map();
+  const put = (at, bytes) =>
+    bytes.forEach((value, index) => memory.set(at + index, value));
+  put(0x1000, [0xf3, 0xaa]);
+  put(0x80, [0x00, 0x02, 0x00, 0x00]);
+  put(0x200, [0xcf]);
+  const cpu = new I80386({
+    read: (address) => memory.get(address) ?? 0,
+    fetch: (address) => memory.get(address) ?? 0,
+    write: (address, value) => memory.set(address, value & 0xff),
+  });
+  cpu.cs = 0x100;
+  cpu.segmentCaches[1].base = 0x1000;
+  cpu.sp = 0x100;
+  cpu.cx = 2;
+  cpu.di = 0x300;
+  cpu.al = 0x44;
+  cpu.eflags |= 0x200;
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [0, 1, 0x301]);
+  assert.equal(cpu.interrupt(0x20), true);
+  assert.deepEqual([cpu.cs, cpu.eip, cpu.cx, cpu.di], [0, 0x200, 1, 0x301]);
+  cpu.step();
+  assert.deepEqual([cpu.cs, cpu.eip, cpu.cx, cpu.di], [0x100, 0, 1, 0x301]);
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [2, 0, 0x302]);
+});
+
+test("REP fault restarts only the uncompleted iteration", () => {
+  const { cpu, memory } = fixture([0x67, 0xf3, 0xaa]);
+  cpu.ecx = 2;
+  cpu.edi = 0;
+  cpu.al = 0x33;
+  cpu.segmentCaches[0].base = 0x100;
+  cpu.segmentCaches[0].limit = 0;
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.ecx, cpu.edi], [0, 1, 1]);
+  assert.equal(memory.get(0x100), 0x33);
+  assert.throws(() => cpu.step(), (error) => error?.vector === 13);
+  assert.deepEqual([cpu.eip, cpu.ecx, cpu.edi], [0, 1, 1]);
+});
+
+test("REPE/REPNE stop after the iteration that breaks their condition", () => {
+  for (const [prefix, values] of [
+    [0xf3, [7, 8]],
+    [0xf2, [8, 7]],
+  ]) {
+    const { cpu, memory } = fixture([prefix, 0xa6]);
+    cpu.cx = 3;
+    cpu.si = 1;
+    cpu.di = 3;
+    cpu.segmentCaches[3].base = 0x100;
+    cpu.segmentCaches[0].base = 0x200;
+    memory.set(0x101, values[0]);
+    memory.set(0x203, 7);
+    memory.set(0x102, values[1]);
+    memory.set(0x204, 7);
+    cpu.step();
+    assert.equal(cpu.eip, 0);
+    cpu.step();
+    assert.deepEqual([cpu.eip, cpu.cx, cpu.si], [2, 1, 3]);
+  }
+});
+
+test("zero-count REP avoids memory and invalid REP encoding raises #UD", () => {
+  let reads = 0;
+  const zero = new I80386({
+    fetch: (address) => [0xf3, 0xa4][address] ?? 0,
+    read: () => {
+      reads++;
+      return 0;
+    },
+  });
+  zero.cx = 0;
+  zero.step();
+  assert.deepEqual([zero.eip, zero.si, zero.di, reads], [2, 0, 0, 0]);
+  const invalid = fixture([0xf3, 0x90]).cpu;
+  assert.throws(() => invalid.step(), (error) => error?.vector === 6);
+  assert.equal(invalid.eip, 0);
+});
