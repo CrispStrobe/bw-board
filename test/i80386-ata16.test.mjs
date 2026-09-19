@@ -7,6 +7,15 @@ import ExperimentalI80386ATMachine from '../src/experimental/i80386-at-machine.j
 const geometry = {cylinders: 1, heads: 1, sectors: 2};
 const image = () => Uint8Array.from({length: 1024}, (_, index) => index & 0xff);
 
+test('experimental ATA admits only geometry representable by its task file', () => {
+  assert.throws(() => new ExperimentalATA16(new Uint8Array(512),
+    {cylinders: 0x10001, heads: 1, sectors: 1}), /CHS task-file/);
+  assert.throws(() => new ExperimentalATA16(new Uint8Array(512),
+    {cylinders: 1, heads: 17, sectors: 1}), /CHS task-file/);
+  assert.throws(() => new ExperimentalATA16(new Uint8Array(512),
+    {cylinders: 1, heads: 1, sectors: 256}), /CHS task-file/);
+});
+
 test('experimental ATA performs CHS sector reads and writes with a native word FIFO', () => {
   const irq = [];
   const ata = new ExperimentalATA16(image(), geometry, {onIRQ: level => irq.push(level)});
@@ -77,6 +86,10 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   assert.deepEqual(irq, [true, false, true, false]);
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
   assert.equal(ata.readData16(), 0xffff, 'SRST cancels the pending data phase');
+  ata.writeRegister(3, 2);
+  ata.writeRegister(7, 0x30);
+  for (let word = 0; word < 256; word++) ata.writeData16(word);
+  assert.deepEqual(ata.mediaBytes(), image(), 'commands and data are ignored while SRST is asserted');
   ata.writeRegister(7, 2, {control: true});
   assert.equal(ata.readRegister(7, {alternate: true}), 0x40);
   ata.writeRegister(7, 0, {control: true});

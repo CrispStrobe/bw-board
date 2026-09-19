@@ -17,6 +17,7 @@ const sourceHash=file=>sha(fs.readFileSync(path.join(root,file)));
 const sourcePaths=[
     'src/i8086-machine.js','src/i8086.js','src/i8086-ram-words.js',
     'src/experimental/i80386.js','src/experimental/i80386-at-machine.js',
+    'src/experimental/ata16.js',
     'src/experimental/i80286-protected.js','src/at-8042-a20.js','src/at-system-control.js',
     'src/i8254.js','src/i8259.js','src/i8237.js','src/mc146818.js','src/cga-card.js',
     'src/upd765.js','src/machine-checkpoint.js',

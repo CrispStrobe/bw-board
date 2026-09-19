@@ -11,6 +11,8 @@ export class ExperimentalATA16 {
     if (!(image instanceof Uint8Array)) throw new Error('ATA image must be a Uint8Array');
     for (const [name, value] of Object.entries({cylinders, heads, sectors}))
       if (!Number.isInteger(value) || value < 1) throw new Error(`ATA ${name} must be positive`);
+    if (cylinders > 0x10000 || heads > 0x10 || sectors > 0xff)
+      throw new Error('ATA geometry exceeds the CHS task-file fields');
     if (image.length !== cylinders * heads * sectors * 512)
       throw new Error('ATA image size does not match geometry');
     this.image = image.slice();
@@ -134,6 +136,7 @@ export class ExperimentalATA16 {
   }
 
   writeCommand(command) {
+    if (this.control & 4) return;
     if (this.driveHead & 0x10) return;
     this.command = command & 0xff;
     this.error = 0;
@@ -145,6 +148,7 @@ export class ExperimentalATA16 {
   }
 
   readData16() {
+    if (this.control & 4) return 0xffff;
     if (this.driveHead & 0x10) return 0xffff;
     if (this.direction !== 'read' || !(this.status & STATUS_DRQ)) return 0xffff;
     const byte = this.wordIndex * 2;
@@ -161,6 +165,7 @@ export class ExperimentalATA16 {
   }
 
   writeData16(value) {
+    if (this.control & 4) return;
     if (this.driveHead & 0x10) return;
     if (this.direction !== 'write' || !(this.status & STATUS_DRQ)) return;
     const byte = this.wordIndex * 2;
@@ -182,6 +187,7 @@ export class ExperimentalATA16 {
   }
 
   readRegister(register, {alternate = false} = {}) {
+    if (this.control & 4) return alternate || register === 7 ? this.status : 0;
     if (this.driveHead & 0x10) return 0;
     if (alternate) return this.status;
     if (register === 1) return this.error;
@@ -216,6 +222,7 @@ export class ExperimentalATA16 {
       } else this._updateIRQ();
       return;
     }
+    if (this.control & 4) return;
     if (this.driveHead & 0x10 && register !== 6) return;
     if (register === 1) this.features = byte;
     else if (register === 2) this.sectorCount = byte;
