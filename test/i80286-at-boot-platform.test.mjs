@@ -66,9 +66,9 @@ test('8042 self-test returns 55h while command-byte bit 2 controls system flag',
     controller.writeCommand(0x60);controller.writeData(controller.commandByte|4);
     assert.equal(controller.readStatus()&4,4);
     controller.writeCommand(0xe0);controller.advance(32);
-    assert.equal(controller.readData(),1,'E0 reports enabled keyboard clock input');
+    assert.equal(controller.readData(),3,'E0 reports idle-high keyboard clock and data inputs');
     controller.writeCommand(0xad);controller.writeCommand(0xe0);controller.advance(32);
-    assert.equal(controller.readData(),0,'E0 reports disabled keyboard clock input');
+    assert.equal(controller.readData(),2,'E0 reports disabled clock and idle-high data input');
     controller.writeCommand(0xfe);
     assert.equal(resets,1);
     assert.equal(controller.readStatus()&4,4);
@@ -104,6 +104,7 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     controller.advance(1);
     assert.equal(controller.readData(),0xaa);
     controller.writeData(0xff);
+    controller.writeCommand(0xad);
     controller.advance(59_999);
     const saved=controller.getState();
     const restored=new AT8042A20({powerOnKeyboardBatCycles:4_200_000,
@@ -112,6 +113,9 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     assert.deepEqual(restored.getState(),saved);
     assert.equal(controller.readStatus()&1,0);
     controller.advance(1);
+    assert.equal(controller.readStatus()&1,0,'disabled interface holds a due keyboard ACK');
+    assert.equal(controller.nextWake(),Infinity,'held byte cannot create a zero-cycle wake loop');
+    controller.writeCommand(0xae);
     assert.equal(controller.readData(),0xfa);
     controller.advance(4_140_000);
     assert.equal(controller.readData(),0xaa);

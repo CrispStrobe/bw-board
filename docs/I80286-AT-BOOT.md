@@ -33,7 +33,10 @@ The attached bounded keyboard schedules its power-on BAT completion and the
 `FAh`/`AAh` response sequence for an explicit `FFh` keyboard reset. The
 profile uses 10 ms for ACK and 700 ms for BAT at 6 MHz, both inside the IBM
 manual's stated response (within 20 ms) and BAT (600–900 ms) ranges. Toggling
-the 8042 interface with `ADh`/`AEh` does not manufacture another BAT byte.
+the 8042 interface with `ADh`/`AEh` does not manufacture another BAT byte;
+completed keyboard bytes remain held while the clock is disabled and are
+released by `AEh`. `E0h` reports both idle-high keyboard test inputs, with the
+clock input low while disabled; serial clock/data transitions are not modeled.
 The second DMA controller currently supports BIOS register diagnostics only;
 16-bit transfers, address shifting, and cascade behavior remain unsupported.
 
