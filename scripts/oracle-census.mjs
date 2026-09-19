@@ -158,6 +158,22 @@ export const INPUTS = [
         ci: 'yes — `vectors` blocks on 200 vectors from every opcode file; the dedicated 286 qualification runs the full pinned corpus and retains separate fast/Harris reports',
     },
     {
+        id: '80386ex-moo-vectors', kind: 'oracle',
+        repository: 'SingleStepTests/80386',
+        revision: '459d49fbe6280e9ed46fee887b58dacd9cb880ab',
+        ciCadence: 'push',
+        what: 'SingleStepTests 80386 MOO 1.1 physical captures from an Intel 386EX. '
+            + 'Provides bounded register/RAM samples for the experimental 80386 executor; '
+            + 'it is not a 386DX timing oracle or protected-mode corpus.',
+        env: 'SST386_ROOT',
+        paths: [join(HOME, 'code', 'SingleStepTests-80386')],
+        gates: ['test/i80386-moo-parser.test.mjs', 'scripts/verify-i80386-moo-sample.mjs'],
+        obtain: 'Check out https://github.com/SingleStepTests/80386 at '
+            + '459d49fbe6280e9ed46fee887b58dacd9cb880ab and set SST386_ROOT to that clean checkout.',
+        ciAvailable: true,
+        ci: 'yes — the 80286 qualification workflow checks out the exact revision and runs the admitted fixed samples',
+    },
+    {
         id: '8088-vectors', kind: 'oracle',
         repository: 'SingleStepTests/v20',
         ciCadence: 'push',   // the `vectors186` job
