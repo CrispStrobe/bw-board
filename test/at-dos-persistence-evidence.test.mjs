@@ -10,6 +10,13 @@ const expectedText='at-boot-ok\r\n';
 
 test('source-bound AT DOS receipts prove write then fresh-remount read without replaying creation',()=>{
     const {write,reboot}=evidence;
+    assert.deepEqual(evidence.historical,{
+        executionRevision:'c5a4b86cf39801c705ee1d61cf73dad3208333ee',
+        writeSteps:24406016,rebootSteps:24318976,
+        outputMediaSha256:'6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69',
+        writeReportSha256:'d92f007664b65989f45bf17cdec9d3dccb38c6a7e782ce056cfa1f477e5b5186',
+        rebootReportSha256:'7baa965cf8012fc8a23a690eeae4b2468c7aafe98983cf5d7be21b04cb175687',
+    });
     assert.equal(write.keyboardScript.requested,'\r\recho at-boot-ok>atboot.txt\rtype atboot.txt\r');
     assert.equal(reboot.keyboardScript.requested,'\r\rtype atboot.txt\r');
     assert.doesNotMatch(reboot.keyboardScript.requested,/echo/i);
@@ -22,7 +29,7 @@ test('source-bound AT DOS receipts prove write then fresh-remount read without r
         assert.equal(receipt.memory.baseRamBytes,640<<10);
         assert.equal(receipt.guestFile.size,12);
         assert.deepEqual(receipt.guestFile.bytes,[...Buffer.from(expectedText)]);
-        assert.equal(receipt.executionRevision,'c5a4b86cf39801c705ee1d61cf73dad3208333ee');
+        assert.equal(receipt.executionRevision,'439560e3dc02c9c11eb36afbe374859126e11e47');
         assert.match(receipt.originalReportSha256,/^[0-9a-f]{64}$/);
         for(const [file,hash] of Object.entries(receipt.sourceSha256))
             assert.equal(hash,sha(file),`${file} source binding`);

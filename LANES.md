@@ -38,6 +38,26 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-19 DONE (implementation; hosted qualification pending) — Astra/Sol
+386 REP/ISA and RTC continuation. Frozen integration worktree
+`/mnt/volume1/code/wt/astra-x86-rep-rtc-land`, branch
+`lane/astra-x86-rep-rtc-land`; candidate is the commit containing this row.
+Adds restartable REP, XCHG, near indirect/far real control, far-pointer loads,
+complete basic ALU families, PUSHA/POPA, moffs and rotates. Root audit corrected
+PUSHAD saved ESP and nonzero full-circle rotate carry; 386EX POPAD upper-ESP
+behavior and undefined-OF sample exclusions are explicit. Source `a6de545`
+passes 91 focused CPU/adapter tests, 266 bounded physical samples, four PCjs
+comparisons and eight rejecting controls. Exact pinned test386 reaches LLDT
+at POST09 setup (POST08 last emitted), not full-ROM acceptance. The separate
+opt-in 386 AT adapter proves bus/reset/IRQ/NMI/HLT wiring, not an OS boot.
+RTC calendar writes/SET/modes/checkpoints now admit the observed FreeDOS BIOS
+writes. Untouched FreeDOS reaches the FreeCom startup display at 40M steps;
+no shell acceptance. Fresh DOS2 write/fresh-remount TYPE at `439560e` both
+pass with identical 12-byte output and linked image SHA, all 15 executed source
+hashes matching this tree; earlier c5 evidence remains historical. AT/device/
+acceptance focused tests pass. Later system-register and 386 BIOS runner work
+stays outside this freeze. No full 386DX, Windows, Doom or timing claim.
+
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol functional
 AT DOS disk boot and 386 paging/reset/ISA stage; candidate is the commit carrying
 this row. Two source-bound genuine-reset IBM Rev1 boots execute DOS 2.00 and

@@ -126,7 +126,7 @@ those values, so genuine checkpoints must include their firmware CS:IP.
 ## Accepted DOS disk boot and persistence
 
 The [source-bound write/reboot evidence](../test/fixtures/at-dos-persistence-evidence.json)
-records two fresh machines executed at `c5a4b86cf39801c705ee1d61cf73dad3208333ee`.
+records two fresh machines requalified at `439560e3dc02c9c11eb36afbe374859126e11e47`. The fixture retains the earlier c5 execution revision, step counts, media hash and raw-report hashes as historical provenance.
 All 15 recorded CPU, device and harness hashes match the integrated stage.
 The BIOS starts at physical FFFFF0h, completes POST and INT19, and loads the
 mounted floppy through the FDC and DMA channel 2 into 0000:7C00. The machine
@@ -151,3 +151,7 @@ The raw reports are represented by their hashes and retained grading fields;
 ROM and disk images remain external. This qualifies the named DOS boot and
 persistence workload on this functional AT profile. It does not qualify all
 AT peripherals, Windows, Doom, or physical bus/cycle timing.
+
+## FreeDOS 1.4 diagnostic
+
+The compact [FreeDOS diagnostic](receipts/2026-09-19-freedos14-diagnostic.json) binds the untouched official 1.2MiB image, Node 22 execution at `439560e`, and all executed source hashes. It reaches INT19, verifies the loaded boot sector, and displays the FreeCom 0.86 interface within a 40-million-instruction ceiling without a host refusal, shutdown, halt, or unexpected interrupt. No final shell prompt or keyboard interaction was observed, so `fullBootAccepted` remains false. This is bounded boot progression rather than a failed or accepted installation.

@@ -281,5 +281,5 @@ mutation controls. Exception and LOCK-prefix exclusions remain explicit.
 The unchanged diagnostic ROM reaches LLDT at CS00D0:EIP2AAC after 802,807
 instructions; `accepted` and `fullRomPass` remain false. The separate external
 IBM Rev1 BIOS probe now reaches SMSW at F000:060D after 1,100,307 instructions.
-Neither diagnostic is an accepted 386 OS boot. Hosted qualification and fresh
-DOS2 RTC-dependent persistence receipts still gate this continuation's landing.
+Neither diagnostic is an accepted 386 OS boot. Fresh DOS2 RTC-dependent write/reboot receipts pass at `439560e`; hosted
+qualification still gates this continuation's landing.

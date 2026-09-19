@@ -1,5 +1,13 @@
 {
-  "schema": "astra.at-dos-persistence-evidence.v1",
+  "schema": "astra.at-dos-persistence-evidence.v2",
+  "historical": {
+    "executionRevision": "c5a4b86cf39801c705ee1d61cf73dad3208333ee",
+    "writeSteps": 24406016,
+    "rebootSteps": 24318976,
+    "outputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
+    "writeReportSha256": "d92f007664b65989f45bf17cdec9d3dccb38c6a7e782ce056cfa1f477e5b5186",
+    "rebootReportSha256": "7baa965cf8012fc8a23a690eeae4b2468c7aafe98983cf5d7be21b04cb175687"
+  },
   "write": {
     "schema": "astra.at-bios-post.v2",
     "passed": true,
@@ -25,7 +33,7 @@
           "bytesPerSector": 512
         },
         "output": {
-          "path": "/tmp/astra-msdos2-at-final2.img",
+          "path": "/tmp/astra-msdos2-at-439560e.img",
           "sha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69"
         }
       }
@@ -874,7 +882,7 @@
       "priorOutputMediaSha256": null,
       "linked": null
     },
-    "executionRevision": "c5a4b86cf39801c705ee1d61cf73dad3208333ee",
+    "executionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
     "sourceSha256": {
       "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
@@ -885,14 +893,13 @@
       "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
       "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
       "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
-      "src/mc146818.js": "f618a3ada8708f03cf7ea73a4afd85cea8794aff1141b42efac1e2338b968083",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
       "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
       "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
       "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
-      "scripts/run-at-bios-post.mjs": "a1850a116ec3b472392590987b409ed74f4d925a8e8427142ba001baace95544"
+      "scripts/run-at-bios-post.mjs": "0f0fe56fd882087caccbb6fd4c2c412a6854bbe11aca944e5d07d848706ba551"
     },
-    "originalReportSha256": "d92f007664b65989f45bf17cdec9d3dccb38c6a7e782ce056cfa1f477e5b5186",
     "reset": {
       "cs": 61440,
       "ip": 65520,
@@ -904,7 +911,8 @@
       "installedRamBytes": 1179648,
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
-    }
+    },
+    "originalReportSha256": "d78bfa07d4e226626e3ce171fdcfbd64f16264c22bf8abe6e52ea5865be3e2ff"
   },
   "reboot": {
     "schema": "astra.at-bios-post.v2",
@@ -1631,7 +1639,7 @@
       "priorOutputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
       "linked": true
     },
-    "executionRevision": "c5a4b86cf39801c705ee1d61cf73dad3208333ee",
+    "executionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
     "sourceSha256": {
       "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
@@ -1642,14 +1650,13 @@
       "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
       "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
       "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
-      "src/mc146818.js": "f618a3ada8708f03cf7ea73a4afd85cea8794aff1141b42efac1e2338b968083",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
       "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
       "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
       "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
-      "scripts/run-at-bios-post.mjs": "a1850a116ec3b472392590987b409ed74f4d925a8e8427142ba001baace95544"
+      "scripts/run-at-bios-post.mjs": "0f0fe56fd882087caccbb6fd4c2c412a6854bbe11aca944e5d07d848706ba551"
     },
-    "originalReportSha256": "7baa965cf8012fc8a23a690eeae4b2468c7aafe98983cf5d7be21b04cb175687",
     "reset": {
       "cs": 61440,
       "ip": 65520,
@@ -1661,6 +1668,7 @@
       "installedRamBytes": 1179648,
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
-    }
+    },
+    "originalReportSha256": "468844d47e4077bef29b956be10c95bdd19100633ced2593a48854f04705d2a0"
   }
 }
