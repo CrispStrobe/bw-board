@@ -76,6 +76,18 @@ const PROFILES={
     files:['6A','666A'],
     scope:'6 fixed deterministic PUSH imm8 samples spanning word and dword sign extension',
   },
+  'imul-immediate':{
+    files:['69','6B','6669','666B'],
+    scope:'12 fixed deterministic signed immediate IMUL samples spanning word and dword operands',
+  },
+  setcc:{
+    files:['0F90','0F91','0F92','0F93','0F94','0F95','0F96','0F97','0F98','0F99','0F9A','0F9B','0F9C','0F9D','0F9E','0F9F'],
+    scope:'48 fixed deterministic SETcc samples covering all original 386 conditions',
+  },
+  'double-shift':{
+    files:['0FA4','0FA5','0FAC','0FAD','660FA4','660FA5','660FAC','660FAD'],
+    scope:'24 fixed deterministic SHLD/SHRD samples spanning immediate and CL counts with word and dword operands',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
