@@ -123,11 +123,14 @@ export function runDosToolchainGuest({dir=process.env.MSDOS_BIN_DIR,variant='802
 }
 
 if(process.argv[1]===fileURLToPath(import.meta.url)) {
+    const started=performance.now();
     const result=runDosToolchainGuest({variant:process.argv[2]||'80286'});
+    const elapsedMS=performance.now()-started;
     const executionRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
     console.log(JSON.stringify({accepted:true,scope:'fast 80286 real-mode core on BIOS-service machine; not wired or protected-mode evidence',
         sourceHashScope:'manually enumerated execution engine and guest harness files, not a transitive import closure',
-        expectedOutput:'GUEST-TOOLCHAIN-OK',baseRevision:BASE_REVISION,executionRevision,variant:result.variant,steps:result.steps,
+        expectedOutput:'GUEST-TOOLCHAIN-OK',baseRevision:BASE_REVISION,executionRevision,node:process.version,elapsedMS,
+        timingGraded:false,variant:result.variant,steps:result.steps,
         sourceSha256:result.sourceSha256,comSha256:result.comSha256,
         inputHashes:result.inputHashes,sourceHashes:result.sourceHashes,unsupported:result.unsupported},null,2));
 }
