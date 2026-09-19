@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import I80386 from "../src/experimental/i80386.js";
+import I80386, { I80386Fault } from "../src/experimental/i80386.js";
 
 function fixture(bytes) {
   const memory = new Map(bytes.map((value, index) => [index, value]));
@@ -99,9 +99,9 @@ test("LDT selectors 4..7 are not mistaken for null data selectors", () => {
   assert.throws(
     () => cpu.step(),
     (error) =>
-      error instanceof Error &&
-      error.constructor.name === "UnsupportedI80386" &&
-      /LDT/.test(error.message),
+      error instanceof I80386Fault &&
+      error.vector === 13 &&
+      error.errorCode === 4,
   );
   assert.equal(cpu.ds, 0);
 });
