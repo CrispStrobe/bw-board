@@ -60,6 +60,89 @@ function fixedBias(params = PARAMS) {
   return board;
 }
 
+function cascodeStack(stages = 2) {
+  const board = new BoardImpl(5);
+  const parts = [
+    { id: 'VDD', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+    { id: 'RD', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ];
+  const nets = [
+    { id: 'gnd', terminals: [{ part: 'VDD', terminal: 'neg' }, { part: 'G1', terminal: 'gnd' }] },
+    { id: 'vdd', terminals: [{ part: 'VDD', terminal: 'pos' }, { part: 'RD', terminal: 'a' }] },
+    { id: 'out', terminals: [{ part: 'RD', terminal: 'b' }, { part: `M${stages}`, terminal: 'drain' }] },
+  ];
+  for (let i = 1; i <= stages; i++) {
+    parts.push({ id: `VG${i}`, kind: 'vsource', params: { volts: 1.7 + i * 0.65 },
+      terminals: ['pos', 'neg'] });
+    parts.push({ id: `M${i}`, kind: 'nmos', params: { ...PARAMS },
+      terminals: ['drain', 'gate', 'source'] });
+    nets[0].terminals.push({ part: `VG${i}`, terminal: 'neg' });
+    nets.push({ id: `gate${i}`, terminals: [
+      { part: `VG${i}`, terminal: 'pos' }, { part: `M${i}`, terminal: 'gate' },
+    ] });
+    const sourceNet = i === 1 ? nets[0] : nets.find(net => net.id === `channel${i - 1}`);
+    sourceNet.terminals.push({ part: `M${i}`, terminal: 'source' });
+    const drainNet = i === stages ? nets[2] : { id: `channel${i}`, terminals: [] };
+    drainNet.terminals.push({ part: `M${i}`, terminal: 'drain' });
+    if (i !== stages) nets.push(drainNet);
+  }
+  board.setNetlist(parts, nets);
+  return board;
+}
+
+function wilsonMirror() {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'VDD', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+    { id: 'RREF', kind: 'resistor', params: { ohms: 12000 }, terminals: ['a', 'b'] },
+    { id: 'RLOAD', kind: 'resistor', params: { ohms: 12000 }, terminals: ['a', 'b'] },
+    ...[1, 2, 3].map(i => ({ id: `M${i}`, kind: 'nmos', params: { ...PARAMS },
+      terminals: ['drain', 'gate', 'source'] })),
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ], [
+    { id: 'gnd', terminals: [
+      { part: 'VDD', terminal: 'neg' }, { part: 'M1', terminal: 'source' },
+      { part: 'M2', terminal: 'source' }, { part: 'G1', terminal: 'gnd' },
+    ] },
+    { id: 'vdd', terminals: [
+      { part: 'VDD', terminal: 'pos' }, { part: 'RREF', terminal: 'a' },
+      { part: 'RLOAD', terminal: 'a' },
+    ] },
+    { id: 'ref', terminals: [
+      { part: 'RREF', terminal: 'b' }, { part: 'M1', terminal: 'drain' },
+      { part: 'M1', terminal: 'gate' }, { part: 'M2', terminal: 'gate' },
+      { part: 'M3', terminal: 'source' },
+    ] },
+    { id: 'sense', terminals: [
+      { part: 'M2', terminal: 'drain' }, { part: 'M3', terminal: 'gate' },
+    ] },
+    { id: 'out', terminals: [
+      { part: 'RLOAD', terminal: 'b' }, { part: 'M3', terminal: 'drain' },
+    ] },
+  ]);
+  return board;
+}
+
+function floatingGate() {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'VDD', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+    { id: 'RD', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+    { id: 'M1', kind: 'nmos', params: { ...PARAMS }, terminals: ['drain', 'gate', 'source'] },
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ], [
+    { id: 'gnd', terminals: [
+      { part: 'VDD', terminal: 'neg' }, { part: 'M1', terminal: 'source' },
+      { part: 'G1', terminal: 'gnd' },
+    ] },
+    { id: 'vdd', terminals: [{ part: 'VDD', terminal: 'pos' }, { part: 'RD', terminal: 'a' }] },
+    { id: 'drain', terminals: [{ part: 'RD', terminal: 'b' }, { part: 'M1', terminal: 'drain' }] },
+    { id: 'gate', terminals: [{ part: 'M1', terminal: 'gate' }] },
+  ]);
+  return board;
+}
+
 function ngspice(deck, names) {
   const text = `* self-authored explicit Level-1 NMOS operating point
 .temp ${NGSPICE_MATCHED_TEMP_C}
@@ -141,7 +224,7 @@ M1 drain gate 0 0 NM W=100u L=1u
     assert.ok(Math.abs(triode.branchCurrents.get('M1').get('drain') - triodeOracle['@m1[id]']) < 1e-8);
   });
 
-  it('refuses implicit, incomplete, invalid, extra, unproved-bulk, disconnected, and PMOS semantics', () => {
+  it('refuses implicit, incomplete, invalid, extra, unproved-bulk, and disconnected semantics', () => {
     const cases = [
       [{ ...PARAMS, model: undefined }, /model must be explicitly/],
       [{ ...PARAMS, vth: NaN }, /vth must be an explicit finite number/],
@@ -160,6 +243,49 @@ M1 drain gate 0 0 NM W=100u L=1u
     assert.throws(() => commonSource(PARAMS, { disconnect: 'drain' }).operatingPoint(),
       /terminal drain is not connected/);
     assert.throws(() => commonSource(PARAMS, { kind: 'pmos' }).operatingPoint(),
-      /unsupported part M1 \(pmos\)/);
+      /parameter bulkAtGround is outside the explicit-bulk Level-1 DC domain/);
+  });
+
+  it('recognizes the always-stamped drain/source path without making a MOS gate conductive', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    const two = cascodeStack(2).operatingPoint();
+    const twoOracle = ngspice(`VDD vdd 0 9
+RD vdd out 10k
+VG1 gate1 0 2.35
+VG2 gate2 0 3
+M1 channel1 gate1 0 0 NM W=100u L=1u
+M2 out gate2 channel1 0 NM W=100u L=1u
+.model NM NMOS(Level=1 VTO=1 KP=50u LAMBDA=0.01)`, ['v(out)', 'v(channel1)']);
+    assert.ok(Math.abs(two.nodeVoltages.get('out') - twoOracle['v(out)']) < 1e-6);
+    assert.ok(Math.abs(two.nodeVoltages.get('channel1') - twoOracle['v(channel1)']) < 1e-6);
+
+    const three = cascodeStack(3).operatingPoint();
+    const threeOracle = ngspice(`VDD vdd 0 9
+RD vdd out 10k
+VG1 gate1 0 2.35
+VG2 gate2 0 3
+VG3 gate3 0 3.65
+M1 channel1 gate1 0 0 NM W=100u L=1u
+M2 channel2 gate2 channel1 0 NM W=100u L=1u
+M3 out gate3 channel2 0 NM W=100u L=1u
+.model NM NMOS(Level=1 VTO=1 KP=50u LAMBDA=0.01)`, ['v(out)', 'v(channel1)', 'v(channel2)']);
+    for (const net of ['out', 'channel1', 'channel2']) {
+      assert.ok(Math.abs(three.nodeVoltages.get(net) - threeOracle[`v(${net})`]) < 1e-6);
+    }
+
+    const wilson = wilsonMirror().operatingPoint();
+    const wilsonOracle = ngspice(`VDD vdd 0 9
+RREF vdd ref 12k
+RLOAD vdd out 12k
+M1 ref ref 0 0 NM W=100u L=1u
+M2 sense ref 0 0 NM W=100u L=1u
+M3 out sense ref 0 NM W=100u L=1u
+.model NM NMOS(Level=1 VTO=1 KP=50u LAMBDA=0.01)`, ['v(ref)', 'v(sense)', 'v(out)']);
+    for (const net of ['ref', 'sense', 'out']) {
+      assert.ok(Math.abs(wilson.nodeVoltages.get(net) - wilsonOracle[`v(${net})`]) < 1e-6);
+    }
+
+    assert.throws(() => floatingGate().operatingPoint(), /DC-floating net gate/);
   });
 });

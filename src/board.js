@@ -61,7 +61,7 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'npn', 'nmos', 'vsource', 'isource',
+  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'npn', 'nmos', 'pmos', 'vsource', 'isource',
   'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
 
@@ -70,6 +70,9 @@ const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'i
 const NPN_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'beta', 'br', 'n', 'vaf', '_model']);
 const NMOS_OPERATING_POINT_PARAMS = new Set([
   'model', 'vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround', '_model',
+]);
+const PMOS_OPERATING_POINT_PARAMS = new Set([
+  'model', 'vth', 'kp', 'w', 'l', 'lambda', '_model',
 ]);
 const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
 
@@ -103,6 +106,13 @@ function dcFloatingNets(parts, nets) {
       if (n) anchored.add(n);
     } else if (part.kind === 'resistor' || part.kind === 'inductor') {
       join(netFor(part, 'a'), netFor(part, 'b'));
+    } else if ((part.kind === 'nmos' || part.kind === 'pmos')
+        && part.params?.model === 'level1') {
+      // The admitted Level-1 stamp always carries MOS_GDS_FLOOR between
+      // drain and source, including cutoff.  Preflight must therefore see
+      // that structural DC path, while gate and proven-ground bulk remain
+      // insulating control terminals.
+      join(netFor(part, 'drain'), netFor(part, 'source'));
     } else if (part.kind === 'vsource') {
       join(netFor(part, 'pos'), netFor(part, 'neg'));
     } else if (part.kind === 'vcvs') {
@@ -2550,6 +2560,45 @@ export class BoardImpl {
           }
         }
       }
+      if (part.kind === 'pmos') {
+        const params = part.params ?? {};
+        if (params.model !== 'level1') {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + "model must be explicitly 'level1'");
+        }
+        if (typeof params.vth !== 'number' || !Number.isFinite(params.vth)) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + 'vth must be an explicit finite number');
+        }
+        for (const name of ['kp', 'w', 'l']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.lambda !== 'number' || !Number.isFinite(params.lambda)
+            || params.lambda < 0) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + 'lambda must be an explicit finite number greater than or equal to zero');
+        }
+        if (Object.prototype.hasOwnProperty.call(params, '_model')
+            && (typeof params._model !== 'string' || !params._model.length)) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + '_model must be a non-empty inert source-model name when retained');
+        }
+        const extra = Object.keys(params).find(name => !PMOS_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + `parameter ${extra} is outside the explicit-bulk Level-1 DC domain`);
+        }
+        for (const terminal of ['gate', 'drain', 'source', 'bulk']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
       if (part.kind === 'inductor') {
         const params = part.params ?? {};
         if (typeof params.henrys !== 'number' || !Number.isFinite(params.henrys)
@@ -2669,7 +2718,7 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-l-d-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn-level1-nmos',
+        scope: 'grounded-static-native-r-c-l-d-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn-level1-nmos-pmos',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
@@ -2699,6 +2748,14 @@ export class BoardImpl {
         nmos: {
           model: 'explicit-spice-level1-grounded-bulk',
           requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
+          defaults: { bulkIs: 1e-14, bulkN: 1 },
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        pmos: {
+          model: 'explicit-spice-level1-explicit-bulk-terminal',
+          requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
+          requiredTerminals: ['gate', 'drain', 'source', 'bulk'],
           defaults: { bulkIs: 1e-14, bulkN: 1 },
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
