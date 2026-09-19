@@ -67,7 +67,7 @@ function install(write) {
   descriptor(write, 0x208, 0x1000, 0xffff, 0x9a); // ring-0 code
   descriptor(write, 0x210, 0, 0xffff, 0x12);      // P=0 readable/writable data
   descriptor(write, 0x218, 0, 0xffff, 0x98);      // execute-only code
-  descriptor(write, 0x220, 0, 0xffff, 0x82);      // system LDT descriptor
+  descriptor(write, 0x220, 0, 0xffff, 0x80);      // reserved system descriptor
   put(write, 0x1000, [
     0x68, 0x17, 0x08, 0x9d,
     0xb8, 0x10, 0x00, 0x0f, 0x00, 0xe0, 0x9c, 0x5b,
@@ -148,7 +148,7 @@ if (
 ) throw new Error("local execution sources changed during comparison");
 console.log(JSON.stringify({
   oracle: "PCjs", revision: PIN, executionRevision,
-  scope: "owned ring-0 VERR/VERW queries of P=0 accessible data, RPL privilege rejection, execute-only code, system and null selectors; exact non-ZF flags and HLT completion",
+  scope: "owned ring-0 VERR/VERW queries of P=0 accessible data, RPL privilege rejection, execute-only code, reserved system type and null selectors; exact non-ZF flags and HLT completion",
   sourceHashes, mutation, expected,
   status: differences.length ? "fail" : "pass",
   reference, actual, differences,
