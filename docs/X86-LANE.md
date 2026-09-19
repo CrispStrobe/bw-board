@@ -85,6 +85,49 @@ routes distinct. Its DOS receipt was refreshed because upstream changes altered
 the same. Broader protected instruction/address coverage and PC/AT memory/A20
 remain the next implementation steps.
 
+## Protected ISA and extended-memory continuation
+
+The remote review for this increment started at
+`028a387a48b119f023b13aaad7ebe324f72839b1`. Since the IDT milestone,
+upstream added a drawable PS/2 mouse, corrected the DOS host-service arena,
+and added terminal runner file mounting and artifact collection. A further refresh incorporated
+`b3a8aa2` with MASM/LINK/EXE2BIN chain support and its guarded test. Concurrent
+analog changes are retained. The host-service runner and real DOS kernel
+acceptance remain distinct.
+
+The experimental executor now supports the complete 16-bit ModR/M address
+matrix, common MOV and arithmetic forms, near calls/returns, conditional
+branches and loops. An owned high-memory arithmetic guest is compared with
+the pinned PCjs implementation. This extends the supported subset; it does
+not establish complete 286 instruction coverage. REP, privilege/task
+transitions, and nested/double-fault delivery remain unfinished.
+
+[Extended memory and A20](EXPERIMENTAL-AT-MEMORY.md) are explicit machine
+options. The bounded 8042 D0/D1 interface lets guest software switch A20;
+the gate clears only bit 20 and preserves higher address bits. The optional
+protected backend runs through the machine bus and skips the RAM word
+shortcut so segment protection cannot be bypassed. Its machine checkpoints
+are explicitly unavailable until hidden CPU state has a complete codec.
+Default CPU checkpoints include the configured A20 controller state.
+
+Fresh source-bound receipts record the [protected ISA guest](receipts/2026-09-19-protected286-isa.json),
+[AT memory guest](receipts/2026-09-19-at-memory-guest.json), and refreshed
+IDT and real DOS toolchain results. Default-path timing samples overlap
+widely; this increment makes no speed claim. The combined focused Node 22
+validation passed 71 tests, including the upstream DOS chain. Pinned PCjs
+bootstrap, IDT and ISA comparisons passed. The final branch head is qualified
+by hosted CI, the full 286 corpora and native contracts before landing; run
+links are recorded in the milestone tag to avoid another source-only SHA bump.
+
+Next, expand protected execution with restartable string operations and the
+remaining common instruction families, then implement privilege/LDT/TSS
+machinery against independent architectural cases. The machine needs a
+complete AT keyboard/reset path, cascaded interrupt controllers and RTC
+before a PC/AT compatibility claim. Retain small owned reproducers for each
+new capability, and introduce existing protected-mode binaries once their
+required instruction and machine contracts are covered. 386DX, Windows and
+Doom remain later acceptance targets, not results of this increment.
+
 ## Milestones and acceptance
 
 | Stage | Concrete acceptance | Still separate |

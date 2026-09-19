@@ -18,6 +18,7 @@ export class ProtectedModeFault extends Error {
 
 export const SEG_ES = 0, SEG_CS = 1, SEG_SS = 2, SEG_DS = 3;
 const IDS = [SEG_ES, SEG_CS, SEG_SS, SEG_DS];
+const CF = 0x0001, PF = 0x0004, ZF = 0x0040, SF = 0x0080;
 const TF = 0x0100, IF = 0x0200, OF = 0x0800, NT = 0x4000;
 const ERROR_CODE_VECTORS = new Set([11, 12, 13]);
 
@@ -168,6 +169,27 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _execProtected(op) {
+        // The eight classic ALU operations, excluding the BCD-adjust holes.
+        if (op < 0x40 && (op & 7) < 6) {
+            const kind = op >> 3, form = op & 7, word = !!(form & 1);
+            if (form < 4) {
+                const ea = this._pmModRM(), toReg = form >= 2;
+                if (!toReg && kind !== 7) this._pmPreflightWrite(ea, word);
+                const memoryValue = this._pmOperandRead(ea, word);
+                const regValue = word ? this._r16(ea.reg) : this._r8(ea.reg);
+                const result = this._alu(kind, toReg ? regValue : memoryValue,
+                    toReg ? memoryValue : regValue, word);
+                if (kind !== 7) {
+                    if (toReg) word ? this._r16set(ea.reg,result) : this._r8set(ea.reg,result);
+                    else this._pmOperandWrite(ea, word, result);
+                }
+                return ea.isReg ? 3 : (toReg ? 9 : 16);
+            }
+            const immediate = word ? this._pmFetch16() : this._pmFetch8();
+            const result = this._alu(kind, word ? this.ax : this.al, immediate, word);
+            if (kind !== 7) { if (word) this.ax=result; else this.al=result; }
+            return 4;
+        }
         if (op === 0xcc) { this._deliverProtected(3, {software:true, returnIp:this.ip}); return 23; }
         if (op === 0xcd) {
             const vector = this._pmFetch8();
@@ -187,13 +209,12 @@ export class ProtectedI80286 extends I8086 {
             return 15;
         }
         if (op === 0x8e) {
-            const modrm = this._pmFetch8(), mod = modrm >> 6, reg = (modrm >> 3) & 7, rm = modrm & 7;
-            if (reg > 3 || reg === 1) this._pmFault(6, 0, 'invalid MOV segment register');
-            if (mod !== 3) throw new UnsupportedProtectedMode('memory-form MOV segment');
-            const target = [SEG_ES, SEG_CS, SEG_SS, SEG_DS][reg];
-            this._sregSet(reg, this._r16(rm));
+            const ea=this._pmModRM();
+            if (ea.reg > 3 || ea.reg === 1) this._pmFault(6, 0, 'invalid MOV segment register');
+            const target = [SEG_ES, SEG_CS, SEG_SS, SEG_DS][ea.reg];
+            this._sregSet(ea.reg, this._pmOperandRead(ea,true));
             if (target === SEG_SS) this.intShadow = 1;
-            return 2;
+            return ea.isReg ? 2 : 8;
         }
         if (op === 0xe9 || op === 0xeb) {
             const delta = op === 0xe9 ? this._pmFetch16() : this._pmFetchS8();
@@ -205,26 +226,137 @@ export class ProtectedI80286 extends I8086 {
         }
         if (op >= 0xb0 && op <= 0xb7) { this._r8set(op & 7, this._pmFetch8()); return 4; }
         if (op >= 0xb8 && op <= 0xbf) { this._r16set(op & 7, this._pmFetch16()); return 4; }
+        if (op >= 0x40 && op <= 0x47) { this._r16set(op&7,this._inc(this._r16(op&7),1)); return 2; }
+        if (op >= 0x48 && op <= 0x4f) { this._r16set(op&7,this._dec(this._r16(op&7),1)); return 2; }
         if (op >= 0x50 && op <= 0x57) { this._pmPush(this._r16(op & 7)); return 11; }
         if (op >= 0x58 && op <= 0x5f) { this._r16set(op & 7, this._pmPop()); return 8; }
         if (op >= 0x88 && op <= 0x8b) {
-            const modrm = this._pmFetch8(), mod = modrm >> 6, reg = (modrm >> 3) & 7, rm = modrm & 7;
+            const ea=this._pmModRM();
             const word = !!(op & 1), toReg = !!(op & 2);
-            if (mod === 3) {
-                const value = word ? this._r16(toReg ? rm : reg) : this._r8(toReg ? rm : reg);
-                if (word) this._r16set(toReg ? reg : rm, value); else this._r8set(toReg ? reg : rm, value);
-                return 2;
-            }
-            if (mod !== 0 || rm !== 6) throw new UnsupportedProtectedMode('non-direct ModR/M addressing');
-            const offset = this._pmFetch16(), id = this._pmOverride ?? SEG_DS;
             if (toReg) {
-                const value = word ? this._rd16(id, offset) : this._rd8(id, offset);
-                if (word) this._r16set(reg, value); else this._r8set(reg, value);
+                const value=this._pmOperandRead(ea,word);
+                if(word)this._r16set(ea.reg,value);else this._r8set(ea.reg,value);
             } else {
-                const value = word ? this._r16(reg) : this._r8(reg);
-                if (word) this._wr16(id, offset, value); else this._wr8(id, offset, value);
+                const value=word?this._r16(ea.reg):this._r8(ea.reg);
+                this._pmOperandWrite(ea,word,value);
             }
+            return ea.isReg?2:10;
+        }
+        if (op === 0x8c) {
+            const ea = this._pmModRM();
+            if (ea.reg > 3) this._pmFault(6, 0, 'invalid MOV from segment register');
+            this._pmOperandWrite(ea, true, [this.es, this.cs, this.ss, this.ds][ea.reg]);
+            return ea.isReg ? 2 : 9;
+        }
+        if (op === 0x8d) {
+            const ea = this._pmModRM();
+            if (ea.isReg) this._pmFault(6, 0, 'LEA requires memory operand');
+            this._r16set(ea.reg, ea.off);
+            return 3;
+        }
+        if (op === 0x84 || op === 0x85) {
+            const word=!!(op&1),ea=this._pmModRM();
+            this._logic(this._pmOperandRead(ea,word)&(word?this._r16(ea.reg):this._r8(ea.reg)),word);return ea.isReg?3:9;
+        }
+        if (op === 0xa8 || op === 0xa9) {
+            const word=!!(op&1),immediate=word?this._pmFetch16():this._pmFetch8();
+            this._logic((word?this.ax:this.al)&immediate,word);return 4;
+        }
+        if (op >= 0xa0 && op <= 0xa3) {
+            const word=!!(op&1),write=!!(op&2),off=this._pmFetch16(),id=this._pmOverride??SEG_DS;
+            if(write)word?this._wr16(id,off,this.ax):this._wr8(id,off,this.al);
+            else if(word)this.ax=this._rd16(id,off);else this.al=this._rd8(id,off);
             return 10;
+        }
+        if (op === 0xc6 || op === 0xc7) {
+            const word = !!(op & 1), ea = this._pmModRM();
+            if (ea.reg !== 0) this._pmFault(6, 0, 'invalid MOV immediate group');
+            const value = word ? this._pmFetch16() : this._pmFetch8();
+            this._pmOperandWrite(ea, word, value);
+            return ea.isReg ? 4 : 10;
+        }
+        if (op === 0x80 || op === 0x81 || op === 0x83) {
+            const word = !!(op & 1);
+            const ea = this._pmModRM();
+            // Finish decoding before touching a data operand. In particular,
+            // an immediate fetch fault must not read an MMIO destination.
+            const immediate = op === 0x81 ? this._pmFetch16() :
+                op === 0x83 ? (this._pmFetchS8() & 0xffff) : this._pmFetch8();
+            if (ea.reg !== 7) this._pmPreflightWrite(ea, word);
+            const operand = this._pmOperandRead(ea, word);
+            const result = this._alu(ea.reg, operand, immediate, word);
+            if (ea.reg !== 7) this._pmOperandWrite(ea, word, result);
+            return ea.isReg ? 4 : 17;
+        }
+        if (op === 0xfe || op === 0xff) {
+            const word = !!(op & 1), ea = this._pmModRM();
+            if (ea.reg <= 1) {
+                this._pmPreflightWrite(ea, word);
+                const value = this._pmOperandRead(ea, word);
+                this._pmOperandWrite(ea, word, ea.reg ? this._dec(value, word) : this._inc(value, word));
+                return ea.isReg ? 3 : 15;
+            }
+            if (word && ea.reg === 2) {
+                const target = this._pmOperandRead(ea, true);
+                this._pmCheckCodeOffset(target);
+                this._pmPush(this.ip);
+                this.ip = target;
+                return 16;
+            }
+            if (word && ea.reg === 4) {
+                const target = this._pmOperandRead(ea, true);
+                this._pmCheckCodeOffset(target);
+                this.ip = target;
+                return 11;
+            }
+            if (word && ea.reg === 6) {
+                this._pmPush(this._pmOperandRead(ea, true));
+                return 11;
+            }
+            if (word && (ea.reg === 3 || ea.reg === 5))
+                throw new UnsupportedProtectedMode('far FE/FF control transfer');
+            this._pmFault(6, 0, 'unsupported FE/FF group');
+        }
+        if (op === 0xe8) {
+            const displacement = this._pmFetch16();
+            const signed = displacement & 0x8000 ? displacement - 0x10000 : displacement;
+            const target = (this.ip + signed) & 0xffff;
+            this._pmCheckCodeOffset(target);
+            this._pmPush(this.ip);
+            this.ip = target;
+            return 19;
+        }
+        if (op === 0xc3 || op === 0xc2) {
+            const extra = op === 0xc2 ? this._pmFetch16() : 0;
+            const target = this._pmPop();
+            this._pmCheckCodeOffset(target);
+            this.sp = (this.sp + extra) & 0xffff;
+            this.ip = target;
+            return 16;
+        }
+        if (op >= 0x70 && op <= 0x7f) {
+            const displacement = this._pmFetchS8();
+            if (this._pmCondition(op & 15)) {
+                const target = (this.ip + displacement) & 0xffff;
+                this._pmCheckCodeOffset(target);
+                this.ip = target;
+            }
+            return 4;
+        }
+        if (op >= 0xe0 && op <= 0xe3) {
+            const displacement = this._pmFetchS8();
+            let take;
+            if (op === 0xe3) take = this.cx === 0;
+            else {
+                this.cx = (this.cx - 1) & 0xffff;
+                take = this.cx !== 0 && (op === 0xe2 || (op === 0xe1 ? !!(this.flags & ZF) : !(this.flags & ZF)));
+            }
+            if (take) {
+                const target = (this.ip + displacement) & 0xffff;
+                this._pmCheckCodeOffset(target);
+                this.ip = target;
+            }
+            return 5;
         }
         if (op === 0x90) return 3;
         if (op === 0xf4) { this.halted = true; return 2; }
@@ -245,6 +377,29 @@ export class ProtectedI80286 extends I8086 {
     }
     _pmFetch16() { return this._pmFetch8() | (this._pmFetch8() << 8); }
     _pmFetchS8() { const v = this._pmFetch8(); return v & 0x80 ? v - 0x100 : v; }
+
+    _pmModRM() {
+        const byte=this._pmFetch8(),mod=byte>>6,reg=(byte>>3)&7,rm=byte&7;
+        if(mod===3)return{mod,reg,rm,isReg:true,id:null,off:0};
+        let base=0,id=SEG_DS;
+        switch(rm){
+            case 0:base=this.bx+this.si;break;case 1:base=this.bx+this.di;break;
+            case 2:base=this.bp+this.si;id=SEG_SS;break;case 3:base=this.bp+this.di;id=SEG_SS;break;
+            case 4:base=this.si;break;case 5:base=this.di;break;
+            case 6:if(mod===0)base=this._pmFetch16();else{base=this.bp;id=SEG_SS;}break;
+            default:base=this.bx;
+        }
+        if(mod===1)base+=this._pmFetchS8();else if(mod===2)base+=this._pmFetch16();
+        return{mod,reg,rm,isReg:false,id:this._pmOverride??id,off:base&0xffff};
+    }
+    _pmOperandRead(ea,word){return ea.isReg?(word?this._r16(ea.rm):this._r8(ea.rm)):
+        (word?this._rd16(ea.id,ea.off):this._rd8(ea.id,ea.off));}
+    _pmOperandWrite(ea,word,value){if(ea.isReg){if(word)this._r16set(ea.rm,value);else this._r8set(ea.rm,value);}
+        else if(word)this._wr16(ea.id,ea.off,value);else this._wr8(ea.id,ea.off,value);}
+    _pmPreflightWrite(ea,word){if(!ea.isReg)this._linear(ea.id,ea.off,word?2:1,'write');}
+    _pmCheckCodeOffset(offset){if(offset>this.segmentCaches[SEG_CS].limit)this._pmFault(13,0,'near control transfer outside code segment');}
+    _pmCondition(kind){const f=this.flags,cf=!!(f&CF),zf=!!(f&ZF),sf=!!(f&SF),of=!!(f&OF),pf=!!(f&PF);
+        return [of,!of,cf,!cf,zf,!zf,cf||zf,!cf&&!zf,sf,!sf,pf,!pf,sf!==of,sf===of,zf||(sf!==of),!zf&&(sf===of)][kind];}
     _pmPush(value) { const sp = (this.sp - 2) & 0xffff; this._wr16(SEG_SS, sp, value); this.sp = sp; }
     _pmPop() { const value = this._rd16(SEG_SS, this.sp); this.sp = (this.sp + 2) & 0xffff; return value; }
 
