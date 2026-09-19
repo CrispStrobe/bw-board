@@ -8,6 +8,7 @@ import {createHarrisNativeMemoryBoard} from '../src/experimental/harris-native-m
 import {runHarrisTransactions} from '../src/experimental/harris-run-transactions.js';
 import {assertProducerCounterABI} from '../src/experimental/wired-kernel/memory-circuit.js';
 import {createPhaseCircuitOracle} from '../scripts/lib/harris-native-phase-circuit-oracle.mjs';
+import {createBusCircuitOracle} from '../scripts/lib/harris-native-bus-circuit-oracle.mjs';
 
 registerBusMemory();
 const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
@@ -49,12 +50,18 @@ test('cooperative producer labels reconcile with exact call-path dimensions in e
         const receipt=await runCPU(mode),{board,run,diagnostic}=receipt;reconcile(receipt);
         const p=diagnostic.producers,memory=diagnostic.memory,incremental=mode.incrementalGraph===true;
         assert.deepEqual(p.other,{attempts:0,changes:0});
-        assert.equal(p.busExternal.attempts,run.periods*10,'ten ideal external drivers are staged per physical period');
+        assert.equal(p.busExternal.attempts,p.busExternal.changes,
+            'only raw four-state changes reach the external canonical writer');
+        assert.ok(p.busExternal.attempts<run.periods*10,
+            'unchanged external submissions are suppressed before the canonical writer');
         assert.equal(p.busOutput.attempts,p.busOutput.changes,
             'after initialization only final CPU output changes reach the canonical writer');
         assert.ok(p.busOutput.attempts>0&&p.busOutput.attempts<run.periods*48,
             'the bounded CPU output frontier removes redundant writer attempts from this workload');
-        assert.equal(p.phaseLatch.attempts,run.periods*26,'the owned latch publishes 26 outputs per physical period');
+        assert.equal(p.phaseLatch.attempts,p.phaseLatch.changes,
+            'only raw four-state changes reach the latch canonical writer');
+        assert.ok(p.phaseLatch.attempts>0&&p.phaseLatch.attempts<run.periods*26,
+            'the fixture has both changed and unchanged latch submissions');
         assert.equal(p.memoryBank.attempts,memory.presentBanks*8,'each present memory bank publishes eight output drivers');
         assert.ok(p.phaseController.attempts>=run.periods*3&&p.phaseController.attempts%3===0,
             'the memory-only controller publishes its three admitted outputs at active boundaries');
@@ -85,6 +92,15 @@ test('phase schedule has a positive isolated producer identity',native,async()=>
     const receipt={work:scheduled.kernel.inspectWorkCounters(),diagnostic:scheduled.kernel.inspectProducerCounters()};reconcile(receipt);
     assert.equal(receipt.diagnostic.producers.phaseSchedule.attempts,handle.encodedUpdates);
     assert.ok(handle.encodedUpdates>0);assert.equal(receipt.diagnostic.producers.other.attempts,0);
+});
+
+test('external producer has a positive isolated changed identity',native,async()=>{
+    const fixture=await createBusCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});
+    fixture.initialize();fixture.kernel.resetWorkCounters();fixture.kernel.resetProducerCounters();
+    const result=fixture.period({...fixture.passive,cpu_ready:1});if(result.error)throw result.error;
+    const receipt={work:fixture.kernel.inspectWorkCounters(),diagnostic:fixture.kernel.inspectProducerCounters()};
+    reconcile(receipt);
+    assert.deepEqual(receipt.diagnostic.producers.busExternal,{attempts:1,changes:1});
 });
 
 test('faulted partial work stays observable and diagnostic reset cannot clear the circuit fault',native,async()=>{

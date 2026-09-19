@@ -71,7 +71,11 @@ u32 begin_latched_memory_clock(const u32 *p,u32 *fault) {
     gather_phase(p,6,27);
     result=update_address_latch(B(8),B(9),B(10),B(11),W(12));if(result)return phase_component_error(p,result,1,fault);
     const u32 *c=W(0);for(u32 i=0;i<26;i++){
-        if(write_owned_driver_tagged(c,W(7)[i],B(11)[i],PRODUCER_PHASE_LATCH))return reject_phase(p,1,2,NONE,fault);
+        /* validate_phase_mapping already admitted every destination. Compare
+         * the raw 0/1/X/Z driver image, not its resolved net, and retain input
+         * order when duplicate destinations make the last write authoritative. */
+        if(CB(4)[W(7)[i]]!=B(11)[i]&&
+           write_owned_driver_tagged(c,W(7)[i],B(11)[i],PRODUCER_PHASE_LATCH))return reject_phase(p,1,2,NONE,fault);
     }
     if((result=settle_phase_memory(p,fault)))return result;
     W(15)[0]=1;fault[0]=0;return 0;
