@@ -18,10 +18,27 @@
  * reported it as 5.92e-2 V on **12 decks**, and four more sit in the gallery.
  * The exponential is BELOW BV at currents below IBV, which is the whole of it.
  *
- * THE DEFAULT IS UNCHANGED. A card stating no IBV keeps the piecewise corner,
- * which is what 2,163 corpus circuits and this suite are written against — the
- * shipped 1N4733A card states `vz` and no knee current, so nothing in the
- * gallery moves. The identity test below is what says so.
+ * AND SPICE'S OWN DEFAULT IS 1 mA, which this took a second pass to get right.
+ * ngspice places the junction so the current is IBV at |Vj| = BV **whether or
+ * not the card states IBV** — so a card giving only `BV` still gets an
+ * exponential, and treating that absence as "no knee" left the gallery's own
+ * zener clamp 57.7 mV out. Matching the reference means taking the default.
+ *
+ * THREE CASES, and the third exists because collapsing it removes a model:
+ *
+ *     ibv > 0      that knee current
+ *     absent       SPICE's 1 mA — what ngspice does
+ *     ibv === 0    the piecewise corner, explicitly asked for
+ *
+ * An absence is a default; a zero is a choice. Taking the SPICE default for
+ * both would have made the piecewise stamp unreachable and `rz` dead code.
+ *
+ * AND THE BREAKDOWN CARRIES THE MODEL'S IDEALITY FACTOR. Measured against
+ * ngspice at N = 1, 1.5, 1.752 and 2.5: the slope is N·Vt·ln(10) per decade
+ * every time, to four figures. The characterisation above missed it because the
+ * ADI card states no N — so N was 1 and the two forms agreed exactly. It took
+ * the gallery's own card, which states N=1.752, to expose the term: 40 mV of
+ * that circuit's 57.7.
  *
  * THE RESIDUAL IS THERMAL, NOT MODEL. 0.033 mV remains at every RS, and it is
  * constant: our fixed thermal voltage is 0.025852 V (26.83 °C) where ngspice's
@@ -68,8 +85,9 @@ test('the knee current puts the regulator where ngspice puts it', () => {
   assert.equal(r.converged, true, 'the solve did not converge, so nothing here is a reading');
   assert.ok(Math.abs(r.v - 3.243334) < 2e-4,
     `V(OUT) ${r.v} against ngspice 3.243334`);
-  // And the gap it closes is real: the piecewise model is 59 mV away.
-  const piecewise = regulator({ vz: 3.3, rz: 5 }).v;
+  // And the gap it closes is real: the piecewise model is 59 mV away. `ibv: 0`
+  // is how a caller asks for it now -- an ABSENT ibv takes SPICE's 1 mA.
+  const piecewise = regulator({ vz: 3.3, rz: 5, ibv: 0 }).v;
   assert.ok(Math.abs(piecewise - 3.243334) > 5e-2,
     `the piecewise model must be far off, was ${piecewise}`);
 });
@@ -86,18 +104,42 @@ test('the series resistance is the card RS, at every value ngspice was run at', 
   }
 });
 
-test('a card stating no IBV keeps the piecewise corner exactly', () => {
-  // THE IDENTITY TEST, and the shipped 1N4733A card is this case: `vz` and no
-  // knee current. A straight line through (vz, 0) reads vz + I*rz, and at
-  // (7.4 - 3.3)/8200 = 0.5 mA through 5 Ω that is 3.3025 V.
-  const r = regulator({ vz: 3.3, rz: 5 });
+test('an explicit ibv of 0 asks for the piecewise corner, and gets it exactly', () => {
+  // A straight line through (vz, 0) reads vz + I*rz, and at
+  // (7.4 - 3.3)/8200 = 0.5 mA through 5 Ω that is 3.3025 V. This is the ONLY
+  // way to reach the piecewise stamp now, which is why it has a test: without
+  // it that whole branch, and `rz`, would be unreachable code.
+  const r = regulator({ vz: 3.3, rz: 5, ibv: 0 });
   assert.equal(r.converged, true);
   assert.ok(Math.abs(r.v - 3.302498) < 1e-6, `V(OUT) ${r.v}, expected the piecewise 3.302498`);
-  // A zero or negative knee current means "no knee stated", not a division.
-  for (const ibv of [0, -1e-3]) {
-    assert.ok(Math.abs(regulator({ vz: 3.3, rz: 5, ibv }).v - 3.302498) < 1e-6,
-      `ibv=${ibv} must behave as absent`);
-  }
+  // A NEGATIVE knee current is not a choice, it is nonsense -- it takes the
+  // default rather than silently selecting a different model.
+  assert.ok(Math.abs(regulator({ vz: 3.3, rs: 5, ibv: -1e-3 }).v - 3.284688) < 1e-5,
+    'a negative ibv falls back to SPICE\'s default, not to the corner');
+});
+
+test('an ABSENT ibv takes SPICE\'s 1 mA default, as ngspice does', () => {
+  // The case the gallery's zener clamp is: a card with BV and no IBV. ngspice
+  // still solves an exponential, so we must too, and the piecewise reading of
+  // that absence was 57.7 mV out on that circuit.
+  const r = regulator({ vz: 3.3, rs: 5 });
+  assert.equal(r.converged, true);
+  assert.ok(Math.abs(r.v - 3.284688) < 1e-5, `V(OUT) ${r.v} with the 1 mA default`);
+  // Not the same as the piecewise corner, and not the same as a stated 5 mA.
+  assert.ok(Math.abs(r.v - 3.302498) > 1e-3);
+  assert.ok(Math.abs(r.v - 3.243367) > 1e-3);
+});
+
+test('the breakdown carries the model ideality factor', () => {
+  // Measured against ngspice: the slope is N*Vt*ln(10) per decade. Two cards
+  // differing only in N must therefore sit at different voltages for the same
+  // current, and a reader that ignores N returns the same number for both.
+  const one = regulator({ vz: 3.3, rs: 5, ibv: 5e-3, n: 1 }).v;
+  const high = regulator({ vz: 3.3, rs: 5, ibv: 5e-3, n: 1.752 }).v;
+  assert.ok(Math.abs(one - 3.243367) < 1e-5, `N=1 must be the characterised value: ${one}`);
+  assert.ok(high < one, `N=1.752 must sit lower below the knee: ${high} against ${one}`);
+  assert.ok(Math.abs(high - one) > 5e-3,
+    `N must move the answer materially: ${(1000 * Math.abs(high - one)).toFixed(1)} mV`);
 });
 
 test('the branch current agrees with the node voltage', () => {
