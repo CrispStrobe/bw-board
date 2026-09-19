@@ -386,13 +386,7 @@ function runVm86PCjs() {
   installVm86((a,v)=>bus.setByteDirect(a,v));cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let visited=false;
   for(let steps=0;steps<100&&!((cpu.getPS()&0x20000)&&cpu.getCS()===0xf000&&cpu.getIP()===0x101);steps++) {
     if(cpu.getCS()===8&&cpu.getIP()===0x180)visited=true;
-    try { cpu.stepCPU(0); }
-    catch(error) {
-      // PCjs exposes an internal abort sentinel around mode transitions.  It
-      // is not treated as a vector; exact handler, frame, and return state are
-      // still required below.
-      if(error!==-1)throw error;
-    }
+    cpu.stepCPU(0);
   }
   return vm86Result(cpu,a=>bus.getByteDirect(a),true,visited,!!(cpu.getPS()&0x20000)&&cpu.getCS()===0xf000&&cpu.getIP()===0x101);
 }
