@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: harris-evidence-${{ github.ref }}
+  group: harris-evidence-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.run_dos && 'dos' || 'qualification' }}
   cancel-in-progress: false
 
 jobs:
@@ -163,6 +163,7 @@ jobs:
       - name: Run the bounded wired BIOS diagnostic
         run: |
           set -uo pipefail
+          set +e
           node scripts/probe-harris-bios.mjs \
             --max-clocks 20000 \
             --pic-mode single-unbuffered --ram-kib 640 \
