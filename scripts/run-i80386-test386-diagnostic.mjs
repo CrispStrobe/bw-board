@@ -136,9 +136,13 @@ try {
   };
 }
 if (!blocker && cpu.halted) {
+  const finalCandidate =
+    post.at(-1)?.value === 0xff && cpu.pc === 0xffe7d;
   blocker = {
-    name: "GuestHaltBoundary",
-    message: "pinned test386 executed HLT before its final POST FF completion",
+    name: finalCandidate ? "CompletionCandidate" : "GuestHaltBoundary",
+    message: finalCandidate
+      ? "pinned test386 emitted POST FF and executed its terminal HLT; output acceptance remains ungraded"
+      : "pinned test386 executed an intermediate HLT before final POST FF",
     ...traceState(),
     recentInstructions,
   };
