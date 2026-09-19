@@ -36,7 +36,7 @@ const scanCodes={a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,
     s:0x1f,t:0x14,u:0x16,v:0x2f,w:0x11,x:0x2d,y:0x15,z:0x2c,' ':0x39,'\r':0x1c,
     '0':0x0b,'1':0x02,'2':0x03,'3':0x04,'4':0x05,'5':0x06,'6':0x07,'7':0x08,'8':0x09,'9':0x0a,
     '-':0x0c,'.':0x34};
-if(requestedKeys.some(key=>key!=='>'&&scanCodes[key.toLowerCase()]===undefined))
+if(requestedKeys.some(key=>key!==key.toLowerCase()||(key!=='>'&&scanCodes[key]===undefined)))
     throw new Error('AT_KEY_SCRIPT contains an unsupported key');
 const keyScript=requestedKeys.flatMap(key=>key==='>'
     ? [{key:'shift-down',scan:0x2a},{key:'>',scan:0x34},{key:'shift-up',scan:0xaa}]
@@ -148,7 +148,7 @@ for(;steps<stepLimit;steps++) {
         const observedFile=readFat12RootFile(floppyImage,expectedFile);
         const observedLines=renderScreen();
         if(observedFile?.text===expectedText&&observedLines.some(line=>line===expectedText.trim())&&
-            observedLines.some(line=>/^A>\s*$/.test(line))) {
+            /^A>\s*$/.test([...observedLines].reverse().find(line=>line.trim()!=='')??'')) {
             stopReason='acceptance-observed';
             break;
         }
@@ -193,10 +193,12 @@ if(process.env.AT_FLOPPY_OUTPUT) {
     fs.writeFileSync(process.env.AT_FLOPPY_OUTPUT,floppyImage);
     floppy.output={path:process.env.AT_FLOPPY_OUTPUT,sha256:sha(floppyImage)};
 }
-const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
+const report={schema:'astra.at-bios-post.v2',passed,stepLimit,steps,
     scope:fullBootAccepted?'genuine-reset IBM 5170 Rev1 BIOS, FDC/DMA DOS boot and keyboard shell command':
         'bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30',
     diagnosticOnly:!fullBootAccepted,fullBootAccepted,mutation,stopReason,
+    persistence:{priorOutputMediaSha256,linked:priorOutputMediaSha256===null?null:
+        priorOutputMediaSha256===floppy?.sha256},
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,

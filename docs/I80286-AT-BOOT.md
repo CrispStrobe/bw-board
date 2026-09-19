@@ -25,6 +25,18 @@ through `9FFFFh`. Its CMOS base-memory word is `0280h` and its configuration
 checksum is `00C5h`. The receipt runner selects it with `AT_BASE_RAM_KB=640`;
 the 512K profile remains the default for the earlier bounded POST evidence.
 
+The DOS write and fresh-remount receipts use two separate machine runs. The
+first run supplies `AT_BASE_RAM_KB=640`, the pristine external disk,
+`AT_FLOPPY_OUTPUT`, `AT_EXPECT_FILE=ATBOOT.TXT`, expected text
+`at-boot-ok\r\n`, and the scancode script
+`<Enter><Enter>echo at-boot-ok>atboot.txt<Enter>type atboot.txt<Enter>`. The
+second run mounts only that output disk, supplies its SHA-256 through
+`AT_PRIOR_OUTPUT_SHA256`, and types
+`<Enter><Enter>type atboot.txt<Enter>`. Acceptance requires the BIOS/FDC DMA
+boot-sector transfer, the complete keyboard path, an exact standalone output
+line and final `A>` prompt, FAT12 file bytes, and the media-hash link between
+the two runs. The reboot phase never replays the file-creation command.
+
 The profile includes cascaded 8259s, an 8254, RTC/CMOS, two 8237 register
 files, the AT page-register latches, port 61h refresh/timer status, CGA, a
 DMA-connected floppy controller, and the 8042 path used for A20 and CPU reset.

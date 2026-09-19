@@ -15,6 +15,7 @@ test('AT DOS acceptance requires every independent boot, DMA, keyboard, file, pr
         e=>e.guestFile.text='wrong\r\n',
         e=>e.screenText=['A>echo at-boot-ok','A>'],
         e=>e.screenText=['at-boot-ok'],
+        e=>e.screenText=['at-boot-ok','A>','still running'],
         e=>e.executionBoundaries.bootSector.devices.primaryDma.status=0,
         e=>e.keyboardScript.injected=[],
         e=>e.executionBoundaries.bootSector.sha256='wrong',
@@ -39,4 +40,6 @@ test('AT FAT12 acceptance reads one bounded regular file and rejects metadata or
     assert.throws(()=>readFat12RootFile(directory,'ATBOOT.TXT'),/not a regular/);
     const chained=image.slice();chained[512+3]=3;chained[512+4]=0;
     assert.throws(()=>readFat12RootFile(chained,'ATBOOT.TXT'),/end-of-chain/);
+    const oversized=image.slice();oversized[19]=9;oversized[20]=0;
+    assert.throws(()=>readFat12RootFile(oversized,'ATBOOT.TXT'),/layout exceeds/);
 });

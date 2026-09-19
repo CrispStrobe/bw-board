@@ -13,7 +13,8 @@ export function readFat12RootFile(image,requested) {
     const dataSector=reserved+fats*sectorsPerFat+rootSectors;
     const dataOffset=dataSector*bytesPerSector;
     const clusters=Math.floor((totalSectors-dataSector)/sectorsPerCluster);
-    if(rootOffset+rootEntries*32>image.length||dataOffset>image.length||clusters<1)
+    if(totalSectors*bytesPerSector>image.length||rootOffset+rootEntries*32>image.length||
+        dataOffset>image.length||clusters<1||clusters>=4085)
         throw new Error('AT FAT12 layout exceeds the supplied image');
     for(let index=0;index<rootEntries;index++) {
         const entry=rootOffset+index*32;
@@ -28,7 +29,9 @@ export function readFat12RootFile(image,requested) {
         if(cluster<2||cluster>=clusters+2||size>clusterBytes)
             throw new Error('AT acceptance currently requires one valid data cluster');
         const fatOffset=reserved*bytesPerSector+Math.floor(cluster*3/2);
-        if(fatOffset+1>=image.length)throw new Error('AT FAT12 entry exceeds the supplied image');
+        const fatEnd=(reserved+sectorsPerFat)*bytesPerSector;
+        if(fatOffset+1>=fatEnd||fatOffset+1>=image.length)
+            throw new Error('AT FAT12 entry exceeds the declared FAT');
         const pair=image[fatOffset]|(image[fatOffset+1]<<8);
         const next=(cluster&1)?pair>>4:pair&0xfff;
         if(next<0xff8)throw new Error('AT expected single-cluster file lacks an end-of-chain marker');
@@ -47,7 +50,8 @@ export function gradeAtDosAcceptance(evidence,{expectedText,inputBootSectorSha25
     const channel=dma?.channels?.[2];
     const lines=evidence.screenText??[];
     const outputLine=lines.some(line=>line===expectedText.trim());
-    const prompt=lines.some(line=>/^A>\s*$/.test(line));
+    const lastLine=[...lines].reverse().find(line=>line.trim()!=='')??'';
+    const prompt=/^A>\s*$/.test(lastLine);
     const dmaSector=channel?.page===0&&channel.baseAddr===0x7c00&&channel.baseCount===0x1ff&&
         channel.curAddr===0x7e00&&channel.curCount===0xffff&&(dma.status&4)!==0;
     const mediaLinked=priorOutputMediaSha256===null||inputMediaSha256===priorOutputMediaSha256;
