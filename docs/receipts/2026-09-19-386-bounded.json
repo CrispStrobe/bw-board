@@ -1,6 +1,7 @@
 {
-  "schema": "astra.386-bounded-evidence.v1",
-  "scope": "owned 386 bootstrap and same-ring exception comparisons plus 84 admitted real-mode 386EX samples; no full CPU or OS compatibility",
+  "schema": "astra.386-bounded-evidence.v2",
+  "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+  "scope": "owned 386 bootstrap, same-ring faults, paging and group3 comparisons plus 90 admitted real-mode 386EX samples; no full CPU or OS compatibility",
   "pcjsBootstrap": {
     "oracle": "PCjs",
     "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
@@ -8,7 +9,7 @@
     "scope": "owned flat ring-0 32-bit bootstrap, SIB store, arithmetic loop, stack, near CALL/RET and HLT; no timing, paging, privilege, exception, or broad ISA claim",
     "sourceHashes": {
       "./compare-pcjs-protected386.mjs": "2c7b746b97e7157a19f33cbcf47d8a9ee0a75e0c9efe9fee23bf1184c91ea5df",
-      "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
     },
     "mutation": null,
     "status": "pass",
@@ -45,7 +46,7 @@
   "pcjsFaults": {
     "oracle": "PCjs",
     "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-    "executionRevision": "d8ff0734e9283aa1ca5662bce70d6c8ad10da713",
+    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
     "node": "v22.23.2",
     "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
     "knownOracleLimitations": {
@@ -58,7 +59,7 @@
     },
     "sourceHashes": {
       "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
-      "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
     },
     "mutation": null,
     "status": "pass",
@@ -204,6 +205,135 @@
     },
     "differences": []
   },
+  "pcjsPaging": {
+    "oracle": "PCjs",
+    "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "node": "v22.23.2",
+    "scope": "owned ring-0 4KiB paging guest: CR3 remap, reads, delivered #PF/CR2/frame; no timing/TLB claim",
+    "knownOracleLimitations": {
+      "resumeFlag": {
+        "graded": false,
+        "pcjsObserved": 2,
+        "intel386Expected": "RF set in saved EFLAGS for #PF",
+        "localObserved": 65538
+      }
+    },
+    "sourceHashes": {
+      "./compare-pcjs-protected386-paging.mjs": "4621e8b90f5c40663d9cbc1438c07aa7ff873816a052daad0d5005c986591016",
+      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+    },
+    "mutation": null,
+    "status": "pass",
+    "reference": {
+      "edx": 287454020,
+      "ecx": 1432778632,
+      "cr2": 32768,
+      "eip": 256,
+      "esp": 1008,
+      "frame": [
+        0,
+        59,
+        8,
+        2
+      ]
+    },
+    "actual": {
+      "edx": 287454020,
+      "ecx": 1432778632,
+      "cr2": 32768,
+      "eip": 256,
+      "esp": 1008,
+      "frame": [
+        0,
+        59,
+        8,
+        65538
+      ]
+    },
+    "differences": []
+  },
+  "pcjsGroup3": {
+    "oracle": "PCjs",
+    "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "scope": "non-faulting F6/F7 MUL/IMUL/DIV/IDIV/NEG register cases; only architecturally defined flags are graded",
+    "sourceHashes": {
+      "./compare-pcjs-i80386-group3.mjs": "5790b48fb7414c054c8f72dd48ad2f49000a7c3301c3d21feba0e23dde0c67a9",
+      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+    },
+    "mutation": null,
+    "status": "pass",
+    "observations": {
+      "mul8": {
+        "reference": {
+          "eax": 510,
+          "ebx": 2,
+          "edx": 0,
+          "flags": 2049
+        },
+        "actual": {
+          "eax": 510,
+          "ebx": 2,
+          "edx": 0,
+          "flags": 2049
+        }
+      },
+      "imul32": {
+        "reference": {
+          "eax": 2147483648,
+          "ebx": 4294967295,
+          "edx": 0,
+          "flags": 2049
+        },
+        "actual": {
+          "eax": 2147483648,
+          "ebx": 4294967295,
+          "edx": 0,
+          "flags": 2049
+        }
+      },
+      "div16": {
+        "reference": {
+          "eax": 128,
+          "ebx": 2,
+          "edx": 1
+        },
+        "actual": {
+          "eax": 128,
+          "ebx": 2,
+          "edx": 1
+        }
+      },
+      "idiv32": {
+        "reference": {
+          "eax": 4294967293,
+          "ebx": 2,
+          "edx": 4294967295
+        },
+        "actual": {
+          "eax": 4294967293,
+          "ebx": 2,
+          "edx": 4294967295
+        }
+      },
+      "neg16": {
+        "reference": {
+          "eax": 32768,
+          "ebx": 0,
+          "edx": 0,
+          "flags": 2181
+        },
+        "actual": {
+          "eax": 32768,
+          "ebx": 0,
+          "edx": 0,
+          "flags": 2181
+        }
+      }
+    },
+    "differences": []
+  },
   "hardwareSamples": {
     "add-sizes": {
       "source": "SingleStepTests/80386 physical 386EX captures",
@@ -213,9 +343,9 @@
       "profile": "add-sizes",
       "scope": "12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
       "sourceHashes": {
-        "./verify-i80386-moo-sample.mjs": "582dbff95f5c4ba52a0f9b1df073c42f50ce89c26be76d4a5a5073fcf5bad86b",
+        "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -339,9 +469,9 @@
       "profile": "byte-movx",
       "scope": "36 fixed deterministic byte XOR/MOV and MOVZX/MOVSX samples across their published address/operand-size forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
       "sourceHashes": {
-        "./verify-i80386-moo-sample.mjs": "582dbff95f5c4ba52a0f9b1df073c42f50ce89c26be76d4a5a5073fcf5bad86b",
+        "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -665,9 +795,9 @@
       "profile": "shifts",
       "scope": "36 fixed deterministic non-exception immediate SHL/SHR/SAR samples across operand/address-size forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
       "sourceHashes": {
-        "./verify-i80386-moo-sample.mjs": "582dbff95f5c4ba52a0f9b1df073c42f50ce89c26be76d4a5a5073fcf5bad86b",
+        "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -982,13 +1112,290 @@
         }
       ],
       "failures": []
+    },
+    "segment-mov": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "segment-mov",
+      "scope": "6 fixed deterministic MOV from segment-register samples covering 16-bit and zero-extended 32-bit register destinations; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 2,
+        "admitted": 6,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 46,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "8C.MOO.gz",
+          "sha256": "c445cabc355b0ac81c5b4603fb39ea080f42811cdbfcd744094303c54ba058d9",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0d0366a28d766e4af385cc62cd311a207c3640e2",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 500,
+              "hash": "9e23ea761ad2853a746e4f7607e4b5f2b8a36f38",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "f1aaf6c2cedd5f11b4d42bc768ee07a437a0f289",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "668C.MOO.gz",
+          "sha256": "ae3255242801086eceed752efdf5caa34c5fa3fb8096a239d9d09dcb2e8a1dff",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "612c954348ed962e90ea1dbd5c3eed305dfdb541",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 500,
+              "hash": "c4f2e9e16115922925cc1dd35ef666e63e3c0039",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "f7b41cc5d8a19b03c764d9f8b299c8381e9d66fe",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
     }
   },
   "negativeControls": {
+    "bootstrap": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "node": "v22.23.2",
+      "scope": "owned flat ring-0 32-bit bootstrap, SIB store, arithmetic loop, stack, near CALL/RET and HLT; no timing, paging, privilege, exception, or broad ISA claim",
+      "sourceHashes": {
+        "./compare-pcjs-protected386.mjs": "2c7b746b97e7157a19f33cbcf47d8a9ee0a75e0c9efe9fee23bf1184c91ea5df",
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      },
+      "mutation": "result",
+      "status": "fail",
+      "reference": {
+        "eax": 287454021,
+        "ebx": 513,
+        "ecx": 0,
+        "edx": 287454021,
+        "esp": 1024,
+        "eip": 47,
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "flags": 0,
+        "result": 287454020,
+        "halted": true
+      },
+      "actual": {
+        "eax": 287454021,
+        "ebx": 513,
+        "ecx": 0,
+        "edx": 287454021,
+        "esp": 1024,
+        "eip": 47,
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "flags": 0,
+        "result": 287454021,
+        "halted": true
+      },
+      "differences": [
+        {
+          "field": "result",
+          "reference": 287454020,
+          "actual": 287454021
+        }
+      ]
+    },
+    "paging": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+      "node": "v22.23.2",
+      "scope": "owned ring-0 4KiB paging guest: CR3 remap, reads, delivered #PF/CR2/frame; no timing/TLB claim",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 2,
+          "intel386Expected": "RF set in saved EFLAGS for #PF",
+          "localObserved": 65538
+        }
+      },
+      "sourceHashes": {
+        "./compare-pcjs-protected386-paging.mjs": "4621e8b90f5c40663d9cbc1438c07aa7ff873816a052daad0d5005c986591016",
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      },
+      "mutation": "cr2",
+      "status": "fail",
+      "reference": {
+        "edx": 287454020,
+        "ecx": 1432778632,
+        "cr2": 32768,
+        "eip": 256,
+        "esp": 1008,
+        "frame": [
+          0,
+          59,
+          8,
+          2
+        ]
+      },
+      "actual": {
+        "edx": 287454020,
+        "ecx": 1432778632,
+        "cr2": 36864,
+        "eip": 256,
+        "esp": 1008,
+        "frame": [
+          0,
+          59,
+          8,
+          65538
+        ]
+      },
+      "differences": [
+        {
+          "field": "cr2",
+          "reference": 32768,
+          "actual": 36864
+        },
+        {
+          "field": "completion:local:cr2",
+          "reference": 32768,
+          "actual": 36864
+        }
+      ]
+    },
+    "group3": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+      "scope": "non-faulting F6/F7 MUL/IMUL/DIV/IDIV/NEG register cases; only architecturally defined flags are graded",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-group3.mjs": "5790b48fb7414c054c8f72dd48ad2f49000a7c3301c3d21feba0e23dde0c67a9",
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      },
+      "mutation": "quotient",
+      "status": "fail",
+      "observations": {
+        "mul8": {
+          "reference": {
+            "eax": 510,
+            "ebx": 2,
+            "edx": 0,
+            "flags": 2049
+          },
+          "actual": {
+            "eax": 510,
+            "ebx": 2,
+            "edx": 0,
+            "flags": 2049
+          }
+        },
+        "imul32": {
+          "reference": {
+            "eax": 2147483648,
+            "ebx": 4294967295,
+            "edx": 0,
+            "flags": 2049
+          },
+          "actual": {
+            "eax": 2147483648,
+            "ebx": 4294967295,
+            "edx": 0,
+            "flags": 2049
+          }
+        },
+        "div16": {
+          "reference": {
+            "eax": 128,
+            "ebx": 2,
+            "edx": 1
+          },
+          "actual": {
+            "eax": 129,
+            "ebx": 2,
+            "edx": 1
+          }
+        },
+        "idiv32": {
+          "reference": {
+            "eax": 4294967293,
+            "ebx": 2,
+            "edx": 4294967295
+          },
+          "actual": {
+            "eax": 4294967293,
+            "ebx": 2,
+            "edx": 4294967295
+          }
+        },
+        "neg16": {
+          "reference": {
+            "eax": 32768,
+            "ebx": 0,
+            "edx": 0,
+            "flags": 2181
+          },
+          "actual": {
+            "eax": 32768,
+            "ebx": 0,
+            "edx": 0,
+            "flags": 2181
+          }
+        }
+      },
+      "differences": [
+        {
+          "case": "div16",
+          "reference": {
+            "eax": 128,
+            "ebx": 2,
+            "edx": 1
+          },
+          "actual": {
+            "eax": 129,
+            "ebx": 2,
+            "edx": 1
+          }
+        }
+      ]
+    },
     "frame": {
       "oracle": "PCjs",
       "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-      "executionRevision": "d8ff0734e9283aa1ca5662bce70d6c8ad10da713",
+      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
       "node": "v22.23.2",
       "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
       "knownOracleLimitations": {
@@ -1001,7 +1408,7 @@
       },
       "sourceHashes": {
         "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "mutation": "frame",
       "status": "fail",
@@ -1206,7 +1613,7 @@
     "if": {
       "oracle": "PCjs",
       "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-      "executionRevision": "d8ff0734e9283aa1ca5662bce70d6c8ad10da713",
+      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
       "node": "v22.23.2",
       "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
       "knownOracleLimitations": {
@@ -1219,7 +1626,7 @@
       },
       "sourceHashes": {
         "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "mutation": "if",
       "status": "fail",
@@ -1429,9 +1836,9 @@
       "profile": "add-sizes",
       "scope": "12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
       "sourceHashes": {
-        "./verify-i80386-moo-sample.mjs": "582dbff95f5c4ba52a0f9b1df073c42f50ce89c26be76d4a5a5073fcf5bad86b",
+        "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": "ram",
@@ -1575,9 +1982,9 @@
       "profile": "add-sizes",
       "scope": "12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
       "sourceHashes": {
-        "./verify-i80386-moo-sample.mjs": "582dbff95f5c4ba52a0f9b1df073c42f50ce89c26be76d4a5a5073fcf5bad86b",
+        "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "562cd308b7cfd6d9a6fb78bbce9ba957957e8a1dff3ffc809314e65cea379abe"
+        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": "stray-write",
@@ -1710,6 +2117,65 @@
           ]
         }
       ]
+    }
+  },
+  "focusedTests": {
+    "pass": 46,
+    "fail": 0,
+    "skip": 0,
+    "scope": "386 core/fault/paging/reset/group3/segment and AT acceptance tests"
+  },
+  "test386Diagnostic": {
+    "schema": "astra.i80386-test386-diagnostic.v1",
+    "accepted": false,
+    "status": "bounded-blocker",
+    "fullRomPass": false,
+    "scope": "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
+    "node": "v22.23.2",
+    "steps": 790292,
+    "post": [
+      {
+        "value": 0,
+        "width": 8
+      },
+      {
+        "value": 1,
+        "width": 8
+      },
+      {
+        "value": 2,
+        "width": 8
+      },
+      {
+        "value": 3,
+        "width": 8
+      },
+      {
+        "value": 4,
+        "width": 8
+      }
+    ],
+    "output": "",
+    "blocker": {
+      "name": "UnsupportedI80386",
+      "message": "opcode f3",
+      "cs": 61440,
+      "eip": 3245,
+      "physical": 986285,
+      "opcode": 243
+    },
+    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "instructionBudget": 2000000,
+    "input": {
+      "bytes": 65536,
+      "sha256": "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067",
+      "provenanceSha256": "8445f111e459457b950cd4b616bd6de63cd5209ed2c265fdd60cb8fe1bbc6403",
+      "revision": "cfd052d1e64d5375dea5a681c1eadeed64ceda2c",
+      "sourceClean": true
+    },
+    "sourceHashes": {
+      "./run-i80386-test386-diagnostic.mjs": "ed74d2097c9f1ca9739eb499c172e5c673f063b1dc43071cbaa4fe26abf30095",
+      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
     }
   }
 }

@@ -94,8 +94,8 @@ budget. Its `accepted: false` and `fullRomPass: false` fields are deliberate:
 the artifact measures bounded progress and does not claim complete ROM,
 hardware, or timing compatibility.
 
-MOV to and from ES/CS/SS/DS/FS/GS uses a 16-bit segment operand, independent
-of the general operand-size default. Invalid encodings raise #UD. Protected
+MOV from ES/CS/SS/DS/FS/GS and MOV to ES/SS/DS/FS/GS use a 16-bit
+selector. MOV to CS and other invalid encodings raise #UD. Protected
 data-register loads admit null selectors with an unusable cache, distinguish
 #GP, #NP, and #SS for the bounded GDT path, and leave LDT and expand-down data
 as explicit valid-but-unsupported paths. Opcode 8C writes 16 bits to memory

@@ -38,6 +38,27 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-19 DONE (implementation; qualification pending) — Astra/Sol functional
+AT DOS disk boot and 386 paging/reset/ISA stage; candidate is the commit carrying
+this row. Two source-bound genuine-reset IBM Rev1 boots execute DOS 2.00 and
+Command 2.02: keyboard ECHO/TYPE writes 12 exact bytes, fresh-remount TYPE reads
+them without recreating the file, both end at A>. Exact DMA boot transfer,
+input/output SHA linkage, all 15 CPU/device/harness source hashes, and rejecting
+file/output/DMA/keyboard/media mutations are checked in. Explicit 640KiB RAM/CMOS
+fixes the owned IO.SYS relocation beyond the original 512KiB profile. BIOS and
+media remain external. 386 adds original 4KiB paging with precise CR2/error/restart
+state, reset at FFFFFFF0h, port I/O, flag privilege, exact group3 arithmetic,
+segment-selector admission and scalar strings. 90 fixed hardware samples pass;
+46 additional segment-profile exception inputs are excluded, not passes. Audit
+resolved 66/8C upper-word behavior with 386EX capture and fixed selector null/TI
+and conforming-read checks. PCjs bootstrap/fault/paging/group3 comparisons pass
+with rejecting mutations and the recorded saved-RF oracle limitation. Focused
+CPU/acceptance tests 46/46, DOS toolchain 7/7 and platform/acceptance 11/11 pass.
+Unchanged external test386 reaches POST00..04, then explicitly refuses REP;
+`fullRomPass:false`. REP continuation stays outside this freeze. Latest upstream
+MOS changes are preserved. Hosted exact-head CI/CPU/native qualification gates
+landing. No full 386DX, Windows, Doom, complete peripherals or timing claim.
+
 2026-09-19 DONE (qualified; landed at `28911b2`) — Astra/Sol bounded 386
 and AT keyboard POST milestone; exact candidate is the commit carrying this row.
 Adds opt-in native 32-bit execution, prefixes/SIB/aliases/stack widths, same-ring
