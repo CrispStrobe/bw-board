@@ -9,19 +9,23 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: exact Level-1 MOS bulk-junction default-temperature
+2026-09-19 DONE — bwcx: exact Level-1 MOS bulk-junction default-temperature
 alignment, isolated worktree `/mnt/volume1/code/wt/bwb-mos-bulk-temperature`,
 branch `lane/mos-bulk-temperature`, exact base
 `3cd5927ba84977d472b7ed75f2075c478800b526`. Owns only the MOS bulk-junction
 thermal constant/metadata in `src/mna.js`, a focused self-authored regression
-test, and this row. Seven current ADI v2 OP comparisons share one measured
-cause: Board fixes the MOS body diode at 0.02585 V while an authored SPICE deck
-without TEMP uses ngspice 42's 27 C default (0.025864925786 V). The private
-oracle-side normalization was rejected because global TEMP/TNOM changes MOS
-channel convergence in unrelated decks. Align only the simplified MOS bulk
-junction to the source/oracle default; no channel law, other junction family,
-solver, tolerance, CUI, x86, workflow, or private payload change. Require the
-exact seven and complete v2 replay at unchanged tolerances before landing.
+test, and this row. Board's MOS body diode now uses ngspice 42's 27 C default
+thermal voltage (0.025864925786 V); diode, zener and BJT families retain their
+existing fixed 0.02585 V contract. The public self-authored witness executes a
+strict ngspice reference and agrees within 0.23 microvolt; restoring 0.02585 V
+makes it fail by 380 microvolts. Focused MOS/bulk coverage passes 67/67 and the
+broader affected surface passes 147/147. The complete 7,410-row ADI v2 replay,
+paired with the bounded instance-geometry oracle correction, closes seven
+comparison failures and passes 1,444,717/1,444,717 observations without moving
+importer/native/not-run counts or tolerances. Exact-head CI `35467635421` and
+Harris `35467635420` are green at `7ef25d725087baa4fa75768617b1395e5891ba6e`.
+No channel law, other junction family, solver, tolerance, CUI, x86, workflow,
+or private payload changed.
 
 2026-09-19 CLAIM — Astra coordinator, two Sol implementers: AT boot and CPU
 exception continuation toward 386DX, Windows and Doom. Integration worktree

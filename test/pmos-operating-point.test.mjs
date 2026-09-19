@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {BoardImpl} from '../src/board.js';
 
-const TEMP_C = 26.826895261366076;
+const TEMP_C = 27;
 const PARAMS = Object.freeze({model: 'level1', vth: -1, kp: 25e-6,
   w: 100e-6, l: 1e-6, lambda: 0.01, _model: 'PM'});
 
@@ -121,7 +121,7 @@ describe('BoardImpl.operatingPoint explicit-bulk Level-1 PMOS domain', () => {
       model: 'explicit-spice-level1-explicit-bulk-terminal',
       requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
       requiredTerminals: ['gate', 'drain', 'source', 'bulk'],
-      defaults: {bulkIs: 1e-14, bulkN: 1}, thermalVoltage: 0.02585,
+      defaults: {bulkIs: 1e-14, bulkN: 1}, thermalVoltage: 0.025864925786328753,
       temperatureModel: 'fixed',
     });
     assert.ok(Math.abs(op.nodeVoltages.get('drain') - oracle['v(drain)']) < 1e-6);

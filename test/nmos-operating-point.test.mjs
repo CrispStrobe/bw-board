@@ -184,6 +184,59 @@ function assertUnchanged(board, before) {
 }
 
 describe('BoardImpl.operatingPoint explicit grounded-bulk Level-1 NMOS domain', () => {
+  it('matches ngspice default temperature when the grounded bulk junction conducts', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    const deck = `* self-authored forward-biased MOS bulk junction
+I1 drain 0 DC 1m
+I2 drain gate DC 1m
+M1 drain gate 0 0 NM W=1u L=1u
+R1 gate drain 1k
+.model NM NMOS(LEVEL=1 VTO=1 KP=100u LAMBDA=.02)
+.options reltol=1e-9 abstol=1e-15 vntol=1e-12
+.control
+set numdgt=17
+op
+print v(drain) v(gate)
+.endc
+.end
+`;
+    const oracle = spawnSync('ngspice', ['-b'], { input: deck, encoding: 'utf8' });
+    assert.equal(oracle.status, 0, oracle.stderr || oracle.stdout);
+    const read = name => Number(oracle.stdout.match(new RegExp(
+      `v\\(${name}\\)\\s*=\\s*([-+0-9.e]+)`, 'i'))?.[1]);
+
+    const board = new BoardImpl(5);
+    board.setNetlist([
+      { id: 'I1', kind: 'isource', params: { amps: 1e-3 }, terminals: ['pos', 'neg'] },
+      { id: 'I2', kind: 'isource', params: { amps: 1e-3 }, terminals: ['pos', 'neg'] },
+      { id: 'M1', kind: 'nmos', params: { model: 'level1', vth: 1, kp: 100e-6,
+        w: 1e-6, l: 1e-6, lambda: 0.02, bulkAtGround: true },
+      terminals: ['drain', 'gate', 'source'] },
+      { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ], [
+      { id: 'gnd', terminals: [
+        { part: 'I1', terminal: 'pos' }, { part: 'M1', terminal: 'source' },
+        { part: 'G1', terminal: 'gnd' },
+      ] },
+      { id: 'drain', terminals: [
+        { part: 'I1', terminal: 'neg' }, { part: 'I2', terminal: 'neg' },
+        { part: 'M1', terminal: 'drain' }, { part: 'R1', terminal: 'b' },
+      ] },
+      { id: 'gate', terminals: [
+        { part: 'I2', terminal: 'pos' }, { part: 'M1', terminal: 'gate' },
+        { part: 'R1', terminal: 'a' },
+      ] },
+    ]);
+    const actual = board.operatingPoint();
+    assert.equal(actual.converged, true);
+    assert.ok(Math.abs(actual.nodeVoltages.get('drain') - read('drain')) < 5e-7,
+      `drain: ${actual.nodeVoltages.get('drain')} vs ${read('drain')}`);
+    assert.ok(Math.abs(actual.nodeVoltages.get('gate') - read('gate')) < 5e-7,
+      `gate: ${actual.nodeVoltages.get('gate')} vs ${read('gate')}`);
+  });
+
   it('is exactly cut off at threshold and joins the square law C1 from above', {
     skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
   }, () => {
@@ -285,7 +338,7 @@ M1 drain gate source 0 NM W=100u L=1u
     assert.deepEqual(active.analysis.nmos, {
       model: 'explicit-spice-level1-grounded-bulk',
       requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
-      defaults: { bulkIs: 1e-14, bulkN: 1 }, thermalVoltage: 0.02585,
+      defaults: { bulkIs: 1e-14, bulkN: 1 }, thermalVoltage: 0.025864925786328753,
       temperatureModel: 'fixed',
     });
     for (const [net, oracle] of [['gate', 'v(gate)'], ['drain', 'v(drain)'], ['source', 'v(source)']]) {
