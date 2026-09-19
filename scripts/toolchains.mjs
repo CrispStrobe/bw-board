@@ -32,6 +32,31 @@ export const FLAVORS = Object.freeze({
 });
 export const DEFAULT_FLAVOR = '80286-at';
 
+/** Languages the code tab knows, with the file extensions that select each. */
+export const LANGUAGES = Object.freeze({
+    asm: { label: 'Assembly', ext: ['asm', 's'] },
+    bas: { label: 'BASIC', ext: ['bas'] },
+    c:   { label: 'C', ext: ['c'] },
+});
+
+/** Detect a source's language from its filename/path extension (null if none). */
+export function detectLanguage(nameOrPath) {
+    const ext = (String(nameOrPath).split('.').pop() || '').toLowerCase();
+    for (const [id, def] of Object.entries(LANGUAGES)) if (def.ext.includes(ext)) return id;
+    return null;
+}
+
+/** A runnable starter skeleton per toolchain — what the code tab preloads so
+ *  a freshly picked toolchain already runs (each language/tool has its own
+ *  source shape; the built-in asm is flat, MASM needs SEGMENT..END). */
+const STARTERS = Object.freeze({
+    'nasm-native': "\tmov dx, offset msg\n\tmov ah, 9\n\tint 21h\n\tmov ax, 4c00h\n\tint 21h\nmsg:\tdb 'Hello from assembly$'\n",
+    'masm': 'CODE\tSEGMENT\n\tASSUME CS:CODE,DS:CODE\n\tORG 100H\nSTART:\tMOV DX,OFFSET MSG\n\tMOV AH,9\n\tINT 21H\n\tMOV AX,4C00H\n\tINT 21H\nMSG:\tDB "Hello from MASM$"\nCODE\tENDS\n\tEND START\n',
+    'basic-native': '10 PRINT "Hello from BASIC"\n20 END\n',
+    'cc-native': '#include <stdio.h>\nint main(void) {\n    printf("Hello from C\\n");\n    return 0;\n}\n',
+});
+export function starterTemplate(toolchainId) { return STARTERS[toolchainId] ?? ''; }
+
 /**
  * Toolchain profiles. `kind: 'native'` runs in-process (no external binary,
  * always available — CI-runnable); `kind: 'dos'` runs real DOS binaries and is
@@ -83,6 +108,27 @@ export function listToolchains(language, { available = new Set() } = {}) {
 }
 
 /**
+ * The whole code-tab menu in one call: each language with its available
+ * toolchains (id/label/kind + a runnable starter) and the machine flavors. The
+ * GUI renders the compiler dropdown from a language's `toolchains`, the machine
+ * dropdown from `flavors`, and runs the picked (toolchain, flavor) via
+ * runToolchain — nothing GUI-specific lives here, so the CLI and the code tab
+ * share exactly this surface.
+ */
+export function codeTabMenu({ available = new Set() } = {}) {
+    return {
+        languages: Object.entries(LANGUAGES).map(([id, def]) => ({
+            id, label: def.label, ext: def.ext,
+            toolchains: listToolchains(id, { available }).map((t) => ({
+                id: t.id, label: t.label, kind: t.kind, starter: starterTemplate(t.id),
+            })),
+        })),
+        flavors: Object.entries(FLAVORS).map(([id, f]) => ({ id, label: f.label })),
+        defaultFlavor: DEFAULT_FLAVOR,
+    };
+}
+
+/**
  * Run a source through a toolchain on a machine flavor. Returns
  * { ok, toolchain, flavor, artifact?, ran?, stages? } — the same shape whether
  * the path was native, a DOS chain, or an interpreter.
@@ -128,6 +174,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             process.stdout.write(`${t.id.padEnd(14)} ${t.language.padEnd(4)} ${t.kind.padEnd(7)} ${t.label}\n`);
         }
         process.stdout.write(`\nmachine flavors: ${Object.keys(FLAVORS).join(', ')} (default ${DEFAULT_FLAVOR})\n`);
+    } else if (cmd === 'menu') {
+        // The JSON the code tab renders its language/compiler/machine pickers from.
+        process.stdout.write(JSON.stringify(codeTabMenu({ available: availableBinaries(process.env.MSDOS_BIN_DIR) }), null, 2) + '\n');
     } else if (cmd === 'run') {
         const [id, source] = rest;
         if (!id || !source) { console.error('usage: toolchains.mjs run <toolchain> <source> [--flavor F]'); process.exit(64); }
@@ -137,7 +186,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         process.stderr.write(`\n[toolchain] ${id} on ${r.flavor}: ${r.ok ? 'built' : 'FAILED'}${r.ran ? ` — ran: exit ${r.ran.exitCode}` : ''}\n`);
         process.exit(r.ran ? (r.ran.terminated ? r.ran.exitCode : 2) : (r.ok ? 0 : 2));
     } else {
-        console.error('usage: toolchains.mjs list [language] | run <toolchain> <source> [--flavor F]');
+        console.error('usage: toolchains.mjs list [language] | menu | run <toolchain> <source> [--flavor F]');
         process.exit(64);
     }
 }
