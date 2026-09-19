@@ -62,6 +62,15 @@ test("32-bit segment POP advances by four and selector failure is atomic", () =>
   assert.deepEqual([bad.cpu.ds,bad.cpu.esp], [0,0x100]);
 });
 
+test("32-bit segment POP reads only the selector word before SP wraps", () => {
+  const f = fixture([0x66,0x0f,0xa1]);
+  f.cpu.sp = 0xfffe;
+  f.memory.set(0xfffe, 0x21);
+  f.memory.set(0xffff, 0x49);
+  f.cpu.step();
+  assert.deepEqual([f.cpu.fs, f.cpu.sp], [0x4921, 2]);
+});
+
 test("POP SS establishes IRQ/NMI/debug shadows", () => {
   const f = fixture([0x17,0x90]);
   f.cpu.sp=0x100; f.memory.set(0x100,0x20); f.memory.set(0x101,0);

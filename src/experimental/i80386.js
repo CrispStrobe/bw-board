@@ -686,12 +686,6 @@ export class ExperimentalI80386 {
     const next = stack32
       ? (this.esp - bytes) >>> 0
       : (this.sp - bytes) & 0xffff;
-    if (!this.protectedMode && !stack32) {
-      for (let index = 0; index < bytes; index++)
-        this._write(SEG_SS, (next + index) & 0xffff, 8, v >>> (8 * index));
-      this.sp = next;
-      return;
-    }
     this._linear(SEG_SS, next, bytes);
     if (stack32) this.esp = next;
     else this.sp = next;
@@ -701,15 +695,7 @@ export class ExperimentalI80386 {
     const bytes = width >>> 3,
       stack32 = !!this.segmentCaches[SEG_SS].default32,
       off = stack32 ? this.esp : this.sp;
-    let v;
-    if (!this.protectedMode && !stack32) {
-      v = 0;
-      for (let index = 0; index < bytes; index++)
-        v += this._read(SEG_SS, (off + index) & 0xffff, 8) * 2 ** (8 * index);
-      this.sp = (this.sp + bytes) & 0xffff;
-      return v >>> 0;
-    }
-    v = this._read(SEG_SS, off, width);
+    const v = this._read(SEG_SS, off, width);
     if (stack32) this.esp = (this.esp + bytes) >>> 0;
     else this.sp = (this.sp + bytes) & 0xffff;
     return v;
@@ -765,14 +751,7 @@ export class ExperimentalI80386 {
     }
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
     const next = stack32 ? (this.esp - 4) >>> 0 : (this.sp - 4) & 0xffff;
-    if (!this.protectedMode && !stack32) {
-      const selector = this._segValue(segment);
-      this._write(SEG_SS, next, 8, selector);
-      this._write(SEG_SS, (next + 1) & 0xffff, 8, selector >>> 8);
-      this.sp = next;
-      return;
-    }
-    const linear = this._linear(SEG_SS, next, 4);
+    const linear = this._linear(SEG_SS, next, 2);
     const physical = [0, 1].map((index) =>
       this._translate((linear + index) >>> 0, { write: true }),
     );
@@ -783,7 +762,12 @@ export class ExperimentalI80386 {
     else this.sp = next;
   }
   _popSegment(segment, width) {
-    const selector = this._pop(width) & 0xffff;
+    const bytes = width >>> 3;
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const old = stack32 ? this.esp : this.sp;
+    const selector = this._read(SEG_SS, old, 16) & 0xffff;
+    if (stack32) this.esp = (this.esp + bytes) >>> 0;
+    else this.sp = (this.sp + bytes) & 0xffff;
     this._loadSeg(segment, selector);
     if (segment === SEG_SS) {
       this._interruptShadow = 2;

@@ -188,9 +188,12 @@ independent destination operand size. It returns the offset without checking a
 segment or issuing an operand bus read; the register ModRM encoding raises #UD.
 
 PUSH/POP ES, SS, DS, FS, and GS plus PUSH CS follow independent operand and
-stack-address sizes; POP CS has no encoding. A 32-bit segment push decrements
-the stack pointer by four while the original 80386 writes only the 16-bit
-selector. Segment-load faults restore the pre-instruction stack/register state,
+stack-address sizes; POP CS has no encoding. Physical 386EX captures show that
+a 32-bit segment push decrements by four but writes only the selector word, and
+a 32-bit segment pop reads only that word before advancing by four. This
+instruction-specific behavior permits SP=FFFE to advance to 0002 without a
+wrapped operand read; general dword stack operands retain full-span admission.
+Segment-load faults restore the pre-instruction stack/register state,
 and POP SS establishes interrupt, NMI, and debug shadows.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
