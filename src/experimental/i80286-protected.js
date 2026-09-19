@@ -26,8 +26,9 @@ const ERROR_CODE_VECTORS = new Set([10, 11, 12, 13]);
  *
  * It implements expand-up 16-bit code/data segments through the GDT and LDT,
  * restartable strings, and a bounded ring-0/ring-3 interrupt path using a 286
- * TSS stack. Full task switches, task/call gates, conforming and expand-down
- * segments remain explicit unsupported boundaries.
+ * TSS stack, far call gates, conforming and expand-down segments, and bounded
+ * 286 task switching. NPX state and hardware-reset task behavior remain
+ * explicit unsupported boundaries.
  */
 export class ProtectedI80286 extends I8086 {
     constructor(bus, {deliverProtectedFaults = false} = {}) {
@@ -821,9 +822,9 @@ export class ProtectedI80286 extends I8086 {
         if ((raw.access & 0x10) || (busy ? type !== 3 : type !== 1))
             this._pmFault(faultVector, selector & 0xfffc,
                 busy ? 'task return requires busy 286 TSS' : 'task switch requires available 286 TSS');
-        if (!(raw.access & 0x80)) this._pmFault(11, selector & 0xfffc, 'TSS not present');
         if (checkPrivilege && !busy && Math.max(this.cpl, selector & 3) > ((raw.access >> 5) & 3))
             this._pmFault(faultVector, selector & 0xfffc, 'TSS privilege');
+        if (!(raw.access & 0x80)) this._pmFault(11, selector & 0xfffc, 'TSS not present');
         return raw;
     }
 
@@ -834,9 +835,9 @@ export class ProtectedI80286 extends I8086 {
             sp:w(0x1a),bp:w(0x1c),si:w(0x1e),di:w(0x20),es:w(0x22),cs:w(0x24),ss:w(0x26),ds:w(0x28),ldt:w(0x2a)};
     }
 
-    _saveCurrentTask(flags=this.flags) {
+    _saveCurrentTask(flags=this.flags, errorSelector=this.tr.selector) {
         if (!this.tr.valid || this.tr.limit < 0x29)
-            this._pmFault(10, this.tr.selector & 0xfffc, 'current TSS invalid');
+            this._pmFault(10, errorSelector & 0xfffc, 'current TSS invalid');
         const values=[[0x0e,this.ip],[0x10,flags],[0x12,this.ax],[0x14,this.cx],[0x16,this.dx],[0x18,this.bx],
             [0x1a,this.sp],[0x1c,this.bp],[0x1e,this.si],[0x20,this.di],[0x22,this.es],[0x24,this.cs],
             [0x26,this.ss],[0x28,this.ds]];
@@ -867,19 +868,25 @@ export class ProtectedI80286 extends I8086 {
         }
     }
 
-    _taskSwitch(selector, kind, {checkPrivilege=true, errorCode=null} = {}) {
+    _taskSwitch(selector, kind, {checkPrivilege=true, errorCode=null, external=false} = {}) {
         const returning = kind === 'iret';
-        const raw = this._taskDescriptor(selector, {
-            busy:returning,
-            checkPrivilege,
-            faultVector:returning ? 10 : 13,
-        });
+        let raw;
+        try {
+            raw=this._taskDescriptor(selector, {
+                busy:returning,
+                checkPrivilege,
+                faultVector:returning ? 10 : 13,
+            });
+        } catch (error) {
+            if (external && error instanceof ProtectedModeFault && error.errorCode) error.errorCode|=1;
+            throw error;
+        }
         const oldRaw = this.tr.valid ? this._rawDescriptor(this.tr.selector, {gdtOnly:true}) : null;
 
         // SWITCH_TASKS commits the new busy bit before validating/saving the
         // outgoing image. Memory effects before TR replacement remain visible.
         if (!returning) this._setTaskBusy(raw, true);
-        this._saveCurrentTask(returning ? this.flags & ~NT : this.flags);
+        this._saveCurrentTask(returning ? this.flags & ~NT : this.flags, selector);
         if (kind === 'call') this._writePhysical16(raw.base, this.tr.selector);
         if (kind === 'jmp' || returning) this._setTaskBusy(oldRaw, false);
         this.tr={selector:selector&0xffff,valid:true,base:raw.base,limit:raw.limit};
@@ -907,7 +914,10 @@ export class ProtectedI80286 extends I8086 {
             if(errorCode!==null)this._pmPush(errorCode);
             this.halted=false;this.intShadow=0;this._pmStiShadow=0;
         } catch (error) {
-            if (error instanceof ProtectedModeFault) error.taskCommitted=true;
+            if (error instanceof ProtectedModeFault) {
+                if (external && error.errorCode) error.errorCode|=1;
+                error.taskCommitted=true;
+            }
             throw error;
         }
     }
@@ -940,7 +950,7 @@ export class ProtectedI80286 extends I8086 {
             descriptor=this._descriptor(gate.selector,SEG_CS,{ignoreRpl:true});
             offset=gate.offset;
         } else descriptor=this._descriptor(selector,SEG_CS);
-        const targetCpl=(descriptor.access>>5)&3;
+        const targetCpl=descriptor.conforming?this.cpl:(descriptor.access>>5)&3;
         if(targetCpl>this.cpl||(!gate&&targetCpl!==this.cpl))
             this._pmFault(13,(gate?.selector??selector)&0xfffc,'far transfer privilege');
         if(!call){
@@ -1050,14 +1060,14 @@ export class ProtectedI80286 extends I8086 {
         this._deliveringProtected = true;
         try {
             const gate = this._gate(vector, software, external);
-            if(gate.task){this._taskSwitch(gate.selector,'call',{checkPrivilege:false,errorCode});return;}
+            if(gate.task){this._taskSwitch(gate.selector,'call',{checkPrivilege:false,errorCode,external});return;}
             let descriptor;
             try { descriptor = this._descriptor(gate.selector, SEG_CS, {ignoreRpl:true}); }
             catch (e) {
                 if (external && e instanceof ProtectedModeFault) e.errorCode |= 1;
                 throw e;
             }
-            const targetCpl=(descriptor.access>>5)&3;
+            const targetCpl=descriptor.conforming?this.cpl:(descriptor.access>>5)&3;
             if(targetCpl>this.cpl)this._pmFault(13,(gate.selector&0xfffc)|(external?1:0),'gate target less privileged than caller');
             descriptor.selector=(gate.selector&0xfffc)|targetCpl;
             const pushesError = errorCode !== null, inner=targetCpl<this.cpl;

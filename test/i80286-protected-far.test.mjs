@@ -66,6 +66,51 @@ test('outer RETF validates the return stack before a bad target offset',()=>{
   assert.throws(()=>f.cpu._farReturn(0),e=>e.vector===13&&e.errorCode===0&&/null selector/.test(e.reason));
 });
 
+test('conforming direct, call-gate, and IDT transfers retain caller CPL',()=>{
+  const direct=fixture();direct.desc(0x208,0x100000,0x9e);
+  direct.cpu.cpl=3;direct.cpu.cs=0x23;direct.cpu.segmentCaches[SEG_CS]=direct.cpu._descriptor(0x23,SEG_CS,{privilegeCpl:3});
+  direct.cpu._farTransfer(0x20,8,false);
+  assert.deepEqual([direct.cpu.cpl,direct.cpu.cs,direct.cpu.ip],[3,0x0b,0x20]);
+
+  const call=fixture();call.desc(0x208,0x100000,0x9e);call.put(0x230,[0x20,0,8,0,0,0xe4,0,0]);
+  call.cpu.cpl=3;call.cpu.cs=0x23;call.cpu.segmentCaches[SEG_CS]=call.cpu._descriptor(0x23,SEG_CS,{privilegeCpl:3});
+  call.cpu.ss=0x2b;call.cpu.segmentCaches[SEG_SS]=call.cpu._descriptor(0x2b,SEG_SS,{privilegeCpl:3});call.cpu.sp=0x200;
+  call.cpu._farTransfer(0,0x33,true);
+  assert.deepEqual([call.cpu.cpl,call.cpu.cs,call.cpu.sp],[3,0x0b,0x1fc]);
+
+  const intr=fixture();intr.desc(0x208,0x100000,0x9e);intr.cpu.deliverProtectedFaults=true;
+  intr.cpu.cpl=3;intr.cpu.cs=0x23;intr.cpu.segmentCaches[SEG_CS]=intr.cpu._descriptor(0x23,SEG_CS,{privilegeCpl:3});
+  intr.cpu.ss=0x2b;intr.cpu.segmentCaches[SEG_SS]=intr.cpu._descriptor(0x2b,SEG_SS,{privilegeCpl:3});intr.cpu.sp=0x200;
+  intr.cpu.idtr={base:0x180000,limit:0x107};intr.put(0x180100,[0x20,0,8,0,0,0xe6,0,0]);
+  intr.cpu.interrupt(0x20);
+  assert.deepEqual([intr.cpu.cpl,intr.cpu.cs,intr.cpu.sp],[3,0x0b,0x1fa]);
+});
+
+test('outer RETF may return to a conforming segment while changing CPL',()=>{
+  const f=fixture();f.desc(0x220,0x140000,0x9e);
+  f.cpu.ss=0x18;f.cpu.segmentCaches[SEG_SS]=f.cpu._descriptor(0x18,SEG_SS);f.cpu.sp=0x200;
+  for(const [off,value]of [[0,0x20],[2,0x23],[4,0x300],[6,0x2b]])f.cpu._wr16(SEG_SS,0x200+off,value);
+  f.cpu._farReturn(0);
+  assert.deepEqual([f.cpu.cpl,f.cpu.cs,f.cpu.ip,f.cpu.ss,f.cpu.sp],[3,0x23,0x20,0x2b,0x300]);
+});
+
+test('call gates mask a 31-word count and honor expand-down stack bounds',()=>{
+  const params=fixture();params.put(0x230,[0,1,8,0,0xff,0xe4,0,0]);
+  params.cpu.cpl=3;params.cpu.cs=0x23;params.cpu.segmentCaches[SEG_CS]=params.cpu._descriptor(0x23,SEG_CS,{privilegeCpl:3});
+  params.cpu.ss=0x2b;params.cpu.segmentCaches[SEG_SS]=params.cpu._descriptor(0x2b,SEG_SS,{privilegeCpl:3});params.cpu.sp=0x200;
+  params.cpu.tr={selector:0x38,valid:true,base:0x160000,limit:0x2b};params.put(0x160002,[0,2,0x18,0]);
+  for(let i=0;i<31;i++)params.cpu._wr16(SEG_SS,0x200+i*2,0x9000+i);
+  params.cpu._farTransfer(0,0x33,true);
+  assert.deepEqual([params.cpu.sp,params.cpu._rd16(SEG_SS,params.cpu.sp+4),params.cpu._rd16(SEG_SS,params.cpu.sp+64)],
+    [0x1ba,0x9000,0x901e]);
+
+  const down=fixture();down.desc(0x218,0x130000,0x96,0x1ff);
+  down.cpu.ss=0x18;down.cpu.segmentCaches[SEG_SS]=down.cpu._descriptor(0x18,SEG_SS);down.cpu.sp=0x208;
+  down.cpu._farTransfer(0x20,8,true);assert.equal(down.cpu.sp,0x204);
+  down.cpu.sp=0x202;
+  assert.throws(()=>down.cpu._farTransfer(0x20,8,true),e=>e.vector===12&&e.errorCode===0);
+});
+
 function installTasks(f,newIp=0x100){
   f.cpu.gdtr.limit=0x4f;f.desc(0x240,0x170000,0x83,0x2b);f.desc(0x248,0x171000,0x81,0x2b);
   f.cpu.tr={selector:0x40,valid:true,base:0x170000,limit:0x2b};
@@ -110,6 +155,54 @@ test('post-commit task faults retain incoming visibles and sequentially loaded c
   assert.equal(f.cpu.segmentCaches[SEG_DS].usable,false);
 });
 
+test('invalid incoming LDT faults with incoming selectors visible and caches empty',()=>{
+  const f=fixture();installTasks(f);f.put(0x17102a,[0x50,0]);
+  assert.throws(()=>f.cpu._taskSwitch(0x48,'jmp'),e=>e.vector===10&&e.errorCode===0x50&&e.taskCommitted);
+  assert.deepEqual([f.cpu.es,f.cpu.cs,f.cpu.ss,f.cpu.ds],[0x10,8,0x18,0x10]);
+  assert.equal(f.cpu.ldtr.valid,false);
+  assert.ok([0,SEG_CS,SEG_SS,SEG_DS].every(id=>f.cpu.segmentCaches[id].usable===false));
+});
+
+test('task limit and busy faults occur on the specified side of the commit point',()=>{
+  const oldShort=fixture();installTasks(oldShort);oldShort.cpu.tr.limit=0x28;
+  assert.throws(()=>oldShort.cpu._taskSwitch(0x48,'jmp'),e=>e.vector===10&&e.errorCode===0x48&&!e.taskCommitted);
+  assert.deepEqual([oldShort.cpu.tr.selector,oldShort.mem.get(0x24d)&15],[0x40,3],
+    'new busy bit commits before rejecting the short outgoing TSS');
+
+  const newShort=fixture();installTasks(newShort);newShort.cpu.ip=0x66;newShort.desc(0x248,0x171000,0x81,0x2a);
+  assert.throws(()=>newShort.cpu._taskSwitch(0x48,'jmp'),e=>e.vector===10&&e.errorCode===0x48&&e.taskCommitted);
+  assert.equal(newShort.cpu.tr.selector,0x48);
+  assert.equal((newShort.mem.get(0x17000e)??0)|((newShort.mem.get(0x17000f)??0)<<8),0x66,
+    'outgoing IP was saved before the incoming limit fault');
+
+  const busy=fixture();installTasks(busy);busy.mem.set(0x24d,0x83);
+  const before=busy.cpu.getProtectedState();
+  assert.throws(()=>busy.cpu._taskSwitch(0x48,'jmp'),e=>e.vector===13&&e.errorCode===0x48&&!e.taskCommitted);
+  assert.deepEqual(busy.cpu.getProtectedState(),before);
+
+  const priority=fixture();installTasks(priority);priority.mem.set(0x24d,0x01);priority.cpu.cpl=3;
+  assert.throws(()=>priority.cpu._taskSwitch(0x48,'jmp'),e=>e.vector===13&&e.errorCode===0x48,
+    'direct task privilege failure precedes the not-present check');
+});
+
+test('task IP faults after all incoming caches commit and bad NT backlink is #TS',()=>{
+  const ip=fixture();installTasks(ip,0x20);ip.desc(0x208,0x100000,0x9a,0x10);
+  assert.throws(()=>ip.cpu._taskSwitch(0x48,'jmp'),e=>e.vector===13&&e.errorCode===0&&e.taskCommitted);
+  assert.ok([SEG_CS,SEG_SS,SEG_DS,0].every(id=>ip.cpu.segmentCaches[id].usable));
+
+  const backlink=fixture();installTasks(backlink);backlink.mem.set(0x245,0x81);
+  assert.throws(()=>backlink.cpu._taskSwitch(0x40,'iret',{checkPrivilege:false}),e=>e.vector===10&&e.errorCode===0x40);
+});
+
+test('a committed invalid data selector delivers #TS on the incoming task stack',()=>{
+  const f=fixture();installTasks(f);f.put(0x171028,[0x58,0]);f.put(0x100000,[0xea,0,0,0x48,0]);
+  f.cpu.ip=0;f.cpu.deliverProtectedFaults=true;f.cpu.idtr={base:0x180000,limit:10*8+7};
+  f.put(0x180000+10*8,[0x80,0,8,0,0,0x86,0,0]);
+  f.cpu.step();
+  assert.deepEqual([f.cpu.tr.selector,f.cpu.ss,f.cpu.sp,f.cpu.ip],[0x48,0x18,0x2f8,0x80]);
+  assert.equal(f.cpu._rd16(SEG_SS,0x2f8),0x58);
+});
+
 test('IDT task gate switches through the TSS and CLTS clears the task-switched bit',()=>{
   const f=fixture();installTasks(f,0x100);f.put(0x100100,[0x0f,0x06,0xf4]);
   f.cpu.deliverProtectedFaults=true;f.cpu.idtr={base:0x180000,limit:0x107};
@@ -126,6 +219,13 @@ test('IDT task gates push an exception error word on the incoming task stack',()
   f.put(0x180000+13*8,[0,0,0x48,0,0,0x85,0,0]);
   f.cpu._deliverProtected(13,{returnIp:0,errorCode:0x1234});
   assert.deepEqual([f.cpu.tr.selector,f.cpu.sp,f.cpu._rd16(SEG_SS,0x2fe)],[0x48,0x2fe,0x1234]);
+});
+
+test('external task-gate selector faults retain EXT in the new task context',()=>{
+  const f=fixture();installTasks(f);f.put(0x171028,[0x58,0]);f.cpu.deliverProtectedFaults=true;
+  f.cpu.idtr={base:0x180000,limit:0x107};f.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
+  assert.throws(()=>f.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===0x59&&e.taskCommitted);
+  assert.equal(f.cpu.tr.selector,0x48);
 });
 
 test('task-gate target bypasses TSS DPL and task images load an LDT',()=>{
