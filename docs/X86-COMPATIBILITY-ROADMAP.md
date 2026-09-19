@@ -93,3 +93,29 @@ configuration; `PCAT80286_BOOT_640K` now supplies it explicitly. The default
   `DOOM1.WAD`: `1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771`.
 - FreeDOS 1.4 archive SHA-256: `45b1fa7c52dd996c3bfa5e352ffcd410781b952a6ad629f15a4c9ec4bbaefc5a`.
   `120m/x86BOOT.img`: `03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77`.
+
+## Platform work after the first DOS boot
+
+The 286 DOS2 acceptance does not establish a 386 application platform. The
+experimental 386 adapter still charges one device clock per completed CPU
+instruction. Its current IBM timer POST failure needs a declared functional
+pacing policy and device-observable tests; any such policy must remain distinct
+from measured 386 instruction or bus timing.
+
+The Doom target also requires a larger, separately named memory configuration
+and corresponding CMOS report, persistent storage large enough for the pinned
+EXE/WAD, and a VGA implementation matched to actual guest accesses. The current
+AT profile provides 640KiB conventional plus 512KiB extended RAM. Repository
+inspection found no AT hard-disk controller implementation. The existing
+`vga-card.js` handles VGA registers and a linear mode-13h framebuffer, but does
+not interpret planar VRAM. Reuse its valid device behavior while filling those
+gaps; do not count a linear framebuffer demo as original Doom graphics proof.
+A VGA option ROM or another explicitly identified firmware configuration must
+supply the required BIOS services through guest execution.
+
+FreeDOS's untouched installer medium reaches its prompt. Declining installation
+must lead to an actual shell command/file round trip before acceptance; a
+stopped banner or echoed choice is diagnostic progress only. Keep the original
+image hash, saved-media hash, exact keyboard events and fresh-reboot receipt
+linked. Windows acceptance still requires identified external installation
+media; no Windows version has been executed by this lane.
