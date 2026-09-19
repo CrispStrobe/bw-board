@@ -301,6 +301,23 @@ test("REP fault restarts only the uncompleted iteration", () => {
   assert.deepEqual([cpu.eip, cpu.ecx, cpu.edi], [0, 1, 1]);
 });
 
+test("faulting REPE restores flags from before the repeat span", () => {
+  const { cpu, memory } = fixture([0xf3, 0xa6]);
+  cpu.cx = 2;
+  cpu.segmentCaches[3].base = 0x100;
+  cpu.segmentCaches[0].base = 0x200;
+  cpu.segmentCaches[0].limit = 0;
+  memory.set(0x100, 0x5a);
+  memory.set(0x200, 0x5a);
+  cpu.eflags = 0x803;
+  cpu.step();
+  assert.equal(cpu.eflags & 0x8c5, 0x44);
+  assert.throws(() => cpu.step(), (error) => error?.vector === 13);
+  assert.equal(cpu.eflags, 0x803);
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.si, cpu.di], [0, 1, 1, 1]);
+  assert.equal(cpu._repeatContext, null);
+});
+
 test("REPE/REPNE stop after the iteration that breaks their condition", () => {
   for (const [prefix, values] of [
     [0xf3, [7, 8]],

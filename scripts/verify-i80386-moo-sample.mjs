@@ -29,6 +29,11 @@ const PROFILES={
     scope:'9 fixed deterministic byte, word, and dword XCHG samples',
     excludedPrefixes:[0xf0],
   },
+  'group5-basic':{
+    files:['FE.0','FE.1','FF.0','FF.1','FF.2','FF.4','FF.6'],
+    scope:'21 fixed deterministic FE/FF INC, DEC, near CALL/JMP, and PUSH samples',
+    excludedPrefixes:[0xf0],
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

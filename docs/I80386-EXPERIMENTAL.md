@@ -110,6 +110,15 @@ profile grades nine fixed non-exception samples; LOCK-prefixed and exception
 inputs are counted and excluded because LOCK semantics remain outside this
 stage. CLC, STC, CMC, CLD, and STD provide the adjacent scalar flag controls.
 
+FE/FF implement INC/DEC with exact carry preservation, near indirect CALL/JMP,
+and PUSH r/m at 8/16/32-bit applicable widths. Effective addresses are decoded
+before stack changes, and target plus stack spans are admitted before commits.
+Real-mode immediate and indirect far CALL/JMP plus RETF are included with full
+pointer/frame preflight. Protected far transfers remain explicit valid but
+unsupported paths because descriptor gates and privilege changes are outside
+this stage. A pinned 386EX profile grades 21 fixed non-exception FE/FF samples;
+exception and LOCK-prefixed inputs are counted and excluded.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A
@@ -129,11 +138,12 @@ when the prefix precedes an instruction outside its permitted list; those
 encodings therefore raise architectural #UD rather than an implementation
 refusal. REP INS/OUTS are on that permitted list but remain explicit
 implementation refusals until their per-iteration I/O semantics are added.
-If a later REPE/REPNE iteration faults before its comparison completes, this
-model retains the flags from the last completed iteration. Later Intel manuals
-instead specify restoration of the flags from before the entire instruction;
-the current behavior is therefore an explicit unqualified limitation, not
-evidence of original-386 behavior.
+If a later REPE/REPNE iteration faults before its comparison completes, a
+repeat-span checkpoint restores the flags from before the entire instruction,
+as specified by later Intel manuals. An interrupt or debug handoff ends that
+span, so IRET begins a fresh span with the interrupted flag image. The
+available original-386 manual does not state this restoration rule explicitly,
+so it remains later-Intel-derived rather than independent 386 hardware proof.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the

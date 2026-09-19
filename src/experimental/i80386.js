@@ -101,6 +101,7 @@ export class ExperimentalI80386 {
     this._nmiShadow = 0;
     this._debugShadow = 0;
     this._nmiActive = false;
+    this._repeatContext = null;
     this.segmentCaches = {};
     for (const id of [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS])
       this.segmentCaches[id] = {
@@ -786,6 +787,77 @@ export class ExperimentalI80386 {
     }
   }
 
+  _group5(op, width, address32, override) {
+    const operandWidth = op === 0xfe ? 8 : width;
+    const ea = this._decodeEA(address32, override);
+    if (ea.reg === 0 || ea.reg === 1) {
+      this._operandPreflightWrite(ea, operandWidth);
+      const carry = this.eflags & CF;
+      const value = this._operandRead(ea, operandWidth);
+      const result = this._add(value, 1, operandWidth, ea.reg === 1);
+      this.eflags = (this.eflags & ~CF) | carry;
+      this._operandWrite(ea, operandWidth, result);
+      return;
+    }
+    if (op === 0xfe || ea.reg === 7)
+      throw new I80386Fault(6, null, "invalid FE/FF extension");
+    if (ea.reg === 3 || ea.reg === 5) {
+      if (this.protectedMode)
+        throw new UnsupportedI80386(
+          "protected far indirect transfer is outside the bounded 386 profile",
+        );
+      if (ea.isReg)
+        throw new I80386Fault(6, null, "far indirect transfer requires memory");
+      const bytes = width >>> 3;
+      const address = this._linear(ea.seg, ea.off, bytes + 2);
+      const target = this._readLinear(address, bytes);
+      const selector = this._readLinear((address + bytes) >>> 0, 2);
+      this._farRealTransfer(selector, target, width, ea.reg === 3);
+      return;
+    }
+    if (ea.reg === 6) {
+      const value = this._operandRead(ea, width);
+      this._push(value, width);
+      return;
+    }
+    const target = this._operandRead(ea, width);
+    const normalized = width === 32 ? target >>> 0 : target & 0xffff;
+    this._linear(SEG_CS, normalized, 1);
+    if (ea.reg === 2) this._push(this.eip, width);
+    this.eip = normalized;
+  }
+
+  _farRealTransfer(selector, target, width, call) {
+    const normalized = width === 32 ? target >>> 0 : target & 0xffff;
+    if (normalized > 0xffff)
+      throw new I80386Fault(13, 0, "real far target exceeds CS limit");
+    if (call) this._stackFrame(width, [this.eip, this.cs]);
+    this._loadSeg(SEG_CS, selector);
+    this.eip = normalized;
+  }
+
+  _farRealReturn(width, discard) {
+    if (this.protectedMode)
+      throw new UnsupportedI80386(
+        "protected far return is outside the bounded 386 profile",
+      );
+    const bytes = width >>> 3;
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const old = stack32 ? this.esp : this.sp;
+    const address = this._linear(SEG_SS, old, bytes * 2);
+    const target = this._readLinear(address, bytes);
+    const selector = this._readLinear((address + bytes) >>> 0, bytes) & 0xffff;
+    if (target > 0xffff)
+      throw new I80386Fault(13, 0, "real far return exceeds CS limit");
+    const next = stack32
+      ? (old + bytes * 2 + discard) >>> 0
+      : (old + bytes * 2 + discard) & 0xffff;
+    this._loadSeg(SEG_CS, selector);
+    if (stack32) this.esp = next;
+    else this.sp = next;
+    this.eip = target;
+  }
+
   _string(op, width, address32, override) {
     const byte = !(op & 1);
     const operandWidth = byte ? 8 : width;
@@ -827,8 +899,27 @@ export class ExperimentalI80386 {
 
   _repeatString(op, width, address32, override, repeat, instructionStart) {
     const count = address32 ? this.ecx : this.cx;
-    if (count === 0) return;
-    this._string(op, width, address32, override);
+    if (count === 0) {
+      this._repeatContext = null;
+      return;
+    }
+    if (
+      !this._repeatContext ||
+      this._repeatContext.cs !== this.cs ||
+      this._repeatContext.eip !== instructionStart
+    )
+      this._repeatContext = {
+        cs: this.cs,
+        eip: instructionStart,
+        flags: this.eflags >>> 0,
+      };
+    try {
+      this._string(op, width, address32, override);
+    } catch (error) {
+      if (error instanceof I80386Fault)
+        error.repeatFlags = this._repeatContext.flags;
+      throw error;
+    }
     if (address32) this.ecx = (this.ecx - 1) >>> 0;
     else this.cx = (this.cx - 1) & 0xffff;
     const remaining = address32 ? this.ecx : this.cx;
@@ -836,6 +927,7 @@ export class ExperimentalI80386 {
     const condition =
       !compare || (repeat === 0xf3 ? !!(this.eflags & ZF) : !(this.eflags & ZF));
     if (remaining !== 0 && condition) this.eip = instructionStart;
+    else this._repeatContext = null;
   }
 
   _snapshotInstruction() {
@@ -863,6 +955,9 @@ export class ExperimentalI80386 {
         { ...cache },
       ]),
     );
+    state.repeatContext = this._repeatContext
+      ? { ...this._repeatContext }
+      : null;
     return state;
   }
 
@@ -890,6 +985,9 @@ export class ExperimentalI80386 {
         { ...cache },
       ]),
     );
+    this._repeatContext = state.repeatContext
+      ? { ...state.repeatContext }
+      : null;
   }
 
   _faultClass(vector) {
@@ -1085,6 +1183,7 @@ export class ExperimentalI80386 {
     )
       return false;
     if (nmi) this._nmiActive = true;
+    this._repeatContext = null;
     try {
       this._deliver(vector & 255, this.eip, null, { external: true });
       return true;
@@ -1200,6 +1299,8 @@ export class ExperimentalI80386 {
       if (this._debugShadow) this._debugShadow--;
       if (!this._preserveRf) this.eflags &= ~RF;
       if (trace && !suppressDebug && !this._suppressTrace)
+        this._repeatContext = null;
+      if (trace && !suppressDebug && !this._suppressTrace)
         this._deliverFault(new I80386Fault(1, null, "single-step"), this.eip, {
           trap: true,
         });
@@ -1210,7 +1311,17 @@ export class ExperimentalI80386 {
         throw error;
       }
       if (!(error instanceof I80386Fault)) throw error;
+      const repeatFlags =
+        error.repeatFlags ??
+        (state.repeatContext?.cs === state.cs &&
+        state.repeatContext?.eip === restartEip
+          ? state.repeatContext.flags
+          : null);
       this._restoreInstruction(state);
+      if (repeatFlags !== null) {
+        this.eflags = repeatFlags >>> 0;
+        this._repeatContext = null;
+      }
       if (!this.deliverFaults) throw error;
       this._deliverFault(error, restartEip);
       return 0;
@@ -1397,6 +1508,8 @@ export class ExperimentalI80386 {
       const ea = this._decodeEA(address32, override);
       if (ea.reg !== 0) throw new UnsupportedI80386("C7 extension");
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
+    } else if (op === 0xfe || op === 0xff) {
+      this._group5(op, width, address32, override);
     } else if (op === 0xf6 || op === 0xf7) {
       this._group3(op, width, address32, override);
     } else if (op === 0x80 || op === 0x81 || op === 0x83) {
@@ -1484,6 +1597,8 @@ export class ExperimentalI80386 {
         this._linear(SEG_CS, target, 1);
         this.eip = target;
       }
+    } else if (op === 0xca || op === 0xcb) {
+      this._farRealReturn(width, op === 0xca ? this._fetchN(2) : 0);
     } else if (op === 0xc3) {
       const stack32 = !!this.segmentCaches[SEG_SS].default32,
         off = stack32 ? this.esp : this.sp,
@@ -1564,6 +1679,14 @@ export class ExperimentalI80386 {
           this._debugShadow = 1;
         }
       }
+    } else if (op === 0x9a) {
+      const target = this._fetchN(width >>> 3);
+      const selector = this._fetchN(2);
+      if (this.protectedMode)
+        throw new UnsupportedI80386(
+          "protected far call is outside the bounded 386 profile",
+        );
+      this._farRealTransfer(selector, target, width, true);
     } else if (op === 0xea) {
       const raw = this._fetchN(width >>> 3),
         off = width === 32 ? raw : raw & 0xffff,
