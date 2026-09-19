@@ -201,3 +201,20 @@ qualification remains pending. Unsupported instruction/protection paths still
 raise a diagnostic refusal. The bounded same-ring recovery above does not
 qualify the excluded hardware exception cases or complete segment-load,
 paging, task, and privilege-transition recovery.
+
+## Experimental AT bridge
+
+`ExperimentalI80386ATMachine` is a separate opt-in adapter around the existing
+AT devices. It preserves 32-bit CPU physical addresses, decodes only the IBM
+reset-ROM window at FFFF0000h as the existing FF0000h ROM storage, and applies
+the motherboard A20 gate without truncating unrelated addresses to 24 bits.
+Byte devices receive 16- and 32-bit I/O as ordered little-endian byte cycles.
+The bridge routes PIC interrupts and NMI through the 386 interrupt API and
+wakes HLT through the ordinary machine scheduler.
+
+The profile retains the bounded AT platform's 640KiB conventional and 512KiB
+extended RAM; it does not claim a 4GiB installed-memory array or a complete
+386-class chipset. Legacy machine checkpoints, 16-bit debug-register snapshots
+and 8088 cycle timing refuse explicitly because their codecs and timing tables
+cannot represent this CPU. This adapter proves reset, bus, A20, port and interrupt wiring only. It is
+not yet a 386 BIOS or operating-system boot qualification.

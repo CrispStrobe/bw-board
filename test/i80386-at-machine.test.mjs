@@ -1,0 +1,84 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import ExperimentalI80386ATMachine, {
+  PCAT80386_EXPERIMENTAL,
+} from '../src/experimental/i80386-at-machine.js';
+
+test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  const rom = new Uint8Array(0x10000);
+  rom[0xfff0] = 0xf4; // HLT
+  assert.equal(machine.loadRom(rom), 0xff0000);
+  machine.reset();
+  assert.equal(machine.cpu.pc, 0xfffffff0);
+  assert.equal(machine.cpu.read(0xfffffff0), 0xf4);
+  assert.equal(machine.cpu.read(0x10fffff0), 0xff);
+  machine.step();
+  assert.equal(machine.cpu.halted, true);
+});
+
+test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 bus', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  machine.mem[0] = 0x11;
+  machine.mem[0x100000] = 0x22;
+  assert.equal(machine.cpu.read(0x100000), 0x22);
+  machine.setA20Enabled(false);
+  assert.equal(machine.cpu.read(0x100000), 0x11);
+  assert.equal(machine.cpu.read(0x01000000), 0xff, '16MiB must not wrap to address zero');
+  machine.setA20Enabled(true);
+  assert.equal(machine.cpu.read(0x100000), 0x22);
+});
+
+test('experimental 386 AT bridges little-endian port widths and refuses legacy state/timing APIs', () => {
+  const events = [];
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL, {
+    onPortAccess: event => events.push(event),
+  });
+  machine.cpu.outPort(0x80, 0x44332211, 32);
+  assert.deepEqual(events.slice(-4).map(event => [event.port, event.value]), [
+    [0x80, 0x11], [0x81, 0x22], [0x82, 0x33], [0x83, 0x44],
+  ]);
+  assert.equal(machine.checkpointSupport().supported, false);
+  assert.throws(() => machine.saveState(), /checkpoint is unsupported/);
+  assert.throws(() => machine.enableI8088CycleTiming(), /refuses 8088 cycle timing/);
+  assert.throws(() => machine._architecturalRegisters(), /debug register snapshot is unsupported/);
+});
+
+test('experimental 386 AT routes a pending NMI through the 386 interrupt API', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  machine.cpu.reset();
+  machine.cpu.ss = 0;
+  machine.cpu.sp = 0x800;
+  machine.mem[8] = 0x00;
+  machine.mem[9] = 0x02;
+  machine.mem[10] = 0x00;
+  machine.mem[11] = 0x00;
+  machine.mem[0x200] = 0xf4;
+  machine.nmi();
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(machine.cpu.eip, 0x200);
+  machine.step();
+  assert.equal(machine.cpu.halted, true);
+});
+
+test('experimental 386 AT wakes HLT for a maskable PIC interrupt', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  const master = machine.chips.pic1;
+  const slave = machine.chips.pic2;
+  master.write(0, 0x11); master.write(1, 0x20); master.write(1, 4); master.write(1, 1);
+  slave.write(0, 0x11); slave.write(1, 0x28); slave.write(1, 2); slave.write(1, 1);
+  machine.cpu.reset();
+  machine.cpu.ss = 0;
+  machine.cpu.sp = 0x800;
+  machine.cpu.eflags |= 0x200;
+  machine.cpu.halted = true;
+  machine.mem[0x80] = 0x00;
+  machine.mem[0x81] = 0x03;
+  machine.mem[0x82] = 0x00;
+  machine.mem[0x83] = 0x00;
+  master.setIRQ(0, 1);
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(machine.cpu.halted, false);
+  assert.equal(machine.cpu.eip, 0x300);
+});
