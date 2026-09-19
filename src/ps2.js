@@ -91,6 +91,44 @@ export class PS2Keyboard {
 }
 
 /**
+ * The standard PS/2 mouse (the 3-byte packet a plain two-button+wheel-less
+ * mouse sends). It queues bytes into the SAME `fifo` a keyboard does, so it
+ * rides the identical capture chain and bridge (ps2On8255 / ps2OnVia) — a mouse
+ * is just another PS/2 device on the wire.
+ *
+ * A packet is three bytes:
+ *   byte 1: YO XO YS XS 1 M R L   (overflow, sign bits, always-1, buttons)
+ *   byte 2: X movement, two's complement (9th/sign bit is XS in byte 1)
+ *   byte 3: Y movement, two's complement (sign in YS)
+ * Movement is +right/+up in mouse convention; the caller chooses the Y sense.
+ * A report is emitted on every move and every button change, as the device does.
+ */
+export class PS2Mouse {
+    constructor() {
+        this.fifo = [];
+        this.buttons = 0;   // bit0 left, bit1 right, bit2 middle
+    }
+
+    _bit(button) { return button === 'left' ? 1 : button === 'right' ? 2 : button === 'middle' ? 4 : 0; }
+
+    /** Queue one 3-byte packet for the current buttons and this movement. */
+    _report(dx, dy) {
+        const clamp = (v) => Math.max(-256, Math.min(255, Math.trunc(v) || 0));
+        dx = clamp(dx); dy = clamp(dy);
+        const xs = dx < 0 ? 1 : 0, ys = dy < 0 ? 1 : 0;
+        const b1 = (this.buttons & 7) | 0x08 | (xs << 4) | (ys << 5);   // no overflow within the clamped range
+        this.fifo.push(b1 & 0xff, dx & 0xff, dy & 0xff);
+    }
+
+    /** Move by a delta (a report with the buttons held). */
+    move(dx, dy = 0) { this._report(dx, dy); }
+
+    /** Press/release a button ('left'|'right'|'middle') — each emits a report. */
+    press(button) { this.buttons |= this._bit(button); this._report(0, 0); }
+    release(button) { this.buttons &= ~this._bit(button); this._report(0, 0); }
+}
+
+/**
  * The 11-bit shift-register capture. Attach to a machine with
  * machine.attachDevice() so advance() gets cycle time; pacing defaults
  * to ~1 ms of frames at 1 MHz (real PS/2 clock arithmetic).
