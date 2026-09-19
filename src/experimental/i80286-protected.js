@@ -20,7 +20,7 @@ export const SEG_ES = 0, SEG_CS = 1, SEG_SS = 2, SEG_DS = 3;
 const IDS = [SEG_ES, SEG_CS, SEG_SS, SEG_DS];
 const CF = 0x0001, PF = 0x0004, ZF = 0x0040, SF = 0x0080;
 const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800, NT = 0x4000;
-const ERROR_CODE_VECTORS = new Set([11, 12, 13]);
+const ERROR_CODE_VECTORS = new Set([10, 11, 12, 13]);
 
 /**
  * Experimental, deliberately bounded 80286 protected-mode executor.
@@ -40,7 +40,13 @@ export class ProtectedI80286 extends I8086 {
         this._pmStiShadow = 0;
     }
 
-    reset() { super.reset(); this.cpl = 0; this._pmStiShadow = 0; this._initRealCaches(); }
+    reset() {
+        super.reset();
+        this.cpl = 0; this._pmStiShadow = 0;
+        this.ldtr = {selector:0,valid:false,base:0,limit:0};
+        this.tr = {selector:0,valid:false,base:0,limit:0};
+        this._initRealCaches();
+    }
 
     canTakeInterrupt() {
         if (!(this.msw & 1)) return super.canTakeInterrupt();
@@ -70,39 +76,60 @@ export class ProtectedI80286 extends I8086 {
         throw new ProtectedModeFault(vector, errorCode, this._instrStartIp ?? this.ip, reason);
     }
 
-    _descriptor(selector, target, {ignoreRpl = false} = {}) {
+    _descriptor(selector, target, {ignoreRpl = false, privilegeCpl = this.cpl} = {}) {
         selector &= 0xffff;
-        if (selector & 4) throw new UnsupportedProtectedMode('LDT selectors');
-        const offset = selector & 0xfff8;
-        if (!offset && target !== SEG_CS && target !== SEG_SS) throw new UnsupportedProtectedMode('null data selectors');
-        if (!offset || offset + 7 > this.gdtr.limit) this._pmFault(13, selector & 0xfffc, 'selector outside GDT');
-        const a = (this.gdtr.base + offset) & 0xffffff;
-        const b = Array.from({length: 8}, (_, i) => {
-            const address = (a + i) & 0xffffff;
-            if (this.busTrace !== null) this.busTrace.push(1, address);
-            return this.read(address) & 0xff;
-        });
-        const access = b[5];
+        if ((selector & 0xfffc) === 0 && (target === SEG_DS || target === SEG_ES))
+            return {selector,base:0,limit:0,access:0,code:false,writable:false,readable:false,usable:false};
+        const raw = this._rawDescriptor(selector);
+        const {bytes:b,address:a} = raw, access = raw.access;
         const present = !!(access & 0x80), dpl = (access >> 5) & 3;
         const code = !!(access & 8), writable = !code && !!(access & 2);
         const readable = !code || !!(access & 2), expandDown = !code && !!(access & 4);
-        if (!(access & 0x10)) throw new UnsupportedProtectedMode('system descriptors');
-        if (dpl !== 0 || (!ignoreRpl && (selector & 3) !== 0) || this.cpl !== 0) throw new UnsupportedProtectedMode('privilege levels other than ring 0');
+        if (!(access & 0x10)) this._pmFault(13, selector & 0xfffc, 'system descriptor as segment');
+        const rpl = selector & 3;
+        if (target === SEG_SS && (rpl !== privilegeCpl || dpl !== privilegeCpl)) this._pmFault(13, selector & 0xfffc, 'SS privilege');
+        if ((target === SEG_DS || target === SEG_ES) && Math.max(privilegeCpl,rpl) > dpl)
+            this._pmFault(13, selector & 0xfffc, 'data segment privilege');
+        if (target === SEG_CS && !ignoreRpl && (dpl !== privilegeCpl || rpl > privilegeCpl))
+            this._pmFault(13, selector & 0xfffc, 'code segment privilege');
         if (expandDown) throw new UnsupportedProtectedMode('expand-down segments');
-        if (target === SEG_CS && (access & 4)) throw new UnsupportedProtectedMode('conforming code segments');
+        if (code && (access & 4)) throw new UnsupportedProtectedMode('conforming code segments');
         if (target === SEG_CS && !code) this._pmFault(13, selector & 0xfffc, 'far jump requires code');
         if (target === SEG_SS && (code || !writable)) this._pmFault(13, selector & 0xfffc, 'SS requires writable data');
         if ((target === SEG_DS || target === SEG_ES) && code && !readable) this._pmFault(13, selector & 0xfffc, 'unreadable code data segment');
         if (!present) this._pmFault(target === SEG_SS ? 12 : 11, selector & 0xfffc, 'segment not present');
-        return {selector:ignoreRpl ? (selector & 0xfffc) | this.cpl : selector,
+        return {selector:target === SEG_CS ? (selector & 0xfffc) | privilegeCpl : selector,
             base: (b[2] | (b[3] << 8) | (b[4] << 16)) >>> 0,
             limit: b[0] | (b[1] << 8), access: access | 1, code, writable, readable,
-            descriptorAccessAddress: a + 5, accessedWasSet: !!(access & 1)};
+            usable:true,descriptorAccessAddress: a + 5, accessedWasSet: !!(access & 1)};
+    }
+
+    _rawDescriptor(selector, {gdtOnly=false} = {}) {
+        selector &= 0xffff;
+        if ((selector & 0xfffc) === 0) this._pmFault(13, 0, 'null selector');
+        const useLdt = !!(selector & 4);
+        if (gdtOnly && useLdt) this._pmFault(13, selector & 0xfffc, 'descriptor must be in GDT');
+        if (useLdt && !this.ldtr.valid) this._pmFault(13, selector & 0xfffc, 'invalid LDTR');
+        const table = useLdt ? this.ldtr : this.gdtr, offset = selector & 0xfff8;
+        if (offset + 7 > table.limit) this._pmFault(13, selector & 0xfffc, 'selector outside table');
+        const address = (table.base + offset) & 0xffffff;
+        const bytes = Array.from({length:8},(_,i)=>{
+            const physical=(address+i)&0xffffff;
+            if(this.busTrace!==null)this.busTrace.push(1,physical);
+            return this.read(physical)&0xff;
+        });
+        return {selector,address,bytes,access:bytes[5],base:(bytes[2]|bytes[3]<<8|bytes[4]<<16)>>>0,
+            limit:bytes[0]|bytes[1]<<8};
     }
 
     _commitDescriptor(target, descriptor) {
         // The 286 sets A in the in-memory descriptor when it loads a segment.
         // All validation has completed before this sole visible side effect.
+        if (descriptor.usable === false) {
+            this.segmentCaches[target] = {...descriptor};
+            if (target === SEG_ES) this.es=descriptor.selector; else this.ds=descriptor.selector;
+            return;
+        }
         if (!(descriptor.access & 1)) throw new Error('internal descriptor access invariant');
         if (!descriptor.accessedWasSet) {
             const a = descriptor.descriptorAccessAddress & 0xffffff;
@@ -122,6 +149,7 @@ export class ProtectedI80286 extends I8086 {
     _linear(id, off, width, kind) {
         const cache = this.segmentCaches[id];
         if (!cache) this._pmFault(13, 0, 'invalid segment identity');
+        if (cache.usable === false) this._pmFault(13, 0, 'null data segment');
         off &= 0xffff;
         if (off + width - 1 > cache.limit) this._pmFault(id === SEG_SS ? 12 : 13, 0, 'segment limit');
         if (kind === 'fetch' && !cache.code) this._pmFault(13, 0, 'execute through non-code segment');
@@ -177,6 +205,7 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _execProtected(op) {
+        if (op === 0x0f) return this._pmSystem(this._pmFetch8());
         if (op >= 0xa4 && op <= 0xaf && op !== 0xa8 && op !== 0xa9) return this._pmString(op);
         if (op === 0x06 || op === 0x0e || op === 0x16 || op === 0x1e) {
             this._pmPush([this.es, this.cs, this.ss, this.ds][op >> 3]);
@@ -539,6 +568,58 @@ export class ProtectedI80286 extends I8086 {
         } else this.al = this.inPort(port) & 0xff;
     }
 
+    _pmSystem(op) {
+        if (op !== 0x00 && op !== 0x01) throw new UnsupportedProtectedMode(`0F ${op.toString(16).padStart(2,'0')}`);
+        const ea = this._pmModRM();
+        if (op === 0x00) {
+            if (ea.reg === 0 || ea.reg === 1) {
+                this._pmOperandWrite(ea, true, ea.reg === 0 ? this.ldtr.selector : this.tr.selector);
+                return ea.isReg ? 2 : 3;
+            }
+            if (ea.reg !== 2 && ea.reg !== 3) throw new UnsupportedProtectedMode('0F 00 verification operation');
+            if (this.cpl !== 0) this._pmFault(13, 0, ea.reg === 2 ? 'LLDT privilege' : 'LTR privilege');
+            const selector = this._pmOperandRead(ea, true);
+            if (ea.reg === 2 && (selector & 0xfffc) === 0) {
+                this.ldtr = {selector:0,valid:false,base:0,limit:0};
+                return 17;
+            }
+            const raw = this._rawDescriptor(selector,{gdtOnly:true});
+            const type = raw.access & 0x1f;
+            if (ea.reg === 2) {
+                if (type !== 2) this._pmFault(13, selector & 0xfffc, 'LLDT requires LDT descriptor');
+                if (!(raw.access & 0x80)) this._pmFault(11, selector & 0xfffc, 'LDT not present');
+                this.ldtr={selector:selector&0xffff,valid:true,base:raw.base,limit:raw.limit};
+            } else {
+                if (type !== 1) this._pmFault(13, selector & 0xfffc, 'LTR requires available 286 TSS');
+                if (!(raw.access & 0x80)) this._pmFault(11, selector & 0xfffc, 'TSS not present');
+                const accessAddress=(raw.address+5)&0xffffff;
+                if(this.busTrace!==null)this.busTrace.push(2,accessAddress);
+                this.write(accessAddress,raw.access|2);
+                this.tr={selector:selector&0xffff,valid:true,base:raw.base,limit:raw.limit};
+            }
+            return 17;
+        }
+        if (ea.reg === 4) { this._pmOperandWrite(ea,true,this.msw); return 2; }
+        if (ea.reg === 6) {
+            if (this.cpl !== 0) this._pmFault(13,0,'LMSW privilege');
+            this.msw=(this._pmOperandRead(ea,true)|(this.msw&1))&0xffff;return 3;
+        }
+        if (ea.reg > 3) this._pmFault(6,0,'invalid 0F 01 group');
+        if (ea.isReg) this._pmFault(6,0,'descriptor table instruction requires memory');
+        const load=ea.reg>=2;
+        if (load&&this.cpl!==0)this._pmFault(13,0,ea.reg===2?'LGDT privilege':'LIDT privilege');
+        this._linear(ea.id,ea.off,6,load?'read':'write');
+        if (load) {
+            const limit=this._rd16(ea.id,ea.off),base=this._rd16(ea.id,(ea.off+2)&0xffff)|this._rd8(ea.id,(ea.off+4)&0xffff)<<16;
+            if(ea.reg===2)this.gdtr={limit,base:base>>>0};else this.idtr={limit,base:base>>>0};
+        } else {
+            const table=ea.reg===0?this.gdtr:this.idtr;
+            this._wr16(ea.id,ea.off,table.limit);this._wr16(ea.id,(ea.off+2)&0xffff,table.base);this._wr8(ea.id,(ea.off+4)&0xffff,table.base>>16);
+            this._wr8(ea.id,(ea.off+5)&0xffff,0xff);
+        }
+        return 11;
+    }
+
     _pmModRM() {
         const byte=this._pmFetch8(),mod=byte>>6,reg=(byte>>3)&7,rm=byte&7;
         if(mod===3)return{mod,reg,rm,isReg:true,id:null,off:0};
@@ -594,6 +675,22 @@ export class ProtectedI80286 extends I8086 {
         this.write(address, value & 0xff); this.write((address + 1) & 0xffffff, (value >> 8) & 0xff);
     }
 
+    _cacheAddress(cache, offset, width, vector=12) {
+        offset &= 0xffff;
+        if (cache.usable === false || offset + width - 1 > cache.limit)
+            this._pmFault(vector, 0, 'privilege stack frame outside limit');
+        return (cache.base + offset) & 0xffffff;
+    }
+
+    _tssStack(level,external=false) {
+        const ext=external?1:0;
+        if (!this.tr.valid) this._pmFault(10, ext, 'invalid task register for privilege entry');
+        const offset=2+4*level;
+        if(offset+3>this.tr.limit)this._pmFault(10,(this.tr.selector&0xfffc)|ext,'TSS stack pointer outside limit');
+        const sp=this._readPhysical16(this.tr.base+offset),ss=this._readPhysical16(this.tr.base+offset+2);
+        return{sp,ss};
+    }
+
     _deliverProtected(vector, {software=false, external=false, returnIp=this.ip, errorCode=null} = {}) {
         if (!this.deliverProtectedFaults) throw new UnsupportedProtectedMode('interrupt/IDT delivery');
         if (this._deliveringProtected) throw new UnsupportedProtectedMode('nested exception/double-fault delivery');
@@ -606,22 +703,37 @@ export class ProtectedI80286 extends I8086 {
                 if (external && e instanceof ProtectedModeFault) e.errorCode |= 1;
                 throw e;
             }
-            const pushesError = errorCode !== null;
-            const bytes = pushesError ? 8 : 6;
-            const newSp = (this.sp - bytes) & 0xffff;
-            const frameAddress = this._linear(SEG_SS, newSp, bytes, 'write');
+            const targetCpl=(descriptor.access>>5)&3;
+            if(targetCpl>this.cpl)this._pmFault(13,(gate.selector&0xfffc)|(external?1:0),'gate target less privileged than caller');
+            descriptor.selector=(gate.selector&0xfffc)|targetCpl;
+            const pushesError = errorCode !== null, inner=targetCpl<this.cpl;
+            const bytes = (inner ? 10 : 6) + (pushesError ? 2 : 0);
+            let stackDescriptor=this.segmentCaches[SEG_SS],stackSelector=this.ss,stackTop=this.sp;
+            if(inner){
+                const stack=this._tssStack(targetCpl,external);stackSelector=stack.ss;stackTop=stack.sp;
+                try{stackDescriptor=this._descriptor(stack.ss,SEG_SS,{privilegeCpl:targetCpl});}
+                catch(e){if(e instanceof ProtectedModeFault){
+                    if(e.vector===11)e.vector=12;else if(e.vector===13)e.vector=10;
+                    e.errorCode=(stack.ss&0xfffc)|(external?1:0);
+                }throw e;}
+            }
+            const newSp=(stackTop-bytes)&0xffff;
+            const frameAddress=this._cacheAddress(stackDescriptor,newSp,bytes,12);
             if (gate.offset > descriptor.limit) this._pmFault(13, 0, 'gate offset outside code segment');
-            const savedFlags = this.flags, savedCs = this.cs;
+            const savedFlags = this.flags, savedCs = this.cs, savedSs=this.ss, savedSp=this.sp;
             let nextFlags = savedFlags & ~(TF | NT);
             if (gate.interrupt) nextFlags &= ~IF;
+            if(inner)this._commitDescriptor(SEG_SS,stackDescriptor);
             this._commitDescriptor(SEG_CS, descriptor);
             // Preserve the architectural bus order after the whole frame has
             // been preflighted: FLAGS, CS, IP, then the optional error code.
-            this._writeFrameWord(frameAddress + bytes - 2, savedFlags);
-            this._writeFrameWord(frameAddress + bytes - 4, savedCs);
-            this._writeFrameWord(frameAddress + bytes - 6, returnIp);
+            if(inner){this._writeFrameWord(frameAddress+bytes-2,savedSs);this._writeFrameWord(frameAddress+bytes-4,savedSp);}
+            const commonTop=inner?bytes-4:bytes;
+            this._writeFrameWord(frameAddress + commonTop - 2, savedFlags);
+            this._writeFrameWord(frameAddress + commonTop - 4, savedCs);
+            this._writeFrameWord(frameAddress + commonTop - 6, returnIp);
             if (pushesError) this._writeFrameWord(frameAddress, errorCode);
-            this.sp = newSp; this.ip = gate.offset; this.flags = nextFlags;
+            this.cpl=targetCpl;this.sp = newSp; this.ip = gate.offset; this.flags = nextFlags;
             this.halted = false; this.intShadow = 0; this._pmStiShadow = 0;
         } finally { this._deliveringProtected = false; }
     }
@@ -634,11 +746,41 @@ export class ProtectedI80286 extends I8086 {
         const ip = this._rd16(SEG_SS, this.sp);
         const selector = this._rd16(SEG_SS, this.sp + 2);
         const flags = this._rd16(SEG_SS, this.sp + 4);
-        const descriptor = this._descriptor(selector, SEG_CS);
+        const oldCpl=this.cpl,newCpl=selector&3;
+        if(newCpl<oldCpl)this._pmFault(13,selector&0xfffc,'IRET cannot return inward');
+        if(newCpl>oldCpl)this._linear(SEG_SS,this.sp,10,'read');
+        const descriptor = this._descriptor(selector, SEG_CS,{privilegeCpl:newCpl});
         if (ip > descriptor.limit) this._pmFault(13, 0, 'IRET offset outside code segment');
+        if(newCpl>oldCpl){
+            const outerSp=this._rd16(SEG_SS,this.sp+6),outerSs=this._rd16(SEG_SS,this.sp+8);
+            let stackDescriptor;
+            try{stackDescriptor=this._descriptor(outerSs,SEG_SS,{privilegeCpl:newCpl});}
+            catch(e){if(e instanceof ProtectedModeFault&&e.vector===11)e.vector=12;throw e;}
+            this._commitDescriptor(SEG_CS,descriptor);this._commitDescriptor(SEG_SS,stackDescriptor);
+            this.cpl=newCpl;this.sp=outerSp;this.ip=ip;
+            this.flags=this._pmReturnFlags(flags,oldCpl);
+            this._invalidateOuterDataSegments(newCpl);
+            return;
+        }
         this._commitDescriptor(SEG_CS, descriptor);
         this.sp = (this.sp + 6) & 0xffff; this.ip = ip;
-        this.flags = (flags | 0x0002) & ~0x8028;
+        this.flags = this._pmReturnFlags(flags,oldCpl);
+    }
+
+    _pmReturnFlags(value,oldCpl){
+        const old=this.flags,oldIopl=(old>>12)&3;let next=(value|2)&~0x8028;
+        if(oldCpl!==0)next=(next&~0x3000)|(old&0x3000);
+        if(oldCpl>oldIopl)next=(next&~IF)|(old&IF);
+        return next;
+    }
+
+    _invalidateOuterDataSegments(newCpl){
+        for(const id of [SEG_DS,SEG_ES]){
+            const cache=this.segmentCaches[id];if(!cache||cache.usable===false)continue;
+            const dpl=(cache.access>>5)&3,rpl=cache.selector&3;
+            if((!cache.code||!(cache.access&4))&&Math.max(newCpl,rpl)>dpl)this._commitDescriptor(id,{selector:0,base:0,limit:0,access:0,
+                code:false,writable:false,readable:false,usable:false});
+        }
     }
 
     step() {
@@ -730,6 +872,7 @@ export class ProtectedI80286 extends I8086 {
         const words = ['ax','bx','cx','dx','sp','bp','si','di','ip','cs','ds','es','ss','flags','msw'];
         const state = Object.fromEntries(words.map((key) => [key, this[key]]));
         state.gdtr = {...this.gdtr}; state.idtr = {...this.idtr}; state.cpl = this.cpl;
+        state.ldtr = {...this.ldtr}; state.tr = {...this.tr};
         state.segmentCaches = Object.fromEntries(Object.entries(this.segmentCaches ?? {}).map(([id, cache]) => [id, {...cache}]));
         state.halted = this.halted; state.cycles = this.cycles; state.intShadow = this.intShadow;
         state.pmStiShadow = this._pmStiShadow;
@@ -739,6 +882,8 @@ export class ProtectedI80286 extends I8086 {
     setProtectedState(state) {
         for (const key of ['ax','bx','cx','dx','sp','bp','si','di','ip','cs','ds','es','ss','flags','msw']) this[key] = state[key];
         this.gdtr = {...state.gdtr}; this.idtr = {...state.idtr}; this.cpl = state.cpl;
+        this.ldtr = {...(state.ldtr??{selector:0,valid:false,base:0,limit:0})};
+        this.tr = {...(state.tr??{selector:0,valid:false,base:0,limit:0})};
         this.segmentCaches = Object.fromEntries(Object.entries(state.segmentCaches).map(([id, cache]) => [id, {...cache}]));
         this.halted = state.halted; this.cycles = state.cycles; this.intShadow = state.intShadow;
         this._pmStiShadow = state.pmStiShadow ?? 0;
