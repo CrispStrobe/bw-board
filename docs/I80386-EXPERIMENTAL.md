@@ -158,14 +158,21 @@ spans are admitted before load or store effects.
 
 ROL, ROR, RCL, and RCR support the immediate, one, and CL-count groups at all
 three operand widths. Counts are masked to five bits, then reduced by the data
-width for ROL/ROR or the carry-ring width for 8/16-bit RCL/RCR. A zero effective
-count preserves flags; rotates update CF and define OF only for a count of one,
-while preserving SF/ZF/PF. Memory forms establish write intent before reads.
+width for ROL/ROR or the carry-ring width for 8/16-bit RCL/RCR. A masked count
+of zero preserves flags. A nonzero full ROL/ROR circle still updates CF, while
+a full RCL/RCR carry-ring circle retains its incoming CF. Rotates define OF
+only for a masked count of one and preserve SF/ZF/PF. Memory forms establish
+write intent before reads.
 The broad pinned profile is deliberately limited to 36 count-one physical
 386EX samples, where OF is defined. A separate exact two-case profile grades
 count-eight ROL/ROR carry output under the capture's published mask, which
 excludes undefined OF; variable counts are otherwise covered by manual-derived
 owned tests rather than described as hardware-qualified.
+An exploratory 72-case profile spanning immediate and CL counts produced ten
+differences, all in OF for counts greater than one where Intel marks OF
+undefined. Those results are retained as a scope audit, not converted into an
+implementation rule or counted as acceptance; the defined-CF full-circle cases
+are graded separately with a carry-flip negative control.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
