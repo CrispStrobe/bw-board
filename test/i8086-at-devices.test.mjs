@@ -69,6 +69,36 @@ test('RTC BCD/binary 12-hour, SET, UIP, alarm and enable gating are deterministi
   r.write(0,0x0b);r.write(1,0x06);r.write(0,0x0a);assert.equal(r.read(1)&0x80,0x80);
 });
 
+test('RTC SET stages calendar writes, preserves independent weekday and commits atomically',()=>{
+  const r=new MC146818(100,{initialUnixSeconds:0});
+  const write=(register,value)=>{r.write(0,register);r.write(1,value);};
+  write(0x0b,0x86); // SET, binary, 24-hour
+  for(const [register,value] of [[9,24],[8,2],[7,29],[6,5],[4,23],[2,59],[0,59]])write(register,value);
+  r.advance(1_000);assert.equal(r.seconds,0,'SET freezes update cycles');
+  r.write(0,7);assert.equal(r.read(1),29,'staged values are visible before commit');
+  const state=r.getState(),restored=new MC146818(100);restored.setState(state);
+  assert.deepEqual(restored.getState(),state,'checkpoint retains an incomplete SET transaction');
+  write(0x0b,0x06);
+  assert.equal(r.seconds,Date.UTC(2024,1,29,23,59,59)/1000);
+  r.write(0,6);assert.equal(r.read(1),5,'written weekday is independent of Gregorian date');
+  r.advance(100);r.write(0,6);assert.equal(r.read(1),6,'midnight advances the independent weekday');
+
+  write(0x0b,0x80);write(4,0x81); // BCD, 12-hour, 1 PM
+  r.write(0,4);assert.equal(r.read(1),0x81);
+  write(8,0x02);write(7,0x31);
+  assert.throws(()=>write(0x0b,0x02),/invalid staged calendar date/);
+  assert.equal(r.ram[0x0b]&0x80,0x80,'failed commit leaves SET transaction intact');
+
+  const live=new MC146818(100,{initialUnixSeconds:Date.UTC(2024,2,31,0,0,0)/1000});
+  const liveWrite=(register,value)=>{live.write(0,register);live.write(1,value);};
+  liveWrite(0,0x28);live.write(0,0);assert.equal(live.read(1),0x28,
+    'firmware may write a calendar field without SET');
+  liveWrite(8,0x02); // February 31 is retained as an intermediate raw state.
+  assert(live.pendingCalendar);const pending=live.getState(),pendingCopy=new MC146818(100);
+  pendingCopy.setState(pending);assert.deepEqual(pendingCopy.getState(),pending);
+  liveWrite(7,0x29);assert.equal(live.pendingCalendar,null,'a later field completes the valid leap date');
+});
+
 test('checkpoint rejects invalid RTC before CPU/RAM mutation and preserves acknowledged IRQ state',()=>{
   const m=new I8086Machine(PCAT80286);initPic(m.chips.pic1,0x20,4);initPic(m.chips.pic2,0x28,2);
   m._out(0x64,0x60);m._out(0x60,1);m.keyIn(0x1e);m.cpu.canTakeInterrupt=()=>true;m.cpu.interrupt=()=>{};m._serviceInterrupts();
