@@ -83,7 +83,7 @@ export function getTargetKinds() {
     {
       kind: 'i80286',
       label: 'Simulated (80286 real mode)',
-      description: 'The 8086 machine in its fast 80286 real-mode variant (186 ISA; protected-mode 0x0F group faults).',
+      description: 'Composable 80286 real-mode machine (zero SST286 real-mode fails) — GPIO blink board with LEDs/switches on an 8255, breadboard, XT, or DOS, same boards as the 8086 tier.',
     },
     {
       kind: 'attiny88',

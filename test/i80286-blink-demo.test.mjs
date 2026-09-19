@@ -9,7 +9,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { I8086Machine, BLINK80286 } from '../src/i8086-machine.js';
+import { I8086Machine, BLINK80286, BLINK8086 } from '../src/i8086-machine.js';
+import { createDebugTarget, getTargetKinds } from '../src/debug-target-factory.js';
 
 const romPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'rom', 'blink-demo.bin');
 const demo = new Uint8Array(readFileSync(romPath));
@@ -55,8 +56,21 @@ test('a CLOSED switch (active low) mirrors onto its LED through the 286 walk', (
     assert.ok([...seen].some((v) => !(v & 0x20)), 'bit 5 (an open switch) is dark except when the walk reaches it');
 });
 
+test('the 80286 GPIO board is pickable through the target factory (widgets picker path)', async () => {
+    // The i80286 kind is in the picker, and the factory builds the GPIO blink
+    // board when the host selects it (config: BLINK8086 -> 286 variant applied).
+    assert.ok(getTargetKinds().some((k) => k.kind === 'i80286'), 'i80286 is a pickable kind');
+    const { adapter, target } = await createDebugTarget('i80286', { config: BLINK8086 });
+    assert.equal(adapter.machine.variant, '80286', 'the picked board is a 286');
+    assert.equal(adapter.machine.cpu._is286, true);
+    assert.deepEqual(Object.keys(adapter.machine.chips), ['ppi1'], 'the GPIO 8255 is on the picked board');
+    assert.ok(target, 'a debug target is built — the widgets pane reaches this 286');
+    adapter.machine.loadRom(demo); adapter.machine.reset();
+    for (let i = 0; i < 5000; i++) adapter.machine.step();
+    assert.equal(adapter.machine.chips.ppi1.dirB & 0xff, 0xff, 'the picked 286 board drives its LED port');
+});
+
 test('the 286 blink is byte-identical to the 8086 blink — the core is the only difference', async () => {
-    const { BLINK8086 } = await import('../src/i8086-machine.js');
     const ledSet = (config) => {
         const m = new I8086Machine(config);
         m.loadRom(demo); m.reset();
