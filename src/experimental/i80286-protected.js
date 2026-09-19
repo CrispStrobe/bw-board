@@ -19,7 +19,7 @@ export class ProtectedModeFault extends Error {
 export const SEG_ES = 0, SEG_CS = 1, SEG_SS = 2, SEG_DS = 3;
 const IDS = [SEG_ES, SEG_CS, SEG_SS, SEG_DS];
 const CF = 0x0001, PF = 0x0004, ZF = 0x0040, SF = 0x0080;
-const TF = 0x0100, IF = 0x0200, OF = 0x0800, NT = 0x4000;
+const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800, NT = 0x4000;
 const ERROR_CODE_VECTORS = new Set([11, 12, 13]);
 
 /**
@@ -169,6 +169,25 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _execProtected(op) {
+        if (op >= 0xa4 && op <= 0xaf) return this._pmString(op);
+        if (op === 0x06 || op === 0x0e || op === 0x16 || op === 0x1e) {
+            this._pmPush([this.es, this.cs, this.ss, this.ds][op >> 3]);
+            return 10;
+        }
+        if (op === 0x07 || op === 0x17 || op === 0x1f) {
+            const register = op === 0x07 ? 0 : op === 0x17 ? 2 : 3;
+            const value = this._rd16(SEG_SS, this.sp);
+            const descriptor = this._descriptor(value, [SEG_ES, SEG_CS, SEG_SS, SEG_DS][register]);
+            this._commitDescriptor([SEG_ES, SEG_CS, SEG_SS, SEG_DS][register], descriptor);
+            this.sp = (this.sp + 2) & 0xffff;
+            if (register === 2) this.intShadow = 1;
+            return 8;
+        }
+        if (op === 0x68 || op === 0x6a) {
+            const value = op === 0x68 ? this._pmFetch16() : (this._pmFetchS8() & 0xffff);
+            this._pmPush(value);
+            return 3;
+        }
         // The eight classic ALU operations, excluding the BCD-adjust holes.
         if (op < 0x40 && (op & 7) < 6) {
             const kind = op >> 3, form = op & 7, word = !!(form & 1);
@@ -242,6 +261,15 @@ export class ProtectedI80286 extends I8086 {
             }
             return ea.isReg?2:10;
         }
+        if (op === 0x86 || op === 0x87) {
+            const word = !!(op & 1), ea = this._pmModRM();
+            this._pmPreflightWrite(ea, word);
+            const memory = this._pmOperandRead(ea, word);
+            const register = word ? this._r16(ea.reg) : this._r8(ea.reg);
+            this._pmOperandWrite(ea, word, register);
+            if (word) this._r16set(ea.reg, memory); else this._r8set(ea.reg, memory);
+            return ea.isReg ? 3 : 17;
+        }
         if (op === 0x8c) {
             const ea = this._pmModRM();
             if (ea.reg > 3) this._pmFault(6, 0, 'invalid MOV from segment register');
@@ -262,6 +290,26 @@ export class ProtectedI80286 extends I8086 {
             const word=!!(op&1),immediate=word?this._pmFetch16():this._pmFetch8();
             this._logic((word?this.ax:this.al)&immediate,word);return 4;
         }
+        if (op >= 0x91 && op <= 0x97) {
+            const register = op & 7, value = this._r16(register);
+            this._r16set(register, this.ax); this.ax = value;
+            return 3;
+        }
+        if (op === 0x98) { this.ax = (this.al & 0x80) ? 0xff00 | this.al : this.al; return 2; }
+        if (op === 0x99) { this.dx = (this.ax & 0x8000) ? 0xffff : 0; return 5; }
+        if (op === 0x9c) { this._pmPush(this.flags); return 10; }
+        if (op === 0x9d) {
+            const value = this._rd16(SEG_SS, this.sp);
+            const oldFlags = this.flags, oldIopl = (oldFlags >> 12) & 3;
+            let next = (value | 2) & ~0x8028;
+            if (this.cpl !== 0) next = (next & ~0x3000) | (oldFlags & 0x3000);
+            if (this.cpl > oldIopl) next = (next & ~IF) | (oldFlags & IF);
+            this.flags = next;
+            this.sp = (this.sp + 2) & 0xffff;
+            return 8;
+        }
+        if (op === 0x9e) { this.flags = (this.flags & 0xff00) | (this.ah & 0xd5) | 2; return 3; }
+        if (op === 0x9f) { this.ah = (this.flags & 0xd5) | 2; return 2; }
         if (op >= 0xa0 && op <= 0xa3) {
             const word=!!(op&1),write=!!(op&2),off=this._pmFetch16(),id=this._pmOverride??SEG_DS;
             if(write)word?this._wr16(id,off,this.ax):this._wr8(id,off,this.al);
@@ -317,6 +365,32 @@ export class ProtectedI80286 extends I8086 {
                 throw new UnsupportedProtectedMode('far FE/FF control transfer');
             this._pmFault(6, 0, 'unsupported FE/FF group');
         }
+        if (op === 0xf6 || op === 0xf7) {
+            const word = !!(op & 1), ea = this._pmModRM();
+            if (ea.reg === 0) {
+                const immediate = word ? this._pmFetch16() : this._pmFetch8();
+                this._logic(this._pmOperandRead(ea, word) & immediate, word);
+                return ea.isReg ? 5 : 11;
+            }
+            if (ea.reg === 2 || ea.reg === 3) {
+                if (ea.reg === 3) this._pmPreflightWrite(ea, word);
+                else this._pmPreflightWrite(ea, word);
+                const value = this._pmOperandRead(ea, word);
+                const result = ea.reg === 2 ? ~value : this._sub(0, value, 0, word);
+                this._pmOperandWrite(ea, word, result);
+                return ea.isReg ? 3 : 16;
+            }
+            throw new UnsupportedProtectedMode('F6/F7 multiply/divide group');
+        }
+        if (op === 0xd0 || op === 0xd1 || op === 0xd2 || op === 0xd3 || op === 0xc0 || op === 0xc1) {
+            const word = !!(op & 1), ea = this._pmModRM();
+            const count = op === 0xc0 || op === 0xc1 ? this._pmFetch8() & 31 :
+                op === 0xd2 || op === 0xd3 ? this.cl & 31 : 1;
+            this._pmPreflightWrite(ea, word);
+            const value = this._pmOperandRead(ea, word);
+            this._pmOperandWrite(ea, word, this._shift(ea.reg, value, count, word));
+            return ea.isReg ? 2 : 15;
+        }
         if (op === 0xe8) {
             const displacement = this._pmFetch16();
             const signed = displacement & 0x8000 ? displacement - 0x10000 : displacement;
@@ -359,6 +433,20 @@ export class ProtectedI80286 extends I8086 {
             return 5;
         }
         if (op === 0x90) return 3;
+        if (op === 0xf5) { this.flags ^= CF; return 2; }
+        if (op === 0xf8) { this.flags &= ~CF; return 2; }
+        if (op === 0xf9) { this.flags |= CF; return 2; }
+        if (op === 0xfa || op === 0xfb) {
+            this._pmCheckIOPrivilege(op === 0xfa ? 'CLI' : 'STI');
+            if (op === 0xfa) this.flags &= ~IF; else this.flags |= IF;
+            return 2;
+        }
+        if (op === 0xfc) { this.flags &= ~DF; return 2; }
+        if (op === 0xfd) { this.flags |= DF; return 2; }
+        if (op >= 0xe4 && op <= 0xe7) {
+            const port = this._pmFetch8(); this._pmIO(op, port); return 10;
+        }
+        if (op >= 0xec && op <= 0xef) { this._pmIO(op, this.dx); return 8; }
         if (op === 0xf4) { this.halted = true; return 2; }
         throw new UnsupportedProtectedMode(`opcode ${op.toString(16).padStart(2, '0')}`);
     }
@@ -377,6 +465,66 @@ export class ProtectedI80286 extends I8086 {
     }
     _pmFetch16() { return this._pmFetch8() | (this._pmFetch8() << 8); }
     _pmFetchS8() { const v = this._pmFetch8(); return v & 0x80 ? v - 0x100 : v; }
+
+    _pmString(op) {
+        const word = !!(op & 1), width = word ? 2 : 1;
+        if (this._pmRep && this.cx === 0) return 5;
+        const sourceId = this._pmOverride ?? SEG_DS;
+        const kind = op & 0xfe;
+        if (kind === 0xa4) {
+            this._linear(sourceId, this.si, width, 'read');
+            this._linear(SEG_ES, this.di, width, 'write');
+            const value = word ? this._rd16(sourceId, this.si) : this._rd8(sourceId, this.si);
+            if (word) this._wr16(SEG_ES, this.di, value); else this._wr8(SEG_ES, this.di, value);
+        } else if (kind === 0xa6) {
+            this._linear(sourceId, this.si, width, 'read');
+            this._linear(SEG_ES, this.di, width, 'read');
+            const source = word ? this._rd16(sourceId, this.si) : this._rd8(sourceId, this.si);
+            const target = word ? this._rd16(SEG_ES, this.di) : this._rd8(SEG_ES, this.di);
+            this._sub(source, target, 0, word);
+        } else if (kind === 0xaa) {
+            this._linear(SEG_ES, this.di, width, 'write');
+            if (word) this._wr16(SEG_ES, this.di, this.ax); else this._wr8(SEG_ES, this.di, this.al);
+        } else if (kind === 0xac) {
+            this._linear(sourceId, this.si, width, 'read');
+            const value = word ? this._rd16(sourceId, this.si) : this._rd8(sourceId, this.si);
+            if (word) this.ax = value; else this.al = value;
+        } else {
+            this._linear(SEG_ES, this.di, width, 'read');
+            const target = word ? this._rd16(SEG_ES, this.di) : this._rd8(SEG_ES, this.di);
+            this._sub(word ? this.ax : this.al, target, 0, word);
+        }
+        const delta = this.flags & DF ? -width : width;
+        if (kind === 0xa4 || kind === 0xa6 || kind === 0xac) this.si = (this.si + delta) & 0xffff;
+        if (kind === 0xa4 || kind === 0xa6 || kind === 0xaa || kind === 0xae) this.di = (this.di + delta) & 0xffff;
+        if (this._pmRep) {
+            this.cx = (this.cx - 1) & 0xffff;
+            const compare = kind === 0xa6 || kind === 0xae;
+            const condition = !compare || (this._pmRep === 0xf3 ? !!(this.flags & ZF) : !(this.flags & ZF));
+            if (this.cx !== 0 && condition) {
+                this.ip = this._instrStartIp;
+                this._pmRepContinues = true;
+            }
+        }
+        return 5;
+    }
+
+    _pmCheckIOPrivilege(operation) {
+        const iopl = (this.flags >> 12) & 3;
+        if (this.cpl > iopl) this._pmFault(13, 0, `${operation} exceeds IOPL`);
+    }
+
+    _pmIO(op, port) {
+        this._pmCheckIOPrivilege('I/O');
+        const word = !!(op & 1), output = !!(op & 2);
+        port &= 0xffff;
+        if (output) {
+            this.outPort(port, this.al);
+            if (word) this.outPort((port + 1) & 0xffff, this.ah);
+        } else if (word) {
+            this.ax = (this.inPort(port) & 0xff) | ((this.inPort((port + 1) & 0xffff) & 0xff) << 8);
+        } else this.al = this.inPort(port) & 0xff;
+    }
 
     _pmModRM() {
         const byte=this._pmFetch8(),mod=byte>>6,reg=(byte>>3)&7,rm=byte&7;
@@ -488,14 +636,27 @@ export class ProtectedI80286 extends I8086 {
             throw new UnsupportedProtectedMode('trap/IDT delivery');
         }
         try {
-            this._instrStartIp = this.ip; this.intShadow = 0; this._pmOverride = null; this._pmBytes = 0;
+            this._instrStartIp = this.ip;
+            const priorShadow = this.intShadow;
+            this.intShadow = 0;
+            this._pmOverride = null;
+            this._pmRep = 0;
+            this._pmRepContinues = false;
+            this._pmBytes = 0;
             let op = this._pmFetch8();
             while (op === 0x26 || op === 0x2e || op === 0x36 || op === 0x3e || op === 0xf2 || op === 0xf3) {
-                if (op === 0xf2 || op === 0xf3) throw new UnsupportedProtectedMode('REP partial-progress semantics');
-                this._pmOverride = op === 0x26 ? SEG_ES : op === 0x2e ? SEG_CS : op === 0x36 ? SEG_SS : SEG_DS;
+                if (op === 0xf2 || op === 0xf3) this._pmRep = op;
+                else this._pmOverride = op === 0x26 ? SEG_ES : op === 0x2e ? SEG_CS : op === 0x36 ? SEG_SS : SEG_DS;
                 op = this._pmFetch8();
             }
+            if (this._pmRep && (op < 0xa4 || op > 0xaf || op === 0xa8 || op === 0xa9))
+                throw new UnsupportedProtectedMode('REP on non-string instruction');
+            if (this._pmRep && this.cx !== 0 && (this.flags & IF) && !priorShadow && this.intPending()) {
+                this.ip = this._instrStartIp;
+                return 0;
+            }
             const cycles = this._execProtected(op);
+            if (this._pmRepContinues) this.intShadow = priorShadow;
             this.cycles += cycles; return cycles;
         }
         catch (e) {
