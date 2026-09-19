@@ -504,6 +504,16 @@ export const BLINK8086 = Object.freeze({
     ],
 });
 
+/**
+ * The SAME minimal GPIO board, run as a real-mode 80286. The blink ROM is pure
+ * 186-compatible code (CLI/MOV/OUT/IN/NOT/OR/ROL/LOOP), so it drives the 8255
+ * byte-for-byte identically on the 286 — the point is that the 80286 core (the
+ * one graded to zero SST286 real-mode fails) reaches PINS through the same board
+ * as every other tier, so "an 80286 blinking an LED" is a picked target, not a
+ * special case. Reuses rom/blink-demo.bin.
+ */
+export const BLINK80286 = Object.freeze({ ...BLINK8086, variant: '80286' });
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
