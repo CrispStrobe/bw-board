@@ -34,6 +34,11 @@ function executeVariant(t, fileMasks) {
     cpu.reset();
     for (const r of REGS) cpu[r] = t.initial.regs[r];
     cpu.flags = t.initial.regs.flags;
+    // Capture the vector the CPU delivers (fault or software INT) so exception
+    // vectors can be graded, not just skipped. Reset per test; only the primary
+    // delivery fires it (the injected HALT below does not).
+    let observedInterrupt = null;
+    cpu.onInterrupt = (e) => { if (observedInterrupt === null) observedInterrupt = e.vector; };
     try {
         cpu.step();                       // the instruction under test
         // SST286 terminates every test with an injected HALT (0xF4): the CPU
@@ -52,12 +57,17 @@ function executeVariant(t, fileMasks) {
             ? 'unsupported-opcode' : (e?.code || e?.name || 'error');
         return {status: 'unsupported', executed: true, reason: code};
     }
-    // Exception vectors model a fault; this variant does not grade 286 fault
-    // delivery yet, so they are reported as unsupported rather than as wrong.
-    if (t.exception) return {status: 'unsupported', executed: true, reason: 'exception-vector'};
+    // Exception vectors are graded, not skipped: the 286 delivers the fault
+    // inline (rewinding to the faulting IP for restart faults, jumping through
+    // the real-mode IVT), and the HALT-consume above steps the handler's
+    // injected terminator — leaving the CPU in the post-delivery state the suite
+    // records. The delivered vector is compared against t.exception.number.
     const masks = {...fileMasks, ...(t.final.masks ?? {})};
     const want = {...t.initial.regs, ...t.final.regs};
     const diffs = [];
+    if (observedInterrupt !== (t.exception?.number ?? null)) {
+        diffs.push({interrupt: observedInterrupt, expected: t.exception?.number ?? null});
+    }
     for (const r of [...REGS, 'flags']) {
         const mask = masks[r] ?? 0xffff;
         if (((cpu[r] & 0xffff) & mask) !== ((want[r] & 0xffff) & mask)) {
@@ -66,7 +76,14 @@ function executeVariant(t, fileMasks) {
     }
     const expected = new Map([...t.initial.ram, ...t.final.ram]);
     for (const [addr, val] of expected) {
-        if (mem[addr & 0xfffff] !== (val & 0xff)) diffs.push({address: addr, actual: mem[addr & 0xfffff], expected: val & 0xff});
+        // The pushed FLAGS word (at t.exception.flagAddress, two bytes) carries
+        // the flags mask so undefined flag bits are not graded; every other byte
+        // is compared exactly. Mirrors executeSST286's memory comparison.
+        const shift = t.exception ? (addr - t.exception.flagAddress) : -1;
+        const mask = (shift === 0 || shift === 1) ? ((masks.flags ?? 0xffff) >> (shift * 8)) & 0xff : 0xff;
+        if ((mem[addr & 0xfffff] & mask) !== ((val & 0xff) & mask)) {
+            diffs.push({address: addr, actual: mem[addr & 0xfffff], expected: val & 0xff, mask});
+        }
     }
     return {status: diffs.length ? 'fail' : 'pass', executed: true, diffs: diffs.slice(0, 12)};
 }
@@ -118,7 +135,9 @@ try {
             if (result.executed) report.executed++;
             if (result.reason) report.reasons[result.reason] = (report.reasons[result.reason] ?? 0) + 1;
             if (result.status === 'fail' && !firstFailure) firstFailure = {index: t.index, hash: t.hash, name: t.name, diffs: result.diffs,
-                initIp: t.initial.regs.ip, finIp: t.final.regs.ip, bytes: t.bytes, bytesLen: t.bytes.length};
+                initIp: t.initial.regs.ip, finIp: t.final.regs.ip, bytes: t.bytes, bytesLen: t.bytes.length,
+                init: {si: t.initial.regs.si, di: t.initial.regs.di, cx: t.initial.regs.cx, flags: t.initial.regs.flags},
+                fin: {si: t.final.regs.si, di: t.final.regs.di, cx: t.final.regs.cx}, exc: t.exception?.number ?? null};
         }
         const op = path.split('/')[1].replace('.MOO.gz', '');
         if (counts.fail) report.failOpcodes[op] = counts.fail;

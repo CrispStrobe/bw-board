@@ -107,10 +107,12 @@ const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800;
 // flags word fails every test that touches the stack.
 const F_ON = 0xf002, F_OFF = 0x0028;
 const fixFlags = (f) => (f | F_ON) & ~F_OFF;
-// The 80286 flags word differs from the 8086's: bits 12-15 are IOPL (12-13) and
-// NT (14), settable in real mode, and bit 15 reads 0 — not the 8086's "bits
-// 12-15 always 1". So force only bit 1, and clear bits 3, 5 and 15.
-const F_ON286 = 0x0002, F_OFF286 = 0x8028;
+// The 80286 flags word differs from the 8086's: bit 15 reads 0 (not the 8086's
+// "bits 12-15 always 1"), and IOPL (12-13) and NT (14) are NOT modifiable in real
+// mode — POPF/IRET force them to 0 there (confirmed against SST286: POPF/IRET
+// clear bits 12-14, not preserve them). So force bit 1, and clear bits 3, 5, and
+// 12-15.
+const F_ON286 = 0x0002, F_OFF286 = 0xf028;
 const fixFlags286 = (f) => (f | F_ON286) & ~F_OFF286;
 
 const PARITY = new Uint8Array(256);
@@ -127,6 +129,20 @@ export class Unimplemented extends Error {
         super(`8086: opcode ${op.toString(16).padStart(2, '0')} not implemented`);
         this.name = 'Unimplemented';
         this.opcode = op;
+    }
+}
+
+/** A 286 real-mode processor fault raised from DEEP inside an instruction (a
+ *  memory access that crosses the segment's 0xFFFF boundary is #GP, vector 13).
+ *  It is thrown so it unwinds the partially-run opcode; step() catches it and
+ *  delivers the interrupt with restart semantics (the faulting CS:IP is pushed).
+ *  #UD faults that can be detected up-front are delivered inline via _fault(6)
+ *  instead; this class is for faults that must abort work already in progress. */
+export class RealModeFault extends Error {
+    constructor(vector) {
+        super(`80286 real-mode fault ${vector}`);
+        this.name = 'RealModeFault';
+        this.vector = vector;
     }
 }
 
@@ -317,9 +333,14 @@ export class I8086 {
         this.write(a, v & 0xff);
     }
     _rd16(seg, off) {
+        // A word whose low byte is at offset 0xFFFF straddles the segment's top
+        // (the high byte would be at 0x10000). The 8086/186 wrap it to offset 0;
+        // the 286 raises #GP (int 13). See RealModeFault / step()'s catch.
+        if (this._is286 && (off & 0xffff) === 0xffff) throw new RealModeFault(13);
         return this._rd8(seg, off) | (this._rd8(seg, (off + 1) & 0xffff) << 8);
     }
     _wr16(seg, off, v) {
+        if (this._is286 && (off & 0xffff) === 0xffff) throw new RealModeFault(13);
         this._wr8(seg, off, v & 0xff);
         this._wr8(seg, (off + 1) & 0xffff, (v >> 8) & 0xff);
     }
@@ -331,12 +352,14 @@ export class I8086 {
      *  scheduler fed that trace would invent a memory cycle per opcode byte. */
     _fetch8() {
         if (this.busTrace !== null) return this._fetch8Traced();
+        if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
         const b = this.fetch(I8086.phys(this.cs, this.ip)) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
     }
 
     _fetch8Traced() {
+        if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
         const a = I8086.phys(this.cs, this.ip);
         // KIND 0 IS AN 'F' AND KIND 5 IS AN 'S', which is the queue-status
         // distinction the 8088 puts on its QS0/QS1 lines: F for the first byte
@@ -708,6 +731,31 @@ export class I8086 {
      *  behavior, not documentation, and it is deliberately written to look
      *  odd so nobody "corrects" it back. */
     _bcdAdjust(sub) {
+        if (this._is286) {
+            // The 286 uses the textbook rule (high correction on old > 0x99 || CF)
+            // rather than the 8086's fitted 0x9a-0x9f/AF quirk, and the LOW
+            // correction can itself set CF (old > 0xf9 for DAA, old < 6 for DAS).
+            // Mirrors the harris 286 reference; SST286-exact.
+            const old = this.al, cf = this.flags & CF ? 1 : 0, af = this.flags & AF;
+            let value = old, carry = 0, adjustAf = 0;
+            if ((old & 0x0f) > 9 || af) {
+                value = (old + (sub ? -6 : 6)) & 0xff;
+                adjustAf = AF;
+                carry = ((sub ? old < 6 : old > 0xf9) ? 1 : 0) | cf;
+            }
+            if (old > 0x99 || cf) {
+                value = (value + (sub ? -0x60 : 0x60)) & 0xff;
+                carry = 1;
+            }
+            this.al = value;
+            let f = this.flags & ~(CF | AF | PF | ZF | SF | OF);
+            if (!value) f |= ZF;
+            if (value & 0x80) f |= SF;
+            if (adjustAf) f |= AF;
+            if (carry) f |= CF;
+            this.flags = f | PARITY[value];
+            return;
+        }
         const oldAl = this.al, oldCf = this.flags & CF ? 1 : 0, oldAf = this.flags & AF;
         let f = this.flags & ~(CF | AF | PF | ZF | SF);
         if ((oldAl & 0x0f) > 9 || oldAf) {
@@ -724,25 +772,27 @@ export class I8086 {
     }
     _daa() { this._bcdAdjust(false); }
     _das() { this._bcdAdjust(true); }
-    _aaa() {
-        let f = this.flags & ~(CF | AF);
-        if ((this.al & 0x0f) > 9 || (this.flags & AF)) {
-            this.al = this.al + 6;
-            this.ah = this.ah + 1;
-            f |= AF | CF;
+    _aaa() { this._asciiAdjust(false); }
+    _aas() { this._asciiAdjust(true); }
+    /** AAA/AAS. The 286 applies the correction as a single 16-bit AX +/- 0x106,
+     *  so a carry out of AL+6 propagates into AH (AL >= 0xFA with a low nibble
+     *  above 9 bumps AH by TWO, matching SST286 and the harris 286 reference);
+     *  the 8086/186 do a separate AL+/-6 / AH+/-1 with no such carry. Only CF
+     *  and AF are defined (both = the adjust flag); SF/ZF/PF/OF are undefined
+     *  and preserved. */
+    _asciiAdjust(sub) {
+        const adjust = (this.al & 0x0f) > 9 || (this.flags & AF);
+        if (this._is286) {
+            if (adjust) this.ax = (this.ax + (sub ? -0x106 : 0x106)) & 0xffff;
+            this.al = this.al & 0x0f;
+        } else {
+            if (adjust) {
+                this.al = sub ? this.al - 6 : this.al + 6;
+                this.ah = sub ? this.ah - 1 : this.ah + 1;
+            }
+            this.al = this.al & 0x0f;
         }
-        this.al = this.al & 0x0f;
-        this.flags = f;
-    }
-    _aas() {
-        let f = this.flags & ~(CF | AF);
-        if ((this.al & 0x0f) > 9 || (this.flags & AF)) {
-            this.al = this.al - 6;
-            this.ah = this.ah - 1;
-            f |= AF | CF;
-        }
-        this.al = this.al & 0x0f;
-        this.flags = f;
+        this.flags = (this.flags & ~(CF | AF)) | (adjust ? (CF | AF) : 0);
     }
     /** The immediate byte is a real operand, not a hardwired ten -- AAM 0
      *  divides by zero and takes INT 0 like any other. */
@@ -847,6 +897,15 @@ export class I8086 {
      */
     _fault(n) {
         this.onInterrupt?.({ vector: n, source: 'exception' });
+        // A 286 fault RESTARTS the instruction: it pushes the faulting
+        // instruction's own CS:IP, not the address the decoder has advanced to
+        // (#DE 0, #BR 5, #UD 6, #GP 13). The single-step trap (#DB 1) is NOT a
+        // restart — it fires AFTER the instruction retires and pushes the
+        // following IP — so it is excluded. (_interrupt pushes this.ip, which it
+        // then overwrites with the handler vector, so rewinding it here only
+        // affects the pushed return address.) The 8086/186 keep their historical
+        // behaviour (this.ip as-left).
+        if (this._is286 && n !== 1) this.ip = this._instrStartIp;
         this._interrupt(n);
     }
 
@@ -856,13 +915,52 @@ export class I8086 {
     _srcSeg() { return this._seg >= 0 ? this._seg : this.ds; }
     _delta(w) { return (this.flags & DF ? -1 : 1) * (w ? 2 : 1); }
 
+    /** GPR+CS snapshot for the 286 fault-restart path, with optional overrides. */
+    _snap286(over) {
+        return { ax: this.ax, bx: this.bx, cx: this.cx, dx: this.dx,
+            sp: this.sp, bp: this.bp, si: this.si, di: this.di, cs: this.cs, ...over };
+    }
+
+    /** One 286 string-element access with the "advance the index even on a
+     *  fault" microcode: stage the restart snapshot with SI/DI already advanced,
+     *  so if the word access #GPs at offset 0xFFFF the instruction restarts with
+     *  the index moved on — exactly what SST286 records. On success the index
+     *  advances normally. (The 8086/186 paths never call this.) */
+    _strElem(indexName, seg, w, write, value, cxDelta = -1) {
+        const off = this[indexName];
+        const d = this._delta(w);
+        const over = { [indexName]: (off + d) & 0xffff };
+        // REP-string fault microcode: the 286 pre-decrements CX per iteration
+        // (our _repeat post-decrements), and a repeated WRITE fault consumes an
+        // extra count while CMPS's leading ES:DI read undoes the pre-decrement.
+        // cxDelta folds all three: -1 for a read, -2 for a write, 0 for CMPS's DI.
+        if (this._rep) over.cx = (this.cx + cxDelta) & 0xffff;
+        this._restartRegs = this._snap286(over);
+        const r = write
+            ? (w ? this._wr16(seg, off, value) : this._wr8(seg, off, value & 0xff))
+            : (w ? this._rd16(seg, off) : this._rd8(seg, off));
+        this[indexName] = (off + d) & 0xffff;
+        return r;
+    }
+
     _movs(w) {
+        if (this._is286) {                       // advance SI (read) then DI (write); each #GPs on a 0xFFFF wrap
+            const v = this._strElem('si', this._srcSeg(), w, false, undefined, -1);
+            this._strElem('di', this.es, w, true, v, -2);
+            return;
+        }
         const d = this._delta(w), s = this._srcSeg();
         if (w) this._wr16(this.es, this.di, this._rd16(s, this.si));
         else this._wr8(this.es, this.di, this._rd8(s, this.si));
         this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
     }
     _cmps(w) {
+        if (this._is286) {                       // the 286 reads ES:DI FIRST — a fault there leaves SI untouched
+            const b = this._strElem('di', this.es, w, false, undefined, 0);   // CMPS's DI read undoes the REP pre-decrement
+            const a = this._strElem('si', this._srcSeg(), w, false, undefined, -1);
+            this._sub(a, b, 0, w);
+            return;
+        }
         const d = this._delta(w), s = this._srcSeg();
         const a = w ? this._rd16(s, this.si) : this._rd8(s, this.si);
         const b = w ? this._rd16(this.es, this.di) : this._rd8(this.es, this.di);
@@ -870,16 +968,19 @@ export class I8086 {
         this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
     }
     _stos(w) {
+        if (this._is286) { this._strElem('di', this.es, w, true, w ? this.ax : this.al, -2); return; }
         const d = this._delta(w);
         if (w) this._wr16(this.es, this.di, this.ax); else this._wr8(this.es, this.di, this.al);
         this.di = (this.di + d) & 0xffff;
     }
     _lods(w) {
+        if (this._is286) { const v = this._strElem('si', this._srcSeg(), w, false); if (w) this.ax = v; else this.al = v; return; }
         const d = this._delta(w), s = this._srcSeg();
         if (w) this.ax = this._rd16(s, this.si); else this.al = this._rd8(s, this.si);
         this.si = (this.si + d) & 0xffff;
     }
     _scas(w) {
+        if (this._is286) { const b = this._strElem('di', this.es, w, false); this._sub(w ? this.ax : this.al, b, 0, w); return; }
         const d = this._delta(w);
         const b = w ? this._rd16(this.es, this.di) : this._rd8(this.es, this.di);
         this._sub(w ? this.ax : this.al, b, 0, w);
@@ -1060,7 +1161,9 @@ export class I8086 {
             // and not something to smooth over.
             case 0x62: {
                 const c = this._modrm();
-                if (this.mod === 3) throw new Unimplemented(op);  // no register form
+                // No register form: #UD (int 6) on the 286, an honest refusal on
+                // the 186 (the grinder scores that 'unsupported', not wrong).
+                if (this.mod === 3) { if (this._is286) { this._fault(6); return 0; } throw new Unimplemented(op); }
                 const idx = sx16(this._r16(this.reg));
                 const lo = sx16(this._rd16(this.eaSeg, this.ea));
                 const hi = sx16(this._rd16(this.eaSeg, (this.ea + 2) & 0xffff));
@@ -1086,7 +1189,24 @@ export class I8086 {
                 const low = full & 0xffff;
                 this._r16set(this.reg, low);
                 const fits = full === sx16(low);
-                this.flags = fits ? (this.flags & ~(CF | OF)) : (this.flags | CF | OF);
+                if (this._is286) {
+                    // The 286 defines SF/ZF/PF from the HIGH product word — not the
+                    // low result stored in reg (only AF stays undefined — SST286
+                    // masks 0xFFEF). Verified against SST286 and the harris 286
+                    // reference (logicalFlags((product>>>16),2)): e.g. IMUL 6B with a
+                    // negative result that fits gives high word 0xFFFF -> SF=1, PF=1
+                    // (PARITY[0xFF] even), which the low word cannot reproduce. The
+                    // 8086/186 leave all of SZAP undefined, so the branch below
+                    // leaves them alone.
+                    const hi = (full >>> 16) & 0xffff;
+                    let f = this.flags & ~(CF | OF | SF | ZF | PF);
+                    if (!fits) f |= CF | OF;
+                    if (!hi) f |= ZF;
+                    if (hi & 0x8000) f |= SF;
+                    this.flags = f | PARITY[hi & 0xff];
+                } else {
+                    this.flags = fits ? (this.flags & ~(CF | OF)) : (this.flags | CF | OF);
+                }
                 return (this.mod === 3 ? 22 : 29 + c);
             }
 
@@ -1164,45 +1284,51 @@ export class I8086 {
      */
     _exec0F286() {
         const op2 = this._fetch8();
+        // 0F 00 (SLDT/STR/LLDT/LTR/VERR/VERW), 0F 02 (LAR), 0F 03 (LSL) are
+        // protected-mode-only: on a real-mode 286 they are invalid-opcode (#UD,
+        // int 6), NOT no-ops. Matches the harris 286 reference and SST286.
+        if (op2 === 0x00 || op2 === 0x02 || op2 === 0x03) { this._fault(6); return 0; }
+        if (op2 === 0x06) { this.msw &= ~0x08; return 2; }   // CLTS: clear the TS bit
         if (op2 === 0x01) {
             const c = this._modrm();                 // ModR/M reg selects the sub-op
             const seg = this.eaSeg, ea = this.ea;
             switch (this.reg) {
-                case 0:                              // SGDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 0:                              // SGDT m — the register form is #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this._wr16(seg, ea, this.gdtr.limit & 0xffff);
                     this._wr16(seg, (ea + 2) & 0xffff, this.gdtr.base & 0xffff);
                     this._wr8(seg, (ea + 4) & 0xffff, (this.gdtr.base >> 16) & 0xff);
                     this._wr8(seg, (ea + 5) & 0xffff, 0xff);   // 286 forces the top byte to 0xFF
                     return 11 + c;
-                case 1:                              // SIDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 1:                              // SIDT m — register form #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this._wr16(seg, ea, this.idtr.limit & 0xffff);
                     this._wr16(seg, (ea + 2) & 0xffff, this.idtr.base & 0xffff);
                     this._wr8(seg, (ea + 4) & 0xffff, (this.idtr.base >> 16) & 0xff);
                     this._wr8(seg, (ea + 5) & 0xffff, 0xff);
                     return 12 + c;
-                case 2:                              // LGDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 2:                              // LGDT m — register form #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this.gdtr = { limit: this._rd16(seg, ea),
                         base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
                     return 11 + c;
-                case 3:                              // LIDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 3:                              // LIDT m — register form #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this.idtr = { limit: this._rd16(seg, ea),
                         base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
                     return 12 + c;
-                case 4:                              // SMSW r/m16
+                case 4:                              // SMSW r/m16 (memory or register)
                     this._rm16set(this.msw & 0xffff);
                     return this.mod === 3 ? 2 : 3 + c;
                 case 6:                              // LMSW r/m16 — PE may be set, never cleared
                     this.msw = (this._rm16() | (this.msw & 1)) & 0xffff;
                     return this.mod === 3 ? 3 : 6 + c;
-                default:
-                    throw new Unimplemented(0x0f01);
+                default:                             // 0F 01 /5 and /7 are #UD
+                    this._fault(6); return 0;
             }
         }
-        if (op2 === 0x06) { this.msw &= ~0x08; return 2; }   // CLTS: clear the TS bit
+        // 0F 05/07 and higher (including the undocumented LOADALL) are not
+        // implemented; the grinder scores those 'unsupported' (not wrong).
         throw new Unimplemented(0x0f00 | op2);
     }
 
@@ -1216,6 +1342,14 @@ export class I8086 {
         // bus once and using the result as a word gives 00FFh where the
         // hardware gives FFFFh, which is a whole high byte of nothing.
         const p = this.dx;
+        // The 286 word write to ES:DI #GPs when it crosses offset 0xFFFF, with DI
+        // advanced (this path writes two bytes, so _wr16's own check never fires).
+        if (this._is286 && w && this.di === 0xffff) {
+            const over = { di: (this.di + d) & 0xffff };
+            if (this._rep) over.cx = (this.cx - 2) & 0xffff;   // repeated WRITE fault consumes an extra count
+            this._restartRegs = this._snap286(over);
+            throw new RealModeFault(13);
+        }
         if (w) {
             this._wr8(this.es, this.di, this.inPort(p) & 0xff);
             this._wr8(this.es, (this.di + 1) & 0xffff, this.inPort((p + 1) & 0xffff) & 0xff);
@@ -1228,6 +1362,14 @@ export class I8086 {
         const seg = this._srcSeg();
         const d = this._delta(w);
         const p = this.dx;
+        // The 286 word read from DS:SI #GPs when it crosses offset 0xFFFF, with SI
+        // advanced (byte-pair read, so _rd16's own check never fires here).
+        if (this._is286 && w && this.si === 0xffff) {
+            const over = { si: (this.si + d) & 0xffff };
+            if (this._rep) over.cx = (this.cx - 1) & 0xffff;   // repeated READ fault: just the pre-decrement
+            this._restartRegs = this._snap286(over);
+            throw new RealModeFault(13);
+        }
         if (w) {
             this.outPort(p, this._rd8(seg, this.si));
             this.outPort((p + 1) & 0xffff, this._rd8(seg, (this.si + 1) & 0xffff));
@@ -1242,6 +1384,22 @@ export class I8086 {
     step() {
         this._seg = -1;
         this._rep = 0;
+        // The IP at the START of this instruction (before prefixes). A 286 FAULT
+        // (#UD/#GP/#BR/#DE) restarts the instruction, so it pushes this address,
+        // not the post-decode IP. Traps (INT3/INTO/single-step) and INT n push
+        // the following IP and use this.ip directly. See _fault().
+        this._instrStartIp = this.ip;
+        // A 286 fault RESTARTS the instruction: any GPR/CS the opcode had already
+        // changed before it faulted is rolled back (LEAVE's SP, ENTER's BP, a
+        // LES whose second word wraps, ...). Snapshot them here; the fault path
+        // in the catch below restores from _restartRegs (an opcode override, e.g.
+        // the string ops that ADVANCE SI/DI even on a fault) or this snapshot.
+        if (this._is286) {
+            this._restartRegs = null;
+            this._ibytes = 0;   // instruction-byte count, for the 286's 10-byte limit
+            this._faultSnap = { ax: this.ax, bx: this.bx, cx: this.cx, dx: this.dx,
+                sp: this.sp, bp: this.bp, si: this.si, di: this.di, cs: this.cs };
+        }
         // SINGLE-STEP IS SAMPLED BEFORE THE INSTRUCTION, NOT AFTER. The 8086
         // tests TF at an instruction boundary and takes a type-1 interrupt if
         // it was set; sampling the value the instruction LEAVES would mean a
@@ -1265,10 +1423,18 @@ export class I8086 {
         this.intShadow = 0;
         let n = 0;
         let op = 0;
+        let faulted = false;
+        // The whole instruction — prefix loop, operand fetch and execution — runs
+        // inside one try so a 286 RealModeFault raised anywhere in it (the 10-byte
+        // length limit, a #GP on a word access that crosses the segment top) is
+        // delivered with restart semantics rather than escaping step().
+        try {
 
-        // Prefixes. There is no length limit on real silicon and the last
-        // segment override wins, so this is a loop and not an if.
+        // Prefixes. On the 8086 there is no length limit and the last segment
+        // override wins, so this is a loop and not an if; the 286 caps the whole
+        // instruction (prefixes included) at 10 bytes — the 11th fetch is #GP(13).
         for (;;) {
+            if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);
             // A PEEK, NOT A BUS CYCLE. This looks at the next byte to decide
             // whether it is a prefix, and if it is not, `_fetch8()` below reads
             // the same byte again. Real silicon takes it from the queue once.
@@ -1339,7 +1505,25 @@ export class I8086 {
             }
         }
 
+        // Execution. A 286 RealModeFault raised here or in the prefix/operand
+        // fetch above is delivered with restart semantics and skips the normal
+        // completion path (queue-flush trace, single-step trap). Other throws
+        // (Unimplemented) propagate to the grinder as before.
         n += this._exec(op);
+        } catch (e) {
+            if (e && e.name === 'RealModeFault') {
+                // Roll back the partially-committed instruction: GPRs and CS to
+                // the restart state (the string-op override, else the start
+                // snapshot), then deliver with restart semantics.
+                const s = this._restartRegs ?? this._faultSnap;
+                this.ax = s.ax; this.bx = s.bx; this.cx = s.cx; this.dx = s.dx;
+                this.sp = s.sp; this.bp = s.bp; this.si = s.si; this.di = s.di; this.cs = s.cs;
+                this._fault(e.vector);   // rewinds to _instrStartIp (286) and vectors through the IVT
+                n += 51;                 // nominal fault-entry cost (this core does not grade 286 timing)
+                faulted = true;
+            } else throw e;
+        }
+        if (faulted) { this.cycles += n; return n; }
 
         // THE QUEUE FLUSH (E). The 8088 throws the prefetch queue away when
         // control goes somewhere the queue was not already reading, and its
@@ -1456,7 +1640,13 @@ export class I8086 {
             case 0x60: case 0x70: return this._jcc(this.flags & OF);
             case 0x61: case 0x71: return this._jcc(!(this.flags & OF));
             case 0x62: case 0x72: return this._jcc(this.flags & CF);
-            case 0x63: case 0x73: return this._jcc(!(this.flags & CF));
+            case 0x63:
+                // ARPL on the 286 — protected-mode only, so #UD (int 6) in real
+                // mode. On the 8086/186 0x63 has no opcode of its own and decodes
+                // as the 0x73 conditional-jump alias (JNC/JAE).
+                if (this._is286) { this._fault(6); return 0; }
+                return this._jcc(!(this.flags & CF));
+            case 0x73: return this._jcc(!(this.flags & CF));
             case 0x64: case 0x74: return this._jcc(this.flags & ZF);
             case 0x65: case 0x75: return this._jcc(!(this.flags & ZF));
             case 0x66: case 0x76: return this._jcc((this.flags & CF) || (this.flags & ZF));
@@ -1496,16 +1686,16 @@ export class I8086 {
             case 0x89: { const c = this._modrm(); this._rm16set(this._r16(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
             case 0x8a: { const c = this._modrm(); this._r8set(this.reg, this._rm8()); return this.mod === 3 ? 2 : 8 + c; }
             case 0x8b: { const c = this._modrm(); this._r16set(this.reg, this._rm16()); return this.mod === 3 ? 2 : 8 + c; }
-            case 0x8c: { const c = this._modrm(); this._rm16set(this._sreg(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
-            case 0x8d: { const c = this._modrm(); this._r16set(this.reg, this.ea); return 2 + c; }
+            case 0x8c: { const c = this._modrm(); if (this._is286 && this.reg > 3) { this._fault(6); return 0; } this._rm16set(this._sreg(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
+            case 0x8d: { const c = this._modrm(); if (this._is286 && this.mod === 3) { this._fault(6); return 0; } this._r16set(this.reg, this.ea); return 2 + c; }
             // MOV to a segment register and POP of one arm the interrupt
             // shadow; LES and LDS (C4/C5) deliberately do NOT. The shadow
             // exists so `mov ss,ax` / `mov sp,imm` cannot be split, and
             // LES/LDS load DS or ES, which can never be half of that pair —
             // so there is no behaviour to protect and no evidence they are
             // shadowed. Absent evidence, the narrower answer.
-            case 0x8e: { const c = this._modrm(); this._sregSet(this.reg, this._rm16()); this.intShadow = 1; return this.mod === 3 ? 2 : 8 + c; }
-            case 0x8f: { const c = this._modrm(); this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
+            case 0x8e: { const c = this._modrm(); if (this._is286 && (this.reg > 3 || this.reg === 1)) { this._fault(6); return 0; } this._sregSet(this.reg, this._rm16()); this.intShadow = 1; return this.mod === 3 ? 2 : 8 + c; }
+            case 0x8f: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
 
             // ---- 0x90-0x9f ----------------------------------------------
             case 0x90: return 3;                              // NOP = XCHG AX,AX
@@ -1548,10 +1738,10 @@ export class I8086 {
             // decode as the returns two bits along.
             case 0xc0: case 0xc2: { const k = this._fetch16(); this.ip = this._pop(); this.sp = (this.sp + k) & 0xffff; return 20; }
             case 0xc1: case 0xc3: this.ip = this._pop(); return 16;
-            case 0xc4: { const c = this._modrm(); this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.es = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
-            case 0xc5: { const c = this._modrm(); this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.ds = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
-            case 0xc6: { const c = this._modrm(); this._rm8set(this._fetch8()); return this.mod === 3 ? 4 : 10 + c; }
-            case 0xc7: { const c = this._modrm(); this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
+            case 0xc4: { const c = this._modrm(); if (this._is286 && this.mod === 3) { this._fault(6); return 0; } this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.es = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
+            case 0xc5: { const c = this._modrm(); if (this._is286 && this.mod === 3) { this._fault(6); return 0; } this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.ds = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
+            case 0xc6: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm8set(this._fetch8()); return this.mod === 3 ? 4 : 10 + c; }
+            case 0xc7: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
             case 0xc8: case 0xca: { const k = this._fetch16(); this.ip = this._pop(); this.cs = this._pop(); this.sp = (this.sp + k) & 0xffff; return 25; }
             case 0xc9: case 0xcb: this.ip = this._pop(); this.cs = this._pop(); return 26;
             case 0xcc: this._swInt(3); return 52;
@@ -1585,6 +1775,12 @@ export class I8086 {
             // coprocessor does. ------------------------------------------
             case 0xd8: case 0xd9: case 0xda: case 0xdb:
             case 0xdc: case 0xdd: case 0xde: case 0xdf: {
+                // A 286 with no coprocessor raises #NM (int 7, "coprocessor not
+                // available") on ESC when MSW.EM (emulate, bit 2) or MSW.TS
+                // (task-switched, bit 3) is set. Otherwise the operand is read
+                // and no floating-point work happens (an inactive-lines 287),
+                // and the read itself #GPs on a 0xFFFF word-wrap via _rd16.
+                if (this._is286 && (this.msw & 0x0c)) { this._fault(7); return 0; }
                 const c = this._modrm();
                 if (this.mod !== 3) this._rd16(this.eaSeg, this.ea);
                 return 2 + c;
@@ -1674,6 +1870,13 @@ export class I8086 {
     _group45(w) {
         const c = this._modrm();
         const mem = this.mod !== 3;
+        // 286 real-mode #UD (int 6) for the invalid group encodings: FE only
+        // defines /0 INC and /1 DEC; FF /7 is undefined; and the far CALL/JMP
+        // forms (FF /3, /5) require a memory operand — a register operand is #UD.
+        if (this._is286) {
+            if (!w && this.reg > 1) { this._fault(6); return 0; }
+            if (w && (this.reg === 7 || ((this.reg === 3 || this.reg === 5) && !mem))) { this._fault(6); return 0; }
+        }
         if (!w) {
             switch (this.reg) {
                 case 0: this._rm8set(this._inc(this._rm8(), 0)); return mem ? 15 + c : 3;

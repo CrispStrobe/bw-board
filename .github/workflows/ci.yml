@@ -317,8 +317,8 @@ jobs:
         env:
           I80286_VECTORS: ${{ github.workspace }}/80286-vectors
         run: |
-          echo "--- diffs for a few simple shared opcodes (INC AX=40, ADD=00, MOV=88) ---"
-          node scripts/grind-i8086-286.mjs 40 00 88 --limit 2 || true
+          echo "--- diffs for any residual (strings A5/A7/6D/6F should be clean now; 81.0/C7/F7.0 are the undiagnosed imm/fetch-wrap fails) ---"
+          node scripts/grind-i8086-286.mjs A5 A7 6D 6F C8 C9 81.0 81.5 C7 F7.0 F7.6 --limit 200 2>&1 | grep -aF firstFailure | head -20 || true
           echo "--- full census (sampled) ---"
           node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
           tail -1 /tmp/286grind.txt \
