@@ -168,11 +168,11 @@ The broad pinned profile is deliberately limited to 36 count-one physical
 count-eight ROL/ROR carry output under the capture's published mask, which
 excludes undefined OF; variable counts are otherwise covered by manual-derived
 owned tests rather than described as hardware-qualified.
-An exploratory 72-case profile spanning immediate and CL counts produced ten
+A preliminary 72-case run spanning immediate and CL counts produced ten
 differences, all in OF for counts greater than one where Intel marks OF
-undefined. Those results are retained as a scope audit, not converted into an
-implementation rule or counted as acceptance; the defined-CF full-circle cases
-are graded separately with a carry-flip negative control.
+undefined. That preliminary report was not retained and is not acceptance
+evidence or an implementation rule; the defined-CF full-circle cases are graded
+separately with a carry-flip negative control.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
