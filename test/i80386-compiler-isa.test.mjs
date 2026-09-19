@@ -55,3 +55,40 @@ test("IMUL source faults preserve the destination, flags, and restart EIP", () =
     [0x12345678, 0x847, 0, 0x4000],
   );
 });
+
+test("SETcc writes canonical bytes without changing flags", () => {
+  const cpu = fixture([
+    0x0f, 0x94, 0xc0, // SETZ AL
+    0x0f, 0x9c, 0xc3, // SETL BL
+    0x0f, 0x97, 0xc1, // SETA CL
+    0x0f, 0x90, 0xc2, // SETO DL
+  ]).cpu;
+  cpu.eax = cpu.ebx = cpu.ecx = cpu.edx = 0xffffffff;
+  cpu.eflags = 0x82; // SF=1; OF=ZF=CF=0
+  for (let count = 0; count < 4; count++) cpu.step();
+  assert.deepEqual(
+    [cpu.eax, cpu.ebx, cpu.ecx, cpu.edx],
+    [0xffffff00, 0xffffff01, 0xffffff01, 0xffffff00],
+  );
+  assert.equal(cpu.eflags, 0x82);
+});
+
+test("SETcc memory faults before any destination write", () => {
+  const reads = [];
+  const writes = [];
+  const bytes = [0x2e, 0x0f, 0x94, 0x06, 0x00, 0x01];
+  const cpu = new I80386({
+    fetch: (address) => bytes[address] ?? 0,
+    read: (address) => { reads.push(address); return 0; },
+    write: (address, value) => writes.push([address, value]),
+  });
+  cpu.cr0 = 1;
+  cpu.segmentCaches[1] = {
+    ...cpu.segmentCaches[1],
+    code: true,
+    readable: true,
+    writable: false,
+  };
+  assert.throws(() => cpu.step(), (error) => error?.vector === 13);
+  assert.deepEqual([reads, writes, cpu.eip], [[], [], 0]);
+});

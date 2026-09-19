@@ -2623,6 +2623,11 @@ export class ExperimentalI80386 {
       );
       return;
     }
+    if (op >= 0x90 && op <= 0x9f) {
+      const ea = this._decodeEA(address32, override);
+      this._operandWrite(ea, 8, this._condition(op & 15) ? 1 : 0);
+      return;
+    }
     if (op >= 0x80 && op <= 0x8f) {
       const displacement = this._fetchN(width >>> 3);
       if (this._condition(op & 15)) {
