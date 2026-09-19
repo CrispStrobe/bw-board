@@ -1764,10 +1764,14 @@ export class ExperimentalI80386 {
         throw new UnsupportedI80386("only LGDT and LIDT are supported");
       if (this.protectedMode && (this.cs & 3) !== 0)
         throw new I80386Fault(13, 0, "LGDT/LIDT require CPL0");
-      const a = this._linear(ea.seg, ea.off, 6),
-        base = this._readLinear((a + 2) >>> 0, 4);
+      const cache = this.segmentCaches[ea.seg];
+      if (this.protectedMode && cache.code && !cache.readable)
+        throw new I80386Fault(13, 0, "read from execute-only segment");
+      const a = this._linear(ea.seg, ea.off, 6);
+      const limit = this._readLinear(a, 2);
+      const base = this._readLinear((a + 2) >>> 0, 4);
       const table = {
-        limit: this._readLinear(a, 2),
+        limit,
         base: width === 16 ? base & 0xffffff : base,
       };
       if (ea.reg === 2) this.gdtr = table;

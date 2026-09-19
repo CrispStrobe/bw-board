@@ -326,3 +326,20 @@ test("segment checks precede paging and paged IDT/GDT/stack references use their
     [0, 0x44, 8],
   );
 });
+
+test("LGDT reads its six-byte operand in address order across a page fault", () => {
+  const f = fixture();
+  f.map(0, 0x3000);
+  f.map(0x4000, 0x6000);
+  f.put(0x3000, [0x0f, 0x01, 0x15, 0xff, 0x0f, 0x00, 0x00]);
+  f.put(0x6fff, [0x34]);
+  f.cpu.segmentCaches[3].base = 0x4000;
+  const before = { ...f.cpu.gdtr };
+  assert.throws(
+    () => f.cpu.step(),
+    (error) => error instanceof I80386Fault && error.vector === 14,
+  );
+  assert.equal(f.cpu.cr2, 0x5000);
+  assert.deepEqual(f.cpu.gdtr, before);
+  assert.equal(f.reads.includes(0x6fff), true);
+});
