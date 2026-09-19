@@ -94,6 +94,7 @@ const PROFILES={
       '660FA4':[25,2138,2432], '660FA5':[40,1375,2487],
       '660FAC':[4,2170,2496], '660FAD':[16,1433,2489],
     },
+    undefinedEflagsMask:0xffffffef,
     scope:'24 fixed count-one SHLD/SHRD samples spanning immediate and CL forms with word and dword operands; wider counts have undefined flags and are not graded',
   },
 };
@@ -141,6 +142,8 @@ function execute(test,globalMasks,mutate) {
   if(mutate==='stray-write')cpu.write(0x00f00000,0x5a);
   const actual={cr0:cpu.cr0,eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,ebp:cpu.ebp,esp:cpu.esp,cs:cpu.cs,ds:cpu.ds,es:cpu.es,fs:cpu.fs,gs:cpu.gs,ss:cpu.ss,eip:cpu.eip,eflags:cpu.eflags};
   const differences=[],masks={...globalMasks,...test.final.masks};
+  if(profile.undefinedEflagsMask!==undefined)
+    masks.eflags=(masks.eflags??0xffffffff)&profile.undefinedEflagsMask;
   for(const[name,want]of Object.entries(test.final.regs)){
     if(!modeledFinal.has(name))throw new Error(`final state requires unsupported ${name}`);
     let mask=masks[name]??0xffffffff;if(['cs','ds','es','fs','gs','ss'].includes(name))mask&=0xffff;
@@ -173,5 +176,6 @@ const failures=results.flatMap(result=>result.sampled.filter(sample=>sample.stat
 console.log(JSON.stringify({source:'SingleStepTests/80386 physical 386EX captures',revision:PIN,formatRevision:FORMAT_PIN,node:process.version,
   profile:profileName,scope:`${profile.scope}; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim`,
   executionRevision,sourceHashes:localSourceHashes,revocationSha256:sha256(revocationBytes),mutation,
+  undefinedEflagsMask:profile.undefinedEflagsMask,
   accounting:{files:FILES.length,admitted,unsupported,revoked:revokedCount,exceptionExcluded,profileExcluded,failures:failures.length},results,failures},null,2));
 process.exitCode=failures.length?1:0;
