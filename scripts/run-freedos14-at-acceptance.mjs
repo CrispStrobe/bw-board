@@ -7,6 +7,7 @@ import {execFileSync} from 'node:child_process';
 
 import {I8086Machine,PCAT80286_BOOT,PCAT80286_BOOT_640K} from '../src/i8086-machine.js';
 import {readFat12RootFile} from './lib/at-dos-acceptance.mjs';
+import {gradeFreeDosAtAcceptance} from './lib/freedos-at-acceptance.mjs';
 
 const EXPECTED_FREEDOS_SHA256='03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77';
 const EXPECTED_ROM_SHA256='74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
@@ -19,7 +20,8 @@ const sourcePaths=[
     'src/experimental/i80286-protected.js','src/at-8042-a20.js','src/at-system-control.js',
     'src/i8254.js','src/i8259.js','src/i8237.js','src/mc146818.js','src/cga-card.js',
     'src/upd765.js','src/machine-checkpoint.js',
-    'scripts/lib/at-dos-acceptance.mjs','scripts/run-freedos14-at-acceptance.mjs'];
+    'scripts/lib/at-dos-acceptance.mjs','scripts/lib/freedos-at-acceptance.mjs',
+    'scripts/run-freedos14-at-acceptance.mjs'];
 const executionRevision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 try {
     execFileSync('git',['diff','--quiet','HEAD','--',...sourcePaths],{cwd:root,stdio:'ignore'});
@@ -44,6 +46,15 @@ const expectedFile=process.env.AT_EXPECT_FILE??null;
 const expectedText=process.env.AT_EXPECT_TEXT??null;
 if((expectedFile===null)!==(expectedText===null))
     throw new Error('AT_EXPECT_FILE and AT_EXPECT_TEXT must be supplied together');
+let priorOutputMediaSha256=null;
+if(process.env.FREEDOS_PRIOR_REPORT) {
+    const priorReport=JSON.parse(fs.readFileSync(process.env.FREEDOS_PRIOR_REPORT,'utf8'));
+    if(priorReport.schema!=='astra.freedos14-at-acceptance.v1'||priorReport.fullBootAccepted!==true||
+        priorReport.input?.floppy?.sha256!==EXPECTED_FREEDOS_SHA256||
+        !/^[0-9a-f]{64}$/.test(priorReport.input?.floppy?.output?.sha256??''))
+        throw new Error('FREEDOS_PRIOR_REPORT is not an accepted write receipt from the pinned original image');
+    priorOutputMediaSha256=priorReport.input.floppy.output.sha256;
+}
 const commandKeys=[...(process.env.FREEDOS_COMMAND_SCRIPT??'')];
 const requestedKeys=[];
 const scanCodes={a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,
@@ -108,7 +119,8 @@ if(process.env.AT_FLOPPY_IMAGE) {
         1228800:{cylinders:80,heads:2,sectors:15,bytesPerSector:512},
     };
     const geometry=geometries[bytes.length];
-    if(sha(bytes)!==EXPECTED_FREEDOS_SHA256)throw new Error(`FreeDOS image SHA-256 mismatch: ${sha(bytes)}`);
+    if(sha(bytes)!==EXPECTED_FREEDOS_SHA256&&sha(bytes)!==priorOutputMediaSha256)
+        throw new Error(`FreeDOS image is neither the pinned original nor the linked prior output: ${sha(bytes)}`);
     if(!geometry)throw new Error(`AT_FLOPPY_IMAGE must be an untouched 360KiB or 1.2MiB image, got ${bytes.length} bytes`);
     machine.chips.fdc1.insert(0,bytes,geometry);
     floppy={bytes:bytes.length,sha256:sha(bytes),bootSectorSha256:sha(bytes.subarray(0,512)),geometry};
@@ -141,8 +153,8 @@ for(;steps<stepLimit;steps++) {
     if(executionBoundaries.bootSector&&(steps&1023)===0) {
         const ui=renderScreen();
         if(!installerDeclined&&ui.some(line=>line.includes('Do you want to proceed'))) {
-            keyScript.push(...encodeKeys(['n']));
-            requestedKeys.push('n');
+            keyScript.push(...encodeKeys(['n','\r']));
+            requestedKeys.push('n','\r');
             installerDeclined=true;
         } else if(installerDeclined&&!commandQueued&&keyScript.length===0&&
             /^A:\\?>\s*$/.test([...ui].reverse().find(line=>line.trim()!=='')??'')) {
@@ -236,20 +248,12 @@ if(mutation==='guest-file'&&gradingEvidence.guestFile)gradingEvidence.guestFile.
 if(mutation==='boot-sector'&&gradingEvidence.executionBoundaries.bootSector)
     gradingEvidence.executionBoundaries.bootSector.sha256='0'.repeat(64);
 if(mutation==='keyboard')gradingEvidence.keyboardScript.injected=[];
-const priorOutputMediaSha256=process.env.AT_PRIOR_OUTPUT_SHA256??null;
-if(priorOutputMediaSha256!==null&&!/^[0-9a-f]{64}$/.test(priorOutputMediaSha256))
-    throw new Error('AT_PRIOR_OUTPUT_SHA256 must be a lowercase SHA-256');
-const boot=gradingEvidence.executionBoundaries.bootSector;
-const dma=boot?.devices?.primaryDma,channel=dma?.channels?.[2];
-const lastLine=[...gradingEvidence.screenText].reverse().find(line=>line.trim()!=='')??'';
-const dmaSector=channel?.page===0&&channel.baseAddr===0x7c00&&channel.baseCount===0x1ff&&
-    channel.curAddr===0x7e00&&channel.curCount===0xffff&&(dma.status&4)!==0;
-const fullBootAccepted=!!expectedFile&&passed&&!gradingEvidence.final.halted&&!gradingEvidence.final.shutdown&&
-    !!gradingEvidence.executionBoundaries.int19&&!!boot&&!gradingEvidence.executionBoundaries.unexpectedInterrupt&&
-    dmaSector&&boot.sha256===floppy?.bootSectorSha256&&installerDeclined&&commandQueued&&
-    gradingEvidence.keyboardScript.remaining.length===0&&gradingEvidence.guestFile?.text===expectedText&&
-    gradingEvidence.screenText.some(line=>line===expectedText.trim())&&/^A:\\?>\s*$/.test(lastLine)&&
-    (priorOutputMediaSha256===null||priorOutputMediaSha256===floppy?.sha256);
+const expectedRequested=`n\r${commandKeys.join('')}`;
+const expectedInjectedKeys=encodeKeys([...expectedRequested]).map(event=>event.key);
+const fullBootAccepted=!!expectedFile&&gradeFreeDosAtAcceptance(gradingEvidence,{expectedText,
+    inputBootSectorSha256:floppy?.bootSectorSha256,inputMediaSha256:floppy?.sha256,
+    originalMediaSha256:EXPECTED_FREEDOS_SHA256,priorOutputMediaSha256,
+    expectedRequested,expectedInjectedKeys});
 if(process.env.AT_FLOPPY_OUTPUT) {
     if(!floppyImage)throw new Error('AT_FLOPPY_OUTPUT requires AT_FLOPPY_IMAGE');
     fs.writeFileSync(process.env.AT_FLOPPY_OUTPUT,floppyImage);
