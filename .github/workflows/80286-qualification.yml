@@ -106,6 +106,31 @@ jobs:
           assert.deepEqual(r.differences.map(d=>d.case),[mutation==='frame'?'interrupt32':'trap32']);
           NODE
           done
+          if I386_FAULT_ORACLE_MUTATION=ring-stack node scripts/compare-pcjs-protected386-faults.mjs \
+            > "$RECEIPT_DIR/rejected-386-ring-stack.json"; then
+            echo "386 ring oracle accepted a saved-stack mutation" >&2
+            exit 1
+          fi
+          if I386_FAULT_ORACLE_RING_BUDGET=5 node scripts/compare-pcjs-protected386-faults.mjs \
+            > "$RECEIPT_DIR/rejected-386-ring-budget.json"; then
+            echo "386 ring oracle accepted incomplete execution" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-ring-${name}.json`));
+          const stack=read('stack');
+          assert.equal(stack.status,'fail');
+          assert.equal(stack.mutation,'ring-stack');
+          assert.deepEqual(stack.differences.map(d=>d.case),['ringTransitionExpected','ringTransition']);
+          const budget=read('budget');
+          assert.equal(budget.status,'fail');
+          for(const engine of ['reference','actual']) {
+            assert.equal(budget.cases.ringTransition[engine].completed,false);
+            assert.ok(budget.differences.some(d=>d.case==='ringTransitionExpected'&&d.engine===engine));
+          }
+          NODE
           node scripts/compare-pcjs-i80386-system-selectors.mjs \
             | tee "$RECEIPT_DIR/pcjs-i80386-system-selectors.json"
           for mutation in busy budget; do
