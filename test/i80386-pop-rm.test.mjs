@@ -64,3 +64,13 @@ test("invalid POP r/m extensions raise #UD before reading the stack", () => {
   assert.deepEqual(f.reads,[]);
   assert.equal(f.cpu.sp,0x100);
 });
+
+test("PUSH imm8 sign-extends to word and dword operand sizes", () => {
+  const f=fixture([0x6a,0x80,0x66,0x6a,0x80]);
+  f.cpu.sp=0x200;
+  f.cpu.step();
+  assert.equal(get(f.memory,0x1fe,2),0xff80);
+  f.cpu.step();
+  assert.equal(get(f.memory,0x1fa,4),0xffffff80);
+  assert.equal(f.cpu.sp,0x1fa);
+});

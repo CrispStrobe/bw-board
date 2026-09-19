@@ -1761,6 +1761,7 @@ export class ExperimentalI80386 {
           this._shift(original, shiftWidth, ea.reg, count),
         );
     } else if (op === 0x68) this._push(this._fetchN(width >>> 3), width);
+    else if (op === 0x6a) this._push((this._fetch8() << 24) >> 24, width);
     else if (op === 0xe8) {
       const d = this._fetchN(width >>> 3),
         next = this.eip,

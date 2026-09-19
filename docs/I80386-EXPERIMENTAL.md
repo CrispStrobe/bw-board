@@ -201,6 +201,7 @@ addressing and an ESP-based destination, the effective address uses ESP after
 the pop; operand size and SS stack-address size remain independent. Invalid
 group extensions raise #UD before the stack read, while destination faults
 restore architectural stack state after the source access.
+PUSH imm8 sign-extends its source to the selected word or dword operand size.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index

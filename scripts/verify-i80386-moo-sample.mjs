@@ -72,6 +72,10 @@ const PROFILES={
     files:['8F','668F','678F','67668F'],
     scope:'12 fixed deterministic POP r/m samples spanning operand/address-size forms',
   },
+  'push-imm8':{
+    files:['6A','666A'],
+    scope:'6 fixed deterministic PUSH imm8 samples spanning word and dword sign extension',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
