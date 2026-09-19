@@ -29,6 +29,8 @@ const checkpoints=[];
 const postEvents=[];
 const controllerPorts=[];
 const controllerWrites=[];
+const diskPorts=[];
+const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
 let machine;
 machine=new I8086Machine(PCAT80286_BOOT,{onPortAccess:event=>{
     if(event.port===0x60||event.port===0x64) {
@@ -42,6 +44,11 @@ machine=new I8086Machine(PCAT80286_BOOT,{onPortAccess:event=>{
         checkpoints.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip});
     if(event.dir==='out'&&event.port===0x80)
         postEvents.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,value:event.value});
+    if((event.port>=0x3f0&&event.port<=0x3f7)||(event.port<=0x0f)||
+        (event.port>=0x80&&event.port<=0x8f)||(event.port>=0xc0&&event.port<=0xde)) {
+        diskPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
+        if(diskPorts.length>256)diskPorts.shift();
+    }
 }});
 machine.loadRom(rom,0xf0000);
 machine.loadRom(rom,0xff0000);
@@ -71,9 +78,23 @@ machine.cpu.busTrace=null;
 steps=1;
 const progressSamples=[];
 let stopReason=null;
+const deviceSnapshot=()=>({
+    masterPic:machine.chips.pic1.getState(),slavePic:machine.chips.pic2.getState(),
+    primaryDma:machine.chips.dma1.getState(),secondaryDma:machine.chips.dma2.getState(),
+    fdc:machine.chips.fdc1.getState(),
+});
 for(;steps<stepLimit;steps++) {
     const requestsBefore=resetRequests.length;
+    const before={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
     machine.step();
+    const after={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
+    const reachedPost43=postEvents.some(event=>event.cs===0xf000&&event.ip===0x16ab&&event.value===0x43);
+    if(!executionBoundaries.int19&&reachedPost43&&before.cs===0xf000&&before.ip===0x16ad)
+        executionBoundaries.int19={step:steps,before,after,devices:deviceSnapshot()};
+    if(!executionBoundaries.bootSector&&after.cs===0&&after.ip===0x7c00)
+        executionBoundaries.bootSector={step:steps,before,after,devices:deviceSnapshot()};
+    if(!executionBoundaries.unexpectedInterrupt&&after.cs===0xf000&&after.ip===0x1805)
+        executionBoundaries.unexpectedInterrupt={step:steps,before,after,devices:deviceSnapshot()};
     if(resetRequests.length>requestsBefore)resetApplications.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,
         pc:machine.cpu.pc,cmosShutdown:machine.chips.rtc1.ram[0x0f]});
     if(steps%100_000===0)progressSamples.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,
@@ -105,11 +126,13 @@ const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
+    executionBoundaries,diskPorts,
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
         shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]},
     screenText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
         String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,'')),
+    devices:deviceSnapshot(),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
         si:machine.cpu.si,di:machine.cpu.di,bp:machine.cpu.bp,sp:machine.cpu.sp,
         ds:machine.cpu.ds,es:machine.cpu.es,ss:machine.cpu.ss,flags:machine.cpu.flags,
