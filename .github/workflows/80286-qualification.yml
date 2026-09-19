@@ -544,11 +544,19 @@ jobs:
           export I386_RECEIPTS
           echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-arpl.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs test/i80386-at-hdd-image.test.mjs \
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-lar-lsl.test.mjs test/i80386-arpl.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs test/i80386-at-hdd-image.test.mjs \
             | tee "$I386_RECEIPTS/tests.tap"
           for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete pusha-popa moffs rotates rotate-full-circle lea segment-stack pop-rm push-imm8 imul-immediate setcc double-shift; do
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
               > "$I386_RECEIPTS/$profile.json"
+          done
+          for pair in imul-immediate:carry setcc:ram double-shift:carry; do
+            profile=${pair%:*}
+            mutation=${pair#*:}
+            if I386_MOO_PROFILE="$profile" I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs > "$I386_RECEIPTS/rejected-$profile.json"; then
+              echo "386 $profile comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
           done
           for mutation in ram stray-write; do
             if I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs \
@@ -575,6 +583,15 @@ jobs:
             assert.equal(r.accounting.revoked,0);
             assert.equal(r.accounting.unsupported,0);
             assert.equal(r.accounting.failures,0);
+          }
+          for(const profile of ['imul-immediate','setcc','double-shift']) {
+            const r=read(`rejected-${profile}`);
+            assert.equal(r.accounting.unsupported,0);
+            assert.equal(r.failures.length,1);
+            assert.equal(r.failures[0].differences.length,1);
+            const field=r.failures[0].differences[0].field;
+            if(profile==='setcc')assert.match(field,/^ram:[0-9a-f]+$/);
+            else assert.equal(field,'eflags');
           }
           const carry=read('rejected-carry');
           assert.equal(carry.mutation,'carry');
