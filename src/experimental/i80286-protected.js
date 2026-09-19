@@ -805,65 +805,93 @@ export class ProtectedI80286 extends I8086 {
         return (this.read(address) & 0xff) | ((this.read((address + 1) & 0xffffff) & 0xff) << 8);
     }
 
-    _writePhysical16(address,value) {
-        address&=0xffffff;
-        if(this.busTrace!==null)this.busTrace.push(2,address,2,(address+1)&0xffffff);
-        this.write(address,value&255);this.write((address+1)&0xffffff,value>>8&255);
+    _taskSelectorFault(vector, selector, reason) {
+        try {
+            this._pmFault(vector, selector & 0xfffc, reason);
+        } catch (error) {
+            if (error instanceof ProtectedModeFault) error.taskSelectorFault = true;
+            throw error;
+        }
+    }
+
+    _writePhysical16(address, value) {
+        address &= 0xffffff;
+        if (this.busTrace !== null) this.busTrace.push(2, address, 2, (address + 1) & 0xffffff);
+        this.write(address, value & 255);
+        this.write((address + 1) & 0xffffff, (value >> 8) & 255);
     }
 
     _taskDescriptor(selector, {busy=false, checkPrivilege=true, faultVector=13} = {}) {
         let raw;
         try { raw = this._rawDescriptor(selector, {gdtOnly:true}); }
         catch (error) {
-            if (error instanceof ProtectedModeFault) error.vector = faultVector;
+            if (error instanceof ProtectedModeFault) {
+                error.vector = faultVector;
+                error.taskSelectorFault = true;
+            }
             throw error;
         }
         const type = raw.access & 0x0f;
         if ((raw.access & 0x10) || (busy ? type !== 3 : type !== 1))
-            this._pmFault(faultVector, selector & 0xfffc,
+            this._taskSelectorFault(faultVector, selector,
                 busy ? 'task return requires busy 286 TSS' : 'task switch requires available 286 TSS');
         if (checkPrivilege && !busy && Math.max(this.cpl, selector & 3) > ((raw.access >> 5) & 3))
-            this._pmFault(faultVector, selector & 0xfffc, 'TSS privilege');
-        if (!(raw.access & 0x80)) this._pmFault(11, selector & 0xfffc, 'TSS not present');
+            this._taskSelectorFault(faultVector, selector, 'TSS privilege');
+        if (!(raw.access & 0x80)) this._taskSelectorFault(11, selector, 'TSS not present');
         return raw;
     }
 
     _taskImage(raw) {
-        if(raw.limit<0x2b)this._pmFault(10,raw.selector&0xfffc,'incoming TSS limit');
-        const w=off=>this._readPhysical16(raw.base+off);
-        return{backlink:w(0),ip:w(0x0e),flags:w(0x10),ax:w(0x12),cx:w(0x14),dx:w(0x16),bx:w(0x18),
-            sp:w(0x1a),bp:w(0x1c),si:w(0x1e),di:w(0x20),es:w(0x22),cs:w(0x24),ss:w(0x26),ds:w(0x28),ldt:w(0x2a)};
+        if (raw.limit < 0x2b) this._taskSelectorFault(10, raw.selector, 'incoming TSS limit');
+        const word = offset => this._readPhysical16(raw.base + offset);
+        return {
+            backlink:word(0), ip:word(0x0e), flags:word(0x10), ax:word(0x12), cx:word(0x14),
+            dx:word(0x16), bx:word(0x18), sp:word(0x1a), bp:word(0x1c), si:word(0x1e),
+            di:word(0x20), es:word(0x22), cs:word(0x24), ss:word(0x26), ds:word(0x28),
+            ldt:word(0x2a),
+        };
     }
 
     _saveCurrentTask(flags=this.flags, errorSelector=this.tr.selector) {
         if (!this.tr.valid || this.tr.limit < 0x29)
-            this._pmFault(10, errorSelector & 0xfffc, 'current TSS invalid');
-        const values=[[0x0e,this.ip],[0x10,flags],[0x12,this.ax],[0x14,this.cx],[0x16,this.dx],[0x18,this.bx],
-            [0x1a,this.sp],[0x1c,this.bp],[0x1e,this.si],[0x20,this.di],[0x22,this.es],[0x24,this.cs],
-            [0x26,this.ss],[0x28,this.ds]];
-        for(const [off,value]of values)this._writePhysical16(this.tr.base+off,value);
+            this._taskSelectorFault(10, errorSelector, 'current TSS invalid');
+        const values = [
+            [0x0e,this.ip], [0x10,flags], [0x12,this.ax], [0x14,this.cx], [0x16,this.dx],
+            [0x18,this.bx], [0x1a,this.sp], [0x1c,this.bp], [0x1e,this.si], [0x20,this.di],
+            [0x22,this.es], [0x24,this.cs], [0x26,this.ss], [0x28,this.ds],
+        ];
+        for (const [offset, value] of values) this._writePhysical16(this.tr.base + offset, value);
     }
 
     _setTaskBusy(raw, busy) {
-        const address=(raw.address+5)&0xffffff;
-        if(this.busTrace!==null)this.busTrace.push(2,address);
-        this.write(address,(raw.access&~2)|(busy?2:0));
+        const address = (raw.address + 5) & 0xffffff;
+        if (this.busTrace !== null) this.busTrace.push(2, address);
+        this.write(address, (raw.access & ~2) | (busy ? 2 : 0));
     }
 
     _taskLdt(selector) {
         if (!(selector & 0xfffc)) return {selector,valid:false,base:0,limit:0};
         let raw;
         try { raw = this._rawDescriptor(selector, {gdtOnly:true}); }
-        catch (error) { if (error instanceof ProtectedModeFault) error.vector=10; throw error; }
-        if ((raw.access & 0x1f) !== 2) this._pmFault(10, selector & 0xfffc, 'task LDT descriptor type');
-        if (!(raw.access & 0x80)) this._pmFault(10, selector & 0xfffc, 'task LDT not present');
-        return {selector:selector & 0xffff,valid:true,base:raw.base,limit:raw.limit};
+        catch (error) {
+            if (error instanceof ProtectedModeFault) {
+                error.vector = 10;
+                error.taskSelectorFault = true;
+            }
+            throw error;
+        }
+        if ((raw.access & 0x1f) !== 2) this._taskSelectorFault(10, selector, 'task LDT descriptor type');
+        if (!(raw.access & 0x80)) this._taskSelectorFault(10, selector, 'task LDT not present');
+        return {selector:selector & 0xffff, valid:true, base:raw.base, limit:raw.limit};
     }
 
     _taskSegment(selector, target, cpl) {
         try { return this._descriptor(selector, target, {privilegeCpl:cpl}); }
         catch (error) {
-            if (error instanceof ProtectedModeFault && error.vector === 13) error.vector=10;
+            if (error instanceof ProtectedModeFault) {
+                if (error.vector === 13) error.vector = 10;
+                error.taskSelectorFault = true;
+            }
             throw error;
         }
     }
@@ -872,13 +900,14 @@ export class ProtectedI80286 extends I8086 {
         const returning = kind === 'iret';
         let raw;
         try {
-            raw=this._taskDescriptor(selector, {
+            raw = this._taskDescriptor(selector, {
                 busy:returning,
                 checkPrivilege,
                 faultVector:returning ? 10 : 13,
             });
         } catch (error) {
-            if (external && error instanceof ProtectedModeFault && error.errorCode) error.errorCode|=1;
+            if (external && error instanceof ProtectedModeFault && error.taskSelectorFault)
+                error.errorCode |= 1;
             throw error;
         }
         const oldRaw = this.tr.valid ? this._rawDescriptor(this.tr.selector, {gdtOnly:true}) : null;
@@ -886,37 +915,50 @@ export class ProtectedI80286 extends I8086 {
         // SWITCH_TASKS commits the new busy bit before validating/saving the
         // outgoing image. Memory effects before TR replacement remain visible.
         if (!returning) this._setTaskBusy(raw, true);
-        this._saveCurrentTask(returning ? this.flags & ~NT : this.flags, selector);
+        try {
+            this._saveCurrentTask(returning ? this.flags & ~NT : this.flags, selector);
+        } catch (error) {
+            if (external && error instanceof ProtectedModeFault && error.taskSelectorFault)
+                error.errorCode |= 1;
+            throw error;
+        }
         if (kind === 'call') this._writePhysical16(raw.base, this.tr.selector);
         if (kind === 'jmp' || returning) this._setTaskBusy(oldRaw, false);
-        this.tr={selector:selector&0xffff,valid:true,base:raw.base,limit:raw.limit};
+        this.tr = {selector:selector & 0xffff, valid:true, base:raw.base, limit:raw.limit};
 
         try {
-            const image=this._taskImage(raw);
-            const loadedFlags=(image.flags|2)&~0x8028;
-            Object.assign(this,{ax:image.ax,cx:image.cx,dx:image.dx,bx:image.bx,sp:image.sp,bp:image.bp,
-                si:image.si,di:image.di,ip:image.ip,
-                es:image.es,cs:image.cs,ss:image.ss,ds:image.ds,
-                flags:kind==='call' ? loadedFlags|NT : kind==='jmp' ? loadedFlags&~NT : loadedFlags});
-            this.msw|=8;
-            const newCpl=image.cs&3;
-            this.cpl=newCpl;
-            this.ldtr={selector:image.ldt,valid:false,base:0,limit:0};
-            for(const [id,value]of [[SEG_ES,image.es],[SEG_CS,image.cs],[SEG_SS,image.ss],[SEG_DS,image.ds]])
-                this.segmentCaches[id]={selector:value,base:0,limit:0,access:0,code:false,writable:false,
-                    readable:false,usable:false};
-            this.ldtr=this._taskLdt(image.ldt);
-            const ss=this._taskSegment(image.ss,SEG_SS,newCpl);this._commitDescriptor(SEG_SS,ss);
-            const cs=this._taskSegment(image.cs,SEG_CS,newCpl);this._commitDescriptor(SEG_CS,cs);
-            const ds=this._taskSegment(image.ds,SEG_DS,newCpl);this._commitDescriptor(SEG_DS,ds);
-            const es=this._taskSegment(image.es,SEG_ES,newCpl);this._commitDescriptor(SEG_ES,es);
-            if(image.ip>cs.limit)this._pmFault(13,0,'task IP outside code segment');
-            if(errorCode!==null)this._pmPush(errorCode);
-            this.halted=false;this.intShadow=0;this._pmStiShadow=0;
+            const image = this._taskImage(raw);
+            const loadedFlags = (image.flags | 2) & ~0x8028;
+            Object.assign(this, {
+                ax:image.ax, cx:image.cx, dx:image.dx, bx:image.bx, sp:image.sp, bp:image.bp,
+                si:image.si, di:image.di, ip:image.ip, es:image.es, cs:image.cs, ss:image.ss, ds:image.ds,
+                flags:kind === 'call' ? loadedFlags | NT : kind === 'jmp' ? loadedFlags & ~NT : loadedFlags,
+            });
+            this.msw |= 8;
+            const newCpl = image.cs & 3;
+            this.cpl = newCpl;
+            this.ldtr = {selector:image.ldt, valid:false, base:0, limit:0};
+            for (const [id, value] of [[SEG_ES,image.es], [SEG_CS,image.cs], [SEG_SS,image.ss], [SEG_DS,image.ds]])
+                this.segmentCaches[id] = {selector:value, base:0, limit:0, access:0, code:false,
+                    writable:false, readable:false, usable:false};
+            this.ldtr = this._taskLdt(image.ldt);
+            const ss = this._taskSegment(image.ss, SEG_SS, newCpl);
+            this._commitDescriptor(SEG_SS, ss);
+            const cs = this._taskSegment(image.cs, SEG_CS, newCpl);
+            this._commitDescriptor(SEG_CS, cs);
+            const ds = this._taskSegment(image.ds, SEG_DS, newCpl);
+            this._commitDescriptor(SEG_DS, ds);
+            const es = this._taskSegment(image.es, SEG_ES, newCpl);
+            this._commitDescriptor(SEG_ES, es);
+            if (image.ip > cs.limit) this._pmFault(13, 0, 'task IP outside code segment');
+            if (errorCode !== null) this._pmPush(errorCode);
+            this.halted = false;
+            this.intShadow = 0;
+            this._pmStiShadow = 0;
         } catch (error) {
             if (error instanceof ProtectedModeFault) {
-                if (external && error.errorCode) error.errorCode|=1;
-                error.taskCommitted=true;
+                if (external && error.taskSelectorFault) error.errorCode |= 1;
+                error.taskCommitted = true;
             }
             throw error;
         }

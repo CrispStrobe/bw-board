@@ -226,6 +226,23 @@ test('external task-gate selector faults retain EXT in the new task context',()=
   f.cpu.idtr={base:0x180000,limit:0x107};f.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
   assert.throws(()=>f.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===0x59&&e.taskCommitted);
   assert.equal(f.cpu.tr.selector,0x48);
+
+  const nullTask=fixture();nullTask.cpu.deliverProtectedFaults=true;
+  nullTask.cpu.idtr={base:0x180000,limit:0x107};nullTask.put(0x180100,[0,0,0,0,0,0x85,0,0]);
+  assert.throws(()=>nullTask.cpu.interrupt(0x20),e=>e.vector===13&&e.errorCode===1&&!e.taskCommitted);
+
+  const nullStack=fixture();installTasks(nullStack);nullStack.put(0x171026,[0,0]);nullStack.cpu.deliverProtectedFaults=true;
+  nullStack.cpu.idtr={base:0x180000,limit:0x107};nullStack.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
+  assert.throws(()=>nullStack.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===1&&e.taskCommitted);
+
+  const shortOld=fixture();installTasks(shortOld);shortOld.cpu.tr.limit=0x28;shortOld.cpu.deliverProtectedFaults=true;
+  shortOld.cpu.idtr={base:0x180000,limit:0x107};shortOld.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
+  assert.throws(()=>shortOld.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===0x49&&!e.taskCommitted);
+
+  const badIp=fixture();installTasks(badIp,0x20);badIp.desc(0x208,0x100000,0x9a,0x10);badIp.cpu.deliverProtectedFaults=true;
+  badIp.cpu.idtr={base:0x180000,limit:0x107};badIp.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
+  assert.throws(()=>badIp.cpu.interrupt(0x20),e=>e.vector===13&&e.errorCode===0&&e.taskCommitted,
+    'an offset #GP(0) does not acquire EXT');
 });
 
 test('task-gate target bypasses TSS DPL and task images load an LDT',()=>{
