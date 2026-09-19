@@ -9,6 +9,20 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-19 CLAIM — bwcx: exact Level-1 PMOS operating-point and explicit bulk
+terminal, isolated worktree `/mnt/volume1/code/wt/bwb-pmos-explicit-bulk`, branch
+`lane/pmos-explicit-bulk-op`. Owns only the MOS bulk state/stamp/current path in
+`src/mna.js`, strict public PMOS admission and structural preflight in
+`src/board.js`, the minimum type/validation surface needed for an optional
+fourth `bulk` terminal, focused PMOS operating-point tests, and this ledger row.
+Measured target: 136 ADI v4 PMOS Differential Pair rows / 23 unique decks / 272
+devices; every card is exact Level 1 with exact W/L and every bulk is a distinct
+node tied to one explicit grounded 5–12 V source. Preserve all three-terminal
+MOS behavior and default paths byte-for-behavior; do not infer bulk voltage,
+alias bulk to source/ground, edit CUI/Lite/corpus repos, alter tolerances, or
+broaden to richer MOS models. Board first; downstream import/replay follows only
+after exact upstream qualification.
+
 2026-09-14 DONE — root Codex: current-contract convergence, isolated worktree
 `/mnt/volume1/code/wt/bwb-current-contract-root`, branch `lane/current-contract-root`.
 Owns mixed-kind MNA extraction, public-current/cache consistency and affected
