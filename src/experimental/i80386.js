@@ -665,6 +665,41 @@ export class ExperimentalI80386 {
     else this.sp = (this.sp + bytes) & 0xffff;
     return v;
   }
+  _pusha(width) {
+    const bytes = width >>> 3;
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const originalStack = stack32 ? this.esp : this.sp;
+    const first = stack32
+      ? (originalStack - bytes * 8) >>> 0
+      : (originalStack - bytes * 8) & 0xffff;
+    if (this.protectedMode) this._linear(SEG_SS, first, bytes * 8);
+    const values = [
+      this._reg(0, width),
+      this._reg(1, width),
+      this._reg(2, width),
+      this._reg(3, width),
+      width === 32 ? originalStack >>> 0 : originalStack & 0xffff,
+      this._reg(5, width),
+      this._reg(6, width),
+      this._reg(7, width),
+    ];
+    for (const value of values) this._push(value, width);
+  }
+  _popa(width) {
+    const bytes = width >>> 3;
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const originalStack = stack32 ? this.esp : this.sp;
+    if (this.protectedMode) this._linear(SEG_SS, originalStack, bytes * 8);
+    for (const register of [7, 6, 5])
+      this._setReg(register, width, this._pop(width));
+    if (width === 32 && !stack32) {
+      const discarded = this._pop(width);
+      this.esp = ((discarded & 0xffff0000) | this.sp) >>> 0;
+    } else if (stack32) this.esp = (this.esp + bytes) >>> 0;
+    else this.sp = (this.sp + bytes) & 0xffff;
+    for (const register of [3, 2, 1, 0])
+      this._setReg(register, width, this._pop(width));
+  }
   _condition(code) {
     const f = this.eflags;
     const z = !!(f & ZF),
@@ -818,12 +853,12 @@ export class ExperimentalI80386 {
     if (op === 0xfe || ea.reg === 7)
       throw new I80386Fault(6, null, "invalid FE/FF extension");
     if (ea.reg === 3 || ea.reg === 5) {
+      if (ea.isReg)
+        throw new I80386Fault(6, null, "far indirect transfer requires memory");
       if (this.protectedMode)
         throw new UnsupportedI80386(
           "protected far indirect transfer is outside the bounded 386 profile",
         );
-      if (ea.isReg)
-        throw new I80386Fault(6, null, "far indirect transfer requires memory");
       const bytes = width >>> 3;
       const address = this._linear(ea.seg, ea.off, bytes + 2);
       const target = this._readLinear(address, bytes);
@@ -1434,6 +1469,8 @@ export class ExperimentalI80386 {
       this._push(this._reg(op - 0x50, width), width);
     else if (op >= 0x58 && op <= 0x5f)
       this._setReg(op - 0x58, width, this._pop(width));
+    else if (op === 0x60) this._pusha(width);
+    else if (op === 0x61) this._popa(width);
     else if (op >= 0x90 && op <= 0x97) {
       const register = op - 0x90;
       const accumulator = this._reg(0, width);

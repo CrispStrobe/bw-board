@@ -37,6 +37,10 @@ if (
 const sourceRoot = resolve(args.source);
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const localSources = ["./run-i80386-test386-diagnostic.mjs", "../src/experimental/i80386.js"];
+const localPathspecs = [
+  "scripts/run-i80386-test386-diagnostic.mjs",
+  "src/experimental/i80386.js",
+];
 const localSourceHashes = Object.fromEntries(
   localSources.map((path) => [
     path,
@@ -45,6 +49,11 @@ const localSourceHashes = Object.fromEntries(
 );
 const git = (cwd, ...gitArgs) =>
   execFileSync("git", gitArgs, { cwd, encoding: "utf8" }).trim();
+const verifyLocalClean = () =>
+  execFileSync("git", ["diff", "--quiet", "HEAD", "--", ...localPathspecs], {
+    cwd: repositoryRoot,
+  });
+verifyLocalClean();
 const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: sourceRoot,
   encoding: "utf8",
@@ -130,6 +139,7 @@ if (
 ) {
   throw new Error("test386 input or local execution source changed during execution");
 }
+verifyLocalClean();
 const report = {
   schema: "astra.i80386-test386-diagnostic.v1",
   accepted: false,

@@ -136,6 +136,18 @@ paging intent before reading the destination; CMP remains read-only. A pinned
 386EX profile grades 42 fixed OR/ADC/SBB/AND cases under the capture's published
 flag masks and does not infer values for undefined flags.
 
+PUSHA/POPA support word and dword operand sizes independently of the stack
+address size. PUSHA records the pre-instruction SP/ESP value; POPA advances
+over the saved stack-pointer slot without loading it. The complete segment
+span is checked before stack memory effects, while paging accesses remain in
+architectural stack order. Instruction-fault rollback restores registers and
+SP/ESP; page-table and already-issued destination writes are not represented
+as transactional. A pinned 386EX profile grades 12 fixed non-exception cases.
+The samples also pin original-386 POPAD behavior with a 16-bit stack address:
+the discarded dword supplies ESP's upper half while the low SP advances.
+Register encodings of FF /3 and /5 raise #UD before the bounded protected far
+transfer refusal.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

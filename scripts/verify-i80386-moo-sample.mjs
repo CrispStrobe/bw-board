@@ -2,6 +2,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import I80386,{SEG_ES,SEG_CS,SEG_SS,SEG_DS,SEG_FS,SEG_GS} from '../src/experimental/i80386.js';
 import {readMoo386} from './lib/moo386-v1.mjs';
 
@@ -42,6 +43,10 @@ const PROFILES={
     files:['08','09','10','11','18','19','20','21','80.2','81.3','0C','15','1D','25'],
     scope:'42 fixed deterministic OR/ADC/SBB/AND samples spanning ModRM, group-1, accumulator, byte, and word forms',
   },
+  'pusha-popa':{
+    files:['60','61','6660','6661'],
+    scope:'12 fixed deterministic PUSHA/POPA samples covering word and dword operand sizes',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
@@ -52,6 +57,16 @@ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
 const verifyPin=()=>{if(git('rev-parse','HEAD')!==PIN||git('status','--porcelain'))throw new Error('SST386_ROOT must match the exact clean pin');};
 verifyPin();
 const sha256=data=>createHash('sha256').update(data).digest('hex');
+const repositoryRoot=resolve(fileURLToPath(new URL('..',import.meta.url)));
+const localSources=['./verify-i80386-moo-sample.mjs','./lib/moo386-v1.mjs','../src/experimental/i80386.js'];
+const localPathspecs=['scripts/verify-i80386-moo-sample.mjs','scripts/lib/moo386-v1.mjs','src/experimental/i80386.js'];
+const localGit=(...args)=>execFileSync('git',args,{cwd:repositoryRoot,encoding:'utf8'}).trim();
+const verifyLocal=()=>{
+  execFileSync('git',['diff','--quiet','HEAD','--',...localPathspecs],{cwd:repositoryRoot});
+};
+verifyLocal();
+const executionRevision=localGit('rev-parse','HEAD');
+const localSourceHashes=Object.fromEntries(localSources.map(path=>[path,sha256(readFileSync(new URL(path,import.meta.url)))]));
 const revocationBytes=readFileSync(resolve(root,'revocation_list.txt'));
 const revoked=new Set(revocationBytes.toString('utf8').split(/\s+/).filter(Boolean));
 const mutation=process.env.I386_MOO_MUTATION??null;
@@ -97,10 +112,12 @@ for(const name of FILES){
   results.push({file:`${name}.MOO.gz`,sha256:sha256(moo.compressed),publishedTests:moo.tests.length,sampled:cases});
 }
 verifyPin();
+verifyLocal();
+if(localGit('rev-parse','HEAD')!==executionRevision||localSources.some(path=>sha256(readFileSync(new URL(path,import.meta.url)))!==localSourceHashes[path]))
+  throw new Error('local execution sources changed during verification');
 const failures=results.flatMap(result=>result.sampled.filter(sample=>sample.status==='fail').map(sample=>({file:result.file,...sample})));
-const localSources=['./verify-i80386-moo-sample.mjs','./lib/moo386-v1.mjs','../src/experimental/i80386.js'];
 console.log(JSON.stringify({source:'SingleStepTests/80386 physical 386EX captures',revision:PIN,formatRevision:FORMAT_PIN,node:process.version,
   profile:profileName,scope:`${profile.scope}; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim`,
-  sourceHashes:Object.fromEntries(localSources.map(path=>[path,sha256(readFileSync(new URL(path,import.meta.url)))])),revocationSha256:sha256(revocationBytes),mutation,
+  executionRevision,sourceHashes:localSourceHashes,revocationSha256:sha256(revocationBytes),mutation,
   accounting:{files:FILES.length,admitted,unsupported,revoked:revokedCount,exceptionExcluded,profileExcluded,failures:failures.length},results,failures},null,2));
 process.exitCode=failures.length?1:0;
