@@ -38,8 +38,10 @@ test('listToolchains filters DOS toolchains by binary availability; native is al
         ['nasm-native', 'masm'], 'MASM binaries present -> MASM appears');
     assert.deepEqual(listToolchains('asm', { available: new Set(['MASM.EXE']) }).map((t) => t.id), ['nasm-native'],
         'a partial toolset does not offer MASM (needs LINK + EXE2BIN too)');
-    assert.deepEqual(listToolchains('bas', { available: new Set(['GWBASIC.EXE']) }).map((t) => t.id), ['gwbasic'],
-        'language filtering picks the BASIC interpreter');
+    assert.deepEqual(listToolchains('bas', { available: new Set(['GWBASIC.EXE']) }).map((t) => t.id), ['basic-native', 'gwbasic'],
+        'language filtering: the native BASIC always, plus GW-BASIC when present');
+    assert.deepEqual(listToolchains('bas', { available: new Set() }).map((t) => t.id), ['basic-native'],
+        'no interpreter installed -> only the built-in BASIC');
 });
 
 test('FLAVORS map to run-dos variant+preset; default is a 286', () => {

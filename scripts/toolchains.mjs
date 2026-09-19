@@ -16,6 +16,7 @@
  */
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { assemble } from '../src/i8086-asm.js';
+import { basicToAsm } from './basic.mjs';
 import { runImage, runChain, runDos } from './run-dos.mjs';
 
 /**
@@ -48,6 +49,10 @@ export const TOOLCHAINS = Object.freeze([
     // Declared but availability-gated: they light up when their binary is
     // present in the DOS bin dir. The registry is the extension point — adding a
     // language/tool is one entry here.
+    { id: 'basic-native', language: 'bas', kind: 'native', tools: [],
+      label: 'Built-in BASIC (PRINT subset -> asm) — no interpreter needed',
+      build: (src) => assemble(basicToAsm(src), { format: 'com' }).bytes, run: 'com' },
+
     { id: 'gwbasic', language: 'bas', kind: 'dos', tools: ['GWBASIC.EXE'],
       label: 'GW-BASIC interpreter', interpret: 'GWBASIC.EXE', ext: 'BAS', run: 'via-tool' },
     { id: 'qbasic', language: 'bas', kind: 'dos', tools: ['QBASIC.EXE'],
