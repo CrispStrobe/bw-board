@@ -120,7 +120,7 @@ test('forbidden privilege and descriptor types fail before cache or accessed-bit
 test('unsupported protected paths refuse without architectural side effects', () => {
   for (const [name, bytes] of [
     ['software INT', [0xcd,0x21]], ['far CALL', [0x9a,0,0,8,0]],
-    ['IRET', [0xcf]], ['LDS', [0xc5,0x06,0,0]],
+    ['IRET', [0xcf]],
     ['REP', [0xf3,0x90]],
   ]) {
     const f = fixture(); installBootstrap(f, bytes);

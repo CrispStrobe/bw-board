@@ -209,7 +209,12 @@ export class ProtectedI80286 extends I8086 {
 
     _execProtected(op) {
         if (op === 0x0f) return this._pmSystem(this._pmFetch8());
+        if (op >= 0x6c && op <= 0x6f) return this._pmPortString(op);
         if (op >= 0xa4 && op <= 0xaf && op !== 0xa8 && op !== 0xa9) return this._pmString(op);
+        if (op === 0x27) { this._daa(); return 3; }
+        if (op === 0x2f) { this._das(); return 3; }
+        if (op === 0x37) { this._aaa(); return 3; }
+        if (op === 0x3f) { this._aas(); return 3; }
         if (op === 0x06 || op === 0x0e || op === 0x16 || op === 0x1e) {
             this._pmPush([this.es, this.cs, this.ss, this.ds][op >> 3]);
             return 10;
@@ -228,6 +233,24 @@ export class ProtectedI80286 extends I8086 {
             this._pmPush(value);
             return 3;
         }
+        if (op === 0x60) { this._pmPusha(); return 17; }
+        if (op === 0x61) { this._pmPopa(); return 19; }
+        if (op === 0x62) {
+            const ea=this._pmModRM();if(ea.isReg)this._pmFault(6,0,'BOUND requires memory');
+            this._linear(ea.id,ea.off,4,'read');
+            const value=this._r16(ea.reg),signed=value&0x8000?value-0x10000:value;
+            const low=this._rd16(ea.id,ea.off),high=this._rd16(ea.id,(ea.off+2)&0xffff);
+            const lower=low&0x8000?low-0x10000:low,upper=high&0x8000?high-0x10000:high;
+            if(signed<lower||signed>upper)this._pmFault(5,0,'BOUND range');
+            return 13;
+        }
+        if(op===0x63){
+            const ea=this._pmModRM();this._pmPreflightWrite(ea,true);
+            const destination=this._pmOperandRead(ea,true),source=this._r16(ea.reg),rpl=source&3;
+            if((destination&3)<rpl){this._pmOperandWrite(ea,true,(destination&0xfffc)|rpl);this.flags|=ZF;}
+            else this.flags&=~ZF;return ea.isReg?10:11;
+        }
+        if (op === 0x69 || op === 0x6b) return this._pmImulImmediate(op);
         // The eight classic ALU operations, excluding the BCD-adjust holes.
         if (op < 0x40 && (op & 7) < 6) {
             const kind = op >> 3, form = op & 7, word = !!(form & 1);
@@ -328,6 +351,13 @@ export class ProtectedI80286 extends I8086 {
             if (ea.isReg) this._pmFault(6, 0, 'LEA requires memory operand');
             this._r16set(ea.reg, ea.off);
             return 3;
+        }
+        if (op === 0xc4 || op === 0xc5) {
+            const ea=this._pmModRM();if(ea.isReg)this._pmFault(6,0,'LDS/LES requires memory');
+            this._linear(ea.id,ea.off,4,'read');
+            const value=this._rd16(ea.id,ea.off),selector=this._rd16(ea.id,(ea.off+2)&0xffff);
+            const target=op===0xc4?SEG_ES:SEG_DS,descriptor=this._descriptor(selector,target);
+            this._commitDescriptor(target,descriptor);this._r16set(ea.reg,value);return 16;
         }
         if (op === 0x84 || op === 0x85) {
             const word=!!(op&1),ea=this._pmModRM();
@@ -432,7 +462,11 @@ export class ProtectedI80286 extends I8086 {
                 this._pmOperandWrite(ea, word, result);
                 return ea.isReg ? 3 : 16;
             }
-            throw new UnsupportedProtectedMode('F6/F7 multiply/divide group');
+            const value=this._pmOperandRead(ea,word);
+            if(ea.reg===4){word?this._mul16(value):this._mul8(value);return ea.isReg?70:76;}
+            if(ea.reg===5){word?this._imul16(value):this._imul8(value);return ea.isReg?98:104;}
+            if(ea.reg===6||ea.reg===7){this._pmDivide(value,word,ea.reg===7);return ea.isReg?112:177;}
+            this._pmFault(6,0,'invalid F6/F7 group');
         }
         if (op === 0xd0 || op === 0xd1 || op === 0xd2 || op === 0xd3 || op === 0xc0 || op === 0xc1) {
             const word = !!(op & 1), ea = this._pmModRM();
@@ -452,6 +486,11 @@ export class ProtectedI80286 extends I8086 {
             this.ip = target;
             return 19;
         }
+        if(op===0xc8){this._pmEnter(this._pmFetch16(),this._pmFetch8()&31);return 15;}
+        if(op===0xc9){const value=this._rd16(SEG_SS,this.bp);this.sp=(this.bp+2)&0xffff;this.bp=value;return 8;}
+        if(op===0xd4){const base=this._pmFetch8();if(!base)this._pmFault(0,0,'AAM divide by zero');this._aam(base);return 16;}
+        if(op===0xd5){this._aad(this._pmFetch8());return 14;}
+        if(op===0xd7){const id=this._pmOverride??SEG_DS;this.al=this._rd8(id,(this.bx+this.al)&0xffff);return 11;}
         if (op === 0xc3 || op === 0xc2) {
             const extra = op === 0xc2 ? this._pmFetch16() : 0;
             const target = this._pmPop();
@@ -566,6 +605,75 @@ export class ProtectedI80286 extends I8086 {
         return 5;
     }
 
+    _pmPortString(op){
+        this._pmCheckIOPrivilege('string I/O');
+        const word=!!(op&1),width=word?2:1,input=!(op&2);
+        if(this._pmRep&&this.cx===0)return 5;
+        if(input){
+            this._linear(SEG_ES,this.di,width,'write');
+            const low=this.inPort(this.dx)&0xff;
+            const value=word?low|((this.inPort((this.dx+1)&0xffff)&0xff)<<8):low;
+            if(word)this._wr16(SEG_ES,this.di,value);else this._wr8(SEG_ES,this.di,value);
+            this.di=(this.di+(this.flags&DF?-width:width))&0xffff;
+        }else{
+            const id=this._pmOverride??SEG_DS;this._linear(id,this.si,width,'read');
+            const value=word?this._rd16(id,this.si):this._rd8(id,this.si);
+            this.outPort(this.dx,value&0xff);if(word)this.outPort((this.dx+1)&0xffff,value>>8);
+            this.si=(this.si+(this.flags&DF?-width:width))&0xffff;
+        }
+        if(this._pmRep){this.cx=(this.cx-1)&0xffff;if(this.cx){this.ip=this._instrStartIp;this._pmRepContinues=true;}}
+        return 8;
+    }
+
+    _pmPusha(){
+        const originalSp=this.sp,newSp=(this.sp-16)&0xffff;this._linear(SEG_SS,newSp,16,'write');
+        for(const value of[this.ax,this.cx,this.dx,this.bx,originalSp,this.bp,this.si,this.di])this._pmPush(value);
+    }
+
+    _pmPopa(){
+        this._linear(SEG_SS,this.sp,16,'read');
+        const values=Array.from({length:8},(_,i)=>this._rd16(SEG_SS,(this.sp+i*2)&0xffff));
+        [this.di,this.si,this.bp,,this.bx,this.dx,this.cx,this.ax]=values;this.sp=(this.sp+16)&0xffff;
+    }
+
+    _pmEnter(size,level){
+        const pushes=level?level+1:1,originalSp=this.sp,frame=(originalSp-2)&0xffff;
+        const total=size+pushes*2;
+        if(total)this._linear(SEG_SS,(originalSp-total)&0xffff,total,'write');
+        for(let i=1;i<level;i++)this._linear(SEG_SS,(this.bp-i*2)&0xffff,2,'read');
+        for(let i=1;i<=pushes;i++)this._linear(SEG_SS,(originalSp-i*2)&0xffff,2,'write');
+        this._pmPush(this.bp);
+        if(level){for(let i=1;i<level;i++)this._pmPush(this._rd16(SEG_SS,(this.bp-i*2)&0xffff));this._pmPush(frame);}
+        this.bp=frame;this.sp=(this.sp-size)&0xffff;
+    }
+
+    _pmImulImmediate(op){
+        const ea=this._pmModRM();
+        const immediate=op===0x69?this._pmFetch16():(this._pmFetchS8()&0xffff);
+        const source=this._pmOperandRead(ea,true);
+        const a=source&0x8000?source-0x10000:source,b=immediate&0x8000?immediate-0x10000:immediate;
+        const full=a*b,low=full&0xffff,high=(full>>>16)&0xffff,fits=full===(low&0x8000?low-0x10000:low);
+        this._r16set(ea.reg,low);let flags=this.flags&~(CF|OF|SF|ZF|PF);if(!fits)flags|=CF|OF;
+        if(!high)flags|=ZF;if(high&0x8000)flags|=SF;this.flags=flags|this._parityFlag(high&0xff);return ea.isReg?22:29;
+    }
+
+    _parityFlag(value){value^=value>>4;value&=15;return(0x6996>>value)&1?0:PF;}
+
+    _pmDivide(source,word,signed){
+        if(!source)this._pmFault(0,0,'divide by zero');
+        if(!signed){
+            const dividend=word?this.dx*0x10000+this.ax:this.ax,limit=word?0xffff:0xff;
+            const quotient=Math.floor(dividend/source),remainder=dividend%source;if(quotient>limit)this._pmFault(0,0,'divide quotient overflow');
+            if(word){this.ax=quotient;this.dx=remainder;}else{this.al=quotient;this.ah=remainder;}return;
+        }
+        const divisor=word?(source&0x8000?source-0x10000:source):(source&0x80?source-0x100:source);
+        let dividend=word?this.dx*0x10000+this.ax:(this.ax&0x8000?this.ax-0x10000:this.ax);
+        if(word&&dividend>=0x80000000)dividend-=0x100000000;
+        const quotient=Math.trunc(dividend/divisor),remainder=dividend%divisor,min=word?-0x8000:-0x80,max=word?0x7fff:0x7f;
+        if(quotient<min||quotient>max)this._pmFault(0,0,'signed divide quotient overflow');
+        if(word){this.ax=quotient&0xffff;this.dx=remainder&0xffff;}else{this.al=quotient&0xff;this.ah=remainder&0xff;}
+    }
+
     _pmCheckIOPrivilege(operation) {
         const iopl = (this.flags >> 12) & 3;
         if (this.cpl > iopl) this._pmFault(13, 0, `${operation} exceeds IOPL`);
@@ -584,6 +692,11 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _pmSystem(op) {
+        if(op===0x02||op===0x03){
+            const ea=this._pmModRM(),selector=this._pmOperandRead(ea,true),descriptor=this._pmQueryDescriptor(selector);
+            if(descriptor){this.flags|=ZF;this._r16set(ea.reg,op===0x02?descriptor.access<<8:descriptor.limit);}
+            else this.flags&=~ZF;return ea.isReg?14:16;
+        }
         if (op !== 0x00 && op !== 0x01) throw new UnsupportedProtectedMode(`0F ${op.toString(16).padStart(2,'0')}`);
         const ea = this._pmModRM();
         if (op === 0x00) {
@@ -591,7 +704,13 @@ export class ProtectedI80286 extends I8086 {
                 this._pmOperandWrite(ea, true, ea.reg === 0 ? this.ldtr.selector : this.tr.selector);
                 return ea.isReg ? 2 : 3;
             }
-            if (ea.reg !== 2 && ea.reg !== 3) throw new UnsupportedProtectedMode('0F 00 verification operation');
+            if(ea.reg===4||ea.reg===5){
+                const descriptor=this._pmQueryDescriptor(this._pmOperandRead(ea,true));
+                const readable=descriptor&&!!(descriptor.access&0x10)&&(!descriptor.code||descriptor.readable);
+                const writable=descriptor&&!!(descriptor.access&0x10)&&!descriptor.code&&descriptor.writable;
+                if(ea.reg===4?readable:writable)this.flags|=ZF;else this.flags&=~ZF;return ea.isReg?10:12;
+            }
+            if (ea.reg !== 2 && ea.reg !== 3) this._pmFault(6,0,'invalid 0F 00 group');
             if (this.cpl !== 0) this._pmFault(13, 0, ea.reg === 2 ? 'LLDT privilege' : 'LTR privilege');
             const selector = this._pmOperandRead(ea, true);
             if (ea.reg === 2 && (selector & 0xfffc) === 0) {
@@ -633,6 +752,20 @@ export class ProtectedI80286 extends I8086 {
             this._wr8(ea.id,(ea.off+5)&0xffff,0xff);
         }
         return 11;
+    }
+
+    _pmQueryDescriptor(selector){
+        selector&=0xffff;if((selector&0xfffc)===0)return null;
+        const table=selector&4?this.ldtr:this.gdtr;if((selector&4)&&!table.valid)return null;
+        if((selector&0xfff8)+7>table.limit)return null;
+        const raw=this._rawDescriptor(selector),access=raw.access,dpl=(access>>5)&3,rpl=selector&3;
+        if(access&0x10){
+            const code=!!(access&8),conforming=code&&!!(access&4);
+            if(!conforming&&Math.max(this.cpl,rpl)>dpl)return null;
+            return{...raw,code,readable:!code||!!(access&2),writable:!code&&!!(access&2)};
+        }
+        const type=access&0x0f;if(![1,2,3].includes(type)||Math.max(this.cpl,rpl)>dpl)return null;
+        return{...raw,code:false,readable:false,writable:false};
     }
 
     _pmModRM() {
@@ -900,7 +1033,8 @@ export class ProtectedI80286 extends I8086 {
                 else this._pmOverride = op === 0x26 ? SEG_ES : op === 0x2e ? SEG_CS : op === 0x36 ? SEG_SS : SEG_DS;
                 op = this._pmFetch8();
             }
-            if (this._pmRep && (op < 0xa4 || op > 0xaf || op === 0xa8 || op === 0xa9))
+            const repeatedString=(op>=0xa4&&op<=0xaf&&op!==0xa8&&op!==0xa9)||(op>=0x6c&&op<=0x6f);
+            if (this._pmRep && !repeatedString)
                 throw new UnsupportedProtectedMode('REP on non-string instruction');
             if (this._pmRep && this.cx !== 0 && (this.flags & IF) && !priorShadow && !priorStiShadow && this.intPending()) {
                 this.ip = this._instrStartIp;
