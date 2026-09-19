@@ -299,6 +299,17 @@ and local implementation reject system types; that observed mismatch is kept
 outside the accepted cross-engine set rather than weakening the architectural
 check.
 
+LAR and LSL likewise return ZF=0 without a selector-derived fault when the
+selector, descriptor type, or privilege is rejected; faults while reading a
+memory operand or descriptor table still propagate. Conforming code bypasses
+both CPL and RPL admission as specified by the original manual. This profile
+retains the original 386 LAR gate-type table, including 286/386 interrupt and
+trap gates, and treats system type 8 as invalid for LSL despite the isolated
+instruction-page table's contradictory “Invalid/Valid” row; the architecture
+chapter's type table and descriptor semantics identify that row as a manual
+typo. LAR returns the masked access-rights image, while LSL expands a granular
+limit to its byte limit. Both preserve the destination when ZF is cleared.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A
