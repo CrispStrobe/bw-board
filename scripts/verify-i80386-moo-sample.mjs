@@ -34,6 +34,10 @@ const PROFILES={
     scope:'21 fixed deterministic FE/FF INC, DEC, near CALL/JMP, and PUSH samples',
     excludedPrefixes:[0xf0],
   },
+  'far-pointer':{
+    files:['C4','C5','0FB2','0FB4','0FB5','66C4','66C5','660FB2','660FB4','660FB5'],
+    scope:'30 fixed deterministic LES/LDS/LSS/LFS/LGS samples covering 16-bit and 32-bit pointer offsets',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

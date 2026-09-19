@@ -119,6 +119,15 @@ unsupported paths because descriptor gates and privilege changes are outside
 this stage. A pinned 386EX profile grades 21 fixed non-exception FE/FF samples;
 exception and LOCK-prefixed inputs are counted and excluded.
 
+LES, LDS, LSS, LFS, and LGS load complete far pointers with independent
+address and operand sizes. The complete source pointer is admitted before bus
+reads; paging still exposes page-walk and earlier-byte read effects in address
+order. A selector-load failure leaves the destination register and segment
+cache unchanged. LSS establishes the same interrupt, NMI, and debug boundary
+shadows as MOV SS. A pinned 386EX profile grades 30 fixed real-mode samples;
+protected selector faults and page ordering are covered by owned tests rather
+than claimed as hardware-oracle coverage.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

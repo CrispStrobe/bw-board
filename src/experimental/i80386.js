@@ -858,6 +858,26 @@ export class ExperimentalI80386 {
     this.eip = target;
   }
 
+  _farPointerLoad(segment, width, address32, override) {
+    const ea = this._decodeEA(address32, override);
+    if (ea.isReg)
+      throw new I80386Fault(6, null, "far pointer load requires memory");
+    const cache = this.segmentCaches[ea.seg];
+    if (this.protectedMode && cache.code && !cache.readable)
+      throw new I80386Fault(13, 0, "read from execute-only segment");
+    const bytes = width >>> 3;
+    const address = this._linear(ea.seg, ea.off, bytes + 2);
+    const offset = this._readLinear(address, bytes);
+    const selector = this._readLinear((address + bytes) >>> 0, 2);
+    this._loadSeg(segment, selector);
+    this._setReg(ea.reg, width, offset);
+    if (segment === SEG_SS) {
+      this._interruptShadow = 2;
+      this._nmiShadow = 2;
+      this._debugShadow = 1;
+    }
+  }
+
   _string(op, width, address32, override) {
     const byte = !(op & 1);
     const operandWidth = byte ? 8 : width;
@@ -1500,6 +1520,13 @@ export class ExperimentalI80386 {
         if (toReg) this._setReg(ea.reg, width, out);
         else this._operandWrite(ea, width, out);
       }
+    } else if (op === 0xc4 || op === 0xc5) {
+      this._farPointerLoad(
+        op === 0xc4 ? SEG_ES : SEG_DS,
+        width,
+        address32,
+        override,
+      );
     } else if (op === 0xc6) {
       const ea = this._decodeEA(address32, override);
       if (ea.reg !== 0) throw new UnsupportedI80386("C6 extension");
@@ -1715,6 +1742,15 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if (op === 0xb2 || op === 0xb4 || op === 0xb5) {
+      this._farPointerLoad(
+        op === 0xb2 ? SEG_SS : op === 0xb4 ? SEG_FS : SEG_GS,
+        width,
+        address32,
+        override,
+      );
+      return;
+    }
     if (op >= 0x80 && op <= 0x8f) {
       const displacement = this._fetchN(width >>> 3);
       if (this._condition(op & 15)) {

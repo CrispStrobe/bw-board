@@ -343,3 +343,22 @@ test("LGDT reads its six-byte operand in address order across a page fault", () 
   assert.deepEqual(f.cpu.gdtr, before);
   assert.equal(f.reads.includes(0x6fff), true);
 });
+
+test("far-pointer load faults in address order without partial register/cache commit", () => {
+  const f = fixture();
+  f.map(0, 0x3000);
+  f.map(0x4000, 0x6000);
+  f.put(0x3000, [0x0f, 0xb4, 0x0d, 0xff, 0x0f, 0x00, 0x00]);
+  f.put(0x6fff, [0x78]);
+  f.cpu.segmentCaches[3].base = 0x4000;
+  f.cpu.ecx = 0x11223344;
+  const before = { ...f.cpu.segmentCaches[4] };
+  assert.throws(
+    () => f.cpu.step(),
+    (error) => error instanceof I80386Fault && error.vector === 14,
+  );
+  assert.equal(f.cpu.cr2, 0x5000);
+  assert.equal(f.cpu.ecx, 0x11223344);
+  assert.equal(f.cpu.fs, 0);
+  assert.deepEqual(f.cpu.segmentCaches[4], before);
+});
