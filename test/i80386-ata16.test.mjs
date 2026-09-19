@@ -83,13 +83,19 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   assert.deepEqual(irq, [true, false, true, false], 'reset cleared pending IRQ');
 
   const before = ata.mediaBytes();
+  ata.writeRegister(7, 0x20);
+  assert.equal(ata.readRegister(7, {alternate: true}) & 8, 8);
   ata.writeRegister(6, 0xb0);
   assert.equal(ata.readRegister(7), 0, 'device 1 does not respond');
+  assert.equal(irq.at(-1), false, 'absent selection tri-states the master interrupt');
+  ata.writeRegister(3, 2);
   ata.writeRegister(7, 0x30);
   for (let word = 0; word < 256; word++) ata.writeData16(word);
   assert.deepEqual(ata.mediaBytes(), before);
   ata.writeRegister(6, 0xa0);
-  assert.equal(ata.readRegister(7), 0x40, 'reselecting device 0 restores its status');
+  assert.equal(irq.at(-1), true, 'reselecting device 0 exposes its pending interrupt');
+  assert.equal(ata.readRegister(7), 0x48, 'reselecting device 0 restores its transfer');
+  assert.equal(ata.readData16(), 0x0100);
 });
 
 test('experimental ATA rejects invalid CHS and unsupported commands without media mutation', () => {

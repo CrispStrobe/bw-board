@@ -134,10 +134,10 @@ export class ExperimentalATA16 {
   }
 
   writeCommand(command) {
+    if (this.driveHead & 0x10) return;
     this.command = command & 0xff;
     this.error = 0;
     this._clearIRQ();
-    if (this.driveHead & 0x10) return;
     if (this.command === 0x20) this._loadReadSector();
     else if (this.command === 0x30) this._prepareWriteSector();
     else if (this.command === 0xec) this._identify();
@@ -145,6 +145,7 @@ export class ExperimentalATA16 {
   }
 
   readData16() {
+    if (this.driveHead & 0x10) return 0xffff;
     if (this.direction !== 'read' || !(this.status & STATUS_DRQ)) return 0xffff;
     const byte = this.wordIndex * 2;
     const value = this.buffer[byte] | this.buffer[byte + 1] << 8;
@@ -160,6 +161,7 @@ export class ExperimentalATA16 {
   }
 
   writeData16(value) {
+    if (this.driveHead & 0x10) return;
     if (this.direction !== 'write' || !(this.status & STATUS_DRQ)) return;
     const byte = this.wordIndex * 2;
     this.buffer[byte] = value & 0xff;
@@ -214,6 +216,7 @@ export class ExperimentalATA16 {
       } else this._updateIRQ();
       return;
     }
+    if (this.driveHead & 0x10 && register !== 6) return;
     if (register === 1) this.features = byte;
     else if (register === 2) this.sectorCount = byte;
     else if (register === 3) this.sectorNumber = byte;
