@@ -8,11 +8,14 @@ the same-ring IDT subset. The default preserves host-visible diagnostic faults.
 
 The supported entry sequence is `LGDT`, `LMSW`, and a direct far `JMP` to a
 present ring-0 nonconforming code descriptor. Protected execution supports
-`MOV r8/r16,imm`, register and direct-address forms of `MOV r/m,r` and
-`MOV r,r/m`, register-form `MOV Sreg,r16`, general-register `PUSH`/`POP`,
-`NOP`, short and near direct `JMP`, direct far `JMP`, and `HLT`. Data addressing
-supports register-to-register and the 16-bit direct `[disp16]` form. Segment
-overrides are supported for those direct data accesses.
+byte and word `MOV` among registers, memory, immediates, segment registers,
+and `moffs`; `LEA`; the ADD/OR/ADC/SBB/AND/SUB/XOR/CMP families and groups;
+`TEST`; register and ModR/M `INC`/`DEC`; general-register `PUSH`/`POP`; near
+`CALL`/`RET`/`JMP`; short conditional jumps; `LOOP`/`LOOPE`/`LOOPNE`/`JCXZ`;
+direct far `JMP`; `NOP`; and `HLT`. All classic 16-bit ModR/M effective-address
+forms are decoded, with BP-based forms defaulting to SS and the other forms to
+DS. ES, CS, SS, and DS overrides replace that default. Read-modify-write
+instructions validate the destination for writing before reading its operand.
 
 The optional IDT subset supports 286 interrupt gates (type 6) and trap gates
 (type 7) targeting present ring-0 nonconforming code in the GDT. It implements
@@ -51,7 +54,7 @@ cpu.setProtectedState(checkpoint);
 This slice refuses LDT selectors, system descriptors, null data selectors,
 privilege levels other than ring 0, conforming and expand-down segments, task
 gates and task returns, privilege-changing gates, nested/double-fault delivery,
-REP partial progress, TF single-step delivery, and all opcodes or address forms
+REP/string execution, far `CALL`/`RET`, TF single-step delivery, and all opcodes or address forms
 outside the lists above. With delivery disabled, a supported protection fault
 is surfaced as `ProtectedModeFault` with vector, error code, and restart IP.
 With delivery enabled, #UD, #NP, #SS, and #GP raised by the bounded decoder are
@@ -83,3 +86,10 @@ selectors, IP, cached bases, 24-bit PC, result register, high-memory data, and
 descriptor accessed bits. This is evidence for that bootstrap only; it makes
 no timing, gate, task, privilege, or broader protected-mode compatibility
 claim.
+
+`scripts/compare-pcjs-protected286-isa.mjs` independently runs a bounded guest
+with an arithmetic loop, 16-bit ModR/M high-memory read-modify-write, near
+call/return stack traffic, and halt against the same exact PCjs revision. It
+compares the resulting registers, defined flags, selectors, IP, stack balance,
+and high-memory result. The receipt is evidence for that program and opcode
+subset only; instruction timing remains ungraded.

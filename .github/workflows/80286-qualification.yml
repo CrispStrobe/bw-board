@@ -2,7 +2,7 @@ name: 80286 qualification
 
 on:
   push:
-    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt']
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa']
   workflow_dispatch:
     inputs:
       evidence:
@@ -63,6 +63,8 @@ jobs:
             | tee "$RECEIPT_DIR/pcjs-protected286.json"
           node scripts/compare-pcjs-protected286-idt.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286-idt.json"
+          node scripts/compare-pcjs-protected286-isa.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-isa.json"
           for mutation in frame if restart; do
             if IDT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-idt.mjs \
               > "$RECEIPT_DIR/rejected-$mutation.json"; then
@@ -86,6 +88,15 @@ jobs:
         with:
           name: protected286-pcjs-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload the fresh protected ISA PCjs receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: protected286-isa-pcjs-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}/pcjs-protected286-isa.json
           if-no-files-found: error
           retention-days: 30
 
