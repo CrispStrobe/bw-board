@@ -99,12 +99,10 @@ of the general operand-size default. Invalid encodings raise #UD. Protected
 data-register loads admit null selectors with an unusable cache, distinguish
 #GP, #NP, and #SS for the bounded GDT path, and leave LDT and expand-down data
 as explicit valid-but-unsupported paths. The original Intel 80386 manual lists
-8C only as `r/m16`; this executor deterministically preserves a register
-destination's upper word when 66 is present. The available original manual
-does not separately specify that upper-half outcome, while pinned PCjs zeroes
-it. Only the low selector word is treated as architecturally graded evidence;
-the deterministic upper-half policy is not a hardware claim or a PCjs bug
-claim.
+8C as a 16-bit memory write and zero-extends a 32-bit register destination
+when 66 selects 32-bit operand size. That distinction is graded against pinned
+PCjs and fixed samples from the pinned SST386 physical 386EX capture; the
+hardware profile makes no protected-mode or timing claim.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index

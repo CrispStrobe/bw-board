@@ -20,6 +20,10 @@ const PROFILES={
     files:['C1.4','C1.5','C1.7','66C1.4','66C1.5','66C1.7','67C1.4','67C1.5','67C1.7','6766C1.4','6766C1.5','6766C1.7'],
     scope:'36 fixed deterministic non-exception immediate SHL/SHR/SAR samples across operand/address-size forms',
   },
+  'segment-mov':{
+    files:['8C','668C'],
+    scope:'6 fixed deterministic MOV from segment-register samples covering 16-bit and zero-extended 32-bit register destinations',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

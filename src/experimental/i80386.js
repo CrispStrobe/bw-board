@@ -1494,7 +1494,12 @@ export class ExperimentalI80386 {
         ids = [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS];
       if (ea.reg > 5 || (op === 0x8e && ea.reg === 1))
         throw new I80386Fault(6, null, "invalid MOV segment register");
-      if (op === 0x8c) this._operandWrite(ea, 16, this._segValue(ids[ea.reg]));
+      if (op === 0x8c)
+        this._operandWrite(
+          ea,
+          ea.isReg ? width : 16,
+          this._segValue(ids[ea.reg]),
+        );
       else {
         this._loadSeg(ids[ea.reg], this._operandRead(ea, 16));
         if (ea.reg === 2) {

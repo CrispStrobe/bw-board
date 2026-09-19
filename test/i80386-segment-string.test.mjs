@@ -29,7 +29,7 @@ function descriptor(base, access, flags = 0x40) {
   ].map((value) => value & 0xff);
 }
 
-test("MOV from segment register keeps the bounded 8C upper-word policy", () => {
+test("MOV from segment register zero-extends 32-bit registers but writes 16-bit memory", () => {
   const { cpu, writes } = fixture([
     0x66, 0x8c, 0xd8,
     0x8c, 0x26, 0x00, 0x01,
@@ -41,7 +41,7 @@ test("MOV from segment register keeps the bounded 8C upper-word policy", () => {
   cpu.fs = 0x5678;
   cpu.gs = 0x9abc;
   cpu.step();
-  assert.equal(cpu.eax, 0xaaaa1234);
+  assert.equal(cpu.eax, 0x1234);
   cpu.step();
   assert.deepEqual(writes.slice(-2), [[0x100, 0x78], [0x101, 0x56]]);
   cpu.step();
