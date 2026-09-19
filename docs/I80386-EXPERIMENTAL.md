@@ -161,6 +161,11 @@ three operand widths. Counts are masked to five bits, then reduced by the data
 width for ROL/ROR or the carry-ring width for 8/16-bit RCL/RCR. A zero effective
 count preserves flags; rotates update CF and define OF only for a count of one,
 while preserving SF/ZF/PF. Memory forms establish write intent before reads.
+The broad pinned profile is deliberately limited to 36 count-one physical
+386EX samples, where OF is defined. A separate exact two-case profile grades
+count-eight ROL/ROR carry output under the capture's published mask, which
+excludes undefined OF; variable counts are otherwise covered by manual-derived
+owned tests rather than described as hardware-qualified.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index

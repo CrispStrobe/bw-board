@@ -60,6 +60,21 @@ test("rotate counts reduce by width or carry-ring width at 8/16/32 bits", () => 
   assert.equal(cpu.eflags & CF, 0);
 });
 
+test("a nonzero full ROL/ROR circle updates carry while leaving OF undefined", () => {
+  for (const item of [
+    { extension: 0, value: 0x80 },
+    { extension: 1, value: 0x01 },
+  ]) {
+    const { cpu } = cpuFor([0xc0, 0xc0 | (item.extension << 3), 8]);
+    cpu.al = item.value;
+    cpu.eflags = 2 | CF | OF | PF;
+    cpu.step();
+    assert.equal(cpu.al, item.value);
+    assert.equal(cpu.eflags & CF, 0);
+    assert.equal(cpu.eflags & (OF | PF), OF | PF);
+  }
+});
+
 test("rotate memory forms establish write intent before operand reads", () => {
   const reads = [];
   const { cpu } = cpuFor([0xd0, 0x16, 0x00, 0x01], reads);

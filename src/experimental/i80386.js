@@ -1284,9 +1284,16 @@ export class ExperimentalI80386 {
     const sign = width === 32 ? 0x80000000 : width === 16 ? 0x8000 : 0x80;
     const original = value & mask;
     if (operation <= 3) {
+      const maskedCount = count;
       if (operation <= 1) count %= width;
       else if (width < 32) count %= width + 1;
-      if (count === 0) return width === 32 ? original >>> 0 : original;
+      if (count === 0) {
+        if (operation === 0)
+          this.eflags = (this.eflags & ~CF) | (original & 1 ? CF : 0);
+        else if (operation === 1)
+          this.eflags = (this.eflags & ~CF) | (original & sign ? CF : 0);
+        return width === 32 ? original >>> 0 : original;
+      }
       let result = original;
       let carry = this.eflags & CF ? 1 : 0;
       for (let index = 0; index < count; index++) {
@@ -1307,7 +1314,7 @@ export class ExperimentalI80386 {
         }
       }
       this.eflags = (this.eflags & ~CF) | (carry ? CF : 0);
-      if (count === 1) {
+      if (maskedCount === 1) {
         this.eflags &= ~OF;
         const overflow =
           operation === 1 || operation === 3

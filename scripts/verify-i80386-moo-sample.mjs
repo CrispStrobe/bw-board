@@ -55,6 +55,11 @@ const PROFILES={
     files:['D0.0','D0.1','D0.2','D0.3','D1.0','D1.1','D1.2','D1.3','66D1.0','66D1.1','66D1.2','66D1.3'],
     scope:'36 fixed deterministic count-one ROL/ROR/RCL/RCR samples spanning byte, word, and dword forms',
   },
+  'rotate-full-circle':{
+    files:['C0.0','C0.1'],
+    samples:{'C0.0':[66],'C0.1':[67]},
+    scope:'two exact physical ROL/ROR byte count-eight cases grading defined CF while the published mask excludes undefined OF',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
@@ -78,7 +83,7 @@ const localSourceHashes=Object.fromEntries(localSources.map(path=>[path,sha256(r
 const revocationBytes=readFileSync(resolve(root,'revocation_list.txt'));
 const revoked=new Set(revocationBytes.toString('utf8').split(/\s+/).filter(Boolean));
 const mutation=process.env.I386_MOO_MUTATION??null;
-if(mutation!==null&&mutation!=='ram'&&mutation!=='stray-write')throw new Error(`unknown I386_MOO_MUTATION ${mutation}`);
+if(mutation!==null&&mutation!=='ram'&&mutation!=='stray-write'&&mutation!=='carry')throw new Error(`unknown I386_MOO_MUTATION ${mutation}`);
 const segmentFields=[[SEG_CS,'cs'],[SEG_DS,'ds'],[SEG_ES,'es'],[SEG_FS,'fs'],[SEG_GS,'gs'],[SEG_SS,'ss']];
 const modeledFinal=new Set(['cr0','eax','ebx','ecx','edx','esi','edi','ebp','esp','cs','ds','es','fs','gs','ss','eip','eflags']);
 
@@ -96,6 +101,7 @@ function execute(test,globalMasks,mutate) {
   cpu.eip=initial.eip>>>0;cpu.eflags=initial.eflags>>>0;cpu.cr0=initial.cr0>>>0;
   for(const[id,name]of segmentFields){cpu[name]=initial[name]&0xffff;cpu.segmentCaches[id]={base:(cpu[name]<<4)>>>0,limit:0xffff,default32:false,present:true,code:id===SEG_CS,writable:id!==SEG_CS};}
   cpu.step();cpu.step();if(!cpu.halted)throw new Error('published trailing HLT did not complete');
+  if(mutate==='carry')cpu.eflags^=1;
   if(mutate==='stray-write')cpu.write(0x00f00000,0x5a);
   const actual={cr0:cpu.cr0,eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,ebp:cpu.ebp,esp:cpu.esp,cs:cpu.cs,ds:cpu.ds,es:cpu.es,fs:cpu.fs,gs:cpu.gs,ss:cpu.ss,eip:cpu.eip,eflags:cpu.eflags};
   const differences=[],masks={...globalMasks,...test.final.masks};
@@ -115,7 +121,11 @@ const results=[];let admitted=0,unsupported=0,revokedCount=0,exceptionExcluded=0
 for(const name of FILES){
   const path=resolve(root,`v1_ex_real_mode/${name}.MOO.gz`),moo=readMoo386(path);
   const eligible=moo.tests.filter(test=>{if(revoked.has(test.hash)){revokedCount++;return false;}if(test.exception){exceptionExcluded++;return false;}if(profile.excludedPrefixes?.includes(test.bytes[0])){profileExcluded++;return false;}return true;});
-  const selected=[eligible[0],eligible[Math.floor(eligible.length/2)],eligible.at(-1)],cases=[];
+  const selected=profile.samples?.[name]
+    ? profile.samples[name].map(index=>eligible.find(test=>test.index===index))
+    : [eligible[0],eligible[Math.floor(eligible.length/2)],eligible.at(-1)];
+  if(selected.some(test=>!test))throw new Error(`profile selects unavailable ${name} case`);
+  const cases=[];
   for(const test of selected){let differences;try{differences=execute(test,moo.masks,admitted===0?mutation:null);}catch(error){unsupported++;differences=[{field:'execution',actual:error.message}];}admitted++;cases.push({index:test.index,hash:test.hash,status:differences.length?'fail':'pass',differences});}
   results.push({file:`${name}.MOO.gz`,sha256:sha256(moo.compressed),publishedTests:moo.tests.length,sampled:cases});
 }
