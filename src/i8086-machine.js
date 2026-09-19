@@ -514,6 +514,27 @@ export const BLINK8086 = Object.freeze({
  */
 export const BLINK80286 = Object.freeze({ ...BLINK8086, variant: '80286' });
 
+/**
+ * A game controller board for the 80286: an 8255 for DIGITAL input (a d-pad and
+ * buttons land on port C bits — the same widget->pin path the switches use) and
+ * an ADC0809 for ANALOG sticks (each axis is a channel; a widget's position
+ * becomes a voltage via axisToVolts, which the converter reports as 0..255 at
+ * port 300h+n). So digital and analog sticks reach the 286 through real parts a
+ * learner can see, and the controller-panel widgets drive them.
+ */
+export const GAMEPAD80286 = Object.freeze({
+    clockHz: 4_772_727,
+    variant: '80286',
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },                  // digital: d-pad/buttons on port C
+        { kind: 'adc0809', name: 'adc1', at: 0x300, vref: 5 },    // analog: stick axes on channels 0..7
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
