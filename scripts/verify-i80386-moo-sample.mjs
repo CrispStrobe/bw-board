@@ -22,11 +22,15 @@ const segmentFields=[[SEG_CS,'cs'],[SEG_DS,'ds'],[SEG_ES,'es'],[SEG_FS,'fs'],[SE
 const modeledFinal=new Set(['cr0','eax','ebx','ecx','edx','esi','edi','ebp','esp','cs','ds','es','fs','gs','ss','eip','eflags']);
 
 function execute(test,globalMasks,mutate) {
+  if(test.exception)throw new Error('sample requires exception delivery');
   if(test.bytes.at(-1)!==0xf4)throw new Error('published BYTS lacks trailing HLT');
   const initialMemory=new Map(test.initial.ram),memory=new Map(initialMemory),writes=[];
   const cpu=new I80386({read:a=>memory.get(a)??0,fetch:a=>memory.get(a)??0,write:(a,v)=>{writes.push([a>>>0,v&255]);memory.set(a>>>0,v&255);}});
   const initial=test.initial.regs;
   if(initial.cr0&0x80000001)throw new Error('sample requires paging or protected mode');
+  const codeBase=((initial.cs&0xffff)<<4)>>>0;
+  for(let index=0;index<test.bytes.length;index++)if(memory.get((codeBase+initial.eip+index)>>>0)!==test.bytes[index])
+    throw new Error('BYTS does not match initial code RAM');
   for(const name of ['eax','ebx','ecx','edx','esi','edi','ebp','esp'])cpu[name]=initial[name]>>>0;
   cpu.eip=initial.eip>>>0;cpu.eflags=initial.eflags>>>0;cpu.cr0=initial.cr0>>>0;
   for(const[id,name]of segmentFields){cpu[name]=initial[name]&0xffff;cpu.segmentCaches[id]={base:(cpu[name]<<4)>>>0,limit:0xffff,default32:false,present:true,code:id===SEG_CS,writable:id!==SEG_CS};}
@@ -58,7 +62,7 @@ verifyPin();
 const failures=results.flatMap(result=>result.sampled.filter(sample=>sample.status==='fail').map(sample=>({file:result.file,...sample})));
 const localSources=['./verify-i80386-moo-sample.mjs','./lib/moo386-v1.mjs','../src/experimental/i80386.js'];
 console.log(JSON.stringify({source:'SingleStepTests/80386 physical 386EX captures',revision:PIN,formatRevision:FORMAT_PIN,node:process.version,
-  scope:'12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, exact writes, and RAM under published masks; no cycle/timing or protected-mode claim',
+  scope:'12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim',
   sourceHashes:Object.fromEntries(localSources.map(path=>[path,sha256(readFileSync(new URL(path,import.meta.url)))])),revocationSha256:sha256(revocationBytes),mutation,
   accounting:{files:FILES.length,admitted,unsupported,revoked:revokedCount,failures:failures.length},results,failures},null,2));
 process.exitCode=failures.length?1:0;

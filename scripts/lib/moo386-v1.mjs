@@ -61,8 +61,6 @@ function readState(buffer,chunk,{initial}) {
   const regs=readRegisters(buffer,one(chunks,'RG32',{required:true}));
   const maskChunk=one(chunks,'RM32');
   const ramChunk=one(chunks,'RAM ',{required:true});
-  const allowed=new Set(['RG32','RM32','RAM ','QUEU','EA32']);
-  for(const child of chunks)if(!allowed.has(child.tag))throw new Error(`unsupported state chunk ${child.tag}`);
   one(chunks,'QUEU');one(chunks,'EA32');
   if(initial)for(const name of REGISTERS386)if(!(name in regs))throw new Error(`initial state lacks ${name}`);
   return{regs,masks:maskChunk?readRegisters(buffer,maskChunk):{},ram:readRam(buffer,ramChunk)};
@@ -75,14 +73,12 @@ function readTest(buffer,chunk) {
   const initialChunk=one(chunks,'INIT',{required:true});
   const finalChunk=one(chunks,'FINA',{required:true});
   const hashChunk=one(chunks,'HASH',{required:true});
-  const allowed=new Set(['GMET','NAME','BYTS','INIT','FINA','CYCL','HASH','EXCP','IDX ']);
-  for(const child of chunks)if(!allowed.has(child.tag))throw new Error(`unsupported TEST chunk ${child.tag}`);
   for(const tag of ['GMET','NAME','CYCL','EXCP','IDX '])one(chunks,tag);
   if(bytesChunk.length<4)throw new Error('BYTS is too short');
   const count=readU32(buffer,bytesChunk.data);
   if(count+4!==bytesChunk.length||count===0||count>15)throw new Error('invalid BYTS count');
   if(hashChunk.length!==20)throw new Error('HASH must be a 20-byte published identifier');
-  return{index,bytes:[...buffer.subarray(bytesChunk.data+4,bytesChunk.end)],
+  return{index,bytes:[...buffer.subarray(bytesChunk.data+4,bytesChunk.end)],exception:!!one(chunks,'EXCP'),
     initial:readState(buffer,initialChunk,{initial:true}),final:readState(buffer,finalChunk,{initial:false}),
     hash:buffer.subarray(hashChunk.data,hashChunk.end).toString('hex')};
 }
@@ -96,7 +92,6 @@ export function readMoo386(path) {
   const declaredCount=readU32(buffer,headerStart+4),cpu=buffer.toString('ascii',headerStart+8,headerStart+12);
   if(major!==1||minor!==1||cpu!=='386E')throw new Error(`unsupported MOO ${major}.${minor} ${cpu}`);
   const chunks=readChunks(buffer,headerStart+headerLength,buffer.length);
-  for(const chunk of chunks)if(!['META','RM32','TEST'].includes(chunk.tag))throw new Error(`unsupported top-level chunk ${chunk.tag}`);
   one(chunks,'META',{required:true});
   const maskChunk=one(chunks,'RM32');
   const tests=chunks.filter(chunk=>chunk.tag==='TEST').map(chunk=>readTest(buffer,chunk));
