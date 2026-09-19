@@ -1,182 +1,95 @@
-# Code tab → language → toolchain → machine (the lite GUI integration spec)
+# Code tab: language → toolchain → machine, and how it relates to the existing paths
 
-This is the exact, actionable spec for wiring **lite's Code tab** (the React
-`CircuitDesigner`) to the engine's modular execution path, so a student can pick
-a **language**, a **compiler/interpreter**, and a **machine flavor**, press Run,
-and watch their program execute on an x86 in the browser.
+The engine now has a modular text-source execution path for **asm, BASIC and C**
+on **8086 / 80186 / 80286** (`scripts/toolchains.mjs`, `scripts/basic.mjs`,
+`scripts/cc.mjs`, `src/i8086-asm.js`, `scripts/run-dos.mjs`). This document says
+**how those relate to the block/text paths that already exist in lite** — so the
+new work converges with them rather than forking — and specifies the one real GUI
+gap that remains.
 
-The CLI half is **done and landed** in this engine (`scripts/toolchains.mjs`,
-`scripts/basic.mjs`, `scripts/cc.mjs`, `src/i8086-asm.js`, `scripts/run-dos.mjs`);
-the user's rule was *"first they must work in CLI, then in GUI."* This document
-is the GUI half. It changes **lite only** — no further engine change is required
-beyond the browser-safe surface already added here
-(`codeTabMenu`, `starterTemplate`, `detectLanguage`, `buildArtifact`, `FLAVORS`).
+## The existing architecture (lite = the scratch-gui fork)
 
-## 1. The contract the engine already exposes
+lite already has a text/code tab AND a blocks environment. The real code tab is
+`packages/scratch-gui/src/components/tw-pseudocode/pseudocode-importer.jsx`
+(languages: pseudocode, python, javascript, **c, basic, asm**, micropython;
+two-way with blocks for pseudocode/python/js/c/basic). What it does today, per
+language, on the i8086 device:
 
-lite consumes bw-board as a git-sha dependency. Import from `scripts/toolchains.mjs`:
+| Lang | Existing lite path | Where | Runs on 8086? |
+|------|--------------------|-------|---------------|
+| **asm** | text → `requestAssembly` → `src/i8086-asm.js` `assemble()` → `.COM` → `createI8086DosBench` | `bw-asm/assemble-route.js` | **Yes** |
+| **C** | blocks→C (`generateC`) / text → `requestCBuild` → **SmallerC-WASM** → NASM → `assemble()` → `.COM` → bench | `bw-asm/assemble-route.js` `compileC8086`, `lib/smallerc-wasm/` | **Yes (browser-only)** |
+| **BASIC** | text/blocks → `runBasic()` → a **6502 or Z80 ROM interpreter** (MS BASIC / BBC BASIC) | `pseudocode-importer.jsx` `runBasic()` | **No — 6502/Z80 only** |
 
-```js
-import {
-  codeTabMenu,      // the whole menu: languages × toolchains × machine flavors
-  detectLanguage,   // 'prog.bas' -> 'bas'
-  starterTemplate,  // a runnable skeleton per toolchain (editor preload)
-  buildArtifact,    // browser-safe: source TEXT -> { bytes, run } (native only)
-} from 'bw-board/scripts/toolchains.mjs';
-```
+All three x86 routes boot the same runtime: `createI8086DosBench({bytes, format,
+variant, keys, onChar, onExit})` in `bw-debug/i8086-dos-bench.js`, which runs the
+`.COM` on the vendored `bw-board` `I8086Machine` + `createDos8086` DOS layer.
 
-`codeTabMenu({ available })` returns exactly:
+## How the new engine scripts relate
 
-```jsonc
-{
-  "languages": [
-    { "id": "asm", "label": "Assembly", "ext": ["asm","s"],
-      "toolchains": [ { "id": "nasm-native", "label": "Built-in assembler …",
-                        "kind": "native", "starter": "\tmov dx, offset msg\n…" } ] },
-    { "id": "bas", "label": "BASIC", "ext": ["bas"],
-      "toolchains": [ { "id": "basic-native", …, "kind": "native", "starter": "10 PRINT …" } ] },
-    { "id": "c",   "label": "C", "ext": ["c"],
-      "toolchains": [ { "id": "cc-native", …, "kind": "native", "starter": "#include …" } ] }
-  ],
-  "flavors": [
-    { "id": "8086",     "label": "8086",                      "variant": "8086",  "preset": "at" },
-    { "id": "8088-pc",  "label": "IBM PC/XT (8088-class)",    "variant": "8086",  "preset": "xt" },
-    { "id": "80186",    "label": "80186",                     "variant": "80186", "preset": "at" },
-    { "id": "80286-at", "label": "PC/AT (80286 real mode)",   "variant": "80286", "preset": "at" }
-  ],
-  "defaultFlavor": "80286-at"
-}
-```
+- **asm** — `nasm-native` just wraps the same `src/i8086-asm.js` `assemble()` lite
+  already uses. No duplication; it is the CLI face of the existing assembler.
+- **C** — `cc-native` (`scripts/cc.mjs`) is a **pure-Node, zero-dependency**
+  integer-C→asm compiler. It does **not** duplicate lite's C route: that route is
+  **SmallerC-WASM and browser-only** (a lazy WASM `import()`, no Node entry).
+  `cc-native` complements it as a CI/CLI-runnable fallback; the real DOS `tcc`
+  toolchain covers full C when its binary is present. **In the GUI, C should keep
+  using SmallerC** — `cc-native` is a CLI/CI convenience, not a GUI replacement.
+- **BASIC** — `basic-native` (`scripts/basic.mjs`) is the **only BASIC→x86
+  compiler in any of these repos**. lite's `generateBASIC`/`runBasic` only ever
+  targets 6502/Z80 ROMs. This is a genuine gap-filler, not a duplicate: it is the
+  first way to run BASIC on the 8086/80186/80286.
 
-**Availability filtering.** In the browser there are no MS-DOS binaries, so pass
-`available: new Set()`. The menu then offers **only the native toolchains**
-(built-in assembler, BASIC, C) — which are pure JavaScript and run in the
-browser. The DOS toolchains (MASM, GW-BASIC, Turbo C) never appear in the GUI;
-they light up only in the CLI when their binaries are present. This is why the
-availability set is the single switch that keeps the GUI honest: it can only ever
-offer what it can actually run.
+The CLI code-tab surface is `scripts/toolchains.mjs` (`codeTabMenu`,
+`listToolchains`, `runToolchain`, `buildArtifact`, `FLAVORS`). It is the Node/CLI
+counterpart of lite's `assemble-route.js` routing — a parallel backend, not an
+import of the browser one.
 
-## 2. The three dropdowns
+## Verification (done)
 
-The Code tab today is a single ASM editor with an *Assemble & Run* button (see
-the hint at `CircuitDesigner.jsx`, *"…or write ASM in the Code tab and Assemble &
-Run"*). Replace that with three selects driven entirely by `codeTabMenu`:
+Both the CLI and the **real GUI bench** were exercised (2026-09-19):
 
-```jsx
-const menu = useMemo(() => codeTabMenu({ available: new Set() }), []);
-const [langId, setLangId]   = useState('bas');            // Language
-const [tcId,   setTcId]     = useState('basic-native');   // Compiler/Interpreter
-const [flavor, setFlavor]   = useState(menu.defaultFlavor);// Machine
-const [source, setSource]   = useState(starterTemplate('basic-native'));
+- **CLI** (`node scripts/toolchains.mjs run …`): BASIC `sum of squares 1..5 = 55`,
+  C `6! = 720`, asm, all on 8086/80186/80286; the real MASM→LINK→EXE2BIN→run DOS
+  chain green with the licensed binaries.
+- **GUI runtime** (`basicToAsm`/`cToAsm` → the **vendored** `i8086-asm.js` →
+  `createI8086DosBench`, i.e. the exact browser bench, driven in Node): BASIC
+  `sum =55` and C `6! = 720` on **8086 and 80186**; BASIC `INPUT` read a key from
+  the bench queue and printed the result. **80286 is blocked in the GUI** —
+  see the vendor-lag note below.
 
-const lang = menu.languages.find((l) => l.id === langId);
+## The remaining GUI gap (a lite change, specified)
 
-// Language → reset toolchain to the language's first, and preload its starter.
-function pickLanguage(id) {
-  const l = menu.languages.find((x) => x.id === id);
-  setLangId(id);
-  setTcId(l.toolchains[0].id);
-  setSource(starterTemplate(l.toolchains[0].id));
-}
-// Compiler → preload that toolchain's starter (only if the editor is untouched
-// or the user confirms; keep their code otherwise).
-function pickToolchain(id) { setTcId(id); if (isPristine) setSource(starterTemplate(id)); }
-```
+To let a learner type BASIC, pick the 8086, and Run — mirroring the C tab exactly:
 
-- **Language** `<select>` ← `menu.languages` (`{id,label}`).
-- **Compiler / Interpreter** `<select>` ← `lang.toolchains` (`{id,label}`); this
-  is the "masm/nasm/gwbasic/qbasic" picker the user asked for, filtered to what
-  runs.
-- **Machine** `<select>` ← `menu.flavors` (`{id,label}`), default
-  `menu.defaultFlavor`; this is the "flavor of chip" picker (8086 / 80186 /
-  80286).
+1. **Vendor** `scripts/basic.mjs` into lite at
+   `packages/scratch-gui/src/lib/bw-board/basic-to-asm.js` (a `src/lib` vendored
+   tree — the change originates here in bw-board and is copied down, like the
+   other `bw-board/*` files).
+2. **Add** `requestBasicBuild({source, device})` to `bw-asm/assemble-route.js`,
+   parallel to `requestCBuild`: `basicToAsm(source)` → `assemble(asm, {format:
+   'com', variant})` → `{bytes, slotId:'com', profile:'dos', format:'com',
+   target:'8086'}`.
+3. **Branch** the importer's BASIC handling: when the device is i8086, call
+   `requestBasicBuild` and dispatch `bw-asm-rom-ready` (the C/asm tab pattern),
+   instead of `runBasic()`'s 6502/Z80 ROM path. Keep `runBasic()` for the 6502/Z80
+   profiles unchanged.
+4. **Machine dropdown**: `createI8086DosBench` already accepts `variant`; pass the
+   chosen flavor through the `bw-asm-rom-ready` detail so 8086/80186/80286 select
+   the chip (the C/asm tabs can share this).
 
-The editor preloads `starterTemplate(tcId)` so a freshly-picked toolchain already
-runs. Each language's file extension (`lang.ext`) drives `detectLanguage` when a
-file is dropped onto the tab, so opening `game.bas` selects BASIC automatically.
+### Vendor-lag blocker (must fix for 80286 in the GUI)
 
-## 3. The Run button (browser path)
+lite's **vendored `src/lib/bw-board/i8086-asm.js` is stale**: it accepts only
+`variant: '8086' | '80186'` and throws `unknown variant "80286"`. The engine
+assembler supports 80286 (the SST286 work). So the GUI is limited to 8086/80186
+until lite **re-vendors** the current `i8086-asm.js` (and `i8086-machine.js`,
+which the bench already threads `variant` into). This is the ordinary
+"vendored trees go upstream / a pin bump moves several surfaces" discipline —
+the engine is the source of truth; lite must pull the newer copy.
 
-Native toolchains build **in the browser** with no filesystem: `buildArtifact`
-turns the editor text into machine-code bytes, and the existing machine loader
-runs them on the selected flavor. Reuse the `bw-machine-media-load` CustomEvent
-the i8086 Machine Loader already listens to — just add `variant`/`preset` from
-the chosen flavor:
+## Scope
 
-```jsx
-function assembleAndRun() {
-  const f = menu.flavors.find((x) => x.id === flavor);
-  let bytes, run;
-  try { ({ bytes, run } = buildArtifact(tcId, source)); }
-  catch (e) { setBuildError(e.message); return; }         // show the compiler error inline
-  setBuildError(null);
-  window.dispatchEvent(new CustomEvent('bw-machine-media-load', {
-    detail: {
-      slotId: run,            // 'com' (all native toolchains today)
-      bytes,                  // Uint8Array from buildArtifact
-      kind: 'i8086',
-      variant: f.variant,     // NEW: 8086 | 80186 | 80286  → the DOS runner
-      profile: 'dos',         // the chipless DOS bench (as the ASM tab already sends)
-      name: `code.${lang.ext[0]}`,
-    },
-  }));
-}
-```
-
-**One machine-side change in lite:** the `bw-machine-media-load` handler that
-boots the DOS profile must read `detail.variant` and construct the machine with
-it — `new I8086Machine({ ...PRESETS[preset], variant })` — instead of always
-defaulting to 8086. (The engine already threads `config.variant` into the core;
-`runImage(bytes, run, { variant, preset })` is the exact reference
-implementation in `scripts/run-dos.mjs`.) With that, the Machine dropdown truly
-selects the chip.
-
-Program output (`INT 21h` writes) and the B800 text screen already surface in
-lite's Serial/Display widgets via the DOS layer's `onChar`; no extra wiring.
-
-### Input (BASIC `INPUT`, INT 21h keyboard)
-
-`buildArtifact` produces a program that may read the keyboard (BASIC `INPUT`, a C
-`getchar`). The DOS runner drinks keystrokes from its `keys` queue; lite should
-route the console widget's typed characters into the same queue (the engine's
-`createDos8086(machine, { keys })` and `runImage(…, { keys })` show the shape —
-a string or byte array). For a first cut, a one-line prompt that pre-feeds a
-`keys` string is enough; live typing is the same queue fed incrementally.
-
-## 4. Glass-box (optional, high value)
-
-lite already has `AsmDebugPanel` (token stream / symbol table / listing). The
-built-in assembler `assemble(src, { format:'com' })` returns
-`{ bytes, symbols, … }`; BASIC and C expose their generated asm
-(`basicToAsm(src)`, `cToAsm(src)`) — feeding that asm back through `assemble`
-lights up the *same* glass-box for BASIC and C, so a student sees their BASIC
-`FOR` loop become real 8086 instructions. This is the pedagogical payoff of
-compiling-to-asm rather than interpreting.
-
-## 5. What each toolchain is, in the GUI
-
-| Language | GUI toolchain (native, in-browser) | Covers |
-|----------|-----------------------------------|--------|
-| Assembly | `nasm-native` (built-in assembler) | full MASM-dialect real-mode asm |
-| BASIC    | `basic-native` | integer variables, expressions, `PRINT`, `INPUT`, `IF/THEN`, `GOTO`, `FOR/NEXT`, `REM` |
-| C        | `cc-native` | int variables, `+ - * / %`, comparisons, `&& \|\|`, `if/else`, `while`, `for`, `printf("%d/%c")`, `puts`, `return` |
-
-All three run on **8086, 80186, and 80286** (the Machine dropdown). The DOS
-toolchains (MASM, GW-BASIC, Turbo C) are **CLI-only** and out of the browser's
-reach by design — the availability filter hides them.
-
-## 6. Acceptance checklist (lite side)
-
-1. Three dropdowns render from `codeTabMenu({ available: new Set() })`; defaults
-   are BASIC / `basic-native` / `80286-at`.
-2. Picking a language switches the compiler list and preloads its starter.
-3. Run builds via `buildArtifact(tcId, source)` and dispatches
-   `bw-machine-media-load` with the flavor's `variant`.
-4. The DOS-profile machine handler honors `detail.variant`.
-5. A compile error (`buildArtifact` throws) shows inline, not as a crash.
-6. Switching the Machine dropdown to 8086 vs 80286 and running a 286-only
-   program shows the difference (e.g. `PUSH imm`, `SHL r,imm`).
-7. Output appears in the console widget; `INPUT` reads from it.
-
-Everything above is additive to lite and needs no new engine work beyond the
-browser-safe surface already exported here.
+Steps 1–4 and the vendor bump are **lite (scratch-gui) work**, governed by lite's
+own landing checklist; the engine side (the compilers, the CLI registry, the
+browser-safe `buildArtifact`, and this spec) is complete and verified here.

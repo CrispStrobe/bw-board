@@ -76,7 +76,7 @@ export const TOOLCHAINS = Object.freeze([
     // present in the DOS bin dir. The registry is the extension point — adding a
     // language/tool is one entry here.
     { id: 'basic-native', language: 'bas', kind: 'native', tools: [],
-      label: 'Built-in BASIC (PRINT subset -> asm) — no interpreter needed',
+      label: 'Built-in BASIC (integer: vars, FOR/IF/GOTO, INPUT, PRINT -> asm) — no interpreter needed',
       build: (src) => assemble(basicToAsm(src), { format: 'com' }).bytes, run: 'com' },
 
     { id: 'gwbasic', language: 'bas', kind: 'dos', tools: ['GWBASIC.EXE'],
@@ -84,7 +84,7 @@ export const TOOLCHAINS = Object.freeze([
     { id: 'qbasic', language: 'bas', kind: 'dos', tools: ['QBASIC.EXE'],
       label: 'QBasic', interpret: 'QBASIC.EXE', ext: 'BAS', run: 'via-tool' },
     { id: 'cc-native', language: 'c', kind: 'native', tools: [],
-      label: 'Built-in C (printf/puts subset -> asm) — no compiler needed',
+      label: 'Built-in C (integer: vars, if/while/for, printf %d/%c -> asm) — no compiler needed',
       build: (src) => assemble(cToAsm(src), { format: 'com' }).bytes, run: 'com' },
 
     { id: 'tcc', language: 'c', kind: 'dos', tools: ['TCC.EXE'],

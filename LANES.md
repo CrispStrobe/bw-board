@@ -53,11 +53,18 @@ segment-selector admission and scalar strings. 90 fixed hardware samples pass;
 resolved 66/8C upper-word behavior with 386EX capture and fixed selector null/TI
 and conforming-read checks. PCjs bootstrap/fault/paging/group3 comparisons pass
 with rejecting mutations and the recorded saved-RF oracle limitation. Focused
-CPU/acceptance tests 46/46, DOS toolchain 7/7 and platform/acceptance 11/11 pass.
+CPU/acceptance tests 48/48, DOS toolchain 7/7 and platform/acceptance 11/11 pass.
 Unchanged external test386 reaches POST00..04, then explicitly refuses REP;
 `fullRomPass:false`. REP continuation stays outside this freeze. Latest upstream
 MOS changes are preserved. Hosted exact-head CI/CPU/native qualification gates
 landing. No full 386DX, Windows, Doom, complete peripherals or timing claim.
+Pre-landing audit superseded candidate `a59f7a0`: LGDT/LIDT bypassed the
+execute-only source-segment read check. The exact old LGDT counterexample
+performed six forbidden reads; fixed source `bf3fea0` raises #GP(0) before
+all operand reads and preserves GDTR. A crossing-page regression checks
+ascending operand reads and CR2. Queued runs `35470133473`, `35470133428`,
+and `35470133415` were canceled as superseded, not counted as passes.
+The corrected candidate refreshes all bounded 386 receipts and qualifications.
 
 2026-09-19 DONE (qualified; landed at `28911b2`) — Astra/Sol bounded 386
 and AT keyboard POST milestone; exact candidate is the commit carrying this row.

@@ -1,6 +1,6 @@
 {
   "schema": "astra.386-bounded-evidence.v2",
-  "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+  "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
   "scope": "owned 386 bootstrap, same-ring faults, paging and group3 comparisons plus 90 admitted real-mode 386EX samples; no full CPU or OS compatibility",
   "pcjsBootstrap": {
     "oracle": "PCjs",
@@ -9,7 +9,7 @@
     "scope": "owned flat ring-0 32-bit bootstrap, SIB store, arithmetic loop, stack, near CALL/RET and HLT; no timing, paging, privilege, exception, or broad ISA claim",
     "sourceHashes": {
       "./compare-pcjs-protected386.mjs": "2c7b746b97e7157a19f33cbcf47d8a9ee0a75e0c9efe9fee23bf1184c91ea5df",
-      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
     },
     "mutation": null,
     "status": "pass",
@@ -46,7 +46,7 @@
   "pcjsFaults": {
     "oracle": "PCjs",
     "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
     "node": "v22.23.2",
     "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
     "knownOracleLimitations": {
@@ -59,7 +59,7 @@
     },
     "sourceHashes": {
       "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
-      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
     },
     "mutation": null,
     "status": "pass",
@@ -208,7 +208,7 @@
   "pcjsPaging": {
     "oracle": "PCjs",
     "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
     "node": "v22.23.2",
     "scope": "owned ring-0 4KiB paging guest: CR3 remap, reads, delivered #PF/CR2/frame; no timing/TLB claim",
     "knownOracleLimitations": {
@@ -221,7 +221,7 @@
     },
     "sourceHashes": {
       "./compare-pcjs-protected386-paging.mjs": "4621e8b90f5c40663d9cbc1438c07aa7ff873816a052daad0d5005c986591016",
-      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
     },
     "mutation": null,
     "status": "pass",
@@ -256,11 +256,11 @@
   "pcjsGroup3": {
     "oracle": "PCjs",
     "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
     "scope": "non-faulting F6/F7 MUL/IMUL/DIV/IDIV/NEG register cases; only architecturally defined flags are graded",
     "sourceHashes": {
       "./compare-pcjs-i80386-group3.mjs": "5790b48fb7414c054c8f72dd48ad2f49000a7c3301c3d21feba0e23dde0c67a9",
-      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
     },
     "mutation": null,
     "status": "pass",
@@ -345,7 +345,7 @@
       "sourceHashes": {
         "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -471,7 +471,7 @@
       "sourceHashes": {
         "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -797,7 +797,7 @@
       "sourceHashes": {
         "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -1123,7 +1123,7 @@
       "sourceHashes": {
         "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": null,
@@ -1198,7 +1198,7 @@
       "scope": "owned flat ring-0 32-bit bootstrap, SIB store, arithmetic loop, stack, near CALL/RET and HLT; no timing, paging, privilege, exception, or broad ISA claim",
       "sourceHashes": {
         "./compare-pcjs-protected386.mjs": "2c7b746b97e7157a19f33cbcf47d8a9ee0a75e0c9efe9fee23bf1184c91ea5df",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "mutation": "result",
       "status": "fail",
@@ -1241,7 +1241,7 @@
     "paging": {
       "oracle": "PCjs",
       "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+      "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
       "node": "v22.23.2",
       "scope": "owned ring-0 4KiB paging guest: CR3 remap, reads, delivered #PF/CR2/frame; no timing/TLB claim",
       "knownOracleLimitations": {
@@ -1254,7 +1254,7 @@
       },
       "sourceHashes": {
         "./compare-pcjs-protected386-paging.mjs": "4621e8b90f5c40663d9cbc1438c07aa7ff873816a052daad0d5005c986591016",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "mutation": "cr2",
       "status": "fail",
@@ -1300,11 +1300,11 @@
     "group3": {
       "oracle": "PCjs",
       "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+      "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
       "scope": "non-faulting F6/F7 MUL/IMUL/DIV/IDIV/NEG register cases; only architecturally defined flags are graded",
       "sourceHashes": {
         "./compare-pcjs-i80386-group3.mjs": "5790b48fb7414c054c8f72dd48ad2f49000a7c3301c3d21feba0e23dde0c67a9",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "mutation": "quotient",
       "status": "fail",
@@ -1395,7 +1395,7 @@
     "frame": {
       "oracle": "PCjs",
       "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+      "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
       "node": "v22.23.2",
       "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
       "knownOracleLimitations": {
@@ -1408,7 +1408,7 @@
       },
       "sourceHashes": {
         "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "mutation": "frame",
       "status": "fail",
@@ -1613,7 +1613,7 @@
     "if": {
       "oracle": "PCjs",
       "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
-      "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+      "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
       "node": "v22.23.2",
       "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
       "knownOracleLimitations": {
@@ -1626,7 +1626,7 @@
       },
       "sourceHashes": {
         "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "mutation": "if",
       "status": "fail",
@@ -1838,7 +1838,7 @@
       "sourceHashes": {
         "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": "ram",
@@ -1984,7 +1984,7 @@
       "sourceHashes": {
         "./verify-i80386-moo-sample.mjs": "1213254814b559c4ac36e75d012b872ee10d1ea0ff17bb1ea41745a0716dc8a9",
         "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
-        "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+        "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
       },
       "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
       "mutation": "stray-write",
@@ -2120,7 +2120,7 @@
     }
   },
   "focusedTests": {
-    "pass": 46,
+    "pass": 48,
     "fail": 0,
     "skip": 0,
     "scope": "386 core/fault/paging/reset/group3/segment and AT acceptance tests"
@@ -2164,7 +2164,7 @@
       "physical": 986285,
       "opcode": 243
     },
-    "executionRevision": "ca9bbb7be1f66aa486ed1250a3760a0f9bdc00b1",
+    "executionRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
     "instructionBudget": 2000000,
     "input": {
       "bytes": 65536,
@@ -2175,7 +2175,48 @@
     },
     "sourceHashes": {
       "./run-i80386-test386-diagnostic.mjs": "ed74d2097c9f1ca9739eb499c172e5c673f063b1dc43071cbaa4fe26abf30095",
-      "../src/experimental/i80386.js": "e0bae7065612e20b8f3412705b3240b3cbed2a37bd4be868a2f2efe7d4da8dbc"
+      "../src/experimental/i80386.js": "170e6635dbacc6dfa7e09433e0df1046c16fcb9f4e98d3a25a78b3777337b4fb"
+    }
+  },
+  "descriptorReadAudit": {
+    "scope": "owned execute-only segment regression, not hardware capture",
+    "oldRevision": "a59f7a0366280aefa1293013b02b78605308648a",
+    "fixedRevision": "bf3fea0152bf7bac00b8c5e5b2e53ccc12b64a9d",
+    "instructionBytes": [
+      46,
+      15,
+      1,
+      22,
+      0,
+      1
+    ],
+    "before": {
+      "fault": null,
+      "reads": [
+        258,
+        259,
+        260,
+        261,
+        256,
+        257
+      ],
+      "eip": 6,
+      "gdtr": {
+        "limit": 0,
+        "base": 0
+      }
+    },
+    "after": {
+      "fault": {
+        "vector": 13,
+        "errorCode": 0
+      },
+      "reads": [],
+      "eip": 0,
+      "gdtr": {
+        "base": 0,
+        "limit": 0
+      }
     }
   }
 }
