@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/ja1umi/80286_programming",
+  "revision": "3ee4c6f1178e71db8926caf999416af7f4e340b3",
+  "license": "MIT",
+  "licenseSha256": "564819554fc6c91d1f59b13a86ef43faf85adef97063c4d8c7ff9c8398205df2",
+  "scope": "Unmodified upstream prebuilt 512-byte boot-sector programs; not rebuilt from source, not a DOS application or full BIOS boot.",
+  "images": [
+    {
+      "file": "hellop.img",
+      "upstreamPath": "hellop/hellop.img",
+      "sha256": "478c94f534e3c1172720616517c40e6e9c248097f319f76d74c93a6b992e483e",
+      "bytes": 512,
+      "assemblySha256": "06b660cf8d460796dcb30dd97be7b8326463cbbc64eb76cd814f9e6952de9757"
+    },
+    {
+      "file": "callgate.img",
+      "upstreamPath": "callgate/callgate.img",
+      "sha256": "474e9ee1d1d8a7b2dee00110e9a77ab6093d5b7a6783e26612caf7a820b84baa",
+      "bytes": 512,
+      "assemblySha256": "113017a317a3ca72684a689878fa0a9715e72db9c551ab74080fb741c39d022d"
+    },
+    {
+      "file": "cgatep.img",
+      "upstreamPath": "cgate_param/cgatep.img",
+      "sha256": "42f647611923358be5628ae27525f3eee440b0427440a124cad18c6c3f549443",
+      "bytes": 512,
+      "assemblySha256": "f494785b59e83bcafa8a5ed281bfe7f7d3b65fdd2db227cbee72bb59e05a1dca"
+    },
+    {
+      "file": "tasksw.img",
+      "upstreamPath": "tasksw/tasksw.img",
+      "sha256": "0d744b95bb559d893ab9c48b2811bf52204afc8e641020103dc686cc4db4d28e",
+      "bytes": 512,
+      "assemblySha256": "96fc9b22bae9247d3370b4306c31311fbf711c3245f0f3ba7782fc09d2869924"
+    },
+    {
+      "file": "taskgate.img",
+      "upstreamPath": "taskgate/taskgate.img",
+      "sha256": "20ae379e490f6dea7f721c205e7e5589bef00dbcd0582802facff9de897fe7ca",
+      "bytes": 512,
+      "assemblySha256": "6a5f9d5f35811c3c722ee35a0a2420f4f473afd002d025a9918e959761999bf6"
+    },
+    {
+      "file": "int4_tgate.img",
+      "upstreamPath": "int4_tgate/int4_tgate.img",
+      "sha256": "60d8bf3841cca706eb5ee6382dfec77cb69d6e38022067199784a4ace0def3d5",
+      "bytes": 512,
+      "assemblySha256": "91e427aaa012871995db0bc491b4e164b26853054806fe04a75bcb913ff6d622"
+    },
+    {
+      "file": "ptr_validn.img",
+      "upstreamPath": "ptr_validn/ptr_validn.img",
+      "sha256": "635606bdba37bb3907cfbab4be00a99b8290990872294b98fce6476d24b30946",
+      "bytes": 512,
+      "assemblySha256": "fa6863a01efe7a19c279e00a7606fc665f2729abd4221cd606203b563de5da97"
+    },
+    {
+      "file": "stakp.img",
+      "upstreamPath": "stakp/stakp.img",
+      "sha256": "c7272704ac2f92f03d99230bacc22ecff95bd5fe1110b2bb2981f4f2fdc458b7",
+      "bytes": 512,
+      "assemblySha256": "1ec2c6c91c5446208e0873a237caaa81c1ba168eaf486ad44522c7fbb677d84c"
+    }
+  ]
+}
