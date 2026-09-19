@@ -222,6 +222,36 @@ export function runChain(opts, hooks = {}) {
     return { ok: true, stem, exe, exeName, obj, bin, binName, ran, stages };
 }
 
+/**
+ * A single-tool DOS compile: `TOOL SRC.<ext>` produces an .EXE/.COM (Turbo C's
+ * `TCC PROG.C`, Microsoft C's `MSC`, …), optionally run in the same invocation.
+ * Unlike runChain (which is the MASM->LINK->EXE2BIN assembler pipeline), the
+ * compiler does its own linking, so this is one stage plus an optional run.
+ * Returns { ok, stem, artifact, artifactName, ran, stages }.
+ */
+export function runCompile(opts, hooks = {}) {
+    const dir = opts.bin || process.env.MSDOS_BIN_DIR;
+    const tool = opts.tool && (opts.tool.includes('/') || opts.tool.includes('\\') ? opts.tool : (dir && join(dir, opts.tool)));
+    if (!tool) throw new Error('run-dos compile needs a compiler binary (pass tool or set MSDOS_BIN_DIR)');
+    const common = { variant: opts.variant || '8086', preset: opts.preset || 'at', max: opts.max || 40_000_000 };
+    const stem = basename(opts.source).replace(/\.[^.]+$/, '').toUpperCase();
+    const ext = (opts.ext || 'C').toUpperCase();
+    const stages = [];
+    const comp = runDos({ ...common, program: tool, args: opts.args ?? `${stem}.${ext}`,
+        files: [`${stem}.${ext}=${opts.source}`], keys: opts.keys || '' }, QUIET);
+    stages.push({ tool: basename(tool), ...summary(comp) });
+    const artifactName = comp.created.find((n) => /\.(EXE|COM)$/i.test(n));
+    const artifact = artifactName ? comp.files.get(artifactName) : null;
+    if (!artifact) return { ok: false, stem, artifact: null, artifactName: null, ran: null, stages };
+    let ran = null;
+    if (opts.run) {
+        const r = runImage(artifact, /\.COM$/i.test(artifactName) ? 'com' : 'exe', { ...common, keys: opts.runKeys || '' }, hooks);
+        stages.push({ tool: 'run', ...summary(r) });
+        ran = r.result;
+    }
+    return { ok: true, stem, artifact, artifactName, ran, stages };
+}
+
 const summary = (r) => ({ terminated: r.result.terminated, exitCode: r.result.exitCode, steps: r.result.steps, created: r.created ?? [] });
 
 /** Run an in-memory program image (no host file) — used to run a chain's own

@@ -18,7 +18,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { assemble } from '../src/i8086-asm.js';
 import { basicToAsm } from './basic.mjs';
 import { cToAsm } from './cc.mjs';
-import { runImage, runChain, runDos } from './run-dos.mjs';
+import { runImage, runChain, runCompile, runDos } from './run-dos.mjs';
 
 /**
  * Machine "flavors" — a chip + board, mapped onto run-dos's variant + preset.
@@ -88,7 +88,7 @@ export const TOOLCHAINS = Object.freeze([
       build: (src) => assemble(cToAsm(src), { format: 'com' }).bytes, run: 'com' },
 
     { id: 'tcc', language: 'c', kind: 'dos', tools: ['TCC.EXE'],
-      label: 'Turbo C (full C, when installed)', chain: true, ext: 'C', run: 'exe' },
+      label: 'Turbo C (full C, when installed)', compile: 'TCC.EXE', ext: 'C', run: 'exe' },
 ]);
 
 /** The uppercased basenames of the DOS binaries present in `dir`. */
@@ -167,6 +167,12 @@ export function runToolchain(id, source, opts = {}, hooks = {}) {
     if (tc.chain) {
         const c = runChain({ source, ...common, bin: opts.bin, exe2bin: tc.run === 'com', run }, hooks);
         return { ...base, ok: c.ok, artifact: c.bin || c.exe, ran: c.ran, stages: c.stages };
+    }
+    if (tc.compile) {
+        // A single-tool compiler (Turbo C: TCC PROG.C -> PROG.EXE) does its own
+        // linking — not the MASM->LINK chain.
+        const c = runCompile({ source, tool: tc.compile, ext: tc.ext, ...common, bin: opts.bin, run }, hooks);
+        return { ...base, ok: c.ok, artifact: c.artifact, ran: c.ran, stages: c.stages };
     }
     if (tc.interpret) {
         // An interpreter runs the source directly: mount it, invoke the tool
