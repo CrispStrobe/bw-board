@@ -216,6 +216,57 @@ M1 drain gate 0 0 NM W=100u L=1u
     }
   });
 
+  it('uses the physical triode equation inside the former region hysteresis band', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    // ADI-v5 row 1328 reduced to its DC circuit. At the answer Vds is only
+    // 1.6% below Vov: the former 5% hysteresis kept the SATURATION equation
+    // and moved the drain by 81 uV even though the two model laws already meet
+    // C1 at their physical boundary.
+    const params = { model: 'level1', vth: 2, kp: 2e-3, w: 100e-6,
+      l: 1e-6, lambda: 0, bulkAtGround: true };
+    const board = new BoardImpl(5);
+    board.setNetlist([
+      { id: 'VDD', kind: 'vsource', params: { volts: 15 }, terminals: ['pos', 'neg'] },
+      { id: 'VG', kind: 'vsource', params: { volts: 4 }, terminals: ['pos', 'neg'] },
+      { id: 'RS', kind: 'resistor', params: { ohms: 2200 }, terminals: ['a', 'b'] },
+      { id: 'RD', kind: 'resistor', params: { ohms: 15000 }, terminals: ['a', 'b'] },
+      { id: 'M1', kind: 'nmos', params, terminals: ['drain', 'gate', 'source'] },
+      { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ], [
+      { id: 'gnd', terminals: [
+        { part: 'VDD', terminal: 'neg' }, { part: 'VG', terminal: 'neg' },
+        { part: 'RS', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+      ] },
+      { id: 'vdd', terminals: [
+        { part: 'VDD', terminal: 'pos' }, { part: 'RD', terminal: 'a' },
+      ] },
+      { id: 'gate', terminals: [
+        { part: 'VG', terminal: 'pos' }, { part: 'M1', terminal: 'gate' },
+      ] },
+      { id: 'source', terminals: [
+        { part: 'RS', terminal: 'a' }, { part: 'M1', terminal: 'source' },
+      ] },
+      { id: 'drain', terminals: [
+        { part: 'RD', terminal: 'b' }, { part: 'M1', terminal: 'drain' },
+      ] },
+    ]);
+    const oracle = ngspice(`VDD vdd 0 15
+VG gate 0 4
+RS source 0 2.2k
+RD vdd drain 15k
+M1 drain gate source 0 NM W=100u L=1u
+.model NM NMOS(Level=1 VTO=2 KP=2m LAMBDA=0)`,
+    ['v(source)', 'v(drain)', '@m1[id]']);
+    const result = board.operatingPoint();
+    assert.equal(result.converged, true);
+    for (const [net, key] of [['source', 'v(source)'], ['drain', 'v(drain)']]) {
+      assert.ok(Math.abs(result.nodeVoltages.get(net) - oracle[key]) < 1e-9,
+        `${net}: ${result.nodeVoltages.get(net)} vs ${oracle[key]}`);
+    }
+    assert.ok(Math.abs(result.branchCurrents.get('M1').get('drain') - oracle['@m1[id]']) < 1e-10);
+  });
+
   it('matches ngspice in saturation and triode with signed current and KCL', {
     skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
   }, () => {

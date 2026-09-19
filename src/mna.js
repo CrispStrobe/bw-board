@@ -2398,10 +2398,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
     }
 
-    // MOSFET region transitions: saturation ↔ triode. Same doctrine
-    // as the BJTs: enter triode only while CONDUCTING and the channel
-    // has collapsed below the overdrive; back to saturation when the
-    // drain lifts clear (small hysteresis against flip-flopping).
+    // MOSFET region transitions: saturation ↔ triode at the physical
+    // Level-1 boundary. The two laws now meet in BOTH value and first
+    // derivative at Vds=Vov (`mosTriode`), so the old 0.95/1.05 hysteresis is
+    // no longer numerical protection: inside that band it selects a different
+    // physical equation. Keep the state only to make a branch change visible
+    // to the convergence loop; choose its value from the exact boundary.
     for (const part of parts) {
       if (part.kind !== 'nmos' && part.kind !== 'pmos') continue;
       // The SAME threshold the stamp used, body effect included — a region
@@ -2422,13 +2424,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vds = part.kind === 'nmos' ? vD - vS : vS - vD;
       const region = mosRegions.get(part.id);
       let next = region;
-      if (vov <= 0) {
-        next = 'saturation'; // cutoff path owns it; reset for clean re-entry
-      } else if (region === 'saturation') {
-        if (vds < vov * 0.95) next = 'triode';
-      } else {
-        if (vds > vov * 1.05) next = 'saturation';
-      }
+      if (vov <= 0) next = 'saturation'; // cutoff path owns it; reset for clean re-entry
+      else next = vds < vov ? 'triode' : 'saturation';
       if (next !== region) {
         mosRegions.set(part.id, next);
         regionChanged = true;
