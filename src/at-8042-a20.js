@@ -86,8 +86,21 @@ export class AT8042A20 {
                 this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
             }
         }
-        for(const event of this.keyboardSchedule)event.remaining=Math.max(0,event.remaining-cycles);
-        this._releaseKeyboardSchedule();
+        let keyboardCycles=cycles;
+        while(keyboardCycles>0&&this.keyboardSchedule.length) {
+            const event=this.keyboardSchedule[0];
+            if(this.commandByte&0x10) {
+                event.remaining=Math.max(0,event.remaining-keyboardCycles);
+                break;
+            }
+            if(event.remaining>keyboardCycles) {
+                event.remaining-=keyboardCycles;
+                break;
+            }
+            keyboardCycles-=event.remaining;
+            event.remaining=0;
+            this._releaseKeyboardSchedule();
+        }
     }
     nextWake() {
         const controller=!this.delayedResponse?Infinity:(this.inputBusyCyclesRemaining>0

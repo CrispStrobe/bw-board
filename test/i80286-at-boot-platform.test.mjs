@@ -128,6 +128,14 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     assert.equal(controller.readData(),0xaa);
     assert.deepEqual(irq,[false,true,false,true,false,true,false]);
     assert.throws(()=>new AT8042A20({keyboardAckCycles:20,keyboardBatCycles:20}),/must precede/);
+
+    const oneStep=new AT8042A20({keyboardAckCycles:60_000,keyboardBatCycles:4_200_000});
+    const splitStep=new AT8042A20({keyboardAckCycles:60_000,keyboardBatCycles:4_200_000});
+    oneStep.writeData(0xff);splitStep.writeData(0xff);
+    oneStep.advance(4_260_000);
+    splitStep.advance(60_000);splitStep.advance(4_200_000);
+    assert.deepEqual(oneStep.getState(),splitStep.getState(),
+        'large and split cycle advances reach the same ACK/BAT state');
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {
