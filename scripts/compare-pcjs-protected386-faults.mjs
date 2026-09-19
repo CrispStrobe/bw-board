@@ -279,6 +279,28 @@ function runCallGatePCjs(){
   for(let steps=0;steps<budget&&!(cpu.getCS()===0x1b&&cpu.getIP()===7);steps++){if(cpu.getCS()===8&&cpu.getIP()===0x100)visited=true;cpu.stepCPU(0);}
   return callGateResult(cpu,a=>bus.getByteDirect(a),true,visited,cpu.getCS()===0x1b&&cpu.getIP()===7);
 }
+function installIoBitmap(write,denied){
+  installRing(write);write(0x228,0x70);write(0x666,0x68);write(0x667,0);
+  write(0x66c,denied?0x01:0);put(write,0x140000,[0xe4,0x20]);
+}
+function runIoLocal(denied){
+  const memory=new Uint8Array(1<<24),ports=[];
+  const cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;},
+    inPort:(port,width)=>{ports.push([port,width]);return 0x5a;}});
+  installIoBitmap((a,v)=>{memory[a]=v;},denied);
+  for(let steps=0;steps<60&&!(cpu.cs===0x1b&&cpu.eip===0);steps++)cpu.step();
+  let fault=null;try{cpu.step();}catch(error){fault=error.vector??error.message;}
+  return{completed:denied?fault===13:cpu.eip===2,...(!denied?{al:cpu.al}:{}),ports,fault};
+}
+function runIoPCjs(denied){
+  const cpu=new CPU({id:`fault386.io.${denied}`,model:80386}),bus=new QuietBus({id:`fault386.io.bus.${denied}`,busWidth:32},cpu),ports=[];
+  if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;
+  bus.addPortInputNotify(0x20,0x20,(port)=>{ports.push([port,8]);return 0x5a;});
+  installIoBitmap((a,v)=>bus.setByteDirect(a,v),denied);cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);
+  for(let steps=0;steps<60&&!(cpu.getCS()===0x1b&&cpu.getIP()===0);steps++)cpu.stepCPU(0);
+  let fault=null;try{cpu.stepCPU(0);}catch(error){fault=typeof error==='number'?(error===-1?13:error):error.message;}
+  return{completed:denied?fault===13:cpu.getIP()===2,...(!denied?{al:cpu.regEAX&255}:{}),ports,fault};
+}
 
 const cases = {};
 for (const [name, type] of [
@@ -292,11 +314,14 @@ cases.generalProtection = {
 };
 cases.ringTransition = { reference: runRingPCjs(), actual: runRingLocal() };
 cases.callGate = { reference:runCallGatePCjs(), actual:runCallGateLocal() };
+cases.ioAllowed={reference:runIoPCjs(false),actual:runIoLocal(false)};
+cases.ioDenied={reference:runIoPCjs(true),actual:runIoLocal(true)};
 const mutation = process.env.I386_FAULT_ORACLE_MUTATION ?? null;
 if (mutation === "frame") cases.interrupt32.actual.entry.frame[0] ^= 1;
 else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
 else if (mutation === "ring-stack") cases.ringTransition.actual.frame[3] ^= 1;
 else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
+else if (mutation === "io-access") cases.ioDenied.actual.ports.push([0x20,8]);
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
@@ -309,6 +334,12 @@ const expectedGate={cs:0x1b,eip:7,ss:0x23,esp:0x804,visitedHandler:true,complete
 for(const [engine,value] of Object.entries(cases.callGate))
   if(JSON.stringify(value)!==JSON.stringify(expectedGate))
     differences.push({case:"callGateExpected",engine,expected:expectedGate,actual:value});
+const expectedIoAllowed={completed:true,al:0x5a,ports:[[0x20,8]],fault:null};
+const expectedIoDenied={completed:true,ports:[],fault:13};
+for(const [name,expected] of [["ioAllowed",expectedIoAllowed],["ioDenied",expectedIoDenied]])
+  for(const [engine,value] of Object.entries(cases[name]))
+    if(JSON.stringify(value)!==JSON.stringify(expected))
+      differences.push({case:`${name}Expected`,engine,expected,actual:value});
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);
