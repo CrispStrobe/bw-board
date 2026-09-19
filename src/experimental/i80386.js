@@ -65,7 +65,7 @@ export class ExperimentalI80386 {
     if((this._instructionBytes??0)>=15)throw new UnsupportedI80386('instruction exceeds 15-byte limit');
     const a=this._linear(SEG_CS,this.eip,1),v=this.fetch(a)&255;
     this._instructionBytes=(this._instructionBytes??0)+1;
-    this.eip=this.segmentCaches[SEG_CS].default32?(this.eip+1)>>>0:(this.eip+1)&0xffff;
+    this.eip=(this.eip+1)>>>0;
     return v;
   }
   _fetchN(size){let v=0;for(let i=0;i<size;i++)v+=(this._fetch8())*(2**(8*i));return v>>>0;}
@@ -162,14 +162,19 @@ export class ExperimentalI80386 {
     } else if(op===0xc7){const ea=this._decodeEA(address32,override);if(ea.reg!==0)throw new UnsupportedI80386('C7 extension');this._operandWrite(ea,width,this._fetchN(width>>>3));}
     else if(op===0x83){const ea=this._decodeEA(address32,override),imm=(this._fetch8()<<24)>>24,dst=this._operandRead(ea,width);let out;if(ea.reg===0)out=this._add(dst,imm,width);else if(ea.reg===1)out=this._setLogic(dst|imm,width);else if(ea.reg===5)out=this._add(dst,imm,width,true);else if(ea.reg===7){this._add(dst,imm,width,true);out=null;}else throw new UnsupportedI80386('83 extension');if(out!==null)this._operandWrite(ea,width,out);}
     else if(op===0x68)this._push(this._fetchN(width>>>3),width);
-    else if(op===0xe8){const d=this._fetchN(width>>>3),next=this.eip,target=next+(width===32?(d|0):((d<<16)>>16));this._push(next,width);this.eip=width===32?target>>>0:target&0xffff;}
-    else if(op===0xe9){const d=this._fetchN(width>>>3),target=this.eip+(width===32?(d|0):((d<<16)>>16));this.eip=width===32?target>>>0:target&0xffff;}
-    else if(op===0xeb){const d=(this._fetch8()<<24)>>24,target=this.eip+d;this.eip=width===32?target>>>0:target&0xffff;}
-    else if(op>=0x70&&op<=0x7f){const d=(this._fetch8()<<24)>>24;if(this._condition(op&15)){const target=this.eip+d;this.eip=width===32?target>>>0:target&0xffff;}}
+    else if(op===0xe8){const d=this._fetchN(width>>>3),next=this.eip,target=width===32?(next+(d|0))>>>0:(next+((d<<16)>>16))&0xffff;this._linear(SEG_CS,target,1);this._push(next,width);this.eip=target;}
+    else if(op===0xe9){const d=this._fetchN(width>>>3),target=width===32?(this.eip+(d|0))>>>0:(this.eip+((d<<16)>>16))&0xffff;this._linear(SEG_CS,target,1);this.eip=target;}
+    else if(op===0xeb){const d=(this._fetch8()<<24)>>24,target=width===32?(this.eip+d)>>>0:(this.eip+d)&0xffff;this._linear(SEG_CS,target,1);this.eip=target;}
+    else if(op>=0x70&&op<=0x7f){const d=(this._fetch8()<<24)>>24;if(this._condition(op&15)){const target=width===32?(this.eip+d)>>>0:(this.eip+d)&0xffff;this._linear(SEG_CS,target,1);this.eip=target;}}
     else if(op===0xc3)this.eip=this._pop(width)>>>0;
     else if(op===0xf4)this.halted=true;
     else if(op===0x8e){const ea=this._decodeEA(address32,override),ids=[SEG_ES,SEG_CS,SEG_SS,SEG_DS,SEG_FS,SEG_GS];if(ea.reg===1||ea.reg>5)throw new UnsupportedI80386('invalid MOV segment register');this._loadSeg(ids[ea.reg],this._operandRead(ea,16));}
-    else if(op===0xea){const off=this._fetchN(width>>>3),sel=this._fetchN(2);this._loadSeg(SEG_CS,sel);this.eip=width===32?off:off&0xffff;}
+    else if(op===0xea){
+      const raw=this._fetchN(width>>>3),off=width===32?raw:raw&0xffff,sel=this._fetchN(2);
+      if(this.protectedMode){const descriptor=this._descriptor(sel);if(!descriptor.code)throw new UnsupportedI80386('CS requires code descriptor');if(off>descriptor.limit)throw new UnsupportedI80386('far target exceeds CS limit');this._setSegValue(SEG_CS,sel);this.segmentCaches[SEG_CS]=descriptor;}
+      else {if(off>0xffff)throw new UnsupportedI80386('real-mode far target exceeds CS limit');this._loadSeg(SEG_CS,sel);}
+      this.eip=off;
+    }
     else if(op===0x0f)this._step0f(address32,override,width);
     else throw new UnsupportedI80386(`opcode ${op.toString(16).padStart(2,'0')}`);
     this.cycles++;return 1;

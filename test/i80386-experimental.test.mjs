@@ -79,6 +79,14 @@ test('near branch targets use post-displacement EIP and truncate for 16-bit oper
   call.cpu.segmentCaches[2]={base:0,limit:0xffff,default32:true,present:true,code:false,writable:true};
   call.cpu.eip=0xffff0000;call.cpu.esp=0x100;call.put(0xffff0000,[0x66,0xe8,1,0]);call.cpu.step();
   assert.deepEqual([call.cpu.eip,call.cpu.esp,call.word(0xfe)],[5,0xfe,4]);
+
+  const narrowCode=fixture();narrowCode.cpu.segmentCaches[1]={base:0,limit:0x1ffff,default32:false,present:true,code:true,writable:false};
+  narrowCode.cpu.eip=0x10000;narrowCode.put(0x10000,[0x40,0xf4]);narrowCode.cpu.step();
+  assert.equal(narrowCode.cpu.eip,0x10001,'CS.D=0 does not truncate sequential EIP in a large-limit segment');
+  narrowCode.cpu.step();assert.equal(narrowCode.cpu.halted,true);
+
+  const crossing=fixture();crossing.cpu.eip=0xffff;crossing.put(0xffff,[0x66]);
+  assert.throws(()=>crossing.cpu.step(),/segment limit/,'real-mode instruction fetch does not wrap through offset zero');
 });
 
 test('LGDT width, descriptor boundaries, and instruction length fail explicitly',()=>{
@@ -108,4 +116,12 @@ test('faulting PUSH preserves ESP and MOV stores do not read their destination',
   const store=fixture();store.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
   store.cpu.eax=0x12345678;store.cpu.ebx=0x200;store.put(0,[0x89,3]);store.cpu.step();
   assert.deepEqual(store.reads,[],'MOV r/m,r performs no destination read');assert.equal(store.dword(0x200),0x12345678);
+
+  const call=fixture();call.cpu.segmentCaches[1]={base:0,limit:3,default32:true,present:true,code:true,writable:false};
+  call.cpu.segmentCaches[2]={base:0,limit:0xffff,default32:true,present:true,code:false,writable:true};call.cpu.esp=0x100;
+  call.put(0,[0xe8,0x10,0,0,0]);assert.throws(()=>call.cpu.step(),/segment limit/);assert.equal(call.cpu.esp,0x100);
+
+  const far=fixture();far.cpu.cr0=1;far.cpu.gdtr={base:0x200,limit:0x0f};far.put(0x208,[3,0,0,0,0x10,0x9a,0x40,0]);
+  far.put(0,[0x66,0xea,4,0,0,0,8,0]);const before={...far.cpu.segmentCaches[1]};
+  assert.throws(()=>far.cpu.step(),/far target/);assert.deepEqual(far.cpu.segmentCaches[1],before);
 });
