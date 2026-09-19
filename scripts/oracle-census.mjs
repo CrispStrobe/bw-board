@@ -146,15 +146,16 @@ export const INPUTS = [
     {
         id: '80286-vectors', kind: 'oracle',
         repository: 'SingleStepTests/80286',
-        ciCadence: 'push',   // the `vectors` job, diagnostic 286 census step
-        what: 'SingleStepTests 80286 real-mode — grades the fast functional 286 '
-            + "(src/i8086.js variant:'80286') and the cycle-accurate harris 286.",
+        ciCadence: 'push',   // bounded fast sample; full qualification is separate
+        what: 'SingleStepTests 80286 real-mode — blocking bounded coverage of the fast functional 286 '
+            + "(src/i8086.js variant:'80286'), plus separate full semantic qualification of that core and "
+            + 'the Harris test-only semantic-memory adapter; no timing or physical-board grading.',
         env: 'I80286_VECTORS',
         paths: [join(HOME, 'code', '80286-vectors', 'v1_real_mode')],
         gates: ['scripts/grind-i8086-286.mjs', 'scripts/grind-i80286.mjs'],
         obtain: 'git clone --depth 1 https://github.com/SingleStepTests/80286 ~/code/80286-vectors',
         ciAvailable: true,
-        ci: 'yes — the `vectors` job checks out v1_real_mode and runs the diagnostic 286 gap census',
+        ci: 'yes — `vectors` blocks on 200 vectors from every opcode file; the dedicated 286 qualification runs the full pinned corpus and retains separate fast/Harris reports',
     },
     {
         id: '8088-vectors', kind: 'oracle',

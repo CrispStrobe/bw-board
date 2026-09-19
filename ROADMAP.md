@@ -261,17 +261,20 @@ is the honest interim.
 
 ## E6 — The 8086 tier (scoped 2026-09-03, owner-requested)
 
-> **80286 — separate, experimental, WIP (codex sessions), default-off.** The base
-> is ALREADY ON MASTER: the WIRED / Harris 80C286 path — `src/experimental/harris-80c286-*`
-> (11 code files) wire-executes a small real-mode subset through a phase-bus
-> sequencer to resolved pins (a 2026-09-08 correctness milestone, "not a complete
-> implementation or an editor-visible CPU part"), plus a diagnostic
-> SingleStepTests/80286 executor (`scripts/lib/sst286.mjs`, "no production
-> CPU/timing claim") and its reports. Further in-progress work is on origin
-> feature branches (`feat/harris-hybrid-cpu-integration`, `perf/native-memory-*`,
-> `evidence/native-*`) plus a local-only codex branch (`feat/native-286-memory-bus`,
-> not pushed). There is NO production 80286 core and NO 80286 speed number — do not
-> treat it as shipped; verify against these before building on it.
+> **80286 — separate, experimental, WIP (codex sessions), default-off.** There
+> are two explicit paths. The fast functional real-mode path is
+> `src/i8086.js` with `variant:'80286'`; CI blocks on 200 vectors from every one
+> of the 326 pinned SingleStepTests/80286 opcode files. A separate hosted
+> qualification runs the full pinned corpus and retains source-hashed artifacts;
+> its result is not claimed here before that workflow completes. The WIRED /
+> Harris path in `src/experimental/harris-80c286-*` executes through its phase
+> bus and resolved pins, while its historical full-corpus reports exercise a
+> test-only semantic-memory adapter. Those reports do not grade timing or the
+> physical board, and their source hashes delimit exactly which revisions they
+> support. Neither path establishes protected mode, cycle accuracy, a speed
+> number, or a shipped complete 80286. Reproduction commands, historical
+> receipts, scope, and the hosted workflow receipts are indexed in
+> `docs/SST286-RUNNER.md`; verify them before building on this work.
 
 Context: the retro tier gains an x86 beside the W65C02 and the Z80. The
 survey that preceded it is in brickwright-lite `docs/I8086-CORE-PLAN.md`
