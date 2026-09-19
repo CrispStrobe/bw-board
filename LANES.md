@@ -936,6 +936,7 @@ rather than each against the master it branched from.
 
 | lane | owner/session | worktree | exact scope | base SHA | status |
 | --- | --- | --- | --- | --- | --- |
+| x86 continuation: real DOS software and 286 protection | Astra coordinator / two Sol agents, astra-x86-next-sept19 | `/mnt/volume1/code/wt/astra-x86-next` with separate agent worktrees | x86 CPU/machine and guest harness only: extend real DOS tests to fast 286, exercise local tool binaries, implement audited bounded protected-mode milestones, measured Harris performance follow-ups, exact-source receipts and roadmap. Excludes FPGA, analog/SPICE/ASC/import/export and their workflows. No downstream pin until upstream qualification. | `acb68f2` | **CLAIMED 2026-09-19** by explicit user lane assignment; root audits and lands, up to two Sol coding agents. |
 | bw-board PR #11 integration | `/root` (2026-09-19) | `/mnt/volume1/code/wt/bwb-pr11-zener-20260919` | Audit current PR #11 checks, mergeability, and land `lane/zener-ibv-default-and-ideality`; no unrelated source changes | `b9efb2e` (`origin/master`) | DONE; PR #11 merged at `b9efb2e`; focused zener test 10/10 and hosted gates green |
 
 The earlier Lite PR #194 and Harris/native rows from the preceding claim commit
