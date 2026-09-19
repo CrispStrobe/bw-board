@@ -66,8 +66,11 @@ test('runner rejects invalid budgets and corrupt FAT file chains',{skip},()=>{
 test('the checked-in receipt is bound to the executed source, output and inputs',{skip},()=>{
     const r=acceptance();
     const receipt=JSON.parse(readFileSync(new URL('../docs/receipts/2026-09-19-dos-toolchain-fast286.json',import.meta.url)));
+    assert.equal(receipt.baseRevision,'4926e93cd0133dd038b929f8506318d0da320b3b');
+    assert.equal(receipt.executionRevision,'ac6f1038ff6f6426afdd80b6c0879823bfe7df69');
     assert.equal(receipt.sourceSha256,r.sourceSha256);
     assert.equal(receipt.producedComSha256,r.comSha256);
+    assert.deepEqual(receipt.sourceHashes,r.sourceHashes);
     assert.deepEqual(receipt.inputSha256,{
         'MSDOS.SYS':r.inputHashes.msdos,'COMMAND.COM':r.inputHashes.command,
         'SYSINIT.OBJ':r.inputHashes.sysinit,'MASM.EXE':r.inputHashes.masm,
