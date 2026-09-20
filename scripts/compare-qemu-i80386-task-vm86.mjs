@@ -32,7 +32,8 @@ const binary=readFileSync(image),memory=new Uint8Array(0x10000);memory.set(binar
 let actual='';const cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>memory[a]=v,inPort:()=>0,outPort:(port,value)=>{if(port===0xe9)actual+=String.fromCharCode(value&255);}});
 cpu.cs=0;cpu.eip=0x7e00;cpu.segmentCaches[1]={base:0,limit:0xffff,default32:false,present:true,code:true,readable:true,writable:false};
 const budget=mutation==='budget'?10:200;
-for(let step=0;step<budget&&actual!=='BHV';step++)cpu.step();
+const actualTrail=[];
+for(let step=0;step<budget&&actual!=='BHV';step++){actualTrail.push(`${cpu.cs.toString(16)}:${cpu.eip.toString(16)}`);cpu.step();}
 if(mutation==='result')actual=actual.slice(0,-1)+'X';
 const expected='BHV',differences=[];
 if(reference!==expected)differences.push({field:'reference.output',expected,actual:reference});
@@ -44,5 +45,5 @@ const packages={
  'qemu-system-common_1:8.2.2+ds-0ubuntu1.18_amd64.deb':'0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f',
  'qemu-system-data_1:8.2.2+ds-0ubuntu1.18_all.deb':'a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e',
  'seabios_1.16.3-2_all.deb':'cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0'};
-const actualState={cs:cpu.cs,eip:cpu.eip,tr:cpu.tr.selector,cr0:cpu.cr0,eflags:cpu.eflags,halted:cpu.halted,shutdown:cpu.shutdown};
+const actualState={cs:cpu.cs,eip:cpu.eip,tr:cpu.tr.selector,cr0:cpu.cr0,eflags:cpu.eflags,halted:cpu.halted,shutdown:cpu.shutdown,trail:actualTrail.slice(-30)};
 console.log(JSON.stringify({oracle:'QEMU TCG later-model software CPU',revision,qemuVersion,qemuExecutableHash:hash(readFileSync(qemu)),packages,sourceHashes,imageHash:hash(binary),mutation,status:differences.length?'fail':'pass',expected,reference,actual,actualState,differences},null,2));process.exitCode=differences.length?1:0;
