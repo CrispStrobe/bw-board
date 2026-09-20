@@ -71,6 +71,7 @@ const postEvents = [];
 const interrupts = [];
 const interruptCounts = {};
 const ataCommands = [];
+const controllerPorts = [];
 const samples = [];
 const instructionTrail = [];
 let instructionTrailNext = 0;
@@ -93,6 +94,10 @@ machine = new ExperimentalI80386ATMachine(windowsProfile, {
     if (interrupts.length > 256) interrupts.shift();
   },
   onPortAccess: event => {
+    if (event.port === 0x60 || event.port === 0x64) {
+      controllerPorts.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, ...event});
+      if (controllerPorts.length > 256) controllerPorts.shift();
+    }
     if (event.dir === 'out' && event.port === 0x80) {
       postEvents.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value});
       if (postEvents.length > 256) postEvents.shift();
@@ -168,7 +173,10 @@ for (; steps < stepLimit; steps++) {
   try {
     machine.step();
   } catch (error) {
-    if (!(error instanceof UnsupportedI80386) && !(error instanceof I80386Fault)) throw error;
+    const deviceRefusal = error instanceof Error &&
+      (error.message.startsWith('AT 8042 ') || error.message.startsWith('MC146818 '));
+    if (!(error instanceof UnsupportedI80386) && !(error instanceof I80386Fault) && !deviceRefusal)
+      throw error;
     const paging = !!(machine.cpu.cr0 & 0x80000000);
     refusal = {name: error.name, message: error.message, step: steps,
       cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
@@ -176,7 +184,8 @@ for (; steps < stepLimit; steps++) {
         const physical = machine._decode386((machine.cpu.pc + index) >>> 0);
         return physical < machine.mem.length ? machine.mem[physical] : 0xff;
       })};
-    stopReason = error instanceof UnsupportedI80386 ? 'cpu-unsupported' : 'architectural-fault-surfaced';
+    stopReason = error instanceof UnsupportedI80386 ? 'cpu-unsupported' :
+      error instanceof I80386Fault ? 'architectural-fault-surfaced' : 'host-device-refusal';
     break;
   }
   if ((machine.cpu.cr0 >>> 0) !== previousCr0) {
@@ -229,7 +238,7 @@ const report = {
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256, geometry: HDD_GEOMETRY},
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
-  reset, postEvents, postContinue, ataCommands, interrupts, interruptCounts,
+  reset, postEvents, postContinue, ataCommands, controllerPorts, interrupts, interruptCounts,
   vgaOptionEntry, bootEntries, bootFailureBoundary, modeTransitions,
   instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
     ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
