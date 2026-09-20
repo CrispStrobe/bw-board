@@ -73,8 +73,10 @@ const interruptCounts = {};
 const ataCommands = [];
 const samples = [];
 const instructionTrail = [];
+let instructionTrailNext = 0;
 const bootEntries = [];
 let vgaOptionEntry = null;
+let bootFailureBoundary = null;
 const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
@@ -89,8 +91,10 @@ machine = new ExperimentalI80386ATMachine(windowsProfile, {
     if (interrupts.length > 256) interrupts.shift();
   },
   onPortAccess: event => {
-    if (event.dir === 'out' && event.port === 0x80 && postEvents.length < 256)
+    if (event.dir === 'out' && event.port === 0x80) {
       postEvents.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value});
+      if (postEvents.length > 256) postEvents.shift();
+    }
     if (event.dir === 'out' && event.port === 0x1f7 && ataCommands.length < 1024)
       ataCommands.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
         command: event.value, count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
@@ -116,14 +120,26 @@ const renderText = () => {
 for (; steps < stepLimit; steps++) {
   const before = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
     ss: machine.cpu.ss, esp: machine.cpu.esp, cr0: machine.cpu.cr0 >>> 0};
-  instructionTrail.push(before);
-  if (instructionTrail.length > 256) instructionTrail.shift();
+  if (instructionTrail.length < 256) instructionTrail.push(before);
+  else {
+    instructionTrail[instructionTrailNext] = before;
+    instructionTrailNext = (instructionTrailNext + 1) & 255;
+  }
   if (vgaOptionEntry === null && machine.cpu.cs === 0xc000 && machine.cpu.eip === 3)
     vgaOptionEntry = {...before};
   if ((machine.cpu.cs === 0 && machine.cpu.eip === 0x7c00) ||
       (machine.cpu.cs === 0x07c0 && machine.cpu.eip === 0)) {
-    bootEntries.push({...before, bytes: Array.from(machine.mem.slice(0x7c00, 0x7e00)),
+    if (bootEntries.length < 8) bootEntries.push({...before,
+      firstBytes: Array.from(machine.mem.slice(0x7c00, 0x7c10)),
       sha256: sha(machine.mem.slice(0x7c00, 0x7e00))});
+  }
+  if (bootFailureBoundary === null && machine.cpu.cs === 0 && machine.cpu.eip === 0x7cd5) {
+    const orderedTrail = instructionTrail.length < 256 ? [...instructionTrail] : [
+      ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
+    ];
+    bootFailureBoundary = {...before, eax: machine.cpu.eax, ebx: machine.cpu.ebx,
+      ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
+      eflags: machine.cpu.eflags, trail: orderedTrail};
   }
   if (postContinue.enabled && postContinue.injected === null && machine.cpu.cs === 0xf000 &&
       machine.cpu.eip >= 0x2fdd && machine.cpu.eip <= 0x300d) {
@@ -174,7 +190,10 @@ const report = {
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
   reset, postEvents, postContinue, ataCommands, interrupts, interruptCounts,
-  vgaOptionEntry, bootEntries, instructionTrail,
+  vgaOptionEntry, bootEntries, bootFailureBoundary,
+  instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
+    ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
+  ],
   final: {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
     cr0: machine.cpu.cr0 >>> 0, cr2: machine.cpu.cr2 >>> 0, cr3: machine.cpu.cr3 >>> 0,
     eflags: machine.cpu.eflags >>> 0, halted: machine.cpu.halted, shutdown: machine.cpu.shutdown},
