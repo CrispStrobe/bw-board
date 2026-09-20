@@ -334,10 +334,8 @@ while section 7.1 documents the exceptional missing higher TSS page case.
 
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
-data read, both busy bits, backlink, TR, and exact HLT completion. The pinned
-reference resets on the matching nested-task IRET fixture, so return behavior
-is kept in independently expected owned tests rather than hidden behind a
-comparison mask. Result and low-budget mutations both reject.
+data read, both busy bits, backlink, nested-task IRET, restored CR3/TR, and
+exact old-task HLT completion. Result and low-budget mutations both reject.
 
 VERR and VERW query descriptor type and privilege without requiring the
 descriptor P bit, as specified for the original 386. The pinned PCjs oracle
