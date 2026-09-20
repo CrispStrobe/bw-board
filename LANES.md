@@ -115,6 +115,10 @@ is not yet attributed or accepted. Receipt:
 `docs/receipts/2026-09-20-386-task-media-rate.json`. Original ROM128 stops on
 its 16-bit VM86-gate expectation before task tests. No full CPU, Windows,
 Doom, x87 or timing acceptance; compiler/BCD continuation remains separate.
+Initial hosted CI/native passed, while CPU qualification caught one stale
+BIOS-service DOS toolchain receipt. A fresh run on d90d3a95 preserves all
+1,111,040 steps and output bytes; its source-bound receipt is refreshed with
+the historical run retained, and the affected tests pass 10/10.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 genuine AT DOS boot and BIOS HDD roundtrip. Exact candidate/landing

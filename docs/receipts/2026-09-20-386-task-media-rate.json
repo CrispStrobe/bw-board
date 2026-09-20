@@ -324,5 +324,21 @@
     "Legacy floppy profiles remain rate-permissive; only the named 1.2MB profile checks CCR. No FDC timing claim.",
     "FreeDOS386 shell and HDD directory observed; Doom command invoked, but actual Doom/extender entry, graphics/gameplay and Windows remain unaccepted.",
     "ENTER/LEAVE, bit tests and BCD adjustment are later work, outside this candidate."
-  ]
+  ],
+  "qualificationCorrection": {
+    "supersededCandidate": "d90d3a95833136eae318881e2102fbf184805c08",
+    "ci": 35480087378,
+    "ciResult": "success",
+    "native": 35480087371,
+    "nativeResult": "success",
+    "cpu": 35480087389,
+    "cpuResult": "failure: stale source-bound DOS toolchain receipt; guest execution itself passed",
+    "freshToolchainReplay": {
+      "executionRevision": "d90d3a95833136eae318881e2102fbf184805c08",
+      "reportSha256": "a7ff7b20e3999571d973b98a1c4e0b9e9d80f03fca95b14c3ce4c38729ef84ba",
+      "steps": 1111040,
+      "accepted": true,
+      "focusedTests": 10
+    }
+  }
 }

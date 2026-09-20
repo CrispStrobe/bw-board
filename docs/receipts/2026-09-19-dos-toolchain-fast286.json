@@ -4,11 +4,11 @@
   "scope": "fast 80286 real-mode core on BIOS-service machine; not wired or protected-mode evidence",
   "sourceHashScope": "manually enumerated execution engine and guest harness files, not a transitive import closure",
   "expectedOutput": "GUEST-TOOLCHAIN-OK",
-  "date": "2026-09-19",
+  "date": "2026-09-20",
   "baseRevision": "4926e93cd0133dd038b929f8506318d0da320b3b",
-  "executionRevision": "87cd5c1f3273c1d522c815603ccb0a683f9123d7",
+  "executionRevision": "d90d3a95833136eae318881e2102fbf184805c08",
   "node": "v22.23.2",
-  "elapsedMS": 1355.878072,
+  "elapsedMS": 896.199378,
   "timingGraded": false,
   "runner": "scripts/run-dos-toolchain-guest.mjs",
   "cpu": "80286 fast-core real mode",
@@ -28,7 +28,7 @@
   "producedComSha256": "740ff31d4fe33e77b397d639e5f674fd451a7730ec5ba3f12c9ea9ba4e8412ca",
   "sourceHashes": {
     "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
-    "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
+    "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
     "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
     "src/i8086-dos.js": "f17c2cefc80082545b4e1caedcc365216db88048eaa65e362d7fe7ee0d1b02ce",
     "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
@@ -48,5 +48,26 @@
     "This is a fast-core real-mode test, not wired-board or protected-mode evidence.",
     "The machine supplies BIOS services; it is not a complete PC/AT peripheral model.",
     "The external Microsoft binaries are hash-admitted and are not distributed by this repository."
-  ]
+  ],
+  "previousRuns": [
+    {
+      "date": "2026-09-19",
+      "executionRevision": "87cd5c1f3273c1d522c815603ccb0a683f9123d7",
+      "node": "v22.23.2",
+      "elapsedMS": 1355.878072,
+      "steps": 1111040,
+      "sourceHashes": {
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/i8086-dos.js": "f17c2cefc80082545b4e1caedcc365216db88048eaa65e362d7fe7ee0d1b02ce",
+        "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+        "scripts/build-dos-image.mjs": "2dec7fb129f65b3a657412b6f881962a56386236ffb9eca80da74b94080e037e",
+        "scripts/oracle-masm.mjs": "127b56856d41f8cde222dff0c5b5dde024f3a6e13f0fec06f857f6b34c9336d6",
+        "scripts/run-dos-toolchain-guest.mjs": "3886bc720220c9c67db965bf5a785819f7b308b965caeec8efa55d5acd1fe731"
+      }
+    }
+  ],
+  "rawReportSha256": "a7ff7b20e3999571d973b98a1c4e0b9e9d80f03fca95b14c3ce4c38729ef84ba",
+  "rawReportFile": "astra-root-stage10-toolchain-d90d3a95.json"
 }
