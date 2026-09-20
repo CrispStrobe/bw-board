@@ -48,6 +48,12 @@ if (bios.bytes.length !== 0x10000 || vga.bytes.length !== 0x7e00 || hdd.bytes.le
 const stepLimit = process.env.AT_POST_STEPS === undefined ? DEFAULT_STEPS : Number(process.env.AT_POST_STEPS);
 if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 500_000_000)
   throw new Error('AT_POST_STEPS must be an integer from 1 through 500000000');
+const traceStart = process.env.AT_TRACE_START === undefined ? null : Number(process.env.AT_TRACE_START);
+const traceEnd = process.env.AT_TRACE_END === undefined ? null : Number(process.env.AT_TRACE_END);
+if ((traceStart === null) !== (traceEnd === null) ||
+    (traceStart !== null && (!Number.isInteger(traceStart) || !Number.isInteger(traceEnd) ||
+      traceStart < 0 || traceEnd <= traceStart || traceEnd - traceStart > 100_000)))
+  throw new Error('AT_TRACE_START/END must define a positive window of at most 100000 instructions');
 
 // Clone the VGA board profile with an AT type-2 HDD and a configured but empty
 // 1.2MB drive A. The IBM Rev1 POST minimum-configuration test requires at
@@ -78,6 +84,7 @@ const dosInterrupts = {scope: 'heuristic real-mode IVT entry and matching SS:SP/
 const controllerPorts = [];
 const samples = [];
 const instructionTrail = [];
+const instructionWindow = [];
 let instructionTrailNext = 0;
 const bootEntries = [];
 let vgaOptionEntry = null;
@@ -215,6 +222,17 @@ for (; steps < stepLimit; steps++) {
     ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
     ebp: machine.cpu.ebp, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0 >>> 0,
     pc: machine.cpu.pc};
+  if (traceStart !== null && steps >= traceStart && steps < traceEnd) {
+    instructionWindow.push({...before,
+      bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0),
+      ata: {status: machine.ata.status, error: machine.ata.error,
+        count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
+        cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
+        head: machine.ata.driveHead, intersectorRemaining: machine.ata._intersectorRemaining,
+        irqPending: machine.ata._irqPending, irqOutput: machine.ata._irqOutput},
+      pic1: machine.chips.pic1.getState(), pic2: machine.chips.pic2.getState(),
+      pit: machine.chips.pit1.getState()});
+  }
   traceDosInterrupt('int13', 0x13, before);
   traceDosInterrupt('int24', 0x24, before);
   if (instructionTrail.length < 256) instructionTrail.push(before);
@@ -321,6 +339,7 @@ const report = {
   instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
     ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
   ],
+  instructionWindow: {start: traceStart, end: traceEnd, entries: instructionWindow},
   final: {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
     cr0: machine.cpu.cr0 >>> 0, cr2: machine.cpu.cr2 >>> 0, cr3: machine.cpu.cr3 >>> 0,
     eflags: machine.cpu.eflags >>> 0, halted: machine.cpu.halted, shutdown: machine.cpu.shutdown},
