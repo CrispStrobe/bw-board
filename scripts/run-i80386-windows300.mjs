@@ -77,7 +77,8 @@ let instructionTrailNext = 0;
 const bootEntries = [];
 let vgaOptionEntry = null;
 let bootFailureBoundary = null;
-const modeTransitions = [];
+const modeTransitions = {count: 0, first: [], tail: []};
+let modeTransitionTailNext = 0;
 const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
@@ -121,12 +122,20 @@ const renderText = () => {
     String.fromCharCode(machine.vgaMemory.planes[0][(row * columns + column) * 2] || 0x20))
     .join('').replace(/\s+$/, ''));
 };
+const physicalBytes = (pc, cr0, length = 8) => {
+  if (cr0 & 0x80000000) return null;
+  return Array.from({length}, (_, index) => {
+    const physical = machine._decode386((pc + index) >>> 0);
+    return physical < machine.mem.length ? machine.mem[physical] : 0xff;
+  });
+};
 for (; steps < stepLimit; steps++) {
   const before = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
     ss: machine.cpu.ss, esp: machine.cpu.esp, eax: machine.cpu.eax, ebx: machine.cpu.ebx,
     ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
     ebp: machine.cpu.ebp, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0 >>> 0,
-    pc: machine.cpu.pc};
+    pc: machine.cpu.pc,
+    bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0)};
   if (instructionTrail.length < 256) instructionTrail.push(before);
   else {
     instructionTrail[instructionTrailNext] = before;
@@ -172,8 +181,15 @@ for (; steps < stepLimit; steps++) {
     break;
   }
   if ((machine.cpu.cr0 >>> 0) !== previousCr0) {
-    modeTransitions.push({step: steps, before: previousCr0, after: machine.cpu.cr0 >>> 0,
-      cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc});
+    const event = {step: steps, before: previousCr0, after: machine.cpu.cr0 >>> 0,
+      cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc};
+    modeTransitions.count++;
+    if (modeTransitions.first.length < 64) modeTransitions.first.push(event);
+    if (modeTransitions.tail.length < 256) modeTransitions.tail.push(event);
+    else {
+      modeTransitions.tail[modeTransitionTailNext] = event;
+      modeTransitionTailNext = (modeTransitionTailNext + 1) & 255;
+    }
     previousCr0 = machine.cpu.cr0 >>> 0;
   }
   if (machine.cpu.shutdown) {
@@ -183,12 +199,24 @@ for (; steps < stepLimit; steps++) {
   if (steps !== 0 && steps % 1_000_000 === 0) {
     const text = renderText().filter(line => line.trim() !== '');
     samples.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
-      cr0: machine.cpu.cr0 >>> 0, lastLines: text.slice(-6)});
+      cr0: machine.cpu.cr0 >>> 0, modeTransitionCount: modeTransitions.count,
+      bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0), lastLines: text.slice(-6)});
+    if (process.env.AT_PROGRESS_OUTPUT) {
+      const progress = {schema: 'astra.i80386-windows300-progress.v1', executionRevision,
+        step: steps, cpu: before, modeTransitionCount: modeTransitions.count,
+        lastLines: text.slice(-6)};
+      const temporary = `${process.env.AT_PROGRESS_OUTPUT}.tmp`;
+      fs.writeFileSync(temporary, `${JSON.stringify(progress, null, 2)}\n`);
+      fs.renameSync(temporary, process.env.AT_PROGRESS_OUTPUT);
+    }
   }
 }
 
 const screenText = renderText();
 const nonblankScreen = screenText.filter(line => line.trim() !== '');
+if (modeTransitions.tail.length === 256 && modeTransitionTailNext !== 0)
+  modeTransitions.tail = [...modeTransitions.tail.slice(modeTransitionTailNext),
+    ...modeTransitions.tail.slice(0, modeTransitionTailNext)];
 const report = {
   schema: 'astra.i80386-windows300-diagnostic.v1',
   scope: 'bounded unchanged PC DOS 3.2 and Windows 3.0 HDD boot diagnostic',
