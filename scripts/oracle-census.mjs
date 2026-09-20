@@ -634,6 +634,22 @@ export const INPUTS = [
             + 'HEAD and cannot reach /tmp, so their absence in a fresh checkout is invisible '
             + 'to it. Can only stand in CI if the job fetches them explicitly.',
     },
+    {
+        id: 'doom-short-report', kind: 'fixture',
+        what: 'Source-bound raw report from the bounded original Doom 1.9 shareware short-demo run. '
+            + 'Enables mutation checks for the exact external media, 24-gametic guest completion, '
+            + 'DOS return and audited rendered frame; it is not an independent CPU oracle.',
+        env: 'ASTRA_DOOM_SHORT_REPORT', paths: [],
+        gates: ['test/i80386-doom-short-demo-acceptance.test.mjs'],
+        obtain: 'Generate the raw report locally with the externally held IBM AT BIOS, SeaVGABIOS, '
+            + 'FreeDOS floppy and Doom shareware inputs documented by '
+            + 'docs/receipts/2026-09-20-386-doom-short-demo.json, then set '
+            + 'ASTRA_DOOM_SHORT_REPORT to that JSON file. The repository does not fetch or publish '
+            + 'the ROM, disk images, game payloads or raw report.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI has neither the external media nor the source-bound raw report; '
+            + 'absence is an explicit optional-test skip rather than a standing gameplay claim.',
+    },
 ];
 
 /** Resolve one input to {present, via}. `via` names WHAT was found, so a
