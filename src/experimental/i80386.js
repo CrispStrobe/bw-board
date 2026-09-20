@@ -819,7 +819,7 @@ export class ExperimentalI80386 {
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
     const bytes = width >>> 3;
     const push = value => {
-      if (this.protectedMode && !this.virtual8086) {
+      if (this.protectedMode) {
         this._push(value, width);
         return;
       }
@@ -836,7 +836,7 @@ export class ExperimentalI80386 {
       else this.sp = next;
     };
     const readFrame = offset => {
-      if (this.protectedMode && !this.virtual8086)
+      if (this.protectedMode)
         return this._read(SEG_SS, offset, width);
       let value = 0;
       for (let index = 0; index < bytes; index++)
@@ -864,7 +864,7 @@ export class ExperimentalI80386 {
     const next = stack32
       ? (this.esp - allocation) >>> 0
       : (this.sp - allocation) & 0xffff;
-    if (allocation && this.protectedMode && !this.virtual8086)
+    if (allocation && this.protectedMode)
       this._linear(SEG_SS, next, allocation);
     if (stack32) this.esp = next;
     else this.sp = next;

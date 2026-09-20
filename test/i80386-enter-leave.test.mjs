@@ -70,3 +70,24 @@ test("LEAVE faults before changing the stack or frame pointer", () => {
   assert.throws(() => cpu.step(), error => error?.vector === 12);
   assert.deepEqual([cpu.sp, cpu.bp], [0x80, 0x100]);
 });
+
+test("VM86 ENTER applies user-page write protection without stack mutation", () => {
+  const { cpu, memory } = fixture([0xc8, 0, 0, 0]);
+  put(memory, 0x1000, 0x2007, 4); // user, writable page table
+  put(memory, 0x2000, 0x0005, 4); // user, read-only code and stack page
+  cpu.cr0 = 0x80000001;
+  cpu.cr3 = 0x1000;
+  cpu.eflags |= 0x20000;
+  cpu.sp = 0x200;
+  cpu.bp = 0x180;
+  const stackBefore = [0x1fe, 0x1ff].map(address => memory.get(address) ?? 0);
+  assert.throws(
+    () => cpu.step(),
+    error => error?.vector === 14 && error.errorCode === 7,
+  );
+  assert.deepEqual([cpu.eip, cpu.sp, cpu.bp], [0, 0x200, 0x180]);
+  assert.deepEqual(
+    [0x1fe, 0x1ff].map(address => memory.get(address) ?? 0),
+    stackBefore,
+  );
+});
