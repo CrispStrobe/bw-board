@@ -113,5 +113,239 @@
     "The raw diagnostic passed flag means absence of its diagnostic failure conditions; fullBootAccepted is false.",
     "CPU instruction counts use functional machine timing, not physical 386 cycle timing.",
     "Proprietary media and captured pixels remain local; this receipt contains provenance and hashes only."
-  ]
+  ],
+  "menuExperiment": {
+    "executionRevision": "0dfcfca2e5be3075cec34f55af33ae1b9ea805fb",
+    "sourceSha256": {
+      "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+      "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+      "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+      "src/experimental/i80386.js": "577bfb0b4bb1dee1b85b948ea6e6db887378d78fdabe6ae55e0c7eef00b1f026",
+      "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
+      "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+      "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+      "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+      "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+      "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+      "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+      "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+      "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+      "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+      "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+      "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+      "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+      "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+      "scripts/lib/freedos-at-acceptance.mjs": "e6dbc560e65676a3199ce1299aea28abd2c3c6f62ac46ed1c0243c572498065a",
+      "scripts/lib/i80386-doom-fat16-image.mjs": "7e58b5c5490370c31ff28f3e7da251a70c222cd7af53cd35a016466946b4738d",
+      "scripts/run-i80386-freedos-doom.mjs": "3f647b6cae108d0a67fe56fa92177a5f3158dd89bfe6fa4b65a3da3b312d8516"
+    },
+    "rawReportSha256": "5bbb767e5d133dc1a11031ba61fae55fc7c33c09f38912db7f72152a64d3da3a",
+    "steps": 340000000,
+    "hostRefusal": null,
+    "shutdown": false,
+    "keys": {
+      "requested": [
+        "esc",
+        "enter",
+        "enter"
+      ],
+      "injected": [
+        {
+          "step": 300000000,
+          "key": "esc",
+          "scan": 1
+        },
+        {
+          "step": 300001000,
+          "key": "esc-break",
+          "scan": 129
+        },
+        {
+          "step": 302000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 302001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 304000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 304001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 307000000,
+          "key": "esc",
+          "scan": 1
+        },
+        {
+          "step": 307001000,
+          "key": "esc-break",
+          "scan": 129
+        },
+        {
+          "step": 309000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 309001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 311000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 311001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 314000000,
+          "key": "esc",
+          "scan": 1
+        },
+        {
+          "step": 314001000,
+          "key": "esc-break",
+          "scan": 129
+        },
+        {
+          "step": 316000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 316001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 318000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 318001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 321000000,
+          "key": "esc",
+          "scan": 1
+        },
+        {
+          "step": 321001000,
+          "key": "esc-break",
+          "scan": 129
+        },
+        {
+          "step": 323000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 323001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 325000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 325001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 328000000,
+          "key": "esc",
+          "scan": 1
+        },
+        {
+          "step": 328001000,
+          "key": "esc-break",
+          "scan": 129
+        },
+        {
+          "step": 330000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 330001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 332000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 332001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 335000000,
+          "key": "esc",
+          "scan": 1
+        },
+        {
+          "step": 335001000,
+          "key": "esc-break",
+          "scan": 129
+        },
+        {
+          "step": 337000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 337001000,
+          "key": "enter-break",
+          "scan": 156
+        },
+        {
+          "step": 339000000,
+          "key": "enter",
+          "scan": 28
+        },
+        {
+          "step": 339001000,
+          "key": "enter-break",
+          "scan": 156
+        }
+      ],
+      "remaining": []
+    },
+    "snapshotStep": 339000000,
+    "render": {
+      "width": 320,
+      "height": 200,
+      "start": 0,
+      "planeStride": 80,
+      "uniqueRgbColors": 235,
+      "indexSha256": "691a4eb2e8df23cc57813bbc2953f2619a331a7561b580c815b7f1446b83ecb5",
+      "rgbSha256": "da0b4089f9b5c59bf2840ace4b16250d1cd3d81f6fbb61de1d909258115d92ed"
+    },
+    "rendererRevision": "ca544f3f",
+    "visuallyInspected": "Doom main menu over title screen",
+    "limitation": "Harness erroneously repeats the three-key sequence six times. This demonstrates menu display after real keyboard input, not the intended single sequence or gameplay acceptance. Corrected scheduler is 6b8b6704."
+  }
 }
