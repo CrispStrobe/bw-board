@@ -46,7 +46,8 @@ const machine = new ExperimentalI80386ATMachine(
   {onPortAccess(event) {
     if (event.port >= 0x3c0 && event.port <= 0x3df && vgaPorts.length < 4096)
       vgaPorts.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, ...event});
-    if (guestStarted && event.dir === 'out' && event.port === 0x80 &&
+    if (guestStarted && machine.cpu.cs === 0 && machine.cpu.eip >= 0x500 &&
+        machine.cpu.eip < 0x530 && event.dir === 'out' && event.port === 0x80 &&
         (event.value === 0xa5 || event.value === 0xee))
       guestMarker = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value};
   }},
@@ -57,19 +58,26 @@ machine.loadRom(vgaRom.value, 0xc0000);
 machine.reset();
 
 let optionEntry = null;
-let optionInstructions = 0;
+let optionPostInstructions = 0;
 let firmwareReturn = null;
 let int10Vector = null;
 let guestStarted = false;
+let int10ServiceEntry = null;
+let int10ServiceInstructions = 0;
 let blocker = null;
 let outcome = 'budget';
 try {
   for (; steps < stepLimit; steps++) {
     const before = {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc};
     if (!optionEntry && before.cs === 0xc000) optionEntry = {step: steps, ...before};
-    if (before.cs === 0xc000) optionInstructions++;
+    if (before.cs === 0xc000) {
+      if (guestStarted) {
+        int10ServiceEntry ??= {step: steps, ...before};
+        int10ServiceInstructions++;
+      } else optionPostInstructions++;
+    }
     machine.step();
-    if (!guestStarted && optionEntry && optionInstructions > 0 && before.cs === 0xc000 && machine.cpu.cs === 0xf000) {
+    if (!guestStarted && optionEntry && optionPostInstructions > 0 && before.cs === 0xc000 && machine.cpu.cs === 0xf000) {
       firmwareReturn = {step: steps, from: before, cs: machine.cpu.cs, eip: machine.cpu.eip};
       int10Vector = {ip: machine._read(0x40), cs: machine._read(0x42)};
       int10Vector.ip |= machine._read(0x41) << 8;
@@ -119,29 +127,37 @@ if (git('rev-parse', 'HEAD') !== executionRevision)
 const optionVgaPorts = optionEntry ? vgaPorts.filter(event => event.step >= optionEntry.step &&
   (!firmwareReturn || event.step <= firmwareReturn.step)) : [];
 const guestVgaPorts = firmwareReturn ? vgaPorts.filter(event => event.step > firmwareReturn.step) : [];
+const bdaVideoMode = machine._read(0x449);
+const videoState = machine.chips.vga1.getVideoState();
 const accepted = outcome === 'int10-vram-roundtrip' && !!optionEntry && !!firmwareReturn &&
-  optionInstructions > 0 && optionVgaPorts.length > 0 && guestVgaPorts.length > 0 &&
-  guestMarker?.value === 0xa5;
+  optionPostInstructions > 0 && optionVgaPorts.length > 0 && int10Vector?.cs === 0xc000 &&
+  int10ServiceEntry?.cs === int10Vector.cs && int10ServiceEntry?.eip === int10Vector.ip &&
+  int10ServiceInstructions > 0 && guestVgaPorts.length > 0 && bdaVideoMode === 0x13 &&
+  (videoState.seq[4] & 0x08) !== 0 && guestMarker?.cs === 0 &&
+  guestMarker?.eip === 0x526 && guestMarker?.value === 0xa5;
 const report = {
   schema: 'astra.i80386-at-vga-bios-diagnostic.v1',
   accepted,
   diagnosticOnly: true,
   fullBootAccepted: false,
-  scope: 'external SeaVGABIOS option-ROM entry, VGA port activity, and return to IBM AT firmware',
+  scope: 'external SeaVGABIOS option POST followed by a host-installed real-mode diagnostic guest invoking INT 10h mode 13h and verifying two VGA-memory bytes',
   outcome,
   steps,
   stepLimit,
   blocker,
   optionEntry,
-  optionInstructions,
+  optionPostInstructions,
   firmwareReturn,
   int10Vector,
+  int10ServiceEntry,
+  int10ServiceInstructions,
+  bdaVideoMode,
   guestStarted,
   guestMarker,
   vgaPorts,
   optionVgaPorts,
   guestVgaPorts,
-  videoState: machine.chips.vga1.getVideoState(),
+  videoState,
   inputs: {
     systemRom: {bytes: systemRom.value.length, sha256: sha256(systemRom.value)},
     vgaRom: {bytes: vgaRom.value.length, sha256: sha256(vgaRom.value)},
