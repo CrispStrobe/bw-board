@@ -1097,7 +1097,15 @@ export class ExperimentalI80386 {
     const code = selector & 0xfffc;
     if (!code || (selector & 4))
       throw new I80386Fault(returning ? 10 : 13, code, "invalid TSS selector");
-    const raw = this._descriptorBytes(selector), access = raw.bytes[5];
+    let raw;
+    try {
+      raw = this._descriptorBytes(selector);
+    } catch (error) {
+      if (returning && error instanceof I80386Fault && error.vector === 13)
+        error.vector = 10;
+      throw error;
+    }
+    const access = raw.bytes[5];
     const type = access & 15, expected = returning ? 11 : 9;
     if ((access & 0x10) || type !== expected)
       throw new I80386Fault(returning ? 10 : 13, code,
@@ -1151,20 +1159,24 @@ export class ExperimentalI80386 {
       (access & ~2) | (busy ? 2 : 0), { supervisor: true });
   }
 
-  _taskSwitch(selector, kind, {
+  _taskSwitch(selector, kind, options = {}) {
+    try {
+      return this._taskSwitchCore(selector, kind, options);
+    } catch (error) {
+      if (options.external && error instanceof I80386Fault &&
+          [10, 11, 12, 13].includes(error.vector))
+        error.errorCode = ((error.errorCode ?? 0) | 1) >>> 0;
+      throw error;
+    }
+  }
+
+  _taskSwitchCore(selector, kind, {
     checkPrivilege = true,
     errorCode = null,
     external = false,
   } = {}) {
     const returning = kind === "iret";
-    let incoming;
-    try {
-      incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
-    } catch (error) {
-      if (external && error instanceof I80386Fault && error.errorCode)
-        error.errorCode |= 1;
-      throw error;
-    }
+    const incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
     // Unlike the 286 SWITCH_TASKS pseudocode, the original 386 task-switch
     // flow diagnoses a short incoming TSS while the outgoing task remains
     // restartable. Read the admitted dynamic image before busy/TR commits.
@@ -1179,8 +1191,8 @@ export class ExperimentalI80386 {
           address: (this.gdtr.base + (this.tr.selector & 0xfff8)) >>> 0,
         }
       : null;
-    if (!returning) this._setTaskBusy(incoming, true);
     this._saveCurrentTask(returning ? this.eflags & ~NT : this.eflags, selector);
+    if (!returning) this._setTaskBusy(incoming, true);
     if (kind === "call") this._taskWrite(incoming.base, 0, 2, this.tr.selector);
     if ((kind === "jmp" || returning) && outgoing) this._setTaskBusy(outgoing, false);
     this.tr = { ...incoming, type: 11 };
@@ -1248,8 +1260,6 @@ export class ExperimentalI80386 {
       this._suppressTrace = true;
     } catch (error) {
       if (error instanceof I80386Fault) error.taskCommitted = true;
-      if (external && error instanceof I80386Fault && error.errorCode)
-        error.errorCode |= 1;
       throw error;
     }
   }
@@ -1295,8 +1305,6 @@ export class ExperimentalI80386 {
           throw new I80386Fault(13, errorCode, "task gate privilege");
         if (!(access & 0x80))
           throw new I80386Fault(11, errorCode, "task gate not present");
-        if (raw.bytes[0] || raw.bytes[1] || raw.bytes[4] || raw.bytes[6] || raw.bytes[7])
-          throw new I80386Fault(13, errorCode, "malformed task gate");
         const target = raw.bytes[2] | raw.bytes[3] << 8;
         this._taskSwitch(target, call ? "call" : "jmp", { checkPrivilege: false });
         return;
@@ -1986,8 +1994,6 @@ export class ExperimentalI80386 {
         throw new I80386Fault(13, idtCode, "software task gate privilege");
       if (!(access & 0x80))
         throw new I80386Fault(11, idtCode, "IDT task gate not present");
-      if (b[0] || b[1] || b[4] || b[6] || b[7])
-        throw new I80386Fault(13, idtCode, "malformed IDT task gate");
       this._taskSwitch(b[2] | b[3] << 8, "call", {
         checkPrivilege: false,
         errorCode,
