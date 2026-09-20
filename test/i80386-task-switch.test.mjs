@@ -208,8 +208,10 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   cpu.tr = { selector: 0x18, base: 0x400, limit: 0x67, present: true, type: 11 };
   cpu.eax = 0xabcdef01;
   cpu.esp = 0x800;
+  cpu._retainedRealCs = true;
 
   cpu.step();
+  assert.equal(cpu._retainedRealCs, false, "task CS load ends retained-real-CS transition");
   assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.cr3, cpu.eflags & 0x4000],
     [0x20, 0x100, 0x2000, 0x4000]);
   assert.equal(memory.get(0x20d), 0x9b, "incoming CS is marked accessed");
