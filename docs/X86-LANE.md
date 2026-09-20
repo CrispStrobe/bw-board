@@ -32,9 +32,11 @@ The independent [386 executor](I80386-EXPERIMENTAL.md) remains opt-in and
 incomplete. Landed stages cover protected far control, privilege transitions,
 TSS I/O permissions, VM86 entry/interrupt/return, BIOS selector checks, common
 compiler ISA, functional AT pacing and experimental ATA disk access. The
-current continuation reaches genuine INT19 and an exact floppy boot-sector
-handoff after adding absent-NPX handling; DOS shell/file and BIOS HDD
-acceptance are being measured separately. The unchanged test386 capture now reaches a named
+current continuation now passes genuine BIOS POST, INT19, DOS 2 shell write,
+and fresh-machine file persistence on the 386. A separate owned HDD boot program
+writes and verifies all 512 bytes of a sector through BIOS INT13. These are
+source-bound at `72f56ab1a5a4606e17d821bed2bb1e3ac36a998e`; see the
+[DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json). The unchanged test386 capture now reaches a named
 paging accessed-bit disagreement; it has not passed the complete ROM.
 Windows and Doom remain unexecuted acceptance targets.
 

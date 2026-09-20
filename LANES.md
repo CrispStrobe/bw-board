@@ -69,6 +69,20 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (implementation frozen; hosted qualification pending) — Astra/Sol
+386 genuine AT DOS boot and BIOS HDD roundtrip. The commit containing this row
+freezes expand-down segment/privilege-stack admission, absent-NPX WAIT/ESC,
+XLAT and CBW/CWDE/CWD/CDQ. Coordinator replay on combined source
+`72f56ab1a5a4606e17d821bed2bb1e3ac36a998e` passes actual reset/POST/INT19,
+DOS shell write and fresh-machine TYPE persistence (25,652,224 / 25,567,232
+steps; identical media hash to the worker). Separate BIOS HDD boot-program
+acceptance passes at 70,579,183 steps with native 16-bit PIO and all 512 read
+bytes poisoned then compared by the guest. This is not an HDD OS boot.
+Focused 386 checks: 204 pass, two optional skips, zero failures; actionlint
+passes. Fixture source hashes and five tamper controls prevent stale DOS proof.
+Receipt: `docs/receipts/2026-09-20-386-at-dos-hdd.json`. Windows, Doom,
+386 FreeDOS, task switching, x87 and full CPU compatibility remain unaccepted.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 VM86, BIOS/compiler ISA and experimental disk continuation. Candidate and
 landing: `88d960eecb566db3939710b844ca03a36e5ea8c1`; receipt preserves actual execution SHAs.
