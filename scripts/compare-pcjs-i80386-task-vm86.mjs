@@ -54,7 +54,7 @@ function install(write) {
   descriptor(write,0x218,0x400,0x67,0x89); descriptor(write,0x220,0x500,0x67,0x89);
   descriptor(write,0x228,0x700,0x67,0x89);
   put(write,0x100,[0xb8,0x10,0,0x8e,0xd0,0x8e,0xd8,0x8e,0xc0,0xbc,0,8,
-    0xb8,0x18,0,0x0f,0,0xd8,0x9a,0,0,0x20,0,0xf4]);
+    0xb8,0x18,0,0x0f,0,0xd8,0xea,0,0,0x20,0,0xf4]);
   put(write,0x1000,[0xcd,0x20,0xb8,0x34,0x12,0xeb,0xfe]);
   put(write,0x180,[0xcf]);
   put(write,0x800+0x20*8,[0xaa,0xbb,0x28,0,0xcc,0xe5,0xdd,0xee]);
@@ -84,7 +84,7 @@ function runPCjs() {
   return summarize(cpu,a=>bus.getByteDirect(a),false,visited);
 }
 const reference=runPCjs(),actual=runLocal();if(mutation==='result')actual.ax^=1;
-const expected={completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0x18,handlerBacklink:0x20};
+const expected={completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0,handlerBacklink:0x20};
 const differences=[];for(const field of Object.keys(expected))for(const [side,value]of[['reference',reference[field]],['actual',actual[field]]])if(value!==expected[field])differences.push({field:`${side}.${field}`,expected:expected[field],actual:value});
 verifyPin();verifyLocal();if(execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim()!==revision||sources.some(path=>hash(readFileSync(new URL(path,import.meta.url)))!==sourceHashes[path]))throw new Error('execution sources changed');
 console.log(JSON.stringify({oracle:'PCjs',revision,pcjsRevision:PIN,scope:'owned VM86 TSS entry, IDT task-gate protected handler, NT IRET VM return and exact completion',sourceHashes,mutation,status:differences.length?'fail':'pass',expected,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
