@@ -9,6 +9,30 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 DONE — `/mnt/volume1/code/lego` (Claude): repair `ci.yml`, red on master since
+`157caed0`. Isolated worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch
+`lane/vcc-supply-knob`. Owns only `test/terminal-current-contract.test.mjs` and this row.
+
+MINE, one cause, six commits. Adding `'led'` to `OPERATING_POINT_KINDS` widened the
+operating-point envelope; `terminal-current-contract.test.mjs` asserts that the
+supported set and the PROVEN set are the same set, and says so in its own failure
+message — "expanding the OP envelope requires expanding this boundary proof". I did not
+expand it, so every commit from `157caed0` to `ebf77e9e` failed that one test and
+nothing else. Two later commits from another session (`03706ed7`, `da2a24ed`) inherited
+the red through no fault of their own, which is why this lands ahead of my own pin work.
+
+The bench now carries an LED with a complete explicit Shockley set, its series resistor
+and its nets. It is given the DIODE's parameters deliberately: what is under test is
+that the kind travels the same OP/live conversion and that its terminal currents invert
+exactly between the operating point and the live solve — not that the numbers resemble
+a red LED, which a 2 V rail could not drive anyway while every part here must carry
+provable current.
+
+Why my local runs missed it: I ran the suites I judged related — diode, operating-point,
+595, digital, inference — and this is the one file that asserts the WHOLE set rather
+than any single kind, so a topic-shaped selection walks straight past it. Full
+`npm test` as CI runs it, which is the check that was owed.
+
 2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): the vcc symbol is a
 bench supply you can turn. Isolated worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch
 `lane/vcc-supply-knob`, exact base `29409086`. Owns only `_railVolts` and its four call
