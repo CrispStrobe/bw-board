@@ -7,7 +7,10 @@ const fixture=()=>{
   const dac=Buffer.alloc(768);dac.set([0,0,0,63,32,1]);
   for(let x=0;x<320;x++)planes[x&3][x>>>2]=x&1;
   return {seq:[0,0,0,0,6],gc:[0,0,0,0,0,0x40,5],
-    crtc:Object.assign(Array(0x20).fill(0),{9:1,0x13:40,0x17:0x40}),dacMask:0xff,
+    crtc:Object.assign(Array(0x20).fill(0),{1:79,6:0xbf,7:0x1f,9:0x41,0x12:0x8f,
+      0x13:40,0x14:0,0x17:0xe3,0x18:0xff}),
+    attr:Object.assign(Array(0x20).fill(0),{0x10:0x41,0x12:0x0f,0x13:0,0x14:0}),
+    dacMask:0xff,
     dacBase64:dac.toString('base64'),planesBase64:planes.map(plane=>plane.toString('base64'))};
 };
 
@@ -25,4 +28,17 @@ test('rejects an unobserved chain-4 or CRTC layout',()=>{
   assert.throws(()=>renderObservedDoomVga(chain4),/outside the observed/);
   const stride=fixture();stride.crtc[0x13]=80;
   assert.throws(()=>renderObservedDoomVga(stride),/outside the observed/);
+  const missing=fixture();delete missing.dacMask;
+  assert.throws(()=>renderObservedDoomVga(missing),/invalid DAC mask/);
+});
+
+test('honors the observed alternate page start and DAC pixel mask',()=>{
+  const snapshot=fixture();snapshot.crtc[0x0c]=0x80;snapshot.dacMask=0;
+  const planes=snapshot.planesBase64.map(value=>Buffer.from(value,'base64'));
+  planes[0][0]=1;planes[0][0x8000]=0;
+  snapshot.planesBase64=planes.map(plane=>plane.toString('base64'));
+  const frame=renderObservedDoomVga(snapshot);
+  assert.equal(frame.start,0x8000);
+  assert.equal(frame.indices[0],0);
+  assert.equal(frame.uniqueRgbColors,1);
 });

@@ -6,6 +6,8 @@ const [input,output]=process.argv.slice(2);
 if(!input||!output)throw new Error('usage: render-i80386-doom-vga.mjs REPORT.json OUTPUT.ppm');
 const report=JSON.parse(fs.readFileSync(input,'utf8'));
 const snapshot=report.vgaEvidence?.latestGraphicsSnapshot??report.vga?.latest;
+if(snapshot?.dacMask===undefined&&report.vgaDiagnostics?.state?.dacMask!==undefined)
+  snapshot.dacMask=report.vgaDiagnostics.state.dacMask;
 const frame=renderObservedDoomVga(snapshot);
 fs.writeFileSync(output,ppmFromDoomVgaFrame(frame));
 process.stdout.write(`${JSON.stringify({input,output,width:frame.width,height:frame.height,

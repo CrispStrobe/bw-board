@@ -4,16 +4,23 @@ const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sixToEight=value=>(value<<2)|(value>>>4);
 
 export function renderObservedDoomVga(snapshot) {
+  // This renderer is deliberately limited to the title-screen register state
+  // observed in the source-bound run.  The card does not yet expose the
+  // attribute-controller PAS/display-enable latch, so this is raw raster
+  // evidence rather than a complete monitor-output model.
   if(!snapshot||snapshot.seq?.[4]!==0x06||snapshot.gc?.[5]!==0x40||snapshot.gc?.[6]!==0x05||
-      snapshot.crtc?.[0x13]!==40||(snapshot.crtc?.[0x14]&0x40)!==0||
-      (snapshot.crtc?.[0x17]&0x40)===0||(snapshot.crtc?.[9]&0x1f)!==1)
+      snapshot.crtc?.[1]!==79||snapshot.crtc?.[6]!==0xbf||snapshot.crtc?.[7]!==0x1f||
+      snapshot.crtc?.[9]!==0x41||snapshot.crtc?.[0x12]!==0x8f||snapshot.crtc?.[0x13]!==40||
+      snapshot.crtc?.[0x14]!==0||snapshot.crtc?.[0x17]!==0xe3||snapshot.crtc?.[0x18]!==0xff||
+      snapshot.attr?.[0x10]!==0x41||snapshot.attr?.[0x12]!==0x0f||
+      snapshot.attr?.[0x13]!==0||snapshot.attr?.[0x14]!==0)
     throw new Error('snapshot is outside the observed Doom unchained 320x200 VGA mode');
   const planes=(snapshot.planesBase64??[]).map(value=>Buffer.from(value,'base64'));
   if(planes.length!==4||planes.some(plane=>plane.length!==0x10000))
     throw new Error('snapshot must contain four 64KiB VGA planes');
   const dac=Buffer.from(snapshot.dacBase64??'','base64');
   if(dac.length!==768)throw new Error('snapshot must contain 768 six-bit DAC bytes');
-  const dacMask=snapshot.dacMask??0xff;
+  const dacMask=snapshot.dacMask;
   if(!Number.isInteger(dacMask)||dacMask<0||dacMask>0xff)throw new Error('invalid DAC mask');
   const start=((snapshot.crtc[0x0c]<<8)|snapshot.crtc[0x0d])&0xffff;
   if(start!==0&&start!==0x8000)throw new Error('unsupported observed Doom page start');

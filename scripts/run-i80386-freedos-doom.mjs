@@ -120,6 +120,7 @@ let latestVgaGraphicsSnapshot=null;
 let lastVgaFrameRevision=null;
 const gameKeySchedule=[];
 const injectedGameKeys=[];
+let gameKeysScheduled=false;
 let ataAtCommandQueue=null;
 const rtcPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
@@ -447,11 +448,15 @@ for(;steps<stepLimit;steps++) {
                     planesBase64:machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64'))};
                 firstVgaGraphicsSnapshot??=snapshot;
                 latestVgaGraphicsSnapshot=snapshot;
-                if(gameKeySchedule.length===0&&gameKeys.length!==0)gameKeys.forEach((key,index)=>{
-                    const make=key==='esc'?0x01:0x1c;
-                    const due=steps+(index+1)*2_000_000;
-                    gameKeySchedule.push({key,scan:make,due},{key:`${key}-break`,scan:make|0x80,due:due+1000});
-                });
+                if(!gameKeysScheduled&&gameKeys.length!==0) {
+                    gameKeysScheduled=true;
+                    gameKeys.forEach((key,index)=>{
+                        const make=key==='esc'?0x01:0x1c;
+                        const due=steps+(index+1)*2_000_000;
+                        gameKeySchedule.push({key,scan:make,due},
+                            {key:`${key}-break`,scan:make|0x80,due:due+1000});
+                    });
+                }
             }
             lastVgaFrameRevision=machine.displayRevision;
         }
