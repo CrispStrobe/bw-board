@@ -73,7 +73,8 @@ const interruptCounts = {};
 const ataCommands = {count: 0, tail: []};
 const ataStatus = {count: 0, tail: []};
 const ataTaskFileWrites = {count: 0, tail: []};
-const dosInterrupts = {int13: {count: 0, tail: []}, int24: {count: 0, tail: []}};
+const dosInterrupts = {scope: 'heuristic real-mode IVT entry and matching SS:SP/CS:IP return; nested same-vector calls omitted',
+  int13: {count: 0, tail: []}, int24: {count: 0, tail: []}};
 const controllerPorts = [];
 const samples = [];
 const instructionTrail = [];
@@ -179,15 +180,18 @@ const physicalBytes = (pc, cr0, length = 8) => {
     return physical < machine.mem.length ? machine.mem[physical] : 0xff;
   });
 };
+const peekPhysical = address => machine.mem[machine._decode386(address >>> 0)] ?? 0xff;
 const ivtTarget = vector => ({
-  eip: machine._read(vector * 4) | machine._read(vector * 4 + 1) << 8,
-  cs: machine._read(vector * 4 + 2) | machine._read(vector * 4 + 3) << 8,
+  eip: peekPhysical(vector * 4) | peekPhysical(vector * 4 + 1) << 8,
+  cs: peekPhysical(vector * 4 + 2) | peekPhysical(vector * 4 + 3) << 8,
 });
 const activeDosInterrupts = new Map();
 const traceDosInterrupt = (name, vector, before) => {
   const trace = dosInterrupts[name];
   const active = activeDosInterrupts.get(name);
-  if (active && before.cs === active.returnCs && before.eip === active.returnIp) {
+  if (active && !(machine.cpu.cr0 & 1) && before.ss === active.returnSs &&
+      machine.cpu.sp === active.returnSp && before.cs === active.returnCs &&
+      before.eip === active.returnIp) {
     trace.count++;
     trace.tail.push({...active, returnStep: steps, returnEax: before.eax,
       returnFlags: before.eflags, carry: !!(before.eflags & 1)});
@@ -197,12 +201,13 @@ const traceDosInterrupt = (name, vector, before) => {
   if ((machine.cpu.cr0 & 1) || activeDosInterrupts.has(name)) return;
   const target = ivtTarget(vector);
   if (before.cs !== target.cs || before.eip !== target.eip) return;
-  const stack = (machine.cpu.ss << 4) + machine.cpu.sp;
+  const stack = (machine.cpu.segmentCaches[2].base + machine.cpu.sp) >>> 0;
   activeDosInterrupts.set(name, {entryStep: steps, vector, ...target,
-    entryEax: before.eax, entryEdx: before.edx,
-    returnIp: machine._read(stack) | machine._read(stack + 1) << 8,
-    returnCs: machine._read(stack + 2) | machine._read(stack + 3) << 8,
-    savedFlags: machine._read(stack + 4) | machine._read(stack + 5) << 8});
+    entryEax: before.eax, entryEdx: before.edx, entrySs: before.ss,
+    entrySp: machine.cpu.sp, returnSs: before.ss, returnSp: (machine.cpu.sp + 6) & 0xffff,
+    returnIp: peekPhysical(stack) | peekPhysical(stack + 1) << 8,
+    returnCs: peekPhysical(stack + 2) | peekPhysical(stack + 3) << 8,
+    savedFlags: peekPhysical(stack + 4) | peekPhysical(stack + 5) << 8});
 };
 for (; steps < stepLimit; steps++) {
   const before = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
