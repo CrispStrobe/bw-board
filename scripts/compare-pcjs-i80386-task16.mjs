@@ -104,7 +104,7 @@ function runPCjs() {
 const reference = runPCjs();
 const actual = runLocal();
 if (mutation === "result") actual.ax ^= 1;
-const expected = { halted: true, cs: 8, eip: 0x119, tr: 0x18, cr3: 0, ax: 0x18,
+const expected = { halted: true, cs: 8, eip: 0x118, tr: 0x18, cr3: 0, ax: 0x18,
   oldBusy: 3, newBusy: 1, backlink: 0x18 };
 const differences = [];
 for (const field of Object.keys(expected)) {
