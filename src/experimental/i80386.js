@@ -2587,6 +2587,21 @@ export class ExperimentalI80386 {
       if (stack32) this.esp = (this.esp + (width >>> 3)) >>> 0;
       else this.sp = (this.sp + (width >>> 3)) & 0xffff;
       this.eip = target;
+    } else if (op === 0xd4 || op === 0xd5) {
+      const base = this._fetch8();
+      if (op === 0xd4) {
+        if (base === 0) throw new I80386Fault(0, null, "AAM divisor is zero");
+        const value = this.al;
+        this.ah = Math.floor(value / base);
+        this.al = value % base;
+      } else {
+        this.al = (this.ah * base + this.al) & 0xff;
+        this.ah = 0;
+      }
+      this.eflags &= ~(PF | ZF | SF);
+      if (this.al === 0) this.eflags |= ZF;
+      if (this.al & 0x80) this.eflags |= SF;
+      if (parity8(this.al)) this.eflags |= PF;
     } else if (op === 0x9e)
       this.eflags = (this.eflags & ~0xd5) | (this.ah & 0xd5) | 2;
     else if (op === 0x9f) this.ah = (this.eflags | 2) & 0xff;
