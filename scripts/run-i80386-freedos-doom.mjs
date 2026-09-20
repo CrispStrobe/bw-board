@@ -67,6 +67,9 @@ if(process.env.FREEDOS_PRIOR_REPORT) {
     priorOutputMediaSha256=priorReport.input.floppy.output.sha256;
 }
 const commandKeys=[...(process.env.FREEDOS_COMMAND_SCRIPT??'')];
+const doomTraceDetail=process.env.DOOM_TRACE_DETAIL??'registers';
+if(!['off','registers','full'].includes(doomTraceDetail))
+    throw new Error('DOOM_TRACE_DETAIL must be off, registers, or full');
 const requestedKeys=[];
 const scanCodes={a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,
     i:0x17,j:0x24,k:0x25,l:0x26,m:0x32,n:0x31,o:0x18,p:0x19,q:0x10,r:0x13,
@@ -329,16 +332,19 @@ for(;steps<stepLimit;steps++) {
                 firstDifferenceOffset:firstLoadDifference,lastDifferenceOffset:lastLoadDifference,
                 firstDifferences:loadDifferences}};
     }
-    if(doomEntry) {
-        const stackOffset=machine.cpu.segmentCaches[2].default32?machine.cpu.esp:machine.cpu.sp;
-        const stackLinear=(machine.cpu.segmentCaches[2].base+stackOffset)>>>0;
-        const stackBytes=observeLinearBytes(stackLinear,8);
-        addDoomInstructionTrace({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,
-            linearPc:machine.cpu.pc,eax:machine.cpu.eax,ebx:machine.cpu.ebx,ecx:machine.cpu.ecx,
-            edx:machine.cpu.edx,ss:machine.cpu.ss,esp:machine.cpu.esp,eflags:machine.cpu.eflags,
-            stackWords:stackBytes&&Array.from({length:4},(_,index)=>stackBytes[index*2]|
-                stackBytes[index*2+1]<<8),
-            bytes:observeLinearBytes(machine.cpu.pc,6)});
+    if(doomEntry&&doomTraceDetail!=='off') {
+        const trace={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0,
+            eax:machine.cpu.eax,ecx:machine.cpu.ecx,edx:machine.cpu.edx};
+        if(doomTraceDetail==='full') {
+            const stackOffset=machine.cpu.segmentCaches[2].default32?machine.cpu.esp:machine.cpu.sp;
+            const stackLinear=(machine.cpu.segmentCaches[2].base+stackOffset)>>>0;
+            const stackBytes=observeLinearBytes(stackLinear,8);
+            Object.assign(trace,{linearPc:machine.cpu.pc,ebx:machine.cpu.ebx,
+                ss:machine.cpu.ss,esp:machine.cpu.esp,eflags:machine.cpu.eflags,
+                stackWords:stackBytes&&Array.from({length:4},(_,index)=>stackBytes[index*2]|
+                    stackBytes[index*2+1]<<8),bytes:observeLinearBytes(machine.cpu.pc,6)});
+        }
+        addDoomInstructionTrace(trace);
     }
     if(executionBoundaries.bootSector&&!commandQueued&&(steps&1023)===0) {
         const ui=renderScreen();
@@ -511,7 +517,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',
         vgaRom:vgaRom&&{bytes:vgaRom.length,sha256:sha(vgaRom)},floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,cr0Transitions,doomEntry,doomEntryWrites,
+    executionBoundaries,cr0Transitions,doomEntry,doomEntryWrites,doomTraceDetail,
     doomInstructionTrace:orderedDoomInstructionTrace(),diskPorts,rtcPorts,keyboardScript,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
