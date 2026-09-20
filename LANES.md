@@ -9,6 +9,23 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 CLAIM — `/root` (Codex): exact grounded-bulk Level-1 NMOS
+GAMMA/PHI small-signal body transconductance, isolated worktree
+`/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`, branch
+`lane/nmos-gamma-phi-ac`, exact base
+`5b3c0ba1071406d875e704b8cdcd01282f1e4978`. Owns only the exact-NMOS
+branch in `src/ac.js`, focused additions to `test/nmos-ac-small-signal.test.mjs`,
+and this row. Extend the already-qualified Level-1 AC Jacobian only when
+`bulkAtGround:true` and finite `gamma >= 0`, finite `phi > 0` are declared as
+a pair. Linearise the same DC threshold law at the converged bias and stamp
+the resulting body transconductance from grounded bulk to source; preserve
+the zero/default-body-effect path byte-for-behaviour and keep generic MOS,
+PMOS, source-tied/third bulk, capacitances, solver/tolerances and every x86
+path outside scope. Require a live-ngspice nonzero-source witness, a zero-gamma
+control, public-state non-mutation, and isolated mutations that drop the body
+Jacobian or admit an incomplete pair. Downstream CUI admission and the exact
+350-row OP+AC replay remain separate after this upstream qualification.
+
 2026-09-20 DONE (candidate) — bwcx: exact grounded-bulk Level-1 NMOS body-effect public
 operating-point domain, isolated worktree
 `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-op`, branch
