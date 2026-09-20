@@ -29,7 +29,8 @@ const {default:X86}=await import(moduleURL('x86'));
 class QuietBus extends Bus {printf(){return 0;}}
 
 const mutation=process.env.I386_UNREAL_ORACLE_MUTATION??null;
-if(mutation!==null&&mutation!=='result'&&mutation!=='budget')throw new Error(`unknown mutation ${mutation}`);
+if(mutation!==null&&mutation!=='result'&&mutation!=='budget'&&mutation!=='cache')
+  throw new Error(`unknown mutation ${mutation}`);
 const stepLimit=mutation==='budget'?10:70000;
 const SOURCE=0x20000,DEST=0x40000,BYTES=0x10004,DWORDS=BYTES>>>2,MEMORY_BYTES=0x60000;
 const put=(write,at,bytes)=>bytes.forEach((value,index)=>write(at+index,value));
@@ -43,7 +44,8 @@ function install(write){
   descriptor(write,0x210,0,0xfffff,0x92,0x80);
   put(write,0x20,[0xb8,0x10,0,0x8e,0xd8,0x8e,0xc0,0x0f,0x20,0xc0,0x66,0x83,0xe0,0xfe,
     0x0f,0x22,0xc0,0xea,0x50,0,0,0]);
-  put(write,0x50,[0x66,0xbe,SOURCE&255,(SOURCE>>>8)&255,(SOURCE>>>16)&255,SOURCE>>>24,
+  put(write,0x50,[0x31,0xc0,0x8e,0xd8,0x8e,0xc0,
+    0x66,0xbe,SOURCE&255,(SOURCE>>>8)&255,(SOURCE>>>16)&255,SOURCE>>>24,
     0x66,0xbf,DEST&255,(DEST>>>8)&255,(DEST>>>16)&255,DEST>>>24,
     0x66,0xb9,DWORDS&255,(DWORDS>>>8)&255,(DWORDS>>>16)&255,DWORDS>>>24,
     0xfc,0x67,0x66,0xf3,0xa5,0xf4]);
@@ -75,12 +77,17 @@ function runPCjs(){
 }
 const reference=runPCjs(),actual=runLocal();
 if(mutation==='result')actual.boundary[1]^=1;
-const expected={halted:true,protectedMode:false,cs:0,eip:0x68,ds:0x10,es:0x10,
+if(mutation==='cache'){actual.dsLimit=0xffff;actual.esLimit=0xffff;}
+const sourcePayload=Buffer.alloc(BYTES);
+for(let i=0;i<BYTES;i++)sourcePayload[i]=(i*37+(i>>>8)+0x5a)&255;
+const expectedCopySha256=hash(sourcePayload);
+const expected={halted:true,protectedMode:false,cs:0,eip:0x6e,ds:0,es:0,
   dsLimit:0xffffffff,esLimit:0xffffffff,esi:SOURCE+BYTES,edi:DEST+BYTES,ecx:0};
 const differences=[];
 for(const field of Object.keys(expected))for(const [side,value] of [['reference',reference],['actual',actual]])
   if(value[field]!==expected[field])differences.push({field:`${side}.${field}`,expected:expected[field],actual:value[field]});
-if(reference.copiedSha256!==actual.copiedSha256)differences.push({field:'copiedSha256',reference:reference.copiedSha256,actual:actual.copiedSha256});
+for(const [side,value] of [['reference',reference],['actual',actual]])
+  if(value.copiedSha256!==expectedCopySha256)differences.push({field:`${side}.copiedSha256`,expected:expectedCopySha256,actual:value.copiedSha256});
 if(JSON.stringify(reference.boundary)!==JSON.stringify(actual.boundary))differences.push({field:'boundary',reference:reference.boundary,actual:actual.boundary});
 verifyPcjs();execFileSync('git',['diff','--quiet','HEAD','--',...localPaths],{cwd:repositoryRoot});
 if(execFileSync('git',['rev-parse','HEAD'],{cwd:repositoryRoot,encoding:'utf8'}).trim()!==executionRevision)
@@ -89,5 +96,6 @@ for(const path of sources)if(hash(readFileSync(new URL(path,import.meta.url)))!=
   throw new Error(`local source changed during comparison: ${path}`);
 console.log(JSON.stringify({oracle:'PCjs',revision:PIN,executionRevision,
   scope:'software compatibility evidence for LGDT, PE entry, 4GiB DS/ES cache loading, PE exit, and address/operand-size REP MOVSD beyond 64KiB',
-  sourceHashes,stepLimit,mutation,status:differences.length?'fail':'pass',expected,reference,actual,differences},null,2));
+  sourceHashes,stepLimit,mutation,status:differences.length?'fail':'pass',expected,expectedCopySha256,
+  reference,actual,differences},null,2));
 process.exitCode=differences.length?1:0;
