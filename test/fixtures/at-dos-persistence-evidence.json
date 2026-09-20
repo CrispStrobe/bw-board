@@ -33,7 +33,7 @@
           "bytesPerSector": 512
         },
         "output": {
-          "path": "/tmp/astra-msdos2-at-439560e.img",
+          "path": "/tmp/astra-root-stage10-286dos-e4b08a61.img",
           "sha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69"
         }
       }
@@ -882,9 +882,9 @@
       "priorOutputMediaSha256": null,
       "linked": null
     },
-    "executionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
+    "executionRevision": "e4b08a616c3db333d8c54216b1fd090373ef72bb",
     "sourceSha256": {
-      "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
+      "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
@@ -895,7 +895,7 @@
       "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
       "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
       "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
-      "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+      "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
       "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-at-bios-post.mjs": "0f0fe56fd882087caccbb6fd4c2c412a6854bbe11aca944e5d07d848706ba551"
@@ -912,7 +912,7 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "originalReportSha256": "d78bfa07d4e226626e3ce171fdcfbd64f16264c22bf8abe6e52ea5865be3e2ff"
+    "originalReportSha256": "4e4ea1c86c273b8721dc94382efb600769626d4adf455e87609d1076d7e76179"
   },
   "reboot": {
     "schema": "astra.at-bios-post.v2",
@@ -1639,9 +1639,9 @@
       "priorOutputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
       "linked": true
     },
-    "executionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
+    "executionRevision": "e4b08a616c3db333d8c54216b1fd090373ef72bb",
     "sourceSha256": {
-      "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
+      "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
@@ -1652,7 +1652,7 @@
       "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
       "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
       "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
-      "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+      "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
       "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-at-bios-post.mjs": "0f0fe56fd882087caccbb6fd4c2c412a6854bbe11aca944e5d07d848706ba551"
@@ -1669,6 +1669,17 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "originalReportSha256": "468844d47e4077bef29b956be10c95bdd19100633ced2593a48854f04705d2a0"
-  }
+    "originalReportSha256": "c5c080b0c4259f49c7e6fd224951636b7ad88e9bd23d9e50bd6cd5b88f6062dd"
+  },
+  "previousRuns": [
+    {
+      "writeExecutionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
+      "rebootExecutionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
+      "writeSteps": 24406016,
+      "rebootSteps": 24318976,
+      "outputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
+      "writeReportSha256": "d78bfa07d4e226626e3ce171fdcfbd64f16264c22bf8abe6e52ea5865be3e2ff",
+      "rebootReportSha256": "468844d47e4077bef29b956be10c95bdd19100633ced2593a48854f04705d2a0"
+    }
+  ]
 }

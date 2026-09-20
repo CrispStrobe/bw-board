@@ -29,7 +29,7 @@ test('source-bound AT DOS receipts prove write then fresh-remount read without r
         assert.equal(receipt.memory.baseRamBytes,640<<10);
         assert.equal(receipt.guestFile.size,12);
         assert.deepEqual(receipt.guestFile.bytes,[...Buffer.from(expectedText)]);
-        assert.equal(receipt.executionRevision,'439560e3dc02c9c11eb36afbe374859126e11e47');
+        assert.equal(receipt.executionRevision,'e4b08a616c3db333d8c54216b1fd090373ef72bb');
         assert.match(receipt.originalReportSha256,/^[0-9a-f]{64}$/);
         for(const [file,hash] of Object.entries(receipt.sourceSha256))
             assert.equal(hash,sha(file),`${file} source binding`);
