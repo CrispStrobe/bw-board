@@ -118,7 +118,9 @@ machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeo
     if((event.port>=0x3f0&&event.port<=0x3f7)||(event.port<=0x0f)||
         (event.port>=0x80&&event.port<=0x8f)||(event.port>=0xc0&&event.port<=0xde)) {
         diskPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
-        if(diskPorts.length>256)diskPorts.shift();
+        // Retain enough firmware traffic to include the drive/media
+        // classification sequence as well as the loader's first failing I/O.
+        if(diskPorts.length>4096)diskPorts.shift();
     }
 }});
 machine.loadRom(rom,0xf0000);
