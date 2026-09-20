@@ -101,6 +101,12 @@ const hddFiles={
 if(sha(hddFiles.doomExe)!==EXPECTED_DOOM_EXE_SHA256||sha(hddFiles.doomWad)!==EXPECTED_DOOM_WAD_SHA256)
     throw new Error('partitioned HDD does not contain the pinned DOOM.EXE and DOOM1.WAD payloads');
 const hddInputSha256=sha(hddImage);
+const mzWord=(bytes,at)=>bytes[at]|bytes[at+1]<<8;
+const doomMz={signature:String.fromCharCode(...hddFiles.doomExe.subarray(0,2)),
+    headerParagraphs:mzWord(hddFiles.doomExe,8),initialSS:mzWord(hddFiles.doomExe,14),
+    initialSP:mzWord(hddFiles.doomExe,16),initialIP:mzWord(hddFiles.doomExe,20),
+    initialCS:mzWord(hddFiles.doomExe,22)};
+if(doomMz.signature!=='MZ')throw new Error('pinned DOOM.EXE is not an MZ executable');
 machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeometry:DOOM_HDD_GEOMETRY,onPortAccess:event=>{
     if(event.port===0x70||event.port===0x71) {
         rtcPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -174,6 +180,14 @@ let hostRefusal=null;
 const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
     String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,''));
 const disketteBda=()=>Array.from({length:16},(_,index)=>machine._read(0x490+index));
+const cpuSnapshot=()=>{
+    const cpu=machine.cpu,pc=cpu.pc;
+    return {eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,
+        ebp:cpu.ebp,esp:cpu.esp,eip:cpu.eip,eflags:cpu.eflags,cs:cpu.cs,ds:cpu.ds,
+        es:cpu.es,ss:cpu.ss,fs:cpu.fs,gs:cpu.gs,cr0:cpu.cr0,cr2:cpu.cr2,cr3:cpu.cr3,
+        pc,tr:{...cpu.tr},ldtr:{...cpu.ldtr},csCache:{...cpu.segmentCaches[1]},
+        opcodeBytes:Array.from({length:16},(_,index)=>cpu.read((pc+index)>>>0))};
+};
 const deviceSnapshot=()=>({
     masterPic:machine.chips.pic1.getState(),slavePic:machine.chips.pic2.getState(),
     primaryDma:machine.chips.dma1.getState(),secondaryDma:machine.chips.dma2.getState(),
@@ -218,7 +232,7 @@ for(;steps<stepLimit;steps++) {
     } catch(error) {
         if(!(error instanceof UnsupportedI80386)&&!(error instanceof I80386Fault)&&
             (!(error instanceof Error)||!error.message.startsWith('MC146818 ')))throw error;
-        hostRefusal={name:error.name,message:error.message,step:steps,before,
+        hostRefusal={name:error.name,message:error.message,step:steps,before,cpu:cpuSnapshot(),
             rtc:{index:machine.chips.rtc1.index,registerB:machine.chips.rtc1.ram[0x0b],
                 state:machine.chips.rtc1.getState()},recentPorts:[...rtcPorts]};
         stopReason=error instanceof UnsupportedI80386?'cpu-unsupported':
@@ -322,7 +336,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
         baseRamBytes:baseRamKiB<<10,extendedRamBytes:3456<<10},
     hdd:{bytes:hddImage.length,inputSha256:hddInputSha256,
         outputSha256:sha(machine.ata.mediaBytes()),geometry:DOOM_HDD_GEOMETRY,
-        files:{doomExe:{bytes:hddFiles.doomExe.length,sha256:sha(hddFiles.doomExe)},
+        files:{doomExe:{bytes:hddFiles.doomExe.length,sha256:sha(hddFiles.doomExe),mz:doomMz},
             doomWad:{bytes:hddFiles.doomWad.length,sha256:sha(hddFiles.doomWad)}},
         controller:{command:machine.ata.command,status:machine.ata.status,error:machine.ata.error,
             sectorCount:machine.ata.sectorCount,sectorNumber:machine.ata.sectorNumber,
