@@ -473,7 +473,7 @@ else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
 else if (mutation === "io-access") cases.ioDenied.actual.ports.push([0x20,8]);
 else if (mutation === "conforming-cpl") cases.conformingInterrupt.actual.handlerCs=8;
 else if (mutation === "vm-frame") cases.vm86RoundTrip.actual.frame[5]^=1;
-else if (mutation === "into-of") cases.intoClear.actual.overflow=true;
+else if (mutation === "into-of") cases.intoClear.actual=runIntoLocal(true);
 else if (mutation === "into-eip") cases.intoSet.actual.frame[0]^=1;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
