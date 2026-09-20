@@ -25,6 +25,15 @@ function fixture() {
 }
 
 describe('experimental VGA memory', () => {
+    it('rejects non-video addresses before consulting register state', () => {
+        let calls = 0;
+        const memory = new VGAMemory({getVideoState() { calls++; throw new Error('must not run'); }});
+        assert.equal(memory.read(0x9ffff), null);
+        assert.equal(memory.read(0xc0000), null);
+        assert.equal(memory.write(0x1000, 0x55), false);
+        assert.equal(calls, 0);
+    });
+
     it('decodes each graphics-controller aperture and refuses other addresses', () => {
         const { memory, gc } = fixture();
         memory.planes[0][0] = 0x11;

@@ -42,8 +42,8 @@ const romSha256=sha(rom);
 if(romSha256!==EXPECTED_ROM_SHA256)
     throw new Error(`AT BIOS ROM SHA-256 mismatch: expected ${EXPECTED_ROM_SHA256}, got ${romSha256}`);
 const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(process.env.AT_POST_STEPS);
-if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>150_000_000)
-    throw new Error('AT_POST_STEPS must be an integer from 1 through 150000000');
+if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>500_000_000)
+    throw new Error('AT_POST_STEPS must be an integer from 1 through 500000000');
 const baseRamKiB=640;
 const machineProfile=PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS;
 const expectedFile=process.env.AT_EXPECT_FILE??null;
@@ -90,6 +90,7 @@ const ataCounts={commands:0,nativeDataReads:0,nativeDataWrites:0,overflow:false}
 let ataAtCommandQueue=null;
 const rtcPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
+const cr0Transitions=[];
 const injectedKeys=[];
 const uiSamples=[];
 let reachedPost43=false;
@@ -210,6 +211,7 @@ machine.cpu.write=(address,value)=>{
 machine.step();
 const firstFetchTrace=[reset.firstByte,reset.fetchPhysical];
 steps=1;
+let previousCr0=machine.cpu.cr0>>>0;
 const progressSamples=[];
 let stopReason=null;
 let hostRefusal=null;
@@ -332,6 +334,11 @@ for(;steps<stepLimit;steps++) {
             error instanceof I80386Fault?'architectural-fault-surfaced':'host-device-refusal';
         break;
     }
+    if((machine.cpu.cr0>>>0)!==previousCr0) {
+        cr0Transitions.push({step:steps,before:previousCr0,after:machine.cpu.cr0>>>0,
+            cs:machine.cpu.cs,eip:machine.cpu.eip,pc:machine.cpu.pc});
+        previousCr0=machine.cpu.cr0>>>0;
+    }
     const after={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
     if(!executionBoundaries.int19&&reachedPost43&&before.cs===0xf000&&before.ip===0x16ab)
         executionBoundaries.int19={step:steps,before,after,devices:deviceSnapshot()};
@@ -416,7 +423,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,doomEntry,doomEntryWrites,doomInstructionTrace,diskPorts,rtcPorts,keyboardScript,
+    executionBoundaries,cr0Transitions,doomEntry,doomEntryWrites,doomInstructionTrace,diskPorts,rtcPorts,keyboardScript,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,finalCpu:cpuSnapshot(),

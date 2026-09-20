@@ -108,6 +108,7 @@ export class VGAMemory {
 
     /** Return null when the selected VGA aperture does not decode address. */
     read(address) {
+        if (!Number.isInteger(address) || address < 0xa0000 || address > 0xbffff) return null;
         const { misc, seq, gc } = this._registers();
         if ((misc & 0x02) === 0) return null;
         const offset = this._decode(address, gc);
@@ -130,6 +131,7 @@ export class VGAMemory {
 
     /** Return false when the selected VGA aperture does not decode address. */
     write(address, value) {
+        if (!Number.isInteger(address) || address < 0xa0000 || address > 0xbffff) return false;
         const { misc, seq, gc } = this._registers();
         if ((misc & 0x02) === 0) return false;
         const offset = this._decode(address, gc);
