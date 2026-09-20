@@ -99,6 +99,22 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate) — Astra/Sol application persistence and demo completion.
+Windows3.0 Notepad creates and saves OWNED.TXT via real keyboard input, then
+opens its exact 17 bytes after fresh reset/remount. Independent FAT and frame
+audits verify the file, source revisions and writer/reader image linkage.
+The key harness rejects malformed scripts and parent-media provenance before
+execution and records every accepted event. Original Doom1.9 repeats E1M1
+movement/fire on the final Windows CPU/device implementation. A separate
+ordinary 110-byte owned demo file loads through DOS, renders E1M1, completes
+24 gametics and returns to C:\>; full demo1 remains incomplete at 500M.
+No original EXE/WAD/media bytes are committed. The optional FAT file builder
+validates names/capacity and independently reproduces both pinned image hashes.
+Focused 452 pass,2 optional skips; actionlint and diff checks pass.
+Receipt: `docs/receipts/2026-09-20-x86-application-persistence.json`.
+Windows enhanced mode, Doom save/load/sound/all levels and complete physical
+386 behavior remain outside these bounded application milestones.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol Windows desktop and Doom interaction.
 Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0
 service with 8192 functional cycles; no arbitrary-handler or mechanical timing

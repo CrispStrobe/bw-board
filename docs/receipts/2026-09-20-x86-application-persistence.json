@@ -1,0 +1,45 @@
+{
+  "schema": "astra.x86-application-persistence-milestone.v1",
+  "date": "2026-09-20",
+  "scope": [
+    "Original Windows3.0 Notepad create/save/fresh-boot reopen through emulated keyboard and ATA disk",
+    "Original Doom1.9 E1M1 movement/fire replay with the final Windows device changes",
+    "Original Doom1.9 loads/renders an owned24-tic demo, completes it and returns to DOS with original executable and WAD unchanged"
+  ],
+  "receipts": [
+    "2026-09-20-windows300-editor-persistence.json",
+    "2026-09-20-386-doom-combined-gameplay.json",
+    "2026-09-20-386-doom-timedemo-incomplete.json",
+    "2026-09-20-386-doom-short-demo.json"
+  ],
+  "validation": {
+    "focusedPassed": 452,
+    "optionalSkipped": 2,
+    "failed": 0,
+    "workflowActionlint": "pass",
+    "diffCheck": "pass",
+    "windowsCompiledTimelines": "Current parser reproduces every recorded step/scan code: writer90 events, remount50 events.",
+    "defaultDoomImage": "Optional-file builder reproduces pinned original image e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303 without extra files.",
+    "shortDemoImage": "Current hardened builder independently reproduces image5ffd1e792e80f5412b713413cd760f4114b6f1d9c527292369c806b716102a8d and demo a88e639dbf38c2ce9d32d0095c44459f797cd73e9cdf9d11079fe633b8455c33.",
+    "shortDemoAcceptance": "Pass with actual external report; nine material evidence mutations reject, including the initial black frame and a changed visible pixel.",
+    "productionSourceEquivalence": "All recorded src/ dependencies for the accepted short-demo run match the candidate; this increment changes harnesses/builders/receipts only."
+  },
+  "limits": [
+    "Windows3.0 standard mode and one editor/file do not prove enhanced mode or other Windows releases.",
+    "Doom E1M1 interaction does not prove all levels, sound, networking or save/load.",
+    "Full demo1 with drawing disabled exhausted500M instructions without completion; no FPS result.",
+    "The CPU and platform remain opt-in functional models; physical timing and complete architectural compatibility are not established."
+  ],
+  "localArchive": "/mnt/volume1/code/astra-x86-evidence/2026-09-20/manifest.json",
+  "shortDemoObserved": {
+    "executionRevision": "d1262ff4d1abe340dea8c7cb53b31af7e91111e6",
+    "steps": 350000000,
+    "guestCompletionLine": "timed 24 gametics in 1464 realtics",
+    "dosPrompt": "C:\\>",
+    "hostRefusal": null,
+    "shutdown": false,
+    "frameStep": 346000000,
+    "rgbSha256": "941e7414ef1599ca01564e4c073544462fd708eeac44a4307194240e75079100",
+    "scope": "Timing values are functional-model output, not a hardware FPS benchmark."
+  }
+}

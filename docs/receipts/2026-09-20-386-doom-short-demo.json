@@ -106,12 +106,15 @@
   "interruptedAttempts": [
     {
       "name": "attempt1",
-      "lastProgressSteps": 94000000,
-      "classification": "operator-interrupted; no guest failure or acceptance"
+      "lastProgressSteps": 154000000,
+      "classification": "operator-interrupted; no guest failure or acceptance",
+      "progressSha256": "216e5b595b938dab75998a116f6179cfd7f16bb88491ec24ec405dc34525a225"
     },
     {
       "name": "attempt2",
-      "classification": "operator-interrupted during process-lifecycle correction; no guest failure or acceptance"
+      "classification": "operator-interrupted during process-lifecycle correction; no guest failure or acceptance",
+      "lastProgressSteps": 64000000,
+      "progressSha256": "243fda867df897c89f62f8149e96e4918f77696deac32dbe616acaaa9ad0e620"
     }
   ]
 }

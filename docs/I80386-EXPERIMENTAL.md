@@ -17,7 +17,11 @@ from 50 to 48; the [gameplay receipt](receipts/2026-09-20-386-doom-gameplay.json
 records source-bound frames and inputs. The
 [combined-source replay](receipts/2026-09-20-386-doom-combined-gameplay.json)
 repeats movement and firing with the final Windows keyboard/disk changes.
-Completed demo, save/load, sound and longer gameplay remain separate acceptance targets.
+The original executable also loads and renders an
+[owned 24-tic demo](receipts/2026-09-20-386-doom-short-demo.json), emits its timing
+completion line and returns to DOS. The original full demo1 timedemo remains
+incomplete at 500M instructions; save/load, sound and longer gameplay remain
+separate acceptance targets.
 
 The Windows 3.0 / PC DOS 3.2 disk boots through HIMEM and SMARTDrive after the
 [opcode82 and ATA-reset fixes](receipts/2026-09-20-386-dos-loader-reset.json).
