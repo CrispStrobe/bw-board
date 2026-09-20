@@ -124,7 +124,7 @@ const PROFILES={
   },
   clts:{
     files:['0F06'],
-    scope:'three fixed deterministic real-mode CLTS decode/completion samples; all published inputs start with TS clear and omit final CR0, so TS clearing is not physically graded',
+    scope:'three fixed deterministic real-mode CLTS decode/completion samples grading unchanged TS=0 through final-state delta reconstruction; all 100 published inputs start with TS clear, so no physical TS=1 to TS=0 transition is claimed',
   },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
