@@ -6,7 +6,7 @@ const fixture=()=>{
   const planes=Array.from({length:4},()=>Buffer.alloc(0x10000));
   const dac=Buffer.alloc(768);dac.set([0,0,0,63,32,1]);
   for(let x=0;x<320;x++)planes[x&3][x>>>2]=x&1;
-  return {seq:[0,0,0,0,6],gc:[0,0,0,0,0,0x40,5],
+  return {seq:[3,1,0,0,6],gc:[0,0,0,0,0,0x40,5],
     crtc:Object.assign(Array(0x20).fill(0),{1:79,6:0xbf,7:0x1f,9:0x41,0x12:0x8f,
       0x13:40,0x14:0,0x17:0xe3,0x18:0xff}),
     attr:Object.assign(Array(0x20).fill(0),{0x10:0x41,0x12:0x0f,0x13:0,0x14:0}),
@@ -30,6 +30,15 @@ test('rejects an unobserved chain-4 or CRTC layout',()=>{
   assert.throws(()=>renderObservedDoomVga(stride),/outside the observed/);
   const missing=fixture();delete missing.dacMask;
   assert.throws(()=>renderObservedDoomVga(missing),/invalid DAC mask/);
+  const noStart=fixture();delete noStart.crtc[0x0c];
+  assert.throws(()=>renderObservedDoomVga(noStart),/explicit CRTC start/);
+  const panning=fixture();panning.crtc[8]=1;
+  assert.throws(()=>renderObservedDoomVga(panning),/outside the observed/);
+  const stopped=fixture();stopped.seq[0]=1;
+  assert.throws(()=>renderObservedDoomVga(stopped),/outside the observed/);
+  const wideDac=fixture();const dac=Buffer.from(wideDac.dacBase64,'base64');
+  dac[0]=64;wideDac.dacBase64=dac.toString('base64');
+  assert.throws(()=>renderObservedDoomVga(wideDac),/wider than six bits/);
 });
 
 test('honors the observed alternate page start and DAC pixel mask',()=>{
