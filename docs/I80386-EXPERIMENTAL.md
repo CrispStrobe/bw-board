@@ -35,6 +35,12 @@ stack operands with stack addressing selected independently by SS.B. ES, CS,
 SS, DS, FS, and GS have independent visible selectors and
 hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
 LIDT, MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
+After protected-mode code clears PE, a real-mode segment reload updates its
+visible selector and base while retaining the hidden limit and default-size
+attributes. This permits HIMEM's high-address copies after its GP handler
+establishes large DS/ES limits. VM86 reloads remain a separate 64KiB path.
+The functional cache's present/null admission flags are normalized on a real
+reload; this is not a claim to preserve every internal cache flag literally.
 On the instruction that sets CR0.PE, CPL starts at zero while visible CS and
 its real-mode hidden cache remain unchanged, as specified by the original
 80386 manual section 10.3. This temporary state is checkpointed for precise
