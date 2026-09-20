@@ -403,7 +403,14 @@ reset while an external A20 gate is deliberately held low leaves bit 20 low and
 does not invent a second alias. The bounded board profile does not claim that
 unsupported combination can boot firmware.
 
-The AT adapter advances board time by a declared four machine clocks for each
+The earlier four-clock profile passed PIT POST but its finite RTC polling
+loop could end before the update-in-progress window. The current six-clock
+profile passes a firmware-shaped regression that rejects the old charge and
+observes both UIP assertion and clearing. The real BIOS then advances beyond
+its date/time error prompt. This changes functional scheduling only; earlier
+source-bound four-clock diagnostics and benchmark timings retain their scope.
+
+The AT adapter advances board time by a declared six machine clocks for each
 completed 386 instruction. This is a deterministic functional pacing policy:
 it lets bounded firmware polling loops observe PIT/device progress while the
 experimental executor lacks per-opcode 80386 timing. It is neither a measured

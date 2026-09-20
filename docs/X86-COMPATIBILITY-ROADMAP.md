@@ -97,9 +97,9 @@ configuration; `PCAT80286_BOOT_640K` now supplies it explicitly. The default
 ## Platform work after the first DOS boot
 
 The 286 DOS2 and FreeDOS persistence acceptance do not establish a 386
-application platform. The experimental 386 adapter now charges four functional
+application platform. The experimental 386 adapter now charges six functional
 device clocks per completed CPU instruction, with actual IRQ-wake, idle and
-fault-delivery checks. This resolves the observed IBM timer POST failure; it
+fault-delivery checks. This resolves the observed IBM timer and RTC UIP polling failures; it
 makes no measured instruction or bus timing claim. The separate 4MiB installed
 memory profile has corresponding CMOS sizes and checksum.
 
