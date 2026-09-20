@@ -239,6 +239,16 @@ const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:screen
     return String.fromCharCode(value||0x20);
 }).join('').replace(/\s+$/,''));
 const disketteBda=()=>Array.from({length:16},(_,index)=>machine._read(0x490+index));
+const observeLinearByte=linear=>{
+    if(machine.cpu.cr0&0x80000000)return null;
+    const physical=machine._decode386(linear>>>0);
+    if(physical>=0xa0000&&physical<=0xbffff)return null;
+    return physical<machine.mem.length?machine.mem[physical]:0xff;
+};
+const observeLinearBytes=(linear,length)=>{
+    const bytes=Array.from({length},(_,index)=>observeLinearByte((linear+index)>>>0));
+    return bytes.some(value=>value===null)?null:bytes;
+};
 const cpuSnapshot=()=>{
     const cpu=machine.cpu,linearPc=cpu.pc,paging=!!(cpu.cr0&0x80000000);
     const mappedOffset=doomEntry
@@ -302,13 +312,15 @@ for(;steps<stepLimit;steps++) {
                 firstDifferences:loadDifferences}};
     }
     if(doomEntry) {
-        const stackLinear=(machine.cpu.segmentCaches[2].base+(machine.cpu.esp&0xffff))>>>0;
+        const stackOffset=machine.cpu.segmentCaches[2].default32?machine.cpu.esp:machine.cpu.sp;
+        const stackLinear=(machine.cpu.segmentCaches[2].base+stackOffset)>>>0;
+        const stackBytes=observeLinearBytes(stackLinear,8);
         addDoomInstructionTrace({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,
             linearPc:machine.cpu.pc,eax:machine.cpu.eax,ebx:machine.cpu.ebx,ecx:machine.cpu.ecx,
             edx:machine.cpu.edx,ss:machine.cpu.ss,esp:machine.cpu.esp,eflags:machine.cpu.eflags,
-            stackWords:Array.from({length:4},(_,index)=>machine.cpu.read((stackLinear+index*2)>>>0)|
-                machine.cpu.read((stackLinear+index*2+1)>>>0)<<8),
-            bytes:Array.from({length:6},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0))});
+            stackWords:stackBytes&&Array.from({length:4},(_,index)=>stackBytes[index*2]|
+                stackBytes[index*2+1]<<8),
+            bytes:observeLinearBytes(machine.cpu.pc,6)});
     }
     if(executionBoundaries.bootSector&&!commandQueued&&(steps&1023)===0) {
         const ui=renderScreen();
