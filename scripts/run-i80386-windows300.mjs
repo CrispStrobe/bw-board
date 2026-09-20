@@ -70,7 +70,9 @@ let steps = 0;
 const postEvents = [];
 const interrupts = [];
 const interruptCounts = {};
-const ataCommands = [];
+const ataCommands = {count: 0, tail: []};
+const ataStatus = {count: 0, tail: []};
+const dosInterrupts = {int13: {count: 0, tail: []}, int24: {count: 0, tail: []}};
 const controllerPorts = [];
 const samples = [];
 const instructionTrail = [];
@@ -102,13 +104,26 @@ machine = new ExperimentalI80386ATMachine(windowsProfile, {
       postEvents.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value});
       if (postEvents.length > 256) postEvents.shift();
     }
-    if (event.dir === 'out' && event.port === 0x1f7 && ataCommands.length < 1024)
-      ataCommands.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
+    if (event.dir === 'out' && event.port === 0x1f7) {
+      ataCommands.count++;
+      ataCommands.tail.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
         command: event.value, phase: 'after-command-dispatch', taskFileAfterDispatch: {
           count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
           cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
           head: machine.ata.driveHead,
         }});
+      if (ataCommands.tail.length > 256) ataCommands.tail.shift();
+    }
+    if (event.dir === 'in' && (event.port === 0x1f7 || event.port === 0x3f6)) {
+      ataStatus.count++;
+      ataStatus.tail.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
+        port: event.port, value: event.value, error: machine.ata.error,
+        taskFile: {count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
+          cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
+          head: machine.ata.driveHead},
+        pic1: machine.chips.pic1.getState(), pic2: machine.chips.pic2.getState()});
+      if (ataStatus.tail.length > 256) ataStatus.tail.shift();
+    }
   },
 });
 machine.loadRom(bios.bytes, 0xf0000);
@@ -157,12 +172,39 @@ const physicalBytes = (pc, cr0, length = 8) => {
     return physical < machine.mem.length ? machine.mem[physical] : 0xff;
   });
 };
+const ivtTarget = vector => ({
+  eip: machine._read(vector * 4) | machine._read(vector * 4 + 1) << 8,
+  cs: machine._read(vector * 4 + 2) | machine._read(vector * 4 + 3) << 8,
+});
+const activeDosInterrupts = new Map();
+const traceDosInterrupt = (name, vector, before) => {
+  const trace = dosInterrupts[name];
+  const active = activeDosInterrupts.get(name);
+  if (active && before.cs === active.returnCs && before.eip === active.returnIp) {
+    trace.count++;
+    trace.tail.push({...active, returnStep: steps, returnEax: before.eax,
+      returnFlags: before.eflags, carry: !!(before.eflags & 1)});
+    if (trace.tail.length > 64) trace.tail.shift();
+    activeDosInterrupts.delete(name);
+  }
+  if ((machine.cpu.cr0 & 1) || activeDosInterrupts.has(name)) return;
+  const target = ivtTarget(vector);
+  if (before.cs !== target.cs || before.eip !== target.eip) return;
+  const stack = (machine.cpu.ss << 4) + machine.cpu.sp;
+  activeDosInterrupts.set(name, {entryStep: steps, vector, ...target,
+    entryEax: before.eax, entryEdx: before.edx,
+    returnIp: machine._read(stack) | machine._read(stack + 1) << 8,
+    returnCs: machine._read(stack + 2) | machine._read(stack + 3) << 8,
+    savedFlags: machine._read(stack + 4) | machine._read(stack + 5) << 8});
+};
 for (; steps < stepLimit; steps++) {
   const before = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
     ss: machine.cpu.ss, esp: machine.cpu.esp, eax: machine.cpu.eax, ebx: machine.cpu.ebx,
     ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
     ebp: machine.cpu.ebp, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0 >>> 0,
     pc: machine.cpu.pc};
+  traceDosInterrupt('int13', 0x13, before);
+  traceDosInterrupt('int24', 0x24, before);
   if (instructionTrail.length < 256) instructionTrail.push(before);
   else {
     instructionTrail[instructionTrailNext] = before;
@@ -261,7 +303,8 @@ const report = {
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256, geometry: HDD_GEOMETRY},
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
-  reset, postEvents, postContinue, ataCommands, controllerPorts, interrupts, interruptCounts,
+  reset, postEvents, postContinue, ataCommands, ataStatus, dosInterrupts,
+  controllerPorts, interrupts, interruptCounts,
   vgaOptionEntry, bootEntries, bootFailureBoundary, modeTransitions,
   instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
     ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
