@@ -169,8 +169,8 @@ fixture, while proprietary media stays a user-supplied input.
 | Windows 3.0 standard mode | Program Manager, File Manager, and Notepad save/reopen on the external image | Do not bundle Microsoft binaries or fonts | Enhanced mode requires a separately sourced `WIN386.EXE` input and more 386 paging/interrupt coverage |
 | Doom 1.9 shareware | VGA title/menu, E1M1 movement/fire, and a short owned demo returning to DOS | Keep the original executable/WAD external; publish only hashes and test scripts | Full demo timing, save/load, sound, additional levels |
 | CP/M 2.2 + BBC BASIC | Z80 CP/M BIOS boots to `A>` and runs `BBCBASIC.COM` | Use the existing source/fixture notices; do not assume Digital Research binaries are redistributable | More BDOS/file and console programs |
-| [ELKS](https://github.com/jbruchon/elks) | Not yet booted here | Source is GPL-licensed; bundle only a source-built image with its complete notices | Best small Unix candidate for the 8086/286 real-mode path |
-| [xv6 x86](https://github.com/mit-pdos/xv6-public) | Not yet booted here | Its MIT source is suitable for a generated test image, with attribution | Best protected-mode teaching OS once the 386 page/interrupt path is broader |
+| [ELKS](https://github.com/jbruchon/elks) | **Accepted:** real 8086 PC/XT boot, kernel banner, floppy probe, root mount, timer/FDC IRQs | Keep the GPL image external; the acceptance test skips loudly and records the expected external hash | Extend from root mount to userland and shell behavior |
+| [xv6 x86](https://github.com/mit-pdos/xv6-public) | MIT source builds reproducibly at pinned revision `eeb7b415`; first AT/IDE probe is not yet an OS acceptance (no visible boot milestone) | A generated image can be bundled with the MIT notice; do not check in build products until the boot receipt is green | Diagnose the AT boot handoff, then assert protected-mode paging, traps, IDE, and `init` |
 | [386BSD](https://www.386bsd.org/) / [NetBSD](https://www.netbsd.org/) i386 | Not yet booted here | BSD-licensed source is generally redistributable, but release images and third-party userlands need their own audit | Later 386 protected-mode stress test; much larger than xv6/ELKS |
 
 Small Unix-like systems are the sensible next OS lane. ELKS exercises 16-bit
@@ -186,6 +186,48 @@ is accepted, enhanced mode is not; Doom's short demo is accepted, the full
 result. The old 8086/8088 and Z80 sweeps remain the architectural ground truth;
 the 286/386 work adds focused ISA/protection/AT receipts rather than silently
 turning partial OS boots into compatibility claims.
+
+## Windows 3.1 reference comparison
+
+The external Windows references agree on the constraints that matter for our
+next run. Windows 3.1 drops 8086/8088 real-mode support; Windows for Workgroups
+3.11 requires a 386; and 386 Enhanced Mode is a separate execution path from
+the standard 286 mode. DOSBox-X documents that 32-bit disk access uses the
+`WDCTRL` driver inside `WIN386.EXE`, depends on a real DOS, one IDE hard disk,
+specific INT 13h configuration, and a suitable disk geometry. Its installation
+guide also recommends supplying floppy/CD devices before Windows starts and
+warns that folder mounts cannot be boot drives.
+
+The FreeDOS report adds a sharper compatibility condition: its JEMM memory
+manager does not provide the required GEMMIS behavior for Windows enhanced
+mode; the tested route uses a FreeDOS kernel built with the Windows 3.1 support
+option, avoids JEMM, loads `SHARE`, and sets `InDOSPolling=TRUE` in
+`SYSTEM.INI`. That is a guest/kernel configuration dependency, not merely a
+missing 386 opcode.
+
+PCjs is useful as a reference-machine catalogue and demonstrates Windows/386,
+Windows 3.0, Windows 3.1, and Windows 95 on distinct AT/386 configurations.
+The `win3_stock` Archive item is a historical Windows 3.11 stock archive, not a
+redistributable project fixture; keep it external and record only its item/file
+hashes. The Win3x forum page and Xtof's Windows internals notes are valuable
+operator references, but their hosts are not stable machine-readable sources,
+so claims derived from them need a pinned local capture or a second source.
+
+For our enhanced-mode attempt the acceptance order is therefore: acquire a
+lawfully supplied Windows 3.1/3.11 input containing `WIN386.EXE`; boot it on a
+FreeDOS configuration with JEMM disabled and `SHARE`/`InDOSPolling`; prove the
+386 protected transition, paging, V86 tasks, timer/keyboard, and IDE path; then
+separately enable 32-bit disk access. A Program Manager screenshot alone will
+not establish that path.
+
+The Brickwright Lite generated language/device matrix exposes related gaps:
+8086 is currently represented as an ASM/C simulation route, while 80286/80386,
+Windows enhanced mode, DOSBox image/config loading, and the new browser VGA
+adapter are not yet represented as matrix cells. The matrix also records the
+standing missing native-language cells (for example BASIC on 8086 and C on
+Z80) and the distinction between simulator reach and silicon deployment. Keep
+the generated matrix as the UI capability source; update its schema before
+claiming that the 386 target is available in the Lite language picker.
 
 **DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
 chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,

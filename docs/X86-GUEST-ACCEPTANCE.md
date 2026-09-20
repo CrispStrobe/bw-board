@@ -8,7 +8,8 @@ The older milestones below retain their original scope and measurements.
 
 2026-09-08. User requested DOS utilities, shell/editor persistence, Circuit
 Editor reference machines, ELKS, then classic MINIX/286 protection, on 8086,
-80186 and 80286. These five milestones are **not complete**.
+80186 and 80286. The ELKS PC/XT boot and root-mount milestone is now complete;
+the remaining MINIX/286 and wired follow-ups are not.
 
 ## Implemented in this increment
 
@@ -75,9 +76,10 @@ Initial measured attempts:
 
 | Guest | CPU | Observation |
 | --- | --- | --- |
-| ELKS 0.9.2 fd360-minix | 8086 | Boot loader prints `/linux`, enters setup, reports missing setup signature |
-| ELKS 0.9.2 fd360-minix | 80186 | Reaches `ELKS Setup`, exhausts 2,000,000-step budget |
+| ELKS 0.9.2 fd360-minix | 8086 | Earlier BIOS-service diagnostic reaches setup but is not acceptance |
+| ELKS 0.9.1 fd1440-fat | 8086 PC/XT | **Accepted:** kernel banner, floppy probe, root mount, timer and FDC IRQs; image remains external |
 | MINIX 2.0.0 TINYROOT | 8086/80186 | CPU reaches unsupported FE encoding before console output; root cause not yet established |
+| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | Source builds reproducibly with host 32-bit GCC; first IDE/AT probe did not reach a visible xv6 milestone within the bounded probe, so no OS acceptance yet |
 | Either | wired 286 | Refused before download/execution: board/CPU prerequisites absent |
 
 An unsupported encoding can result from executing wrong bytes; it is not by
