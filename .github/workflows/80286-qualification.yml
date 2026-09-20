@@ -616,6 +616,14 @@ jobs:
             /v1_ex_real_mode/67660FBA.5.MOO.gz
             /v1_ex_real_mode/67660FBA.6.MOO.gz
             /v1_ex_real_mode/67660FBA.7.MOO.gz
+            /v1_ex_real_mode/0FBC.MOO.gz
+            /v1_ex_real_mode/0FBD.MOO.gz
+            /v1_ex_real_mode/660FBC.MOO.gz
+            /v1_ex_real_mode/660FBD.MOO.gz
+            /v1_ex_real_mode/670FBC.MOO.gz
+            /v1_ex_real_mode/670FBD.MOO.gz
+            /v1_ex_real_mode/67660FBC.MOO.gz
+            /v1_ex_real_mode/67660FBD.MOO.gz
       - name: Grade the bounded 386 profiles and reject corrupted evidence
         env:
           SST386_ROOT: ${{ github.workspace }}/sst386
@@ -625,13 +633,13 @@ jobs:
           export I386_RECEIPTS
           echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-lar-lsl.test.mjs test/i80386-aam-aad.test.mjs test/i80386-arpl.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs test/i80386-at-hdd-image.test.mjs test/i80386-expand-down.test.mjs test/i80386-absent-npx.test.mjs test/i80386-xlat.test.mjs test/i80386-sign-extend.test.mjs test/i80386-at-dos-persistence-evidence.test.mjs test/i80386-task-switch.test.mjs test/i80386-ret.test.mjs test/i80386-doom-fat16-image.test.mjs test/i80386-enter-leave.test.mjs test/i80386-bit-test.test.mjs test/i80386-bcd.test.mjs \
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-lar-lsl.test.mjs test/i80386-aam-aad.test.mjs test/i80386-arpl.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs test/i80386-at-hdd-image.test.mjs test/i80386-expand-down.test.mjs test/i80386-absent-npx.test.mjs test/i80386-xlat.test.mjs test/i80386-sign-extend.test.mjs test/i80386-at-dos-persistence-evidence.test.mjs test/i80386-task-switch.test.mjs test/i80386-ret.test.mjs test/i80386-doom-fat16-image.test.mjs test/i80386-enter-leave.test.mjs test/i80386-bit-test.test.mjs test/i80386-bcd.test.mjs test/i80386-bit-scan.test.mjs \
             | tee "$I386_RECEIPTS/tests.tap"
-          for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete pusha-popa moffs rotates rotate-full-circle lea segment-stack pop-rm push-imm8 imul-immediate setcc double-shift enter-ret bit-test bcd-adjust; do
+          for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete pusha-popa moffs rotates rotate-full-circle lea segment-stack pop-rm push-imm8 imul-immediate setcc double-shift enter-ret bit-test bcd-adjust bit-scan; do
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
               > "$I386_RECEIPTS/$profile.json"
           done
-          for pair in imul-immediate:carry setcc:ram double-shift:carry enter-ret:stray-write bit-test:carry bcd-adjust:carry; do
+          for pair in imul-immediate:carry setcc:ram double-shift:carry enter-ret:stray-write bit-test:carry bcd-adjust:carry bit-scan:zf; do
             profile=${pair%:*}
             mutation=${pair#*:}
             if I386_MOO_PROFILE="$profile" I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs > "$I386_RECEIPTS/rejected-$profile.json"; then
@@ -656,7 +664,7 @@ jobs:
           import fs from 'node:fs';
           const dir=process.env.I386_RECEIPTS;
           const read=name=>JSON.parse(fs.readFileSync(`${dir}/${name}.json`));
-          for(const [profile,count,excluded,prefixExcluded=0] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46],['xchg',9,16,58],['group5-basic',21,319,194],['far-pointer',30,955],['alu-complete',42,163],['pusha-popa',12,405],['moffs',24,452],['rotates',36,904],['rotate-full-circle',2,134],['lea',12,2704],['segment-stack',66,690],['pop-rm',12,601],['push-imm8',6,68],['imul-immediate',9,224],['setcc',48,297],['double-shift',24,654],['enter-ret',18,938],['bit-test',96,7616,1068],['bcd-adjust',12,0]]) {
+          for(const [profile,count,excluded,prefixExcluded=0] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46],['xchg',9,16,58],['group5-basic',21,319,194],['far-pointer',30,955],['alu-complete',42,163],['pusha-popa',12,405],['moffs',24,452],['rotates',36,904],['rotate-full-circle',2,134],['lea',12,2704],['segment-stack',66,690],['pop-rm',12,601],['push-imm8',6,68],['imul-immediate',9,224],['setcc',48,297],['double-shift',24,654],['enter-ret',18,938],['bit-test',96,7616,1068],['bcd-adjust',12,0],['bit-scan',24,2106]]) {
             const r=read(profile);
             assert.equal(r.accounting.admitted,count);
             assert.equal(r.accounting.exceptionExcluded,excluded);
@@ -665,7 +673,7 @@ jobs:
             assert.equal(r.accounting.unsupported,0);
             assert.equal(r.accounting.failures,0);
           }
-          for(const profile of ['imul-immediate','setcc','double-shift','enter-ret','bit-test','bcd-adjust']) {
+          for(const profile of ['imul-immediate','setcc','double-shift','enter-ret','bit-test','bcd-adjust','bit-scan']) {
             const r=read(`rejected-${profile}`);
             assert.equal(r.accounting.unsupported,0);
             assert.equal(r.failures.length,1);
