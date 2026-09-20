@@ -106,6 +106,8 @@ if(sha(hddFiles.doomExe)!==EXPECTED_DOOM_EXE_SHA256||sha(hddFiles.doomWad)!==EXP
 const hddInputSha256=sha(hddImage);
 const mzWord=(bytes,at)=>bytes[at]|bytes[at+1]<<8;
 const doomMz={signature:String.fromCharCode(...hddFiles.doomExe.subarray(0,2)),
+    lastPageBytes:mzWord(hddFiles.doomExe,2),pages:mzWord(hddFiles.doomExe,4),
+    relocationCount:mzWord(hddFiles.doomExe,6),relocationTableOffset:mzWord(hddFiles.doomExe,24),
     headerParagraphs:mzWord(hddFiles.doomExe,8),initialSS:mzWord(hddFiles.doomExe,14),
     initialSP:mzWord(hddFiles.doomExe,16),initialIP:mzWord(hddFiles.doomExe,20),
     initialCS:mzWord(hddFiles.doomExe,22)};
@@ -114,6 +116,20 @@ const doomEntryFileOffset=doomMz.headerParagraphs*16+doomMz.initialCS*16+doomMz.
 const doomEntryBytes=Array.from(hddFiles.doomExe.subarray(doomEntryFileOffset,doomEntryFileOffset+16));
 const expectedDoomLoadSegment=0x22d2;
 const doomEntryPhysical=(expectedDoomLoadSegment<<4)+(doomMz.initialCS<<4)+doomMz.initialIP;
+const doomDeclaredBytes=(doomMz.pages-1)*512+(doomMz.lastPageBytes||512);
+const doomHeaderBytes=doomMz.headerParagraphs*16;
+const expectedDoomLoadImage=hddFiles.doomExe.slice(doomHeaderBytes,doomDeclaredBytes);
+for(let index=0;index<doomMz.relocationCount;index++) {
+    const record=doomMz.relocationTableOffset+index*4;
+    const offset=mzWord(hddFiles.doomExe,record);
+    const segment=mzWord(hddFiles.doomExe,record+2);
+    const target=segment*16+offset;
+    if(target+1>=expectedDoomLoadImage.length)
+        throw new Error(`Doom relocation ${index} lies outside the declared load image`);
+    const relocated=(mzWord(expectedDoomLoadImage,target)+expectedDoomLoadSegment)&0xffff;
+    expectedDoomLoadImage[target]=relocated&0xff;
+    expectedDoomLoadImage[target+1]=relocated>>>8;
+}
 machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeometry:DOOM_HDD_GEOMETRY,onPortAccess:event=>{
     if(event.port===0x70||event.port===0x71) {
         rtcPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -237,10 +253,23 @@ for(;steps<stepLimit;steps++) {
             }
             if(matches)exactEntryLocations.push(address);
         }
+        const actualLoadImage=machine.mem.slice(loadSegment<<4,
+            (loadSegment<<4)+expectedDoomLoadImage.length);
+        const loadDifferences=[];
+        let loadDifferenceCount=0;
+        for(let index=0;index<expectedDoomLoadImage.length;index++) {
+            if(actualLoadImage[index]===expectedDoomLoadImage[index])continue;
+            loadDifferenceCount++;
+            if(loadDifferences.length<16)loadDifferences.push({offset:index,
+                expected:expectedDoomLoadImage[index],actual:actualLoadImage[index]});
+        }
         doomEntry={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,linearPc:machine.cpu.pc,
             loadSegment,memoryBytes,
             fileBytes:doomEntryBytes,physical:doomEntryPhysical,exactEntryLocations,
-            writes:[...doomEntryWrites]};
+            writes:[...doomEntryWrites],loadImage:{bytes:expectedDoomLoadImage.length,
+                relocationCount:doomMz.relocationCount,expectedSha256:sha(expectedDoomLoadImage),
+                actualSha256:sha(actualLoadImage),differenceCount:loadDifferenceCount,
+                firstDifferences:loadDifferences}};
     }
     if(doomEntry) {
         const stackLinear=(machine.cpu.segmentCaches[2].base+(machine.cpu.esp&0xffff))>>>0;
