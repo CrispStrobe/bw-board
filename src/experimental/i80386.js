@@ -2899,8 +2899,9 @@ export class ExperimentalI80386 {
       this._group5(op, width, address32, override);
     } else if (op === 0xf6 || op === 0xf7) {
       this._group3(op, width, address32, override);
-    } else if (op === 0x80 || op === 0x81 || op === 0x83) {
-      const groupWidth = op === 0x80 ? 8 : width;
+    } else if (op === 0x80 || op === 0x81 || op === 0x82 || op === 0x83) {
+      // Original 80386 retains 82h as the byte-immediate Group 1 alias.
+      const groupWidth = op === 0x80 || op === 0x82 ? 8 : width;
       const ea = this._decodeEA(address32, override),
         imm =
           op === 0x83
