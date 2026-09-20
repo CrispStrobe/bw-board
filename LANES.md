@@ -99,6 +99,24 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate) — Astra/Sol 386 protected entry and VGA services.
+Preserves visible real-mode CS and starts CPL0 when MOV CR0/LMSW enables PE;
+checks direct/conforming, segment, interrupt, return and task paths. Adds INTO
+with pinned-PCjs next-IP/frame agreement and two rejecting negative controls.
+8042 FF is a no-line pulse. Adds opt-in planar VGA memory and external C000h
+option-ROM mapping; SeaVGABIOS option POST and INT10 mode13 execute in the
+emulator, followed by an owned two-byte VRAM comparison. The INT10 guest is
+installed by the diagnostic harness after POST, not booted as an operating
+system. Grading requires actual service entry, mode state and guest marker.
+All six DOS/FreeDOS write-and-fresh-reboot regressions have been genuinely
+rerun with matching historical guest steps and media bytes. Doom's original
+shareware executable reaches DPMI allocation, WAD loading and R_Init within
+150 million machine steps; no game frame, Windows, complete VGA addressing,
+ROM shadow-write or timing acceptance. The 16-bit TSS continuation is separate.
+Focused affected surface: 317 pass, 2 optional skips. Receipt:
+`docs/receipts/2026-09-20-386-protected-entry-vga.json`.
+This candidate requires exact-head hosted qualification before landing.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 compiler instructions and autonomous multi-sector ATA. Adds ENTER/LEAVE,
 BT/BTS/BTR/BTC, BSF/BSR, BCD adjustment and privileged CLTS; VM86 ENTER

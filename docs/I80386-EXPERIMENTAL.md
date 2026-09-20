@@ -4,6 +4,20 @@
 32-bit register and instruction-pointer model. It does not select or replace
 the production 8086/186/286 CPU.
 
+The September 20 protected-entry/VGA checkpoint fixes the live CPL transition
+used by Doom's extender, implements INTO, and admits the 8042 FF command that
+pulses no output lines. A frozen run of the original Doom 1.9 shareware
+executable now allocates DPMI memory, loads `doom1.wad`, and reaches `R_Init`
+without a reported CPU/device refusal through 150 million machine steps. This
+is initialization evidence, not a rendered frame or gameplay acceptance.
+The opt-in VGA board separately executes SeaVGABIOS option POST and its real
+INT 10h mode-13h service from a host-installed diagnostic guest, which compares
+two bytes written through the VGA aperture. The probe verifies the installed
+service entry, BDA mode, chain-4 state and guest completion. See the
+[source-bound checkpoint](receipts/2026-09-20-386-protected-entry-vga.json) and
+[VGA scope](VGA-MEMORY-EXPERIMENT.md). Windows, full graphics compatibility,
+and complete 386 protection/debug behavior remain unaccepted.
+
 The current profile implements an explicit original-80386 hardware reset entry
 at physical `0xfffffff0`; an ordinary constructor retains the zero-based test
 fixture reset. The reset CS cache remains based at `0xffff0000` until a real CS
