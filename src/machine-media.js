@@ -87,6 +87,7 @@ const SLOTS = {
         { id: 'snapshot', label: 'Snapshot (.sna/.z80)', accept: ['.sna', '.z80'] },
     ],
 };
+const MEDIA_ALIASES = { i80286: 'i8086' };
 
 /**
  * Slots for a target kind, or [] for kinds whose loading story is the
@@ -101,7 +102,7 @@ const SLOTS = {
  * @returns {MediaSlot[]}
  */
 export function describeMedia(kind, opts) {
-    const slots = [...(SLOTS[kind] || [])];
+    const slots = [...(SLOTS[kind] || SLOTS[MEDIA_ALIASES[kind]] || [])];
     // Dynamic: AT24C64 EEPROM parts in the circuit get a loadable slot
     if (opts?.parts) {
         for (const p of opts.parts) {

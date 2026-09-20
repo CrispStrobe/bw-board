@@ -14,6 +14,7 @@ test('slots describe per kind; MCU kinds have none (they flash)', () => {
     assert.equal(describeMedia('zx128').filter((s) => s.id.startsWith('rom')).length, 2);
     assert.deepEqual(describeMedia('avr8js'), []);
     assert.ok(describeMedia('i80386').some((s) => s.id === 'dosbox-conf'));
+    assert.ok(describeMedia('i80286').some((s) => s.id === 'dosbox-conf'));
 });
 
 test('parseIhex self-locates', () => {
