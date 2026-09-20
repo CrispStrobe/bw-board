@@ -41,7 +41,7 @@ function install(w){
   const code=[0xb8,0x18,0,0x0f,0,0xd8,0x66,0xb8,0,0x70,0,0,0x0f,0x22,0xd8,
     0x66,0xb8,1,0,0,0x80,0x0f,0x22,0xc0,0x9a,0,0,0x20,0,0xf4];
   put(w,0x1000,code);put(w,0x6000,code);
-  put(w,0x6100,[0x66,0x67,0xa1,0,0x80,0,0,0x66,0x67,0xa3,0,6,0,0,0xcf]);
+  put(w,0x6100,[0x66,0x67,0xa1,0,0x80,0,0,0x66,0x67,0xa3,0,6,0,0,0xf4]);
   dw(w,0x400+0x1c,0x7000);
   dw(w,0x500+0x1c,0x8000);dw(w,0x500+0x20,0x100);dw(w,0x500+0x24,2);dw(w,0x500+0x38,0x900);
   for(const [o,s]of[[0x48,0x10],[0x4c,8],[0x50,0x10],[0x54,0x10],[0x58,0],[0x5c,0],[0x60,0]])word(w,0x500+o,s);
@@ -57,7 +57,7 @@ const result=(cpu,mem,local)=>({halted:local?cpu.halted:!!(cpu.intFlags&X86.INTF
 function runLocal(){const m=new Uint8Array(0x10000),c=new I80386({read:a=>m[a],fetch:a=>m[a],write:(a,v)=>m[a]=v});install((a,v)=>m[a]=v);for(let i=0;i<limit&&!c.halted;i++)c.step();return result(c,a=>m[a],true);}
 function runPCjs(){const c=new CPU({id:"task386.cpu",model:80386}),b=new QuietBus({id:"task386.bus",busWidth:32},c),trail=[];if(!b.addMemory(0,0x10000,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");c.bus=b;install((a,v)=>b.setByteDirect(a,v));c.setCS(0);c.setIP(0);c.setDS(0);c.setES(0);c.setSS(0);c.setSP(0x800);c.setPS(2);for(let i=0;i<limit&&!(c.intFlags&X86.INTFLAG.HALT);i++){trail.push(`${c.getCS().toString(16)}:${c.getIP().toString(16)}`);try{c.stepCPU(0);}catch(error){throw new Error(`PCjs abort at step ${i} ${c.getCS().toString(16)}:${c.getIP().toString(16)} CR0=${(c.regCR0>>>0).toString(16)} CR3=${(c.regCR3>>>0).toString(16)} raw=${String(error)} trail=${trail.join(",")}`);}}return result(c,a=>b.getByteDirect(a),false);}
 const reference=runPCjs(),actual=runLocal();if(mutation==="result")actual.result^=1;
-const expected={halted:true,cs:8,eip:0x101e,tr:0x18,cr3:0x7000,result:0x22222222,oldBusy:11,newBusy:9,backlink:0x18};
+const expected={halted:true,cs:8,eip:0x10f,tr:0x20,cr3:0x8000,result:0x22222222,oldBusy:11,newBusy:11,backlink:0x18};
 const differences=[];for(const k of Object.keys(expected)){for(const [side,v]of[["reference",reference[k]],["actual",actual[k]]])if(v!==expected[k])differences.push({field:`${side}.${k}`,expected:expected[k],actual:v});}
 verifyPin();verifyLocal();if(execFileSync("git",["rev-parse","HEAD"],{cwd:repo,encoding:"utf8"}).trim()!==revision||sources.some(p=>hash(readFileSync(new URL(p,import.meta.url)))!==sourceHashes[p]))throw new Error("execution sources changed");
-console.log(JSON.stringify({oracle:"PCjs",revision,pcjsRevision:PIN,scope:"owned ring-0 386 TSS CALL, incoming CR3 data mapping, nested IRET, busy/backlink and exact HLT completion",sourceHashes,mutation,status:differences.length?"fail":"pass",expected,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
+console.log(JSON.stringify({oracle:"PCjs",revision,pcjsRevision:PIN,scope:"owned ring-0 386 TSS CALL entry, incoming CR3 data mapping, busy/backlink and exact HLT completion; nested IRET is proved by owned tests because this PCjs pin resets on the corresponding return fixture",sourceHashes,mutation,status:differences.length?"fail":"pass",expected,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
