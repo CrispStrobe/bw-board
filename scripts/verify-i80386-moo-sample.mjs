@@ -119,7 +119,7 @@ const PROFILES={
   },
   'bit-scan':{
     files:['0FBC','0FBD','660FBC','660FBD','670FBC','670FBD','67660FBC','67660FBD'],
-    undefinedEflagsMask:0xfffff72b,
+    undefinedEflagsMask:0xfffff72a,
     scope:'24 fixed deterministic BSF/BSR samples spanning 16/32-bit operand and address sizes',
   },
 };
