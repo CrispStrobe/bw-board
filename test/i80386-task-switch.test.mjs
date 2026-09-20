@@ -21,6 +21,67 @@ function word(memory, address, value) {
   put(memory, address, [value, value >>> 8]);
 }
 
+function pagingFaultFixture(kind) {
+  const memory = new Map();
+  put(memory, 0x208, descriptor(0, 0xfffff, 0x9a));
+  put(memory, 0x210, descriptor(0, 0xfffff, 0x93));
+  put(memory, 0x218, descriptor(0x400, 0x67, 0x8b, 0));
+  put(memory, 0x220, descriptor(0x500, 0x67, 0x89, 0));
+  put(memory, 0x228, descriptor(0x700, 0xff, 0x82, 0));
+  put(memory, 0x1208, descriptor(0, 0xfffff, 0x93));
+  dword(memory, 0x500 + 0x1c, 0x2000);
+  dword(memory, 0x500 + 0x20, 0x100);
+  dword(memory, 0x500 + 0x24, 2);
+  dword(memory, 0x500 + 0x38, 0x900);
+  const selectors = {
+    ldt: { ldt: 0x28, cs: 8, ss: 0x10, ds: 0x10, page: 0, cr2: 0x228 },
+    cs: { ldt: 0, cs: 8, ss: 0x10, ds: 0x10, page: 0, cr2: 0x208 },
+    ss: { ldt: 0, cs: 8, ss: 0x1008, ds: 0x10, page: 1, cr2: 0x1208 },
+    data: { ldt: 0, cs: 8, ss: 0x10, ds: 0x1008, page: 1, cr2: 0x1208 },
+  }[kind];
+  for (const [offset, selector] of [[0x48,0x10],[0x4c,selectors.cs],
+    [0x50,selectors.ss],[0x54,selectors.ds],[0x58,0],[0x5c,0],
+    [0x60,selectors.ldt]]) word(memory, 0x500 + offset, selector);
+  dword(memory, 0x1000, 0x3003);
+  dword(memory, 0x2000, 0x4003);
+  for (let page = 0; page < 16; page++) {
+    dword(memory, 0x3000 + page * 4, (page << 12) | 3);
+    dword(memory, 0x4000 + page * 4,
+      page === selectors.page ? 0 : (page << 12) | 3);
+  }
+  const cpu = new I80386({
+    read: address => memory.get(address) ?? 0,
+    fetch: address => memory.get(address) ?? 0,
+    write: (address, value) => memory.set(address, value & 255),
+  });
+  cpu.cr0 = 0x80000001;
+  cpu.cr3 = 0x1000;
+  cpu.gdtr = { base: 0x200, limit: 0x100f };
+  cpu.cs = 8; cpu.ss = cpu.ds = cpu.es = 0x10; cpu.eip = 0x40;
+  cpu.segmentCaches[1] = { base: 0, limit: 0xfffff, default32: true,
+    present: true, code: true, readable: true, writable: false };
+  for (const id of [0,2,3]) cpu.segmentCaches[id] = { base: 0, limit: 0xfffff,
+    default32: true, present: true, code: false, readable: true, writable: true };
+  cpu.tr = { selector: 0x18, base: 0x400, limit: 0x67, present: true, type: 11 };
+  return { cpu, memory, expectedCr2: selectors.cr2 };
+}
+
+test("postcommit task selector page faults retain PF, CR2, TR, busy, and outgoing save", () => {
+  for (const kind of ["ldt", "cs", "ss", "data"]) {
+    const { cpu, memory, expectedCr2 } = pagingFaultFixture(kind);
+    assert.throws(
+      () => cpu._taskSwitch(0x20, "call"),
+      error => error?.vector === 14 && error.errorCode === 0 && error.taskCommitted,
+      kind,
+    );
+    assert.deepEqual([cpu.cr2, cpu.cr3, cpu.tr.selector], [expectedCr2, 0x2000, 0x20]);
+    assert.equal(memory.get(0x225) & 15, 11, `${kind}: incoming busy remains set`);
+    assert.equal(memory.get(0x21d) & 15, 11, `${kind}: outgoing busy remains set`);
+    assert.deepEqual([0x420,0x421,0x422,0x423].map(a => memory.get(a)),
+      [0x40,0,0,0], `${kind}: outgoing EIP was saved before commit`);
+  }
+});
+
 test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", () => {
   const memory = new Map();
   put(memory, 0, [0x9a, 0, 0, 0x20, 0, 0xf4]);

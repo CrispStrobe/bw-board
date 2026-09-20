@@ -317,7 +317,15 @@ bit is written after the task commits, so a paging fault on that write is a
 new-task fault. The chapter 7 overview table contains contradictory exception
 rows; the implementation follows the explicit exception-context rules in
 sections 9.8.10 and 9.8.11 rather than extending the audited 286 sequence.
-Task gates remain outside this direct-transfer milestone.
+The owned paging-fault matrix removes the incoming mapping at each of the
+LDTR, CS, SS, and data-selector descriptor reads. In every case the original
+#PF error and CR2 survive unchanged, while the outgoing register save,
+incoming busy bit, new TR, and new CR3 remain committed. Outgoing saves are
+ordinary sequential system writes: a page fault can therefore leave an
+architecturally visible prefix of the TSS updated; this profile does not
+invent transactional rollback around those writes. Far and IDT task gates
+use the same switch path, and an exception task gate pushes its error dword on
+the incoming task's stack before the handler begins.
 
 VERR and VERW query descriptor type and privilege without requiring the
 descriptor P bit, as specified for the original 386. The pinned PCjs oracle
