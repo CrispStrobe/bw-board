@@ -1,10 +1,10 @@
 # Experimental VGA memory pipeline
 
 `src/experimental/vga-memory.js` implements the CPU-visible VGA memory
-pipeline behind the register latches in `src/vga-card.js`. It is deliberately
-not connected to a machine yet. The separation lets the register file remain
-the single owner of VGA ports while a later board integration can map this
-module at A0000h through BFFFFh.
+pipeline behind the register latches in `src/vga-card.js`. The explicit
+experimental 386 VGA AT profile connects it at A0000h through BFFFFh while
+the register file remains the single owner of VGA ports. Other machine
+profiles are unchanged.
 
 The implementation follows IBM's *Personal System/2 Hardware Interface
 Technical Reference — Video Subsystems*, September 1992, section 2, “VGA
@@ -41,8 +41,11 @@ each map, representing 64 KiB or 256 KiB total VGA RAM. The 128 KiB aperture
 therefore aliases addresses beyond the enabled per-map range. Chain-4 consumes
 A1:A0 as the map number and clears those bits from the literal CPU plane
 address; it does not compact higher address bits. CRTC/display fetch packing
-is a separate rendering concern. Graphics-controller register 6 can substitute A0 out of the map address
-without itself choosing a read map or restricting write maps. Register 5
+is a separate rendering concern. Graphics-controller register 6 currently
+suppresses CPU A0 in the bounded odd/even route without itself choosing a
+read map or restricting write maps. The hardware's higher-address
+substitution into that route is not yet modeled, so this is not evidence for
+the entire 128 KiB odd/even aperture. Register 5
 independently uses A0 to select the odd/even read map, while sequencer register
 4 independently restricts writes to the odd or even pair. Mixed settings are
 modeled because VGA font-plane access intentionally programs these controls
@@ -55,12 +58,16 @@ enable policy.
 
 This module does not interpret CRTC or attribute-controller display fetches,
 render pixels, arbitrate CPU and display memory cycles, model snow/timing, or
-connect VGA ROM execution to the AT machine. It also does not yet model VGA
+model VGA ROM shadow-write chipset behavior. It also does not yet model VGA
 write buffering or vendor extensions. The existing mode-13h renderer remains
 a separate linear renderer and is not evidence for Mode X, Windows, or Doom.
 
-The prepared external firmware input is SeaVGABIOS/SeaBIOS release 1.16.3 at
+The external firmware input is SeaVGABIOS/SeaBIOS release 1.16.3 at
 commit `a6ed6b701f0a57db0569ab98b0661c12a6ec3ff8`; the local build produced
-`/tmp/astra-seavgabios-source/out/vgabios.bin`. This path is provenance for a
-future source-bound board test only. No SeaVGABIOS execution is claimed by
-this isolated memory module.
+`/tmp/astra-seavgabios-source/out/vgabios.bin`. The source-bound board probe
+executes its option POST, observes the installed C000h INT 10h vector, and
+then runs a host-installed real-mode diagnostic guest. That guest requests
+mode 13h through INT 10h, verifies BDA mode 13h and chain-4 register state,
+and round-trips two bytes through A0000h. This proves the bounded firmware
+service and CPU-memory path; it is not a complete AT boot, pixel-rendering,
+Mode X, Windows, or Doom graphics result.
