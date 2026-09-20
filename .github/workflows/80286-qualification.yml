@@ -264,6 +264,39 @@ jobs:
             assert.equal(observation.actual.completed,false);
           }
           NODE
+          node scripts/compare-pcjs-i80386-unreal-rep.mjs > "$RECEIPT_DIR/pcjs-i80386-unreal-rep.json"
+          for mutation in result budget cache; do
+            if I386_UNREAL_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-unreal-rep.mjs > "$RECEIPT_DIR/rejected-unreal-$mutation.json"; then
+              echo "Unreal-mode comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          const positive=read('pcjs-i80386-unreal-rep');
+          assert.equal(positive.status,'pass');
+          assert.deepEqual(positive.differences,[]);
+          for(const side of ['reference','actual']) {
+            assert.equal(positive[side].halted,true);
+            assert.equal(positive[side].ds,0);
+            assert.equal(positive[side].es,0);
+            assert.equal(positive[side].copiedSha256,positive.expectedCopySha256);
+          }
+          for(const [mutation,fields] of [['result',['boundary']],['cache',['actual.dsLimit','actual.esLimit']]]) {
+            const rejected=read(`rejected-unreal-${mutation}`);
+            assert.equal(rejected.status,'fail');
+            assert.equal(rejected.mutation,mutation);
+            assert.deepEqual(rejected.differences.map(d=>d.field),fields);
+          }
+          const budget=read('rejected-unreal-budget');
+          assert.equal(budget.status,'fail');
+          for(const side of ['reference','actual']) {
+            assert.equal(budget[side].halted,false);
+            assert.ok(budget.differences.some(d=>d.field===`${side}.halted`));
+          }
+          NODE
           node scripts/compare-pcjs-i80386-task16.mjs > "$RECEIPT_DIR/pcjs-i80386-task16.json"
           for mutation in result budget; do
             if I386_TASK16_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-task16.mjs > "$RECEIPT_DIR/rejected-task16-$mutation.json"; then
