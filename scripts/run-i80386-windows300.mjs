@@ -42,7 +42,9 @@ const readPinned = (envName, expectedHash, description) => {
 
 const bios = readPinned('AT_BIOS_ROM', EXPECTED_BIOS_SHA256, 'IBM 5170 Rev1 BIOS');
 const vga = readPinned('VGA_BIOS_ROM', EXPECTED_VGA_SHA256, 'SeaVGABIOS ROM');
-const hdd = readPinned('AT_HDD_IMAGE', EXPECTED_HDD_SHA256, 'Windows 3.0 / PC DOS 3.2 HDD image');
+const expectedHdd = process.env.AT_HDD_EXPECTED_SHA256 ?? EXPECTED_HDD_SHA256;
+if (!/^[0-9a-f]{64}$/.test(expectedHdd)) throw new Error('AT_HDD_EXPECTED_SHA256 must be lowercase SHA-256');
+const hdd = readPinned('AT_HDD_IMAGE', expectedHdd, 'Windows 3.0 / PC DOS 3.2 HDD image');
 if (bios.bytes.length !== 0x10000 || vga.bytes.length !== 0x7e00 || hdd.bytes.length !== 21_411_840)
   throw new Error('external input byte length mismatch');
 const stepLimit = process.env.AT_POST_STEPS === undefined ? DEFAULT_STEPS : Number(process.env.AT_POST_STEPS);
@@ -59,6 +61,44 @@ const enterStep = process.env.AT_WINDOWS_ENTER_STEP === undefined
 if (enterStep !== null && (!Number.isInteger(enterStep) || enterStep < 1 ||
     enterStep + 10_000_000 >= stepLimit))
   throw new Error('AT_WINDOWS_ENTER_STEP must leave 10000000 instructions for observed response');
+const keyScriptPath = process.env.AT_WINDOWS_KEY_SCRIPT ?? null;
+if (enterStep !== null && keyScriptPath) throw new Error('choose AT_WINDOWS_ENTER_STEP or AT_WINDOWS_KEY_SCRIPT');
+const keyScriptBytes = keyScriptPath ? fs.readFileSync(keyScriptPath) : null;
+const keyScriptSha256 = keyScriptBytes && sha(keyScriptBytes);
+const keyScript = keyScriptBytes && JSON.parse(keyScriptBytes);
+const scan = {alt:0x38,ctrl:0x1d,shift:0x2a,enter:0x1c,space:0x39,'.':0x34,'\\':0x2b,';':0x27,
+  '0':0x0b,'1':0x02,'2':0x03,'3':0x04,'4':0x05,'5':0x06,'6':0x07,'7':0x08,'8':0x09,'9':0x0a,
+  a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,i:0x17,j:0x24,k:0x25,l:0x26,
+  m:0x32,n:0x31,o:0x18,p:0x19,q:0x10,r:0x13,s:0x1f,t:0x14,u:0x16,v:0x2f,w:0x11,x:0x2d,y:0x15,z:0x2c};
+const keyEvents = [];
+const emitStroke = (step,key,shift=false) => {
+  const code=scan[key]; if(code===undefined)throw new Error(`unsupported key '${key}'`);
+  if(shift)keyEvents.push({step,code:scan.shift});
+  keyEvents.push({step:step+100,code},{step:step+200,code:code|0x80});
+  if(shift)keyEvents.push({step:step+300,code:scan.shift|0x80});
+};
+if (keyScript) {
+  if(keyScript.schema!=='astra.windows-key-script.v1'||!Array.isArray(keyScript.actions))
+    throw new Error('invalid Windows key script');
+  for(const action of keyScript.actions){
+    if(!Number.isInteger(action.step)||action.step<1)throw new Error('key action step must be positive');
+    if(action.kind==='key')emitStroke(action.step,action.key);
+    else if(action.kind==='chord'){
+      const keys=action.keys; if(!Array.isArray(keys)||keys.length<2)throw new Error('invalid chord');
+      let at=action.step; for(const key of keys.slice(0,-1))keyEvents.push({step:at+=100,code:scan[key]});
+      const code=scan[keys.at(-1)]; keyEvents.push({step:at+=100,code},{step:at+=100,code:code|0x80});
+      for(const key of keys.slice(0,-1).reverse())keyEvents.push({step:at+=100,code:scan[key]|0x80});
+    } else if(action.kind==='text'){
+      let at=action.step; const interval=action.interval??1000;
+      for(const char of action.value){const lower=char.toLowerCase(),shift=char!==lower||char===':';
+        emitStroke(at,char===':'?';':lower,shift); at+=interval;}
+    } else throw new Error(`unsupported key action '${action.kind}'`);
+  }
+  keyEvents.sort((a,b)=>a.step-b.step);
+  if(keyEvents.some((event,index)=>event.step>=stepLimit||(index&&event.step<=keyEvents[index-1].step))||
+      keyEvents.at(-1)?.step+10_000_000>=stepLimit)
+    throw new Error('key events must be unique and precede the instruction limit');
+}
 
 // Clone the VGA board profile with an AT type-2 HDD and a configured but empty
 // 1.2MB drive A. The IBM Rev1 POST minimum-configuration test requires at
@@ -99,8 +139,10 @@ let modeTransitionTailNext = 0;
 const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
-const keyboardAction = {kind: 'set1-enter', requestedStep: enterStep,
+const keyboardAction = {kind: keyScript ? 'source-bound-script' : 'set1-enter', requestedStep: enterStep,
+  script: keyScript&&{sha256:keyScriptSha256,actions:keyScript.actions},
   events: [], beforeVga: null, afterVga: null};
+let keyEventIndex=0;
 let machine;
 machine = new ExperimentalI80386ATMachine(windowsProfile, {
   ataImage: hdd.bytes,
@@ -237,6 +279,13 @@ for (; steps < stepLimit; steps++) {
     keyboardAction.events.push({step: steps, code: 0x9c, accepted: machine.keyIn(0x9c)});
   if (enterStep !== null && steps === enterStep + 10_000_000)
     keyboardAction.afterVga = captureVga();
+  if(keyScript&&keyEventIndex===0&&steps===keyEvents[0]?.step)keyboardAction.beforeVga=captureVga();
+  while(keyEventIndex<keyEvents.length&&steps===keyEvents[keyEventIndex].step){
+    const event=keyEvents[keyEventIndex++];
+    keyboardAction.events.push({...event,accepted:machine.keyIn(event.code)});
+  }
+  if(keyScript&&keyEventIndex===keyEvents.length&&keyboardAction.afterVga===null&&
+      steps===keyEvents.at(-1).step+10_000_000)keyboardAction.afterVga=captureVga();
   if (traceStart !== null && steps >= traceStart && steps < traceEnd) {
     instructionWindow.push({...before,
       bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0),
@@ -369,5 +418,11 @@ for (const [file, before] of Object.entries(sourceSha256)) {
 }
 if (execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim() !== executionRevision)
   throw new Error('Windows run refused: HEAD changed during execution');
+if(keyScriptPath&&sha(fs.readFileSync(keyScriptPath))!==keyScriptSha256)
+  throw new Error('Windows run refused: key script changed during execution');
+if(process.env.AT_HDD_OUTPUT){
+  if(fs.existsSync(process.env.AT_HDD_OUTPUT))throw new Error('AT_HDD_OUTPUT refuses to overwrite an existing file');
+  fs.writeFileSync(process.env.AT_HDD_OUTPUT,machine.ata.mediaBytes());
+}
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 if (refusal || machine.cpu.shutdown) process.exitCode = 1;
