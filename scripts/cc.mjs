@@ -5,6 +5,7 @@
  * An honest integer subset — not a full compiler, but real control flow and
  * expressions, enough to run small programs. Inside main() it understands:
  *   int a, b = expr;                 16-bit integer variables (optional init)
+ *   int a[n];  a[i]                  integer arrays (word each; element read/write, any index expr)
  *   a = expr;  a += / -= / *= / /=   assignment and compound assignment
  *   a++;  a--;                       increment / decrement
  *   printf("fmt", args...);          %d (integer), %c (char), %% and \n\t\r\\\";
@@ -80,6 +81,8 @@ export function cToAsm(source) {
     const emit = (...a) => code.push(...a.map((s) => (s.endsWith(':') ? s : '\t' + s)));
     const lbl = () => `_L${lblN++}`;
     const varLabel = (n) => { if (!vars.has(n)) vars.set(n, `V${vars.size}`); return vars.get(n); };
+    const arrays = new Map();   // name -> { label, size } (int arrays, word each)
+    const arrLabel = (n) => { const a = arrays.get(n); if (!a) throw new Error(`C: array '${n}' used before declaration`); return a.label; };
     const strLabel = (bytes) => { const l = `s${strings.length}`; strings.push(`${l}:\tDB ${bytes.length ? bytes.join(',') + ",'$'" : "'$'"}`); return l; };
     const peek = () => toks[i], next = () => toks[i++];
     const isId = (t) => typeof t === 'string' && /^[A-Za-z_]\w*$/.test(t);
@@ -95,7 +98,13 @@ export function cToAsm(source) {
         if (t === '!') { primary(); const L = lbl(); emit('CMP AX, 0', 'MOV AX, 0', `JNE ${L}`, 'MOV AX, 1', `${L}:`); return; }
         if (t === '+') { primary(); return; }
         if (typeof t === 'string' && /^\d+$/.test(t)) { emit(`MOV AX, ${parseInt(t, 10) & 0xffff}`); return; }
-        if (isId(t) && !KW.has(t)) { emit(`MOV AX, [${varLabel(t)}]`); return; }
+        if (isId(t) && !KW.has(t)) {
+            if (peek() === '[') {   // array element read: a[i]
+                next(); orExpr(); expect(']');
+                emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(t)}`, 'ADD BX, AX', 'MOV AX, [BX]'); return;
+            }
+            emit(`MOV AX, [${varLabel(t)}]`); return;
+        }
         throw new Error(`C: bad token '${JSON.stringify(t)}' in expression`);
     }
     function mul() {
@@ -190,6 +199,14 @@ export function cToAsm(source) {
     function block() { expect('{'); while (peek() !== '}' && i < toks.length) statement(); expect('}'); }
 
     function exprStatement() {
+        if (isId(peek()) && !KW.has(peek()) && toks[i + 1] === '[') {   // array element write: a[i] = expr
+            const name = next(); next();                 // name, '['
+            orExpr(); expect(']');                       // index -> AX
+            const op = next();
+            if (op !== '=') throw new Error(`C: array elements support '=' only, got '${JSON.stringify(op)}'`);
+            emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(name)}`, 'ADD BX, AX', 'PUSH BX');
+            orExpr(); emit('POP BX', 'MOV [BX], AX'); return;
+        }
         if (isId(peek()) && !KW.has(peek()) && (toks[i + 1] === '++' || toks[i + 1] === '--')) {
             const name = next(), op = next(), lab = varLabel(name);
             emit(`MOV AX, [${lab}]`, op === '++' ? 'INC AX' : 'DEC AX', `MOV [${lab}], AX`); return;
@@ -213,7 +230,14 @@ export function cToAsm(source) {
         if (t === 'int') {
             next();
             do {
-                const name = next(); const lab = varLabel(name);
+                const name = next();
+                if (peek() === '[') {                     // array declaration: int a[n];
+                    next(); const sz = next(); expect(']');
+                    if (typeof sz !== 'string' || !/^\d+$/.test(sz)) throw new Error(`C: array size must be an integer literal, got '${JSON.stringify(sz)}'`);
+                    if (!arrays.has(name)) { const label = `A${arrays.size}`; const n = parseInt(sz, 10); arrays.set(name, { label, size: n }); data.push(`${label}:\tDW ${Array(n).fill(0).join(',')}`); }
+                    continue;
+                }
+                const lab = varLabel(name);
                 if (peek() === '=') { next(); orExpr(); emit(`MOV [${lab}], AX`); }
             } while (peek() === ',' && next());
             expect(';'); return;
