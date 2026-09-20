@@ -49,6 +49,7 @@ vmcode:
   int $0x20
   movb $'V',%al
   outb %al,$0xe9
+  outb %al,$0xf4
 vmhang: jmp vmhang
 .align 8
 gdt:
