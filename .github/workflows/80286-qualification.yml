@@ -156,7 +156,7 @@ jobs:
             assert.ok(budget.differences.some(d=>d.case==='callGateExpected'&&d.engine===engine));
           }
           NODE
-          for mutation in io-access conforming-cpl vm-frame; do
+          for mutation in io-access conforming-cpl vm-frame into-of into-eip; do
             if I386_FAULT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected386-faults.mjs \
               > "$RECEIPT_DIR/rejected-386-$mutation.json"; then
               echo "386 protection oracle accepted $mutation mutation" >&2
@@ -170,6 +170,8 @@ jobs:
             ['io-access',['ioDeniedExpected','ioDenied']],
             ['conforming-cpl',['conformingExpected']],
             ['vm-frame',['vm86Expected','vm86RoundTrip']],
+            ['into-of',['intoClearExpected','intoClear']],
+            ['into-eip',['intoSetExpected','intoSet']],
           ]) {
             const report=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-${mutation}.json`));
             assert.equal(report.status,'fail');
