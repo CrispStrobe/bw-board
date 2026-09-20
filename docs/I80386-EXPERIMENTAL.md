@@ -390,14 +390,16 @@ to a protected task, whose NT IRET follows the backlink and reconstructs the
 saved VM task and its real-style caches. IRET executed directly by VM86 code
 continues to use VM86 stack semantics and never treats NT as a task return.
 The TSS debug-trap bit remains a precommit refusal in this bounded profile.
-The source-bound VM-task comparator records a pinned-PCjs limitation rather
-than using it as false agreement: that revision resets at the far JMP into an
-otherwise valid VM TSS. The local side must still enter VM86, visit a protected
-IDT task-gate handler, return through NT IRET, and reach the exact VM completion
-state. The comparator also requires PCjs's exact reset boundary; result and
-low-budget mutations reject. The owned manual-derived tests are therefore the
-acceptance evidence for VM task semantics, while PCjs supplies a reproducible
-named reference difference.
+The source-bound VM-task diagnostic records a pinned-PCjs disagreement rather
+than treating reset as oracle success: that revision resets at the far JMP into
+an otherwise valid VM TSS. Its task-load path calls `setPS()` but does not
+switch the segment loaders to VM86 mode before loading the incoming selectors;
+the same revision's IRET path explicitly performs that mode change. The local
+side enters VM86, visits a protected IDT task-gate handler, returns through NT
+IRET, and reaches the exact VM completion state, but the diagnostic status is
+still `fail` because the reference does not agree. The owned manual-derived
+tests are local evidence only until another independent engine or hardware
+guest validates this task transition.
 
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped

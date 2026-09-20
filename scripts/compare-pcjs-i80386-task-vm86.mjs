@@ -84,8 +84,7 @@ function runPCjs() {
   return summarize(cpu,a=>bus.getByteDirect(a),false,visited,reset);
 }
 const reference=runPCjs(),actual=runLocal();if(mutation==='result')actual.ax^=1;
-const expectedActual={reset:false,completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0,handlerBacklink:0x20};
-const expectedReference={reset:true,completed:false,handler:false,returned:false,vm:false,cs:0xf000,eip:0xfff0,tr:0};
-const differences=[];for(const [side,observed,expected]of[['reference',reference,expectedReference],['actual',actual,expectedActual]])for(const field of Object.keys(expected))if(observed[field]!==expected[field])differences.push({field:`${side}.${field}`,expected:expected[field],actual:observed[field]});
+const expected={reset:false,completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0,handlerBacklink:0x20};
+const differences=[];for(const [side,observed]of[['reference',reference],['actual',actual]])for(const field of Object.keys(expected))if(observed[field]!==expected[field])differences.push({field:`${side}.${field}`,expected:expected[field],actual:observed[field]});
 verifyPin();verifyLocal();if(execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim()!==revision||sources.some(path=>hash(readFileSync(new URL(path,import.meta.url)))!==sourceHashes[path]))throw new Error('execution sources changed');
-console.log(JSON.stringify({oracle:'PCjs',revision,pcjsRevision:PIN,scope:'local VM86 TSS entry, IDT task-gate protected handler, NT IRET VM return and exact completion; pinned PCjs exact reset limitation at VM task entry',sourceHashes,mutation,status:differences.length?'fail':'pass',expectedReference,expectedActual,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
+console.log(JSON.stringify({oracle:'PCjs',revision,pcjsRevision:PIN,scope:'VM86 TSS entry, IDT task-gate protected handler, NT IRET VM return and exact completion',classification:'reference-disagreement',sourceHashes,mutation,status:differences.length?'fail':'pass',expected,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
