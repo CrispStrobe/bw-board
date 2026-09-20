@@ -41,7 +41,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
         cylinders: 306, heads: 4, sectors: 17,
       }, {
         onIRQ: active => this.chips.pic2?.setIRQ(6, active ? 1 : 0),
-        intersectorDelayCycles: hooks.ataIntersectorDelayCycles ?? 2048,
+        intersectorDelayCycles: hooks.ataIntersectorDelayCycles ?? 8192,
       });
       this.attachDevice('ata', this.ata);
     }
