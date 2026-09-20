@@ -39,7 +39,7 @@ callback errors remain host errors rather than guest exceptions.
 
 The current profile implements bounded VM86 entry, interrupts and return as
 detailed below. Expand-down data and privilege stacks are now admitted.
-Task switching and other unimplemented opcodes still refuse explicitly. LDT lookup, LLDT/LTR, protected call gates,
+Unsupported task formats and unimplemented opcodes still refuse explicitly. LDT lookup, LLDT/LTR, protected call gates,
 conforming code, and privilege-changing interrupt/return paths are implemented
 within the bounded contracts below.
 Only architecturally invalid encodings implemented by this profile raise #UD;
