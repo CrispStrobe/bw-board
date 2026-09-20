@@ -70,7 +70,7 @@ test("postcommit task selector page faults retain PF, CR2, TR, busy, and outgoin
   for (const kind of ["ldt", "cs", "ss", "data"]) {
     const { cpu, memory, expectedCr2 } = pagingFaultFixture(kind);
     assert.throws(
-      () => cpu._taskSwitch(0x20, "call"),
+      () => cpu._taskSwitch(0x20, "call", { external: true }),
       error => error?.vector === 14 && error.errorCode === 0 && error.taskCommitted,
       kind,
     );
@@ -80,6 +80,20 @@ test("postcommit task selector page faults retain PF, CR2, TR, busy, and outgoin
     assert.deepEqual([0x420,0x421,0x422,0x423].map(a => memory.get(a)),
       [0x40,0,0,0], `${kind}: outgoing EIP was saved before commit`);
   }
+});
+
+test("external task selector errors add EXT while page faults retain their bits", () => {
+  const nullTarget = pagingFaultFixture("cs").cpu;
+  assert.throws(
+    () => nullTarget._taskSwitch(0, "call", { external: true }),
+    error => error?.vector === 13 && error.errorCode === 1,
+  );
+  const absent = pagingFaultFixture("cs");
+  absent.memory.set(0x225, absent.memory.get(0x225) & 0x7f);
+  assert.throws(
+    () => absent.cpu._taskSwitch(0x20, "call", { external: true }),
+    error => error?.vector === 11 && error.errorCode === 0x21,
+  );
 });
 
 test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", () => {
@@ -152,7 +166,7 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
 
   cpu.halted = false;
   cpu.idtr = { base: 0x600, limit: 0x7ff };
-  put(memory, 0x600 + 13 * 8, [0, 0, 0x20, 0, 0, 0x85, 0, 0]);
+  put(memory, 0x600 + 13 * 8, [0xaa, 0xbb, 0x20, 0, 0xcc, 0x85, 0xdd, 0xee]);
   dword(memory, 0x500 + 0x20, 0x100);
   dword(memory, 0x500 + 0x24, 2);
   dword(memory, 0x500 + 0x1c, 0x2000);

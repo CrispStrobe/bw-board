@@ -1140,11 +1140,11 @@ export class ExperimentalI80386 {
       fs: word(0x58), gs: word(0x5c), ldt: word(0x60) };
   }
 
-  _saveCurrentTask(flags, incomingSelector) {
+  _saveCurrentTask(flags, incomingSelector, savedEip = this.eip) {
     if (!this.tr.present || this.tr.limit < 0x5d)
       throw new I80386Fault(10, incomingSelector & 0xfffc, "current 386 TSS limit");
     const d = this.tr.base;
-    for (const [o, v] of [[0x20,this.eip],[0x24,flags],[0x28,this.eax],
+    for (const [o, v] of [[0x20,savedEip],[0x24,flags],[0x28,this.eax],
       [0x2c,this.ecx],[0x30,this.edx],[0x34,this.ebx],[0x38,this.esp],[0x3c,this.ebp],
       [0x40,this.esi],[0x44,this.edi]]) this._taskWrite(d, o, 4, v);
     for (const [o, v] of [[0x48,this.es],[0x4c,this.cs],[0x50,this.ss],[0x54,this.ds],
@@ -1174,29 +1174,34 @@ export class ExperimentalI80386 {
     checkPrivilege = true,
     errorCode = null,
     external = false,
+    saveEip = this.eip,
+    saveFlags = this.eflags,
   } = {}) {
     const returning = kind === "iret";
     const incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
-    // Unlike the 286 SWITCH_TASKS pseudocode, the original 386 task-switch
-    // flow diagnoses a short incoming TSS while the outgoing task remains
-    // restartable. Read the admitted dynamic image before busy/TR commits.
-    const image = this._taskImage(incoming);
-    if (image.eflags & 0x20000)
-      throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
-    if (this._taskRead(incoming.base, 0x64, 2) & 1)
-      throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
+    if (incoming.limit < 0x67)
+      throw new I80386Fault(10, incoming.selector & 0xfffc, "incoming 386 TSS limit");
+    if ((this.cr0 & 0x80000000) && (incoming.base & 0xfff) + 0x67 >= 0x1000)
+      throw new UnsupportedI80386(
+        "page-straddling incoming TSS images are outside the bounded task profile",
+      );
     const outgoing = this.tr.present
       ? {
           ...this.tr,
           address: (this.gdtr.base + (this.tr.selector & 0xfff8)) >>> 0,
         }
       : null;
-    this._saveCurrentTask(returning ? this.eflags & ~NT : this.eflags, selector);
+    this._saveCurrentTask(returning ? saveFlags & ~NT : saveFlags, selector, saveEip);
     if (!returning) this._setTaskBusy(incoming, true);
     if (kind === "call") this._taskWrite(incoming.base, 0, 2, this.tr.selector);
     if ((kind === "jmp" || returning) && outgoing) this._setTaskBusy(outgoing, false);
     this.tr = { ...incoming, type: 11 };
     try {
+      const image = this._taskImage(incoming);
+      if (image.eflags & 0x20000)
+        throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
+      if (this._taskRead(incoming.base, 0x64, 2) & 1)
+        throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
       this.cr3 = image.cr3 >>> 0;
       this.cr0 |= 8;
       Object.assign(this, image);
@@ -1259,7 +1264,8 @@ export class ExperimentalI80386 {
       this._interruptShadow = this._nmiShadow = this._debugShadow = 0;
       this._suppressTrace = true;
     } catch (error) {
-      if (error instanceof I80386Fault) error.taskCommitted = true;
+      if (error instanceof I80386Fault || error instanceof UnsupportedI80386)
+        error.taskCommitted = true;
       throw error;
     }
   }
@@ -1998,6 +2004,8 @@ export class ExperimentalI80386 {
         checkPrivilege: false,
         errorCode,
         external,
+        saveEip: returnEip,
+        saveFlags: fault ? this.eflags | RF : this.eflags,
       });
       return;
     }
@@ -2100,6 +2108,7 @@ export class ExperimentalI80386 {
         return;
       } catch (next) {
         if (!(next instanceof I80386Fault)) throw next;
+        if (next.taskCommitted) returnEip = this.eip;
         if (current.vector === 8) {
           this.shutdown = true;
           return;
@@ -2400,7 +2409,7 @@ export class ExperimentalI80386 {
       return result;
     } catch (error) {
       if (error instanceof UnsupportedI80386) {
-        this._restoreInstruction(state);
+        if (!error.taskCommitted) this._restoreInstruction(state);
         throw error;
       }
       if (!(error instanceof I80386Fault)) throw error;
