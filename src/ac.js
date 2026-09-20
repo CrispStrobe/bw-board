@@ -384,11 +384,20 @@ export function acSweep(args) {
             : vOp(nS) - vOp(nG);
           let gm;
           let gds;
-          const exactGroundedLevel1Nmos = part.kind === 'nmos' && P.model === 'level1'
-            && P.bulkAtGround === true && Number(P.gamma ?? 0) === 0
+          const exactGroundedLevel1Base = part.kind === 'nmos' && P.model === 'level1'
+            && P.bulkAtGround === true
             && Number.isFinite(P.vth) && Number.isFinite(P.kp) && P.kp > 0
             && Number.isFinite(P.w) && P.w > 0 && Number.isFinite(P.l) && P.l > 0
             && Number.isFinite(P.lambda) && P.lambda >= 0;
+          const hasGamma = Object.hasOwn(P, 'gamma');
+          const hasPhi = Object.hasOwn(P, 'phi');
+          if (exactGroundedLevel1Base && (hasGamma !== hasPhi
+              || (hasGamma && (!Number.isFinite(P.gamma) || P.gamma < 0
+                || !Number.isFinite(P.phi) || P.phi <= 0)))) {
+            throw new Error(`acSweep: ${part.id} gamma and phi must be a finite nonnegative/positive pair`);
+          }
+          const exactGroundedLevel1Nmos = exactGroundedLevel1Base;
+          let gmb = 0;
           if (exactGroundedLevel1Nmos) {
             // The strict DC domain already proves the bulk is the reference.
             // Linearise the SAME Level-1 law at that converged point instead
@@ -406,6 +415,14 @@ export function acSweep(args) {
               const lambda = P.lambda > 0 ? P.lambda : 0;
               gm = 2 * k * vovS * dVovS * (1 + lambda * vds);
               gds = mosGds(P, id0, dVovS);
+            }
+            // Vth = Vth0 + gamma*(sqrt(phi + Vsb) - sqrt(phi)). With the
+            // bulk fixed at ground, dId/dVb = gm*dVth/dVsb and therefore
+            // dId/dVs gains the equal-and-opposite body term. The DC model
+            // clamps reverse Vsb to zero, so its derivative is zero there.
+            const vsb = vOp(nS);
+            if (hasGamma && P.gamma > 0 && vsb > 0) {
+              gmb = gm * P.gamma / (2 * Math.sqrt(P.phi + vsb));
             }
           } else {
             // Compatibility model for generic interactive MOS parts. Its
@@ -426,6 +443,9 @@ export function acSweep(args) {
           if (iD !== undefined && iS !== undefined) addC(iD, iS, -gm, 0);
           if (iS !== undefined && iG !== undefined) addC(iS, iG, -gm, 0);
           if (iS !== undefined) addC(iS, iS, gm, 0);
+          // Grounded bulk: i(D->S) += gmb*(vB-vS), with vB = 0.
+          if (iD !== undefined && iS !== undefined) addC(iD, iS, -gmb, 0);
+          if (iS !== undefined) addC(iS, iS, gmb, 0);
           break;
         }
         case 'opamp': {
