@@ -37,7 +37,7 @@ function runComOnBootedDos(comBytes, marker, budget = 20_000_000) {
 }
 
 test('a BASIC-compiled .COM runs on a real booted MS-DOS 2.0 kernel',
-    { skip: have ? false : 'set MSDOS_BIN_DIR to the MS-DOS 2.0 files (COMMAND.COM, MSDOS.SYS, SYSINIT.OBJ)' }, () => {
+    { skip: have ? false : 'run `npm run fetch:free-dos` (MIT) or set MSDOS_BIN_DIR to the MS-DOS 2.0 files (COMMAND.COM, MSDOS.SYS, SYSINIT.OBJ)' }, () => {
         const com = assemble(basicToAsm('10 PRINT "BASIC-ON-REAL-DOS"\n20 PRINT 6*7\n'), { format: 'com' }).bytes;
         const { screen } = runComOnBootedDos(com, 'BDONE');
         assert.match(screen, /BASIC-ON-REAL-DOS/, 'the BASIC program printed its banner under real DOS');
@@ -46,7 +46,7 @@ test('a BASIC-compiled .COM runs on a real booted MS-DOS 2.0 kernel',
     });
 
 test('a C-compiled .COM (with a function call) runs on a real booted MS-DOS 2.0 kernel',
-    { skip: have ? false : 'set MSDOS_BIN_DIR to the MS-DOS 2.0 files' }, () => {
+    { skip: have ? false : 'run `npm run fetch:free-dos` (MIT) or set MSDOS_BIN_DIR to the MS-DOS 2.0 files' }, () => {
         const com = assemble(cToAsm('int sq(int x){return x*x;} int main(){printf("C-ON-REAL-DOS %d\\n",sq(8)); return 0;}'), { format: 'com' }).bytes;
         const { screen } = runComOnBootedDos(com, 'CDONE');
         assert.match(screen, /C-ON-REAL-DOS 64/, 'the C program (calling sq()) printed its result under real DOS');
