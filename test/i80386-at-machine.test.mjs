@@ -191,3 +191,43 @@ test('experimental 386 AT functional pacing lets a bounded PIT poll observe term
   assert.ok(machine.chips.pic1.irr & 1,
     '44 PIT ticks expire within a 60-instruction functional polling window');
 });
+
+test('experimental 386 AT firmware-shaped RTC polling observes and exits the UIP window', () => {
+  const pollingProgram = [
+    0xbb, 0x03, 0x00,       // MOV BX,3
+    0xb9, 0x00, 0x00,       // retry: MOV CX,0 (65536 iterations)
+    0xb0, 0x0a, 0xe6, 0x70, // poll: select register A
+    0xe4, 0x71, 0xa8, 0x80, // read and test UIP
+    0x75, 0x07,             // JNZ observed
+    0xe2, 0xf4,             // LOOP poll
+    0xfe, 0xcb, 0x75, 0xed, // DEC BL; JNZ retry
+    0xf4,                   // timeout HLT
+    0xc6, 0x06, 0x00, 0x01, 0x01, // observed: MOV byte [0100],1
+    0xf4,
+  ];
+  const runPoll = functionalInstructionCycles => {
+    const machine = new ExperimentalI80386ATMachine({
+      ...PCAT80386_EXPERIMENTAL,
+      functionalInstructionCycles,
+    });
+    machine.cpu.reset();
+    machine.mem.set(pollingProgram, 0);
+    // Put the next UIP window beyond the old four-clock polling budget but
+    // inside the six-clock budget.
+    machine.chips.rtc1.cyclePhase = 1_000_000;
+    for (let steps = 0; steps < 1_200_000 && !machine.cpu.halted; steps++)
+      machine.step();
+    return machine;
+  };
+
+  assert.equal(runPoll(4).mem[0x100], 0, 'the former charge times out before UIP');
+  const paced = runPoll(6);
+  assert.equal(paced.mem[0x100], 1, 'the admitted profile observes UIP');
+  paced._out(0x70, 0x0a);
+  assert.ok(paced._in(0x71) & 0x80);
+  paced.cpu.halted = false;
+  paced.cpu.eip = 0x200;
+  paced.mem.fill(0x90, 0x200, 0x400);
+  for (let instruction = 0; instruction < 300; instruction++) paced.step();
+  assert.equal(paced._in(0x71) & 0x80, 0, 'UIP clears after its bounded update window');
+});
