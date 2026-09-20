@@ -118,6 +118,8 @@ Initial candidate9d64209a failed the sampled386 zero-skip assertion because
 the coordinator put an optional external-report test in that subset. The
 forward workflow correction removes that optional entry and retains the
 zero-skip assertion; actual-report acceptance and mutations passed locally.
+General CI also caught missing census registration for the optional report.
+The new doom-short-report fixture row makes absence explicit; census14/14 pass.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol Windows desktop and Doom interaction.
 Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0

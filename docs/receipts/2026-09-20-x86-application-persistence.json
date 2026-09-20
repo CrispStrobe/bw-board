@@ -28,6 +28,12 @@
       "run": 35490440739,
       "reason": "Coordinator placed the optional external-report test in the sampled386 job whose aggregate requires zero skips. All tests had zero failures; one intentional missing-external-report skip violated that contract.",
       "correction": "Remove the optional external-report test from this zero-skip subset. Keep the zero-skip assertion unchanged; the actual external report and nine mutations passed locally. General CI still discovers the optional test."
+    },
+    "censusTestsPassed": 14,
+    "initialCensusFailure": {
+      "run": 35490440717,
+      "reason": "New optional external-report test lacked an oracle-census registration.",
+      "correction": "Register doom-short-report as an external fixture with explicit absent-CI behavior; both census suites pass14/14."
     }
   },
   "limits": [
