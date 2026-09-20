@@ -99,6 +99,25 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate frozen; hosted qualification pending) — Astra/Sol
+386 compiler instructions and autonomous multi-sector ATA. Adds ENTER/LEAVE,
+BT/BTS/BTR/BTC, BSF/BSR, BCD adjustment and privileged CLTS; VM86 ENTER
+checks page-write permission. Corrects the physical comparator to reconstruct
+unchanged registers from the published final-state delta. All 596 selected
+386EX cases pass; unchanged EAX and CR0.TS mutations are now rejected.
+All published CLTS inputs have TS already clear; the clearing transition is
+covered by directed tests only. ATA exposes a scheduled 256-functional-clock
+inter-sector BSY phase, independent of status polling, and rearms its device
+deadline after I/O. Coordinator fca2badd genuinely boots IBM BIOS/DOS2,
+writes and freshly reboots/reads the same12-byte file, and separately completes
+an owned two-sector INT13 write/read with distinct data and a poisoned buffer.
+Focused surface:286 pass,2 optional skips. Doom now enters its correctly
+relocated real-mode stub and reaches the unsupported8042 FF command; full MZ
+comparison retains18 differences, with the recorded subset near the startup
+stack; this is not zero-difference acceptance.
+No protected extender, game, Windows, NPX or hardware timing acceptance.
+Receipt: `docs/receipts/2026-09-20-386-compiler-ata-multisector.json`.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 32-bit task switching, RET immediate and explicit AT floppy media rates.
 The commit containing this row freezes audited TSS CALL/JMP/NT IRET, task

@@ -1,0 +1,1127 @@
+{
+  "schema": "astra.i80386-compiler-ata-multisector.v1",
+  "scope": [
+    "ENTER/LEAVE, BT/BTS/BTR/BTC, BSF/BSR, BCD adjustment and CLTS",
+    "physical MOO final-state delta reconstruction including unchanged modeled registers",
+    "autonomous inter-sector ATA BSY/DRQ/IRQ with 256 functional clocks; no mechanical timing claim",
+    "IBM BIOS owned two-sector write/read with distinct sector contents and poisoned read buffer",
+    "Doom MZ loading diagnostics; gameplay and Windows remain unaccepted"
+  ],
+  "physical": [
+    {
+      "profile": "add-sizes",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "b899c6ebde6a24f22b53afd8c1246afe44ffd3d5498e581fe08f616cdbe537d6",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 888,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "alu-complete",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "8f4f1b07478437ff9abdacb58645edc075888c3ab594e4381d4108f162bc415a",
+      "accounting": {
+        "files": 14,
+        "admitted": 42,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 163,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "bcd-adjust",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "3947edcea677dddcada43f793e859fa118dbc103ee129b4eace1da69b8ee1adf",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 0,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "bit-scan",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "21ab257eb789117bf34bba0a843a2bac17ec27f9f9482c73a99d0f9d14bb9342",
+      "accounting": {
+        "files": 8,
+        "admitted": 24,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 2106,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "bit-test",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "991c5e0f90911b61bcb287be1a94224b878eb6f158a4a0cc4e876b9e7006725c",
+      "accounting": {
+        "files": 32,
+        "admitted": 96,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 7616,
+        "profileExcluded": 1068,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "byte-movx",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "2143a6857e530fc53fe2867062814f47e9a2698632de0541647b5f463d73fab9",
+      "accounting": {
+        "files": 12,
+        "admitted": 36,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 2600,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "clts",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "6c6affeee52df6fd1e3350cdef0088bc58fdbccf0259ff7f03af677518746e63",
+      "accounting": {
+        "files": 1,
+        "admitted": 3,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 3,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "clts",
+      "mutation": "cr0-ts",
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "ea342de0646573eb3e2a3a66f8bc7c5954e9796589146f8a9d9930816860ee0e",
+      "accounting": {
+        "files": 1,
+        "admitted": 3,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 3,
+        "profileExcluded": 0,
+        "failures": 1
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": [
+        {
+          "file": "0F06.MOO.gz",
+          "index": 0,
+          "hash": "30f8f15c2f2d3e411d5fcb458683fdaf05d8dbc2",
+          "status": "fail",
+          "differences": [
+            {
+              "field": "cr0",
+              "expected": 2147418096,
+              "actual": 2147418104,
+              "mask": 4294967295
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "clts",
+      "mutation": "eax",
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "9cd1d5ef2f20f2d2f384c3e6cab08366a967a38648d27b4a1143fef0cc67aeb1",
+      "accounting": {
+        "files": 1,
+        "admitted": 3,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 3,
+        "profileExcluded": 0,
+        "failures": 1
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": [
+        {
+          "file": "0F06.MOO.gz",
+          "index": 0,
+          "hash": "30f8f15c2f2d3e411d5fcb458683fdaf05d8dbc2",
+          "status": "fail",
+          "differences": [
+            {
+              "field": "eax",
+              "expected": 4290349296,
+              "actual": 4290349297,
+              "mask": 4294967295
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "double-shift",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "ad9877773da70e91f821cad66d8e28039128b677b11f4761282be0a0513d665b",
+      "accounting": {
+        "files": 8,
+        "admitted": 24,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 654,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "enter-ret",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "669b8345b5122897c94bb5cc26a519d5fb1dfbea78cf1206e89c7775cafd3f57",
+      "accounting": {
+        "files": 6,
+        "admitted": 18,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 938,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "far-pointer",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "eaa01a863c7a3693998c1911f73590244f02765896c6b44300c7c00c918070f3",
+      "accounting": {
+        "files": 10,
+        "admitted": 30,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 955,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "group5-basic",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "86c661754d3ac52d3922895cb193b32d6776e806b9fb8a1ea8668cc8d9fef5bd",
+      "accounting": {
+        "files": 7,
+        "admitted": 21,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 319,
+        "profileExcluded": 194,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "imul-immediate",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "1a498e8fa6dbe7f7a535524cde8ee9e5219eee4ddfa21af3bf2f0929893f4628",
+      "accounting": {
+        "files": 3,
+        "admitted": 9,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 224,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "lea",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "27a47f3dfba7e0f24443dc65d04e3c14f21dbed4b99d88f5fdcb973c47f02ba5",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 2704,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "moffs",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "8e7a08fadaa1b002e637d3e2b96523be0c6b47e852319af81c297bb8fa17e97b",
+      "accounting": {
+        "files": 8,
+        "admitted": 24,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 452,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "pop-rm",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "ffd1f7bcbb8978b57371d0104a26579d4e14cad32828e92d150fbcb416be2f09",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 601,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "push-imm8",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "00a48abc26ae9b46e7954d6d07af6135fe0a5acf4ef2584e8e00ce57cf14041a",
+      "accounting": {
+        "files": 2,
+        "admitted": 6,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 68,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "pusha-popa",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "1a2222b87c30825be20fcd2ca15d409465769c7df9f3b44f5d2a92a64cb33baa",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 405,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "rotate-full-circle",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "232e9ffeac4e93fdee17b0f26c3494049691e58e6bbaaaabb91f8b7ca1dcf603",
+      "accounting": {
+        "files": 2,
+        "admitted": 2,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 134,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "rotates",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "265fb0711f8520a4a225d35adc87f788fc986d9d44652d18e4e374eb18d171f0",
+      "accounting": {
+        "files": 12,
+        "admitted": 36,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 904,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "segment-mov",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "e9a7984aa627d0947f1651cde3115c99c21b71268dbb3f981cd127a347f6a66f",
+      "accounting": {
+        "files": 2,
+        "admitted": 6,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 46,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "segment-stack",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "f4975b6bf84795367185684775c2470988f33e863d2fc5aa12c75f19a669265f",
+      "accounting": {
+        "files": 22,
+        "admitted": 66,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 690,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "setcc",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "9102e8ae9ef2fe3566fe52170e8b60a7b5b9a126c365c7d9face8755dbbe42cb",
+      "accounting": {
+        "files": 16,
+        "admitted": 48,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 297,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "shifts",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "af5d2855045d882154a221d26f512383ff99b61f53df3420c9c1f7e2d2dc69bc",
+      "accounting": {
+        "files": 12,
+        "admitted": 36,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 3111,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    },
+    {
+      "profile": "xchg",
+      "mutation": null,
+      "executionRevision": "cb6519f8ca0d9f12e74d1fe99d9e2f64dba58208",
+      "reportSha256": "5ea9d8be70d92b0d96124dcffb467523443dfa4ab512348b6bcfe794b4482016",
+      "accounting": {
+        "files": 3,
+        "admitted": 9,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 16,
+        "profileExcluded": 58,
+        "failures": 0
+      },
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "e4b0860b4ae9972d611d6601a0ef48ef8486b239e33a9ec9b89108c80df82dbf",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe"
+      },
+      "failures": []
+    }
+  ],
+  "limits": [
+    "Physical samples are bounded 386EX real-mode captures, not full 386DX or protected-mode qualification.",
+    "All 100 pinned CLTS captures start with TS=0; physical samples prove its preservation, directed tests cover TS=1 clearing and privilege faults.",
+    "Earlier physical receipts omitted unchanged registers; these stronger actual replays supersede that comparison limitation without rewriting historical reports.",
+    "Disk delay is a functional scheduling model, not measured hardware latency."
+  ],
+  "guestReplays": {
+    "DOS2write": {
+      "executionRevision": "fca2baddb750512aed8fbaa9454e7ab95a640036",
+      "reportSha256": "bc0b67f0ab01daf279c49565f694a18d5cf93f6c958a1ee04c789639ea7d89c3",
+      "accepted": true,
+      "steps": 25652224,
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe",
+        "src/experimental/i80386-at-machine.js": "a47550051107f4015a04a63a491720504e9d9bfec5c9061150ef47166cbd4054",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "cbf5f54ebe7f64854aeaba888a6a8a39d28e8739a46a6952e6e470ee39b7f6d6",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+        "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
+      },
+      "media": {
+        "bytes": 368640,
+        "sha256": "5fbbe5e86fb845cff120ae8d17a01904c0db9d0b6103ce382b31130bd3eadd39",
+        "bootSectorSha256": "a6c72572438d003327c04838781f3a1fc79b7fd7a6df605df5118d06f520f2b5",
+        "geometry": {
+          "cylinders": 40,
+          "heads": 2,
+          "sectors": 9,
+          "bytesPerSector": 512
+        },
+        "output": {
+          "path": "/tmp/astra-root-stage11-386dos-fca2badd.img",
+          "sha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819"
+        }
+      },
+      "file": {
+        "name": "ATBOOT  TXT",
+        "cluster": 43,
+        "size": 12,
+        "bytes": [
+          97,
+          116,
+          45,
+          98,
+          111,
+          111,
+          116,
+          45,
+          111,
+          107,
+          13,
+          10
+        ],
+        "text": "at-boot-ok\r\n"
+      }
+    },
+    "DOS2reboot": {
+      "executionRevision": "fca2baddb750512aed8fbaa9454e7ab95a640036",
+      "reportSha256": "adee933580a246b3e28f63bb150cf66c9f47986aa75847c06487d2173edf43f7",
+      "accepted": true,
+      "steps": 25567232,
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe",
+        "src/experimental/i80386-at-machine.js": "a47550051107f4015a04a63a491720504e9d9bfec5c9061150ef47166cbd4054",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "cbf5f54ebe7f64854aeaba888a6a8a39d28e8739a46a6952e6e470ee39b7f6d6",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+        "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
+      },
+      "media": {
+        "bytes": 368640,
+        "sha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+        "bootSectorSha256": "a6c72572438d003327c04838781f3a1fc79b7fd7a6df605df5118d06f520f2b5",
+        "geometry": {
+          "cylinders": 40,
+          "heads": 2,
+          "sectors": 9,
+          "bytesPerSector": 512
+        }
+      },
+      "file": {
+        "name": "ATBOOT  TXT",
+        "cluster": 43,
+        "size": 12,
+        "bytes": [
+          97,
+          116,
+          45,
+          98,
+          111,
+          111,
+          116,
+          45,
+          111,
+          107,
+          13,
+          10
+        ],
+        "text": "at-boot-ok\r\n"
+      }
+    },
+    "BIOSMultiSector": {
+      "executionRevision": "fca2baddb750512aed8fbaa9454e7ab95a640036",
+      "accepted": true,
+      "fullBootAccepted": false,
+      "steps": 70582507,
+      "bootSector": {
+        "step": 70575354,
+        "cs": 0,
+        "eip": 31744,
+        "sha256": "6609b8e4590c43a59db194535785f1de85e6a2ef533fdedae879345a282daa98"
+      },
+      "bootCommands": [
+        48,
+        32
+      ],
+      "dataTransfers": {
+        "reads16": 768,
+        "writes16": 512,
+        "otherWidth": 0
+      },
+      "media": {
+        "geometry": {
+          "cylinders": 306,
+          "heads": 4,
+          "sectors": 17
+        },
+        "bytes": 10653696,
+        "inputSha256": "2e30f03a4dc963304297da4b4f7e028f5bed324f4d03923943f6f450b1ed3171",
+        "inputBootSectorSha256": "6609b8e4590c43a59db194535785f1de85e6a2ef533fdedae879345a282daa98",
+        "outputSha256": "04699efa1a415b2a7f6e81767c256783f7aff7feec7d64d8248bd707ca24739e",
+        "finalTwoSectorsSha256": "3e640cd0007a708ed3563211064d66b9be234b1f21bc10ade7672cf08088cee5",
+        "expectedText": "ASTRA-386-HDD\r\n"
+      },
+      "sourceSha256": {
+        "src/ac.js": "7657428b9ab50e9a92af06a9048e553f5f9f3d02ecdb568a7f96cbb470a71a51",
+        "src/adc0809.js": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af",
+        "src/air.js": "287928f1d5d9a3f57b8832d16d06f993cf35bc152c3d2976f62fc73f2214accf",
+        "src/at-8042-a20.js": "cbf5f54ebe7f64854aeaba888a6a8a39d28e8739a46a6952e6e470ee39b7f6d6",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/audio-bus.js": "95a263b2432f8309b76a64a0b6dcf0ddcc1dd61aeabb7a8727505f343e26ba08",
+        "src/avr-chips.js": "75f29bb3d92b58782960be5f8b9d01f32d8c0cbf80fe27783594394d381f3bd6",
+        "src/avr-peripherals.js": "3af96f3a85fd7b7a6e628b28134472a8decc9b06b931dbc8d4b9b23a8f75c39d",
+        "src/avr-twi-stub.js": "0a6d1fdc1b8e640673d2826e03b4985ec111ec832d9dc2fe3692cfd727276578",
+        "src/avr8js-adapter.js": "aeda87fc411239107a8811d0790e7cb9d7c39ad9ad4868d0183f008f20163cc8",
+        "src/avr8js-debug.js": "0035498998acd2df86ddb41e9137f794755d7eb5ca31477f4329f0761db70a04",
+        "src/ay-3-8912.js": "cf34ec93b1a16c292a971e721b6d2ceb791a3a9739140d8c73f0b2aa5cfe3be1",
+        "src/basic-machine-runner.js": "a0f7688473496333d68a5db8a0dc2b695e5e7bc31ed4f061af2b867eab9c7f6c",
+        "src/bbc-z80-runner.js": "6e59808c85d30d23b26088db43e54a029346495c3e267eea2fb63bef41e42507",
+        "src/bin-to-elf.js": "0bdd55be4f1e610459289b2186be2860aaf8b12629347084633f2a976856d934",
+        "src/blinkenrocket-modem.js": "c42e2cfd21b9c849f46d6254bdf953a4fd947e2cac4c5709ea27b154325830d9",
+        "src/board.js": "ab053eb3929e5c2a7796d765b999f014fde9d32d4f9dd6ed27705d015b71bd65",
+        "src/buffer244.js": "cabd1579bf709c174dca5c03fd0470cab3ded9526310c57c3f4d18c16fb335f2",
+        "src/builder.js": "08128e2c7b9d039a08636a60187df3ac68fd058e380df0f75a292a1724bb315c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/chip-ledger.js": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a",
+        "src/conformance.js": "3762994f5746671cf6c041b6f2abda50ab6caf49c73c63945462d321d35258b9",
+        "src/controller-binding.js": "4a21590a42ed92daf59d0f0fbaed459a4156165b87aaa392f7350db0096bf633",
+        "src/controller-extension.js": "e7c35e7ae3d45ec2bdb1a7b1b9d51c727889bfd3780b852ffb11fe13a92ad079",
+        "src/controller-stage-view.js": "b9c70d50b55a648853ae5da04212a66b769f3e6ff9bf201e322d7fce7346a134",
+        "src/controller.js": "6cfd8d8ad0551b54daf88b0fca75a08c4b33df587c73573d0c4aa6ecc694f419",
+        "src/cortex-m0-machine.js": "9121ef5ebd4879b9abacdb7ef4966df37225444595bb31994c013b053eeb0fa8",
+        "src/current-ratings.js": "4fe2c209a39aa9cf735ebbc04982854144b85e0e4d3d369399fd6b26880ce541",
+        "src/dac0832.js": "81b24b9c8f461cbd2f4a9bcd1aceda3e366062841d1c530440eccdb8cbeae787",
+        "src/datalogger-extension.js": "26f045f4993ad7fb879f5591bef0fac455c9ebd22268a7bdd25d4129cdae3dde",
+        "src/datalogger.js": "40e4d9c9602c54bcf807f9e444a6cbdbeaad76789aa5bc8169bcb8d0782b6044",
+        "src/debug-input-admission.js": "8f6bd739f6c675798e2163dd4049a0f4d162f18edba6b6f0fa2d0f26176b3db2",
+        "src/debug-replay-contract.js": "2643f5f68cca1444afa8128f41a28f2e7fa2f303025cc7aa729f2e84304862ff",
+        "src/debug-session.js": "9fc51a08f8b00380b0e0a528ddf6b8fc5b1e3055bd9f748b1399af7a65717d54",
+        "src/debug-target-factory.js": "3c0778b0b5279ddcbcffaca288b881d107d369c710c028684bf04b16eb0b99dc",
+        "src/devices.js": "4c7ea62350ab7dd86f1f633682739258895cf8c58d1e8c464382b84de029ebf3",
+        "src/devices/a2-displays.js": "fe8c9fb01bb23089e714d828de2afee1a3223ae141df14a3486e3e6235a8e6d7",
+        "src/devices/accelerometers.js": "9524b669d2cc2c77b3f4a99dcbf38c5964429ef6ab3ed0aa54e46002d1669320",
+        "src/devices/adc-sensors.js": "6878d9e749dfa7c501303903c6ec340a599336bf500585237d453ab1dddf6e71",
+        "src/devices/analog-amps.js": "e2901f52eca78ef44946f0639b2a1b15a54f6fc13f2109b6e1202489eae73ff9",
+        "src/devices/analog-ics.js": "98e2657e63fe6671f67058ada5b10a7f578a709398d0a282c723887cbab5ec18",
+        "src/devices/audio-parts.js": "d9ecd20b61a44a7b32f08fe5097c6ea8c01c97b6b9f4a684977b0beaf6a5edcf",
+        "src/devices/bench-meters.js": "4d7f5362d23e2e6c5df8b86ca8de674af1fb162d2d40763172356b0f6e8b98fd",
+        "src/devices/board-ics.js": "24effc0d83635b459e67a9c47613371282e46b369080576c5b9b323d7dd8bc4a",
+        "src/devices/board-kinds.js": "be118de503ed10beae918deee4ed8c186c4df0ba0030b218d2c6098f7958b8a6",
+        "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+        "src/devices/chip-composer.js": "eaac9e378b11b3573e38270c7ab1e3420991605bb84af3d4b44123ee23bd518b",
+        "src/devices/dallas-parts.js": "2e7bd31c05ef26edc9fde1864e7dc5209cab143341dcdaa181b1408843f5ee6f",
+        "src/devices/dc-motor.js": "03e710f17e023cebd10857c94de2572571729a88a77d9b93fc6c17d910f14941",
+        "src/devices/digital-ics.js": "2a721b2643fd6e5047df5fc8017b7517d5b24e8b067ad3d82ef7601e6c0b14bd",
+        "src/devices/display.js": "ddb994a0c227105a6658202d8be48ec257cff986f1caba8c13033677bead0612",
+        "src/devices/h-bridge.js": "2faaa978ea32ad030dbe2fdd8773235ae2caff7a1a655205c1978e64cddd83f5",
+        "src/devices/hd44780.js": "ace01802e2f2eec778c4c91937e06aa04675c7417440c1697c9d19d3ada66af7",
+        "src/devices/i2c-parts.js": "40d41cd672c2ebf868f283b9364a0e5c25c7a79bb2aabec5f639ecd83da23108",
+        "src/devices/i2c-sensors.js": "09d3c492499568eb8fc90cebd72853f06a7244368f033348bf705397caa28329",
+        "src/devices/i2c-slave.js": "67cd86ee6254bb676ca5a20e46695a1d2857c7e0bcad1565fc3f4553afa49de1",
+        "src/devices/ili9341.js": "e82504ebf0926d694e64204e1008e9397f5cafa00009fc3d998f93cad8109f50",
+        "src/devices/kit-sensors.js": "eb686772481a71cdc7229447aac9284c50cd9a3e294c5e46f3da52e4fd026474",
+        "src/devices/level-mux.js": "3f8787a063858e7d38f007e6c531537dccf3e9b7b431802f8e604f6f9e4f5622",
+        "src/devices/logic-gates.js": "6b65479c9e4e6912b84f6580f0588cb96f565cdd2a50a2a7c554c47f73e438db",
+        "src/devices/logic-levels.js": "bdebc9328ae32428455f31517223722b1d7fe3c63d89a12477b42299b24abb37",
+        "src/devices/matrix8x8.js": "b5ea1e93a9696777428fac83c766d2d98ce5ee16b62dbb9a5c84bfa5b8e78b7a",
+        "src/devices/max232.js": "0c90c1fbceb030e28144ccdb49f00ab1e1b621cf89c3bd67bf92b43ee0ddb0f3",
+        "src/devices/mcp4725.js": "350de71b3fadfc8dc095b043f21395d01d67f72c163de0895077d3ff57ce61fa",
+        "src/devices/misc-parts.js": "2bbec1042c759b4e671829442f596de5a72d13cf761e1bcca50b2bc1b90cdf5d",
+        "src/devices/motor-drivers.js": "59ebd9d59c7e7fcdcbf90ffcf44a3a424fb6d6b291f9865cf9c6e5208339f83a",
+        "src/devices/mpu6050.js": "73f74afd4f5929bd3d17a01752fda7a0a0e86f48ff42e775a837ca89aaf91e00",
+        "src/devices/msgeq7.js": "c141f7a7cca3975e5503433ef9ad138d68a46c5a7592cec5859eca71b67b8da6",
+        "src/devices/named-parts.js": "2cfdc416f47ead68bce85aae15f3bd089890cddb8728177eb9ebb874e3f608c4",
+        "src/devices/nrf24.js": "771f4be199e74b4f6fa2a4e33b02ca3bda47809213658039c7c639b64fe0fb88",
+        "src/devices/power.js": "b256d4d75ee3cd4b6195761f09c9d8179b7fefecd8cdbe9e4588732762bb6280",
+        "src/devices/ps2-device.js": "5efba9d6a0eefac934ece4e3fec83a23c21d4a9a53966748b8b83fc364c459ca",
+        "src/devices/ps2-mouse-device.js": "68a25dd41bc075e82041e733a3aada5954e8d7be7b337a0b7a4d1df4ea862fa0",
+        "src/devices/relay.js": "2c03d721d9c72b4179bd4d3f822abbe44a01737db1e6dcdd140d9cd09f704d06",
+        "src/devices/resistor-network.js": "eb284cb24d712df292ee50122cf7148c881cc7264c83d50be2f7deae5e774d07",
+        "src/devices/retro-dips.js": "5a202636d6a6c62beffd55338b7ccfdef1dfbec5e19adf7c4f598f696885677b",
+        "src/devices/rf433.js": "f956142d3d95788eeddcb5be8615c5937faf284c1d097c2c9091b09eced0a30f",
+        "src/devices/rtc-display.js": "69b4572bd5a2b672d1edc69c1784b7c7399cafd9c898cdd3fb544aa7d1fa7d0c",
+        "src/devices/sap1-chips.js": "001ad7c9bdcb847c859df5455d8fe5c7f2ca8713cb0a45a27dfb812fa9bc525a",
+        "src/devices/sensors.js": "96dd7cab7a67d8ccfc0cbbb2c6f4362eb57adfe7f7d1ad8fab52b55480d0d189",
+        "src/devices/servo.js": "495cc1ac866a230ee01ce64418d51dc74ad9b769ba3f910034b1663cdd922f08",
+        "src/devices/simplevga-card.js": "5a4dc50ba7fda561628b1386c409e6dedfd10ab0b498dc9d3e81d3a4fa6c5f3b",
+        "src/devices/ssd1306.js": "600c398c9be87a77a8f6c8b006084fcdb37733c2633bb539040f9793fef7a8fc",
+        "src/devices/st7920.js": "91eb7bc920a8ce017acd66c5dd7accf737e9122ad8f1ae2563c2e949af72daf2",
+        "src/devices/thirtyseven.js": "7088aa0488d0ccd134385901bfd4a45dedf54f58bbaf0289e9ea166b649a3209",
+        "src/devices/tier1-parts.js": "9d679aaa7a2016b90aa4e9521c9a0ce14eeedef42e22de83dfed46fac0f324c6",
+        "src/devices/tier2-parts.js": "9a2a259769a784f4573e5a0dcd6cd042446eb3fb8837d9ef86a891e45a120898",
+        "src/devices/tier3-parts.js": "22959bc32962e3e1dc55a542ca6bb4865c759b19e69d95b5e15101489000b2e3",
+        "src/devices/timer-555.js": "0c3b4d4630947a95e6a75cc5cb6c85f9fd68ee191cb01e056f2564f6c622eedb",
+        "src/devices/uart-frame.js": "75ae828e2cb418bda2fbd32c2e571ba65108588947824e0cfe993d0bc4e19d6e",
+        "src/devices/uart-peer.js": "10805f8ebc4fb0f939ee0f625acef103b6205708e59ad81aef2bd2ff3723b15f",
+        "src/devices/um245r.js": "305e3edfdaad559483c4e71db92573497e0a8d1d6ac289892fc135e073fa2fd7",
+        "src/ega-card.js": "5b93057ca256f7a43046b477127862278c80bb9849e062528c1cd603f7e3d2f5",
+        "src/emu8051-adapter.js": "aa15d642820aa94687f08870faf140c76862f23a226f73898054a7ca57b5c71f",
+        "src/emu8051-debug.js": "29bd9767c82d1ba9b08c04f5385e8804580ef6ae109b3421c50ca7a10f270d93",
+        "src/execution-measurement.js": "d9783d25f14334bf41ad76f4670f8f5d90a005f47df6b6c3b41c73967cee4112",
+        "src/execution-policy.js": "704099b647cd9a4f36f9ada08b7bb56d95099f3950f8133d7fee8d4d1e9ffbf3",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/compiled-device-scheduler.js": "b0674f709446a3e1b42f22d2712988a25cdd5e3e4239c841b7ea00d2f6dc66f3",
+        "src/experimental/compiled-digital-circuit.js": "69a693b1340ea93240c1caf402665573f6651be0e34fef408bf3a1f42b65a03e",
+        "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+        "src/experimental/harris-80c286-boot-cpu.js": "e44f66cbd032e5887fae4f33a03b3100d910cffbfcbc88e354eaf7d1cbe9b5ab",
+        "src/experimental/harris-80c286-bus.js": "987832faf0b66548dbfce7062b18a9a2abbac0d0ae0ce7fea2976a3416ecf386",
+        "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+        "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+        "src/experimental/harris-8254-adapter.js": "eb1643b2be68f21f0e9c319d03a74e305383214b983d720d5b77718890e7f293",
+        "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+        "src/experimental/harris-boot-rom.js": "7e184ed31af43f90775a7caa8f9c2de532abc57c9d42b1be590bb9ebc585c51b",
+        "src/experimental/harris-circuit-session.js": "6471828c8c00d23b38a82bc32333af370a82c51026efd94b800b7c597503154f",
+        "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+        "src/experimental/harris-fdc-adapter.js": "b19260367dcb2e9a737ec68fb639a6fb2491c4bfb1c2a93e4881019e1e2a2fe8",
+        "src/experimental/harris-keyboard-adapter.js": "acccc5ac0a78c4fe5fada61ee0204f606c7bd2cc7feaa126ac6d2d8fa4475e12",
+        "src/experimental/harris-memory-decoder.js": "1f274145e565f125284c5f312a62a9219d3dc64ce246fb52ba18b8857719721c",
+        "src/experimental/harris-native-memory-board.js": "6cf2d11e88fdb48aaed4c857a3bb92be926f98930a844a46d3c42cab8585a7d2",
+        "src/experimental/harris-run-chunks.js": "a3a69c3acbdc9d3f38c576a098075a70f1fe62c925962015648c40fd66fdce6c",
+        "src/experimental/harris-run-transactions.js": "5ab3e87715ac7f6092399a1b353d14d0a96060c3c6a437ab6e7b4d0545548d84",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/experimental/i80386-at-machine.js": "a47550051107f4015a04a63a491720504e9d9bfec5c9061150ef47166cbd4054",
+        "src/experimental/i80386.js": "5a2af8cd2d9bd64950d94dcfff3c8a624ed00b0b1665cfe9a0bb3cf73dde9ffe",
+        "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+        "src/experimental/wired-bus-lab.js": "2177280d5a94f763b07958ea75a6c1341e30f9205ebf2f013fb68e054cc662f9",
+        "src/experimental/wired-kernel/bus-circuit-image.js": "849fb24fff8908bdbdd8e4cc7fdbc17a2286b0844802146d64e200f8881bbf13",
+        "src/experimental/wired-kernel/bus-sequencer.js": "bb260c3b90068cb3160c9eb39e42bba059f695b0c17e239d94f422ac0b9e6c63",
+        "src/experimental/wired-kernel/evaluator-contract.js": "c6227d1b5c4dc2f25689f17edd852611c3fdee045fdc5d10517ffd2e1d3fffd3",
+        "src/experimental/wired-kernel/evaluator-image.js": "05945e555041114b1ca3ed4619898efec85ad98faa1141c97a47351e70fa9266",
+        "src/experimental/wired-kernel/memory-banks.js": "1763d7ee24fa087c5ba30a601dd7e87d970a6ce8aef52bee16bce854da725898",
+        "src/experimental/wired-kernel/memory-circuit.js": "96bf750a51b0b1cacc4af1eaf714ec9090c09f506bb2c8e23ee1977d494a1c4d",
+        "src/experimental/wired-kernel/net-resolver.js": "6666359a92495a1b8bbd03d8144bbb5ad70fed986ebb61a55edd08e85bf1a8ef",
+        "src/experimental/wired-kernel/owned-kernel.js": "66bbe9e53b5e910642ac2ad08f757ad5b13929cde67274ec7c89a99e67ecafc7",
+        "src/experimental/wired-kernel/phase-circuit-image.js": "ed215777e311cc6f5544194d345dc2f94c275b2fda2b509f7d373fb52bb367d7",
+        "src/experimental/wired-kernel/phase-components.js": "eeff37a4966c5908d7f72ee69db9baaca12e3820b8c4c2beb67662efb2707fd1",
+        "src/experimental/wired-kernel/phase-schedule.js": "b4451f3b8aa617ea0053d10af90f78b19aea1f480a4f0b9f6fc3c415fa5603ae",
+        "src/experimental/wired-net-image.js": "6979669bc6403ffe5b7b12227c146212f501c9abb0b49871b4f43b9c81879d11",
+        "src/face-live.js": "acd30cfbd62681a992c0191e829cc828efcbb9b1ef3c8a5f743268cec2b87b6b",
+        "src/face.js": "9996a4066858b49d68d8fc4528d0568afe99ba91406fed518cff00fc3feea270",
+        "src/floooh-z80-cycle-provider.js": "3fc731dd487710849912649fb4bfcb9a3239c0aa584ed542454ba3fcb959671c",
+        "src/funscii-font.js": "b41f8a2b5dabcf17161898de257e0931bc87a90ed27640994fd922770bc173c6",
+        "src/hercules-card.js": "6e3af9bce88edbc609b2f8a07dc464b8a1fb60ce5fd800a4d345dac61367752b",
+        "src/i8086-adapter.js": "97122568d1d5d68f0d32bbd52be6214aec0568ad9e6088bd10992241e163a747",
+        "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+        "src/i8086-cga.js": "568c9d36b1c1610ed2e65496606d16634ce4844d68db080807e3f41688f0d831",
+        "src/i8086-debug.js": "c81ad06fc143c3d44ce45ce34fb55dd7017811172b71ebaf76dc796119dccfa4",
+        "src/i8086-disasm.js": "afc9aba2386d04670a83a77f447adcf5e4526a9fe85b7935bb364210bbb49c0c",
+        "src/i8086-dos.js": "f17c2cefc80082545b4e1caedcc365216db88048eaa65e362d7fe7ee0d1b02ce",
+        "src/i8086-emu8086.js": "ec2b82e2352c0c8287bde2447a033d6ba69c22596e1692d80e86aaa21aa27ef9",
+        "src/i8086-extract.js": "da873a6405cc3a59de1d4b6c35dedaa76f63ba641827214f25e283e5717e27fe",
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8088-biu.js": "f6d8a5a959028f0b4595d5f9a6ed25eb389198ba10e233ec1375f49b82139989",
+        "src/i8088-cycles.js": "402d869be7c7ca79f1f6116d0861c85887112e46f1f1ba20f59d7e3031ce1477",
+        "src/i8088-timing.js": "b1f85cab54484119016e57b954505dfb90821c0b47b5b7851a3d5d787977dc95",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/i8251.js": "45a2df29bc0920e7d57188a365e8c05addab0805efc1eb02d8df72a41d4dca2b",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/index.js": "7d6594489d8e8a672a95e9b0865c32dab3bc02a96fdafd19517949320c810433",
+        "src/infer-netlist.js": "5b3c97a68d2d97ada92650942ce163ecb071f46d736008768789c5251c6ac528",
+        "src/instruction-debug-events.js": "b80c15303309f414db0126997b1dbfa98fd7362d74f4b1a5702df088a3bf7b1d",
+        "src/intel-hex.js": "625efa84278ae2e3ba629ec22939d051de223313eeb5605c1f1639fcc0ea3fa5",
+        "src/labwired-adapter.js": "6e8479bbb20bff9f584669118117cbe551b5df5a95895874cc0b4cb0f7d59ae2",
+        "src/labwired-bridge.js": "dd4c78dc6aa7af7c8758f1eb437cf694e23330f5794645dc10497b99db82feb4",
+        "src/labwired-chips.js": "90282de73a25cedfe029e744e35d8ca601c9c0e1ce9da42e4ef061aae6eaabd4",
+        "src/labwired-debug.js": "78ce07d1315de270a69453eb26a29a3303512bbc7a4dc8e8ca00e9772ffaed0e",
+        "src/latch374.js": "78cab7db792dc201f5ae2451f7106d1e068e864d6e24bbd7e6b45fa160887772",
+        "src/m6502-adapter.js": "6c5578b09f201a2cd66491b6be7eb65b5a8bdba008f4b73952a9680e36cad9da",
+        "src/m6502-debug.js": "7d76d610d2f0f742aced3d5f48f585b0fca34370e7dda6c30acd0dc5053b7901",
+        "src/m6502-extract.js": "0a2b141f4de0f1871f91cdbf3fe5d889dca3001e7ecdcb56cea5756f1bbbde5f",
+        "src/m6502-machine.js": "ba4ef4ebc8a683ca467ad327423424733649835a35e18683403c935147208e9b",
+        "src/m6507-machine.js": "268ed55bf52a309ee97ef0833c72956e883dacca12f6d34a3f72904887f1bec1",
+        "src/m6532.js": "d6ce51c97739a93dd639442b6babcda0e30301ee7b95c483ed4e9243989df383",
+        "src/m74c922.js": "f485982959613e66acf3cccc4fb585f5c14712eca63a9fc42b5ea401e3a5fe6a",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "src/machine-media.js": "0b001e869b92c31ba3dc3e211ce48ea5bd93d552103370fb93c10491f42b6099",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/mc6845.js": "30c369c37fc4030162dde6d46bea388ce9acbf489141195ab166f3c0cab5c599",
+        "src/mc6850.js": "e987c5243a92a7b43533a99ff9bf2da29e0bd608a2417162c7b5dfeb1cb75889",
+        "src/mna.js": "57ac3104045caceaff2509dc1eb7746ee54764a31fdecf83c0a75d413e39cc25",
+        "src/ne2000.js": "12a97f87807aaf74a94245d81acddfb10f43748c09a1d4633e0ba7959b7a1244",
+        "src/ngspice.js": "968c5b8cedae66c696b84b9ecd97d558d24926c829fa5645e02b3c7a5d1d2c03",
+        "src/ns16c550.js": "34633ec3bec4d0826998fadde5e11bf88f20dfd32fc5a09144c6bad64461f41b",
+        "src/parts-library.js": "e7dbaefa6d9cb770b749945358a97065f554e05ce71b032e194f3e5279ebbd27",
+        "src/pc-speaker.js": "50260dcd04eaedd84373e5c2b1e42faa2f1bc924833b6bdf0aa7d23a80ea9499",
+        "src/pin-aliases.js": "cad0f289cac9955e6d3fc284afd62b4f9de607a190b36fd1025c9a23d74a8751",
+        "src/pin-functions.js": "20d884eaa982ece6d7c0bc18b83ba47d2820ef1fa1c3c1b4960ea72f28ae6299",
+        "src/pin-model.js": "5e24d10c43f4a4b413132ba84d823523c795b3fd32616ed92634eabc9b21d894",
+        "src/ps2.js": "6b6d8649319c0bb85673fa9d0f2cf6ab6cdbc57fecb7b732ce9c7ad08f6e8cc9",
+        "src/r6507.js": "da38b8ce7ec0f4c9561dea118045979e1c2235ea9d4d460c10e9c9d3e4e66232",
+        "src/register-all.js": "472268d6deb581a6c0a158e36edb44a1292c85c0e92c7919ff6d71c8ac14abc1",
+        "src/reseat-gate.js": "0f966affd928185002e4228b7e78d5f36e25aea92ce81034c50c1b1fb8e443c7",
+        "src/rp2040-bootrom.js": "4ce867bda6a2b72646d71770110ebf37cd0eeff4ae03519d32ab6e58bd672331",
+        "src/rp2040js-adapter.js": "6c97aa6a5d9500500aa407d07519c4ed8d7cb3132f2c8d52be6a567075ae5c3d",
+        "src/rp2040js-debug.js": "5f152119cc91e9e7cfb22d12f1af55a6f5bc4af2c7ccf9f49da08e1d7e04ea6d",
+        "src/sb-dsp.js": "901fc1d6536e19a552380d226b8e285ff4ab29f871a319d552701c2100044f71",
+        "src/scripted-mcu.js": "9a09588aec06d0b3a111159b26a13050892d05ae6dce58ad281926b8e0c1b8b4",
+        "src/sdcard-spi.js": "16783347db078c5539aad52090b66e61ddb9b48cf2db57e8fe1add43d17a7fc1",
+        "src/serial-debug.js": "91b2a32bae391011a5837addf7b055d1dd6a3d8164064d2f51c891f766178d8e",
+        "src/simplevga.js": "3e695a3e9b3fbeb62e794785091b8b6c0f985e6fed9d2e8484a53f1d9c79ab51",
+        "src/source-waveforms.js": "0016844629cb513f219a4d0e1ec786607aa7504d4d25bf2e263a1ed458b0dbc0",
+        "src/sparse.js": "bee869429114526b4756dfed63264ece5f91a5cfe8edfdebb9d1a3410374f9f6",
+        "src/spi-bridge.js": "c2b83f6b6d9cd1c1bea3f2a563cd1cc0db718c590c4b11b731416deec47a84d3",
+        "src/stimulus-catalogue.js": "ab57a65080f9fdbf607d7236cbb810995b630c095b2c2b8c8e83799a78c8de82",
+        "src/stimulus-extension.js": "0f705bc8bacb1513676c82f6d25491878041e09e73e453654a4304e163f5b360",
+        "src/stm32-adapter.js": "fcfab832e49c0c6c4dbaf166f24cd743c48631abbb242b26adde9b7f6688348c",
+        "src/stm32-isp.js": "ec64a4402d0ff5f674eabe4d29bc7053a7e6d82a4ed917afb419b10b7853e242",
+        "src/stm32f0-board.js": "e8f7cbe68b1fdd0b952d57756b1c4d23aceb0c39c247072f9a4a3a18c8af299d",
+        "src/sweep.js": "c637b15b203796eed5a109fb6114dd0de3d84f271ad5fd9fea2b3a4d2de04abc",
+        "src/target-kinds.js": "f415f5fb760cead5239fbf311f8b580fe852f4d5aa2d3ca2f9eaa3e73a87460e",
+        "src/tilevga.js": "0087c53842d648734045518e1140fb9a9fcdb62977b42e01060e7fcecbd09e34",
+        "src/tms9918.js": "afa16b1f3cec6d6b7b41b0855be7c8f4d36312e3a8abd8421360b1ef403828b3",
+        "src/twi-bridge.js": "4d77e85640f64e0aeb99fbf57a98585c0aa4cc5c8289e27cd00689e27ecc023d",
+        "src/types.js": "cd52a716e42aa3d7ec55166b329349069c183fe25d59eb110e1ecff93d9fef3a",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/usi-bridge.js": "01bef8e43b1e3bc11059d9f27a7ffc61222e2db8910283fcd20402b31b7637db",
+        "src/validate.js": "7717793ce19f1b95d59503059be53b2a03ad9adad435011474a78c39a05acbf5",
+        "src/vdu-decoder.js": "b22333f30235262c59f4ea745a326c128132b1db4efd211ce3952cfe266ca30f",
+        "src/vendor/avr8js-fast/instruction.js": "f243ca7d42d2f6ff280c1c0c084cb3f360b6753737bf03c646c9f860e0a2138f",
+        "src/vendor/rp2040js-fast/execute-instruction.js": "0199c50acaaa12c6314bd7b8a1ea6eca74010f7f96b32a9bed587d803def5626",
+        "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+        "src/w65c02-disasm.js": "f0bdab86ddbcc4770f303801e0e42f3265ab1d95f43e3f9faf77ae5ebaabb26b",
+        "src/w65c02.js": "6a4582af2bcc7feb7a3807a1061d387d2216f113b726c5020788232a076b5340",
+        "src/w65c22.js": "e00d099adf0775b0a2d1d55f3422c151ac28813b06eba57a9feffdb399bc388d",
+        "src/w65c51.js": "ad293b2c5af358dd334b3fc3a3c7c33d3d3b28b5fcb1e8c0665145211faf1b46",
+        "src/ym3812.js": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04",
+        "src/z80-adapter.js": "77e548cde3ebbd50b110da33f1c4aada938a894bfd106617164de7bef477b115",
+        "src/z80-ctc.js": "ca07b685630a646fb22eabc095b6e4013009268c6a85b7168418accb52990c7f",
+        "src/z80-cycle-debug.js": "4ddc3af032e53154fbd810adde0bb4ec2fbc876d8db4be8061ab647961d056ac",
+        "src/z80-debug.js": "e4773efef4422e34248e85dffedab6e2ab49ca577645117e382159be8bf95adf",
+        "src/z80-disasm.js": "c729d2860525835273d70248b7a74eaaca6e8ce88de53518da24f56c8a36fc39",
+        "src/z80-extract.js": "e6d4828b028d9e93e4d8cb34332df5b68fb92e3b6ee8c45f1cd71d41a5b52288",
+        "src/z80-machine.js": "ed8510e10169a9f6817add969a572bc41554e56f966f0a8838258bc31c4aaed9",
+        "src/z80-target-factory.js": "c8b6149ac4dbdd12b31b53f77020792dcbbe1c77c8aed3ba57149d6dda035cb9",
+        "src/z80.js": "2a83493f98a5c227680bef50dbf38f388e0be4f560a2a015b03aa875458f9b01",
+        "src/zx-sna.js": "7d8b158afc1df3a96be4d9df6cd30fe4892dfc1e8fc9be521d03f22f8e052e1d",
+        "src/zx-tape.js": "1fed055d60467bc0bf44a004f586fb7f21d8350814492fba2d29a3cbac69cc63",
+        "src/zx-tzx.js": "42e874b38af75c3371d6772c5b832165c2a6d65adac5e63232c07b6277a5a082",
+        "src/zx-ula.js": "8665185fb88b4db0fac0e998a312f1460f1a4d79300743aa4d21ba995264f1ba",
+        "src/zx-z80file.js": "14136c9a093e3bbd05d543efdeceeccc1a546f097545c25cdf2aa09e889f4c2b",
+        "scripts/lib/i80386-at-hdd-image.mjs": "c591b73bea4f44aa08f2fe54dcd2cd167789957a20ee74ab35c020aa127c312a",
+        "scripts/run-i80386-at-hdd-roundtrip.mjs": "52939e9d2be56bafb5bf35d7c2f768f48c61f863ed13ce3f1f2945b3812b302e"
+      },
+      "reportSha256": "0fcc5d526249e65ae687ca3b933a0c0442a3a5ca9090795fd1b8a808514a5ba1",
+      "scope": "Owned INT13 two-sector write/read, distinct second-sector marker, all1024 bytes compared after poisoning; not DOS hard-disk boot."
+    }
+  },
+  "date": "2026-09-20",
+  "doomDiagnostic": {
+    "executionRevision": "c1a056d74aba48725568dd6bec52caf3410c2766",
+    "reportSha256": "d27248a3340939c8cff464e461c074968c10a3398d86f76fdaca45f8e7b85b97",
+    "steps": 121525958,
+    "fullBootAccepted": false,
+    "entry": {
+      "step": 121336967,
+      "cs": 9359,
+      "eip": 9074,
+      "linearPc": 158818,
+      "loadSegment": 8914,
+      "loadImage": {
+        "bytes": 61604,
+        "relocationCount": 78,
+        "expectedSha256": "5c0bb31ad2956d06795248adca0be668b125bf2cacf6c7d374ffcbb0e30b6245",
+        "actualSha256": "306b0142bb9c4c641be9fbd0eeb58afa0ed9fd668d51b84a5855c0bba12aa1cc",
+        "differenceCount": 18,
+        "firstDifferences": [
+          {
+            "offset": 5436,
+            "expected": 0,
+            "actual": 255
+          },
+          {
+            "offset": 5438,
+            "expected": 0,
+            "actual": 194
+          },
+          {
+            "offset": 5439,
+            "expected": 0,
+            "actual": 34
+          },
+          {
+            "offset": 5440,
+            "expected": 0,
+            "actual": 114
+          },
+          {
+            "offset": 5441,
+            "expected": 0,
+            "actual": 35
+          },
+          {
+            "offset": 5442,
+            "expected": 0,
+            "actual": 64
+          },
+          {
+            "offset": 5443,
+            "expected": 0,
+            "actual": 3
+          },
+          {
+            "offset": 5444,
+            "expected": 0,
+            "actual": 30
+          },
+          {
+            "offset": 5445,
+            "expected": 0,
+            "actual": 9
+          },
+          {
+            "offset": 5446,
+            "expected": 0,
+            "actual": 194
+          },
+          {
+            "offset": 5447,
+            "expected": 0,
+            "actual": 34
+          },
+          {
+            "offset": 5448,
+            "expected": 0,
+            "actual": 194
+          },
+          {
+            "offset": 5449,
+            "expected": 0,
+            "actual": 34
+          },
+          {
+            "offset": 5450,
+            "expected": 0,
+            "actual": 114
+          },
+          {
+            "offset": 5451,
+            "expected": 0,
+            "actual": 35
+          },
+          {
+            "offset": 5452,
+            "expected": 0,
+            "actual": 143
+          }
+        ]
+      }
+    },
+    "frontier": {
+      "message": "AT 8042 command ffh is outside the bounded A20 subset and keyboard extension",
+      "before": {
+        "cs": 9482,
+        "ip": 3045,
+        "sp": 5428,
+        "ss": 8914
+      }
+    },
+    "interpretation": "Real-mode executable entry bytes agree after declared relocation. Complete MZ load comparison retains18 differences; the16 recorded differences are near the initial stack. This is consistent with DOS startup stack writes but is not zero-difference full-image acceptance. No protected extender or gameplay acceptance."
+  },
+  "focused": {
+    "executionRevision": "b9074f455bee24ab9bc9106787aecc3c609da11e",
+    "pass": 286,
+    "skip": 2,
+    "fail": 0,
+    "tapSha256": "010b7dcecd67746e6dc689ff71a1b358c5389144abb1cfdac126aaf414809cea"
+  },
+  "sources": [
+    {
+      "url": "https://github.com/SingleStepTests/80386/blob/459d49fbe6280e9ed46fee887b58dacd9cb880ab/README.md",
+      "scope": "Final register state is a delta; omitted registers retain initial state."
+    },
+    {
+      "url": "https://bitsavers.org/pdf/ibm/pc/at/1502494_PC_AT_Technical_Reference_Mar84.pdf",
+      "scope": "BIOS COMMANDI/COMMANDO sector loops, pp5-110 through5-112; 8042 pulse commands, pp1-42/43."
+    },
+    {
+      "url": "https://www.scs.stanford.edu/11wi-cs140/pintos/specs/ata-3-std.pdf",
+      "scope": "Status and BSY/DRQ rules section6.2.13; autonomous PIO flows sections8.3/8.4."
+    }
+  ]
+}
