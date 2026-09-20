@@ -374,6 +374,12 @@ This bounded executor deterministically zero-extends incoming 16-bit general
 registers and makes FS/GS null; those choices are compatibility policy, not a
 physical-original-386 acceptance claim. VM86 and the 386 TSS debug-trap bit
 remain explicit refusals before task state is committed.
+`scripts/compare-pcjs-i80386-task16.mjs` independently compares an all-286-TSS
+CALL/IRET roundtrip with pinned PCjs, including exact HLT completion, the
+defined 16-bit AX image, backlink and busy transitions, and unchanged CR3.
+Its result and low-budget controls reject. Upper register halves and FS/GS are
+intentionally excluded from that cross-engine claim because neither exists in
+the 286 TSS image.
 
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped

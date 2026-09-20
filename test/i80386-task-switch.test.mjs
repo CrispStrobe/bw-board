@@ -122,6 +122,38 @@ test("incoming one-page TSS faults and bounded task refusals are precommit", () 
   }
 });
 
+test("286 TSS paging faults distinguish incoming-image and postcommit selector reads", () => {
+  const missing = pagingFaultFixture("cs");
+  put(missing.memory, 0x220, descriptor(0x5000, 0x2b, 0x81, 0));
+  dword(missing.memory, 0x3000 + 5 * 4, 0);
+  assert.throws(
+    () => missing.cpu._taskSwitch(0x20, "call"),
+    error => error?.vector === 14 && error.errorCode === 0 && !error.taskCommitted,
+  );
+  assert.deepEqual(
+    [missing.cpu.cr2, missing.cpu.cr3, missing.cpu.tr.selector, missing.memory.get(0x225) & 15],
+    [0x5000, 0x1000, 0x18, 1],
+  );
+
+  const postcommit = pagingFaultFixture("ss");
+  put(postcommit.memory, 0x220, descriptor(0x500, 0x2b, 0x81, 0));
+  for (const [offset, value] of [
+    [0x0e,0x100],[0x10,2],[0x12,1],[0x14,2],[0x16,3],[0x18,4],
+    [0x1a,0x900],[0x1c,5],[0x1e,6],[0x20,7],[0x22,0x10],
+    [0x24,8],[0x26,0x1008],[0x28,0x10],[0x2a,0],
+  ]) word(postcommit.memory, 0x500 + offset, value);
+  dword(postcommit.memory, 0x3000 + 1 * 4, 0);
+  assert.throws(
+    () => postcommit.cpu._taskSwitch(0x20, "call"),
+    error => error?.vector === 14 && error.errorCode === 0 && error.taskCommitted,
+  );
+  assert.deepEqual(
+    [postcommit.cpu.cr2, postcommit.cpu.cr3, postcommit.cpu.tr.selector,
+      postcommit.memory.get(0x225) & 15],
+    [0x1208, 0x1000, 0x20, 3],
+  );
+});
+
 test("JMP preflights the outgoing busy descriptor byte before task mutation", () => {
   const { cpu, memory } = pagingFaultFixture("cs");
   cpu.cr3 = 0x7000;
