@@ -3090,6 +3090,21 @@ export class ExperimentalI80386 {
       }
       return;
     }
+    if (op === 0xbc || op === 0xbd) {
+      const ea = this._decodeEA(address32, override);
+      const value = this._operandRead(ea, width);
+      if (value === 0) {
+        this.eflags |= ZF;
+        return;
+      }
+      const unsigned = width === 32 ? value >>> 0 : value & 0xffff;
+      const index = op === 0xbc
+        ? 31 - Math.clz32(unsigned & -unsigned)
+        : 31 - Math.clz32(unsigned);
+      this._setReg(ea.reg, width, index);
+      this.eflags &= ~ZF;
+      return;
+    }
     if (op === 0x02 || op === 0x03) {
       if (!this.protectedMode || this.virtual8086)
         throw new I80386Fault(6, null, "LAR/LSL are undefined outside protected mode");

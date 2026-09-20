@@ -117,6 +117,11 @@ const PROFILES={
     files:['27','2F','37','3F'],
     scope:'12 fixed deterministic DAA/DAS/AAA/AAS samples grading published defined flags and adjusted accumulator state',
   },
+  'bit-scan':{
+    files:['0FBC','0FBD','660FBC','660FBD','670FBC','670FBD','67660FBC','67660FBD'],
+    undefinedEflagsMask:0xfffff72b,
+    scope:'24 fixed deterministic BSF/BSR samples spanning 16/32-bit operand and address sizes',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
