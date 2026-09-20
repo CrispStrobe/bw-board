@@ -9,6 +9,8 @@ const sha256=b=>createHash('sha256').update(b).digest('hex');
 export function createDoomFat16Hdd({doomExe,doomWad}) {
   if(!(doomExe instanceof Uint8Array)||!(doomWad instanceof Uint8Array))
     throw new Error('Doom FAT16 inputs must be Uint8Array instances');
+  if(doomExe.length===0||doomWad.length===0)
+    throw new Error('Doom FAT16 inputs must be nonempty');
   const g=DOOM_HDD_GEOMETRY,p=DOOM_PARTITION;
   const image=new Uint8Array(g.cylinders*g.heads*g.sectors*512);
   const entry=446;
@@ -55,4 +57,38 @@ export function createDoomFat16Hdd({doomExe,doomWad}) {
   return {image,manifest:{geometry:g,partition:p,files:files.map(file=>({name:file.name,
     bytes:file.bytes.length,sha256:sha256(file.bytes),firstCluster:file.first,clusters:file.count})),
     imageSha256:sha256(image)}};
+}
+
+export function readDoomFat16File(image, shortName) {
+  if(!(image instanceof Uint8Array))throw new Error('Doom FAT16 image must be a Uint8Array');
+  const p=DOOM_PARTITION,volume=p.startLba*512;
+  const imageStart=(image[454]|image[455]<<8|image[456]<<16|image[457]<<24)>>>0;
+  if(image.length!==DOOM_HDD_GEOMETRY.cylinders*DOOM_HDD_GEOMETRY.heads*DOOM_HDD_GEOMETRY.sectors*512||
+      image[510]!==0x55||image[511]!==0xaa||image[450]!==0x04||
+      imageStart!==p.startLba)
+    throw new Error('Doom FAT16 image layout mismatch');
+  const rootSectors=Math.ceil(p.rootEntries*32/512);
+  const root=(p.startLba+1+2*p.fatSectors)*512;
+  const firstData=p.startLba+1+2*p.fatSectors+rootSectors;
+  let entry=-1;
+  for(let i=0;i<p.rootEntries;i++) {
+    const at=root+i*32;
+    if(Buffer.from(image.subarray(at,at+11)).toString()===shortName){entry=at;break;}
+  }
+  if(entry<0)return null;
+  const size=(image[entry+28]|image[entry+29]<<8|image[entry+30]<<16|image[entry+31]<<24)>>>0;
+  let cluster=image[entry+26]|image[entry+27]<<8;
+  const output=new Uint8Array(size),seen=new Set();let offset=0;
+  while(offset<size) {
+    if(cluster<2||cluster>=0xfff8||seen.has(cluster))throw new Error('invalid Doom FAT16 chain');
+    seen.add(cluster);
+    const bytes=Math.min(p.sectorsPerCluster*512,size-offset);
+    output.set(image.subarray((firstData+(cluster-2)*p.sectorsPerCluster)*512,
+      (firstData+(cluster-2)*p.sectorsPerCluster)*512+bytes),offset);
+    offset+=bytes;
+    cluster=image[(p.startLba+1)*512+cluster*2]|
+      image[(p.startLba+1)*512+cluster*2+1]<<8;
+  }
+  if(cluster<0xfff8)throw new Error('Doom FAT16 chain continues beyond file size');
+  return output;
 }

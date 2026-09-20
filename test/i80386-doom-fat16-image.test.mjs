@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDoomFat16Hdd,DOOM_PARTITION} from '../scripts/lib/i80386-doom-fat16-image.mjs';
+import {createDoomFat16Hdd,readDoomFat16File,DOOM_PARTITION} from '../scripts/lib/i80386-doom-fat16-image.mjs';
 const word=(b,o)=>b[o]|b[o+1]<<8;
 const dword=(b,o)=>(word(b,o)|word(b,o+2)<<16)>>>0;
 
@@ -26,9 +26,16 @@ test('owned Doom HDD is a partitioned type-1 FAT16 disk with exact file chains',
   assert.equal(Buffer.from(image.slice(root+32,root+43)).toString(),'DOOM1   WAD');
   assert.equal(dword(image,root+60),wad.length);
   assert.deepEqual(manifest.files.map(file=>file.bytes),[1500,2500]);
+  assert.deepEqual(readDoomFat16File(image,'DOOM    EXE'),exe);
+  assert.deepEqual(readDoomFat16File(image,'DOOM1   WAD'),wad);
+  const fat1=(DOOM_PARTITION.startLba+1)*512;
+  const fat2=(DOOM_PARTITION.startLba+1+DOOM_PARTITION.fatSectors)*512;
+  assert.deepEqual(image.slice(fat1,fat1+DOOM_PARTITION.fatSectors*512),
+    image.slice(fat2,fat2+DOOM_PARTITION.fatSectors*512),'both FAT copies match');
 });
 
 test('owned Doom HDD rejects files larger than the fixed partition',()=>{
-  assert.throws(()=>createDoomFat16Hdd({doomExe:new Uint8Array(11_000_000),doomWad:new Uint8Array()}),
+  assert.throws(()=>createDoomFat16Hdd({doomExe:new Uint8Array(),doomWad:new Uint8Array(1)}),/nonempty/);
+  assert.throws(()=>createDoomFat16Hdd({doomExe:new Uint8Array(11_000_000),doomWad:new Uint8Array(1)}),
     /exceed/);
 });

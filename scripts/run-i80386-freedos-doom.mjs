@@ -7,12 +7,14 @@ import {execFileSync} from 'node:child_process';
 
 import ExperimentalI80386ATMachine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS} from '../src/experimental/i80386-at-machine.js';
 import {I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
-import {DOOM_HDD_GEOMETRY} from './lib/i80386-doom-fat16-image.mjs';
+import {DOOM_HDD_GEOMETRY,readDoomFat16File} from './lib/i80386-doom-fat16-image.mjs';
 import {readFat12RootFile} from './lib/at-dos-acceptance.mjs';
 import {gradeFreeDosAtAcceptance} from './lib/freedos-at-acceptance.mjs';
 
 const EXPECTED_FREEDOS_SHA256='03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77';
 const EXPECTED_ROM_SHA256='74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
+const EXPECTED_DOOM_EXE_SHA256='b8020523561a5ad9706e009a52d61c578f37faafd85ac471962308406292ce27';
+const EXPECTED_DOOM_WAD_SHA256='1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771';
 const DEFAULT_STEPS=2_000_000;
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -88,6 +90,13 @@ let machine;
 const hddPath=process.env.AT_HDD_IMAGE;
 if(!hddPath)throw new Error('AT_HDD_IMAGE must name the external partitioned Doom disk');
 const hddImage=fs.readFileSync(hddPath);
+const hddFiles={
+    doomExe:readDoomFat16File(hddImage,'DOOM    EXE'),
+    doomWad:readDoomFat16File(hddImage,'DOOM1   WAD'),
+};
+if(sha(hddFiles.doomExe)!==EXPECTED_DOOM_EXE_SHA256||sha(hddFiles.doomWad)!==EXPECTED_DOOM_WAD_SHA256)
+    throw new Error('partitioned HDD does not contain the pinned DOOM.EXE and DOOM1.WAD payloads');
+const hddInputSha256=sha(hddImage);
 machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeometry:DOOM_HDD_GEOMETRY,onPortAccess:event=>{
     if(event.port===0x70||event.port===0x71) {
         rtcPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -289,7 +298,15 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
         samples:progressSamples},
     memory:{addressSpaceBytes:machine.mem.length,installedRamBytes:4<<20,
         baseRamBytes:baseRamKiB<<10,extendedRamBytes:3456<<10},
-    hdd:{bytes:hddImage.length,sha256:sha(hddImage),geometry:DOOM_HDD_GEOMETRY},
+    hdd:{bytes:hddImage.length,inputSha256:hddInputSha256,
+        outputSha256:sha(machine.ata.mediaBytes()),geometry:DOOM_HDD_GEOMETRY,
+        files:{doomExe:{bytes:hddFiles.doomExe.length,sha256:sha(hddFiles.doomExe)},
+            doomWad:{bytes:hddFiles.doomWad.length,sha256:sha(hddFiles.doomWad)}},
+        controller:{command:machine.ata.command,status:machine.ata.status,error:machine.ata.error,
+            sectorCount:machine.ata.sectorCount,sectorNumber:machine.ata.sectorNumber,
+            cylinder:machine.ata.cylinderLow|machine.ata.cylinderHigh<<8,
+            driveHead:machine.ata.driveHead,direction:machine.ata.direction,
+            irqPending:machine.ata._irqPending,irqOutput:machine.ata._irqOutput}},
     executionRevision,sourceSha256};
 for(const [file,before] of Object.entries(sourceSha256)) {
     const after=sourceHash(file);
