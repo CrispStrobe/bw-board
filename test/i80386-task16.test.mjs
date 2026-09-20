@@ -10,9 +10,10 @@ function descriptor(base, limit, access, flags = 0) {
     flags | ((limit >>> 16) & 15), base >>> 24].map(value => value & 0xff);
 }
 
-function fixture() {
+function fixture(bus = {}) {
   const memory = new Map();
   const cpu = new I80386({
+    ...bus,
     read: address => memory.get(address) ?? 0,
     fetch: address => memory.get(address) ?? 0,
     write: (address, value) => memory.set(address, value & 0xff),
@@ -37,6 +38,20 @@ function fixture() {
   cpu.cr3 = 0x12345000;
   cpu.eax = 0xaaaa1234;
   return { cpu, memory };
+}
+
+const bytes = (memory, address, length) =>
+  Array.from({ length }, (_, index) => memory.get(address + index) ?? 0);
+
+function assertOnlyRangeChanged(before, after, first, last) {
+  for (let index = 0; index < before.length; index++) {
+    if (index < first || index > last)
+      assert.equal(after[index], before[index], `unexpected TSS write at ${index.toString(16)}`);
+  }
+}
+
+function storeExpected(target, offset, width, value) {
+  for (let index = 0; index < width; index++) target[offset + index] = value >>> (index * 8) & 0xff;
 }
 
 test('286 TSS CALL and nested IRET save and restore the 16-bit task images', () => {
@@ -109,18 +124,63 @@ test('short and busy 286 TSS targets fault before task state mutation', () => {
 test('mixed 386-to-286 CALL preserves CR3 and returns through the 386 image', () => {
   const { cpu, memory } = fixture();
   put(memory, 0x218, descriptor(0x400, 0x67, 0x8b));
+  put(memory, 0x228, descriptor(0x700, 0xff, 0x82));
+  cpu.gdtr.limit = 0x2f;
   cpu.tr = { selector: 0x18, base: 0x400, limit: 0x67, present: true, type: 11 };
+  for (let offset = 0; offset <= 0x67; offset++) memory.set(0x400 + offset, 0xa5);
+  word(memory, 0x400, 0xbeef);
   dword(memory, 0x400 + 0x1c, 0x12345000);
+  word(memory, 0x400 + 0x60, 0x28);
+  word(memory, 0x400 + 0x64, 0);
+  cpu.eax = 0x89abcdef;
+  cpu.ecx = 0x76543210;
+  const before = bytes(memory, 0x400, 0x68);
+  const expected = before.slice();
+  for (const [offset, value] of [
+    [0x20,5],[0x24,cpu.eflags],[0x28,cpu.eax],[0x2c,cpu.ecx],
+    [0x30,cpu.edx],[0x34,cpu.ebx],[0x38,cpu.esp],[0x3c,cpu.ebp],
+    [0x40,cpu.esi],[0x44,cpu.edi],
+  ]) storeExpected(expected, offset, 4, value);
+  for (const [offset, value] of [
+    [0x48,cpu.es],[0x4c,cpu.cs],[0x50,cpu.ss],[0x54,cpu.ds],
+    [0x58,cpu.fs],[0x5c,cpu.gs],
+  ]) storeExpected(expected, offset, 2, value);
 
   cpu.step();
   assert.deepEqual([cpu.tr.selector, cpu.tr.type, cpu.cr3], [0x20, 3, 0x12345000]);
-  assert.equal((memory.get(0x420) ?? 0) | ((memory.get(0x421) ?? 0) << 8), 5);
+  const saved = bytes(memory, 0x400, 0x68);
+  assert.deepEqual(saved, expected, 'the outgoing 386 image has the exact save footprint');
+  assertOnlyRangeChanged(before, saved, 0x20, 0x5d);
+  assert.deepEqual(saved.slice(0, 2), [0xef, 0xbe], 'backlink is static');
+  assert.deepEqual(saved.slice(0x1c, 0x20), [0x00,0x50,0x34,0x12], 'CR3 is static');
+  assert.deepEqual(saved.slice(0x20, 0x24), [5,0,0,0]);
+  assert.deepEqual(saved.slice(0x28, 0x30), [0xef,0xcd,0xab,0x89,0x10,0x32,0x54,0x76]);
+  assert.deepEqual(saved.slice(0x60, 0x62), [0x28,0], 'LDT is static');
   cpu.step();
-  assert.deepEqual([cpu.tr.selector, cpu.tr.type, cpu.eip, cpu.cr3], [0x18, 11, 5, 0x12345000]);
+  assert.deepEqual([cpu.tr.selector, cpu.tr.type, cpu.eip, cpu.cr3, cpu.eax, cpu.ecx],
+    [0x18, 11, 5, 0x12345000, 0x89abcdef, 0x76543210]);
 });
 
 test('mixed 286-to-386 CALL changes CR3 and a 286 return leaves it selected', () => {
   const { cpu, memory } = fixture();
+  put(memory, 0x228, descriptor(0x700, 0xff, 0x82));
+  cpu.gdtr.limit = 0x2f;
+  for (let offset = 0; offset <= 0x2b; offset++) memory.set(0x400 + offset, 0xa5);
+  word(memory, 0x400, 0xbeef);
+  word(memory, 0x402, 0x1111);
+  word(memory, 0x404, 0x2222);
+  word(memory, 0x400 + 0x2a, 0x28);
+  for (let offset = 0x2c; offset < 0x34; offset++) memory.set(0x400 + offset, 0x5a);
+  cpu.eax = 0x89abcdef;
+  cpu.ecx = 0x76543210;
+  const before = bytes(memory, 0x400, 0x34);
+  const expected = before.slice();
+  for (const [offset, value] of [
+    [0x0e,5],[0x10,cpu.eflags],[0x12,cpu.eax],[0x14,cpu.ecx],
+    [0x16,cpu.edx],[0x18,cpu.ebx],[0x1a,cpu.esp],[0x1c,cpu.ebp],
+    [0x1e,cpu.esi],[0x20,cpu.edi],[0x22,cpu.es],[0x24,cpu.cs],
+    [0x26,cpu.ss],[0x28,cpu.ds],
+  ]) storeExpected(expected, offset, 2, value);
   put(memory, 0x220, descriptor(0x500, 0x67, 0x89));
   dword(memory, 0x500 + 0x1c, 0x56789000);
   dword(memory, 0x500 + 0x20, 0x100);
@@ -135,8 +195,34 @@ test('mixed 286-to-386 CALL changes CR3 and a 286 return leaves it selected', ()
 
   cpu.step();
   assert.deepEqual([cpu.tr.selector, cpu.tr.type, cpu.cr3], [0x20, 11, 0x56789000]);
+  const saved = bytes(memory, 0x400, 0x34);
+  assert.deepEqual(saved, expected, 'the outgoing 286 image has the exact save footprint');
+  assertOnlyRangeChanged(before, saved, 0x0e, 0x29);
+  assert.deepEqual(saved.slice(0, 6), [0xef,0xbe,0x11,0x11,0x22,0x22],
+    'backlink and privilege-stack words are static');
+  assert.deepEqual(saved.slice(0x0e, 0x12), [5,0,2,0]);
+  assert.deepEqual(saved.slice(0x12, 0x16), [0xef,0xcd,0x10,0x32],
+    'only low general-register words are saved');
+  assert.deepEqual(saved.slice(0x2a, 0x2c), [0x28,0], 'LDT is static');
+  assert.deepEqual(saved.slice(0x2c, 0x34), Array(8).fill(0x5a),
+    'bytes beyond the 286 TSS image are untouched');
   cpu.step();
-  assert.deepEqual([cpu.tr.selector, cpu.tr.type, cpu.eip, cpu.cr3], [0x18, 3, 5, 0x56789000]);
+  assert.deepEqual([cpu.tr.selector, cpu.tr.type, cpu.eip, cpu.cr3, cpu.eax, cpu.ecx],
+    [0x18, 3, 5, 0x56789000, 0xcdef, 0x3210]);
+});
+
+test('IOPL-denied IN with a current 286 TSS faults before the port callback', () => {
+  let reads = 0;
+  const { cpu, memory } = fixture({ inPort: () => { reads++; return 0x5a; } });
+  put(memory, 0, [0xe4, 0x80]);
+  cpu.cs = 3;
+  cpu.eflags = 2;
+  assert.throws(
+    () => cpu.step(),
+    error => error?.vector === 13 && error.errorCode === 0,
+  );
+  assert.equal(reads, 0);
+  assert.equal(cpu.eip, 0);
 });
 
 test('286 TSS JMP clears the outgoing busy bit without writing a backlink', () => {
