@@ -3035,7 +3035,12 @@ export class ExperimentalI80386 {
           ? rawIndex
           : width === 32 ? rawIndex | 0 : (rawIndex << 16) >> 16;
         const byteOffset = Math.floor(signedIndex / width) * (width >>> 3);
-        operand = { ...ea, off: (ea.off + byteOffset) >>> 0 };
+        operand = {
+          ...ea,
+          off: address32
+            ? (ea.off + byteOffset) >>> 0
+            : (ea.off + byteOffset) & 0xffff,
+        };
       }
       if (modifying) this._operandPreflightWrite(operand, width);
       const value = this._operandRead(operand, width);

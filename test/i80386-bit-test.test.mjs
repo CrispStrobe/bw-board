@@ -42,6 +42,15 @@ test("register-indexed memory BT uses a signed unmasked bit offset", () => {
   assert.deepEqual(writes, []);
 });
 
+test("16-bit bit-string addressing wraps the adjusted effective offset", () => {
+  const { cpu, memory } = fixture([0x0f, 0xb3, 0x0e, 0x00, 0x00]);
+  cpu.cx = 0xffff;
+  put(memory, 0xfffe, 0x8000, 2);
+  cpu.step();
+  assert.ok(cpu.eflags & CF);
+  assert.equal((memory.get(0xfffe) ?? 0) | ((memory.get(0xffff) ?? 0) << 8), 0);
+});
+
 test("immediate BTS/BTR/BTC mask the index within one memory operand", () => {
   for (const [extension, initial, expected] of [
     [5, 0, 2],
