@@ -43,7 +43,13 @@ const { default: Memory } = await import(moduleURL("memory"));
 const { default: X86 } = await import(moduleURL("x86"));
 class QuietBus extends Bus { printf() { return 0; } }
 const mutation = process.env.I386_SYSTEM_ORACLE_MUTATION ?? null;
-if (mutation !== null && mutation !== "busy" && mutation !== "budget")
+if (
+  mutation !== null &&
+  mutation !== "busy" &&
+  mutation !== "budget" &&
+  mutation !== "lar-defined" &&
+  mutation !== "lsl-limit"
+)
   throw new Error(`unknown mutation ${mutation}`);
 const stepLimit = mutation === "budget" ? 5 : 20;
 
@@ -105,6 +111,8 @@ function runPCjs() {
 const reference = runPCjs();
 const actual = runLocal();
 if (mutation === "busy") actual.busyAccess ^= 2;
+if (mutation === "lar-defined") actual.larDefined ^= 0x100;
+if (mutation === "lsl-limit") actual.edi ^= 1;
 const expected = { ax:0x20, larDefined:0x00801200, cx:24, edi:0x12345fff, ds:12, dsBase:0x500, busyAccess:0x8b, cs:8, eip:0x23, halted:true, ldtr:[16,0x300,0x0f], tr:[24,0x400,0x66] };
 const differences = [];
 for (const field of Object.keys(expected)) {
