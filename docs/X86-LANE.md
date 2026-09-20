@@ -13,11 +13,13 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `d128b384a9f9df986ae38db72bc7dae33a6b092e`,
-tag `milestones/x86-freedos-386-platform-20260919`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35476376757)
-passed 5,559 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35476376774)
-and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35476376827)
-also passed. The exact qualified candidate was fast-forwarded to master.
+The latest landed milestone is `88d960eecb566db3939710b844ca03a36e5ea8c1`,
+tag `milestones/x86-386-vm-isa-platform-20260920`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35477928736)
+passed 5,614 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35477928733)
+and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35477928839)
+also passed. CPU qualification covers the existing full fast/Harris corpora,
+443 selected physical 386EX cases and bounded PCjs comparisons. The exact
+qualified candidate was fast-forwarded to master.
 
 The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
 DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
@@ -28,10 +30,11 @@ fresh-remount read acceptance. BIOS and media bytes remain external. See
 
 The independent [386 executor](I80386-EXPERIMENTAL.md) remains opt-in and
 incomplete. Landed stages cover protected far control, privilege transitions,
-TSS I/O permissions and functional AT device pacing. The current continuation
-adds VM86 entry/interrupt/return, BIOS selector checks, common compiler ISA,
-and experimental ATA disk access. Real 386 DOS and BIOS disk acceptance are
-being measured separately. The unchanged test386 capture now reaches a named
+TSS I/O permissions, VM86 entry/interrupt/return, BIOS selector checks, common
+compiler ISA, functional AT pacing and experimental ATA disk access. The
+current continuation reaches genuine INT19 and an exact floppy boot-sector
+handoff after adding absent-NPX handling; DOS shell/file and BIOS HDD
+acceptance are being measured separately. The unchanged test386 capture now reaches a named
 paging accessed-bit disagreement; it has not passed the complete ROM.
 Windows and Doom remain unexecuted acceptance targets.
 

@@ -32,8 +32,8 @@ until IRET. Gate/frame checks complete before frame writes, and host bus
 callback errors remain host errors rather than guest exceptions.
 
 The current profile implements bounded VM86 entry, interrupts and return as
-detailed below. It still refuses task switching, expand-down privilege stacks,
-and unimplemented opcodes. LDT lookup, LLDT/LTR, protected call gates,
+detailed below. Expand-down data and privilege stacks are now admitted.
+Task switching and other unimplemented opcodes still refuse explicitly. LDT lookup, LLDT/LTR, protected call gates,
 conforming code, and privilege-changing interrupt/return paths are implemented
 within the bounded contracts below.
 Only architecturally invalid encodings implemented by this profile raise #UD;
@@ -45,7 +45,7 @@ and make no 386DX or 386EX timing claim.
 MOV/POP data-segment loads check descriptor type, privilege and presence;
 null data selectors load an unusable cache, while null SS raises #GP. Invalid
 table bounds and descriptor admission raise architectural exceptions.
-Expand-down descriptors remain an explicit implementation refusal.
+Expand-down descriptors use the exclusive lower-bound rules below.
 
 The paging profile implements original-80386 two-level 4 KiB translation
 through CR3. It combines PDE/PTE present, U/S, and R/W permissions, applies

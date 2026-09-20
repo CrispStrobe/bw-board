@@ -58,9 +58,9 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (implemented; exact-head qualification pending) — Astra/Sol
-386 VM86, BIOS/compiler ISA and experimental disk continuation. Candidate is
-the commit containing this row; receipt preserves each actual execution SHA.
+2026-09-20 DONE (qualified and landed) — Astra/Sol
+386 VM86, BIOS/compiler ISA and experimental disk continuation. Candidate and
+landing: `88d960eecb566db3939710b844ca03a36e5ea8c1`; receipt preserves actual execution SHAs.
 VM86 entry/interrupt/IRETD, BOUND, VERR/VERW, ARPL, LAR/LSL, immediate IMUL,
 SETcc, double shifts, TEST, AAM/AAD and interruptible INS/OUTS are implemented.
 Coordinator audit corrected VM privileges, original selector-query semantics,
@@ -75,6 +75,10 @@ polling but no386DOS boot is yet accepted. ATA BIOS roundtrip and open VGA ROM
 remain prepared inputs. Receipt: `docs/receipts/2026-09-20-386-vm-isa-platform.json`.
 No tasking, full386DX, x87, Windows, Doom or silicon timing claim. Expand-down
 and absent-NPX work continue separately after this freeze.
+Exact candidate CI `35477928736` passed (5,614 pass,272skip,zero fail),
+CPU `35477928733` and native `35477928839` passed. Guarded normal push
+advanced master from `62160e7` to the exact qualified candidate. Tag:
+`milestones/x86-386-vm-isa-platform-20260920`.
 
 2026-09-19 DONE (qualified and landed) — Astra/Sol
 FreeDOS persistence and bounded 386 AT platform. Candidate and landing are
