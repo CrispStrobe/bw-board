@@ -100,8 +100,8 @@ const expected = { halted: true, cs: 8, eip: 0x119, tr: 0x18, cr3: 0, ax: 0x18,
   oldBusy: 3, newBusy: 1, backlink: 0x18 };
 const differences = [];
 for (const field of Object.keys(expected)) {
-  for (const [side, value] of [["reference", reference[field]], ["actual", actual[field]].
-    filter(([, value]) => value !== expected[field]))
+  const observations = [["reference", reference[field]], ["actual", actual[field]]];
+  for (const [side, value] of observations.filter(([, value]) => value !== expected[field]))
     differences.push({ field: `${side}.${field}`, expected: expected[field], actual: value });
 }
 verifyPin(); verifyLocal();
