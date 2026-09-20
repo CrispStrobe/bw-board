@@ -1,0 +1,409 @@
+{
+  "schema": "astra.i80386-unreal-mode-evidence.v1",
+  "date": "2026-09-20",
+  "scope": "386 real-mode segment reload retains hidden limit/default-size; VM86 reload stays canonical",
+  "softwareOracle": {
+    "positive": {
+      "rawReportSha256": "68dc73f819989b27c7d39f41e1dd34aa97b58ac737126fc5ce89bdcf91e549d0",
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "42882e0aca87d27331e0436173d2d99ffa459962",
+      "scope": "software compatibility evidence for LGDT, PE entry, 4GiB DS/ES cache loading, PE exit, and address/operand-size REP MOVSD beyond 64KiB",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-unreal-rep.mjs": "14f413d019ff756f6d930f64a3ea7aa86bb0f2429dcd4cdb64f39bbe88808ec1",
+        "../src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157"
+      },
+      "stepLimit": 70000,
+      "mutation": null,
+      "status": "pass",
+      "expected": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0
+      },
+      "expectedCopySha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+      "reference": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0,
+        "copiedSha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+        "boundary": [
+          52,
+          90,
+          201
+        ]
+      },
+      "actual": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0,
+        "copiedSha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+        "boundary": [
+          52,
+          90,
+          201
+        ]
+      },
+      "differences": []
+    },
+    "result": {
+      "rawReportSha256": "2a3081ef40260a96e5a900ca0bbf05ad29eb5c45f2f7ebf641c624eb2330824e",
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "42882e0aca87d27331e0436173d2d99ffa459962",
+      "scope": "software compatibility evidence for LGDT, PE entry, 4GiB DS/ES cache loading, PE exit, and address/operand-size REP MOVSD beyond 64KiB",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-unreal-rep.mjs": "14f413d019ff756f6d930f64a3ea7aa86bb0f2429dcd4cdb64f39bbe88808ec1",
+        "../src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157"
+      },
+      "stepLimit": 70000,
+      "mutation": "result",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0
+      },
+      "expectedCopySha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+      "reference": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0,
+        "copiedSha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+        "boundary": [
+          52,
+          90,
+          201
+        ]
+      },
+      "actual": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0,
+        "copiedSha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+        "boundary": [
+          52,
+          91,
+          201
+        ]
+      },
+      "differences": [
+        {
+          "field": "boundary",
+          "reference": [
+            52,
+            90,
+            201
+          ],
+          "actual": [
+            52,
+            91,
+            201
+          ]
+        }
+      ]
+    },
+    "budget": {
+      "rawReportSha256": "9bedf27e4ccf71a067a5f44c51b462c32b5d10ee826bae12228f653410a6ef57",
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "42882e0aca87d27331e0436173d2d99ffa459962",
+      "scope": "software compatibility evidence for LGDT, PE entry, 4GiB DS/ES cache loading, PE exit, and address/operand-size REP MOVSD beyond 64KiB",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-unreal-rep.mjs": "14f413d019ff756f6d930f64a3ea7aa86bb0f2429dcd4cdb64f39bbe88808ec1",
+        "../src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157"
+      },
+      "stepLimit": 10,
+      "mutation": "budget",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0
+      },
+      "expectedCopySha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+      "reference": {
+        "halted": false,
+        "protectedMode": true,
+        "cs": 8,
+        "eip": 39,
+        "ds": 16,
+        "es": 16,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 0,
+        "edi": 0,
+        "ecx": 0,
+        "copiedSha256": "3c78fb99a026e181c88fd31947d06ac9e4106ac5e922462fabe089ca1de9f9b3",
+        "boundary": [
+          0,
+          0,
+          0
+        ]
+      },
+      "actual": {
+        "halted": false,
+        "protectedMode": true,
+        "cs": 8,
+        "eip": 46,
+        "ds": 16,
+        "es": 16,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 0,
+        "edi": 0,
+        "ecx": 0,
+        "copiedSha256": "3c78fb99a026e181c88fd31947d06ac9e4106ac5e922462fabe089ca1de9f9b3",
+        "boundary": [
+          0,
+          0,
+          0
+        ]
+      },
+      "differences": [
+        {
+          "field": "reference.halted",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "field": "actual.halted",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "field": "reference.protectedMode",
+          "expected": false,
+          "actual": true
+        },
+        {
+          "field": "actual.protectedMode",
+          "expected": false,
+          "actual": true
+        },
+        {
+          "field": "reference.cs",
+          "expected": 0,
+          "actual": 8
+        },
+        {
+          "field": "actual.cs",
+          "expected": 0,
+          "actual": 8
+        },
+        {
+          "field": "reference.eip",
+          "expected": 110,
+          "actual": 39
+        },
+        {
+          "field": "actual.eip",
+          "expected": 110,
+          "actual": 46
+        },
+        {
+          "field": "reference.ds",
+          "expected": 0,
+          "actual": 16
+        },
+        {
+          "field": "actual.ds",
+          "expected": 0,
+          "actual": 16
+        },
+        {
+          "field": "reference.es",
+          "expected": 0,
+          "actual": 16
+        },
+        {
+          "field": "actual.es",
+          "expected": 0,
+          "actual": 16
+        },
+        {
+          "field": "reference.esi",
+          "expected": 196612,
+          "actual": 0
+        },
+        {
+          "field": "actual.esi",
+          "expected": 196612,
+          "actual": 0
+        },
+        {
+          "field": "reference.edi",
+          "expected": 327684,
+          "actual": 0
+        },
+        {
+          "field": "actual.edi",
+          "expected": 327684,
+          "actual": 0
+        },
+        {
+          "field": "reference.copiedSha256",
+          "expected": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+          "actual": "3c78fb99a026e181c88fd31947d06ac9e4106ac5e922462fabe089ca1de9f9b3"
+        },
+        {
+          "field": "actual.copiedSha256",
+          "expected": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+          "actual": "3c78fb99a026e181c88fd31947d06ac9e4106ac5e922462fabe089ca1de9f9b3"
+        }
+      ]
+    },
+    "cache": {
+      "rawReportSha256": "52e6bb9a2bbc6facb298927d6320b1235cc822325db00aa098baa5c8bdee2aea",
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "42882e0aca87d27331e0436173d2d99ffa459962",
+      "scope": "software compatibility evidence for LGDT, PE entry, 4GiB DS/ES cache loading, PE exit, and address/operand-size REP MOVSD beyond 64KiB",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-unreal-rep.mjs": "14f413d019ff756f6d930f64a3ea7aa86bb0f2429dcd4cdb64f39bbe88808ec1",
+        "../src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157"
+      },
+      "stepLimit": 70000,
+      "mutation": "cache",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0
+      },
+      "expectedCopySha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+      "reference": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 4294967295,
+        "esLimit": 4294967295,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0,
+        "copiedSha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+        "boundary": [
+          52,
+          90,
+          201
+        ]
+      },
+      "actual": {
+        "halted": true,
+        "protectedMode": false,
+        "cs": 0,
+        "eip": 110,
+        "ds": 0,
+        "es": 0,
+        "dsLimit": 65535,
+        "esLimit": 65535,
+        "esi": 196612,
+        "edi": 327684,
+        "ecx": 0,
+        "copiedSha256": "eda2b670730f8306cadc5204eb4e26377b535264915069dbcec95e7890bfd4c2",
+        "boundary": [
+          52,
+          90,
+          201
+        ]
+      },
+      "differences": [
+        {
+          "field": "actual.dsLimit",
+          "expected": 4294967295,
+          "actual": 65535
+        },
+        {
+          "field": "actual.esLimit",
+          "expected": 4294967295,
+          "actual": 65535
+        }
+      ]
+    }
+  },
+  "behavioralNegative": {
+    "executionRevision": "d922f869609e7353717b7b357b03829c5c0b7ce7",
+    "logSha256": "7ab29705781de380d57c548ffb30db06650f814e8c52331ffdbfdf9660477ecd",
+    "result": "Before the CPU fix the corrected guest raises GP segment-limit fault during high-address copy after real DS/ES reload.",
+    "scope": "This is an implementation regression control, separate from post-result comparator mutations."
+  },
+  "limits": [
+    "Pinned PCjs is software compatibility evidence, not original 80386 silicon grading.",
+    "Real-load present/null flags are model admission flags and are normalized; this does not establish arbitrary descriptor attributes in real mode."
+  ],
+  "dosPersistence": {
+    "executionRevision": "05fe59a941d65c96ca00835340fd4e8a32e1697d",
+    "writeSteps": 25652224,
+    "rebootSteps": 25567232,
+    "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+    "writeReportSha256": "8242f6039112eae5fbb98fc28c63adc1050df4e9f5e8d32a4eaad450b44c241a",
+    "rebootReportSha256": "c8cfe66f884667dc30657dbda70a07d4d9d8ebae2028f4ff8bda4bab64d3b1c1"
+  }
+}
