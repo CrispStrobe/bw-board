@@ -120,6 +120,7 @@ const PROFILES={
   'bit-scan':{
     files:['0FBC','0FBD','660FBC','660FBD','670FBC','670FBD','67660FBC','67660FBD'],
     undefinedEflagsMask:0xfffff72a,
+    requiredEflagsMask:0x40,
     scope:'24 fixed deterministic BSF/BSR samples spanning 16/32-bit operand and address sizes',
   },
 };
@@ -170,6 +171,8 @@ function execute(test,globalMasks,mutate) {
   const differences=[],masks={...globalMasks,...test.final.masks};
   if(profile.undefinedEflagsMask!==undefined)
     masks.eflags=(masks.eflags??0xffffffff)&profile.undefinedEflagsMask;
+  if(profile.requiredEflagsMask!==undefined)
+    masks.eflags=(masks.eflags??0xffffffff)|profile.requiredEflagsMask;
   for(const[name,want]of Object.entries(test.final.regs)){
     if(!modeledFinal.has(name))throw new Error(`final state requires unsupported ${name}`);
     let mask=masks[name]??0xffffffff;if(['cs','ds','es','fs','gs','ss'].includes(name))mask&=0xffff;
