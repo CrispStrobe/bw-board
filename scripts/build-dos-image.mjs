@@ -71,12 +71,6 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assemble from '../src/i8086-asm.js';
 
-// Browser-safe latin1 decode of a byte range (no Node Buffer), so the image
-// builder's core runs in a browser bundle as well as in Node — the same reason
-// basic-to-asm avoids Buffer. Node-only concerns (reading files, the CLI) stay
-// below; build() itself touches neither once given its inputs as data.
-const latin1 = (u8, start, end) => { let s = ''; for (let i = start; i < end; i++) s += String.fromCharCode(u8[i]); return s; };
-
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
 
@@ -323,7 +317,7 @@ export function linkSysinit(obj, { sysinitSeg, externs }) {
                 let q = 0;
                 while (q < body.length) {
                     const l = body[q];
-                    lnames.push(latin1(body, q + 1, q + 1 + l));
+                    lnames.push(Buffer.from(body.subarray(q + 1, q + 1 + l)).toString('latin1'));
                     q += 1 + l;
                 }
                 break;
@@ -342,7 +336,7 @@ export function linkSysinit(obj, { sysinitSeg, externs }) {
                 let q = 0;
                 while (q < body.length) {
                     const l = body[q];
-                    extdefs.push(latin1(body, q + 1, q + 1 + l));
+                    extdefs.push(Buffer.from(body.subarray(q + 1, q + 1 + l)).toString('latin1'));
                     q += 1 + l + 1;                         // + type index
                 }
                 break;
@@ -354,7 +348,7 @@ export function linkSysinit(obj, { sysinitSeg, externs }) {
                 if (seg.value === 0) q += 2;                // base frame
                 while (q < body.length) {
                     const l = body[q];
-                    const name = latin1(body, q + 1, q + 1 + l);
+                    const name = Buffer.from(body.subarray(q + 1, q + 1 + l)).toString('latin1');
                     q += 1 + l;
                     publics.set(name, body[q] | (body[q + 1] << 8));
                     q += 2;
@@ -539,12 +533,8 @@ export function linkSysinit(obj, { sysinitSeg, externs }) {
  * SYSINITSEG at BIOSIZ, and the SYSINIT message module immediately after
  * SYSINIT.OBJ's own contribution to that segment.
  */
-export function buildIoSys(sysinitObj, asm2 = join(REPO, 'dos', 'iosys.asm')) {
-    // `asm2` is the iosys.asm SOURCE STRING when the caller has it in hand (the
-    // browser passes it — a bundled/fetched asset), or a filesystem PATH for the
-    // Node CLI. A string containing a newline is treated as source, never a path,
-    // so build() stays filesystem-free when given files.iosysAsm.
-    const source = typeof asm2 === 'string' && asm2.includes('\n') ? asm2 : readFileSync(asm2, 'utf8');
+export function buildIoSys(sysinitObj, asmPath = join(REPO, 'dos', 'iosys.asm')) {
+    const source = readFileSync(asmPath, 'utf8');
     const asm = assemble(source, { format: 'com' });
     const sym = (n) => {
         const s = asm.symbols.get(n.toLowerCase());
@@ -977,7 +967,7 @@ export function verifyDosImage({ image, entries, lay, sysSectors, dosCurrentSeg 
     }
 
     const rootAt = lay.rootStart * g.bytesPerSector;
-    const nameAt = (i) => latin1(image, rootAt + i * 32, rootAt + i * 32 + 11);
+    const nameAt = (i) => Buffer.from(image.subarray(rootAt + i * 32, rootAt + i * 32 + 11)).toString('latin1');
     if (nameAt(0) !== 'IO      SYS') {
         fail(`the first directory entry is "${nameAt(0)}", not IO.SYS. The boot sector loads `
             + 'the system by position, so the order of the first two entries is load-bearing.');
@@ -1032,9 +1022,7 @@ export function verifyDosImage({ image, entries, lay, sysSectors, dosCurrentSeg 
 
 /** Build IO.SYS and the whole disk from a directory of Microsoft binaries. */
 export function build(files) {
-    // files.iosysAsm (the iosys.asm source string) makes this fully filesystem-
-    // free — pass it in the browser; omit it in Node to read dos/iosys.asm.
-    const io = files.iosysAsm ? buildIoSys(files.sysinit, files.iosysAsm) : buildIoSys(files.sysinit);
+    const io = buildIoSys(files.sysinit);
     const img = buildDosImage({ iosys: io.bytes, msdos: files.msdos, command: files.command,
         extra: files.extra });
     return { ...img, iosys: io };

@@ -8,7 +8,6 @@
 // (a skip is "the licensed binaries are not on this runner", never a pass).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { basicToAsm } from '../src/basic-to-asm.js';
 import { cToAsm } from '../scripts/cc.mjs';
 import { assemble } from '../src/i8086-asm.js';
@@ -44,20 +43,6 @@ test('a BASIC-compiled .COM runs on a real booted MS-DOS 2.0 kernel',
         assert.match(screen, /BASIC-ON-REAL-DOS/, 'the BASIC program printed its banner under real DOS');
         assert.match(screen, /(^|\n)42(\n|$)/, 'and evaluated 6*7');
         assert.match(screen, /BDONE\n\nA>/, 'COMMAND.COM regained its prompt after the program exited');
-    });
-
-test('the image builder is filesystem-free given the iosys.asm source (the browser path)',
-    { skip: have ? false : 'run `npm run fetch:free-dos` (MIT) or set MSDOS_BIN_DIR to the MS-DOS 2.0 files' }, () => {
-        // A browser bundle has no fs: it hands build() the iosys.asm SOURCE instead of
-        // a path. That path must produce a byte-identical image to Node reading the
-        // file — proving the builder's core is portable, so lite can run it in-page.
-        const files = findMsdosFiles([BIN]).files;
-        const iosysAsm = readFileSync(new URL('../dos/iosys.asm', import.meta.url), 'utf8');
-        const com = assemble(basicToAsm('10 PRINT "OK"\n'), { format: 'com' }).bytes;
-        const viaFile = build({ ...files, extra: [{ name: 'P.COM', data: com }] });
-        const viaSource = build({ ...files, iosysAsm, extra: [{ name: 'P.COM', data: com }] });
-        assert.equal(viaSource.image.length, viaFile.image.length);
-        assert.deepEqual([...viaSource.image], [...viaFile.image], 'browser (source) image == Node (file) image');
     });
 
 test('a C-compiled .COM (with a function call) runs on a real booted MS-DOS 2.0 kernel',
