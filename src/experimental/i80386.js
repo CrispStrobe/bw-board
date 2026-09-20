@@ -105,6 +105,7 @@ export class ExperimentalI80386 {
     this._nmiShadow = 0;
     this._debugShadow = 0;
     this._nmiActive = false;
+    this._retainedRealCs = false;
     this._repeatContext = null;
     this.segmentCaches = {};
     for (const id of [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS])
@@ -125,7 +126,9 @@ export class ExperimentalI80386 {
     return this.protectedMode && !!(this.eflags & 0x20000);
   }
   get currentPrivilegeLevel() {
-    return this.virtual8086 ? 3 : this.protectedMode ? this.cs & 3 : 0;
+    if (this.virtual8086) return 3;
+    if (!this.protectedMode || this._retainedRealCs) return 0;
+    return this.cs & 3;
   }
   get pc() {
     return (this.segmentCaches[SEG_CS].base + this.eip) >>> 0;
@@ -555,6 +558,7 @@ export class ExperimentalI80386 {
         code: id === SEG_CS,
         writable: id !== SEG_CS,
       };
+      if (id === SEG_CS) this._retainedRealCs = false;
       return;
     }
     if (id !== SEG_CS && !(selector & 0xfffc)) {
@@ -578,7 +582,7 @@ export class ExperimentalI80386 {
       const access = bytes[5];
       const flags = bytes[6];
       const dpl = (access >>> 5) & 3;
-      const cpl = this.cs & 3;
+      const cpl = this.currentPrivilegeLevel;
       const rpl = selector & 3;
       const code = !!(access & 8);
       const conformingOrExpandDown = !!(access & 4);
@@ -634,6 +638,7 @@ export class ExperimentalI80386 {
     this._markAccessed(d);
     this._setSegValue(id, selector);
     this.segmentCaches[id] = d;
+    if (id === SEG_CS) this._retainedRealCs = false;
   }
 
   _decodeEA(address32, override) {
@@ -1313,6 +1318,7 @@ export class ExperimentalI80386 {
       this.cr3 = image.cr3 >>> 0;
       this.cr0 |= 8;
       Object.assign(this, image);
+      this._retainedRealCs = false;
       for (const id of [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS])
         this.segmentCaches[id] = {
           base: 0,
@@ -1379,7 +1385,7 @@ export class ExperimentalI80386 {
   }
 
   _protectedFarTransfer(selector, offset, operandWidth, call) {
-    const cpl = this.cs & 3,
+    const cpl = this.currentPrivilegeLevel,
       errorCode = selector & 0xfffc;
     if (!errorCode) throw new I80386Fault(13, 0, "null far selector");
     const raw = this._descriptorBytes(selector),
@@ -1402,6 +1408,7 @@ export class ExperimentalI80386 {
       this._markAccessed(descriptor);
       if (frame) this._commitStackFrame(frame);
       this.cs = (selector & 0xfffc) | cpl;
+      this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       this.eip = target;
       return;
@@ -1470,6 +1477,7 @@ export class ExperimentalI80386 {
         throw new I80386Fault(13, 0, "call gate offset outside code segment");
       this._markAccessed(descriptor);
       this.cs = (targetSelector & 0xfffc) | cpl;
+      this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       this.eip = targetOffset;
       return;
@@ -1487,6 +1495,7 @@ export class ExperimentalI80386 {
       this._markAccessed(descriptor);
       this._commitStackFrame(frame);
       this.cs = (targetSelector & 0xfffc) | cpl;
+      this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       this.eip = targetOffset;
       return;
@@ -1521,6 +1530,7 @@ export class ExperimentalI80386 {
     this._markAccessed(frame.descriptor);
     this._commitInnerInterruptStack(frame);
     this.cs = (targetSelector & 0xfffc) | targetCpl;
+    this._retainedRealCs = false;
     this.segmentCaches[SEG_CS] = descriptor;
     this.eip = targetOffset;
   }
@@ -1533,7 +1543,7 @@ export class ExperimentalI80386 {
     const address = this._linear(SEG_SS, old, bytes * 2);
     const target = this._readLinear(address, bytes);
     const selector = this._readLinear(address + bytes, bytes) & 0xffff;
-    const currentCpl = this.cs & 3,
+    const currentCpl = this.currentPrivilegeLevel,
       returnCpl = selector & 3;
     if (returnCpl < currentCpl)
       throw new I80386Fault(13, selector & 0xfffc, "far return privilege");
@@ -1565,6 +1575,7 @@ export class ExperimentalI80386 {
     this._markAccessed(descriptor);
     if (stackDescriptor) this._markAccessed(stackDescriptor);
     this.cs = selector;
+    this._retainedRealCs = false;
     this.segmentCaches[SEG_CS] = descriptor;
     this.eip = width === 32 ? target >>> 0 : target & 0xffff;
     if (outer) {
@@ -1769,6 +1780,7 @@ export class ExperimentalI80386 {
       nmiShadow: this._nmiShadow,
       debugShadow: this._debugShadow,
       nmiActive: this._nmiActive,
+      retainedRealCs: this._retainedRealCs,
       segmentCaches: [
         { ...this.segmentCaches[0] },
         { ...this.segmentCaches[1] },
@@ -1805,6 +1817,7 @@ export class ExperimentalI80386 {
     this._nmiShadow = state.nmiShadow;
     this._debugShadow = state.debugShadow;
     this._nmiActive = state.nmiActive;
+    this._retainedRealCs = state.retainedRealCs;
     this.segmentCaches = {
       0: { ...state.segmentCaches[0] },
       1: { ...state.segmentCaches[1] },
@@ -2178,6 +2191,7 @@ export class ExperimentalI80386 {
     if (innerFrame) this._commitInnerInterruptStack(innerFrame);
     else this._commitStackFrame(sameFrame);
     this.cs = (selector & 0xfffc) | targetCpl;
+    this._retainedRealCs = false;
     this.segmentCaches[SEG_CS] = descriptor;
     if (vm86) {
       for (const id of [SEG_ES, SEG_DS, SEG_FS, SEG_GS]) {
@@ -2461,6 +2475,7 @@ export class ExperimentalI80386 {
       this._markAccessed(descriptor);
       if (stackDescriptor) this._markAccessed(stackDescriptor);
       this.cs = selector;
+      this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       if (outer) {
         this.ss = newSs;
@@ -3292,7 +3307,9 @@ export class ExperimentalI80386 {
         if (this.protectedMode && this.currentPrivilegeLevel !== 0)
           throw new I80386Fault(13, 0, "LMSW requires CPL0");
         const value = this._operandRead(ea, 16);
+        const wasProtected = this.protectedMode;
         this.cr0 = ((this.cr0 & ~15) | (value & 15) | (this.cr0 & 1)) >>> 0;
+        if (!wasProtected && this.protectedMode) this._retainedRealCs = true;
         return;
       }
       if (ea.isReg || (ea.reg !== 2 && ea.reg !== 3))
@@ -3328,12 +3345,17 @@ export class ExperimentalI80386 {
         const value = this._reg(register, 32);
         if (control === 0 && value & 0x80000000 && !(value & 1))
           throw new I80386Fault(13, 0, "paging requires protected mode");
+        const wasProtected = this.protectedMode;
         this[`cr${control}`] =
           control === 3
             ? (value & 0xfffff000) >>> 0
             : control === 0
               ? (value & 0x8000001f) >>> 0
               : value;
+        if (control === 0) {
+          if (!wasProtected && this.protectedMode) this._retainedRealCs = true;
+          else if (!this.protectedMode) this._retainedRealCs = false;
+        }
       }
       return;
     }

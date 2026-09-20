@@ -18,6 +18,12 @@ stack operands with stack addressing selected independently by SS.B. ES, CS,
 SS, DS, FS, and GS have independent visible selectors and
 hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
 LIDT, MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
+On the instruction that sets CR0.PE, CPL starts at zero while visible CS and
+its real-mode hidden cache remain unchanged, as specified by the original
+80386 manual section 10.3. This temporary state is checkpointed for precise
+fault restart and ends when a protected control transfer successfully loads
+CS. Thus real CS values whose low bits are nonzero do not invent CPL1–3 during
+the required first protected-mode jump.
 
 The opt-in `deliverFaults` profile adds precise instruction restart for
 architectural faults, real-mode IVT delivery, 16- and 32-bit
