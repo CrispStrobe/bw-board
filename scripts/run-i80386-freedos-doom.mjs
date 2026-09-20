@@ -72,7 +72,7 @@ const encodeKeys=keys=>keys.flatMap(key=>key==='>'||key===':'
     ? [{key:'shift-down',scan:0x2a},{key,scan:key==='>'?0x34:0x27},{key:'shift-up',scan:0xaa}]
     : [{key,scan:scanCodes[key.toLowerCase()]}]);
 const keyScript=[];
-let installerDeclined=false,commandQueued=false,commandPrompt=null;
+let installerDeclined=false,commandQueued=false,commandPrompt=null,doomEntry=null;
 
 const resetRequests=[];
 const resetApplications=[];
@@ -107,6 +107,8 @@ const doomMz={signature:String.fromCharCode(...hddFiles.doomExe.subarray(0,2)),
     initialSP:mzWord(hddFiles.doomExe,16),initialIP:mzWord(hddFiles.doomExe,20),
     initialCS:mzWord(hddFiles.doomExe,22)};
 if(doomMz.signature!=='MZ')throw new Error('pinned DOOM.EXE is not an MZ executable');
+const doomEntryFileOffset=doomMz.headerParagraphs*16+doomMz.initialCS*16+doomMz.initialIP;
+const doomEntryBytes=Array.from(hddFiles.doomExe.subarray(doomEntryFileOffset,doomEntryFileOffset+16));
 machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeometry:DOOM_HDD_GEOMETRY,onPortAccess:event=>{
     if(event.port===0x70||event.port===0x71) {
         rtcPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -182,11 +184,16 @@ const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_
 const disketteBda=()=>Array.from({length:16},(_,index)=>machine._read(0x490+index));
 const cpuSnapshot=()=>{
     const cpu=machine.cpu,pc=cpu.pc;
+    const mappedOffset=doomEntry
+        ? doomMz.headerParagraphs*16+(((cpu.cs-doomEntry.loadSegment)&0xffff)<<4)+cpu.eip:null;
+    const mappedBytes=mappedOffset!==null&&mappedOffset<hddFiles.doomExe.length
+        ? Array.from(hddFiles.doomExe.subarray(mappedOffset,mappedOffset+16)):null;
     return {eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,
         ebp:cpu.ebp,esp:cpu.esp,eip:cpu.eip,eflags:cpu.eflags,cs:cpu.cs,ds:cpu.ds,
         es:cpu.es,ss:cpu.ss,fs:cpu.fs,gs:cpu.gs,cr0:cpu.cr0,cr2:cpu.cr2,cr3:cpu.cr3,
         pc,tr:{...cpu.tr},ldtr:{...cpu.ldtr},csCache:{...cpu.segmentCaches[1]},
-        opcodeBytes:Array.from({length:16},(_,index)=>cpu.read((pc+index)>>>0))};
+        opcodeBytes:Array.from({length:16},(_,index)=>cpu.read((pc+index)>>>0)),
+        doomFileMapping:mappedOffset===null?null:{offset:mappedOffset,bytes:mappedBytes}};
 };
 const deviceSnapshot=()=>({
     masterPic:machine.chips.pic1.getState(),slavePic:machine.chips.pic2.getState(),
@@ -196,6 +203,12 @@ const deviceSnapshot=()=>({
 for(;steps<stepLimit;steps++) {
     const requestsBefore=resetRequests.length;
     const before={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
+    if(commandQueued&&!doomEntry&&machine.cpu.eip===doomMz.initialIP) {
+        const memoryBytes=Array.from({length:16},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0));
+        if(memoryBytes.every((byte,index)=>byte===doomEntryBytes[index]))
+            doomEntry={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,pc:machine.cpu.pc,
+                loadSegment:(machine.cpu.cs-doomMz.initialCS)&0xffff,memoryBytes};
+    }
     if(executionBoundaries.bootSector&&(steps&1023)===0) {
         const ui=renderScreen();
         if(!installerDeclined&&ui.some(line=>line.includes('Do you want to proceed'))) {
@@ -323,7 +336,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,diskPorts,rtcPorts,keyboardScript,disketteBda490:disketteBda(),
+    executionBoundaries,doomEntry,diskPorts,rtcPorts,keyboardScript,disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,
     screenText,uiSamples,
