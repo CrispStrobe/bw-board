@@ -173,3 +173,97 @@ describe('74HC595: clock in 0xA5, latch, verify outputs', () => {
     }
   });
 });
+
+/**
+ * The gallery benches wire each output through a resistor to an LED, not to a
+ * bare resistor. An LED is nonlinear, so its net is solved by MNA rather than
+ * by the closed-form net resolver — and MNA had no stamp for a shift register
+ * at all, so every output sat at 0 V while the latch register held the right
+ * byte. The whole of 20-shift-register-binary and 08-led-chaser-595 was dark.
+ */
+describe('74HC595: outputs drive a nonlinear load', () => {
+  const PATTERN = [1, 0, 0, 0, 0, 1, 0, 1]; // 0xA1 read out as Q0..Q7 (bits 0, 5, 7)
+
+  /** @param {'resistor' | 'led'} load */
+  function ledLoadBench(load, { oeHigh = false, skipLatch = false } = {}) {
+    const board = new BoardImpl(5.0);
+    const parts = [
+      { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0', 'P1.1', 'P1.2', 'P1.3'] },
+      { id: 'U1', kind: 'shift_register', params: { rOut: 50 },
+        terminals: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] },
+      { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+    ];
+    const gndNet = { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] };
+    const nets = [
+      { id: 'net_data', terminals: [{ part: 'MCU', terminal: 'P1.0' }, { part: 'U1', terminal: 'data' }] },
+      { id: 'net_clock', terminals: [{ part: 'MCU', terminal: 'P1.1' }, { part: 'U1', terminal: 'clock' }] },
+      { id: 'net_latch', terminals: [{ part: 'MCU', terminal: 'P1.2' }, { part: 'U1', terminal: 'latch' }] },
+      { id: 'net_oe', terminals: [{ part: 'MCU', terminal: 'P1.3' }, { part: 'U1', terminal: 'oe' }] },
+      gndNet,
+    ];
+    for (let i = 0; i < 8; i++) {
+      parts.push({ id: `R${i}`, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
+      nets.push({ id: `net_q${i}`, terminals: [{ part: 'U1', terminal: `q${i}` }, { part: `R${i}`, terminal: 'a' }] });
+      if (load === 'led') {
+        parts.push({ id: `D${i}`, kind: 'led', params: { vf: 2, color: 'red' }, terminals: ['anode', 'cathode'] });
+        nets.push({ id: `net_m${i}`, terminals: [{ part: `R${i}`, terminal: 'b' }, { part: `D${i}`, terminal: 'anode' }] });
+        gndNet.terminals.push({ part: `D${i}`, terminal: 'cathode' });
+      } else {
+        gndNet.terminals.push({ part: `R${i}`, terminal: 'b' });
+      }
+    }
+    board.setNetlist(parts, nets);
+    board.setPin('P1.3', 'pushpull', oeHigh); // /OE: LOW enables the outputs
+    board.setPin('P1.1', 'pushpull', false);
+    board.setPin('P1.2', 'pushpull', false);
+    for (const bit of [1, 0, 1, 0, 0, 0, 0, 1]) clockBit(board, bit); // MSB first → 0xA1
+    if (!skipLatch) latch(board);
+    return board;
+  }
+
+  it('lights the pattern through a series resistor and LED', () => {
+    const board = ledLoadBench('led');
+    // The register itself was never the problem: prove it holds the byte, so a
+    // failure below is attributed to the drive and not to the shift logic.
+    assert.equal(board._shiftRegisters.get('U1').latchReg, 0xA1);
+    for (let i = 0; i < 8; i++) {
+      const v = board.nodeVoltage(`net_q${i}`);
+      if (PATTERN[i]) assert.ok(v > 2.0, `Q${i} should drive its LED, got ${v.toFixed(3)} V`);
+      else assert.ok(v < 1.0, `Q${i} should be LOW, got ${v.toFixed(3)} V`);
+    }
+  });
+
+  it('agrees with the purely resistive bench on which outputs are high', () => {
+    const led = ledLoadBench('led');
+    const res = ledLoadBench('resistor');
+    for (let i = 0; i < 8; i++) {
+      const high = v => v > 2.0;
+      assert.equal(high(led.nodeVoltage(`net_q${i}`)), high(res.nodeVoltage(`net_q${i}`)),
+        `Q${i} disagrees between the LED and resistor benches`);
+    }
+  });
+
+  it('drives nothing through the nonlinear load while OE is inactive', () => {
+    const board = ledLoadBench('led', { oeHigh: true });
+    assert.equal(board._shiftRegisters.get('U1').latchReg, 0xA1); // latched, but disabled
+    for (let i = 0; i < 8; i++) {
+      assert.ok(board.nodeVoltage(`net_q${i}`) < 1.0,
+        `Q${i} must not drive while /OE is high, got ${board.nodeVoltage(`net_q${i}`).toFixed(3)} V`);
+    }
+  });
+
+  it('shows the LATCHED byte, not the byte still in the shift register', () => {
+    // Clock the pattern in but never pulse latch: the outputs must still show
+    // the previous latch contents (all zero), or the storage register is not
+    // doing its job and a cascade would glitch mid-shift.
+    const board = ledLoadBench('led', { skipLatch: true });
+    const sr = board._shiftRegisters.get('U1');
+    assert.equal(sr.shiftReg, 0xA1, 'the shift register should hold the clocked byte');
+    assert.equal(sr.latchReg, 0, 'nothing was latched');
+    for (let i = 0; i < 8; i++) {
+      assert.ok(board.nodeVoltage(`net_q${i}`) < 1.0,
+        `Q${i} showed un-latched data, got ${board.nodeVoltage(`net_q${i}`).toFixed(3)} V`);
+    }
+  });
+});

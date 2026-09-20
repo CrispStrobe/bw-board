@@ -61,11 +61,19 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'npn', 'nmos', 'pmos', 'vsource', 'isource',
+  'resistor', 'capacitor', 'inductor', 'diode', 'led', 'zener', 'npn', 'nmos', 'pmos', 'vsource', 'isource',
   'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
 
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
+// An LED is the same junction: mna.js branches on `kind === 'led' || kind === 'diode'`
+// everywhere and applies one limiter to both. It was refused here by KIND ALONE,
+// so an LED carrying a complete explicit Shockley set — which solves, and lands a
+// red LED at 1.998 V — could not be asked for its own operating point. `vf` is
+// admitted alongside because it is only the Newton seed in mna.js, never a term in
+// the Shockley law: present or absent, the solved voltage is bit-identical. `color`
+// is a label with no electrical meaning at all.
+const LED_OPERATING_POINT_PARAMS = new Set([...DIODE_OPERATING_POINT_PARAMS, 'vf', 'color']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const NPN_OPERATING_POINT_PARAMS = new Set([
   'model', 'is', 'beta', 'br', 'n', 'vaf', 'ikf', 'rb', 'rc', 'cje', 'cjc', 'tf', '_model',
@@ -2393,7 +2401,7 @@ export class BoardImpl {
     for (const part of this._solveParts) {
       if (!OPERATING_POINT_KINDS.has(part.kind)) {
         throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
-          + 'the supported domain is static R/C/L/V/I, explicit Shockley D/Z/NPN, '
+          + 'the supported domain is static R/C/L/V/I, explicit Shockley D/LED/Z/NPN, '
           + 'explicit grounded-bulk Level-1 NMOS, '
           + 'plus ideal VCVS/VCCS only');
       }
@@ -2425,31 +2433,37 @@ export class BoardImpl {
             + `${volts} V cannot be imposed across the same net ${posNet}`);
         }
       }
-      if (part.kind === 'diode') {
+      if (part.kind === 'diode' || part.kind === 'led') {
         const params = part.params ?? {};
+        const what = part.kind === 'led' ? 'LED' : 'diode';
         if (params.model !== 'shockley') {
-          throw new Error(`operatingPoint: unsupported diode ${part.id}; `
-            + "model must be explicitly 'shockley'");
+          throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
+            + "model must be explicitly 'shockley'"
+            + (part.kind === 'led' && params.vf !== undefined
+              ? ` (this LED declares only vf=${params.vf}, which is the knee model: `
+                + 'add is, n and rs to ask for its DC operating point)' : ''));
         }
         for (const name of ['is', 'n']) {
           if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
               || params[name] <= 0) {
-            throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+            throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
               + `${name} must be an explicit finite number greater than zero`);
           }
         }
         if (typeof params.rs !== 'number' || !Number.isFinite(params.rs) || params.rs < 0) {
-          throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+          throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
             + 'rs must be an explicit finite number greater than or equal to zero');
         }
-        const extra = Object.keys(params).find(name => !DIODE_OPERATING_POINT_PARAMS.has(name));
+        const admitted = part.kind === 'led'
+          ? LED_OPERATING_POINT_PARAMS : DIODE_OPERATING_POINT_PARAMS;
+        const extra = Object.keys(params).find(name => !admitted.has(name));
         if (extra) {
-          throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+          throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
             + `parameter ${extra} is outside the explicit Shockley DC domain`);
         }
         for (const terminal of ['anode', 'cathode']) {
           if (this._netForTerminal(part.id, terminal) === undefined) {
-            throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+            throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
               + `terminal ${terminal} is not connected to a supplied net`);
           }
         }
@@ -2798,7 +2812,7 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-l-d-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn-level1-nmos-pmos',
+        scope: 'grounded-static-native-r-c-l-d-led-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-led-z-npn-level1-nmos-pmos',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
@@ -2808,6 +2822,11 @@ export class BoardImpl {
         diodes: {
           model: 'explicit-shockley',
           parameters: ['is', 'n', 'rs'],
+          // One junction law, so one entry: an LED is admitted on exactly these
+          // terms. `vf` and `color` may ride along on an LED and change nothing —
+          // vf is the Newton seed, color is a label.
+          kinds: ['diode', 'led'],
+          ledNonElectricalParameters: ['vf', 'color'],
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },
@@ -3705,9 +3724,29 @@ export class BoardImpl {
   /** Thévenin drives for qualified pins, grouped per part — the machine-chip
    *  half of what _pinSources() does for the MCU body. */
   _qualifiedSources() {
-    if (!this._hasQualifiedPin) return null;
+    if (!this._hasQualifiedPin && this._shiftRegisters.size === 0) return null;
     /** @type {Map<string, Map<string, import('./types.js').TheveninSource>>} */
     const out = new Map();
+    // A shift register's q outputs are Thevenin drivers exactly like a pin,
+    // and the closed-form net resolver already treats them that way
+    // (_gatherSourcesInner). MNA had no stamp for the part at all, so the
+    // moment ONE nonlinear part — an LED, which is what every gallery bench
+    // puts there — pushed the output net onto the MNA path, all eight outputs
+    // sat at 0 V while the latch register held the right byte. Only the MNA
+    // side is filled in here; the closed-form path still drives them itself,
+    // so no output is driven twice.
+    for (const part of this.parts) {
+      if (part.kind !== 'shift_register') continue;
+      const sr = this._shiftRegisters.get(part.id);
+      if (!sr || sr.oeActive === false) continue; // /OE inactive: high-Z, no source
+      const rOut = /** @type {number} */ (part.params?.rOut ?? 50);
+      let terms = out.get(part.id);
+      if (!terms) { terms = new Map(); out.set(part.id, terms); }
+      for (let i = 0; i < 8; i++) {
+        terms.set(`q${i}`, { vTh: ((sr.latchReg >> i) & 1) ? this.vcc : 0, rTh: rOut });
+      }
+    }
+    if (!this._hasQualifiedPin) return out.size ? out : null;
     for (const [key, state] of this.pinStates) {
       const q = this._resolveQualified(key);
       if (!q) continue;

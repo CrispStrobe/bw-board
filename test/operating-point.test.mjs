@@ -180,7 +180,7 @@ describe('BoardImpl.operatingPoint', () => {
       const second = board.operatingPoint();
       assert.equal(first.converged, true);
       assert.equal(first.analysis.scope,
-      'grounded-static-native-r-c-l-d-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn-level1-nmos-pmos');
+      'grounded-static-native-r-c-l-d-led-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-led-z-npn-level1-nmos-pmos');
       assert.equal(first.analysis.controlledSources, 'ideal-explicit-finite-parameters-only');
       assert.ok(first.analysis.supportedKinds.includes('vcvs'));
       assert.ok(first.analysis.supportedKinds.includes('vccs'));
@@ -380,7 +380,11 @@ describe('BoardImpl.operatingPoint', () => {
       [{ id: 'V1', kind: 'vsource', params: { wave: 'sine' }, terminals: ['pos', 'neg'] }, /time-varying/],
       [{ id: 'V1', kind: 'vsource', params: { volts: 5, iLimit: 0.1 }, terminals: ['pos', 'neg'] }, /current-limited/],
       [{ id: 'T1', kind: 'transformer', params: {}, terminals: ['p1', 'p2', 's1', 's2'] }, /unsupported part T1 \(transformer\)/],
-      [{ id: 'LED1', kind: 'led', params: {}, terminals: ['anode', 'cathode'] }, /unsupported part LED1 \(led\)/],
+      // An LED is no longer refused by KIND — it is admitted on the diode's
+      // terms — so a bare one is refused for the reason that actually applies:
+      // it names no model. See diode-operating-point.test.mjs.
+      [{ id: 'LED1', kind: 'led', params: {}, terminals: ['anode', 'cathode'] },
+        /unsupported LED LED1; model must be explicitly 'shockley'/],
     ];
     for (const [part, pattern] of cases) {
       const board = new BoardImpl(5);

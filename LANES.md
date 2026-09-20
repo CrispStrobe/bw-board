@@ -9,6 +9,41 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): shift-register outputs
+on a nonlinear load, and the LED operating point. Isolated worktree
+`/mnt/volume1/code/wt/bwb-sr-outputs`, branch `lane/shift-register-output-refresh`,
+exact base `11b4c7a8`. Owns only `_qualifiedSources` and the operating-point diode
+admission in `src/board.js`, plus `test/device-595.test.js`,
+`test/diode-operating-point.test.mjs`, `test/operating-point.test.mjs` and this row.
+
+(1) `mna.js`'s `shift_register` case stamps nothing, so the moment ONE nonlinear part
+sat on an output net the whole net went to MNA, which drove no output: the latch
+register held the right byte while all eight q pins sat at 0 V. Every gallery bench
+wires q through a resistor to an LED, so `20-shift-register-binary` and
+`08-led-chaser-595` were simply dark. The A/B is exact — identical bench, resistive
+load gives 4.34 V on bits 0, 5, 7 of 0xA1; swap in the LEDs and all eight read 0.00 V.
+The outputs are now published through the existing generic `qualifiedSources` channel,
+which MNA already stamps for parts of any kind, honouring /OE and the LATCH register.
+The closed-form resolver still drives them itself, so nothing is driven twice.
+
+(2) `operatingPoint()` refused `led` by KIND, though `mna.js` branches on
+`kind === 'led' || kind === 'diode'` everywhere and applies one limiter to both — so
+VCC → resistor → LED, the first circuit any beginner meets, could not be asked for its
+own DC point. An LED is now admitted on exactly the diode's terms, and matches
+independent ngspice 42 at the matched temperature to 5.3 uV on a red LED (1.886665 V
+against 1.8866703 V). `vf` and `color` may ride along on an LED only: vf is the Newton
+seed and never a term in the Shockley law, proved by asserting the dressed and bare
+parts give a bit-identical point, and a diode naming either is still refused. A
+knee-model LED still refuses, now saying what it found and what to add.
+
+Focused suites 100/100 across diode/operating-point/595/shockley/ngspice-diode/npn/
+nmos/inductor, plus 41/41 on the digital suites. Five mutations each turn a named test
+red: dropping `led` from the kinds, driving from shiftReg instead of latchReg, ignoring
+/OE, restoring the `_hasQualifiedPin` early return, and widening the diode parameter
+set. Excludes the thermal-voltage constant (`0.02585` against ngspice's kT/q, a
+pre-existing 1.1 mV offset on every junction, unchanged here), the knee model's own
+admission to the operating point, CUI/package pins, and every other part kind.
+
 2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN small-signal charge
 storage, isolated worktree `/mnt/volume1/code/wt/bwb-npn-charge-ac`, branch
 `lane/npn-charge-small-signal`, exact base

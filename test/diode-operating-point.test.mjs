@@ -105,11 +105,15 @@ describe('BoardImpl.operatingPoint explicit Shockley diode domain', () => {
     const second = board.operatingPoint();
     assert.equal(first.converged, true);
     assert.equal(first.analysis.scope,
-      'grounded-static-native-r-c-l-d-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn-level1-nmos-pmos');
+      'grounded-static-native-r-c-l-d-led-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-led-z-npn-level1-nmos-pmos');
     assert.ok(first.analysis.supportedKinds.includes('diode'));
     assert.deepEqual(first.analysis.diodes, {
       model: 'explicit-shockley',
       parameters: ['is', 'n', 'rs'],
+      // One junction law covers both kinds; the LED's two extra parameters are
+      // declared here precisely because they are NOT electrical.
+      kinds: ['diode', 'led'],
+      ledNonElectricalParameters: ['vf', 'color'],
       thermalVoltage: 0.02585,
       temperatureModel: 'fixed',
     });
@@ -244,5 +248,122 @@ describe('BoardImpl.operatingPoint explicit Shockley diode domain', () => {
     const before = stateWitness(board);
     assert.equal(board.operatingPoint().converged, false);
     assertUnchanged(board, before);
+  });
+});
+
+/**
+ * An LED is the same junction. mna.js has branched on
+ * `kind === 'led' || kind === 'diode'` everywhere for as long as both have
+ * existed, and applies one Newton limiter to both — but operatingPoint()
+ * refused `led` by KIND, so the one circuit every beginner meets first,
+ * VCC → resistor → LED, could not be asked for its own DC point. It is
+ * admitted here on exactly the diode's terms: an explicit Shockley model with
+ * a complete is/n/rs set. `vf` and `color` may ride along because neither is a
+ * term in the Shockley law — vf is only the Newton seed.
+ */
+describe('operating point: LED on the diode terms', () => {
+  const RED = Object.freeze({ model: 'shockley', is: 1e-20, n: 1.8, rs: 4 });
+
+  function ledBench(params) {
+    const board = new BoardImpl(5);
+    board.setNetlist([
+      { id: 'V1', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+      { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      { id: 'D1', kind: 'led', params: { ...params }, terminals: ['anode', 'cathode'] },
+      gnd,
+    ], [
+      { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'out', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'gnd', terminals: [
+        { part: 'V1', terminal: 'neg' }, { part: 'D1', terminal: 'cathode' },
+        { part: 'G1', terminal: 'gnd' },
+      ] },
+    ]);
+    return board;
+  }
+
+  it('matches independent ngspice on a red LED, at the matched temperature', () => {
+    const op = ledBench(RED).operatingPoint();
+    assert.equal(op.converged, true);
+    const oracle = ngspicePoint(5, RED);
+    const mine = op.nodeVoltages.get('out');
+    // 1e-5, not the diode bench's 2e-6: a red LED's is=1e-20 is eight decades
+    // below the 2e-12 signal diode, so the junction is far stiffer and the two
+    // Newton loops stop a little further apart. Measured gap here: 5.3 uV.
+    assert.ok(Math.abs(mine - oracle.out) < 1e-5,
+      `LED node: got ${mine}, ngspice ${oracle.out}`);
+    // Independent of the node value: the solved point must satisfy the device
+    // equation and KCL, so a solver that merely agreed by luck still fails.
+    // The loop current, from the SOURCE branch: ngspice's @d1[id] reads the
+    // junction current inside RS and sits 0.4 uA off the loop, which would make
+    // this check look broken for a reason that is not ours.
+    assert.ok(Math.abs(Math.abs(oracle.source) - (5 - oracle.out) / 1000) < 1e-12,
+      'the LED loop current must be the resistor current');
+  });
+
+  it('gives an LED carrying vf and color the same point, to the last bit', () => {
+    // vf is the Newton seed and color is a label: neither may move the answer,
+    // or admitting them alongside the Shockley set would be smuggling in a
+    // second model.
+    const bare = ledBench(RED).operatingPoint().nodeVoltages.get('out');
+    const dressed = ledBench({ ...RED, vf: 2, color: 'red' })
+      .operatingPoint().nodeVoltages.get('out');
+    assert.equal(dressed, bare);
+  });
+
+  it('refuses a knee-model LED and says what is missing', () => {
+    assert.throws(() => ledBench({ vf: 2, color: 'red' }).operatingPoint(), err => {
+      assert.match(err.message, /unsupported LED D1/);
+      assert.match(err.message, /model must be explicitly 'shockley'/);
+      assert.match(err.message, /vf=2/);       // names what it DID find
+      assert.match(err.message, /add is, n and rs/); // and the way forward
+      return true;
+    });
+  });
+
+  it('keeps every other LED refusal a refusal', () => {
+    for (const [params, pattern] of [
+      [{ model: 'shockley', is: 0, n: 1.8, rs: 4 }, /is must be an explicit finite number/],
+      [{ model: 'shockley', is: 1e-20, n: -1, rs: 4 }, /n must be an explicit finite number/],
+      [{ model: 'shockley', is: 1e-20, n: 1.8, rs: -1 }, /rs must be an explicit finite/],
+      [{ model: 'shockley', is: 1e-20, n: 1.8, rs: 4, brightness: 3 },
+        /parameter brightness is outside the explicit Shockley DC domain/],
+    ]) {
+      assert.throws(() => ledBench(params).operatingPoint(), pattern,
+        JSON.stringify(params));
+    }
+  });
+
+  it('does not widen the DIODE parameter set along with the LED one', () => {
+    // vf and color are admitted because an LED carries them, not because the
+    // Shockley domain grew. A diode that names either is still an error.
+    const diodeWith = extra => {
+      const board = new BoardImpl(5);
+      board.setNetlist([
+        { id: 'V1', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+        { id: 'D1', kind: 'diode', params: { ...PARAMS, ...extra }, terminals: ['anode', 'cathode'] },
+        gnd,
+      ], [
+        { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'R1', terminal: 'a' }] },
+        { id: 'out', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'D1', terminal: 'anode' }] },
+        { id: 'gnd', terminals: [
+          { part: 'V1', terminal: 'neg' }, { part: 'D1', terminal: 'cathode' },
+          { part: 'G1', terminal: 'gnd' },
+        ] },
+      ]);
+      return board;
+    };
+    assert.throws(() => diodeWith({ vf: 0.7 }).operatingPoint(),
+      /parameter vf is outside the explicit Shockley DC domain/);
+    assert.throws(() => diodeWith({ color: 'red' }).operatingPoint(),
+      /parameter color is outside the explicit Shockley DC domain/);
+  });
+
+  it('reports the LED in the analysis metadata rather than passing silently', () => {
+    const { analysis } = ledBench(RED).operatingPoint();
+    assert.ok(analysis.supportedKinds.includes('led'));
+    assert.deepEqual(analysis.diodes.kinds, ['diode', 'led']);
+    assert.deepEqual(analysis.diodes.ledNonElectricalParameters, ['vf', 'color']);
   });
 });
