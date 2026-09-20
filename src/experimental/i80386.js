@@ -1208,10 +1208,11 @@ export class ExperimentalI80386 {
       throw error;
     }
     const access = raw.bytes[5];
-    const type = access & 15, expected = returning ? 11 : 9;
-    if ((access & 0x10) || type !== expected)
+    const type = access & 15;
+    const validTypes = returning ? [3, 11] : [1, 9];
+    if ((access & 0x10) || !validTypes.includes(type))
       throw new I80386Fault(faultVector, code,
-        returning ? "task return requires busy 386 TSS" : "task switch requires available 386 TSS");
+        returning ? "task return requires busy TSS" : "task switch requires available TSS");
     if (checkPrivilege && Math.max(this.currentPrivilegeLevel, selector & 3) > ((access >>> 5) & 3))
       throw new I80386Fault(13, code, "TSS privilege");
     if (!(access & 0x80)) throw new I80386Fault(11, code, "TSS not present");
@@ -1219,6 +1220,7 @@ export class ExperimentalI80386 {
     let limit = (raw.bytes[0] | raw.bytes[1] << 8 | (flags & 15) << 16) >>> 0;
     if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
     return { selector: selector & 0xffff, address: raw.address, access, type,
+      format: type < 8 ? 16 : 32,
       base: (raw.bytes[2] | raw.bytes[3] << 8 | raw.bytes[4] << 16 |
         raw.bytes[7] * 0x1000000) >>> 0, limit, present: true };
   }
@@ -1232,9 +1234,38 @@ export class ExperimentalI80386 {
   }
 
   _taskImage(descriptor) {
-    if (descriptor.limit < 0x67)
-      throw new I80386Fault(10, descriptor.selector & 0xfffc, "incoming 386 TSS limit");
-    const d = descriptor.base, dword = o => this._taskRead(d, o, 4), word = o => this._taskRead(d, o, 2);
+    const minimum = descriptor.format === 16 ? 0x2b : 0x67;
+    if (descriptor.limit < minimum)
+      throw new I80386Fault(10, descriptor.selector & 0xfffc, "incoming TSS limit");
+    const d = descriptor.base;
+    const dword = offset => this._taskRead(d, offset, 4);
+    const word = offset => this._taskRead(d, offset, 2);
+    if (descriptor.format === 16) {
+      return {
+        backlink: word(0),
+        // Section 13.3.5: a 286 TSS has no PDBR image.
+        cr3: this.cr3,
+        eip: word(0x0e),
+        eflags: word(0x10),
+        eax: word(0x12),
+        ecx: word(0x14),
+        edx: word(0x16),
+        ebx: word(0x18),
+        esp: word(0x1a),
+        ebp: word(0x1c),
+        esi: word(0x1e),
+        edi: word(0x20),
+        es: word(0x22),
+        cs: word(0x24),
+        ss: word(0x26),
+        ds: word(0x28),
+        // FS and GS have no 286 TSS image. This bounded profile makes them
+        // unusable rather than leaking selectors from the outgoing task.
+        fs: 0,
+        gs: 0,
+        ldt: word(0x2a),
+      };
+    }
     return { backlink: word(0), cr3: dword(0x1c), eip: dword(0x20), eflags: dword(0x24),
       eax: dword(0x28), ecx: dword(0x2c), edx: dword(0x30), ebx: dword(0x34),
       esp: dword(0x38), ebp: dword(0x3c), esi: dword(0x40), edi: dword(0x44),
@@ -1243,9 +1274,23 @@ export class ExperimentalI80386 {
   }
 
   _saveCurrentTask(flags, incomingSelector, savedEip = this.eip) {
-    if (!this.tr.present || this.tr.limit < 0x5d)
-      throw new I80386Fault(10, incomingSelector & 0xfffc, "current 386 TSS limit");
+    const format = this.tr.type < 8 ? 16 : 32;
+    const minimum = format === 16 ? 0x29 : 0x5d;
+    if (!this.tr.present || this.tr.limit < minimum)
+      throw new I80386Fault(10, incomingSelector & 0xfffc, "current TSS limit");
     const d = this.tr.base;
+    if (format === 16) {
+      const words = [
+        [0x0e, savedEip], [0x10, flags], [0x12, this.eax],
+        [0x14, this.ecx], [0x16, this.edx], [0x18, this.ebx],
+        [0x1a, this.esp], [0x1c, this.ebp], [0x1e, this.esi],
+        [0x20, this.edi], [0x22, this.es], [0x24, this.cs],
+        [0x26, this.ss], [0x28, this.ds],
+      ];
+      for (const [offset, value] of words)
+        this._taskWrite(d, offset, 2, value);
+      return;
+    }
     for (const [o, v] of [[0x20,savedEip],[0x24,flags],[0x28,this.eax],
       [0x2c,this.ecx],[0x30,this.edx],[0x34,this.ebx],[0x38,this.esp],[0x3c,this.ebp],
       [0x40,this.esi],[0x44,this.edi]]) this._taskWrite(d, o, 4, v);
@@ -1287,16 +1332,17 @@ export class ExperimentalI80386 {
       checkPrivilege,
       faultVector: taskFaultVector,
     });
-    if (incoming.limit < 0x67)
-      throw new I80386Fault(10, incoming.selector & 0xfffc, "incoming 386 TSS limit");
-    if ((this.cr0 & 0x80000000) && (incoming.base & 0xfff) + 0x67 >= 0x1000)
+    const imageEnd = incoming.format === 16 ? 0x2b : 0x67;
+    if (incoming.limit < imageEnd)
+      throw new I80386Fault(10, incoming.selector & 0xfffc, "incoming TSS limit");
+    if ((this.cr0 & 0x80000000) && (incoming.base & 0xfff) + imageEnd >= 0x1000)
       throw new UnsupportedI80386(
         "page-straddling incoming TSS images are outside the bounded task profile",
       );
     const image = this._taskImage(incoming);
     if (image.eflags & 0x20000)
       throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
-    if (this._taskRead(incoming.base, 0x64, 2) & 1)
+    if (incoming.format === 32 && this._taskRead(incoming.base, 0x64, 2) & 1)
       throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
     const outgoing = this.tr.present
       ? {
@@ -1313,7 +1359,7 @@ export class ExperimentalI80386 {
     if (!returning) this._setTaskBusy(incoming, true);
     if (kind === "call") this._taskWrite(incoming.base, 0, 2, this.tr.selector);
     if ((kind === "jmp" || returning) && outgoing) this._setTaskBusy(outgoing, false);
-    this.tr = { ...incoming, type: 11 };
+    this.tr = { ...incoming, type: incoming.format === 16 ? 3 : 11 };
     try {
       this.cr3 = image.cr3 >>> 0;
       this.cr0 |= 8;
@@ -1373,7 +1419,7 @@ export class ExperimentalI80386 {
         }
       }
       if (image.eip > code.limit) throw new I80386Fault(13, 0, "task EIP outside code segment");
-      if (errorCode !== null) this._push(errorCode, 32);
+      if (errorCode !== null) this._push(errorCode, incoming.format);
       this.halted = false;
       this._interruptShadow = this._nmiShadow = this._debugShadow = 0;
       this._suppressTrace = true;
@@ -1414,11 +1460,11 @@ export class ExperimentalI80386 {
       return;
     }
     if (![4, 12].includes(type)) {
-      if (type === 9) {
+      if (type === 1 || type === 9) {
         this._taskSwitch(selector, call ? "call" : "jmp");
         return;
       }
-      if (type === 11)
+      if (type === 3 || type === 11)
         throw new I80386Fault(13, errorCode, "task switch target is busy");
       if (type === 5) {
         const gateDpl = (access >>> 5) & 3;
@@ -1430,10 +1476,6 @@ export class ExperimentalI80386 {
         this._taskSwitch(target, call ? "call" : "jmp", { checkPrivilege: false });
         return;
       }
-      if ([1, 3].includes(type))
-        throw new UnsupportedI80386(
-          "protected task transfer is outside the bounded 386 profile",
-        );
       throw new I80386Fault(13, errorCode, "invalid protected far descriptor");
     }
     const gateDpl = (access >>> 5) & 3;
@@ -2035,17 +2077,16 @@ export class ExperimentalI80386 {
 
   _innerInterruptStack(cpl, width, values, external, callGate = false) {
     const trCode = (this.tr.selector & 0xfffc) | (external ? 1 : 0);
-    if (this.tr.type !== 9 && this.tr.type !== 11)
-      throw new UnsupportedI80386(
-        "286 TSS privilege stacks are outside the bounded 386 profile",
-      );
-    const stackEnd = 9 + cpl * 8;
+    const tss16 = this.tr.type === 1 || this.tr.type === 3;
+    if (!tss16 && this.tr.type !== 9 && this.tr.type !== 11)
+      throw new I80386Fault(10, trCode, "invalid current TSS type");
+    const stackEnd = tss16 ? 5 + cpl * 4 : 9 + cpl * 8;
     if (!this.tr.present || this.tr.limit < stackEnd)
       throw new I80386Fault(10, trCode, "TSS lacks privilege stack");
-    const esp = this._readLinear((this.tr.base + 4 + cpl * 8) >>> 0, 4, {
+    const esp = this._readLinear((this.tr.base + (tss16 ? 2 + cpl * 4 : 4 + cpl * 8)) >>> 0, tss16 ? 2 : 4, {
       supervisor: true,
     });
-    const ss = this._readLinear((this.tr.base + 8 + cpl * 8) >>> 0, 2, {
+    const ss = this._readLinear((this.tr.base + (tss16 ? 4 + cpl * 4 : 8 + cpl * 8)) >>> 0, 2, {
       supervisor: true,
     });
     if (callGate && !(ss & 0xfffc))

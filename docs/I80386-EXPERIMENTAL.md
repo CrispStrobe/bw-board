@@ -362,6 +362,19 @@ task on failure. IDT task-target admission uses #TS (including EXT for an
 external event); direct CALL/JMP target admission uses #GP. Page-fault error
 bits never acquire EXT.
 
+Available and busy 286 TSS descriptors use the same direct, task-gate, and
+nested-return paths with the 16-bit image through the LDT word at offset
+`0x2a`. Loading an incoming image therefore requires limit `0x2b`; saving an
+outgoing image writes only through the DS word ending at `0x29`. Ring-stack
+loads use the 286 `SPn`/`SSn` word pairs. As section 13.3.5 specifies, a switch
+to a 286 TSS preserves CR3 because that image has no PDBR field. The original
+manual recommends against mixing 286 and 386 TSS formats but does not define
+the otherwise unrepresentable upper general-register halves or FS/GS images.
+This bounded executor deterministically zero-extends incoming 16-bit general
+registers and makes FS/GS null; those choices are compatibility policy, not a
+physical-original-386 acceptance claim. VM86 and the 386 TSS debug-trap bit
+remain explicit refusals before task state is committed.
+
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
 data read, both busy bits, backlink, nested-task IRET, restored CR3/TR, and
