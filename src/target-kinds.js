@@ -86,6 +86,11 @@ export function getTargetKinds() {
       description: 'Composable 80286 real-mode machine (zero SST286 real-mode fails) — GPIO blink board with LEDs/switches on an 8255, breadboard, XT, or DOS, same boards as the 8086 tier.',
     },
     {
+      kind: 'i80386',
+      label: 'Experimental (80386 AT)',
+      description: 'Opt-in 80386 AT machine with VGA and ATA media; architectural coverage and timing remain WIP.',
+    },
+    {
       kind: 'attiny88',
       label: 'Simulated (ATtiny88)',
       description: 'AVR instruction-level emulation. ATtiny88 (blinkenrocket-class boards).',

@@ -77,3 +77,5 @@ export { runDcSweep, runAcSweep, correlateAt, logSpace } from './sweep.js';
 // Browser consumers get pin functions from bw-circuit-ui's VENDORED sidecar
 // registry, which is the same bw-parts data through the sync pipeline.
 export { describeMedia, applyMedia, parseIhex } from './machine-media.js';
+export { createI80386Adapter } from './i80386-adapter.js';
+export { parseDosboxConfig, resolveDosboxMedia } from './dosbox-config.js';

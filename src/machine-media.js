@@ -57,6 +57,15 @@ const SLOTS = {
           hint: 'MZ header, relocated on load' },
         { id: 'floppy', label: 'Floppy image (360K)', accept: ['.img', '.ima', '.dsk'],
           hint: 'boots through the µPD765 and the 8237 when the board has them' },
+        { id: 'dosbox-conf', label: 'DOSBox config', accept: ['.conf', '.cfg'],
+          hint: 'declarative mounts and boot selection; host directory mounts stay refused' },
+    ],
+    i80386: [
+        { id: 'bios', label: 'AT BIOS ROM', accept: BIN_EXT, at: 0xffff0000, required: true },
+        { id: 'vga-rom', label: 'VGA BIOS ROM', accept: BIN_EXT, hint: 'optional VGA option ROM bytes' },
+        { id: 'hdd', label: 'ATA hard-disk image', accept: ['.img', '.ima', '.vhd'], hint: 'raw image attached to the experimental ATA device' },
+        { id: 'floppy', label: 'Floppy image', accept: ['.img', '.ima', '.dsk'], hint: 'raw floppy input for a future FDC profile' },
+        { id: 'dosbox-conf', label: 'DOSBox config', accept: ['.conf', '.cfg'], hint: 'declarative media manifest; no host commands execute' },
     ],
     z80: [
         { id: 'rom', label: 'ROM image', accept: BIN_EXT, at: 0x0000 },
@@ -199,6 +208,32 @@ export function applyMedia(target, entries, opts = {}) {
                 case 'snapshot': {
                     if (!machine || !machine.loadSnapshot) throw new Error('target takes no snapshots');
                     machine.loadSnapshot(bytes);
+                    break;
+                }
+                case 'dosbox-conf': {
+                    const loadConfig = adapter.loadDosboxConfig || machine?.loadDosboxConfig;
+                    if (!loadConfig) throw new Error('target has no DOSBox config loader');
+                    loadConfig.call(adapter.loadDosboxConfig ? adapter : machine, new TextDecoder().decode(bytes));
+                    break;
+                }
+                case 'bios':
+                case 'vga-rom': {
+                    const load = adapter.loadRom || machine?.loadRom;
+                    if (!load) throw new Error('target has no ROM loader');
+                    load.call(adapter.loadRom ? adapter : machine, bytes, slot.at);
+                    break;
+                }
+                case 'hdd': {
+                    if (!machine) throw new Error('target has no machine');
+                    if (typeof machine.attachAtaImage === 'function') machine.attachAtaImage(bytes);
+                    else if (typeof adapter.attachAtaImage === 'function') adapter.attachAtaImage(bytes);
+                    else throw new Error('target has no ATA image loader');
+                    break;
+                }
+                case 'floppy': {
+                    if (typeof machine.attachFloppyImage === 'function') machine.attachFloppyImage(bytes);
+                    else if (typeof adapter.attachFloppyImage === 'function') adapter.attachFloppyImage(bytes);
+                    else throw new Error('target has no floppy image loader');
                     break;
                 }
                 default: {

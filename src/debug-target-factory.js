@@ -95,6 +95,7 @@ export async function createDebugTarget(kind, opts) {
     // faults). A distinct kind so it surfaces in the picker on its own.
     return createI8086Target({ ...opts, variant: '80286' });
   }
+  if (kind === 'i80386') return createI80386Target(opts);
   if (kind === 'rp2040js') {
     return createRp2040jsTarget(opts);
   }
@@ -336,6 +337,15 @@ async function createI8086Target(opts) {
       target = mod.createI8086DebugTarget(adapter);
     }
   } catch { /* adapter-only mode */ }
+  return { target, adapter };
+}
+
+async function createI80386Target(opts) {
+  const { createI80386Adapter } = await import('./i80386-adapter.js');
+  const { createI8086DebugTarget } = await import('./i8086-debug.js');
+  const adapter = createI80386Adapter(opts);
+  adapter.attachBoard(opts.board);
+  const target = createI8086DebugTarget(adapter, { cpuId: 'i80386' });
   return { target, adapter };
 }
 
