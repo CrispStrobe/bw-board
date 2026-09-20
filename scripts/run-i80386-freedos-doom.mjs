@@ -74,7 +74,6 @@ const encodeKeys=keys=>keys.flatMap(key=>key==='>'||key===':'
 const keyScript=[];
 let installerDeclined=false,commandQueued=false,commandPrompt=null,doomEntry=null;
 let steps=0;
-const doomEntryPhysical=0x26b62;
 const doomEntryWrites=[];
 const doomInstructionTrace=[];
 
@@ -113,6 +112,8 @@ const doomMz={signature:String.fromCharCode(...hddFiles.doomExe.subarray(0,2)),
 if(doomMz.signature!=='MZ')throw new Error('pinned DOOM.EXE is not an MZ executable');
 const doomEntryFileOffset=doomMz.headerParagraphs*16+doomMz.initialCS*16+doomMz.initialIP;
 const doomEntryBytes=Array.from(hddFiles.doomExe.subarray(doomEntryFileOffset,doomEntryFileOffset+16));
+const expectedDoomLoadSegment=0x22d2;
+const doomEntryPhysical=(expectedDoomLoadSegment<<4)+(doomMz.initialCS<<4)+doomMz.initialIP;
 machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeometry:DOOM_HDD_GEOMETRY,onPortAccess:event=>{
     if(event.port===0x70||event.port===0x71) {
         rtcPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -182,7 +183,10 @@ machine.cpu.write=(address,value)=>{
         doomEntryWrites.push({step:steps,address,value:value&0xff,cs:machine.cpu.cs,
             eip:machine.cpu.eip,linearPc:machine.cpu.pc,esi:machine.cpu.esi,
             edi:machine.cpu.edi,ecx:machine.cpu.ecx,ds:machine.cpu.ds,es:machine.cpu.es,
-            dsBase:machine.cpu.segmentCaches[3].base,esBase:machine.cpu.segmentCaches[0].base});
+            dsBase:machine.cpu.segmentCaches[3].base,esBase:machine.cpu.segmentCaches[0].base,
+            sourceLinear16:(machine.cpu.segmentCaches[3].base+machine.cpu.si)>>>0,
+            sourceLinear32:(machine.cpu.segmentCaches[3].base+machine.cpu.esi)>>>0,
+            opcodeBytes:Array.from({length:8},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0))});
         if(doomEntryWrites.length>4096)doomEntryWrites.shift();
     }
     cpuWrite(address,value);
@@ -221,6 +225,9 @@ for(;steps<stepLimit;steps++) {
     if(commandQueued&&!doomEntry&&machine.cpu.eip===doomMz.initialIP&&
         (machine.cpu.esp&0xffff)===doomMz.initialSP&&
         ((machine.cpu.cs-machine.cpu.ss)&0xffff)===((doomMz.initialCS-doomMz.initialSS)&0xffff)) {
+        const loadSegment=(machine.cpu.cs-doomMz.initialCS)&0xffff;
+        if(loadSegment!==expectedDoomLoadSegment||machine.cpu.pc!==doomEntryPhysical)
+            throw new Error(`Doom entry address mismatch: load ${loadSegment.toString(16)}, pc ${machine.cpu.pc.toString(16)}`);
         const memoryBytes=Array.from({length:16},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0));
         const exactEntryLocations=[];
         for(let address=0;address<=machine.mem.length-doomEntryBytes.length;address++) {
@@ -231,7 +238,7 @@ for(;steps<stepLimit;steps++) {
             if(matches)exactEntryLocations.push(address);
         }
         doomEntry={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,linearPc:machine.cpu.pc,
-            loadSegment:(machine.cpu.cs-doomMz.initialCS)&0xffff,memoryBytes,
+            loadSegment,memoryBytes,
             fileBytes:doomEntryBytes,physical:doomEntryPhysical,exactEntryLocations,
             writes:[...doomEntryWrites]};
     }
