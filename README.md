@@ -6,8 +6,9 @@ servo angles, motor speeds, and relay states — from pin-level physics, not
 shortcuts.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
-5,400+ tests, 0 failures. 129+ part kinds. Three vector-verified CPU cores
-(W65C02, Z80, and 8086/8088 — the last also as an 80186 and cycle-accurate).
+5,400+ tests, 0 failures. 129+ part kinds. Three production CPU cores
+(W65C02, Z80, and 8086/8088) plus an explicitly experimental 80286/80386 AT
+profile.
 
 ## What is in this repo
 
@@ -40,7 +41,8 @@ fire at the correct simulated time, not just at the destination.
 
 **DebugTarget implementations** — emu8051 (with `emu_disasm`, verified
 237/0 against an independent table), avr8js (ATmega328P/2560, ATtiny85
-via chip param), rp2040js, eater6502, serial (real firmware over UART).
+via chip param), rp2040js, eater6502, 8086/80286, the opt-in experimental
+80386 AT target, and serial (real firmware over UART).
 Factory at `src/debug-target-factory.js`. Disassembly panes for the
 non-8051 targets are planned (live table disasm for owned cores,
 service-side objdump listings for toolchain targets).
@@ -64,6 +66,11 @@ service-side objdump listings for toolchain targets).
   (`src/i8088-biu.js`) graded against the SingleStepTests 8088 bus traces.
   Grinders: `scripts/grind-i8086.mjs`, `grind-i8086-v20.mjs`,
   `grind-i8088-cycles.mjs`.
+- `src/experimental/i80386.js` and `src/experimental/i80386-at-machine.js` —
+  an opt-in 386 protected-mode/AT path. It has real-mode, paging, descriptor,
+  VM86, task, VGA, ATA, FreeDOS, Windows 3.0 standard-mode, and Doom evidence,
+  but it is not a claim of complete 386DX, x87, Windows enhanced-mode, or
+  hardware-timing compatibility. See `docs/I80386-EXPERIMENTAL.md`.
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
@@ -147,6 +154,38 @@ with our own BIOS boots to A> and runs BBCBASIC.COM
 (`scripts/cpm-smoke.mjs`); Microsoft BASIC 1.1 boots via the
 basic-m6502-bw port. Twin-run CPU differential:
 `scripts/twinrun-6502.mjs`.
+
+## Operating-system and application matrix
+
+The x86 work keeps guest software separate from the MIT source tree. A receipt
+records the exact external bytes, hashes, harness revision, and the boundary of
+the claim; a source-built or freely redistributable guest may be checked into a
+fixture, while proprietary media stays a user-supplied input.
+
+| Guest | Current evidence | Bundling policy | Next useful test |
+|---|---|---|---|
+| MS-DOS 2.00 / PC DOS 3.2 | 8086/286 DOS shell, compiler tools, and the Windows 3.0 disk path | Keep external; Microsoft DOS and Windows media are not MIT assets | More DOS utilities and filesystem stress from user-supplied images |
+| [FreeDOS 1.4](https://github.com/FDOS) | 386 AT shell, HDD directory access, persistence, and Doom launch path | **Bundleable in principle** under its GPL terms, with its notices and source offer; current receipts use an external image | Build a reproducible minimal FreeDOS image and pin its upstream revision/license files |
+| Windows 3.0 standard mode | Program Manager, File Manager, and Notepad save/reopen on the external image | Do not bundle Microsoft binaries or fonts | Enhanced mode requires a separately sourced `WIN386.EXE` input and more 386 paging/interrupt coverage |
+| Doom 1.9 shareware | VGA title/menu, E1M1 movement/fire, and a short owned demo returning to DOS | Keep the original executable/WAD external; publish only hashes and test scripts | Full demo timing, save/load, sound, additional levels |
+| CP/M 2.2 + BBC BASIC | Z80 CP/M BIOS boots to `A>` and runs `BBCBASIC.COM` | Use the existing source/fixture notices; do not assume Digital Research binaries are redistributable | More BDOS/file and console programs |
+| [ELKS](https://github.com/jbruchon/elks) | Not yet booted here | Source is GPL-licensed; bundle only a source-built image with its complete notices | Best small Unix candidate for the 8086/286 real-mode path |
+| [xv6 x86](https://github.com/mit-pdos/xv6-public) | Not yet booted here | Its MIT source is suitable for a generated test image, with attribution | Best protected-mode teaching OS once the 386 page/interrupt path is broader |
+| [386BSD](https://www.386bsd.org/) / [NetBSD](https://www.netbsd.org/) i386 | Not yet booted here | BSD-licensed source is generally redistributable, but release images and third-party userlands need their own audit | Later 386 protected-mode stress test; much larger than xv6/ELKS |
+
+Small Unix-like systems are the sensible next OS lane. ELKS exercises 16-bit
+real mode, BIOS/DOS-style devices, and a compact kernel. xv6 exercises the
+386 protected-mode contract with a small, inspectable codebase. A full BSD or
+Linux distribution is a later systems test: it needs reliable paging, IDE/FDC,
+PIC/PIT, serial, filesystem, and a legally redistributable userland before a
+boot banner means anything.
+
+The current 386 receipts are deliberately bounded. Windows 3.0 standard mode
+is accepted, enhanced mode is not; Doom's short demo is accepted, the full
+`demo1` timedemo still reaches its diagnostic ceiling without a completion/FPS
+result. The old 8086/8088 and Z80 sweeps remain the architectural ground truth;
+the 286/386 work adds focused ISA/protection/AT receipts rather than silently
+turning partial OS boots into compatibility claims.
 
 **DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
 chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,
