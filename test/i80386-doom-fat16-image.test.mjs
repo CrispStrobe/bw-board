@@ -39,3 +39,13 @@ test('owned Doom HDD rejects files larger than the fixed partition',()=>{
   assert.throws(()=>createDoomFat16Hdd({doomExe:new Uint8Array(11_000_000),doomWad:new Uint8Array(1)}),
     /exceed/);
 });
+
+test('owned Doom HDD carries an exact ordinary short demo file when requested',()=>{
+  const exe=Uint8Array.of(1),wad=Uint8Array.of(2),demo=Uint8Array.of(109,2,1,1,0,0,0,0,0,1,0,0,0,0x80);
+  const {image,manifest}=createDoomFat16Hdd({doomExe:exe,doomWad:wad,
+    extraFiles:[{name:'ASTRA   LMP',bytes:demo}]});
+  assert.deepEqual(readDoomFat16File(image,'ASTRA   LMP'),demo);
+  assert.deepEqual(manifest.files.map(file=>file.name),['DOOM    EXE','DOOM1   WAD','ASTRA   LMP']);
+  assert.throws(()=>createDoomFat16Hdd({doomExe:exe,doomWad:wad,
+    extraFiles:[{name:'astra.lmp',bytes:demo}]}),/11-byte uppercase/);
+});

@@ -6,11 +6,15 @@ const put16=(b,o,v)=>{b[o]=v&255;b[o+1]=v>>>8&255;};
 const put32=(b,o,v)=>{put16(b,o,v);put16(b,o+2,v>>>16);};
 const sha256=b=>createHash('sha256').update(b).digest('hex');
 
-export function createDoomFat16Hdd({doomExe,doomWad}) {
+export function createDoomFat16Hdd({doomExe,doomWad,extraFiles=[]}) {
   if(!(doomExe instanceof Uint8Array)||!(doomWad instanceof Uint8Array))
     throw new Error('Doom FAT16 inputs must be Uint8Array instances');
   if(doomExe.length===0||doomWad.length===0)
     throw new Error('Doom FAT16 inputs must be nonempty');
+  if(!Array.isArray(extraFiles)||extraFiles.some(file=>
+    typeof file?.name!=='string'||!/^[A-Z0-9 ]{11}$/.test(file.name)||
+    !(file.bytes instanceof Uint8Array)||file.bytes.length===0))
+    throw new Error('extra Doom FAT16 files require an 11-byte uppercase short name and nonempty bytes');
   const g=DOOM_HDD_GEOMETRY,p=DOOM_PARTITION;
   const image=new Uint8Array(g.cylinders*g.heads*g.sectors*512);
   const entry=446;
@@ -36,7 +40,8 @@ export function createDoomFat16Hdd({doomExe,doomWad}) {
   const clusterBytes=p.sectorsPerCluster*512;
   let nextCluster=2;
   const files=[];
-  for(const [name,bytes] of [['DOOM    EXE',doomExe],['DOOM1   WAD',doomWad]]) {
+  for(const [name,bytes] of [['DOOM    EXE',doomExe],['DOOM1   WAD',doomWad],
+    ...extraFiles.map(file=>[file.name,file.bytes])]) {
     const count=Math.ceil(bytes.length/clusterBytes);
     const first=nextCluster;
     files.push({name,bytes,first,count});nextCluster+=count;
