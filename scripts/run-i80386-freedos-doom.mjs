@@ -104,7 +104,10 @@ const ataTrace=[];
 const ataCommands=[];
 const ataCounts={commands:0,nativeDataReads:0,nativeDataWrites:0,overflow:false};
 const vgaPortEvents=[];
-const vgaFrameSamples=[];
+const vgaPostDoomPortEvents=[];
+let vgaPortEventCount=0;
+let vgaPortEventOverflow=false;
+const vgaRawSamples=[];
 let lastVgaFrameRevision=null;
 let ataAtCommandQueue=null;
 const rtcPorts=[];
@@ -189,8 +192,14 @@ machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeo
         else ataCounts.overflow=true;
     }
     if(vgaRom!==null&&event.port>=0x3c0&&event.port<=0x3df) {
-        if(vgaPortEvents.length<8192)
-            vgaPortEvents.push({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,...event});
+        const sample={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,...event};
+        vgaPortEventCount++;
+        if(vgaPortEvents.length<8192)vgaPortEvents.push(sample);
+        else vgaPortEventOverflow=true;
+        if(doomEntry) {
+            vgaPostDoomPortEvents.push(sample);
+            if(vgaPostDoomPortEvents.length>8192)vgaPostDoomPortEvents.shift();
+        }
     }
 }});
 machine.loadRom(rom,0xf0000);
@@ -408,22 +417,13 @@ for(;steps<stepLimit;steps++) {
             lastLines:nonblank.slice(-4)});
         if(vgaRom!==null&&machine.displayRevision!==lastVgaFrameRevision) {
             const state=machine.chips.vga1.getVideoState();
-            if((state.seq[4]&0x08)!==0&&(state.gc[5]&0x40)!==0) {
-                const indices=Uint8Array.from({length:64000},(_,address)=>
-                    machine.vgaMemory.planes[address&3][address&~3]);
-                const rgb=new Uint8Array(indices.length*3);
-                const colors=new Set();
-                indices.forEach((index,pixel)=>{
-                    const masked=index&state.dacMask;
-                    colors.add(masked);
-                    for(let component=0;component<3;component++)
-                        rgb[pixel*3+component]=state.dac[masked*3+component];
-                });
-                vgaFrameSamples.push({step:steps,displayRevision:machine.displayRevision,
-                    indexSha256:sha(indices),rgbSha256:sha(rgb),uniqueColors:colors.size,
-                    nonzeroPixels:indices.reduce((count,value)=>count+(value!==0),0)});
-                if(vgaFrameSamples.length>64)vgaFrameSamples.shift();
-            }
+            vgaRawSamples.push({step:steps,displayRevision:machine.displayRevision,
+                planeSha256:machine.vgaMemory.planes.map(plane=>sha(plane)),
+                nonzeroByPlane:machine.vgaMemory.planes.map(plane=>
+                    plane.reduce((count,value)=>count+(value!==0),0)),
+                dacSha256:sha(state.dac),misc:state.misc,seq:Array.from(state.seq),
+                gc:Array.from(state.gc),crtc:Array.from(state.crtc),attr:Array.from(state.attr)});
+            if(vgaRawSamples.length>64)vgaRawSamples.shift();
             lastVgaFrameRevision=machine.displayRevision;
         }
     }
@@ -505,7 +505,9 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,finalCpu:cpuSnapshot(),vgaDiagnostics,
-    vgaEvidence:{portEvents:vgaPortEvents,frameSamples:vgaFrameSamples},
+    vgaEvidence:{portEventCount,vgaPortEventOverflow,portEvents:vgaPortEvents,
+        postDoomPortEvents:vgaPostDoomPortEvents,rawPlanePaletteSamples:vgaRawSamples,
+        renderedFrames:[]},
     screenText,uiSamples,
     devices:deviceSnapshot(),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
