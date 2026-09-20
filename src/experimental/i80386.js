@@ -548,7 +548,19 @@ export class ExperimentalI80386 {
     this[kind] = cache;
   }
   _loadSeg(id, selector) {
-    if (!this.protectedMode || this.virtual8086) {
+    if (!this.protectedMode) {
+      this._setSegValue(id, selector);
+      const previous = this.segmentCaches[id];
+      this.segmentCaches[id] = {
+        ...previous,
+        base: (selector << 4) >>> 0,
+        present: true,
+        null: false,
+      };
+      if (id === SEG_CS) this._retainedRealCs = false;
+      return;
+    }
+    if (this.virtual8086) {
       this._setSegValue(id, selector);
       this.segmentCaches[id] = {
         base: (selector << 4) >>> 0,
