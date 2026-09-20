@@ -77,6 +77,7 @@ let instructionTrailNext = 0;
 const bootEntries = [];
 let vgaOptionEntry = null;
 let bootFailureBoundary = null;
+const modeTransitions = [];
 const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
@@ -108,6 +109,7 @@ machine.loadRom(bios.bytes, 0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes, 0xc0000);
 machine.reset();
+let previousCr0 = machine.cpu.cr0 >>> 0;
 const reset = {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
   firstByte: machine.cpu.read(machine.cpu.pc)};
 if (reset.cs !== 0xf000 || reset.eip !== 0xfff0 || reset.pc !== 0xfffffff0)
@@ -121,7 +123,10 @@ const renderText = () => {
 };
 for (; steps < stepLimit; steps++) {
   const before = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
-    ss: machine.cpu.ss, esp: machine.cpu.esp, cr0: machine.cpu.cr0 >>> 0};
+    ss: machine.cpu.ss, esp: machine.cpu.esp, eax: machine.cpu.eax, ebx: machine.cpu.ebx,
+    ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
+    ebp: machine.cpu.ebp, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0 >>> 0,
+    pc: machine.cpu.pc};
   if (instructionTrail.length < 256) instructionTrail.push(before);
   else {
     instructionTrail[instructionTrailNext] = before;
@@ -166,6 +171,11 @@ for (; steps < stepLimit; steps++) {
     stopReason = error instanceof UnsupportedI80386 ? 'cpu-unsupported' : 'architectural-fault-surfaced';
     break;
   }
+  if ((machine.cpu.cr0 >>> 0) !== previousCr0) {
+    modeTransitions.push({step: steps, before: previousCr0, after: machine.cpu.cr0 >>> 0,
+      cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc});
+    previousCr0 = machine.cpu.cr0 >>> 0;
+  }
   if (machine.cpu.shutdown) {
     stopReason = 'cpu-shutdown';
     break;
@@ -192,7 +202,7 @@ const report = {
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
   reset, postEvents, postContinue, ataCommands, interrupts, interruptCounts,
-  vgaOptionEntry, bootEntries, bootFailureBoundary,
+  vgaOptionEntry, bootEntries, bootFailureBoundary, modeTransitions,
   instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
     ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
   ],
