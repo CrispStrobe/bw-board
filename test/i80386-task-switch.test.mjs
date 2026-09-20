@@ -96,6 +96,32 @@ test("external task selector errors add EXT while page faults retain their bits"
   );
 });
 
+test("incoming one-page TSS faults and bounded task refusals are precommit", () => {
+  const missing = pagingFaultFixture("cs");
+  put(missing.memory, 0x220, descriptor(0x5000, 0x67, 0x89, 0));
+  dword(missing.memory, 0x3000 + 5 * 4, 0);
+  assert.throws(
+    () => missing.cpu._taskSwitch(0x20, "call"),
+    error => error?.vector === 14 && error.errorCode === 0 && !error.taskCommitted,
+  );
+  assert.deepEqual([missing.cpu.cr2, missing.cpu.cr3, missing.cpu.tr.selector],
+    [0x5000, 0x1000, 0x18]);
+  assert.equal(missing.memory.get(0x225) & 15, 9);
+  assert.deepEqual([0x420,0x421,0x422,0x423].map(a => missing.memory.get(a) ?? 0),
+    [0,0,0,0]);
+
+  for (const kind of ["vm", "debug"]) {
+    const f = pagingFaultFixture("cs");
+    if (kind === "vm") dword(f.memory, 0x500 + 0x24, 0x20002);
+    else word(f.memory, 0x500 + 0x64, 1);
+    assert.throws(() => f.cpu._taskSwitch(0x20, "call"), /outside the bounded task profile/);
+    assert.deepEqual([f.cpu.cr3, f.cpu.tr.selector], [0x1000, 0x18]);
+    assert.equal(f.memory.get(0x225) & 15, 9);
+    assert.deepEqual([0x420,0x421,0x422,0x423].map(a => f.memory.get(a) ?? 0),
+      [0,0,0,0]);
+  }
+});
+
 test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", () => {
   const memory = new Map();
   put(memory, 0, [0x9a, 0, 0, 0x20, 0, 0xf4]);

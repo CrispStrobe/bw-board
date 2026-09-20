@@ -1185,6 +1185,11 @@ export class ExperimentalI80386 {
       throw new UnsupportedI80386(
         "page-straddling incoming TSS images are outside the bounded task profile",
       );
+    const image = this._taskImage(incoming);
+    if (image.eflags & 0x20000)
+      throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
+    if (this._taskRead(incoming.base, 0x64, 2) & 1)
+      throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
     const outgoing = this.tr.present
       ? {
           ...this.tr,
@@ -1197,11 +1202,6 @@ export class ExperimentalI80386 {
     if ((kind === "jmp" || returning) && outgoing) this._setTaskBusy(outgoing, false);
     this.tr = { ...incoming, type: 11 };
     try {
-      const image = this._taskImage(incoming);
-      if (image.eflags & 0x20000)
-        throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
-      if (this._taskRead(incoming.base, 0x64, 2) & 1)
-        throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
       this.cr3 = image.cr3 >>> 0;
       this.cr0 |= 8;
       Object.assign(this, image);
