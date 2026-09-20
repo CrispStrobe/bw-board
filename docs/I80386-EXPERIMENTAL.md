@@ -75,8 +75,8 @@ operand read, including zero-count shifts. The pinned PCjs group decoder also
 executes its memory writeback path when the shift helper returns the unchanged
 operand for count zero.
 
-PSE, CR0.WP behavior from later processors, task switching, and
-TLB timing are outside this stage. Reloading CR3 takes effect immediately
+PSE, CR0.WP behavior from later processors, 16-bit TSS task switching, and
+TLB timing are outside this stage. The bounded 32-bit TSS contract is below. Reloading CR3 takes effect immediately
 because this functional executor does not cache translations.
 
 The bounded I/O profile provides explicit `inPort(port, width)` and
@@ -252,7 +252,9 @@ An admitted VM86 interrupt or trap enters a nonconforming inner-ring gate,
 builds the nine-dword VM86 frame on the 386 TSS-selected stack, clears the
 visible VM86 data segments, and can return through IRETD. The bounded path
 requires a 32-bit gate to nonconforming ring-0 code; other target privileges
-fault architecturally, while 16-bit VM86 gates remain an explicit refusal.
+fault architecturally. A 16-bit interrupt/trap gate from VM86 raises #GP with
+the IDT entry error code; original manual section 15.3.2 requires a task gate
+or 386 interrupt/trap gate.
 On the original 386, VM86 PUSHF, POPF, INT imm8, IRET, CLI, STI, and LOCK
 require IOPL3; lower IOPL raises #GP(0). INT3 is exempt and enters its IDT
 gate. VM86 IRET bypasses nested-task return, preserves VM and IOPL, and IRETD
@@ -329,8 +331,14 @@ the incoming task's stack before the handler begins.
 The task image must fit within one 4 KiB page in the current bounded paging
 profile. This explicit precommit refusal avoids misclassifying the original
 386's special two-page incoming-TSS fault boundary: section 9.8.14.1 places
-ordinary incoming-image and selector-verification page faults in the new task,
-while section 7.1 documents the exceptional missing higher TSS page case.
+incoming-image and selector-verification faults in the new task, while section
+7.1 distinguishes missing TSS pages. The admitted single-page image is read
+before state mutation, so an entirely absent incoming image faults in the old
+task. VM86 task targets and the TSS debug-trap bit also refuse before mutation.
+After commit, selector validation runs under the new CR3 and retains the new
+task on failure. IDT task-target admission uses #TS (including EXT for an
+external event); direct CALL/JMP target admission uses #GP. Page-fault error
+bits never acquire EXT.
 
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
@@ -565,3 +573,14 @@ the functional 286 AT profile.
 A one-million-step BIOS CPU profile attributes 70.3% of sampled self time to
 instruction-state copying and 5.1% to garbage collection. This identifies an
 optimization candidate; no speedup or fault-recovery simplification is claimed.
+
+
+## Full-size diagnostic boundary
+
+The pinned 128 KiB capture configuration includes task tests omitted from the
+older 64 KiB build. Coordinator execution at `908e57bd43dd3eaedadf6f7b1ff5779035cf8912`
+reaches its error routine at step 807,601: the guest executes `INT 2Eh` through
+a 16-bit gate while in VM86 and expects it to succeed. The executor instead
+raises #GP under the original-386 gate restriction in section 15.3.2. This is
+a named guest/manual disagreement, not a full-ROM or task-test pass. The owned
+paged task CALL/IRET program is separately compared against pinned PCjs.
