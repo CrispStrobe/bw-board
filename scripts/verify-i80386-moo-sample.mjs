@@ -124,7 +124,7 @@ const PROFILES={
   },
   clts:{
     files:['0F06'],
-    scope:'three fixed deterministic real-mode CLTS samples grading CR0.TS clearing with other architectural state preserved',
+    scope:'three fixed deterministic real-mode CLTS decode/completion samples; all published inputs start with TS clear and omit final CR0, so TS clearing is not physically graded',
   },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
@@ -149,7 +149,7 @@ const localSourceHashes=Object.fromEntries(localSources.map(path=>[path,sha256(r
 const revocationBytes=readFileSync(resolve(root,'revocation_list.txt'));
 const revoked=new Set(revocationBytes.toString('utf8').split(/\s+/).filter(Boolean));
 const mutation=process.env.I386_MOO_MUTATION??null;
-if(mutation!==null&&!['ram','stray-write','carry','zf','cr0-ts'].includes(mutation))throw new Error(`unknown I386_MOO_MUTATION ${mutation}`);
+if(mutation!==null&&!['ram','stray-write','carry','zf','eax','cr0-ts'].includes(mutation))throw new Error(`unknown I386_MOO_MUTATION ${mutation}`);
 const segmentFields=[[SEG_CS,'cs'],[SEG_DS,'ds'],[SEG_ES,'es'],[SEG_FS,'fs'],[SEG_GS,'gs'],[SEG_SS,'ss']];
 const modeledFinal=new Set(['cr0','eax','ebx','ecx','edx','esi','edi','ebp','esp','cs','ds','es','fs','gs','ss','eip','eflags']);
 
@@ -164,18 +164,23 @@ function execute(test,globalMasks,mutate) {
   for(let index=0;index<test.bytes.length;index++)if(memory.get((codeBase+initial.eip+index)>>>0)!==test.bytes[index])
     throw new Error('BYTS does not match initial code RAM');
   for(const name of ['eax','ebx','ecx','edx','esi','edi','ebp','esp'])cpu[name]=initial[name]>>>0;
-  cpu.eip=initial.eip>>>0;cpu.eflags=initial.eflags>>>0;cpu.cr0=initial.cr0>>>0;
+  cpu.eip=initial.eip>>>0;cpu.eflags=initial.eflags>>>0;cpu.cr0=initial.cr0>>>0;cpu.cr3=initial.cr3>>>0;
   for(const[id,name]of segmentFields){cpu[name]=initial[name]&0xffff;cpu.segmentCaches[id]={base:(cpu[name]<<4)>>>0,limit:0xffff,default32:false,present:true,code:id===SEG_CS,writable:id!==SEG_CS};}
   cpu.step();cpu.step();if(!cpu.halted)throw new Error('published trailing HLT did not complete');
   if(mutate==='carry')cpu.eflags^=1;
   if(mutate==='zf')cpu.eflags^=0x40;
+  if(mutate==='eax')cpu.eax^=1;
   if(mutate==='cr0-ts')cpu.cr0^=8;
   if(mutate==='stray-write')cpu.write(0x00f00000,0x5a);
   const actual={cr0:cpu.cr0,eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,ebp:cpu.ebp,esp:cpu.esp,cs:cpu.cs,ds:cpu.ds,es:cpu.es,fs:cpu.fs,gs:cpu.gs,ss:cpu.ss,eip:cpu.eip,eflags:cpu.eflags};
   const differences=[],masks={...globalMasks,...test.final.masks};
   if(profile.undefinedEflagsMask!==undefined)
     masks.eflags=(masks.eflags??0xffffffff)&profile.undefinedEflagsMask;
-  for(const[name,want]of Object.entries(test.final.regs)){
+  const expectedFinal={};
+  for(const[name,want]of Object.entries(initial))
+    if(modeledFinal.has(name))expectedFinal[name]=want;
+  Object.assign(expectedFinal,test.final.regs);
+  for(const[name,want]of Object.entries(expectedFinal)){
     if(!modeledFinal.has(name))throw new Error(`final state requires unsupported ${name}`);
     let mask=masks[name]??0xffffffff;if(['cs','ds','es','fs','gs','ss'].includes(name))mask&=0xffff;
     const got=actual[name]>>>0;if(((got&mask)>>>0)!==((want&mask)>>>0))differences.push({field:name,expected:want>>>0,actual:got,mask:mask>>>0});
