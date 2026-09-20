@@ -401,6 +401,15 @@ still `fail` because the reference does not agree. The owned manual-derived
 tests are local evidence only until another independent engine or hardware
 guest validates this task transition.
 
+The owned boot image in `test/fixtures/i80386-vm-task.S` provides that second
+software-engine check with QEMU 8.2.2 TCG configured as a later 486 CPU. It
+executes a real-mode bootstrap, enters protected mode, performs a far JMP to a
+VM TSS, enters a protected handler through an IDT task gate, and returns by NT
+IRET. Both QEMU and this executor must emit the exact debug-port sequence
+`BHV`; result and low-budget mutations reject. This is later-model software
+CPU evidence, not a physical original-386 claim. The runner records the exact
+QEMU executable, package, source, and generated-image hashes.
+
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
 data read, both busy bits, backlink, nested-task IRET, restored CR3/TR, and
