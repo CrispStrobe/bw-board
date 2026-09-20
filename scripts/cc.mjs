@@ -6,6 +6,7 @@
  * expressions, enough to run small programs. Inside main() it understands:
  *   int a, b = expr;                 16-bit integer variables (optional init)
  *   int a[n];  a[i]                  integer arrays (word each; element read/write, any index expr)
+ *   int *p;  &x / &a[i];  *p         pointers: address-of and dereference (read and write)
  *   a = expr;  a += / -= / *= / /=   assignment and compound assignment
  *   a++;  a--;                       increment / decrement
  *   printf("fmt", args...);          %d (integer), %c (char), %% and \n\t\r\\\";
@@ -97,6 +98,13 @@ export function cToAsm(source) {
         if (t === '-') { primary(); emit('NEG AX'); return; }
         if (t === '!') { primary(); const L = lbl(); emit('CMP AX, 0', 'MOV AX, 0', `JNE ${L}`, 'MOV AX, 1', `${L}:`); return; }
         if (t === '+') { primary(); return; }
+        if (t === '*') { primary(); emit('MOV BX, AX', 'MOV AX, [BX]'); return; }   // *p — dereference read
+        if (t === '&') {                                                            // &x / &a[i] — address-of
+            const nm = next();
+            if (!isId(nm) || KW.has(nm)) throw new Error(`C: & needs a variable, got '${JSON.stringify(nm)}'`);
+            if (peek() === '[') { next(); orExpr(); expect(']'); emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(nm)}`, 'ADD AX, BX'); return; }
+            emit(`MOV AX, OFFSET ${varLabel(nm)}`); return;
+        }
         if (typeof t === 'string' && /^\d+$/.test(t)) { emit(`MOV AX, ${parseInt(t, 10) & 0xffff}`); return; }
         if (isId(t) && !KW.has(t)) {
             if (peek() === '[') {   // array element read: a[i]
@@ -199,6 +207,13 @@ export function cToAsm(source) {
     function block() { expect('{'); while (peek() !== '}' && i < toks.length) statement(); expect('}'); }
 
     function exprStatement() {
+        if (peek() === '*') {   // pointer deref write: *p = expr
+            next(); primary();                           // pointer address -> AX
+            emit('MOV BX, AX', 'PUSH BX');
+            const op = next();
+            if (op !== '=') throw new Error(`C: pointer deref supports '=' only, got '${JSON.stringify(op)}'`);
+            orExpr(); emit('POP BX', 'MOV [BX], AX'); return;
+        }
         if (isId(peek()) && !KW.has(peek()) && toks[i + 1] === '[') {   // array element write: a[i] = expr
             const name = next(); next();                 // name, '['
             orExpr(); expect(']');                       // index -> AX
@@ -230,6 +245,7 @@ export function cToAsm(source) {
         if (t === 'int') {
             next();
             do {
+                if (peek() === '*') next();               // pointer declarator: int *p; (a word holding an address)
                 const name = next();
                 if (peek() === '[') {                     // array declaration: int a[n];
                     next(); const sz = next(); expect(']');
