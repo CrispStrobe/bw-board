@@ -11,19 +11,23 @@ planes decode to 320 by 200 pixels with 240 distinct colors. The
 [source-bound graphics receipt](receipts/2026-09-20-386-doom-graphics.json)
 records the image hashes and the historical snapshot's missing DAC-mask field.
 A separate controlled run injects Esc and three Enter keys through the 8042,
-then reaches a rendered E1M1 level with pistol and HUD. Movement, firing, and
-longer gameplay still require acceptance.
+then reaches a rendered E1M1 level with pistol and HUD. A subsequent controlled
+Up/Ctrl sequence visibly moves the player and fires the pistol, reducing ammo
+from 50 to 48; the [gameplay receipt](receipts/2026-09-20-386-doom-gameplay.json)
+records source-bound frames and inputs. Completed demo, save/load, sound and
+longer gameplay remain separate acceptance targets.
 
 The Windows 3.0 / PC DOS 3.2 disk boots through HIMEM and SMARTDrive after the
 [opcode82 and ATA-reset fixes](receipts/2026-09-20-386-dos-loader-reset.json).
-After correcting HIMEM segment-limit retention and keyboard F3 acknowledgements,
-the original disk reaches a rendered Windows System Error dialog reporting
-“Cannot read from drive C:”. The disk failure remains under investigation; a
-Windows desktop has not yet been demonstrated by this executor. The same
-external disk reaches Program Manager under the independent QEMU baseline,
-which establishes input viability only. Full graphics compatibility and
-complete 386 protection/debug behavior remain unaccepted. See also the
-[VGA scope](VGA-MEMORY-EXPERIMENT.md).
+After correcting HIMEM segment-limit retention, keyboard F3 acknowledgements
+and the bounded ATA intersector delay, it reaches Program Manager. A real
+Set-1 Enter make/break pair launches File Manager and displays the C:\WINDOWS
+tree and free space. The [Windows milestone](I80386-WINDOWS300.md) records
+source-bound desktop and application runs. The diagnostic runner retains
+`windowsBootAccepted:false`; separately decoded and visually audited frames
+establish this bounded milestone. Other Windows releases, enhanced mode,
+application editing/persistence and complete 386 protection/debug behavior
+remain unaccepted. See also the [VGA scope](VGA-MEMORY-EXPERIMENT.md).
 
 The configured AT keyboard extension accepts F3h and a seven-bit rate/delay
 parameter with separate delayed, keyboard-originated FAh acknowledgements.
