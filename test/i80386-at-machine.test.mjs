@@ -21,11 +21,11 @@ test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-a
   assert.equal(machine.cpu.halted, true);
 });
 
-test('FreeDOS HDD profile selects literal out-of-range uPD765 seek completion', () => {
+test('FreeDOS HDD profile grades the 1.2MB medium data rate without changing seek policy', () => {
   const ordinary = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD);
   const freedos = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS);
   assert.equal(ordinary.chips.fdc1.seekBeyondEnd, 'error');
-  assert.equal(freedos.chips.fdc1.seekBeyondEnd, 'silent');
+  assert.equal(freedos.chips.fdc1.seekBeyondEnd, 'error');
   assert.deepEqual(freedos.chips.fdc1.acceptedCcrByImageBytes,{1228800:[0]});
 });
 

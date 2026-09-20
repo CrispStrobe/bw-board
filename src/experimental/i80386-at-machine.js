@@ -213,11 +213,11 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD = Object.freeze({
   } : chip),
 });
 
-/** Literal uPD765 seek completion for software that probes past cylinder 79. */
+/** FreeDOS media profile: a 1.2MB disk in the AT high-capacity drive. */
 export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD,
   chips: PCAT80386_EXPERIMENTAL_4M_HDD.chips.map(chip => chip.kind === 'fdc'
-    ? {...chip, seekBeyondEnd: 'silent',acceptedCcrByImageBytes:{1228800:[0]}} : chip),
+    ? {...chip,acceptedCcrByImageBytes:{1228800:[0]}} : chip),
 });
 
 export default ExperimentalI80386ATMachine;
