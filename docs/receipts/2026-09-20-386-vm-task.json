@@ -1,0 +1,550 @@
+{
+  "schema": "astra.i80386-vm-task.v1",
+  "scope": [
+    "32-bit TSS VM86 entry with six real-style caches and user paging",
+    "IDT task gate from VM86 to protected handler and protected NT IRET return",
+    "postcommit LDTR/EIP/page-fault boundaries; ordinary VM86 IRET ignores NT task-return semantics",
+    "far JMP preserves incoming VM TSS EIP"
+  ],
+  "oracles": [
+    {
+      "oracle": "QEMU TCG later-model software CPU",
+      "revision": "6d231137d66d68c9eae73c3b41dfa2f7b805d456",
+      "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+      "qemuExecutableHash": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+      "biosHash": "4d597f68e06a0e28498e12e96e1f2ce64aee88a519685c61da92eb775c95a445",
+      "assemblerVersion": "GNU assembler (GNU Binutils for Ubuntu) 2.42",
+      "linkerVersion": "GNU ld (GNU Binutils for Ubuntu) 2.42",
+      "packages": {
+        "qemu-system-x86_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb": "14602e262627adac030329d2cecfee5f6c0938b34566ff2ea2d4c9a9eb02430d",
+        "qemu-system-common_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb": "0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f",
+        "qemu-system-data_1%3a8.2.2+ds-0ubuntu1.18_all.deb": "a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e",
+        "seabios_1.16.3-2_all.deb": "cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0",
+        "libfdt1_1.7.0-2build1_amd64.deb": "274d20dfab9d6b216b5de85446a93f6ce5b2cd82c847b8dfdc508577f76eb96a",
+        "libpmem1_1.13.1-1.1ubuntu2_amd64.deb": "8f1be1cc834a98f0cf5c0950153f7f939a0c2c92095e98cd7bb40c752c545c1b",
+        "libslirp0_4.7.0-1ubuntu3.1_amd64.deb": "4efa2d1c509de4d10fe965e86a3d864bf542996caf476d9111fd882c73857164",
+        "libndctl6_77-2ubuntu2_amd64.deb": "4eab53588a8fa9e3192635e118c2d91bc069cde46a4a3785c77a0bb1ae001d02",
+        "libdaxctl1_77-2ubuntu2_amd64.deb": "c6629b49c79343fb11ae404aeaa3156f051168da6c6d3d9d8d516acd94705061"
+      },
+      "sourceHashes": {
+        "test/fixtures/i80386-vm-task.S": "acc2a072c686a187afa398dc29e2e41f8da8b9c7841ff1d06cfc4f535d3fc488",
+        "src/experimental/i80386.js": "2289de2616b86f1a3a611d750cedfe48f57bc3d7466f46977eae5a9d274ada8c",
+        "scripts/compare-qemu-i80386-task-vm86.mjs": "ed915b9a1b0374195ca77e4a76a25c7a69c35c7a849611c2a67d5f0506059b98"
+      },
+      "imageHash": "f3a4ded4aab6bf446ceb476b07d91d678fc669292a3e4b4bb3635b23eac7baa3",
+      "execution": {
+        "reference": "BIOS boot and floppy sector load",
+        "actual": "same image at 0x7c00; starts owned setup at 0x7e00 after disk load"
+      },
+      "mutation": null,
+      "status": "pass",
+      "expected": "BHV",
+      "reference": "BHV",
+      "actual": "BHV",
+      "actualState": {
+        "cs": 0,
+        "eip": 32321,
+        "tr": 32,
+        "trBase": 32504,
+        "tssEip": [
+          61,
+          126,
+          0,
+          0
+        ],
+        "cr0": 9,
+        "eflags": 143874,
+        "halted": false,
+        "shutdown": false,
+        "trail": [
+          "0:7e00",
+          "0:7e02",
+          "0:7e04",
+          "0:7e09",
+          "0:7e0e",
+          "0:7e11",
+          "0:7e15",
+          "0:7e18",
+          "8:7e1d",
+          "8:7e20",
+          "8:7e22",
+          "8:7e24",
+          "8:7e26",
+          "8:7e29",
+          "8:7e2c",
+          "8:7e2f",
+          "0:7e3b",
+          "8:7e36",
+          "8:7e38",
+          "8:7e3a",
+          "0:7e3d",
+          "0:7e3f"
+        ]
+      },
+      "differences": [],
+      "reportSha256": "0ef2ee609f2025b3216ff4b767a6ee562a65ec9a2a8d1e56169b14ff6029b1db"
+    },
+    {
+      "oracle": "QEMU TCG later-model software CPU",
+      "revision": "6d231137d66d68c9eae73c3b41dfa2f7b805d456",
+      "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+      "qemuExecutableHash": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+      "biosHash": "4d597f68e06a0e28498e12e96e1f2ce64aee88a519685c61da92eb775c95a445",
+      "assemblerVersion": "GNU assembler (GNU Binutils for Ubuntu) 2.42",
+      "linkerVersion": "GNU ld (GNU Binutils for Ubuntu) 2.42",
+      "packages": {
+        "qemu-system-x86_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb": "14602e262627adac030329d2cecfee5f6c0938b34566ff2ea2d4c9a9eb02430d",
+        "qemu-system-common_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb": "0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f",
+        "qemu-system-data_1%3a8.2.2+ds-0ubuntu1.18_all.deb": "a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e",
+        "seabios_1.16.3-2_all.deb": "cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0",
+        "libfdt1_1.7.0-2build1_amd64.deb": "274d20dfab9d6b216b5de85446a93f6ce5b2cd82c847b8dfdc508577f76eb96a",
+        "libpmem1_1.13.1-1.1ubuntu2_amd64.deb": "8f1be1cc834a98f0cf5c0950153f7f939a0c2c92095e98cd7bb40c752c545c1b",
+        "libslirp0_4.7.0-1ubuntu3.1_amd64.deb": "4efa2d1c509de4d10fe965e86a3d864bf542996caf476d9111fd882c73857164",
+        "libndctl6_77-2ubuntu2_amd64.deb": "4eab53588a8fa9e3192635e118c2d91bc069cde46a4a3785c77a0bb1ae001d02",
+        "libdaxctl1_77-2ubuntu2_amd64.deb": "c6629b49c79343fb11ae404aeaa3156f051168da6c6d3d9d8d516acd94705061"
+      },
+      "sourceHashes": {
+        "test/fixtures/i80386-vm-task.S": "acc2a072c686a187afa398dc29e2e41f8da8b9c7841ff1d06cfc4f535d3fc488",
+        "src/experimental/i80386.js": "2289de2616b86f1a3a611d750cedfe48f57bc3d7466f46977eae5a9d274ada8c",
+        "scripts/compare-qemu-i80386-task-vm86.mjs": "ed915b9a1b0374195ca77e4a76a25c7a69c35c7a849611c2a67d5f0506059b98"
+      },
+      "imageHash": "f3a4ded4aab6bf446ceb476b07d91d678fc669292a3e4b4bb3635b23eac7baa3",
+      "execution": {
+        "reference": "BIOS boot and floppy sector load",
+        "actual": "same image at 0x7c00; starts owned setup at 0x7e00 after disk load"
+      },
+      "mutation": "result",
+      "status": "fail",
+      "expected": "BHV",
+      "reference": "BHV",
+      "actual": "BHX",
+      "actualState": {
+        "cs": 0,
+        "eip": 32321,
+        "tr": 32,
+        "trBase": 32504,
+        "tssEip": [
+          61,
+          126,
+          0,
+          0
+        ],
+        "cr0": 9,
+        "eflags": 143874,
+        "halted": false,
+        "shutdown": false,
+        "trail": [
+          "0:7e00",
+          "0:7e02",
+          "0:7e04",
+          "0:7e09",
+          "0:7e0e",
+          "0:7e11",
+          "0:7e15",
+          "0:7e18",
+          "8:7e1d",
+          "8:7e20",
+          "8:7e22",
+          "8:7e24",
+          "8:7e26",
+          "8:7e29",
+          "8:7e2c",
+          "8:7e2f",
+          "0:7e3b",
+          "8:7e36",
+          "8:7e38",
+          "8:7e3a",
+          "0:7e3d",
+          "0:7e3f"
+        ]
+      },
+      "differences": [
+        {
+          "field": "actual.output",
+          "expected": "BHV",
+          "actual": "BHX"
+        }
+      ],
+      "reportSha256": "f6cfa816ed182a8aa4c597201f339a3c1b616584b9ffbb9f0d6e24a4d5c4bfea"
+    },
+    {
+      "oracle": "QEMU TCG later-model software CPU",
+      "revision": "6d231137d66d68c9eae73c3b41dfa2f7b805d456",
+      "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+      "qemuExecutableHash": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+      "biosHash": "4d597f68e06a0e28498e12e96e1f2ce64aee88a519685c61da92eb775c95a445",
+      "assemblerVersion": "GNU assembler (GNU Binutils for Ubuntu) 2.42",
+      "linkerVersion": "GNU ld (GNU Binutils for Ubuntu) 2.42",
+      "packages": {
+        "qemu-system-x86_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb": "14602e262627adac030329d2cecfee5f6c0938b34566ff2ea2d4c9a9eb02430d",
+        "qemu-system-common_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb": "0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f",
+        "qemu-system-data_1%3a8.2.2+ds-0ubuntu1.18_all.deb": "a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e",
+        "seabios_1.16.3-2_all.deb": "cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0",
+        "libfdt1_1.7.0-2build1_amd64.deb": "274d20dfab9d6b216b5de85446a93f6ce5b2cd82c847b8dfdc508577f76eb96a",
+        "libpmem1_1.13.1-1.1ubuntu2_amd64.deb": "8f1be1cc834a98f0cf5c0950153f7f939a0c2c92095e98cd7bb40c752c545c1b",
+        "libslirp0_4.7.0-1ubuntu3.1_amd64.deb": "4efa2d1c509de4d10fe965e86a3d864bf542996caf476d9111fd882c73857164",
+        "libndctl6_77-2ubuntu2_amd64.deb": "4eab53588a8fa9e3192635e118c2d91bc069cde46a4a3785c77a0bb1ae001d02",
+        "libdaxctl1_77-2ubuntu2_amd64.deb": "c6629b49c79343fb11ae404aeaa3156f051168da6c6d3d9d8d516acd94705061"
+      },
+      "sourceHashes": {
+        "test/fixtures/i80386-vm-task.S": "acc2a072c686a187afa398dc29e2e41f8da8b9c7841ff1d06cfc4f535d3fc488",
+        "src/experimental/i80386.js": "2289de2616b86f1a3a611d750cedfe48f57bc3d7466f46977eae5a9d274ada8c",
+        "scripts/compare-qemu-i80386-task-vm86.mjs": "ed915b9a1b0374195ca77e4a76a25c7a69c35c7a849611c2a67d5f0506059b98"
+      },
+      "imageHash": "f3a4ded4aab6bf446ceb476b07d91d678fc669292a3e4b4bb3635b23eac7baa3",
+      "execution": {
+        "reference": "BIOS boot and floppy sector load",
+        "actual": "same image at 0x7c00; starts owned setup at 0x7e00 after disk load"
+      },
+      "mutation": "budget",
+      "status": "fail",
+      "expected": "BHV",
+      "reference": "BHV",
+      "actual": "B",
+      "actualState": {
+        "cs": 8,
+        "eip": 32290,
+        "tr": 0,
+        "trBase": 0,
+        "tssEip": [
+          59,
+          126,
+          0,
+          0
+        ],
+        "cr0": 1,
+        "eflags": 2,
+        "halted": false,
+        "shutdown": false,
+        "trail": [
+          "0:7e00",
+          "0:7e02",
+          "0:7e04",
+          "0:7e09",
+          "0:7e0e",
+          "0:7e11",
+          "0:7e15",
+          "0:7e18",
+          "8:7e1d",
+          "8:7e20"
+        ]
+      },
+      "differences": [
+        {
+          "field": "actual.output",
+          "expected": "BHV",
+          "actual": "B"
+        }
+      ],
+      "reportSha256": "c031c7729378c62f6c43cf406f302192c0257eb981944ccf4450db2df6d91b8a"
+    }
+  ],
+  "referenceDisagreement": {
+    "oracle": "PCjs",
+    "revision": "79617dfcc28718e4ea0cdef257515986cb95b651",
+    "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "scope": "VM86 TSS entry, IDT task-gate protected handler, NT IRET VM return and exact completion",
+    "classification": "reference-disagreement",
+    "sourceHashes": {
+      "./compare-pcjs-i80386-task-vm86.mjs": "034ff5fdff3d5d2d2b6fd4d12262448ebe48a476a412a9ddf529aa9d45518bc9",
+      "../src/experimental/i80386.js": "2289de2616b86f1a3a611d750cedfe48f57bc3d7466f46977eae5a9d274ada8c"
+    },
+    "mutation": null,
+    "status": "fail",
+    "expected": {
+      "reset": false,
+      "completed": true,
+      "handler": true,
+      "returned": true,
+      "vm": true,
+      "cs": 256,
+      "eip": 5,
+      "tr": 32,
+      "ax": 4660,
+      "vmBusy": 11,
+      "handlerBusy": 9,
+      "vmBacklink": 0,
+      "handlerBacklink": 32
+    },
+    "reference": {
+      "reset": true,
+      "completed": false,
+      "handler": false,
+      "returned": false,
+      "vm": false,
+      "cs": 61440,
+      "eip": 65520,
+      "tr": 0,
+      "ax": 0,
+      "vmBusy": 11,
+      "handlerBusy": 9,
+      "vmBacklink": 0,
+      "handlerBacklink": 0,
+      "faultTrace": [
+        {
+          "vector": 13,
+          "errorCode": 256,
+          "cs": 8,
+          "eip": 279,
+          "tr": 32
+        },
+        {
+          "vector": 13,
+          "errorCode": 104,
+          "cs": 8,
+          "eip": 274,
+          "tr": 32
+        },
+        {
+          "vector": 13,
+          "errorCode": 64,
+          "cs": 8,
+          "eip": 274,
+          "tr": 32
+        }
+      ]
+    },
+    "actual": {
+      "reset": false,
+      "completed": true,
+      "handler": true,
+      "returned": true,
+      "vm": true,
+      "cs": 256,
+      "eip": 5,
+      "tr": 32,
+      "ax": 4660,
+      "vmBusy": 11,
+      "handlerBusy": 9,
+      "vmBacklink": 0,
+      "handlerBacklink": 32
+    },
+    "differences": [
+      {
+        "field": "reference.reset",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "field": "reference.completed",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "field": "reference.handler",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "field": "reference.returned",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "field": "reference.vm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "field": "reference.cs",
+        "expected": 256,
+        "actual": 61440
+      },
+      {
+        "field": "reference.eip",
+        "expected": 5,
+        "actual": 65520
+      },
+      {
+        "field": "reference.tr",
+        "expected": 32,
+        "actual": 0
+      },
+      {
+        "field": "reference.ax",
+        "expected": 4660,
+        "actual": 0
+      },
+      {
+        "field": "reference.handlerBacklink",
+        "expected": 32,
+        "actual": 0
+      }
+    ],
+    "reportSha256": "b6b0a360dd7d1d60f1ee42a0763deabe181f7d356f2d39962e6abaae42770661"
+  },
+  "dosPersistence": {
+    "executionRevision": "79617dfcc28718e4ea0cdef257515986cb95b651",
+    "writeSteps": 25652224,
+    "rebootSteps": 25567232,
+    "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+    "writeReportSha256": "8fcc76c739325cbc6fb18789183b67386d333ea33e4cc2178c614a5738be8a78",
+    "rebootReportSha256": "089599daa3dc63bf6c61c02ae7c23ed390b4fd8cbb2a1935718c5bc55d3431ac"
+  },
+  "limits": [
+    "QEMU TCG uses later 486 software model, not physical original 386",
+    "QEMU boots BIOS and loads guest sectors; local comparator begins same owned setup after disk load",
+    "QEMU oracle was replayed locally; hosted qualification separately runs directed CPU tests and existing independent corpus",
+    "TSS debug trap and page-straddling incoming TSS remain unsupported",
+    "No Windows desktop or Doom gameplay acceptance"
+  ],
+  "doomDiagnostics": [
+    {
+      "executionRevision": "edfc82128ae7fbe35c05ada8b15f710020d7cf4c",
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80386.js": "c27f95fcd71ded3e05910bf75152209b94f14cd0e27295ea1c84f7ce277f7868",
+        "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+        "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+        "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+        "scripts/lib/freedos-at-acceptance.mjs": "e6dbc560e65676a3199ce1299aea28abd2c3c6f62ac46ed1c0243c572498065a",
+        "scripts/lib/i80386-doom-fat16-image.mjs": "7e58b5c5490370c31ff28f3e7da251a70c222cd7af53cd35a016466946b4738d",
+        "scripts/run-i80386-freedos-doom.mjs": "dfff0a41278a1f329f1bd71b2701e60e48696a24cde5878242bc040266eef096"
+      },
+      "steps": 200000000,
+      "stepLimit": 200000000,
+      "stopReason": null,
+      "hostRefusal": null,
+      "final": {
+        "cs": 1728,
+        "ip": 23769,
+        "pc": 51417,
+        "halted": false,
+        "shutdown": false,
+        "a20Enabled": true,
+        "cmosShutdown": 0
+      },
+      "screenText": [
+        "                          DOOM System Startup v1.9",
+        "P_Init: Checking cmd-line parameters...",
+        "V_Init: allocate screens.",
+        "M_LoadDefaults: Load system defaults.",
+        "Z_Init: Init zone memory allocation daemon.",
+        "DPMI memory: 0x242000, 0x222000 allocated for zone",
+        "W_Init: Init WADfiles.",
+        "        adding doom1.wad",
+        "        shareware version.",
+        "M_Init: Init miscellaneous info.",
+        "R_Init: Init DOOM refresh daemon - [..                 ]",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "reportSha256": "e5861e02f51d738407585c0f25d291112d51fdea7f3f0594a732e7155c54df16",
+      "acceptedGameplay": false,
+      "doomEntry": {
+        "step": 120131773,
+        "cs": 9359,
+        "eip": 9074,
+        "loadSegment": 8914
+      }
+    },
+    {
+      "executionRevision": "d922e2c0be404cf8b39f5e592c482637c3d15194",
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80386.js": "c27f95fcd71ded3e05910bf75152209b94f14cd0e27295ea1c84f7ce277f7868",
+        "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+        "scripts/lib/freedos-at-acceptance.mjs": "e6dbc560e65676a3199ce1299aea28abd2c3c6f62ac46ed1c0243c572498065a",
+        "scripts/lib/i80386-doom-fat16-image.mjs": "7e58b5c5490370c31ff28f3e7da251a70c222cd7af53cd35a016466946b4738d",
+        "scripts/run-i80386-freedos-doom.mjs": "ebe882d1df2272672a02a4e9f60a140a468d246402ed5521f62fac8a64c3e851"
+      },
+      "steps": 500000000,
+      "stepLimit": 500000000,
+      "stopReason": null,
+      "hostRefusal": null,
+      "final": {
+        "cs": 1728,
+        "ip": 90,
+        "pc": 27738,
+        "halted": false,
+        "shutdown": false,
+        "a20Enabled": true,
+        "cmosShutdown": 0
+      },
+      "screenText": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "reportSha256": "700e7db628ce47cf92a712e4bb1d06f7b8f814bb57e33cfcd294bb5490f966a9",
+      "acceptedGameplay": false,
+      "doomEntry": {
+        "step": 121336967,
+        "cs": 9359,
+        "eip": 9074,
+        "loadSegment": 8914
+      }
+    }
+  ],
+  "qualification": {
+    "status": "candidate; hosted qualification pending",
+    "focused": {
+      "pass": 282,
+      "skip": 2,
+      "fail": 0,
+      "scope": "all i80386 tests plus VGA memory; optional fixtures skipped"
+    }
+  }
+}
