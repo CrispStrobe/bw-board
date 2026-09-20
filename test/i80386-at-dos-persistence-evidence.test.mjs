@@ -20,9 +20,9 @@ test('source-bound 386 AT DOS receipts prove write and fresh-remount TYPE persis
     writeReportSha256:'146ec4957c2c91a862899898c4088dc6cde28952e619d37a536036ed0962832c',
     rebootReportSha256:'a0a514bb9d909526bbe9012b94d7ca25dc62763baa7a7dfa59f8351278ad0e09',
   });
-  assert.equal(evidence.current.executionRevision,'1a790719fb690aa7866e16cf5522be0244f59479');
-  assert.equal(write.originalReportSha256,'bf587aa20439555f53a5e5fb544d828fe29f900b6f41f714f3df0641acad08a2');
-  assert.equal(reboot.originalReportSha256,'f8ca0cbaad41a975d2506cd203546459e83b3ab3e986c7dff6aa0793f249d534');
+  assert.equal(evidence.current.executionRevision,'79617dfcc28718e4ea0cdef257515986cb95b651');
+  assert.equal(write.originalReportSha256,'8fcc76c739325cbc6fb18789183b67386d333ea33e4cc2178c614a5738be8a78');
+  assert.equal(reboot.originalReportSha256,'089599daa3dc63bf6c61c02ae7c23ed390b4fd8cbb2a1935718c5bc55d3431ac');
   assert.equal(write.steps,evidence.current.writeSteps);
   assert.equal(reboot.steps,evidence.current.rebootSteps);
   assert.equal(write.keyboardScript.requested,'\r\recho at-boot-ok>atboot.txt\rtype atboot.txt\r');
