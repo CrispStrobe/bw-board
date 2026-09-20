@@ -2377,6 +2377,12 @@ export class ExperimentalI80386 {
       const accumulator = this._reg(0, width);
       this._setReg(0, width, this._reg(register, width));
       this._setReg(register, width, accumulator);
+    } else if (op === 0x98) {
+      if (width === 32) this.eax = ((this.ax << 16) >> 16) >>> 0;
+      else this.ax = (this.al << 24) >> 24;
+    } else if (op === 0x99) {
+      if (width === 32) this.edx = this.eax & 0x80000000 ? 0xffffffff : 0;
+      else this.dx = this.ax & 0x8000 ? 0xffff : 0;
     } else if (op === 0x9b) {
       if ((this.cr0 & 0x0a) === 0x0a)
         throw new I80386Fault(7, null, "WAIT with MP and TS set");
