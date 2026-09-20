@@ -390,6 +390,14 @@ to a protected task, whose NT IRET follows the backlink and reconstructs the
 saved VM task and its real-style caches. IRET executed directly by VM86 code
 continues to use VM86 stack semantics and never treats NT as a task return.
 The TSS debug-trap bit remains a precommit refusal in this bounded profile.
+The source-bound VM-task comparator records a pinned-PCjs limitation rather
+than using it as false agreement: that revision resets at the far JMP into an
+otherwise valid VM TSS. The local side must still enter VM86, visit a protected
+IDT task-gate handler, return through NT IRET, and reach the exact VM completion
+state. The comparator also requires PCjs's exact reset boundary; result and
+low-budget mutations reject. The owned manual-derived tests are therefore the
+acceptance evidence for VM task semantics, while PCjs supplies a reproducible
+named reference difference.
 
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
