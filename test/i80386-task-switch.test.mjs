@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import I80386, { I80386Fault } from "../src/experimental/i80386.js";
+import I80386 from "../src/experimental/i80386.js";
 
 function put(memory, address, bytes) {
   bytes.forEach((value, index) => memory.set(address + index, value & 255));
@@ -124,36 +124,37 @@ test("incoming one-page TSS faults and bounded task refusals are precommit", () 
 
 test("JMP preflights the outgoing busy descriptor byte before task mutation", () => {
   const { cpu, memory } = pagingFaultFixture("cs");
-  const translate = cpu._translate.bind(cpu);
-  cpu._translate = (linear, options) => {
-    if (linear === 0x21d && options?.write) {
-      cpu.cr2 = linear;
-      throw new I80386Fault(14, 2, "outgoing busy descriptor page");
-    }
-    return translate(linear, options);
-  };
+  cpu.cr3 = 0x7000;
+  dword(memory, 0x7000, 0x3003);
+  cpu.gdtr = { base: 0xfe0, limit: 0x27 };
+  put(memory, 0x1000, descriptor(0x2500, 0x67, 0x89, 0));
+  for (let offset = 0; offset <= 0x67; offset++)
+    memory.set(0x2500 + offset, memory.get(0x500 + offset) ?? 0);
+  dword(memory, 0x3000, 0); // linear page zero, including outgoing descriptor, absent
   const before = {
     tr: cpu.tr.selector,
     cr3: cpu.cr3,
-    incomingAccess: memory.get(0x225),
+    incomingAccess: memory.get(0x1005),
     outgoingEip: [0x420, 0x421, 0x422, 0x423].map(address => memory.get(address)),
   };
-  assert.throws(
-    () => cpu._taskSwitch(0x20, "jmp"),
-    error => error?.vector === 14 && error.errorCode === 2 && !error.taskCommitted,
-  );
+  let fault;
+  try { cpu._taskSwitch(0x20, "jmp"); } catch (error) { fault = error; }
+  assert.ok(fault);
+  assert.deepEqual([fault.vector, fault.errorCode, !!fault.taskCommitted], [14, 2, false], fault.message);
+  assert.equal(cpu.cr2, 0xffd);
   assert.deepEqual({
     tr: cpu.tr.selector,
     cr3: cpu.cr3,
-    incomingAccess: memory.get(0x225),
+    incomingAccess: memory.get(0x1005),
     outgoingEip: [0x420, 0x421, 0x422, 0x423].map(address => memory.get(address)),
   }, before);
 });
 
 test("IDT task gates report invalid task targets as TS before mutation", () => {
-  for (const [selector, expected] of [[0,0],[4,4],[0x20,0x20]]) {
+  for (const [selector, expected] of [[0,0],[4,4],[0x20,0x20],[0x28,0x28]]) {
     const { cpu, memory } = pagingFaultFixture("cs");
     if (selector === 0x20) memory.set(0x225, 0x8b);
+    if (selector === 0x28) cpu.gdtr.limit = 0x27;
     cpu.idtr = { base: 0x600, limit: 0x7ff };
     put(memory, 0x600 + 5 * 8, [0xaa,0xbb,selector,selector>>>8,0xcc,0x85,0xdd,0xee]);
     assert.throws(
