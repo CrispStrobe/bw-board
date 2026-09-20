@@ -10,24 +10,45 @@
   "sourceManifestSha256": "3de5c170aeaa412fd91909d7a66154b56030a04396fb705e9426ee457cb6ce14",
   "inputs": {
     "biosSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
-    "geometry": {"cylinders": 306, "heads": 4, "sectors": 17, "bytesPerSector": 512},
+    "geometry": {
+      "cylinders": 306,
+      "heads": 4,
+      "sectors": 17,
+      "bytesPerSector": 512
+    },
     "mediaBytes": 10653696,
     "mediaSha256": "c1ebf2785e8bf736fc6ed81f6e917bec1cabded671916098b64e2503a1f777ce",
     "bootSectorSha256": "7448effa5063326d14885f0ba20ca5ff46e5a87ae09f9dc4fc028e21bc7427ed"
   },
   "biosEvidence": {
-    "commands": [144, 145, 16, 64, 32],
+    "commands": [
+      144,
+      145,
+      16,
+      64,
+      32
+    ],
     "bootSectorStep": 70575354,
     "bootSectorAddress": "0000:7C00",
     "bootSectorHashMatchedInput": true
   },
   "guestEvidence": {
-    "commands": [48, 32],
-    "nativeDataRegister": {"writes16": 256, "reads16": 512, "otherWidth": 0},
+    "commands": [
+      48,
+      32
+    ],
+    "nativeDataRegister": {
+      "writes16": 256,
+      "reads16": 512,
+      "otherWidth": 0
+    },
     "writeBufferInitialization": "all 512 bytes initialized; text prefix and zero tail",
     "readBufferInitialization": "all 512 bytes poisoned with A5A5 before BIOS read",
     "comparison": "all 512 read-back bytes checked in guest code",
-    "successMarker": {"step": 70579183, "value": 165},
+    "successMarker": {
+      "step": 70579183,
+      "value": 165
+    },
     "commandTraceOverflow": false,
     "diagnosticPortTraceTruncated": false
   },
@@ -35,5 +56,29 @@
     "mediaSha256": "1cb7732758ebde69e6a61cb344822aa8eb68dbe17075f2c95476285e817c9bf2",
     "finalSectorSha256": "3fb0f0892cdf3d7a48870c0b9d7dbe5b637466f03c312d0f6c863af6b7723313",
     "expectedText": "ASTRA-386-HDD\r\n"
+  },
+  "coordinatorReplay": {
+    "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
+    "rawReportSha256": "616d8f4f0735063b915b3d747a5a397e9b5fe25779abbb2f8e2a76ddb6d6abc0",
+    "sourceManifestSha256": "69fbb6c345cf94c6dfb15e97fbd2d72b6a101e0317cdff0f562e24896ced14ab",
+    "steps": 70579183,
+    "accepted": true,
+    "inputMediaSha256": "c1ebf2785e8bf736fc6ed81f6e917bec1cabded671916098b64e2503a1f777ce",
+    "outputMediaSha256": "1cb7732758ebde69e6a61cb344822aa8eb68dbe17075f2c95476285e817c9bf2",
+    "finalSectorSha256": "3fb0f0892cdf3d7a48870c0b9d7dbe5b637466f03c312d0f6c863af6b7723313",
+    "commands": [
+      144,
+      145,
+      16,
+      64,
+      32,
+      48,
+      32
+    ],
+    "dataTransfers": {
+      "reads16": 512,
+      "writes16": 256,
+      "otherWidth": 0
+    }
   }
 }

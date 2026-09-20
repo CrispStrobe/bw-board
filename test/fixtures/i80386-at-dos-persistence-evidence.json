@@ -877,7 +877,7 @@
           "bytesPerSector": 512
         },
         "output": {
-          "path": "/tmp/astra-i80386-dos2-write-dcaff8a.img",
+          "path": "/tmp/astra-root-386-dos-72f56ab.img",
           "sha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819"
         }
       }
@@ -894,12 +894,12 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "executionRevision": "dcaff8aa229fbccd5810a9d0269dab309c57ed53",
+    "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
     "sourceSha256": {
       "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-      "src/experimental/i80386.js": "9d613479efafe816d063786ff4cd258d7ca06385135154a163e8e4f028b99d14",
+      "src/experimental/i80386.js": "52c34080c7dbe1d4e96245803dc3e03fed3f492a8e07e4a91d23d813fd084361",
       "src/experimental/i80386-at-machine.js": "0b58a35791530c3fee5329c266ba03bc8d75d9db91ec7a5d2f0f602543b845da",
       "src/experimental/ata16.js": "5b9e732402507a7a2c74a083bc247d3685ace0ae9a96c6c561455543d7d62c9d",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
@@ -915,7 +915,7 @@
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
     },
-    "originalReportSha256": "146ec4957c2c91a862899898c4088dc6cde28952e619d37a536036ed0962832c"
+    "originalReportSha256": "054ab853edfe14391a56f83a19a72c1b43f5c8608bdbf627cca803d7ea2c2112"
   },
   "reboot": {
     "schema": "astra.i80386-at-dos-acceptance.v1",
@@ -1654,12 +1654,12 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "executionRevision": "dcaff8aa229fbccd5810a9d0269dab309c57ed53",
+    "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
     "sourceSha256": {
       "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-      "src/experimental/i80386.js": "9d613479efafe816d063786ff4cd258d7ca06385135154a163e8e4f028b99d14",
+      "src/experimental/i80386.js": "52c34080c7dbe1d4e96245803dc3e03fed3f492a8e07e4a91d23d813fd084361",
       "src/experimental/i80386-at-machine.js": "0b58a35791530c3fee5329c266ba03bc8d75d9db91ec7a5d2f0f602543b845da",
       "src/experimental/ata16.js": "5b9e732402507a7a2c74a083bc247d3685ace0ae9a96c6c561455543d7d62c9d",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
@@ -1675,6 +1675,14 @@
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
     },
-    "originalReportSha256": "a0a514bb9d909526bbe9012b94d7ca25dc62763baa7a7dfa59f8351278ad0e09"
+    "originalReportSha256": "747c445ab9a8e26dd3af8327db1838f92cbefc5070629a8fc41e8ed4dd7d4112"
+  },
+  "current": {
+    "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
+    "writeSteps": 25652224,
+    "rebootSteps": 25567232,
+    "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+    "writeReportSha256": "054ab853edfe14391a56f83a19a72c1b43f5c8608bdbf627cca803d7ea2c2112",
+    "rebootReportSha256": "747c445ab9a8e26dd3af8327db1838f92cbefc5070629a8fc41e8ed4dd7d4112"
   }
 }

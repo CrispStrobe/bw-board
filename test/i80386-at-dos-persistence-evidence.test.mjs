@@ -20,6 +20,11 @@ test('source-bound 386 AT DOS receipts prove write and fresh-remount TYPE persis
     writeReportSha256:'146ec4957c2c91a862899898c4088dc6cde28952e619d37a536036ed0962832c',
     rebootReportSha256:'a0a514bb9d909526bbe9012b94d7ca25dc62763baa7a7dfa59f8351278ad0e09',
   });
+  assert.equal(evidence.current.executionRevision,'72f56ab1a5a4606e17d821bed2bb1e3ac36a998e');
+  assert.equal(write.originalReportSha256,'054ab853edfe14391a56f83a19a72c1b43f5c8608bdbf627cca803d7ea2c2112');
+  assert.equal(reboot.originalReportSha256,'747c445ab9a8e26dd3af8327db1838f92cbefc5070629a8fc41e8ed4dd7d4112');
+  assert.equal(write.steps,evidence.current.writeSteps);
+  assert.equal(reboot.steps,evidence.current.rebootSteps);
   assert.equal(write.keyboardScript.requested,'\r\recho at-boot-ok>atboot.txt\rtype atboot.txt\r');
   assert.equal(reboot.keyboardScript.requested,'\r\rtype atboot.txt\r');
   assert.doesNotMatch(reboot.keyboardScript.requested,/echo/i);
@@ -33,7 +38,7 @@ test('source-bound 386 AT DOS receipts prove write and fresh-remount TYPE persis
       baseRamBytes:640<<10,extendedRamBytes:512<<10});
     assert.deepEqual(receipt.guestFile.bytes,[...Buffer.from(expectedText)]);
     assert.equal(receipt.guestFile.size,12);
-    assert.equal(receipt.executionRevision,evidence.historical.executionRevision);
+    assert.equal(receipt.executionRevision,evidence.current.executionRevision);
     assert.match(receipt.originalReportSha256,/^[0-9a-f]{64}$/);
     for(const [file,hash] of Object.entries(receipt.sourceSha256))
       assert.equal(hash,sha(file),`${file} source binding`);
