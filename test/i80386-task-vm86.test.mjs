@@ -85,6 +85,33 @@ test('far JMP into a VM86 task retains the EIP loaded from its TSS', () => {
     [0x20, true, 0x100, 0x123]);
 });
 
+test('VM86 task fetch uses user paging after task state commits', () => {
+  const { cpu, memory } = fixture();
+  dword(memory, 0x4000 + 4, 0x6003);
+  cpu.step();
+  assert.throws(
+    () => cpu.step(),
+    error => error?.vector === 14 && error.errorCode === 5,
+  );
+  assert.deepEqual([cpu.cr2, cpu.tr.selector, cpu.cr3, cpu.virtual8086, cpu.eip],
+    [0x1000, 0x20, 0x2000, true, 0]);
+});
+
+test('IRET executed in a VM86 task ignores NT task-return semantics', () => {
+  const { cpu, memory } = fixture();
+  memory.set(0x6000, 0xcf);
+  for (const [address, value] of [
+    [0x2800,0x1234],[0x2802,0x222],[0x2804,0x3202],
+  ]) word(memory, address, value);
+  cpu.step();
+  assert.equal(cpu.eflags & 0x4000, 0x4000, 'CALL task entry set NT');
+  cpu.eflags |= 0x3000;
+  cpu.step();
+  assert.deepEqual([cpu.tr.selector, cpu.virtual8086, cpu.cs, cpu.eip, cpu.esp],
+    [0x20, true, 0x222, 0x1234, 0x806]);
+  assert.equal(cpu.eflags & 0x4000, 0, 'ordinary VM IRET loaded NT from its stack frame');
+});
+
 test('VM86 task EIP overflow faults after the task and real caches commit', () => {
   const { cpu, memory } = fixture();
   dword(memory, 0x500 + 0x20, 0x10000);
