@@ -13,13 +13,14 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `88d960eecb566db3939710b844ca03a36e5ea8c1`,
-tag `milestones/x86-386-vm-isa-platform-20260920`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35477928736)
-passed 5,614 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35477928733)
-and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35477928839)
+The latest landed milestone is `5b3c0ba1071406d875e704b8cdcd01282f1e4978`,
+tag `milestones/x86-386-at-dos-hdd-20260920`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35479044402)
+passed 5,630 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35479044552)
+and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35479044390)
 also passed. CPU qualification covers the existing full fast/Harris corpora,
 443 selected physical 386EX cases and bounded PCjs comparisons. The exact
-qualified candidate was fast-forwarded to master.
+qualified candidate, including the latest NMOS lane changes, was fast-forwarded
+to master. It adds accepted 386 DOS persistence and BIOS HDD-sector evidence.
 
 The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
 DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
