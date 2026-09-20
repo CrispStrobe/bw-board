@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-20 CLAIM — `/root` (Codex): exact grounded-bulk Level-1 NMOS
+2026-09-20 DONE (candidate) — `/root` (Codex): exact grounded-bulk Level-1 NMOS
 GAMMA/PHI small-signal body transconductance, isolated worktree
 `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`, branch
 `lane/nmos-gamma-phi-ac`, exact base
@@ -21,10 +21,15 @@ a pair. Linearise the same DC threshold law at the converged bias and stamp
 the resulting body transconductance from grounded bulk to source; preserve
 the zero/default-body-effect path byte-for-behaviour and keep generic MOS,
 PMOS, source-tied/third bulk, capacitances, solver/tolerances and every x86
-path outside scope. Require a live-ngspice nonzero-source witness, a zero-gamma
-control, public-state non-mutation, and isolated mutations that drop the body
-Jacobian or admit an incomplete pair. Downstream CUI admission and the exact
-350-row OP+AC replay remain separate after this upstream qualification.
+path outside scope. The exact DC threshold derivative now contributes
+`gmb = gm*gamma/(2*sqrt(phi+Vsb))` for positive grounded-bulk Vsb and stamps
+its equal-and-opposite source coefficient. A live ngspice 42 source-degenerated
+witness agrees at drain and source within 1 microvolt; declared zero GAMMA is
+exactly equal to the absent-body path, incomplete pairs refuse by name, and the
+focused AC/DC/body-effect surface passes 30/30 without adopting the bias point.
+Dropping the body Jacobian makes the live witness red; dropping pair validation
+makes the refusal proof red. Downstream CUI AC admission and the exact 350-row
+OP+AC replay remain separate after this upstream qualification.
 
 2026-09-20 DONE (candidate) — bwcx: exact grounded-bulk Level-1 NMOS body-effect public
 operating-point domain, isolated worktree
