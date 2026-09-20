@@ -1,0 +1,361 @@
+{
+  "executionRevision": "58c26416ec2f496fd05c8e6b874aa5f8be526cb2",
+  "sourceSha256": {
+    "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+    "src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157",
+    "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+    "src/experimental/ata16.js": "e84e22eb7edd97c83ac481a9096159370365368806b851e22a2bbce66d245c6e",
+    "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+    "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
+    "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+    "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+    "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+    "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+    "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+    "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+    "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+    "scripts/lib/freedos-at-acceptance.mjs": "e6dbc560e65676a3199ce1299aea28abd2c3c6f62ac46ed1c0243c572498065a",
+    "scripts/lib/i80386-doom-fat16-image.mjs": "7e58b5c5490370c31ff28f3e7da251a70c222cd7af53cd35a016466946b4738d",
+    "scripts/run-i80386-freedos-doom.mjs": "51a9b121a981d77e3e8a4fb0d43789b7f30f0f75ad433efd0bdaf012484ac011"
+  },
+  "input": {
+    "name": "IBM 5170 Rev1 BIOS 1984-01-10",
+    "bytes": 65536,
+    "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "expectedSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "distribution": "external; ROM bytes are not stored by this repository",
+    "vgaRom": {
+      "bytes": 32256,
+      "sha256": "90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a"
+    },
+    "floppy": {
+      "bytes": 1228800,
+      "sha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+      "bootSectorSha256": "02aa8525a3dce52cf544fd6acff21687973362da0bef1503428d6eb694659189",
+      "geometry": {
+        "cylinders": 80,
+        "heads": 2,
+        "sectors": 15,
+        "bytesPerSector": 512
+      }
+    }
+  },
+  "hdd": {
+    "bytes": 10653696,
+    "inputSha256": "e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303",
+    "outputSha256": "e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303",
+    "geometry": {
+      "cylinders": 306,
+      "heads": 4,
+      "sectors": 17
+    },
+    "files": {
+      "doomExe": {
+        "bytes": 709905,
+        "sha256": "b8020523561a5ad9706e009a52d61c578f37faafd85ac471962308406292ce27",
+        "mz": {
+          "signature": "MZ",
+          "lastPageBytes": 164,
+          "pages": 122,
+          "relocationCount": 78,
+          "relocationTableOffset": 30,
+          "headerParagraphs": 32,
+          "initialSS": 289,
+          "initialSP": 832,
+          "initialIP": 9074,
+          "initialCS": 445
+        }
+      },
+      "doomWad": {
+        "bytes": 4196020,
+        "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+      }
+    },
+    "counts": {
+      "commands": 2424,
+      "nativeDataReads": 1397760,
+      "nativeDataWrites": 0,
+      "overflow": true
+    },
+    "atCommandQueue": {
+      "commands": 15,
+      "nativeDataReads": 1792,
+      "nativeDataWrites": 0,
+      "overflow": false
+    }
+  },
+  "steps": 500000000,
+  "hostRefusal": null,
+  "final": {
+    "cs": 368,
+    "ip": 38103,
+    "pc": 1545431,
+    "halted": false,
+    "shutdown": false,
+    "a20Enabled": true,
+    "cmosShutdown": 9
+  },
+  "keyboardScript": {
+    "requested": "n\rn\rc:\rdoom -timedemo demo1 -nodraw -nosound\r",
+    "installerDeclined": true,
+    "commandQueued": true,
+    "commandPrompt": {
+      "step": 116360192,
+      "row": 24,
+      "column": 4,
+      "line": "A:\\>"
+    },
+    "injected": [
+      {
+        "step": 104078386,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 104589204,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 116362428,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 116363817,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 116370842,
+        "key": "c",
+        "scan": 46
+      },
+      {
+        "step": 117075469,
+        "key": "shift-down",
+        "scan": 42
+      },
+      {
+        "step": 117076001,
+        "key": ":",
+        "scan": 39
+      },
+      {
+        "step": 117078267,
+        "key": "shift-up",
+        "scan": 170
+      },
+      {
+        "step": 117078802,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 117085831,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 117120837,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117123498,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117126159,
+        "key": "m",
+        "scan": 50
+      },
+      {
+        "step": 117128820,
+        "key": " ",
+        "scan": 57
+      },
+      {
+        "step": 117131481,
+        "key": "-",
+        "scan": 12
+      },
+      {
+        "step": 117134142,
+        "key": "t",
+        "scan": 20
+      },
+      {
+        "step": 117136803,
+        "key": "i",
+        "scan": 23
+      },
+      {
+        "step": 117139464,
+        "key": "m",
+        "scan": 50
+      },
+      {
+        "step": 117142127,
+        "key": "e",
+        "scan": 18
+      },
+      {
+        "step": 117144788,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 117147449,
+        "key": "e",
+        "scan": 18
+      },
+      {
+        "step": 117150110,
+        "key": "m",
+        "scan": 50
+      },
+      {
+        "step": 117152771,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117155432,
+        "key": " ",
+        "scan": 57
+      },
+      {
+        "step": 117158093,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 117160754,
+        "key": "e",
+        "scan": 18
+      },
+      {
+        "step": 117163415,
+        "key": "m",
+        "scan": 50
+      },
+      {
+        "step": 117166076,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117168797,
+        "key": "1",
+        "scan": 2
+      },
+      {
+        "step": 117171458,
+        "key": " ",
+        "scan": 57
+      },
+      {
+        "step": 117174119,
+        "key": "-",
+        "scan": 12
+      },
+      {
+        "step": 117176780,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 117179441,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117182102,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 117184765,
+        "key": "r",
+        "scan": 19
+      },
+      {
+        "step": 117187426,
+        "key": "a",
+        "scan": 30
+      },
+      {
+        "step": 117190087,
+        "key": "w",
+        "scan": 17
+      },
+      {
+        "step": 117192748,
+        "key": " ",
+        "scan": 57
+      },
+      {
+        "step": 117195409,
+        "key": "-",
+        "scan": 12
+      },
+      {
+        "step": 117198070,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 117200731,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117203392,
+        "key": "s",
+        "scan": 31
+      },
+      {
+        "step": 117206053,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 117208714,
+        "key": "u",
+        "scan": 22
+      },
+      {
+        "step": 117211375,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 117214036,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 117219205,
+        "key": "\r",
+        "scan": 28
+      }
+    ],
+    "remaining": []
+  },
+  "schema": "astra.i80386-doom-timedemo-diagnostic.v1",
+  "rawReportSha256": "f7288d4e12d609621dc5ad9528fb48baccef6e59a41884828722e48c58da352f",
+  "demoCompleted": false,
+  "scope": "Original demo1 -timedemo -nodraw -nosound reached500M instructions without refusal, but no guest completion line or DOS return; no FPS result.",
+  "limits": [
+    "Drawing disabled; this is not rendered demo evidence.",
+    "Extra harmless DOS n command retained in the recorded command script."
+  ]
+}

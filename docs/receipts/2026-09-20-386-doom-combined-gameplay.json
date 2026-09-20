@@ -1,0 +1,357 @@
+{
+  "schema": "astra.i80386-doom-gameplay-evidence.v1",
+  "date": "2026-09-20",
+  "scope": "Original Doom1.9 shareware E1M1 entry, forward movement and pistol fire after genuine AT reset, SeaVGABIOS and FreeDOS",
+  "executionRevision": "58c26416ec2f496fd05c8e6b874aa5f8be526cb2",
+  "sourceSha256": {
+    "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+    "src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157",
+    "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+    "src/experimental/ata16.js": "e84e22eb7edd97c83ac481a9096159370365368806b851e22a2bbce66d245c6e",
+    "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+    "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
+    "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+    "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+    "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+    "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+    "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+    "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+    "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+    "scripts/lib/freedos-at-acceptance.mjs": "e6dbc560e65676a3199ce1299aea28abd2c3c6f62ac46ed1c0243c572498065a",
+    "scripts/lib/i80386-doom-fat16-image.mjs": "7e58b5c5490370c31ff28f3e7da251a70c222cd7af53cd35a016466946b4738d",
+    "scripts/run-i80386-freedos-doom.mjs": "51a9b121a981d77e3e8a4fb0d43789b7f30f0f75ad433efd0bdaf012484ac011"
+  },
+  "rawReportSha256": "fe87fbae02b517501202932bd6cc2bb5015e664c40f08c4661f65f3e3d9635af",
+  "input": {
+    "name": "IBM 5170 Rev1 BIOS 1984-01-10",
+    "bytes": 65536,
+    "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "expectedSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "distribution": "external; ROM bytes are not stored by this repository",
+    "vgaRom": {
+      "bytes": 32256,
+      "sha256": "90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a"
+    },
+    "floppy": {
+      "bytes": 1228800,
+      "sha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+      "bootSectorSha256": "02aa8525a3dce52cf544fd6acff21687973362da0bef1503428d6eb694659189",
+      "geometry": {
+        "cylinders": 80,
+        "heads": 2,
+        "sectors": 15,
+        "bytesPerSector": 512
+      }
+    }
+  },
+  "hdd": {
+    "bytes": 10653696,
+    "inputSha256": "e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303",
+    "outputSha256": "e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303",
+    "geometry": {
+      "cylinders": 306,
+      "heads": 4,
+      "sectors": 17
+    },
+    "files": {
+      "doomExe": {
+        "bytes": 709905,
+        "sha256": "b8020523561a5ad9706e009a52d61c578f37faafd85ac471962308406292ce27",
+        "mz": {
+          "signature": "MZ",
+          "lastPageBytes": 164,
+          "pages": 122,
+          "relocationCount": 78,
+          "relocationTableOffset": 30,
+          "headerParagraphs": 32,
+          "initialSS": 289,
+          "initialSP": 832,
+          "initialIP": 9074,
+          "initialCS": 445
+        }
+      },
+      "doomWad": {
+        "bytes": 4196020,
+        "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+      }
+    },
+    "counts": {
+      "commands": 2545,
+      "nativeDataReads": 1476864,
+      "nativeDataWrites": 0,
+      "overflow": true
+    },
+    "atCommandQueue": {
+      "commands": 15,
+      "nativeDataReads": 1792,
+      "nativeDataWrites": 0,
+      "overflow": false
+    }
+  },
+  "steps": 370000000,
+  "hostRefusal": null,
+  "final": {
+    "cs": 368,
+    "ip": 60255,
+    "pc": 1567583,
+    "halted": false,
+    "shutdown": false,
+    "a20Enabled": true,
+    "cmosShutdown": 9
+  },
+  "keyboard": {
+    "requested": [
+      "esc",
+      "enter",
+      "enter",
+      "enter"
+    ],
+    "gameplayRequested": [
+      "up",
+      "ctrl"
+    ],
+    "gameplayInputTrigger": {
+      "step": 336000000,
+      "crtc17": 227
+    },
+    "injected": [
+      {
+        "step": 304000000,
+        "key": "esc",
+        "scan": 1
+      },
+      {
+        "step": 304001000,
+        "key": "esc-break",
+        "scan": 129
+      },
+      {
+        "step": 306000000,
+        "key": "enter",
+        "scan": 28
+      },
+      {
+        "step": 306001000,
+        "key": "enter-break",
+        "scan": 156
+      },
+      {
+        "step": 308000000,
+        "key": "enter",
+        "scan": 28
+      },
+      {
+        "step": 308001000,
+        "key": "enter-break",
+        "scan": 156
+      },
+      {
+        "step": 310000000,
+        "key": "enter",
+        "scan": 28
+      },
+      {
+        "step": 310001000,
+        "key": "enter-break",
+        "scan": 156
+      },
+      {
+        "step": 337000000,
+        "key": "up",
+        "scan": 72
+      },
+      {
+        "step": 342000000,
+        "key": "up-break",
+        "scan": 200
+      },
+      {
+        "step": 345000000,
+        "key": "ctrl",
+        "scan": 29
+      },
+      {
+        "step": 350000000,
+        "key": "ctrl-break",
+        "scan": 157
+      }
+    ],
+    "remaining": []
+  },
+  "frames": [
+    {
+      "step": 336000000,
+      "observed": "Before movement, ammo50",
+      "width": 320,
+      "height": 200,
+      "start": 16384,
+      "planeStride": 80,
+      "uniqueRgbColors": 152,
+      "indexSha256": "56e135faa750e07cfdec6e902a3757bd9b45d7b59f0664c82c8a9b46aa3cfce9",
+      "rgbSha256": "c1528a3677a7e5cb669e4744c3b4cbe588659c717a49bd7a7e0c0fe9a7292023"
+    },
+    {
+      "step": 344000000,
+      "observed": "Moved forward, ammo50",
+      "width": 320,
+      "height": 200,
+      "start": 32768,
+      "planeStride": 80,
+      "uniqueRgbColors": 161,
+      "indexSha256": "0a506214639ca8d75933a12ccde2cc83a16ded78284ce4b4be9ab12346cd44ec",
+      "rgbSha256": "be9218d7838b65495db126ff41de5379191869b83a39b1fdb455b99e5f06cca8"
+    },
+    {
+      "step": 351000000,
+      "observed": "Muzzle flash, ammo48",
+      "width": 320,
+      "height": 200,
+      "start": 0,
+      "planeStride": 80,
+      "uniqueRgbColors": 196,
+      "indexSha256": "a3186cd9bad1c5d2260ca9b5a34c947a9085bb5631576bcfed7db72cbaad3335",
+      "rgbSha256": "7995a9b6feedf67cb9b96c52b01335dc407e978fe1eccbdb69cffc042b7152ec"
+    },
+    {
+      "step": 369000000,
+      "observed": "Settled moved view, ammo48",
+      "width": 320,
+      "height": 200,
+      "start": 32768,
+      "planeStride": 80,
+      "uniqueRgbColors": 162,
+      "indexSha256": "3a5c39bd020087fbc48b0f3af5068a430820620e8adf58ed5972e3f47d63b1e1",
+      "rgbSha256": "752fc67a454412858ea320ca6f2b360831b9e73bba89fb4869f6bd12c6929170"
+    }
+  ],
+  "renderer": {
+    "executionRevision": "eae0a0a1a0a3df862c65f79283f1f6c11b6fc999",
+    "sha256": "4f51164ce0611d4bfeea722b999fcaad9ce133fed1e2cbd813352580bc38ff50",
+    "scope": "Strict observed VGA register layout; CRTC17h E3, stride80, start0/4000/8000, palette and DAC mask. Exposed raw raster, not complete monitor timing/PAS modeling."
+  },
+  "accepted": {
+    "genuineResetToGame": true,
+    "menuAndLevelEntry": true,
+    "movement": true,
+    "pistolFire": true,
+    "completeGameCompatibility": false
+  },
+  "limits": [
+    "A bounded E1M1 interaction does not prove every level, sound output, save/load, networking, or sustained play.",
+    "Completion derives from preserved controlled inputs and visually audited frame sequence, not the diagnostic passed flag alone.",
+    "Firmware/media/pixels remain external; public receipt contains only provenance and hashes.",
+    "Command script included an extra n command after the installer decline already generated by the runner; DOS rejected it and then executed C: and DOOM. This is disclosed command history, not an exact instruction-count baseline."
+  ],
+  "keyboardScript": {
+    "requested": "n\rn\rc:\rdir\rdoom\r",
+    "installerDeclined": true,
+    "commandQueued": true,
+    "commandPrompt": {
+      "step": 116360192,
+      "row": 24,
+      "column": 4,
+      "line": "A:\\>"
+    },
+    "injected": [
+      {
+        "step": 104078386,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 104589204,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 116362428,
+        "key": "n",
+        "scan": 49
+      },
+      {
+        "step": 116363817,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 116370842,
+        "key": "c",
+        "scan": 46
+      },
+      {
+        "step": 117075469,
+        "key": "shift-down",
+        "scan": 42
+      },
+      {
+        "step": 117076001,
+        "key": ":",
+        "scan": 39
+      },
+      {
+        "step": 117078267,
+        "key": "shift-up",
+        "scan": 170
+      },
+      {
+        "step": 117078802,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 117085831,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 117120837,
+        "key": "i",
+        "scan": 23
+      },
+      {
+        "step": 117123498,
+        "key": "r",
+        "scan": 19
+      },
+      {
+        "step": 117126159,
+        "key": "\r",
+        "scan": 28
+      },
+      {
+        "step": 117134002,
+        "key": "d",
+        "scan": 32
+      },
+      {
+        "step": 120242233,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 120244954,
+        "key": "o",
+        "scan": 24
+      },
+      {
+        "step": 120247615,
+        "key": "m",
+        "scan": 50
+      },
+      {
+        "step": 120250276,
+        "key": "\r",
+        "scan": 28
+      }
+    ],
+    "remaining": []
+  },
+  "priorGameplayReceipt": "2026-09-20-386-doom-gameplay.json",
+  "combinedSource": "Includes the final keyboard F3 and ATA8192 functional-cycle changes used by Windows."
+}

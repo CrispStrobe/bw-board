@@ -14,8 +14,10 @@ A separate controlled run injects Esc and three Enter keys through the 8042,
 then reaches a rendered E1M1 level with pistol and HUD. A subsequent controlled
 Up/Ctrl sequence visibly moves the player and fires the pistol, reducing ammo
 from 50 to 48; the [gameplay receipt](receipts/2026-09-20-386-doom-gameplay.json)
-records source-bound frames and inputs. Completed demo, save/load, sound and
-longer gameplay remain separate acceptance targets.
+records source-bound frames and inputs. The
+[combined-source replay](receipts/2026-09-20-386-doom-combined-gameplay.json)
+repeats movement and firing with the final Windows keyboard/disk changes.
+Completed demo, save/load, sound and longer gameplay remain separate acceptance targets.
 
 The Windows 3.0 / PC DOS 3.2 disk boots through HIMEM and SMARTDrive after the
 [opcode82 and ATA-reset fixes](receipts/2026-09-20-386-dos-loader-reset.json).
@@ -25,9 +27,12 @@ Set-1 Enter make/break pair launches File Manager and displays the C:\WINDOWS
 tree and free space. The [Windows milestone](I80386-WINDOWS300.md) records
 source-bound desktop and application runs. The diagnostic runner retains
 `windowsBootAccepted:false`; separately decoded and visually audited frames
-establish this bounded milestone. Other Windows releases, enhanced mode,
-application editing/persistence and complete 386 protection/debug behavior
-remain unaccepted. See also the [VGA scope](VGA-MEMORY-EXPERIMENT.md).
+establish this bounded milestone. Other Windows releases, enhanced mode, and
+complete 386 protection/debug behavior remain unaccepted. A separate
+[Notepad persistence run](receipts/2026-09-20-windows300-editor-persistence.json)
+creates OWNED.TXT through the Windows UI, saves its exact 17 bytes to the cloned
+HDD, then reboots and opens it in Notepad. The writer and reader use separately
+bound source revisions and linked media hashes. See also the [VGA scope](VGA-MEMORY-EXPERIMENT.md).
 
 The configured AT keyboard extension accepts F3h and a seven-bit rate/delay
 parameter with separate delayed, keyboard-originated FAh acknowledgements.
