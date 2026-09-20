@@ -9,6 +9,20 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 CLAIM — `/root` (Codex): explicit Shockley-NPN collector series
+resistance, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,
+branch `lane/npn-collector-resistance`, exact base
+`dced14205a0c7e8914dcb18435ac1d726ab778fa`. Owns only the strict NPN
+operating-point parameter boundary in `src/board.js`, the explicit Ebers-Moll
+intrinsic-collector topology/readback in `src/mna.js`, its matching small-signal
+topology in `src/ac.js`, focused additions to `test/npn-operating-point.test.mjs`
+and `test/npn-ac-small-signal.test.mjs`, and this row. Add optional finite
+`rc >= 0` as a real resistor between the public collector terminal and the
+intrinsic Ebers-Moll collector, prove DC and AC against self-authored ngspice 42
+witnesses, and keep omitted/zero RC byte-for-behaviour unchanged. Excludes IKF,
+CJE/CJC/TF, PNP, generic BJT, solver/tolerances, CUI/corpus/package pins, x86,
+and every unrelated model or path.
+
 2026-09-20 DONE (candidate) — `/root` (Codex): exact grounded-bulk Level-1 NMOS
 GAMMA/PHI small-signal body transconductance, isolated worktree
 `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`, branch
