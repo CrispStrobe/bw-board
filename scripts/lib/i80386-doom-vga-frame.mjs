@@ -4,8 +4,8 @@ const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sixToEight=value=>(value<<2)|(value>>>4);
 
 export function renderObservedDoomVga(snapshot) {
-  // This renderer is deliberately limited to the title/menu and gameplay
-  // register states observed in source-bound runs.  The card does not expose the
+  // This renderer is deliberately limited to the byte-addressed title/menu
+  // register state observed in source-bound runs.  The card does not expose the
   // attribute-controller PAS/display-enable latch, so this is raw raster
   // evidence rather than a complete monitor-output model.
   if(!snapshot||snapshot.seq?.[0]!==0x03||snapshot.seq?.[1]!==0x01||snapshot.seq?.[4]!==0x06||
@@ -13,8 +13,7 @@ export function renderObservedDoomVga(snapshot) {
       snapshot.crtc?.[1]!==79||snapshot.crtc?.[6]!==0xbf||snapshot.crtc?.[7]!==0x1f||
       snapshot.crtc?.[8]!==0||snapshot.crtc?.[9]!==0x41||snapshot.crtc?.[0x12]!==0x8f||
       snapshot.crtc?.[0x13]!==40||snapshot.crtc?.[0x14]!==0||
-      (snapshot.crtc?.[0x17]!==0xe3&&snapshot.crtc?.[0x17]!==0x8e)||
-      snapshot.crtc?.[0x18]!==0xff||
+      snapshot.crtc?.[0x17]!==0xe3||snapshot.crtc?.[0x18]!==0xff||
       snapshot.attr?.[0x10]!==0x41||snapshot.attr?.[0x12]!==0x0f||
       snapshot.attr?.[0x13]!==0||snapshot.attr?.[0x14]!==0)
     throw new Error('snapshot is outside the observed Doom unchained 320x200 VGA mode');
