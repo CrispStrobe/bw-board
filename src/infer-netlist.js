@@ -570,6 +570,53 @@ export function inferNetlist(stc, opts) {
           notes.push(`74HC595 part ${part.name} is missing pin roles: ` +
             `have ${Object.keys(roles).join(', ') || 'none'}`);
         }
+      } else if (part.type === 'lcd1602' || part.kind === 'lcd1602') {
+        // PART lcd = LCD1602 DATA P1.4 P1.5 P1.6 P1.7 RS P2.0 EN P2.1 [RW Px.y]
+        // [WRITE ONLY]. Only `74hc595` was ever built from a PART binding, so
+        // a program that declared its whole display inferred nothing and the
+        // generated bench showed a bare MCU — which is how 81-8051-lcd1602-
+        // parallel came to document a wiring the bench did not have. The panel
+        // is a registered char_lcd; a write-only board ties RW to ground,
+        // exactly as the declaration says.
+        const lcdId = `LCD_${safeName}`;
+        parts.push({ id: lcdId, kind: 'char_lcd', declName: part.name, params: {},
+          terminals: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+            'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'] });
+        const wire = (terminal, coord) => {
+          if (!coord) return;
+          nets.push({ id: `net_${safeName}_${terminal}`, terminals: [
+            { part: 'MCU', terminal: pinName(coord) },
+            { part: lcdId, terminal },
+          ] });
+        };
+        // A 4-bit bus drives D4..D7; D0..D3 stay unconnected, which is what
+        // 4-bit mode means.
+        (part.data || []).forEach((coord, i) => wire(`d${i + 4}`, coord));
+        wire('rs', part.rs);
+        wire('e', part.en);
+        if (part.rw) wire('rw', part.rw);
+        else gndNet.terminals.push({ part: lcdId, terminal: 'rw' });
+        vccNet.terminals.push({ part: lcdId, terminal: 'vcc' });
+        vccNet.terminals.push({ part: lcdId, terminal: 'bl_a' });
+        gndNet.terminals.push({ part: lcdId, terminal: 'gnd' });
+        gndNet.terminals.push({ part: lcdId, terminal: 'bl_k' });
+        gndNet.terminals.push({ part: lcdId, terminal: 'vo' });
+      } else if (part.type === 'ledbank8' || part.kind === 'ledbank8') {
+        // PART leds = LEDBANK8 ON P2 [ACTIVE LOW] — eight LEDs on one whole
+        // port, which the A2 board carries as its D1-D8 row.
+        const bankId = `LEDS_${safeName}`;
+        parts.push({ id: bankId, kind: 'ledbank8', declName: part.name,
+          params: { activeLow: !!part.activeLow },
+          terminals: ['vcc', 'gnd', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7'] });
+        const port = part.ledPort;
+        for (let bit = 0; bit < 8; bit++) {
+          nets.push({ id: `net_${safeName}_d${bit}`, terminals: [
+            { part: 'MCU', terminal: pinName({ port, bit }) },
+            { part: bankId, terminal: `d${bit}` },
+          ] });
+        }
+        vccNet.terminals.push({ part: bankId, terminal: 'vcc' });
+        gndNet.terminals.push({ part: bankId, terminal: 'gnd' });
       } else {
         notes.push(`Unknown part kind '${part.type || part.kind}' for part ${part.name}`);
       }

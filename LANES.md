@@ -35,9 +35,20 @@ two-terminal variable resistors, so each forms the TOP leg of a divider with a f
 10k to ground, which is the wiring those intros describe. An unnamed analog pin is
 still a potentiometer, asserted, because most of them really are knobs.
 
-Focused suite 21/21, and 61/61 across every inference suite plus the 595 device. Disabling servo detection, removing its exclusion chain, dropping the servo ground
-net, disabling the sensors, letting the LDR pattern swallow `pot`, and ungrounding the
-divider each turn a named test red. Two mutants that survived were fixed rather than
+Finally, the PART path: only `74hc595` was ever built from a PART binding, so a
+program that declared its whole display inferred nothing and its generated bench
+showed a bare MCU. That is how 81-8051-lcd1602-parallel came to document "D4-D7 on
+P1.4-P1.7, RS on P2.0, EN on P2.1" over a breadboard with no LCD on it, and
+82-a2-led-row an eight-LED row with no LEDs. `LCD1602` now builds the registered
+`char_lcd` on its declared 4-bit bus — D0-D3 deliberately left unconnected, because
+that is what 4-bit mode means — grounding RW when the board declares none and wiring
+it when it does. `LEDBANK8` builds all eight LEDs on the declared port and keeps the
+declared polarity. An unknown part kind is still refused out loud in `notes`.
+
+Focused suite 26/26, and 78/78 across every inference suite plus the 595 device and
+the diode operating point. Disabling servo detection, removing its exclusion chain, dropping the servo ground
+net, disabling the sensors, letting the LDR pattern swallow `pot`, ungrounding the divider, floating the LCD's RW, mapping the 4-bit bus onto D0-D3,
+wiring half an LED bank, and dropping the bank's polarity each turn a named test red. Two mutants that survived were fixed rather than
 accepted: the redundant `!isLdr` guard was removed so precedence lives only in the
 ternary, and the divider test now asserts both legs reach a rail. Excludes the servo and sensor device models themselves, PWM angle semantics, sensor
 value/illumination controls, and every other name convention.
