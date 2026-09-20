@@ -67,6 +67,9 @@ if(process.env.FREEDOS_PRIOR_REPORT) {
     priorOutputMediaSha256=priorReport.input.floppy.output.sha256;
 }
 const commandKeys=[...(process.env.FREEDOS_COMMAND_SCRIPT??'')];
+const gameKeys=(process.env.DOOM_GAME_KEYS??'').split(',').filter(Boolean);
+if(gameKeys.some(key=>!['esc','enter'].includes(key)))
+    throw new Error('DOOM_GAME_KEYS supports only comma-separated esc and enter');
 const doomTraceDetail=process.env.DOOM_TRACE_DETAIL??'off';
 if(!['off','registers','full'].includes(doomTraceDetail))
     throw new Error('DOOM_TRACE_DETAIL must be off, registers, or full');
@@ -115,6 +118,8 @@ const vgaRawSamples=[];
 let firstVgaGraphicsSnapshot=null;
 let latestVgaGraphicsSnapshot=null;
 let lastVgaFrameRevision=null;
+const gameKeySchedule=[];
+const injectedGameKeys=[];
 let ataAtCommandQueue=null;
 const rtcPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
@@ -442,6 +447,11 @@ for(;steps<stepLimit;steps++) {
                     planesBase64:machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64'))};
                 firstVgaGraphicsSnapshot??=snapshot;
                 latestVgaGraphicsSnapshot=snapshot;
+                if(gameKeySchedule.length===0&&gameKeys.length!==0)gameKeys.forEach((key,index)=>{
+                    const make=key==='esc'?0x01:0x1c;
+                    const due=steps+(index+1)*2_000_000;
+                    gameKeySchedule.push({key,scan:make,due},{key:`${key}-break`,scan:make|0x80,due:due+1000});
+                });
             }
             lastVgaFrameRevision=machine.displayRevision;
         }
@@ -455,6 +465,13 @@ for(;steps<stepLimit;steps++) {
                     first:firstVgaGraphicsSnapshot,latest:latestVgaGraphicsSnapshot}};
             fs.writeFileSync(`${progressOutput}.tmp`,JSON.stringify(progressReport));
             fs.renameSync(`${progressOutput}.tmp`,progressOutput);
+        }
+    }
+    if(gameKeySchedule.length!==0&&steps>=gameKeySchedule[0].due) {
+        const event=gameKeySchedule[0];
+        if(machine.keyIn(event.scan)) {
+            gameKeySchedule.shift();
+            injectedGameKeys.push({step:steps,key:event.key,scan:event.scan});
         }
     }
     if(expectedFile&&executionBoundaries.bootSector&&keyScript.length===0&&(steps&1023)===0) {
@@ -531,6 +548,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
         vgaRom:vgaRom&&{bytes:vgaRom.length,sha256:sha(vgaRom)},floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
     executionBoundaries,cr0Transitions,doomEntry,doomEntryWrites,doomTraceDetail,
+    gameKeyboard:{requested:gameKeys,injected:injectedGameKeys,remaining:gameKeySchedule},
     doomInstructionTrace:orderedDoomInstructionTrace(),diskPorts,rtcPorts,keyboardScript,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
