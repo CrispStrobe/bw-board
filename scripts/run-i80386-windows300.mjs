@@ -45,6 +45,11 @@ const vga = readPinned('VGA_BIOS_ROM', EXPECTED_VGA_SHA256, 'SeaVGABIOS ROM');
 const expectedHdd = process.env.AT_HDD_EXPECTED_SHA256 ?? EXPECTED_HDD_SHA256;
 if (!/^[0-9a-f]{64}$/.test(expectedHdd)) throw new Error('AT_HDD_EXPECTED_SHA256 must be lowercase SHA-256');
 const hdd = readPinned('AT_HDD_IMAGE', expectedHdd, 'Windows 3.0 / PC DOS 3.2 HDD image');
+const parentReportPath = process.env.AT_HDD_PARENT_REPORT ?? null;
+if(expectedHdd!==EXPECTED_HDD_SHA256&&!parentReportPath)
+  throw new Error('derived HDD input requires AT_HDD_PARENT_REPORT');
+const parentReportSha256 = parentReportPath && sha(fs.readFileSync(parentReportPath));
+const hddOutputPath = process.env.AT_HDD_OUTPUT ?? null;
 if (bios.bytes.length !== 0x10000 || vga.bytes.length !== 0x7e00 || hdd.bytes.length !== 21_411_840)
   throw new Error('external input byte length mismatch');
 const stepLimit = process.env.AT_POST_STEPS === undefined ? DEFAULT_STEPS : Number(process.env.AT_POST_STEPS);
@@ -78,18 +83,22 @@ const emitStroke = (step,key,shift=false) => {
   if(shift)keyEvents.push({step:step+300,code:scan.shift|0x80});
 };
 if (keyScript) {
-  if(keyScript.schema!=='astra.windows-key-script.v1'||!Array.isArray(keyScript.actions))
+  if(keyScript.schema!=='astra.windows-key-script.v1'||!Array.isArray(keyScript.actions)||
+      keyScript.actions.length===0)
     throw new Error('invalid Windows key script');
   for(const action of keyScript.actions){
     if(!Number.isInteger(action.step)||action.step<1)throw new Error('key action step must be positive');
     if(action.kind==='key')emitStroke(action.step,action.key);
     else if(action.kind==='chord'){
       const keys=action.keys; if(!Array.isArray(keys)||keys.length<2)throw new Error('invalid chord');
+      if(keys.some(key=>scan[key]===undefined))throw new Error('unsupported chord key');
       let at=action.step; for(const key of keys.slice(0,-1))keyEvents.push({step:at+=100,code:scan[key]});
       const code=scan[keys.at(-1)]; keyEvents.push({step:at+=100,code},{step:at+=100,code:code|0x80});
       for(const key of keys.slice(0,-1).reverse())keyEvents.push({step:at+=100,code:scan[key]|0x80});
     } else if(action.kind==='text'){
+      if(typeof action.value!=='string'||action.value.length===0)throw new Error('key text must be nonempty');
       let at=action.step; const interval=action.interval??1000;
+      if(!Number.isInteger(interval)||interval<400)throw new Error('key text interval must be an integer >=400');
       for(const char of action.value){const lower=char.toLowerCase(),shift=char!==lower||char===':';
         emitStroke(at,char===':'?';':char===' '?'space':lower,shift); at+=interval;}
     } else throw new Error(`unsupported key action '${action.kind}'`);
@@ -99,6 +108,7 @@ if (keyScript) {
       keyEvents.at(-1)?.step+10_000_000>=stepLimit)
     throw new Error('key events must be unique and precede the instruction limit');
 }
+const hddOutputFd = hddOutputPath ? fs.openSync(hddOutputPath,'wx') : null;
 
 // Clone the VGA board profile with an AT type-2 HDD and a configured but empty
 // 1.2MB drive A. The IBM Rev1 POST minimum-configuration test requires at
@@ -395,6 +405,8 @@ const report = {
     bios: {bytes: bios.bytes.length, sha256: bios.sha256},
     vgaRom: {bytes: vga.bytes.length, sha256: vga.sha256},
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256, geometry: HDD_GEOMETRY},
+    hddProvenance: expectedHdd===EXPECTED_HDD_SHA256 ? {kind:'pinned-original'} :
+      {kind:'derived-clone',parentReportSha256},
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
   reset, postEvents, postContinue, ataCommands, ataStatus, ataTaskFileWrites, dosInterrupts,
@@ -420,9 +432,9 @@ if (execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).tr
   throw new Error('Windows run refused: HEAD changed during execution');
 if(keyScriptPath&&sha(fs.readFileSync(keyScriptPath))!==keyScriptSha256)
   throw new Error('Windows run refused: key script changed during execution');
-if(process.env.AT_HDD_OUTPUT){
-  if(fs.existsSync(process.env.AT_HDD_OUTPUT))throw new Error('AT_HDD_OUTPUT refuses to overwrite an existing file');
-  fs.writeFileSync(process.env.AT_HDD_OUTPUT,machine.ata.mediaBytes());
+if(hddOutputFd!==null){
+  fs.writeFileSync(hddOutputFd,machine.ata.mediaBytes());
+  fs.closeSync(hddOutputFd);
 }
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 if (refusal || machine.cpu.shutdown) process.exitCode = 1;
