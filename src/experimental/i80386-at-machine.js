@@ -1,6 +1,7 @@
 import {I8086Machine, PCAT80286_BOOT_640K} from '../i8086-machine.js';
 import ExperimentalI80386 from './i80386.js';
 import ExperimentalATA16 from './ata16.js';
+import VGAMemory from './vga-memory.js';
 
 /**
  * Opt-in bridge from the bounded 80386 executor to the existing AT devices.
@@ -29,6 +30,12 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this.cpu = new ExperimentalI80386(bus, {deliverFaults: true});
     this.cpu.onInterrupt = event => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(event); };
     this.ata = null;
+    this.vgaMemory = null;
+    if (config.experimentalVgaMemory) {
+      const vga = this.chips[config.experimentalVgaMemory];
+      if (!vga) throw new Error(`experimental VGA memory names missing chip '${config.experimentalVgaMemory}'`);
+      this.vgaMemory = new VGAMemory(vga);
+    }
     if (hooks.ataImage !== undefined) {
       this.ata = new ExperimentalATA16(hooks.ataImage, hooks.ataGeometry ?? {
         cylinders: 306, heads: 4, sectors: 17,
@@ -42,6 +49,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
   reset() {
     super.reset();
     this.ata?.reset();
+    this.vgaMemory?.reset();
   }
 
   _gate386(address) {
@@ -59,11 +67,17 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _read386(address) {
     const decoded = this._decode386(address);
+    const video = this.vgaMemory?.read(decoded);
+    if (video !== undefined && video !== null) return video;
     return decoded < this.memoryBytes ? this._read(decoded) : 0xff;
   }
 
   _write386(address, value) {
     const decoded = this._decode386(address);
+    if (this.vgaMemory?.write(decoded, value)) {
+      this.displayRevision = (this.displayRevision + 1) >>> 0;
+      return;
+    }
     if (decoded < this.memoryBytes) this._write(decoded, value);
   }
 
@@ -227,6 +241,26 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD,
   chips: PCAT80386_EXPERIMENTAL_4M_HDD.chips.map(chip => chip.kind === 'fdc'
     ? {...chip,acceptedCcrByImageBytes:{1228800:[0]}} : chip),
+});
+
+/** Opt-in VGA board profile with external C000h option-ROM decode. */
+export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
+  experimentalVgaMemory: 'vga1',
+  regions: [
+    ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS.regions.filter(region =>
+      !(region.kind === 'ram' && region.start === 0xb8000)),
+    {kind: 'rom', start: 0xc0000, end: 0xc7fff},
+  ],
+  chips: [
+    ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS.chips
+      .filter(chip => chip.kind !== 'cga')
+      .map(chip => chip.kind === 'rtc' ? {...chip,
+        initialCmos: chip.initialCmos.map(([index, value]) =>
+          index === 0x14 ? [index, 0x01] : index === 0x2f ? [index, 0x40] : [index, value]),
+      } : chip),
+    {kind: 'vga', name: 'vga1', at: 0x3c0},
+  ],
 });
 
 export default ExperimentalI80386ATMachine;
