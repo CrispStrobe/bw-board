@@ -17,14 +17,19 @@
       "title": "NEC uPD765 application note AN08",
       "url": "https://bitsavers.org/components/nec/_appNotes/AN08_uPD765_preliminary_197902.pdf",
       "localText": "/tmp/astra-nec-upd765-appnote.txt",
-      "evidence": "drive ready polling and SEEK/SENSE behavior; PCN is not cleared by controller reset"
+      "evidence": "Drive ready polling and SEEK/SENSE behavior."
+    },
+    {
+      "title": "NEC uPD765A/uPD7265 datasheet, Seek and Reset pin sections (transcription)",
+      "url": "https://cpctech.cpcwiki.de/docs/upd765a/necfdc.htm",
+      "evidence": "Seek section states the four PCN registers are cleared only by RECALIBRATE. This is why the PCjs-inspired reset-PCN experiment was rejected."
     }
   ],
   "diagnostics": [
     {
       "executionRevision": "4643546e5311d49033a6e3b1849a3d4c26f71c8d",
       "reportSha256": "76a10cd1a8102f5725ec7daed5ab08f0663341897fd04128773ffc19f0b617f2",
-      "result": "baseline failed after BIOS selected low-density media; SEEK80 then READ C40 returned 44/04/10"
+      "result": "Baseline loader ends in Error before the installer UI; later source-bound classification traces identify the SEEK80/READ C40 wrong-cylinder cause."
     },
     {
       "executionRevision": "aea06c7752a2594f71e260d4dfac975897465ed9",
@@ -53,6 +58,16 @@
     "strictSeekCommit": "2890d462",
     "defaultProfilesChanged": false,
     "acceptedProfile": "PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS",
-    "acceptedCcrByImageBytes": {"1228800": [0]}
-  }
+    "acceptedCcrByImageBytes": {
+      "1228800": [
+        0
+      ]
+    },
+    "scope": "Only the explicitly named 1.2MB-media profile enforces the declared data rate; legacy permissive profiles retain their existing behavior."
+  },
+  "limits": [
+    "The shell invoked the DOOM command; execution of the DOS4GW extender or game has not yet been attributed and accepted.",
+    "Earlier baseline traces and the winning ad44541b run are historical; the winning run still selected the later-removed silent seek option.",
+    "No full386, Windows, Doom graphics, or FDC timing claim."
+  ]
 }
