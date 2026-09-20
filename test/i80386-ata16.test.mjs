@@ -74,7 +74,7 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   assert.deepEqual(irq, [], 'write also enters a visible inter-sector busy phase');
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
   ata.advance(8192);
-  assert.deepEqual(irq, [true], 'second write block becomes ready after status observes busy');
+  assert.deepEqual(irq, [true], 'second write block becomes ready at the autonomous deadline');
   ata.readRegister(7);
   for (let word = 0; word < 256; word++) ata.writeData16(0x2200 | word);
   assert.deepEqual(irq, [true, false, true], 'write command completion interrupts');

@@ -54,6 +54,11 @@ if ((traceStart === null) !== (traceEnd === null) ||
     (traceStart !== null && (!Number.isInteger(traceStart) || !Number.isInteger(traceEnd) ||
       traceStart < 0 || traceEnd <= traceStart || traceEnd - traceStart > 100_000)))
   throw new Error('AT_TRACE_START/END must define a positive window of at most 100000 instructions');
+const enterStep = process.env.AT_WINDOWS_ENTER_STEP === undefined
+  ? null : Number(process.env.AT_WINDOWS_ENTER_STEP);
+if (enterStep !== null && (!Number.isInteger(enterStep) || enterStep < 1 ||
+    enterStep + 10_000_000 >= stepLimit))
+  throw new Error('AT_WINDOWS_ENTER_STEP must leave 10000000 instructions for observed response');
 
 // Clone the VGA board profile with an AT type-2 HDD and a configured but empty
 // 1.2MB drive A. The IBM Rev1 POST minimum-configuration test requires at
@@ -94,6 +99,8 @@ let modeTransitionTailNext = 0;
 const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
+const keyboardAction = {kind: 'set1-enter', requestedStep: enterStep,
+  events: [], beforeVga: null, afterVga: null};
 let machine;
 machine = new ExperimentalI80386ATMachine(windowsProfile, {
   ataImage: hdd.bytes,
@@ -222,6 +229,14 @@ for (; steps < stepLimit; steps++) {
     ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
     ebp: machine.cpu.ebp, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0 >>> 0,
     pc: machine.cpu.pc};
+  if (enterStep !== null && steps === enterStep) {
+    keyboardAction.beforeVga = captureVga();
+    keyboardAction.events.push({step: steps, code: 0x1c, accepted: machine.keyIn(0x1c)});
+  }
+  if (enterStep !== null && steps === enterStep + 2_000)
+    keyboardAction.events.push({step: steps, code: 0x9c, accepted: machine.keyIn(0x9c)});
+  if (enterStep !== null && steps === enterStep + 10_000_000)
+    keyboardAction.afterVga = captureVga();
   if (traceStart !== null && steps >= traceStart && steps < traceEnd) {
     instructionWindow.push({...before,
       bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0),
@@ -334,7 +349,7 @@ const report = {
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
   reset, postEvents, postContinue, ataCommands, ataStatus, ataTaskFileWrites, dosInterrupts,
-  controllerPorts, interrupts, interruptCounts,
+  controllerPorts, interrupts, interruptCounts, keyboardAction,
   vgaOptionEntry, bootEntries, bootFailureBoundary, modeTransitions,
   instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
     ...instructionTrail.slice(instructionTrailNext), ...instructionTrail.slice(0, instructionTrailNext),
