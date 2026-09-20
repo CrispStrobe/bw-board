@@ -1,0 +1,234 @@
+{
+  "schema": "astra.i80386-windows300-editor-persistence-receipt.v1",
+  "date": "2026-09-20",
+  "accepted": true,
+  "scope": "Keyboard-only Windows 3.0 Notepad creation and save to a cloned HDD, followed by a fresh reset/remount that opens the saved file. The external Windows media and rendered pixels remain outside the repository.",
+  "originalInputs": {
+    "biosSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "vgaRomSha256": "90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a",
+    "hddSha256": "127d214b6c4ff2520c95063e00028547cf287a22e56c0c7a8d550af08486f1aa",
+    "hddBytes": 21411840,
+    "hddGeometry": {
+      "cylinders": 615,
+      "heads": 4,
+      "sectors": 17
+    }
+  },
+  "writer": {
+    "executionRevision": "159f9c43d5d07ef0ea1a09b6489c823b779b5cdc",
+    "sourceSha256": {
+      "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+      "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+      "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+      "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+      "src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157",
+      "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+      "src/experimental/ata16.js": "e84e22eb7edd97c83ac481a9096159370365368806b851e22a2bbce66d245c6e",
+      "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+      "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+      "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
+      "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+      "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+      "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+      "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+      "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+      "scripts/run-i80386-windows300.mjs": "570caf2e68e02adc3688cfbdaaa773c70b717e08fa8c46a7897da94d68b00a79"
+    },
+    "report": {
+      "path": "/tmp/astra-windows300-editor-save-v2.json",
+      "sha256": "4f50af26657ae1d2d6f57986d6367fcbcfb4a1d0ce9cbc11b16a6e2163cc6fa9"
+    },
+    "steps": 120000000,
+    "stopReason": "budget",
+    "keyScript": {
+      "path": "test/fixtures/windows300-editor-save.json",
+      "sha256": "812f663dd337064fbcd252e04a4eed32a138e36919d6c4c3233a567b887074e4",
+      "actions": [
+        {
+          "step": 100000000,
+          "kind": "chord",
+          "keys": [
+            "alt",
+            "f"
+          ]
+        },
+        {
+          "step": 100500000,
+          "kind": "key",
+          "key": "r"
+        },
+        {
+          "step": 101000000,
+          "kind": "text",
+          "value": "notepad"
+        },
+        {
+          "step": 102000000,
+          "kind": "key",
+          "key": "enter"
+        },
+        {
+          "step": 105000000,
+          "kind": "text",
+          "value": "astra windows 300"
+        },
+        {
+          "step": 106000000,
+          "kind": "chord",
+          "keys": [
+            "alt",
+            "f"
+          ]
+        },
+        {
+          "step": 106500000,
+          "kind": "key",
+          "key": "a"
+        },
+        {
+          "step": 107000000,
+          "kind": "text",
+          "value": "c:\\owned.txt"
+        },
+        {
+          "step": 108000000,
+          "kind": "key",
+          "key": "enter"
+        }
+      ],
+      "events": {
+        "count": 90,
+        "allAccepted": true,
+        "firstStep": 100000100,
+        "lastStep": 108000200
+      }
+    },
+    "result": {
+      "refusal": null,
+      "halted": false,
+      "shutdown": false,
+      "diagnosticOnly": true,
+      "windowsBootAccepted": false
+    },
+    "outputHddSha256": "95a4621134ec4e0b0ce168eaa95bf6badcd94f4e1b88c5526afee18cc0f2e214",
+    "renderedFrame": {
+      "pngPath": "/tmp/editor-v2-after.png",
+      "pngSha256": "d4187cb38593dc053ec6a41530bd2b741a99f6a2185f837f10b77d2b2e562f5b",
+      "rgb24Sha256": "069cf898a5f548df51c6813c9609b0ffe08d5f5d6e719078d2fdbc16d861d3a5",
+      "observed": "Notepad - OWNED.TXT with text astra windows 300"
+    }
+  },
+  "persistedFile": {
+    "dosPath": "C:\\OWNED.TXT",
+    "size": 17,
+    "clusterChain": [
+      2138
+    ],
+    "utf8": "astra windows 300",
+    "hex": "61737472612077696e646f777320333030",
+    "sha256": "1f6737e67b3319c3257ded96c40f99f7ef137a840067c9fbe7e2bab4df56fcee",
+    "audit": "Independent FAT16 audit checked both FAT copies and exact file bytes; the file was absent from the pinned original image."
+  },
+  "remount": {
+    "executionRevision": "2f58a5a5d8f027ad61f957d74cf7f30953393f39",
+    "sourceSha256": {
+      "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+      "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+      "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+      "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+      "src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157",
+      "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+      "src/experimental/ata16.js": "e84e22eb7edd97c83ac481a9096159370365368806b851e22a2bbce66d245c6e",
+      "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+      "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+      "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
+      "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+      "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+      "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+      "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+      "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+      "scripts/run-i80386-windows300.mjs": "62025c719ca9af4a6547140229098618681f69687eeda4de2ab27dbc026055b0"
+    },
+    "report": {
+      "path": "/tmp/astra-windows300-editor-remount-report.json",
+      "sha256": "47b12bf047ad6646f4ada588230c02924b6121ecd9f9e241d2293b1e87e6076f"
+    },
+    "steps": 115000000,
+    "stopReason": "budget",
+    "inputHddSha256": "95a4621134ec4e0b0ce168eaa95bf6badcd94f4e1b88c5526afee18cc0f2e214",
+    "parentWriterReportSha256": "4f50af26657ae1d2d6f57986d6367fcbcfb4a1d0ce9cbc11b16a6e2163cc6fa9",
+    "keyScript": {
+      "path": "test/fixtures/windows300-editor-remount.json",
+      "sha256": "742dba0a40df9715e9f4671eb64848082fd137d584a83c7ca3c4eb489190ae0f",
+      "actions": [
+        {
+          "step": 100000000,
+          "kind": "chord",
+          "keys": [
+            "alt",
+            "f"
+          ]
+        },
+        {
+          "step": 100500000,
+          "kind": "key",
+          "key": "r"
+        },
+        {
+          "step": 101000000,
+          "kind": "text",
+          "value": "notepad c:\\owned.txt"
+        },
+        {
+          "step": 102000000,
+          "kind": "key",
+          "key": "enter"
+        }
+      ],
+      "events": {
+        "count": 50,
+        "allAccepted": true,
+        "firstStep": 100000100,
+        "lastStep": 102000200
+      }
+    },
+    "result": {
+      "refusal": null,
+      "halted": false,
+      "shutdown": false,
+      "diagnosticOnly": true,
+      "windowsBootAccepted": false
+    },
+    "renderedFrame": {
+      "pngPath": "/tmp/editor-remount-after.png",
+      "pngSha256": "4b1f27fd8376ccf819e4276480ba51681cd0c12d89b7f5497ade9e53a948ef3b",
+      "rgb24Sha256": "6e45fc0e51ac9c23d769ff60995868b48ed65a2e678df3e35d49e172b41b1b75",
+      "observed": "Fresh boot opened Notepad - OWNED.TXT with exact text astra windows 300"
+    }
+  },
+  "provenanceNotes": [
+    "The writer used the pinned original HDD and produced a distinct cloned output; the original image hash did not change.",
+    "The historical remount run recorded and checked the parent writer report hash and input clone hash. Its source revision did not yet parse the parent report contents. Revision dcdf7e9981c00d495ce2f4f8720f1733c5aaf098 later added fail-closed schema and output-hash linkage checks; this receipt does not relabel the historical run as that revision.",
+    "The runner retains diagnosticOnly=true and windowsBootAccepted=false. Acceptance here is the narrower independently audited editor-save/remount milestone."
+  ],
+  "excludedDiagnostics": [
+    {
+      "reportPath": "/tmp/astra-windows300-editor-save.json",
+      "reportSha256": "1a0ea5a7da92810a02a407467c4167cf5d33a2fbea653a20464fc3e4128f71da",
+      "reason": "Ctrl+S did not invoke Save in Windows 3.0 Notepad and the attempted filename became document text; its unchanged output is excluded."
+    }
+  ],
+  "validation": {
+    "currentHarnessRevision": "dcdf7e9981c00d495ce2f4f8720f1733c5aaf098",
+    "preflightNegativeCases": [
+      "null script",
+      "empty actions",
+      "prototype-inherited chord key constructor",
+      "text interval below 400"
+    ],
+    "allRejected": true,
+    "rootVisualAudit": "/tmp/astra-root-windows-save-render.json"
+  }
+}
