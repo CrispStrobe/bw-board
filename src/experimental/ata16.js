@@ -304,6 +304,9 @@ export class ExperimentalATA16 {
       } else if ((old & 4) && !(this.control & 4)) {
         const interruptMask = this.control & 2;
         this.reset();
+        // ATA software-reset signature for device 0. The IBM 5170 fixed-disk
+        // reset path requires register 1 to read 01h after SRST is released.
+        this.error = 1;
         this.control = interruptMask;
         this._updateIRQ();
       } else this._updateIRQ();

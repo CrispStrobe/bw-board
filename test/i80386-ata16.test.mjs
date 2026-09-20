@@ -111,6 +111,8 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   ata.writeRegister(7, 0, {control: true});
   assert.equal(ata.readRegister(7, {alternate: true}), 0x50,
     'reset release does not resurrect the next multi-sector block');
+  assert.equal(ata.readRegister(1), 1,
+    'software-reset release publishes the device-0 diagnostic signature');
 
   const irqBeforeIgnoredCommands = irq.length;
   ata.writeRegister(7, 4, {control: true});
@@ -120,6 +122,7 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   assert.deepEqual(ata.mediaBytes(), image(), 'commands and data are ignored while SRST is asserted');
   ata.writeRegister(7, 2, {control: true});
   assert.equal(ata.readRegister(7, {alternate: true}), 0x50);
+  assert.equal(ata.readRegister(1), 1);
   ata.writeRegister(7, 0, {control: true});
   assert.equal(irq.length, irqBeforeIgnoredCommands, 'reset cleared pending IRQ');
 
