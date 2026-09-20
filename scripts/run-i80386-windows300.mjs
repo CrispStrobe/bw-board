@@ -127,6 +127,29 @@ const renderText = () => {
     String.fromCharCode(machine.vgaMemory.planes[0][(row * columns + column) * 2] || 0x20))
     .join('').replace(/\s+$/, ''));
 };
+const captureVga = () => {
+  const state = machine.chips.vga1.getVideoState();
+  const planes = machine.vgaMemory.planes.map(plane => Buffer.from(plane));
+  return {
+    phase: 'after-step',
+    planeBytes: planes.map(plane => plane.length),
+    planeSha256: planes.map(sha),
+    planeBase64: planes.map(plane => plane.toString('base64')),
+    registers: {
+      misc: state.misc,
+      seq: Array.from(state.seq),
+      gc: Array.from(state.gc),
+      crtc: Array.from(state.crtc),
+      attr: Array.from(state.attr),
+      dac: Array.from(state.dac),
+      dacMask: state.dacMask,
+      dacWriteIndex: state.dacWriteIndex,
+      dacReadIndex: state.dacReadIndex,
+      inVRetrace: state.inVRetrace,
+      frame: state.frame,
+    },
+  };
+};
 const physicalBytes = (pc, cr0, length = 8) => {
   if (cr0 & 0x80000000) return null;
   return Array.from({length}, (_, index) => {
@@ -213,7 +236,7 @@ for (; steps < stepLimit; steps++) {
     if (process.env.AT_PROGRESS_OUTPUT) {
       const progress = {schema: 'astra.i80386-windows300-progress.v1', executionRevision,
         step: steps, cpu: before, modeTransitionCount: modeTransitions.count,
-        lastLines: text.slice(-6)};
+        lastLines: text.slice(-6), vga: captureVga()};
       const temporary = `${process.env.AT_PROGRESS_OUTPUT}.tmp`;
       fs.writeFileSync(temporary, `${JSON.stringify(progress, null, 2)}\n`);
       fs.renameSync(temporary, process.env.AT_PROGRESS_OUTPUT);
@@ -247,7 +270,7 @@ const report = {
     cr0: machine.cpu.cr0 >>> 0, cr2: machine.cpu.cr2 >>> 0, cr3: machine.cpu.cr3 >>> 0,
     eflags: machine.cpu.eflags >>> 0, halted: machine.cpu.halted, shutdown: machine.cpu.shutdown},
   screenText, nonblankScreen, samples,
-  vga: {state: machine.chips.vga1.getVideoState(),
+  vga: {snapshot: captureVga(),
     nonzeroByPlane: machine.vgaMemory.planes.map(plane => plane.reduce((sum, byte) => sum + (byte !== 0), 0))},
   hddOutputSha256: sha(machine.ata.mediaBytes()),
   executionRevision, sourceSha256,
