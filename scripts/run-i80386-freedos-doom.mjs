@@ -316,7 +316,8 @@ for(;steps<stepLimit;steps++) {
         machine.step();
     } catch(error) {
         if(!(error instanceof UnsupportedI80386)&&!(error instanceof I80386Fault)&&
-            (!(error instanceof Error)||!error.message.startsWith('MC146818 ')))throw error;
+            (!(error instanceof Error)||
+                (!error.message.startsWith('MC146818 ')&&!error.message.startsWith('AT 8042 '))))throw error;
         hostRefusal={name:error.name,message:error.message,step:steps,before,cpu:cpuSnapshot(),
             rtc:{index:machine.chips.rtc1.index,registerB:machine.chips.rtc1.ram[0x0b],
                 state:machine.chips.rtc1.getState()},recentPorts:[...rtcPorts]};

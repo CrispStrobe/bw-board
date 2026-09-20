@@ -226,11 +226,25 @@ test('386 AT scheduler wakes a halted CPU horizon for the next ATA PIO block', (
   out8(0x1f7, 0x20);
   machine.cpu.inPort(0x1f7, 8);
   for (let word = 0; word < 256; word++) machine.cpu.inPort(0x1f0, 16);
-  assert.equal(machine.cpu.inPort(0x3f6, 8), 0x80);
+  assert.equal(machine.ata.status, 0x80);
+  const rom = new Uint8Array(0x10000).fill(0x90);
+  machine.loadRom(rom);
+  machine.cpu.hardwareReset();
+  let instructions = 0;
+  while (!machine.ata._irqPending && instructions++ < 46) machine.step();
+  assert.equal(machine.ata.status, 0x58);
+  assert.equal(machine.ata._irqPending, true);
+  assert.ok(instructions <= 46, 'NOP execution reaches the rearmed ATA deadline without port I/O');
+
+  machine.ata.readRegister(7);
+  machine.ata._beginIntersector('read');
+  machine._chipDeadline = machine._wakeHorizon();
   machine.cpu.halted = true;
   const before = machine.cycles;
+  const remaining = machine.ata._intersectorRemaining;
   machine.step();
-  assert.equal(machine.cpu.inPort(0x3f6, 8), 0x58);
+  assert.equal(machine.ata.status, 0x58);
   assert.equal(machine.ata._irqPending, true);
-  assert.ok(machine.cycles - before >= 256, 'halt advances to the ATA deadline without another poll');
+  assert.ok(machine.cycles - before > 0 && machine.cycles - before <= remaining,
+    'halt advances to the ATA deadline without another poll');
 });
