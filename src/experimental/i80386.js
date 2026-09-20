@@ -61,6 +61,7 @@ export class ExperimentalI80386 {
     if (!Number.isInteger(stepping) || stepping < 0 || stepping > 0xff)
       throw new TypeError("reset stepping must be an unsigned byte");
     this.reset();
+    this._coprocessorProfile = coprocessor;
     // Bits 5..30 are undefined on the original 80386 and are deterministically
     // zero in this model. ERROR# selects ET; all other defined CR0 bits clear.
     this.cr0 = coprocessor === "80387" ? 0x10 : 0;
@@ -86,6 +87,7 @@ export class ExperimentalI80386 {
     this.cr0 = 0;
     this.cr2 = 0;
     this.cr3 = 0;
+    this._coprocessorProfile = "none";
     this.halted = false;
     this.cycles = 0;
     this.cs = 0;
@@ -2371,6 +2373,21 @@ export class ExperimentalI80386 {
       const accumulator = this._reg(0, width);
       this._setReg(0, width, this._reg(register, width));
       this._setReg(register, width, accumulator);
+    } else if (op === 0x9b) {
+      if ((this.cr0 & 0x0a) === 0x0a)
+        throw new I80386Fault(7, null, "WAIT with MP and TS set");
+    } else if (op >= 0xd8 && op <= 0xdf) {
+      if (this.cr0 & 0x0c)
+        throw new I80386Fault(7, null, "ESC with EM or TS set");
+      const operand = this._decodeEA(address32, override);
+      if (this._coprocessorProfile !== "none")
+        throw new UnsupportedI80386(
+          "x87 execution requires an external coprocessor backend",
+        );
+      // With no external NPX, the CPU decodes the ESC and its effective
+      // address but no coprocessor exists to consume or produce operand data.
+      // In particular, store-form ESC instructions leave memory unchanged.
+      void operand;
     } else if (op >= 0x40 && op <= 0x47) {
       const n = op - 0x40,
         cf = this.eflags & CF;

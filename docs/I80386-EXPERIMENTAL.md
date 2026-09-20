@@ -292,6 +292,16 @@ iteration as a separate interruptible executor step. Operand size selects the
 port width, address size selects SI/ESI or DI/EDI, OUTS accepts a source
 segment override, and INS always targets ES.
 
+The reset profile can identify no coprocessor, an 80287, or an 80387 for the
+original ET reset bit, but this executor does not implement x87 arithmetic.
+For the explicit absent-coprocessor profile, WAIT raises #NM only when MP and
+TS are both set, while ESC raises #NM when EM or TS is set. Otherwise ESC
+decodes its ModR/M effective address without an operand bus access: no external
+device exists to read or write the operand, so store forms such as FNSTCW leave
+memory unchanged. A reset profile that declares a coprocessor still refuses
+ESC execution unless an external coprocessor backend is added; it does not
+invent x87 results.
+
 VERR and VERW query descriptor type and privilege without requiring the
 descriptor P bit, as specified for the original 386. The pinned PCjs oracle
 agrees for P=0 accessible data, RPL rejection, execute-only code rejection,
