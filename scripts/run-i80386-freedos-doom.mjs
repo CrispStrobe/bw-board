@@ -156,6 +156,7 @@ let stopReason=null;
 let hostRefusal=null;
 const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
     String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,''));
+const disketteBda=()=>Array.from({length:16},(_,index)=>machine._read(0x490+index));
 const deviceSnapshot=()=>({
     masterPic:machine.chips.pic1.getState(),slavePic:machine.chips.pic2.getState(),
     primaryDma:machine.chips.dma1.getState(),secondaryDma:machine.chips.dma2.getState(),
@@ -213,7 +214,8 @@ for(;steps<stepLimit;steps++) {
     if(!executionBoundaries.bootSector&&atBootSector) {
         const loaded=machine.mem.slice(0x7c00,0x7e00);
         executionBoundaries.bootSector={step:steps,before,after,physical:0x7c00,
-            firstBytes:Array.from(loaded.slice(0,16)),sha256:sha(loaded),devices:deviceSnapshot()};
+            firstBytes:Array.from(loaded.slice(0,16)),sha256:sha(loaded),
+            disketteBda490:disketteBda(),devices:deviceSnapshot()};
     }
     if(!executionBoundaries.unexpectedInterrupt&&after.cs===0xf000&&after.ip===0x1805)
         executionBoundaries.unexpectedInterrupt={step:steps,before,after,devices:deviceSnapshot()};
@@ -289,7 +291,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,diskPorts,rtcPorts,keyboardScript,
+    executionBoundaries,diskPorts,rtcPorts,keyboardScript,disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,
     screenText,uiSamples,
