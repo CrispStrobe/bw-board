@@ -124,7 +124,7 @@ M1 out out source source NM W=1u L=1u
     for (const [params, pattern] of [
       [{ ...PARAMS, bulkOnSource: undefined }, /bulkAtGround must explicitly prove/],
       [{ ...PARAMS, bulkAtGround: true }, /bulkAtGround must explicitly prove/],
-      [{ ...PARAMS, gamma: 0.4 }, /parameter gamma is outside/],
+      [{ ...PARAMS, gamma: 0.4 }, /gamma and phi must be declared together/],
     ]) assert.throws(() => boardFor({ sourceVolts: 0, drainVolts: 2, gateVolts: 3, params }).operatingPoint(), pattern);
   });
 });

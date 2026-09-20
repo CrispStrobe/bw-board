@@ -23,6 +23,10 @@ current within 10 nA; the focused MOS surface passes 46/46. Removing the new
 allowlist makes that witness red, while removing either pair completeness or the
 grounded-bulk restriction makes the named refusal proof red. No stamp, AC/gmb,
 solver/tolerance, CUI/pin, PMOS, x86, workflow, or unrelated engine change.
+Initial exact-head CI `35478520574` ran 5,614 tests with one stale source-bulk
+expectation: it expected GAMMA to be globally outside the domain rather than the
+new stricter pair-completeness refusal. This forward test-only correction names
+the actual retained refusal; Harris `35478520595` and every non-test CI job were green.
 
 2026-09-19 DONE — bwcx: Level-1 MOS reverse-VDS channel symmetry, isolated
 worktree `/mnt/volume1/code/wt/bwb-mos-reverse-vds-symmetry`, branch
