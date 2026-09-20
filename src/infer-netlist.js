@@ -209,6 +209,12 @@ export function inferNetlist(stc, opts) {
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
     const isMotor = /motor|fan\b/i.test(pin.name) && !isBuzzer;
     const isRelay = /relay/i.test(pin.name) && !isBuzzer && !isMotor;
+    // A servo is a registered three-terminal device that takes the pin as its
+    // signal and its own power from the rails — so unlike the motor it needs no
+    // driver transistor, and unlike the LED it must not be one. A pin named
+    // `servo` rendered as an LED, which is how 53-servo-sweep came to describe
+    // "a servo motor sweeping back and forth" over a bench holding one LED.
+    const isServo = /servo/i.test(pin.name) && !isBuzzer && !isMotor && !isRelay;
 
     switch (pin.direction) {
       case 'tone': {
@@ -232,6 +238,16 @@ export function inferNetlist(stc, opts) {
 
       case 'output':
       case 'pwm': {
+        if (isServo) {
+          const sId = `SERVO_${safeName}`;
+          parts.push({ id: sId, kind: 'servo', params: {},
+            terminals: ['signal', 'vcc', 'gnd'] });
+          nets.push({ id: `net_${safeName}_sig`,
+            terminals: [{ part: 'MCU', terminal: pinId }, { part: sId, terminal: 'signal' }] });
+          vccNet.terminals.push({ part: sId, terminal: 'vcc' });
+          gndNet.terminals.push({ part: sId, terminal: 'gnd' });
+          break;
+        }
         if (isMotor) {
           // pin → NPN base via 1k; motor VCC→collector, emitter→GND. A pin
           // named 'motor' rendered as an LED and the owner asked, fairly,

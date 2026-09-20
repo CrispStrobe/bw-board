@@ -9,6 +9,29 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): infer a servo from the
+pin name. Isolated worktree `/mnt/volume1/code/wt/bwb-infer-servo`, branch
+`lane/infer-servo-by-name`, exact base `a0ba2531`. Owns only the servo branch in
+`src/infer-netlist.js`, `test/infer-servo.test.js` and this row.
+
+`inferNetlist` has detected buzzer, motor and relay by name convention since
+2026-08-17, for exactly the reason recorded there: a pin named `motor` rendered as an
+LED and the owner asked where the motor was. A pin named `servo` still rendered as an
+LED, which is how sb3-creator's 53-servo-sweep came to open with "A servo motor
+sweeping back and forth between 0 and 180 degrees" over a bench holding one LED, and
+arduino-sk-p05-servo-mood likewise. The servo is an already-registered three-terminal
+device: it takes the pin as its signal and its own power from the rails, so unlike the
+motor it needs no driver transistor, and the test asserts no NPN appears. Detection
+runs LAST of the four, so `servoMotor` stays a motor, `servoBuzzer` a buzzer and
+`servoRelay` a relay — each asserted, because plain names cannot tell whether that
+chain is load-bearing and the first version of the test could not see it.
+
+Focused servo suite 10/10, and 47/47 across every inference suite plus the shift
+register example. Disabling detection, removing the exclusion chain, and dropping the
+ground net each turn a named test red. Excludes the servo device model itself, PWM
+angle semantics, the `signal` pin-name spelling that 53-servo-sweep still uses, and
+every other name convention.
+
 2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): shift-register outputs
 on a nonlinear load, and the LED operating point. Isolated worktree
 `/mnt/volume1/code/wt/bwb-sr-outputs`, branch `lane/shift-register-output-refresh`,
