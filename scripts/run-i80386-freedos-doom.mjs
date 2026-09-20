@@ -73,6 +73,7 @@ const encodeKeys=keys=>keys.flatMap(key=>key==='>'||key===':'
     : [{key,scan:scanCodes[key.toLowerCase()]}]);
 const keyScript=[];
 let installerDeclined=false,commandQueued=false,commandPrompt=null,doomEntry=null;
+const doomInstructionTrace=[];
 
 const resetRequests=[];
 const resetApplications=[];
@@ -183,7 +184,7 @@ const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_
     String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,''));
 const disketteBda=()=>Array.from({length:16},(_,index)=>machine._read(0x490+index));
 const cpuSnapshot=()=>{
-    const cpu=machine.cpu,pc=cpu.pc;
+    const cpu=machine.cpu,linearPc=cpu.pc,paging=!!(cpu.cr0&0x80000000);
     const mappedOffset=doomEntry
         ? doomMz.headerParagraphs*16+(((cpu.cs-doomEntry.loadSegment)&0xffff)<<4)+cpu.eip:null;
     const mappedBytes=mappedOffset!==null&&mappedOffset<hddFiles.doomExe.length
@@ -191,8 +192,9 @@ const cpuSnapshot=()=>{
     return {eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,
         ebp:cpu.ebp,esp:cpu.esp,eip:cpu.eip,eflags:cpu.eflags,cs:cpu.cs,ds:cpu.ds,
         es:cpu.es,ss:cpu.ss,fs:cpu.fs,gs:cpu.gs,cr0:cpu.cr0,cr2:cpu.cr2,cr3:cpu.cr3,
-        pc,tr:{...cpu.tr},ldtr:{...cpu.ldtr},csCache:{...cpu.segmentCaches[1]},
-        opcodeBytes:Array.from({length:16},(_,index)=>cpu.read((pc+index)>>>0)),
+        linearPc,physicalPc:paging?null:machine._decode386(linearPc),paging,
+        tr:{...cpu.tr},ldtr:{...cpu.ldtr},csCache:{...cpu.segmentCaches[1]},
+        opcodeBytes:paging?null:Array.from({length:16},(_,index)=>cpu.read((linearPc+index)>>>0)),
         doomFileMapping:mappedOffset===null?null:{offset:mappedOffset,bytes:mappedBytes}};
 };
 const deviceSnapshot=()=>({
@@ -203,11 +205,20 @@ const deviceSnapshot=()=>({
 for(;steps<stepLimit;steps++) {
     const requestsBefore=resetRequests.length;
     const before={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
-    if(commandQueued&&!doomEntry&&machine.cpu.eip===doomMz.initialIP) {
+    if(commandQueued&&!doomEntry&&machine.cpu.eip===doomMz.initialIP&&
+        (machine.cpu.esp&0xffff)===doomMz.initialSP&&
+        ((machine.cpu.cs-machine.cpu.ss)&0xffff)===((doomMz.initialCS-doomMz.initialSS)&0xffff)) {
         const memoryBytes=Array.from({length:16},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0));
-        if(memoryBytes.every((byte,index)=>byte===doomEntryBytes[index]))
-            doomEntry={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,pc:machine.cpu.pc,
-                loadSegment:(machine.cpu.cs-doomMz.initialCS)&0xffff,memoryBytes};
+        doomEntry={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,linearPc:machine.cpu.pc,
+            loadSegment:(machine.cpu.cs-doomMz.initialCS)&0xffff,memoryBytes,
+            fileBytes:doomEntryBytes};
+    }
+    if(doomEntry) {
+        doomInstructionTrace.push({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,
+            linearPc:machine.cpu.pc,eax:machine.cpu.eax,ebx:machine.cpu.ebx,ecx:machine.cpu.ecx,
+            edx:machine.cpu.edx,esp:machine.cpu.esp,
+            bytes:Array.from({length:6},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0))});
+        if(doomInstructionTrace.length>128)doomInstructionTrace.shift();
     }
     if(executionBoundaries.bootSector&&(steps&1023)===0) {
         const ui=renderScreen();
@@ -336,9 +347,10 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,doomEntry,diskPorts,rtcPorts,keyboardScript,disketteBda490:disketteBda(),
+    executionBoundaries,doomEntry,doomInstructionTrace,diskPorts,rtcPorts,keyboardScript,
+    disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
-    guestFile,final,
+    guestFile,final,finalCpu:cpuSnapshot(),
     screenText,uiSamples,
     devices:deviceSnapshot(),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
