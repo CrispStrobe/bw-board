@@ -177,6 +177,24 @@ jobs:
             assert.deepEqual(report.differences.map(d=>d.case),expected);
           }
           NODE
+          node scripts/compare-pcjs-i80386-lar-lsl.mjs > "$RECEIPT_DIR/pcjs-i80386-lar-lsl.json"
+          for mutation in lar-defined lsl-limit; do
+            if I386_SYSTEM_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-lar-lsl.mjs > "$RECEIPT_DIR/rejected-$mutation.json"; then
+              echo "LAR/LSL comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          assert.equal(read('pcjs-i80386-lar-lsl').status,'pass');
+          for(const [mutation,field] of [['lar-defined','larDefined'],['lsl-limit','edi']]) {
+            const r=read(`rejected-${mutation}`);
+            assert.equal(r.status,'fail');
+            assert.deepEqual(r.differences.map(d=>d.field),[`actual.${field}`]);
+          }
+          NODE
           node scripts/compare-pcjs-i80386-verr.mjs > "$RECEIPT_DIR/pcjs-i80386-verr.json"
           for mutation in zf budget; do
             if I386_VERR_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-verr.mjs > "$RECEIPT_DIR/rejected-verr-$mutation.json"; then
