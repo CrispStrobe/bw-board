@@ -2298,5 +2298,13 @@
         "sha256": "d54248bff2dd44ea2a095facf8c14e27f5fa4162f012ea9a5e55fd1e2922bc12"
       }
     ]
+  },
+  "landing": {
+    "revision": "43ad9762fd426dc148ca5ef68c1ab0297b208c20",
+    "tag": "milestones/x86-386-protected-entry-vga-20260920",
+    "ci": 35482976575,
+    "cpuQualification": 35482976574,
+    "nativeQualification": 35482976578,
+    "status": "all hosted checks succeeded; normal fast-forward to master verified"
   }
 }

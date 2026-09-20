@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (candidate) — Astra/Sol 386 protected entry and VGA services.
+2026-09-20 DONE (qualified and landed) — Astra/Sol 386 protected entry and VGA services.
 Preserves visible real-mode CS and starts CPL0 when MOV CR0/LMSW enables PE;
 checks direct/conforming, segment, interrupt, return and task paths. Adds INTO
 with pinned-PCjs next-IP/frame agreement and two rejecting negative controls.
@@ -115,7 +115,9 @@ shareware executable reaches DPMI allocation, WAD loading and R_Init within
 ROM shadow-write or timing acceptance. The 16-bit TSS continuation is separate.
 Focused affected surface: 317 pass, 2 optional skips. Receipt:
 `docs/receipts/2026-09-20-386-protected-entry-vga.json`.
-This candidate requires exact-head hosted qualification before landing.
+Exact `43ad9762fd426dc148ca5ef68c1ab0297b208c20` passed CI `35482976575`,
+CPU `35482976574`, native `35482976578`, then fast-forwarded master.
+Tag: `milestones/x86-386-protected-entry-vga-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 compiler instructions and autonomous multi-sector ATA. Adds ENTER/LEAVE,
