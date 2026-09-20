@@ -218,3 +218,14 @@ test("VM86 I/O consults the TSS bitmap even at IOPL3", () => {
   );
   assert.deepEqual(ports,[]);
 });
+
+test("VM86 rejects a 16-bit interrupt gate with architectural GP", () => {
+  const { cpu, memory } = fixture();
+  cpu.step();
+  put(memory, 0x400 + 0x2e * 8, [0,0,8,0,0,0x86,0,0]);
+  assert.throws(
+    () => cpu._deliverProtected(0x2e, cpu.eip, null, { software: true }),
+    error => error instanceof I80386Fault &&
+      error.vector === 13 && error.errorCode === (0x2e * 8 + 2),
+  );
+});

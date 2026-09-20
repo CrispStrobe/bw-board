@@ -2034,8 +2034,10 @@ export class ExperimentalI80386 {
         "VM86 interrupt target must be nonconforming ring 0 code",
       );
     if (vm86 && width !== 32)
-      throw new UnsupportedI80386(
-        "16-bit VM86 interrupt gates are outside the bounded profile",
+      throw new I80386Fault(
+        13,
+        idtCode,
+        "VM86 interrupts require a 386 interrupt, trap, or task gate",
       );
     const offset =
       (b[0] |
