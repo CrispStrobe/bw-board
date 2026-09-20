@@ -1740,7 +1740,10 @@ export class ExperimentalI80386 {
       ? (esp - bytes * values.length) >>> 0
       : ((esp & 0xffff) - bytes * values.length) & 0xffff;
     const end = next + bytes * values.length - 1;
-    if (end > descriptor.limit || end > 0xffffffff)
+    const outside = descriptor.expandDown
+      ? next <= descriptor.limit || end > (descriptor.default32 ? 0xffffffff : 0xffff)
+      : end > descriptor.limit;
+    if (end < next || outside || end > 0xffffffff)
       throw new I80386Fault(12, 0, "new privilege stack limit");
     const linear = (descriptor.base + next) >>> 0;
     const physical = Array.from({ length: bytes * values.length }, (_, index) =>

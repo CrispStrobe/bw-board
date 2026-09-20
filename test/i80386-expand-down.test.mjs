@@ -24,6 +24,9 @@ function descriptor(base, limit, access, flags = 0) {
     ((limit >>> 16) & 15) | flags, base >>> 24,
   ];
 }
+function gate(offset, selector, dpl = 3) {
+  return [offset, offset >>> 8, selector, selector >>> 8, 0, 0x8e | (dpl << 5), offset >>> 16, offset >>> 24];
+}
 
 test("MOV loads a writable expand-down data cache with an exclusive lower bound", () => {
   const f = fixture([0x8e, 0xd8]);
@@ -109,6 +112,40 @@ test("inner-ring stack admission retains expand-down geometry", () => {
     [stack.base, stack.limit, stack.default32, stack.expandDown],
     [0x4000, 0x1fff, true, true],
   );
+});
+
+test("ring-3 INT and IRETD use an expand-down inner stack", () => {
+  const f = fixture();
+  const dword = address => [0, 1, 2, 3].reduce(
+    (value, index) => value | ((f.memory.get(address + index) ?? 0) << (index * 8)), 0,
+  ) >>> 0;
+  f.cpu.deliverFaults = true;
+  f.cpu.cr0 = 1;
+  f.cpu.gdtr = { base: 0x200, limit: 0x2f };
+  f.cpu.idtr = { base: 0x400, limit: 0x7ff };
+  f.put(0x208, descriptor(0x100000, 0xfffff, 0x9a, 0xc0));
+  f.put(0x210, descriptor(0x120000, 0x3df, 0x96, 0x40));
+  f.put(0x218, descriptor(0x140000, 0xfffff, 0xfa, 0xc0));
+  f.put(0x220, descriptor(0x160000, 0xfffff, 0xf2, 0xc0));
+  f.put(0x400 + 0x20 * 8, gate(0x100, 8));
+  f.cpu.tr = { selector: 0x28, base: 0x600, limit: 0x67, present: true, type: 11 };
+  f.put(0x604, [0x00, 0x04, 0, 0, 0x10, 0]);
+  f.cpu.cs = 0x1b;
+  f.cpu.ss = 0x23;
+  f.cpu.segmentCaches[1] = f.cpu._ringCodeDescriptor(0x1b);
+  f.cpu.segmentCaches[2] = f.cpu._ringStackDescriptor(0x23, 3, { returnPath: true });
+  f.cpu.esp = 0x800;
+  f.cpu.eflags = 0x202;
+  f.put(0x140000, [0xcd, 0x20]);
+  f.put(0x100100, [0xcf]);
+  f.cpu.step();
+  assert.deepEqual([f.cpu.cs, f.cpu.ss, f.cpu.esp], [8, 0x10, 0x3ec]);
+  assert.deepEqual(
+    [0, 4, 8, 12, 16].map(offset => dword(0x1203ec + offset)),
+    [2, 0x1b, 0x202, 0x800, 0x23],
+  );
+  f.cpu.step();
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp], [0x1b, 2, 0x23, 0x800]);
 });
 
 test("32-bit expand-down stack pushes preflight limit and wrap faults", () => {
