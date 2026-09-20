@@ -67,10 +67,11 @@ if(process.env.FREEDOS_PRIOR_REPORT) {
     priorOutputMediaSha256=priorReport.input.floppy.output.sha256;
 }
 const commandKeys=[...(process.env.FREEDOS_COMMAND_SCRIPT??'')];
-const doomTraceDetail=process.env.DOOM_TRACE_DETAIL??'registers';
+const doomTraceDetail=process.env.DOOM_TRACE_DETAIL??'off';
 if(!['off','registers','full'].includes(doomTraceDetail))
     throw new Error('DOOM_TRACE_DETAIL must be off, registers, or full');
 const requestedKeys=[];
+const progressOutput=process.env.AT_PROGRESS_OUTPUT??null;
 const scanCodes={a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,
     i:0x17,j:0x24,k:0x25,l:0x26,m:0x32,n:0x31,o:0x18,p:0x19,q:0x10,r:0x13,
     s:0x1f,t:0x14,u:0x16,v:0x2f,w:0x11,x:0x2d,y:0x15,z:0x2c,' ':0x39,'\r':0x1c,
@@ -442,6 +443,17 @@ for(;steps<stepLimit;steps++) {
                 latestVgaGraphicsSnapshot=snapshot;
             }
             lastVgaFrameRevision=machine.displayRevision;
+        }
+        if(progressOutput!==null) {
+            const progressReport={schema:'astra.i80386-doom-progress.v1',executionRevision,
+                sourceSha256,steps,doomTraceDetail,commandQueued,doomEntry:doomEntry&&{
+                    step:doomEntry.step,cs:doomEntry.cs,eip:doomEntry.eip,
+                    loadSegment:doomEntry.loadSegment,loadImage:doomEntry.loadImage},
+                cr0:machine.cpu.cr0,cs:machine.cpu.cs,eip:machine.cpu.eip,
+                screenTail:nonblank.slice(-12),vga:latestVgaGraphicsSnapshot&&{
+                    first:firstVgaGraphicsSnapshot,latest:latestVgaGraphicsSnapshot}};
+            fs.writeFileSync(`${progressOutput}.tmp`,JSON.stringify(progressReport));
+            fs.renameSync(`${progressOutput}.tmp`,progressOutput);
         }
     }
     if(expectedFile&&executionBoundaries.bootSector&&keyScript.length===0&&(steps&1023)===0) {
