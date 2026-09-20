@@ -56,7 +56,7 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80,
     'alternate status observes the inter-sector busy phase without advancing it');
   assert.deepEqual(irq, [true, false], 'the next block is not exposed synchronously');
-  ata.writeRegister(3, 2);
+  ata.writeRegister(3, 7);
   assert.equal(ata.sectorNumber, 2, 'task-file writes are ignored while BSY is asserted');
   ata.advance(255);
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
@@ -212,4 +212,25 @@ test('386 AT dispatches ATA data as one 16-bit port access and persists sector w
   assert.deepEqual(Array.from(machine.ata.mediaBytes().slice(512, 518)),
     [0x00, 0x55, 0x01, 0x55, 0x02, 0x55], 'board reset retains disk media');
   assert.equal(machine.cpu.inPort(0x1f7, 8), 0x50);
+});
+
+test('386 AT scheduler wakes a halted CPU horizon for the next ATA PIO block', () => {
+  const machine = new ExperimentalI80386ATMachine(undefined, {
+    ataImage: image(),
+    ataGeometry: geometry,
+  });
+  const out8 = (port, value) => machine.cpu.outPort(port, value, 8);
+  out8(0x1f2, 2);
+  out8(0x1f3, 1);
+  out8(0x1f6, 0xa0);
+  out8(0x1f7, 0x20);
+  machine.cpu.inPort(0x1f7, 8);
+  for (let word = 0; word < 256; word++) machine.cpu.inPort(0x1f0, 16);
+  assert.equal(machine.cpu.inPort(0x3f6, 8), 0x80);
+  machine.cpu.halted = true;
+  const before = machine.cycles;
+  machine.step();
+  assert.equal(machine.cpu.inPort(0x3f6, 8), 0x58);
+  assert.equal(machine.ata._irqPending, true);
+  assert.ok(machine.cycles - before >= 256, 'halt advances to the ATA deadline without another poll');
 });

@@ -79,16 +79,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
       const value = this.ata.readData16();
       this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      this._chipDeadline = this._wakeHorizon();
       return value;
     }
     if (this.ata && width === 8 && port >= 0x1f1 && port <= 0x1f7) {
       const value = this.ata.readRegister(port - 0x1f0);
       this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      this._chipDeadline = this._wakeHorizon();
       return value;
     }
     if (this.ata && width === 8 && port === 0x3f6) {
       const value = this.ata.readRegister(7, {alternate: true});
       this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      this._chipDeadline = this._wakeHorizon();
       return value;
     }
     let value = 0;
@@ -103,16 +106,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
       this.ata.writeData16(value);
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xffff});
+      this._chipDeadline = this._wakeHorizon();
       return;
     }
     if (this.ata && width === 8 && port >= 0x1f1 && port <= 0x1f7) {
       this.ata.writeRegister(port - 0x1f0, value);
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
+      this._chipDeadline = this._wakeHorizon();
       return;
     }
     if (this.ata && width === 8 && port === 0x3f6) {
       this.ata.writeRegister(7, value, {control: true});
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
+      this._chipDeadline = this._wakeHorizon();
       return;
     }
     for (let byte = 0; byte < width / 8; byte++)

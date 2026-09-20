@@ -124,6 +124,7 @@ const bootCommands = bootSector ? commandEvents.filter(event => event.step >= bo
   .map(event => event.value) : [];
 const expectedTail = new Uint8Array(1024);
 expectedTail.set(Buffer.from(HDD_ROUNDTRIP_TEXT));
+expectedTail.set([0xa5, 0x5a], 512);
 const accepted = outcome === 'roundtrip-observed' && marker?.value === 0xa5 && !!bootSector &&
   bootSector.sha256 === inputBootSectorSha256 &&
   bootCommands.includes(0x30) && bootCommands.includes(0x20) &&

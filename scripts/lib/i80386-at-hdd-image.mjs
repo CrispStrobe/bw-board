@@ -45,6 +45,7 @@ function bootSector() {
   zeroBuffer();
   const patternAddressPatch = code.length + 1;
   emit(0xbe, 0, 0, 0xbf, 0x00, 0x06, 0xb9, 0x08, 0x00, 0xf3, 0xa5);
+  emit(0xc7, 0x06, 0x00, 0x08, 0xa5, 0x5a); // Distinct marker in sector two.
   const transfer = operation => emit(0xb8, 0x02, operation, 0xbb, 0x00, 0x06,
     0xb9, 0x50, 0x31, 0xba, 0x80, 0x03, 0xcd, 0x13);
   transfer(0x03);
@@ -58,12 +59,21 @@ function bootSector() {
   emit(0xbf, 0, 0, 0xb9, 0x10, 0x00, 0xf3, 0xa6);
   const compareFailure = code.length + 1;
   emit(0x75, 0);
-  emit(0xbe, 0x10, 0x06, 0xb9, 0xf0, 0x03); // Check the remaining 1008 bytes.
-  const zeroTailLoop = code.length;
+  emit(0xbe, 0x10, 0x06, 0xb9, 0xf0, 0x01); // Check sector one's remaining bytes.
+  const zeroTailLoop1 = code.length;
   emit(0xac, 0x08, 0xc0); // LODSB; OR AL,AL.
-  const tailFailure = code.length + 1;
+  const tailFailure1 = code.length + 1;
   emit(0x75, 0);
-  const zeroTailLoopPatch = code.length + 1;
+  const zeroTailLoopPatch1 = code.length + 1;
+  emit(0xe2, 0);
+  emit(0x81, 0x3e, 0x00, 0x08, 0xa5, 0x5a); // Prove sector two was transferred.
+  const markerFailure = code.length + 1;
+  emit(0x75, 0, 0xbe, 0x02, 0x08, 0xb9, 0xfe, 0x01);
+  const zeroTailLoop2 = code.length;
+  emit(0xac, 0x08, 0xc0);
+  const tailFailure2 = code.length + 1;
+  emit(0x75, 0);
+  const zeroTailLoopPatch2 = code.length + 1;
   emit(0xe2, 0);
   emit(0xb0, 0xa5, 0xe6, 0x80, 0xfa, 0xf4, 0xeb, 0xfd);
   const failure = code.length;
@@ -74,8 +84,10 @@ function bootSector() {
   const origin = 0x7c00 + 62;
   put16(code, patternAddressPatch, origin + pattern);
   put16(code, comparePatternPatch, origin + pattern);
-  code[zeroTailLoopPatch] = (zeroTailLoop - (zeroTailLoopPatch + 1)) & 0xff;
-  for (const patch of [writeFailure, readFailure, compareFailure, tailFailure])
+  code[zeroTailLoopPatch1] = (zeroTailLoop1 - (zeroTailLoopPatch1 + 1)) & 0xff;
+  code[zeroTailLoopPatch2] = (zeroTailLoop2 - (zeroTailLoopPatch2 + 1)) & 0xff;
+  for (const patch of [writeFailure, readFailure, compareFailure, tailFailure1,
+    markerFailure, tailFailure2])
     code[patch] = (failure - (patch + 1)) & 0xff;
   if (62 + code.length > 510) throw new Error('owned HDD boot program exceeds one sector');
   sector.set(code, 62);
