@@ -56,8 +56,8 @@ test('admits the middle page only under the proven byte-addressed CRTC state',()
   const snapshot=fixture();snapshot.crtc[0x0c]=0x40;
   const frame=renderObservedDoomVga(snapshot);
   assert.equal(frame.start,0x4000);
-  const transient=fixture();transient.crtc[0x17]=0x8e;
-  assert.throws(()=>renderObservedDoomVga(transient),/outside the observed/);
+  const unobserved=fixture();unobserved.crtc[0x17]=0x8e;
+  assert.throws(()=>renderObservedDoomVga(unobserved),/outside the observed/);
   const unsupported=fixture();unsupported.crtc[0x0c]=0x20;
   assert.throws(()=>renderObservedDoomVga(unsupported),/unsupported observed Doom page/);
 });
