@@ -7,12 +7,16 @@ const STATUS_IDLE = STATUS_DRDY | STATUS_DSC;
 
 /**
  * Bounded ATA task-file device for the experimental 386 AT. Multi-sector PIO
- * exposes an inter-sector BSY phase until the host observes regular status;
- * this preserves the IBM 5170 BIOS COMMANDI polling contract without claiming
- * measured disk timing. It models native 16-bit PIO, not mechanical timing.
+ * exposes an autonomous, deterministic inter-sector BSY phase. The 256-cycle
+ * functional delay preserves the IBM 5170 BIOS COMMANDI/COMMANDO contracts
+ * without claiming measured disk or rotational timing. It models native
+ * 16-bit PIO, not mechanical timing.
  */
 export class ExperimentalATA16 {
-  constructor(image, {cylinders, heads, sectors}, {onIRQ = null} = {}) {
+  constructor(image, {cylinders, heads, sectors}, {
+    onIRQ = null,
+    intersectorDelayCycles = 256,
+  } = {}) {
     if (!(image instanceof Uint8Array)) throw new Error('ATA image must be a Uint8Array');
     for (const [name, value] of Object.entries({cylinders, heads, sectors}))
       if (!Number.isInteger(value) || value < 1) throw new Error(`ATA ${name} must be positive`);
@@ -23,6 +27,9 @@ export class ExperimentalATA16 {
     this.image = image.slice();
     this.geometry = {cylinders, heads, sectors};
     this.onIRQ = onIRQ;
+    if (!Number.isInteger(intersectorDelayCycles) || intersectorDelayCycles < 1)
+      throw new Error('ATA inter-sector delay must be a positive integer');
+    this.intersectorDelayCycles = intersectorDelayCycles;
     this.reset();
   }
 
@@ -42,6 +49,7 @@ export class ExperimentalATA16 {
     this.wordIndex = 0;
     this.direction = null;
     this._intersector = null;
+    this._intersectorRemaining = 0;
     this._irqPending = false;
     this._irqOutput = false;
     if (wasOutput) this.onIRQ?.(false);
@@ -75,6 +83,7 @@ export class ExperimentalATA16 {
     this.buffer = null;
     this.direction = null;
     this._intersector = null;
+    this._intersectorRemaining = 0;
     this._raiseIRQ();
   }
 
@@ -93,17 +102,29 @@ export class ExperimentalATA16 {
     this.wordIndex = 0;
     this.direction = null;
     this._intersector = direction;
+    this._intersectorRemaining = this.intersectorDelayCycles;
     this.status = STATUS_BSY;
   }
 
   _completeIntersector() {
     const direction = this._intersector;
     this._intersector = null;
+    this._intersectorRemaining = 0;
     if (direction === 'read') this._loadReadSector();
     else if (direction === 'write') {
       this._prepareWriteSector();
       this._raiseIRQ();
     }
+  }
+
+  advance(cycles) {
+    if (!this._intersector || cycles <= 0) return;
+    this._intersectorRemaining -= cycles;
+    if (this._intersectorRemaining <= 0) this._completeIntersector();
+  }
+
+  nextWake() {
+    return this._intersector ? Math.max(0, this._intersectorRemaining) : Infinity;
   }
 
   _prepareWriteSector() {
@@ -172,6 +193,7 @@ export class ExperimentalATA16 {
     this.wordIndex = 0;
     this.direction = null;
     this._intersector = null;
+    this._intersectorRemaining = 0;
     this.status = STATUS_IDLE;
     if (this.command === 0x20 || this.command === 0x21) this._loadReadSector();
     else if (this.command === 0x30 || this.command === 0x31) this._prepareWriteSector();
@@ -262,7 +284,6 @@ export class ExperimentalATA16 {
     if (register === 7) {
       const value = this.status;
       this._clearIRQ();
-      if (this._intersector) this._completeIntersector();
       return value;
     }
     return 0xff;
@@ -276,6 +297,8 @@ export class ExperimentalATA16 {
       if (!(old & 4) && (this.control & 4)) {
         this.buffer = null;
         this.direction = null;
+        this._intersector = null;
+        this._intersectorRemaining = 0;
         this.status = 0x80;
         this._clearIRQ();
       } else if ((old & 4) && !(this.control & 4)) {
@@ -286,6 +309,7 @@ export class ExperimentalATA16 {
       } else this._updateIRQ();
       return;
     }
+    if (this.status & STATUS_BSY) return;
     if (this.control & 4) return;
     if (this.driveHead & 0x10 && register !== 6) return;
     if (register === 1) this.features = byte;

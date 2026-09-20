@@ -56,9 +56,13 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80,
     'alternate status observes the inter-sector busy phase without advancing it');
   assert.deepEqual(irq, [true, false], 'the next block is not exposed synchronously');
-  assert.equal(ata.readRegister(7), 0x80, 'normal status acknowledges the completed block');
+  ata.writeRegister(3, 2);
+  assert.equal(ata.sectorNumber, 2, 'task-file writes are ignored while BSY is asserted');
+  ata.advance(255);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
+  ata.advance(1);
   assert.deepEqual(irq, [true, false, true], 'second read block then becomes ready');
-  ata.readRegister(7);
+  assert.equal(ata.readRegister(7), 0x58);
   for (let word = 0; word < 256; word++) ata.readData16();
   assert.equal(ata.readRegister(7), 0x50);
 
@@ -68,7 +72,8 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   assert.deepEqual(irq, [], 'first write block is polled without an interrupt');
   for (let word = 0; word < 256; word++) ata.writeData16(0x1100 | word);
   assert.deepEqual(irq, [], 'write also enters a visible inter-sector busy phase');
-  assert.equal(ata.readRegister(7), 0x80);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
+  ata.advance(256);
   assert.deepEqual(irq, [true], 'second write block becomes ready after status observes busy');
   ata.readRegister(7);
   for (let word = 0; word < 256; word++) ata.writeData16(0x2200 | word);

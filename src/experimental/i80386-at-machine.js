@@ -35,6 +35,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       }, {
         onIRQ: active => this.chips.pic2?.setIRQ(6, active ? 1 : 0),
       });
+      this.attachDevice('ata', this.ata);
     }
   }
 
@@ -73,6 +74,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _in386(port, width) {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
+    if (this.ata && (port >= 0x1f0 && port <= 0x1f7 || port === 0x3f6)) this._flushChips();
     if (this.ata && port === 0x1f0) {
       if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
       const value = this.ata.readData16();
@@ -96,6 +98,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _out386(port, value, width) {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
+    if (this.ata && (port >= 0x1f0 && port <= 0x1f7 || port === 0x3f6)) this._flushChips();
     if (this.ata && port === 0x1f0) {
       if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
       this.ata.writeData16(value);
