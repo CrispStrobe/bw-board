@@ -1093,6 +1093,99 @@ export class ExperimentalI80386 {
     this.eip = target;
   }
 
+  _taskDescriptor(selector, { returning = false, checkPrivilege = true } = {}) {
+    const code = selector & 0xfffc;
+    if (!code || (selector & 4))
+      throw new I80386Fault(returning ? 10 : 13, code, "invalid TSS selector");
+    const raw = this._descriptorBytes(selector), access = raw.bytes[5];
+    const type = access & 15, expected = returning ? 11 : 9;
+    if ((access & 0x10) || type !== expected)
+      throw new I80386Fault(returning ? 10 : 13, code,
+        returning ? "task return requires busy 386 TSS" : "task switch requires available 386 TSS");
+    if (checkPrivilege && Math.max(this.currentPrivilegeLevel, selector & 3) > ((access >>> 5) & 3))
+      throw new I80386Fault(13, code, "TSS privilege");
+    if (!(access & 0x80)) throw new I80386Fault(11, code, "TSS not present");
+    const flags = raw.bytes[6];
+    let limit = (raw.bytes[0] | raw.bytes[1] << 8 | (flags & 15) << 16) >>> 0;
+    if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
+    return { selector: selector & 0xffff, address: raw.address, access, type,
+      base: (raw.bytes[2] | raw.bytes[3] << 8 | raw.bytes[4] << 16 |
+        raw.bytes[7] * 0x1000000) >>> 0, limit, present: true };
+  }
+
+  _taskRead(base, offset, bytes) {
+    return this._readLinear((base + offset) >>> 0, bytes, { supervisor: true });
+  }
+
+  _taskWrite(base, offset, bytes, value) {
+    this._writeLinear((base + offset) >>> 0, bytes, value, { supervisor: true });
+  }
+
+  _taskImage(descriptor) {
+    if (descriptor.limit < 0x67)
+      throw new I80386Fault(10, descriptor.selector & 0xfffc, "incoming 386 TSS limit");
+    const d = descriptor.base, dword = o => this._taskRead(d, o, 4), word = o => this._taskRead(d, o, 2);
+    return { backlink: word(0), cr3: dword(0x1c), eip: dword(0x20), eflags: dword(0x24),
+      eax: dword(0x28), ecx: dword(0x2c), edx: dword(0x30), ebx: dword(0x34),
+      esp: dword(0x38), ebp: dword(0x3c), esi: dword(0x40), edi: dword(0x44),
+      es: word(0x48), cs: word(0x4c), ss: word(0x50), ds: word(0x54),
+      fs: word(0x58), gs: word(0x5c), ldt: word(0x60) };
+  }
+
+  _saveCurrentTask(flags, incomingSelector) {
+    if (!this.tr.present || this.tr.limit < 0x5d)
+      throw new I80386Fault(10, incomingSelector & 0xfffc, "current 386 TSS limit");
+    const d = this.tr.base;
+    for (const [o, v] of [[0x1c,this.cr3],[0x20,this.eip],[0x24,flags],[0x28,this.eax],
+      [0x2c,this.ecx],[0x30,this.edx],[0x34,this.ebx],[0x38,this.esp],[0x3c,this.ebp],
+      [0x40,this.esi],[0x44,this.edi]]) this._taskWrite(d, o, 4, v);
+    for (const [o, v] of [[0x48,this.es],[0x4c,this.cs],[0x50,this.ss],[0x54,this.ds],
+      [0x58,this.fs],[0x5c,this.gs]]) this._taskWrite(d, o, 2, v);
+  }
+
+  _setTaskBusy(descriptor, busy) {
+    this._writeLinear((descriptor.address + 5) >>> 0, 1,
+      (descriptor.access & ~2) | (busy ? 2 : 0), { supervisor: true });
+  }
+
+  _taskSwitch(selector, kind, { checkPrivilege = true } = {}) {
+    const returning = kind === "iret";
+    const incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
+    const outgoing = this.tr.present
+      ? this._taskDescriptor(this.tr.selector, { returning: true, checkPrivilege: false }) : null;
+    if (!returning) this._setTaskBusy(incoming, true);
+    this._saveCurrentTask(returning ? this.eflags & ~NT : this.eflags, selector);
+    if (kind === "call") this._taskWrite(incoming.base, 0, 2, this.tr.selector);
+    if ((kind === "jmp" || returning) && outgoing) this._setTaskBusy(outgoing, false);
+    this.tr = { ...incoming, type: 11 };
+    try {
+      // The detailed SWITCH_TASKS flow commits TR/busy/outgoing state before
+      // checking the incoming 386 TSS limit and loading its dynamic image.
+      const image = this._taskImage(incoming);
+      this.cr3 = image.cr3 >>> 0;
+      this.cr0 |= 8;
+      Object.assign(this, image);
+      const flags = (image.eflags & 0x00037fd7) | 2;
+      this.eflags = kind === "call" ? flags | NT : kind === "jmp" ? flags & ~NT : flags;
+      this.ldtr = { selector: image.ldt, base: 0, limit: 0, present: false };
+      if (image.ldt & 0xfffc) this._loadSystemRegister("ldtr", image.ldt);
+      const code = this._ringCodeDescriptor(image.cs, false, true), cpl = image.cs & 3;
+      if (code.conforming ? code.dpl > cpl : code.dpl !== cpl)
+        throw new I80386Fault(10, image.cs & 0xfffc, "task code privilege");
+      this.segmentCaches[SEG_CS] = code;
+      this._loadSeg(SEG_SS, image.ss);
+      for (const [id, value] of [[SEG_DS,image.ds],[SEG_ES,image.es],[SEG_FS,image.fs],[SEG_GS,image.gs]])
+        this._loadSeg(id, value);
+      if (image.eip > code.limit) throw new I80386Fault(13, 0, "task EIP outside code segment");
+      this.halted = false;
+      this._interruptShadow = this._nmiShadow = this._debugShadow = 0;
+      this._suppressTrace = true;
+    } catch (error) {
+      if (error instanceof I80386Fault) error.taskCommitted = true;
+      throw error;
+    }
+  }
+
   _protectedFarTransfer(selector, offset, operandWidth, call) {
     const cpl = this.cs & 3,
       errorCode = selector & 0xfffc;
@@ -1122,7 +1215,11 @@ export class ExperimentalI80386 {
       return;
     }
     if (![4, 12].includes(type)) {
-      if ([1, 3, 5, 9, 11].includes(type))
+      if (type === 9) {
+        this._taskSwitch(selector, call ? "call" : "jmp");
+        return;
+      }
+      if ([1, 3, 5, 11].includes(type))
         throw new UnsupportedI80386(
           "protected task transfer is outside the bounded 386 profile",
         );
@@ -2061,10 +2158,14 @@ export class ExperimentalI80386 {
   }
 
   _iret(width) {
-    if (this.protectedMode && !this.virtual8086 && this.eflags & NT)
-      throw new UnsupportedI80386(
-        "nested-task IRET is outside the bounded profile",
-      );
+    if (this.protectedMode && !this.virtual8086 && this.eflags & NT) {
+      if (!this.tr.present || this.tr.limit < 1)
+        throw new I80386Fault(10, this.tr.selector & 0xfffc, "current TSS backlink");
+      this._taskSwitch(this._taskRead(this.tr.base, 0, 2), "iret", {
+        checkPrivilege: false,
+      });
+      return;
+    }
     if (this.virtual8086 && ((this.eflags >>> 12) & 3) !== 3)
       throw new I80386Fault(13, 0, "VM86 IRET requires IOPL3");
     const bytes = width >>> 3,
@@ -2211,13 +2312,13 @@ export class ExperimentalI80386 {
         state.repeatContext?.eip === restartEip
           ? state.repeatContext.flags
           : null);
-      this._restoreInstruction(state);
+      if (!error.taskCommitted) this._restoreInstruction(state);
       if (repeatFlags !== null) {
         this.eflags = repeatFlags >>> 0;
         this._repeatContext = null;
       }
       if (!this.deliverFaults) throw error;
-      this._deliverFault(error, restartEip);
+      this._deliverFault(error, error.taskCommitted ? this.eip : restartEip);
       return 0;
     }
   }

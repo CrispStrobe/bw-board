@@ -528,7 +528,10 @@ test("32-bit POP SS advances ESP by four and invalid IRET modes are atomic", () 
   const nested = protectedFixture();
   nested.cpu.eflags |= 0x4000;
   nested.put(0x100000, [0xcf]);
-  assert.throws(() => nested.cpu.step(), /nested-task IRET/);
+  assert.throws(
+    () => nested.cpu._iret(32),
+    (error) => error?.vector === 10 && error.errorCode === 0,
+  );
   assert.deepEqual([nested.cpu.eip, nested.cpu.esp], [0, 0x400]);
 
   const vm = protectedFixture();

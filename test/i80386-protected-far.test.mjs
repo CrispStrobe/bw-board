@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import I80386,{UnsupportedI80386} from '../src/experimental/i80386.js';
+import I80386 from '../src/experimental/i80386.js';
 
 function fixture(){
   const memory=new Map(),writes=[],reads=[];
@@ -94,11 +94,11 @@ test('a 16-bit call gate controls frame and parameter width from 32-bit caller c
   f.cpu.step();assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,7,0x23,0x802]);
 });
 
-test('protected far task descriptors remain explicit refusals without stack mutation',()=>{
+test('protected far task switches require a valid current task without stack mutation',()=>{
   const f=protectedFixture();f.put(0x228,descriptor(0x600,0x89,0x67,0));
   f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x400;f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
   f.put(0x100000,[0x9a,0,0,0,0,0x28,0]);
-  assert.throws(()=>f.cpu.step(),error=>error instanceof UnsupportedI80386&&/task/.test(error.message));assert.equal(f.cpu.esp,0x400);
+  assert.throws(()=>f.cpu.step(),error=>error?.vector===13);assert.equal(f.cpu.esp,0x400);
 });
 
 test('outer RETF separates operand-size loads from returned stack-address-size discard',()=>{
