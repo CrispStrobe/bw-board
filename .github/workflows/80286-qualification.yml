@@ -241,6 +241,29 @@ jobs:
           }
           NODE
           done
+          node scripts/compare-pcjs-i80386-group1-alias.mjs > "$RECEIPT_DIR/pcjs-i80386-group1-alias.json"
+          for mutation in result budget; do
+            if I386_GROUP1_ALIAS_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-group1-alias.mjs > "$RECEIPT_DIR/rejected-group1-alias-$mutation.json"; then
+              echo "Byte Group 1 alias comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          assert.equal(read('pcjs-i80386-group1-alias').status,'pass');
+          const result=read('rejected-group1-alias-result');
+          assert.equal(result.status,'fail');
+          assert.deepEqual(result.differences.map(d=>d.case),['adc-carry-prefix66']);
+          const budget=read('rejected-group1-alias-budget');
+          assert.equal(budget.status,'fail');
+          assert.deepEqual(budget.differences.map(d=>d.case),['cmp-memory','adc-carry-prefix66']);
+          for(const observation of Object.values(budget.observations)) {
+            assert.equal(observation.reference.completed,false);
+            assert.equal(observation.actual.completed,false);
+          }
+          NODE
           node scripts/compare-pcjs-i80386-task16.mjs > "$RECEIPT_DIR/pcjs-i80386-task16.json"
           for mutation in result budget; do
             if I386_TASK16_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-task16.mjs > "$RECEIPT_DIR/rejected-task16-$mutation.json"; then
