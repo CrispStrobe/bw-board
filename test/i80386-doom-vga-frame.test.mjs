@@ -51,3 +51,11 @@ test('honors the observed alternate page start and DAC pixel mask',()=>{
   assert.equal(frame.indices[0],0);
   assert.equal(frame.uniqueRgbColors,1);
 });
+
+test('admits the observed gameplay CRTC state and middle page only',()=>{
+  const snapshot=fixture();snapshot.crtc[0x0c]=0x40;snapshot.crtc[0x17]=0x8e;
+  const frame=renderObservedDoomVga(snapshot);
+  assert.equal(frame.start,0x4000);
+  const unsupported=fixture();unsupported.crtc[0x0c]=0x20;
+  assert.throws(()=>renderObservedDoomVga(unsupported),/unsupported observed Doom page/);
+});
