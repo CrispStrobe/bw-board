@@ -437,6 +437,7 @@ for(;steps<stepLimit;steps++) {
                 const snapshot={step:steps,displayRevision:machine.displayRevision,
                     misc:state.misc,seq:Array.from(state.seq),gc:Array.from(state.gc),
                     crtc:Array.from(state.crtc),attr:Array.from(state.attr),
+                    dacMask:state.dacMask,
                     dacBase64:Buffer.from(state.dac).toString('base64'),
                     planesBase64:machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64'))};
                 firstVgaGraphicsSnapshot??=snapshot;
