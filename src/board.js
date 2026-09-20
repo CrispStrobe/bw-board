@@ -69,7 +69,8 @@ const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const NPN_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'beta', 'br', 'n', 'vaf', 'rb', '_model']);
 const NMOS_OPERATING_POINT_PARAMS = new Set([
-  'model', 'vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround', 'bulkOnSource', '_model',
+  'model', 'vth', 'kp', 'w', 'l', 'lambda', 'gamma', 'phi',
+  'bulkAtGround', 'bulkOnSource', '_model',
 ]);
 const PMOS_OPERATING_POINT_PARAMS = new Set([
   'model', 'vth', 'kp', 'w', 'l', 'lambda', '_model',
@@ -2555,6 +2556,28 @@ export class BoardImpl {
             + 'bulkAtGround must explicitly prove the fourth terminal is the reference net, '
             + 'or bulkOnSource must exclusively prove it is tied to source');
         }
+        const hasGamma = Object.prototype.hasOwnProperty.call(params, 'gamma');
+        const hasPhi = Object.prototype.hasOwnProperty.call(params, 'phi');
+        if (hasGamma !== hasPhi) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'gamma and phi must be declared together');
+        }
+        if (hasGamma) {
+          if (!groundedBulk) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + 'gamma/phi body effect requires an explicitly grounded bulk');
+          }
+          if (typeof params.gamma !== 'number' || !Number.isFinite(params.gamma)
+              || params.gamma < 0) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + 'gamma must be a finite number greater than or equal to zero');
+          }
+          if (typeof params.phi !== 'number' || !Number.isFinite(params.phi)
+              || params.phi <= 0) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + 'phi must be a finite number greater than zero');
+          }
+        }
         if (Object.prototype.hasOwnProperty.call(params, '_model')
             && (typeof params._model !== 'string' || !params._model.length)) {
           throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
@@ -2745,6 +2768,7 @@ export class BoardImpl {
     } : {
       model: 'explicit-spice-level1-grounded-bulk',
       requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
+      optionalParameterGroups: [['gamma', 'phi']],
       defaults: { bulkIs: 1e-14, bulkN: 1 },
       thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
       temperatureModel: 'fixed',
