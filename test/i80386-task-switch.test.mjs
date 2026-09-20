@@ -178,6 +178,24 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   cpu.step();
   assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.cr3], [0x18, 6, 0x1000]);
 
+  put(memory, 0x300, [0x0f, 0x00, 0xf8]);
+  put(memory, 0x600 + 6 * 8, [0, 0, 0x20, 0, 0, 0x85, 0, 0]);
+  dword(memory, 0x500 + 0x20, 0x100);
+  dword(memory, 0x500 + 0x24, 2);
+  dword(memory, 0x500 + 0x1c, 0x2000);
+  dword(memory, 0x500 + 0x38, 0x900);
+  cpu.eip = 0x300;
+  cpu.deliverFaults = true;
+  cpu.step();
+  assert.deepEqual([cpu.tr.selector, cpu.eip], [0x20, 0x100]);
+  assert.deepEqual([0x420,0x421,0x422,0x423].map(a => memory.get(a)), [0,3,0,0]);
+  assert.equal((memory.get(0x424) | memory.get(0x425)<<8 | memory.get(0x426)<<16 |
+    memory.get(0x427)*0x1000000) & 0x10000, 0x10000);
+  cpu.step();
+  cpu.step();
+  assert.deepEqual([cpu.tr.selector, cpu.eip], [0x18, 0x300]);
+  cpu.deliverFaults = false;
+
   cpu.halted = false;
   memory.set(0x20d, 0x1a);
   assert.throws(
