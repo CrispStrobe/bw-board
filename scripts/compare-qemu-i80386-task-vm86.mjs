@@ -44,4 +44,5 @@ const packages={
  'qemu-system-common_1:8.2.2+ds-0ubuntu1.18_amd64.deb':'0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f',
  'qemu-system-data_1:8.2.2+ds-0ubuntu1.18_all.deb':'a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e',
  'seabios_1.16.3-2_all.deb':'cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0'};
-console.log(JSON.stringify({oracle:'QEMU TCG later-model software CPU',revision,qemuVersion,qemuExecutableHash:hash(readFileSync(qemu)),packages,sourceHashes,imageHash:hash(binary),mutation,status:differences.length?'fail':'pass',expected,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
+const actualState={cs:cpu.cs,eip:cpu.eip,tr:cpu.tr.selector,cr0:cpu.cr0,eflags:cpu.eflags,halted:cpu.halted,shutdown:cpu.shutdown};
+console.log(JSON.stringify({oracle:'QEMU TCG later-model software CPU',revision,qemuVersion,qemuExecutableHash:hash(readFileSync(qemu)),packages,sourceHashes,imageHash:hash(binary),mutation,status:differences.length?'fail':'pass',expected,reference,actual,actualState,differences},null,2));process.exitCode=differences.length?1:0;
