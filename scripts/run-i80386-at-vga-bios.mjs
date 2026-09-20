@@ -40,11 +40,14 @@ if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 20_000_000)
 
 let steps = 0;
 const vgaPorts = [];
+let guestMarker = null;
 const machine = new ExperimentalI80386ATMachine(
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,
   {onPortAccess(event) {
     if (event.port >= 0x3c0 && event.port <= 0x3df && vgaPorts.length < 4096)
       vgaPorts.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, ...event});
+    if (event.dir === 'out' && event.port === 0x80 && (event.value === 0xa5 || event.value === 0xee))
+      guestMarker = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value};
   }},
 );
 machine.loadRom(systemRom.value, 0xf0000);
@@ -55,6 +58,8 @@ machine.reset();
 let optionEntry = null;
 let optionInstructions = 0;
 let firmwareReturn = null;
+let int10Vector = null;
+let guestStarted = false;
 let blocker = null;
 let outcome = 'budget';
 try {
@@ -63,9 +68,33 @@ try {
     if (!optionEntry && before.cs === 0xc000) optionEntry = {step: steps, ...before};
     if (before.cs === 0xc000) optionInstructions++;
     machine.step();
-    if (optionEntry && optionInstructions > 0 && before.cs === 0xc000 && machine.cpu.cs === 0xf000) {
+    if (!guestStarted && optionEntry && optionInstructions > 0 && before.cs === 0xc000 && machine.cpu.cs === 0xf000) {
       firmwareReturn = {step: steps, from: before, cs: machine.cpu.cs, eip: machine.cpu.eip};
-      outcome = 'option-rom-returned';
+      int10Vector = {ip: machine._read(0x40), cs: machine._read(0x42)};
+      int10Vector.ip |= machine._read(0x41) << 8;
+      int10Vector.cs |= machine._read(0x43) << 8;
+      const guest = [
+        0xb8, 0x13, 0x00, 0xcd, 0x10,
+        0xb8, 0x00, 0xa0, 0x8e, 0xc0, 0x31, 0xff,
+        0xb0, 0x5a, 0xaa, 0xb0, 0xa5, 0xaa,
+        0x26, 0xa0, 0x00, 0x00, 0x3c, 0x5a, 0x75, 0x0f,
+        0x26, 0xa0, 0x01, 0x00, 0x3c, 0xa5, 0x75, 0x05,
+        0xb0, 0xa5, 0xe6, 0x80, 0xf4,
+        0xb0, 0xee, 0xe6, 0x80, 0xf4,
+      ];
+      guest.forEach((value, index) => machine._write(0x500 + index, value));
+      machine.cpu.cr0 = 0;
+      machine.cpu.eflags = 2;
+      machine.cpu._loadSeg(1, 0);
+      machine.cpu._loadSeg(3, 0);
+      machine.cpu._loadSeg(0, 0);
+      machine.cpu._loadSeg(2, 0);
+      machine.cpu.eip = 0x500;
+      machine.cpu.esp = 0x7c00;
+      guestStarted = true;
+    }
+    if (guestMarker) {
+      outcome = guestMarker.value === 0xa5 ? 'int10-vram-roundtrip' : 'guest-failure';
       break;
     }
     if (machine.cpu.shutdown) { outcome = 'shutdown'; break; }
@@ -88,8 +117,10 @@ if (git('rev-parse', 'HEAD') !== executionRevision)
 
 const optionVgaPorts = optionEntry ? vgaPorts.filter(event => event.step >= optionEntry.step &&
   (!firmwareReturn || event.step <= firmwareReturn.step)) : [];
-const accepted = outcome === 'option-rom-returned' && !!optionEntry && !!firmwareReturn &&
-  optionInstructions > 0 && optionVgaPorts.length > 0;
+const guestVgaPorts = firmwareReturn ? vgaPorts.filter(event => event.step > firmwareReturn.step) : [];
+const accepted = outcome === 'int10-vram-roundtrip' && !!optionEntry && !!firmwareReturn &&
+  optionInstructions > 0 && optionVgaPorts.length > 0 && guestVgaPorts.length > 0 &&
+  guestMarker?.value === 0xa5;
 const report = {
   schema: 'astra.i80386-at-vga-bios-diagnostic.v1',
   accepted,
@@ -103,8 +134,12 @@ const report = {
   optionEntry,
   optionInstructions,
   firmwareReturn,
+  int10Vector,
+  guestStarted,
+  guestMarker,
   vgaPorts,
   optionVgaPorts,
+  guestVgaPorts,
   videoState: machine.chips.vga1.getVideoState(),
   inputs: {
     systemRom: {bytes: systemRom.value.length, sha256: sha256(systemRom.value)},
