@@ -69,6 +69,11 @@ test('8042 self-test returns 55h while command-byte bit 2 controls system flag',
     assert.equal(controller.readData(),3,'E0 reports idle-high keyboard clock and data inputs');
     controller.writeCommand(0xad);controller.writeCommand(0xe0);controller.advance(32);
     assert.equal(controller.readData(),2,'E0 reports disabled clock and idle-high data input');
+    const beforeNoPulse=controller.getState();
+    controller.writeCommand(0xff);
+    assert.deepEqual(controller.getState(),beforeNoPulse,'FF selects no output line and changes no state');
+    assert.throws(()=>controller.writeCommand(0xfd),/outside the bounded/,
+        'other pulse commands remain outside the bounded controller model');
     controller.writeCommand(0xfe);
     assert.equal(resets,1);
     assert.equal(controller.readStatus()&4,4);

@@ -139,6 +139,11 @@ export class AT8042A20 {
         if(value===0xd0){if(this.outputQueue.length)throw new Error('AT 8042 D0 refused: output buffer is full');this.pendingCommand=null;this._respond(this.outputPort);return;}
         if(value===0xd1){this.pendingCommand=0xd1;return;}
         if(value===0xe0){this._respond((this.commandByte&0x10)?2:3);this.pendingCommand=null;return;}
+        // IBM 5170 Technical Reference, keyboard-controller commands F0h-FFh:
+        // zero low-nibble bits pulse the corresponding output-port lines low.
+        // FFh selects no line, so it is a valid controller no-op rather than
+        // an unsupported keyboard command. FEh remains the modeled CPU reset.
+        if(value===0xff){this.pendingCommand=null;return;}
         if(value===0xfe){
             if(!this.allowReset)throw new Error('AT 8042 command feh is outside the bounded A20 subset unless CPU reset is enabled');
             this.pendingCommand=null;
