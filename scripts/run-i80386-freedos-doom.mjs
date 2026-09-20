@@ -222,10 +222,13 @@ const cpuSnapshot=()=>{
         ? doomMz.headerParagraphs*16+(((cpu.cs-doomEntry.loadSegment)&0xffff)<<4)+cpu.eip:null;
     const mappedBytes=mappedOffset!==null&&mappedOffset<hddFiles.doomExe.length
         ? Array.from(hddFiles.doomExe.subarray(mappedOffset,mappedOffset+16)):null;
+    const gdtBytes=paging?null:Array.from({length:Math.min(cpu.gdtr.limit+1,64)},
+        (_,index)=>cpu.read((cpu.gdtr.base+index)>>>0));
     return {eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,esi:cpu.esi,edi:cpu.edi,
         ebp:cpu.ebp,esp:cpu.esp,eip:cpu.eip,eflags:cpu.eflags,cs:cpu.cs,ds:cpu.ds,
         es:cpu.es,ss:cpu.ss,fs:cpu.fs,gs:cpu.gs,cr0:cpu.cr0,cr2:cpu.cr2,cr3:cpu.cr3,
         linearPc,physicalPc:paging?null:machine._decode386(linearPc),paging,
+        gdtr:{...cpu.gdtr},idtr:{...cpu.idtr},gdtBytes,
         tr:{...cpu.tr},ldtr:{...cpu.ldtr},csCache:{...cpu.segmentCaches[1]},
         opcodeBytes:paging?null:Array.from({length:16},(_,index)=>cpu.read((linearPc+index)>>>0)),
         doomFileMapping:mappedOffset===null?null:{offset:mappedOffset,bytes:mappedBytes}};
