@@ -7,6 +7,8 @@ import { MOS_SMOOTH_DELTA, smoothVov } from '../src/mna.js';
 const NGSPICE_MATCHED_TEMP_C = 26.826895261366076;
 const PARAMS = Object.freeze({ model: 'level1', vth: 1, kp: 50e-6, w: 100e-6,
   l: 1e-6, lambda: 0.01, bulkAtGround: true });
+const SOURCE_TIED_PARAMS = Object.freeze({ model: 'level1', vth: 1, kp: 50e-6, w: 100e-6,
+  l: 1e-6, lambda: 0.01, bulkOnSource: true });
 
 function commonSource(params = PARAMS, { disconnect = null, kind = 'nmos' } = {}) {
   const board = new BoardImpl(5);
@@ -184,6 +186,28 @@ function assertUnchanged(board, before) {
 }
 
 describe('BoardImpl.operatingPoint explicit grounded-bulk Level-1 NMOS domain', () => {
+  it('admits the exact GAMMA/PHI pair and matches ngspice body-effect DC', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    const params = { ...PARAMS, gamma: 0.5, phi: 0.6 };
+    const oracle = ngspice(`VDD vdd 0 9
+R1 vdd gate 11k
+R2 gate 0 6.8k
+RD vdd drain 910
+RS source 0 180
+M1 drain gate source 0 NM W=100u L=1u
+.model NM NMOS(LEVEL=1 VTO=1 KP=50u LAMBDA=.01 GAMMA=.5 PHI=.6)`,
+    ['v(gate)', 'v(drain)', 'v(source)', '@m1[id]']);
+    const point = commonSource(params).operatingPoint();
+    assert.equal(point.converged, true);
+    for (const [net, key] of [['gate', 'v(gate)'], ['drain', 'v(drain)'], ['source', 'v(source)']]) {
+      assert.ok(Math.abs(point.nodeVoltages.get(net) - oracle[key]) < 1e-6,
+        `${net}: ${point.nodeVoltages.get(net)} vs ${oracle[key]}`);
+    }
+    assert.ok(Math.abs(point.branchCurrents.get('M1').get('drain') - oracle['@m1[id]']) < 1e-8);
+    assert.deepEqual(point.analysis.nmos.optionalParameterGroups, [['gamma', 'phi']]);
+  });
+
   it('matches ngspice default temperature when the grounded bulk junction conducts', {
     skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
   }, () => {
@@ -338,6 +362,7 @@ M1 drain gate source 0 NM W=100u L=1u
     assert.deepEqual(active.analysis.nmos, {
       model: 'explicit-spice-level1-grounded-bulk',
       requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
+      optionalParameterGroups: [['gamma', 'phi']],
       defaults: { bulkIs: 1e-14, bulkN: 1 }, thermalVoltage: 0.025864925786328753,
       temperatureModel: 'fixed',
     });
@@ -370,7 +395,12 @@ M1 drain gate 0 0 NM W=100u L=1u
       [{ ...PARAMS, l: 0 }, /l must be an explicit finite number greater than zero/],
       [{ ...PARAMS, lambda: -1 }, /lambda must be an explicit finite number greater than or equal to zero/],
       [{ ...PARAMS, bulkAtGround: false }, /bulkAtGround must explicitly prove/],
-      [{ ...PARAMS, gamma: 0.5 }, /parameter gamma is outside/],
+      [{ ...PARAMS, gamma: 0.5 }, /gamma and phi must be declared together/],
+      [{ ...PARAMS, phi: 0.6 }, /gamma and phi must be declared together/],
+      [{ ...PARAMS, gamma: -0.5, phi: 0.6 }, /gamma must be a finite number/],
+      [{ ...PARAMS, gamma: 0.5, phi: 0 }, /phi must be a finite number/],
+      [{ ...SOURCE_TIED_PARAMS, gamma: 0.5, phi: 0.6 },
+        /gamma\/phi body effect requires an explicitly grounded bulk/],
       [{ ...PARAMS, _model: '' }, /_model must be a non-empty inert source-model name/],
     ];
     for (const [params, pattern] of cases) {

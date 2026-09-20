@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-20 CLAIM — bwcx: exact grounded-bulk Level-1 NMOS body-effect public
+2026-09-20 DONE (candidate) — bwcx: exact grounded-bulk Level-1 NMOS body-effect public
 operating-point domain, isolated worktree
 `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-op`, branch
 `lane/nmos-gamma-phi-op`, exact base
@@ -17,8 +17,12 @@ operating-point domain, isolated worktree
 NMOS parameter preflight in `src/board.js`, focused public NMOS operating-point
 tests, and this row. Admit finite nonnegative GAMMA plus finite positive PHI only
 as a pair on the already-qualified grounded-bulk Level-1 NMOS law; source-tied
-bulk, partial/invalid fields and every extra parameter remain refused. No stamp,
-AC/gmb, solver/tolerance, CUI/pin, PMOS, x86, workflow, or unrelated engine change.
+bulk, partial/invalid fields and every extra parameter remain refused. A live
+ngspice witness agrees on gate/drain/source voltage within 1 microvolt and drain
+current within 10 nA; the focused MOS surface passes 46/46. Removing the new
+allowlist makes that witness red, while removing either pair completeness or the
+grounded-bulk restriction makes the named refusal proof red. No stamp, AC/gmb,
+solver/tolerance, CUI/pin, PMOS, x86, workflow, or unrelated engine change.
 
 2026-09-19 DONE — bwcx: Level-1 MOS reverse-VDS channel symmetry, isolated
 worktree `/mnt/volume1/code/wt/bwb-mos-reverse-vds-symmetry`, branch
