@@ -14,12 +14,12 @@ function fixture() {
 test("CLTS clears only CR0.TS in real mode and protected ring 0", () => {
   for (const protectedMode of [false, true]) {
     const cpu = fixture();
-    cpu.cr0 = protectedMode ? 0x80000019 : 0x18;
+    cpu.cr0 = protectedMode ? 0x19 : 0x18;
     cpu.eflags = 0xad7;
     cpu.step();
     assert.deepEqual(
       [cpu.cr0, cpu.eflags, cpu.eip],
-      [protectedMode ? 0x80000011 : 0x10, 0xad7, 2],
+      [protectedMode ? 0x11 : 0x10, 0xad7, 2],
     );
   }
 });
