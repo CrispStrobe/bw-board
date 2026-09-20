@@ -2832,13 +2832,15 @@ export class ExperimentalI80386 {
       }
     } else if (op === 0xca || op === 0xcb) {
       this._farRealReturn(width, op === 0xca ? this._fetchN(2) : 0);
-    } else if (op === 0xc3) {
+    } else if (op === 0xc2 || op === 0xc3) {
+      const discard = op === 0xc2 ? this._fetchN(2) : 0;
       const stack32 = !!this.segmentCaches[SEG_SS].default32,
         off = stack32 ? this.esp : this.sp,
         target = this._read(SEG_SS, off, width) >>> 0;
       this._linear(SEG_CS, target, 1);
-      if (stack32) this.esp = (this.esp + (width >>> 3)) >>> 0;
-      else this.sp = (this.sp + (width >>> 3)) & 0xffff;
+      const adjustment = (width >>> 3) + discard;
+      if (stack32) this.esp = (this.esp + adjustment) >>> 0;
+      else this.sp = (this.sp + adjustment) & 0xffff;
       this.eip = target;
     } else if (op === 0xd4 || op === 0xd5) {
       const base = this._fetch8();
