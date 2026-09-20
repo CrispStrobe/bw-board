@@ -58,7 +58,7 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   assert.deepEqual(irq, [true, false], 'the next block is not exposed synchronously');
   ata.writeRegister(3, 7);
   assert.equal(ata.sectorNumber, 2, 'task-file writes are ignored while BSY is asserted');
-  ata.advance(255);
+  ata.advance(2047);
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
   ata.advance(1);
   assert.deepEqual(irq, [true, false, true], 'second read block then becomes ready');
@@ -73,13 +73,36 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   for (let word = 0; word < 256; word++) ata.writeData16(0x1100 | word);
   assert.deepEqual(irq, [], 'write also enters a visible inter-sector busy phase');
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
-  ata.advance(256);
+  ata.advance(2048);
   assert.deepEqual(irq, [true], 'second write block becomes ready after status observes busy');
   ata.readRegister(7);
   for (let word = 0; word < 256; word++) ata.writeData16(0x2200 | word);
   assert.deepEqual(irq, [true, false, true], 'write command completion interrupts');
   ata.readRegister(7);
   assert.deepEqual(irq, [true, false, true, false]);
+});
+
+test('inter-sector service remains busy across an intervening timer handler', () => {
+  const irq = [];
+  const ata = new ExperimentalATA16(image(), geometry, {
+    onIRQ: level => irq.push(level), intersectorDelayCycles: 2048,
+  });
+  ata.writeRegister(2, 2);
+  ata.writeRegister(3, 1);
+  ata.writeRegister(6, 0xa0);
+  ata.writeRegister(7, 0x20);
+  ata.readRegister(7);
+  for (let word = 0; word < 256; word++) ata.readData16();
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
+  ata.advance(1400);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80,
+    'a long chained IRQ0 service cannot expose DRQ as early command completion');
+  assert.deepEqual(irq, [true, false]);
+  ata.advance(647);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
+  ata.advance(1);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x58);
+  assert.deepEqual(irq, [true, false, true]);
 });
 
 test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 absent', () => {
@@ -236,10 +259,10 @@ test('386 AT scheduler wakes a halted CPU horizon for the next ATA PIO block', (
   machine.loadRom(rom);
   machine.cpu.hardwareReset();
   let instructions = 0;
-  while (!machine.ata._irqPending && instructions++ < 46) machine.step();
+  while (!machine.ata._irqPending && instructions++ < 400) machine.step();
   assert.equal(machine.ata.status, 0x58);
   assert.equal(machine.ata._irqPending, true);
-  assert.ok(instructions <= 46, 'NOP execution reaches the rearmed ATA deadline without port I/O');
+  assert.ok(instructions <= 400, 'NOP execution reaches the rearmed ATA deadline without port I/O');
 
   machine.ata.readRegister(7);
   machine.ata._beginIntersector('read');

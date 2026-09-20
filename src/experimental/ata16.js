@@ -7,15 +7,16 @@ const STATUS_IDLE = STATUS_DRDY | STATUS_DSC;
 
 /**
  * Bounded ATA task-file device for the experimental 386 AT. Multi-sector PIO
- * exposes an autonomous, deterministic inter-sector BSY phase. The 256-cycle
- * functional delay preserves the IBM 5170 BIOS COMMANDI/COMMANDO contracts
- * without claiming measured disk or rotational timing. It models native
- * 16-bit PIO, not mechanical timing.
+ * exposes an autonomous, deterministic inter-sector BSY phase. The default
+ * functional delay is long enough that an intervening IBM-compatible chained
+ * IRQ0 handler cannot make COMMANDI mistake the next DRQ for command
+ * completion. It is not a claim about measured disk or rotational timing.
+ * The device models native 16-bit PIO, not mechanical timing.
  */
 export class ExperimentalATA16 {
   constructor(image, {cylinders, heads, sectors}, {
     onIRQ = null,
-    intersectorDelayCycles = 256,
+    intersectorDelayCycles = 2048,
   } = {}) {
     if (!(image instanceof Uint8Array)) throw new Error('ATA image must be a Uint8Array');
     for (const [name, value] of Object.entries({cylinders, heads, sectors}))
