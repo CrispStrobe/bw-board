@@ -1777,7 +1777,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             // rail beside the 5V one); the board default stays the
             // fallback. board.js's seed path already honored this —
             // the solver must agree or the seed lies.
-            const railVolts = (Number.isFinite(part.params?.volts) ? part.params.volts : vcc) * srcScale;
+            // control > authored rail > board default. The knob is what makes a
+            // vcc symbol a bench supply you can turn; board.js's two seed paths
+            // use this same precedence and the three must not disagree.
+            const controlled = controls instanceof Map ? controls.get(part.id) : undefined;
+            const authored = Number.isFinite(controlled) ? Number(controlled)
+              : (Number.isFinite(part.params?.volts) ? part.params.volts : vcc);
+            const railVolts = authored * srcScale;
             const railNet = findNet(nets, part.id, 'vcc');
             if (vsIndex.has(part.id)) {
               railStamped.set(railNet, railVolts);

@@ -3068,13 +3068,37 @@ export class BoardImpl {
    * vsource control value = voltage (for bench supply knob).
    * @returns {Array<{id: string, kind: string, value: number}>}
    */
+  /**
+   * The volts a vcc symbol delivers: knob, then its authored rail, then the
+   * board default. FIVE sites read this — two net seeds, two closed-form
+   * source traces and the knob readout — and they must agree, or the seed says
+   * one voltage and the solve finds another, or the panel shows a third. The
+   * MNA stamp applies the same precedence against the controls map it is
+   * handed; `test/vcc-supply-knob.test.mjs` holds the two together on a
+   * nonlinear bench, where the net moves from the resolver to the solver.
+   * @param {object} part
+   * @returns {number}
+   */
+  _railVolts(part) {
+    const knob = this.controls.get(part.id);
+    if (Number.isFinite(knob)) return Number(knob);
+    return Number.isFinite(part?.params?.volts) ? part.params.volts : this.vcc;
+  }
+
   getControls() {
-    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource'];
+    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource', 'vcc'];
     return this.parts
       .filter(p => controllable.includes(p.kind))
       .map(p => ({
         id: p.id, kind: p.kind,
-        value: this.controls.get(p.id) ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0),
+        // A vcc symbol IS a bench supply, and the solver has honoured
+        // `params.volts` on it for as long as the 3.3 V rail has existed — but
+        // it was not listed here, so no panel offered the knob and the only way
+        // to run a circuit at 9 V was to edit its JSON by hand. Its rest value
+        // is its own authored rail, falling back to the board's.
+        value: p.kind === 'vcc' ? this._railVolts(p)
+          : (this.controls.get(p.id)
+            ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0)),
       }));
   }
 
@@ -4674,7 +4698,7 @@ export class BoardImpl {
       for (const t of net.terminals) {
         const p = this.partMap.get(t.part);
         if (p && p.kind === 'vcc') {
-          this.nodeVoltages.set(net.id, p.params?.volts ?? this.vcc);
+          this.nodeVoltages.set(net.id, this._railVolts(p));
         } else if (p && p.kind === 'gnd') {
           this.nodeVoltages.set(net.id, 0);
         }
@@ -4782,7 +4806,7 @@ export class BoardImpl {
         const part = this.partMap.get(t.part);
         if (!part) continue;
         if (part.kind === 'vcc') {
-          this.nodeVoltages.set(net.id, part.params?.volts ?? this.vcc);
+          this.nodeVoltages.set(net.id, this._railVolts(part));
         } else if (part.kind === 'gnd') {
           this.nodeVoltages.set(net.id, 0);
         }
@@ -4976,7 +5000,10 @@ export class BoardImpl {
 
       switch (part.kind) {
         case 'vcc':
-          out.push({ vTh: part.params?.volts ?? this.vcc, rTh: rAccum });
+          // control > authored rail > board default, the same precedence the
+          // MNA path uses. The two must agree or the closed-form seed lies
+          // about the voltage the solver then finds.
+          out.push({ vTh: this._railVolts(part), rTh: rAccum });
           break;
         case 'gnd':
           out.push({ vTh: 0, rTh: rAccum });
@@ -5232,7 +5259,8 @@ export class BoardImpl {
 
       switch (part.kind) {
         case 'vcc':
-          return { vTh: part.params?.volts ?? this.vcc, rTh: rAccum };
+          // Same precedence as the other two rail sites; see _gatherSourcesInner.
+          return { vTh: this._railVolts(part), rTh: rAccum };
 
         case 'gnd':
           return { vTh: 0, rTh: rAccum };

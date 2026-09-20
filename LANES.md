@@ -9,6 +9,37 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): the vcc symbol is a
+bench supply you can turn. Isolated worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch
+`lane/vcc-supply-knob`, exact base `29409086`. Owns only `_railVolts` and its four call
+sites plus `getControls` in `src/board.js`, the `vcc` stamp in `src/mna.js`,
+`test/vcc-supply-knob.test.mjs` and this row.
+
+Owner report: "in examples like Zener voltage regulator we must be able to change for
+vcc1 how much volt is delivered. and what about amperes?" BOTH answers were already in
+the engine and neither was reachable. The solver has honoured `params.volts` on a vcc
+part for as long as the 3.3 V rail has existed, and the current out of that part has
+always been solved — measured here at exactly -5.000 mA for 5 V into 1 kOhm, tracking
+the knob to 9 V and 3.3 V — but `vcc` was absent from `getControls()`, so no panel
+offered a knob and the only way to run a bench at 9 V was to hand-edit its JSON.
+
+The precedence is knob > authored rail > board default, and it now lives in ONE helper
+because FIVE sites read it: two net seeds, two closed-form source traces, and the knob
+readout. Two of those seeds were found by a test that adds an LED — the net then moves
+from the resolver to MNA, and the rail stayed at 5 V while the knob said 9. That is the
+same split that killed the shift-register outputs, so the test keeps the two halves
+honest on a nonlinear bench. Two rails stay independent: turning the 5 V one to 12 V
+leaves a 3.3 V neighbour at 3.3 V.
+
+Focused suite 6/6; 63/63 across operating-point, diode, 595, mixed analog/digital,
+digital fast path and inference; 184/184 across every `getControls` consumer
+(controller, export surface, state API). Ignoring the knob on the board side, ignoring
+it in MNA, dropping `vcc` from the controllable list, and dropping the authored-rail
+fallback each turn a named test red — the last only after `getControls` was routed
+through the helper too, since as a fifth independent read it had kept that mutant
+alive. Excludes multi-rail topology, any UI, the current READOUT's presentation, and
+`vsource`, whose knob already worked.
+
 2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): infer a servo from the
 pin name. Isolated worktree `/mnt/volume1/code/wt/bwb-infer-servo`, branch
 `lane/infer-servo-by-name`, exact base `a0ba2531`. Owns only the servo branch in
