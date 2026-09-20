@@ -5,7 +5,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 
-import ExperimentalI80386ATMachine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS} from '../src/experimental/i80386-at-machine.js';
+import ExperimentalI80386ATMachine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
+    PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from '../src/experimental/i80386-at-machine.js';
 import {I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
 import {DOOM_HDD_GEOMETRY,readDoomFat16File} from './lib/i80386-doom-fat16-image.mjs';
 import {readFat12RootFile} from './lib/at-dos-acceptance.mjs';
@@ -13,6 +14,7 @@ import {gradeFreeDosAtAcceptance} from './lib/freedos-at-acceptance.mjs';
 
 const EXPECTED_FREEDOS_SHA256='03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77';
 const EXPECTED_ROM_SHA256='74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
+const EXPECTED_VGA_ROM_SHA256='90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a';
 const EXPECTED_DOOM_EXE_SHA256='b8020523561a5ad9706e009a52d61c578f37faafd85ac471962308406292ce27';
 const EXPECTED_DOOM_WAD_SHA256='1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771';
 const DEFAULT_STEPS=2_000_000;
@@ -24,7 +26,7 @@ const sourcePaths=[
     'src/experimental/i80386.js','src/experimental/i80386-at-machine.js','src/experimental/ata16.js',
     'src/experimental/i80286-protected.js','src/at-8042-a20.js','src/at-system-control.js',
     'src/i8254.js','src/i8259.js','src/i8237.js','src/mc146818.js','src/cga-card.js',
-    'src/upd765.js','src/machine-checkpoint.js',
+    'src/upd765.js','src/machine-checkpoint.js','src/vga-card.js','src/experimental/vga-memory.js',
     'scripts/lib/at-dos-acceptance.mjs','scripts/lib/freedos-at-acceptance.mjs',
     'scripts/lib/i80386-doom-fat16-image.mjs','scripts/run-i80386-freedos-doom.mjs'];
 const executionRevision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
@@ -45,7 +47,12 @@ const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(proce
 if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>500_000_000)
     throw new Error('AT_POST_STEPS must be an integer from 1 through 500000000');
 const baseRamKiB=640;
-const machineProfile=PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS;
+const vgaRomPath=process.env.VGA_BIOS_ROM??null;
+const vgaRom=vgaRomPath===null?null:fs.readFileSync(vgaRomPath);
+if(vgaRom!==null&&(vgaRom.length!==0x7e00||sha(vgaRom)!==EXPECTED_VGA_ROM_SHA256))
+    throw new Error('VGA_BIOS_ROM identity mismatch');
+const machineProfile=vgaRom===null?PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS:
+    PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA;
 const expectedFile=process.env.AT_EXPECT_FILE??null;
 const expectedText=process.env.AT_EXPECT_TEXT??null;
 if((expectedFile===null)!==(expectedText===null))
@@ -76,6 +83,15 @@ let installerDeclined=false,commandQueued=false,commandPrompt=null,doomEntry=nul
 let steps=0;
 const doomEntryWrites=[];
 const doomInstructionTrace=[];
+let doomInstructionTraceNext=0;
+const addDoomInstructionTrace=event=>{
+    if(doomInstructionTrace.length<1024)doomInstructionTrace.push(event);
+    else doomInstructionTrace[doomInstructionTraceNext]=event;
+    doomInstructionTraceNext=(doomInstructionTraceNext+1)&1023;
+};
+const orderedDoomInstructionTrace=()=>doomInstructionTrace.length<1024?[...doomInstructionTrace]:[
+    ...doomInstructionTrace.slice(doomInstructionTraceNext),
+    ...doomInstructionTrace.slice(0,doomInstructionTraceNext)];
 
 const resetRequests=[];
 const resetApplications=[];
@@ -172,6 +188,7 @@ machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeo
 }});
 machine.loadRom(rom,0xf0000);
 machine.loadRom(rom);
+if(vgaRom!==null)machine.loadRom(vgaRom,0xc0000);
 let floppy=null;
 let floppyImage=null;
 if(process.env.AT_FLOPPY_IMAGE) {
@@ -215,8 +232,11 @@ let previousCr0=machine.cpu.cr0>>>0;
 const progressSamples=[];
 let stopReason=null;
 let hostRefusal=null;
-const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
-    String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,''));
+const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>{
+    const cell=row*80+column;
+    const value=vgaRom===null?machine._read(0xb8000+cell*2):machine.vgaMemory.planes[0][cell*2];
+    return String.fromCharCode(value||0x20);
+}).join('').replace(/\s+$/,''));
 const disketteBda=()=>Array.from({length:16},(_,index)=>machine._read(0x490+index));
 const cpuSnapshot=()=>{
     const cpu=machine.cpu,linearPc=cpu.pc,paging=!!(cpu.cr0&0x80000000);
@@ -282,15 +302,14 @@ for(;steps<stepLimit;steps++) {
     }
     if(doomEntry) {
         const stackLinear=(machine.cpu.segmentCaches[2].base+(machine.cpu.esp&0xffff))>>>0;
-        doomInstructionTrace.push({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,
+        addDoomInstructionTrace({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,
             linearPc:machine.cpu.pc,eax:machine.cpu.eax,ebx:machine.cpu.ebx,ecx:machine.cpu.ecx,
             edx:machine.cpu.edx,ss:machine.cpu.ss,esp:machine.cpu.esp,eflags:machine.cpu.eflags,
             stackWords:Array.from({length:4},(_,index)=>machine.cpu.read((stackLinear+index*2)>>>0)|
                 machine.cpu.read((stackLinear+index*2+1)>>>0)<<8),
             bytes:Array.from({length:6},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0))});
-        if(doomInstructionTrace.length>1024)doomInstructionTrace.shift();
     }
-    if(executionBoundaries.bootSector&&(steps&1023)===0) {
+    if(executionBoundaries.bootSector&&!commandQueued&&(steps&1023)===0) {
         const ui=renderScreen();
         if(!installerDeclined&&ui.some(line=>line.includes('Do you want to proceed'))) {
             keyScript.push(...encodeKeys(['n','\r']));
@@ -421,9 +440,11 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     persistence:{priorOutputMediaSha256,linked:priorOutputMediaSha256===null?null:
         priorOutputMediaSha256===floppy?.sha256},
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
-        expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
+        expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',
+        vgaRom:vgaRom&&{bytes:vgaRom.length,sha256:sha(vgaRom)},floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,cr0Transitions,doomEntry,doomEntryWrites,doomInstructionTrace,diskPorts,rtcPorts,keyboardScript,
+    executionBoundaries,cr0Transitions,doomEntry,doomEntryWrites,
+    doomInstructionTrace:orderedDoomInstructionTrace(),diskPorts,rtcPorts,keyboardScript,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,finalCpu:cpuSnapshot(),
