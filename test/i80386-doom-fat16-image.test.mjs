@@ -48,4 +48,6 @@ test('owned Doom HDD carries an exact ordinary short demo file when requested',(
   assert.deepEqual(manifest.files.map(file=>file.name),['DOOM    EXE','DOOM1   WAD','ASTRA   LMP']);
   assert.throws(()=>createDoomFat16Hdd({doomExe:exe,doomWad:wad,
     extraFiles:[{name:'astra.lmp',bytes:demo}]}),/11-byte uppercase/);
+  assert.throws(()=>createDoomFat16Hdd({doomExe:exe,doomWad:wad,
+    extraFiles:[{name:'DOOM    EXE',bytes:demo}]}),/duplicate|short name/);
 });

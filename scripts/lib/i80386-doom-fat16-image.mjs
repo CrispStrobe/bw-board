@@ -15,6 +15,8 @@ export function createDoomFat16Hdd({doomExe,doomWad,extraFiles=[]}) {
     typeof file?.name!=='string'||!/^[A-Z0-9 ]{11}$/.test(file.name)||
     !(file.bytes instanceof Uint8Array)||file.bytes.length===0))
     throw new Error('extra Doom FAT16 files require an 11-byte uppercase short name and nonempty bytes');
+  const allNames=['DOOM    EXE','DOOM1   WAD',...extraFiles.map(file=>file.name)];
+  if(new Set(allNames).size!==allNames.length)throw new Error('duplicate Doom FAT16 short name');
   const g=DOOM_HDD_GEOMETRY,p=DOOM_PARTITION;
   const image=new Uint8Array(g.cylinders*g.heads*g.sectors*512);
   const entry=446;
