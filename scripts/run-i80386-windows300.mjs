@@ -91,7 +91,7 @@ if (keyScript) {
     } else if(action.kind==='text'){
       let at=action.step; const interval=action.interval??1000;
       for(const char of action.value){const lower=char.toLowerCase(),shift=char!==lower||char===':';
-        emitStroke(at,char===':'?';':lower,shift); at+=interval;}
+        emitStroke(at,char===':'?';':char===' '?'space':lower,shift); at+=interval;}
     } else throw new Error(`unsupported key action '${action.kind}'`);
   }
   keyEvents.sort((a,b)=>a.step-b.step);
