@@ -110,11 +110,13 @@ hardware, or timing compatibility.
 
 MOV from ES/CS/SS/DS/FS/GS and MOV to ES/SS/DS/FS/GS use a 16-bit
 selector. MOV to CS and other invalid encodings raise #UD. Protected
-data-register loads admit null selectors with an unusable cache, distinguish
-#GP, #NP, and #SS for the bounded GDT path, and leave LDT and expand-down data
-as explicit valid-but-unsupported paths. Opcode 8C writes 16 bits to memory
-and zero-extends a register destination under 32-bit operand size. The original
-manual lists only the r/m16 form; the register upper-half policy follows pinned
+loads distinguish #GP, #NP and #SS across GDT and loaded-LDT paths; null
+data selectors install unusable caches. Expand-down data and stacks enforce
+an exclusive lower limit and a B-selected upper bound (FFFF or FFFFFFFF).
+Full operand spans are checked before memory or stack-pointer commits.
+Opcode 8C writes 16 bits to memory and zero-extends a register destination
+under 32-bit operand size. The original manual lists only the r/m16 form;
+the register upper-half policy follows pinned
 PCjs and fixed samples from the pinned SST386 physical 386EX capture; the
 hardware profile makes no protected-mode or timing claim.
 
@@ -240,7 +242,7 @@ the target code, new stack descriptor, complete new frame, and target offset
 before changing visible execution state. Outer IRET follows the original-386
 order: complete old frame, return code descriptor, return stack descriptor,
 then target offset; it does not eagerly validate the returned stack pointer.
-Task gates, nested-task returns, and expand-down privilege stacks remain
+Task gates and nested-task returns remain
 explicit refusals.
 Ring-0 IRETD can enter VM86 after validating its complete nine-dword frame and
 16-bit target. It constructs six real-address segment caches and executes the

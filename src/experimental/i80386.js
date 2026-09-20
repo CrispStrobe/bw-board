@@ -288,7 +288,10 @@ export class ExperimentalI80386 {
         this._segValue(seg),
         "segment not present",
       );
-    if (off < 0 || end > c.limit || end > 0xffffffff)
+    const outside = c.expandDown
+      ? off <= c.limit || end > (c.default32 ? 0xffffffff : 0xffff)
+      : end > c.limit;
+    if (off < 0 || end < off || outside || end > 0xffffffff)
       throw new I80386Fault(seg === SEG_SS ? 12 : 13, 0, "segment limit fault");
     return (c.base + (off >>> 0)) >>> 0;
   }
@@ -595,10 +598,6 @@ export class ExperimentalI80386 {
           errorCode,
           "segment not present",
         );
-      if (!code && conformingOrExpandDown)
-        throw new UnsupportedI80386(
-          "expand-down data is outside the bounded 386 profile",
-        );
       let limit = (bytes[0] | (bytes[1] << 8) | ((flags & 15) << 16)) >>> 0;
       if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
       const descriptor = {
@@ -612,6 +611,7 @@ export class ExperimentalI80386 {
         default32: !!(flags & 0x40),
         present: true,
         code,
+        expandDown: !code && conformingOrExpandDown,
         readable: !code || readableOrWritable,
         writable: !code && readableOrWritable,
         access,
@@ -1696,10 +1696,6 @@ export class ExperimentalI80386 {
         code,
         "privilege stack not present",
       );
-    if (access & 4)
-      throw new UnsupportedI80386(
-        "expand-down privilege stack is outside the bounded profile",
-      );
     let limit = (bytes[0] | (bytes[1] << 8) | ((flags & 15) << 16)) >>> 0;
     if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
     return {
@@ -1713,6 +1709,7 @@ export class ExperimentalI80386 {
       default32: !!(flags & 0x40),
       present: true,
       code: false,
+      expandDown: !!(access & 4),
       readable: true,
       writable: true,
       access,
