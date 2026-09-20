@@ -19,7 +19,7 @@ if(sha256(doomExe)!==EXPECTED_EXE||sha256(doomWad)!==EXPECTED_WAD)
   throw new Error('short timedemo requires the pinned Doom 1.9 shareware EXE and IWAD');
 const {image,manifest}=createDoomFat16Hdd({doomExe,doomWad,
   extraFiles:[{name:'ASTRA   LMP',bytes:demo}]});
-fs.writeFileSync(outputPath,image);
+fs.writeFileSync(outputPath,image,{flag:'wx'});
 process.stdout.write(`${JSON.stringify({schema:'astra.i80386-doom-short-demo-input.v1',
   scope:'owned 24-tic Doom 1.9 demo: 20 forward commands, four attack commands, then DEMOMARKER',
   inputs:{doomExe:{bytes:doomExe.length,sha256:sha256(doomExe)},

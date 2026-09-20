@@ -11,13 +11,20 @@ export function createDoomFat16Hdd({doomExe,doomWad,extraFiles=[]}) {
     throw new Error('Doom FAT16 inputs must be Uint8Array instances');
   if(doomExe.length===0||doomWad.length===0)
     throw new Error('Doom FAT16 inputs must be nonempty');
+  const canonicalShortName=name=>{
+    if(typeof name!=='string'||name.length!==11)return false;
+    const base=name.slice(0,8),extension=name.slice(8),trimmedBase=base.trimEnd(),trimmedExtension=extension.trimEnd();
+    return trimmedBase.length>0&&/^[A-Z0-9]+$/.test(trimmedBase)&&/^[A-Z0-9]*$/.test(trimmedExtension)&&
+      base===trimmedBase.padEnd(8)&&extension===trimmedExtension.padEnd(3);
+  };
   if(!Array.isArray(extraFiles)||extraFiles.some(file=>
-    typeof file?.name!=='string'||!/^[A-Z0-9 ]{11}$/.test(file.name)||
+    !canonicalShortName(file?.name)||
     !(file.bytes instanceof Uint8Array)||file.bytes.length===0))
-    throw new Error('extra Doom FAT16 files require an 11-byte uppercase short name and nonempty bytes');
+    throw new Error('extra Doom FAT16 files require a canonical uppercase 8.3 short name and nonempty bytes');
   const allNames=['DOOM    EXE','DOOM1   WAD',...extraFiles.map(file=>file.name)];
   if(new Set(allNames).size!==allNames.length)throw new Error('duplicate Doom FAT16 short name');
   const g=DOOM_HDD_GEOMETRY,p=DOOM_PARTITION;
+  if(allNames.length>p.rootEntries)throw new Error('Doom FAT16 files exceed the root directory capacity');
   const image=new Uint8Array(g.cylinders*g.heads*g.sectors*512);
   const entry=446;
   image[entry+1]=1;image[entry+2]=1;image[entry+3]=0;
