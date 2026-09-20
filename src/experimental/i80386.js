@@ -3007,6 +3007,11 @@ export class ExperimentalI80386 {
       this._checkVmIopl("INT");
       this._suppressTrace = true;
       this._deliver(vector, this.eip, null, { software: true });
+    } else if (op === 0xce) {
+      if (this.eflags & OF) {
+        this._suppressTrace = true;
+        this._deliver(4, this.eip, null, { software: true });
+      }
     } else if (op === 0xcf) this._iret(width);
     else if (op === 0xfa) {
       if (this.protectedMode && this.currentPrivilegeLevel > ((this.eflags >>> 12) & 3))

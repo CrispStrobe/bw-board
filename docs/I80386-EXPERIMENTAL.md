@@ -262,8 +262,10 @@ fault architecturally. A 16-bit interrupt/trap gate from VM86 raises #GP with
 the IDT entry error code; original manual section 15.3.2 requires a task gate
 or 386 interrupt/trap gate.
 On the original 386, VM86 PUSHF, POPF, INT imm8, IRET, CLI, STI, and LOCK
-require IOPL3; lower IOPL raises #GP(0). INT3 is exempt and enters its IDT
-gate. VM86 IRET bypasses nested-task return, preserves VM and IOPL, and IRETD
+require IOPL3; lower IOPL raises #GP(0). INT3 and overflow-triggered INTO are
+exempt from the INT-imm8 IOPL check, but still enforce their software gate DPL.
+INTO retires without delivery when OF is clear and otherwise saves the following
+EIP as a trap. VM86 IRET bypasses nested-task return, preserves VM and IOPL, and IRETD
 can restore RF. IN and OUT consult the current 386 TSS I/O bitmap in VM86 even
 when IOPL is 3. LOCK execution after that privilege check remains outside the
 bounded instruction profile. SLDT, STR, LLDT, and LTR raise #UD in VM86.
