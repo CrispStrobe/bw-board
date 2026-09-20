@@ -340,8 +340,7 @@ export class UPD765 {
      * @param {{ onIrqChange?: (asserted: boolean) => void,
      *           onDmaRequest?: (dir: 'read'|'write', byte?: number) => any,
      *           onMotorChange?: (drive: number, on: boolean) => void }} [hooks]
-     * @param {{ seekBeyondEnd?: 'error'|'silent',
-     *           resetPresentCylinder?: 'preserve'|'zero' }} [options]
+     * @param {{ seekBeyondEnd?: 'error'|'silent' }} [options]
      *   THE ONE BEHAVIOUR THE DATASHEET DOES NOT SETTLE. A uPD765 has no idea
      *   how many cylinders a drive has: SEEK counts out step pulses and the
      *   only feedback it ever gets is the TRACK 0 sensor. Read literally, a
@@ -360,11 +359,6 @@ export class UPD765 {
     constructor(hooks = {}, options = {}) {
         this.hooks = hooks;
         this.seekBeyondEnd = options.seekBeyondEnd === 'silent' ? 'silent' : 'error';
-        // PCjs' 5170 controller reset initializes each drive's logical PCN
-        // register to zero.  Keep this opt-in while the physical-head effect
-        // is qualified: reset itself still emits no step pulses and therefore
-        // must not move Drive.track.
-        this.resetPresentCylinder = options.resetPresentCylinder === 'zero' ? 'zero' : 'preserve';
         this.drives = Array.from({ length: 4 }, () => new Drive());
         this.reset(true);
     }
@@ -556,9 +550,6 @@ export class UPD765 {
         this.srt = 0; this.hut = 0; this.hlt = 0;
         this.nonDma = false;
         this.intPending = false;
-        if (this.resetPresentCylinder === 'zero') {
-            for (const d of this.drives) d.pcn = 0;
-        }
         this._refreshIrq();
     }
 

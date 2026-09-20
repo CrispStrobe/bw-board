@@ -774,10 +774,7 @@ export class I8086Machine {
                     onMotorChange: (drive, on) => {
                         if (this.hooks.onMotorChange) this.hooks.onMotorChange(c.name, drive, on);
                     },
-                }, {
-                    seekBeyondEnd: c.seekBeyondEnd,
-                    resetPresentCylinder: c.resetPresentCylinder,
-                });
+                }, { seekBeyondEnd: c.seekBeyondEnd });
             } else if (c.kind === 'vga') {
                 chip = new VGACard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },

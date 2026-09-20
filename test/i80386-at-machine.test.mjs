@@ -26,7 +26,6 @@ test('FreeDOS HDD profile selects literal out-of-range uPD765 seek completion', 
   const freedos = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS);
   assert.equal(ordinary.chips.fdc1.seekBeyondEnd, 'error');
   assert.equal(freedos.chips.fdc1.seekBeyondEnd, 'silent');
-  assert.equal(freedos.chips.fdc1.resetPresentCylinder, 'zero');
 });
 
 test('experimental 386 HDD profile reports IBM type 1 drive C with a matching CMOS checksum', () => {
