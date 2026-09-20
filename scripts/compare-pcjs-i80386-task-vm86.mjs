@@ -28,6 +28,7 @@ for (const name of ['x86func','x86help','x86mods','x86op0f','x86ops']) await imp
 const { default: CPU } = await import(moduleURL('cpux86'));
 const { default: Bus } = await import(moduleURL('bus'));
 const { default: Memory } = await import(moduleURL('memory'));
+const { default: X86 } = await import(moduleURL('x86'));
 class QuietBus extends Bus { printf() { return 0; } }
 
 const mutation = process.env.I386_TASK_VM_ORACLE_MUTATION ?? null;
@@ -79,9 +80,13 @@ function runLocal() {
 function runPCjs() {
   const cpu=new CPU({id:'taskvm.cpu',model:80386}),bus=new QuietBus({id:'taskvm.bus',busWidth:32},cpu);
   if(!bus.addMemory(0,0x2000,Memory.TYPE.RAM))throw new Error('PCjs memory allocation failed');cpu.bus=bus;install((a,v)=>bus.setByteDirect(a,v));
+  const faultTrace=[];
+  const originalHelpFault=X86.helpFault;
+  X86.helpFault=function(vector,errorCode,...rest){faultTrace.push({vector,errorCode,cs:this.getCS(),eip:this.getIP(),tr:this.segTSS.sel});return originalHelpFault.call(this,vector,errorCode,...rest);};
   cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0x800);cpu.setPS(2);const visited={handler:false,returned:false},trail=[];let reset=false;
   for(let step=0;step<budget;step++){const cs=cpu.getCS(),ip=cpu.getIP();trail.push(`${cs.toString(16)}:${ip.toString(16)}`);if(cs===8&&ip===0x180)visited.handler=true;if(visited.handler&&(cpu.getPS()&0x20000))visited.returned=true;if(visited.returned&&ip===5)break;try{cpu.stepCPU(0);}catch(error){reset=error===-1&&cpu.getCS()===0xf000&&cpu.getIP()===0xfff0&&cpu.segTSS.sel===0&&trail.at(-1)==='8:112';if(!reset)throw new Error(`PCjs abort ${String(error)} state=${cpu.getCS().toString(16)}:${cpu.getIP().toString(16)} flags=${(cpu.getPS()>>>0).toString(16)} tr=${cpu.segTSS.sel.toString(16)} trail=${trail.join(',')}`);break;}}
-  return summarize(cpu,a=>bus.getByteDirect(a),false,visited,reset);
+  X86.helpFault=originalHelpFault;
+  return {...summarize(cpu,a=>bus.getByteDirect(a),false,visited,reset),faultTrace};
 }
 const reference=runPCjs(),actual=runLocal();if(mutation==='result')actual.ax^=1;
 const expected={reset:false,completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0,handlerBacklink:0x20};
