@@ -787,8 +787,35 @@ export class ExperimentalI80386 {
   _enter(width, allocation, nesting) {
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
     const bytes = width >>> 3;
+    const push = value => {
+      if (this.protectedMode && !this.virtual8086) {
+        this._push(value, width);
+        return;
+      }
+      const next = stack32
+        ? (this.esp - bytes) >>> 0
+        : (this.sp - bytes) & 0xffff;
+      for (let index = 0; index < bytes; index++)
+        this.write(
+          this._translate((this.segmentCaches[SEG_SS].base +
+            (stack32 ? next + index : (next + index) & 0xffff)) >>> 0),
+          (value >>> (index * 8)) & 0xff,
+        );
+      if (stack32) this.esp = next;
+      else this.sp = next;
+    };
+    const readFrame = offset => {
+      if (this.protectedMode && !this.virtual8086)
+        return this._read(SEG_SS, offset, width);
+      let value = 0;
+      for (let index = 0; index < bytes; index++)
+        value += this.read(this._translate((this.segmentCaches[SEG_SS].base +
+          (stack32 ? offset + index : (offset + index) & 0xffff)) >>> 0)) *
+          2 ** (index * 8);
+      return value >>> 0;
+    };
     const frameValue = width === 32 ? this.ebp : this.bp;
-    this._push(frameValue, width);
+    push(frameValue);
     const framePointer = stack32 ? this.esp : this.sp;
     nesting &= 31;
     if (nesting) {
@@ -797,9 +824,9 @@ export class ExperimentalI80386 {
         ancestor = width === 32
           ? (ancestor - bytes) >>> 0
           : (ancestor - bytes) & 0xffff;
-        this._push(this._read(SEG_SS, ancestor, width), width);
+        push(readFrame(ancestor));
       }
-      this._push(framePointer, width);
+      push(framePointer);
     }
     if (width === 32) this.ebp = framePointer >>> 0;
     else this.bp = framePointer;
