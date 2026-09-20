@@ -168,14 +168,15 @@ describe('createDebugTarget: missing options', () => {
 describe('getTargetKinds', () => {
   it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    // 12 SINCE THE 80286 REAL-MODE VARIANT BECAME PICKABLE (was 11 when the 8086
-    // became pickable, 66691e1). This count is the reason the test exists -- a
-    // kind added without a row here is a target the factory can build and the
-    // picker never offers -- so it is updated with the assertion below rather
-    // than loosened to `>=`.
-    assert.equal(kinds.length, 12);
+    // 13 SINCE THE EXPERIMENTAL 80386 AT TARGET BECAME PICKABLE (was 12 when the
+    // 80286 real-mode variant became pickable, 11 when the 8086 did, 66691e1).
+    // This count is the reason the test exists -- a kind added without a row
+    // here is a target the factory can build and the picker never offers -- so
+    // it is updated with the assertion below rather than loosened to `>=`.
+    assert.equal(kinds.length, 13);
     assert.ok(kinds.find(k => k.kind === 'i8086'));
     assert.ok(kinds.find(k => k.kind === 'i80286'));
+    assert.ok(kinds.find(k => k.kind === 'i80386'));
     assert.ok(kinds.find(k => k.kind === 'emulator'));
     assert.ok(kinds.find(k => k.kind === 'avr8js'));
     assert.ok(kinds.find(k => k.kind === 'atmega2560'));

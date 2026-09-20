@@ -223,7 +223,7 @@ test('getTargetKinds is exactly the list we mean, and says which one moved', () 
   // fix is one word rather than an investigation.
   const EXPECTED = [
     'emulator', 'avr8js', 'atmega2560', 'attiny85', 'z80', 'i8086', 'i80286',
-    'attiny88', 'eater6502', 'rp2040js', 'stm32f0', 'serial',
+    'i80386', 'attiny88', 'eater6502', 'rp2040js', 'stm32f0', 'serial',
   ];
   const kinds = getTargetKinds().map(k => k.kind);
   assert.ok(kinds.includes('eater6502'), 'the breadboard 6502 is the one this file is about');
