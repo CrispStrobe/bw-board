@@ -53,7 +53,7 @@ if((expectedFile===null)!==(expectedText===null))
 let priorOutputMediaSha256=null;
 if(process.env.FREEDOS_PRIOR_REPORT) {
     const priorReport=JSON.parse(fs.readFileSync(process.env.FREEDOS_PRIOR_REPORT,'utf8'));
-    if(priorReport.schema!=='astra.freedos14-at-acceptance.v1'||priorReport.fullBootAccepted!==true||
+    if(priorReport.schema!=='astra.i80386-freedos-doom-diagnostic.v1'||priorReport.fullBootAccepted!==true||
         priorReport.input?.floppy?.sha256!==EXPECTED_FREEDOS_SHA256||
         !/^[0-9a-f]{64}$/.test(priorReport.input?.floppy?.output?.sha256??''))
         throw new Error('FREEDOS_PRIOR_REPORT is not an accepted write receipt from the pinned original image');
@@ -81,6 +81,8 @@ const postEvents=[];
 const controllerPorts=[];
 const controllerWrites=[];
 const diskPorts=[];
+const ataTrace=[];
+const ataCounts={commands:0,nativeDataReads:0,nativeDataWrites:0,overflow:false};
 const rtcPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
 const injectedKeys=[];
@@ -121,6 +123,13 @@ machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeo
         // Retain enough firmware traffic to include the drive/media
         // classification sequence as well as the loader's first failing I/O.
         if(diskPorts.length>4096)diskPorts.shift();
+    }
+    if((event.port>=0x1f0&&event.port<=0x1f7)||event.port===0x3f6) {
+        if(event.port===0x1f7&&event.dir==='out')ataCounts.commands++;
+        if(event.port===0x1f0&&event.width===16)
+            ataCounts[event.dir==='in'?'nativeDataReads':'nativeDataWrites']++;
+        if(ataTrace.length<4096)ataTrace.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
+        else ataCounts.overflow=true;
     }
 }});
 machine.loadRom(rom,0xf0000);
@@ -310,7 +319,8 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
             sectorCount:machine.ata.sectorCount,sectorNumber:machine.ata.sectorNumber,
             cylinder:machine.ata.cylinderLow|machine.ata.cylinderHigh<<8,
             driveHead:machine.ata.driveHead,direction:machine.ata.direction,
-            irqPending:machine.ata._irqPending,irqOutput:machine.ata._irqOutput}},
+            irqPending:machine.ata._irqPending,irqOutput:machine.ata._irqOutput},
+        trace:ataTrace,counts:ataCounts},
     executionRevision,sourceSha256};
 for(const [file,before] of Object.entries(sourceSha256)) {
     const after=sourceHash(file);
