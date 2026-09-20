@@ -207,6 +207,11 @@ test('keyboard F3 typematic command and parameter produce timed keyboard ACKs', 
     assert.throws(()=>invalid.writeData(0xed),/no D1 output-port command/,
         'an unmodeled command byte is not accepted as the F3 parameter');
     assert.equal(invalid.getState().pendingKeyboardCommand,0xf3);
+
+    const disabled=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    disabled.writeCommand(0xad);disabled.writeData(0xf3);
+    assert.equal(disabled.commandByte&0x10,0,'forwarding F3h releases the keyboard clock');
+    disabled.advance(10);assert.equal(disabled.readData(),0xfa);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {

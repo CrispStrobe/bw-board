@@ -177,6 +177,9 @@ export class AT8042A20 {
             // FAh ACK; scanning retains its prior state.
             if(this.keyboardSchedule.length)
                 throw new Error('AT 8042 keyboard F3h refused: another keyboard response is pending');
+            // Forwarding a host command releases the keyboard clock, as for
+            // FFh reset; otherwise its keyboard-originated ACK cannot arrive.
+            this.commandByte&=~0x10;
             this.pendingKeyboardCommand=0xf3;
             this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
             this._publish();
@@ -225,6 +228,7 @@ export class AT8042A20 {
                 s.delayedResponse.value>=0&&s.delayedResponse.value<=255))||
             (!!s.delayedResponse)!==(s.responseCyclesRemaining>0)||
             ![null,0xf3].includes(s.pendingKeyboardCommand)||
+            (this.keyboardAckCycles===null&&s.pendingKeyboardCommand!==null)||
             !(s.typematicParameter===null||(Number.isInteger(s.typematicParameter)&&
                 s.typematicParameter>=0&&s.typematicParameter<=0x7f))||
             !Array.isArray(s.keyboardSchedule)||s.keyboardSchedule.length>2||s.keyboardSchedule.some((event,index)=>!event||
