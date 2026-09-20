@@ -134,8 +134,7 @@ for (; steps < stepLimit; steps++) {
     ss: machine.cpu.ss, esp: machine.cpu.esp, eax: machine.cpu.eax, ebx: machine.cpu.ebx,
     ecx: machine.cpu.ecx, edx: machine.cpu.edx, esi: machine.cpu.esi, edi: machine.cpu.edi,
     ebp: machine.cpu.ebp, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0 >>> 0,
-    pc: machine.cpu.pc,
-    bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0)};
+    pc: machine.cpu.pc};
   if (instructionTrail.length < 256) instructionTrail.push(before);
   else {
     instructionTrail[instructionTrailNext] = before;
@@ -182,7 +181,8 @@ for (; steps < stepLimit; steps++) {
   }
   if ((machine.cpu.cr0 >>> 0) !== previousCr0) {
     const event = {step: steps, before: previousCr0, after: machine.cpu.cr0 >>> 0,
-      cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc};
+      cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
+      bytes: physicalBytes(machine.cpu.pc, machine.cpu.cr0 >>> 0)};
     modeTransitions.count++;
     if (modeTransitions.first.length < 64) modeTransitions.first.push(event);
     if (modeTransitions.tail.length < 256) modeTransitions.tail.push(event);
