@@ -625,7 +625,7 @@ export const INPUTS = [
         // census's own anti-drift check finds a gate that mentions the path, not only
         // the env var. Both files genuinely gate on this input.
         paths: ['/tmp/msdosbin'],
-        gates: ['test/oracle-masm.test.mjs', 'scripts/oracle-masm.mjs', 'test/dos-toolchain-chain.test.mjs', 'test/dos-c-compile.test.mjs'],
+        gates: ['test/oracle-masm.test.mjs', 'scripts/oracle-masm.mjs', 'test/dos-toolchain-chain.test.mjs', 'test/dos-c-compile.test.mjs', 'test/dos-boot-compiled-com.test.mjs'],
         obtain: 'fetch MASM.EXE, LINK.EXE, EXE2BIN.EXE (MIT-licensed MS 1982 binaries) into '
             + '/tmp/msdosbin, or point $MSDOS_BIN_DIR at them',
         ciAvailable: false,
