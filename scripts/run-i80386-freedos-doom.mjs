@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 
-import ExperimentalI80386ATMachine,{PCAT80386_EXPERIMENTAL_4M_HDD} from '../src/experimental/i80386-at-machine.js';
+import ExperimentalI80386ATMachine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS} from '../src/experimental/i80386-at-machine.js';
 import {I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
 import {DOOM_HDD_GEOMETRY} from './lib/i80386-doom-fat16-image.mjs';
 import {readFat12RootFile} from './lib/at-dos-acceptance.mjs';
@@ -43,7 +43,7 @@ const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(proce
 if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>150_000_000)
     throw new Error('AT_POST_STEPS must be an integer from 1 through 150000000');
 const baseRamKiB=640;
-const machineProfile=PCAT80386_EXPERIMENTAL_4M_HDD;
+const machineProfile=PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS;
 const expectedFile=process.env.AT_EXPECT_FILE??null;
 const expectedText=process.env.AT_EXPECT_TEXT??null;
 if((expectedFile===null)!==(expectedText===null))

@@ -213,4 +213,11 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD = Object.freeze({
   } : chip),
 });
 
+/** Literal uPD765 seek completion for software that probes past cylinder 79. */
+export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_4M_HDD,
+  chips: PCAT80386_EXPERIMENTAL_4M_HDD.chips.map(chip => chip.kind === 'fdc'
+    ? {...chip, seekBeyondEnd: 'silent'} : chip),
+});
+
 export default ExperimentalI80386ATMachine;

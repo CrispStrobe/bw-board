@@ -5,6 +5,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL,
   PCAT80386_EXPERIMENTAL_4M,
   PCAT80386_EXPERIMENTAL_4M_HDD,
+  PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
 } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
@@ -18,6 +19,13 @@ test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-a
   assert.equal(machine.cpu.read(0x10fffff0), 0xff);
   assert.equal(machine.step(), 6, 'completed reset-vector HLT receives functional charge');
   assert.equal(machine.cpu.halted, true);
+});
+
+test('FreeDOS HDD profile selects literal out-of-range uPD765 seek completion', () => {
+  const ordinary = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD);
+  const freedos = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS);
+  assert.equal(ordinary.chips.fdc1.seekBeyondEnd, 'error');
+  assert.equal(freedos.chips.fdc1.seekBeyondEnd, 'silent');
 });
 
 test('experimental 386 HDD profile reports IBM type 1 drive C with a matching CMOS checksum', () => {
