@@ -99,6 +99,22 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate) — Astra/Sol hidden segment caches, keyboard F3,
+and original Doom level entry. Real DS/ES reloads retain large hidden limits
+following PE exit; pinned PCjs agrees on a guest bootstrap and 65,540-byte copy,
+while the pre-fix executor faults. Result, cache and budget controls reject.
+The configured AT keyboard extension models F3 parameter/ACK state and exact
+ACK deadlines, scan suppression, reset and checkpoint restoration; automatic
+repeat generation remains outside scope. Original Doom reaches E1M1 graphics
+through a single Esc/Enter sequence. Windows reaches a real graphical disk-error
+dialog, not the desktop. Six fresh DOS/FreeDOS write/reboot executions at frozen
+30475e6f reproduce their original command sequences, counts and output images.
+Focused checks: 462 pass, 2 optional skips; actionlint and diff checks pass.
+One hosted qualification set remains required before landing. Receipt:
+`docs/receipts/2026-09-20-x86-unreal-keyboard-doom-level.json`.
+The ongoing parent claim covers the next Windows disk-transfer fix and Doom
+movement/firing acceptance; other lanes remain outside scope.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol DOS loader fixes.
 The original PC DOS MBR exercises byte Group1 opcode82; the executor now handles
 it with byte semantics even under66. Pinned PCjs agrees on CMP memory and ADC

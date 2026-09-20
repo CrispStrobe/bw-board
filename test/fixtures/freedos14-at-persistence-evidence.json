@@ -25,7 +25,7 @@
           "bytesPerSector": 512
         },
         "output": {
-          "path": "/tmp/astra-root-stage12-286freedos-55804422.img",
+          "path": "/tmp/astra-root-stage16-keyboard-corrected-286freedos.img",
           "sha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815"
         }
       }
@@ -882,13 +882,13 @@
       "priorOutputMediaSha256": null,
       "linked": null
     },
-    "executionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+    "executionRevision": "30475e6f2dc80dfd9bd7fa8536ac0cf17980923b",
     "sourceSha256": {
       "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
-      "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+      "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
       "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
       "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
       "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
@@ -913,7 +913,7 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "originalReportSha256": "681328dae3587c90f0d4e1d5af27115c97fdc2480a55adf981e3e4a0297dd5ea"
+    "originalReportSha256": "40f5e0449f50fac870af16347a7a0c2ebf33b7d265af906d68054216422a61f6"
   },
   "reboot": {
     "schema": "astra.freedos14-at-acceptance.v1",
@@ -1648,13 +1648,13 @@
       "priorOutputMediaSha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815",
       "linked": true
     },
-    "executionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+    "executionRevision": "30475e6f2dc80dfd9bd7fa8536ac0cf17980923b",
     "sourceSha256": {
       "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
-      "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+      "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
       "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
       "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
       "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
@@ -1679,7 +1679,7 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "originalReportSha256": "9a0be8916436e75115050070c9333192bc38bedb13090716839f186201e249b6"
+    "originalReportSha256": "2d19a0e4f0f8d45d6a94d04c70e9f7e8db8cca6ba4cf5119b028c7cadc472dff"
   },
   "previousRuns": [
     {
@@ -1777,6 +1777,15 @@
           "scripts/run-freedos14-at-acceptance.mjs": "e230b830833e4b0c7603f32c18add01a1cd6d12fa27a46ce9c96392accf1d46d"
         }
       }
+    },
+    {
+      "writeExecutionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+      "rebootExecutionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+      "writeSteps": 71256064,
+      "rebootSteps": 71130112,
+      "outputMediaSha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815",
+      "writeReportSha256": "681328dae3587c90f0d4e1d5af27115c97fdc2480a55adf981e3e4a0297dd5ea",
+      "rebootReportSha256": "9a0be8916436e75115050070c9333192bc38bedb13090716839f186201e249b6"
     }
   ]
 }

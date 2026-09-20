@@ -25,6 +25,14 @@ which establishes input viability only. Full graphics compatibility and
 complete 386 protection/debug behavior remain unaccepted. See also the
 [VGA scope](VGA-MEMORY-EXPERIMENT.md).
 
+The configured AT keyboard extension accepts F3h and a seven-bit rate/delay
+parameter with separate delayed, keyboard-originated FAh acknowledgements.
+It pauses injected scans while awaiting the parameter, retains the value,
+releases the controller clock for command transmission, and restores this
+pending protocol state from controller checkpoint version 7. Automatic key
+repeat generation and other unimplemented keyboard commands remain outside
+this bounded extension.
+
 The current profile implements an explicit original-80386 hardware reset entry
 at physical `0xfffffff0`; an ordinary constructor retains the zero-based test
 fixture reset. The reset CS cache remains based at `0xffff0000` until a real CS

@@ -33,7 +33,7 @@
           "bytesPerSector": 512
         },
         "output": {
-          "path": "/tmp/astra-root-stage12-286dos-55804422.img",
+          "path": "/tmp/astra-root-stage16-keyboard-286dos.img",
           "sha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69"
         }
       }
@@ -882,13 +882,13 @@
       "priorOutputMediaSha256": null,
       "linked": null
     },
-    "executionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+    "executionRevision": "30475e6f2dc80dfd9bd7fa8536ac0cf17980923b",
     "sourceSha256": {
       "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
-      "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+      "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
       "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
       "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
       "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
@@ -912,7 +912,7 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "originalReportSha256": "0cf580d1006ef766fec5c4d6134c095d3fc255ff48a5f7296ec663c894333485"
+    "originalReportSha256": "cafe6b51432a841e2abdc6c2939b7254d0db6db9688cbef516f3265b22fe1dea"
   },
   "reboot": {
     "schema": "astra.at-bios-post.v2",
@@ -1639,13 +1639,13 @@
       "priorOutputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
       "linked": true
     },
-    "executionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+    "executionRevision": "30475e6f2dc80dfd9bd7fa8536ac0cf17980923b",
     "sourceSha256": {
       "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
-      "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+      "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
       "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
       "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
       "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
@@ -1669,7 +1669,7 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "originalReportSha256": "d09edeae5d6b1808d5451bbdab553b7aec03bf01c8fb23d389d87e267f7fb341"
+    "originalReportSha256": "3b084cdf86720fcbf0744ad070171e97d1cbe3222ce4dcc5664781a223378555"
   },
   "previousRuns": [
     {
@@ -1689,6 +1689,15 @@
       "outputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
       "writeReportSha256": "4e4ea1c86c273b8721dc94382efb600769626d4adf455e87609d1076d7e76179",
       "rebootReportSha256": "c5c080b0c4259f49c7e6fd224951636b7ad88e9bd23d9e50bd6cd5b88f6062dd"
+    },
+    {
+      "writeExecutionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+      "rebootExecutionRevision": "55804422bf354dd99b92823f3f294e5cc72f7aa6",
+      "writeSteps": 24406016,
+      "rebootSteps": 24318976,
+      "outputMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69",
+      "writeReportSha256": "0cf580d1006ef766fec5c4d6134c095d3fc255ff48a5f7296ec663c894333485",
+      "rebootReportSha256": "d09edeae5d6b1808d5451bbdab553b7aec03bf01c8fb23d389d87e267f7fb341"
     }
   ]
 }
