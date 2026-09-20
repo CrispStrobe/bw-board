@@ -641,6 +641,27 @@ test('coming out of reset queues four ready-change statuses, one per drive', () 
     assert.equal(fdc.irq, false, 'and the line has dropped');
 });
 
+test('opt-in reset clears logical PCN without pretending the head moved', () => {
+    const { img } = makeImage('1.2m');
+    const fdc = new UPD765({}, {
+        seekBeyondEnd: 'silent', resetPresentCylinder: 'zero',
+    });
+    fdc.insert(0, img, '1.2m');
+    fdc.write(R_DOR, DOR_DMA);
+    drainResetStatuses(fdc);
+    command(fdc, [CMD.SEEK, 0x00, 80]);
+    assert.deepEqual(exchange(fdc, [CMD.SENSE_INT]), [ST0.SE, 80]);
+    assert.deepEqual([fdc.drives[0].pcn, fdc.drives[0].track], [80, 79],
+        'the logical counter reaches 80 while the physical head stops at 79');
+
+    fdc.write(R_DOR, 0x00);
+    fdc.write(R_DOR, DOR_DMA);
+    assert.deepEqual(exchange(fdc, [CMD.SENSE_INT]), [ST0.IC_READY_CHANGE, 0],
+        'the first reset status exposes the reset logical PCN');
+    assert.deepEqual([fdc.drives[0].pcn, fdc.drives[0].track], [0, 79],
+        'controller reset did not manufacture a physical seek');
+});
+
 test('reset() while IRQ6 is asserted tells the machine layer the line went away', () => {
     const seen = [];
     const { geom, img } = makeImage();
