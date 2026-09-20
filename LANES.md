@@ -9,6 +9,22 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 CLAIM — `/root` (Codex): explicit Shockley-NPN small-signal charge
+storage, isolated worktree `/mnt/volume1/code/wt/bwb-npn-charge-ac`, branch
+`lane/npn-charge-small-signal`, exact base
+`cdca2dc758865c8a80d26738b7e3df3777f95cee`. Owns only strict NPN CJE/CJC/TF
+parameter validation/metadata in `src/board.js`, shared bounded charge helpers in
+`src/mna.js`, their exact AC stamps in `src/ac.js`, focused NPN AC/operating-point
+tests, and this row. Admit finite nonnegative CJE, CJC and TF together on the
+already-qualified Shockley NPN path; stamp base-emitter and base-collector
+depletion capacitance at the intrinsic terminals and the forward transit-time
+diffusion charge from the qualified transport derivative. Prove a self-authored
+ngspice 42 complex AC witness, analytical component values, strict refusals, and
+absent/explicit-zero byte-for-behaviour equivalence. Excludes transient charge
+storage, nondefault VJE/MJE/VJC/MJC/FC, XTF/VTF/ITF/PTF/TR, IKR/VAR, PNP and
+generic BJT paths, solver/tolerances, CUI/corpus/package pins, x86, and unrelated
+models/files.
+
 2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN forward high-current
 beta rolloff, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,
 branch `lane/npn-forward-rolloff`, exact base
