@@ -32,6 +32,7 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   dword(memory, 0x500 + 0x20, 0x100);
   dword(memory, 0x500 + 0x24, 2);
   dword(memory, 0x500 + 0x1c, 0x2000);
+  dword(memory, 0x400 + 0x1c, 0x1000);
   dword(memory, 0x500 + 0x38, 0x900);
   for (const [offset, selector] of [[0x48,0x10],[0x4c,8],[0x50,0x10],
     [0x54,0x10],[0x58,0],[0x5c,0],[0x60,0]]) word(memory, 0x500 + offset, selector);
@@ -76,6 +77,12 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.eax, cpu.esp],
     [0x18, 5, 0xabcdef01, 0x800]);
   assert.equal(cpu.cr3, 0x1000);
+  assert.deepEqual(
+    [0x400 + 0x1c, 0x400 + 0x1d, 0x400 + 0x1e, 0x400 + 0x1f]
+      .map(address => memory.get(address)),
+    [0x00, 0x10, 0x00, 0x00],
+    "task switches do not overwrite the static CR3 field of the outgoing TSS",
+  );
   assert.equal(cpu.eflags & 0x4000, 0);
   assert.equal((memory.get(0x205 + 0x20) ?? 0) & 15, 9);
   cpu.step();

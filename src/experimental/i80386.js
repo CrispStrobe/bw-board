@@ -1136,7 +1136,7 @@ export class ExperimentalI80386 {
     if (!this.tr.present || this.tr.limit < 0x5d)
       throw new I80386Fault(10, incomingSelector & 0xfffc, "current 386 TSS limit");
     const d = this.tr.base;
-    for (const [o, v] of [[0x1c,this.cr3],[0x20,this.eip],[0x24,flags],[0x28,this.eax],
+    for (const [o, v] of [[0x20,this.eip],[0x24,flags],[0x28,this.eax],
       [0x2c,this.ecx],[0x30,this.edx],[0x34,this.ebx],[0x38,this.esp],[0x3c,this.ebp],
       [0x40,this.esi],[0x44,this.edi]]) this._taskWrite(d, o, 4, v);
     for (const [o, v] of [[0x48,this.es],[0x4c,this.cs],[0x50,this.ss],[0x54,this.ds],
@@ -1144,24 +1144,32 @@ export class ExperimentalI80386 {
   }
 
   _setTaskBusy(descriptor, busy) {
+    const access = this._readLinear((descriptor.address + 5) >>> 0, 1, {
+      supervisor: true,
+    });
     this._writeLinear((descriptor.address + 5) >>> 0, 1,
-      (descriptor.access & ~2) | (busy ? 2 : 0), { supervisor: true });
+      (access & ~2) | (busy ? 2 : 0), { supervisor: true });
   }
 
   _taskSwitch(selector, kind, { checkPrivilege = true } = {}) {
     const returning = kind === "iret";
     const incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
+    // Unlike the 286 SWITCH_TASKS pseudocode, the original 386 task-switch
+    // flow diagnoses a short incoming TSS while the outgoing task remains
+    // restartable. Read the admitted dynamic image before busy/TR commits.
+    const image = this._taskImage(incoming);
     const outgoing = this.tr.present
-      ? this._taskDescriptor(this.tr.selector, { returning: true, checkPrivilege: false }) : null;
+      ? {
+          ...this.tr,
+          address: (this.gdtr.base + (this.tr.selector & 0xfff8)) >>> 0,
+        }
+      : null;
     if (!returning) this._setTaskBusy(incoming, true);
     this._saveCurrentTask(returning ? this.eflags & ~NT : this.eflags, selector);
     if (kind === "call") this._taskWrite(incoming.base, 0, 2, this.tr.selector);
     if ((kind === "jmp" || returning) && outgoing) this._setTaskBusy(outgoing, false);
     this.tr = { ...incoming, type: 11 };
     try {
-      // The detailed SWITCH_TASKS flow commits TR/busy/outgoing state before
-      // checking the incoming 386 TSS limit and loading its dynamic image.
-      const image = this._taskImage(incoming);
       this.cr3 = image.cr3 >>> 0;
       this.cr0 |= 8;
       Object.assign(this, image);
@@ -1172,6 +1180,8 @@ export class ExperimentalI80386 {
       const code = this._ringCodeDescriptor(image.cs, false, true), cpl = image.cs & 3;
       if (code.conforming ? code.dpl > cpl : code.dpl !== cpl)
         throw new I80386Fault(10, image.cs & 0xfffc, "task code privilege");
+      if (!code.present)
+        throw new I80386Fault(11, image.cs & 0xfffc, "task code not present");
       this.segmentCaches[SEG_CS] = code;
       this._loadSeg(SEG_SS, image.ss);
       for (const [id, value] of [[SEG_DS,image.ds],[SEG_ES,image.es],[SEG_FS,image.fs],[SEG_GS,image.gs]])

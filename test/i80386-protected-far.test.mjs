@@ -95,10 +95,10 @@ test('a 16-bit call gate controls frame and parameter width from 32-bit caller c
 });
 
 test('protected far task switches require a valid current task without stack mutation',()=>{
-  const f=protectedFixture();f.put(0x228,descriptor(0x600,0x89,0x67,0));
+  const f=protectedFixture();f.put(0x228,descriptor(0x600,0x89,0x66,0));
   f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x400;f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
   f.put(0x100000,[0x9a,0,0,0,0,0x28,0]);
-  assert.throws(()=>f.cpu.step(),error=>error?.vector===13);assert.equal(f.cpu.esp,0x400);
+  assert.throws(()=>f.cpu.step(),error=>error?.vector===10);assert.equal(f.cpu.esp,0x400);
 });
 
 test('outer RETF separates operand-size loads from returned stack-address-size discard',()=>{
