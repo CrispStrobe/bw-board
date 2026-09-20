@@ -102,10 +102,16 @@ const PROFILES={
     scope:'18 fixed deterministic RET imm16, ENTER, and LEAVE samples spanning word and dword operand sizes',
   },
   'bit-test':{
-    files:['0FA3','0FAB','0FB3','0FBB','0FBA.4','0FBA.5','0FBA.6','0FBA.7'],
-    undefinedEflagsMask:1,
+    files:[
+      '0FA3','0FAB','0FB3','0FBB','0FBA.4','0FBA.5','0FBA.6','0FBA.7',
+      '660FA3','660FAB','660FB3','660FBB','660FBA.4','660FBA.5','660FBA.6','660FBA.7',
+      '670FA3','670FAB','670FB3','670FBB','670FBA.4','670FBA.5','670FBA.6','670FBA.7',
+      '67660FA3','67660FAB','67660FB3','67660FBB',
+      '67660FBA.4','67660FBA.5','67660FBA.6','67660FBA.7',
+    ],
+    undefinedEflagsMask:0xfffff72b,
     excludedPrefixes:[0xf0],
-    scope:'24 fixed deterministic BT/BTS/BTR/BTC register and immediate samples spanning read-only and modifying forms',
+    scope:'96 fixed deterministic BT/BTS/BTR/BTC samples spanning 16/32-bit operand and address sizes, read-only and modifying forms',
   },
   'bcd-adjust':{
     files:['27','2F','37','3F'],
