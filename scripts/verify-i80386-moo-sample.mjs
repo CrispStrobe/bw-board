@@ -122,6 +122,10 @@ const PROFILES={
     undefinedEflagsMask:0xfffff76a,
     scope:'24 fixed deterministic BSF/BSR samples spanning 16/32-bit operand and address sizes',
   },
+  clts:{
+    files:['0F06'],
+    scope:'three fixed deterministic real-mode CLTS samples grading CR0.TS clearing with other architectural state preserved',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

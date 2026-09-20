@@ -3057,6 +3057,12 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if (op === 0x06) {
+      if (this.protectedMode && this.currentPrivilegeLevel !== 0)
+        throw new I80386Fault(13, 0, "CLTS requires CPL0");
+      this.cr0 = (this.cr0 & ~8) >>> 0;
+      return;
+    }
     if ([0xa3, 0xab, 0xb3, 0xbb, 0xba].includes(op)) {
       const ea = this._decodeEA(address32, override);
       if (op === 0xba && ea.reg < 4)
