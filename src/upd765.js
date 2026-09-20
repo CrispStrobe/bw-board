@@ -360,7 +360,18 @@ export class UPD765 {
     constructor(hooks = {}, options = {}) {
         this.hooks = hooks;
         this.seekBeyondEnd = options.seekBeyondEnd === 'silent' ? 'silent' : 'error';
-        this.acceptedCcrByImageBytes = options.acceptedCcrByImageBytes ?? null;
+        this.acceptedCcrByImageBytes = null;
+        if (options.acceptedCcrByImageBytes !== undefined) {
+            if (!options.acceptedCcrByImageBytes || typeof options.acceptedCcrByImageBytes !== 'object')
+                throw new Error('upd765: acceptedCcrByImageBytes must be an object');
+            this.acceptedCcrByImageBytes = Object.freeze(Object.fromEntries(
+                Object.entries(options.acceptedCcrByImageBytes).map(([bytes, rates]) => {
+                    if (!/^\d+$/.test(bytes) || !Array.isArray(rates) || rates.length === 0 ||
+                        rates.some(rate => !Number.isInteger(rate) || rate < 0 || rate > 3))
+                        throw new Error('upd765: accepted CCR lists must contain rates 0..3');
+                    return [bytes, Object.freeze([...new Set(rates)])];
+                })));
+        }
         this.drives = Array.from({ length: 4 }, () => new Drive());
         this.reset(true);
     }
@@ -744,6 +755,11 @@ export class UPD765 {
         this._result([ev.st0, this.drives[ev.drive].pcn], false);
     }
 
+    _mediaRateAccepted(drive) {
+        const rates = drive.image && this.acceptedCcrByImageBytes?.[drive.image.length];
+        return !rates || rates.includes(this.ccr & 3);
+    }
+
     /**
      * RECALIBRATE steps toward track 0 and stops when the drive's track-0
      * sensor says so -- but the chip gives up after 77 pulses. A head at
@@ -813,6 +829,14 @@ export class UPD765 {
             this._result([ST0.IC_ABNORMAL | ST0.NR | base, ST1.MA, 0, 0, hd, 0, 0]);
             return;
         }
+        if (!this._mediaRateAccepted(d)) {
+            // With an incompatible bit cell rate no ID address mark can be
+            // decoded.  MA describes that condition; ND would mean that ID
+            // marks were seen but none contained the requested identifier.
+            this._result([ST0.IC_ABNORMAL | base, ST1.MA, 0, d.track, hd, 0,
+                sizeCode(d.geom.bytesPerSector)]);
+            return;
+        }
         this._noteMotor(us);
         if (d.track >= d.geom.cylinders || hd >= d.geom.heads) {
             // Unformatted territory: no address marks at all.
@@ -847,12 +871,11 @@ export class UPD765 {
             this._result([ST0.IC_ABNORMAL | ST0.NR | base, ST1.MA, 0, c, h, r, n]);
             return;
         }
-        const acceptedRates = this.acceptedCcrByImageBytes?.[d.image.length];
-        if (acceptedRates && !acceptedRates.includes(this.ccr & 3)) {
+        if (!this._mediaRateAccepted(d)) {
             // At the wrong bit rate the requested ID field is not decoded.
             // Historical profiles intentionally leave CCR inert; this
             // behavior is enabled only by an explicit board/media profile.
-            this._result([ST0.IC_ABNORMAL | base, ST1.ND, 0, c, h, r, n]);
+            this._result([ST0.IC_ABNORMAL | base, ST1.MA, 0, c, h, r, n]);
             return;
         }
         this._noteMotor(us);

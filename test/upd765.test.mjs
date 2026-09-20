@@ -377,8 +377,10 @@ test('opt-in media-rate policy rejects a 1.2MB read until CCR selects 500kbps', 
     fdc.write(R_DOR, DOR_PIO);
     drainResetStatuses(fdc);
     fdc.write(R_DIR, 1);
+    assert.deepEqual(exchange(fdc, [CMD.READ_ID, 0]).slice(0, 3),
+        [ST0.IC_ABNORMAL, ST1.MA, 0], 'READ ID cannot find an address mark at 300kbps');
     assert.deepEqual(exchange(fdc, [CMD.READ_DATA, 0, 0, 0, 1, 2, 15, 0x23, 0xff]).slice(0, 3),
-        [ST0.IC_ABNORMAL, ST1.ND, 0], '300kbps cannot decode a 500kbps ID field');
+        [ST0.IC_ABNORMAL, ST1.MA, 0], 'READ DATA sees the same undecodable ID stream');
     fdc.write(R_DIR, 0);
     command(fdc, [CMD.SPECIFY, 0xdf, 3]);
     command(fdc, [CMD.READ_DATA, 0, 0, 0, 1, 2, 15, 0x23, 0xff]);
