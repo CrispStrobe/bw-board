@@ -117,6 +117,7 @@ let vgaPortEventOverflow=false;
 const vgaRawSamples=[];
 let firstVgaGraphicsSnapshot=null;
 let latestVgaGraphicsSnapshot=null;
+const gameVgaSnapshots=[];
 let lastVgaFrameRevision=null;
 const gameKeySchedule=[];
 const injectedGameKeys=[];
@@ -448,6 +449,7 @@ for(;steps<stepLimit;steps++) {
                     planesBase64:machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64'))};
                 firstVgaGraphicsSnapshot??=snapshot;
                 latestVgaGraphicsSnapshot=snapshot;
+                if(gameKeysScheduled&&gameVgaSnapshots.length<32)gameVgaSnapshots.push(snapshot);
                 if(!gameKeysScheduled&&gameKeys.length!==0) {
                     gameKeysScheduled=true;
                     gameKeys.forEach((key,index)=>{
@@ -561,7 +563,8 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     vgaEvidence:{portEventCount:vgaPortEventCount,vgaPortEventOverflow,portEvents:vgaPortEvents,
         postDoomPortEvents:vgaPostDoomPortEvents,rawPlanePaletteSamples:vgaRawSamples,
         firstGraphicsSnapshot:firstVgaGraphicsSnapshot,
-        latestGraphicsSnapshot:latestVgaGraphicsSnapshot,renderedFrames:[]},
+        latestGraphicsSnapshot:latestVgaGraphicsSnapshot,
+        gameGraphicsSnapshots:gameVgaSnapshots,renderedFrames:[]},
     screenText,uiSamples,
     devices:deviceSnapshot(),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
