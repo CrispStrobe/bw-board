@@ -302,6 +302,22 @@ memory unchanged. A reset profile that declares a coprocessor still refuses
 ESC execution unless an external coprocessor backend is added; it does not
 invent x87 results.
 
+Direct 32-bit TSS CALL/JMP and nested-task IRET implement the original-386
+busy, backlink, NT, TS, register, selector, and CR3 transitions. The owned
+roundtrip keeps the GDT, TSS, code, and page tables mapped in both address
+spaces as required by section 7.7.1, while mapping a guest data page to
+different physical storage and proving that the incoming and restored CR3
+values select the expected bytes. Section 7.5 and Table 7-1 define the
+staging used here: incoming descriptor presence and limit failures remain in
+the outgoing context; LDTR/CS validity failures after the switch are #TS,
+nonpresent CS is #NP, stack failures retain their documented #GP/#SS split,
+and ordinary data-segment failures retain #GP/#NP. The incoming CS accessed
+bit is written after the task commits, so a paging fault on that write is a
+new-task fault. The overview table contains wording and ordering ambiguities;
+the implementation follows its numbered checks and the surrounding detailed
+task-switch text rather than extending the audited 286 sequence to the 386.
+Task gates remain outside this direct-transfer milestone.
+
 VERR and VERW query descriptor type and privilege without requiring the
 descriptor P bit, as specified for the original 386. The pinned PCjs oracle
 agrees for P=0 accessible data, RPL rejection, execute-only code rejection,

@@ -1158,6 +1158,10 @@ export class ExperimentalI80386 {
     // flow diagnoses a short incoming TSS while the outgoing task remains
     // restartable. Read the admitted dynamic image before busy/TR commits.
     const image = this._taskImage(incoming);
+    if (image.eflags & 0x20000)
+      throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
+    if (this._taskRead(incoming.base, 0x64, 2) & 1)
+      throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
     const outgoing = this.tr.present
       ? {
           ...this.tr,
@@ -1173,15 +1177,44 @@ export class ExperimentalI80386 {
       this.cr3 = image.cr3 >>> 0;
       this.cr0 |= 8;
       Object.assign(this, image);
+      for (const id of [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS])
+        this.segmentCaches[id] = {
+          base: 0,
+          limit: 0,
+          present: false,
+          null: true,
+          code: id === SEG_CS,
+          readable: false,
+          writable: false,
+        };
       const flags = (image.eflags & 0x00037fd7) | 2;
       this.eflags = kind === "call" ? flags | NT : kind === "jmp" ? flags & ~NT : flags;
       this.ldtr = { selector: image.ldt, base: 0, limit: 0, present: false };
-      if (image.ldt & 0xfffc) this._loadSystemRegister("ldtr", image.ldt);
-      const code = this._ringCodeDescriptor(image.cs, false, true), cpl = image.cs & 3;
+      if (image.ldt & 0xfffc) {
+        try {
+          this._loadSystemRegister("ldtr", image.ldt);
+        } catch (error) {
+          if (error instanceof I80386Fault) {
+            error.vector = 10;
+            error.errorCode = incoming.selector & 0xfffc;
+          }
+          throw error;
+        }
+      }
+      let code;
+      try {
+        code = this._ringCodeDescriptor(image.cs, false, true);
+      } catch (error) {
+        if (error instanceof I80386Fault && error.vector === 13)
+          error.vector = 10;
+        throw error;
+      }
+      const cpl = image.cs & 3;
       if (code.conforming ? code.dpl > cpl : code.dpl !== cpl)
         throw new I80386Fault(10, image.cs & 0xfffc, "task code privilege");
       if (!code.present)
         throw new I80386Fault(11, image.cs & 0xfffc, "task code not present");
+      this._markAccessed(code);
       this.segmentCaches[SEG_CS] = code;
       this._loadSeg(SEG_SS, image.ss);
       for (const [id, value] of [[SEG_DS,image.ds],[SEG_ES,image.es],[SEG_FS,image.fs],[SEG_GS,image.gs]])

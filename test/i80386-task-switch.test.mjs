@@ -25,7 +25,7 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   const memory = new Map();
   put(memory, 0, [0x9a, 0, 0, 0x20, 0, 0xf4]);
   put(memory, 0x100, [0xa1, 0, 0x80, 0, 0, 0xcf]);
-  put(memory, 0x208, descriptor(0, 0xfffff, 0x9b));
+  put(memory, 0x208, descriptor(0, 0xfffff, 0x9a));
   put(memory, 0x210, descriptor(0, 0xfffff, 0x93));
   put(memory, 0x218, descriptor(0x400, 0x67, 0x8b, 0));
   put(memory, 0x220, descriptor(0x500, 0x67, 0x89, 0));
@@ -67,6 +67,7 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   cpu.step();
   assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.cr3, cpu.eflags & 0x4000],
     [0x20, 0x100, 0x2000, 0x4000]);
+  assert.equal(memory.get(0x20d), 0x9b, "incoming CS is marked accessed");
   assert.equal((memory.get(0x205 + 0x20) ?? 0) & 15, 11);
   assert.equal((memory.get(0x205 + 0x18) ?? 0) & 15, 11);
   assert.equal((memory.get(0x500) ?? 0) | ((memory.get(0x501) ?? 0) << 8), 0x18);
@@ -87,4 +88,14 @@ test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", (
   assert.equal((memory.get(0x205 + 0x20) ?? 0) & 15, 9);
   cpu.step();
   assert.equal(cpu.halted, true);
+
+  cpu.halted = false;
+  memory.set(0x20d, 0x1a);
+  assert.throws(
+    () => cpu._taskSwitch(0x20, "call"),
+    (error) => error?.vector === 11 && error.errorCode === 8 && error.taskCommitted,
+  );
+  assert.equal(cpu.tr.selector, 0x20);
+  assert.equal(cpu.cr3, 0x2000);
+  assert.equal(cpu.segmentCaches[1].present, false);
 });
