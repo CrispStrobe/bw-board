@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-20 CLAIM — `/root` (Codex): explicit Shockley-NPN small-signal charge
+2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN small-signal charge
 storage, isolated worktree `/mnt/volume1/code/wt/bwb-npn-charge-ac`, branch
 `lane/npn-charge-small-signal`, exact base
 `cdca2dc758865c8a80d26738b7e3df3777f95cee`. Owns only strict NPN CJE/CJC/TF
@@ -24,6 +24,16 @@ absent/explicit-zero byte-for-behaviour equivalence. Excludes transient charge
 storage, nondefault VJE/MJE/VJC/MJC/FC, XTF/VTF/ITF/PTF/TR, IKR/VAR, PNP and
 generic BJT paths, solver/tolerances, CUI/corpus/package pins, x86, and unrelated
 models/files.
+The implementation follows SPICE3's default VJE/VJC=.75 V, MJE/MJC=.33 and
+FC=.5 depletion law and TF times the exact forward `If/qb` transport law,
+including its non-reciprocal Vbc cross derivative under VAF/IKF. A self-authored
+ngspice 42 witness agrees at 1 MHz on the full complex base, collector and
+emitter response; the analytical TF cross derivative agrees with finite
+differences; absent and explicit all-zero charge fields are identical; and the
+focused BJT/AC/operating-point surface passes 33/33. Removing the TF cross
+derivative, the intrinsic CJC stamp, or TF itself independently makes the live
+ngspice witness red. No transient-storage or public corpus-row reach claim is
+made; CUI exact-card admission remains a separate downstream lane.
 
 2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN forward high-current
 beta rolloff, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,

@@ -68,7 +68,7 @@ const OPERATING_POINT_KINDS = new Set([
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const NPN_OPERATING_POINT_PARAMS = new Set([
-  'model', 'is', 'beta', 'br', 'n', 'vaf', 'ikf', 'rb', 'rc', '_model',
+  'model', 'is', 'beta', 'br', 'n', 'vaf', 'ikf', 'rb', 'rc', 'cje', 'cjc', 'tf', '_model',
 ]);
 const NMOS_OPERATING_POINT_PARAMS = new Set([
   'model', 'vth', 'kp', 'w', 'l', 'lambda', 'gamma', 'phi',
@@ -2516,6 +2516,20 @@ export class BoardImpl {
           throw new Error(`operatingPoint: unsupported npn ${part.id}; `
             + 'rc must be a finite number greater than or equal to zero when declared');
         }
+        const chargeFields = ['cje', 'cjc', 'tf'];
+        const declaredChargeFields = chargeFields.filter(name =>
+          Object.prototype.hasOwnProperty.call(params, name));
+        if (declaredChargeFields.length !== 0 && declaredChargeFields.length !== chargeFields.length) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + 'cje, cjc and tf must be declared together');
+        }
+        for (const name of declaredChargeFields) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] < 0) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `${name} must be a finite number greater than or equal to zero when declared`);
+          }
+        }
         if (Object.prototype.hasOwnProperty.call(params, '_model')
             && (typeof params._model !== 'string' || !params._model.length)) {
           throw new Error(`operatingPoint: unsupported npn ${part.id}; `
@@ -2804,10 +2818,11 @@ export class BoardImpl {
           temperatureModel: 'fixed',
         },
         npn: {
-          model: 'explicit-ebers-moll-with-forward-early-effect',
+          model: 'explicit-ebers-moll',
           requiredParameters: ['is', 'beta'],
-          optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc'],
-          defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0 },
+          optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc', 'cje', 'cjc', 'tf'],
+          defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0,
+            cje: 0, cjc: 0, tf: 0 },
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },

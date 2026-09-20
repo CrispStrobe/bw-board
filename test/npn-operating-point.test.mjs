@@ -186,9 +186,11 @@ Q1 collector base emitter QN
     const before = stateWitness(board); const active = board.operatingPoint();
     assert.equal(active.converged, true);
     assert.deepEqual(active.analysis.npn, {
-      model: 'explicit-ebers-moll-with-forward-early-effect',
-      requiredParameters: ['is', 'beta'], optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc'],
-      defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0 }, thermalVoltage: 0.02585,
+      model: 'explicit-ebers-moll',
+      requiredParameters: ['is', 'beta'],
+      optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc', 'cje', 'cjc', 'tf'],
+      defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0,
+        cje: 0, cjc: 0, tf: 0 }, thermalVoltage: 0.02585,
       temperatureModel: 'fixed',
     });
     for (const [net, oracle] of [['base', 'v(base)'], ['collector', 'v(collector)'], ['emitter', 'v(emitter)']]) {
@@ -329,7 +331,11 @@ Q1 collector base emitter QN
       [{ ...PARAMS, rb: NaN }, /rb must be a finite number greater than or equal to zero/],
       [{ ...PARAMS, rc: -1 }, /rc must be a finite number greater than or equal to zero/],
       [{ ...PARAMS, rc: NaN }, /rc must be a finite number greater than or equal to zero/],
-      [{ ...PARAMS, cje: 2e-12 }, /parameter cje is outside/],
+      [{ ...PARAMS, cje: 2e-12 }, /cje, cjc and tf must be declared together/],
+      [{ ...PARAMS, cje: 2e-12, cjc: 1e-12, tf: -1 },
+        /tf must be a finite number greater than or equal to zero/],
+      [{ ...PARAMS, cje: 2e-12, cjc: NaN, tf: 1e-9 },
+        /cjc must be a finite number greater than or equal to zero/],
       [{ ...PARAMS, _model: '' }, /_model must be a non-empty inert source-model name/],
     ];
     for (const [params, pattern] of cases) {

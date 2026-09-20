@@ -24,7 +24,7 @@
 
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
-  ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
+  ebersMollChargeCompanion, ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
   shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
@@ -356,6 +356,28 @@ export function acSweep(args) {
             add(iE, iB, -(c.gpi + c.gmu + c.gcF + c.gcR));
             add(iE, iE, c.gpi + c.gcF);
             add(iE, iC, c.gmu + c.gcR);
+
+            // Charge derivatives use the intrinsic junction voltages and
+            // therefore the same hidden RB/RC nodes as the conductance stamp.
+            // CBE and CBC are ordinary two-terminal terms. TF also makes Qbe
+            // depend on Vbc through VAF/IKF base charge; that cross derivative
+            // is the four-entry non-reciprocal stamp below.
+            const q = ebersMollChargeCompanion(vB - vOp(nE), vB - vC, em);
+            const addSusc = (row, col, capacitance) => {
+              if (row !== undefined && col !== undefined && capacitance !== 0) {
+                addC(row, col, 0, omega * capacitance);
+              }
+            };
+            addSusc(iB, iB, q.cbe + q.cbeVbc);
+            addSusc(iB, iE, -q.cbe);
+            addSusc(iB, iC, -q.cbeVbc);
+            addSusc(iE, iB, -(q.cbe + q.cbeVbc));
+            addSusc(iE, iE, q.cbe);
+            addSusc(iE, iC, q.cbeVbc);
+            addSusc(iB, iB, q.cbc);
+            addSusc(iB, iC, -q.cbc);
+            addSusc(iC, iB, -q.cbc);
+            addSusc(iC, iC, q.cbc);
             break;
           }
           const vJ = part.kind === 'npn'

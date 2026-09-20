@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { BoardImpl } from '../src/board.js';
+import { ebersMollChargeCompanion, ebersMollParams } from '../src/mna.js';
 
 const net = (id, ...terminals) => ({ id,
   terminals: terminals.map(([part, terminal]) => ({ part, terminal })) });
@@ -29,6 +30,12 @@ function bench(params = exactParams) {
 function signedReal(row, node) {
   const value = row.results.get(node);
   return value.mag * Math.cos(value.phaseDeg * Math.PI / 180);
+}
+
+function rectangular(row, node) {
+  const value = row.results.get(node);
+  const phase = value.phaseDeg * Math.PI / 180;
+  return { re: value.mag * Math.cos(phase), im: value.mag * Math.sin(phase) };
 }
 
 describe('strict explicit Ebers-Moll NPN small-signal AC', () => {
@@ -95,6 +102,61 @@ describe('strict explicit Ebers-Moll NPN small-signal AC', () => {
         `${node}: ${actual} vs ngspice ${oracle}`);
     }
     assert.deepEqual([...board.operatingPoint().nodeVoltages], [...before.nodeVoltages]);
+  });
+
+  it('matches independent ngspice CJE/CJC/TF charge storage at 1 MHz', () => {
+    // Self-authored ngspice 42 deck using the same bench and matched
+    // TEMP=TNOM as above. The model adds RC=100, IKF=10m, CJE=20p,
+    // CJC=10p and TF=.5n; no charge-shaping parameter is declared.
+    const expected = new Map([
+      ['base', { re: 1, im: 0 }],
+      ['collector', { re: -2.7836164880391721, im: 0.3401614479609181 }],
+      ['emitter', { re: 0.9420364784804977, im: -0.0003402408658239708 }],
+    ]);
+    const params = { ...exactParams, rc: 100, ikf: 0.01,
+      cje: 20e-12, cjc: 10e-12, tf: 0.5e-9 };
+    const board = bench(params);
+    const before = board.operatingPoint();
+    const row = board.runAc({ sourceId: 'VIN', frequencies: [1e6],
+      analysisProfile: 'source-analysis-v1', nodeRegularizationSiemens: 0,
+      probes: [...expected.keys()] })[0];
+    for (const [node, oracle] of expected) {
+      const actual = rectangular(row, node);
+      assert.ok(Math.abs(actual.re - oracle.re) < 2e-8,
+        `${node}.re: ${actual.re} vs ngspice ${oracle.re}`);
+      assert.ok(Math.abs(actual.im - oracle.im) < 2e-8,
+        `${node}.im: ${actual.im} vs ngspice ${oracle.im}`);
+    }
+    assert.deepEqual([...board.operatingPoint().nodeVoltages], [...before.nodeVoltages]);
+  });
+
+  it('derives the TF cross charge from the same VAF/IKF transport law', () => {
+    const raw = { kind: 'npn', params: { ...exactParams, ikf: 0.01,
+      cje: 20e-12, cjc: 10e-12, tf: 0.5e-9 } };
+    const p = ebersMollParams(raw);
+    const vbe = 0.72;
+    const vbc = -3;
+    const q = ebersMollChargeCompanion(vbe, vbc, p);
+    const h = 1e-7;
+    const forwardCharge = (be, bc) => {
+      const cap = 80 * p.nVt;
+      const iF = p.is * (Math.exp(Math.min(be, cap) / p.nVt) - 1);
+      const early = 1 - bc / p.vaf;
+      const rolloff = 2 / (1 + Math.sqrt(Math.max(0, 1 + 4 * iF / p.ikf)));
+      return p.tf * iF * early * rolloff;
+    };
+    const dVbc = (forwardCharge(vbe, vbc + h) - forwardCharge(vbe, vbc - h)) / (2 * h);
+    assert.ok(Math.abs(q.cbeVbc - dVbc) < 1e-16,
+      `TF cross derivative ${q.cbeVbc} vs finite difference ${dVbc}`);
+    assert.ok(q.cbe > p.cje && q.cbc > 0,
+      'the witness must exercise diffusion plus both depletion capacitances');
+  });
+
+  it('keeps omitted charge storage identical to an explicit all-zero card', () => {
+    const run = params => bench(params).runAc({ sourceId: 'VIN', frequencies: [1e6],
+      analysisProfile: 'source-analysis-v1', nodeRegularizationSiemens: 0,
+      probes: ['base', 'collector', 'emitter'] });
+    assert.deepEqual(run(exactParams), run({ ...exactParams, cje: 0, cjc: 0, tf: 0 }));
   });
 
   it('retains the generic interactive NPN compatibility model', () => {

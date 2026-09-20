@@ -782,7 +782,8 @@ export function junctionModelOf(part, headroomV) {
  *
  * @param {Part} part
  * @returns {{is: number, nVt: number, bf: number, br: number, vaf: number,
- *            ikf: number, rb: number, rc: number} | null}
+ *            ikf: number, rb: number, rc: number,
+ *            cje: number, cjc: number, tf: number} | null}
  *   null when this part is not on the exponential path.
  */
 export function ebersMollParams(part) {
@@ -811,10 +812,73 @@ export function ebersMollParams(part) {
   const ikf = Number(part.params?.ikf ?? Infinity);
   const rb = Number(part.params?.rb ?? 0);
   const rc = Number(part.params?.rc ?? 0);
+  const cje = Number(part.params?.cje ?? 0);
+  const cjc = Number(part.params?.cjc ?? 0);
+  const tf = Number(part.params?.tf ?? 0);
   if (!(is > 0) || !(bf > 0) || !(br > 0) || !(n > 0)
       || (!(ikf > 0) || (!Number.isFinite(ikf) && ikf !== Infinity))
-      || !Number.isFinite(rb) || rb < 0 || !Number.isFinite(rc) || rc < 0) return null;
-  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc };
+      || !Number.isFinite(rb) || rb < 0 || !Number.isFinite(rc) || rc < 0
+      || !Number.isFinite(cje) || cje < 0 || !Number.isFinite(cjc) || cjc < 0
+      || !Number.isFinite(tf) || tf < 0) return null;
+  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc,
+    cje, cjc, tf };
+}
+
+/**
+ * Exact SPICE3 small-signal charge derivatives for the bounded NPN card.
+ *
+ * CJE/CJC use the model's undeclared defaults VJE=VJC=.75 V, MJE=MJC=.33
+ * and FC=.5. TF multiplies the forward transported junction current If/qb,
+ * including the already-qualified VAF/IKF base-charge law. The cross
+ * derivative dQbe/dVbc is deliberately returned separately: it is a
+ * non-reciprocal charge term, not a capacitor that may be stamped with addG2.
+ *
+ * @returns {{cbe: number, cbc: number, cbeVbc: number}}
+ */
+export function ebersMollChargeCompanion(vbe, vbc, p) {
+  const cje = p.cje ?? 0;
+  const cjc = p.cjc ?? 0;
+  const tf = p.tf ?? 0;
+  if (cje === 0 && cjc === 0 && tf === 0) return { cbe: 0, cbc: 0, cbeVbc: 0 };
+
+  const depletion = (v, c0) => {
+    if (c0 === 0) return 0;
+    const potential = 0.75;
+    const exponent = 0.33;
+    const fc = 0.5;
+    if (v < fc * potential) return c0 * Math.pow(1 - v / potential, -exponent);
+    const f2 = Math.pow(1 - fc, 1 + exponent);
+    const f3 = 1 - fc * (1 + exponent);
+    return c0 / f2 * (f3 + exponent * v / potential);
+  };
+
+  const cap = 80 * p.nVt;
+  const expF = Math.exp(Math.min(vbe, cap) / p.nVt);
+  const iF = p.is * (expF - 1);
+  const gF = Math.min(p.is * expF / p.nVt, 1e6);
+  const vaf = p.vaf ?? Infinity;
+  const early = 1 - vbc / vaf;
+  const dEarly = Number.isFinite(vaf) ? -1 / vaf : 0;
+  let scale = early;
+  let dScaleVbe = 0;
+  let dScaleVbc = dEarly;
+  const ikf = p.ikf ?? Infinity;
+  if (Number.isFinite(ikf)) {
+    const arg = Math.max(0, 1 + 4 * iF / ikf);
+    const sqrtArg = arg === 0 ? 1 : Math.sqrt(arg);
+    const rolloff = 2 / (1 + sqrtArg);
+    const dRolloffDiF = -4 / (ikf * sqrtArg * (1 + sqrtArg) ** 2);
+    scale = early * rolloff;
+    dScaleVbe = early * dRolloffDiF * gF;
+    dScaleVbc = dEarly * rolloff;
+  }
+  const dForwardVbe = gF * scale + iF * dScaleVbe;
+  const dForwardVbc = iF * dScaleVbc;
+  return {
+    cbe: depletion(vbe, cje) + tf * dForwardVbe,
+    cbc: depletion(vbc, cjc),
+    cbeVbc: tf * dForwardVbc,
+  };
 }
 
 /**
