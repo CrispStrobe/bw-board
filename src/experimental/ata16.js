@@ -2,11 +2,14 @@ const STATUS_ERR = 0x01;
 const STATUS_DRQ = 0x08;
 const STATUS_DRDY = 0x40;
 const STATUS_DSC = 0x10;
+const STATUS_BSY = 0x80;
 const STATUS_IDLE = STATUS_DRDY | STATUS_DSC;
 
 /**
- * Bounded synchronous ATA task-file device for the experimental 386 AT.
- * It models sector PIO and the native 16-bit data register, not command timing.
+ * Bounded ATA task-file device for the experimental 386 AT. Multi-sector PIO
+ * exposes an inter-sector BSY phase until the host observes regular status;
+ * this preserves the IBM 5170 BIOS COMMANDI polling contract without claiming
+ * measured disk timing. It models native 16-bit PIO, not mechanical timing.
  */
 export class ExperimentalATA16 {
   constructor(image, {cylinders, heads, sectors}, {onIRQ = null} = {}) {
@@ -38,6 +41,7 @@ export class ExperimentalATA16 {
     this.buffer = null;
     this.wordIndex = 0;
     this.direction = null;
+    this._intersector = null;
     this._irqPending = false;
     this._irqOutput = false;
     if (wasOutput) this.onIRQ?.(false);
@@ -70,6 +74,7 @@ export class ExperimentalATA16 {
     this.status = STATUS_IDLE | STATUS_ERR;
     this.buffer = null;
     this.direction = null;
+    this._intersector = null;
     this._raiseIRQ();
   }
 
@@ -81,6 +86,24 @@ export class ExperimentalATA16 {
     this.direction = 'read';
     this.status = STATUS_IDLE | STATUS_DRQ;
     this._raiseIRQ();
+  }
+
+  _beginIntersector(direction) {
+    this.buffer = null;
+    this.wordIndex = 0;
+    this.direction = null;
+    this._intersector = direction;
+    this.status = STATUS_BSY;
+  }
+
+  _completeIntersector() {
+    const direction = this._intersector;
+    this._intersector = null;
+    if (direction === 'read') this._loadReadSector();
+    else if (direction === 'write') {
+      this._prepareWriteSector();
+      this._raiseIRQ();
+    }
   }
 
   _prepareWriteSector() {
@@ -148,6 +171,7 @@ export class ExperimentalATA16 {
     this.buffer = null;
     this.wordIndex = 0;
     this.direction = null;
+    this._intersector = null;
     this.status = STATUS_IDLE;
     if (this.command === 0x20 || this.command === 0x21) this._loadReadSector();
     else if (this.command === 0x30 || this.command === 0x31) this._prepareWriteSector();
@@ -193,7 +217,8 @@ export class ExperimentalATA16 {
     const byte = this.wordIndex * 2;
     const value = this.buffer[byte] | this.buffer[byte + 1] << 8;
     if (++this.wordIndex === 256) {
-      if ((this.command === 0x20 || this.command === 0x21) && this._advanceAddress()) this._loadReadSector();
+      if ((this.command === 0x20 || this.command === 0x21) && this._advanceAddress())
+        this._beginIntersector('read');
       else {
         this.buffer = null;
         this.direction = null;
@@ -214,8 +239,7 @@ export class ExperimentalATA16 {
     const lba = this._lba();
     this.image.set(this.buffer, lba * 512);
     if (this._advanceAddress()) {
-      this._prepareWriteSector();
-      this._raiseIRQ();
+      this._beginIntersector('write');
     }
     else {
       this.buffer = null;
@@ -238,6 +262,7 @@ export class ExperimentalATA16 {
     if (register === 7) {
       const value = this.status;
       this._clearIRQ();
+      if (this._intersector) this._completeIntersector();
       return value;
     }
     return 0xff;

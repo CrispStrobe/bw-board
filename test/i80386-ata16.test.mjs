@@ -53,7 +53,11 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   ata.readRegister(7);
   assert.deepEqual(irq, [true, false]);
   for (let word = 0; word < 256; word++) ata.readData16();
-  assert.deepEqual(irq, [true, false, true], 'second read block becomes ready');
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80,
+    'alternate status observes the inter-sector busy phase without advancing it');
+  assert.deepEqual(irq, [true, false], 'the next block is not exposed synchronously');
+  assert.equal(ata.readRegister(7), 0x80, 'normal status acknowledges the completed block');
+  assert.deepEqual(irq, [true, false, true], 'second read block then becomes ready');
   ata.readRegister(7);
   for (let word = 0; word < 256; word++) ata.readData16();
   assert.equal(ata.readRegister(7), 0x50);
@@ -63,7 +67,9 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   ata.writeRegister(7, 0x30);
   assert.deepEqual(irq, [], 'first write block is polled without an interrupt');
   for (let word = 0; word < 256; word++) ata.writeData16(0x1100 | word);
-  assert.deepEqual(irq, [true], 'second write block becomes ready');
+  assert.deepEqual(irq, [], 'write also enters a visible inter-sector busy phase');
+  assert.equal(ata.readRegister(7), 0x80);
+  assert.deepEqual(irq, [true], 'second write block becomes ready after status observes busy');
   ata.readRegister(7);
   for (let word = 0; word < 256; word++) ata.writeData16(0x2200 | word);
   assert.deepEqual(irq, [true, false, true], 'write command completion interrupts');
@@ -86,6 +92,23 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   assert.deepEqual(irq, [true, false, true, false]);
   assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
   assert.equal(ata.readData16(), 0xffff, 'SRST cancels the pending data phase');
+
+  ata.writeRegister(7, 0, {control: true});
+  ata.writeRegister(2, 2);
+  ata.writeRegister(3, 1);
+  ata.writeRegister(7, 0x20);
+  ata.readRegister(7);
+  for (let word = 0; word < 256; word++) ata.readData16();
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
+  ata.writeRegister(7, 4, {control: true});
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80,
+    'SRST replaces an inter-sector phase with reset busy');
+  ata.writeRegister(7, 0, {control: true});
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x50,
+    'reset release does not resurrect the next multi-sector block');
+
+  const irqBeforeIgnoredCommands = irq.length;
+  ata.writeRegister(7, 4, {control: true});
   ata.writeRegister(3, 2);
   ata.writeRegister(7, 0x30);
   for (let word = 0; word < 256; word++) ata.writeData16(word);
@@ -93,7 +116,7 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   ata.writeRegister(7, 2, {control: true});
   assert.equal(ata.readRegister(7, {alternate: true}), 0x50);
   ata.writeRegister(7, 0, {control: true});
-  assert.deepEqual(irq, [true, false, true, false], 'reset cleared pending IRQ');
+  assert.equal(irq.length, irqBeforeIgnoredCommands, 'reset cleared pending IRQ');
 
   const before = ata.mediaBytes();
   ata.writeRegister(7, 0x20);
