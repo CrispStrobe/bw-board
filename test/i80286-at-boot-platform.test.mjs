@@ -168,11 +168,17 @@ test('keyboard F3 typematic command and parameter produce timed keyboard ACKs', 
         onIRQ:level=>irq.push(level)});
     controller.writeCommand(0x60);controller.writeData(1);
     controller.writeData(0xf3);
-    assert.equal(controller.getState().pendingKeyboardCommand,0xf3);
+    const awaitingParameter=controller.getState();
+    assert.equal(awaitingParameter.pendingKeyboardCommand,0xf3);
+    assert.equal(controller.injectSet1(0x1e),false,'scanning stops while the parameter is pending');
     controller.advance(10);
     assert.equal(controller.readData(),0xfa);
+    const halfway=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    halfway.setState(controller.getState());
+    assert.deepEqual(halfway.getState(),controller.getState());
     controller.writeData(0x0b);
     assert.equal(controller.getState().pendingKeyboardCommand,null);
+    assert.equal(controller.getState().typematicParameter,0x0b);
     controller.advance(10);
     const pending=controller.getState();
     const restored=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
@@ -182,6 +188,25 @@ test('keyboard F3 typematic command and parameter produce timed keyboard ACKs', 
     assert.ok(irq.includes(true),'keyboard ACK obeys command-byte IRQ gating');
     assert.throws(()=>controller.writeData(0xed),/no D1 output-port command/,
         'unobserved keyboard commands remain explicit refusals');
+
+    const repeated=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    repeated.writeData(0xf3);repeated.advance(10);assert.equal(repeated.readData(),0xfa);
+    repeated.writeData(0xf3);
+    assert.equal(repeated.getState().pendingKeyboardCommand,0xf3,
+        'a repeated command restarts rather than becoming a typematic parameter');
+
+    const reset=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    reset.writeData(0xf3);reset.advance(10);assert.equal(reset.readData(),0xfa);
+    reset.writeData(0xff);
+    assert.equal(reset.getState().pendingKeyboardCommand,null);
+    assert.equal(reset.getState().typematicParameter,null);
+    reset.advance(10);assert.equal(reset.readData(),0xfa);
+
+    const invalid=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    invalid.writeData(0xf3);invalid.advance(10);assert.equal(invalid.readData(),0xfa);
+    assert.throws(()=>invalid.writeData(0xed),/no D1 output-port command/,
+        'an unmodeled command byte is not accepted as the F3 parameter');
+    assert.equal(invalid.getState().pendingKeyboardCommand,0xf3);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {

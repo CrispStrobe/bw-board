@@ -37,6 +37,7 @@ export class AT8042A20 {
         this.commandByte=0;
         this.pendingCommand=null;
         this.pendingKeyboardCommand=null;
+        this.typematicParameter=null;
         this.outputQueue=[];
         this.responseCyclesRemaining=0;
         this.inputBusyCyclesRemaining=0;
@@ -163,20 +164,30 @@ export class AT8042A20 {
             // Forwarding a host command to the keyboard releases its clock;
             // the IBM BIOS sends FFh after ADh without a separate AEh.
             this.commandByte&=~0x10;
+            this.pendingKeyboardCommand=null;
+            this.typematicParameter=null;
             this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa,
                 afterRelease:this.keyboardBatCycles}];
             this._publish();
             return;
         }
-        if(this.pendingCommand===null&&this.keyboardAckCycles!==null&&
-            (this.pendingKeyboardCommand===0xf3||value===0xf3)) {
+        if(this.pendingCommand===null&&this.keyboardAckCycles!==null&&value===0xf3) {
             // IBM enhanced-keyboard F3h Set Typematic Rate/Delay. Both the
             // command byte and its parameter receive a keyboard-originated
             // FAh ACK; scanning retains its prior state.
             if(this.keyboardSchedule.length)
                 throw new Error('AT 8042 keyboard F3h refused: another keyboard response is pending');
-            if(this.pendingKeyboardCommand===0xf3)this.pendingKeyboardCommand=null;
-            else this.pendingKeyboardCommand=0xf3;
+            this.pendingKeyboardCommand=0xf3;
+            this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
+            this._publish();
+            return;
+        }
+        if(this.pendingCommand===null&&this.keyboardAckCycles!==null&&
+            this.pendingKeyboardCommand===0xf3&&value<=0x7f) {
+            if(this.keyboardSchedule.length)
+                throw new Error('AT 8042 keyboard F3h parameter refused: another keyboard response is pending');
+            this.pendingKeyboardCommand=null;
+            this.typematicParameter=value;
             this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
             this._publish();
             return;
@@ -187,20 +198,21 @@ export class AT8042A20 {
     }
     injectSet1(value) {
         if(!Number.isInteger(value)||value<0||value>255)throw new Error('AT 8042 scancode must be a byte');
-        if(this.commandByte&0x10)return false;
+        if((this.commandByte&0x10)||this.pendingKeyboardCommand!==null)return false;
         this._queue(value,true);
         return true;
     }
     getState() {
-        return {v:6,outputPort:this.outputPort,commandByte:this.commandByte,
+        return {v:7,outputPort:this.outputPort,commandByte:this.commandByte,
             pendingCommand:this.pendingCommand,outputQueue:this.outputQueue.map(e=>({...e})),
             responseCyclesRemaining:this.responseCyclesRemaining,inputBusyCyclesRemaining:this.inputBusyCyclesRemaining,
             delayedResponse:this.delayedResponse&&{...this.delayedResponse},
             keyboardSchedule:this.keyboardSchedule.map(event=>({...event})),
-            systemFlag:this.systemFlag,pendingKeyboardCommand:this.pendingKeyboardCommand};
+            systemFlag:this.systemFlag,pendingKeyboardCommand:this.pendingKeyboardCommand,
+            typematicParameter:this.typematicParameter};
     }
     validateState(s) {
-        if(!s||s.v!==6||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
+        if(!s||s.v!==7||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
             !Number.isInteger(s.commandByte)||s.commandByte<0||s.commandByte>255||
             ![null,0x60,0xd1].includes(s.pendingCommand)||!Array.isArray(s.outputQueue)||
             s.outputQueue.length>this.queueLimit||s.outputQueue.some(e=>!e||!Number.isInteger(e.value)||
@@ -213,6 +225,8 @@ export class AT8042A20 {
                 s.delayedResponse.value>=0&&s.delayedResponse.value<=255))||
             (!!s.delayedResponse)!==(s.responseCyclesRemaining>0)||
             ![null,0xf3].includes(s.pendingKeyboardCommand)||
+            !(s.typematicParameter===null||(Number.isInteger(s.typematicParameter)&&
+                s.typematicParameter>=0&&s.typematicParameter<=0x7f))||
             !Array.isArray(s.keyboardSchedule)||s.keyboardSchedule.length>2||s.keyboardSchedule.some((event,index)=>!event||
                 !Number.isFinite(event.remaining)||event.remaining<0||event.remaining>100_000_000||
                 (index>0&&event.remaining<s.keyboardSchedule[index-1].remaining)||
@@ -234,6 +248,7 @@ export class AT8042A20 {
         this.keyboardSchedule=s.keyboardSchedule.map(event=>({...event}));
         this.systemFlag=s.systemFlag;
         this.pendingKeyboardCommand=s.pendingKeyboardCommand;
+        this.typematicParameter=s.typematicParameter;
         this._irq=undefined;
         this._releaseKeyboardSchedule();
         this._publish();
