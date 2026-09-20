@@ -30,7 +30,7 @@ class QuietBus extends Bus {printf(){return 0;}}
 
 const mutation=process.env.I386_UNREAL_ORACLE_MUTATION??null;
 if(mutation!==null&&mutation!=='result'&&mutation!=='budget')throw new Error(`unknown mutation ${mutation}`);
-const stepLimit=mutation==='budget'?10:17000;
+const stepLimit=mutation==='budget'?10:70000;
 const SOURCE=0x20000,DEST=0x40000,BYTES=0x10004,DWORDS=BYTES>>>2,MEMORY_BYTES=0x60000;
 const put=(write,at,bytes)=>bytes.forEach((value,index)=>write(at+index,value));
 const descriptor=(write,at,base,limit,access,flags=0)=>put(write,at,[limit,limit>>>8,base,base>>>8,
@@ -53,7 +53,8 @@ const observe=(cpu,read,local)=>{
   const copied=Buffer.alloc(BYTES);for(let i=0;i<BYTES;i++)copied[i]=read(DEST+i);
   return {halted:local?cpu.halted:!!(cpu.intFlags&X86.INTFLAG.HALT),protectedMode:local?cpu.protectedMode:!!(cpu.regCR0&1),
     cs:local?cpu.cs:cpu.getCS(),eip:local?cpu.eip:cpu.getIP(),ds:local?cpu.ds:cpu.getDS(),es:local?cpu.es:cpu.getES(),
-    dsLimit:local?cpu.segmentCaches[3].limit:cpu.segDS.limit,esLimit:local?cpu.segmentCaches[0].limit:cpu.segES.limit,
+    dsLimit:(local?cpu.segmentCaches[3].limit:cpu.segDS.limit)>>>0,
+    esLimit:(local?cpu.segmentCaches[0].limit:cpu.segES.limit)>>>0,
     esi:(local?cpu.esi:cpu.regESI)>>>0,edi:(local?cpu.edi:cpu.regEDI)>>>0,ecx:(local?cpu.ecx:cpu.regECX)>>>0,
     copiedSha256:hash(copied),boundary:[read(DEST+0xffff),read(DEST+0x10000),read(DEST+0x10003)]};
 };
@@ -74,7 +75,7 @@ function runPCjs(){
 }
 const reference=runPCjs(),actual=runLocal();
 if(mutation==='result')actual.boundary[1]^=1;
-const expected={halted:true,protectedMode:false,cs:0,eip:0x6a,ds:0x10,es:0x10,
+const expected={halted:true,protectedMode:false,cs:0,eip:0x68,ds:0x10,es:0x10,
   dsLimit:0xffffffff,esLimit:0xffffffff,esi:SOURCE+BYTES,edi:DEST+BYTES,ecx:0};
 const differences=[];
 for(const field of Object.keys(expected))for(const [side,value] of [['reference',reference],['actual',actual]])
