@@ -535,16 +535,59 @@
         "cs": 9359,
         "eip": 9074,
         "loadSegment": 8914
-      }
+      },
+      "lateInitializationEvidence": [
+        {
+          "step": 285000000,
+          "cs": 1728,
+          "ip": 6246,
+          "keyboardHead": 58,
+          "keyboardTail": 58,
+          "lastLines": [
+            "player 1 of 1 (1 nodes)",
+            "S_Init: Setting up sound.",
+            "HU_Init: Setting up heads up display.",
+            "ST_Init: Init status bar."
+          ]
+        },
+        {
+          "step": 298000000,
+          "cs": 1728,
+          "ip": 22792,
+          "keyboardHead": 58,
+          "keyboardTail": 58,
+          "lastLines": [
+            "player 1 of 1 (1 nodes)",
+            "S_Init: Setting up sound.",
+            "HU_Init: Setting up heads up display.",
+            "ST_Init: Init status bar."
+          ]
+        },
+        {
+          "step": 299000000,
+          "cs": 1728,
+          "ip": 6411,
+          "keyboardHead": 58,
+          "keyboardTail": 58,
+          "lastLines": []
+        }
+      ]
     }
   ],
   "qualification": {
-    "status": "candidate; hosted qualification pending",
+    "status": "qualified and landed",
     "focused": {
       "pass": 282,
       "skip": 2,
       "fail": 0,
       "scope": "all i80386 tests plus VGA memory; optional fixtures skipped"
-    }
+    },
+    "revision": "e40abd64a7c283401ac58433d633eb0d3b2549c6",
+    "runs": {
+      "CI": 35484387534,
+      "CPU": 35484387526,
+      "native": 35484387522
+    },
+    "tag": "milestones/x86-386-vm-task-20260920"
   }
 }

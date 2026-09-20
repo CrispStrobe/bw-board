@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (candidate; hosted qualification pending) — Astra/Sol VM86 TSS.
+2026-09-20 DONE (qualified and landed) — Astra/Sol VM86 TSS.
 32-bit tasks now enter VM86, use user paging, and return from protected task-gate
 handlers through NT IRET. Independent QEMU TCG 486 execution exposed and fixed
 an actual far-JMP EIP overwrite; both engines now emit the exact owned guest
@@ -112,6 +112,11 @@ without refusal. Neither establishes rendered gameplay. Windows input has been
 verified and execution is under investigation in the CPU lane. Receipt:
 `docs/receipts/2026-09-20-386-vm-task.json`. Debug task traps and page-straddling
 TSS remain bounded refusals. Ongoing Windows/Doom work retains the parent claim.
+Exact e40abd64a7c283401ac58433d633eb0d3b2549c6 passed CI35484387534,
+CPU35484387526 and native35484387522, then fast-forwarded master.
+Tag: milestones/x86-386-vm-task-20260920. The 500M Doom trace also records
+sound, HUD and status-bar initialization before the screen clears at299M;
+this advances the observed initialization frontier but does not prove graphics.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol 286-format TSS support in the 386.
 Adds 16-bit task images to direct CALL/JMP, task gates and nested IRET;
