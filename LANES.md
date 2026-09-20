@@ -43,9 +43,11 @@ P1.4-P1.7, RS on P2.0, EN on P2.1" over a breadboard with no LCD on it, and
 `char_lcd` on its declared 4-bit bus — D0-D3 deliberately left unconnected, because
 that is what 4-bit mode means — grounding RW when the board declares none and wiring
 it when it does. `LEDBANK8` builds all eight LEDs on the declared port and keeps the
-declared polarity. An unknown part kind is still refused out loud in `notes`.
+declared polarity; `KEYPAD4X4` and `SEVENSEG8` build the A2 board's keypad and its
+eight-digit multiplexed display on their declared rows, columns, segment port and
+select lines. An unknown part kind is still refused out loud in `notes`.
 
-Focused suite 26/26, and 78/78 across every inference suite plus the 595 device and
+Focused suite 28/28, and 78/78 across every inference suite plus the 595 device and
 the diode operating point. Disabling servo detection, removing its exclusion chain, dropping the servo ground
 net, disabling the sensors, letting the LDR pattern swallow `pot`, ungrounding the divider, floating the LCD's RW, mapping the 4-bit bus onto D0-D3,
 wiring half an LED bank, and dropping the bank's polarity each turn a named test red. Two mutants that survived were fixed rather than

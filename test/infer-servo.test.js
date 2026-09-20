@@ -235,3 +235,39 @@ describe('inferNetlist: whole-panel parts', () => {
     assert.ok(notes.some(n => /nonesuch9000/.test(n)), 'and the refusal must be said out loud');
   });
 });
+
+describe('inferNetlist: the A2 board parts', () => {
+  it('builds a 4x4 keypad on its declared rows and columns', () => {
+    const { parts, nets } = inferNetlist({ pins: [], parts: [{
+      name: 'keys', type: 'keypad4x4',
+      rows: [7, 6, 5, 4].map(bit => ({ port: 1, bit })),
+      cols: [3, 2, 1, 0].map(bit => ({ port: 1, bit })),
+    }] });
+    const pad = parts.find(p => p.kind === 'keypad_4x4');
+    assert.ok(pad, 'the declared keypad must appear');
+    for (const t of ['r0', 'r1', 'r2', 'r3', 'c0', 'c1', 'c2', 'c3']) {
+      const net = nets.find(n => n.terminals.some(x => x.part === pad.id && x.terminal === t));
+      assert.ok(net, `${t} must be wired`);
+      assert.ok(net.terminals.some(x => x.part === 'MCU'), `${t} must reach the MCU`);
+    }
+    assert.deepEqual(validateNetlist(parts, nets).filter(e => e.severity === 'error'), []);
+  });
+
+  it('builds an 8-digit display on its segment port and select lines', () => {
+    const { parts, nets } = inferNetlist({ pins: [], parts: [{
+      name: 'display', type: 'sevenseg8', segPort: 0,
+      selPins: [2, 3, 4].map(bit => ({ port: 2, bit })), commonAnode: false,
+    }] });
+    const disp = parts.find(p => p.kind === 'sevenseg8');
+    assert.ok(disp, 'the declared display must appear');
+    // All eight segment lines, including the decimal point, and all three
+    // select lines: a display missing dp or a select line multiplexes wrong.
+    for (const t of ['seg_a', 'seg_b', 'seg_c', 'seg_d', 'seg_e', 'seg_f', 'seg_g', 'seg_dp',
+      'sel_a', 'sel_b', 'sel_c']) {
+      const net = nets.find(n => n.terminals.some(x => x.part === disp.id && x.terminal === t));
+      assert.ok(net, `${t} must be wired`);
+      assert.ok(net.terminals.some(x => x.part === 'MCU'), `${t} must reach the MCU`);
+    }
+    assert.deepEqual(validateNetlist(parts, nets).filter(e => e.severity === 'error'), []);
+  });
+});

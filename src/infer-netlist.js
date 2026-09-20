@@ -617,6 +617,43 @@ export function inferNetlist(stc, opts) {
         }
         vccNet.terminals.push({ part: bankId, terminal: 'vcc' });
         gndNet.terminals.push({ part: bankId, terminal: 'gnd' });
+      } else if (part.type === 'keypad4x4' || part.kind === 'keypad4x4') {
+        // PART keys = KEYPAD4X4 ROWS P1.7 P1.6 P1.5 P1.4 COLS P1.3 P1.2 P1.1 P1.0
+        const padId = `KEYPAD_${safeName}`;
+        parts.push({ id: padId, kind: 'keypad_4x4', declName: part.name, params: {},
+          terminals: ['r0', 'r1', 'r2', 'r3', 'c0', 'c1', 'c2', 'c3'] });
+        const line = (prefix, coords) => (coords || []).forEach((coord, i) => {
+          if (!coord) return;
+          nets.push({ id: `net_${safeName}_${prefix}${i}`, terminals: [
+            { part: 'MCU', terminal: pinName(coord) },
+            { part: padId, terminal: `${prefix}${i}` },
+          ] });
+        });
+        line('r', part.rows);
+        line('c', part.cols);
+      } else if (part.type === 'sevenseg8' || part.kind === 'sevenseg8') {
+        // PART display = SEVENSEG8 SEGMENTS P0 SELECT P2.2 P2.3 P2.4 — eight
+        // digits multiplexed behind three select lines, segments on one port.
+        const dispId = `DISP_${safeName}`;
+        const segs = ['seg_a', 'seg_b', 'seg_c', 'seg_d', 'seg_e', 'seg_f', 'seg_g', 'seg_dp'];
+        parts.push({ id: dispId, kind: 'sevenseg8', declName: part.name,
+          params: { commonAnode: !!part.commonAnode },
+          terminals: ['vcc', 'gnd', ...segs, 'sel_a', 'sel_b', 'sel_c'] });
+        segs.forEach((seg, bit) => {
+          nets.push({ id: `net_${safeName}_${seg}`, terminals: [
+            { part: 'MCU', terminal: pinName({ port: part.segPort, bit }) },
+            { part: dispId, terminal: seg },
+          ] });
+        });
+        (part.selPins || []).forEach((coord, i) => {
+          if (!coord) return;
+          nets.push({ id: `net_${safeName}_sel${i}`, terminals: [
+            { part: 'MCU', terminal: pinName(coord) },
+            { part: dispId, terminal: ['sel_a', 'sel_b', 'sel_c'][i] },
+          ] });
+        });
+        vccNet.terminals.push({ part: dispId, terminal: 'vcc' });
+        gndNet.terminals.push({ part: dispId, terminal: 'gnd' });
       } else {
         notes.push(`Unknown part kind '${part.type || part.kind}' for part ${part.name}`);
       }
