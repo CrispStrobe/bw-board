@@ -1,0 +1,473 @@
+{
+  "schema": "astra.i80386-dos-loader-reset.v1",
+  "scope": [
+    "opcode82 byte Group1 compatibility alias including66-prefixed byte ADC and memory CMP",
+    "ATA diagnostic01 signature after cold and software reset",
+    "external Windows3.0 disk boot harness with firmware-compatible empty floppy and type2 HDD",
+    "Doom report serialization repair, optional tracing and atomic progress snapshots"
+  ],
+  "oracles": [
+    {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "20c5b804c0f924e0a92b03fa92fbdf96a20e706c",
+      "scope": "software compatibility evidence for opcode 82h byte CMP memory and operand-size-prefixed ADC with carry; full registers, defined flags, and memory are graded",
+      "stepLimit": 2,
+      "mutation": null,
+      "status": "pass",
+      "observations": {
+        "cmp-memory": {
+          "reference": {
+            "completed": true,
+            "eip": 5,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 2064,
+            "memory0200": 128
+          },
+          "actual": {
+            "completed": true,
+            "eip": 5,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 2064,
+            "memory0200": 128
+          }
+        },
+        "adc-carry-prefix66": {
+          "reference": {
+            "completed": true,
+            "eip": 4,
+            "eax": 2309737729,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 17,
+            "memory0200": 90
+          },
+          "actual": {
+            "completed": true,
+            "eip": 4,
+            "eax": 2309737729,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 17,
+            "memory0200": 90
+          }
+        }
+      },
+      "differences": [],
+      "sourceHashes": {
+        "./compare-pcjs-i80386-group1-alias.mjs": "5d48b2b000be788d60035011277dd85b37fbbeec11b5072945d676b1d39c65ed",
+        "../src/experimental/i80386.js": "cc007a7c43137b0cd53fd8834bc433df730b6eb84bc54c8a20ca2c4efef56855"
+      },
+      "reportSha256": "8dbacf866dfa03e419c835a2c2c9ee7b49cad814058ca45a6f10e3de122b78f7"
+    },
+    {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "20c5b804c0f924e0a92b03fa92fbdf96a20e706c",
+      "scope": "software compatibility evidence for opcode 82h byte CMP memory and operand-size-prefixed ADC with carry; full registers, defined flags, and memory are graded",
+      "stepLimit": 2,
+      "mutation": "result",
+      "status": "fail",
+      "observations": {
+        "cmp-memory": {
+          "reference": {
+            "completed": true,
+            "eip": 5,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 2064,
+            "memory0200": 128
+          },
+          "actual": {
+            "completed": true,
+            "eip": 5,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 2064,
+            "memory0200": 128
+          }
+        },
+        "adc-carry-prefix66": {
+          "reference": {
+            "completed": true,
+            "eip": 4,
+            "eax": 2309737729,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 17,
+            "memory0200": 90
+          },
+          "actual": {
+            "completed": true,
+            "eip": 4,
+            "eax": 2309737728,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 17,
+            "memory0200": 90
+          }
+        }
+      },
+      "differences": [
+        {
+          "case": "adc-carry-prefix66",
+          "reference": {
+            "completed": true,
+            "eip": 4,
+            "eax": 2309737729,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 17,
+            "memory0200": 90
+          },
+          "actual": {
+            "completed": true,
+            "eip": 4,
+            "eax": 2309737728,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 17,
+            "memory0200": 90
+          }
+        }
+      ],
+      "sourceHashes": {
+        "./compare-pcjs-i80386-group1-alias.mjs": "5d48b2b000be788d60035011277dd85b37fbbeec11b5072945d676b1d39c65ed",
+        "../src/experimental/i80386.js": "cc007a7c43137b0cd53fd8834bc433df730b6eb84bc54c8a20ca2c4efef56855"
+      },
+      "reportSha256": "60be345a44fd5c696c4a3cb42d9b92f0610e2963517b7a022779c5a91369e07a"
+    },
+    {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "20c5b804c0f924e0a92b03fa92fbdf96a20e706c",
+      "scope": "software compatibility evidence for opcode 82h byte CMP memory and operand-size-prefixed ADC with carry; full registers, defined flags, and memory are graded",
+      "stepLimit": 0,
+      "mutation": "budget",
+      "status": "fail",
+      "observations": {
+        "cmp-memory": {
+          "reference": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 0,
+            "memory0200": 128
+          },
+          "actual": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 0,
+            "memory0200": 128
+          }
+        },
+        "adc-carry-prefix66": {
+          "reference": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737983,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 1,
+            "memory0200": 90
+          },
+          "actual": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737983,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 1,
+            "memory0200": 90
+          }
+        }
+      },
+      "differences": [
+        {
+          "case": "cmp-memory",
+          "reference": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 0,
+            "memory0200": 128
+          },
+          "actual": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737967,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 0,
+            "memory0200": 128
+          }
+        },
+        {
+          "case": "adc-carry-prefix66",
+          "reference": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737983,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 1,
+            "memory0200": 90
+          },
+          "actual": {
+            "completed": false,
+            "eip": 0,
+            "eax": 2309737983,
+            "ebx": 270544960,
+            "ecx": 1348497536,
+            "edx": 2426450112,
+            "esi": 287454020,
+            "edi": 1432778632,
+            "ebp": 2578103244,
+            "esp": 1792,
+            "flags": 1,
+            "memory0200": 90
+          }
+        }
+      ],
+      "sourceHashes": {
+        "./compare-pcjs-i80386-group1-alias.mjs": "5d48b2b000be788d60035011277dd85b37fbbeec11b5072945d676b1d39c65ed",
+        "../src/experimental/i80386.js": "cc007a7c43137b0cd53fd8834bc433df730b6eb84bc54c8a20ca2c4efef56855"
+      },
+      "reportSha256": "78958e6ffa7536e5baf1c0603368215ad08942257fe51223dc081f46ad8029bb"
+    }
+  ],
+  "windowsInputReference": "2026-09-20-windows300-qemu-input-check.json",
+  "windowsDiagnostic": {
+    "executionRevision": "004e99418b7bbf641b9838c172fd8093a99ba7c3",
+    "sourceSha256": {
+      "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+      "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+      "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+      "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+      "src/experimental/i80386.js": "cc007a7c43137b0cd53fd8834bc433df730b6eb84bc54c8a20ca2c4efef56855",
+      "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
+      "src/experimental/ata16.js": "f26aaf730d96a660d1417ab54c636d0fa8144f66bc44d4403009c0206eba3a6d",
+      "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+      "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+      "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+      "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+      "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+      "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+      "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+      "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+      "scripts/run-i80386-windows300.mjs": "c0f81d831123da17a101e2fd8cbb319181b0b573de528c50705cd1fe3219fcbc"
+    },
+    "steps": 200000000,
+    "stopReason": "budget",
+    "refusal": null,
+    "final": {
+      "cs": 2490,
+      "eip": 2409,
+      "pc": 42249,
+      "cr0": 0,
+      "cr2": 0,
+      "cr3": 0,
+      "eflags": 70,
+      "halted": false,
+      "shutdown": false
+    },
+    "nonblankScreen": [
+      "HIMEM: DOS XMS Driver, Version 2.60 - 04",
+      "/05/90",
+      "XMS Specification Version 2.0",
+      "Copyright 1988-1990 Microsoft Corp.",
+      "Installed A20 handler number 1.",
+      "64K High Memory Area is available.",
+      "Microsoft SMARTDrive Disk Cache version",
+      "3.03",
+      "    Cache size: 320K in Extended Memory",
+      "    Room for 37 tracks of 17 sectors eac",
+      "h",
+      "    Minimum cache size will be 0K"
+    ],
+    "input": {
+      "bios": {
+        "bytes": 65536,
+        "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f"
+      },
+      "vgaRom": {
+        "bytes": 32256,
+        "sha256": "90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a"
+      },
+      "hdd": {
+        "bytes": 21411840,
+        "sha256": "127d214b6c4ff2520c95063e00028547cf287a22e56c0c7a8d550af08486f1aa",
+        "geometry": {
+          "cylinders": 615,
+          "heads": 4,
+          "sectors": 17
+        }
+      },
+      "cmos": {
+        "driveTypes": 32,
+        "floppyTypes": 32,
+        "equipment": 1,
+        "checksum": 336
+      }
+    },
+    "vgaOptionEntry": {
+      "step": 3284962,
+      "cs": 49152,
+      "eip": 3,
+      "ss": 48,
+      "esp": 248,
+      "cr0": 0
+    },
+    "postContinue": {
+      "enabled": false,
+      "injected": null
+    },
+    "reportSha256": "06a21d1ca3397d14bf93e27f830216ac56c6f18ecfee24b29da6e134ab9f4b83",
+    "scope": "original PC DOS loader reaches HIMEM and SMARTDrive; no Windows execution acceptance",
+    "coldResetFollowup": "This execution used the SRST fix before the separate cold-reset signature correction; retain its exact source identity."
+  },
+  "dosPersistence": {
+    "executionRevision": "0c913eb0c9cd221f66811b12e057f34caa200cf9",
+    "writeSteps": 25652224,
+    "rebootSteps": 25567232,
+    "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+    "writeReportSha256": "c64407fdc1d5ee8c47ca3295cc1eeaf361a7d93120a34c9618785ec069968365",
+    "rebootReportSha256": "f86cf174f998b73390cb6e98c32d0c5f84953d66dfc66f6ac9576d715c2bf79f"
+  },
+  "qualification": {
+    "status": "candidate; hosted qualification pending",
+    "focused": {
+      "pass": 284,
+      "skip": 2,
+      "fail": 0,
+      "scope": "all i80386 tests plus VGA memory"
+    }
+  },
+  "limits": [
+    "Opcode82 independent evidence is software compatibility, not a physical386 claim",
+    "Windows driver startup is not Windows desktop acceptance; HIMEM can itself enter protected mode",
+    "No Doom rendered-frame or gameplay acceptance",
+    "320M VGA attempt at9a0e4ca2 lost final report to undefined portEventCount; no result acceptance",
+    "Earlier VGA500M attempt was terminated without a usable report",
+    "Detailed tracing defaults off; no measured speedup claim"
+  ],
+  "runnerSmoke": [
+    {
+      "schema": "astra.i80386-freedos-doom-diagnostic.v1",
+      "executionRevision": "f3a24129525e6431a6fd213421a230d6b894346f",
+      "steps": 1,
+      "reportSha256": "220d83b5297fb169ba6183c2bd9b32599a9e974892b4404b29471698ffd46062"
+    },
+    {
+      "schema": "astra.i80386-freedos-doom-diagnostic.v1",
+      "executionRevision": "f3a24129525e6431a6fd213421a230d6b894346f",
+      "steps": 1000001,
+      "reportSha256": "68ca0dd552e8960c7c1ff068263b8621012b89e0c7b69fc2c9620e3f87ff152d"
+    },
+    {
+      "schema": "astra.i80386-doom-progress.v1",
+      "executionRevision": "f3a24129525e6431a6fd213421a230d6b894346f",
+      "steps": 1000000,
+      "reportSha256": "5f8c3346acc2d0fbc65954ce9a30f7a5a089f42a097654edc832b4474f4cef86"
+    }
+  ]
+}

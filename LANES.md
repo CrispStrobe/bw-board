@@ -99,6 +99,21 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate; hosted qualification pending) — Astra/Sol DOS loader fixes.
+The original PC DOS MBR exercises byte Group1 opcode82; the executor now handles
+it with byte semantics even under66. Pinned PCjs agrees on CMP memory and ADC
+carry/flags/high-register preservation; result and budget controls reject.
+The next actual PBR failure was BIOS INT13 reset returning AH05 because ATA SRST
+reported error0 instead of diagnostic01. Cold and software reset now publish01;
+IRQ and transfer-cancellation checks remain green. The untouched external disk
+reaches HIMEM and SMARTDrive after the fix. Windows desktop remains unaccepted.
+Fresh source-bound DOS write/reboot and284 focused tests pass (2 optional skips).
+Doom report serialization now survives short CGA/VGA smoke runs; atomic progress
+snapshots and opt-in detailed tracing avoid losing long runs to final-report errors.
+The previous320M VGA execution lost its report and supplies no acceptance.
+Receipt: `docs/receipts/2026-09-20-386-dos-loader-reset.json`.
+Ongoing Windows/Doom work retains the parent claim and does not touch other lanes.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol VM86 TSS.
 32-bit tasks now enter VM86, use user paging, and return from protected task-gate
 handlers through NT IRET. Independent QEMU TCG 486 execution exposed and fixed
