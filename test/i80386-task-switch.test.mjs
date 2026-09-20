@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import I80386 from "../src/experimental/i80386.js";
+import I80386, { I80386Fault } from "../src/experimental/i80386.js";
 
 function put(memory, address, bytes) {
   bytes.forEach((value, index) => memory.set(address + index, value & 255));
@@ -119,6 +119,49 @@ test("incoming one-page TSS faults and bounded task refusals are precommit", () 
     assert.equal(f.memory.get(0x225) & 15, 9);
     assert.deepEqual([0x420,0x421,0x422,0x423].map(a => f.memory.get(a) ?? 0),
       [0,0,0,0]);
+  }
+});
+
+test("JMP preflights the outgoing busy descriptor byte before task mutation", () => {
+  const { cpu, memory } = pagingFaultFixture("cs");
+  const translate = cpu._translate.bind(cpu);
+  cpu._translate = (linear, options) => {
+    if (linear === 0x21d && options?.write) {
+      cpu.cr2 = linear;
+      throw new I80386Fault(14, 2, "outgoing busy descriptor page");
+    }
+    return translate(linear, options);
+  };
+  const before = {
+    tr: cpu.tr.selector,
+    cr3: cpu.cr3,
+    incomingAccess: memory.get(0x225),
+    outgoingEip: [0x420, 0x421, 0x422, 0x423].map(address => memory.get(address)),
+  };
+  assert.throws(
+    () => cpu._taskSwitch(0x20, "jmp"),
+    error => error?.vector === 14 && error.errorCode === 2 && !error.taskCommitted,
+  );
+  assert.deepEqual({
+    tr: cpu.tr.selector,
+    cr3: cpu.cr3,
+    incomingAccess: memory.get(0x225),
+    outgoingEip: [0x420, 0x421, 0x422, 0x423].map(address => memory.get(address)),
+  }, before);
+});
+
+test("IDT task gates report invalid task targets as TS before mutation", () => {
+  for (const [selector, expected] of [[0,0],[4,4],[0x20,0x20]]) {
+    const { cpu, memory } = pagingFaultFixture("cs");
+    if (selector === 0x20) memory.set(0x225, 0x8b);
+    cpu.idtr = { base: 0x600, limit: 0x7ff };
+    put(memory, 0x600 + 5 * 8, [0xaa,0xbb,selector,selector>>>8,0xcc,0x85,0xdd,0xee]);
+    assert.throws(
+      () => cpu._deliverProtected(5, cpu.eip, null, { external: true }),
+      error => error?.vector === 10 && error.errorCode === (expected | 1),
+    );
+    assert.deepEqual([cpu.tr.selector,cpu.cr3,memory.get(0x225)&15],
+      [0x18,0x1000,selector===0x20?11:9]);
   }
 });
 

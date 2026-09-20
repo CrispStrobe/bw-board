@@ -1093,22 +1093,26 @@ export class ExperimentalI80386 {
     this.eip = target;
   }
 
-  _taskDescriptor(selector, { returning = false, checkPrivilege = true } = {}) {
+  _taskDescriptor(selector, {
+    returning = false,
+    checkPrivilege = true,
+    faultVector = returning ? 10 : 13,
+  } = {}) {
     const code = selector & 0xfffc;
     if (!code || (selector & 4))
-      throw new I80386Fault(returning ? 10 : 13, code, "invalid TSS selector");
+      throw new I80386Fault(faultVector, code, "invalid TSS selector");
     let raw;
     try {
       raw = this._descriptorBytes(selector);
     } catch (error) {
-      if (returning && error instanceof I80386Fault && error.vector === 13)
-        error.vector = 10;
+      if (error instanceof I80386Fault && error.vector === 13)
+        error.vector = faultVector;
       throw error;
     }
     const access = raw.bytes[5];
     const type = access & 15, expected = returning ? 11 : 9;
     if ((access & 0x10) || type !== expected)
-      throw new I80386Fault(returning ? 10 : 13, code,
+      throw new I80386Fault(faultVector, code,
         returning ? "task return requires busy 386 TSS" : "task switch requires available 386 TSS");
     if (checkPrivilege && Math.max(this.currentPrivilegeLevel, selector & 3) > ((access >>> 5) & 3))
       throw new I80386Fault(13, code, "TSS privilege");
@@ -1176,9 +1180,15 @@ export class ExperimentalI80386 {
     external = false,
     saveEip = this.eip,
     saveFlags = this.eflags,
+    descriptorFaultVector = null,
   } = {}) {
     const returning = kind === "iret";
-    const incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
+    const taskFaultVector = descriptorFaultVector ?? (returning ? 10 : 13);
+    const incoming = this._taskDescriptor(selector, {
+      returning,
+      checkPrivilege,
+      faultVector: taskFaultVector,
+    });
     if (incoming.limit < 0x67)
       throw new I80386Fault(10, incoming.selector & 0xfffc, "incoming 386 TSS limit");
     if ((this.cr0 & 0x80000000) && (incoming.base & 0xfff) + 0x67 >= 0x1000)
@@ -1196,6 +1206,11 @@ export class ExperimentalI80386 {
           address: (this.gdtr.base + (this.tr.selector & 0xfff8)) >>> 0,
         }
       : null;
+    if ((kind === "jmp" || returning) && outgoing)
+      this._translate((outgoing.address + 5) >>> 0, {
+        write: true,
+        supervisor: true,
+      });
     this._saveCurrentTask(returning ? saveFlags & ~NT : saveFlags, selector, saveEip);
     if (!returning) this._setTaskBusy(incoming, true);
     if (kind === "call") this._taskWrite(incoming.base, 0, 2, this.tr.selector);
@@ -2006,6 +2021,7 @@ export class ExperimentalI80386 {
         external,
         saveEip: returnEip,
         saveFlags: fault ? this.eflags | RF : this.eflags,
+        descriptorFaultVector: 10,
       });
       return;
     }
