@@ -28,6 +28,15 @@ These are bounded experimental milestones. Windows enhanced mode, Doom
 save/load/sound/all levels and complete physical 386 equivalence remain
 separate targets; the current Windows input has no WIN386.EXE.
 
+The experimental application path is presently CLI-driven. Windows and Doom
+frames can be rendered to PPM/PNG from their JSON reports, but the browser
+application has not yet been wired to instantiate this 386 AT profile or draw
+its VGA surface interactively. The next sensible GUI increment is a thin
+browser adapter that accepts externally supplied ROM/media bytes, exposes an
+explicit experimental-profile switch, and reuses the strict frame decoder;
+it must remain separate from the production machine defaults and from hosted
+application acceptance.
+
 The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
 DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
 fresh boot. Unchanged official FreeDOS 1.4 also completes guest write and
