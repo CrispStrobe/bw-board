@@ -82,7 +82,9 @@ const controllerPorts=[];
 const controllerWrites=[];
 const diskPorts=[];
 const ataTrace=[];
+const ataCommands=[];
 const ataCounts={commands:0,nativeDataReads:0,nativeDataWrites:0,overflow:false};
+let ataAtCommandQueue=null;
 const rtcPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
 const injectedKeys=[];
@@ -125,7 +127,13 @@ machine=new ExperimentalI80386ATMachine(machineProfile,{ataImage:hddImage,ataGeo
         if(diskPorts.length>4096)diskPorts.shift();
     }
     if((event.port>=0x1f0&&event.port<=0x1f7)||event.port===0x3f6) {
-        if(event.port===0x1f7&&event.dir==='out')ataCounts.commands++;
+        if(event.port===0x1f7&&event.dir==='out') {
+            ataCounts.commands++;
+            ataCommands.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,command:event.value,
+                sectorCount:machine.ata.sectorCount,sectorNumber:machine.ata.sectorNumber,
+                cylinder:machine.ata.cylinderLow|machine.ata.cylinderHigh<<8,
+                driveHead:machine.ata.driveHead});
+        }
         if(event.port===0x1f0&&event.width===16)
             ataCounts[event.dir==='in'?'nativeDataReads':'nativeDataWrites']++;
         if(ataTrace.length<4096)ataTrace.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -188,6 +196,7 @@ for(;steps<stepLimit;steps++) {
                 keyScript.push(...encodeKeys(commandKeys));
                 requestedKeys.push(...commandKeys);
                 commandQueued=true;
+                ataAtCommandQueue=structuredClone(ataCounts);
             }
         }
     }
@@ -224,7 +233,7 @@ for(;steps<stepLimit;steps++) {
         const loaded=machine.mem.slice(0x7c00,0x7e00);
         executionBoundaries.bootSector={step:steps,before,after,physical:0x7c00,
             firstBytes:Array.from(loaded.slice(0,16)),sha256:sha(loaded),
-            disketteBda490:disketteBda(),devices:deviceSnapshot()};
+            disketteBda490:disketteBda(),ataCounts:structuredClone(ataCounts),devices:deviceSnapshot()};
     }
     if(!executionBoundaries.unexpectedInterrupt&&after.cs===0xf000&&after.ip===0x1805)
         executionBoundaries.unexpectedInterrupt={step:steps,before,after,devices:deviceSnapshot()};
@@ -320,7 +329,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
             cylinder:machine.ata.cylinderLow|machine.ata.cylinderHigh<<8,
             driveHead:machine.ata.driveHead,direction:machine.ata.direction,
             irqPending:machine.ata._irqPending,irqOutput:machine.ata._irqOutput},
-        trace:ataTrace,counts:ataCounts},
+        trace:ataTrace,commands:ataCommands,counts:ataCounts,atCommandQueue:ataAtCommandQueue},
     executionRevision,sourceSha256};
 for(const [file,before] of Object.entries(sourceSha256)) {
     const after=sourceHash(file);
