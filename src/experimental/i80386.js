@@ -2994,6 +2994,34 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if ([0xa3, 0xab, 0xb3, 0xbb, 0xba].includes(op)) {
+      const ea = this._decodeEA(address32, override);
+      if (op === 0xba && ea.reg < 4)
+        throw new I80386Fault(6, null, "invalid bit-test immediate extension");
+      const modifying = op !== 0xa3 && !(op === 0xba && ea.reg === 4);
+      const rawIndex = op === 0xba ? this._fetch8() : this._reg(ea.reg, width);
+      let operand = ea;
+      let bit = rawIndex & (width - 1);
+      if (!ea.isReg) {
+        const signedIndex = op === 0xba
+          ? rawIndex
+          : width === 32 ? rawIndex | 0 : (rawIndex << 16) >> 16;
+        const byteOffset = Math.floor(signedIndex / width) * (width >>> 3);
+        operand = { ...ea, off: (ea.off + byteOffset) >>> 0 };
+      }
+      if (modifying) this._operandPreflightWrite(operand, width);
+      const value = this._operandRead(operand, width);
+      const mask = 2 ** bit;
+      this.eflags = value & mask ? this.eflags | CF : this.eflags & ~CF;
+      if (modifying) {
+        const extension = op === 0xba ? ea.reg : op === 0xab ? 5 : op === 0xb3 ? 6 : 7;
+        const result = extension === 5
+          ? value | mask
+          : extension === 6 ? value & ~mask : value ^ mask;
+        this._operandWrite(operand, width, result);
+      }
+      return;
+    }
     if (op === 0x02 || op === 0x03) {
       if (!this.protectedMode || this.virtual8086)
         throw new I80386Fault(6, null, "LAR/LSL are undefined outside protected mode");
