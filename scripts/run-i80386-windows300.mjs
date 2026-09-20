@@ -73,6 +73,7 @@ const interrupts = [];
 const interruptCounts = {};
 const ataCommands = [];
 const samples = [];
+const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
 let machine;
@@ -111,6 +112,15 @@ const renderText = () => {
     .join('').replace(/\s+$/, ''));
 };
 for (; steps < stepLimit; steps++) {
+  if (postContinue.enabled && postContinue.injected === null && machine.cpu.cs === 0xf000 &&
+      machine.cpu.eip >= 0x2fdd && machine.cpu.eip <= 0x300d) {
+    const stack = Array.from({length: 16}, (_, index) =>
+      machine._read(((machine.cpu.ss << 4) + machine.cpu.sp + index) & 0xfffff));
+    if (machine.keyIn(0x3b))
+      postContinue.injected = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
+        ss: machine.cpu.ss, sp: machine.cpu.sp, stack,
+        bda: Array.from({length: 0x90}, (_, index) => machine._read(0x400 + index))};
+  }
   try {
     machine.step();
   } catch (error) {
@@ -150,7 +160,7 @@ const report = {
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256, geometry: HDD_GEOMETRY},
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
-  reset, postEvents, ataCommands, interrupts, interruptCounts,
+  reset, postEvents, postContinue, ataCommands, interrupts, interruptCounts,
   final: {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
     cr0: machine.cpu.cr0 >>> 0, cr2: machine.cpu.cr2 >>> 0, cr3: machine.cpu.cr3 >>> 0,
     eflags: machine.cpu.eflags >>> 0, halted: machine.cpu.halted, shutdown: machine.cpu.shutdown},
