@@ -9,6 +9,20 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-20 CLAIM — `/root` (Codex): explicit Shockley-NPN forward high-current
+beta rolloff, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,
+branch `lane/npn-forward-rolloff`, exact base
+`80ae84904de98c8140086e5adbf2295fef40550f`. Owns only the strict NPN
+operating-point parameter boundary/metadata in `src/board.js`, the shared
+Ebers-Moll current/Jacobian in `src/mna.js`, focused additions to
+`test/npn-operating-point.test.mjs` and `test/bjt-early-effect.test.mjs`, and
+this row. Add optional finite `ikf > 0` using ngspice's forward base-charge
+rolloff, prove the high-current DC solution and signed currents against a
+self-authored ngspice 42 witness, prove the analytical Jacobian against finite
+differences, and keep absent IKF byte-for-behaviour unchanged. Excludes IKR,
+VAR, CJE/CJC/TF and every other charge/transit term, topology, PNP/generic BJT,
+solver/tolerances, CUI/corpus/package pins, x86, and unrelated models/paths.
+
 2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN collector series
 resistance, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,
 branch `lane/npn-collector-resistance`, exact base
