@@ -727,6 +727,37 @@ export class ExperimentalI80386 {
     if (parity8(r)) this.eflags |= PF;
     return width === 32 ? r >>> 0 : r;
   }
+  _decimalAdjust(subtract) {
+    const old = this.al;
+    const oldCarry = !!(this.eflags & CF);
+    const oldAuxiliary = !!(this.eflags & AF);
+    let value = old;
+    let carry = oldCarry;
+    let auxiliary = false;
+    if ((old & 15) > 9 || oldAuxiliary) {
+      value = (value + (subtract ? -6 : 6)) & 0xff;
+      auxiliary = true;
+      carry ||= subtract ? old < 6 : old > 0xf9;
+    }
+    if (old > 0x99 || oldCarry) {
+      value = (value + (subtract ? -0x60 : 0x60)) & 0xff;
+      carry = true;
+    }
+    this.al = value;
+    this.eflags &= ~(CF | AF | PF | ZF | SF);
+    if (carry) this.eflags |= CF;
+    if (auxiliary) this.eflags |= AF;
+    if (!value) this.eflags |= ZF;
+    if (value & 0x80) this.eflags |= SF;
+    if (parity8(value)) this.eflags |= PF;
+  }
+  _asciiAdjust(subtract) {
+    const adjust = (this.al & 15) > 9 || !!(this.eflags & AF);
+    if (adjust)
+      this.ax = (this.ax + (subtract ? -0x106 : 0x106)) & 0xffff;
+    this.al &= 15;
+    this.eflags = (this.eflags & ~(CF | AF)) | (adjust ? CF | AF : 0);
+  }
   _add(a, b, width, subtract = false, carry = 0) {
     const mask = maskFor(width),
       sign = width === 32 ? 0x80000000 : width === 16 ? 0x8000 : 0x80;
@@ -2908,6 +2939,10 @@ export class ExperimentalI80386 {
       if (stack32) this.esp = (this.esp + adjustment) >>> 0;
       else this.sp = (this.sp + adjustment) & 0xffff;
       this.eip = target;
+    } else if (op === 0x27 || op === 0x2f) {
+      this._decimalAdjust(op === 0x2f);
+    } else if (op === 0x37 || op === 0x3f) {
+      this._asciiAdjust(op === 0x3f);
     } else if (op === 0xd4 || op === 0xd5) {
       const base = this._fetch8();
       if (op === 0xd4) {

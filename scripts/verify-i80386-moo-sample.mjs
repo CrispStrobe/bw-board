@@ -107,6 +107,10 @@ const PROFILES={
     excludedPrefixes:[0xf0],
     scope:'24 fixed deterministic BT/BTS/BTR/BTC register and immediate samples spanning read-only and modifying forms',
   },
+  'bcd-adjust':{
+    files:['27','2F','37','3F'],
+    scope:'12 fixed deterministic DAA/DAS/AAA/AAS samples grading published defined flags and adjusted accumulator state',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
