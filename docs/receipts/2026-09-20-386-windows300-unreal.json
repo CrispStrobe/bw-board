@@ -102,5 +102,14 @@
       "executionRevision": "323b8b252e9fde41c94e81523cc8127f7875174c",
       "status": "Slow per-instruction byte trace run deliberately terminated before completion; replaced by boundary-sampled run"
     }
-  ]
+  ],
+  "graphicsProgress": {
+    "executionRevision": "80b39374002632ef225df81ee0cc77c5fd498008",
+    "step": 93000000,
+    "rawProgressSha256": "7bfb19897b25989454312fea0a02748f53f9e17d8926f2525d59bb1b28296a13",
+    "pngSha256": "7ba6f03aaa687b6d631edc05e6ee1f491a9062d5c652165623dd8068af7a2a22",
+    "visuallyInspected": "Windows System Error dialog: Cannot read from drive C:, with Cancel and Retry buttons.",
+    "renderMethod": "640x350 four bitplanes, 80bytes/scanline, MSB-first pixels; attribute palette and color-select bits select six-bit DAC entries.",
+    "scope": "Atomic progress snapshot only; full run report pending. GUI error dialog is not desktop acceptance."
+  }
 }

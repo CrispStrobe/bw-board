@@ -16,8 +16,10 @@ longer gameplay still require acceptance.
 
 The Windows 3.0 / PC DOS 3.2 disk boots through HIMEM and SMARTDrive after the
 [opcode82 and ATA-reset fixes](receipts/2026-09-20-386-dos-loader-reset.json).
-Repeated HIMEM mode switches exposed a real-mode segment-limit retention bug;
-a Windows desktop has not yet been demonstrated by this executor. The same
+After correcting HIMEM segment-limit retention and keyboard F3 acknowledgements,
+the original disk reaches a rendered Windows System Error dialog reporting
+“Cannot read from drive C:”. The disk failure remains under investigation; a
+Windows desktop has not yet been demonstrated by this executor. The same
 external disk reaches Program Manager under the independent QEMU baseline,
 which establishes input viability only. Full graphics compatibility and
 complete 386 protection/debug behavior remain unaccepted. See also the
