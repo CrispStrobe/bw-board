@@ -10,7 +10,9 @@ step run completed without a CPU/device refusal; the captured unchained VGA
 planes decode to 320 by 200 pixels with 240 distinct colors. The
 [source-bound graphics receipt](receipts/2026-09-20-386-doom-graphics.json)
 records the image hashes and the historical snapshot's missing DAC-mask field.
-Keyboard-driven menus and gameplay still require acceptance.
+A separate controlled run injects Esc and three Enter keys through the 8042,
+then reaches a rendered E1M1 level with pistol and HUD. Movement, firing, and
+longer gameplay still require acceptance.
 
 The Windows 3.0 / PC DOS 3.2 disk boots through HIMEM and SMARTDrive after the
 [opcode82 and ATA-reset fixes](receipts/2026-09-20-386-dos-loader-reset.json).
