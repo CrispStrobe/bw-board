@@ -257,9 +257,12 @@ for(;steps<stepLimit;steps++) {
             (loadSegment<<4)+expectedDoomLoadImage.length);
         const loadDifferences=[];
         let loadDifferenceCount=0;
+        let firstLoadDifference=null,lastLoadDifference=null;
         for(let index=0;index<expectedDoomLoadImage.length;index++) {
             if(actualLoadImage[index]===expectedDoomLoadImage[index])continue;
             loadDifferenceCount++;
+            if(firstLoadDifference===null)firstLoadDifference=index;
+            lastLoadDifference=index;
             if(loadDifferences.length<16)loadDifferences.push({offset:index,
                 expected:expectedDoomLoadImage[index],actual:actualLoadImage[index]});
         }
@@ -269,6 +272,7 @@ for(;steps<stepLimit;steps++) {
             writes:[...doomEntryWrites],loadImage:{bytes:expectedDoomLoadImage.length,
                 relocationCount:doomMz.relocationCount,expectedSha256:sha(expectedDoomLoadImage),
                 actualSha256:sha(actualLoadImage),differenceCount:loadDifferenceCount,
+                firstDifferenceOffset:firstLoadDifference,lastDifferenceOffset:lastLoadDifference,
                 firstDifferences:loadDifferences}};
     }
     if(doomEntry) {
