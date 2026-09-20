@@ -11,7 +11,7 @@ usable and publish its exact source, input and qualification revisions.
 | --- | --- | --- |
 | Genuine AT reset | 286 reset CS F000, IP FFF0, hidden CS base FF0000; physical reset fetch FFFFF0; ROM far jump removes reset base; RAM-preserving controller reset | Implemented with hidden-cache and same-selector far-reload tests; AT firmware first fetch verified |
 | AT BIOS POST | Unmodified external IBM 5170 ROM executes timer, controller, memory and device checks; no host interception of firmware services | Rev1 completes POST and reaches INT19 without displayed errors; the owned DOS image requires the explicit 640KiB profile for its 9F84h SYSINIT relocation |
-| AT disk boot | Firmware reads actual mounted sectors via emulated controller/DMA and reaches an identifiable DOS shell; command/file round trip persists across reboot | Source-bound DOS2.00/Command2.02 ECHO/TYPE and fresh-boot TYPE pass, with exact file bytes, final prompts and linked image hashes; named functional AT profile only |
+| AT disk boot | Firmware reads actual mounted sectors via emulated controller/DMA and reaches an identifiable DOS shell; command/file round trip persists across reboot | Source-bound DOS2.00/Command2.02 ECHO/TYPE and fresh-boot TYPE pass on functional286 and experimental386 AT profiles, with exact file bytes, final prompts and linked image hashes; FreeDOS persistence is accepted on functional286 only |
 | 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Landed at `3cd5927`; all three hosted qualification workflows green |
 | 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; original386 4KiB paging, reset, scalar I/O, privilege transitions and VM86 have bounded tests; complete ISA, tasking and full OS acceptance remain |
 | Windows | First Windows 3.0 standard mode on 286; then a separately identified 386 enhanced-mode configuration, desktop plus keyboard-driven application open/edit/save/reopen | Not demonstrated; exact external media must be identified |
@@ -103,16 +103,19 @@ fault-delivery checks. This resolves the observed IBM timer and RTC UIP polling 
 makes no measured instruction or bus timing claim. The separate 4MiB installed
 memory profile has corresponding CMOS sizes and checksum.
 
-The current 386 BIOS continuation has passed memory scanning and BOUND, then
-reached its VERR/VERW and ARPL processor self-tests. Each missing instruction
-is implemented and checked before a fresh source-bound firmware run. This is
-not yet full 386 POST or DOS acceptance. Snapshot copying is now optimized;
+The 386 BIOS continuation now passes POST, genuine INT19, DOS shell write
+and fresh-machine TYPE persistence at combined execution source `72f56ab`.
+The [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json) keeps source and
+input hashes, exact file bytes and separate BIOS-sector evidence. The first
+unchanged FreeDOS-on-386 attempt reaches its boot loader and fails before
+shell startup; it is diagnostic-only. Snapshot copying is now optimized;
 the isolated million-step BIOS benchmark and its limits are recorded in the
 [snapshot receipt](receipts/2026-09-19-386-snapshot-performance.json).
 
 An experimental ATA16 controller now supplies native word PIO and persistent
 media bytes. IBM fixed-disk setup and an owned BIOS INT13 sector round trip
-are the next disk acceptance boundary. The pinned Doom EXE/WAD needs that
+now pass. The next boundary is guest DOS access to exact EXE/WAD bytes on a
+partitioned FAT16 disk, followed by real extender startup. The pinned Doom EXE/WAD needs that
 storage and a VGA implementation matched to actual guest accesses. Existing
 `vga-card.js` handles registers and a linear mode-13h framebuffer but does not
 interpret planar VRAM. A VGA option ROM or another explicitly identified
