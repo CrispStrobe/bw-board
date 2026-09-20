@@ -5,8 +5,17 @@
   "fullBootAccepted": false,
   "scope": "Source-bound IBM 5170 Rev1 BIOS progression through successive experimental 386 ISA blockers; no INT 19 or boot-sector handoff was observed in these runs.",
   "inputs": {
-    "bios": {"name": "IBM 5170 Rev1 BIOS 1984-01-10", "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f", "distribution": "external"},
-    "floppy": {"bytes": 368640, "sha256": "5fbbe5e86fb845cff120ae8d17a01904c0db9d0b6103ce382b31130bd3eadd39", "bootSectorSha256": "a6c72572438d003327c04838781f3a1fc79b7fd7a6df605df5118d06f520f2b5", "distribution": "external"}
+    "bios": {
+      "name": "IBM 5170 Rev1 BIOS 1984-01-10",
+      "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+      "distribution": "external"
+    },
+    "floppy": {
+      "bytes": 368640,
+      "sha256": "5fbbe5e86fb845cff120ae8d17a01904c0db9d0b6103ce382b31130bd3eadd39",
+      "bootSectorSha256": "a6c72572438d003327c04838781f3a1fc79b7fd7a6df605df5118d06f520f2b5",
+      "distribution": "external"
+    }
   },
   "sourceManifestDigestMethod": "SHA-256 of jq -Sc '.sourceSha256' over the raw report, including its trailing newline",
   "milestones": [
@@ -14,16 +23,27 @@
       "instruction": "BOUND",
       "executionRevision": "bd7ab20ef39cb2d0d6094bfcc9f3eceffe0c3e61",
       "steps": 17591610,
-      "address": {"cs": 64, "ip": 7457, "physical": 990497, "hex": "0040:1D21 / F1D21"},
+      "address": {
+        "cs": 64,
+        "ip": 7457,
+        "physical": 990497,
+        "hex": "0040:1D21 / F1D21"
+      },
       "bytes": "26 62 05",
       "rawReportSha256": "fcaf314286ea46a682b0515c09e74b869ad8a9e3b407d1c93a9f010365d653e9",
-      "sourceManifestSha256": "e02532139a36a80f4790966e0f0f4773a09a9a4701fd51703517f2e47f03da5b"
+      "sourceManifestSha256": "e02532139a36a80f4790966e0f0f4773a09a9a4701fd51703517f2e47f03da5b",
+      "sourceBinding": "Historical diagnostic location only: runner omitted imported src/experimental/ata16.js from its manual dependency manifest."
     },
     {
       "instruction": "VERW",
       "executionRevision": "0ee14334984e06a8d6c27ebaeb69fdc6a1a0a14c",
       "steps": 17657294,
-      "address": {"cs": 64, "ip": 7645, "physical": 990685, "hex": "0040:1DDD / F1DDD"},
+      "address": {
+        "cs": 64,
+        "ip": 7645,
+        "physical": 990685,
+        "hex": "0040:1DDD / F1DDD"
+      },
       "bytes": "3E 0F 00 E8",
       "rawReportSha256": "af3298105b3605e2f22fd9e94d13c41719cd41630d3b629b3d0ba816677fc567",
       "sourceManifestSha256": "9e7efc1d20038cbf9663d5da4b3e79a223bacfbbfebb779ed55887a396c5675b"
@@ -32,7 +52,12 @@
       "instruction": "ARPL",
       "executionRevision": "bb9f27de8a12a82e6950c69cf9cf0ff8f647c75d",
       "steps": 17657348,
-      "address": {"cs": 64, "ip": 7714, "physical": 990754, "hex": "0040:1E22 / F1E22"},
+      "address": {
+        "cs": 64,
+        "ip": 7714,
+        "physical": 990754,
+        "hex": "0040:1E22 / F1E22"
+      },
       "bytes": "63 C3",
       "rawReportSha256": "a16a555d185e8f40b8f2392dbabfb8dfd26a39d0e353c51d53ba1f18525dafbb",
       "sourceManifestSha256": "dc3d39672607745dd1a2a482b2a76fea67b4aa38c331995327af54723f265ea4"
@@ -41,7 +66,12 @@
       "instruction": "LAR",
       "executionRevision": "8246b42ceb8d0714dfdb4f22739b9b4d19d05ee8",
       "steps": 17657366,
-      "address": {"cs": 64, "ip": 7761, "physical": 990801, "hex": "0040:1E51 / F1E51"},
+      "address": {
+        "cs": 64,
+        "ip": 7761,
+        "physical": 990801,
+        "hex": "0040:1E51 / F1E51"
+      },
       "bytes": "0F 02 C3",
       "rawReportSha256": "c9feace73f843b303450cb47849de33eb6bc3110ea0cfde5178bbf40faf2f3a5",
       "sourceManifestSha256": "e434eefa0632002c8dbc6081f90df21e8be1c72d9446b83738eb6e2891a2f233"
@@ -50,11 +80,21 @@
       "instruction": "TEST r/m8,r8",
       "executionRevision": "a34877de072b770da8caa2560420bcb55ec4c138",
       "steps": 19575320,
-      "address": {"cs": 61440, "ip": 9417, "physical": 992457, "hex": "F000:24C9 / F24C9"},
+      "address": {
+        "cs": 61440,
+        "ip": 9417,
+        "physical": 992457,
+        "hex": "F000:24C9 / F24C9"
+      },
       "bytes": "84 06 3E 00",
       "rawReportSha256": "eda7de0930a171214664fd1024e15e013d730e37e7a7bee6edd27c226df83ae6",
       "sourceManifestSha256": "ae3cc9a49b5ce0d649ba63e2b8f6c27bb8e47e63abef4c0e7b1240742e974b60"
     }
   ],
-  "result": {"allRunsSourceBound": true, "allRunsStoppedBeforeInt19": true, "allRunsStoppedBeforeBootSector": true}
+  "result": {
+    "allRunsSourceBound": false,
+    "allRunsStoppedBeforeInt19": true,
+    "allRunsStoppedBeforeBootSector": true,
+    "laterFourRunsSourceBound": true
+  }
 }
