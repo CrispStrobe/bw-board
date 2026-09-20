@@ -80,7 +80,7 @@ function runPCjs() {
   const cpu=new CPU({id:'taskvm.cpu',model:80386}),bus=new QuietBus({id:'taskvm.bus',busWidth:32},cpu);
   if(!bus.addMemory(0,0x2000,Memory.TYPE.RAM))throw new Error('PCjs memory allocation failed');cpu.bus=bus;install((a,v)=>bus.setByteDirect(a,v));
   cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0x800);cpu.setPS(2);const visited={handler:false,returned:false},trail=[];
-  for(let step=0;step<budget;step++){const cs=cpu.getCS(),ip=cpu.getIP();trail.push(`${cs.toString(16)}:${ip.toString(16)}`);if(cs===8&&ip===0x180)visited.handler=true;if(visited.handler&&(cpu.getPS()&0x20000))visited.returned=true;if(visited.returned&&ip===5)break;try{cpu.stepCPU(0);}catch(error){throw new Error(`PCjs abort ${String(error)} trail=${trail.join(',')}`);}}
+  for(let step=0;step<budget;step++){const cs=cpu.getCS(),ip=cpu.getIP();trail.push(`${cs.toString(16)}:${ip.toString(16)}`);if(cs===8&&ip===0x180)visited.handler=true;if(visited.handler&&(cpu.getPS()&0x20000))visited.returned=true;if(visited.returned&&ip===5)break;try{cpu.stepCPU(0);}catch(error){const entered=error===-1&&(cpu.getPS()&0x20000)&&cpu.getCS()===0x100&&cpu.getIP()===0&&cpu.segTSS.sel===0x20;if(!entered)throw new Error(`PCjs abort ${String(error)} trail=${trail.join(',')}`);}}
   return summarize(cpu,a=>bus.getByteDirect(a),false,visited);
 }
 const reference=runPCjs(),actual=runLocal();if(mutation==='result')actual.ax^=1;
