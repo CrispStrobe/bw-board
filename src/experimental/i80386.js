@@ -3118,8 +3118,8 @@ export class ExperimentalI80386 {
         if (off > 0xffff)
           throw new UnsupportedI80386("real-mode far target exceeds CS limit");
         this._loadSeg(SEG_CS, sel);
+        this.eip = off;
       }
-      if (!this.protectedMode || this.virtual8086) this.eip = off;
     } else if (op === 0x0f) this._step0f(address32, override, width);
     else
       throw new UnsupportedI80386(`opcode ${op.toString(16).padStart(2, "0")}`);

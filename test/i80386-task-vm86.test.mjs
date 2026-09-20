@@ -76,6 +76,15 @@ test('32-bit TSS CALL enters VM86 with user paging and all six real caches', () 
     'VM fetch used the incoming user page mapping');
 });
 
+test('far JMP into a VM86 task retains the EIP loaded from its TSS', () => {
+  const { cpu, memory } = fixture();
+  memory.set(0, 0xea);
+  dword(memory, 0x500 + 0x20, 0x123);
+  cpu.step();
+  assert.deepEqual([cpu.tr.selector, cpu.virtual8086, cpu.cs, cpu.eip],
+    [0x20, true, 0x100, 0x123]);
+});
+
 test('VM86 task EIP overflow faults after the task and real caches commit', () => {
   const { cpu, memory } = fixture();
   dword(memory, 0x500 + 0x20, 0x10000);
