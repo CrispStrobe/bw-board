@@ -2900,7 +2900,8 @@ export class ExperimentalI80386 {
     } else if (op === 0xf6 || op === 0xf7) {
       this._group3(op, width, address32, override);
     } else if (op === 0x80 || op === 0x81 || op === 0x82 || op === 0x83) {
-      // Original 80386 retains 82h as the byte-immediate Group 1 alias.
+      // Compatibility alias observed in the pinned PC DOS boot code and the
+      // pinned PCjs reference; Intel's original opcode table reserves 82h.
       const groupWidth = op === 0x80 || op === 0x82 ? 8 : width;
       const ea = this._decodeEA(address32, override),
         imm =

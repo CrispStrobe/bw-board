@@ -49,23 +49,22 @@ const stepLimit = process.env.AT_POST_STEPS === undefined ? DEFAULT_STEPS : Numb
 if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 500_000_000)
   throw new Error('AT_POST_STEPS must be an integer from 1 through 500000000');
 
-// Clone the VGA board profile with an HDD-only AT type-2 CMOS declaration.
-// Register 10h says no floppy drives, 12h selects type 2 for drive C, and
-// equipment byte 14h clears the diskette-present bit. Video is initialized by
-// the external VGA option ROM rather than encoded as an IBM fixed-display type.
+// Clone the VGA board profile with an AT type-2 HDD and a configured but empty
+// 1.2MB drive A. The IBM Rev1 POST minimum-configuration test requires at
+// least one diskette drive in CMOS even when the machine boots from drive C.
 const windowsProfile = structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
 const rtc = windowsProfile.chips.find(chip => chip.kind === 'rtc');
 const cmos = new Uint8Array(0x40);
 for (const [index, value] of rtc.initialCmos) cmos[index] = value;
-cmos[0x10] = 0x00;
+cmos[0x10] = 0x20;
 cmos[0x12] = 0x20;
-cmos[0x14] = 0x00;
+cmos[0x14] = 0x01;
 let checksum = 0;
 for (let index = 0x10; index <= 0x2d; index++) checksum = (checksum + cmos[index]) & 0xffff;
 cmos[0x2e] = checksum >>> 8;
 cmos[0x2f] = checksum & 0xff;
 rtc.initialCmos = [...cmos.entries()].filter(([index, value]) =>
-  value !== 0 || index === 0x10 || index === 0x14);
+  value !== 0);
 
 let steps = 0;
 const postEvents = [];
@@ -73,6 +72,9 @@ const interrupts = [];
 const interruptCounts = {};
 const ataCommands = [];
 const samples = [];
+const instructionTrail = [];
+const bootEntries = [];
+let vgaOptionEntry = null;
 const postContinue = {enabled: process.env.AT_POST_CONTINUE_F1 === '1', injected: null};
 let refusal = null;
 let stopReason = 'budget';
@@ -112,6 +114,17 @@ const renderText = () => {
     .join('').replace(/\s+$/, ''));
 };
 for (; steps < stepLimit; steps++) {
+  const before = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
+    ss: machine.cpu.ss, esp: machine.cpu.esp, cr0: machine.cpu.cr0 >>> 0};
+  instructionTrail.push(before);
+  if (instructionTrail.length > 256) instructionTrail.shift();
+  if (vgaOptionEntry === null && machine.cpu.cs === 0xc000 && machine.cpu.eip === 3)
+    vgaOptionEntry = {...before};
+  if ((machine.cpu.cs === 0 && machine.cpu.eip === 0x7c00) ||
+      (machine.cpu.cs === 0x07c0 && machine.cpu.eip === 0)) {
+    bootEntries.push({...before, bytes: Array.from(machine.mem.slice(0x7c00, 0x7e00)),
+      sha256: sha(machine.mem.slice(0x7c00, 0x7e00))});
+  }
   if (postContinue.enabled && postContinue.injected === null && machine.cpu.cs === 0xf000 &&
       machine.cpu.eip >= 0x2fdd && machine.cpu.eip <= 0x300d) {
     const stack = Array.from({length: 16}, (_, index) =>
@@ -161,6 +174,7 @@ const report = {
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
   reset, postEvents, postContinue, ataCommands, interrupts, interruptCounts,
+  vgaOptionEntry, bootEntries, instructionTrail,
   final: {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
     cr0: machine.cpu.cr0 >>> 0, cr2: machine.cpu.cr2 >>> 0, cr3: machine.cpu.cr3 >>> 0,
     eflags: machine.cpu.eflags >>> 0, halted: machine.cpu.halted, shutdown: machine.cpu.shutdown},
