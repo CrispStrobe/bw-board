@@ -417,6 +417,14 @@ const keyboardScript={requested:requestedKeys.join(''),installerDeclined,command
     injected:injectedKeys,remaining:keyScript};
 const final={cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
     shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]};
+const vgaDiagnostics=vgaRom===null?null:{
+    state:machine.chips.vga1.getVideoState(),
+    nonzeroByPlane:machine.vgaMemory.planes.map(plane=>plane.reduce((count,value)=>count+(value!==0),0)),
+    literalText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
+        String.fromCharCode(machine.vgaMemory.planes[0][(row*80+column)*2]||0x20)).join('').replace(/\s+$/,'')),
+    compactText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
+        String.fromCharCode(machine.vgaMemory.planes[0][row*80+column]||0x20)).join('').replace(/\s+$/,'')),
+};
 const gradingEvidence=structuredClone({passed,executionBoundaries,keyboardScript,guestFile,final,screenText});
 if(mutation==='guest-file'&&gradingEvidence.guestFile)gradingEvidence.guestFile.text+='!';
 if(mutation==='boot-sector'&&gradingEvidence.executionBoundaries.bootSector)
@@ -447,7 +455,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     doomInstructionTrace:orderedDoomInstructionTrace(),diskPorts,rtcPorts,keyboardScript,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
-    guestFile,final,finalCpu:cpuSnapshot(),
+    guestFile,final,finalCpu:cpuSnapshot(),vgaDiagnostics,
     screenText,uiSamples,
     devices:deviceSnapshot(),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
