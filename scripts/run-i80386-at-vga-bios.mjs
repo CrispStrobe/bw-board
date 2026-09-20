@@ -46,7 +46,8 @@ const machine = new ExperimentalI80386ATMachine(
   {onPortAccess(event) {
     if (event.port >= 0x3c0 && event.port <= 0x3df && vgaPorts.length < 4096)
       vgaPorts.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, ...event});
-    if (event.dir === 'out' && event.port === 0x80 && (event.value === 0xa5 || event.value === 0xee))
+    if (guestStarted && event.dir === 'out' && event.port === 0x80 &&
+        (event.value === 0xa5 || event.value === 0xee))
       guestMarker = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value};
   }},
 );
