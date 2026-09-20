@@ -10,8 +10,10 @@ const fixture=()=>{
     0x12:0x5d,0x13:40,0x14:0x0f,0x17:0xe3});
   const attr=Array(0x20).fill(0);for(let i=0;i<16;i++)attr[i]=i;
   attr[0x10]=1;attr[0x12]=0x0f;
+  const seq=Array(8).fill(0);Object.assign(seq,{0:3,1:1,2:0x0f,4:6});
+  const gc=Array(16).fill(0);gc[6]=5;
   return {planeBase64:planes.map(value=>value.toString('base64')),registers:{misc:0xa3,
-    seq:[3,1,0x0f,0,6],gc:[0,0,0,0,0,0,5],crtc,attr,dac,dacMask:0xff}};
+    seq,gc,crtc,attr,dac,dacMask:0xff}};
 };
 
 test('renders the exact observed Windows 640x350 four-plane state',()=>{
@@ -23,13 +25,19 @@ test('renders the exact observed Windows 640x350 four-plane state',()=>{
 
 test('rejects omitted display controls, non-six-bit DAC, and unrelated layouts',()=>{
   const noStart=fixture();delete noStart.registers.crtc[0x0c];
-  assert.throws(()=>renderObservedWindowsEga(noStart),/explicit CRTC start/);
+  assert.throws(()=>renderObservedWindowsEga(noStart),/complete byte-valued/);
+  const noGc5=fixture();delete noGc5.registers.gc[5];
+  assert.throws(()=>renderObservedWindowsEga(noGc5),/complete byte-valued/);
+  const noPalette=fixture();delete noPalette.registers.attr[0];
+  assert.throws(()=>renderObservedWindowsEga(noPalette),/complete byte-valued/);
   const panned=fixture();panned.registers.crtc[8]=1;
   assert.throws(()=>renderObservedWindowsEga(panned),/outside the observed/);
   const mask=fixture();delete mask.registers.dacMask;
   assert.throws(()=>renderObservedWindowsEga(mask),/invalid DAC mask/);
-  const dac=fixture();dac.registers.dac[0]=64;
-  assert.throws(()=>renderObservedWindowsEga(dac),/six-bit DAC/);
+  for(const value of [64,257,-255]) {
+    const dac=fixture();dac.registers.dac[0]=value;
+    assert.throws(()=>renderObservedWindowsEga(dac),/six-bit DAC/);
+  }
   const stride=fixture();stride.registers.crtc[0x13]=80;
   assert.throws(()=>renderObservedWindowsEga(stride),/outside the observed/);
 });

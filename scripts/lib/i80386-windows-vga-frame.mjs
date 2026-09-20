@@ -2,23 +2,25 @@ import {createHash} from 'node:crypto';
 
 const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sixToEight=value=>(value<<2)|(value>>>4);
+const validBytes=(values,length,max=0xff)=>Array.isArray(values)&&values.length===length&&
+  Array.from({length},(_,index)=>values[index]).every(value=>Number.isInteger(value)&&value>=0&&value<=max);
 
 /** Render only the exact 640x350x16 EGA-compatible VGA state observed in Windows 3.0. */
 export function renderObservedWindowsEga(snapshot) {
   const r=snapshot?.registers;
-  if(!r||r.misc!==0xa3||r.seq?.[0]!==3||r.seq?.[1]!==1||r.seq?.[2]!==0x0f||r.seq?.[4]!==6||
+  if(!r||!Number.isInteger(r.misc)||r.misc<0||r.misc>0xff||
+      !validBytes(r.seq,8)||!validBytes(r.gc,16)||!validBytes(r.crtc,32)||
+      !validBytes(r.attr,32)||!validBytes(r.dac,768,63))
+    throw new Error('snapshot must contain complete byte-valued VGA register banks and a six-bit DAC');
+  if(r.misc!==0xa3||r.seq[0]!==3||r.seq[1]!==1||r.seq[2]!==0x0f||r.seq[4]!==6||
       (r.gc?.[5]&0x60)!==0||r.gc?.[6]!==5||r.crtc?.[1]!==79||r.crtc?.[6]!==0xbf||
       r.crtc?.[7]!==0x1f||r.crtc?.[8]!==0||r.crtc?.[9]!==0x40||r.crtc?.[0x12]!==0x5d||
       r.crtc?.[0x13]!==40||r.crtc?.[0x14]!==0x0f||r.crtc?.[0x17]!==0xe3||
       r.attr?.[0x10]!==1||r.attr?.[0x12]!==0x0f||r.attr?.[0x13]!==0||r.attr?.[0x14]!==0)
     throw new Error('snapshot is outside the observed Windows 640x350 planar state');
-  if(!Number.isInteger(r.crtc[0x0c])||!Number.isInteger(r.crtc[0x0d]))
-    throw new Error('snapshot must contain an explicit CRTC start address');
   if(!Number.isInteger(r.dacMask)||r.dacMask<0||r.dacMask>0xff)
     throw new Error('invalid DAC mask');
-  const dac=Uint8Array.from(r.dac??[]);
-  if(dac.length!==768||dac.some(value=>value>63))
-    throw new Error('snapshot must contain 256 six-bit DAC entries');
+  const dac=Uint8Array.from(r.dac);
   const planes=(snapshot.planeBase64??[]).map(value=>Buffer.from(value,'base64'));
   if(planes.length!==4||planes.some(plane=>plane.length!==0x10000))
     throw new Error('snapshot must contain four 64KiB VGA planes');
