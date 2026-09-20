@@ -96,7 +96,7 @@ test("external task selector errors add EXT while page faults retain their bits"
   );
 });
 
-test("incoming one-page TSS faults and bounded task refusals are precommit", () => {
+test("incoming one-page TSS faults and debug-task refusal are precommit", () => {
   const missing = pagingFaultFixture("cs");
   put(missing.memory, 0x220, descriptor(0x5000, 0x67, 0x89, 0));
   dword(missing.memory, 0x3000 + 5 * 4, 0);
@@ -110,16 +110,13 @@ test("incoming one-page TSS faults and bounded task refusals are precommit", () 
   assert.deepEqual([0x420,0x421,0x422,0x423].map(a => missing.memory.get(a) ?? 0),
     [0,0,0,0]);
 
-  for (const kind of ["vm", "debug"]) {
-    const f = pagingFaultFixture("cs");
-    if (kind === "vm") dword(f.memory, 0x500 + 0x24, 0x20002);
-    else word(f.memory, 0x500 + 0x64, 1);
-    assert.throws(() => f.cpu._taskSwitch(0x20, "call"), /outside the bounded task profile/);
-    assert.deepEqual([f.cpu.cr3, f.cpu.tr.selector], [0x1000, 0x18]);
-    assert.equal(f.memory.get(0x225) & 15, 9);
-    assert.deepEqual([0x420,0x421,0x422,0x423].map(a => f.memory.get(a) ?? 0),
-      [0,0,0,0]);
-  }
+  const debug = pagingFaultFixture("cs");
+  word(debug.memory, 0x500 + 0x64, 1);
+  assert.throws(() => debug.cpu._taskSwitch(0x20, "call"), /outside the bounded task profile/);
+  assert.deepEqual([debug.cpu.cr3, debug.cpu.tr.selector], [0x1000, 0x18]);
+  assert.equal(debug.memory.get(0x225) & 15, 9);
+  assert.deepEqual([0x420,0x421,0x422,0x423].map(a => debug.memory.get(a) ?? 0),
+    [0,0,0,0]);
 });
 
 test("286 TSS paging faults distinguish incoming-image and postcommit selector reads", () => {

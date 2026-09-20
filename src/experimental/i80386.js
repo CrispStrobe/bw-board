@@ -1340,8 +1340,6 @@ export class ExperimentalI80386 {
         "page-straddling incoming TSS images are outside the bounded task profile",
       );
     const image = this._taskImage(incoming);
-    if (image.eflags & 0x20000)
-      throw new UnsupportedI80386("VM86 task entry is outside the bounded task profile");
     if (incoming.format === 32 && this._taskRead(incoming.base, 0x64, 2) & 1)
       throw new UnsupportedI80386("TSS debug-trap task entry is outside the bounded task profile");
     const outgoing = this.tr.present
@@ -1388,6 +1386,19 @@ export class ExperimentalI80386 {
           }
           throw error;
         }
+      }
+      if (this.virtual8086) {
+        for (const [id, value] of [
+          [SEG_ES, image.es], [SEG_CS, image.cs], [SEG_SS, image.ss],
+          [SEG_DS, image.ds], [SEG_FS, image.fs], [SEG_GS, image.gs],
+        ]) this._loadSeg(id, value);
+        if (image.eip > 0xffff)
+          throw new I80386Fault(13, 0, "VM86 task EIP outside 16-bit code segment");
+        if (errorCode !== null) this._push(errorCode, 32);
+        this.halted = false;
+        this._interruptShadow = this._nmiShadow = this._debugShadow = 0;
+        this._suppressTrace = true;
+        return;
       }
       let code;
       try {

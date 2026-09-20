@@ -381,6 +381,16 @@ Its result and low-budget controls reject. Upper register halves and FS/GS are
 intentionally excluded from that cross-engine claim because neither exists in
 the 286 TSS image.
 
+A 32-bit incoming TSS may enter VM86 by setting EFLAGS.VM. The task switch
+still validates and loads LDTR after committing TR, busy state, and CR3, then
+forms all six segment caches with `selector << 4`, a 64 KiB limit, and 16-bit
+defaults without descriptor accesses. VM paging uses user permissions. An EIP
+above `0xffff` raises postcommit #GP(0). An IDT task gate can switch from VM86
+to a protected task, whose NT IRET follows the backlink and reconstructs the
+saved VM task and its real-style caches. IRET executed directly by VM86 code
+continues to use VM86 stack semantics and never treats NT as a task return.
+The TSS debug-trap bit remains a precommit refusal in this bounded profile.
+
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
 data read, both busy bits, backlink, nested-task IRET, restored CR3/TR, and
