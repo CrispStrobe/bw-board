@@ -21,26 +21,37 @@ function word(memory, address, value) {
   put(memory, address, [value, value >>> 8]);
 }
 
-test("386 TSS CALL and nested IRET preserve backlink, busy state, and registers", () => {
+test("386 TSS CALL changes CR3 and nested IRET restores the original mapping", () => {
   const memory = new Map();
   put(memory, 0, [0x9a, 0, 0, 0x20, 0, 0xf4]);
-  put(memory, 0x100, [0xcf]);
+  put(memory, 0x100, [0xa1, 0, 0x80, 0, 0, 0xcf]);
   put(memory, 0x208, descriptor(0, 0xfffff, 0x9b));
   put(memory, 0x210, descriptor(0, 0xfffff, 0x93));
   put(memory, 0x218, descriptor(0x400, 0x67, 0x8b, 0));
   put(memory, 0x220, descriptor(0x500, 0x67, 0x89, 0));
   dword(memory, 0x500 + 0x20, 0x100);
   dword(memory, 0x500 + 0x24, 2);
-  dword(memory, 0x500 + 0x28, 0x12345678);
+  dword(memory, 0x500 + 0x1c, 0x2000);
   dword(memory, 0x500 + 0x38, 0x900);
   for (const [offset, selector] of [[0x48,0x10],[0x4c,8],[0x50,0x10],
     [0x54,0x10],[0x58,0],[0x5c,0],[0x60,0]]) word(memory, 0x500 + offset, selector);
+  dword(memory, 0x1000, 0x3003);
+  dword(memory, 0x2000, 0x4003);
+  for (let page = 0; page < 16; page++) {
+    dword(memory, 0x3000 + page * 4, (page << 12) | 3);
+    dword(memory, 0x4000 + page * 4, (page << 12) | 3);
+  }
+  dword(memory, 0x3000 + 8 * 4, 0x9003);
+  dword(memory, 0x4000 + 8 * 4, 0xa003);
+  dword(memory, 0x9000, 0x11111111);
+  dword(memory, 0xa000, 0x22222222);
   const cpu = new I80386({
     read: address => memory.get(address) ?? 0,
     fetch: address => memory.get(address) ?? 0,
     write: (address, value) => memory.set(address, value & 255),
   });
-  cpu.cr0 = 1;
+  cpu.cr0 = 0x80000001;
+  cpu.cr3 = 0x1000;
   cpu.gdtr = { base: 0x200, limit: 0x27 };
   cpu.cs = 8;
   cpu.ss = cpu.ds = cpu.es = 0x10;
@@ -53,15 +64,18 @@ test("386 TSS CALL and nested IRET preserve backlink, busy state, and registers"
   cpu.esp = 0x800;
 
   cpu.step();
-  assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.eax, cpu.eflags & 0x4000],
-    [0x20, 0x100, 0x12345678, 0x4000]);
+  assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.cr3, cpu.eflags & 0x4000],
+    [0x20, 0x100, 0x2000, 0x4000]);
   assert.equal((memory.get(0x205 + 0x20) ?? 0) & 15, 11);
   assert.equal((memory.get(0x205 + 0x18) ?? 0) & 15, 11);
   assert.equal((memory.get(0x500) ?? 0) | ((memory.get(0x501) ?? 0) << 8), 0x18);
 
   cpu.step();
+  assert.equal(cpu.eax, 0x22222222, "the incoming CR3 selects the new data mapping");
+  cpu.step();
   assert.deepEqual([cpu.tr.selector, cpu.eip, cpu.eax, cpu.esp],
     [0x18, 5, 0xabcdef01, 0x800]);
+  assert.equal(cpu.cr3, 0x1000);
   assert.equal(cpu.eflags & 0x4000, 0);
   assert.equal((memory.get(0x205 + 0x20) ?? 0) & 15, 9);
   cpu.step();
