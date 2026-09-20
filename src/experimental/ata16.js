@@ -35,7 +35,9 @@ export class ExperimentalATA16 {
 
   reset() {
     const wasOutput = this._irqOutput ?? false;
-    this.error = 0;
+    // ATA diagnostic code 01h: device 0 passed and device 1 is absent. ATA-3
+    // defines this register value after power-on, reset, and diagnostics.
+    this.error = 1;
     this.features = 0;
     this.sectorCount = 1;
     this.sectorNumber = 1;
@@ -306,7 +308,6 @@ export class ExperimentalATA16 {
         this.reset();
         // ATA software-reset signature for device 0. The IBM 5170 fixed-disk
         // reset path requires register 1 to read 01h after SRST is released.
-        this.error = 1;
         this.control = interruptMask;
         this._updateIRQ();
       } else this._updateIRQ();

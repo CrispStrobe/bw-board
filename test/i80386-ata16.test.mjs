@@ -85,6 +85,8 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
 test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 absent', () => {
   const irq = [];
   const ata = new ExperimentalATA16(image(), geometry, {onIRQ: level => irq.push(level)});
+  assert.equal(ata.readRegister(1), 1,
+    'cold reset publishes the device-0 diagnostic signature');
   ata.writeRegister(7, 0x20);
   assert.deepEqual(irq, [true]);
   ata.writeRegister(7, 2, {control: true});

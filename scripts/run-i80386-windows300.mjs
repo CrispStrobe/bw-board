@@ -97,9 +97,11 @@ machine = new ExperimentalI80386ATMachine(windowsProfile, {
     }
     if (event.dir === 'out' && event.port === 0x1f7 && ataCommands.length < 1024)
       ataCommands.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
-        command: event.value, count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
-        cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
-        head: machine.ata.driveHead});
+        command: event.value, phase: 'after-command-dispatch', taskFileAfterDispatch: {
+          count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
+          cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
+          head: machine.ata.driveHead,
+        }});
   },
 });
 machine.loadRom(bios.bytes, 0xf0000);
