@@ -61,9 +61,9 @@ function install(write) {
   task(write,0x500,{cr3:0,eip:0,flags:0x23202,esp:0x800,es:0x100,cs:0x100,ss:0x200,ds:0x300,fs:0x400,gs:0x500});
   task(write,0x700,{cr3:0,eip:0x180,flags:2,esp:0x900,es:0x10,cs:8,ss:0x10,ds:0x10,fs:0,gs:0});
 }
-function summarize(cpu, read, local, visited) {
+function summarize(cpu, read, local, visited, reset = false) {
   const flags = local ? cpu.eflags : cpu.getPS();
-  return { completed: visited.handler && visited.returned && (local ? cpu.eip : cpu.getIP()) === 5,
+  return { reset, completed: visited.handler && visited.returned && (local ? cpu.eip : cpu.getIP()) === 5,
     handler: visited.handler, returned: visited.returned, vm: !!(flags & 0x20000),
     cs: local ? cpu.cs : cpu.getCS(), eip: local ? cpu.eip : cpu.getIP(),
     tr: local ? cpu.tr.selector : cpu.segTSS.sel, ax: (local ? cpu.eax : cpu.regEAX) & 0xffff,
@@ -79,12 +79,13 @@ function runLocal() {
 function runPCjs() {
   const cpu=new CPU({id:'taskvm.cpu',model:80386}),bus=new QuietBus({id:'taskvm.bus',busWidth:32},cpu);
   if(!bus.addMemory(0,0x2000,Memory.TYPE.RAM))throw new Error('PCjs memory allocation failed');cpu.bus=bus;install((a,v)=>bus.setByteDirect(a,v));
-  cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0x800);cpu.setPS(2);const visited={handler:false,returned:false},trail=[];
-  for(let step=0;step<budget;step++){const cs=cpu.getCS(),ip=cpu.getIP();trail.push(`${cs.toString(16)}:${ip.toString(16)}`);if(cs===8&&ip===0x180)visited.handler=true;if(visited.handler&&(cpu.getPS()&0x20000))visited.returned=true;if(visited.returned&&ip===5)break;try{cpu.stepCPU(0);}catch(error){const entered=error===-1&&(cpu.getPS()&0x20000)&&cpu.getCS()===0x100&&cpu.getIP()===0&&cpu.segTSS.sel===0x20;if(!entered)throw new Error(`PCjs abort ${String(error)} state=${cpu.getCS().toString(16)}:${cpu.getIP().toString(16)} flags=${(cpu.getPS()>>>0).toString(16)} tr=${cpu.segTSS.sel.toString(16)} trail=${trail.join(',')}`);}}
-  return summarize(cpu,a=>bus.getByteDirect(a),false,visited);
+  cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0x800);cpu.setPS(2);const visited={handler:false,returned:false},trail=[];let reset=false;
+  for(let step=0;step<budget;step++){const cs=cpu.getCS(),ip=cpu.getIP();trail.push(`${cs.toString(16)}:${ip.toString(16)}`);if(cs===8&&ip===0x180)visited.handler=true;if(visited.handler&&(cpu.getPS()&0x20000))visited.returned=true;if(visited.returned&&ip===5)break;try{cpu.stepCPU(0);}catch(error){reset=error===-1&&cpu.getCS()===0xf000&&cpu.getIP()===0xfff0&&cpu.segTSS.sel===0&&trail.at(-1)==='8:112';if(!reset)throw new Error(`PCjs abort ${String(error)} state=${cpu.getCS().toString(16)}:${cpu.getIP().toString(16)} flags=${(cpu.getPS()>>>0).toString(16)} tr=${cpu.segTSS.sel.toString(16)} trail=${trail.join(',')}`);break;}}
+  return summarize(cpu,a=>bus.getByteDirect(a),false,visited,reset);
 }
 const reference=runPCjs(),actual=runLocal();if(mutation==='result')actual.ax^=1;
-const expected={completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0,handlerBacklink:0x20};
-const differences=[];for(const field of Object.keys(expected))for(const [side,value]of[['reference',reference[field]],['actual',actual[field]]])if(value!==expected[field])differences.push({field:`${side}.${field}`,expected:expected[field],actual:value});
+const expectedActual={reset:false,completed:true,handler:true,returned:true,vm:true,cs:0x100,eip:5,tr:0x20,ax:0x1234,vmBusy:11,handlerBusy:9,vmBacklink:0,handlerBacklink:0x20};
+const expectedReference={reset:true,completed:false,handler:false,returned:false,vm:false,cs:0xf000,eip:0xfff0,tr:0};
+const differences=[];for(const [side,observed,expected]of[['reference',reference,expectedReference],['actual',actual,expectedActual]])for(const field of Object.keys(expected))if(observed[field]!==expected[field])differences.push({field:`${side}.${field}`,expected:expected[field],actual:observed[field]});
 verifyPin();verifyLocal();if(execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim()!==revision||sources.some(path=>hash(readFileSync(new URL(path,import.meta.url)))!==sourceHashes[path]))throw new Error('execution sources changed');
-console.log(JSON.stringify({oracle:'PCjs',revision,pcjsRevision:PIN,scope:'owned VM86 TSS entry, IDT task-gate protected handler, NT IRET VM return and exact completion',sourceHashes,mutation,status:differences.length?'fail':'pass',expected,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
+console.log(JSON.stringify({oracle:'PCjs',revision,pcjsRevision:PIN,scope:'local VM86 TSS entry, IDT task-gate protected handler, NT IRET VM return and exact completion; pinned PCjs exact reset limitation at VM task entry',sourceHashes,mutation,status:differences.length?'fail':'pass',expectedReference,expectedActual,reference,actual,differences},null,2));process.exitCode=differences.length?1:0;
