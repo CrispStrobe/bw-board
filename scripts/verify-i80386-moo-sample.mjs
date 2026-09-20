@@ -97,6 +97,14 @@ const PROFILES={
     undefinedEflagsMask:0xffffffef,
     scope:'24 fixed count-one SHLD/SHRD samples spanning immediate and CL forms with word and dword operands; wider counts have undefined flags and are not graded',
   },
+  'enter-ret':{
+    files:['C2','66C2','C8','66C8','C9','66C9'],
+    scope:'18 fixed deterministic RET imm16, ENTER, and LEAVE samples spanning word and dword operand sizes',
+  },
+  'bit-test':{
+    files:['0FA3','0FAB','0FB3','0FBB','0FBA.4','0FBA.5','0FBA.6','0FBA.7'],
+    scope:'24 fixed deterministic BT/BTS/BTR/BTC register and immediate samples spanning read-only and modifying forms',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
