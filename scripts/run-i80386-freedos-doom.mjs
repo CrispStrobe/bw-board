@@ -214,11 +214,14 @@ for(;steps<stepLimit;steps++) {
             fileBytes:doomEntryBytes};
     }
     if(doomEntry) {
+        const stackLinear=(machine.cpu.segmentCaches[2].base+(machine.cpu.esp&0xffff))>>>0;
         doomInstructionTrace.push({step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,
             linearPc:machine.cpu.pc,eax:machine.cpu.eax,ebx:machine.cpu.ebx,ecx:machine.cpu.ecx,
-            edx:machine.cpu.edx,esp:machine.cpu.esp,
+            edx:machine.cpu.edx,ss:machine.cpu.ss,esp:machine.cpu.esp,eflags:machine.cpu.eflags,
+            stackWords:Array.from({length:4},(_,index)=>machine.cpu.read((stackLinear+index*2)>>>0)|
+                machine.cpu.read((stackLinear+index*2+1)>>>0)<<8),
             bytes:Array.from({length:6},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0))});
-        if(doomInstructionTrace.length>128)doomInstructionTrace.shift();
+        if(doomInstructionTrace.length>1024)doomInstructionTrace.shift();
     }
     if(executionBoundaries.bootSector&&(steps&1023)===0) {
         const ui=renderScreen();
