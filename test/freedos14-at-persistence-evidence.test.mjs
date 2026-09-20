@@ -12,8 +12,8 @@ const expand=requested=>[...requested].flatMap(key=>key==='>'?['shift-down','>',
 
 test('unchanged FreeDOS write and fresh-remount TYPE evidence is exact and linked',()=>{
   const {write,reboot}=evidence;
-  assert.equal(write.executionRevision,'e4b08a616c3db333d8c54216b1fd090373ef72bb');
-  assert.equal(reboot.executionRevision,'e4b08a616c3db333d8c54216b1fd090373ef72bb');
+  assert.equal(write.executionRevision,'55804422bf354dd99b92823f3f294e5cc72f7aa6');
+  assert.equal(reboot.executionRevision,'55804422bf354dd99b92823f3f294e5cc72f7aa6');
   assert.equal(write.keyboardScript.requested,'n\recho fd-boot-ok>fdboot.txt\rtype fdboot.txt\r');
   assert.equal(reboot.keyboardScript.requested,'n\rtype fdboot.txt\r');
   assert.doesNotMatch(reboot.keyboardScript.requested,/echo/i);
