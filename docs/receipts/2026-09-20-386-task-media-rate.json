@@ -340,5 +340,13 @@
       "accepted": true,
       "focusedTests": 10
     }
+  },
+  "landing": {
+    "revision": "3726c9f063e3aa97a062bb3743f211552ebf2341",
+    "tag": "milestones/x86-386-task-media-rate-20260920",
+    "ci": 35480541673,
+    "cpu": 35480541674,
+    "native": 35480541732,
+    "result": "all success; normal fast-forward push to master"
   }
 }

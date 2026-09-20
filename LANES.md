@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (implementation frozen; hosted qualification pending) — Astra/Sol
+2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 32-bit task switching, RET immediate and explicit AT floppy media rates.
 The commit containing this row freezes audited TSS CALL/JMP/NT IRET, task
 gates, exact CR3 mapping, original selector-fault classes and postcommit page
@@ -118,7 +118,10 @@ Doom, x87 or timing acceptance; compiler/BCD continuation remains separate.
 Initial hosted CI/native passed, while CPU qualification caught one stale
 BIOS-service DOS toolchain receipt. A fresh run on d90d3a95 preserves all
 1,111,040 steps and output bytes; its source-bound receipt is refreshed with
-the historical run retained, and the affected tests pass 10/10.
+the historical run retained, and the affected tests pass 10/10. Exact corrected
+revision `3726c9f063e3aa97a062bb3743f211552ebf2341` passed CI `35480541673`,
+CPU `35480541674`, and native `35480541732`, then fast-forwarded master; tag
+`milestones/x86-386-task-media-rate-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 genuine AT DOS boot and BIOS HDD roundtrip. Exact candidate/landing
