@@ -17,9 +17,13 @@
  *   IF a <relop> b THEN <line>       relop = < > <= >= = <>, jumps to a line
  *   GOTO <line>                      jump
  *   FOR v = a TO b [STEP s] .. NEXT  counted loop (constant STEP; default 1)
+ *   DIM v(n) / v(i)                  integer arrays (word each; element read/write)
+ *   GOSUB <line> / RETURN            subroutine call and return
+ *   DEF FN<name>(p) = expr           one-argument integer function (inline-expanded)
  *   REM / '                          comment
  *   END                             stop
- * Expressions: + - * / and parens over integer literals and variables.
+ * Expressions: + - * / and parens over integer literals, variables, array
+ * elements and FN calls.
  * Deliberately integer-only and single-file; enough to run real little BASIC
  * programs on the 8086/80186/80286 through the same native path asm and C use.
  *
@@ -42,6 +46,13 @@ export function basicToAsm(source) {
         strings.push(`${lbl}:\tDB ${bytes.length ? bytes.join(',') + ",'$'" : "'$'"}`);
         return lbl;
     };
+    const arrays = new Map();      // name -> { label, size }
+    const fnDefs = new Map();      // FN name -> { param, body } (inline-expanded)
+    const arrLabel = (name) => {
+        const a = arrays.get(name.toUpperCase());
+        if (!a) throw new Error(`BASIC: array ${name.toUpperCase()} used before DIM`);
+        return a.label;
+    };
     const newTmp = () => `T${tmpN++}`;
 
     // ── expression codegen: result left in AX ──────────────────────────────
@@ -55,7 +66,20 @@ export function basicToAsm(source) {
             const t = eat();
             if (t === '(') { expr(); if (eat() !== ')') throw new Error('BASIC: unbalanced ()'); return; }
             if (/^\d+$/.test(t)) { emit(`MOV AX, ${parseInt(t, 10) & 0xffff}`); return; }
-            if (/^[A-Za-z]/.test(t)) { emit(`MOV AX, [${varLabel(t)}]`); return; }
+            if (/^[A-Za-z]/.test(t)) {
+                if (peek() === '(') {
+                    const fn = fnDefs.get(t.toUpperCase());
+                    if (fn) {   // user function call FNx(arg): store the arg in the param, inline the body
+                        eat(); expr(); if (eat() !== ')') throw new Error('BASIC: unbalanced () in FN call');
+                        emit(`MOV [${varLabel(fn.param)}], AX`); genExprStr(fn.body); return;
+                    }
+                    // array element read: NAME(index)
+                    eat(); expr(); if (eat() !== ')') throw new Error('BASIC: unbalanced () in array index');
+                    emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(t)}`, 'ADD BX, AX', 'MOV AX, [BX]');
+                    return;
+                }
+                emit(`MOV AX, [${varLabel(t)}]`); return;
+            }
             throw new Error(`BASIC: bad token '${t}' in expression`);
         }
         function unary() { if (peek() === '-') { eat(); unary(); emit('NEG AX'); return; } if (peek() === '+') { eat(); } return primary(); }
@@ -125,6 +149,21 @@ export function basicToAsm(source) {
             const f = forStack.pop();
             if (!f) throw new Error('BASIC: NEXT without FOR');
             emit(`MOV AX, [${f.v}]`, `ADD AX, ${f.step & 0xffff}`, `MOV [${f.v}], AX`, `CMP AX, [${f.limit}]`, `${f.step < 0 ? 'JGE' : 'JLE'} ${f.top}`);
+            return;
+        }
+        if ((m = line.match(/^DEF\s+(FN[A-Za-z][A-Za-z0-9]*)\s*\(\s*([A-Za-z][A-Za-z0-9]*)\s*\)\s*=\s*(.+)$/i))) {
+            fnDefs.set(m[1].toUpperCase(), { param: m[2], body: m[3] }); return;
+        }
+        if ((m = line.match(/^DIM\s+([A-Za-z][A-Za-z0-9]*)\s*\(\s*(\d+)\s*\)$/i))) {
+            const n = m[1].toUpperCase(), size = parseInt(m[2], 10);
+            if (!arrays.has(n)) { const label = `ARR${arrays.size}`; arrays.set(n, { label, size }); data.push(`${label}:\tDW ${Array(size + 1).fill(0).join(',')}`); }
+            return;
+        }
+        if ((m = line.match(/^GOSUB\s+(\d+)$/i))) { emit(`CALL ${labelFor(m[1])}`); return; }
+        if (/^RETURN$/i.test(line)) { emit('RET'); return; }
+        if ((m = line.match(/^([A-Za-z][A-Za-z0-9]*)\s*\(\s*(.+?)\s*\)\s*=\s*(.+)$/i))) {   // array element write
+            genExprStr(m[3]); emit('PUSH AX');
+            genExprStr(m[2]); emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(m[1])}`, 'ADD BX, AX', 'POP AX', 'MOV [BX], AX');
             return;
         }
         if ((m = line.match(/^(?:LET\s+)?([A-Za-z][A-Za-z0-9]*)\s*=\s*(.+)$/i))) { genExprStr(m[2]); emit(`MOV [${varLabel(m[1])}], AX`); return; }
