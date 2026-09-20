@@ -95,7 +95,7 @@ operand read, including zero-count shifts. The pinned PCjs group decoder also
 executes its memory writeback path when the shift helper returns the unchanged
 operand for count zero.
 
-PSE, CR0.WP behavior from later processors, 16-bit TSS task switching, and
+PSE, CR0.WP behavior from later processors, VM86 TSS task entry, and
 TLB timing are outside this stage. The bounded 32-bit TSS contract is below. Reloading CR3 takes effect immediately
 because this functional executor does not cache translations.
 
