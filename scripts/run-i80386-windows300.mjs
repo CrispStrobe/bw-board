@@ -72,6 +72,7 @@ const interrupts = [];
 const interruptCounts = {};
 const ataCommands = {count: 0, tail: []};
 const ataStatus = {count: 0, tail: []};
+const ataTaskFileWrites = {count: 0, tail: []};
 const dosInterrupts = {int13: {count: 0, tail: []}, int24: {count: 0, tail: []}};
 const controllerPorts = [];
 const samples = [];
@@ -113,6 +114,12 @@ machine = new ExperimentalI80386ATMachine(windowsProfile, {
           head: machine.ata.driveHead,
         }});
       if (ataCommands.tail.length > 256) ataCommands.tail.shift();
+    }
+    if (event.dir === 'out' && event.port >= 0x1f1 && event.port <= 0x1f6) {
+      ataTaskFileWrites.count++;
+      ataTaskFileWrites.tail.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip,
+        port: event.port, value: event.value});
+      if (ataTaskFileWrites.tail.length > 256) ataTaskFileWrites.tail.shift();
     }
     if (event.dir === 'in' && (event.port === 0x1f7 || event.port === 0x3f6)) {
       ataStatus.count++;
@@ -303,7 +310,7 @@ const report = {
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256, geometry: HDD_GEOMETRY},
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
-  reset, postEvents, postContinue, ataCommands, ataStatus, dosInterrupts,
+  reset, postEvents, postContinue, ataCommands, ataStatus, ataTaskFileWrites, dosInterrupts,
   controllerPorts, interrupts, interruptCounts,
   vgaOptionEntry, bootEntries, bootFailureBoundary, modeTransitions,
   instructionTrail: instructionTrail.length < 256 ? instructionTrail : [
