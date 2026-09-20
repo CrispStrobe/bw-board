@@ -118,17 +118,17 @@ if (git('rev-parse', 'HEAD') !== executionRevision)
   throw new Error('386 HDD run refused: HEAD changed during execution');
 
 const outputImage = machine.ata.mediaBytes();
-const lastSector = outputImage.slice(-512);
+const lastTwoSectors = outputImage.slice(-1024);
 const commands = commandEvents.map(event => event.value);
 const bootCommands = bootSector ? commandEvents.filter(event => event.step >= bootSector.step)
   .map(event => event.value) : [];
-const expectedTail = new Uint8Array(512);
+const expectedTail = new Uint8Array(1024);
 expectedTail.set(Buffer.from(HDD_ROUNDTRIP_TEXT));
 const accepted = outcome === 'roundtrip-observed' && marker?.value === 0xa5 && !!bootSector &&
   bootSector.sha256 === inputBootSectorSha256 &&
   bootCommands.includes(0x30) && bootCommands.includes(0x20) &&
-  lastSector.every((byte, index) => byte === expectedTail[index]) &&
-  dataTransfers.reads16 >= 256 && dataTransfers.writes16 >= 256 &&
+  lastTwoSectors.every((byte, index) => byte === expectedTail[index]) &&
+  dataTransfers.reads16 >= 512 && dataTransfers.writes16 >= 512 &&
   dataTransfers.otherWidth === 0 && !commandTraceOverflow;
 
 const report = {
@@ -159,7 +159,7 @@ const report = {
     inputSha256: inputImageSha256,
     inputBootSectorSha256,
     outputSha256: sha256(outputImage),
-    finalSectorSha256: sha256(lastSector),
+    finalTwoSectorsSha256: sha256(lastTwoSectors),
     expectedText: HDD_ROUNDTRIP_TEXT,
   },
   final: {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,

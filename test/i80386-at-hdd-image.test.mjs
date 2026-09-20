@@ -12,7 +12,7 @@ import {
 const word = (bytes, offset) => bytes[offset] | bytes[offset + 1] << 8;
 const dword = (bytes, offset) => (word(bytes, offset) | word(bytes, offset + 2) << 16) >>> 0;
 
-test('owned 386 AT disk is a deterministic type-1 FAT16 volume with a reserved round-trip sector', () => {
+test('owned 386 AT disk is a deterministic type-1 FAT16 volume with two reserved round-trip sectors', () => {
   const first = createI80386AtFat16Image();
   const second = createI80386AtFat16Image();
   assert.equal(first.length, 306 * 4 * 17 * 512);
@@ -29,7 +29,7 @@ test('owned 386 AT disk is a deterministic type-1 FAT16 volume with a reserved r
   const data = 197 * 512;
   assert.equal(Buffer.from(first.slice(data, data + HDD_ROUNDTRIP_TEXT.length)).toString(),
     HDD_ROUNDTRIP_TEXT);
-  assert.ok(first.slice(-512).every(byte => byte === 0), 'round-trip target is outside the FAT volume');
+  assert.ok(first.slice(-1024).every(byte => byte === 0), 'round-trip target is outside the FAT volume');
 });
 
 test('IBM BIOS task-file commands write and read the owned final physical sector', () => {
