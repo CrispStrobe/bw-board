@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (candidate) — Astra/Sol Windows desktop and Doom interaction.
+2026-09-20 DONE (qualified and landed) — Astra/Sol Windows desktop and Doom interaction.
 Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0
 service with 8192 functional cycles; no arbitrary-handler or mechanical timing
 claim. Original Windows3.0 reaches Program Manager, and real Set-1 Enter opens
@@ -112,6 +112,8 @@ Focused tests:399 pass,2 optional skips; shared platform/checkpoint/VGA49 pass.
 The full test386 diagnostic retains its documented VM86 16-bit gate/manual
 disagreement; it is not a full-ROM pass. Actionlint and diff checks pass.
 Receipt: `docs/receipts/2026-09-20-x86-windows-doom-gameplay.json`.
+Exact8172a3bf passed CI35488705735, CPU35488705876 and native35488705795,
+then fast-forwarded master. Tag: milestones/x86-windows300-doom-gameplay-20260920.
 Parent claim continues through Windows edit/save/reopen and completed Doom demo;
 experimental defaults and other lanes remain unchanged.
 

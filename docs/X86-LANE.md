@@ -13,15 +13,16 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `36e459d0fa62c3c89264d0a32d1a2f819cb1b3ba`,
-tag `milestones/x86-unreal-keyboard-doom-level-20260920`. Its exact-head
-[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35487847024),
-[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35487846991)
-and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35487846948)
-passed. The next candidate adds the observed Windows disk timing correction,
-Program Manager and keyboard-driven File Manager acceptance, and original Doom
-E1M1 movement/firing evidence. It remains experimental; application milestones
-are bounded by exact executable, source and input hashes.
+The latest landed milestone is `8172a3bf9891056d989394211ef92728d39958e7`,
+tag `milestones/x86-windows300-doom-gameplay-20260920`. Its exact-head
+[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35488705735),
+[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35488705876)
+and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35488705795)
+passed. It adds the observed Windows disk timing correction, Program Manager
+and keyboard-driven File Manager acceptance, and original Doom E1M1 movement
+and firing evidence. It remains experimental; application milestones are
+bounded by exact executable, source and input hashes. Windows editing and
+persistence and completed Doom demo remain active follow-up targets.
 
 The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
 DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a

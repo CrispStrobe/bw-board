@@ -328,7 +328,14 @@
     "failed": 0,
     "workflowActionlint": "pass",
     "diffCheck": "pass",
-    "sharedPassed": 49
+    "sharedPassed": 49,
+    "hosted": {
+      "revision": "8172a3bf9891056d989394211ef92728d39958e7",
+      "ci": 35488705735,
+      "cpu": 35488705876,
+      "native": 35488705795,
+      "conclusion": "success"
+    }
   },
   "limits": [
     "8192 functional cycles is bounded observed pacing, not physical disk timing or a guarantee for arbitrary handlers.",
@@ -355,5 +362,11 @@
     },
     "rawReportSha256": "171913f07478afb8f2032637fc9eeccd4a06c644eca974dd34d16546b1419d63",
     "frontier": "128KiB external test386 enters its error routine after POST21 at INT2E testing a 16-bit gate from VM86; full diagnostic remains unaccepted. This reproduces the previously documented guest/manual disagreement: original386 section15.3.2 restricts this VM86 entry to a 32-bit gate; no architectural rule is relaxed for the guest."
-  }
+  },
+  "landing": {
+    "branch": "master",
+    "revision": "8172a3bf9891056d989394211ef92728d39958e7",
+    "tag": "milestones/x86-windows300-doom-gameplay-20260920"
+  },
+  "localArchive": "/mnt/volume1/code/astra-x86-evidence/2026-09-20/manifest.json"
 }
