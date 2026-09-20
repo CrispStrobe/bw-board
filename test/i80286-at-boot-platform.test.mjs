@@ -162,6 +162,28 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     assert.equal(biosReset.readData(),0xfa);
 });
 
+test('keyboard F3 typematic command and parameter produce timed keyboard ACKs', () => {
+    const irq=[];
+    const controller=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20,
+        onIRQ:level=>irq.push(level)});
+    controller.writeCommand(0x60);controller.writeData(1);
+    controller.writeData(0xf3);
+    assert.equal(controller.getState().pendingKeyboardCommand,0xf3);
+    controller.advance(10);
+    assert.equal(controller.readData(),0xfa);
+    controller.writeData(0x0b);
+    assert.equal(controller.getState().pendingKeyboardCommand,null);
+    controller.advance(10);
+    const pending=controller.getState();
+    const restored=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    restored.setState(pending);
+    assert.deepEqual(restored.getState(),pending);
+    assert.equal(controller.readData(),0xfa);
+    assert.ok(irq.includes(true),'keyboard ACK obeys command-byte IRQ gating');
+    assert.throws(()=>controller.writeData(0xed),/no D1 output-port command/,
+        'unobserved keyboard commands remain explicit refusals');
+});
+
 test('second-pass AT page windows participate in I/O conflict validation', () => {
     const config={clockHz:6_000_000,regions:[{kind:'ram',start:0,end:0xfffff}],chips:[
         {kind:'dma',name:'dma1',at:0x00},{kind:'dma',name:'dma2',at:0xc0,stride:2},

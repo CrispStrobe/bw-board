@@ -36,6 +36,7 @@ export class AT8042A20 {
         this.outputPort=1|(this.initialA20Enabled?2:0);
         this.commandByte=0;
         this.pendingCommand=null;
+        this.pendingKeyboardCommand=null;
         this.outputQueue=[];
         this.responseCyclesRemaining=0;
         this.inputBusyCyclesRemaining=0;
@@ -167,6 +168,19 @@ export class AT8042A20 {
             this._publish();
             return;
         }
+        if(this.pendingCommand===null&&this.keyboardAckCycles!==null&&
+            (this.pendingKeyboardCommand===0xf3||value===0xf3)) {
+            // IBM enhanced-keyboard F3h Set Typematic Rate/Delay. Both the
+            // command byte and its parameter receive a keyboard-originated
+            // FAh ACK; scanning retains its prior state.
+            if(this.keyboardSchedule.length)
+                throw new Error('AT 8042 keyboard F3h refused: another keyboard response is pending');
+            if(this.pendingKeyboardCommand===0xf3)this.pendingKeyboardCommand=null;
+            else this.pendingKeyboardCommand=0xf3;
+            this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
+            this._publish();
+            return;
+        }
         if(this.pendingCommand!==0xd1)throw new Error('AT 8042 data write refused: no D1 output-port command, 60h command-byte command, or configured keyboard reset is pending');
         if(!(value&1))throw new Error('AT 8042 output-port write refused: bit 0 low requests unsupported CPU reset');
         this.pendingCommand=null;this.outputPort=value;this._publish();
@@ -178,15 +192,15 @@ export class AT8042A20 {
         return true;
     }
     getState() {
-        return {v:5,outputPort:this.outputPort,commandByte:this.commandByte,
+        return {v:6,outputPort:this.outputPort,commandByte:this.commandByte,
             pendingCommand:this.pendingCommand,outputQueue:this.outputQueue.map(e=>({...e})),
             responseCyclesRemaining:this.responseCyclesRemaining,inputBusyCyclesRemaining:this.inputBusyCyclesRemaining,
             delayedResponse:this.delayedResponse&&{...this.delayedResponse},
             keyboardSchedule:this.keyboardSchedule.map(event=>({...event})),
-            systemFlag:this.systemFlag};
+            systemFlag:this.systemFlag,pendingKeyboardCommand:this.pendingKeyboardCommand};
     }
     validateState(s) {
-        if(!s||s.v!==5||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
+        if(!s||s.v!==6||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
             !Number.isInteger(s.commandByte)||s.commandByte<0||s.commandByte>255||
             ![null,0x60,0xd1].includes(s.pendingCommand)||!Array.isArray(s.outputQueue)||
             s.outputQueue.length>this.queueLimit||s.outputQueue.some(e=>!e||!Number.isInteger(e.value)||
@@ -198,6 +212,7 @@ export class AT8042A20 {
             !(s.delayedResponse===null||(s.delayedResponse&&Number.isInteger(s.delayedResponse.value)&&
                 s.delayedResponse.value>=0&&s.delayedResponse.value<=255))||
             (!!s.delayedResponse)!==(s.responseCyclesRemaining>0)||
+            ![null,0xf3].includes(s.pendingKeyboardCommand)||
             !Array.isArray(s.keyboardSchedule)||s.keyboardSchedule.length>2||s.keyboardSchedule.some((event,index)=>!event||
                 !Number.isFinite(event.remaining)||event.remaining<0||event.remaining>100_000_000||
                 (index>0&&event.remaining<s.keyboardSchedule[index-1].remaining)||
@@ -218,6 +233,7 @@ export class AT8042A20 {
         this.delayedResponse=s.delayedResponse&&{...s.delayedResponse};
         this.keyboardSchedule=s.keyboardSchedule.map(event=>({...event}));
         this.systemFlag=s.systemFlag;
+        this.pendingKeyboardCommand=s.pendingKeyboardCommand;
         this._irq=undefined;
         this._releaseKeyboardSchedule();
         this._publish();
