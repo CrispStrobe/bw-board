@@ -784,6 +784,40 @@ export class ExperimentalI80386 {
     else this.sp = (this.sp + bytes) & 0xffff;
     return v;
   }
+  _enter(width, allocation, nesting) {
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const bytes = width >>> 3;
+    const frameValue = width === 32 ? this.ebp : this.bp;
+    this._push(frameValue, width);
+    const framePointer = stack32 ? this.esp : this.sp;
+    nesting &= 31;
+    if (nesting) {
+      let ancestor = frameValue;
+      for (let index = 1; index < nesting; index++) {
+        ancestor = width === 32
+          ? (ancestor - bytes) >>> 0
+          : (ancestor - bytes) & 0xffff;
+        this._push(this._read(SEG_SS, ancestor, width), width);
+      }
+      this._push(framePointer, width);
+    }
+    if (width === 32) this.ebp = framePointer >>> 0;
+    else this.bp = framePointer;
+    const next = stack32
+      ? (this.esp - allocation) >>> 0
+      : (this.sp - allocation) & 0xffff;
+    if (allocation) this._linear(SEG_SS, next, allocation);
+    if (stack32) this.esp = next;
+    else this.sp = next;
+  }
+  _leave(width) {
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const frame = stack32 ? this.ebp : this.bp;
+    this._linear(SEG_SS, frame, width >>> 3);
+    if (stack32) this.esp = frame >>> 0;
+    else this.sp = frame;
+    this._setReg(5, width, this._pop(width));
+  }
   _pusha(width) {
     const bytes = width >>> 3;
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
@@ -2832,6 +2866,10 @@ export class ExperimentalI80386 {
       }
     } else if (op === 0xca || op === 0xcb) {
       this._farRealReturn(width, op === 0xca ? this._fetchN(2) : 0);
+    } else if (op === 0xc8) {
+      this._enter(width, this._fetchN(2), this._fetch8());
+    } else if (op === 0xc9) {
+      this._leave(width);
     } else if (op === 0xc2 || op === 0xc3) {
       const discard = op === 0xc2 ? this._fetchN(2) : 0;
       const stack32 = !!this.segmentCaches[SEG_SS].default32,
