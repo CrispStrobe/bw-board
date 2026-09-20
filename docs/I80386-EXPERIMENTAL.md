@@ -403,12 +403,15 @@ provides independent software evidence for the successful transition.
 
 The owned boot image in `test/fixtures/i80386-vm-task.S` provides that second
 software-engine check with QEMU 8.2.2 TCG configured as a later 486 CPU. It
-executes a real-mode bootstrap, enters protected mode, performs a far JMP to a
-VM TSS, enters a protected handler through an IDT task gate, and returns by NT
-IRET. Both QEMU and this executor must emit the exact debug-port sequence
+boots through BIOS and loads the floppy sectors before executing the real-mode
+bootstrap. The local executor loads the same image at `0x7c00` and begins at
+the owned setup entry `0x7e00`, after the disk-load step. Both then enter
+protected mode, perform a far JMP to a VM TSS, enter a protected handler
+through an IDT task gate, and return by NT IRET. Both must emit the exact sequence
 `BHV`; result and low-budget mutations reject. This is later-model software
 CPU evidence, not a physical original-386 claim. The runner records the exact
-QEMU executable, package, source, and generated-image hashes.
+QEMU executable, BIOS, downloaded packages, compiler versions, sources, and
+generated-image hashes and builds in a unique temporary directory.
 
 `scripts/compare-pcjs-i80386-tasks.mjs` binds the clean pinned PCjs revision
 and compares a task CALL through an actual CR3 change, a differently mapped
