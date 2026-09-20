@@ -1,0 +1,39 @@
+{
+  "schema": "astra.i80386-at-hdd-roundtrip-receipt.v1",
+  "accepted": true,
+  "fullBootAccepted": false,
+  "scope": "Genuine-reset IBM 5170 Rev1 BIOS fixed-disk initialization and boot, followed by an owned boot program's full-sector BIOS write/read round trip; this is not an HDD operating-system boot.",
+  "executionRevision": "dcaff8aa229fbccd5810a9d0269dab309c57ed53",
+  "steps": 70579183,
+  "rawReportSha256": "72316eed6ae7ffd8ecda430c3bafbf36def841c8fe630ee924269608d78523b0",
+  "sourceManifestDigestMethod": "SHA-256 of jq -Sc '.sourceSha256' over the raw report, including its trailing newline",
+  "sourceManifestSha256": "3de5c170aeaa412fd91909d7a66154b56030a04396fb705e9426ee457cb6ce14",
+  "inputs": {
+    "biosSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "geometry": {"cylinders": 306, "heads": 4, "sectors": 17, "bytesPerSector": 512},
+    "mediaBytes": 10653696,
+    "mediaSha256": "c1ebf2785e8bf736fc6ed81f6e917bec1cabded671916098b64e2503a1f777ce",
+    "bootSectorSha256": "7448effa5063326d14885f0ba20ca5ff46e5a87ae09f9dc4fc028e21bc7427ed"
+  },
+  "biosEvidence": {
+    "commands": [144, 145, 16, 64, 32],
+    "bootSectorStep": 70575354,
+    "bootSectorAddress": "0000:7C00",
+    "bootSectorHashMatchedInput": true
+  },
+  "guestEvidence": {
+    "commands": [48, 32],
+    "nativeDataRegister": {"writes16": 256, "reads16": 512, "otherWidth": 0},
+    "writeBufferInitialization": "all 512 bytes initialized; text prefix and zero tail",
+    "readBufferInitialization": "all 512 bytes poisoned with A5A5 before BIOS read",
+    "comparison": "all 512 read-back bytes checked in guest code",
+    "successMarker": {"step": 70579183, "value": 165},
+    "commandTraceOverflow": false,
+    "diagnosticPortTraceTruncated": false
+  },
+  "output": {
+    "mediaSha256": "1cb7732758ebde69e6a61cb344822aa8eb68dbe17075f2c95476285e817c9bf2",
+    "finalSectorSha256": "3fb0f0892cdf3d7a48870c0b9d7dbe5b637466f03c312d0f6c863af6b7723313",
+    "expectedText": "ASTRA-386-HDD\r\n"
+  }
+}
