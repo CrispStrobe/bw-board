@@ -1,4 +1,4 @@
-/** Compare original-386 opcode 82h byte group-1 alias semantics with pinned PCjs. */
+/** Compare 386-software opcode 82h compatibility semantics with pinned PCjs. */
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -20,6 +20,10 @@ const localPaths=['scripts/compare-pcjs-i80386-group1-alias.mjs','src/experiment
 execFileSync('git',['diff','--quiet','HEAD','--',...localPaths],{cwd:repositoryRoot});
 const executionRevision=execFileSync('git',['rev-parse','HEAD'],
   {cwd:repositoryRoot,encoding:'utf8'}).trim();
+const hash=data=>createHash('sha256').update(data).digest('hex');
+const sources=['./compare-pcjs-i80386-group1-alias.mjs','../src/experimental/i80386.js'];
+const sourceHashes=Object.fromEntries(sources.map(path=>
+  [path,hash(readFileSync(new URL(path,import.meta.url)))]));
 const moduleURL=name=>pathToFileURL(resolve(pcjsRoot,`machines/pcx86/modules/v2/${name}.js`)).href;
 for(const name of ['x86func','x86help','x86mods','x86op0f','x86ops'])await import(moduleURL(name));
 const {default:CPU}=await import(moduleURL('cpux86'));
@@ -67,16 +71,19 @@ function runPCjs(spec){
 }
 const observations=Object.fromEntries(cases.map(spec=>[spec.name,
   {reference:runPCjs(spec),actual:runLocal(spec)}]));
-if(mutation==='result')observations['adc-carry-prefix66'].actual.eax^=1;
+if(mutation==='result')observations['adc-carry-prefix66'].actual.eax=
+  (observations['adc-carry-prefix66'].actual.eax^1)>>>0;
 const differences=Object.entries(observations).filter(([,value])=>
   JSON.stringify(value.reference)!==JSON.stringify(value.actual)||!value.actual.completed)
   .map(([name,value])=>({case:name,...value}));
 verifyPcjs();
 execFileSync('git',['diff','--quiet','HEAD','--',...localPaths],{cwd:repositoryRoot});
-const hash=data=>createHash('sha256').update(data).digest('hex');
-const sources=['./compare-pcjs-i80386-group1-alias.mjs','../src/experimental/i80386.js'];
+if(execFileSync('git',['rev-parse','HEAD'],{cwd:repositoryRoot,encoding:'utf8'}).trim()!==executionRevision)
+  throw new Error('local execution revision changed during comparison');
+for(const path of sources)if(hash(readFileSync(new URL(path,import.meta.url)))!==sourceHashes[path])
+  throw new Error(`local source changed during comparison: ${path}`);
 console.log(JSON.stringify({oracle:'PCjs',revision:PIN,executionRevision,
-  scope:'opcode 82h byte CMP memory and operand-size-prefixed ADC with carry; full registers, defined flags, and memory are graded',
+  scope:'software compatibility evidence for opcode 82h byte CMP memory and operand-size-prefixed ADC with carry; full registers, defined flags, and memory are graded',
   stepLimit,mutation,status:differences.length?'fail':'pass',observations,differences,
-  sourceHashes:Object.fromEntries(sources.map(path=>[path,hash(readFileSync(new URL(path,import.meta.url)))]))},null,2));
+  sourceHashes},null,2));
 process.exitCode=differences.length?1:0;
