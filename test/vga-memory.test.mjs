@@ -14,8 +14,9 @@ function fixture() {
         card.write(0x0e, index);
         card.write(0x0f, value);
     };
+    card.write(0x02, 0x02); // miscellaneous output: enable CPU video RAM
     seq(2, 0x0f);
-    seq(4, 0x04); // sequential planar addressing
+    seq(4, 0x06); // extended memory, sequential planar addressing
     gc(5, 0x00);
     gc(6, 0x05); // A0000-AFFFF, graphics mode
     gc(7, 0x0f);
@@ -114,7 +115,7 @@ describe('experimental VGA memory', () => {
 
     it('routes chain-4 accesses by low address bits and still honors map mask', () => {
         const { memory, seq, gc } = fixture();
-        seq(4, 0x0c);
+        seq(4, 0x0e);
         gc(5, 0x00);
         for (let plane = 0; plane < 4; plane++) memory.write(0xa0000 + plane, 0x40 + plane);
         assert.deepEqual(memory.planes.map((p) => p[0]), [0x40, 0x41, 0x42, 0x43]);
@@ -129,9 +130,9 @@ describe('experimental VGA memory', () => {
         assert.equal(memory.planes[0][1], 0x55);
     });
 
-    it('routes odd/even accesses to plane pairs and shifts the memory index', () => {
+    it('routes odd/even accesses to plane pairs and substitutes A0 in the memory index', () => {
         const { memory, seq, gc } = fixture();
-        seq(4, 0x00);
+        seq(4, 0x02);
         gc(5, 0x10);
         gc(6, 0x07);
         gc(4, 0x02);
@@ -141,8 +142,61 @@ describe('experimental VGA memory', () => {
         assert.equal(memory.read(0xa0000), 0x66, 'read-map bit 1 chooses maps 2/3');
         assert.equal(memory.read(0xa0001), 0x77);
         memory.write(0xa0002, 0x88);
-        assert.equal(memory.planes[0][1], 0x88);
-        assert.equal(memory.planes[2][1], 0x88);
+        assert.equal(memory.planes[0][2], 0x88);
+        assert.equal(memory.planes[2][2], 0x88);
+    });
+
+    it('keeps the three odd/even controls independent in mixed register states', () => {
+        const { memory, seq, gc } = fixture();
+        seq(4, 0x06); // sequential writes: no parity restriction
+        gc(5, 0x10); // odd/even read-map routing only
+        gc(6, 0x05); // no A0 substitution
+        memory.planes[3][0x101] = 0x31;
+        gc(4, 0x02);
+        assert.equal(memory.read(0xa0101), 0x31);
+        memory.write(0xa0101, 0x44);
+        assert.deepEqual(memory.planes.map((p) => p[0x101]), [0x44, 0x44, 0x44, 0x44]);
+
+        seq(4, 0x02); // parity-select writes
+        gc(5, 0x00); // ordinary read-map selection
+        gc(6, 0x07); // substitute A0 in the memory-map address
+        gc(4, 0x02);
+        memory.planes[2][0x100] = 0x52;
+        assert.equal(memory.read(0xa0101), 0x52, 'GC mode controls reads independently');
+        memory.write(0xa0101, 0x77);
+        assert.equal(memory.planes[1][0x100], 0x77);
+        assert.equal(memory.planes[3][0x100], 0x77);
+        assert.equal(memory.planes[0][0x100], 0x00);
+        assert.equal(memory.planes[2][0x100], 0x52);
+    });
+
+    it('uses high aperture bits and extended-memory enable in routed map indices', () => {
+        const { memory, seq, gc } = fixture();
+        gc(6, 0x03); // 128 KiB aperture, A0 substitution
+        gc(5, 0x10);
+        gc(4, 0x02);
+        seq(4, 0x06);
+        memory.planes[3][0xfffe] = 0xe1;
+        assert.equal(memory.read(0xbffff), 0xe1);
+
+        seq(4, 0x04); // disable extended memory: 16 KiB per map
+        memory.planes[3][0x3ffe] = 0xe2;
+        assert.equal(memory.read(0xbffff), 0xe2);
+
+        gc(6, 0x01);
+        gc(5, 0x00);
+        seq(4, 0x0e);
+        memory.planes[3][0x7fff] = 0xc4;
+        assert.equal(memory.read(0xbffff), 0xc4, 'chain-4 consumes A1:A0 as map select');
+    });
+
+    it('does not decode CPU video memory while miscellaneous-output RAM enable is clear', () => {
+        const { card, memory } = fixture();
+        memory.planes[0][0] = 0x5a;
+        card.write(0x02, 0x00);
+        assert.equal(memory.read(0xa0000), null);
+        assert.equal(memory.write(0xa0000, 0xa5), false);
+        assert.equal(memory.planes[0][0], 0x5a);
     });
 
     it('validates a checkpoint before changing planes or latches', () => {

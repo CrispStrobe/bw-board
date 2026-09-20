@@ -21,8 +21,9 @@ The modeled contract is:
 - four independent 64 KiB memory maps and four byte latches;
 - A0000h 128 KiB, A0000h 64 KiB, B0000h 32 KiB, and B8000h 32 KiB aperture
   selections from graphics-controller register 6;
-- sequential planar, chain-4, and coordinated sequencer/graphics-controller
-  odd/even addressing;
+- sequential planar and chain-4 addressing, plus independent sequencer write
+  parity, graphics-mode read-map routing, and graphics-miscellaneous A0
+  substitution controls for odd/even access;
 - map-mask write selection and read-map selection;
 - read mode 0 and per-pixel color comparison in read mode 1;
 - write modes 0 through 3, including rotation, logical operations, set/reset,
@@ -35,12 +36,21 @@ plane. Reads load all four latches before selecting or comparing their result;
 writes do not implicitly refresh them. That distinction is required by write
 mode 1 and masked raster operations.
 
-The 128 KiB aperture exposes a 64 KiB address within each map in unchained
-planar mode, so its upper half aliases the lower half. Chain-4 consumes A1:A0
-as the map number and therefore has a 16-bit per-map index. Odd/even mode is
-active only when the sequencer enables odd/even addressing and both relevant
-graphics-controller odd/even controls are set; A0 selects the odd or even map
-and is removed from the map offset.
+The sequencer Extended Memory bit selects a 16 KiB or 64 KiB address range in
+each map, representing 64 KiB or 256 KiB total VGA RAM. The 128 KiB aperture
+therefore aliases addresses beyond the enabled per-map range. Chain-4 consumes
+A1:A0 as the map number and shifts the remaining address into the selected
+map. Graphics-controller register 6 can substitute A0 out of the map address
+without itself choosing a read map or restricting write maps. Register 5
+independently uses A0 to select the odd/even read map, while sequencer register
+4 independently restricts writes to the odd or even pair. Mixed settings are
+modeled because VGA font-plane access intentionally programs these controls
+differently.
+
+The module owns CPU-memory decode, so it also honors the Miscellaneous Output
+RAM Enable bit: with that bit clear, reads and writes are reported as
+undecoded. A future machine integration must not add a second conflicting RAM
+enable policy.
 
 This module does not interpret CRTC or attribute-controller display fetches,
 render pixels, arbitrate CPU and display memory cycles, model snow/timing, or

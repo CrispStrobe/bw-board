@@ -77,22 +77,24 @@ export class VGAMemory {
 
     _route(offset, seq, gc) {
         const chain4 = (seq[4] & 0x08) !== 0;
-        const oddEven = !chain4
-            && (seq[4] & 0x04) === 0
-            && (gc[5] & 0x10) !== 0
-            && (gc[6] & 0x02) !== 0;
+        const addressMask = seq[4] & 0x02 ? 0xffff : 0x3fff;
         if (chain4) {
-            return { index: (offset >>> 2) & 0xffff, plane: offset & 3, chain4, oddEven };
-        }
-        if (oddEven) {
             return {
-                index: (offset >>> 1) & 0xffff,
-                plane: ((gc[4] & 2) | (offset & 1)) & 3,
-                chain4,
-                oddEven,
+                index: (offset >>> 2) & addressMask,
+                readPlane: offset & 3,
+                chain4: true,
+                writeOddEven: false,
             };
         }
-        return { index: offset & 0xffff, plane: gc[4] & 3, chain4, oddEven };
+
+        const hostOddEven = (gc[5] & 0x10) !== 0;
+        const substituteA0 = (gc[6] & 0x02) !== 0;
+        return {
+            index: (substituteA0 ? offset & ~1 : offset) & addressMask,
+            readPlane: hostOddEven ? ((gc[4] & 2) | (offset & 1)) : gc[4] & 3,
+            chain4: false,
+            writeOddEven: (seq[4] & 0x04) === 0,
+        };
     }
 
     _loadLatches(index) {
@@ -103,13 +105,14 @@ export class VGAMemory {
 
     /** Return null when the selected VGA aperture does not decode address. */
     read(address) {
-        const { seq, gc } = this._registers();
+        const { misc, seq, gc } = this._registers();
+        if ((misc & 0x02) === 0) return null;
         const offset = this._decode(address, gc);
         if (offset === null) return null;
         const route = this._route(offset, seq, gc);
         this._loadLatches(route.index);
 
-        if ((gc[5] & 0x08) === 0) return this.latches[route.plane];
+        if ((gc[5] & 0x08) === 0) return this.latches[route.readPlane];
 
         const compare = gc[2] & 0x0f;
         const care = gc[7] & 0x0f;
@@ -124,7 +127,8 @@ export class VGAMemory {
 
     /** Return false when the selected VGA aperture does not decode address. */
     write(address, value) {
-        const { seq, gc } = this._registers();
+        const { misc, seq, gc } = this._registers();
+        if ((misc & 0x02) === 0) return false;
         const offset = this._decode(address, gc);
         if (offset === null) return false;
         const route = this._route(offset, seq, gc);
@@ -136,8 +140,8 @@ export class VGAMemory {
 
         for (let plane = 0; plane < 4; plane++) {
             if ((mapMask & (1 << plane)) === 0) continue;
-            if (route.chain4 && plane !== route.plane) continue;
-            if (route.oddEven && (plane & 1) !== (offset & 1)) continue;
+            if (route.chain4 && plane !== route.readPlane) continue;
+            if (route.writeOddEven && (plane & 1) !== (offset & 1)) continue;
 
             let source;
             let bitMask = registerMask;
