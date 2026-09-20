@@ -45,6 +45,39 @@ function activeBench(params = PARAMS, { disconnect = null, kind = 'npn' } = {}) 
   return board;
 }
 
+function highCurrentBench(params) {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'VCC', kind: 'vsource', params: { volts: 12 }, terminals: ['pos', 'neg'] },
+    { id: 'R1', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+    { id: 'R2', kind: 'resistor', params: { ohms: 2000 }, terminals: ['a', 'b'] },
+    { id: 'RC', kind: 'resistor', params: { ohms: 100 }, terminals: ['a', 'b'] },
+    { id: 'RE', kind: 'resistor', params: { ohms: 10 }, terminals: ['a', 'b'] },
+    { id: 'Q1', kind: 'npn', params, terminals: ['collector', 'base', 'emitter'] },
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ], [
+    { id: 'gnd', terminals: [
+      { part: 'VCC', terminal: 'neg' }, { part: 'R2', terminal: 'b' },
+      { part: 'RE', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+    ] },
+    { id: 'vcc', terminals: [
+      { part: 'VCC', terminal: 'pos' }, { part: 'R1', terminal: 'a' },
+      { part: 'RC', terminal: 'a' },
+    ] },
+    { id: 'base', terminals: [
+      { part: 'R1', terminal: 'b' }, { part: 'R2', terminal: 'a' },
+      { part: 'Q1', terminal: 'base' },
+    ] },
+    { id: 'collector', terminals: [
+      { part: 'RC', terminal: 'b' }, { part: 'Q1', terminal: 'collector' },
+    ] },
+    { id: 'emitter', terminals: [
+      { part: 'RE', terminal: 'a' }, { part: 'Q1', terminal: 'emitter' },
+    ] },
+  ]);
+  return board;
+}
+
 function saturatedBench() {
   const board = new BoardImpl(5);
   board.setNetlist([
@@ -154,8 +187,8 @@ Q1 collector base emitter QN
     assert.equal(active.converged, true);
     assert.deepEqual(active.analysis.npn, {
       model: 'explicit-ebers-moll-with-forward-early-effect',
-      requiredParameters: ['is', 'beta'], optionalParameters: ['br', 'n', 'vaf', 'rb', 'rc'],
-      defaults: { br: 1, n: 1, vaf: 'infinite', rb: 0, rc: 0 }, thermalVoltage: 0.02585,
+      requiredParameters: ['is', 'beta'], optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc'],
+      defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0 }, thermalVoltage: 0.02585,
       temperatureModel: 'fixed',
     });
     for (const [net, oracle] of [['base', 'v(base)'], ['collector', 'v(collector)'], ['emitter', 'v(emitter)']]) {
@@ -243,6 +276,35 @@ Q1 collector base emitter QN
     assertUnchanged(board, before);
   });
 
+  it('matches ngspice forward high-current IKF rolloff without scaling base current', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    const oracle = ngspice(`VCC vcc 0 12
+R1 vcc base 10k
+R2 base 0 2k
+RC vcc collector 100
+RE emitter 0 10
+Q1 collector base emitter QN
+.model QN NPN(IS=1e-14 BF=200 VAF=100 IKF=0.01)`,
+    ['v(base)', 'v(collector)', 'v(emitter)', '@vcc[i]', '@q1[ib]', '@q1[ic]', '@q1[ie]']);
+    const board = highCurrentBench({ model: 'shockley', is: 1e-14, beta: 200,
+      vaf: 100, ikf: 0.01 });
+    const before = stateWitness(board); const op = board.operatingPoint();
+    assert.equal(op.converged, true);
+    for (const [net, name] of [['base', 'v(base)'], ['collector', 'v(collector)'], ['emitter', 'v(emitter)']]) {
+      assert.ok(Math.abs(op.nodeVoltages.get(net) - oracle[name]) < 1e-8,
+        `${net}: ${op.nodeVoltages.get(net)} vs ${oracle[name]}`);
+    }
+    const q = op.branchCurrents.get('Q1');
+    for (const [terminal, name] of [['base', '@q1[ib]'], ['collector', '@q1[ic]'], ['emitter', '@q1[ie]']]) {
+      assert.ok(Math.abs(q.get(terminal) - oracle[name]) < 1e-10,
+        `${terminal}: ${q.get(terminal)} vs ${oracle[name]}`);
+    }
+    assert.ok(Math.abs(q.get('base') + q.get('collector') + q.get('emitter')) < 1e-12);
+    assert.ok(Math.abs(op.branchCurrents.get('VCC').get('pos') - oracle['@vcc[i]']) < 1e-10);
+    assertUnchanged(board, before);
+  });
+
   it('keeps omitted and explicit zero RB byte-for-behaviour identical', () => {
     assert.deepEqual(activeBench(PARAMS).operatingPoint(),
       activeBench({ ...PARAMS, rb: 0 }).operatingPoint());
@@ -261,11 +323,13 @@ Q1 collector base emitter QN
       [{ ...PARAMS, br: 0 }, /br must be a finite number greater than zero/],
       [{ ...PARAMS, n: -1 }, /n must be a finite number greater than zero/],
       [{ ...PARAMS, vaf: 0 }, /vaf must be a finite number greater than zero/],
+      [{ ...PARAMS, ikf: 0 }, /ikf must be a finite number greater than zero/],
+      [{ ...PARAMS, ikf: NaN }, /ikf must be a finite number greater than zero/],
       [{ ...PARAMS, rb: -1 }, /rb must be a finite number greater than or equal to zero/],
       [{ ...PARAMS, rb: NaN }, /rb must be a finite number greater than or equal to zero/],
       [{ ...PARAMS, rc: -1 }, /rc must be a finite number greater than or equal to zero/],
       [{ ...PARAMS, rc: NaN }, /rc must be a finite number greater than or equal to zero/],
-      [{ ...PARAMS, ikf: 0.3 }, /parameter ikf is outside/],
+      [{ ...PARAMS, cje: 2e-12 }, /parameter cje is outside/],
       [{ ...PARAMS, _model: '' }, /_model must be a non-empty inert source-model name/],
     ];
     for (const [params, pattern] of cases) {

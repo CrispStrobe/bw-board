@@ -68,7 +68,7 @@ const OPERATING_POINT_KINDS = new Set([
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
 const NPN_OPERATING_POINT_PARAMS = new Set([
-  'model', 'is', 'beta', 'br', 'n', 'vaf', 'rb', 'rc', '_model',
+  'model', 'is', 'beta', 'br', 'n', 'vaf', 'ikf', 'rb', 'rc', '_model',
 ]);
 const NMOS_OPERATING_POINT_PARAMS = new Set([
   'model', 'vth', 'kp', 'w', 'l', 'lambda', 'gamma', 'phi',
@@ -2496,7 +2496,7 @@ export class BoardImpl {
               + `${name} must be an explicit finite number greater than zero`);
           }
         }
-        for (const name of ['br', 'n', 'vaf']) {
+        for (const name of ['br', 'n', 'vaf', 'ikf']) {
           if (Object.prototype.hasOwnProperty.call(params, name)
               && (typeof params[name] !== 'number' || !Number.isFinite(params[name])
                 || params[name] <= 0)) {
@@ -2806,8 +2806,8 @@ export class BoardImpl {
         npn: {
           model: 'explicit-ebers-moll-with-forward-early-effect',
           requiredParameters: ['is', 'beta'],
-          optionalParameters: ['br', 'n', 'vaf', 'rb', 'rc'],
-          defaults: { br: 1, n: 1, vaf: 'infinite', rb: 0, rc: 0 },
+          optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc'],
+          defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0 },
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },

@@ -77,6 +77,26 @@ describe('strict explicit Ebers-Moll NPN small-signal AC', () => {
     assert.deepEqual([...board.operatingPoint().nodeVoltages], [...before.nodeVoltages]);
   });
 
+  it('matches the independent ngspice IKF high-current Jacobian', () => {
+    // Same self-authored bench and matched temperature, with IKF=10 mA.
+    const expected = new Map([
+      ['base', 1],
+      ['collector', -2.8120736314311232],
+      ['emitter', 0.9421294955055833],
+    ]);
+    const board = bench({ ...exactParams, ikf: 0.01 });
+    const before = board.operatingPoint();
+    const row = board.runAc({ sourceId: 'VIN', frequencies: [1000],
+      analysisProfile: 'source-analysis-v1', nodeRegularizationSiemens: 0,
+      probes: [...expected.keys()] })[0];
+    for (const [node, oracle] of expected) {
+      const actual = signedReal(row, node);
+      assert.ok(Math.abs(actual - oracle) < 2e-8,
+        `${node}: ${actual} vs ngspice ${oracle}`);
+    }
+    assert.deepEqual([...board.operatingPoint().nodeVoltages], [...before.nodeVoltages]);
+  });
+
   it('retains the generic interactive NPN compatibility model', () => {
     const exact = bench();
     const generic = bench({ beta: 200, vbe: 0.7 });

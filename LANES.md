@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-20 CLAIM — `/root` (Codex): explicit Shockley-NPN forward high-current
+2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN forward high-current
 beta rolloff, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,
 branch `lane/npn-forward-rolloff`, exact base
 `80ae84904de98c8140086e5adbf2295fef40550f`. Owns only the strict NPN
@@ -22,6 +22,17 @@ self-authored ngspice 42 witness, prove the analytical Jacobian against finite
 differences, and keep absent IKF byte-for-behaviour unchanged. Excludes IKR,
 VAR, CJE/CJC/TF and every other charge/transit term, topology, PNP/generic BJT,
 solver/tolerances, CUI/corpus/package pins, x86, and unrelated models/paths.
+The bounded law is ngspice's `q2=If/IKF`,
+`qb=q1*(1+sqrt(1+4*q2))/2` with IKR/VAR absent: only transported collector
+current and its exact derivatives are scaled; junction/base current is not.
+Independent ngspice 42 DC and AC high-current witnesses agree on every probed
+node and signed terminal current, the analytical IKF Jacobian agrees with
+finite differences, omitted/Infinity IKF retains the prior companion exactly,
+and invalid declared values refuse by name. The affected BJT/AC/routing/GMIN
+surface passes 46/46. Ignoring authored IKF makes both live witnesses red;
+omitting IKF's own Vbe derivative makes the finite-difference proof red. The
+ADI-v2 cards still all require CJE/CJC/TF, so no public corpus-row reach claim
+or CUI admission is made by this upstream slice.
 
 2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN collector series
 resistance, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,

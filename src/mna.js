@@ -782,7 +782,7 @@ export function junctionModelOf(part, headroomV) {
  *
  * @param {Part} part
  * @returns {{is: number, nVt: number, bf: number, br: number, vaf: number,
- *            rb: number, rc: number} | null}
+ *            ikf: number, rb: number, rc: number} | null}
  *   null when this part is not on the exponential path.
  */
 export function ebersMollParams(part) {
@@ -806,11 +806,15 @@ export function ebersMollParams(part) {
   // we, by falling back to Infinity rather than by a branch downstream.
   const vafDeclared = Number(part.params?.vaf ?? cls.vaf ?? Infinity);
   const vaf = vafDeclared > 0 ? vafDeclared : Infinity;
+  // Forward high-current rolloff. Infinity is the algebraic no-rolloff value
+  // and preserves the pre-IKF current/Jacobian path exactly.
+  const ikf = Number(part.params?.ikf ?? Infinity);
   const rb = Number(part.params?.rb ?? 0);
   const rc = Number(part.params?.rc ?? 0);
   if (!(is > 0) || !(bf > 0) || !(br > 0) || !(n > 0)
+      || (!(ikf > 0) || (!Number.isFinite(ikf) && ikf !== Infinity))
       || !Number.isFinite(rb) || rb < 0 || !Number.isFinite(rc) || rc < 0) return null;
-  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, rb, rc };
+  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc };
 }
 
 /**
@@ -887,18 +891,41 @@ export function ebersMollCompanion(vbe, vbc, p) {
   const dEarly = Number.isFinite(vaf) ? -1 / vaf : 0;
   const ict = iF - iR;
 
+  // SPICE forward beta rolloff uses the forward junction current in its base
+  // charge: q2=If/IKF, qb=q1*(1+sqrt(1+4*q2))/2. Since q1=1/early here (VAR
+  // and IKR are deliberately outside this bounded model), transport current
+  // is ict*early*2/(1+sqrt(...)). Base current is NOT scaled: reducing the
+  // transported collector current at the same junction/base current is the
+  // high-current beta falloff. Keep the absent-IKF branch byte-for-behaviour
+  // identical to the earlier Early-only arithmetic.
+  let transportScale = early;
+  let dScaleVbe = 0;
+  let dScaleVbc = dEarly;
+  const ikf = p.ikf ?? Infinity;
+  if (Number.isFinite(ikf)) {
+    const arg = Math.max(0, 1 + 4 * iF / ikf);
+    // Match SPICE's guarded branch: its square-root accumulator stays 1 when
+    // the clamped argument is exactly zero.
+    const sqrtArg = arg === 0 ? 1 : Math.sqrt(arg);
+    const rolloff = 2 / (1 + sqrtArg);
+    const dRolloffDiF = -4 / (ikf * sqrtArg * (1 + sqrtArg) ** 2);
+    transportScale = early * rolloff;
+    dScaleVbe = early * dRolloffDiF * gF;
+    dScaleVbc = dEarly * rolloff;
+  }
+
   const ib = iF / p.bf + iR / p.br + JUNCTION_GMIN * (vbe + vbc);
-  const ic = ict * early - iR / p.br - JUNCTION_GMIN * vbc;
+  const ic = ict * transportScale - iR / p.br - JUNCTION_GMIN * vbc;
 
   const gpi = gF / p.bf + JUNCTION_GMIN;   // d Ib / d Vbe
   const gmu = gR / p.br + JUNCTION_GMIN;   // d Ib / d Vbc
-  const gcF = gF * early;                  // d Ic / d Vbe
+  const gcF = gF * transportScale + ict * dScaleVbe; // d Ic / d Vbe
   // d Ic / d Vbc: the reverse transport slope through the same factor, plus the
   // factor's OWN derivative times the transport current -- the term a chain
   // rule left out would make the Jacobian disagree with the current it stamps,
   // which costs iterations rather than accuracy and is invisible in any
   // converged voltage. It has its own finite-difference assertion.
-  const gcR = -gR * early + ict * dEarly - gR / p.br - JUNCTION_GMIN;
+  const gcR = -gR * transportScale + ict * dScaleVbc - gR / p.br - JUNCTION_GMIN;
 
   return {
     gpi, gmu, gcF, gcR,

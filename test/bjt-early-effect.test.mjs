@@ -134,6 +134,37 @@ test('the factor is on the transport current and NOT on the base current', () =>
     assert.deepEqual(ebersMollCompanion(vbe, vbc, { ...p, vaf: Infinity }), plain);
 });
 
+test('IKF uses SPICE forward base charge and its own exact Jacobian', () => {
+    // Bias and terminal currents are from the independent ngspice 42
+    // high-current operating-point witness in npn-operating-point.test.mjs.
+    const p = { is: 1e-14, nVt: 0.02585, bf: 200, br: 1, vaf: 100, ikf: 0.01 };
+    const vbe = 0.7761044166980251;
+    const vbc = -7.843419750002912;
+    const at = ebersMollCompanion(vbe, vbc, p);
+    assert.ok(Math.abs(at.ib - 5.469643173914041e-4) < 1e-15);
+    assert.ok(Math.abs(at.ic - 3.0681874447563224e-2) < 1e-14);
+
+    // High-current rolloff reduces transported collector current at the same
+    // junction/base current. Applying the charge factor to Ib would preserve
+    // beta and defeat the parameter's meaning.
+    const noRolloff = ebersMollCompanion(vbe, vbc, { ...p, ikf: Infinity });
+    assert.equal(at.ib, noRolloff.ib, 'IKF may not scale base current');
+    assert.equal(at.gpi, noRolloff.gpi, 'IKF may not scale dIb/dVbe');
+    assert.ok(at.ic < noRolloff.ic / 3, 'the high-current witness must exercise real rolloff');
+    assert.deepEqual(noRolloff,
+        ebersMollCompanion(vbe, vbc, { is: p.is, nVt: p.nVt, bf: p.bf, br: p.br, vaf: p.vaf }),
+        'omitted IKF must retain the prior arithmetic exactly');
+
+    const h = 1e-7;
+    const dIcDbe = (ebersMollCompanion(vbe + h, vbc, p).ic
+      - ebersMollCompanion(vbe - h, vbc, p).ic) / (2 * h);
+    const dIcDbc = (ebersMollCompanion(vbe, vbc + h, p).ic
+      - ebersMollCompanion(vbe, vbc - h, p).ic) / (2 * h);
+    const rel = (a, b) => Math.abs(a - b) / Math.max(Math.abs(b), 1e-12);
+    assert.ok(rel(at.gcF, dIcDbe) < 1e-8, `gcF ${at.gcF} vs ${dIcDbe}`);
+    assert.ok(rel(at.gcR, dIcDbc) < 1e-7, `gcR ${at.gcR} vs ${dIcDbc}`);
+});
+
 test('the stamped Jacobian is the derivative of the stamped current', () => {
     // The only test here that can see a missing chain-rule term: `gcR` carries
     // the Early factor's OWN derivative times the transport current, and a
