@@ -329,5 +329,13 @@
     "skipped": 2,
     "failed": 0,
     "logSha256": "503809c4d84a355dd5a75cc7b1de2ec35e774ffc79f76d38450c3bbcad90c1e7"
+  },
+  "landing": {
+    "revision": "b74387f5d5b20cda2978a816eb48e6a9f737084c",
+    "tag": "milestones/x86-386-task16-20260920",
+    "ci": 35483322404,
+    "cpuQualification": 35483322421,
+    "nativeQualification": 35483322406,
+    "status": "all hosted checks succeeded; normal fast-forward to master verified"
   }
 }
