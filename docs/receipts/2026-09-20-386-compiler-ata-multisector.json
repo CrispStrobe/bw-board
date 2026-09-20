@@ -1123,5 +1123,13 @@
       "url": "https://www.scs.stanford.edu/11wi-cs140/pintos/specs/ata-3-std.pdf",
       "scope": "Status and BSY/DRQ rules section6.2.13; autonomous PIO flows sections8.3/8.4."
     }
-  ]
+  ],
+  "landing": {
+    "revision": "6cf8e4042a66ed7f4cf2372f5acab166b79bcd03",
+    "tag": "milestones/x86-386-compiler-ata-20260920",
+    "ci": 35481716140,
+    "cpu": 35481716139,
+    "native": 35481716137,
+    "result": "all success; normal fast-forward push to master"
+  }
 }

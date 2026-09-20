@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (candidate frozen; hosted qualification pending) — Astra/Sol
+2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 compiler instructions and autonomous multi-sector ATA. Adds ENTER/LEAVE,
 BT/BTS/BTR/BTC, BSF/BSR, BCD adjustment and privileged CLTS; VM86 ENTER
 checks page-write permission. Corrects the physical comparator to reconstruct
@@ -117,6 +117,9 @@ comparison retains18 differences, with the recorded subset near the startup
 stack; this is not zero-difference acceptance.
 No protected extender, game, Windows, NPX or hardware timing acceptance.
 Receipt: `docs/receipts/2026-09-20-386-compiler-ata-multisector.json`.
+Exact `6cf8e4042a66ed7f4cf2372f5acab166b79bcd03` passed CI `35481716140`,
+CPU `35481716139`, native `35481716137`, then fast-forwarded master.
+Tag: `milestones/x86-386-compiler-ata-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 32-bit task switching, RET immediate and explicit AT floppy media rates.
