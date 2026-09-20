@@ -51,23 +51,26 @@ if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 500_000_000)
 
 // Clone the VGA board profile with an HDD-only AT type-2 CMOS declaration.
 // Register 10h says no floppy drives, 12h selects type 2 for drive C, and
-// equipment byte 14h retains VGA while clearing the diskette-present bit.
+// equipment byte 14h clears the diskette-present bit. Video is initialized by
+// the external VGA option ROM rather than encoded as an IBM fixed-display type.
 const windowsProfile = structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
 const rtc = windowsProfile.chips.find(chip => chip.kind === 'rtc');
 const cmos = new Uint8Array(0x40);
 for (const [index, value] of rtc.initialCmos) cmos[index] = value;
 cmos[0x10] = 0x00;
 cmos[0x12] = 0x20;
-cmos[0x14] = 0x01;
+cmos[0x14] = 0x00;
 let checksum = 0;
 for (let index = 0x10; index <= 0x2d; index++) checksum = (checksum + cmos[index]) & 0xffff;
 cmos[0x2e] = checksum >>> 8;
 cmos[0x2f] = checksum & 0xff;
-rtc.initialCmos = [...cmos.entries()].filter(([, value]) => value !== 0);
+rtc.initialCmos = [...cmos.entries()].filter(([index, value]) =>
+  value !== 0 || index === 0x10 || index === 0x14);
 
 let steps = 0;
 const postEvents = [];
 const interrupts = [];
+const interruptCounts = {};
 const ataCommands = [];
 const samples = [];
 let refusal = null;
@@ -77,7 +80,10 @@ machine = new ExperimentalI80386ATMachine(windowsProfile, {
   ataImage: hdd.bytes,
   ataGeometry: HDD_GEOMETRY,
   onInterrupt: event => {
-    if (interrupts.length < 256) interrupts.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, ...event});
+    const key = `${event.source}:${event.vector}`;
+    interruptCounts[key] = (interruptCounts[key] ?? 0) + 1;
+    interrupts.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, ...event});
+    if (interrupts.length > 256) interrupts.shift();
   },
   onPortAccess: event => {
     if (event.dir === 'out' && event.port === 0x80 && postEvents.length < 256)
@@ -109,9 +115,13 @@ for (; steps < stepLimit; steps++) {
     machine.step();
   } catch (error) {
     if (!(error instanceof UnsupportedI80386) && !(error instanceof I80386Fault)) throw error;
+    const paging = !!(machine.cpu.cr0 & 0x80000000);
     refusal = {name: error.name, message: error.message, step: steps,
       cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
-      bytes: Array.from({length: 8}, (_, index) => machine.cpu.read((machine.cpu.pc + index) >>> 0))};
+      bytes: paging ? null : Array.from({length: 8}, (_, index) => {
+        const physical = machine._decode386((machine.cpu.pc + index) >>> 0);
+        return physical < machine.mem.length ? machine.mem[physical] : 0xff;
+      })};
     stopReason = error instanceof UnsupportedI80386 ? 'cpu-unsupported' : 'architectural-fault-surfaced';
     break;
   }
@@ -140,7 +150,7 @@ const report = {
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256, geometry: HDD_GEOMETRY},
     cmos: {driveTypes: cmos[0x12], floppyTypes: cmos[0x10], equipment: cmos[0x14], checksum},
   },
-  reset, postEvents, ataCommands, interrupts,
+  reset, postEvents, ataCommands, interrupts, interruptCounts,
   final: {cs: machine.cpu.cs, eip: machine.cpu.eip, pc: machine.cpu.pc,
     cr0: machine.cpu.cr0 >>> 0, cr2: machine.cpu.cr2 >>> 0, cr3: machine.cpu.cr3 >>> 0,
     eflags: machine.cpu.eflags >>> 0, halted: machine.cpu.halted, shutdown: machine.cpu.shutdown},
