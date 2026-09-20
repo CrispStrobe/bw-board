@@ -114,6 +114,10 @@ Focused 452 pass,2 optional skips; actionlint and diff checks pass.
 Receipt: `docs/receipts/2026-09-20-x86-application-persistence.json`.
 Windows enhanced mode, Doom save/load/sound/all levels and complete physical
 386 behavior remain outside these bounded application milestones.
+Initial candidate9d64209a failed the sampled386 zero-skip assertion because
+the coordinator put an optional external-report test in that subset. The
+forward workflow correction removes that optional entry and retains the
+zero-skip assertion; actual-report acceptance and mutations passed locally.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol Windows desktop and Doom interaction.
 Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0

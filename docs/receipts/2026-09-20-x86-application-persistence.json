@@ -22,7 +22,13 @@
     "defaultDoomImage": "Optional-file builder reproduces pinned original image e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303 without extra files.",
     "shortDemoImage": "Current hardened builder independently reproduces image5ffd1e792e80f5412b713413cd760f4114b6f1d9c527292369c806b716102a8d and demo a88e639dbf38c2ce9d32d0095c44459f797cd73e9cdf9d11079fe633b8455c33.",
     "shortDemoAcceptance": "Pass with actual external report; nine material evidence mutations reject, including the initial black frame and a changed visible pixel.",
-    "productionSourceEquivalence": "All recorded src/ dependencies for the accepted short-demo run match the candidate; this increment changes harnesses/builders/receipts only."
+    "productionSourceEquivalence": "All recorded src/ dependencies for the accepted short-demo run match the candidate; this increment changes harnesses/builders/receipts only.",
+    "initialHostedFailure": {
+      "revision": "9d64209a920cecde9b741b317440cf6de9f41bb9",
+      "run": 35490440739,
+      "reason": "Coordinator placed the optional external-report test in the sampled386 job whose aggregate requires zero skips. All tests had zero failures; one intentional missing-external-report skip violated that contract.",
+      "correction": "Remove the optional external-report test from this zero-skip subset. Keep the zero-skip assertion unchanged; the actual external report and nine mutations passed locally. General CI still discovers the optional test."
+    }
   },
   "limits": [
     "Windows3.0 standard mode and one editor/file do not prove enhanced mode or other Windows releases.",
