@@ -16,7 +16,7 @@ test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-a
   assert.equal(machine.cpu.pc, 0xfffffff0);
   assert.equal(machine.cpu.read(0xfffffff0), 0xf4);
   assert.equal(machine.cpu.read(0x10fffff0), 0xff);
-  assert.equal(machine.step(), 4, 'completed reset-vector HLT receives functional charge');
+  assert.equal(machine.step(), 6, 'completed reset-vector HLT receives functional charge');
   assert.equal(machine.cpu.halted, true);
 });
 
@@ -73,7 +73,7 @@ test('experimental 386 AT cold board reset restores configured A20 before reset-
     'a CPU-only reset with the external A20 gate low does not invent a ROM alias');
   machine.reset();
   assert.equal(machine.a20Enabled, true, 'cold board reset restores the profile output-port state');
-  assert.equal(machine.step(), 4, 'completed reset-vector HLT receives functional charge');
+  assert.equal(machine.step(), 6, 'completed reset-vector HLT receives functional charge');
   assert.equal(machine.cpu.halted, true);
 });
 
@@ -128,8 +128,8 @@ test('experimental 386 AT wakes HLT for a maskable PIC interrupt', () => {
   machine.mem[0x300] = 0xf4;
   const machineCycles = machine.cycles;
   const cpuCycles = machine.cpu.cycles;
-  assert.equal(machine.step(), 4, 'IRQ wake executes and charges the handler HLT');
-  assert.equal(machine.cycles - machineCycles, 4);
+  assert.equal(machine.step(), 6, 'IRQ wake executes and charges the handler HLT');
+  assert.equal(machine.cycles - machineCycles, 6);
   assert.equal(machine.cpu.cycles - cpuCycles, 1);
   assert.equal(machine.cpu.halted, true, 'machine.step wakes, vectors, and executes the handler HLT');
   assert.equal(machine.cpu.eip, 0x301);
@@ -186,8 +186,8 @@ test('experimental 386 AT functional pacing lets a bounded PIT poll observe term
   machine._out(0x40, 0);
   const start = machine.cycles;
   for (let instruction = 0; instruction < 60; instruction++)
-    assert.equal(machine.step(), 4);
-  assert.equal(machine.cycles - start, 240);
+    assert.equal(machine.step(), 6);
+  assert.equal(machine.cycles - start, 360);
   assert.ok(machine.chips.pic1.irr & 1,
     '44 PIT ticks expire within a 60-instruction functional polling window');
 });

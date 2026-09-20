@@ -176,7 +176,7 @@ export const PCAT80386_EXPERIMENTAL = Object.freeze({
   // Functional device pacing only. The instruction executor does not yet
   // provide measured 80386 timings, so board time advances by a declared,
   // deterministic four clocks per completed instruction.
-  functionalInstructionCycles: 4,
+  functionalInstructionCycles: 6,
   // The installed memory remains the AT profile's sparse 640KiB + 512KiB.
   // The reset ROM alias is decoded by the adapter without a 4GiB allocation.
 });
