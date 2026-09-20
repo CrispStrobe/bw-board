@@ -39,8 +39,9 @@ mode 1 and masked raster operations.
 The sequencer Extended Memory bit selects a 16 KiB or 64 KiB address range in
 each map, representing 64 KiB or 256 KiB total VGA RAM. The 128 KiB aperture
 therefore aliases addresses beyond the enabled per-map range. Chain-4 consumes
-A1:A0 as the map number and shifts the remaining address into the selected
-map. Graphics-controller register 6 can substitute A0 out of the map address
+A1:A0 as the map number and clears those bits from the literal CPU plane
+address; it does not compact higher address bits. CRTC/display fetch packing
+is a separate rendering concern. Graphics-controller register 6 can substitute A0 out of the map address
 without itself choosing a read map or restricting write maps. Register 5
 independently uses A0 to select the odd/even read map, while sequencer register
 4 independently restricts writes to the odd or even pair. Mixed settings are

@@ -127,7 +127,13 @@ describe('experimental VGA memory', () => {
         assert.equal(memory.write(0xa0001, 0x99), true);
         assert.equal(memory.planes[1][0], 0x41, 'chain-selected plane is disabled by map mask');
         memory.write(0xa0004, 0x55);
-        assert.equal(memory.planes[0][1], 0x55);
+        assert.equal(memory.planes[0][4], 0x55);
+
+        memory.write(0xa0010, 0x6a);
+        seq(4, 0x06);
+        gc(4, 0);
+        assert.equal(memory.read(0xa0010), 0x6a,
+            'switching to planar mode observes the same literal CPU address');
     });
 
     it('routes odd/even accesses to plane pairs and substitutes A0 in the memory index', () => {
@@ -186,7 +192,7 @@ describe('experimental VGA memory', () => {
         gc(6, 0x01);
         gc(5, 0x00);
         seq(4, 0x0e);
-        memory.planes[3][0x7fff] = 0xc4;
+        memory.planes[3][0xfffc] = 0xc4;
         assert.equal(memory.read(0xbffff), 0xc4, 'chain-4 consumes A1:A0 as map select');
     });
 

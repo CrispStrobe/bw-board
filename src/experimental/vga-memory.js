@@ -80,7 +80,10 @@ export class VGAMemory {
         const addressMask = seq[4] & 0x02 ? 0xffff : 0x3fff;
         if (chain4) {
             return {
-                index: (offset >>> 2) & addressMask,
+                // CPU address bits A1:A0 select the plane; the remaining
+                // address bits stay in their literal positions in VGA RAM.
+                // Display fetch packing belongs to CRTC/rendering logic.
+                index: (offset & ~3) & addressMask,
                 readPlane: offset & 3,
                 chain4: true,
                 writeOddEven: false,
