@@ -877,7 +877,7 @@
           "bytesPerSector": 512
         },
         "output": {
-          "path": "/tmp/astra-root-stage12-386dos-6ad41ef3.img",
+          "path": "/tmp/astra-root-stage13-386dos-1a790719.img",
           "sha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819"
         }
       }
@@ -894,12 +894,12 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "executionRevision": "6ad41ef326d120108c640af12614a44407e6c11b",
+    "executionRevision": "1a790719fb690aa7866e16cf5522be0244f59479",
     "sourceSha256": {
       "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-      "src/experimental/i80386.js": "904c5089b3f0acb0d5e1a55e249954f579463584833ccb656b5940082edd4e7f",
+      "src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00",
       "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
       "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
@@ -915,7 +915,7 @@
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
     },
-    "originalReportSha256": "64bb11f99ebeeaee01202f77628fc16d6c16b9e8c9063beadbc15924bef81fdd"
+    "originalReportSha256": "bf587aa20439555f53a5e5fb544d828fe29f900b6f41f714f3df0641acad08a2"
   },
   "reboot": {
     "schema": "astra.i80386-at-dos-acceptance.v1",
@@ -1654,12 +1654,12 @@
       "baseRamBytes": 655360,
       "extendedRamBytes": 524288
     },
-    "executionRevision": "6ad41ef326d120108c640af12614a44407e6c11b",
+    "executionRevision": "1a790719fb690aa7866e16cf5522be0244f59479",
     "sourceSha256": {
       "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
       "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
       "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-      "src/experimental/i80386.js": "904c5089b3f0acb0d5e1a55e249954f579463584833ccb656b5940082edd4e7f",
+      "src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00",
       "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
       "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
       "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
@@ -1675,15 +1675,15 @@
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
     },
-    "originalReportSha256": "469be342127129f55daceaa1287559f79c73b7c6e3c828bfcfcd490811179795"
+    "originalReportSha256": "f8ca0cbaad41a975d2506cd203546459e83b3ab3e986c7dff6aa0793f249d534"
   },
   "current": {
-    "executionRevision": "6ad41ef326d120108c640af12614a44407e6c11b",
+    "executionRevision": "1a790719fb690aa7866e16cf5522be0244f59479",
     "writeSteps": 25652224,
     "rebootSteps": 25567232,
     "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
-    "writeReportSha256": "64bb11f99ebeeaee01202f77628fc16d6c16b9e8c9063beadbc15924bef81fdd",
-    "rebootReportSha256": "469be342127129f55daceaa1287559f79c73b7c6e3c828bfcfcd490811179795"
+    "writeReportSha256": "bf587aa20439555f53a5e5fb544d828fe29f900b6f41f714f3df0641acad08a2",
+    "rebootReportSha256": "f8ca0cbaad41a975d2506cd203546459e83b3ab3e986c7dff6aa0793f249d534"
   },
   "previousRuns": [
     {
@@ -1710,6 +1710,14 @@
       "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
       "writeReportSha256": "bc0b67f0ab01daf279c49565f694a18d5cf93f6c958a1ee04c789639ea7d89c3",
       "rebootReportSha256": "adee933580a246b3e28f63bb150cf66c9f47986aa75847c06487d2173edf43f7"
+    },
+    {
+      "executionRevision": "6ad41ef326d120108c640af12614a44407e6c11b",
+      "writeSteps": 25652224,
+      "rebootSteps": 25567232,
+      "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+      "writeReportSha256": "64bb11f99ebeeaee01202f77628fc16d6c16b9e8c9063beadbc15924bef81fdd",
+      "rebootReportSha256": "469be342127129f55daceaa1287559f79c73b7c6e3c828bfcfcd490811179795"
     }
   ]
 }

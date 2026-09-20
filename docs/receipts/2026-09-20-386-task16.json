@@ -1,0 +1,333 @@
+{
+  "schema": "astra.i80386-task16.v1",
+  "scope": [
+    "286-format TSS CALL/JMP, task gates and nested IRET in the386 executor",
+    "mixed286/386 dynamic saves with exact static-byte preservation",
+    "286 SPn/SSn privilege stacks, word task error codes, and IOPL-denied I/O",
+    "precise incoming-image versus postcommit selector page-fault contexts"
+  ],
+  "oracles": [
+    {
+      "oracle": "PCjs",
+      "revision": "1a790719fb690aa7866e16cf5522be0244f59479",
+      "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "scope": "owned 286-format TSS CALL, nested IRET, CR3 preservation, busy/backlink and exact old-task HLT completion",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-task16.mjs": "eb539e93f54cab1ac60f992e679cee33273087f811958a35776b36ea6ef3d99e",
+        "../src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00"
+      },
+      "mutation": null,
+      "status": "pass",
+      "expected": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 24,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "reference": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 24,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "actual": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 24,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "differences": [],
+      "reportSha256": "6556b3ca0031229a526feccdbae5ebf152e900be72efe2f04cfae9e985462197"
+    },
+    {
+      "oracle": "PCjs",
+      "revision": "1a790719fb690aa7866e16cf5522be0244f59479",
+      "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "scope": "owned 286-format TSS CALL, nested IRET, CR3 preservation, busy/backlink and exact old-task HLT completion",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-task16.mjs": "eb539e93f54cab1ac60f992e679cee33273087f811958a35776b36ea6ef3d99e",
+        "../src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00"
+      },
+      "mutation": "result",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 24,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "reference": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 24,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "actual": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 25,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "differences": [
+        {
+          "field": "actual.ax",
+          "expected": 24,
+          "actual": 25
+        }
+      ],
+      "reportSha256": "74cd3e149d4f9d18f8029af25e99d37cb8788ecab16b6bbaad68a43aa407e5d1"
+    },
+    {
+      "oracle": "PCjs",
+      "revision": "1a790719fb690aa7866e16cf5522be0244f59479",
+      "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "scope": "owned 286-format TSS CALL, nested IRET, CR3 preservation, busy/backlink and exact old-task HLT completion",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-task16.mjs": "eb539e93f54cab1ac60f992e679cee33273087f811958a35776b36ea6ef3d99e",
+        "../src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00"
+      },
+      "mutation": "budget",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "cs": 8,
+        "eip": 280,
+        "tr": 24,
+        "cr3": 0,
+        "ax": 24,
+        "oldBusy": 3,
+        "newBusy": 1,
+        "backlink": 24
+      },
+      "reference": {
+        "halted": false,
+        "cs": 8,
+        "eip": 265,
+        "tr": 0,
+        "cr3": 0,
+        "ax": 16,
+        "oldBusy": 1,
+        "newBusy": 1,
+        "backlink": 0
+      },
+      "actual": {
+        "halted": false,
+        "cs": 8,
+        "eip": 265,
+        "tr": 0,
+        "cr3": 0,
+        "ax": 16,
+        "oldBusy": 1,
+        "newBusy": 1,
+        "backlink": 0
+      },
+      "differences": [
+        {
+          "field": "reference.halted",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "field": "actual.halted",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "field": "reference.eip",
+          "expected": 280,
+          "actual": 265
+        },
+        {
+          "field": "actual.eip",
+          "expected": 280,
+          "actual": 265
+        },
+        {
+          "field": "reference.tr",
+          "expected": 24,
+          "actual": 0
+        },
+        {
+          "field": "actual.tr",
+          "expected": 24,
+          "actual": 0
+        },
+        {
+          "field": "reference.ax",
+          "expected": 24,
+          "actual": 16
+        },
+        {
+          "field": "actual.ax",
+          "expected": 24,
+          "actual": 16
+        },
+        {
+          "field": "reference.oldBusy",
+          "expected": 3,
+          "actual": 1
+        },
+        {
+          "field": "actual.oldBusy",
+          "expected": 3,
+          "actual": 1
+        },
+        {
+          "field": "reference.backlink",
+          "expected": 24,
+          "actual": 0
+        },
+        {
+          "field": "actual.backlink",
+          "expected": 24,
+          "actual": 0
+        }
+      ],
+      "reportSha256": "71ff50007fbed0fb2440591dc1c7d8064d11f6e6f8bef070d52972571752e2fe"
+    }
+  ],
+  "dosRegression": {
+    "write": {
+      "executionRevision": "1a790719fb690aa7866e16cf5522be0244f59479",
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00",
+        "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+        "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
+      },
+      "steps": 25652224,
+      "fullBootAccepted": true,
+      "persistence": {
+        "priorOutputMediaSha256": null,
+        "linked": null
+      },
+      "guestFile": {
+        "name": "ATBOOT  TXT",
+        "cluster": 43,
+        "size": 12,
+        "bytes": [
+          97,
+          116,
+          45,
+          98,
+          111,
+          111,
+          116,
+          45,
+          111,
+          107,
+          13,
+          10
+        ],
+        "text": "at-boot-ok\r\n"
+      },
+      "reportSha256": "bf587aa20439555f53a5e5fb544d828fe29f900b6f41f714f3df0641acad08a2"
+    },
+    "reboot": {
+      "executionRevision": "1a790719fb690aa7866e16cf5522be0244f59479",
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80386.js": "c027aa2111ce204099525326c74f486af946b97d0ba543959608886b421e0c00",
+        "src/experimental/i80386-at-machine.js": "9fa8ba59ff10dcd62d2830c67766490127659f14702a4fc87938968b3cd81805",
+        "src/experimental/ata16.js": "9233a8fd5be037fcb50fe80c868f53dbf1b0927f8936880306ae2d7f6fb6b90d",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/at-8042-a20.js": "6996c2b26137543e8c7e5e4e45b90daad74c84d0142f5ca6b31282807f56ebab",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+        "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+        "scripts/run-i80386-at-dos-acceptance.mjs": "0c442e527d896f2b39fdbed2d0c8a476166e1267026b312272c48baf1fb4b25f"
+      },
+      "steps": 25567232,
+      "fullBootAccepted": true,
+      "persistence": {
+        "priorOutputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+        "linked": true
+      },
+      "guestFile": {
+        "name": "ATBOOT  TXT",
+        "cluster": 43,
+        "size": 12,
+        "bytes": [
+          97,
+          116,
+          45,
+          98,
+          111,
+          111,
+          116,
+          45,
+          111,
+          107,
+          13,
+          10
+        ],
+        "text": "at-boot-ok\r\n"
+      },
+      "reportSha256": "f8ca0cbaad41a975d2506cd203546459e83b3ab3e986c7dff6aa0793f249d534"
+    }
+  },
+  "limitations": [
+    "Upper general-register halves are deterministically zero-extended and FS/GS become null on incoming286 tasks; these policies are excluded from cross-engine hardware claims",
+    "The PCjs guest uses CR3=0; directed mixed-format tests additionally check nonzero CR3 preservation and selection",
+    "VM86 task entry, debug task trap and page-straddling incoming TSS images remain outside this increment",
+    "No Windows application, full CPU compatibility or hardware timing acceptance"
+  ],
+  "focused": {
+    "passed": 326,
+    "skipped": 2,
+    "failed": 0,
+    "logSha256": "503809c4d84a355dd5a75cc7b1de2ec35e774ffc79f76d38450c3bbcad90c1e7"
+  }
+}

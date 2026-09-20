@@ -99,6 +99,23 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate) — Astra/Sol 286-format TSS support in the 386.
+Adds 16-bit task images to direct CALL/JMP, task gates and nested IRET;
+implements 286 privilege-stack fields and word task error frames. Mixed-format
+switches preserve exactly the appropriate outgoing dynamic bytes and retain
+static fields, including CR3/LDT; an incoming 286 image leaves CR3 selected.
+Directed tests distinguish precommit incoming-image faults from postcommit
+selector page faults, and verify IOPL denial without port callbacks. Pinned
+PCjs agrees on an all-286 CALL/IRET round trip with exact HLT/busy/backlink
+state; result and truncated-budget mutations reject. Upper general-register
+halves and FS/GS follow explicitly bounded deterministic policies and are not
+hardware-graded by this oracle. Fresh frozen-source 386 DOS write/reboot tests
+pass with unchanged steps and media bytes. Focused surface:326 pass,2 optional
+skips. VM86 task entry, debug trap, page-straddling TSS images, Windows and
+full compatibility remain outside this increment. Receipt:
+`docs/receipts/2026-09-20-386-task16.json`.
+Exact-head hosted qualification is required before landing this candidate.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol 386 protected entry and VGA services.
 Preserves visible real-mode CS and starts CPL0 when MOV CR0/LMSW enables PE;
 checks direct/conforming, segment, interrupt, return and task paths. Adds INTO

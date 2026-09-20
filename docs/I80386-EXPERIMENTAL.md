@@ -625,3 +625,8 @@ a 16-bit gate while in VM86 and expects it to succeed. The executor instead
 raises #GP under the original-386 gate restriction in section 15.3.2. This is
 a named guest/manual disagreement, not a full-ROM or task-test pass. The owned
 paged task CALL/IRET program is separately compared against pinned PCjs.
+
+The [286-format TSS receipt](receipts/2026-09-20-386-task16.json) records the
+independent CALL/IRET comparison, its rejecting controls, exact mixed-format
+save-byte tests, and a fresh source-bound DOS write/reboot regression. These
+are bounded executor checks; they do not establish Windows compatibility.
