@@ -806,7 +806,8 @@ export class ExperimentalI80386 {
     const next = stack32
       ? (this.esp - allocation) >>> 0
       : (this.sp - allocation) & 0xffff;
-    if (allocation) this._linear(SEG_SS, next, allocation);
+    if (allocation && this.protectedMode && !this.virtual8086)
+      this._linear(SEG_SS, next, allocation);
     if (stack32) this.esp = next;
     else this.sp = next;
   }
@@ -3002,7 +3003,7 @@ export class ExperimentalI80386 {
       const rawIndex = op === 0xba ? this._fetch8() : this._reg(ea.reg, width);
       let operand = ea;
       let bit = rawIndex & (width - 1);
-      if (!ea.isReg) {
+      if (!ea.isReg && op !== 0xba) {
         const signedIndex = op === 0xba
           ? rawIndex
           : width === 32 ? rawIndex | 0 : (rawIndex << 16) >> 16;

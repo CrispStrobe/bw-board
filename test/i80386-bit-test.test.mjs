@@ -42,7 +42,7 @@ test("register-indexed memory BT uses a signed unmasked bit offset", () => {
   assert.deepEqual(writes, []);
 });
 
-test("immediate BTS/BTR/BTC address later words without masking the index", () => {
+test("immediate BTS/BTR/BTC mask the index within one memory operand", () => {
   for (const [extension, initial, expected] of [
     [5, 0, 2],
     [6, 3, 1],
@@ -50,9 +50,9 @@ test("immediate BTS/BTR/BTC address later words without masking the index", () =
   ]) {
     const { cpu, memory } = fixture([0x0f, 0xba, 0x00 | extension << 3, 17]);
     cpu.bx = 0x200;
-    put(memory, 0x202, initial, 2);
+    put(memory, 0x200, initial, 2);
     cpu.step();
-    assert.equal((memory.get(0x202) ?? 0) | ((memory.get(0x203) ?? 0) << 8), expected);
+    assert.equal((memory.get(0x200) ?? 0) | ((memory.get(0x201) ?? 0) << 8), expected);
     assert.equal(!!(cpu.eflags & CF), !!(initial & 2));
   }
 });

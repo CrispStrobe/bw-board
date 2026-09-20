@@ -103,6 +103,8 @@ const PROFILES={
   },
   'bit-test':{
     files:['0FA3','0FAB','0FB3','0FBB','0FBA.4','0FBA.5','0FBA.6','0FBA.7'],
+    undefinedEflagsMask:1,
+    excludedPrefixes:[0xf0],
     scope:'24 fixed deterministic BT/BTS/BTR/BTC register and immediate samples spanning read-only and modifying forms',
   },
 };
