@@ -1,0 +1,58 @@
+{
+  "schema": "astra.i80386-freedos-media-rate-causal.v1",
+  "status": "diagnostic-causal-fix; FreeDOS shell and HDD DIR reached, Doom graphics not accepted",
+  "externalInputs": {
+    "freedos14FloppySha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+    "ibm5170Rev1RomSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "doomFat16HddSha256": "e9f311f96d97a2dbf2bd27f08302f23c51041c6e9d87beae339b0970b43d7303"
+  },
+  "primarySources": [
+    {
+      "title": "IBM Personal Computer AT Technical Reference (1984)",
+      "url": "https://bitsavers.org/pdf/ibm/pc/at/1502494_PC_AT_Technical_Reference_Mar84.pdf",
+      "localText": "/tmp/astra-ibm-at-1984.txt",
+      "evidence": "lines 15440-15470 define BDA media states and double stepping; lines 7772-7800 identify 250/300kbps states"
+    },
+    {
+      "title": "NEC uPD765 application note AN08",
+      "url": "https://bitsavers.org/components/nec/_appNotes/AN08_uPD765_preliminary_197902.pdf",
+      "localText": "/tmp/astra-nec-upd765-appnote.txt",
+      "evidence": "drive ready polling and SEEK/SENSE behavior; PCN is not cleared by controller reset"
+    }
+  ],
+  "diagnostics": [
+    {
+      "executionRevision": "4643546e5311d49033a6e3b1849a3d4c26f71c8d",
+      "reportSha256": "76a10cd1a8102f5725ec7daed5ab08f0663341897fd04128773ffc19f0b617f2",
+      "result": "baseline failed after BIOS selected low-density media; SEEK80 then READ C40 returned 44/04/10"
+    },
+    {
+      "executionRevision": "aea06c7752a2594f71e260d4dfac975897465ed9",
+      "reportSha256": "b856d774b23f71ad24125d6642d761a7efdef8147a3e97bf5e73b46c7488cc73",
+      "result": "silent out-of-range SEEK experiment produced the identical failure; experiment removed"
+    },
+    {
+      "executionRevision": "8fc5603879bd6ef6fbe34a8ff1245770edb51d22",
+      "reportSha256": "1f4a4f8c6fdcc1cb34cc6d9efb60d8037c83a96f3b2eddcbbff87ff769453763",
+      "result": "BDA 40:90 was 74h: 360K media in a 1.2MB drive with double stepping"
+    },
+    {
+      "executionRevision": "ad44541b7fb83207ef3c9e9101ef440d0e65b4cd",
+      "reportSha256": "673501a6754c70ae09ca9db0c804f652d51db94142a185e6c604c64c98beafe8",
+      "result": "opt-in 500kbps compatibility selected BDA state15h and CCR0; genuine FreeDOS kernel banner reached"
+    },
+    {
+      "executionRevision": "3674833deed0e3ddcc8a081d4a412d7e80843e79",
+      "reportSha256": "769288a66f7c2eff2f92e8b6d1ed877445d2dd042914094ea6cbd963adf40bff",
+      "result": "real 8042 input declined installation; C: DIR showed pinned DOOM.EXE and DOOM1.WAD; shell invoked DOOM then stopped at unsupported opcode3F"
+    }
+  ],
+  "implementation": {
+    "rateCommit": "ad44541b7fb83207ef3c9e9101ef440d0e65b4cd",
+    "readIdFollowup": "a9fd5318",
+    "strictSeekCommit": "2890d462",
+    "defaultProfilesChanged": false,
+    "acceptedProfile": "PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS",
+    "acceptedCcrByImageBytes": {"1228800": [0]}
+  }
+}
