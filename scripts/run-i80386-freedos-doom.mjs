@@ -73,6 +73,9 @@ const encodeKeys=keys=>keys.flatMap(key=>key==='>'||key===':'
     : [{key,scan:scanCodes[key.toLowerCase()]}]);
 const keyScript=[];
 let installerDeclined=false,commandQueued=false,commandPrompt=null,doomEntry=null;
+let steps=0;
+const doomEntryPhysical=0x26b62;
+const doomEntryWrites=[];
 const doomInstructionTrace=[];
 
 const resetRequests=[];
@@ -173,7 +176,17 @@ const reset={cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,
 if(reset.cs!==0xf000||reset.ip!==0xfff0||reset.pc!==0xfffffff0||reset.fetchPhysical!==0xfffffff0)
     throw new Error(`80386 reset entry mismatch: ${JSON.stringify(reset)}`);
 
-let steps=0;
+const cpuWrite=machine.cpu.write;
+machine.cpu.write=(address,value)=>{
+    if(commandQueued&&address>=doomEntryPhysical&&address<doomEntryPhysical+16) {
+        doomEntryWrites.push({step:steps,address,value:value&0xff,cs:machine.cpu.cs,
+            eip:machine.cpu.eip,linearPc:machine.cpu.pc,esi:machine.cpu.esi,
+            edi:machine.cpu.edi,ecx:machine.cpu.ecx,ds:machine.cpu.ds,es:machine.cpu.es,
+            dsBase:machine.cpu.segmentCaches[3].base,esBase:machine.cpu.segmentCaches[0].base});
+        if(doomEntryWrites.length>4096)doomEntryWrites.shift();
+    }
+    cpuWrite(address,value);
+};
 machine.step();
 const firstFetchTrace=[reset.firstByte,reset.fetchPhysical];
 steps=1;
@@ -209,9 +222,18 @@ for(;steps<stepLimit;steps++) {
         (machine.cpu.esp&0xffff)===doomMz.initialSP&&
         ((machine.cpu.cs-machine.cpu.ss)&0xffff)===((doomMz.initialCS-doomMz.initialSS)&0xffff)) {
         const memoryBytes=Array.from({length:16},(_,index)=>machine.cpu.read((machine.cpu.pc+index)>>>0));
+        const exactEntryLocations=[];
+        for(let address=0;address<=machine.mem.length-doomEntryBytes.length;address++) {
+            let matches=true;
+            for(let index=0;index<doomEntryBytes.length;index++) {
+                if(machine.mem[address+index]!==doomEntryBytes[index]) { matches=false; break; }
+            }
+            if(matches)exactEntryLocations.push(address);
+        }
         doomEntry={step:steps,cs:machine.cpu.cs,eip:machine.cpu.eip,linearPc:machine.cpu.pc,
             loadSegment:(machine.cpu.cs-doomMz.initialCS)&0xffff,memoryBytes,
-            fileBytes:doomEntryBytes};
+            fileBytes:doomEntryBytes,physical:doomEntryPhysical,exactEntryLocations,
+            writes:[...doomEntryWrites]};
     }
     if(doomEntry) {
         const stackLinear=(machine.cpu.segmentCaches[2].base+(machine.cpu.esp&0xffff))>>>0;
@@ -350,7 +372,7 @@ const report={schema:'astra.i80386-freedos-doom-diagnostic.v1',passed,stepLimit,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,doomEntry,doomInstructionTrace,diskPorts,rtcPorts,keyboardScript,
+    executionBoundaries,doomEntry,doomEntryWrites,doomInstructionTrace,diskPorts,rtcPorts,keyboardScript,
     disketteBda490:disketteBda(),
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,finalCpu:cpuSnapshot(),
