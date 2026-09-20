@@ -340,7 +340,8 @@ export class UPD765 {
      * @param {{ onIrqChange?: (asserted: boolean) => void,
      *           onDmaRequest?: (dir: 'read'|'write', byte?: number) => any,
      *           onMotorChange?: (drive: number, on: boolean) => void }} [hooks]
-     * @param {{ seekBeyondEnd?: 'error'|'silent' }} [options]
+     * @param {{ seekBeyondEnd?: 'error'|'silent',
+     *           acceptedCcrByImageBytes?: Record<string, number[]> }} [options]
      *   THE ONE BEHAVIOUR THE DATASHEET DOES NOT SETTLE. A uPD765 has no idea
      *   how many cylinders a drive has: SEEK counts out step pulses and the
      *   only feedback it ever gets is the TRACK 0 sensor. Read literally, a
@@ -359,6 +360,7 @@ export class UPD765 {
     constructor(hooks = {}, options = {}) {
         this.hooks = hooks;
         this.seekBeyondEnd = options.seekBeyondEnd === 'silent' ? 'silent' : 'error';
+        this.acceptedCcrByImageBytes = options.acceptedCcrByImageBytes ?? null;
         this.drives = Array.from({ length: 4 }, () => new Drive());
         this.reset(true);
     }
@@ -843,6 +845,14 @@ export class UPD765 {
 
         if (!d.image) {
             this._result([ST0.IC_ABNORMAL | ST0.NR | base, ST1.MA, 0, c, h, r, n]);
+            return;
+        }
+        const acceptedRates = this.acceptedCcrByImageBytes?.[d.image.length];
+        if (acceptedRates && !acceptedRates.includes(this.ccr & 3)) {
+            // At the wrong bit rate the requested ID field is not decoded.
+            // Historical profiles intentionally leave CCR inert; this
+            // behavior is enabled only by an explicit board/media profile.
+            this._result([ST0.IC_ABNORMAL | base, ST1.ND, 0, c, h, r, n]);
             return;
         }
         this._noteMotor(us);

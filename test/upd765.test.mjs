@@ -370,6 +370,21 @@ test("seekBeyondEnd:'silent' takes the datasheet literally and calls the same se
     assert.equal(fdc.drives[0].track, geom.cylinders - 1, 'and so is the parked head');
 });
 
+test('opt-in media-rate policy rejects a 1.2MB read until CCR selects 500kbps', () => {
+    const { img } = makeImage('1.2m');
+    const fdc = new UPD765({}, { acceptedCcrByImageBytes: { 1228800: [0] } });
+    fdc.insert(0, img, '1.2m');
+    fdc.write(R_DOR, DOR_PIO);
+    drainResetStatuses(fdc);
+    fdc.write(R_DIR, 1);
+    assert.deepEqual(exchange(fdc, [CMD.READ_DATA, 0, 0, 0, 1, 2, 15, 0x23, 0xff]).slice(0, 3),
+        [ST0.IC_ABNORMAL, ST1.ND, 0], '300kbps cannot decode a 500kbps ID field');
+    fdc.write(R_DIR, 0);
+    command(fdc, [CMD.SPECIFY, 0xdf, 3]);
+    command(fdc, [CMD.READ_DATA, 0, 0, 0, 1, 2, 15, 0x23, 0xff]);
+    assert.equal(fdc.phase, 'exec', '500kbps admits the same medium and command');
+});
+
 test('the chip does not seek for you: READ DATA with the wrong C is refused, not helped', () => {
     const { fdc } = pioMachine();
     const res = exchange(fdc, [CMD.READ_DATA, 0x00, 5, 0, 1, 2, 9, 0x2a, 0xff]);
