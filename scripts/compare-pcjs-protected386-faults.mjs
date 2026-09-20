@@ -212,6 +212,62 @@ function runPCjs(type, fault = false) {
   return { entry, returned: snapshot(view, (a) => bus.getByteDirect(a)) };
 }
 
+function installInto(write) {
+  install(write, 15);
+  put(write, 0x300 + 4 * 8, gate(15));
+  put(write, CODE + 14, [0xce, 0xf4]);
+  put(write, CODE + 0x100, [0xf4]);
+}
+
+function intoResult(cpu, read, pcjs, overflow) {
+  const cs = pcjs ? cpu.getCS() : cpu.cs;
+  const eip = (pcjs ? cpu.getIP() : cpu.eip) >>> 0;
+  const esp = (pcjs ? cpu.getSP() : cpu.esp) >>> 0;
+  const dword = address => (read(address) | (read(address + 1) << 8)
+    | (read(address + 2) << 16) | (read(address + 3) * 0x1000000)) >>> 0;
+  return {
+    overflow,
+    cs,
+    eip,
+    esp,
+    frame: overflow
+      ? [0, 4, 8].map(delta => dword(STACK + esp + delta))
+      : [],
+  };
+}
+
+function runIntoLocal(overflow) {
+  const memory = new Uint8Array(1 << 24);
+  const cpu = new I80386({
+    read: address => memory[address],
+    fetch: address => memory[address],
+    write: (address, value) => { memory[address] = value; },
+  });
+  installInto((address, value) => { memory[address] = value; });
+  for (let steps = 0; steps < 30 && !(cpu.cs === 8 && cpu.eip === 14); steps++)
+    cpu.step();
+  if (!(cpu.cs === 8 && cpu.eip === 14)) throw new Error("local INTO bootstrap incomplete");
+  cpu.eflags = overflow ? 0xa02 : 0x202;
+  cpu.step();
+  return intoResult(cpu, address => memory[address], false, overflow);
+}
+
+function runIntoPCjs(overflow) {
+  const cpu = new CPU({ id: `fault386.into.${overflow}`, model: 80386 });
+  const bus = new QuietBus({ id: `fault386.into.bus.${overflow}`, busWidth: 32 }, cpu);
+  if (!bus.addMemory(0, 1 << 24, Memory.TYPE.RAM))
+    throw new Error("PCjs memory allocation failed");
+  cpu.bus = bus;
+  installInto((address, value) => bus.setByteDirect(address, value));
+  cpu.setCS(0); cpu.setIP(0); cpu.setDS(0); cpu.setES(0); cpu.setSS(0); cpu.setSP(0); cpu.setPS(2);
+  for (let steps = 0; steps < 30 && !(cpu.getCS() === 8 && cpu.getIP() === 14); steps++)
+    cpu.stepCPU(0);
+  if (!(cpu.getCS() === 8 && cpu.getIP() === 14)) throw new Error("PCjs INTO bootstrap incomplete");
+  cpu.setPS(overflow ? 0xa02 : 0x202);
+  cpu.stepCPU(0);
+  return intoResult(cpu, address => bus.getByteDirect(address), true, overflow);
+}
+
 function installRing(write) {
   install(write, 14);
   write(0x100, 0x2f);
@@ -407,6 +463,8 @@ cases.ioAllowed={reference:runIoPCjs(false),actual:runIoLocal(false)};
 cases.ioDenied={reference:runIoPCjs(true),actual:runIoLocal(true)};
 cases.conformingInterrupt={reference:runConformingPCjs(),actual:runConformingLocal()};
 cases.vm86RoundTrip={reference:runVm86PCjs(),actual:runVm86Local()};
+cases.intoClear={reference:runIntoPCjs(false),actual:runIntoLocal(false)};
+cases.intoSet={reference:runIntoPCjs(true),actual:runIntoLocal(true)};
 const mutation = process.env.I386_FAULT_ORACLE_MUTATION ?? null;
 if (mutation === "frame") cases.interrupt32.actual.entry.frame[0] ^= 1;
 else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
@@ -415,6 +473,8 @@ else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
 else if (mutation === "io-access") cases.ioDenied.actual.ports.push([0x20,8]);
 else if (mutation === "conforming-cpl") cases.conformingInterrupt.actual.handlerCs=8;
 else if (mutation === "vm-frame") cases.vm86RoundTrip.actual.frame[5]^=1;
+else if (mutation === "into-of") cases.intoClear.actual.overflow=true;
+else if (mutation === "into-eip") cases.intoSet.actual.frame[0]^=1;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
@@ -451,6 +511,12 @@ const expectedVm86={cs:0xf000,eip:0x101,ss:0x2000,esp:0x200,vm:true,visited:true
 for(const [engine,value] of Object.entries(cases.vm86RoundTrip))
   if(JSON.stringify(value)!==JSON.stringify(expectedVm86))
     differences.push({case:"vm86Expected",engine,expected:expectedVm86,actual:value});
+const expectedIntoClear={overflow:false,cs:8,eip:15,esp:0x400,frame:[]};
+const expectedIntoSet={overflow:true,cs:8,eip:0x100,esp:0x3f4,frame:[15,8,0xa02]};
+for(const [name,expected] of [["intoClear",expectedIntoClear],["intoSet",expectedIntoSet]])
+  for(const [engine,value] of Object.entries(cases[name]))
+    if(JSON.stringify(value)!==JSON.stringify(expected))
+      differences.push({case:`${name}Expected`,engine,expected,actual:value});
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);
