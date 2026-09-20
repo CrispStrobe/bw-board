@@ -6,7 +6,20 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import I80386, { UnsupportedI80386 } from "../src/experimental/i80386.js";
 
-const EXPECTED = "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067";
+const PROFILES = {
+  capture64: {
+    bytes: 65536,
+    sha256: "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067",
+    errorOffsets: [0xfe7f, 0xfe86],
+    completionPcOffset: 0xfe7d,
+  },
+  rom128: {
+    bytes: 131072,
+    sha256: "168acf93a07cd637ad24e4bd21aacc890d9ebcdfc8a56f564b2193978104fca8",
+    errorOffsets: [0x1ff53, 0x1ff5a],
+    completionPcOffset: 0x1ff51,
+  },
+};
 const args = Object.fromEntries(
   process.argv
     .slice(2)
@@ -16,20 +29,23 @@ const args = Object.fromEntries(
     .filter(Boolean),
 );
 if (!args.rom || !args.provenance || !args.source || !args.out) {
-  throw new Error("usage: --rom FILE --provenance FILE --source DIR --out FILE [--budget N]");
+  throw new Error("usage: --rom FILE --provenance FILE --source DIR --out FILE [--profile capture64|rom128] [--budget N]");
 }
+const profileName = args.profile ?? "capture64";
+const profile = PROFILES[profileName];
+if (!profile) throw new Error("--profile must be capture64 or rom128");
 const budget = args.budget === undefined ? 2_000_000 : Number(args.budget);
-if (!Number.isSafeInteger(budget) || budget < 1 || budget > 10_000_000) {
-  throw new Error("--budget must be a positive integer no greater than 10000000");
+if (!Number.isSafeInteger(budget) || budget < 1 || budget > 30_000_000) {
+  throw new Error("--budget must be a positive integer no greater than 30000000");
 }
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 const rom = readFileSync(resolve(args.rom));
 const provenanceBytes = readFileSync(resolve(args.provenance));
 const provenance = JSON.parse(provenanceBytes);
 if (
-  rom.length !== 65536 ||
-  hash(rom) !== EXPECTED ||
-  provenance.binarySha256 !== EXPECTED ||
+  rom.length !== profile.bytes ||
+  hash(rom) !== profile.sha256 ||
+  provenance.binarySha256 !== profile.sha256 ||
   provenance.revision !== "cfd052d1e64d5375dea5a681c1eadeed64ceda2c"
 ) {
   throw new Error("test386 input provenance mismatch");
@@ -69,10 +85,12 @@ const executionRevision = git(repositoryRoot, "rev-parse", "HEAD");
 const ram = new Map();
 const post = [];
 const output = [];
+const topRomBase = 0x100000000 - rom.length;
+const lowRomBase = 0x100000 - rom.length;
 const read = (address) => {
   address >>>= 0;
-  if (address >= 0xffff0000) return rom[address & 0xffff];
-  if (address >= 0xf0000 && address < 0x100000) return rom[address - 0xf0000];
+  if (address >= topRomBase) return rom[address - topRomBase];
+  if (address >= lowRomBase && address < 0x100000) return rom[address - lowRomBase];
   return ram.get(address) ?? 0;
 };
 const cpu = new I80386(
@@ -109,11 +127,16 @@ try {
     const state = traceState();
     recentInstructions.push(state);
     if (recentInstructions.length > 32) recentInstructions.shift();
-    if (state.physical === 0xffe7f || state.physical === 0xffe86) {
+    const romOffset = state.physical >= topRomBase
+      ? state.physical - topRomBase
+      : state.physical >= lowRomBase && state.physical < 0x100000
+        ? state.physical - lowRomBase
+        : -1;
+    if (profile.errorOffsets.includes(romOffset)) {
       blocker = {
         name: "GuestAssertionFailure",
         message:
-          state.physical === 0xffe7f
+          romOffset === profile.errorOffsets[0]
             ? "pinned test386 entered its error routine"
             : "pinned test386 entered its ring-3 error loop",
         ...state,
@@ -137,7 +160,9 @@ try {
 }
 if (!blocker && cpu.halted) {
   const finalCandidate =
-    post.at(-1)?.value === 0xff && cpu.pc === 0xffe7d;
+    post.at(-1)?.value === 0xff &&
+    (cpu.pc === topRomBase + profile.completionPcOffset ||
+      cpu.pc === lowRomBase + profile.completionPcOffset);
   blocker = {
     name: finalCandidate ? "CompletionCandidate" : "GuestHaltBoundary",
     message: finalCandidate
@@ -171,7 +196,7 @@ if (git(sourceRoot, "rev-parse", "HEAD") !== sourceRevision ||
   throw new Error("test386 source provenance changed during execution");
 }
 if (
-  hash(readFileSync(resolve(args.rom))) !== EXPECTED ||
+  hash(readFileSync(resolve(args.rom))) !== profile.sha256 ||
   hash(readFileSync(resolve(args.provenance))) !== hash(provenanceBytes) ||
   git(repositoryRoot, "rev-parse", "HEAD") !== executionRevision ||
   localSources.some(
@@ -187,7 +212,7 @@ const report = {
   accepted: false,
   status: blocker ? "bounded-blocker" : "guest-halted", fullRomPass: false,
   scope:
-    "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
+    `unchanged pinned test386 ${profileName} ROM; diagnostic progress only, no full-ROM or hardware-timing claim`,
   node: process.version, steps, post, output: Buffer.from(output).toString("latin1"), blocker,
   executionRevision,
   instructionBudget: budget,
@@ -197,6 +222,7 @@ const report = {
     provenanceSha256: hash(provenanceBytes),
     revision: sourceRevision,
     sourceClean: true,
+    profile: profileName,
   },
   sourceHashes: localSourceHashes,
 };
