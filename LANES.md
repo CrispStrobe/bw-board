@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (candidate) — Astra/Sol application persistence and demo completion.
+2026-09-20 DONE (qualified and landed) — Astra/Sol application persistence and demo completion.
 Windows3.0 Notepad creates and saves OWNED.TXT via real keyboard input, then
 opens its exact 17 bytes after fresh reset/remount. Independent FAT and frame
 audits verify the file, source revisions and writer/reader image linkage.
@@ -120,6 +120,8 @@ forward workflow correction removes that optional entry and retains the
 zero-skip assertion; actual-report acceptance and mutations passed locally.
 General CI also caught missing census registration for the optional report.
 The new doom-short-report fixture row makes absence explicit; census14/14 pass.
+Exact 74c47bbe passed CI35490696573, CPU35490696554 and native35490696525,
+then fast-forwarded master. Tag: milestones/x86-windows-persistence-doom-demo-20260920.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol Windows desktop and Doom interaction.
 Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0

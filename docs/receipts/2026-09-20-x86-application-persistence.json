@@ -34,6 +34,13 @@
       "run": 35490440717,
       "reason": "New optional external-report test lacked an oracle-census registration.",
       "correction": "Register doom-short-report as an external fixture with explicit absent-CI behavior; both census suites pass14/14."
+    },
+    "hosted": {
+      "revision": "74c47bbe250bb96c7a65f17539c2bbae935025ad",
+      "ci": 35490696573,
+      "cpu": 35490696554,
+      "native": 35490696525,
+      "conclusion": "success"
     }
   },
   "limits": [
@@ -53,5 +60,10 @@
     "frameStep": 346000000,
     "rgbSha256": "941e7414ef1599ca01564e4c073544462fd708eeac44a4307194240e75079100",
     "scope": "Timing values are functional-model output, not a hardware FPS benchmark."
+  },
+  "landing": {
+    "branch": "master",
+    "revision": "74c47bbe250bb96c7a65f17539c2bbae935025ad",
+    "tag": "milestones/x86-windows-persistence-doom-demo-20260920"
   }
 }

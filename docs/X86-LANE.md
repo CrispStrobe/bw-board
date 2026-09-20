@@ -13,16 +13,20 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `8172a3bf9891056d989394211ef92728d39958e7`,
-tag `milestones/x86-windows300-doom-gameplay-20260920`. Its exact-head
-[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35488705735),
-[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35488705876)
-and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35488705795)
-passed. It adds the observed Windows disk timing correction, Program Manager
-and keyboard-driven File Manager acceptance, and original Doom E1M1 movement
-and firing evidence. It remains experimental; application milestones are
-bounded by exact executable, source and input hashes. Windows editing and
-persistence and completed Doom demo remain active follow-up targets.
+The latest qualified implementation is `74c47bbe250bb96c7a65f17539c2bbae935025ad`,
+tag `milestones/x86-windows-persistence-doom-demo-20260920`, merged to master.
+Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35490696573),
+[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35490696554)
+and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35490696525)
+passed. Windows 3.0 boots to Program Manager, launches File Manager and Notepad,
+saves an owned text file and opens it after fresh reset/remount. Original Doom
+1.9 reaches E1M1 with keyboard-driven movement/firing, and loads/renders an
+owned 24-tic demo, completes it and returns to DOS. The
+[application receipt](receipts/2026-09-20-x86-application-persistence.json)
+records exact source/input hashes and the retained failed diagnostics.
+These are bounded experimental milestones. Windows enhanced mode, Doom
+save/load/sound/all levels and complete physical 386 equivalence remain
+separate targets; the current Windows input has no WIN386.EXE.
 
 The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
 DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
