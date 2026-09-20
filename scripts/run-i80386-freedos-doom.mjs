@@ -419,6 +419,10 @@ const final={cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machin
     shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]};
 const vgaDiagnostics=vgaRom===null?null:{
     state:machine.chips.vga1.getVideoState(),
+    bdaActivePage:machine._read(0x462),
+    bdaCursor:Array.from({length:8},(_,page)=>machine._read(0x450+page*2)|
+        machine._read(0x451+page*2)<<8),
+    crtcCursor:(machine.chips.vga1.crtc[0x0e]<<8)|machine.chips.vga1.crtc[0x0f],
     nonzeroByPlane:machine.vgaMemory.planes.map(plane=>plane.reduce((count,value)=>count+(value!==0),0)),
     literalText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
         String.fromCharCode(machine.vgaMemory.planes[0][(row*80+column)*2]||0x20)).join('').replace(/\s+$/,'')),
