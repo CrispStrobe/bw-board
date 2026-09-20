@@ -97,6 +97,8 @@
       "wrong derived HDD hash",
       "wrong Doom EXE hash",
       "missing VGA snapshot",
+      "substituted early mostly-black VGA snapshot",
+      "altered VGA plane byte",
       "host refusal",
       "wrong command script"
     ]

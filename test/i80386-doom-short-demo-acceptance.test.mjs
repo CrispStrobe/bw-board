@@ -14,6 +14,10 @@ test('short Doom demo acceptance rejects material evidence mutations',
     report=>{report.hdd.inputSha256='0'.repeat(64);},
     report=>{report.hdd.files.doomExe.sha256='0'.repeat(64);},
     report=>{delete report.vgaEvidence.latestGraphicsSnapshot;},
+    report=>{report.vgaEvidence.latestGraphicsSnapshot=report.vgaEvidence.firstGraphicsSnapshot;},
+    report=>{const snapshot=report.vgaEvidence.latestGraphicsSnapshot;
+      const plane=Buffer.from(snapshot.planesBase64[0],'base64');plane[0x8000]^=1;
+      snapshot.planesBase64[0]=plane.toString('base64');},
     report=>{report.hostRefusal={message:'mutation'};},
     report=>{report.keyboardScript.requested='doom -timedemo astra\r';}
   ];
