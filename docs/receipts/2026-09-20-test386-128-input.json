@@ -1,0 +1,29 @@
+{
+  "schema": "astra.external-test-rom-build.v1",
+  "source": "https://github.com/barotto/test386.asm",
+  "revision": "cfd052d1e64d5375dea5a681c1eadeed64ceda2c",
+  "sourceClean": true,
+  "license": "GPL-3.0-or-later; derived from PCjs test386",
+  "assembler": "NASM 2.16.01",
+  "assemblerPackage": "Ubuntu noble nasm 2.16.01-1build1 amd64",
+  "assemblerPackageSha256": "22eede0f2dd62343b0298182f62f7485704fe02f166395b02c92a8883377e0b3",
+  "configurationSha256": "58bf7b21597f9c6f9d97e11213e7d7f1184d70eec84454ad46e8f7f34ba8d9d7",
+  "configuration": "POST_PORT=0x80, OUT_PORT=0xe9, ROM128=1; all other settings unchanged",
+  "binaryBytes": 131072,
+  "binarySha256": "168acf93a07cd637ad24e4bd21aacc890d9ebcdfc8a56f564b2193978104fca8",
+  "executed": false,
+  "scope": "External 128KiB test386 input preparation only; includes ROM128 task tests excluded by the older 64KiB build. No execution acceptance.",
+  "command": [
+    "/tmp/astra-nasm-tool/extracted/usr/bin/nasm",
+    "-i/tmp/astra-test386-128-build/",
+    "-i./src/",
+    "-f",
+    "bin",
+    "src/test386.asm",
+    "-w-all",
+    "-l",
+    "/tmp/astra-test386-128-build/test386-128.lst",
+    "-o",
+    "/tmp/astra-test386-128-build/test386-128.bin"
+  ]
+}

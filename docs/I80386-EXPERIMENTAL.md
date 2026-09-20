@@ -453,16 +453,26 @@ absent rather than aliasing the writable master image.
 `PCAT80386_EXPERIMENTAL_4M_HDD` advertises one IBM BIOS drive type 1 in CMOS
 (306 cylinders, 4 heads, 17 sectors). The bounded controller also implements
 the recalibrate, verify, initialize-parameters, seek and diagnostic commands
-used by the 1984 IBM AT fixed-disk BIOS. This profile and its command tests are
-still controller-level evidence until a firmware-issued sector round trip is
-recorded.
+used by the 1984 IBM AT fixed-disk BIOS. The source-bound
+[roundtrip receipt](receipts/2026-09-20-386-at-hdd-roundtrip.json) now records
+an accepted real-firmware sector round trip on combined source `72f56ab`.
 `scripts/run-i80386-at-hdd-roundtrip.mjs` supplies a deterministic owned FAT16
 superfloppy with the same type-1 geometry. Its boot sector asks the real IBM
 INT 13h path to write and reread the final physical sector, which lies outside
 the declared FAT volume, and emits a success marker only after comparing the
 returned bytes. The runner requires native 16-bit 1F0h accesses and records
-every BIOS/guest task-file command. Until that runner produces an accepted
-source-bound report, the image and controller tests remain preparation only.
+every BIOS/guest task-file command. Both worker and coordinator runs pass at
+70,579,183 steps: all 512 write bytes initialized, the read buffer poisoned,
+and all 512 returned bytes compared in guest code. This is an owned boot-program
+witness, not an HDD operating-system boot.
+
+The 386 also boots DOS2 through genuine reset, POST and INT19, writes
+`ATBOOT.TXT` through the shell, and reads its exact `at-boot-ok` plus CRLF bytes
+after a fresh machine remount. Coordinator source `72f56ab` takes 25,652,224
+write steps and 25,567,232 reboot steps; the saved image hash matches the
+worker run. The tracked fixture binds all executed sources and rejects five
+tampered evidence cases. See the [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json).
+386 FreeDOS, Windows and Doom acceptance remain open.
 
 ## REP and ISA continuation receipt
 
