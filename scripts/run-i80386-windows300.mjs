@@ -48,7 +48,12 @@ const hdd = readPinned('AT_HDD_IMAGE', expectedHdd, 'Windows 3.0 / PC DOS 3.2 HD
 const parentReportPath = process.env.AT_HDD_PARENT_REPORT ?? null;
 if(expectedHdd!==EXPECTED_HDD_SHA256&&!parentReportPath)
   throw new Error('derived HDD input requires AT_HDD_PARENT_REPORT');
-const parentReportSha256 = parentReportPath && sha(fs.readFileSync(parentReportPath));
+const parentReportBytes = parentReportPath && fs.readFileSync(parentReportPath);
+const parentReportSha256 = parentReportBytes && sha(parentReportBytes);
+const parentReport = parentReportBytes && JSON.parse(parentReportBytes);
+if(parentReport&&(parentReport.schema!=='astra.i80386-windows300-diagnostic.v1'||
+    parentReport.hddOutputSha256!==hdd.sha256))
+  throw new Error('derived HDD parent report does not produce the supplied image');
 const hddOutputPath = process.env.AT_HDD_OUTPUT ?? null;
 if (bios.bytes.length !== 0x10000 || vga.bytes.length !== 0x7e00 || hdd.bytes.length !== 21_411_840)
   throw new Error('external input byte length mismatch');
@@ -71,13 +76,15 @@ if (enterStep !== null && keyScriptPath) throw new Error('choose AT_WINDOWS_ENTE
 const keyScriptBytes = keyScriptPath ? fs.readFileSync(keyScriptPath) : null;
 const keyScriptSha256 = keyScriptBytes && sha(keyScriptBytes);
 const keyScript = keyScriptBytes && JSON.parse(keyScriptBytes);
+if(keyScriptPath&&(!keyScript||typeof keyScript!=='object'))throw new Error('invalid Windows key script');
 const scan = {alt:0x38,ctrl:0x1d,shift:0x2a,enter:0x1c,space:0x39,'.':0x34,'\\':0x2b,';':0x27,
   '0':0x0b,'1':0x02,'2':0x03,'3':0x04,'4':0x05,'5':0x06,'6':0x07,'7':0x08,'8':0x09,'9':0x0a,
   a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,i:0x17,j:0x24,k:0x25,l:0x26,
   m:0x32,n:0x31,o:0x18,p:0x19,q:0x10,r:0x13,s:0x1f,t:0x14,u:0x16,v:0x2f,w:0x11,x:0x2d,y:0x15,z:0x2c};
 const keyEvents = [];
 const emitStroke = (step,key,shift=false) => {
-  const code=scan[key]; if(code===undefined)throw new Error(`unsupported key '${key}'`);
+  if(!Object.hasOwn(scan,key))throw new Error(`unsupported key '${key}'`);
+  const code=scan[key];
   if(shift)keyEvents.push({step,code:scan.shift});
   keyEvents.push({step:step+100,code},{step:step+200,code:code|0x80});
   if(shift)keyEvents.push({step:step+300,code:scan.shift|0x80});
@@ -91,7 +98,7 @@ if (keyScript) {
     if(action.kind==='key')emitStroke(action.step,action.key);
     else if(action.kind==='chord'){
       const keys=action.keys; if(!Array.isArray(keys)||keys.length<2)throw new Error('invalid chord');
-      if(keys.some(key=>scan[key]===undefined))throw new Error('unsupported chord key');
+      if(keys.some(key=>!Object.hasOwn(scan,key)))throw new Error('unsupported chord key');
       let at=action.step; for(const key of keys.slice(0,-1))keyEvents.push({step:at+=100,code:scan[key]});
       const code=scan[keys.at(-1)]; keyEvents.push({step:at+=100,code},{step:at+=100,code:code|0x80});
       for(const key of keys.slice(0,-1).reverse())keyEvents.push({step:at+=100,code:scan[key]|0x80});
@@ -432,6 +439,8 @@ if (execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).tr
   throw new Error('Windows run refused: HEAD changed during execution');
 if(keyScriptPath&&sha(fs.readFileSync(keyScriptPath))!==keyScriptSha256)
   throw new Error('Windows run refused: key script changed during execution');
+if(parentReportPath&&sha(fs.readFileSync(parentReportPath))!==parentReportSha256)
+  throw new Error('Windows run refused: parent report changed during execution');
 if(hddOutputFd!==null){
   fs.writeFileSync(hddOutputFd,machine.ata.mediaBytes());
   fs.closeSync(hddOutputFd);

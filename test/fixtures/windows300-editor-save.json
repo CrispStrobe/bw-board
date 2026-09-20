@@ -1,0 +1,14 @@
+{
+  "schema": "astra.windows-key-script.v1",
+  "actions": [
+    {"step": 100000000, "kind": "chord", "keys": ["alt", "f"]},
+    {"step": 100500000, "kind": "key", "key": "r"},
+    {"step": 101000000, "kind": "text", "value": "notepad"},
+    {"step": 102000000, "kind": "key", "key": "enter"},
+    {"step": 105000000, "kind": "text", "value": "astra windows 300"},
+    {"step": 106000000, "kind": "chord", "keys": ["alt", "f"]},
+    {"step": 106500000, "kind": "key", "key": "a"},
+    {"step": 107000000, "kind": "text", "value": "c:\\owned.txt"},
+    {"step": 108000000, "kind": "key", "key": "enter"}
+  ]
+}
