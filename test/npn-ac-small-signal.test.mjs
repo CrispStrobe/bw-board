@@ -57,6 +57,26 @@ describe('strict explicit Ebers-Moll NPN small-signal AC', () => {
       'small-signal analysis must not adopt or move the DC operating point');
   });
 
+  it('matches an independent ngspice intrinsic-collector RC Jacobian', () => {
+    // Same self-authored bench and matched temperature as above, with RC=100.
+    const expected = new Map([
+      ['base', 1],
+      ['collector', -2.8195889809420733],
+      ['emitter', 0.9442879018998295],
+    ]);
+    const board = bench({ ...exactParams, rc: 100 });
+    const before = board.operatingPoint();
+    const row = board.runAc({ sourceId: 'VIN', frequencies: [1000],
+      analysisProfile: 'source-analysis-v1', nodeRegularizationSiemens: 0,
+      probes: [...expected.keys()] })[0];
+    for (const [node, oracle] of expected) {
+      const actual = signedReal(row, node);
+      assert.ok(Math.abs(actual - oracle) < 2e-8,
+        `${node}: ${actual} vs ngspice ${oracle}`);
+    }
+    assert.deepEqual([...board.operatingPoint().nodeVoltages], [...before.nodeVoltages]);
+  });
+
   it('retains the generic interactive NPN compatibility model', () => {
     const exact = bench();
     const generic = bench({ beta: 200, vbe: 0.7 });

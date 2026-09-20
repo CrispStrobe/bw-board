@@ -781,7 +781,8 @@ export function junctionModelOf(part, headroomV) {
  * a model rather than replacing one, and no shipped number moves.
  *
  * @param {Part} part
- * @returns {{is: number, nVt: number, bf: number, br: number, vaf: number, rb: number} | null}
+ * @returns {{is: number, nVt: number, bf: number, br: number, vaf: number,
+ *            rb: number, rc: number} | null}
  *   null when this part is not on the exponential path.
  */
 export function ebersMollParams(part) {
@@ -806,9 +807,10 @@ export function ebersMollParams(part) {
   const vafDeclared = Number(part.params?.vaf ?? cls.vaf ?? Infinity);
   const vaf = vafDeclared > 0 ? vafDeclared : Infinity;
   const rb = Number(part.params?.rb ?? 0);
+  const rc = Number(part.params?.rc ?? 0);
   if (!(is > 0) || !(bf > 0) || !(br > 0) || !(n > 0)
-      || !Number.isFinite(rb) || rb < 0) return null;
-  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, rb };
+      || !Number.isFinite(rb) || rb < 0 || !Number.isFinite(rc) || rc < 0) return null;
+  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, rb, rc };
 }
 
 /**
@@ -1373,12 +1375,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // and zero RB retain the old matrix shape and arithmetic exactly.
   /** @type {Map<string, number>} part id → intrinsic base node index */
   const bjtBaseIndex = new Map();
+  /** @type {Map<string, number>} part id → intrinsic collector node index */
+  const bjtCollectorIndex = new Map();
   for (const part of parts) {
     const em = part.kind === 'npn' ? ebersMollParams(part) : null;
-    if (!em || !(em.rb > 0)) continue;
-    const key = `\u0000intrinsic-base:${part.id}`;
-    bjtBaseIndex.set(part.id, nodeCount);
-    nodeIndex.set(key, nodeCount++);
+    if (!em) continue;
+    if (em.rb > 0) {
+      const key = `\u0000intrinsic-base:${part.id}`;
+      bjtBaseIndex.set(part.id, nodeCount);
+      nodeIndex.set(key, nodeCount++);
+    }
+    if (em.rc > 0) {
+      const key = `\u0000intrinsic-collector:${part.id}`;
+      bjtCollectorIndex.set(part.id, nodeCount);
+      nodeIndex.set(key, nodeCount++);
+    }
   }
 
   // Count voltage sources (VCC only, unless powerOff)
@@ -1821,7 +1832,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
         case 'npn':
           stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
-            bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc, bjtBaseIndex);
+            bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc,
+            bjtBaseIndex, bjtCollectorIndex);
           break;
 
         case 'pnp':
@@ -2196,7 +2208,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const emp = ebersMollParams(part);
         const netC2 = findNet(nets, part.id, 'collector');
         const netB2 = findNet(nets, part.id, 'base');
-        const idxC2 = netC2 ? nodeIndex.get(netC2) : undefined;
+        const idxC2 = bjtCollectorIndex.get(part.id)
+          ?? (netC2 ? nodeIndex.get(netC2) : undefined);
         const idxB2 = bjtBaseIndex.get(part.id) ?? (netB2 ? nodeIndex.get(netB2) : undefined);
         const vC2 = idxC2 !== undefined ? solution[idxC2] : 0;
         const vB2 = idxB2 !== undefined ? solution[idxB2] : 0;
@@ -2835,19 +2848,24 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // Newton state, which is one limited step behind.
       const emX = bjtVbc.has(part.id) ? ebersMollParams(part) : null;
       if (emX) {
-        const idxIntrinsic = bjtBaseIndex.get(part.id);
-        const vModelBase = idxIntrinsic !== undefined ? solution[idxIntrinsic] : vB;
+        const idxIntrinsicBase = bjtBaseIndex.get(part.id);
+        const idxIntrinsicCollector = bjtCollectorIndex.get(part.id);
+        const vModelBase = idxIntrinsicBase !== undefined ? solution[idxIntrinsicBase] : vB;
+        const vModelCollector = idxIntrinsicCollector !== undefined
+          ? solution[idxIntrinsicCollector] : vC;
         const vbeX = part.kind === 'npn' ? vModelBase - vE : vE - vModelBase;
-        const vbcX = part.kind === 'npn' ? vModelBase - vC : vC - vModelBase;
+        const vbcX = part.kind === 'npn'
+          ? vModelBase - vModelCollector : vModelCollector - vModelBase;
         const c = ebersMollCompanion(vbeX, vbcX, emX);
         const sgn = part.kind === 'npn' ? 1 : -1;
-        if (idxIntrinsic !== undefined) {
-          // RB belongs between the public base terminal and the intrinsic
-          // Ebers-Moll base.  Read the current through the element that was
-          // actually stamped; deriving it from the junction companion would
-          // hide a stamp/reader split.  This path is NPN-only by construction.
-          const baseOut = -(vB - vModelBase) / emX.rb;
-          const collectorOut = -c.ic;
+        if (idxIntrinsicBase !== undefined || idxIntrinsicCollector !== undefined) {
+          // Read each explicit terminal resistor from the voltage that was
+          // actually stamped. Deriving either current from the junction
+          // companion would hide a resistor-stamp/readback split.
+          const baseOut = idxIntrinsicBase !== undefined
+            ? -(vB - vModelBase) / emX.rb : -c.ib;
+          const collectorOut = idxIntrinsicCollector !== undefined
+            ? -(vC - vModelCollector) / emX.rc : -c.ic;
           currents.set('base', baseOut);
           currents.set('collector', collectorOut);
           currents.set('emitter', -(baseOut + collectorOut));
@@ -3757,7 +3775,7 @@ function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, control
  * Linearized: Ic = gm × Vbe - Ic0 (Norton companion model).
  */
 function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
-  region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex) {
+  region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10; // base-emitter dynamic resistance
@@ -3794,7 +3812,18 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
       A.add(idxB, idxIntrinsic, -gRb);
       A.add(idxIntrinsic, idxB, -gRb);
     }
-    stampEbersMoll(A, b, idxModelBase, idxC, idxE,
+    const idxIntrinsicCollector = bjtCollectorIndex?.get(part.id);
+    const idxModelCollector = idxIntrinsicCollector ?? idxC;
+    if (idxIntrinsicCollector !== undefined) {
+      const gRc = 1 / em.rc;
+      A.add(idxIntrinsicCollector, idxIntrinsicCollector, gRc);
+      if (idxC !== undefined) {
+        A.add(idxC, idxC, gRc);
+        A.add(idxC, idxIntrinsicCollector, -gRc);
+        A.add(idxIntrinsicCollector, idxC, -gRc);
+      }
+    }
+    stampEbersMoll(A, b, idxModelBase, idxModelCollector, idxE,
       ebersMollCompanion(vbe, vbc, em), 1);
     return;
   }

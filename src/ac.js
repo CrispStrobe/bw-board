@@ -137,12 +137,14 @@ export function acSweep(args) {
   // without RB reuse the external base index and add no matrix row.
   const exactNpn = new Map();
   const bjtBaseIndex = new Map();
+  const bjtCollectorIndex = new Map();
   for (const part of parts) {
     if (part.kind !== 'npn' || part.params?.model !== 'shockley') continue;
     const params = ebersMollParams(part);
     if (!params) continue;
     exactNpn.set(part.id, params);
     if (params.rb > 0) bjtBaseIndex.set(part.id, nodeCount++);
+    if (params.rc > 0) bjtCollectorIndex.set(part.id, nodeCount++);
   }
   const idxOf = (netId) => (netId && !grounded.has(netId)) ? nodeIndex.get(netId) : undefined;
   const vOp = (netId) => netId ? (opVoltages.get(netId) ?? 0) : 0;
@@ -318,9 +320,11 @@ export function acSweep(args) {
           if (em) {
             const iExternalBase = idxOf(nB);
             const iB = bjtBaseIndex.get(part.id) ?? iExternalBase;
-            const iC = idxOf(nC);
+            const iExternalCollector = idxOf(nC);
+            const iC = bjtCollectorIndex.get(part.id) ?? iExternalCollector;
             const iE = idxOf(nE);
             let vB = vOp(nB);
+            let vC = vOp(nC);
             if (em.rb > 0) {
               const baseCurrent = opBranchCurrents?.get(part.id)?.get('base');
               if (!Number.isFinite(baseCurrent)) {
@@ -329,7 +333,15 @@ export function acSweep(args) {
               vB -= baseCurrent * em.rb;
               addGIndexes(iExternalBase, iB, 1 / em.rb);
             }
-            const c = ebersMollCompanion(vB - vOp(nE), vB - vOp(nC), em);
+            if (em.rc > 0) {
+              const collectorCurrent = opBranchCurrents?.get(part.id)?.get('collector');
+              if (!Number.isFinite(collectorCurrent)) {
+                throw new Error(`acSweep: ${part.id} is missing its converged collector current for RC`);
+              }
+              vC -= collectorCurrent * em.rc;
+              addGIndexes(iExternalCollector, iC, 1 / em.rc);
+            }
+            const c = ebersMollCompanion(vB - vOp(nE), vB - vC, em);
             const add = (row, col, value) => {
               if (row !== undefined && col !== undefined) addC(row, col, value, 0);
             };

@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-20 CLAIM — `/root` (Codex): explicit Shockley-NPN collector series
+2026-09-20 DONE (candidate) — `/root` (Codex): explicit Shockley-NPN collector series
 resistance, isolated worktree `/mnt/volume1/code/wt/bwb-nmos-gamma-phi-ac`,
 branch `lane/npn-collector-resistance`, exact base
 `dced14205a0c7e8914dcb18435ac1d726ab778fa`. Owns only the strict NPN
@@ -22,6 +22,18 @@ intrinsic Ebers-Moll collector, prove DC and AC against self-authored ngspice 42
 witnesses, and keep omitted/zero RC byte-for-behaviour unchanged. Excludes IKF,
 CJE/CJC/TF, PNP, generic BJT, solver/tolerances, CUI/corpus/package pins, x86,
 and every unrelated model or path.
+The implementation creates a hidden intrinsic collector only for explicit
+positive RC, stamps the physical resistor in both the DC and small-signal
+systems, evaluates Vbc at the intrinsic node, and reports public-terminal
+currents with signed KCL intact. Independent ngspice 42 DC and AC witnesses
+agree on all terminal voltages/currents and the complex AC response; omitted
+and explicit zero RC are identical, and negative/non-finite RC refuses by
+name. The affected DC/AC/BJT/routing/source-honesty surface passes 36/36.
+Mutating the authored RC to zero makes both independent witnesses red. The
+ADI-v2 attribution shows all 550 refused NPN instances also carry
+CJC/CJE/IKF/TF, so this bounded upstream topology is not itself a corpus-row
+admission claim; those remaining laws and CUI exact-card admission stay
+separate follow-on lanes.
 
 2026-09-20 DONE (candidate) — `/root` (Codex): exact grounded-bulk Level-1 NMOS
 GAMMA/PHI small-signal body transconductance, isolated worktree
