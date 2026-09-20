@@ -86,8 +86,10 @@ for (const [file, before] of Object.entries(sourceSha256))
 if (git('rev-parse', 'HEAD') !== executionRevision)
   throw new Error('VGA BIOS run refused: HEAD changed during execution');
 
+const optionVgaPorts = optionEntry ? vgaPorts.filter(event => event.step >= optionEntry.step &&
+  (!firmwareReturn || event.step <= firmwareReturn.step)) : [];
 const accepted = outcome === 'option-rom-returned' && !!optionEntry && !!firmwareReturn &&
-  optionInstructions > 0 && vgaPorts.length > 0;
+  optionInstructions > 0 && optionVgaPorts.length > 0;
 const report = {
   schema: 'astra.i80386-at-vga-bios-diagnostic.v1',
   accepted,
@@ -102,6 +104,7 @@ const report = {
   optionInstructions,
   firmwareReturn,
   vgaPorts,
+  optionVgaPorts,
   videoState: machine.chips.vga1.getVideoState(),
   inputs: {
     systemRom: {bytes: systemRom.value.length, sha256: sha256(systemRom.value)},
