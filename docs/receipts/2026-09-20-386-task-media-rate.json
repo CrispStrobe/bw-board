@@ -1,0 +1,328 @@
+{
+  "schema": "astra.i80386-task-media-rate.v1",
+  "scope": [
+    "bounded 32-bit TSS CALL/JMP/NT IRET and far/IDT task gates",
+    "postcommit selector fault contexts, original fault classes, CR3 mapping and precise task admission",
+    "near RET imm16",
+    "explicit 1.2MB AT floppy rate compatibility and partitioned pinned Doom input preparation"
+  ],
+  "focused": {
+    "executionRevision": "92ba13ac3617498778f67831ad85704f3ad163a6",
+    "pass": 268,
+    "skip": 2,
+    "fail": 0,
+    "tapSha256": "66ac62874fadead14afab7d4f20a00e12d0f1b34b9d3bea2bd21a819fdb2b9fd",
+    "additionalCheck": "fresh functional286 FreeDOS fixture test passed after report update"
+  },
+  "replays": {
+    "functional286DOS": {
+      "write": {
+        "executionRevision": "e4b08a616c3db333d8c54216b1fd090373ef72bb",
+        "steps": 24406016,
+        "reportSha256": "4e4ea1c86c273b8721dc94382efb600769626d4adf455e87609d1076d7e76179"
+      },
+      "reboot": {
+        "executionRevision": "e4b08a616c3db333d8c54216b1fd090373ef72bb",
+        "steps": 24318976,
+        "reportSha256": "c5c080b0c4259f49c7e6fd224951636b7ad88e9bd23d9e50bd6cd5b88f6062dd"
+      },
+      "savedMediaSha256": "6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69"
+    },
+    "functional286FreeDOS": {
+      "write": {
+        "executionRevision": "e4b08a616c3db333d8c54216b1fd090373ef72bb",
+        "steps": 71256064,
+        "reportSha256": "9b8fe5923e5dc954804f020d4d383e2e964f9732a4d95bc77a0410dc7da0f8d3"
+      },
+      "reboot": {
+        "executionRevision": "e4b08a616c3db333d8c54216b1fd090373ef72bb",
+        "steps": 71130112,
+        "reportSha256": "0df3307c39cee75fe14f16bf9273fbe0c0cec43a26c753e300fbaa6e6239ad90"
+      },
+      "savedMediaSha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815"
+    },
+    "experimental386DOS": {
+      "write": {
+        "executionRevision": "50d889cc81c9f0decfdccd55bcd3bfd29cf3a2c9",
+        "steps": 25652224,
+        "reportSha256": "c4757b31f17c82ae5dac40378399a19cc3a159b0c5818dafcb6ff2e028cc7971"
+      },
+      "reboot": {
+        "executionRevision": "50d889cc81c9f0decfdccd55bcd3bfd29cf3a2c9",
+        "steps": 25567232,
+        "reportSha256": "375eb070be426b9237eb7e42f06ffe76e63607cb16ada7e0c2862d5a4c5abdae"
+      },
+      "savedMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819"
+    }
+  },
+  "taskOracle": {
+    "positive": {
+      "rawSha256": "d5c4200553e29fd091f05ccec2ea5bcd9e7e5b8dd0458e3e27a9f7cc3dc857cc",
+      "oracle": "PCjs",
+      "revision": "92ba13ac3617498778f67831ad85704f3ad163a6",
+      "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "scope": "owned ring-0 386 TSS CALL, incoming CR3 data mapping, nested IRET, busy/backlink and exact old-task HLT completion",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-tasks.mjs": "a88304f8a74f0e0810980335fd232133fa0744a39aff67c627489bc820c448a5",
+        "../src/experimental/i80386.js": "5320ed71496b31b06a10a96a7a3a06aaacca440c68f82c6a48373c852034e4dc"
+      },
+      "mutation": null,
+      "status": "pass",
+      "expected": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662306,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "reference": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662306,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "actual": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662306,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "differences": []
+    },
+    "result": {
+      "rawSha256": "32da30b3453515138d076f23bc68f8ffb0cabdfaa33a7685003dde8705b6b394",
+      "oracle": "PCjs",
+      "revision": "92ba13ac3617498778f67831ad85704f3ad163a6",
+      "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "scope": "owned ring-0 386 TSS CALL, incoming CR3 data mapping, nested IRET, busy/backlink and exact old-task HLT completion",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-tasks.mjs": "a88304f8a74f0e0810980335fd232133fa0744a39aff67c627489bc820c448a5",
+        "../src/experimental/i80386.js": "5320ed71496b31b06a10a96a7a3a06aaacca440c68f82c6a48373c852034e4dc"
+      },
+      "mutation": "result",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662306,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "reference": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662306,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "actual": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662307,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "differences": [
+        {
+          "field": "actual.result",
+          "expected": 572662306,
+          "actual": 572662307
+        }
+      ]
+    },
+    "budget": {
+      "rawSha256": "41dcb75997ada2589765e56fbca13fc967d2193e6e4d1fc5c6a09000520d36a4",
+      "oracle": "PCjs",
+      "revision": "92ba13ac3617498778f67831ad85704f3ad163a6",
+      "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "scope": "owned ring-0 386 TSS CALL, incoming CR3 data mapping, nested IRET, busy/backlink and exact old-task HLT completion",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-tasks.mjs": "a88304f8a74f0e0810980335fd232133fa0744a39aff67c627489bc820c448a5",
+        "../src/experimental/i80386.js": "5320ed71496b31b06a10a96a7a3a06aaacca440c68f82c6a48373c852034e4dc"
+      },
+      "mutation": "budget",
+      "status": "fail",
+      "expected": {
+        "halted": true,
+        "cs": 8,
+        "eip": 42,
+        "tr": 24,
+        "cr3": 28672,
+        "result": 572662306,
+        "oldBusy": 11,
+        "newBusy": 9,
+        "backlink": 24
+      },
+      "reference": {
+        "halted": false,
+        "cs": 8,
+        "eip": 9,
+        "tr": 0,
+        "cr3": 0,
+        "result": 0,
+        "oldBusy": 9,
+        "newBusy": 9,
+        "backlink": 0
+      },
+      "actual": {
+        "halted": false,
+        "cs": 8,
+        "eip": 9,
+        "tr": 0,
+        "cr3": 0,
+        "result": 0,
+        "oldBusy": 9,
+        "newBusy": 9,
+        "backlink": 0
+      },
+      "differences": [
+        {
+          "field": "reference.halted",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "field": "actual.halted",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "field": "reference.eip",
+          "expected": 42,
+          "actual": 9
+        },
+        {
+          "field": "actual.eip",
+          "expected": 42,
+          "actual": 9
+        },
+        {
+          "field": "reference.tr",
+          "expected": 24,
+          "actual": 0
+        },
+        {
+          "field": "actual.tr",
+          "expected": 24,
+          "actual": 0
+        },
+        {
+          "field": "reference.cr3",
+          "expected": 28672,
+          "actual": 0
+        },
+        {
+          "field": "actual.cr3",
+          "expected": 28672,
+          "actual": 0
+        },
+        {
+          "field": "reference.result",
+          "expected": 572662306,
+          "actual": 0
+        },
+        {
+          "field": "actual.result",
+          "expected": 572662306,
+          "actual": 0
+        },
+        {
+          "field": "reference.oldBusy",
+          "expected": 11,
+          "actual": 9
+        },
+        {
+          "field": "actual.oldBusy",
+          "expected": 11,
+          "actual": 9
+        },
+        {
+          "field": "reference.backlink",
+          "expected": 24,
+          "actual": 0
+        },
+        {
+          "field": "actual.backlink",
+          "expected": 24,
+          "actual": 0
+        }
+      ]
+    }
+  },
+  "rom128Diagnostic": {
+    "executionRevision": "908e57bd43dd3eaedadf6f7b1ff5779035cf8912",
+    "reportSha256": "7fda9bf47c9f4712bfc258ef96aa9d8ca1e8da9c01b66b9f8e6fe6ea450bede4",
+    "input": {
+      "bytes": 131072,
+      "sha256": "168acf93a07cd637ad24e4bd21aacc890d9ebcdfc8a56f564b2193978104fca8",
+      "provenanceSha256": "89d3aadfeb2973b91655449f13f8546e00e884c211cf84987dbcd0d400875fd1",
+      "revision": "cfd052d1e64d5375dea5a681c1eadeed64ceda2c",
+      "sourceClean": true,
+      "profile": "rom128"
+    },
+    "steps": 807601,
+    "post": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      32,
+      33
+    ],
+    "blocker": {
+      "name": "GuestAssertionFailure",
+      "message": "pinned test386 entered its error routine",
+      "step": 807601,
+      "cs": 208,
+      "eip": 65363,
+      "physical": 1048403,
+      "opcode": 102,
+      "eflags": 12358,
+      "eax": 280,
+      "ebx": 0,
+      "ecx": 22229,
+      "edx": 26242,
+      "esp": 65491,
+      "ss": 280
+    },
+    "classification": "Guest expects 16-bit interrupt gate from VM86; original386 manual 15.3.2 permits task or386gate. #GP reaches guest error routine before ROM128 task tests. Diagnostic only."
+  },
+  "relatedReceipt": "2026-09-20-386-freedos-media-rate.json",
+  "limits": [
+    "16-bit TSS switching, VM86 task targets, TSS debug-trap bit and page-straddling incoming TSS images remain outside the bounded task profile.",
+    "Legacy floppy profiles remain rate-permissive; only the named 1.2MB profile checks CCR. No FDC timing claim.",
+    "FreeDOS386 shell and HDD directory observed; Doom command invoked, but actual Doom/extender entry, graphics/gameplay and Windows remain unaccepted.",
+    "ENTER/LEAVE, bit tests and BCD adjustment are later work, outside this candidate."
+  ]
+}

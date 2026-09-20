@@ -99,6 +99,23 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (implementation frozen; hosted qualification pending) — Astra/Sol
+386 32-bit task switching, RET immediate and explicit AT floppy media rates.
+The commit containing this row freezes audited TSS CALL/JMP/NT IRET, task
+gates, exact CR3 mapping, original selector-fault classes and postcommit page
+faults; task-gate unused fields are ignored and EXT never alters #PF bits.
+The pinned PCjs CALL/IRET oracle and both targeted negative controls pass;
+268 focused checks pass with two optional skips. Real DOS2 write/reboot on
+both CPUs and unchanged FreeDOS on functional286 were rerun against changed
+sources; all six runs preserve earlier step counts and disk hashes. The
+explicit 1.2MB floppy profile fixes BIOS 360K misclassification through CCR
+checks, without changing legacy profile behavior. FreeDOS386 reaches its
+shell and HDD DIR; the DOOM command is invoked but extender/game execution
+is not yet attributed or accepted. Receipt:
+`docs/receipts/2026-09-20-386-task-media-rate.json`. Original ROM128 stops on
+its 16-bit VM86-gate expectation before task tests. No full CPU, Windows,
+Doom, x87 or timing acceptance; compiler/BCD continuation remains separate.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 genuine AT DOS boot and BIOS HDD roundtrip. Exact candidate/landing
 `5b3c0ba1071406d875e704b8cdcd01282f1e4978` freezes expand-down segment/privilege-stack admission, absent-NPX WAIT/ESC,

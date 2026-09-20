@@ -107,8 +107,9 @@ The 386 BIOS continuation now passes POST, genuine INT19, DOS shell write
 and fresh-machine TYPE persistence at combined execution source `72f56ab`.
 The [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json) keeps source and
 input hashes, exact file bytes and separate BIOS-sector evidence. The first
-unchanged FreeDOS-on-386 attempt reaches its boot loader and fails before
-shell startup; it is diagnostic-only. Snapshot copying is now optimized;
+unchanged FreeDOS-on-386 continuation now reaches the shell and lists the
+pinned Doom files on C: after correcting explicit 1.2MB media-rate detection.
+The DOOM command is invoked; actual extender/game execution remains unaccepted. Snapshot copying is now optimized;
 the isolated million-step BIOS benchmark and its limits are recorded in the
 [snapshot receipt](receipts/2026-09-19-386-snapshot-performance.json).
 
