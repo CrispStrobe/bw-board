@@ -99,7 +99,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (candidate; hosted qualification pending) — Astra/Sol DOS loader fixes.
+2026-09-20 DONE (qualified and landed) — Astra/Sol DOS loader fixes.
 The original PC DOS MBR exercises byte Group1 opcode82; the executor now handles
 it with byte semantics even under66. Pinned PCjs agrees on CMP memory and ADC
 carry/flags/high-register preservation; result and budget controls reject.
@@ -113,6 +113,9 @@ snapshots and opt-in detailed tracing avoid losing long runs to final-report err
 The previous320M VGA execution lost its report and supplies no acceptance.
 Receipt: `docs/receipts/2026-09-20-386-dos-loader-reset.json`.
 Ongoing Windows/Doom work retains the parent claim and does not touch other lanes.
+Exact a6a5b483bf87d281cc64bdee0152ff676816a1ed passed CI 35485712895,
+CPU 35485712931 and native 35485712883, then fast-forwarded master.
+Tag: milestones/x86-dos-loader-ata-reset-20260920.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol VM86 TSS.
 32-bit tasks now enter VM86, use user paging, and return from protected task-gate

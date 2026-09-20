@@ -434,13 +434,20 @@
     "rebootReportSha256": "f86cf174f998b73390cb6e98c32d0c5f84953d66dfc66f6ac9576d715c2bf79f"
   },
   "qualification": {
-    "status": "candidate; hosted qualification pending",
+    "status": "qualified and landed",
     "focused": {
       "pass": 284,
       "skip": 2,
       "fail": 0,
       "scope": "all i80386 tests plus VGA memory"
-    }
+    },
+    "revision": "a6a5b483bf87d281cc64bdee0152ff676816a1ed",
+    "runs": {
+      "CI": 35485712895,
+      "CPU": 35485712931,
+      "native": 35485712883
+    },
+    "tag": "milestones/x86-dos-loader-ata-reset-20260920"
   },
   "limits": [
     "Opcode82 independent evidence is software compatibility, not a physical386 claim",
