@@ -232,8 +232,9 @@ let previousCr0=machine.cpu.cr0>>>0;
 const progressSamples=[];
 let stopReason=null;
 let hostRefusal=null;
-const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>{
-    const cell=row*80+column;
+const screenColumns=()=>vgaRom===null?80:(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
+const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:screenColumns()},(_,column)=>{
+    const cell=row*screenColumns()+column;
     const value=vgaRom===null?machine._read(0xb8000+cell*2):machine.vgaMemory.planes[0][cell*2];
     return String.fromCharCode(value||0x20);
 }).join('').replace(/\s+$/,''));
@@ -317,8 +318,12 @@ for(;steps<stepLimit;steps++) {
             installerDeclined=true;
         } else if(installerDeclined&&!commandQueued&&keyScript.length===0) {
             const promptRow=ui.findIndex(line=>/^A:\\?>/.test(line));
-            const cursor=machine._read(0x450)|(machine._read(0x451)<<8);
-            if(promptRow>=0&&(cursor>>8)===promptRow&&(cursor&0xff)>=3) {
+            const activePage=vgaRom===null?0:machine._read(0x462)&7;
+            const cursor=machine._read(0x450+activePage*2)|machine._read(0x451+activePage*2)<<8;
+            const finalLine=[...ui].reverse().find(line=>line.trim()!=='')??'';
+            const promptComplete=/^A:\\?>\s*$/.test(finalLine);
+            const cursorAtPrompt=(cursor>>8)===promptRow&&(cursor&0xff)>=3;
+            if(promptRow>=0&&promptComplete&&(vgaRom!==null||cursorAtPrompt)) {
                 commandPrompt={step:steps,row:promptRow,column:cursor&0xff,line:ui[promptRow]};
                 keyScript.push(...encodeKeys(commandKeys));
                 requestedKeys.push(...commandKeys);
@@ -424,8 +429,9 @@ const vgaDiagnostics=vgaRom===null?null:{
         machine._read(0x451+page*2)<<8),
     crtcCursor:(machine.chips.vga1.crtc[0x0e]<<8)|machine.chips.vga1.crtc[0x0f],
     nonzeroByPlane:machine.vgaMemory.planes.map(plane=>plane.reduce((count,value)=>count+(value!==0),0)),
-    literalText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
-        String.fromCharCode(machine.vgaMemory.planes[0][(row*80+column)*2]||0x20)).join('').replace(/\s+$/,'')),
+    textColumns:screenColumns(),
+    literalText:Array.from({length:25},(_,row)=>Array.from({length:screenColumns()},(_,column)=>
+        String.fromCharCode(machine.vgaMemory.planes[0][(row*screenColumns()+column)*2]||0x20)).join('').replace(/\s+$/,'')),
     compactText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
         String.fromCharCode(machine.vgaMemory.planes[0][row*80+column]||0x20)).join('').replace(/\s+$/,'')),
 };
