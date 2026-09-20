@@ -99,6 +99,22 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-20 DONE (candidate) — Astra/Sol Windows desktop and Doom interaction.
+Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0
+service with 8192 functional cycles; no arbitrary-handler or mechanical timing
+claim. Original Windows3.0 reaches Program Manager, and real Set-1 Enter opens
+File Manager with C:\WINDOWS and free space. Strict observed planar decoding
+independently reproduces the audited frame hashes. Original Doom1.9 E1M1
+movement and pistol fire are accepted at exact9eeca326; a combined-source
+replay is still running and supplies no acceptance yet. Fresh DOS write/reboot
+and BIOS two-sector write/read pass at863cc769 with exact input/source hashes.
+Focused tests:399 pass,2 optional skips; shared platform/checkpoint/VGA49 pass.
+The full test386 diagnostic retains its documented VM86 16-bit gate/manual
+disagreement; it is not a full-ROM pass. Actionlint and diff checks pass.
+Receipt: `docs/receipts/2026-09-20-x86-windows-doom-gameplay.json`.
+Parent claim continues through Windows edit/save/reopen and completed Doom demo;
+experimental defaults and other lanes remain unchanged.
+
 2026-09-20 DONE (qualified and landed) — Astra/Sol hidden segment caches, keyboard F3,
 and original Doom level entry. Real DS/ES reloads retain large hidden limits
 following PE exit; pinned PCjs agrees on a guest bootstrap and 65,540-byte copy,
