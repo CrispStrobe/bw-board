@@ -1151,9 +1151,20 @@ export class ExperimentalI80386 {
       (access & ~2) | (busy ? 2 : 0), { supervisor: true });
   }
 
-  _taskSwitch(selector, kind, { checkPrivilege = true } = {}) {
+  _taskSwitch(selector, kind, {
+    checkPrivilege = true,
+    errorCode = null,
+    external = false,
+  } = {}) {
     const returning = kind === "iret";
-    const incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
+    let incoming;
+    try {
+      incoming = this._taskDescriptor(selector, { returning, checkPrivilege });
+    } catch (error) {
+      if (external && error instanceof I80386Fault && error.errorCode)
+        error.errorCode |= 1;
+      throw error;
+    }
     // Unlike the 286 SWITCH_TASKS pseudocode, the original 386 task-switch
     // flow diagnoses a short incoming TSS while the outgoing task remains
     // restartable. Read the admitted dynamic image before busy/TR commits.
@@ -1194,9 +1205,9 @@ export class ExperimentalI80386 {
         try {
           this._loadSystemRegister("ldtr", image.ldt);
         } catch (error) {
-          if (error instanceof I80386Fault) {
+          if (error instanceof I80386Fault && [11, 13].includes(error.vector)) {
             error.vector = 10;
-            error.errorCode = incoming.selector & 0xfffc;
+            error.errorCode = image.ldt & 0xfffc;
           }
           throw error;
         }
@@ -1216,15 +1227,29 @@ export class ExperimentalI80386 {
         throw new I80386Fault(11, image.cs & 0xfffc, "task code not present");
       this._markAccessed(code);
       this.segmentCaches[SEG_CS] = code;
-      this._loadSeg(SEG_SS, image.ss);
-      for (const [id, value] of [[SEG_DS,image.ds],[SEG_ES,image.es],[SEG_FS,image.fs],[SEG_GS,image.gs]])
-        this._loadSeg(id, value);
+      try {
+        this._loadSeg(SEG_SS, image.ss);
+      } catch (error) {
+        if (error instanceof I80386Fault && error.vector === 13) error.vector = 10;
+        throw error;
+      }
+      for (const [id, value] of [[SEG_DS,image.ds],[SEG_ES,image.es],[SEG_FS,image.fs],[SEG_GS,image.gs]]) {
+        try {
+          this._loadSeg(id, value);
+        } catch (error) {
+          if (error instanceof I80386Fault && error.vector === 13) error.vector = 10;
+          throw error;
+        }
+      }
       if (image.eip > code.limit) throw new I80386Fault(13, 0, "task EIP outside code segment");
+      if (errorCode !== null) this._push(errorCode, 32);
       this.halted = false;
       this._interruptShadow = this._nmiShadow = this._debugShadow = 0;
       this._suppressTrace = true;
     } catch (error) {
       if (error instanceof I80386Fault) error.taskCommitted = true;
+      if (external && error instanceof I80386Fault && error.errorCode)
+        error.errorCode |= 1;
       throw error;
     }
   }
@@ -1262,7 +1287,21 @@ export class ExperimentalI80386 {
         this._taskSwitch(selector, call ? "call" : "jmp");
         return;
       }
-      if ([1, 3, 5, 11].includes(type))
+      if (type === 11)
+        throw new I80386Fault(13, errorCode, "task switch target is busy");
+      if (type === 5) {
+        const gateDpl = (access >>> 5) & 3;
+        if (Math.max(cpl, selector & 3) > gateDpl)
+          throw new I80386Fault(13, errorCode, "task gate privilege");
+        if (!(access & 0x80))
+          throw new I80386Fault(11, errorCode, "task gate not present");
+        if (raw.bytes[0] || raw.bytes[1] || raw.bytes[4] || raw.bytes[6] || raw.bytes[7])
+          throw new I80386Fault(13, errorCode, "malformed task gate");
+        const target = raw.bytes[2] | raw.bytes[3] << 8;
+        this._taskSwitch(target, call ? "call" : "jmp", { checkPrivilege: false });
+        return;
+      }
+      if ([1, 3].includes(type))
         throw new UnsupportedI80386(
           "protected task transfer is outside the bounded 386 profile",
         );
@@ -1942,10 +1981,20 @@ export class ExperimentalI80386 {
     const access = b[5],
       type = access & 31,
       dpl = (access >>> 5) & 3;
-    if (type === 5)
-      throw new UnsupportedI80386(
-        "IDT task gates are outside the bounded profile",
-      );
+    if (type === 5) {
+      if (software && dpl < this.currentPrivilegeLevel)
+        throw new I80386Fault(13, idtCode, "software task gate privilege");
+      if (!(access & 0x80))
+        throw new I80386Fault(11, idtCode, "IDT task gate not present");
+      if (b[0] || b[1] || b[4] || b[6] || b[7])
+        throw new I80386Fault(13, idtCode, "malformed IDT task gate");
+      this._taskSwitch(b[2] | b[3] << 8, "call", {
+        checkPrivilege: false,
+        errorCode,
+        external,
+      });
+      return;
+    }
     if (![6, 7, 14, 15].includes(type) || b[4] !== 0)
       throw new I80386Fault(13, idtCode, "unsupported IDT gate");
     const vm86 = this.virtual8086;

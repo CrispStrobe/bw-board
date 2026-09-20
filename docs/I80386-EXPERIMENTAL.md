@@ -307,15 +307,16 @@ busy, backlink, NT, TS, register, selector, and CR3 transitions. The owned
 roundtrip keeps the GDT, TSS, code, and page tables mapped in both address
 spaces as required by section 7.7.1, while mapping a guest data page to
 different physical storage and proving that the incoming and restored CR3
-values select the expected bytes. Section 7.5 and Table 7-1 define the
-staging used here: incoming descriptor presence and limit failures remain in
-the outgoing context; LDTR/CS validity failures after the switch are #TS,
-nonpresent CS is #NP, stack failures retain their documented #GP/#SS split,
-and ordinary data-segment failures retain #GP/#NP. The incoming CS accessed
+values select the expected bytes. Section 7.5 and the exception chapter's
+section 9.8.10/Table 9-5 define the staging used here: incoming descriptor
+presence and limit failures remain in the outgoing context; LDTR, CS, SS, and
+data-selector validity failures after the switch are #TS with the failing
+selector, nonpresent CS/data are #NP, and nonpresent SS is #SS. Paging faults
+during these system reads remain #PF with their original error and CR2. The incoming CS accessed
 bit is written after the task commits, so a paging fault on that write is a
-new-task fault. The overview table contains wording and ordering ambiguities;
-the implementation follows its numbered checks and the surrounding detailed
-task-switch text rather than extending the audited 286 sequence to the 386.
+new-task fault. The chapter 7 overview table contains contradictory exception
+rows; the implementation follows the explicit exception-context rules in
+sections 9.8.10 and 9.8.11 rather than extending the audited 286 sequence.
 Task gates remain outside this direct-transfer milestone.
 
 VERR and VERW query descriptor type and privilege without requiring the

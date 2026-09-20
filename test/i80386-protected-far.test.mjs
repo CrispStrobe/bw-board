@@ -101,6 +101,18 @@ test('protected far task switches require a valid current task without stack mut
   assert.throws(()=>f.cpu.step(),error=>error?.vector===10);assert.equal(f.cpu.esp,0x400);
 });
 
+test('direct CALL rejects a busy 386 TSS before CPU or TSS mutation',()=>{
+  const f=protectedFixture();f.put(0x228,descriptor(0x600,0x8b,0x67,0));
+  f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x400;
+  f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);
+  f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
+  f.put(0x100000,[0x9a,0,0,0,0,0x28,0]);
+  const before=Array.from({length:0x68},(_,i)=>f.memory.get(0x600+i)??0);
+  assert.throws(()=>f.cpu.step(),error=>error?.vector===13&&error.errorCode===0x28);
+  assert.deepEqual([f.cpu.eip,f.cpu.esp],[0,0x400]);
+  assert.deepEqual(Array.from({length:0x68},(_,i)=>f.memory.get(0x600+i)??0),before);
+});
+
 test('outer RETF separates operand-size loads from returned stack-address-size discard',()=>{
   const narrow=protectedFixture();narrow.put(0x220,descriptor(0x160000,0xf2,0xffff,0x80));
   narrow.cpu.cs=8;narrow.cpu.ss=0x10;narrow.cpu.esp=0x300;narrow.cpu.segmentCaches[1]=narrow.cpu._ringCodeDescriptor(8);narrow.cpu.segmentCaches[2]=narrow.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
