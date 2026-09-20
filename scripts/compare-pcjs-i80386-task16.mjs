@@ -89,7 +89,15 @@ function runPCjs() {
   cpu.bus = bus;
   install((address, value) => bus.setByteDirect(address, value));
   cpu.setCS(0); cpu.setIP(0); cpu.setDS(0); cpu.setES(0); cpu.setSS(0); cpu.setSP(0x800); cpu.setPS(2);
-  for (let step = 0; step < budget && !(cpu.intFlags & X86.INTFLAG.HALT); step++) cpu.stepCPU(0);
+  const trail = [];
+  for (let step = 0; step < budget && !(cpu.intFlags & X86.INTFLAG.HALT); step++) {
+    trail.push(`${cpu.getCS().toString(16)}:${cpu.getIP().toString(16)}`);
+    try {
+      cpu.stepCPU(0);
+    } catch (error) {
+      throw new Error(`PCjs abort at ${trail.at(-1)} raw=${String(error)} trail=${trail.join(",")}`);
+    }
+  }
   return result(cpu, address => bus.getByteDirect(address), false);
 }
 
