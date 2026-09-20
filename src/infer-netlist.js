@@ -386,6 +386,36 @@ export function inferNetlist(stc, opts) {
       }
 
       case 'analog': {
+        // A named sensor is the sensor, not a knob. Every analog pin used to
+        // become a potentiometer, so 03-night-light opened with "a
+        // light-dependent resistor (LDR) in a voltage divider" over a bench
+        // holding a pot — and the reader had no way to tell the substitution
+        // had happened. LDR and NTC are two-terminal variable resistors, so
+        // each forms the TOP leg of a divider with a fixed 10k to ground,
+        // which is the textbook wiring both examples describe.
+        // Light wins a name that says both; the ternary below is the only
+        // place that precedence lives, so there is no second guard to drift.
+        const isLdr = /ldr|photo|light/i.test(pin.name);
+        const isNtc = /ntc|thermistor|thermo|temp/i.test(pin.name);
+        if (isLdr || isNtc) {
+          const sId = `${isLdr ? 'LDR' : 'NTC'}_${safeName}`;
+          const rId = `R_DIV_${safeName}`;
+          parts.push({ id: sId, kind: isLdr ? 'ldr' : 'ntc', declName: pin.name,
+            params: {}, terminals: ['a', 'b'] });
+          parts.push({ id: rId, kind: 'resistor',
+            params: { ohms: 10000 }, terminals: ['a', 'b'] });
+          vccNet.terminals.push({ part: sId, terminal: 'a' });
+          nets.push({
+            id: `net_${safeName}_div`,
+            terminals: [
+              { part: sId, terminal: 'b' },
+              { part: rId, terminal: 'a' },
+              { part: 'MCU', terminal: pinId },
+            ],
+          });
+          gndNet.terminals.push({ part: rId, terminal: 'b' });
+          break;
+        }
         // Potentiometer across VCC/GND, wiper → pin
         const potId = `POT_${safeName}`;
         parts.push({

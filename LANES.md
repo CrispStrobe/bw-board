@@ -26,11 +26,21 @@ runs LAST of the four, so `servoMotor` stays a motor, `servoBuzzer` a buzzer and
 `servoRelay` a relay — each asserted, because plain names cannot tell whether that
 chain is load-bearing and the first version of the test could not see it.
 
-Focused servo suite 10/10, and 47/47 across every inference suite plus the shift
-register example. Disabling detection, removing the exclusion chain, and dropping the
-ground net each turn a named test red. Excludes the servo device model itself, PWM
-angle semantics, the `signal` pin-name spelling that 53-servo-sweep still uses, and
-every other name convention.
+The same lane then gave the analog case the same treatment: every analog pin became a
+potentiometer, so 03-night-light opened with "a light-dependent resistor (LDR) in a
+voltage divider" over a bench holding a knob, with 16-ldr-bargraph and
+arduino-sk-p06-light-theremin alike, and nothing on screen said a substitution had
+happened. A pin named for light or temperature now gets an `ldr` or `ntc` — both
+two-terminal variable resistors, so each forms the TOP leg of a divider with a fixed
+10k to ground, which is the wiring those intros describe. An unnamed analog pin is
+still a potentiometer, asserted, because most of them really are knobs.
+
+Focused suite 21/21, and 61/61 across every inference suite plus the 595 device. Disabling servo detection, removing its exclusion chain, dropping the servo ground
+net, disabling the sensors, letting the LDR pattern swallow `pot`, and ungrounding the
+divider each turn a named test red. Two mutants that survived were fixed rather than
+accepted: the redundant `!isLdr` guard was removed so precedence lives only in the
+ternary, and the divider test now asserts both legs reach a rail. Excludes the servo and sensor device models themselves, PWM angle semantics, sensor
+value/illumination controls, and every other name convention.
 
 2026-09-20 DONE (candidate) — `/mnt/volume1/code/lego` (Claude): shift-register outputs
 on a nonlinear load, and the LED operating point. Isolated worktree
