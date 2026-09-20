@@ -2,24 +2,25 @@
  * cc.mjs — a small C front end that compiles to 8086 asm (MASM dialect, which the
  * built-in assembler speaks), so a .C runs on any x86 flavor: C -> asm -> .COM.
  *
- * An honest integer subset — not a full compiler, but real control flow and
- * expressions, enough to run small programs. Inside main() it understands:
- *   int a, b = expr;                 16-bit integer variables (optional init)
- *   int a[n];  a[i]                  integer arrays (word each; element read/write, any index expr)
+ * An honest integer subset — not a full compiler, but real control flow,
+ * expressions, and user-defined functions, enough to run small programs:
+ *   int f(int a, int b) { ... }      multiple functions; params + a return value
+ *   int a, b = expr;                 16-bit integer variables (locals in a frame)
+ *   int a[n];  a[i]                  integer arrays (word each; element read/write) [global]
  *   int *p;  &x / &a[i];  *p         pointers: address-of and dereference (read and write)
  *   a = expr;  a += / -= / *= / /=   assignment and compound assignment
  *   a++;  a--;                       increment / decrement
  *   printf("fmt", args...);          %d (integer), %c (char), %% and \n\t\r\\\";
- *                                    each conversion consumes one integer arg
  *   puts("literal");                 a string literal + newline
- *   if (cond) {..} [else {..}]       full conditionals
- *   while (cond) {..}                loops
- *   for (init; cond; post) {..}      counted loops
- *   return expr;                     the process exit code (low byte)
- * Expressions: + - * / % , parens, unary - and !, comparisons (< > <= >= == !=)
- * and && || (short-circuit), over integer literals, char literals and variables.
- * #include lines and /* *\/ // comments are ignored. Full C (types, pointers,
- * functions, floats) is a real DOS C compiler's job when its binary is present.
+ *   if (cond) {..} [else {..}]  while (cond) {..}  for (init; cond; post) {..}
+ *   f(args)                          calls (cdecl: args pushed right-to-left, result in AX)
+ *   return expr;                     from a function; main's return is the exit code
+ * Expressions: + - * / % , parens, unary - ! * &, comparisons (< > <= >= == !=),
+ * && || (short-circuit), over integer/char literals, variables, array elements,
+ * pointer derefs and function calls. Calling convention: PUSH BP / MOV BP,SP;
+ * params at [BP+4+2k], locals at [BP-2-2k]; arrays are global (word data).
+ * #include lines and /* *\/ // comments are ignored. Full C (structs, floats,
+ * the standard library) is a real DOS C compiler's job when its binary is present.
  *
  * @module
  */
@@ -67,31 +68,54 @@ function tokenizeC(s) {
     return toks;
 }
 
-/** Compile the minimal C subset to MASM-dialect .COM assembly. */
+/** Compile the C subset to MASM-dialect .COM assembly. */
 export function cToAsm(source) {
     let src = source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
     src = src.replace(/^\s*#.*$/gm, ' ');
-    const mm = src.match(/\bmain\s*\([^)]*\)\s*\{([\s\S]*)\}/);
-    if (!mm) throw new Error('C: no main() { ... } found');
 
-    let toks = tokenizeC(mm[1]);
+    let toks = tokenizeC(src);
     let i = 0;
     const code = [], data = [], strings = [];
-    const vars = new Map();
+    const vars = new Map();          // global scalars: name -> label
+    const arrays = new Map();        // global arrays: name -> { label, size }
+    const funcs = new Set();         // defined function names
+    const calls = new Set();         // called function names (validated at the end)
     let usesPrintInt = false, usesCrlf = false, lblN = 0;
+    let curScope = null;             // { params: Map, locals: Map, epi: label } inside a function
+
     const emit = (...a) => code.push(...a.map((s) => (s.endsWith(':') ? s : '\t' + s)));
     const lbl = () => `_L${lblN++}`;
-    const varLabel = (n) => { if (!vars.has(n)) vars.set(n, `V${vars.size}`); return vars.get(n); };
-    const arrays = new Map();   // name -> { label, size } (int arrays, word each)
-    const arrLabel = (n) => { const a = arrays.get(n); if (!a) throw new Error(`C: array '${n}' used before declaration`); return a.label; };
     const strLabel = (bytes) => { const l = `s${strings.length}`; strings.push(`${l}:\tDB ${bytes.length ? bytes.join(',') + ",'$'" : "'$'"}`); return l; };
+    const arrLabel = (n) => { const a = arrays.get(n); if (!a) throw new Error(`C: array '${n}' used before declaration`); return a.label; };
     const peek = () => toks[i], next = () => toks[i++];
     const isId = (t) => typeof t === 'string' && /^[A-Za-z_]\w*$/.test(t);
     const isStr = (t) => t && typeof t === 'object' && t.str !== undefined;
     const expect = (t) => { if (toks[i] !== t) throw new Error(`C: expected '${t}', got '${JSON.stringify(toks[i]) ?? 'EOF'}'`); return toks[i++]; };
-    const KW = new Set(['int', 'if', 'else', 'while', 'for', 'return', 'printf', 'puts']);
+    const KW = new Set(['int', 'void', 'if', 'else', 'while', 'for', 'return', 'printf', 'puts']);
+    const fnLabel = (n) => `C_${n.toUpperCase()}`;
 
-    // ── expression codegen: result in AX ───────────────────────────────────
+    // A variable's memory operand: a frame slot in the current function, else a
+    // (lazily created) global. Params sit above the saved BP/return address,
+    // locals below.
+    const varRef = (name) => {
+        if (curScope) {
+            if (curScope.params.has(name)) return `[BP+${4 + 2 * curScope.params.get(name)}]`;
+            if (curScope.locals.has(name)) return `[BP-${2 + 2 * curScope.locals.get(name)}]`;
+        }
+        if (!vars.has(name)) vars.set(name, `V${vars.size}`);
+        return `[${vars.get(name)}]`;
+    };
+    // Emit the ADDRESS of a variable into AX.
+    const varAddrEmit = (name) => {
+        if (curScope) {
+            if (curScope.params.has(name)) { emit('MOV AX, BP', `ADD AX, ${4 + 2 * curScope.params.get(name)}`); return; }
+            if (curScope.locals.has(name)) { emit('MOV AX, BP', `SUB AX, ${2 + 2 * curScope.locals.get(name)}`); return; }
+        }
+        if (!vars.has(name)) vars.set(name, `V${vars.size}`);
+        emit(`MOV AX, OFFSET ${vars.get(name)}`);
+    };
+
+    // ── expression codegen: result left in AX ───────────────────────────────
     function primary() {
         const t = next();
         if (t === '(') { orExpr(); expect(')'); return; }
@@ -103,7 +127,7 @@ export function cToAsm(source) {
             const nm = next();
             if (!isId(nm) || KW.has(nm)) throw new Error(`C: & needs a variable, got '${JSON.stringify(nm)}'`);
             if (peek() === '[') { next(); orExpr(); expect(']'); emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(nm)}`, 'ADD AX, BX'); return; }
-            emit(`MOV AX, OFFSET ${varLabel(nm)}`); return;
+            varAddrEmit(nm); return;
         }
         if (typeof t === 'string' && /^\d+$/.test(t)) { emit(`MOV AX, ${parseInt(t, 10) & 0xffff}`); return; }
         if (isId(t) && !KW.has(t)) {
@@ -111,7 +135,8 @@ export function cToAsm(source) {
                 next(); orExpr(); expect(']');
                 emit('SHL AX, 1', `MOV BX, OFFSET ${arrLabel(t)}`, 'ADD BX, AX', 'MOV AX, [BX]'); return;
             }
-            emit(`MOV AX, [${varLabel(t)}]`); return;
+            if (peek() === '(') { emitCall(t); return; }   // function call
+            emit(`MOV AX, ${varRef(t)}`); return;
         }
         throw new Error(`C: bad token '${JSON.stringify(t)}' in expression`);
     }
@@ -154,12 +179,29 @@ export function cToAsm(source) {
         while (peek() === '||') { next(); andExpr(); emit('CMP AX, 0', `JNE ${Lt}`); }
         emit('MOV AX, 0', `JMP ${Le}`, `${Lt}:`, 'MOV AX, 1', `${Le}:`);
     }
-    /** Codegen an argument captured as its own token slice. */
+    /** Codegen an argument/expression captured as its own token slice. */
     function genSlice(slice) {
         const st = toks, si = i; toks = slice; i = 0;
         orExpr();
         if (i !== toks.length) throw new Error('C: bad expression in argument');
         toks = st; i = si;
+    }
+    /** A call: gather args (balanced), push right-to-left (cdecl), CALL, clean up. */
+    function emitCall(name) {
+        expect('(');
+        const args = [];
+        if (peek() !== ')') {
+            do {
+                const slice = []; let d = 0;
+                while (i < toks.length) { const tk = peek(); if (d === 0 && (tk === ',' || tk === ')')) break; if (tk === '(') d++; else if (tk === ')') d--; slice.push(next()); }
+                args.push(slice);
+            } while (peek() === ',' && next());
+        }
+        expect(')');
+        for (let a = args.length - 1; a >= 0; a--) { genSlice(args[a]); emit('PUSH AX'); }
+        calls.add(name);
+        emit(`CALL ${fnLabel(name)}`);
+        if (args.length) emit(`ADD SP, ${2 * args.length}`);
     }
 
     // ── printf / puts ──────────────────────────────────────────────────────
@@ -182,7 +224,6 @@ export function cToAsm(source) {
         }
         expect(')');
         if (fn === 'puts') { const b = cStringBytes(lit); b.push(13, 10); const l = strLabel(b); emit(`MOV DX, OFFSET ${l}`, 'MOV AH, 9', 'INT 21H'); return; }
-        // printf: walk the format, flushing literal runs and consuming an arg per conversion.
         let buf = [], ai = 0;
         const flush = () => { if (buf.length) { const l = strLabel(buf); emit(`MOV DX, OFFSET ${l}`, 'MOV AH, 9', 'INT 21H'); buf = []; } };
         for (let k = 0; k < lit.length; k++) {
@@ -223,19 +264,19 @@ export function cToAsm(source) {
             orExpr(); emit('POP BX', 'MOV [BX], AX'); return;
         }
         if (isId(peek()) && !KW.has(peek()) && (toks[i + 1] === '++' || toks[i + 1] === '--')) {
-            const name = next(), op = next(), lab = varLabel(name);
-            emit(`MOV AX, [${lab}]`, op === '++' ? 'INC AX' : 'DEC AX', `MOV [${lab}], AX`); return;
+            const name = next(), op = next(), ref = varRef(name);
+            emit(`MOV AX, ${ref}`, op === '++' ? 'INC AX' : 'DEC AX', `MOV ${ref}, AX`); return;
         }
         if (isId(peek()) && !KW.has(peek()) && ['=', '+=', '-=', '*=', '/='].includes(toks[i + 1])) {
-            const name = next(), op = next(), lab = varLabel(name);
-            if (op === '=') { orExpr(); emit(`MOV [${lab}], AX`); return; }
-            orExpr(); emit('MOV BX, AX', `MOV AX, [${lab}]`);
+            const name = next(), op = next(), ref = varRef(name);
+            if (op === '=') { orExpr(); emit(`MOV ${ref}, AX`); return; }
+            orExpr(); emit('MOV BX, AX', `MOV AX, ${ref}`);
             if (op === '+=') emit('ADD AX, BX'); else if (op === '-=') emit('SUB AX, BX');
             else if (op === '*=') emit('IMUL BX'); else emit('MOV CX, BX', 'CWD', 'IDIV CX');
-            emit(`MOV [${lab}], AX`); return;
+            emit(`MOV ${ref}, AX`); return;
         }
         if (peek() === 'printf' || peek() === 'puts') { callStmt(); return; }
-        orExpr();   // bare expression, value discarded
+        orExpr();   // bare expression (e.g. a function call), value discarded
     }
 
     function statement() {
@@ -245,16 +286,15 @@ export function cToAsm(source) {
         if (t === 'int') {
             next();
             do {
-                if (peek() === '*') next();               // pointer declarator: int *p; (a word holding an address)
+                if (peek() === '*') next();               // pointer declarator: int *p;
                 const name = next();
-                if (peek() === '[') {                     // array declaration: int a[n];
+                if (peek() === '[') {                     // array declaration (global): int a[n];
                     next(); const sz = next(); expect(']');
                     if (typeof sz !== 'string' || !/^\d+$/.test(sz)) throw new Error(`C: array size must be an integer literal, got '${JSON.stringify(sz)}'`);
                     if (!arrays.has(name)) { const label = `A${arrays.size}`; const n = parseInt(sz, 10); arrays.set(name, { label, size: n }); data.push(`${label}:\tDW ${Array(n).fill(0).join(',')}`); }
                     continue;
                 }
-                const lab = varLabel(name);
-                if (peek() === '=') { next(); orExpr(); emit(`MOV [${lab}], AX`); }
+                if (peek() === '=') { next(); orExpr(); emit(`MOV ${varRef(name)}, AX`); }   // local slot pre-assigned
             } while (peek() === ',' && next());
             expect(';'); return;
         }
@@ -275,7 +315,6 @@ export function cToAsm(source) {
             if (peek() !== ';') exprStatement(); expect(';');
             const Ltop = lbl(), Lend = lbl(); emit(`${Ltop}:`);
             if (peek() !== ';') { orExpr(); emit('CMP AX, 0', `JE ${Lend}`); } expect(';');
-            // capture the post-expression tokens to emit after the body
             const post = []; let depth = 0;
             while (i < toks.length) { const tk = peek(); if (depth === 0 && tk === ')') break; if (tk === '(') depth++; else if (tk === ')') depth--; post.push(next()); }
             expect(')');
@@ -285,14 +324,79 @@ export function cToAsm(source) {
         }
         if (t === 'return') {
             next();
-            if (peek() === ';') emit('MOV AX, 4C00H', 'INT 21H'); else { orExpr(); emit('MOV AH, 4CH', 'INT 21H'); }
+            if (peek() !== ';') orExpr();   // value in AX; a bare `return;` leaves AX as-is
+            emit(`JMP ${curScope.epi}`);
             expect(';'); return;
         }
         exprStatement(); expect(';');
     }
 
-    while (i < toks.length) statement();
-    emit('MOV AX, 4C00H', 'INT 21H');   // fall-through exit
+    // ── function-scoped local collection (pre-pass to size the frame) ────────
+    function collectLocals(bts, paramSet) {
+        const locals = new Map();
+        for (let k = 0; k < bts.length; k++) {
+            if (bts[k] !== 'int') continue;
+            let j = k + 1;
+            while (j < bts.length && bts[j] !== ';') {
+                if (bts[j] === '*') j++;
+                const nm = bts[j];
+                if (isId(nm) && !KW.has(nm)) {
+                    if (bts[j + 1] === '[') { while (j < bts.length && bts[j] !== ']') j++; }   // array -> global
+                    else if (!paramSet.has(nm) && !locals.has(nm)) locals.set(nm, locals.size);
+                }
+                while (j < bts.length && bts[j] !== ',' && bts[j] !== ';') j++;
+                if (bts[j] === ',') j++;
+            }
+            k = j;
+        }
+        return locals;
+    }
+
+    function parseFunction() {
+        const rt = next();
+        if (rt !== 'int' && rt !== 'void') throw new Error(`C: expected a function return type (int/void), got '${JSON.stringify(rt)}'`);
+        const name = next();
+        if (!isId(name) || KW.has(name)) throw new Error(`C: expected a function name, got '${JSON.stringify(name)}'`);
+        expect('(');
+        const params = new Map();
+        if (peek() === 'void' && toks[i + 1] === ')') next();   // (void)
+        else if (peek() !== ')') {
+            do {
+                if (peek() === 'int') next();     // optional type
+                if (peek() === '*') next();       // pointer param
+                const pn = next();
+                if (!isId(pn)) throw new Error(`C: bad parameter '${JSON.stringify(pn)}'`);
+                params.set(pn, params.size);
+            } while (peek() === ',' && next());
+        }
+        expect(')');
+        expect('{');
+        const body = []; let depth = 1;
+        while (i < toks.length) {
+            const tk = next();
+            if (tk === '{') depth++;
+            else if (tk === '}') { depth--; if (depth === 0) break; }
+            body.push(tk);
+        }
+        const locals = collectLocals(body, new Set(params.keys()));
+        const epi = lbl();
+        code.push(`${fnLabel(name)}:`);
+        emit('PUSH BP', 'MOV BP, SP');
+        if (locals.size) emit(`SUB SP, ${2 * locals.size}`);
+        const savedToks = toks, savedI = i, savedScope = curScope;
+        toks = body; i = 0; curScope = { params, locals, epi };
+        while (i < toks.length) statement();
+        toks = savedToks; i = savedI; curScope = savedScope;
+        code.push(`${epi}:`);
+        emit('MOV SP, BP', 'POP BP', 'RET');
+        funcs.add(name);
+    }
+
+    // ── driver: entry calls main, then every function, then the runtime ─────
+    emit(`CALL ${fnLabel('main')}`, 'MOV AH, 4CH', 'INT 21H');   // main's return -> exit code (AL)
+    while (i < toks.length) parseFunction();
+    if (!funcs.has('main')) throw new Error('C: no main() function found');
+    for (const c of calls) if (!funcs.has(c)) throw new Error(`C: call to undefined function '${c}'`);
 
     // ── runtime: signed print-integer (matches BASIC's) ────────────────────
     const rt = [];

@@ -72,8 +72,8 @@ test('the subset boundary is honest: unknown conversion / missing arg are refuse
     assert.throws(() => cToAsm('int main(){ printf("%f", 1); return 0; }'), /unsupported printf conversion/);
     // A conversion with no matching argument is refused.
     assert.throws(() => cToAsm('int main(){ printf("%d"); return 0; }'), /not enough arguments/);
-    // An unknown function call is refused (no ';' where one is expected).
-    assert.throws(() => cToAsm('int main(){ gets(x); return 0; }'), /expected/);
+    // A call to a function that is never defined is refused at compile time.
+    assert.throws(() => cToAsm('int main(){ gets(x); return 0; }'), /undefined function/);
 });
 
 test('cc-native and the gated Turbo C are the C toolchains; native always lists', () => {
