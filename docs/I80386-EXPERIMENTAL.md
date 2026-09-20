@@ -356,7 +356,7 @@ profile. This explicit precommit refusal avoids misclassifying the original
 incoming-image and selector-verification faults in the new task, while section
 7.1 distinguishes missing TSS pages. The admitted single-page image is read
 before state mutation, so an entirely absent incoming image faults in the old
-task. VM86 task targets and the TSS debug-trap bit also refuse before mutation.
+task. The TSS debug-trap bit also refuses before mutation.
 After commit, selector validation runs under the new CR3 and retains the new
 task on failure. IDT task-target admission uses #TS (including EXT for an
 external event); direct CALL/JMP target admission uses #GP. Page-fault error
@@ -372,8 +372,8 @@ manual recommends against mixing 286 and 386 TSS formats but does not define
 the otherwise unrepresentable upper general-register halves or FS/GS images.
 This bounded executor deterministically zero-extends incoming 16-bit general
 registers and makes FS/GS null; those choices are compatibility policy, not a
-physical-original-386 acceptance claim. VM86 and the 386 TSS debug-trap bit
-remain explicit refusals before task state is committed.
+physical-original-386 acceptance claim. The 386 TSS debug-trap bit remains
+an explicit refusal before task state is committed.
 `scripts/compare-pcjs-i80386-task16.mjs` independently compares an all-286-TSS
 CALL/IRET roundtrip with pinned PCjs, including exact HLT completion, the
 defined 16-bit AX image, backlink and busy transitions, and unchanged CR3.
@@ -398,8 +398,8 @@ the same revision's IRET path explicitly performs that mode change. The local
 side enters VM86, visits a protected IDT task-gate handler, returns through NT
 IRET, and reaches the exact VM completion state, but the diagnostic status is
 still `fail` because the reference does not agree. The owned manual-derived
-tests are local evidence only until another independent engine or hardware
-guest validates this task transition.
+tests cover additional local fault boundaries; the separate QEMU witness below
+provides independent software evidence for the successful transition.
 
 The owned boot image in `test/fixtures/i80386-vm-task.S` provides that second
 software-engine check with QEMU 8.2.2 TCG configured as a later 486 CPU. It
