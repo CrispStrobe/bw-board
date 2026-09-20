@@ -67,7 +67,7 @@ commit `a6ed6b701f0a57db0569ab98b0661c12a6ec3ff8`; the local build produced
 `/tmp/astra-seavgabios-source/out/vgabios.bin`. The source-bound board probe
 executes its option POST, observes the installed C000h INT 10h vector, and
 then runs a host-installed real-mode diagnostic guest. That guest requests
-mode 13h through INT 10h, verifies BDA mode 13h and chain-4 register state,
-and round-trips two bytes through A0000h. This proves the bounded firmware
+mode 13h through INT 10h and round-trips two bytes through A0000h; the host
+probe verifies BDA mode 13h and chain-4 register state. This proves the bounded firmware
 service and CPU-memory path; it is not a complete AT boot, pixel-rendering,
 Mode X, Windows, or Doom graphics result.

@@ -9,6 +9,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,
 } from '../src/experimental/i80386-at-machine.js';
 import {I80386Fault, UnsupportedI80386} from '../src/experimental/i80386.js';
+import {gradeI80386VgaBiosEvidence} from './lib/i80386-vga-bios-grade.mjs';
 
 const SYSTEM_ROM_SHA256 = '74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
 const VGA_ROM_SHA256 = '90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a';
@@ -17,6 +18,7 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const git = (...args) => execFileSync('git', args, {cwd: root, encoding: 'utf8'}).trim();
 const sourcePaths = [
   ...git('ls-files', 'src').split('\n').filter(file => file.endsWith('.js')),
+  'scripts/lib/i80386-vga-bios-grade.mjs',
   'scripts/run-i80386-at-vga-bios.mjs',
 ];
 const executionRevision = git('rev-parse', 'HEAD');
@@ -129,15 +131,15 @@ const optionVgaPorts = optionEntry ? vgaPorts.filter(event => event.step >= opti
 const guestVgaPorts = firmwareReturn ? vgaPorts.filter(event => event.step > firmwareReturn.step) : [];
 const bdaVideoMode = machine._read(0x449);
 const videoState = machine.chips.vga1.getVideoState();
-const accepted = outcome === 'int10-vram-roundtrip' && !!optionEntry && !!firmwareReturn &&
-  optionPostInstructions > 0 && optionVgaPorts.length > 0 && int10Vector?.cs === 0xc000 &&
-  int10ServiceEntry?.cs === int10Vector.cs && int10ServiceEntry?.eip === int10Vector.ip &&
-  int10ServiceInstructions > 0 && guestVgaPorts.length > 0 && bdaVideoMode === 0x13 &&
-  (videoState.seq[4] & 0x08) !== 0 && guestMarker?.cs === 0 &&
-  guestMarker?.eip === 0x526 && guestMarker?.value === 0xa5;
+const grading = gradeI80386VgaBiosEvidence({
+  outcome, optionEntry, firmwareReturn, optionPostInstructions, optionVgaPorts,
+  int10Vector, int10ServiceEntry, int10ServiceInstructions, guestVgaPorts,
+  bdaVideoMode, videoState, guestMarker,
+});
 const report = {
   schema: 'astra.i80386-at-vga-bios-diagnostic.v1',
-  accepted,
+  accepted: grading.accepted,
+  grading,
   diagnosticOnly: true,
   fullBootAccepted: false,
   scope: 'external SeaVGABIOS option POST followed by a host-installed real-mode diagnostic guest invoking INT 10h mode 13h and verifying two VGA-memory bytes',
@@ -167,4 +169,4 @@ const report = {
   node: process.version,
 };
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-if (!accepted) process.exitCode = 1;
+if (!grading.accepted) process.exitCode = 1;
