@@ -131,7 +131,7 @@ export function inferNetlist(stc, opts) {
       const rId = `R_${prefix}_q${bit}`;
       const ledId = `LED_${prefix}_q${bit}`;
       parts.push({ id: rId, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
-      parts.push({ id: ledId, kind: 'led', params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'] });
+      parts.push({ id: ledId, kind: 'led', params: { color: 'red' }, terminals: ['anode', 'cathode'] });
       if (activeLow) {
         // Output LOW lights: VCC → R → LED → Qn (current sinks into the pin)
         vccNet.terminals.push({ part: rId, terminal: 'a' });
@@ -331,7 +331,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led', declName: pin.name,
-            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { color: 'red' }, terminals: ['anode', 'cathode'],
           });
           // VCC → R.a
           vccNet.terminals.push({ part: rId, terminal: 'a' });
@@ -361,7 +361,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led', declName: pin.name,
-            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { color: 'red' }, terminals: ['anode', 'cathode'],
           });
           // MCU pin → R.a
           nets.push({
@@ -507,7 +507,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led',
-            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { color: 'red' }, terminals: ['anode', 'cathode'],
           });
 
           if (port.activeLow) {
@@ -646,7 +646,13 @@ export function inferNetlist(stc, opts) {
         const dispId = `DISP_${safeName}`;
         const segs = ['seg_a', 'seg_b', 'seg_c', 'seg_d', 'seg_e', 'seg_f', 'seg_g', 'seg_dp'];
         parts.push({ id: dispId, kind: 'sevenseg8', declName: part.name,
-          params: { commonAnode: !!part.commonAnode },
+          // THE KEY THE DEVICE READS. registerSevenseg8's init() asks for
+          // `params.common` and tests it with /anode/i; `commonAnode` was a
+          // name nothing looked at, so a program declaring COMMON ANODE was
+          // inferred as a common-cathode display and its segments ran
+          // inverted. sb3-creator's circuit-params-are-read gate names this
+          // exactly: "declared by circuits, read by no engine code".
+          params: { common: part.commonAnode ? 'anode' : 'cathode' },
           terminals: ['vcc', 'gnd', ...segs, 'sel_a', 'sel_b', 'sel_c'] });
         segs.forEach((seg, bit) => {
           nets.push({ id: `net_${safeName}_${seg}`, terminals: [
