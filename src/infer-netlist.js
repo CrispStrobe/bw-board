@@ -131,7 +131,7 @@ export function inferNetlist(stc, opts) {
       const rId = `R_${prefix}_q${bit}`;
       const ledId = `LED_${prefix}_q${bit}`;
       parts.push({ id: rId, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
-      parts.push({ id: ledId, kind: 'led', params: { color: 'red' }, terminals: ['anode', 'cathode'] });
+      parts.push({ id: ledId, kind: 'led', params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'] });
       if (activeLow) {
         // Output LOW lights: VCC → R → LED → Qn (current sinks into the pin)
         vccNet.terminals.push({ part: rId, terminal: 'a' });
@@ -331,7 +331,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led', declName: pin.name,
-            params: { color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
           });
           // VCC → R.a
           vccNet.terminals.push({ part: rId, terminal: 'a' });
@@ -361,7 +361,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led', declName: pin.name,
-            params: { color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
           });
           // MCU pin → R.a
           nets.push({
@@ -507,7 +507,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led',
-            params: { color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
           });
 
           if (port.activeLow) {

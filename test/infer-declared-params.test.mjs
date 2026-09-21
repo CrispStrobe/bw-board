@@ -1,19 +1,14 @@
 /**
  * AN INFERRED PART MUST DECLARE ONLY WHAT THE ENGINE READS.
  *
- * Two emissions in inferNetlist said something no code consumed, and
- * sb3-creator's `circuit-params-are-read` gate named both against this engine:
+ * One emission in inferNetlist said something no code consumed, and
+ * sb3-creator's `circuit-params-are-read` gate named it against this engine:
  *
  *   - sevenseg8 carried `params.commonAnode`, while registerSevenseg8's init()
  *     reads `params.common` and tests it with /anode/i. A program declaring
  *     `PART display = SEVENSEG8 … COMMON ANODE` was therefore inferred as a
  *     common-CATHODE display: the declaration reached the file and died there.
  *
- *   - every inferred led carried `vf: 2.0`, which is exactly the engine's own
- *     LED_VF. A generated bench that restates the default says nothing, and ten
- *     such benches crowded that gate's probe cap with sites where the LED is
- *     dark — so the one key that IS read looked inert. The colour stays: the
- *     renderer draws with it, and it is a choice, not a default restated.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -49,14 +44,4 @@ describe('inferNetlist: a declared param is one the device reads', () => {
     assert.equal(getDevice('sevenseg8').init(part).commonAnode, false);
   });
 
-  it('an inferred LED declares its colour and not the engine default vf', () => {
-    const { parts } = inferNetlist({
-      pins: [{ name: 'led1', port: 1, bit: 0, direction: 'output', activeLow: false }],
-    });
-    const led = parts.find(part => part.kind === 'led');
-    assert.ok(led, 'no LED was inferred — this test would prove nothing');
-    assert.equal(led.params.color, 'red');
-    assert.equal(led.params.vf, undefined,
-      'vf: 2.0 is exactly LED_VF; a generated bench restating the default says nothing');
-  });
 });

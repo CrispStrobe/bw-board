@@ -14,15 +14,15 @@ emissions and their tests. MEASURED by sb3-creator's `circuit-params-are-read`
 gate against this engine: (1) the inferred `sevenseg8` carries
 `params.commonAnode`, while `devices/a2-displays.js` reads `params.common` and
 tests it with /anode/i — so a COMMON ANODE display declared in a program is
-inferred as common cathode and the declaration does nothing; (2) every inferred
-`led` carries `vf: 2.0`, which is exactly `LED_VF`, so the file restates the
-default and ten new generated benches now crowd that gate's probe cap with sites
-where the LED is dark. No device model, solver or other inference changes.
+inferred as common cathode and the declaration does nothing; (2) the same gate also reported
+`led.vf` inert, which this lane MEASURED to be the gate's own site ranking
+rather than an engine fact — it preferred `circuit.json` as a proxy for
+"authored", and 26 rebuilt examples had made that file a generated bench. That
+half is fixed in sb3-creator's gate; nothing about `vf` moves here. No device model, solver or other inference changes.
 Landed: sevenseg8 now emits `common: 'anode'|'cathode'` and the new
 `test/infer-declared-params.test.mjs` drives registerSevenseg8's own init() with
-what is emitted rather than asserting a spelling; the inferred led emits its
-colour only. Reverting either emission reddens all three cases. The seven infer
-and validate suites pass 101/101.
+what is emitted rather than asserting a spelling. Reverting the emission reddens
+both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
