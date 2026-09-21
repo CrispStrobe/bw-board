@@ -195,8 +195,26 @@ test('keyboard F3 typematic command and parameter produce timed keyboard ACKs', 
     assert.deepEqual(restored.getState(),pending);
     assert.equal(controller.readData(),0xfa);
     assert.ok(irq.includes(true),'keyboard ACK obeys command-byte IRQ gating');
-    assert.throws(()=>controller.writeData(0xed),/no D1 output-port command/,
-        'unobserved keyboard commands remain explicit refusals');
+    // A still-unmodeled keyboard command remains an explicit refusal (never a
+    // silent drop). EEh (keyboard echo) is not on the free-BIOS init path.
+    assert.throws(()=>controller.writeData(0xee),/no D1 output-port command/,
+        'an unmodeled keyboard command remains an explicit refusal');
+    // EDh (set LEDs), F0h (scancode set), F2h (identify) and F4h/F5h/F6h are
+    // modeled keyboard commands: the free Bochs BIOS issues them during keyboard
+    // init, and the covered IBM-AT BIOS never does (a strict superset). Each ACKs
+    // FAh; EDh/F0h then ACK one following parameter byte.
+    const ledController=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
+    ledController.writeCommand(0x60);ledController.writeData(1);
+    ledController.writeData(0xed);
+    assert.equal(ledController.getState().pendingKeyboardCommand,0xed,
+        'EDh is accepted and awaits its LED-bitmask parameter');
+    ledController.advance(10);
+    assert.equal(ledController.readData(),0xfa,'EDh ACKs FAh');
+    ledController.writeData(0x02);
+    ledController.advance(10);
+    assert.equal(ledController.readData(),0xfa,'the EDh parameter also ACKs FAh');
+    assert.equal(ledController.getState().pendingKeyboardCommand,null,
+        'the EDh command completes after its parameter');
 
     const repeated=new AT8042A20({keyboardAckCycles:10,keyboardBatCycles:20});
     repeated.writeData(0xf3);repeated.advance(10);assert.equal(repeated.readData(),0xfa);

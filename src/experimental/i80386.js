@@ -2648,10 +2648,15 @@ export class ExperimentalI80386 {
       }
       else break;
     } while (true);
-    if (lock)
-      throw new UnsupportedI80386(
-        "LOCK execution is outside the bounded 386 profile",
-      );
+    // LOCK (F0) on a single-core executor imposes no additional architectural
+    // effect on the read-modify-write instruction it prefixes: there is no other
+    // agent that could observe an intermediate state. The bus is already
+    // serialised. We therefore accept the prefix and execute the following
+    // instruction normally. Covered IBM-BIOS/FreeDOS/Doom/Win3.0 workloads do
+    // not use LOCK, so this only adds behaviour (a strict superset). The
+    // #UD for LOCK on a non-lockable opcode is not modelled; SeaBIOS only emits
+    // LOCK on valid RMW forms.
+    void lock;
     const width = operand32 ? 32 : 16;
     const stringOpcodes = [
       0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
@@ -3147,6 +3152,24 @@ export class ExperimentalI80386 {
       if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "CLTS requires CPL0");
       this.cr0 = (this.cr0 & ~8) >>> 0;
+      return;
+    }
+    if (op >= 0xc8 && op <= 0xcf) {
+      // BSWAP r32 (486+). A pure byte-reversal of a 32-bit register: no flags,
+      // no memory, no mode dependence. The covered IBM-BIOS/FreeDOS/Doom/Win3.0
+      // workloads never emit it (it threw at the bounded guard), so accepting it
+      // only adds behaviour (a strict superset). The 16-bit operand form is
+      // architecturally undefined and not modelled; callers (e.g. SeaBIOS's
+      // fw_cfg big-endian conversion) use the 32-bit form.
+      const register = op - 0xc8;
+      const value = this._reg(register, 32) >>> 0;
+      const swapped =
+        (((value & 0xff) << 24) |
+          ((value & 0xff00) << 8) |
+          ((value >>> 8) & 0xff00) |
+          (value >>> 24)) >>>
+        0;
+      this._setReg(register, 32, swapped);
       return;
     }
     if ([0xa3, 0xab, 0xb3, 0xbb, 0xba].includes(op)) {

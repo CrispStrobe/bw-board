@@ -169,6 +169,14 @@ export class ExperimentalATA16 {
     words[0] = 0x0040;
     words[1] = this.geometry.cylinders;
     words[3] = this.geometry.heads;
+    // Word 5 is the number of bytes in a physical sector. It was previously left
+    // zero: a fixed-disk BIOS that derives its PIO transfer block size from this
+    // field (the LGPL Bochs BIOS reads IDENTIFY word 5 at detection) would then
+    // transfer zero words per READ, leaving DRQ asserted and failing the command
+    // -- so its int13h reads, and any OS partition scan behind them, never
+    // succeeded. Report the standard 512-byte sector. BIOSes that hardcode 512
+    // (the IBM 5170 path) are unaffected.
+    words[5] = 512;
     words[6] = this.geometry.sectors;
     words[49] = 0x0200; // LBA is the only optional transfer capability advertised.
     const sectors = this.image.length / 512;
