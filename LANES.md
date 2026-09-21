@@ -7,6 +7,18 @@ pin, private transcript, or new software-proof claim.
 Corrected the dated compiled-DOS status without rewriting its history; added a
 five-route evidence table, exact public receipts and local DOS input provenance.
 
+2026-09-21 inferred part params say what the engine reads — CLAIM, Claude Opus 5
+(lego session). Isolated worktree `/mnt/volume1/code/wt/board-infer-params`, branch
+`lane/inferred-part-params`, base `78089d5d`. Owns two `src/infer-netlist.js`
+emissions and their tests. MEASURED by sb3-creator's `circuit-params-are-read`
+gate against this engine: (1) the inferred `sevenseg8` carries
+`params.commonAnode`, while `devices/a2-displays.js` reads `params.common` and
+tests it with /anode/i — so a COMMON ANODE display declared in a program is
+inferred as common cathode and the declaration does nothing; (2) every inferred
+`led` carries `vf: 2.0`, which is exactly `LED_VF`, so the file restates the
+default and ten new generated benches now crowd that gate's probe cap with sites
+where the LED is dark. No device model, solver or other inference changes.
+
 # Who is doing what in bw-board — claim before you start, release when you finish
 
 2026-09-21 DONE — `/mnt/volume1/code/lego` (Claude): infer tilt switches and piezo
