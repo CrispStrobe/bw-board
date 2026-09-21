@@ -9,6 +9,29 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-21 DONE — `/mnt/volume1/code/lego` (Claude): infer tilt switches and piezo
+discs by name. Worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch
+`lane/vcc-supply-knob`. Owns only those two branches in `src/infer-netlist.js` and
+`test/infer-servo.test.js`.
+
+Found by brickwright-lite's `declared-pins-wired` gate, which checks that a declared
+NAME matches the kind of part on its pad — and states the reason better than I would
+have: `PIN ldr = A0 ANALOG` wired to a potentiometer is the light-theremin defect,
+"electrically the bench works, because a pot and an LDR are both a resistance to the
+ADC, so only the lesson is wrong". A wired/unwired check cannot see it.
+
+`tilt_sensor` and `piezo` were already REGISTERED devices that nothing ever built, so
+a pin named `tilt` got the generic button and one named `piezo` got the generic knob.
+A tilt switch now wires exactly as the button it replaces — same terminals, same
+pull-up, same ground — since a different shape would change the lesson twice; a piezo
+takes the same divider leg as the resistive sensors beside it.
+
+37/37 focused and 64/64 across every inference suite. Disabling tilt, and letting the
+tilt pattern swallow `btn`, each turn a named test red. A third mutant survived and
+was fixed rather than accepted: the `!isLdr && !isNtc` guard on the piezo test was
+redundant beside the ternary that already decides precedence — the same equivalent
+mutant this file produced for NTC yesterday, removed the same way.
+
 2026-09-21 DONE — `/mnt/volume1/code/lego` (Claude): a supply rail is not a stimulus
 control. Worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch `lane/vcc-supply-knob`.
 Owns only the `controllable` list in `getControls` and its test.

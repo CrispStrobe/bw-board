@@ -271,3 +271,63 @@ describe('inferNetlist: the A2 board parts', () => {
     assert.deepEqual(validateNetlist(parts, nets).filter(e => e.severity === 'error'), []);
   });
 });
+
+/**
+ * Tilt switches and piezo discs, by name.
+ *
+ * Lite gates on the declared name matching the part on its pad — `PIN tilt =
+ * D8 INPUT` sitting on a generic button is the same species of defect as an
+ * LDR pin sitting on a knob: electrically indistinguishable, and the lesson is
+ * what's wrong. Both kinds are already registered devices; nothing had ever
+ * built them.
+ */
+describe('inferNetlist: tilt switches and piezo discs by name', () => {
+  const at = (name, direction) => inferNetlist({
+    pins: [{ name, port: 1, bit: 2, direction, activeLow: false }],
+  }).parts;
+
+  for (const name of ['tilt', 'tiltSwitch', 'TILT']) {
+    it(`"${name}" on an input is a tilt sensor, not a button`, () => {
+      assert.ok(at(name, 'input').some(p => p.kind === 'tilt_sensor'), name);
+      assert.ok(!at(name, 'input').some(p => p.kind === 'button'), name);
+    });
+  }
+
+  for (const name of ['piezo', 'knock', 'knockSensor']) {
+    it(`"${name}" on an analog pin is a piezo, not a potentiometer`, () => {
+      assert.ok(at(name, 'analog').some(p => p.kind === 'piezo'), name);
+      assert.ok(!at(name, 'analog').some(p => p.kind === 'potentiometer'), name);
+    });
+  }
+
+  it('leaves the ordinary names alone', () => {
+    assert.ok(at('btn', 'input').some(p => p.kind === 'button'));
+    assert.ok(!at('btn', 'input').some(p => p.kind === 'tilt_sensor'));
+    assert.ok(at('pot', 'analog').some(p => p.kind === 'potentiometer'));
+    assert.ok(!at('pot', 'analog').some(p => p.kind === 'piezo'));
+    // The resistive sensors keep precedence over the piezo pattern.
+    assert.ok(at('ldr', 'analog').some(p => p.kind === 'ldr'));
+    assert.ok(at('thermistor', 'analog').some(p => p.kind === 'ntc'));
+  });
+
+  it('wires a tilt switch exactly like the button it replaces', () => {
+    // Same topology, different kind: pin to the contact, contact to ground,
+    // pull-up to the rail. A different shape would change the lesson twice.
+    const parts = at('tilt', 'input');
+    const tilt = parts.find(p => p.kind === 'tilt_sensor');
+    const btn = at('btn', 'input').find(p => p.kind === 'button');
+    assert.deepEqual(tilt.terminals, btn.terminals);
+    assert.equal(parts.filter(p => p.kind === 'resistor').length,
+      at('btn', 'input').filter(p => p.kind === 'resistor').length);
+  });
+
+  it('produces netlists the engine accepts', () => {
+    for (const [name, dir] of [['tilt', 'input'], ['piezo', 'analog']]) {
+      const { parts, nets } = inferNetlist({
+        pins: [{ name, port: 1, bit: 2, direction: dir, activeLow: false }],
+      });
+      assert.deepEqual(validateNetlist(parts, nets).filter(e => e.severity === 'error')
+        .map(e => e.message), [], name);
+    }
+  });
+});

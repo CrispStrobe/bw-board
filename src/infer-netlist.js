@@ -397,10 +397,14 @@ export function inferNetlist(stc, opts) {
         // place that precedence lives, so there is no second guard to drift.
         const isLdr = /ldr|photo|light/i.test(pin.name);
         const isNtc = /ntc|thermistor|thermo|temp/i.test(pin.name);
-        if (isLdr || isNtc) {
-          const sId = `${isLdr ? 'LDR' : 'NTC'}_${safeName}`;
+        // A knock sensor IS a piezo disc read as a voltage; it takes the same
+        // divider shape as the resistive sensors above. Precedence lives ONLY
+        // in the ternary below, so there is no second guard to drift from it.
+        const isPiezo = /piezo|knock/i.test(pin.name);
+        if (isLdr || isNtc || isPiezo) {
+          const sId = `${isLdr ? 'LDR' : isNtc ? 'NTC' : 'PIEZO'}_${safeName}`;
           const rId = `R_DIV_${safeName}`;
-          parts.push({ id: sId, kind: isLdr ? 'ldr' : 'ntc', declName: pin.name,
+          parts.push({ id: sId, kind: isLdr ? 'ldr' : isNtc ? 'ntc' : 'piezo', declName: pin.name,
             params: {}, terminals: ['a', 'b'] });
           parts.push({ id: rId, kind: 'resistor',
             params: { ohms: 10000 }, terminals: ['a', 'b'] });
@@ -438,15 +442,20 @@ export function inferNetlist(stc, opts) {
       }
 
       case 'input': {
+        // A named tilt switch is a tilt switch. It is a two-terminal contact
+        // like a button and wires identically — but the DECLARED NAME is the
+        // lesson, and lite gates on exactly that: `PIN tilt = D8 INPUT` sitting
+        // on a button is the same species as an LDR pin sitting on a knob.
+        const isTilt = /tilt/i.test(pin.name);
         // Button pin → GND, plus a 10kΩ pull-up to VCC
         const rpuId = `R_PU_${safeName}`;
-        const btnId = `BTN_${safeName}`;
+        const btnId = `${isTilt ? 'TILT' : 'BTN'}_${safeName}`;
         parts.push({
           id: rpuId, kind: 'resistor',
           params: { ohms: 10000 }, terminals: ['a', 'b'],
         });
         parts.push({
-          id: btnId, kind: 'button', declName: pin.name,
+          id: btnId, kind: isTilt ? 'tilt_sensor' : 'button', declName: pin.name,
           params: {}, terminals: ['a', 'b'],
         });
         // VCC → R_PU.a
