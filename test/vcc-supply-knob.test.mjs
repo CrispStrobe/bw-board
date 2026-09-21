@@ -33,15 +33,22 @@ function railBench(params = {}, boardVcc = 5) {
 const supplyAmps = board => -board.operatingPoint().branchCurrents.get('VCC1').get('vcc');
 
 describe('vcc: the supply knob', () => {
-  it('offers a control whose rest value is the rail it already has', () => {
-    assert.deepEqual(railBench().getControls(),
-      [{ id: 'VCC1', kind: 'vcc', value: 5 }], 'board default');
-    assert.deepEqual(railBench({ volts: 3.3 }).getControls(),
-      [{ id: 'VCC1', kind: 'vcc', value: 3.3 }], 'authored rail wins over the board default');
+  it('is NOT a stimulus control, because a rail is bench configuration', () => {
+    // Listing it beside pots and buttons put a knob on every bench with a
+    // supply and changed what getControls() means for every consumer — lite
+    // caught it on a bench asserting it "carries exactly one control, and it
+    // is the discharge switch". The rail is edited through its `volts` param.
+    assert.deepEqual(railBench().getControls(), []);
+    assert.deepEqual(railBench({ volts: 3.3 }).getControls(), []);
+  });
+
+  it('still resolves knob > authored rail > board default', () => {
+    // The precedence is the contract; only the discovery channel changed.
+    assert.equal(railBench()._railVolts({ id: 'VCC1', params: {} }), 5);
+    assert.equal(railBench({ volts: 3.3 })._railVolts({ id: 'VCC1', params: { volts: 3.3 } }), 3.3);
     const turned = railBench({ volts: 3.3 });
     turned.setControl('VCC1', 9);
-    assert.deepEqual(turned.getControls(),
-      [{ id: 'VCC1', kind: 'vcc', value: 9 }], 'and the knob wins over both');
+    assert.equal(turned._railVolts({ id: 'VCC1', params: { volts: 3.3 } }), 9);
   });
 
   it('delivers the voltage the knob asks for', () => {

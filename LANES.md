@@ -9,6 +9,28 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-21 DONE — `/mnt/volume1/code/lego` (Claude): a supply rail is not a stimulus
+control. Worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch `lane/vcc-supply-knob`.
+Owns only the `controllable` list in `getControls` and its test.
+
+CORRECTING MY OWN 2026-09-20 CHANGE. Adding `'vcc'` beside pots, buttons, switches,
+LDRs, NTCs and vsources put a knob on every bench that has a supply — nearly all of
+them — and quietly changed what `getControls()` MEANS for every consumer. Downstream
+lite caught it by name: `lesson-bench-claims-wave2` asserts a bench "carries exactly
+one control, and it is the discharge switch", and it started reporting
+`['vcc1', 'sw_discharge']`.
+
+The owner's request — change how many volts vcc1 delivers — is already met by the
+part's own `volts` param, which bw-circuit-ui's inline editor now offers and
+`_railVolts` honours at all five read sites. Nothing is lost: a control set by some
+other route still wins, the precedence knob > authored > board default is unchanged
+and still asserted. Only the discovery channel moved, from the stimulus list to the
+part's parameters, where bench CONFIGURATION belongs.
+
+Blast radius measured this time rather than assumed: 232/232 across every
+`getControls` consumer (controller, export surface, state API) plus 595, diode OP and
+inference.
+
 2026-09-20 DONE — `/mnt/volume1/code/lego` (Claude): repair `ci.yml`, red on master since
 `157caed0`. Isolated worktree `/mnt/volume1/code/wt/bwb-vcc-knob`, branch
 `lane/vcc-supply-knob`. Owns only `test/terminal-current-contract.test.mjs` and this row.

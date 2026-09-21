@@ -3086,7 +3086,15 @@ export class BoardImpl {
   }
 
   getControls() {
-    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource', 'vcc'];
+    // NOT 'vcc'. A supply rail is bench CONFIGURATION, not a stimulus: adding it
+    // here put a knob on every bench that has a supply — which is nearly all of
+    // them — and changed what getControls() means for every existing consumer.
+    // Lite caught it by name: a bench asserting it "carries exactly one control,
+    // and it is the discharge switch" started reporting ['vcc1', 'sw_discharge'].
+    // The rail is edited through its own `volts` param instead (bw-circuit-ui's
+    // inline editor offers it), which `_railVolts` honours either way, so a
+    // control set by some other route still works and nothing is lost.
+    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource'];
     return this.parts
       .filter(p => controllable.includes(p.kind))
       .map(p => ({
@@ -3096,9 +3104,8 @@ export class BoardImpl {
         // it was not listed here, so no panel offered the knob and the only way
         // to run a circuit at 9 V was to edit its JSON by hand. Its rest value
         // is its own authored rail, falling back to the board's.
-        value: p.kind === 'vcc' ? this._railVolts(p)
-          : (this.controls.get(p.id)
-            ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0)),
+        value: this.controls.get(p.id)
+          ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0),
       }));
   }
 
