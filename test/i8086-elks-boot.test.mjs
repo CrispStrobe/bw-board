@@ -60,9 +60,50 @@ function screenText(m) {
  * probes the hardware, sizes the floppy, mounts its root filesystem, and
  * panics only because this image carries no userland.
  */
+/**
+ * Supply INT 13h AH=08h's floppy DRIVE TYPE in BL, the way a real PC/AT BIOS
+ * does — 01h=360K, 02h=1.2M, 03h=720K, 04h=1.44M, 05h=2.88M — WITHOUT touching
+ * the ROM or the machine core.
+ *
+ * WHY THIS IS A HOOK AND NOT A ROM/CORE CHANGE. The ROM's AH=08h (`d_params`)
+ * is XT-shaped: it answers the geometry (CH/CL/DH/DL and ES:DI) but leaves BX
+ * untouched, so BL round-trips the caller's value and a guest that reads it
+ * gets 0. rom/bios.asm is content-pinned by a frozen receipt, and the machine
+ * core is bound by the DOS/FreeDOS persistence receipts, so neither can carry
+ * this. It is also not NEEDED by DOS/FreeDOS/Windows — only by a guest that
+ * trusts the AT CMOS drive-type byte. ELKS does: `bios_getfdinfo` does
+ * `*drivep = fd_types[(BL & 0xFF) - 1]`, so BL=0 indexes `fd_types[-1]`, whose
+ * sector_size word reads as 256 rather than 512; every 1024-byte block then
+ * maps to `blocknr * (1024/256) = blocknr*4` sectors instead of *2, the root
+ * directory (block 9) is read from LBA 36 not 18, comes back garbage, and
+ * `/bin/init` is never found — panic "No init". So the ELKS setup opts in here.
+ *
+ * The machine fires onInterrupt at INT ENTRY (i8086 `_swInt`: onInterrupt then
+ * `_interrupt(n)`), before the ROM handler runs, and the handler preserves BX
+ * through to its IRET — so a value written here is what the guest reads back.
+ * Scoped to floppies (DL < 80h) with real media, so the HDD path is untouched.
+ */
+function installFloppyDriveType(machine) {
+    const prior = machine.hooks.onInterrupt;
+    machine.hooks.onInterrupt = (ev) => {
+        if (ev.vector === 0x13 && ev.source === 'int') {
+            const cpu = machine.cpu;
+            if (cpu.ah === 0x08 && cpu.dl < 0x80) {
+                const geom = machine.chips.fdc1?.drives?.[cpu.dl & 3]?.geom;
+                if (geom) {
+                    const cyl = geom.cylinders | 0, spt = geom.sectors | 0;
+                    cpu.bl = cyl <= 40 ? 1 : spt >= 36 ? 5 : spt >= 18 ? 4 : spt >= 15 ? 2 : 3;
+                }
+            }
+        }
+        if (prior) prior(ev);
+    };
+}
+
 function bootElks(steps) {
     const img = readFileSync(IMAGE);
     const m = new I8086Machine(PCXT8086);
+    installFloppyDriveType(m);
     m.loadRom(buildBios().bytes);
     m.chips.fdc1.insert(0, img,
         { cylinders: 80, heads: 2, sectors: 18, bytesPerSector: 512 });
@@ -87,7 +128,16 @@ test('ELKS boots: kernel initialises, sizes the disk and MOUNTS ITS ROOT', { ski
     const s = screenText(bootElks(4_000_000));
     assert.ok(s.includes('ELKS 0.9.1'),
         `no ELKS kernel banner. Screen: ${JSON.stringify(s.trim().slice(0, 200))}`);
-    assert.ok(/fd0: probed/.test(s), 'the kernel never probed the floppy geometry');
+    // The kernel sizes the disk and reports its geometry. This once read
+    // `/fd0: probed/`, which matched the "probed, probably" fallback the kernel
+    // prints ONLY when it cannot read the boot sector's parameter block — the
+    // symptom of the sector_size=256 bug (INT 13h AH=08h returned no drive type
+    // in BL, see i8086-machine _biosFloppyDriveType). With the drive type now
+    // supplied, ELKS reads the boot sector, recognises the ELKS parameter block
+    // and reports the geometry directly, so assert the geometry the kernel
+    // determined rather than the fallback wording that only a broken read reaches.
+    assert.ok(/80 cylinders, 2 heads, and 18 sectors/.test(s),
+        'the kernel never sized the floppy geometry');
     assert.ok(s.includes('Mounted root device'),
         'the kernel did not mount a root filesystem — the strongest single claim '
         + 'this test makes, since it needs the FDC, the DMA controller, the 8259 '
