@@ -1,0 +1,151 @@
+{
+  "schema": "astra.i80386-free-bios-freedos.v1",
+  "passed": true,
+  "freeBios": true,
+  "proprietaryRomUsed": false,
+  "scope": "ROM-free 80386 AT: LGPL Bochs BIOS + LGPL VGABios boot FreeDOS 1.4 to A:\\>, decline installer, mount an ATA hard disk as C: (dir c:).",
+  "executionRevision": "eebe48a8650f0d898f8916d90dd75dfe589a01c6",
+  "firmware": {
+    "bios": {
+      "path": "roms/free-at-bios/BIOS-bochs-legacy",
+      "bytes": 65536,
+      "sha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+      "id": "Bochs 2.7 BIOS (c)2001-2021 The Bochs Project",
+      "license": "LGPL"
+    },
+    "vgaBios": {
+      "path": "roms/free-at-bios/vgabios-lgpl.bin",
+      "bytes": 38400,
+      "sha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+      "id": "Bochs VGABios (PCI) (C)2002-2021 LGPL VGABios developers Team",
+      "license": "LGPL"
+    }
+  },
+  "input": {
+    "floppy": {
+      "path": "/mnt/volume1/tmp-astra/astra-external-freedos14/x86BOOT-1200.img",
+      "bytes": 1228800,
+      "sha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+      "id": "FreeDOS 1.4 x86BOOT-1200.img (external, GPL-mixed, not vendored)"
+    },
+    "hdd": {
+      "geometry": {
+        "cylinders": 306,
+        "heads": 4,
+        "sectors": 17
+      },
+      "bytes": 10653696,
+      "sha256": "2fa9c252f22cec4f8c5bdc82d1587293ffcaed791e0982384628d19a7316a851",
+      "builtInScript": true,
+      "info": {
+        "geometry": {
+          "cylinders": 306,
+          "heads": 4,
+          "sectors": 17
+        },
+        "totalSectors": 20808,
+        "startLba": 17,
+        "partSectors": 20791,
+        "spc": 2,
+        "fatSectors": 41,
+        "rootSectors": 32,
+        "clusters": 10338,
+        "firstData": 132,
+        "used": 1
+      },
+      "markerFile": {
+        "name": "CMOUNTOK.TXT",
+        "size": 27,
+        "sha256": "0e472014613d329cd64dea41c4c2ca0787162df9fffdb0b05a9324c8512abce4",
+        "text": "FREE-BIOS 386 C: MOUNT OK\r\n"
+      }
+    }
+  },
+  "reset": {
+    "cs": 61440,
+    "ip": 65520,
+    "pc": 4294967280,
+    "firstByte": 234
+  },
+  "steps": 45800000,
+  "stopReason": "settled",
+  "installerDeclined": true,
+  "reachedDosPrompt": true,
+  "cMounted": true,
+  "keyboardScript": {
+    "requested": "n\\rdir c:\\r",
+    "injected": [
+      "\r",
+      "n",
+      "\r",
+      "\r",
+      "\r",
+      "d",
+      "i",
+      "r",
+      " ",
+      "c",
+      "S",
+      ":",
+      "s",
+      "\r"
+    ]
+  },
+  "evidence": {
+    "promptLine": "A:\\>",
+    "volumeLine": " Volume in drive C has no label",
+    "markerLine": "CMOUNTOK TXT            27  00/00/1980 12:00a",
+    "bytesFreeLine": "         0 dir(s)      10,585,088 bytes free"
+  },
+  "screenText": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Welcome to the FreeDOS 1.4 installation program.",
+    "",
+    "FreeDOS is a complete operating system. If you choose to install this on",
+    "your computer, you may  overwrite the operating system you have now",
+    "(for example, Windows.) If this is not what you intend, please stop NOW!",
+    "",
+    "Do you want to proceed [Y,N]?N",
+    "",
+    "The installation of FreeDOS 1.4 has been aborted.",
+    "A:\\>",
+    "A:\\>",
+    "A:\\>dir c:",
+    " Volume in drive C has no label",
+    " Volume Serial Number is 386D-0019",
+    " Directory of C:\\",
+    "",
+    "CMOUNTOK TXT            27  00/00/1980 12:00a",
+    "         1 file(s)             27 bytes",
+    "         0 dir(s)      10,585,088 bytes free",
+    "A:\\>"
+  ],
+  "fidelityOracle": "The proprietary IBM 5170 ROM is an OPTIONAL fidelity oracle only (AT_BIOS_ROM/VGA_BIOS_ROM). This receipt uses zero proprietary firmware.",
+  "sourceSha256": {
+    "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+    "src/experimental/i80386.js": "1c8379abdab58f8dce3214596525f02c295838a8092c2ff5e5e6da1b450d420d",
+    "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+    "src/experimental/ata16.js": "886158255c76e9ba2c186d4107381dc3c25d87b6a8d19bf1c358399f8f11fdc3",
+    "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+    "src/at-8042-a20.js": "bfa24540747ca8da9d6849f9379abea0a98726cf7289419724fab9590a0f0cb3",
+    "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+    "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+    "src/upd765.js": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4",
+    "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+    "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+    "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+    "scripts/lib/i80386-free-bios-fat16.mjs": "c6b2bd6f13d264b07b64f517e1dcd6b385e3a71016d1b871dfbadf3855b30cd3",
+    "scripts/run-i80386-free-bios-freedos.mjs": "753b35f2219f41a3a572c672e270c35ad4319b5e9b71723387ae898e97702f33"
+  },
+  "qualification": "The commit containing this receipt is the candidate. A test asserts sourceSha256[file] === sha(file) for every bound source path, with no external input -- that is the reproducible public-CI 386 gate."
+}

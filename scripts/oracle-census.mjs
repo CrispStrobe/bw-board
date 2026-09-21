@@ -650,6 +650,27 @@ export const INPUTS = [
         ci: 'no — ordinary CI has neither the external media nor the source-bound raw report; '
             + 'absence is an explicit optional-test skip rather than a standing gameplay claim.',
     },
+    {
+        id: 'ibm-5170-at-rom', kind: 'oracle',
+        what: 'The proprietary, non-redistributable IBM 5170 (AT) system ROM and its VGA option '
+            + 'ROM. A FIDELITY oracle only: it lets the source-bound AT/386 DOS and FreeDOS '
+            + 'persistence receipts requalify against real IBM firmware. It is NOT required to '
+            + 'build or qualify the 386 — the reproducible ROM-free gate is the vendored-LGPL '
+            + 'free-BIOS receipt (test/i80386-free-bios-freedos-evidence.test.mjs), which needs '
+            + 'no external input at all.',
+        env: 'AT_BIOS_ROM', paths: [],
+        gates: ['test/at-dos-persistence-evidence.test.mjs',
+            'test/freedos14-at-persistence-evidence.test.mjs',
+            'test/i80386-at-dos-persistence-evidence.test.mjs'],
+        obtain: 'Provide the externally held 64KiB IBM 5170 Rev1 ROM as AT_BIOS_ROM (and the VGA '
+            + 'option ROM as VGA_BIOS_ROM). The repository never fetches, stores, or publishes '
+            + 'this copyrighted firmware. When AT_BIOS_ROM is absent these fidelity oracles skip '
+            + 'loudly by name; when present, a maintainer regenerates the bound fixtures.',
+        ciAvailable: false,
+        ci: 'no — public CI is intentionally ROM-free and green via the free-BIOS receipt; the '
+            + 'IBM-ROM fidelity oracles are an explicit named skip when AT_BIOS_ROM is absent, '
+            + 'never a silent pass.',
+    },
 ];
 
 /** Resolve one input to {present, via}. `via` names WHAT was found, so a

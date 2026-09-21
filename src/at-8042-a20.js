@@ -146,6 +146,18 @@ export class AT8042A20 {
         // FFh selects no line, so it is a valid controller no-op rather than
         // an unsupported keyboard command. FEh remains the modeled CPU reset.
         if(value===0xff){this.pendingCommand=null;return;}
+        // PS/2 auxiliary-port (mouse) controller commands. The covered IBM 5170
+        // AT BIOS never issues these (it drives a keyboard-only controller); the
+        // free Bochs BIOS does. Modelling them as a strict SUPERSET -- command
+        // byte bit 5 is the standard "aux disable" flag, and the aux interface
+        // test reports no error -- leaves every keyboard-only command path (and
+        // therefore the qualified IBM-BIOS behaviour) unchanged. There is no
+        // emulated mouse, so an aux write (D4h) is accepted and dropped; the
+        // BIOS then observes no device and moves on.
+        if(value===0xa7){this.commandByte|=0x20;this.pendingCommand=null;return;} // disable aux port
+        if(value===0xa8){this.commandByte&=~0x20;this.pendingCommand=null;return;} // enable aux port
+        if(value===0xa9){this._respond(0x00);this.pendingCommand=null;return;} // test aux interface: 0 = no error
+        if(value===0xd4){this.pendingCommand=0xd4;return;} // next data byte goes to the (absent) aux device
         if(value===0xfe){
             if(!this.allowReset)throw new Error('AT 8042 command feh is outside the bounded A20 subset unless CPU reset is enabled');
             this.pendingCommand=null;
@@ -160,6 +172,11 @@ export class AT8042A20 {
             this.pendingCommand=null;this.commandByte=value;this.systemFlag=!!(value&4);
             this._releaseKeyboardSchedule();this._publish();return;
         }
+        // A byte written to the auxiliary (mouse) device after a D4h command.
+        // There is no emulated mouse, so it is accepted and dropped: no ACK is
+        // queued, and the free BIOS's mouse probe then observes no device. This
+        // path is unreachable for the keyboard-only IBM BIOS (a strict superset).
+        if(this.pendingCommand===0xd4){this.pendingCommand=null;return;}
         if(this.pendingCommand===null&&value===0xff&&this.keyboardAckCycles!==null) {
             // Forwarding a host command to the keyboard releases its clock;
             // the IBM BIOS sends FFh after ADh without a separate AEh.
@@ -194,6 +211,39 @@ export class AT8042A20 {
             this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
             this._publish();
             return;
+        }
+        // Additional keyboard commands (port 60h data) that the free Bochs BIOS
+        // issues during keyboard init and the keyboard-only IBM 5170 BIOS does
+        // not. Each is acknowledged with FAh through the keyboard schedule, the
+        // same mechanism as the modelled FFh/F3h. EDh (set LEDs) and F0h
+        // (scancode set) take one following parameter byte, also ACKed; F2h
+        // (identify) additionally returns the MF2 id AB 83. Strict superset:
+        // this path is unreachable for the covered IBM-BIOS command stream.
+        if(this.pendingCommand===null&&this.keyboardAckCycles!==null&&
+            this.pendingKeyboardCommand===null&&!this.keyboardSchedule.length) {
+            if(value===0xf4||value===0xf5||value===0xf6) {
+                this.commandByte&=~0x10;
+                this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
+                this._publish();return;
+            }
+            if(value===0xed||value===0xf0) {
+                this.commandByte&=~0x10;this.pendingKeyboardCommand=value;
+                this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
+                this._publish();return;
+            }
+            if(value===0xf2) {
+                this.commandByte&=~0x10;const t=this.keyboardAckCycles;
+                this.keyboardSchedule=[{remaining:t,value:0xfa},
+                    {remaining:t,value:0xab},{remaining:t,value:0x83}];
+                this._publish();return;
+            }
+        }
+        if(this.pendingCommand===null&&this.keyboardAckCycles!==null&&
+            (this.pendingKeyboardCommand===0xed||this.pendingKeyboardCommand===0xf0)&&
+            !this.keyboardSchedule.length) {
+            this.pendingKeyboardCommand=null;
+            this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa}];
+            this._publish();return;
         }
         if(this.pendingCommand!==0xd1)throw new Error('AT 8042 data write refused: no D1 output-port command, 60h command-byte command, or configured keyboard reset is pending');
         if(!(value&1))throw new Error('AT 8042 output-port write refused: bit 0 low requests unsupported CPU reset');

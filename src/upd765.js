@@ -883,12 +883,22 @@ export class UPD765 {
             this._result([ST0.IC_ABNORMAL | base, ST1.NW, 0, c, h, r, n]);
             return;
         }
-        // The chip compares the C in the command against the ID field under
-        // the head. It does NOT seek: a driver that forgot the SEEK gets
-        // no-data plus wrong-cylinder, not a helpful silent seek.
+        // The C in the command is compared against the ID field under the head.
+        // Implied seek (82077 with EIS enabled): when the head is not already at
+        // the requested cylinder, move it there before the transfer -- exactly
+        // what the free Bochs BIOS and the FreeDOS floppy driver rely on. The
+        // covered IBM-AT BIOS always issues an explicit SEEK first, so for it
+        // c === d.track and this seek never fires: its behaviour is unchanged
+        // (a strict superset). A target past the end of the disk still fails
+        // with wrong-cylinder, as the head jams against the stop.
         if (c !== d.track) {
-            this._result([ST0.IC_ABNORMAL | base, ST1.ND, ST2.WC, c, h, r, n]);
-            return;
+            const last = d.geom ? d.geom.cylinders - 1 : 255;
+            if (c > last) {
+                this._result([ST0.IC_ABNORMAL | base, ST1.ND, ST2.WC, c, h, r, n]);
+                return;
+            }
+            if (c !== d.track) d.changed = false;   // a step clears the change latch
+            d.pcn = c; d.track = c;                  // implied seek to the target cylinder
         }
         // N is the sector size the command expects. The images here are plain
         // sector dumps whose ID fields we synthesise from the geometry, so a
