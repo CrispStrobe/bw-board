@@ -15,7 +15,7 @@
 
 /** Dependency-isolated Z80 target selection, including the optional cycle core. */
 export async function createZ80Target (opts = {}) {
-  const {board, rom, config, pc, cpm} = opts;
+  const {board, rom, config, pc, cpm, cpmSystem} = opts;
   const executionMode = opts.executionMode ?? 'fast';
   if (!['fast', 'cycle'].includes(executionMode)) {
     throw new Error(`unknown Z80 execution mode: ${executionMode}`);
@@ -28,7 +28,7 @@ export async function createZ80Target (opts = {}) {
     return {target: result.target, adapter: result.adapter};
   }
   const {createZ80Adapter} = await import('./z80-adapter.js');
-  const adapter = createZ80Adapter({config, rom, romAt: opts.romAt, pc, cpm});
+  const adapter = createZ80Adapter({config, rom, romAt: opts.romAt, pc, cpm, cpmSystem});
   if (board) adapter.attachBoard(board);
   else adapter.attachBoard({advanceTo () {}});
   let target = null;
