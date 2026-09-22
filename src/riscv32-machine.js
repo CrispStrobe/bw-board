@@ -16,6 +16,7 @@
  */
 import {RiscV32} from './riscv32.js';
 import {createClint} from './riscv32-clint.js';
+import {createUart} from './riscv32-uart.js';
 
 const MASK = size => size - 1;
 
@@ -40,6 +41,13 @@ export class RiscV32Machine {
         if (config.clint !== false) {
             this.clint = createClint(this.cpu, {base: config.clintBase});
             this.cpu.io = this.clint;
+        }
+        // A memory-mapped NS16550 UART (default 0x10000000) so a program can
+        // print without the ecall ABI — the way an RTOS driver does. Its output
+        // joins the same console. Opt out with uart:false.
+        if (config.uart !== false) {
+            this.uart = createUart({base: config.uartBase, onSerial: b => this._emit(String.fromCharCode(b))});
+            this.cpu.io8 = this.uart;
         }
     }
 
