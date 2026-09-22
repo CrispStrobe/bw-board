@@ -83,6 +83,9 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'z80') {
     return createZ80Target(opts);
   }
+  if (kind === 'riscv32') {
+    return createRiscV32Target(opts);
+  }
   if (kind === 'eater6502') {
     return createEater6502Target(opts);
   }
@@ -109,8 +112,22 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
   );
+}
+
+/**
+ * The RISC-V (RV32IMA) bench: a console-only machine, so — like the z80/6502
+ * console shapes — no board is required and there is no dedicated debug target
+ * yet (adapter-only mode). `opts.image` is a linked program ({segments, entry},
+ * e.g. from scripts/riscv-elf.mjs); its ecall ABI output reaches the adapter's
+ * onSerial.
+ */
+async function createRiscV32Target(opts = {}) {
+  const { createRiscV32Adapter } = await import('./riscv32-adapter.js');
+  const adapter = createRiscV32Adapter(opts);
+  adapter.attachBoard(opts.board || { advanceTo() {}, setPin() {} });
+  return { target: null, adapter };
 }
 
 // ─── labwired target (the heavy tier) ───────────────────────────────────
