@@ -15,6 +15,7 @@
  * @module
  */
 import {RiscV32} from './riscv32.js';
+import {createClint} from './riscv32-clint.js';
 
 const MASK = size => size - 1;
 
@@ -33,6 +34,13 @@ export class RiscV32Machine {
             resetPc: config.resetPc || 0,
             ecall: c => this._syscall(c)
         });
+        // A CLINT (timer + software interrupt) so an RTOS gets its tick. It maps
+        // outside any sane program's RAM footprint, so it's inert for the
+        // bare-metal ecall programs that never touch it. Opt out with clint:false.
+        if (config.clint !== false) {
+            this.clint = createClint(this.cpu, {base: config.clintBase});
+            this.cpu.io = this.clint;
+        }
     }
 
     _emit(s) {
@@ -60,11 +68,12 @@ export class RiscV32Machine {
 
     reset() { this.cpu.reset(); this.output = ''; this.exitCode = null; }
 
-    /** One instruction; returns instructions retired (0 when halted). */
-    step() { return this.cpu.step(); }
+    /** One instruction; returns instructions retired (0 when halted). Advances
+     *  the CLINT's mtime so a scheduled timer interrupt eventually fires. */
+    step() { const r = this.cpu.step(); if (this.clint && r) this.clint.tick(r); return r; }
 
     /** Run until halt or `max` instructions; returns instructions executed. */
-    run(max = 10_000_000) { let n = 0; while (!this.cpu.halted && n++ < max) this.cpu.step(); return n; }
+    run(max = 10_000_000) { let n = 0; while (!this.cpu.halted && n++ < max) this.step(); return n; }
 
     /** True once the program exited (via the exit syscall) or trapped. */
     get halted() { return this.cpu.halted; }
