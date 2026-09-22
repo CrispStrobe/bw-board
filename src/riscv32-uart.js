@@ -25,6 +25,7 @@ const LSR_DR = 0x01, LSR_THRE = 0x20, LSR_TEMT = 0x40;
 export function createUart(opts = {}) {
     const base = opts.base ?? 0x10000000;
     const onSerial = opts.onSerial || (() => {});
+    const onRx = opts.onRx || (() => {});     // raise/lower an external-interrupt line (PLIC)
     const rx = [];
     let ier = 0, lcr = 0, mcr = 0;
 
@@ -32,7 +33,7 @@ export function createUart(opts = {}) {
         base, size: 0x1000,
         load8(off) {
             switch (off) {
-                case THR: return rx.length ? rx.shift() : 0;             // RBR
+                case THR: { const b = rx.length ? rx.shift() : 0; onRx(rx.length > 0); return b; }   // RBR (drains the line)
                 case IER: return ier;
                 case LCR: return lcr;
                 case MCR: return mcr;
@@ -50,7 +51,7 @@ export function createUart(opts = {}) {
             }
         },
         /** Push a byte into the receive path (a keyboard / host stdin). */
-        rxPush(byte) { rx.push(byte & 0xff); }
+        rxPush(byte) { rx.push(byte & 0xff); onRx(true); }
     };
 }
 

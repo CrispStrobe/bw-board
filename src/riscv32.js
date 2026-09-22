@@ -57,8 +57,11 @@ export class RiscV32 {
         this.resvAddr = -1;               // LR/SC reservation (address, or -1)
         this.csr = new Uint32Array(4096); // M-mode CSR file
         this.waiting = false;             // parked on WFI until an interrupt
-        this.io = hooks.io || null;       // optional word MMIO device {base,size,load32,store32} (CLINT)
-        this.io8 = hooks.io8 || null;     // optional byte MMIO device {base,size,load8,store8} (UART)
+        // MMIO device lists: word devices {base,size,load32,store32} (CLINT,
+        // PLIC) routed by ld32/st32; byte devices {base,size,load8,store8}
+        // (UART) routed by ld8/st8. Accepts a single device or an array.
+        this.io = [].concat(hooks.io || []);
+        this.io8 = [].concat(hooks.io8 || []);
     }
 
     reset() {
@@ -125,26 +128,27 @@ export class RiscV32 {
     }
 
     // ── little-endian memory ────────────────────────────────────────
+    /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
+    _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
+
     ld8(a)  {
-        const u = a >>> 0;
-        if (this.io8 && u >= this.io8.base && u < this.io8.base + this.io8.size) return this.io8.load8((u - this.io8.base) >>> 0) & 0xff;
-        return this.mem[a & (this.mem.length - 1)];
+        const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
+        return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[a & (this.mem.length - 1)];
     }
     ld16(a) { return this.ld8(a) | (this.ld8(a + 1) << 8); }
     ld32(a) {
-        const u = a >>> 0;
-        if (this.io && u >= this.io.base && u < this.io.base + this.io.size) return this.io.load32((u - this.io.base) >>> 0) >>> 0;
-        return (this.ld16(a) | (this.ld16(a + 2) << 16)) >>> 0;
+        const u = a >>> 0, d = this.io.length && this._dev(this.io, u);
+        return d ? (d.load32((u - d.base) >>> 0) >>> 0) : ((this.ld16(a) | (this.ld16(a + 2) << 16)) >>> 0);
     }
     st8(a, v)  {
-        const u = a >>> 0;
-        if (this.io8 && u >= this.io8.base && u < this.io8.base + this.io8.size) { this.io8.store8((u - this.io8.base) >>> 0, v & 0xff); return; }
+        const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
+        if (d) { d.store8((u - d.base) >>> 0, v & 0xff); return; }
         this.mem[a & (this.mem.length - 1)] = v & 0xff;
     }
     st16(a, v) { this.st8(a, v); this.st8(a + 1, v >>> 8); }
     st32(a, v) {
-        const u = a >>> 0;
-        if (this.io && u >= this.io.base && u < this.io.base + this.io.size) { this.io.store32((u - this.io.base) >>> 0, v >>> 0); return; }
+        const u = a >>> 0, d = this.io.length && this._dev(this.io, u);
+        if (d) { d.store32((u - d.base) >>> 0, v >>> 0); return; }
         this.st16(a, v); this.st16(a + 2, v >>> 16);
     }
 

@@ -17,6 +17,7 @@
 import {RiscV32} from './riscv32.js';
 import {createClint} from './riscv32-clint.js';
 import {createUart} from './riscv32-uart.js';
+import {createPlic} from './riscv32-plic.js';
 
 const MASK = size => size - 1;
 
@@ -40,14 +41,25 @@ export class RiscV32Machine {
         // bare-metal ecall programs that never touch it. Opt out with clint:false.
         if (config.clint !== false) {
             this.clint = createClint(this.cpu, {base: config.clintBase});
-            this.cpu.io = this.clint;
+            this.cpu.io.push(this.clint);
+        }
+        // A PLIC (external interrupts) so a device — the UART's receive line —
+        // can trap the core via MEIP. The third of the standard CLINT+PLIC+UART.
+        if (config.plic !== false) {
+            this.plic = createPlic(this.cpu, {base: config.plicBase});
+            this.cpu.io.push(this.plic);
         }
         // A memory-mapped NS16550 UART (default 0x10000000) so a program can
-        // print without the ecall ABI — the way an RTOS driver does. Its output
-        // joins the same console. Opt out with uart:false.
+        // print without the ecall ABI — the way an RTOS driver does. Its RX line
+        // raises PLIC source `uartIrq` (default 1). Opt out with uart:false.
+        const uartIrq = config.uartIrq ?? 1;
         if (config.uart !== false) {
-            this.uart = createUart({base: config.uartBase, onSerial: b => this._emit(String.fromCharCode(b))});
-            this.cpu.io8 = this.uart;
+            this.uart = createUart({
+                base: config.uartBase,
+                onSerial: b => this._emit(String.fromCharCode(b)),
+                onRx: this.plic ? (on => this.plic.setPending(uartIrq, on)) : undefined
+            });
+            this.cpu.io8.push(this.uart);
         }
     }
 
