@@ -72,6 +72,11 @@ export function getTargetKinds() {
       description: 'Composable Z80 machine — Searle bench, CP/M, ZX Spectrum configs.',
     },
     {
+      kind: 'riscv32',
+      label: 'Simulated (RISC-V RV32IMA)',
+      description: 'RV32IMA console bench — runs clang-compiled programs over an ecall syscall ABI.',
+    },
+    {
       // MISSING SINCE THE KIND SHIPPED, and the failure was not "no entry" --
       // a <select> whose value matches no option renders the FIRST option, so
       // the picker read "Simulated (STC12 / 8051)" while running 8086 code.

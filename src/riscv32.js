@@ -1,10 +1,10 @@
 /**
- * A small RV32IM interpreter — the RISC-V core, in the hand-rolled per-core
+ * A small RV32IMA interpreter — the RISC-V core, in the hand-rolled per-core
  * idiom of z80.js / m6502.js / i8086.js (one instruction per `step()`, a flat
  * little-endian memory, no code generation). Semantics follow the RISC-V
- * unprivileged ISA (rv32i base + the M extension: mul/div/rem); the atomic (A)
- * extension and CSRs are a later increment. ultraembedded's `exactstep` was the
- * reference for the one-step decode shape.
+ * unprivileged ISA: rv32i base + M (mul/div/rem) + A (LR/SC + AMO*, a single
+ * reservation since this is one hart). CSRs are a later increment.
+ * ultraembedded's `exactstep` was the reference for the one-step decode shape.
  *
  * Memory is a flat `Uint8Array` the caller owns; the CPU reads and writes it
  * little-endian. `ecall`/`ebreak` call an injectable hook so a test (or a later
@@ -16,7 +16,8 @@
 
 const OPC = {
     LUI: 0x37, AUIPC: 0x17, JAL: 0x6f, JALR: 0x67, BRANCH: 0x63,
-    LOAD: 0x03, STORE: 0x23, OPIMM: 0x13, OP: 0x33, MISCMEM: 0x0f, SYSTEM: 0x73
+    LOAD: 0x03, STORE: 0x23, OPIMM: 0x13, OP: 0x33, MISCMEM: 0x0f, SYSTEM: 0x73,
+    AMO: 0x2f
 };
 
 /** Sign-extend the low `bits` of `v` to a JS (32-bit) signed int. */
@@ -35,6 +36,7 @@ export class RiscV32 {
         this.hooks = hooks;
         this.halted = false;
         this.instret = 0;                 // instructions retired
+        this.resvAddr = -1;               // LR/SC reservation (address, or -1)
     }
 
     reset() {
@@ -42,6 +44,7 @@ export class RiscV32 {
         this.pc = (this.hooks.resetPc ?? 0) >>> 0;
         this.halted = false;
         this.instret = 0;
+        this.resvAddr = -1;
     }
 
     // ── little-endian memory ────────────────────────────────────────
@@ -160,6 +163,40 @@ export class RiscV32 {
                     case 7: this.set(rd, a & b); break;                         // AND
                     default: return this._bad(inst);
                 }
+                break;
+            }
+            case OPC.AMO: {
+                if (funct3 !== 0x2) return this._bad(inst);   // .W only (RV32A)
+                const funct5 = (inst >>> 27) & 0x1f;
+                const addr = a >>> 0;                          // rs1 is the address
+                if (funct5 === 0x02) {                         // LR.W
+                    this.set(rd, this.ld32(addr) | 0);
+                    this.resvAddr = addr;
+                    break;
+                }
+                if (funct5 === 0x03) {                         // SC.W
+                    if (this.resvAddr === addr) { this.st32(addr, b); this.set(rd, 0); }
+                    else this.set(rd, 1);
+                    this.resvAddr = -1;
+                    break;
+                }
+                const t = this.ld32(addr) | 0;                 // AMO*: read, op, write-back, return old
+                let v;
+                switch (funct5) {
+                    case 0x01: v = b; break;                                   // AMOSWAP
+                    case 0x00: v = (t + b) | 0; break;                         // AMOADD
+                    case 0x04: v = t ^ b; break;                              // AMOXOR
+                    case 0x0c: v = t & b; break;                              // AMOAND
+                    case 0x08: v = t | b; break;                              // AMOOR
+                    case 0x10: v = t < b ? t : b; break;                      // AMOMIN
+                    case 0x14: v = t > b ? t : b; break;                      // AMOMAX
+                    case 0x18: v = (t >>> 0) < (b >>> 0) ? t : b; break;       // AMOMINU
+                    case 0x1c: v = (t >>> 0) > (b >>> 0) ? t : b; break;       // AMOMAXU
+                    default: return this._bad(inst);
+                }
+                this.st32(addr, v);
+                this.set(rd, t);
+                this.resvAddr = -1;
                 break;
             }
             case OPC.MISCMEM: break;   // FENCE / FENCE.I — a nop for this model
