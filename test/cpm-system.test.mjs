@@ -13,6 +13,7 @@ import {join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Z80Machine, CPM64K} from '../src/z80-machine.js';
 import {createCpmSystem, buildCpmDisk} from '../src/cpm-system.js';
+import {createZ80Target} from '../src/z80-target-factory.js';
 
 const romDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'roms', 'cpm');
 const ccpPath = join(romDir, 'cpm22-64k.bin');
@@ -84,4 +85,37 @@ test('a cold boot reaches A>, DIR lists the file, and running it prints its outp
         sys.sendText('TEST\r');
         r = runUntil(sys, () => out, 'CPMTEST OK', 100_000_000, runMark);
         assert.equal(r, 'hit', 'running TEST.COM should print its output');
+    });
+
+test('the z80 adapter cpmSystem path (the GUI route) boots to A> and runs a file',
+    {skip: haveRoms ? false : 'roms/cpm/{cpm22-64k.bin,bios.bin} not present'},
+    async () => {
+        const ccpBdos = new Uint8Array(readFileSync(ccpPath));
+        const bios = new Uint8Array(readFileSync(biosPath));
+        let out = '';
+        // createDebugTarget('z80', {cpmSystem}) is exactly what lite's attachZ80
+        // will call; here through the target factory so attachBoard sets the
+        // BIOS boot vector the way the GUI flow does.
+        const {adapter} = await createZ80Target({
+            cpmSystem: {ccpBdos, bios, files: {'TEST.COM': TEST_COM}}
+        });
+        adapter.onSerial(b => { out += String.fromCharCode(b); });
+        const m = adapter.machine;
+        const wait = (pat, budget, from = 0) => {
+            for (let i = 0; i < budget; i++) {
+                if (out.indexOf(pat, from) >= 0) return true;
+                m.step();
+            }
+            return false;
+        };
+        const send = s => { for (const ch of s) adapter.sendSerial(ch.charCodeAt(0)); };
+
+        assert.ok(wait('A>', 60_000_000), 'adapter cold boot reaches A>');
+        const dirMark = out.length;
+        send('DIR\r');
+        assert.ok(wait('A>', 60_000_000, dirMark), 'DIR completes');
+        assert.match(out.slice(dirMark), /TEST\s+COM/i, 'DIR lists TEST COM via the adapter');
+        const runMark = out.length;
+        send('TEST\r');
+        assert.ok(wait('CPMTEST OK', 80_000_000, runMark), 'running TEST.COM prints its output');
     });

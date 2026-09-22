@@ -119,7 +119,56 @@ export function buildCpmDisk(ccpBdos, files = {}) {
 }
 
 /**
- * Boot a real CP/M 2.2 computer.
+ * Install a real CP/M 2.2 system onto an EXISTING Z80 machine (one built with
+ * the CPM64K config, so its MC6850 ACIA console is present): load CCP+BDOS +
+ * BIOS, build and mount the RAM-disk, wire its host controller onto ports
+ * $10–$15, and cold-boot at the BIOS entry. This is the one place the boot is
+ * defined; both the standalone {@link createCpmSystem} and bw-board's z80
+ * adapter's `cpmSystem` path call it, so the GUI and the CLI boot identically.
+ *
+ * @param {object} machine a Z80Machine on the CPM64K config
+ * @param {{ccpBdos: Uint8Array, bios: Uint8Array, files?: Record<string, Uint8Array>}} rom
+ * @returns {{disk: Uint8Array, boot: () => void}}
+ */
+export function installCpmSystem(machine, {ccpBdos, bios, files = {}}) {
+    if (!ccpBdos || !bios) throw new Error('installCpmSystem needs ccpBdos and bios bytes');
+    machine.load(ccpBdos.subarray(0, SYS_LEN), CCP);
+    machine.load(bios, BIOS);
+
+    const {image: disk} = buildCpmDisk(ccpBdos, files);
+
+    // Host-side RAM-disk controller on ports $10–$15 (matches bios.asm).
+    let track = 0, sector = 1, dmaLo = 0x80, dmaHi = 0, result = 0;
+    const doCmd = cmd => {
+        const off = (track * SPT + (sector - 1)) * 128;
+        const dma = (dmaLo | (dmaHi << 8)) & 0xffff;
+        if (off < 0 || off + 128 > disk.length) { result = 1; return; }
+        if (cmd === 0) { for (let i = 0; i < 128; i++) machine.mem[(dma + i) & 0xffff] = disk[off + i]; result = 0; }
+        else if (cmd === 1) { for (let i = 0; i < 128; i++) disk[off + i] = machine.mem[(dma + i) & 0xffff]; result = 0; }
+        else result = 1;
+    };
+    const origIn = machine.cpu.inPort, origOut = machine.cpu.outPort;
+    machine.cpu.inPort = port => ((port & 0xff) === 0x15 ? result : origIn(port));
+    machine.cpu.outPort = (port, v) => {
+        switch (port & 0xff) {
+            case 0x10: /* drive */ return;
+            case 0x11: track = v & 0xff; return;
+            case 0x12: sector = v & 0xff; return;
+            case 0x13: dmaLo = v & 0xff; return;
+            case 0x14: dmaHi = v & 0xff; return;
+            case 0x15: doCmd(v & 0xff); return;
+        }
+        origOut(port, v);
+    };
+
+    const boot = () => { machine.cpu.pc = BIOS; machine.cpu.sp = 0x80; };
+    boot();
+    return {disk, boot};
+}
+
+/**
+ * Boot a real CP/M 2.2 computer standalone (the CLI/testing entry — the GUI
+ * reaches the same boot through the z80 adapter's `cpmSystem` option).
  *
  * @param {object} opts
  * @param {Uint8Array} opts.ccpBdos  CCP+BDOS image (`roms/cpm/cpm22-64k.bin`)
@@ -136,43 +185,11 @@ export function buildCpmDisk(ccpBdos, files = {}) {
  */
 export function createCpmSystem(opts) {
     const {ccpBdos, bios, files = {}, onSerial, Z80Machine, CPM64K} = opts;
-    if (!ccpBdos || !bios) throw new Error('createCpmSystem needs ccpBdos and bios bytes');
     if (!Z80Machine || !CPM64K) throw new Error('createCpmSystem needs Z80Machine and CPM64K (inject from z80-machine.js)');
 
     const machine = new Z80Machine(CPM64K, {onSerial: onSerial || (() => {})});
-    machine.load(ccpBdos.subarray(0, SYS_LEN), CCP);
-    machine.load(bios, BIOS);
-
-    const {image: disk} = buildCpmDisk(ccpBdos, files);
-
-    // Host-side RAM-disk controller on ports $10–$15 (matches bios.asm).
-    let drive = 0, track = 0, sector = 1, dmaLo = 0x80, dmaHi = 0, result = 0;
-    void drive;
-    const doCmd = cmd => {
-        const off = (track * SPT + (sector - 1)) * 128;
-        const dma = (dmaLo | (dmaHi << 8)) & 0xffff;
-        if (off < 0 || off + 128 > disk.length) { result = 1; return; }
-        if (cmd === 0) { for (let i = 0; i < 128; i++) machine.mem[(dma + i) & 0xffff] = disk[off + i]; result = 0; }
-        else if (cmd === 1) { for (let i = 0; i < 128; i++) disk[off + i] = machine.mem[(dma + i) & 0xffff]; result = 0; }
-        else result = 1;
-    };
-    const origIn = machine.cpu.inPort, origOut = machine.cpu.outPort;
-    machine.cpu.inPort = port => ((port & 0xff) === 0x15 ? result : origIn(port));
-    machine.cpu.outPort = (port, v) => {
-        switch (port & 0xff) {
-            case 0x10: drive = v & 0xff; return;
-            case 0x11: track = v & 0xff; return;
-            case 0x12: sector = v & 0xff; return;
-            case 0x13: dmaLo = v & 0xff; return;
-            case 0x14: dmaHi = v & 0xff; return;
-            case 0x15: doCmd(v & 0xff); return;
-        }
-        origOut(port, v);
-    };
-
+    const {disk, boot} = installCpmSystem(machine, {ccpBdos, bios, files});
     const acia = machine.chips.acia1;
-    const boot = () => { machine.cpu.pc = BIOS; machine.cpu.sp = 0x80; };
-    boot();
 
     return {
         machine, disk, cpu: machine.cpu,

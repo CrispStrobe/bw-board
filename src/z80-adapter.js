@@ -20,9 +20,10 @@
 import { Z80Machine, SEARLE, CPM64K } from './z80-machine.js';
 import { getDevice } from './devices.js';
 import { PS2Keyboard, PS2Capture } from './ps2.js';
+import { installCpmSystem, BIOS as CPM_BIOS } from './cpm-system.js';
 
 export function createZ80Adapter(opts = {}) {
-    const config = opts.config ?? (opts.cpm ? CPM64K : SEARLE);
+    const config = opts.config ?? (opts.cpm || opts.cpmSystem ? CPM64K : SEARLE);
     let board = null;
     let unloggedBoardInputs = false;
     const stats = { serialCount: 0, advanceToCount: 0 };
@@ -219,6 +220,15 @@ export function createZ80Adapter(opts = {}) {
         });
     }
 
+    // ── Real CP/M 2.2 system (opts.cpmSystem = { ccpBdos, bios, files }) ──
+    // The genuine article, not the shim above: DRI's CCP+BDOS + our MIT BIOS
+    // + a RAM-disk on this machine, booting to an A> prompt. The console is
+    // the real MC6850 ACIA (onSerial / sendSerial already talk to it), so the
+    // adapter surface is unchanged — only the boot differs.
+    if (opts.cpmSystem) {
+        installCpmSystem(machine, opts.cpmSystem);
+    }
+
     return {
         machine,
         clockHz: config.clockHz,
@@ -232,8 +242,9 @@ export function createZ80Adapter(opts = {}) {
             // input net and needs no refusal.
             unloggedBoardInputs = bufferChips.length > 0 && typeof b?.readPin === 'function';
             bridgePS2(b);
-            machine.cpu.pc = opts.pc ?? (opts.cpm ? 0x0100 : 0);
+            machine.cpu.pc = opts.pc ?? (opts.cpm ? 0x0100 : (opts.cpmSystem ? CPM_BIOS : 0));
             if (opts.cpm) machine.cpu.sp = 0xfdff;
+            else if (opts.cpmSystem) machine.cpu.sp = 0x80;
             seatLatchPins();
             syncInputs();
         },
