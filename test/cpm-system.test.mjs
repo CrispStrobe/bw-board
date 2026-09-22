@@ -8,17 +8,19 @@
 
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, existsSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Z80Machine, CPM64K} from '../src/z80-machine.js';
 import {createCpmSystem, buildCpmDisk} from '../src/cpm-system.js';
 import {createZ80Target} from '../src/z80-target-factory.js';
 
+// The ROMs are committed in-repo (roms/cpm/, redistributable — see PROVENANCE),
+// so they load unconditionally: their absence is a broken checkout, a hard
+// error, not a skip.
 const romDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'roms', 'cpm');
 const ccpPath = join(romDir, 'cpm22-64k.bin');
 const biosPath = join(romDir, 'bios.bin');
-const haveRoms = existsSync(ccpPath) && existsSync(biosPath);
 
 // A minimal CP/M 2.2 program: print "CPMTEST OK" via BDOS 9, warm-boot to A>.
 //   org 0x100 : ld de,msg / ld c,9 / call 5 / jp 0 / msg db 'CPMTEST OK',13,10,'$'
@@ -58,9 +60,7 @@ test('buildCpmDisk lays down a real directory entry for each file', () => {
     assert.equal(image[dir + 16], 2, 'first data block is block 2 (after the 2 directory blocks)');
 });
 
-test('a cold boot reaches A>, DIR lists the file, and running it prints its output',
-    {skip: haveRoms ? false : 'roms/cpm/{cpm22-64k.bin,bios.bin} not present'},
-    () => {
+test('a cold boot reaches A>, DIR lists the file, and running it prints its output',    () => {
         const ccpBdos = new Uint8Array(readFileSync(ccpPath));
         const bios = new Uint8Array(readFileSync(biosPath));
         let out = '';
@@ -87,9 +87,7 @@ test('a cold boot reaches A>, DIR lists the file, and running it prints its outp
         assert.equal(r, 'hit', 'running TEST.COM should print its output');
     });
 
-test('the z80 adapter cpmSystem path (the GUI route) boots to A> and runs a file',
-    {skip: haveRoms ? false : 'roms/cpm/{cpm22-64k.bin,bios.bin} not present'},
-    async () => {
+test('the z80 adapter cpmSystem path (the GUI route) boots to A> and runs a file',    async () => {
         const ccpBdos = new Uint8Array(readFileSync(ccpPath));
         const bios = new Uint8Array(readFileSync(biosPath));
         let out = '';
