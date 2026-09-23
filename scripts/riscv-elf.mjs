@@ -133,9 +133,51 @@ export function linkElf(obj, opts = {}) {
     return {segments: segments.map(({addr, bytes}) => ({addr, bytes})), entry: symbols.get(opts.entry || '_start') ?? textBase, symbols};
 }
 
-/** Load a linked object into a RiscV32Machine and set its entry. */
+/**
+ * Load a **fully-linked** ELF32 executable (ET_EXEC — the output of a real
+ * linker like ld.lld) by walking its program headers: each PT_LOAD segment is
+ * copied to its p_vaddr and the trailing [filesz, memsz) (.bss) is zeroed. pc is
+ * set to e_entry. This is the counterpart to {@link linkElf}, which relocates a
+ * single *object*; a linked executable already has its addresses baked in, so it
+ * must be loaded, not re-placed.
+ *
+ * @param {Uint8Array} elf the linked ELF32 executable bytes
+ * @returns {{addr:number, bytes:Uint8Array}[]} the PT_LOAD segments (vaddr-based)
+ */
+export function loadExecSegments(elf) {
+    const dv = new DataView(elf.buffer, elf.byteOffset, elf.byteLength);
+    if (!(elf[0] === 0x7f && elf[1] === 0x45 && elf[2] === 0x4c && elf[3] === 0x46)) throw new Error('not an ELF file');
+    if (elf[4] !== 1) throw new Error('not ELF32');
+    const phoff = dv.getUint32(0x1c, true), phent = dv.getUint16(0x2a, true), phnum = dv.getUint16(0x2c, true);
+    const segments = [];
+    for (let i = 0; i < phnum; i++) {
+        const p = phoff + i * phent;
+        if (dv.getUint32(p, true) !== 1) continue;               // PT_LOAD only
+        const off = dv.getUint32(p + 4, true), vaddr = dv.getUint32(p + 8, true);
+        const filesz = dv.getUint32(p + 16, true), memsz = dv.getUint32(p + 20, true);
+        const bytes = new Uint8Array(memsz);                     // memsz ≥ filesz; tail (.bss) stays 0
+        bytes.set(elf.subarray(off, off + filesz));
+        segments.push({addr: vaddr >>> 0, bytes});
+    }
+    return segments;
+}
+
+/**
+ * Load an ELF into a RiscV32Machine and set its entry. Auto-detects the kind:
+ * a relocatable object (ET_REL) is linked via {@link linkElf}; a fully-linked
+ * executable (ET_EXEC) is loaded by its program headers via {@link loadExecSegments}.
+ */
 export function loadElfInto(machine, obj, opts = {}) {
-    const {segments, entry, symbols} = linkElf(obj, opts);
+    const dv = new DataView(obj.buffer, obj.byteOffset, obj.byteLength);
+    const etype = dv.getUint16(0x10, true);
+    if (etype === 2) {                                            // ET_EXEC — already linked
+        const segments = loadExecSegments(obj);
+        for (const {addr, bytes} of segments) machine.load(bytes, addr);
+        const entry = dv.getUint32(0x18, true) >>> 0;
+        machine.cpu.pc = entry;
+        return {entry, symbols: new Map()};
+    }
+    const {segments, entry, symbols} = linkElf(obj, opts);        // ET_REL — relocate the object
     for (const {addr, bytes} of segments) machine.load(bytes, addr);
     machine.cpu.pc = entry >>> 0;
     return {entry, symbols};

@@ -40,18 +40,25 @@ const MSTATUS_MIE = 1 << 3, MSTATUS_MPIE = 1 << 7, MSTATUS_MPP = 3 << 11;
 const IRQ_MSI = 1 << 3, IRQ_MTI = 1 << 7, IRQ_MEI = 1 << 11;
 // Interrupt causes (with the high bit set in mcause).
 const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
+// Synchronous exception cause: environment call from M-mode (no interrupt bit).
+const CAUSE_ECALL_M = 11;
 
 export class RiscV32 {
     /**
      * @param {Uint8Array} mem flat memory the CPU reads/writes (little-endian)
      * @param {{ecall?: (cpu: RiscV32) => void, ebreak?: (cpu: RiscV32) => void,
-     *          resetPc?: number}} [hooks]
+     *          resetPc?: number, ecallTraps?: boolean}} [hooks]
      */
     constructor(mem, hooks = {}) {
         this.mem = mem;
         this.x = new Int32Array(32);      // x0..x31, x0 stays 0
         this.pc = (hooks.resetPc ?? 0) >>> 0;
         this.hooks = hooks;
+        // RTOS mode: ECALL becomes a real M-mode exception (cause 11) to mtvec
+        // instead of the Linux-ABI hook. An RTOS (FreeRTOS) yields via ecall and
+        // wants its own trap handler; a bare program leaves this off and keeps the
+        // write/exit hook. Off by default, so every existing fixture is untouched.
+        this.ecallTraps = !!hooks.ecallTraps;
         this.halted = false;
         this.instret = 0;                 // instructions retired
         this.resvAddr = -1;               // LR/SC reservation (address, or -1)
@@ -302,6 +309,14 @@ export class RiscV32 {
             case OPC.SYSTEM: {
                 const imm = (inst >>> 20) & 0xfff;
                 if (funct3 === 0 && imm === 0) {          // ECALL
+                    if (this.ecallTraps) {
+                        // A real M-mode environment-call exception. pc is still the
+                        // ecall instruction, so _trap stashes MEPC = this.pc; the
+                        // RTOS handler advances mepc past it (mepc+4) before MRET.
+                        this._trap(CAUSE_ECALL_M, false, 0);
+                        this.instret++;
+                        return 1;
+                    }
                     this.pc = next;
                     if (this.hooks.ecall) this.hooks.ecall(this);
                     if (this.halted) return 0;
