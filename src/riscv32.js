@@ -3,7 +3,9 @@
  * idiom of z80.js / m6502.js / i8086.js (one instruction per `step()`, a flat
  * little-endian memory, no code generation). Semantics follow the RISC-V
  * unprivileged ISA: rv32i base + M (mul/div/rem) + A (LR/SC + AMO*, a single
- * reservation since this is one hart), plus the machine-mode privileged bits an
+ * reservation since this is one hart) + C (the compressed 16-bit encodings,
+ * expanded to their base instruction at fetch by `_decompress`), plus the
+ * machine-mode privileged bits an
  * RTOS trap handler needs: the M-mode CSRs (mstatus/mie/mip/mtvec/mepc/mcause/
  * mscratch/mtval), Zicsr (CSRRW/S/C and their immediate forms), MRET, WFI, and
  * interrupt entry — a pending, enabled machine interrupt (mip & mie, with
@@ -81,6 +83,13 @@ export class RiscV32 {
         // wants its own trap handler; a bare program leaves this off and keeps the
         // write/exit hook. Off by default, so every existing fixture is untouched.
         this.ecallTraps = !!hooks.ecallTraps;
+        // Base physical address of RAM. `mem` is a flat 0-based array, so an
+        // address is translated to a RAM index by subtracting this. Default 0
+        // (RAM at 0x0, as before). Set to 0x80000000 to run images linked at the
+        // standard riscv `virt` RAM base (Zephyr's qemu_riscv32, xv6, Linux). The
+        // MMIO devices (CLINT/PLIC/UART) sit below it and are routed by absolute
+        // address before RAM, so they are unaffected.
+        this.ramBase = (hooks.ramBase ?? 0) >>> 0;
         this.halted = false;
         this.instret = 0;                 // instructions retired
         this.resvAddr = -1;               // LR/SC reservation (address, or -1)
@@ -267,13 +276,108 @@ export class RiscV32 {
         return phys;
     }
 
+    // ── RVC: the compressed (C) extension ───────────────────────────
+    /** Expand a 16-bit compressed instruction to its 32-bit equivalent, or
+     *  return null if the encoding is reserved/illegal. RVC is pure syntactic
+     *  sugar — each C instruction maps to one base instruction — so decompressing
+     *  at fetch keeps the executor (below) unchanged. RV32 set (no F/D). */
+    _decompress(h) {
+        h &= 0xffff;
+        const op = h & 3, f3 = (h >>> 13) & 7;
+        const rd = (h >>> 7) & 0x1f, rs2 = (h >>> 2) & 0x1f;   // full 5-bit fields
+        const rdp = 8 + ((h >>> 2) & 7), rs1p = 8 + ((h >>> 7) & 7), rs2p = 8 + ((h >>> 2) & 7);
+        const bit = n => (h >>> n) & 1;
+        const sx = (v, b) => (v << (32 - b)) >> (32 - b);
+        // 32-bit field encoders (same layout the executor decodes).
+        const I = (o, f, d, s1, im) => ((im & 0xfff) << 20 | (s1 & 0x1f) << 15 | (f & 7) << 12 | (d & 0x1f) << 7 | o) >>> 0;
+        const R = (o, f, f7, d, s1, s2) => ((f7 & 0x7f) << 25 | (s2 & 0x1f) << 20 | (s1 & 0x1f) << 15 | (f & 7) << 12 | (d & 0x1f) << 7 | o) >>> 0;
+        const S = (o, f, s1, s2, im) => (((im >> 5) & 0x7f) << 25 | (s2 & 0x1f) << 20 | (s1 & 0x1f) << 15 | (f & 7) << 12 | (im & 0x1f) << 7 | o) >>> 0;
+        const B = (o, f, s1, s2, im) => (((im >> 12) & 1) << 31 | ((im >> 5) & 0x3f) << 25 | (s2 & 0x1f) << 20 | (s1 & 0x1f) << 15 | (f & 7) << 12 | ((im >> 1) & 0xf) << 8 | ((im >> 11) & 1) << 7 | o) >>> 0;
+        const U = (o, d, im) => ((im & 0xfffff000) | (d & 0x1f) << 7 | o) >>> 0;
+        const J = (o, d, im) => (((im >> 20) & 1) << 31 | ((im >> 1) & 0x3ff) << 21 | ((im >> 11) & 1) << 20 | ((im >> 12) & 0xff) << 12 | (d & 0x1f) << 7 | o) >>> 0;
+
+        if (op === 0) {                                        // ── Quadrant 0 ──
+            if (f3 === 0) {                                    // C.ADDI4SPN → addi rd', x2, nzuimm
+                const nz = (((h >> 7) & 0xf) << 6) | (((h >> 11) & 3) << 4) | (bit(5) << 3) | (bit(6) << 2);
+                return nz === 0 ? null : I(0x13, 0, rdp, 2, nz);
+            }
+            if (f3 === 2) {                                    // C.LW → lw rd', off(rs1')
+                const off = (((h >> 10) & 7) << 3) | (bit(6) << 2) | (bit(5) << 6);
+                return I(0x03, 2, rdp, rs1p, off);
+            }
+            if (f3 === 6) {                                    // C.SW → sw rs2', off(rs1')
+                const off = (((h >> 10) & 7) << 3) | (bit(6) << 2) | (bit(5) << 6);
+                return S(0x23, 2, rs1p, rs2p, off);
+            }
+            return null;                                       // FLD/FLW/FSD/FSW: no F/D
+        }
+        if (op === 1) {                                        // ── Quadrant 1 ──
+            if (f3 === 0) return I(0x13, 0, rd, rd, sx((bit(12) << 5) | ((h >> 2) & 0x1f), 6));   // C.ADDI (rd=0 → NOP)
+            if (f3 === 1) {                                    // C.JAL → jal x1, off  (RV32)
+                const im = (bit(12) << 11) | (bit(11) << 4) | (((h >> 9) & 3) << 8) | (bit(8) << 10) |
+                    (bit(7) << 6) | (bit(6) << 7) | (((h >> 3) & 7) << 1) | (bit(2) << 5);
+                return J(0x6f, 1, sx(im, 12));
+            }
+            if (f3 === 2) return I(0x13, 0, rd, 0, sx((bit(12) << 5) | ((h >> 2) & 0x1f), 6));     // C.LI → addi rd, x0, imm
+            if (f3 === 3) {
+                if (rd === 2) {                                // C.ADDI16SP → addi x2, x2, nzimm
+                    const im = (bit(12) << 9) | (((h >> 3) & 3) << 7) | (bit(5) << 6) | (bit(2) << 5) | (bit(6) << 4);
+                    return im === 0 ? null : I(0x13, 0, 2, 2, sx(im, 10));
+                }
+                const im = sx((bit(12) << 17) | (((h >> 2) & 0x1f) << 12), 18);                    // C.LUI → lui rd, nzimm
+                return im === 0 ? null : U(0x37, rd, im);
+            }
+            if (f3 === 4) {                                    // MISC-ALU on rd'
+                const sub = (h >> 10) & 3;
+                if (sub === 0) return R(0x13, 5, 0x00, rs1p, rs1p, (bit(12) << 5) | ((h >> 2) & 0x1f));   // C.SRLI (srli imm)
+                if (sub === 1) return R(0x13, 5, 0x20, rs1p, rs1p, (bit(12) << 5) | ((h >> 2) & 0x1f));   // C.SRAI
+                if (sub === 2) return I(0x13, 7, rs1p, rs1p, sx((bit(12) << 5) | ((h >> 2) & 0x1f), 6));  // C.ANDI
+                const w = (h >> 5) & 3;                        // C.SUB/XOR/OR/AND (bit12=0 for RV32)
+                if (bit(12)) return null;
+                return R(0x33, [0, 4, 6, 7][w], w === 0 ? 0x20 : 0x00, rs1p, rs1p, rs2p);
+            }
+            if (f3 === 5) {                                    // C.J → jal x0, off
+                const im = (bit(12) << 11) | (bit(11) << 4) | (((h >> 9) & 3) << 8) | (bit(8) << 10) |
+                    (bit(7) << 6) | (bit(6) << 7) | (((h >> 3) & 7) << 1) | (bit(2) << 5);
+                return J(0x6f, 0, sx(im, 12));
+            }
+            if (f3 === 6 || f3 === 7) {                        // C.BEQZ / C.BNEZ → beq/bne rs1', x0, off
+                const im = (bit(12) << 8) | (((h >> 10) & 3) << 3) | (((h >> 5) & 3) << 6) | (((h >> 3) & 3) << 1) | (bit(2) << 5);
+                return B(0x63, f3 === 6 ? 0 : 1, rs1p, 0, sx(im, 9));
+            }
+        }
+        if (op === 2) {                                        // ── Quadrant 2 ──
+            if (f3 === 0) return R(0x13, 1, 0x00, rd, rd, (h >> 2) & 0x1f);                // C.SLLI → slli rd, rd, shamt
+            if (f3 === 2) {                                    // C.LWSP → lw rd, off(x2)
+                const off = (bit(12) << 5) | (((h >> 4) & 7) << 2) | (((h >> 2) & 3) << 6);
+                return rd === 0 ? null : I(0x03, 2, rd, 2, off);
+            }
+            if (f3 === 4) {
+                if (bit(12) === 0) {
+                    if (rs2 === 0) return rd === 0 ? null : I(0x67, 0, 0, rd, 0);           // C.JR → jalr x0, rd, 0
+                    return R(0x33, 0, 0x00, rd, 0, rs2);                                    // C.MV → add rd, x0, rs2
+                }
+                if (rs2 === 0) return rd === 0 ? 0x00100073 : I(0x67, 0, 1, rd, 0);         // C.EBREAK / C.JALR
+                return R(0x33, 0, 0x00, rd, rd, rs2);                                       // C.ADD → add rd, rd, rs2
+            }
+            if (f3 === 6) {                                    // C.SWSP → sw rs2, off(x2)
+                const off = (((h >> 9) & 0xf) << 2) | (((h >> 7) & 3) << 6);
+                return S(0x23, 2, 2, rs2, off);
+            }
+        }
+        return null;                                           // reserved / unsupported
+    }
+
     // ── little-endian memory ────────────────────────────────────────
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
 
+    /** Absolute address → flat RAM index (subtract the RAM base, wrap to size). */
+    _ram(u) { return ((u - this.ramBase) >>> 0) & (this.mem.length - 1); }
+
     ld8(a)  {
         const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
-        return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[a & (this.mem.length - 1)];
+        return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[this._ram(u)];
     }
     ld16(a) { return this.ld8(a) | (this.ld8(a + 1) << 8); }
     ld32(a) {
@@ -283,7 +387,7 @@ export class RiscV32 {
     st8(a, v)  {
         const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
         if (d) { d.store8((u - d.base) >>> 0, v & 0xff); return; }
-        this.mem[a & (this.mem.length - 1)] = v & 0xff;
+        this.mem[this._ram(u)] = v & 0xff;
     }
     st16(a, v) { this.st8(a, v); this.st8(a + 1, v >>> 8); }
     st32(a, v) {
@@ -304,16 +408,36 @@ export class RiscV32 {
         // A pending, enabled machine interrupt is taken before the next fetch.
         if (this._takeInterruptIfPending()) { this.instret++; return 1; }
         const pc = this.pc >>> 0;
+        // Translate then fetch. A halfword first: low two bits != 11 -> a 16-bit
+        // compressed (C) instruction, expanded and pc += 2; else the full 32-bit
+        // word, pc += 4. The high half of a 32-bit instruction at an odd page
+        // offset lands in the next page, so it is translated separately.
         const pcPhys = this._translate(pc, 'fetch');
         if (pcPhys === null) { this.instret++; return 1; }   // instruction page fault taken
-        const inst = this.ld32(pcPhys);
+        const lo = this.ld16(pcPhys);
+        let inst, ilen;
+        if ((lo & 3) !== 3) {
+            inst = this._decompress(lo);
+            if (inst === null) return this._bad(lo);
+            ilen = 2;
+        } else {
+            let hiPhys;
+            if ((pc & 0xfff) === 0xffe) {
+                hiPhys = this._translate((pc + 2) >>> 0, 'fetch');
+                if (hiPhys === null) { this.instret++; return 1; }
+            } else {
+                hiPhys = (pcPhys + 2) >>> 0;
+            }
+            inst = (lo | (this.ld16(hiPhys) << 16)) >>> 0;
+            ilen = 4;
+        }
         const opcode = inst & 0x7f;
         const rd = (inst >>> 7) & 0x1f;
         const funct3 = (inst >>> 12) & 0x7;
         const rs1 = (inst >>> 15) & 0x1f;
         const rs2 = (inst >>> 20) & 0x1f;
         const funct7 = (inst >>> 25) & 0x7f;
-        let next = (pc + 4) >>> 0;
+        let next = (pc + ilen) >>> 0;
         const a = this.x[rs1] | 0, b = this.x[rs2] | 0;
 
         switch (opcode) {
