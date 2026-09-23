@@ -66,6 +66,56 @@ A console-only machine (no pins) can run in **adapter-only mode**: return
 
 ---
 
+## bw-board — booting an OS / RTOS image on a CPU
+
+Proven for RISC-V: a real **FreeRTOS** and **RT-Thread Nano** boot on the
+emulated SoC. The recipe (see `test/fixtures/riscv-freertos/` and
+`test/fixtures/riscv-rtthread/` as worked examples):
+
+- **Loader.** `scripts/riscv-elf.mjs` `loadElfInto(machine, bytes)` auto-detects
+  the ELF kind: a **relocatable object** (`ET_REL`, a single `clang -c` output)
+  is relocated by the mini-linker `linkElf`; a **fully-linked executable**
+  (`ET_EXEC`, real `ld.lld`/`gcc` output) is loaded by its **program headers**
+  (`loadExecSegments` — `PT_LOAD` at each `p_vaddr`, `pc = e_entry`). A whole OS
+  image is the second kind — do not feed it to `linkElf`.
+- **The memory map the machine exposes** (`riscv32-machine.js`, SiFive/QEMU-virt
+  layout): flat RAM at **`0x0`** (1 MiB default, `memSize` configurable); **CLINT**
+  at `0x02000000` (`mtime` `0x0200BFF8`, `mtimecmp` `0x02004000`); **PLIC** at
+  `0x0c000000`; **NS16550 UART** at `0x10000000`. Link the image against this map.
+  (Note RAM is at `0x0`, **not** the `0x80000000` a stock `qemu virt` uses — see
+  the caveat below.)
+- **`ecallTraps` — pick per the RTOS's yield mechanism.** If the port yields via
+  **`ecall`** (FreeRTOS), construct the machine with `ecallTraps: true` so `ECALL`
+  becomes a real M-mode exception (cause 11) to `mtvec` instead of the Linux
+  write/exit hook. If it switches by a **direct `mret`** and preempts off the
+  timer trap (RT-Thread), leave `ecallTraps` off — it boots on the plain machine.
+- **Startup installs `mtvec`.** Neither the FreeRTOS GCC/RISC-V port nor RT-Thread
+  sets `mtvec` — the **BSP/startup must** (`csrw mtvec, <trap_handler>`) before the
+  first tick, or the first timer interrupt traps to `0` and re-runs `_start`.
+- **The fixture, not the toolchain.** Cross-build with `clang` + `ld.lld` (no
+  RISC-V gcc needed; a real `riscv64-unknown-elf-gcc` also works), then commit the
+  **stripped** image as base64 (`llvm-objcopy --strip-all` → `base64 -w0`), so CI
+  needs no cross-toolchain — the same rule as the core fixtures. A `build.sh`
+  **fetches the kernel at a pinned commit** (not vendored) and regenerates it.
+- **Reproducibility.** Rebuild must be byte-identical (a check-twin). If the
+  kernel banner embeds `__DATE__`/`__TIME__` (RT-Thread does), `export
+  SOURCE_DATE_EPOCH=<fixed>` — clang honors it and the build stabilises.
+- **libc.** Use picolibc's **headers only** (`-isystem …/picolibc/…/include`); link
+  `-nostdlib` and hand-roll the handful of `mem*`/`str*` the kernel calls in a
+  `libc_shim.c`. Keeps the image self-contained.
+- **Licence.** Record the kernel in `THIRD-PARTY.md` under *"Shipped compiled
+  binaries"* (FreeRTOS = MIT, RT-Thread = Apache-2.0). Only the compiled image is
+  shipped; the source is fetched, not vendored.
+
+**Caveat — what does NOT fit the current machine.** OSes that assume RAM at
+`0x80000000` or boot in **S-mode under OpenSBI** (e.g. NuttX's `rv-virt`, some
+Zephyr `virt` configs) need work first: a **configurable RAM base** on the machine
+and/or **S-mode + Sv32 + an SBI layer** (the Linux/xv6 tier). A generic M-mode
+port whose trap/timer/UART match the map above (FreeRTOS, RT-Thread, and Zephyr's
+`qemu_riscv32`) is the tractable class today.
+
+---
+
 ## bw-board — CI gates (`.github/workflows/ci.yml`)
 
 - Jobs: **test** (`npm test` → `test/*.test.js` + `test/*.test.mjs`, Node 22),
