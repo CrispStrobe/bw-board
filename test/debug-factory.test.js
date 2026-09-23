@@ -168,12 +168,13 @@ describe('createDebugTarget: missing options', () => {
 describe('getTargetKinds', () => {
   it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    // 13 SINCE THE EXPERIMENTAL 80386 AT TARGET BECAME PICKABLE (was 12 when the
-    // 80286 real-mode variant became pickable, 11 when the 8086 did, 66691e1).
-    // This count is the reason the test exists -- a kind added without a row
-    // here is a target the factory can build and the picker never offers -- so
-    // it is updated with the assertion below rather than loosened to `>=`.
-    assert.equal(kinds.length, 13);
+    // 14 SINCE THE RISC-V RV32IMA CONSOLE BENCH BECAME PICKABLE (was 13 when the
+    // experimental 80386 AT target did, 12 for the 80286 real-mode variant, 11
+    // for the 8086, 66691e1). This count is the reason the test exists -- a kind
+    // added without a row here is a target the factory can build and the picker
+    // never offers -- so it is updated with the assertion below, not loosened.
+    assert.equal(kinds.length, 14);
+    assert.ok(kinds.find(k => k.kind === 'riscv32'));
     assert.ok(kinds.find(k => k.kind === 'i8086'));
     assert.ok(kinds.find(k => k.kind === 'i80286'));
     assert.ok(kinds.find(k => k.kind === 'i80386'));
