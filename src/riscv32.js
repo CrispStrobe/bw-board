@@ -528,6 +528,9 @@ export class RiscV32 {
                     this.waiting = true;
                     break;
                 }
+                if (funct3 === 0 && ((inst >>> 25) & 0x7f) === 0x09) {  // SFENCE.VMA
+                    break;                                // no TLB in this model — a nop
+                }
                 // CSR read/modify/write (funct3 1..7): rd <- old CSR; CSR <- new.
                 if (funct3 !== 0) {
                     const csrN = imm & 0xfff;
