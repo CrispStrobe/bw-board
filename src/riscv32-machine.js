@@ -34,7 +34,11 @@ export class RiscV32Machine {
         this.exitCode = null;
         this.cpu = new RiscV32(this.mem, {
             resetPc: config.resetPc || 0,
-            ecall: c => this._syscall(c)
+            ecall: c => this._syscall(c),
+            // RTOS images (FreeRTOS) yield via ecall and install their own trap
+            // handler: turn ECALL into a real M-mode exception rather than the
+            // Linux write/exit ABI. Default off — bare ecall programs are unchanged.
+            ecallTraps: config.ecallTraps === true
         });
         // A CLINT (timer + software interrupt) so an RTOS gets its tick. It maps
         // outside any sane program's RAM footprint, so it's inert for the

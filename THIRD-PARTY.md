@@ -28,6 +28,7 @@
 | adafruit/Adafruit-GFX-Library | BSD-2-Clause | Compiled to HEX as SSD1306 dependency |
 | adafruit/Adafruit_BusIO | MIT | Compiled to HEX as RTClib/SSD1306 dependency |
 | arduino/ArduinoCore-avr | LGPL-2.1 | Core + Wire library compiled to HEX for TWI bridge tests; LGPL stays in compiled binary only |
+| FreeRTOS/FreeRTOS-Kernel | MIT | Kernel V11.1.0 (pinned `dbf70559`) cross-built with clang+lld to a riscv32 ELF at `test/fixtures/riscv-freertos/freertos-demo.elf.b64` for the RISC-V SoC boot test (`test/riscv32-freertos.test.mjs`). Only the compiled image is committed; the kernel source is fetched by `build.sh`, not vendored. The demo sources, linker script and config in that directory are original bw-board code |
 
 ## Test-time references (not shipped)
 

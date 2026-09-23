@@ -113,3 +113,29 @@ test('an illegal instruction traps and halts, it does not run wild', () => {
     assert.equal(cpu.trap.cause, 'illegal-instruction');
     assert.equal(cpu.x[1], 0, 'did not execute past the trap');
 });
+
+// ── ecallTraps mode (RTOS): ECALL is a real M-mode exception ────────
+// An RTOS (FreeRTOS) yields via ecall and installs its own mtvec handler, so in
+// ecallTraps mode ECALL must trap (cause 11) to mtvec instead of calling the
+// Linux write/exit hook. Default mode is unchanged — every existing fixture and
+// the ecall-ABI programs rely on the hook.
+test('ecallTraps: ECALL traps to mtvec as environment-call-from-M (cause 11)', () => {
+    let hookCalled = false;
+    const cpu = machineOf([ECALL()], {hooks: {ecallTraps: true, ecall: () => { hookCalled = true; }}});
+    cpu.csr[0x305] = 0x40;                     // mtvec (direct), 4-aligned
+    const ecallPc = cpu.pc >>> 0;             // 0
+    cpu.step();
+    assert.equal(cpu.pc >>> 0, 0x40, 'jumped to mtvec');
+    assert.equal(cpu.csr[0x342] >>> 0, 11, 'mcause = 11 (env call from M-mode, no interrupt bit)');
+    assert.equal(cpu.csr[0x341] >>> 0, ecallPc, 'mepc = the ecall instruction (handler advances +4)');
+    assert.ok(!hookCalled, 'the Linux-ABI hook was NOT called in trap mode');
+});
+
+test('default: ECALL calls the hook and does not trap, even with mtvec set', () => {
+    let hookCalled = false;
+    const cpu = machineOf([ECALL()], {hooks: {ecall: () => { hookCalled = true; }}});
+    cpu.csr[0x305] = 0x40;                     // mtvec set, but default mode ignores it for ecall
+    cpu.step();
+    assert.ok(hookCalled, 'the hook ran');
+    assert.equal(cpu.pc >>> 0, 4, 'advanced past ecall (no trap)');
+});
