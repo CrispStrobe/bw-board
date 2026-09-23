@@ -10,8 +10,12 @@
  * mscratch/mtval), Zicsr (CSRRW/S/C and their immediate forms), MRET, WFI, and
  * interrupt entry — a pending, enabled machine interrupt (mip & mie, with
  * mstatus.MIE) traps to mtvec before the next fetch. A device (a CLINT) raises
- * the timer/software lines through `setInterruptPending`. No S-mode / Sv32 MMU
- * yet (that is the Linux increment). exactstep was the one-step decode reference.
+ * the timer/software lines through `setInterruptPending`. It also has S-mode: the
+ * three privilege levels (M/S/U), trap delegation (medeleg/mideleg → stvec), the
+ * S trap CSRs (sstatus/sie/sip/stvec/sepc/scause/stval/satp) as masked views of
+ * their M counterparts, SRET, and an SBI firmware hook for supervisor ecalls — so
+ * a supervisor kernel runs. The Sv32 page-table walk (paging) is the next
+ * increment. exactstep was the one-step decode reference.
  *
  * Memory is a flat `Uint8Array` the caller owns; the CPU reads and writes it
  * little-endian. `ecall`/`ebreak` call an injectable hook so a test (or a later
@@ -30,20 +34,33 @@ const OPC = {
 /** Sign-extend the low `bits` of `v` to a JS (32-bit) signed int. */
 const sext = (v, bits) => (v << (32 - bits)) >> (32 - bits);
 
-// M-mode CSRs (the subset a machine-mode RTOS trap handler needs).
+// Privileged CSRs — M-mode plus the S-mode subset a supervisor kernel (xv6,
+// Linux) needs: trap delegation (medeleg/mideleg), the S trap CSRs, and satp.
 const CSR = {
-    MSTATUS: 0x300, MISA: 0x301, MIE: 0x304, MTVEC: 0x305,
+    MSTATUS: 0x300, MISA: 0x301, MEDELEG: 0x302, MIDELEG: 0x303, MIE: 0x304, MTVEC: 0x305,
     MSCRATCH: 0x340, MEPC: 0x341, MCAUSE: 0x342, MTVAL: 0x343, MIP: 0x344,
+    SSTATUS: 0x100, SIE: 0x104, STVEC: 0x105, SSCRATCH: 0x140, SEPC: 0x141,
+    SCAUSE: 0x142, STVAL: 0x143, SIP: 0x144, SATP: 0x180,
     MHARTID: 0xf14, MCYCLE: 0xb00, MINSTRET: 0xb02
 };
-// mstatus fields.
+// Privilege levels.
+const PRIV_U = 0, PRIV_S = 1, PRIV_M = 3;
+// mstatus/sstatus fields. M: MIE/MPIE/MPP. S: SIE/SPIE/SPP (SPP is a single bit).
 const MSTATUS_MIE = 1 << 3, MSTATUS_MPIE = 1 << 7, MSTATUS_MPP = 3 << 11;
-// mie/mip interrupt bits: software (3), timer (7), external (11) — machine mode.
+const MSTATUS_SIE = 1 << 1, MSTATUS_SPIE = 1 << 5, MSTATUS_SPP = 1 << 8;
+// The sstatus view of mstatus (S-mode sees only these bits).
+const SSTATUS_MASK = (MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | (1 << 18) /*SUM*/ | (0x3 << 13) /*FS*/);
+// Writable mstatus bits: the M and S mode/interrupt bits, MPRV/SUM/MXR, FS.
+const MSTATUS_WMASK = (MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPP | MSTATUS_SIE | MSTATUS_SPIE |
+    MSTATUS_SPP | (1 << 17) /*MPRV*/ | (1 << 18) /*SUM*/ | (1 << 19) /*MXR*/ | (0x3 << 13) /*FS*/);
+// mie/mip interrupt bits: machine software/timer/external (3/7/11),
+// supervisor software/timer/external (1/5/9).
 const IRQ_MSI = 1 << 3, IRQ_MTI = 1 << 7, IRQ_MEI = 1 << 11;
+const IRQ_SSI = 1 << 1, IRQ_STI = 1 << 5, IRQ_SEI = 1 << 9;
 // Interrupt causes (with the high bit set in mcause).
 const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
-// Synchronous exception cause: environment call from M-mode (no interrupt bit).
-const CAUSE_ECALL_M = 11;
+// Synchronous exception causes: environment call from U/S/M mode.
+const CAUSE_ECALL_U = 8, CAUSE_ECALL_S = 9, CAUSE_ECALL_M = 11;
 
 export class RiscV32 {
     /**
@@ -71,8 +88,13 @@ export class RiscV32 {
         this.halted = false;
         this.instret = 0;                 // instructions retired
         this.resvAddr = -1;               // LR/SC reservation (address, or -1)
-        this.csr = new Uint32Array(4096); // M-mode CSR file
+        this.csr = new Uint32Array(4096); // M/S CSR file
+        this.priv = PRIV_M;               // current privilege (M at reset)
         this.waiting = false;             // parked on WFI until an interrupt
+        // A supervisor environment-call (SBI) hook: an S-mode kernel calls the
+        // firmware via ecall; the machine services it (console/timer) like the
+        // M-mode ecall hook. Injected by the machine when it acts as SBI firmware.
+        this.sbi = hooks.sbi || null;
         // MMIO device lists: word devices {base,size,load32,store32} (CLINT,
         // PLIC) routed by ld32/st32; byte devices {base,size,load8,store8}
         // (UART) routed by ld8/st8. Accepts a single device or an array.
@@ -87,6 +109,7 @@ export class RiscV32 {
         this.instret = 0;
         this.resvAddr = -1;
         this.csr.fill(0);
+        this.priv = PRIV_M;
         this.waiting = false;
     }
 
@@ -96,51 +119,101 @@ export class RiscV32 {
         if (on) this.csr[CSR.MIP] |= bit; else this.csr[CSR.MIP] &= ~bit;
     }
 
-    /** Read a CSR, honouring the hard-wired ones. */
+    /** Read a CSR. The S-mode status/interrupt CSRs are masked views of the
+     *  M-mode registers (sstatus⊂mstatus; sie/sip = mie/mip restricted by mideleg). */
     _readCsr(n) {
         if (n === CSR.MHARTID) return 0;
-        if (n === CSR.MISA) return 0x40001100 >>> 0;   // RV32 + I,M,A (MXL=1, bits I/M/A)
+        if (n === CSR.MISA) return 0x40141101 >>> 0;   // RV32 + I,M,A,S,U (MXL=1)
+        if (n === CSR.SSTATUS) return (this.csr[CSR.MSTATUS] & SSTATUS_MASK) >>> 0;
+        if (n === CSR.SIE) return (this.csr[CSR.MIE] & this.csr[CSR.MIDELEG]) >>> 0;
+        if (n === CSR.SIP) return (this.csr[CSR.MIP] & this.csr[CSR.MIDELEG]) >>> 0;
         return this.csr[n] >>> 0;
     }
 
-    /** Write a CSR with the WARL masks M-mode needs. */
+    /** Write a CSR with the WARL masks M/S mode need. */
     _writeCsr(n, v) {
         v >>>= 0;
         if (n === CSR.MHARTID || n === CSR.MISA) return;              // read-only here
-        if (n === CSR.MSTATUS) { this.csr[n] = v & (MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPP); return; }
-        if (n === CSR.MIP) {
-            // Software may set/clear MSIP; MTIP/MEIP are owned by devices.
-            this.csr[n] = (this.csr[n] & ~IRQ_MSI) | (v & IRQ_MSI);
+        if (n === CSR.MSTATUS) { this.csr[n] = v & MSTATUS_WMASK; return; }
+        if (n === CSR.SSTATUS) {                                      // S-view: only the S bits of mstatus
+            this.csr[CSR.MSTATUS] = ((this.csr[CSR.MSTATUS] & ~SSTATUS_MASK) | (v & SSTATUS_MASK)) >>> 0;
             return;
         }
-        if (n === CSR.MTVEC) { this.csr[n] = v & ~1; return; }        // direct/vectored low bit; force direct base
+        if (n === CSR.MIP) {
+            // Software may set/clear the software-interrupt bits (MSIP/SSIP);
+            // timer/external lines are owned by devices (CLINT/PLIC).
+            this.csr[n] = (this.csr[n] & ~(IRQ_MSI | IRQ_SSI)) | (v & (IRQ_MSI | IRQ_SSI));
+            return;
+        }
+        if (n === CSR.SIE) {                                          // S-view of mie, gated by mideleg
+            const d = this.csr[CSR.MIDELEG];
+            this.csr[CSR.MIE] = ((this.csr[CSR.MIE] & ~d) | (v & d)) >>> 0;
+            return;
+        }
+        if (n === CSR.SIP) {                                          // S may set SSIP (if delegated)
+            const w = IRQ_SSI & this.csr[CSR.MIDELEG];
+            this.csr[CSR.MIP] = ((this.csr[CSR.MIP] & ~w) | (v & w)) >>> 0;
+            return;
+        }
+        if (n === CSR.MTVEC || n === CSR.STVEC) { this.csr[n] = v & ~1; return; }   // force direct base
         this.csr[n] = v;
     }
 
-    /** Enter a trap (interrupt or exception): stash pc, set cause/tval, mask
-     *  interrupts, and jump to mtvec (direct mode). */
+    /** Enter a trap. Routed to S-mode when the cause is delegated (medeleg for
+     *  exceptions, mideleg for interrupts) and the current privilege is ≤ S;
+     *  otherwise to M-mode. Stashes the return pc/cause/tval, records and lowers
+     *  the interrupt-enable, sets the previous privilege, and jumps to the vector. */
     _trap(cause, isInterrupt, tval) {
-        this.csr[CSR.MEPC] = this.pc >>> 0;
-        this.csr[CSR.MCAUSE] = ((isInterrupt ? 0x80000000 : 0) | cause) >>> 0;
-        this.csr[CSR.MTVAL] = (tval || 0) >>> 0;
+        const deleg = isInterrupt ? this.csr[CSR.MIDELEG] : this.csr[CSR.MEDELEG];
+        const toS = this.priv <= PRIV_S && (deleg & (1 << cause)) !== 0;
+        const causeWord = ((isInterrupt ? 0x80000000 : 0) | cause) >>> 0;
         const s = this.csr[CSR.MSTATUS];
-        // MPIE <- MIE; MIE <- 0; MPP <- 3 (M-mode).
-        this.csr[CSR.MSTATUS] = ((s & ~MSTATUS_MPIE & ~MSTATUS_MIE & ~MSTATUS_MPP) |
-            ((s & MSTATUS_MIE) ? MSTATUS_MPIE : 0) | MSTATUS_MPP) >>> 0;
-        this.pc = (this.csr[CSR.MTVEC] & ~3) >>> 0;
+        if (toS) {
+            this.csr[CSR.SEPC] = this.pc >>> 0;
+            this.csr[CSR.SCAUSE] = causeWord;
+            this.csr[CSR.STVAL] = (tval || 0) >>> 0;
+            // SPIE <- SIE; SIE <- 0; SPP <- (came from S ? 1 : 0).
+            let ns = s & ~MSTATUS_SPIE & ~MSTATUS_SIE & ~MSTATUS_SPP;
+            if (s & MSTATUS_SIE) ns |= MSTATUS_SPIE;
+            if (this.priv === PRIV_S) ns |= MSTATUS_SPP;
+            this.csr[CSR.MSTATUS] = ns >>> 0;
+            this.priv = PRIV_S;
+            this.pc = (this.csr[CSR.STVEC] & ~3) >>> 0;
+        } else {
+            this.csr[CSR.MEPC] = this.pc >>> 0;
+            this.csr[CSR.MCAUSE] = causeWord;
+            this.csr[CSR.MTVAL] = (tval || 0) >>> 0;
+            // MPIE <- MIE; MIE <- 0; MPP <- the privilege we came from.
+            let ns = s & ~MSTATUS_MPIE & ~MSTATUS_MIE & ~MSTATUS_MPP;
+            if (s & MSTATUS_MIE) ns |= MSTATUS_MPIE;
+            ns |= (this.priv << 11) & MSTATUS_MPP;
+            this.csr[CSR.MSTATUS] = ns >>> 0;
+            this.priv = PRIV_M;
+            this.pc = (this.csr[CSR.MTVEC] & ~3) >>> 0;
+        }
         this.waiting = false;
     }
 
-    /** If an enabled machine interrupt is pending, take it. Returns true if a
-     *  trap was entered (so step() does not also execute an instruction). */
+    /** If an enabled interrupt is pending, take it (highest priority first).
+     *  A delegated interrupt (mideleg) targets S-mode and is gated by the S-mode
+     *  rules (taken when priv<S, or priv==S with sstatus.SIE); an M interrupt by
+     *  the M rules. Returns true if a trap was entered. */
     _takeInterruptIfPending() {
-        if (!(this.csr[CSR.MSTATUS] & MSTATUS_MIE)) return false;
-        const pending = this.csr[CSR.MIP] & this.csr[CSR.MIE];
-        if (!pending) return false;
-        // Priority: external > software > timer (per the spec's default order).
-        const cause = (pending & IRQ_MEI) ? CAUSE_MEI : (pending & IRQ_MSI) ? CAUSE_MSI : CAUSE_MTI;
-        this._trap(cause, true, 0);
-        return true;
+        const pend = this.csr[CSR.MIP] & this.csr[CSR.MIE];
+        if (!pend) return false;
+        const md = this.csr[CSR.MIDELEG], ms = this.csr[CSR.MSTATUS];
+        // Spec default priority: MEI, MSI, MTI, SEI, SSI, STI.
+        const order = [[IRQ_MEI, CAUSE_MEI], [IRQ_MSI, CAUSE_MSI], [IRQ_MTI, CAUSE_MTI],
+            [IRQ_SEI, 9], [IRQ_SSI, 1], [IRQ_STI, 5]];
+        for (const [bit, cause] of order) {
+            if (!(pend & bit)) continue;
+            const toS = (md & bit) !== 0;
+            const enabled = toS
+                ? (this.priv < PRIV_S || (this.priv === PRIV_S && (ms & MSTATUS_SIE)))
+                : (this.priv < PRIV_M || (this.priv === PRIV_M && (ms & MSTATUS_MIE)));
+            if (enabled) { this._trap(cause, true, 0); return true; }
+        }
+        return false;
     }
 
     // ── RVC: the compressed (C) extension ───────────────────────────
@@ -425,17 +498,34 @@ export class RiscV32 {
             case OPC.SYSTEM: {
                 const imm = (inst >>> 20) & 0xfff;
                 if (funct3 === 0 && imm === 0) {          // ECALL
-                    if (this.ecallTraps) {
-                        // A real M-mode environment-call exception. pc is still the
-                        // ecall instruction, so _trap stashes MEPC = this.pc; the
-                        // RTOS handler advances mepc past it (mepc+4) before MRET.
-                        this._trap(CAUSE_ECALL_M, false, 0);
+                    if (this.priv === PRIV_M) {
+                        if (this.ecallTraps) {
+                            // A real M-mode environment-call exception. pc is still the
+                            // ecall instruction, so _trap stashes MEPC = this.pc; the
+                            // RTOS handler advances mepc past it (mepc+4) before MRET.
+                            this._trap(CAUSE_ECALL_M, false, 0);
+                            this.instret++;
+                            return 1;
+                        }
+                        this.pc = next;
+                        if (this.hooks.ecall) this.hooks.ecall(this);
+                        if (this.halted) return 0;
                         this.instret++;
                         return 1;
                     }
-                    this.pc = next;
-                    if (this.hooks.ecall) this.hooks.ecall(this);
-                    if (this.halted) return 0;
+                    if (this.priv === PRIV_S && this.sbi) {
+                        // S-mode SBI call: the machine acts as the M-mode firmware
+                        // and services it inline (console/timer), returning to the
+                        // instruction after ecall (a0/a1 hold the SBI return).
+                        this.pc = next;
+                        this.sbi(this);
+                        if (this.halted) return 0;
+                        this.instret++;
+                        return 1;
+                    }
+                    // A U-mode syscall (cause 8) or an S-mode ecall with no SBI
+                    // firmware (cause 9): a real exception, routed by delegation.
+                    this._trap(this.priv === PRIV_S ? CAUSE_ECALL_S : CAUSE_ECALL_U, false, 0);
                     this.instret++;
                     return 1;
                 }
@@ -446,12 +536,30 @@ export class RiscV32 {
                     this.instret++;
                     return 1;
                 }
-                if (funct3 === 0 && imm === 0x302) {      // MRET — return from trap
+                if (funct3 === 0 && imm === 0x302) {      // MRET — return from an M-mode trap
                     const s = this.csr[CSR.MSTATUS];
-                    // MIE <- MPIE; MPIE <- 1; MPP <- 0.
-                    this.csr[CSR.MSTATUS] = ((s & ~MSTATUS_MIE & ~MSTATUS_MPP) |
-                        ((s & MSTATUS_MPIE) ? MSTATUS_MIE : 0) | MSTATUS_MPIE) >>> 0;
+                    const mpp = (s & MSTATUS_MPP) >>> 11;
+                    // MIE <- MPIE; MPIE <- 1; MPP <- U(0); priv <- MPP.
+                    let ns = s & ~MSTATUS_MIE & ~MSTATUS_MPP;
+                    if (s & MSTATUS_MPIE) ns |= MSTATUS_MIE;
+                    ns |= MSTATUS_MPIE;
+                    if (mpp !== PRIV_M) ns &= ~(1 << 17);        // MPRV cleared returning below M
+                    this.csr[CSR.MSTATUS] = ns >>> 0;
+                    this.priv = mpp;
                     this.pc = this.csr[CSR.MEPC] >>> 0;
+                    this.instret++;
+                    return 1;
+                }
+                if (funct3 === 0 && imm === 0x102) {      // SRET — return from an S-mode trap
+                    const s = this.csr[CSR.MSTATUS];
+                    const spp = (s & MSTATUS_SPP) ? PRIV_S : PRIV_U;
+                    // SIE <- SPIE; SPIE <- 1; SPP <- U(0); priv <- SPP.
+                    let ns = s & ~MSTATUS_SIE & ~MSTATUS_SPP;
+                    if (s & MSTATUS_SPIE) ns |= MSTATUS_SIE;
+                    ns |= MSTATUS_SPIE;
+                    this.csr[CSR.MSTATUS] = ns >>> 0;
+                    this.priv = spp;
+                    this.pc = this.csr[CSR.SEPC] >>> 0;
                     this.instret++;
                     return 1;
                 }
