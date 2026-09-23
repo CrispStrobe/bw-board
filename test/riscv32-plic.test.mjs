@@ -24,7 +24,7 @@ test('clang echoes UART input through an external (PLIC) interrupt', () => {
     assert.equal(m.exitCode, 0);
 });
 
-test('PLIC claim/complete gates MEIP: pending+enabled+priority>threshold raises it', () => {
+test('PLIC gateway is edge-latched: claim clears the latch, complete does not re-pend a still-high line', () => {
     const cpu = new RiscV32(new Uint8Array(0x1000));
     const plic = createPlic(cpu, {});
     const mip = () => cpu.csr[0x344] & INTERRUPT.MEI;
@@ -32,14 +32,21 @@ test('PLIC claim/complete gates MEIP: pending+enabled+priority>threshold raises 
     plic.store32(0x2000, 1 << 1);    // enable source 1
     plic.store32(0x200000, 0);       // threshold 0
     assert.equal(mip(), 0, 'nothing pending yet');
-    plic.setPending(1, true);        // the device raises its line
+    plic.setPending(1, true);        // the device signals an event
     assert.ok(mip(), 'MEIP raised');
     assert.equal(plic.load32(0x200004), 1, 'claim returns the source');
-    assert.equal(mip(), 0, 'in-service source no longer drives MEIP');
+    assert.equal(mip(), 0, 'claim cleared the pending latch -> MEIP drops');
+    // The device has NOT lowered its line (setPending(1,false) never called) — as
+    // e.g. xv6-rv32's virtio_disk_intr, which acks only via claim/complete. On a
+    // SiFive/QEMU gateway, complete does not re-derive pending from that still-high
+    // line, so MEIP stays low. (A level-re-deriving PLIC would storm the hart here.)
     plic.store32(0x200004, 1);       // complete
-    assert.ok(mip(), 'still pending after complete (device has not lowered) -> re-raised');
-    plic.setPending(1, false);       // device lowers
-    assert.equal(mip(), 0, 'line lowered -> MEIP clears');
+    assert.equal(mip(), 0, 'complete does not re-pend a claimed, still-asserted source');
+    // A fresh device event re-latches and interrupts again — repeated I/O still works.
+    plic.setPending(1, true);        // next used-ring post / next keystroke
+    assert.ok(mip(), 'a new setPending(true) event re-raises MEIP');
+    assert.equal(plic.load32(0x200004), 1, 'claim returns the source again');
+    assert.equal(mip(), 0, 'and clears again');
 });
 
 test('a source below the threshold does not interrupt', () => {
