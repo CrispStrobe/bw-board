@@ -1,0 +1,40 @@
+# Build the xv6-rv32 kernel + filesystem on a fresh runner and boot it on
+# RiscV32Machine to the shell prompt. The dev box is too CPU-contended and
+# memory-starved for the ~10^9-instruction boot; a clean CI runner (JIT-warmed
+# V8, no contention) runs it fast. xv6-rv32 exercises the whole supervisor stack
+# at once: M/S/U + Sv32 + RVC + CLINT + PLIC (supervisor context) + NS16550 +
+# a legacy virtio-mmio disk.
+name: xv6 RISC-V boot
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [lane/riscv32-xv6]
+    paths:
+      - 'test/xv6-riscv/**'
+      - '.github/workflows/xv6-riscv.yml'
+      - 'src/riscv32*.js'
+      - 'scripts/riscv-elf.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  boot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bw-board
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install the RISC-V toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-unknown-elf
+      - name: Build xv6-rv32 (kernel + fs.img)
+        run: bash test/xv6-riscv/build.sh
+      - name: Boot xv6 to the shell
+        run: |
+          node --max-old-space-size=512 test/xv6-riscv/boot.mjs \
+            test/xv6-riscv/xv6-rv32/kernel/kernel test/xv6-riscv/xv6-rv32/fs.img \
+            4000000000 900
