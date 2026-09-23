@@ -43,7 +43,12 @@ export class RiscV32Machine {
             // handler: turn ECALL into a real M-mode exception rather than the
             // Linux write/exit ABI. Default off — bare ecall programs are unchanged.
             ecallTraps: config.ecallTraps === true,
-            ramBase: this.ramBase
+            ramBase: this.ramBase,
+            // The machine also acts as the M-mode SBI firmware (an OpenSBI-lite)
+            // for a supervisor kernel: an S-mode ecall is serviced here (console,
+            // timer, shutdown) instead of trapping. Inert for M-mode programs,
+            // which never take the SBI path.
+            sbi: c => this._sbi(c)
         });
         // A CLINT (timer + software interrupt) so an RTOS gets its tick. It maps
         // outside any sane program's RAM footprint, so it's inert for the
@@ -90,6 +95,38 @@ export class RiscV32Machine {
             c.halted = true;
         }
         // other syscalls: a no-op (a0 unchanged) so a fuller libc keeps going
+    }
+
+    /** The M-mode SBI firmware an S-mode kernel calls via ecall. Supports the
+     *  legacy console/timer/shutdown extensions and SBI v0.2 DBCN (debug console)
+     *  and SRST (reset) — enough for a supervisor kernel to print and stop. The
+     *  SBI return convention is a0 = error, a1 = value (0 = SBI_SUCCESS). */
+    _sbi(c) {
+        const eid = c.x[17] >>> 0, fid = c.x[16] >>> 0;   // a7 = extension, a6 = function
+        if (eid === 1) {                                  // legacy console_putchar
+            this._emit(String.fromCharCode(c.x[10] & 0xff));
+            c.x[10] = 0;
+        } else if (eid === 0x4442434E) {                  // DBCN — debug console
+            if (fid === 2) {                              //   write_byte(a0)
+                this._emit(String.fromCharCode(c.x[10] & 0xff)); c.x[10] = 0; c.x[11] = 0;
+            } else if (fid === 0) {                       //   write(num=a0, base_lo=a1)
+                const len = c.x[10] >>> 0, addr = c.x[11] >>> 0;
+                let s = '';
+                for (let i = 0; i < len; i++) s += String.fromCharCode(c.ld8((addr + i) >>> 0) & 0xff);
+                this._emit(s); c.x[10] = 0; c.x[11] = len;
+            } else { c.x[10] = 0; c.x[11] = 0; }          //   read: nothing pending
+        } else if (eid === 8 || eid === 0x53525354) {     // legacy shutdown / SRST reset
+            this.exitCode = 0; c.halted = true;
+        } else if (eid === 0 || eid === 0x54494D45) {     // legacy set_timer / TIME set_timer
+            c.st32(0x02004000, c.x[10] >>> 0);            // program CLINT mtimecmp (lo, hi)
+            c.st32(0x02004004, c.x[11] >>> 0);
+            c.setInterruptPending(1 << 5, false);         // clear the pending S-timer (STIP)
+            c.x[10] = 0;
+        } else if (eid === 0x10) {                        // BASE: probe/impl id — report present
+            c.x[10] = 0; c.x[11] = fid === 0 ? 0x10000 : 1;
+        } else {
+            c.x[10] = -2 | 0;                             // SBI_ERR_NOT_SUPPORTED
+        }
     }
 
     /** Load bytes into RAM at physical address `base` (default the RAM base):
