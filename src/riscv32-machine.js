@@ -18,6 +18,7 @@ import {RiscV32} from './riscv32.js';
 import {createClint} from './riscv32-clint.js';
 import {createUart} from './riscv32-uart.js';
 import {createPlic} from './riscv32-plic.js';
+import {createVirtioBlk} from './riscv32-virtio-blk.js';
 
 const MASK = size => size - 1;
 
@@ -74,6 +75,18 @@ export class RiscV32Machine {
                 onRx: this.plic ? (on => this.plic.setPending(uartIrq, on)) : undefined
             });
             this.cpu.io8.push(this.uart);
+        }
+        // A legacy virtio-mmio block device (default 0x10001000) backed by
+        // `config.virtioDisk` — the root disk a kernel (xv6) mounts. Its
+        // completion interrupt raises PLIC source `virtioIrq` (default 1). Given
+        // only when a disk image is supplied.
+        if (config.virtioDisk && this.plic) {
+            const virtioIrq = config.virtioIrq ?? 1;
+            this.virtio = createVirtioBlk(this.cpu, {
+                base: config.virtioBase, disk: config.virtioDisk,
+                setIrq: on => this.plic.setPending(virtioIrq, on)
+            });
+            this.cpu.io.push(this.virtio);
         }
     }
 

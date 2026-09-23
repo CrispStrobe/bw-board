@@ -161,6 +161,10 @@ export class RiscV32 {
             return;
         }
         if (n === CSR.MTVEC || n === CSR.STVEC) { this.csr[n] = v & ~1; return; }   // force direct base
+        // Only the S-mode interrupts (software/timer/external) are delegatable;
+        // the machine interrupts (bits 3/7/11) are hardwired 0 in mideleg, so an
+        // over-broad write (xv6 sets 0xffff) must not delegate the machine timer.
+        if (n === CSR.MIDELEG) { this.csr[n] = v & (IRQ_SSI | IRQ_STI | IRQ_SEI); return; }
         this.csr[n] = v;
     }
 
@@ -692,6 +696,7 @@ export class RiscV32 {
 }
 
 /** Machine interrupt line bits for mip/mie, for a device (CLINT) to raise. */
-export const INTERRUPT = Object.freeze({MSI: IRQ_MSI, MTI: IRQ_MTI, MEI: IRQ_MEI});
+export const INTERRUPT = Object.freeze({
+    MSI: IRQ_MSI, MTI: IRQ_MTI, MEI: IRQ_MEI, SSI: IRQ_SSI, STI: IRQ_STI, SEI: IRQ_SEI});
 
 export default RiscV32;
