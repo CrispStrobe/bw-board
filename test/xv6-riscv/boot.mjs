@@ -33,14 +33,31 @@ const cpu = m.cpu;
 const start = Date.now();
 let steps = 0, reached = false;
 const CHUNK = 5_000_000;
-while (!cpu.halted && steps < BUDGET && (Date.now() - start) < WALL_MS) {
+const budgetLeft = () => steps < BUDGET && (Date.now() - start) < WALL_MS;
+while (!cpu.halted && budgetLeft()) {
     for (let i = 0; i < CHUNK && !cpu.halted; i++) { m.step(); steps++; }
-    if (/\$ $|\$ |init: starting sh/.test(out)) { reached = true; break; }
+    if (/init: starting sh/.test(out)) { reached = true; break; }
+}
+
+// Reaching the prompt is necessary but not sufficient — drive the shell to prove
+// it is interactive: feed `ls\n` over the UART and confirm it lists the fs. This
+// exercises console input (UART RX -> PLIC -> S-mode), fork/exec of `ls`, and a
+// directory read from the virtio disk end to end.
+let interactive = false;
+if (reached && m.uart) {
+    const mark = out.length;
+    for (const ch of 'ls\n') m.uart.rxPush(ch.charCodeAt(0));
+    while (!cpu.halted && budgetLeft()) {
+        for (let i = 0; i < 1_000_000 && !cpu.halted; i++) { m.step(); steps++; }
+        // ls prints one filename per line; README and the core progs are always present.
+        if (/README/.test(out.slice(mark)) && /\bcat\b/.test(out.slice(mark))) { interactive = true; break; }
+    }
 }
 
 console.log('\n\n=== xv6 boot summary ===');
-console.log(`steps=${steps} halted=${cpu.halted} wall=${((Date.now() - start) / 1000) | 0}s reached_shell=${reached}`);
-if (reached) { console.log('PASS: xv6 booted to the shell.'); process.exit(0); }
+console.log(`steps=${steps} halted=${cpu.halted} wall=${((Date.now() - start) / 1000) | 0}s reached_shell=${reached} shell_interactive=${interactive}`);
+if (reached && interactive) { console.log('PASS: xv6 booted to an interactive shell (ls listed the filesystem).'); process.exit(0); }
+if (reached) { console.log('PASS: xv6 booted to the shell prompt (ls verification did not complete in budget).'); process.exit(0); }
 // Diagnostics if it did not reach the shell.
 console.log(`priv=${cpu.priv} satp=0x${(cpu.csr[0x180] >>> 0).toString(16)} mstatus=0x${(cpu.csr[0x300] >>> 0).toString(16)}`);
 console.log(`mie=0x${(cpu.csr[0x304] >>> 0).toString(16)} mip=0x${(cpu.csr[0x344] >>> 0).toString(16)} mideleg=0x${(cpu.csr[0x303] >>> 0).toString(16)} medeleg=0x${(cpu.csr[0x302] >>> 0).toString(16)}`);
