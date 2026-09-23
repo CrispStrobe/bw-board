@@ -29,6 +29,10 @@ export class RiscV32Machine {
     constructor(config = {}, hooks = {}) {
         this.memSize = config.memSize || (1 << 20);   // 1 MiB, power of two
         this.mem = new Uint8Array(this.memSize);
+        // Base physical address of RAM (default 0). Set to 0x80000000 to boot
+        // images linked at the standard riscv `virt` base (Zephyr qemu_riscv32,
+        // xv6, Linux); `load()` and the CPU translate addresses to 0-based indices.
+        this.ramBase = (config.ramBase ?? 0) >>> 0;
         this.hooks = hooks;
         this.output = '';
         this.exitCode = null;
@@ -38,7 +42,8 @@ export class RiscV32Machine {
             // RTOS images (FreeRTOS) yield via ecall and install their own trap
             // handler: turn ECALL into a real M-mode exception rather than the
             // Linux write/exit ABI. Default off — bare ecall programs are unchanged.
-            ecallTraps: config.ecallTraps === true
+            ecallTraps: config.ecallTraps === true,
+            ramBase: this.ramBase
         });
         // A CLINT (timer + software interrupt) so an RTOS gets its tick. It maps
         // outside any sane program's RAM footprint, so it's inert for the
@@ -87,8 +92,9 @@ export class RiscV32Machine {
         // other syscalls: a no-op (a0 unchanged) so a fuller libc keeps going
     }
 
-    /** Load bytes into RAM at `base` (default 0). */
-    load(bytes, base = 0) { this.mem.set(bytes, base >>> 0); }
+    /** Load bytes into RAM at physical address `base` (default the RAM base):
+     *  translated to a flat index by subtracting `ramBase`. */
+    load(bytes, base = this.ramBase) { this.mem.set(bytes, ((base >>> 0) - this.ramBase) >>> 0); }
 
     reset() { this.cpu.reset(); this.output = ''; this.exitCode = null; }
 

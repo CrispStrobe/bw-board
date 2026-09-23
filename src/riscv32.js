@@ -81,6 +81,13 @@ export class RiscV32 {
         // wants its own trap handler; a bare program leaves this off and keeps the
         // write/exit hook. Off by default, so every existing fixture is untouched.
         this.ecallTraps = !!hooks.ecallTraps;
+        // Base physical address of RAM. `mem` is a flat 0-based array, so an
+        // address is translated to a RAM index by subtracting this. Default 0
+        // (RAM at 0x0, as before). Set to 0x80000000 to run images linked at the
+        // standard riscv `virt` RAM base (Zephyr's qemu_riscv32, xv6, Linux). The
+        // MMIO devices (CLINT/PLIC/UART) sit below it and are routed by absolute
+        // address before RAM, so they are unaffected.
+        this.ramBase = (hooks.ramBase ?? 0) >>> 0;
         this.halted = false;
         this.instret = 0;                 // instructions retired
         this.resvAddr = -1;               // LR/SC reservation (address, or -1)
@@ -271,9 +278,12 @@ export class RiscV32 {
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
 
+    /** Absolute address → flat RAM index (subtract the RAM base, wrap to size). */
+    _ram(u) { return ((u - this.ramBase) >>> 0) & (this.mem.length - 1); }
+
     ld8(a)  {
         const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
-        return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[a & (this.mem.length - 1)];
+        return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[this._ram(u)];
     }
     ld16(a) { return this.ld8(a) | (this.ld8(a + 1) << 8); }
     ld32(a) {
@@ -283,7 +293,7 @@ export class RiscV32 {
     st8(a, v)  {
         const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
         if (d) { d.store8((u - d.base) >>> 0, v & 0xff); return; }
-        this.mem[a & (this.mem.length - 1)] = v & 0xff;
+        this.mem[this._ram(u)] = v & 0xff;
     }
     st16(a, v) { this.st8(a, v); this.st8(a + 1, v >>> 8); }
     st32(a, v) {
