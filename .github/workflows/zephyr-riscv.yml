@@ -1,0 +1,73 @@
+# Cross-build a real Zephyr image for qemu_riscv32 and boot it on RiscV32Machine.
+#
+# The bw-board dev box cannot host the Zephyr SDK (disk/RAM), so the heavy build
+# runs here, in the Zephyr CI container, and a light second job boots the result
+# on our emulated SoC (RV32IMA + CLINT + UART, RAM at 0x80000000 via ramBase).
+# Zephyr's qemu_riscv32 board is an exact match for that map, so a stock build
+# boots unmodified. The built image is also uploaded so a fixture + a committed
+# boot test can follow (the FreeRTOS/RT-Thread pattern, but built on CI).
+name: Zephyr RISC-V boot
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [lane/riscv32-zephyr]
+    paths:
+      - 'test/zephyr-riscv/**'
+      - '.github/workflows/zephyr-riscv.yml'
+      - 'src/riscv32*.js'
+      - 'scripts/riscv-elf.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.26.14
+      options: --user root
+    env:
+      ZEPHYR_TOOLCHAIN_VARIANT: zephyr
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Zephyr workspace (v3.7.0 LTS)
+        run: |
+          west init --mr v3.7.0 -m https://github.com/zephyrproject-rtos/zephyr zephyrproject
+          cd zephyrproject
+          west update --narrow -o=--depth=1
+          west zephyr-export
+      - name: Build samples/synchronization for qemu_riscv32
+        run: |
+          cd zephyrproject
+          west build -b qemu_riscv32 zephyr/samples/synchronization -d build
+          ls -la build/zephyr/zephyr.elf
+      - name: Stage the image (elf + base64)
+        run: |
+          mkdir -p out
+          cp zephyrproject/build/zephyr/zephyr.elf out/zephyr.elf
+          base64 -w0 out/zephyr.elf > out/zephyr.elf.b64
+          echo "b64 bytes: $(wc -c < out/zephyr.elf.b64)"
+      - name: Upload the image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: zephyr-qemu-riscv32
+          path: out/
+
+  boot:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bw-board
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Download the built image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: zephyr-qemu-riscv32
+          path: out
+      - name: Boot Zephyr on the emulated RISC-V SoC
+        run: node test/zephyr-riscv/boot.mjs out/zephyr.elf
