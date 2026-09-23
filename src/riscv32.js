@@ -12,8 +12,11 @@
  * three privilege levels (M/S/U), trap delegation (medeleg/mideleg → stvec), the
  * S trap CSRs (sstatus/sie/sip/stvec/sepc/scause/stval/satp) as masked views of
  * their M counterparts, SRET, and an SBI firmware hook for supervisor ecalls — so
- * a supervisor kernel runs. The Sv32 page-table walk (paging) is the next
- * increment. exactstep was the one-step decode reference.
+ * a supervisor kernel runs, and Sv32 paging: satp switches on a two-level
+ * page-table walk (`_translate`) applied to every fetch/load/store when the
+ * effective privilege is S or U — 4 KiB pages and 4 MiB superpages, R/W/X + U +
+ * SUM/MXR checks, A/D updates, and instruction/load/store page faults. M-mode
+ * and satp=Bare are an identity map. exactstep was the one-step decode reference.
  *
  * Memory is a flat `Uint8Array` the caller owns; the CPU reads and writes it
  * little-endian. `ecall`/`ebreak` call an injectable hook so a test (or a later
@@ -59,6 +62,8 @@ const IRQ_SSI = 1 << 1, IRQ_STI = 1 << 5, IRQ_SEI = 1 << 9;
 const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
 // Synchronous exception causes: environment call from U/S/M mode.
 const CAUSE_ECALL_U = 8, CAUSE_ECALL_S = 9, CAUSE_ECALL_M = 11;
+// Sv32 page-fault causes: instruction / load / store-or-AMO.
+const CAUSE_FETCH_PF = 12, CAUSE_LOAD_PF = 13, CAUSE_STORE_PF = 15;
 
 export class RiscV32 {
     /**
@@ -207,6 +212,61 @@ export class RiscV32 {
         return false;
     }
 
+    // ── Sv32 address translation ────────────────────────────────────
+    /** Effective privilege for an access — MPRV redirects loads/stores (not the
+     *  instruction fetch) to the previous privilege in mstatus.MPP. */
+    _effPriv(access) {
+        if (access !== 'fetch' && (this.csr[CSR.MSTATUS] & (1 << 17)))
+            return (this.csr[CSR.MSTATUS] & MSTATUS_MPP) >>> 11;
+        return this.priv;
+    }
+
+    /** Translate a virtual address via an Sv32 two-level page-table walk. Returns
+     *  the physical address, or null after raising the appropriate page fault.
+     *  Paging applies only when satp.MODE = Sv32 and the effective privilege is S
+     *  or U; M-mode and MODE=Bare are an identity map. `access` ∈ fetch|load|store.
+     *  The walk reads/writes PTEs through the physical ld32/st32 (no recursion),
+     *  handles 4 KiB pages and 4 MiB superpages, checks R/W/X + U/SUM/MXR, and
+     *  sets the A (and, on a store, D) bits. */
+    _translate(va, access) {
+        va >>>= 0;
+        const satp = this.csr[CSR.SATP] >>> 0;
+        const eff = this._effPriv(access);
+        if ((satp >>> 31) === 0 || eff > PRIV_S) return va;          // Bare / M-mode: identity
+        const cause = access === 'fetch' ? CAUSE_FETCH_PF : access === 'store' ? CAUSE_STORE_PF : CAUSE_LOAD_PF;
+        const fault = () => { this._trap(cause, false, va); return null; };
+        const vpn1 = (va >>> 22) & 0x3ff, vpn0 = (va >>> 12) & 0x3ff, off = va & 0xfff;
+        const isLeaf = p => (p & 0xa) !== 0;                         // R or X set
+        const bad = p => !(p & 1) || ((p & 0x4) && !(p & 0x2));      // V=0, or W without R (reserved)
+        // Level 1.
+        let pteAddr = ((satp & 0x3fffff) * 4096 + vpn1 * 4) >>> 0;
+        let pte = this.ld32(pteAddr) >>> 0;
+        let phys;
+        if (bad(pte)) return fault();
+        if (isLeaf(pte)) {
+            if (((pte >>> 10) & 0x3ff) !== 0) return fault();        // misaligned superpage (PPN[0] must be 0)
+            phys = (((pte >>> 20) & 0xfff) * 0x400000 + (va & 0x3fffff)) >>> 0;   // 4 MiB superpage
+        } else {                                                     // pointer → level 0
+            pteAddr = (((pte >>> 10) & 0x3fffff) * 4096 + vpn0 * 4) >>> 0;
+            pte = this.ld32(pteAddr) >>> 0;
+            if (bad(pte) || !isLeaf(pte)) return fault();            // must be a leaf at level 0
+            phys = (((pte >>> 10) & 0x3fffff) * 4096 + off) >>> 0;
+        }
+        // Permission + privilege checks on the leaf PTE.
+        const R = pte & 2, W = pte & 4, X = pte & 8, Uf = pte & 0x10;
+        const ms = this.csr[CSR.MSTATUS];
+        const permit = access === 'fetch' ? X : access === 'store' ? W : (R || (X && (ms & (1 << 19)))); // MXR
+        if (!permit) return fault();
+        if (eff === PRIV_U && !Uf) return fault();
+        // S-mode may not touch a U-page — SUM lifts that for loads/stores, but
+        // never for an instruction fetch (S can never execute a user page).
+        if (eff === PRIV_S && Uf && !(access !== 'fetch' && (ms & (1 << 18)))) return fault();
+        // Accessed / Dirty (hardware sets them here rather than faulting).
+        const np = (pte | 0x40 | (access === 'store' ? 0x80 : 0)) >>> 0;
+        if (np !== pte) this.st32(pteAddr, np);
+        return phys;
+    }
+
     // ── little-endian memory ────────────────────────────────────────
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
@@ -244,7 +304,9 @@ export class RiscV32 {
         // A pending, enabled machine interrupt is taken before the next fetch.
         if (this._takeInterruptIfPending()) { this.instret++; return 1; }
         const pc = this.pc >>> 0;
-        const inst = this.ld32(pc);
+        const pcPhys = this._translate(pc, 'fetch');
+        if (pcPhys === null) { this.instret++; return 1; }   // instruction page fault taken
+        const inst = this.ld32(pcPhys);
         const opcode = inst & 0x7f;
         const rd = (inst >>> 7) & 0x1f;
         const funct3 = (inst >>> 12) & 0x7;
@@ -290,7 +352,9 @@ export class RiscV32 {
                 break;
             }
             case OPC.LOAD: {
-                const addr = (a + sext(inst >>> 20, 12)) >>> 0;
+                const va = (a + sext(inst >>> 20, 12)) >>> 0;
+                const addr = this._translate(va, 'load');
+                if (addr === null) { this.instret++; return 1; }        // load page fault taken
                 switch (funct3) {
                     case 0: this.set(rd, sext(this.ld8(addr), 8)); break;   // LB
                     case 1: this.set(rd, sext(this.ld16(addr), 16)); break; // LH
@@ -303,7 +367,9 @@ export class RiscV32 {
             }
             case OPC.STORE: {
                 const imm = sext(((inst >>> 25) & 0x7f) << 5 | ((inst >>> 7) & 0x1f), 12);
-                const addr = (a + imm) >>> 0;
+                const va = (a + imm) >>> 0;
+                const addr = this._translate(va, 'store');
+                if (addr === null) { this.instret++; return 1; }        // store page fault taken
                 switch (funct3) {
                     case 0: this.st8(addr, b); break;    // SB
                     case 1: this.st16(addr, b); break;   // SH
@@ -347,7 +413,8 @@ export class RiscV32 {
             case OPC.AMO: {
                 if (funct3 !== 0x2) return this._bad(inst);   // .W only (RV32A)
                 const funct5 = (inst >>> 27) & 0x1f;
-                const addr = a >>> 0;                          // rs1 is the address
+                const addr = this._translate(a >>> 0, funct5 === 0x02 ? 'load' : 'store'); // rs1 is the address
+                if (addr === null) { this.instret++; return 1; }   // page fault taken
                 if (funct5 === 0x02) {                         // LR.W
                     this.set(rd, this.ld32(addr) | 0);
                     this.resvAddr = addr;
