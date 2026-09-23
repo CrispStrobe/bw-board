@@ -22,6 +22,19 @@ printf '\n%%.o: %%.S\n\t$(CC) $(CFLAGS) -c -o $@ $<\n' >> Makefile
 # 16 MiB of RAM is plenty for the boot and keeps freerange fast.
 sed -i 's/#define PHYSTOP (KERNBASE + 128\*1024\*1024)/#define PHYSTOP (KERNBASE + 16*1024*1024)/' kernel/memlayout.h
 
+# Our riscv64 toolchain emits a .riscv.attributes section; the linker gives it its
+# own RISCV_ATTRIBUTES program header, so each user ELF has two phdrs. But xv6-rv32
+# exec strides the program-header table by sizeof(struct proghdr)==28 while the
+# ELF's e_phentsize is 32, so the *second* phdr is read 4 bytes misaligned — exec
+# then parses the LOAD segment's file offset (0x74) as its vaddr, finds it not
+# page-aligned, and rejects /init (=> "panic: init exiting"). Discard the
+# attributes section at link time so each user program links to a single LOAD
+# segment, exactly as the original riscv32-unknown-elf toolchain produced. The
+# sed only touches the user-program link lines (`-Ttext 0 -o`); the kernel link
+# uses -T kernel.ld and is left alone.
+printf 'SECTIONS { /DISCARD/ : { *(.riscv.attributes) } }\nINSERT AFTER .text;\n' > user/discard-attrs.ld
+sed -i 's|-Ttext 0 -o|-Ttext 0 -T $U/discard-attrs.ld -o|g' Makefile
+
 TP="${TOOLPREFIX:-riscv64-unknown-elf-}"
 make clean >/dev/null 2>&1 || true
 make kernel/kernel fs.img TOOLPREFIX="$TP"
