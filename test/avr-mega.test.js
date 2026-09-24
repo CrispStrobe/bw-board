@@ -139,3 +139,39 @@ test('Mega: all 11 ports instantiated (A through L minus I)', () => {
   const portKeys = Object.keys(MEGA.ports);
   assert.deepEqual(portKeys.sort(), ['A','B','C','D','E','F','G','H','J','K','L']);
 });
+
+// ── The stack lives at RAMEND = 0x21FF ─────────────────────────────────────
+//
+// The 2560's SRAM does not start at 0x100 as the 328P's does: 0x100-0x1FF is
+// EXTENDED I/O (ports H-L, timers 3-5), SRAM is 0x200-0x21FF, and avr-libc's
+// startup sets SP to RAMEND = 0x21FF. avr8js sizes data space as
+// sramBytes + 0x100, so sramBytes 8192 ended it at 0x20FF: every push to the
+// real stack was dropped and every pop read 0, and the first RET jumped to the
+// reset vector. Any compiled Mega program that called a function reset-looped.
+//
+// Hand-assembled, doing exactly what the C startup does, then one call:
+//   word 0: LDI r28,0xFF  1110 1111 1100 1111 = 0xEFCF
+//   word 1: LDI r29,0x21  1110 0010 1101 0001 = 0xE2D1
+//   word 2: OUT SPL,r28   1011 1111 1100 1101 = 0xBFCD  (SPL = IO 0x3D)
+//   word 3: OUT SPH,r29   1011 1111 1101 1110 = 0xBFDE  (SPH = IO 0x3E)
+//   word 4: RCALL .+2     1101 0000 0000 0010 = 0xD002  (-> word 7)
+//   word 5: LDI r16,0x42  1110 0100 0000 0010 = 0xE402  (reached only by RET)
+//   word 6: RJMP .-1      1100 1111 1111 1111 = 0xCFFF  (park)
+//   word 7: RET           1001 0101 0000 1000 = 0x9508
+const CALL_FROM_RAMEND = new Uint16Array([
+  0xEFCF, 0xE2D1, 0xBFCD, 0xBFDE, 0xD002, 0xE402, 0xCFFF, 0x9508,
+]);
+
+test('Mega: data space reaches RAMEND 0x21FF (SRAM sits above extended I/O)', () => {
+  const a = createAvr8jsAdapter({ chip: 'atmega2560' });
+  assert.ok(a.cpu.data.length > 0x21FF,
+    `data space ends at 0x${(a.cpu.data.length - 1).toString(16)}, below RAMEND 0x21ff`);
+});
+
+test('Mega: a call with SP at RAMEND returns to its caller', () => {
+  const a = createAvr8jsAdapter({ chip: 'atmega2560', program: CALL_FROM_RAMEND });
+  a.attachBoard(stubBoard());
+  a.advanceNs(10_000);                       // 160 cycles: far more than needed
+  assert.equal(a.cpu.data[16], 0x42, 'RET did not come back to the instruction after RCALL');
+  assert.equal(a.cpu.pc, 6, `parked at word ${a.cpu.pc}, not the RJMP after the call`);
+});

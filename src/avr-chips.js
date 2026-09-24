@@ -272,7 +272,13 @@ const ATMEGA2560_SPI = {
 export const ATMEGA2560 = {
   name: 'ATmega2560',
   flashWords: 0x20000,  // 256 KB = 128K words
-  sramBytes: 8192,
+  // avr8js's data space is sramBytes + 0x100 (registers and standard I/O).
+  // The 2560 has a SECOND 0x100 of extended I/O (ports H-L, timers 3-5) before
+  // its 8 KB of SRAM, which therefore runs 0x200-0x21FF, and avr-libc's
+  // startup puts the stack at RAMEND = 0x21FF. At 8192 the data space ended
+  // at 0x20FF: stack pushes were dropped, pops read 0, and the first RET of
+  // any compiled program jumped to the reset vector.
+  sramBytes: 8192 + 0x100,
   clockHz: 16_000_000,
   vcc: 5.0,
   pins: ATMEGA2560_PINS,
