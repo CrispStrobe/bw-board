@@ -148,11 +148,25 @@ export function createAvr8jsAdapter(opts = {}) {
 
   // ── USART ──
   let serialListener = null;
+  // Bytes sent TO the program, waiting for the receiver. One at a time,
+  // through avr8js's own writeByte, so each arrives at the programmed baud
+  // rate and sets RXC exactly as a real frame would; the next is offered when
+  // the previous completes. Bytes sent before the program enables its
+  // receiver (Serial.begin not yet called) wait here rather than vanish.
+  const rxQueue = [];
+  let usart = null;
+  const pumpRx = () => {
+    while (usart && rxQueue.length && usart.rxEnable && !usart.rxBusy) {
+      if (!usart.writeByte(rxQueue[0])) break;
+      rxQueue.shift();
+    }
+  };
   if (chip.usart) {
-    const usart = new AVRUSART(cpu, chip.usart, clockHz);
+    usart = new AVRUSART(cpu, chip.usart, clockHz);
     usart.onByteTransmit = (byte) => {
       if (serialListener) serialListener(byte);
     };
+    usart.onRxComplete = pumpRx;
   }
 
   // ── TWI (I2C hardware peripheral) ──
@@ -221,6 +235,9 @@ export function createAvr8jsAdapter(opts = {}) {
   /** Sync input pins from board → CPU (buttons, external signals). */
   let inInputSync = false;
   function syncInputs() {
+    // Serial bytes waiting for the receiver are an input too, re-offered at
+    // the same cadence -- the debug loop bypasses advanceNs and calls this.
+    pumpRx();
     if (!board || !board.readPin) return;
     inInputSync = true;
     try {
@@ -265,6 +282,20 @@ export function createAvr8jsAdapter(opts = {}) {
     /** Receive every byte the program transmits on UART0 (print output).
      *  No-op on chips without USART (ATtiny85). */
     onSerial(cb) { serialListener = cb; },
+
+    /**
+     * Send bytes TO the program's UART0 (what a serial monitor types). Queued
+     * and delivered at the programmed baud rate; returns false on a chip
+     * without a USART (ATtiny85/88), true otherwise. Not recorded: the AVR
+     * debug target declares no replay surface, so nothing claims to replay it.
+     */
+    sendSerial(byteOrBytes) {
+      if (!usart) return false;
+      const bytes = typeof byteOrBytes === 'number' ? [byteOrBytes] : Array.from(byteOrBytes);
+      for (const b of bytes) rxQueue.push(b & 0xff);
+      pumpRx();
+      return true;
+    },
 
     /**
      * Observe instruction retires, data accesses and idle during ORDINARY runs.
