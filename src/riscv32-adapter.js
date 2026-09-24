@@ -15,6 +15,12 @@
  */
 import {RiscV32Machine} from './riscv32-machine.js';
 
+// A console C program (the compile routes' output) wants more room than a bare
+// demo: picolibc's malloc heap, a real stack, and headroom between them. 8 MiB
+// is generous for a learner's program and cheap to allocate; a caller can still
+// pass its own `config.memSize` (an OS image at the qemu `virt` base does).
+const DEFAULT_RISCV_MEM = 8 * 1024 * 1024;
+
 /**
  * @param {{image?: {segments: {addr:number,bytes:Uint8Array}[], entry:number},
  *          config?: object}} [opts]
@@ -22,14 +28,15 @@ import {RiscV32Machine} from './riscv32-machine.js';
 export function createRiscV32Adapter(opts = {}) {
     let serialListener = null;
     const stats = {serialCount: 0, stepCount: 0};
-    const machine = new RiscV32Machine(opts.config || {}, {
+    const machine = new RiscV32Machine({memSize: DEFAULT_RISCV_MEM, ...(opts.config || {})}, {
         onSerial: b => { stats.serialCount++; if (serialListener) serialListener(b & 0xff); }
     });
 
-    // Load a linked program image (segments + entry) if one was given.
-    if (opts.image && Array.isArray(opts.image.segments)) {
-        for (const {addr, bytes} of opts.image.segments) machine.load(bytes, addr);
-        if (typeof opts.image.entry === 'number') machine.cpu.pc = opts.image.entry >>> 0;
+    // Boot a linked program image (segments + entry) if one was given — with a
+    // proper stack + argc/argv, so a Linux-ABI image (shecc) starts correctly
+    // rather than relying on address wraparound from sp = 0.
+    if (opts.image && Array.isArray(opts.image.segments) && typeof opts.image.entry === 'number') {
+        machine.loadImage(opts.image);
     }
 
     let tNs = 0;
