@@ -146,6 +146,26 @@ export class RiscV32Machine {
      *  translated to a flat index by subtracting `ramBase`. */
     load(bytes, base = this.ramBase) { this.mem.set(bytes, ((base >>> 0) - this.ramBase) >>> 0); }
 
+    /**
+     * Boot a linked `{entry, segments}` image the way an OS would hand a program
+     * control: place each segment, set pc = entry, and give it a valid stack —
+     * `sp` near the top of RAM with `argc`/`argv` (= 0) laid out where a
+     * Linux-style `_start` reads them. shecc emits exactly that ABI and does NOT
+     * set its own sp, so without this it would run with sp = 0; a program that
+     * sets its own sp (a picolibc/newlib crt0, an RTOS) simply overwrites it, so
+     * doing this unconditionally is safe for every image. `entrySp` overrides
+     * the stack top when a caller wants a specific layout.
+     */
+    loadImage(image, entrySp) {
+        for (const {addr, bytes} of image.segments) this.load(bytes, addr);
+        this.cpu.pc = (image.entry >>> 0);
+        const sp = ((entrySp ?? (this.ramBase + this.memSize - 16)) >>> 0);
+        this.cpu.x[2] = sp | 0;                                   // sp
+        // argc = 0, argv = NULL, envp = NULL where _start expects them.
+        for (let i = 0; i < 16; i++) this.mem[(sp + i - this.ramBase) & MASK(this.memSize)] = 0;
+        return this;
+    }
+
     reset() { this.cpu.reset(); this.output = ''; this.exitCode = null; }
 
     /** One instruction; returns instructions retired (0 when halted). Advances
