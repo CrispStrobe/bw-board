@@ -163,6 +163,22 @@ export function loadExecSegments(elf) {
 }
 
 /**
+ * Turn a **fully-linked** ELF32 executable into a loadable image: its entry
+ * point plus its PT_LOAD segments (via {@link loadExecSegments}). This is the
+ * serialisable form — `{entry, segments}` — that a compiler front end (the
+ * `riscv-cc-wasm` C compiler, or a hosted compile service) returns and the
+ * machine boots. Keeping the one exec-ELF reader here means the compiler and
+ * `loadElfInto` never disagree about where a program loads.
+ *
+ * @param {Uint8Array} elf the linked ELF32 executable bytes
+ * @returns {{entry:number, segments:{addr:number, bytes:Uint8Array}[]}}
+ */
+export function execElfToImage(elf) {
+    const dv = new DataView(elf.buffer, elf.byteOffset, elf.byteLength);
+    return {entry: dv.getUint32(0x18, true) >>> 0, segments: loadExecSegments(elf)};
+}
+
+/**
  * Load an ELF into a RiscV32Machine and set its entry. Auto-detects the kind:
  * a relocatable object (ET_REL) is linked via {@link linkElf}; a fully-linked
  * executable (ET_EXEC) is loaded by its program headers via {@link loadExecSegments}.
@@ -171,9 +187,8 @@ export function loadElfInto(machine, obj, opts = {}) {
     const dv = new DataView(obj.buffer, obj.byteOffset, obj.byteLength);
     const etype = dv.getUint16(0x10, true);
     if (etype === 2) {                                            // ET_EXEC — already linked
-        const segments = loadExecSegments(obj);
+        const {entry, segments} = execElfToImage(obj);
         for (const {addr, bytes} of segments) machine.load(bytes, addr);
-        const entry = dv.getUint32(0x18, true) >>> 0;
         machine.cpu.pc = entry;
         return {entry, symbols: new Map()};
     }
