@@ -73,12 +73,16 @@ rejects a program, offers a one-click retry on the server.
 
 ## What is NOT here
 
-- **C++** is not usefully supported by the hosted bundle: Debian's
-  `gcc-riscv64-unknown-elf` is built `--disable-libstdcxx`, so there is no target
-  `libstdc++` (no STL, no `<iostream>`, no `<cXXX>` headers) for rv32. Bare
-  freestanding C++ (classes, templates, C headers) compiles, but without the
-  standard library it is a poor fit for the audience; real C++ would need a
-  `libstdc++` built for `rv32imac/ilp32`, a separate effort.
+- **C++ is not offered on RISC-V, by design** — and RISC-V is the wrong place
+  for it. Debian's `gcc-riscv64-unknown-elf` is built `--disable-libstdcxx`, so
+  there is no target `libstdc++` (no STL, no `<iostream>`, no `<cXXX>` headers)
+  for rv32; bare freestanding C++ compiles, but without the standard library it
+  misleads a learner, and this machine is console-only, so C++'s hardware idioms
+  have nothing to drive. **Where C++ belongs is AVR/Arduino** (in stc-compiler):
+  Arduino *is* C++, `avr-g++`/`cc1plus` are already in the Debian bundle (just
+  trimmed), ATTinyCore is C++, avr8js models real peripherals, and no STL is
+  *expected* on AVR — so nothing misleads. That is the planned home for a C++
+  lane; RISC-V stays C.
 - **A stdin/console-input path** — the ecall ABI is write/exit only today; a
   UART/HTIF stdin is future work.
 
