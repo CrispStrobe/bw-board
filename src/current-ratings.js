@@ -142,6 +142,12 @@ const LOCAL_ONLY = {
   gate_not: { chip_mA: 0, supply_mA: 0.08 }, gate_nand: { chip_mA: 0, supply_mA: 0.08 },
   gate_nor: { chip_mA: 0, supply_mA: 0.08 }, gate_xor: { chip_mA: 0, supply_mA: 0.08 },
   dff: { chip_mA: 0, supply_mA: 0.08 }, jkff: { chip_mA: 0, supply_mA: 0.08 },
+  // MakeCode boards (board-kinds.js). Like arduino_uno, a board is not a
+  // consumer of the chip-pin budget. Its own supply draw is NOT yet rated —
+  // null, not a guessed number, the same state bw-parts gives `microbit`.
+  calliopemini:               { chip_mA: 0, supply_mA: null },
+  circuit_playground_express: { chip_mA: 0, supply_mA: null },
+  pybadge:                    { chip_mA: 0, supply_mA: null },
 };
 
 // ─── Build the consumed ratings ─────────────────────────────────────────
