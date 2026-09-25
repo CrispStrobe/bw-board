@@ -21,6 +21,12 @@ import {createPlic} from './riscv32-plic.js';
 import {createVirtioBlk} from './riscv32-virtio-blk.js';
 
 const MASK = size => size - 1;
+const IRQ_SSIP = 1 << 1, IRQ_STIP = 1 << 5, IRQ_MTIP = 1 << 7;
+const SBI_EXT_BASE = 0x10, SBI_EXT_TIME = 0x54494D45, SBI_EXT_IPI = 0x735049, SBI_EXT_RFENCE = 0x52464E43,
+    SBI_EXT_HSM = 0x48534D, SBI_EXT_SRST = 0x53525354, SBI_EXT_DBCN = 0x4442434E;
+const SBI_EXTENSIONS = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, SBI_EXT_BASE, SBI_EXT_TIME, SBI_EXT_IPI,
+    SBI_EXT_RFENCE, SBI_EXT_HSM, SBI_EXT_SRST, SBI_EXT_DBCN]);
+const SBI_ERR_NOT_SUPPORTED = -2, SBI_ERR_INVALID_PARAM = -3, SBI_ERR_ALREADY_AVAILABLE = -6;
 
 export class RiscV32Machine {
     /**
@@ -37,6 +43,9 @@ export class RiscV32Machine {
         this.hooks = hooks;
         this.output = '';
         this.exitCode = null;
+        this._rxQueue = [];            // legacy SBI getchar input
+        this._sbiTimer = false;        // SBI set_timer armed: forward MTIP to STIP
+        this.idleSkipped = 0;          // mtime ticks skipped by WFI idle skips
         this.cpu = new RiscV32(this.mem, {
             resetPc: config.resetPc || 0,
             ecall: c => this._syscall(c),
@@ -112,36 +121,95 @@ export class RiscV32Machine {
         // other syscalls: a no-op (a0 unchanged) so a fuller libc keeps going
     }
 
-    /** The M-mode SBI firmware an S-mode kernel calls via ecall. Supports the
-     *  legacy console/timer/shutdown extensions and SBI v0.2 DBCN (debug console)
-     *  and SRST (reset) — enough for a supervisor kernel to print and stop. The
-     *  SBI return convention is a0 = error, a1 = value (0 = SBI_SUCCESS). */
+    /** The M-mode SBI firmware an S-mode kernel calls via ecall — an
+     *  in-emulator stand-in for OpenSBI. SBI v0.3 BASE (with an honest
+     *  probe_extension), TIME, IPI, RFENCE, HSM, SRST and DBCN, plus the legacy
+     *  v0.1 calls (set_timer, console putchar/getchar, IPI, fences, shutdown).
+     *  Return convention: a0 = error (0 = SBI_SUCCESS), a1 = value. */
     _sbi(c) {
         const eid = c.x[17] >>> 0, fid = c.x[16] >>> 0;   // a7 = extension, a6 = function
-        if (eid === 1) {                                  // legacy console_putchar
-            this._emit(String.fromCharCode(c.x[10] & 0xff));
-            c.x[10] = 0;
-        } else if (eid === 0x4442434E) {                  // DBCN — debug console
-            if (fid === 2) {                              //   write_byte(a0)
-                this._emit(String.fromCharCode(c.x[10] & 0xff)); c.x[10] = 0; c.x[11] = 0;
-            } else if (fid === 0) {                       //   write(num=a0, base_lo=a1)
-                const len = c.x[10] >>> 0, addr = c.x[11] >>> 0;
-                let s = '';
-                for (let i = 0; i < len; i++) s += String.fromCharCode(c.ld8((addr + i) >>> 0) & 0xff);
-                this._emit(s); c.x[10] = 0; c.x[11] = len;
-            } else { c.x[10] = 0; c.x[11] = 0; }          //   read: nothing pending
-        } else if (eid === 8 || eid === 0x53525354) {     // legacy shutdown / SRST reset
-            this.exitCode = 0; c.halted = true;
-        } else if (eid === 0 || eid === 0x54494D45) {     // legacy set_timer / TIME set_timer
-            c.st32(0x02004000, c.x[10] >>> 0);            // program CLINT mtimecmp (lo, hi)
-            c.st32(0x02004004, c.x[11] >>> 0);
-            c.setInterruptPending(1 << 5, false);         // clear the pending S-timer (STIP)
-            c.x[10] = 0;
-        } else if (eid === 0x10) {                        // BASE: probe/impl id — report present
-            c.x[10] = 0; c.x[11] = fid === 0 ? 0x10000 : 1;
-        } else {
-            c.x[10] = -2 | 0;                             // SBI_ERR_NOT_SUPPORTED
+        const a0 = c.x[10] >>> 0, a1 = c.x[11] >>> 0;
+        const ok = (v = 0) => { c.x[10] = 0; c.x[11] = v | 0; };
+        const err = e => { c.x[10] = e | 0; c.x[11] = 0; };
+        switch (eid) {
+            case 0x00: this._sbiSetTimer(a0, a1); c.x[10] = 0; return;           // legacy set_timer
+            case 0x01: this._emit(String.fromCharCode(a0 & 0xff)); c.x[10] = 0; return;   // legacy putchar
+            case 0x02: c.x[10] = this._rxQueue.length ? this._rxQueue.shift() : -1; return;   // legacy getchar
+            case 0x03: c.setInterruptPending(IRQ_SSIP, false); c.x[10] = 0; return;            // legacy clear_ipi
+            case 0x04: c.setInterruptPending(IRQ_SSIP, true); c.x[10] = 0; return;             // legacy send_ipi (self)
+            case 0x05: case 0x06: case 0x07: c._tlbFlush && c._tlbFlush(); c.x[10] = 0; return; // legacy fences
+            case 0x08: this.exitCode = 0; c.halted = true; return;              // legacy shutdown
+            case SBI_EXT_BASE:
+                switch (fid) {
+                    case 0: return ok(0x3);                                     // spec v0.3 (adds SRST)
+                    case 1: return ok(0x62776273);                              // impl id ('bwbs')
+                    case 2: return ok(1);                                       // impl version
+                    case 3: return ok(SBI_EXTENSIONS.has(a0) ? 1 : 0);          // probe_extension
+                    case 4: case 5: case 6: return ok(0);                       // mvendorid / marchid / mimpid
+                    default: return err(SBI_ERR_NOT_SUPPORTED);
+                }
+            case SBI_EXT_TIME:
+                if (fid === 0) { this._sbiSetTimer(a0, a1); return ok(); }
+                return err(SBI_ERR_NOT_SUPPORTED);
+            case SBI_EXT_IPI:                                                   // one hart: an IPI to ourselves
+                if (fid === 0) { if (this._hartSelected(a0, a1)) c.setInterruptPending(IRQ_SSIP, true); return ok(); }
+                return err(SBI_ERR_NOT_SUPPORTED);
+            case SBI_EXT_RFENCE:                                                // fence.i / sfence.vma (any range): flush
+                if (fid <= 6) { if (c._tlbFlush) c._tlbFlush(); return ok(); }
+                return err(SBI_ERR_NOT_SUPPORTED);
+            case SBI_EXT_HSM:
+                if (fid === 2) return a0 === 0 ? ok(0) : err(SBI_ERR_INVALID_PARAM);   // hart_get_status: started
+                if (fid === 0) return err(a0 === 0 ? SBI_ERR_ALREADY_AVAILABLE : SBI_ERR_INVALID_PARAM);
+                return err(SBI_ERR_NOT_SUPPORTED);
+            case SBI_EXT_SRST: this.exitCode = a1 | 0; c.halted = true; return ok();   // reset: halt
+            case SBI_EXT_DBCN:
+                if (fid === 2) { this._emit(String.fromCharCode(a0 & 0xff)); return ok(); }   // write_byte
+                if (fid === 0) {                                                // write(num, base_lo)
+                    let s = '';
+                    for (let i = 0; i < a0; i++) s += String.fromCharCode(c.ld8((a1 + i) >>> 0) & 0xff);
+                    this._emit(s); return ok(a0);
+                }
+                return ok(0);                                                   // read: nothing
+            default: return err(SBI_ERR_NOT_SUPPORTED);
         }
+    }
+
+    /** IPI hart mask (hart_mask, hart_mask_base): is hart 0 selected? */
+    _hartSelected(mask, maskBase) { return (maskBase >>> 0) === 0xffffffff || (maskBase === 0 && (mask & 1)); }
+
+    /** SBI set_timer: program mtimecmp and, like OpenSBI, forward the machine
+     *  timer to the supervisor — STIP is cleared now and raised by
+     *  _clintEvent() when mtime reaches the new compare value. */
+    _sbiSetTimer(lo, hi) {
+        const c = this.cpu;
+        c.setInterruptPending(IRQ_STIP, false);
+        if (!this.clint) return;
+        this._sbiTimer = true;
+        this.clint.store32(0x4004, 0xffffffff);          // no transient match while the halves change
+        this.clint.store32(0x4000, lo >>> 0);
+        this.clint.store32(0x4004, hi >>> 0);
+        this._clintEvent();
+    }
+
+    /** The CLINT reached its deadline (or was written): re-derive its lines, and
+     *  if the SBI timer is armed and MTIP is now up, raise STIP (once). */
+    _clintEvent() {
+        this.clint.sync();
+        if (this._sbiTimer && (this.cpu.csr[0x344] & IRQ_MTIP)) {
+            this._sbiTimer = false;
+            this.cpu.setInterruptPending(IRQ_STIP, true);
+        }
+    }
+
+    /** WFI with nothing pending and enabled: jump mtime to the timer deadline
+     *  instead of spinning the idle loop through it (an idle skip). mtime then
+     *  runs ahead of the retired-instruction count by the time skipped. */
+    _idleSkip() {
+        const c = this.cpu, cl = this.clint;
+        if (!cl || (c.csr[0x344] & c.csr[0x304]) !== 0 || cl.deadline === Infinity) return;
+        const d = cl.deadline - c.instret;
+        if (d > 0) { cl.tick(d); this.idleSkipped += d; }
+        this._clintEvent();
     }
 
     /** Load bytes into RAM at physical address `base` (default the RAM base):
@@ -184,7 +252,10 @@ export class RiscV32Machine {
      *  the CLINT's mtime so a scheduled timer interrupt eventually fires. */
     step() {
         const cpu = this.cpu, r = cpu.step();
-        if (this.clint && cpu.instret >= this.clint.deadline) this.clint.sync();
+        if (this.clint) {
+            if (cpu.instret >= this.clint.deadline) this._clintEvent();
+            if (cpu.waiting) { cpu.waiting = false; this._idleSkip(); }
+        }
         return r;
     }
 
@@ -195,7 +266,8 @@ export class RiscV32Machine {
         if (!clint) { while (!cpu.halted && n++ < max) cpu.step(); return n; }
         while (!cpu.halted && n++ < max) {
             cpu.step();
-            if (cpu.instret >= clint.deadline) clint.sync();
+            if (cpu.instret >= clint.deadline) this._clintEvent();
+            if (cpu.waiting) { cpu.waiting = false; this._idleSkip(); }
         }
         return n;
     }
