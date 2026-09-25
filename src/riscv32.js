@@ -150,6 +150,18 @@ export class RiscV32 {
         // (UART) routed by ld8/st8. Accepts a single device or an array.
         this.io = [].concat(hooks.io || []);
         this.io8 = [].concat(hooks.io8 || []);
+        // Fast RAM paths: halfword/word views over the same buffer (aligned
+        // accesses on a little-endian host), and a map of the 4 KiB RAM pages a
+        // device overlaps (those keep the device-routing slow path). The map is
+        // rebuilt whenever a device list changes length (checked per step).
+        this._memLen = mem.length;
+        const le = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+        const aligned = (mem.byteOffset & 3) === 0;
+        this._m16 = le && aligned ? new Uint16Array(mem.buffer, mem.byteOffset, mem.length >>> 1) : null;
+        this._m32 = le && aligned ? new Int32Array(mem.buffer, mem.byteOffset, mem.length >>> 2) : null;
+        this._devPage = new Uint8Array(Math.ceil(mem.length / 4096) + 1);
+        this._devCount = -1;
+        this._scanDevices();
         // Zicntr: the `time` CSR reads this source (the machine wires the CLINT's
         // mtime); without one it follows the cycle count.
         this.timeSource = hooks.timeSource || null;
@@ -524,6 +536,22 @@ export class RiscV32 {
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
 
+    /** Rebuild the map of RAM pages that a device overlaps (see constructor).
+     *  Without the typed views every page is marked, so all accesses route
+     *  through the byte-wise slow path. */
+    _scanDevices() {
+        const n = this.io.length + this.io8.length;
+        if (n === this._devCount) return;
+        this._devCount = n;
+        const map = this._devPage;
+        map.fill(this._m32 ? 0 : 1);
+        for (const d of this.io.concat(this.io8)) {
+            const lo = ((d.base - this.ramBase) >>> 0), hi = lo + d.size;
+            if (lo >= this._memLen && ((d.base >>> 0) >= this.ramBase)) continue;   // entirely above RAM
+            for (let pg = Math.floor(Math.min(lo, this._memLen) / 4096); pg * 4096 < Math.min(hi, this._memLen); pg++) map[pg] = 1;
+        }
+    }
+
     /** Absolute address → flat RAM index (subtract the RAM base). An address
      *  outside RAM (and not claimed by a device) is an access fault: thrown
      *  here, turned into the architectural exception by step(). */
@@ -534,25 +562,44 @@ export class RiscV32 {
         throw ACCESS_FAULT;
     }
 
-    ld8(a)  {
-        const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
+    // Each accessor first tries the fast path — the address is in RAM, on a
+    // page no device overlaps, and (for 16/32 bits) naturally aligned — and
+    // otherwise takes the device-routing byte path, which is the reference.
+    ld8(a) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if (i < this._memLen && this._devPage[i >>> 12] === 0) return this.mem[i];
+        const d = this.io8.length && this._dev(this.io8, u);
         return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[this._ram(u)];
     }
-    ld16(a) { return this.ld8(a) | (this.ld8(a + 1) << 8); }
-    ld32(a) {
-        const u = a >>> 0, d = this.io.length && this._dev(this.io, u);
-        return d ? (d.load32((u - d.base) >>> 0) >>> 0) : ((this.ld16(a) | (this.ld16(a + 2) << 16)) >>> 0);
+    ld16(a) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 1) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) return this._m16[i >>> 1];
+        return this.ld8(u) | (this.ld8(u + 1) << 8);
     }
-    st8(a, v)  {
-        const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
+    ld32(a) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 3) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) return this._m32[i >>> 2] >>> 0;
+        const d = this.io.length && this._dev(this.io, u);
+        return d ? (d.load32((u - d.base) >>> 0) >>> 0) : ((this.ld16(u) | (this.ld16(u + 2) << 16)) >>> 0);
+    }
+    st8(a, v) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if (i < this._memLen && this._devPage[i >>> 12] === 0) { this.mem[i] = v; return; }
+        const d = this.io8.length && this._dev(this.io8, u);
         if (d) { d.store8((u - d.base) >>> 0, v & 0xff); return; }
         this.mem[this._ram(u)] = v & 0xff;
     }
-    st16(a, v) { this.st8(a, v); this.st8(a + 1, v >>> 8); }
+    st16(a, v) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 1) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) { this._m16[i >>> 1] = v; return; }
+        this.st8(u, v); this.st8(u + 1, v >>> 8);
+    }
     st32(a, v) {
-        const u = a >>> 0, d = this.io.length && this._dev(this.io, u);
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 3) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) { this._m32[i >>> 2] = v; return; }
+        const d = this.io.length && this._dev(this.io, u);
         if (d) { d.store32((u - d.base) >>> 0, v >>> 0); return; }
-        this.st16(a, v); this.st16(a + 2, v >>> 16);
+        this.st16(u, v); this.st16(u + 2, v >>> 16);
     }
 
     /** Write a register (x0 discards). Accepts any 32-bit pattern. */
@@ -590,13 +637,15 @@ export class RiscV32 {
     }
 
     _exec() {
+        if (this.io.length + this.io8.length !== this._devCount) this._scanDevices();
         const pc = this.pc >>> 0;
         this._acc = CAUSE_FETCH_ACCESS; this._va = pc;
         // Translate then fetch. A halfword first: low two bits != 11 → a 16-bit
         // compressed (C) instruction, expanded and pc += 2; else the full 32-bit
         // word, pc += 4. The high half of a 32-bit instruction at an odd page
         // offset lands in the next page, so it is translated separately.
-        const pcPhys = this._translate(pc, 'fetch');
+        // Paging off (satp.MODE = Bare) or M-mode: fetch is untranslated.
+        const pcPhys = ((this.csr[CSR.SATP] & 0x80000000) === 0 || this.priv === PRIV_M) ? pc : this._translate(pc, 'fetch');
         if (pcPhys === null) { this.instret++; return 1; }   // instruction page fault taken
         const lo = this.ld16(pcPhys);
         let inst, ilen;
