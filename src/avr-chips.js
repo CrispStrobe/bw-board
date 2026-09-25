@@ -82,6 +82,11 @@ const ATMEGA328P_TWI = {
   TWDR: 0xbb, TWCR: 0xbc, TWAMR: 0xbd,
 };
 
+// The SPI pins, by port bit: what the peripheral drives (SCK, MOSI) and
+// samples (MISO) when SPCR.MSTR is set.
+const SPI_PINS_PB345 = { port: 'B', mosi: 3, miso: 4, sck: 5 };   // 328P, 88PA
+const SPI_PINS_PB123 = { port: 'B', mosi: 2, miso: 3, sck: 1 };   // 2560, 32U4
+
 // SPI register addresses (same as spiConfig from avr8js).
 const ATMEGA328P_SPI = {
   spiInterrupt: 0x22,   // vector 18, word address (18-1)*2
@@ -114,6 +119,7 @@ export const ATMEGA328P = {
   usart: ATMEGA328P_USART,
   twi: ATMEGA328P_TWI,
   spi: ATMEGA328P_SPI,
+  spiPins: SPI_PINS_PB345,
   eeprom: ATMEGA328P_EEPROM,
   eepromBytes: 1024,
 };
@@ -154,6 +160,7 @@ export const ATMEGA88PA = {
     dataRegisterEmptyInterrupt: v88(20), txCompleteInterrupt: v88(21) },
   twi: { ...ATMEGA328P_TWI, twiInterrupt: v88(25) },
   spi: { ...ATMEGA328P_SPI, spiInterrupt: v88(18) },
+  spiPins: SPI_PINS_PB345,
   // One-word vectors (8 KB): EE_READY, vect_num 22, is word address 22.
   eeprom: { ...MEGA_EEPROM_REGS, eepromReadyInterrupt: v88(23),
     eraseCycles: 28800, writeCycles: 28800 },
@@ -307,6 +314,7 @@ export const ATMEGA2560 = {
   usart: ATMEGA2560_USART,
   twi: ATMEGA2560_TWI,
   spi: ATMEGA2560_SPI,
+  spiPins: SPI_PINS_PB123,
   eeprom: { ...MEGA_EEPROM_REGS, eepromReadyInterrupt: 0x3C,   // vect_num 30
     eraseCycles: 28800, writeCycles: 28800 },
   eepromBytes: 4096,
@@ -856,6 +864,7 @@ export const ATMEGA32U4 = {
   usart: ATMEGA32U4_USART,
   twi: ATMEGA32U4_TWI,
   spi: ATMEGA32U4_SPI,
+  spiPins: SPI_PINS_PB123,
   eeprom: { ...MEGA_EEPROM_REGS, eepromReadyInterrupt: 0x3C,   // vect_num 30
     eraseCycles: 28800, writeCycles: 28800 },
   eepromBytes: 1024,
