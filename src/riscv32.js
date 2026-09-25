@@ -77,6 +77,8 @@ const MSTATUS_MIE = 1 << 3, MSTATUS_MPIE = 1 << 7, MSTATUS_MPP = 3 << 11;
 const MSTATUS_SIE = 1 << 1, MSTATUS_SPIE = 1 << 5, MSTATUS_SPP = 1 << 8;
 // The sstatus view of mstatus (S-mode sees only these bits).
 const SSTATUS_MASK = (MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | (1 << 18) /*SUM*/ | (1 << 19) /*MXR*/ | (0x3 << 13) /*FS*/);
+// menvcfg.ADUE (bit 61 → menvcfgh bit 29): hardware A/D updates (Svadu).
+const MENVCFGH_ADUE = 1 << 29;
 const MSTATUS_TVM = 1 << 20, MSTATUS_TW = 1 << 21, MSTATUS_TSR = 1 << 22;
 // Writable mstatus bits: the M and S mode/interrupt bits, MPRV/SUM/MXR, FS
 // (writable because S-mode exists, as in Spike), and the TVM/TW/TSR traps.
@@ -92,6 +94,9 @@ const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
 // Synchronous exception causes: environment call from U/S/M mode.
 const CAUSE_ECALL_U = 8, CAUSE_ECALL_S = 9, CAUSE_ECALL_M = 11;
 const CAUSE_ILLEGAL = 2, CAUSE_BREAKPOINT = 3;
+const CAUSE_FETCH_ACCESS = 1, CAUSE_LOAD_ACCESS = 5, CAUSE_STORE_ACCESS = 7;
+// Thrown by the physical accessors for an address no RAM or device claims.
+const ACCESS_FAULT = Object.freeze({accessFault: true});
 // Sv32 page-fault causes: instruction / load / store-or-AMO.
 const CAUSE_FETCH_PF = 12, CAUSE_LOAD_PF = 13, CAUSE_STORE_PF = 15;
 
@@ -123,6 +128,13 @@ export class RiscV32 {
         // MMIO devices (CLINT/PLIC/UART) sit below it and are routed by absolute
         // address before RAM, so they are unaffected.
         this.ramBase = (hooks.ramBase ?? 0) >>> 0;
+        // Address decoding. Mirrored (the default for the legacy RAM-at-0 map):
+        // RAM repeats across the whole physical space, so a bare program that
+        // starts with sp = 0 and pushes to 0xfffffffc lands at the top of RAM.
+        // Not mirrored (the default once RAM sits at a base, the riscv `virt`
+        // layout Linux/xv6 use): an address no RAM or device claims is an
+        // access fault, as on Spike/QEMU.
+        this.ramMirror = hooks.ramMirror ?? (this.ramBase === 0);
         this.halted = false;
         this.instret = 0;                 // instructions retired
         this.resvAddr = -1;               // LR/SC reservation (address, or -1)
@@ -213,7 +225,7 @@ export class RiscV32 {
         switch (n) {
             case CSR.MHARTID: case CSR.MVENDORID: case CSR.MARCHID: case CSR.MIMPID: case CSR.MCONFIGPTR:
             case CSR.TSELECT: case CSR.TDATA1: case CSR.TDATA2: case CSR.TDATA3: case CSR.MCOUNTINHIBIT:
-            case CSR.MSTATUSH: case CSR.MENVCFGH:
+            case CSR.MSTATUSH:
                 return 0;
             case CSR.MISA: return 0x40141105 >>> 0;          // RV32 + A,C,I,M,S,U (MXL=1)
             case CSR.MSTATUS: {                               // SD summarises FS == dirty
@@ -284,6 +296,7 @@ export class RiscV32 {
             case CSR.MINSTRET: this._instretOff = this._counterWrite(this._instretOff, v, false); return;
             case CSR.MINSTRETH: this._instretOff = this._counterWrite(this._instretOff, v, true); return;
             case CSR.MENVCFG: this.csr[n] = v & ((1 << 0) /*FIOM*/); return;
+            case CSR.MENVCFGH: this.csr[n] = v & MENVCFGH_ADUE; return;
             case CSR.SENVCFG: this.csr[n] = v & 1; return;
             case CSR.SATP: this.csr[n] = v; return;
             case CSR.MSCRATCH: case CSR.MCAUSE: case CSR.MTVAL: case CSR.SSCRATCH: case CSR.SCAUSE:
@@ -404,9 +417,14 @@ export class RiscV32 {
         // S-mode may not touch a U-page — SUM lifts that for loads/stores, but
         // never for an instruction fetch (S can never execute a user page).
         if (eff === PRIV_S && Uf && !(access !== 'fetch' && (ms & (1 << 18)))) return fault();
-        // Accessed / Dirty (hardware sets them here rather than faulting).
+        // Accessed / Dirty. Svadu: with menvcfg.ADUE set the hardware updates
+        // them; clear (the reset value, as Spike), a leaf whose A — or, for a
+        // store, D — is clear is a page fault (Svade) and software sets them.
         const np = (pte | 0x40 | (access === 'store' ? 0x80 : 0)) >>> 0;
-        if (np !== pte) this.st32(pteAddr, np);
+        if (np !== pte) {
+            if (!(this.csr[CSR.MENVCFGH] & MENVCFGH_ADUE)) return fault();
+            this.st32(pteAddr, np);
+        }
         return phys;
     }
 
@@ -506,8 +524,15 @@ export class RiscV32 {
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
 
-    /** Absolute address → flat RAM index (subtract the RAM base, wrap to size). */
-    _ram(u) { return ((u - this.ramBase) >>> 0) & (this.mem.length - 1); }
+    /** Absolute address → flat RAM index (subtract the RAM base). An address
+     *  outside RAM (and not claimed by a device) is an access fault: thrown
+     *  here, turned into the architectural exception by step(). */
+    _ram(u) {
+        const i = (u - this.ramBase) >>> 0;
+        if (i < this.mem.length) return i;
+        if (this.ramMirror) return i & (this.mem.length - 1);
+        throw ACCESS_FAULT;
+    }
 
     ld8(a)  {
         const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
@@ -541,7 +566,32 @@ export class RiscV32 {
         if (this.halted) return 0;
         // A pending, enabled machine interrupt is taken before the next fetch.
         if (this._takeInterruptIfPending()) { this.instret++; return 1; }
+        try {
+            return this._exec();
+        } catch (e) {
+            if (e !== ACCESS_FAULT) throw e;
+            return this._accessFault();
+        }
+    }
+
+    /** A physical access outside RAM and every device: the access-fault
+     *  exception for the access in flight (fetch 1 / load 5 / store-AMO 7,
+     *  tval = its virtual address). With no trap vector installed it halts
+     *  and records what it hit, as an illegal instruction does. */
+    _accessFault() {
+        if (this.csr[CSR.MTVEC] !== 0) {
+            this._trap(this._acc, false, this._va);
+            this.instret++;
+            return 1;
+        }
+        this.halted = true;
+        this.trap = {cause: 'access-fault', addr: this._va >>> 0, pc: this.pc >>> 0};
+        return 0;
+    }
+
+    _exec() {
         const pc = this.pc >>> 0;
+        this._acc = CAUSE_FETCH_ACCESS; this._va = pc;
         // Translate then fetch. A halfword first: low two bits != 11 → a 16-bit
         // compressed (C) instruction, expanded and pc += 2; else the full 32-bit
         // word, pc += 4. The high half of a 32-bit instruction at an odd page
@@ -612,6 +662,7 @@ export class RiscV32 {
             }
             case OPC.LOAD: {
                 const va = (a + sext(inst >>> 20, 12)) >>> 0;
+                this._acc = CAUSE_LOAD_ACCESS; this._va = va;
                 const addr = this._translate(va, 'load');
                 if (addr === null) { this.instret++; return 1; }        // load page fault taken
                 switch (funct3) {
@@ -627,6 +678,7 @@ export class RiscV32 {
             case OPC.STORE: {
                 const imm = sext(((inst >>> 25) & 0x7f) << 5 | ((inst >>> 7) & 0x1f), 12);
                 const va = (a + imm) >>> 0;
+                this._acc = CAUSE_STORE_ACCESS; this._va = va;
                 const addr = this._translate(va, 'store');
                 if (addr === null) { this.instret++; return 1; }        // store page fault taken
                 switch (funct3) {
@@ -678,6 +730,10 @@ export class RiscV32 {
             case OPC.AMO: {
                 if (funct3 !== 0x2) return this._bad(inst);   // .W only (RV32A)
                 const funct5 = (inst >>> 27) & 0x1f;
+                this._acc = funct5 === 0x02 ? CAUSE_LOAD_ACCESS : CAUSE_STORE_ACCESS; this._va = a >>> 0;
+                // A misaligned LR/SC/AMO is an access fault (Zicclsm covers only
+                // plain loads/stores; misaligned atomics are not emulated).
+                if (a & 3) throw ACCESS_FAULT;
                 const addr = this._translate(a >>> 0, funct5 === 0x02 ? 'load' : 'store'); // rs1 is the address
                 if (addr === null) { this.instret++; return 1; }   // page fault taken
                 if (funct5 === 0x02) {                         // LR.W
@@ -708,8 +764,7 @@ export class RiscV32 {
                 }
                 this.st32(addr, v);
                 this.set(rd, t);
-                this.resvAddr = -1;
-                break;
+                break;                                         // an AMO leaves the reservation (as Spike)
             }
             case OPC.MISCMEM:          // FENCE / FENCE.I — a nop for this model (no caches)
                 if (funct3 > 1) return this._bad(inst);
