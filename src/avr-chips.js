@@ -88,6 +88,18 @@ const ATMEGA328P_SPI = {
   SPCR: 0x4c, SPSR: 0x4d, SPDR: 0x4e,
 };
 
+// Internal EEPROM, by chip. The register block is avr8js's default (EECR 0x3F,
+// EEDR 0x40, EEARL 0x41, EEARH 0x42) on every ATmega here; what differs is the
+// EE_READY vector (avr-libc's EE_READY_vect_num, x2 for the megas' two-word
+// vectors, x1 on the one-word-vector parts) and, on the ATtiny85, the register
+// addresses. The write time is avr8js's own default, 1.8 ms, as cycles at each
+// part's clock.
+const MEGA_EEPROM_REGS = { EECR: 0x3F, EEDR: 0x40, EEARL: 0x41, EEARH: 0x42 };
+export const ATMEGA328P_EEPROM = {
+  ...MEGA_EEPROM_REGS, eepromReadyInterrupt: 0x2C,   // vect_num 22
+  eraseCycles: 28800, writeCycles: 28800,           // 1.8 ms at 16 MHz, as avr8js
+};
+
 export const ATMEGA328P = {
   name: 'ATmega328P',
   flashWords: 0x4000,   // 32 KB = 16K words
@@ -102,6 +114,8 @@ export const ATMEGA328P = {
   usart: ATMEGA328P_USART,
   twi: ATMEGA328P_TWI,
   spi: ATMEGA328P_SPI,
+  eeprom: ATMEGA328P_EEPROM,
+  eepromBytes: 1024,
 };
 
 // ─── ATmega88PA (E5.8) ─────────────────────────────────────────────────────
@@ -140,6 +154,10 @@ export const ATMEGA88PA = {
     dataRegisterEmptyInterrupt: v88(20), txCompleteInterrupt: v88(21) },
   twi: { ...ATMEGA328P_TWI, twiInterrupt: v88(25) },
   spi: { ...ATMEGA328P_SPI, spiInterrupt: v88(18) },
+  // One-word vectors (8 KB): EE_READY, vect_num 22, is word address 22.
+  eeprom: { ...MEGA_EEPROM_REGS, eepromReadyInterrupt: v88(23),
+    eraseCycles: 28800, writeCycles: 28800 },
+  eepromBytes: 512,
 };
 
 // ─── ATmega2560 (Arduino Mega) ─────────────────────────────────────────────
@@ -289,6 +307,9 @@ export const ATMEGA2560 = {
   usart: ATMEGA2560_USART,
   twi: ATMEGA2560_TWI,
   spi: ATMEGA2560_SPI,
+  eeprom: { ...MEGA_EEPROM_REGS, eepromReadyInterrupt: 0x3C,   // vect_num 30
+    eraseCycles: 28800, writeCycles: 28800 },
+  eepromBytes: 4096,
 };
 
 // ─── ATtiny85 ───────────────────────────────────────────────────────────────
@@ -380,6 +401,10 @@ export const ATTINY85 = {
   adcChannelToPin: ATTINY85_ADC_MAP,
   usart: null,  // no USART on ATtiny85
   usi: ATTINY85_USI,    // USI peripheral for software I2C (TinyWireM)
+  // I/O 0x1C-0x1F, one-word vectors: EE_RDY is vect_num 6, word address 6.
+  eeprom: { EECR: 0x3C, EEDR: 0x3D, EEARL: 0x3E, EEARH: 0x3F,
+    eepromReadyInterrupt: 6, eraseCycles: 14400, writeCycles: 14400 },  // 1.8 ms at 8 MHz
+  eepromBytes: 512,
 };
 
 // ─── ATtiny88 (Blinkenrocket congress badge) ──────────────────────────────
@@ -831,6 +856,9 @@ export const ATMEGA32U4 = {
   usart: ATMEGA32U4_USART,
   twi: ATMEGA32U4_TWI,
   spi: ATMEGA32U4_SPI,
+  eeprom: { ...MEGA_EEPROM_REGS, eepromReadyInterrupt: 0x3C,   // vect_num 30
+    eraseCycles: 28800, writeCycles: 28800 },
+  eepromBytes: 1024,
 };
 
 export const CHIPS = {

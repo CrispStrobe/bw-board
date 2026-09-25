@@ -14,7 +14,7 @@
 import {
   CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART, PinState,
   ATtinyTimer1, attinyTimer1Config,
-  AVRTWI, AVRSPI,
+  AVRTWI, AVRSPI, AVREEPROM, EEPROMMemoryBackend,
 } from 'avr8js';
 import { CHIPS, ATMEGA328P } from './avr-chips.js';
 import { fastAvrInstruction } from './vendor/avr8js-fast/instruction.js';
@@ -169,6 +169,19 @@ export function createAvr8jsAdapter(opts = {}) {
     usart.onRxComplete = pumpRx;
   }
 
+  // ── EEPROM ──
+  // Every chip here has internal EEPROM, and a program that writes it waits
+  // for EEPE to clear. Without the peripheral the bit is plain RAM that
+  // nothing clears, so EEPROM.write() -- and every EEPROM.read() after it --
+  // hung forever (measured: an Arduino sketch printed its first line and
+  // stopped). avr-peripherals.js's wirePeripherals() had this and nothing
+  // called it; the adapter owns it now, like the USART.
+  let eeprom = null, eepromBackend = null;
+  if (chip.eeprom) {
+    eepromBackend = new EEPROMMemoryBackend(chip.eepromBytes ?? 512);
+    eeprom = new AVREEPROM(cpu, eepromBackend, chip.eeprom);
+  }
+
   // ── TWI (I2C hardware peripheral) ──
   let twi = null;
   let twiBridge = null;
@@ -282,6 +295,11 @@ export function createAvr8jsAdapter(opts = {}) {
     /** Receive every byte the program transmits on UART0 (print output).
      *  No-op on chips without USART (ATtiny85). */
     onSerial(cb) { serialListener = cb; },
+
+    /** The chip's internal EEPROM (avr8js AVREEPROM), or null. */
+    eeprom,
+    /** Its backing store (EEPROMMemoryBackend; .memory is the bytes), or null. */
+    eepromBackend,
 
     /**
      * Send bytes TO the program's UART0 (what a serial monitor types). Queued
