@@ -129,6 +129,20 @@ s_code:
     lb a4, 3(s2)
     lhu a5, 2(s2)
     sh a5, 6(s2)
+    // Translation depends on SUM/MXR at the time of the access, not at the
+    // time a (cached) walk happened: the U page was just loaded with SUM=1,
+    // so clearing SUM must make the same load fault again; likewise MXR for
+    // the execute-only page.
+    li t0, 1 << 18
+    csrc sstatus, t0
+    la s11, 1f
+    lw a0, 0(s2)
+1:  csrs sstatus, t0
+    li t0, 1 << 19
+    csrc sstatus, t0
+    la s11, 1f
+    lw a2, 0(s3)
+1:
     // → U mode at the U code page
     li t0, 1 << 8
     csrc sstatus, t0
