@@ -18,6 +18,10 @@ test('clang echoes UART input through an external (PLIC) interrupt', () => {
     let out = '';
     const m = new RiscV32Machine({}, {onSerial: b => { out += String.fromCharCode(b); }});
     loadElfInto(m, new Uint8Array(Buffer.from(ECHO_O, 'base64')));
+    // A 16550 raises received-data interrupts only with IER.RDI set. This
+    // program's driver never writes IER (the UART model used to interrupt
+    // regardless), so the host enables it, as a board's firmware would.
+    m.uart.store8(1, 0x01);
     for (const c of 'ABC') m.uart.rxPush(c.charCodeAt(0));   // three keystrokes
     m.run(5_000_000);
     assert.equal(out, 'ABC\nOK\n', 'each keystroke was delivered by an external interrupt and echoed');
