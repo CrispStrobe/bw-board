@@ -41,21 +41,48 @@ const sext = (v, bits) => (v << (32 - bits)) >> (32 - bits);
 // Linux) needs: trap delegation (medeleg/mideleg), the S trap CSRs, and satp.
 const CSR = {
     MSTATUS: 0x300, MISA: 0x301, MEDELEG: 0x302, MIDELEG: 0x303, MIE: 0x304, MTVEC: 0x305,
+    MCOUNTEREN: 0x306, MENVCFG: 0x30a, MSTATUSH: 0x310, MENVCFGH: 0x31a, MCOUNTINHIBIT: 0x320,
     MSCRATCH: 0x340, MEPC: 0x341, MCAUSE: 0x342, MTVAL: 0x343, MIP: 0x344,
-    SSTATUS: 0x100, SIE: 0x104, STVEC: 0x105, SSCRATCH: 0x140, SEPC: 0x141,
-    SCAUSE: 0x142, STVAL: 0x143, SIP: 0x144, SATP: 0x180,
-    MHARTID: 0xf14, MCYCLE: 0xb00, MINSTRET: 0xb02
+    SSTATUS: 0x100, SIE: 0x104, STVEC: 0x105, SCOUNTEREN: 0x106, SENVCFG: 0x10a,
+    SSCRATCH: 0x140, SEPC: 0x141, SCAUSE: 0x142, STVAL: 0x143, SIP: 0x144,
+    STIMECMP: 0x14d, STIMECMPH: 0x15d, SATP: 0x180,
+    TSELECT: 0x7a0, TDATA1: 0x7a1, TDATA2: 0x7a2, TDATA3: 0x7a3,
+    MVENDORID: 0xf11, MARCHID: 0xf12, MIMPID: 0xf13, MHARTID: 0xf14, MCONFIGPTR: 0xf15,
+    MCYCLE: 0xb00, MINSTRET: 0xb02, MCYCLEH: 0xb80, MINSTRETH: 0xb82,
+    CYCLE: 0xc00, TIME: 0xc01, INSTRET: 0xc02, CYCLEH: 0xc80, TIMEH: 0xc81, INSTRETH: 0xc82
 };
+
+// Which CSR numbers exist on this hart. Any other number is an illegal
+// instruction (as is a privilege or read-only violation) — the behaviour the
+// privileged spec requires and Spike (the oracle) implements.
+const CSR_EXISTS = new Uint8Array(4096);
+for (const n of Object.values(CSR)) CSR_EXISTS[n] = 1;
+for (let i = 0; i < 4; i++) CSR_EXISTS[0x3a0 + i] = 1;                  // pmpcfg0..3
+for (let i = 0; i < 16; i++) CSR_EXISTS[0x3b0 + i] = 1;                 // pmpaddr0..15
+for (let i = 3; i < 32; i++) {                                           // hpm counters/events: read-only 0
+    CSR_EXISTS[0xb00 + i] = CSR_EXISTS[0xb80 + i] = 1;
+    CSR_EXISTS[0xc00 + i] = CSR_EXISTS[0xc80 + i] = 1;
+    CSR_EXISTS[0x320 + i] = 1;
+}
+CSR_EXISTS[CSR.STIMECMP] = CSR_EXISTS[CSR.STIMECMPH] = 0;               // Sstc: not implemented (yet)
+// The delegatable synchronous exceptions (Spike's medeleg mask for a hart with
+// C, an MMU and Zicntr): everything except misaligned fetch (C makes it
+// impossible), ecall-from-M (11) and the reserved causes.
+const MEDELEG_MASK = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7) |
+    (1 << 8) | (1 << 9) | (1 << 12) | (1 << 13) | (1 << 15) | (1 << 19);
 // Privilege levels.
 const PRIV_U = 0, PRIV_S = 1, PRIV_M = 3;
 // mstatus/sstatus fields. M: MIE/MPIE/MPP. S: SIE/SPIE/SPP (SPP is a single bit).
 const MSTATUS_MIE = 1 << 3, MSTATUS_MPIE = 1 << 7, MSTATUS_MPP = 3 << 11;
 const MSTATUS_SIE = 1 << 1, MSTATUS_SPIE = 1 << 5, MSTATUS_SPP = 1 << 8;
 // The sstatus view of mstatus (S-mode sees only these bits).
-const SSTATUS_MASK = (MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | (1 << 18) /*SUM*/ | (0x3 << 13) /*FS*/);
-// Writable mstatus bits: the M and S mode/interrupt bits, MPRV/SUM/MXR, FS.
+const SSTATUS_MASK = (MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | (1 << 18) /*SUM*/ | (1 << 19) /*MXR*/ | (0x3 << 13) /*FS*/);
+const MSTATUS_TVM = 1 << 20, MSTATUS_TW = 1 << 21, MSTATUS_TSR = 1 << 22;
+// Writable mstatus bits: the M and S mode/interrupt bits, MPRV/SUM/MXR, FS
+// (writable because S-mode exists, as in Spike), and the TVM/TW/TSR traps.
 const MSTATUS_WMASK = (MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPP | MSTATUS_SIE | MSTATUS_SPIE |
-    MSTATUS_SPP | (1 << 17) /*MPRV*/ | (1 << 18) /*SUM*/ | (1 << 19) /*MXR*/ | (0x3 << 13) /*FS*/);
+    MSTATUS_SPP | (1 << 17) /*MPRV*/ | (1 << 18) /*SUM*/ | (1 << 19) /*MXR*/ | (0x3 << 13) /*FS*/ |
+    MSTATUS_TVM | MSTATUS_TW | MSTATUS_TSR);
 // mie/mip interrupt bits: machine software/timer/external (3/7/11),
 // supervisor software/timer/external (1/5/9).
 const IRQ_MSI = 1 << 3, IRQ_MTI = 1 << 7, IRQ_MEI = 1 << 11;
@@ -64,6 +91,7 @@ const IRQ_SSI = 1 << 1, IRQ_STI = 1 << 5, IRQ_SEI = 1 << 9;
 const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
 // Synchronous exception causes: environment call from U/S/M mode.
 const CAUSE_ECALL_U = 8, CAUSE_ECALL_S = 9, CAUSE_ECALL_M = 11;
+const CAUSE_ILLEGAL = 2, CAUSE_BREAKPOINT = 3;
 // Sv32 page-fault causes: instruction / load / store-or-AMO.
 const CAUSE_FETCH_PF = 12, CAUSE_LOAD_PF = 13, CAUSE_STORE_PF = 15;
 
@@ -83,6 +111,11 @@ export class RiscV32 {
         // wants its own trap handler; a bare program leaves this off and keeps the
         // write/exit hook. Off by default, so every existing fixture is untouched.
         this.ecallTraps = !!hooks.ecallTraps;
+        // EBREAK likewise: with no debugger hook it halts the machine (how the
+        // bare test programs stop) unless this is set, when it is the
+        // architectural breakpoint exception (cause 3) an OS kernel expects —
+        // Linux's BUG()/WARN() are ebreaks. Defaults to follow ecallTraps.
+        this.ebreakTraps = hooks.ebreakTraps ?? this.ecallTraps;
         // Base physical address of RAM. `mem` is a flat 0-based array, so an
         // address is translated to a RAM index by subtracting this. Default 0
         // (RAM at 0x0, as before). Set to 0x80000000 to run images linked at the
@@ -105,7 +138,23 @@ export class RiscV32 {
         // (UART) routed by ld8/st8. Accepts a single device or an array.
         this.io = [].concat(hooks.io || []);
         this.io8 = [].concat(hooks.io8 || []);
+        // Zicntr: the `time` CSR reads this source (the machine wires the CLINT's
+        // mtime); without one it follows the cycle count.
+        this.timeSource = hooks.timeSource || null;
+        this._resetCounters();
     }
+
+    _resetCounters() {
+        // Architectural retired-instruction count = steps retired minus traps
+        // taken (a trapping step bumps `instret` but retires nothing). mcycle and
+        // minstret are that count plus a 64-bit offset (BigInt: CSR access only).
+        this._traps = 0;
+        this._cycleOff = 0n;
+        this._instretOff = 0n;
+    }
+
+    /** Instructions architecturally retired (what minstret counts from reset). */
+    get retired() { return this.instret - this._traps; }
 
     reset() {
         this.x.fill(0);
@@ -116,6 +165,7 @@ export class RiscV32 {
         this.csr.fill(0);
         this.priv = PRIV_M;
         this.waiting = false;
+        this._resetCounters();
     }
 
     /** Raise (level-set) a machine interrupt line in mip — called by a device
@@ -124,48 +174,125 @@ export class RiscV32 {
         if (on) this.csr[CSR.MIP] |= bit; else this.csr[CSR.MIP] &= ~bit;
     }
 
+    /** A 64-bit counter's current value: `retired` plus its offset, mod 2^64. */
+    _counter(off) { return (BigInt(this.retired) + off) & 0xffffffffffffffffn; }
+
+    /** Write half of a 64-bit counter. The written value is what the NEXT
+     *  instruction reads (the CSR write suppresses this instruction's own
+     *  increment), so the offset is taken against retired + 1. */
+    _counterWrite(off, v, high) {
+        const cur = this._counter(off);
+        const nv = high ? ((BigInt(v >>> 0) << 32n) | (cur & 0xffffffffn))
+            : ((cur & 0xffffffff00000000n) | BigInt(v >>> 0));
+        return (nv - BigInt(this.retired + 1)) & 0xffffffffffffffffn;
+    }
+
+    /** The `time` CSR: the machine's timer (CLINT mtime) or, without one, cycles. */
+    _time() { return this.timeSource ? this.timeSource() : Number(this._counter(this._cycleOff)); }
+
+    /** Is CSR `n` accessible from the current privilege (and, for `write`,
+     *  writable)? False is an illegal-instruction exception. Checks existence,
+     *  the privilege encoded in csr[9:8], read-only csr[11:10]=3, the counter
+     *  enables (mcounteren / scounteren), and mstatus.TVM for satp. */
+    _csrOk(n, write) {
+        if (!CSR_EXISTS[n]) return false;
+        if (this.priv < ((n >>> 8) & 3)) return false;
+        if (write && (n >>> 10) === 3) return false;
+        if ((n >= 0xc00 && n <= 0xc1f) || (n >= 0xc80 && n <= 0xc9f)) {   // user counters
+            const bit = 1 << (n & 0x1f);
+            if (this.priv < PRIV_M && !(this.csr[CSR.MCOUNTEREN] & bit)) return false;
+            if (this.priv < PRIV_S && !(this.csr[CSR.SCOUNTEREN] & bit)) return false;
+        }
+        if (n === CSR.SATP && this.priv === PRIV_S && (this.csr[CSR.MSTATUS] & MSTATUS_TVM)) return false;
+        return true;
+    }
+
     /** Read a CSR. The S-mode status/interrupt CSRs are masked views of the
      *  M-mode registers (sstatus⊂mstatus; sie/sip = mie/mip restricted by mideleg). */
     _readCsr(n) {
-        if (n === CSR.MHARTID) return 0;
-        if (n === CSR.MISA) return 0x40141101 >>> 0;   // RV32 + I,M,A,S,U (MXL=1)
-        if (n === CSR.SSTATUS) return (this.csr[CSR.MSTATUS] & SSTATUS_MASK) >>> 0;
-        if (n === CSR.SIE) return (this.csr[CSR.MIE] & this.csr[CSR.MIDELEG]) >>> 0;
-        if (n === CSR.SIP) return (this.csr[CSR.MIP] & this.csr[CSR.MIDELEG]) >>> 0;
-        return this.csr[n] >>> 0;
+        switch (n) {
+            case CSR.MHARTID: case CSR.MVENDORID: case CSR.MARCHID: case CSR.MIMPID: case CSR.MCONFIGPTR:
+            case CSR.TSELECT: case CSR.TDATA1: case CSR.TDATA2: case CSR.TDATA3: case CSR.MCOUNTINHIBIT:
+            case CSR.MSTATUSH: case CSR.MENVCFGH:
+                return 0;
+            case CSR.MISA: return 0x40141105 >>> 0;          // RV32 + A,C,I,M,S,U (MXL=1)
+            case CSR.MSTATUS: {                               // SD summarises FS == dirty
+                const v = this.csr[CSR.MSTATUS];
+                return (((v >>> 13) & 3) === 3 ? (v | 0x80000000) : v) >>> 0;
+            }
+            case CSR.SSTATUS: {
+                const v = this.csr[CSR.MSTATUS];
+                return ((v & SSTATUS_MASK) | (((v >>> 13) & 3) === 3 ? 0x80000000 : 0)) >>> 0;
+            }
+            case CSR.SIE: return (this.csr[CSR.MIE] & this.csr[CSR.MIDELEG]) >>> 0;
+            case CSR.SIP: return (this.csr[CSR.MIP] & this.csr[CSR.MIDELEG]) >>> 0;
+            case CSR.MCYCLE: case CSR.CYCLE: return Number(this._counter(this._cycleOff) & 0xffffffffn);
+            case CSR.MCYCLEH: case CSR.CYCLEH: return Number(this._counter(this._cycleOff) >> 32n);
+            case CSR.MINSTRET: case CSR.INSTRET: return Number(this._counter(this._instretOff) & 0xffffffffn);
+            case CSR.MINSTRETH: case CSR.INSTRETH: return Number(this._counter(this._instretOff) >> 32n);
+            case CSR.TIME: return this._time() % 0x100000000;
+            case CSR.TIMEH: return Math.floor(this._time() / 0x100000000) >>> 0;
+            default:
+                if ((n >= 0xb03 && n <= 0xb1f) || (n >= 0xb83 && n <= 0xb9f) ||
+                    (n >= 0xc03 && n <= 0xc1f) || (n >= 0xc83 && n <= 0xc9f) ||
+                    (n >= 0x323 && n <= 0x33f)) return 0;       // hpm counters/events: hardwired 0
+                return this.csr[n] >>> 0;
+        }
     }
 
-    /** Write a CSR with the WARL masks M/S mode need. */
+    /** Write a CSR with the WARL masks M/S mode need (Spike's, where they differ). */
     _writeCsr(n, v) {
         v >>>= 0;
-        if (n === CSR.MHARTID || n === CSR.MISA) return;              // read-only here
-        if (n === CSR.MSTATUS) { this.csr[n] = v & MSTATUS_WMASK; return; }
-        if (n === CSR.SSTATUS) {                                      // S-view: only the S bits of mstatus
-            this.csr[CSR.MSTATUS] = ((this.csr[CSR.MSTATUS] & ~SSTATUS_MASK) | (v & SSTATUS_MASK)) >>> 0;
-            return;
+        switch (n) {
+            case CSR.MSTATUS: {
+                if (((v >>> 11) & 3) === 2) v &= ~MSTATUS_MPP;          // reserved MPP legalises to U
+                this.csr[n] = v & MSTATUS_WMASK;
+                return;
+            }
+            case CSR.SSTATUS:                                         // S-view: only the S bits of mstatus
+                this.csr[CSR.MSTATUS] = ((this.csr[CSR.MSTATUS] & ~SSTATUS_MASK) | (v & SSTATUS_MASK)) >>> 0;
+                return;
+            case CSR.MIP: {
+                // M-mode may write the supervisor lines (SSIP/STIP/SEIP) — how
+                // firmware forwards a timer to S-mode. The machine lines are
+                // owned by devices (CLINT/PLIC), read-only here.
+                const w = IRQ_SSI | IRQ_STI | IRQ_SEI;
+                this.csr[n] = ((this.csr[n] & ~w) | (v & w)) >>> 0;
+                return;
+            }
+            case CSR.MIE: this.csr[n] = v & 0xaaa; return;
+            case CSR.SIE: {                                           // S-view of mie, gated by mideleg
+                const d = this.csr[CSR.MIDELEG];
+                this.csr[CSR.MIE] = ((this.csr[CSR.MIE] & ~d) | (v & d)) >>> 0;
+                return;
+            }
+            case CSR.SIP: {                                           // S may set SSIP (if delegated)
+                const w = IRQ_SSI & this.csr[CSR.MIDELEG];
+                this.csr[CSR.MIP] = ((this.csr[CSR.MIP] & ~w) | (v & w)) >>> 0;
+                return;
+            }
+            // Direct (0) and vectored (1) modes; mode 2/3 are reserved.
+            case CSR.MTVEC: case CSR.STVEC: this.csr[n] = (v & ~2) >>> 0; return;
+            case CSR.MEPC: case CSR.SEPC: this.csr[n] = (v & ~1) >>> 0; return;   // IALIGN=16 (C)
+            // Only the S-mode interrupts (software/timer/external) are delegatable;
+            // the machine interrupts (bits 3/7/11) are hardwired 0 in mideleg, so an
+            // over-broad write (xv6 sets 0xffff) must not delegate the machine timer.
+            case CSR.MIDELEG: this.csr[n] = v & (IRQ_SSI | IRQ_STI | IRQ_SEI); return;
+            case CSR.MEDELEG: this.csr[n] = v & MEDELEG_MASK; return;
+            case CSR.MCYCLE: this._cycleOff = this._counterWrite(this._cycleOff, v, false); return;
+            case CSR.MCYCLEH: this._cycleOff = this._counterWrite(this._cycleOff, v, true); return;
+            case CSR.MINSTRET: this._instretOff = this._counterWrite(this._instretOff, v, false); return;
+            case CSR.MINSTRETH: this._instretOff = this._counterWrite(this._instretOff, v, true); return;
+            case CSR.MENVCFG: this.csr[n] = v & ((1 << 0) /*FIOM*/); return;
+            case CSR.SENVCFG: this.csr[n] = v & 1; return;
+            case CSR.SATP: this.csr[n] = v; return;
+            case CSR.MSCRATCH: case CSR.MCAUSE: case CSR.MTVAL: case CSR.SSCRATCH: case CSR.SCAUSE:
+            case CSR.STVAL: case CSR.MCOUNTEREN: case CSR.SCOUNTEREN:
+                this.csr[n] = v; return;
+            default:
+                if ((n >= 0x3a0 && n <= 0x3a3) || (n >= 0x3b0 && n <= 0x3bf)) { this.csr[n] = v; return; }  // PMP (stored, not enforced)
+                return;                                                // read-only / hardwired: ignore
         }
-        if (n === CSR.MIP) {
-            // Software may set/clear the software-interrupt bits (MSIP/SSIP);
-            // timer/external lines are owned by devices (CLINT/PLIC).
-            this.csr[n] = (this.csr[n] & ~(IRQ_MSI | IRQ_SSI)) | (v & (IRQ_MSI | IRQ_SSI));
-            return;
-        }
-        if (n === CSR.SIE) {                                          // S-view of mie, gated by mideleg
-            const d = this.csr[CSR.MIDELEG];
-            this.csr[CSR.MIE] = ((this.csr[CSR.MIE] & ~d) | (v & d)) >>> 0;
-            return;
-        }
-        if (n === CSR.SIP) {                                          // S may set SSIP (if delegated)
-            const w = IRQ_SSI & this.csr[CSR.MIDELEG];
-            this.csr[CSR.MIP] = ((this.csr[CSR.MIP] & ~w) | (v & w)) >>> 0;
-            return;
-        }
-        if (n === CSR.MTVEC || n === CSR.STVEC) { this.csr[n] = v & ~1; return; }   // force direct base
-        // Only the S-mode interrupts (software/timer/external) are delegatable;
-        // the machine interrupts (bits 3/7/11) are hardwired 0 in mideleg, so an
-        // over-broad write (xv6 sets 0xffff) must not delegate the machine timer.
-        if (n === CSR.MIDELEG) { this.csr[n] = v & (IRQ_SSI | IRQ_STI | IRQ_SEI); return; }
-        this.csr[n] = v;
     }
 
     /** Enter a trap. Routed to S-mode when the cause is delegated (medeleg for
@@ -173,6 +300,7 @@ export class RiscV32 {
      *  otherwise to M-mode. Stashes the return pc/cause/tval, records and lowers
      *  the interrupt-enable, sets the previous privilege, and jumps to the vector. */
     _trap(cause, isInterrupt, tval) {
+        this._traps++;                                   // the trapping step retires nothing
         const deleg = isInterrupt ? this.csr[CSR.MIDELEG] : this.csr[CSR.MEDELEG];
         const toS = this.priv <= PRIV_S && (deleg & (1 << cause)) !== 0;
         const causeWord = ((isInterrupt ? 0x80000000 : 0) | cause) >>> 0;
@@ -187,7 +315,8 @@ export class RiscV32 {
             if (this.priv === PRIV_S) ns |= MSTATUS_SPP;
             this.csr[CSR.MSTATUS] = ns >>> 0;
             this.priv = PRIV_S;
-            this.pc = (this.csr[CSR.STVEC] & ~3) >>> 0;
+            const tv = this.csr[CSR.STVEC];                            // vectored: interrupts to base + 4*cause
+            this.pc = ((tv & ~3) + ((tv & 1) && isInterrupt ? 4 * cause : 0)) >>> 0;
         } else {
             this.csr[CSR.MEPC] = this.pc >>> 0;
             this.csr[CSR.MCAUSE] = causeWord;
@@ -198,7 +327,8 @@ export class RiscV32 {
             ns |= (this.priv << 11) & MSTATUS_MPP;
             this.csr[CSR.MSTATUS] = ns >>> 0;
             this.priv = PRIV_M;
-            this.pc = (this.csr[CSR.MTVEC] & ~3) >>> 0;
+            const tv = this.csr[CSR.MTVEC];
+            this.pc = ((tv & ~3) + ((tv & 1) && isInterrupt ? 4 * cause : 0)) >>> 0;
         }
         this.waiting = false;
     }
@@ -456,6 +586,7 @@ export class RiscV32 {
                 break;
             }
             case OPC.JALR: {
+                if (funct3 !== 0) return this._bad(inst);
                 const imm = sext(inst >>> 20, 12);
                 const t = next;
                 next = ((a + imm) & ~1) >>> 0;
@@ -516,14 +647,20 @@ export class RiscV32 {
                     case 4: this.set(rd, a ^ imm); break;                       // XORI
                     case 6: this.set(rd, a | imm); break;                       // ORI
                     case 7: this.set(rd, a & imm); break;                       // ANDI
-                    case 1: this.set(rd, a << shamt); break;                    // SLLI
-                    case 5: this.set(rd, (funct7 & 0x20) ? (a >> shamt) : (a >>> shamt)); break; // SRAI/SRLI
+                    case 1:                                                     // SLLI (shamt[5]=1 is illegal on RV32)
+                        if (funct7 !== 0) return this._bad(inst);
+                        this.set(rd, a << shamt); break;
+                    case 5:                                                     // SRAI/SRLI
+                        if ((funct7 & ~0x20) !== 0) return this._bad(inst);
+                        this.set(rd, (funct7 & 0x20) ? (a >> shamt) : (a >>> shamt)); break;
                     default: return this._bad(inst);
                 }
                 break;
             }
             case OPC.OP: {
                 if (funct7 === 0x01) { if (!this._muldiv(rd, funct3, a, b)) return this._bad(inst); break; }
+                // funct7 is 0, or 0x20 for SUB/SRA only; anything else is illegal.
+                if (funct7 !== 0 && !(funct7 === 0x20 && (funct3 === 0 || funct3 === 5))) return this._bad(inst);
                 const shamt = b & 0x1f;
                 switch (funct3) {
                     case 0: this.set(rd, (funct7 & 0x20) ? (a - b) | 0 : (a + b) | 0); break; // SUB/ADD
@@ -544,6 +681,7 @@ export class RiscV32 {
                 const addr = this._translate(a >>> 0, funct5 === 0x02 ? 'load' : 'store'); // rs1 is the address
                 if (addr === null) { this.instret++; return 1; }   // page fault taken
                 if (funct5 === 0x02) {                         // LR.W
+                    if (rs2 !== 0) return this._bad(inst);
                     this.set(rd, this.ld32(addr) | 0);
                     this.resvAddr = addr;
                     break;
@@ -573,9 +711,12 @@ export class RiscV32 {
                 this.resvAddr = -1;
                 break;
             }
-            case OPC.MISCMEM: break;   // FENCE / FENCE.I — a nop for this model
+            case OPC.MISCMEM:          // FENCE / FENCE.I — a nop for this model (no caches)
+                if (funct3 > 1) return this._bad(inst);
+                break;
             case OPC.SYSTEM: {
                 const imm = (inst >>> 20) & 0xfff;
+                if (funct3 === 0 && (rd !== 0 || (rs1 !== 0 && funct7 !== 0x09))) return this._bad(inst);
                 if (funct3 === 0 && imm === 0) {          // ECALL
                     if (this.priv === PRIV_M) {
                         if (this.ecallTraps) {
@@ -609,6 +750,13 @@ export class RiscV32 {
                     return 1;
                 }
                 if (funct3 === 0 && imm === 1) {          // EBREAK
+                    if (!this.hooks.ebreak && this.ebreakTraps) {
+                        // No debugger hook, trap semantics requested: the
+                        // architectural breakpoint exception (tval = pc, as Spike).
+                        this._trap(CAUSE_BREAKPOINT, false, pc);
+                        this.instret++;
+                        return 1;
+                    }
                     this.pc = next;
                     if (this.hooks.ebreak) this.hooks.ebreak(this); else this.halted = true;
                     if (this.halted) return 0;
@@ -616,6 +764,7 @@ export class RiscV32 {
                     return 1;
                 }
                 if (funct3 === 0 && imm === 0x302) {      // MRET — return from an M-mode trap
+                    if (this.priv !== PRIV_M) return this._bad(inst);
                     const s = this.csr[CSR.MSTATUS];
                     const mpp = (s & MSTATUS_MPP) >>> 11;
                     // MIE <- MPIE; MPIE <- 1; MPP <- U(0); priv <- MPP.
@@ -630,6 +779,8 @@ export class RiscV32 {
                     return 1;
                 }
                 if (funct3 === 0 && imm === 0x102) {      // SRET — return from an S-mode trap
+                    if (this.priv === PRIV_U || (this.priv === PRIV_S && (this.csr[CSR.MSTATUS] & MSTATUS_TSR)))
+                        return this._bad(inst);
                     const s = this.csr[CSR.MSTATUS];
                     const spp = (s & MSTATUS_SPP) ? PRIV_S : PRIV_U;
                     // SIE <- SPIE; SPIE <- 1; SPP <- U(0); priv <- SPP.
@@ -643,24 +794,30 @@ export class RiscV32 {
                     return 1;
                 }
                 if (funct3 === 0 && imm === 0x105) {      // WFI — a hint; nop here
+                    if (this.priv === PRIV_U || (this.priv === PRIV_S && (this.csr[CSR.MSTATUS] & MSTATUS_TW)))
+                        return this._bad(inst);
                     this.waiting = true;
                     break;
                 }
-                if (funct3 === 0 && ((inst >>> 25) & 0x7f) === 0x09) {  // SFENCE.VMA
+                if (funct3 === 0 && funct7 === 0x09) {    // SFENCE.VMA
+                    if (this.priv === PRIV_U || (this.priv === PRIV_S && (this.csr[CSR.MSTATUS] & MSTATUS_TVM)))
+                        return this._bad(inst);
                     break;                                // no TLB in this model — a nop
                 }
                 // CSR read/modify/write (funct3 1..7): rd <- old CSR; CSR <- new.
-                if (funct3 !== 0) {
+                if (funct3 !== 0 && funct3 !== 4) {
                     const csrN = imm & 0xfff;
+                    const write = funct3 & 0x3;                        // 1=RW, 2=RS, 3=RC
+                    // CSRRS/CSRRC with a zero source (rs1 = x0, or uimm = 0) do not write.
+                    const writes = write === 1 || rs1 !== 0;
+                    if (!this._csrOk(csrN, writes)) return this._bad(inst);
                     const old = this._readCsr(csrN);
                     const src = (funct3 & 0x4) ? rs1 : (a | 0);       // immediate variants use the rs1 FIELD
-                    const write = funct3 & 0x3;                        // 1=RW, 2=RS, 3=RC
                     let val;
                     if (write === 1) val = src;                       // CSRRW/I
                     else if (write === 2) val = old | src;            // CSRRS/I (set)
                     else val = old & ~src;                            // CSRRC/I (clear)
-                    // CSRRS/CSRRC with a zero source do not write (no side effects).
-                    if (!(write !== 1 && ((funct3 & 0x4) ? rs1 : rs1) === 0)) this._writeCsr(csrN, val);
+                    if (writes) this._writeCsr(csrN, val);
                     this.set(rd, old | 0);
                     break;
                 }
@@ -688,7 +845,17 @@ export class RiscV32 {
         }
     }
 
+    /** An illegal instruction. Once software has installed a trap vector (mtvec
+     *  != 0) this is the architectural exception — cause 2, tval = the
+     *  instruction bits — which an OS relies on (emulation, SIGILL). A bare
+     *  program with no vector would only jump into address 0, so there the
+     *  machine halts instead and records what it hit. */
     _bad(inst) {
+        if (this.csr[CSR.MTVEC] !== 0) {
+            this._trap(CAUSE_ILLEGAL, false, inst >>> 0);
+            this.instret++;
+            return 1;
+        }
         this.halted = true;
         this.trap = { cause: 'illegal-instruction', inst: inst >>> 0, pc: this.pc >>> 0 };
         return 0;
