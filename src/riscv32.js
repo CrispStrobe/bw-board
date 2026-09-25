@@ -162,11 +162,22 @@ export class RiscV32 {
         this._devPage = new Uint8Array(Math.ceil(mem.length / 4096) + 1);
         this._devCount = -1;
         this._scanDevices();
+        // A software TLB for Sv32: direct-mapped, 256 entries per access type
+        // (fetch 0 / load 1 / store 2). An entry maps a 4 KiB virtual page to its
+        // physical page for one context — effective privilege | SUM<<2 | MXR<<3 —
+        // so privilege/MPRV changes need no flush. Filled only after a walk has
+        // passed every check with A (and, for a store, D) set; flushed on a satp
+        // write, SFENCE.VMA and reset — the invalidation the spec asks software for.
+        this._tlbTag = new Int32Array(768);     // vpn + 1 (0 = empty)
+        this._tlbCtx = new Int8Array(768);
+        this._tlbPpn = new Int32Array(768);     // physical page base
         // Zicntr: the `time` CSR reads this source (the machine wires the CLINT's
         // mtime); without one it follows the cycle count.
         this.timeSource = hooks.timeSource || null;
         this._resetCounters();
     }
+
+    _tlbFlush() { this._tlbTag.fill(0); }
 
     _resetCounters() {
         // Architectural retired-instruction count = steps retired minus traps
@@ -190,6 +201,7 @@ export class RiscV32 {
         this.priv = PRIV_M;
         this.waiting = false;
         this._resetCounters();
+        this._tlbFlush();
     }
 
     /** Raise (level-set) a machine interrupt line in mip — called by a device
@@ -310,7 +322,7 @@ export class RiscV32 {
             case CSR.MENVCFG: this.csr[n] = v & ((1 << 0) /*FIOM*/); return;
             case CSR.MENVCFGH: this.csr[n] = v & MENVCFGH_ADUE; return;
             case CSR.SENVCFG: this.csr[n] = v & 1; return;
-            case CSR.SATP: this.csr[n] = v; return;
+            case CSR.SATP: this.csr[n] = v; this._tlbFlush(); return;
             case CSR.MSCRATCH: case CSR.MCAUSE: case CSR.MTVAL: case CSR.SSCRATCH: case CSR.SCAUSE:
             case CSR.STVAL: case CSR.MCOUNTEREN: case CSR.SCOUNTEREN:
                 this.csr[n] = v; return;
@@ -401,6 +413,11 @@ export class RiscV32 {
         const satp = this.csr[CSR.SATP] >>> 0;
         const eff = this._effPriv(access);
         if ((satp >>> 31) === 0 || eff > PRIV_S) return va;          // Bare / M-mode: identity
+        const msx = this.csr[CSR.MSTATUS];
+        const ctx = eff | ((msx >>> 16) & 0xc);                      // SUM (bit 18) → 4, MXR (bit 19) → 8
+        const ti = (access === 'fetch' ? 0 : access === 'store' ? 512 : 256) | ((va >>> 12) & 0xff);
+        if (this._tlbTag[ti] === (va >>> 12) + 1 && this._tlbCtx[ti] === ctx)
+            return (this._tlbPpn[ti] + (va & 0xfff)) >>> 0;
         const cause = access === 'fetch' ? CAUSE_FETCH_PF : access === 'store' ? CAUSE_STORE_PF : CAUSE_LOAD_PF;
         const fault = () => { this._trap(cause, false, va); return null; };
         const vpn1 = (va >>> 22) & 0x3ff, vpn0 = (va >>> 12) & 0x3ff, off = va & 0xfff;
@@ -437,6 +454,9 @@ export class RiscV32 {
             if (!(this.csr[CSR.MENVCFGH] & MENVCFGH_ADUE)) return fault();
             this.st32(pteAddr, np);
         }
+        this._tlbTag[ti] = (va >>> 12) + 1;
+        this._tlbCtx[ti] = ctx;
+        this._tlbPpn[ti] = (phys - off) | 0;
         return phys;
     }
 
@@ -712,7 +732,7 @@ export class RiscV32 {
             case OPC.LOAD: {
                 const va = (a + sext(inst >>> 20, 12)) >>> 0;
                 this._acc = CAUSE_LOAD_ACCESS; this._va = va;
-                const addr = this._translate(va, 'load');
+                const addr = (this.csr[CSR.SATP] & 0x80000000) === 0 ? va : this._translate(va, 'load');
                 if (addr === null) { this.instret++; return 1; }        // load page fault taken
                 switch (funct3) {
                     case 0: this.set(rd, sext(this.ld8(addr), 8)); break;   // LB
@@ -728,7 +748,7 @@ export class RiscV32 {
                 const imm = sext(((inst >>> 25) & 0x7f) << 5 | ((inst >>> 7) & 0x1f), 12);
                 const va = (a + imm) >>> 0;
                 this._acc = CAUSE_STORE_ACCESS; this._va = va;
-                const addr = this._translate(va, 'store');
+                const addr = (this.csr[CSR.SATP] & 0x80000000) === 0 ? va : this._translate(va, 'store');
                 if (addr === null) { this.instret++; return 1; }        // store page fault taken
                 switch (funct3) {
                     case 0: this.st8(addr, b); break;    // SB
@@ -906,7 +926,8 @@ export class RiscV32 {
                 if (funct3 === 0 && funct7 === 0x09) {    // SFENCE.VMA
                     if (this.priv === PRIV_U || (this.priv === PRIV_S && (this.csr[CSR.MSTATUS] & MSTATUS_TVM)))
                         return this._bad(inst);
-                    break;                                // no TLB in this model — a nop
+                    this._tlbFlush();                     // (a whole-TLB flush covers any rs1/rs2 scope)
+                    break;
                 }
                 // CSR read/modify/write (funct3 1..7): rd <- old CSR; CSR <- new.
                 if (funct3 !== 0 && funct3 !== 4) {

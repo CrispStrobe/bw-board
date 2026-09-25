@@ -174,7 +174,18 @@ function peekInst(cpu, pc) {
     return hi === null ? 0 : (lo | (hi << 16)) >>> 0;
 }
 
+// The peek walks with a scratch TLB so it can neither use nor fill the core's
+// real one (it walks with ADUE forced on, which the real core may not have).
+const peekTlb = {tag: new Int32Array(768), ctx: new Int8Array(768), ppn: new Int32Array(768)};
+
 function peekHalf(cpu, va) {
+    const tlb = [cpu._tlbTag, cpu._tlbCtx, cpu._tlbPpn];
+    if (tlb[0]) { peekTlb.tag.fill(0); [cpu._tlbTag, cpu._tlbCtx, cpu._tlbPpn] = [peekTlb.tag, peekTlb.ctx, peekTlb.ppn]; }
+    try { return peekHalfRaw(cpu, va); }
+    finally { if (tlb[0]) [cpu._tlbTag, cpu._tlbCtx, cpu._tlbPpn] = tlb; }
+}
+
+function peekHalfRaw(cpu, va) {
     const saveTrap = cpu._trap, st32 = cpu.st32, traps = cpu._traps;
     let faulted = false;
     cpu._trap = () => { faulted = true; };
