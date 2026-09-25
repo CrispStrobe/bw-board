@@ -1,5 +1,6 @@
 /**
- * Board-kind device models — Arduino Nano, Arduino Uno, Pi Pico.
+ * Board-kind device models — Arduino Nano/Uno/Mega, Pi Pico, and the MakeCode
+ * boards (Calliope mini, Circuit Playground Express, PyBadge).
  *
  * These represent the development board as a whole. Their power pins (5V,
  * 3V3, GND, VIN, VBUS, VSYS) are stamped as Thévenin sources / ground
@@ -58,11 +59,14 @@ function classifyTerminal(name) {
  * Build a device model for a board kind given its terminal list.
  * Power terminals are stamped; GPIO terminals are left for the adapter.
  */
-function boardModel(allTerminals, boardVcc) {
+function boardModel(allTerminals, boardVcc, roles = {}) {
   const powerTerminals = [];
   const gpioTerminals = [];
   for (const t of allTerminals) {
-    const role = classifyTerminal(t);
+    // `roles` names a board's own power pads where the shared spelling rules
+    // above would misread them — a micro:bit-style `3v` pad or Feather `usb`
+    // pin would otherwise classify as GPIO and silently source nothing.
+    const role = Object.hasOwn(roles, t) ? roles[t] : classifyTerminal(t);
     if (role === 'gpio') gpioTerminals.push(t);
     else powerTerminals.push({ name: t, role });
   }
@@ -303,6 +307,46 @@ const STC15_TERMINALS = [
   'p3.7', 'p3.6', 'p3.5', 'p3.4', 'p3.3', 'p3.2', 'p3.1', 'p3.0',
 ];
 
+// ─── MakeCode boards: Calliope mini, Circuit Playground Express, PyBadge ─
+//
+// The boards lite runs MakeCode programs on. Terminal spellings are the
+// bw-circuit-ui sidecars' (the netlist's namespace), which are MakeCode's own
+// pin names lowercased — `DigitalPin.P0` is `p0`, `pins.A1` is `a1` — so a
+// program's setPin('p0', …) lands on the pad it names. All three are 3.3 V
+// logic: registered as 'mcu' passthroughs (the pre-registration fallback in
+// bw-circuit-ui) their pins drove at the BOARD's vcc, which the designer
+// constructs at 5 V, and their 3V/GND pads sourced nothing.
+
+// Calliope mini 1.x/2.x (nRF51822): the six ring pads — P0-P3 on the arms,
+// `+` (3V) and `-` (GND) at the top. The 2x13 header (C4-C17, …) and the Grove
+// sockets are not modelled as terminals.
+const CALLIOPE_MINI_TERMINALS = ['p0', 'p1', 'p2', 'p3', '3v', 'gnd'];
+const CALLIOPE_MINI_ROLES = { '3v': '3v3' };
+
+// Adafruit Circuit Playground Express (ATSAMD21G18): its 14 alligator pads —
+// A0-A7, two 3.3 V, three GND and VOUT. Onboard NeoPixels, buttons, slide
+// switch and sensors belong to the board, not to pads.
+const CPX_TERMINALS = [
+  'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7',
+  '3v3', '3v3_2', 'gnd', 'gnd2', 'gnd3', 'vout',
+];
+// VOUT is USB 5 V or the battery, whichever is higher, after the power-path
+// diode — the Pico's VSYS role (USB-powered, ~4.7 V) is the same assumption.
+const CPX_ROLES = { '3v3_2': '3v3', vout: 'vsys' };
+
+// Adafruit PyBadge (ATSAMD51J19): the Feather headers, STEMMA and the D2/D3
+// JST ports, exactly as bw-circuit-ui's pybadge sidecar names them.
+const PYBADGE_TERMINALS = [
+  'reset', '3v3', 'aref', 'gnd', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5',
+  'sck', 'mosi', 'miso', 'rx', 'tx', 'free', 'sda', 'scl',
+  'd5', 'd6', 'd9', 'd10', 'd11', 'd12', 'd13',
+  'usb', 'enable', 'battery',
+  'stemma_sda', 'stemma_scl', 'd2', 'd3',
+];
+// Feather `USB` is VBUS (5 V when plugged in). `BAT` is a LiPo that is not
+// assumed present, and `EN` is the regulator enable — neither sources.
+const PYBADGE_ROLES = { usb: '5v', battery: 'ref', enable: 'ref' };
+
 /**
  * Register board-kind device models.
  */
@@ -311,6 +355,9 @@ export function registerBoardKinds() {
   registerDevice('arduino_uno', boardModel(UNO_TERMINALS, 5.0));
   registerDevice('arduino_mega', boardModel(MEGA_TERMINALS, 5.0));
   registerDevice('pi_pico', boardModel(PICO_TERMINALS, 3.3));
+  registerDevice('calliopemini', boardModel(CALLIOPE_MINI_TERMINALS, 3.3, CALLIOPE_MINI_ROLES));
+  registerDevice('circuit_playground_express', boardModel(CPX_TERMINALS, 3.3, CPX_ROLES));
+  registerDevice('pybadge', boardModel(PYBADGE_TERMINALS, 3.3, PYBADGE_ROLES));
   registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
   registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));
   registerDevice('attiny85', bareChipModel(ATTINY85_TERMINALS, 5.0));
