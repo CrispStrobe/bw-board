@@ -14,7 +14,7 @@
 import {
   CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART, PinState,
   ATtinyTimer1, attinyTimer1Config,
-  AVRTWI, AVRSPI,
+  AVRTWI, AVRSPI, AVREEPROM, EEPROMMemoryBackend,
 } from 'avr8js';
 import { CHIPS, ATMEGA328P } from './avr-chips.js';
 import { fastAvrInstruction } from './vendor/avr8js-fast/instruction.js';
@@ -169,6 +169,19 @@ export function createAvr8jsAdapter(opts = {}) {
     usart.onRxComplete = pumpRx;
   }
 
+  // ── EEPROM ──
+  // Every chip here has internal EEPROM, and a program that writes it waits
+  // for EEPE to clear. Without the peripheral the bit is plain RAM that
+  // nothing clears, so EEPROM.write() -- and every EEPROM.read() after it --
+  // hung forever (measured: an Arduino sketch printed its first line and
+  // stopped). avr-peripherals.js's wirePeripherals() had this and nothing
+  // called it; the adapter owns it now, like the USART.
+  let eeprom = null, eepromBackend = null;
+  if (chip.eeprom) {
+    eepromBackend = new EEPROMMemoryBackend(chip.eepromBytes ?? 512);
+    eeprom = new AVREEPROM(cpu, eepromBackend, chip.eeprom);
+  }
+
   // ── TWI (I2C hardware peripheral) ──
   let twi = null;
   let twiBridge = null;
@@ -189,8 +202,40 @@ export function createAvr8jsAdapter(opts = {}) {
   let spiBridge = null;
   if (chip.spi) {
     spi = new AVRSPI(cpu, chip.spi, clockHz);
-    spiBridge = createSPIBridge(spi, { onAccess: publishDeviceAccess });
+    // Hardware SPI on the pins (see spi-bridge.js): the peripheral overrides
+    // the port for SCK/MOSI -- the same override timer PWM uses, so the edges
+    // reach the board through publishPin -- and MISO is read off the board.
+    // avr8js's PinOverrideMode (not exported from its index): None 0, Set 2, Clear 3.
+    const OVERRIDE_NONE = 0, OVERRIDE_SET = 2, OVERRIDE_CLEAR = 3;
+    const sp = chip.spiPins;
+    const wire = sp && {
+      SPCR: chip.spi.SPCR,
+      ready: () => !!board && !!(cpu.data[chip.spi.SPCR] & 0x10),   // MSTR
+      drive(which, high) {
+        ioPorts[sp.port].timerOverridePin(sp[which], high ? OVERRIDE_SET : OVERRIDE_CLEAR);
+      },
+      release() {
+        ioPorts[sp.port].timerOverridePin(sp.sck, OVERRIDE_NONE);
+        ioPorts[sp.port].timerOverridePin(sp.mosi, OVERRIDE_NONE);
+      },
+      readMiso: () => board.readPin(portPins[sp.port][sp.miso]) === 1,
+    };
+    spiBridge = createSPIBridge(spi, { onAccess: publishDeviceAccess, wire });
     spi.onByte = spiBridge.onByte;
+    // While SPE and MSTR are set the peripheral owns SCK and it idles at CPOL
+    // -- in mode 2/3 that is HIGH between bytes whatever PORTB says, and a
+    // part counting edges would otherwise see a spurious one per byte. SPI
+    // off (or slave) hands both pins back to the port.
+    if (wire) {
+      const avrSpcrHook = cpu.writeHooks[chip.spi.SPCR];
+      cpu.writeHooks[chip.spi.SPCR] = (value, ...rest) => {
+        const r = avrSpcrHook ? avrSpcrHook(value, ...rest) : false;
+        if (!board) return r;
+        if ((value & 0x50) === 0x50) wire.drive('sck', !!(value & 0x08));
+        else wire.release();
+        return r;
+      };
+    }
   }
 
   let board = null;
@@ -282,6 +327,11 @@ export function createAvr8jsAdapter(opts = {}) {
     /** Receive every byte the program transmits on UART0 (print output).
      *  No-op on chips without USART (ATtiny85). */
     onSerial(cb) { serialListener = cb; },
+
+    /** The chip's internal EEPROM (avr8js AVREEPROM), or null. */
+    eeprom,
+    /** Its backing store (EEPROMMemoryBackend; .memory is the bytes), or null. */
+    eepromBackend,
 
     /**
      * Send bytes TO the program's UART0 (what a serial monitor types). Queued

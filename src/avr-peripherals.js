@@ -33,7 +33,9 @@ export function wirePeripherals(adapter, opts = {}) {
   const { cpu, chip } = adapter;
 
   // ── Internal EEPROM ──
-  if (chip.eeprom) {
+  // The adapter wires the internal EEPROM itself now; a second AVREEPROM on the
+  // same registers would only replace the first one's hooks.
+  if (chip.eeprom && !adapter.eeprom) {
     const size = chip.eepromBytes ?? 512;
     const backend = new EEPROMMemoryBackend(size);
     const eeprom = new AVREEPROM(cpu, backend, chip.eeprom);
