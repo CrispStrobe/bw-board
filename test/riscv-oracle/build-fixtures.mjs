@@ -21,7 +21,10 @@ export const SPIKE_ISA = 'rv32imac_zicsr_zifencei_zicntr_zicclsm_svadu';
 const KEEP_SYMS = ['tohost', 'fromhost', 'begin_signature', 'end_signature'];
 
 const here = dirname(fileURLToPath(import.meta.url));
-const [suite, ...elfs] = process.argv.slice(2);
+const [suite, ...args] = process.argv.slice(2);
+// Programs in code-point order of their names, so the fixture's bytes do not
+// depend on the shell's locale collation of the glob that listed them.
+const elfs = [...args].sort((a, b) => (basename(a) < basename(b) ? -1 : basename(a) > basename(b) ? 1 : 0));
 const spike = process.env.SPIKE || 'spike';
 const out = {isa: SPIKE_ISA, tests: {}};
 for (const f of elfs) {
