@@ -91,6 +91,8 @@ const IRQ_MSI = 1 << 3, IRQ_MTI = 1 << 7, IRQ_MEI = 1 << 11;
 const IRQ_SSI = 1 << 1, IRQ_STI = 1 << 5, IRQ_SEI = 1 << 9;
 // Interrupt causes (with the high bit set in mcause).
 const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
+// Spec default interrupt priority, as (mip bit, cause) pairs: MEI, MSI, MTI, SEI, SSI, STI.
+const IRQ_ORDER = [IRQ_MEI, CAUSE_MEI, IRQ_MSI, CAUSE_MSI, IRQ_MTI, CAUSE_MTI, IRQ_SEI, 9, IRQ_SSI, 1, IRQ_STI, 5];
 // Synchronous exception causes: environment call from U/S/M mode.
 const CAUSE_ECALL_U = 8, CAUSE_ECALL_S = 9, CAUSE_ECALL_M = 11;
 const CAUSE_ILLEGAL = 2, CAUSE_BREAKPOINT = 3;
@@ -99,6 +101,8 @@ const CAUSE_FETCH_ACCESS = 1, CAUSE_LOAD_ACCESS = 5, CAUSE_STORE_ACCESS = 7;
 const ACCESS_FAULT = Object.freeze({accessFault: true});
 // Sv32 page-fault causes: instruction / load / store-or-AMO.
 const CAUSE_FETCH_PF = 12, CAUSE_LOAD_PF = 13, CAUSE_STORE_PF = 15;
+
+const RVC_CACHE = new Uint32Array(65536);
 
 export class RiscV32 {
     /**
@@ -379,9 +383,8 @@ export class RiscV32 {
         if (!pend) return false;
         const md = this.csr[CSR.MIDELEG], ms = this.csr[CSR.MSTATUS];
         // Spec default priority: MEI, MSI, MTI, SEI, SSI, STI.
-        const order = [[IRQ_MEI, CAUSE_MEI], [IRQ_MSI, CAUSE_MSI], [IRQ_MTI, CAUSE_MTI],
-            [IRQ_SEI, 9], [IRQ_SSI, 1], [IRQ_STI, 5]];
-        for (const [bit, cause] of order) {
+        for (let k = 0; k < IRQ_ORDER.length; k += 2) {
+            const bit = IRQ_ORDER[k], cause = IRQ_ORDER[k + 1];
             if (!(pend & bit)) continue;
             const toS = (md & bit) !== 0;
             const enabled = toS
@@ -670,8 +673,12 @@ export class RiscV32 {
         const lo = this.ld16(pcPhys);
         let inst, ilen;
         if ((lo & 3) !== 3) {
-            inst = this._decompress(lo);
-            if (inst === null) return this._bad(lo);
+            // RVC expansion is a pure function of the 16 bits: memoised in a
+            // 64 K table shared by every core (0 = not yet expanded; an illegal
+            // encoding is stored as 1, which no expansion can produce).
+            inst = RVC_CACHE[lo];
+            if (inst === 0) { const e = this._decompress(lo); inst = RVC_CACHE[lo] = e === null ? 1 : e; }
+            if (inst === 1) return this._bad(lo);
             ilen = 2;
         } else {
             let hiPhys;
