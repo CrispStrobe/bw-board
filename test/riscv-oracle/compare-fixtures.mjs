@@ -4,8 +4,12 @@
 // differing trace record.  node compare-fixtures.mjs A.json.br B.json.br
 import {readFileSync} from 'node:fs';
 import {brotliDecompressSync} from 'node:zlib';
-const [a, b] = process.argv.slice(2).map(f => JSON.parse(brotliDecompressSync(readFileSync(f)).toString()));
+const raw = process.argv.slice(2).map(f => brotliDecompressSync(readFileSync(f)));
+const [a, b] = raw.map(r => JSON.parse(r.toString()));
 let diffs = 0;
+// Exact: the decompressed JSON must be identical (program order included);
+// the per-program comparison below then says what differs, if anything.
+if (!raw[0].equals(raw[1])) { diffs++; console.log('decompressed bytes differ'); }
 const say = s => { diffs++; if (diffs <= 40) console.log(s); };
 if (a.isa !== b.isa) say(`isa: ${a.isa} vs ${b.isa}`);
 const names = new Set([...Object.keys(a.tests), ...Object.keys(b.tests)]);
