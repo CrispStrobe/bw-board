@@ -57,6 +57,7 @@ export class RiscV32Machine {
         if (config.clint !== false) {
             this.clint = createClint(this.cpu, {base: config.clintBase});
             this.cpu.io.push(this.clint);
+            this.cpu.timeSource = () => this.clint.mtime;   // the `time` CSR reads mtime
         }
         // A PLIC (external interrupts) so a device — the UART's receive line —
         // can trap the core via MEIP. The third of the standard CLINT+PLIC+UART.
