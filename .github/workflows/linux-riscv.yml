@@ -1,0 +1,37 @@
+# Boot RV32 Linux (6.1, Sv32) to an interactive busybox shell on
+# RiscV32Machine, and time it. The kernel and userland are rv32emu's pinned
+# prebuilt image, fetched and SHA-checked by test/linux-riscv/build.sh (GPL, so
+# never committed); the machine's in-emulator SBI replaces OpenSBI. A clean
+# runner gives the real wall-clock numbers; the dev box is shared.
+name: Linux RISC-V boot
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'test/linux-riscv/**'
+      - '.github/workflows/linux-riscv.yml'
+      - 'src/riscv32*.js'
+      - 'src/fdt.js'
+
+permissions:
+  contents: read
+
+jobs:
+  boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Fetch the kernel and cut the initramfs
+        run: bash test/linux-riscv/build.sh linux-out
+      - name: Boot to an interactive shell (uname -a over the UART)
+        run: node --max-old-space-size=1024 test/linux-riscv/boot.mjs linux-out/Image linux-out/initramfs.cpio 3000000000 900
+      - name: Reset to power-off, three runs (instructions and wall time)
+        run: |
+          for i in 1 2 3; do
+            QUIET=1 node --max-old-space-size=1024 test/linux-riscv/poweroff.mjs linux-out/Image linux-out/initramfs-poweroff.cpio
+          done
