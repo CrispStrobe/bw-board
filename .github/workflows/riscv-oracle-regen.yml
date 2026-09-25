@@ -70,11 +70,19 @@ jobs:
         run: |
           mkdir committed && cp test/fixtures/riscv-oracle/*.br committed/
           bash test/riscv-oracle/regenerate.sh
+      - name: Upload the regenerated fixtures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: riscv-oracle-fixtures
+          path: test/fixtures/riscv-oracle/*.br
       - name: Committed fixtures match what Spike produces
         run: |
+          rc=0
           for f in committed/*.br; do
-            n=$(basename "$f")
-            node -e "const z=require('zlib'),fs=require('fs');const a=z.brotliDecompressSync(fs.readFileSync(process.argv[1])),b=z.brotliDecompressSync(fs.readFileSync(process.argv[2]));if(!a.equals(b)){console.error('DIFFERS: '+process.argv[2]);process.exit(1)}console.log('same: '+process.argv[2])" "$f" "test/fixtures/riscv-oracle/$n"
+            echo "== $(basename "$f")"
+            node test/riscv-oracle/compare-fixtures.mjs "$f" "test/fixtures/riscv-oracle/$(basename "$f")" || rc=1
           done
+          exit $rc
       - name: Oracle gate against the regenerated traces
         run: node --test test/riscv32-oracle.test.mjs
