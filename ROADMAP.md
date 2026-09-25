@@ -47,6 +47,7 @@ for E2–E4 being affordable.
 - R2 The tracked demo ROMs are executed but never checked against their generators
 - R3 The `'SF'` soft-float table is empty, and it is what stops Kaluma
 - R4 The ROM stamps `BSD-3` into its own image, and this repo is MIT
+- E8 RISC-V microarchitecture — timing models over the functional core (PARKED, owner 2026-09-25)
 
 ## E0 — Correctness fixes in the current engine (days)
 
@@ -1347,6 +1348,93 @@ over time.
 
 ---
 
+## E8 — RISC-V microarchitecture: timing models over the functional core (PARKED)
+
+**Status: PARKED by the owner on 2026-09-25 ("for some time later; atm we have enough on
+the table").** It was scoped after a survey of the reference simulators (Spike, rv32emu,
+TinyEMU, gem5). Nothing here is started. **Prerequisite:** the oracle and performance
+lane that was opened the same day must have landed:
+- Spike lockstep and riscv-arch-test as a CI gate on `src/riscv32.js`;
+- measured MIPS against rv32emu and TinyEMU;
+- the Linux-boot verdict.
+
+Re-measure that lane's numbers before starting this one.
+
+**Why.** Brickwright is about learning internals. Today the RISC-V core is
+*instruction-accurate*:
+- RV32IMAC with M/S/U and Sv32;
+- CLINT, PLIC, UART and virtio;
+- it boots xv6, FreeRTOS, RT-Thread and Zephyr.
+
+It says nothing about *how* a CPU executes an instruction. The PicoRV32 soft-core on
+lite's FPGA tab shows real RTL, but that is one fixed, multi-cycle, non-pipelined design.
+The cycle-level simulator surveyed here (gem5) covers exactly this missing layer:
+- pipelines, hazards and forwarding;
+- branch prediction;
+- caches and coherence;
+- per-component statistics.
+
+We take its **design ideas**, not its code. It is C++/Python, has no wasm build and runs
+far too slow for a browser.
+
+### E8.1 Functional/timing split: pluggable CPU models
+The functional core stays the single source of truth for semantics. A timing model
+observes the retired-instruction stream and charges cycles. It is trace-driven first;
+execute-in-execute is needed only if a lesson needs wrong-path effects.
+
+The models:
+- **Atomic:** the current model, 1 instruction per step, fastest.
+- **In-order 5-stage:** IF/ID/EX/MEM/WB, with RAW hazards, load-use stalls, a forwarding
+  on/off switch, and branch resolution in EX with a configurable penalty.
+- **Later, optional:** a small out-of-order model (rename, ROB, issue queue) as a
+  lesson, not a performance model.
+
+**Acceptance:**
+- Switching models never changes architectural results. The oracle gate from the
+  prerequisite lane runs under every model.
+- Cycle counts for hand-analysed kernels match a hand-derived table, for example a
+  load-use chain with forwarding off costs exactly N stalls.
+
+### E8.2 Caches and memory hierarchy
+Configurable L1 I and D caches: size, associativity, line size, and LRU/FIFO/random
+replacement, all write-back and write-allocate. A fixed-latency memory sits below.
+Optionally an L2.
+
+**Acceptance:**
+- Miss counts on strided and blocked matrix kernels match closed-form expectations.
+- Cross-check against the reference cycle-level simulator run offline on the same
+  program and configuration.
+
+### E8.3 Branch predictors
+Static not-taken, bimodal (2-bit counters), gshare, and a BTB. Report the misprediction
+rate and its cycle cost per branch site.
+
+### E8.4 Statistics framework
+Named counters, for example `cpu.ipc`, `dcache.misses`, `bp.mispredicts` and
+`pipe.stall.loaduse`, following the reference simulator's stats design. They can be
+reset or dumped over a region of interest, exposed on the debug-target adapter, and
+shown in lite next to the pipeline view.
+
+### E8.5 Fast-forward, then switch
+Run to a region of interest on the atomic model (for example boot to shell), then
+switch to the detailed model: checkpoint the architectural state and warm the caches.
+The same mechanism keeps an OS-scale lesson interactive.
+
+### E8.6 The lite half
+- A pipeline diagram: the classic stage × cycle grid, with stalls and forwards marked.
+- Cache and predictor panels.
+- Model and configuration pickers on the RISC-V target.
+
+This is lessons material: "why forwarding matters", "why this loop order is 10× slower".
+
+### Oracles and licence notes
+- The reference cycle-level simulator is BSD-licensed. Use it offline as an
+  oracle only: pinned build, committed fixtures, never vendored.
+- Spike (BSD-3) remains the architectural oracle.
+- Don't expect cycle-exact agreement with any real core. The claim is agreement
+  with our own stated model and with the oracle under a matched configuration.
+  Report deviations rather than tuning them away.
+
 ## Reported gaps, not yet triaged
 
 Gaps recorded at the moment they are found — some measured in a DOWNSTREAM
@@ -2231,6 +2319,9 @@ re-vendor, so this should land in the same commit as the CMOS/equipment-word
    and G1), and E6.8.6 was already done; both corrections are recorded in place
    rather than quietly edited out. Remaining order: E6.8.2 → .3 → .1 → .5 → .4 → .8.
    E6.8.4 (cycle-level execution) is owner-requested and lands last of the eight.
+
+8. **E8** — PARKED (owner, 2026-09-25). Starts only after the RISC-V oracle and
+   performance lane lands; order inside it is E8.1 → E8.4 → E8.2 → E8.3 → E8.5 → E8.6.
 
 Cross-repo dependencies: bw-circuit-ui X1.1 (SPICE import) wants E3.5; X2.x runners
 want E1.5; the AC UI wants E2.1. brickwright-lite re-vendors via `sync:bwboard` after
