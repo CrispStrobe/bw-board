@@ -16,4 +16,5 @@ and writes `bw-xv6-up-receipt.json` with the source revision and image hash.
 This is a diagnostic guest variant; it does not change or weaken the stock
 xv6 acceptance claim. The current run reaches the xv6 console banner through
 the experimental 386 protected-mode, PSE-paged, 32-bit-ATA path. The next
-stock-image milestone is an MP table plus LAPIC/IOAPIC implementation.
+stock-image milestone is complete interrupt delivery through the WIP MP/LAPIC/IOAPIC
+profile; that profile currently proves metadata and register initialization only.
