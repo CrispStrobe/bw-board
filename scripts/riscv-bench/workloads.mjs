@@ -4,6 +4,10 @@
 // machine class to use (so a caller can time another tree's core) and returns
 // {instructions, seconds} for the timed part.
 
+// Retired instructions. A core older than the Zicntr work has no `retired`;
+// fall back to its step counter (which also counts trap entries).
+const retired = cpu => cpu.retired ?? cpu.instret;
+
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
 
 function loadSegments(m, elf) {
@@ -25,7 +29,7 @@ export function runBareElf(RiscV32Machine, elf) {
     const cpu = m.cpu;
     const t0 = now();
     while (!cpu.halted) m.run(1_000_000);
-    return {instructions: cpu.retired, seconds: now() - t0, exit: m.exitCode, output: m.output};
+    return {instructions: retired(cpu), seconds: now() - t0, exit: m.exitCode, output: m.output};
 }
 
 /** The mixed ALU/load/store/mul loop: 30 M instructions after a 2 M warm-up. */
@@ -47,10 +51,10 @@ export function runAlu(RiscV32Machine, assembleRiscv, {clint = true, n = 30_000_
     const m = new RiscV32Machine({clint: clint ? undefined : false});
     m.loadImage(img.image);
     m.run(2_000_000);
-    const i0 = m.cpu.retired;
+    const i0 = retired(m.cpu);
     const t0 = now();
     m.run(n);
-    return {instructions: m.cpu.retired - i0, seconds: now() - t0};
+    return {instructions: retired(m.cpu) - i0, seconds: now() - t0};
 }
 
 /** xv6-rv32 from reset to the shell prompt ("init: starting sh" then "$ "). */
@@ -63,5 +67,5 @@ export function runXv6(RiscV32Machine, kernel, fsImg) {
     const cpu = m.cpu;
     const t0 = now();
     while (!cpu.halted && !/init: starting sh\n\$ /.test(out)) m.run(1_000_000);
-    return {instructions: cpu.retired, seconds: now() - t0, reached: /\$ /.test(out)};
+    return {instructions: retired(cpu), seconds: now() - t0, reached: /\$ /.test(out)};
 }

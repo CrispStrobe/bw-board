@@ -89,5 +89,8 @@ jobs:
           PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs
       - name: Master's core, same workloads (one run each)
         run: for w in alu coremark xv6; do node scripts/bench-riscv32.mjs $w --src ext/master/src | tail -1; done
+      # xv6, not Dhrystone: master's core has no Zicntr counters (cycle reads 0),
+      # so this Dhrystone build never exits on it.
       - name: A/B, master's core vs this tree's (interleaved, 3 trials)
-        run: node scripts/bench-riscv32-ab.mjs dhrystone ext/master/src src 3
+        timeout-minutes: 20
+        run: node scripts/bench-riscv32-ab.mjs xv6 ext/master/src src 3
