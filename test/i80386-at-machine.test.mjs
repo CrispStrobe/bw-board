@@ -6,6 +6,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M,
   PCAT80386_EXPERIMENTAL_4M_HDD,
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
+  PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
 } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
@@ -99,6 +100,14 @@ test('experimental 386 AT bridges little-endian port widths and refuses legacy s
   assert.throws(() => machine.saveState(), /checkpoint is unsupported/);
   assert.throws(() => machine.enableI8088CycleTiming(), /refuses 8088 cycle timing/);
   assert.throws(() => machine._architecturalRegisters(), /debug register snapshot is unsupported/);
+});
+
+test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC delivery status', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  const read = address => machine._read386(address);
+  assert.deepEqual([read(0x9fc00), read(0x9fc01), read(0x9fc02), read(0x9fc03)], [0x5f, 0x4d, 0x50, 0x5f]);
+  machine._write386(0xfee00300, 0x8100);
+  assert.equal(read(0xfee00300) & 0x1000, 0, 'LAPIC ICR delivery completes');
 });
 
 test('experimental 386 AT routes a pending NMI through the 386 interrupt API', () => {

@@ -3,6 +3,30 @@ import ExperimentalI80386 from './i80386.js';
 import ExperimentalATA16 from './ata16.js';
 import VGAMemory from './vga-memory.js';
 
+const MP_TABLE_BASE = 0x9fd00;
+const MP_FLOAT_BASE = 0x9fc00;
+const LAPIC_BASE = 0xfee00000;
+const IOAPIC_BASE = 0xfec00000;
+
+function xv6MpTable() {
+  const bytes = new Uint8Array(0x200);
+  const put16 = (at, value) => { bytes[at] = value & 0xff; bytes[at + 1] = value >>> 8; };
+  const put32 = (at, value) => { put16(at, value); put16(at + 2, value >>> 16); };
+  bytes.set(Buffer.from('PCMP'), 0);
+  put16(4, 80); bytes[6] = 4; bytes[7] = 0;
+  bytes.set(Buffer.from('BWXV6           '), 8);
+  put32(28, 0); put16(32, 0); put16(34, 3); put32(36, LAPIC_BASE);
+  put16(40, 0); bytes[42] = 0; bytes[43] = 0;
+  let at = 44;
+  bytes[at] = 0; bytes[at + 1] = 0; bytes[at + 2] = 0x14; bytes[at + 3] = 2; at += 20;
+  bytes[at] = 1; bytes[at + 1] = 0; bytes.set(Buffer.from('ISA     '), at + 2); at += 8;
+  bytes[at] = 2; bytes[at + 1] = 2; bytes[at + 2] = 0x11; bytes[at + 3] = 1; put32(at + 4, IOAPIC_BASE);
+  let sum = 0; for (let i = 0; i < 80; i++) sum = (sum + bytes[i]) & 0xff; bytes[7] = (-sum) & 0xff;
+  bytes.set(Buffer.from('_MP_'), 0x100); put32(0x104, MP_TABLE_BASE); bytes[0x108] = 1; bytes[0x109] = 4;
+  sum = 0; for (let i = 0; i < 16; i++) sum = (sum + bytes[0x100 + i]) & 0xff; bytes[0x10a] = (-sum) & 0xff;
+  return {float: bytes.slice(0x100, 0x110), config: bytes.slice(0, 80)};
+}
+
 /**
  * Opt-in bridge from the bounded 80386 executor to the existing AT devices.
  * The ordinary I8086Machine constructor and its hot path remain unchanged.
@@ -30,6 +54,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this.cpu = new ExperimentalI80386(bus, {deliverFaults: true});
     this.cpu.onInterrupt = event => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(event); };
     this.ata = null;
+    this._xv6Mp = config.experimentalXv6Mp ? xv6MpTable() : null;
+    this._lapic = new Uint32Array(1024);
+    this._ioapic = new Uint32Array(256);
+    this._ioapicSelect = 0;
     this.vgaMemory = null;
     if (config.experimentalVgaMemory) {
       const vga = this.chips[config.experimentalVgaMemory];
@@ -68,6 +96,21 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _read386(address) {
     const decoded = this._decode386(address);
+    if (this._xv6Mp && decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16)
+      return this._xv6Mp.float[decoded - MP_FLOAT_BASE];
+    if (this._xv6Mp && decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80)
+      return this._xv6Mp.config[decoded - MP_TABLE_BASE];
+    if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
+      const index = (decoded - LAPIC_BASE) >>> 2;
+      // INIT/STARTUP delivery completes immediately in this single-CPU model.
+      return index === 0x300 / 4 ? (this._lapic[index] & ~0x1000) : (this._lapic[index] ?? 0);
+    }
+    if (this._xv6Mp && decoded >= IOAPIC_BASE && decoded < IOAPIC_BASE + 0x20) {
+      const offset = decoded - IOAPIC_BASE;
+      if (offset === 0) return this._ioapicSelect;
+      if (offset === 0x10) return this._ioapic[this._ioapicSelect] ?? 0;
+      return 0;
+    }
     const video = this.vgaMemory?.read(decoded);
     if (video !== undefined && video !== null) return video;
     return decoded < this.memoryBytes ? this._read(decoded) : 0xff;
@@ -75,6 +118,17 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _write386(address, value) {
     const decoded = this._decode386(address);
+    if (this._xv6Mp && ((decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16) ||
+        (decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80))) return;
+    if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
+      this._lapic[(decoded - LAPIC_BASE) >>> 2] = value >>> 0; return;
+    }
+    if (this._xv6Mp && decoded >= IOAPIC_BASE && decoded < IOAPIC_BASE + 0x20) {
+      const offset = decoded - IOAPIC_BASE;
+      if (offset === 0) this._ioapicSelect = value & 0xff;
+      else if (offset === 0x10) this._ioapic[this._ioapicSelect] = value >>> 0;
+      return;
+    }
     if (this.vgaMemory?.write(decoded, value)) {
       this.displayRevision = (this.displayRevision + 1) >>> 0;
       return;
@@ -240,6 +294,12 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD = Object.freeze({
       [0x15, 0x80], [0x16, 0x02], [0x17, 0x80], [0x18, 0x0d],
       [0x2e, 0x01], [0x2f, 0x60], [0x30, 0x80], [0x31, 0x0d], [0x32, 0x19]],
   } : chip),
+});
+
+/** Opt-in MP-table/LAPIC/IOAPIC surface for stock xv6's SMP bootstrap. */
+export const PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_4M_HDD,
+  experimentalXv6Mp: true,
 });
 
 /** FreeDOS media profile: a 1.2MB disk in the AT high-capacity drive. */
