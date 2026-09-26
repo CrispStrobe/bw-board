@@ -4,7 +4,7 @@
   "freeBios": true,
   "proprietaryRomUsed": false,
   "scope": "ROM-free 80386 AT: LGPL Bochs BIOS + LGPL VGABios boot FreeDOS 1.4 to A:\\>, decline installer, mount an ATA hard disk as C: (dir c:).",
-  "executionRevision": "eebe48a8650f0d898f8916d90dd75dfe589a01c6",
+  "executionRevision": "4641c904ea159864bf9ef27bf5f17db43dc4c547",
   "firmware": {
     "bios": {
       "path": "roms/free-at-bios/BIOS-bochs-legacy",
@@ -126,11 +126,11 @@
   ],
   "fidelityOracle": "The proprietary IBM 5170 ROM is an OPTIONAL fidelity oracle only (AT_BIOS_ROM/VGA_BIOS_ROM). This receipt uses zero proprietary firmware.",
   "sourceSha256": {
-    "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+    "src/i8086-machine.js": "665536de8cdff85698fc3471f356a011217f6f9e52dea9f9966ddb799ed9c554",
     "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
     "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-    "src/experimental/i80386.js": "1c8379abdab58f8dce3214596525f02c295838a8092c2ff5e5e6da1b450d420d",
-    "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+    "src/experimental/i80386.js": "f0dd13c08ba39c7636024d057d8371a67e94fc3842b0f50b1bdc1024f8dce872",
+    "src/experimental/i80386-at-machine.js": "813aa979188e550871f44f0de388eae3683f72f4062381d137cab9e569f344df",
     "src/experimental/ata16.js": "886158255c76e9ba2c186d4107381dc3c25d87b6a8d19bf1c358399f8f11fdc3",
     "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
     "src/at-8042-a20.js": "bfa24540747ca8da9d6849f9379abea0a98726cf7289419724fab9590a0f0cb3",
