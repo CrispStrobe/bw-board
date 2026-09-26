@@ -26,17 +26,19 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-26 CLAIM — `/root` (Codex), ideal-inductor AC numerical stability.
+2026-09-26 DONE — `/root` (Codex), ideal-inductor AC numerical stability.
 Isolated worktree `/mnt/volume1/code/wt/board-ac-rlc-numerical-stability`, branch
 `lane/ac-rlc-numerical-stability`, exact base
-`ac6bb7f782dfc350d71c50d32fd63c1a56bca374`. Owns only `src/ac.js`, a focused
-closed-form regression in `test/ac-small-signal.test.mjs`, and this claim.
-Replace the independent ideal inductor's low-frequency `1/(jωL)` admittance
-with its equivalent MNA branch-current constraint `V = jωLI`, preserving public
-results and source-analysis profiles while avoiding the measured ill-conditioning.
-Evidence boundary: the exact current shipped chain exposes 26 ideal series-RLC
-AC circuits/1,584 observations; ngspice agrees with the independent closed form
-to at most `8.88e-16`, while current native differs by up to `3.43e-5`.
+`ac6bb7f782dfc350d71c50d32fd63c1a56bca374`. Independent ideal inductors now use
+the equivalent MNA branch-current constraint `V = jωLI` instead of the
+low-frequency `1/(jωL)` admittance, avoiding the measured ill-conditioning
+without special-casing a corpus value. The self-authored 2.7 kΩ/1 nH/100 nF
+witness formerly missed its closed form by `3.43e-5` V and now agrees within
+`1e-12`; restoring the old admittance stamp makes that test red. The focused
+AC/source/NMOS/NPN/transformer surface passes 39/39. This directly addresses
+the exact current shipped-chain evidence: 26 ideal series-RLC AC circuits and
+1,584 failed observations for which ngspice agrees with the independent closed
+form to at most `8.88e-16`.
 No sparse-LU implementation, transformer/coupled-inductor model, DC/transient
 model, public API, comparator/tolerance, CUI pin, corpus source, workflow, or
 unrelated device change.

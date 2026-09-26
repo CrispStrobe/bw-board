@@ -85,6 +85,60 @@ describe('AC: RLC series resonance', () => {
     assert.ok(lowRows[0].results.get('n_mid').mag > 0.99,
       'far below resonance the capacitor blocks and the mid node follows the source');
   });
+
+  it('keeps a small ideal inductor accurate at low frequency', () => {
+    // This scale separation used to stamp 1/(jωL) ≈ -j1.6e8 beside
+    // jωC ≈ j6.3e-7.  The sparse solve then lost 3.43e-5 V even though the
+    // ideal three-element network has a closed-form answer.
+    const resistance = 2700;
+    const henrys = 1e-9;
+    const farads = 1e-7;
+    const parts = [GND,
+      { id: 'FG', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] },
+      R('R1', resistance),
+      { id: 'L1', kind: 'inductor', params: { henrys }, terminals: ['a', 'b'] },
+      { id: 'C1', kind: 'capacitor', params: { farads }, terminals: ['a', 'b'] }];
+    const nets = [
+      { id: 'n_in', terminals: [{ part: 'FG', terminal: 'pos' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'n_rl', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'L1', terminal: 'a' }] },
+      { id: 'n_lc', terminals: [{ part: 'L1', terminal: 'b' }, { part: 'C1', terminal: 'a' }] },
+      { id: 'n_gnd', terminals: [
+        { part: 'G1', terminal: 'gnd' }, { part: 'FG', terminal: 'neg' },
+        { part: 'C1', terminal: 'b' },
+      ] },
+    ];
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    const frequencies = [1, Math.pow(10, 0.01)];
+    const rows = board.runAc({ sourceId: 'FG', frequencies, probes: ['n_rl', 'n_lc'],
+      analysisProfile: 'source-analysis-v1', nodeRegularizationSiemens: 0 });
+    for (const row of rows) {
+      const omega = 2 * Math.PI * row.hz;
+      const zCapImaginary = -1 / (omega * farads);
+      const zLoadImaginary = omega * henrys + zCapImaginary;
+      const denominator = resistance ** 2 + zLoadImaginary ** 2;
+      const currentReal = resistance / denominator;
+      const currentImaginary = -zLoadImaginary / denominator;
+      for (const [netId, loadImaginary] of [
+        ['n_rl', zLoadImaginary], ['n_lc', zCapImaginary],
+      ]) {
+        const expected = {
+          real: -currentImaginary * loadImaginary,
+          imaginary: currentReal * loadImaginary,
+        };
+        const response = row.results.get(netId);
+        const angle = response.phaseDeg * Math.PI / 180;
+        const actual = {
+          real: response.mag * Math.cos(angle),
+          imaginary: response.mag * Math.sin(angle),
+        };
+        assert.ok(Math.abs(actual.real - expected.real) < 1e-12,
+          `${netId} real at ${row.hz} Hz: ${actual.real} vs ${expected.real}`);
+        assert.ok(Math.abs(actual.imaginary - expected.imaginary) < 1e-12,
+          `${netId} imaginary at ${row.hz} Hz: ${actual.imaginary} vs ${expected.imaginary}`);
+      }
+    }
+  });
 });
 
 describe('AC: resistive divider is flat', () => {

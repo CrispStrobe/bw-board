@@ -165,6 +165,10 @@ export function acSweep(args) {
         && (idxOf(netOf(p.id, 'pos')) !== undefined || idxOf(netOf(p.id, 'neg')) !== undefined)) {
       rowIndex.set(p.id, acRows++);
     }
+    if (p.kind === 'inductor'
+        && (idxOf(netOf(p.id, 'a')) !== undefined || idxOf(netOf(p.id, 'b')) !== undefined)) {
+      rowIndex.set(p.id, acRows++);
+    }
     if (p.kind === 'opamp' && idxOf(netOf(p.id, 'out')) !== undefined) {
       rowIndex.set(p.id, acRows++);
     }
@@ -253,9 +257,21 @@ export function acSweep(args) {
           addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 0, omega * (P.farads ?? 1e-4));
           break;
         case 'inductor':
-          // Y = 1/(jωL) = −j/(ωL)
-          addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 0,
-            -1 / (omega * Math.max(P.henrys ?? P.henries ?? 1e-3, 1e-12)));
+          // Branch-current MNA form: Va - Vb = jωL·I.  The equivalent
+          // admittance 1/(jωL) is mathematically correct but becomes enormous
+          // for a small L at low frequency; combining it with a small
+          // capacitor in the real-equivalent matrix loses useful digits.
+          // Keeping I as an unknown avoids that ill-conditioning.
+          {
+            if (!rowIndex.has(part.id)) break; // both terminals are AC ground
+            const row = nodeCount + rowIndex.get(part.id);
+            const iA = idxOf(netOf(part.id, 'a'));
+            const iB = idxOf(netOf(part.id, 'b'));
+            if (iA !== undefined) { addC(iA, row, 1, 0); addC(row, iA, 1, 0); }
+            if (iB !== undefined) { addC(iB, row, -1, 0); addC(row, iB, -1, 0); }
+            const henrys = Math.max(P.henrys ?? P.henries ?? 1e-3, 1e-12);
+            addC(row, row, 0, -omega * henrys);
+          }
           break;
         case 'transformer': {
           // Coupled pair (spec-updates/coupled-inductors.md): Y(ω) =
