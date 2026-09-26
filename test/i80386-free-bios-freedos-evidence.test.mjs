@@ -8,11 +8,11 @@ import {createHash} from 'node:crypto';
 // scripts/run-i80386-free-bios-freedos.mjs boots FreeDOS 1.4 on the experimental
 // 80386 AT machine using ONLY the vendored LGPL Bochs BIOS + LGPL VGABios (zero
 // proprietary ROM), declines the installer to A:\>, and mounts an ATA disk as C:.
-// It commits docs/receipts/2026-09-21-i80386-free-bios-freedos.json. This test
+// It commits the latest dated FreeDOS receipt. This test
 // asserts that receipt's source bindings equal the CURRENT source shas, with no
 // external input (no ROM, no disk image) -- that is the public-CI 386 gate.
 const receipt = JSON.parse(fs.readFileSync(
-  new URL('../docs/receipts/2026-09-21-i80386-free-bios-freedos.json', import.meta.url)));
+  new URL('../docs/receipts/2026-09-26-i80386-free-bios-freedos.json', import.meta.url)));
 const sha = file => createHash('sha256')
   .update(fs.readFileSync(new URL(`../${file}`, import.meta.url))).digest('hex');
 

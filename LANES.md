@@ -50,7 +50,15 @@ LM358 makes the new behavioral tests fail. A broad local run reached 6,099
 passes/284 environment skips but ended with three failures after saturating this
 small host; that run is not accepted or rerun locally. The single exact-head
 hosted qualification must identify them as reproducible failures or clear them
-before landing.
+before landing. Hosted CI exposed one real pre-existing master failure instead:
+the landed xv6 machine changes had moved `i80386-at-machine.js` and `ata16.js`
+without refreshing their ROM-free FreeDOS source binding. The repository's
+actual pinned-image generator was run at this candidate (45,800,000 steps),
+again declining installation, reaching the bare `A:\\>` prompt and listing
+`CMOUNTOK.TXT` on C:. This lane therefore also owns only the newly generated
+`docs/receipts/2026-09-26-i80386-free-bios-freedos.json` and the dated pointer
+in `test/i80386-free-bios-freedos-evidence.test.mjs`; no 386 source, fixture,
+firmware, workflow or acceptance assertion changes.
 
 2026-09-26 DONE — `/root` (Codex), regenerate the ROM-free 80386/FreeDOS
 source-bound receipt after the landed AT UART/PIC wiring changed
