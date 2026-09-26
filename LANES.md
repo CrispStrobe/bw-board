@@ -26,6 +26,19 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-26 CLAIM — `/root` (Codex), LM324 real powered quad op-amp engine model.
+Isolated worktree `/tmp/wt-bwcx-lm324-board`, branch `lane/lm324-real-part`, exact
+base `915edc8f773538ad5065f72bda82ee6bc019279a`. Owns only this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js` and focused LM324/analog
+amplifier tests. Factor the landed LM358 convergence mechanism into an explicit
+shared powered bipolar op-amp helper, then register LM324 with four independent
+channels, shared V+/V- rails, grounded-input common-mode range, bounded output
+swing/drive and deterministic state. Tests must prove all four physical channel
+contracts, feedback convergence, rail/supply behavior, common-mode refusal or
+declared limitation, and mutations for a missing fourth channel and an LM358
+two-channel alias. No generic `opamp`, AC/macromodel, MNA, importer/exporter,
+part face, package pin, UI, corpus, workflow, dependency pin or Lite change.
+
 2026-09-26 DONE — `/root` (Codex), regenerate the ROM-free 80386/FreeDOS
 source-bound receipt after the landed AT UART/PIC wiring changed
 `src/i8086-machine.js`. Isolated worktree
