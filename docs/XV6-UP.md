@@ -17,4 +17,6 @@ This is a diagnostic guest variant; it does not change or weaken the stock
 xv6 acceptance claim. The current run reaches the xv6 console banner through
 the experimental 386 protected-mode, PSE-paged, 32-bit-ATA path. The next
 stock-image milestone is complete interrupt delivery through the WIP MP/LAPIC/IOAPIC
-profile; that profile currently proves metadata and register initialization only.
+profile; that profile currently proves metadata, register initialization, and
+vector selection in unit tests only. The full stock BIOS-to-SMP replay remains
+WIP because firmware memory-test ordering still needs a clean handoff point.

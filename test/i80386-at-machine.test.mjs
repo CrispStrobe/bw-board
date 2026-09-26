@@ -104,10 +104,23 @@ test('experimental 386 AT bridges little-endian port widths and refuses legacy s
 
 test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC delivery status', () => {
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine._mpReady = true;
   const read = address => machine._read386(address);
   assert.deepEqual([read(0x9fc00), read(0x9fc01), read(0x9fc02), read(0x9fc03)], [0x5f, 0x4d, 0x50, 0x5f]);
   machine._write386(0xfee00300, 0x8100);
   assert.equal(read(0xfee00300) & 0x1000, 0, 'LAPIC ICR delivery completes');
+});
+
+test('xv6 SMP profile routes an enabled IDE IRQ through the IOAPIC vector', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine._ioapic[0x10 + 14 * 2] = 0x2e;
+  machine._apicIrq[14] = 1;
+  machine.cpu.eflags |= 0x200;
+  let vector = null;
+  machine.cpu.interrupt = value => { vector = value; };
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(vector, 0x2e);
+  assert.equal(machine._apicIrq[14], 0);
 });
 
 test('experimental 386 AT routes a pending NMI through the 386 interrupt API', () => {

@@ -55,9 +55,11 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this.cpu.onInterrupt = event => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(event); };
     this.ata = null;
     this._xv6Mp = config.experimentalXv6Mp ? xv6MpTable() : null;
+    this._mpReady = false;
     this._lapic = new Uint32Array(1024);
     this._ioapic = new Uint32Array(256);
     this._ioapicSelect = 0;
+    this._apicIrq = new Uint8Array(24);
     this.vgaMemory = null;
     if (config.experimentalVgaMemory) {
       const vga = this.chips[config.experimentalVgaMemory];
@@ -68,7 +70,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       this.ata = new ExperimentalATA16(hooks.ataImage, hooks.ataGeometry ?? {
         cylinders: 306, heads: 4, sectors: 17,
       }, {
-        onIRQ: active => this.chips.pic2?.setIRQ(6, active ? 1 : 0),
+        onIRQ: active => {
+          if (this._xv6Mp) this._apicIrq[14] = active ? 1 : 0;
+          else this.chips.pic2?.setIRQ(6, active ? 1 : 0);
+        },
         intersectorDelayCycles: hooks.ataIntersectorDelayCycles ?? 8192,
       });
       this.attachDevice('ata', this.ata);
@@ -96,9 +101,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _read386(address) {
     const decoded = this._decode386(address);
-    if (this._xv6Mp && decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16)
+    if (this._xv6Mp && this._mpReady && decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16)
       return this._xv6Mp.float[decoded - MP_FLOAT_BASE];
-    if (this._xv6Mp && decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80)
+    if (this._xv6Mp && this._mpReady && decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80)
       return this._xv6Mp.config[decoded - MP_TABLE_BASE];
     if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
       const index = (decoded - LAPIC_BASE) >>> 2;
@@ -118,7 +123,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _write386(address, value) {
     const decoded = this._decode386(address);
-    if (this._xv6Mp && ((decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16) ||
+    if (this._xv6Mp && this._mpReady && ((decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16) ||
         (decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80))) return;
     if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
       this._lapic[(decoded - LAPIC_BASE) >>> 2] = value >>> 0; return;
@@ -184,6 +189,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       return;
     }
     if (this.ata && width === 8 && port >= 0x1f1 && port <= 0x1f7) {
+      if (this._xv6Mp && port === 0x1f7 && (value & 0xff) === 0x90) this._mpReady = true;
       this.ata.writeRegister(port - 0x1f0, value);
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
       this._chipDeadline = this._wakeHorizon();
@@ -207,6 +213,17 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       if (this.hooks.onInterrupt) this.hooks.onInterrupt({vector: 2, source: 'nmi'});
       cpu.interrupt(2, {nmi: true});
       return true;
+    }
+    if (this._xv6Mp && (cpu.eflags & 0x200) && !cpu._interruptShadow) {
+      for (let irq = 0; irq < this._apicIrq.length; irq++) {
+        if (!this._apicIrq[irq]) continue;
+        const low = this._ioapic[0x10 + irq * 2] ?? 0;
+        if (low & 0x10000) continue;
+        this._apicIrq[irq] = 0;
+        if (this.hooks.onInterrupt) this.hooks.onInterrupt({vector: low & 0xff, source: 'apic-irq', irq});
+        cpu.interrupt(low & 0xff);
+        return true;
+      }
     }
     if (!this._pic || !this._pic.intActive || !(cpu.eflags & 0x200) || cpu._interruptShadow) return false;
     let vector;
