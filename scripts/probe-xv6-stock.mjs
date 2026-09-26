@@ -2,11 +2,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import Machine, {PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
+import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
 
 const romPath = process.env.XV6_ROM ?? '/tmp/ATBIOS-REV1.rom';
-const imagePath = process.env.XV6_IMG ?? '/tmp/xv6-public/xv6.img';
+const imagePath = process.env.XV6_IMG ?? '/tmp/xv6-stock-4m/xv6.img';
 const slavePath = process.env.XV6_FS_IMG ?? path.join(path.dirname(imagePath), 'fs.img');
 const stepsLimit = Number(process.env.XV6_STEPS ?? 76_000_000);
 const rom = fs.readFileSync(romPath);
@@ -19,7 +19,7 @@ let first32 = null;
 const serial = [];
 const interrupts = [];
 const postBootInterrupts = [];
-const machine = new Machine(PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP, {
+const machine = new Machine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP, {
   ataImage: image,
   ataGeometry: IBM_TYPE1_GEOMETRY,
   ataSlaveImage: (() => { const media = new Uint8Array(image.length); media.set(slave); return media; })(),

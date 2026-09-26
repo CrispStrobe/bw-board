@@ -18,5 +18,7 @@ xv6 acceptance claim. The current run reaches the xv6 console banner through
 the experimental 386 protected-mode, PSE-paged, 32-bit-ATA path. The stock
 MIT image now also reaches `xv6...` under the WIP MP/LAPIC/IOAPIC profile: the
 reproducible probe observes the first 32-bit ATA transfer at step 70,575,463
-and the UART banner by 76,000,000 steps. Full interrupt-driven userland remains
-WIP; this is a kernel-entry milestone, not a complete xv6 acceptance claim.
+and the UART banner by 76,000,000 steps. The BIOS-compatible stock 4MiB build now reaches `cpu0: starting 0`, delivers
+IDE through APIC vector `0x2e`, and receives LAPIC timer vector `0x20` in the
+76M-step receipt. Shell and broader userland behavior remain WIP; this is not
+yet a complete xv6 acceptance claim.

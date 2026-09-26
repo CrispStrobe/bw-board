@@ -79,7 +79,7 @@ Initial measured attempts:
 | ELKS 0.9.2 fd360-minix | 8086 | Earlier BIOS-service diagnostic reaches setup but is not acceptance |
 | ELKS 0.9.1 fd1440-fat | 8086 PC/XT | **Accepted:** kernel banner, floppy probe, root mount, timer and FDC IRQs; image remains external |
 | MINIX 2.0.0 TINYROOT | 8086/80186 | CPU reaches unsupported FE encoding before console output; root cause not yet established |
-| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | Source builds reproducibly; 32-bit ATA PIO plus CR4/PSE reaches protected mode. Both the labelled UP image and the stock image reach `xv6...`; the stock SMP profile remains WIP for interrupt-driven userland and is not a full OS acceptance |
+| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | Source builds reproducibly; 32-bit ATA PIO plus CR4/PSE reaches protected mode. The labelled UP image reaches `xv6...`; a stock SMP image built with `PHYSTOP=4MiB` reaches `cpu0: starting 0`, APIC IDE vector `0x2e`, and LAPIC timer vector `0x20`; shell and userland remain WIP |
 | Either | wired 286 | Refused before download/execution: board/CPU prerequisites absent |
 
 An unsupported encoding can result from executing wrong bytes; it is not by
