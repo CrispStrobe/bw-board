@@ -20,7 +20,7 @@ permissions:
 jobs:
   bench:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       SPIKE_SHA: 5f2a1d48752121ab09dd0f1932884808c2e6c081
       RV32EMU_SHA: 19f5a7984e54292df025d747f87a7728e7cfb3eb
@@ -87,5 +87,7 @@ jobs:
           npm i --no-audit --no-fund playwright@1.62.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE"
           PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs
-      - name: A/B, master's core vs this tree's (interleaved, 5 trials)
-        run: for w in dhrystone xv6; do node scripts/bench-riscv32-ab.mjs $w ext/master/src src 5; done
+      - name: Master's core, same workloads (one run each)
+        run: for w in alu coremark xv6; do node scripts/bench-riscv32.mjs $w --src ext/master/src | tail -1; done
+      - name: A/B, master's core vs this tree's (interleaved, 3 trials)
+        run: node scripts/bench-riscv32-ab.mjs dhrystone ext/master/src src 3
