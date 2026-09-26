@@ -314,7 +314,8 @@ export const PCAT80286_BOOT = Object.freeze({
         keyboardUnlocked:true},
     hardwareReset:true,
     regions:[
-        {kind:'ram',start:0,end:0x7ffff},
+        // IBM AT CMOS reports 640KiB conventional memory (0x280 KiB).
+        {kind:'ram',start:0,end:0x9ffff},
         {kind:'ram',start:0xb8000,end:0xbffff},
         {kind:'rom',start:0xf0000,end:0xfffff},
         {kind:'ram',start:0x100000,end:0x17ffff},
