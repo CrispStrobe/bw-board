@@ -39,6 +39,6 @@ const receipt = {
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},
   steps, first32, serial: Buffer.from(serial).toString('latin1'), interrupts, postBootInterrupts, screen,
   lapic: {svr: machine._lapic[0xf0 / 4], timer: machine._lapic[0x320 / 4], initialCount: machine._lapic[0x380 / 4]},
-  cpu: {cs: machine.cpu.cs, eip: machine.cpu.eip, cr0: machine.cpu.cr0, cr3: machine.cpu.cr3, cr4: machine.cpu.cr4},
+  cpu: {cs: machine.cpu.cs, eip: machine.cpu.eip, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0, cr3: machine.cpu.cr3, cr4: machine.cpu.cr4},
 };
 console.log(JSON.stringify(receipt, null, 2));
