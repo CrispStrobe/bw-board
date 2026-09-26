@@ -18,6 +18,7 @@ export class ExperimentalATA16 {
   constructor(image, {cylinders, heads, sectors}, {
     onIRQ = null,
     intersectorDelayCycles = 8192,
+    slaveImage = null,
   } = {}) {
     if (!(image instanceof Uint8Array)) throw new Error('ATA image must be a Uint8Array');
     for (const [name, value] of Object.entries({cylinders, heads, sectors}))
@@ -27,6 +28,9 @@ export class ExperimentalATA16 {
     if (image.length !== cylinders * heads * sectors * 512)
       throw new Error('ATA image size does not match geometry');
     this.image = image.slice();
+    if (slaveImage !== null && (!(slaveImage instanceof Uint8Array) || slaveImage.length !== image.length))
+      throw new Error('ATA slave image must match the master image size');
+    this.slaveImage = slaveImage?.slice() ?? null;
     this.geometry = {cylinders, heads, sectors};
     this.onIRQ = onIRQ;
     if (!Number.isInteger(intersectorDelayCycles) || intersectorDelayCycles < 1)
@@ -34,6 +38,8 @@ export class ExperimentalATA16 {
     this.intersectorDelayCycles = intersectorDelayCycles;
     this.reset();
   }
+
+  _media() { return (this.driveHead & 0x10) && this.slaveImage ? this.slaveImage : this.image; }
 
   reset() {
     const wasOutput = this._irqOutput ?? false;
@@ -93,8 +99,9 @@ export class ExperimentalATA16 {
 
   _loadReadSector() {
     const lba = this._lba();
-    if (lba < 0 || lba * 512 >= this.image.length) return this._fail(0x10);
-    this.buffer = this.image.slice(lba * 512, lba * 512 + 512);
+    const media = this._media();
+    if (lba < 0 || lba * 512 >= media.length) return this._fail(0x10);
+    this.buffer = media.slice(lba * 512, lba * 512 + 512);
     this.wordIndex = 0;
     this.direction = 'read';
     this.status = STATUS_IDLE | STATUS_DRQ;
@@ -133,7 +140,8 @@ export class ExperimentalATA16 {
 
   _prepareWriteSector() {
     const lba = this._lba();
-    if (lba < 0 || lba * 512 >= this.image.length) return this._fail(0x10);
+    const media = this._media();
+    if (lba < 0 || lba * 512 >= media.length) return this._fail(0x10);
     this.buffer = new Uint8Array(512);
     this.wordIndex = 0;
     this.direction = 'write';
@@ -179,7 +187,7 @@ export class ExperimentalATA16 {
     words[5] = 512;
     words[6] = this.geometry.sectors;
     words[49] = 0x0200; // LBA is the only optional transfer capability advertised.
-    const sectors = this.image.length / 512;
+    const sectors = this._media().length / 512;
     words[60] = sectors & 0xffff;
     words[61] = sectors >>> 16;
     this.buffer = new Uint8Array(512);
@@ -220,7 +228,7 @@ export class ExperimentalATA16 {
       let remaining = this.sectorCount === 0 ? 256 : this.sectorCount;
       while (remaining-- > 0) {
         const lba = this._lba();
-        if (lba < 0 || lba * 512 >= this.image.length) return this._fail(0x10);
+        if (lba < 0 || lba * 512 >= this._media().length) return this._fail(0x10);
         if (remaining > 0) this._advanceAddress();
       }
       this.sectorCount = 0;
@@ -233,7 +241,7 @@ export class ExperimentalATA16 {
       this._raiseIRQ();
     } else if (this.command === 0x70 || this.command === 0x71) {
       const lba = this._lba();
-      if (lba < 0 || lba * 512 >= this.image.length) return this._fail(0x10);
+      if (lba < 0 || lba * 512 >= this._media().length) return this._fail(0x10);
       this.status = STATUS_IDLE;
       this._raiseIRQ();
     } else if (this.command === 0x90) {
@@ -271,7 +279,7 @@ export class ExperimentalATA16 {
     this.buffer[byte + 1] = value >>> 8 & 0xff;
     if (++this.wordIndex !== 256) return;
     const lba = this._lba();
-    this.image.set(this.buffer, lba * 512);
+    this._media().set(this.buffer, lba * 512);
     if (this._advanceAddress()) {
       this._beginIntersector('write');
     }

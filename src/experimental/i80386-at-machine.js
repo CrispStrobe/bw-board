@@ -90,6 +90,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
           else this.chips.pic2?.setIRQ(6, active ? 1 : 0);
         },
         intersectorDelayCycles: hooks.ataIntersectorDelayCycles ?? 8192,
+        slaveImage: hooks.ataSlaveImage,
       });
       this.attachDevice('ata', this.ata);
     }
@@ -235,9 +236,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       // first actual boot-sector read is dispatched, so POST never sees it as
       // altered RAM.
       if (this._xv6Mp && port === 0x1f7 && (value & 0xff) === 0x20) this._mpReady = true;
-      const taskValue = this.config.experimentalAtaSlaveAlias && port === 0x1f6
-        ? (value & ~0x10) : value;
-      this.ata.writeRegister(port - 0x1f0, taskValue);
+      this.ata.writeRegister(port - 0x1f0, value);
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
       this._chipDeadline = this._wakeHorizon();
       return;

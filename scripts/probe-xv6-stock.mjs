@@ -7,9 +7,11 @@ import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
 
 const romPath = process.env.XV6_ROM ?? '/tmp/ATBIOS-REV1.rom';
 const imagePath = process.env.XV6_IMG ?? '/tmp/xv6-public/xv6.img';
+const slavePath = process.env.XV6_FS_IMG ?? path.join(path.dirname(imagePath), 'fs.img');
 const stepsLimit = Number(process.env.XV6_STEPS ?? 76_000_000);
 const rom = fs.readFileSync(romPath);
 const raw = fs.readFileSync(imagePath);
+const slave = fs.readFileSync(slavePath);
 const image = new Uint8Array(IBM_TYPE1_GEOMETRY.cylinders * IBM_TYPE1_GEOMETRY.heads * IBM_TYPE1_GEOMETRY.sectors * 512);
 image.set(raw);
 let steps = 0;
@@ -20,6 +22,7 @@ const postBootInterrupts = [];
 const machine = new Machine(PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP, {
   ataImage: image,
   ataGeometry: IBM_TYPE1_GEOMETRY,
+  ataSlaveImage: (() => { const media = new Uint8Array(image.length); media.set(slave); return media; })(),
   onPortAccess: event => {
     if (event.port === 0x1f0 && event.width === 32 && first32 === null) first32 = steps;
     if (event.dir === 'out' && event.port === 0x3f8) serial.push(event.value & 0xff);
@@ -37,6 +40,7 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
 const receipt = {
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},
+  slaveImage: {path: path.resolve(slavePath), sha256: crypto.createHash('sha256').update(slave).digest('hex')},
   steps, first32, serial: Buffer.from(serial).toString('latin1'), interrupts, postBootInterrupts, screen,
   lapic: {svr: machine._lapic[0xf0 / 4], timer: machine._lapic[0x320 / 4], initialCount: machine._lapic[0x380 / 4]},
   ioapic: {id: machine._ioapic[0], version: machine._ioapic[1], ideLow: machine._ioapic[0x10 + 14 * 2], ideHigh: machine._ioapic[0x10 + 14 * 2 + 1], idePending: machine._apicIrq[14]},
