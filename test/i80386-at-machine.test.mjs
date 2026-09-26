@@ -7,6 +7,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M_HDD,
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
 } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
@@ -100,6 +101,13 @@ test('experimental 386 AT bridges little-endian port widths and refuses legacy s
   assert.throws(() => machine.saveState(), /checkpoint is unsupported/);
   assert.throws(() => machine.enableI8088CycleTiming(), /refuses 8088 cycle timing/);
   assert.throws(() => machine._architecturalRegisters(), /debug register snapshot is unsupported/);
+});
+
+test('xv6 stock profile exposes the 14MiB PHYSTOP RAM window', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP);
+  machine.cpu.write(0xe00000, 0x5a);
+  assert.equal(machine.cpu.read(0xe00000), 0x5a);
+  assert.equal(machine.cpu.read(0x1000000), 0xff);
 });
 
 test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC delivery status', () => {

@@ -381,6 +381,19 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP = Object.freeze({
   experimentalXv6Mp: true,
 });
 
+/** 16MiB installed-RAM profile for stock xv6's PHYSTOP (14MiB) build. */
+export const PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
+  regions: PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP.regions.map(region =>
+    region.kind === 'ram' && region.start === 0x100000 ? {...region, end: 0xffffff} : region),
+  chips: PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP.chips.map(chip => chip.kind === 'rtc' ? {
+    ...chip,
+    initialCmos: [[0x10, 0x20], [0x12, 0x10], [0x14, 0x21],
+      [0x15, 0x00], [0x16, 0x3c], [0x17, 0x00], [0x18, 0x3c],
+      [0x2e, 0x01], [0x2f, 0x60], [0x30, 0x00], [0x31, 0x3c], [0x32, 0x19]],
+  } : chip),
+});
+
 /** FreeDOS media profile: a 1.2MB disk in the AT high-capacity drive. */
 export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD,
