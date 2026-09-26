@@ -26,6 +26,23 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-26 CLAIM — `/root` (Codex), real uA741/LM741 single op-amp model.
+Isolated worktree `/tmp/wt-bwcx-lm741-board`, branch `lane/lm741-real-part`, exact
+base `1df17d48fbd20cebe0be0b6e5dbd0545d34ad242`. Owns only this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and focused LM741 tests.
+Add one physical DIP-8 contract (`offset_1`, `inn`, `inp`, `vneg`, `offset_5`,
+`out`, `vpos`, `nc`) and a dual-supply bipolar model whose bounded claims are
+grounded in the reviewed manufacturer data: finite open-loop gain, input
+common-mode range, output swing/drive, 1 MHz-class gain bandwidth and 0.5 V/us
+slew response. Prove negative-feedback DC convergence, both supply rails,
+positive and negative saturation, common-mode limitation, event-time slew and
+settling, and physical pin identity. uA741/LM741 spelling aliases belong later
+in the importer; this engine lane registers only canonical `lm741`. Offset-null
+pins must remain present and explicitly reported if their trim network is not
+yet modeled; they may not silently disappear or pretend ideal cancellation.
+No LM358/LM324 behavior change, generic `opamp`, MNA/AC solver, importer,
+face/art, corpus, workflow, package pin, CUI or Lite edit.
+
 2026-09-26 DONE — `/root` (Codex), LM324 real powered quad op-amp engine model.
 Isolated worktree `/tmp/wt-bwcx-lm324-board`, branch `lane/lm324-real-part`, exact
 base `915edc8f773538ad5065f72bda82ee6bc019279a`. Owns only this row,
