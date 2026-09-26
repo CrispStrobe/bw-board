@@ -333,6 +333,7 @@ export const PCAT80286_BOOT = Object.freeze({
                 [0x17,0x00],[0x18,0x02],[0x2e,0x00],[0x2f,0x45],
                 [0x30,0x00],[0x31,0x02],[0x32,0x19]]},
         {kind:'cga',name:'cga1',at:0x3d0},
+        {kind:'uart16550',name:'uart1',at:0x3f8,pic:'pic1',irq:4},
         {kind:'fdc',name:'fdc1',at:0x3f0,pic:'pic1',irq:6,dma:'dma1',dmaChannel:2},
     ],
 });
@@ -707,6 +708,10 @@ export class I8086Machine {
             } else if (c.kind === 'uart16550') {
                 chip = new NS16C550({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                    onIrqChange: (active) => {
+                        if (!this._restoring)
+                            (this.chips[c.pic] || this._pic)?.setIRQ(c.irq ?? 4, active ? 1 : 0);
+                    },
                     clockHz: c.xtal || config.clockHz,
                 });
             } else if (c.kind === 'pit') {
