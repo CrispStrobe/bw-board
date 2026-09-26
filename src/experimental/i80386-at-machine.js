@@ -81,7 +81,12 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
           // Keep firmware diagnostics on the legacy PIC.  The BIOS does not
           // know about the synthetic MP/IOAPIC surface; switch ATA IRQ14 to
           // the APIC only once the table is published for the guest kernel.
-          if (this._xv6Mp && this._mpReady && (this.cpu.cr0 & 1)) this._apicIrq[14] = active ? 1 : 0;
+          if (this._xv6Mp && this._mpReady && (this.cpu.cr0 & 1)) {
+            // ATA presents an edge-like request. Latch the assertion until
+            // IOAPIC arbitration consumes it; do not lose a short pulse when
+            // the device deasserts before the next CPU boundary.
+            if (active) this._apicIrq[14] = 1;
+          }
           else this.chips.pic2?.setIRQ(6, active ? 1 : 0);
         },
         intersectorDelayCycles: hooks.ataIntersectorDelayCycles ?? 8192,
