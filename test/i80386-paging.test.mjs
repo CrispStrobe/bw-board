@@ -88,6 +88,14 @@ test("walks PDE/PTE, sets accessed/dirty in walk order, and honors original supe
   );
 });
 
+test("PSE translates 4MiB PDEs for xv6-style bootstrap paging", () => {
+  const f = fixture();
+  f.cpu.cr4 = 0x10;
+  f.putDword(0x1000, 0x00000083); // present, writable, 4MiB page
+  assert.equal(f.cpu._translate(0x00123456, {write: true, supervisor: true}), 0x00123456);
+  assert.equal(f.dword(0x1000) & 0x60, 0x60, 'PDE accessed/dirty bits are latched');
+});
+
 test("faulting second page retains first-page walk/read effects and precise restart state", () => {
   const f = fixture();
   f.map(0, 0x3000);

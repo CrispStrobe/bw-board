@@ -87,6 +87,7 @@ export class ExperimentalI80386 {
     this.cr0 = 0;
     this.cr2 = 0;
     this.cr3 = 0;
+    this.cr4 = 0;
     this._coprocessorProfile = "none";
     this.halted = false;
     this.cycles = 0;
@@ -329,6 +330,17 @@ export class ExperimentalI80386 {
     if (!(pde & 0x20)) {
       pde |= 0x20;
       this._writePhysical(pdeAddress, 4, pde);
+    }
+    if ((this.cr4 & 0x10) && (pde & 0x80)) {
+      const userPage = !!(pde & 4);
+      const writable = !!(pde & 2);
+      if ((user && !userPage) || (user && write && !writable))
+        this._pageFault(linear, write, user, true);
+      if (write && !(pde & 0x40)) {
+        pde |= 0x40;
+        this._writePhysical(pdeAddress, 4, pde);
+      }
+      return ((pde & 0xffc00000) | (linear & 0x3fffff)) >>> 0;
     }
     const pteAddress = ((pde & 0xfffff000) + ((linear >>> 10) & 0xffc)) >>> 0;
     let pte = this._readPhysical(pteAddress, 4);
@@ -3430,7 +3442,7 @@ export class ExperimentalI80386 {
         throw new I80386Fault(6, null, "MOV CR requires a register");
       const control = (m >>> 3) & 7,
         register = m & 7;
-      if (![0, 2, 3].includes(control))
+      if (![0, 2, 3, 4].includes(control))
         throw new I80386Fault(6, null, "invalid control register");
       if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "MOV CR requires CPL0");
@@ -3443,6 +3455,8 @@ export class ExperimentalI80386 {
         this[`cr${control}`] =
           control === 3
             ? (value & 0xfffff000) >>> 0
+            : control === 4
+              ? (value & 0x10) >>> 0
             : control === 0
               ? (value & 0x8000001f) >>> 0
               : value;
