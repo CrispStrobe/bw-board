@@ -214,7 +214,11 @@ export const PCAT80386_EXPERIMENTAL_4M = Object.freeze({
   ...PCAT80386_EXPERIMENTAL,
   regions: PCAT80386_EXPERIMENTAL.regions.map(region =>
     region.kind === 'ram' && region.start === 0x100000
-      ? {...region, end: 0x45ffff}
+      // 640KiB conventional plus 3456KiB extended ends at 4MiB - 1.
+      // The previous 0x45ffff endpoint exposed an extra 384KiB that is not
+      // described by CMOS; IBM AT POST consequently remained in its memory
+      // verification loop and never reached INT 19/IDE boot.
+      ? {...region, end: 0x3fffff}
       : region),
   chips: PCAT80386_EXPERIMENTAL.chips.map(chip => chip.kind === 'rtc' ? {
     ...chip,
