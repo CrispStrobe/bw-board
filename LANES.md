@@ -26,7 +26,7 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-26 CLAIM — `/root` (Codex), regenerate the ROM-free 80386/FreeDOS
+2026-09-26 DONE — `/root` (Codex), regenerate the ROM-free 80386/FreeDOS
 source-bound receipt after the landed AT UART/PIC wiring changed
 `src/i8086-machine.js`. Isolated worktree
 `/mnt/volume1/code/wt/board-i80386-free-bios-uart-receipt`, branch
@@ -34,6 +34,11 @@ source-bound receipt after the landed AT UART/PIC wiring changed
 `docs/receipts/2026-09-21-i80386-free-bios-freedos.json` and this row. The
 receipt must be produced by the pinned external FreeDOS boot, not by editing a
 hash; its existing source-binding and mutation test remain the public-CI gate.
+The regenerated run passed at 45,800,000 steps: installer declined, bare
+`A:\\>` reached, deterministic FAT16 disk mounted as C:, and `CMOUNTOK.TXT`
+listed. The receipt changes only its execution revision plus the three source
+hashes legitimately moved since the prior run; its outcome/screen evidence is
+unchanged. The two source-binding/mutation tests pass.
 No emulator, UART, BIOS, workflow, or acceptance-envelope change.
 
 2026-09-26 CLAIM — `/root` (Codex), ideal-inductor AC numerical stability.
