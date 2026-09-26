@@ -1,5 +1,5 @@
 /**
- * LM358 dual op-amp + LM3915 dot/bar display driver — the analog pair
+ * LM358/LM324 op-amps + LM3915 dot/bar display driver — the analog pair
  * behind every cheap VU meter, clean-room from the TI datasheets.
  *
  * The op-amp is the genuinely hard one: real feedback needs convergence
@@ -68,63 +68,69 @@ const BETA_MIN = 1e-4;
 const E_TOL = 1e-7;         // volts of residual (v+ − v−)
 const U_TOL = 1e-9;         // volts of output movement below which nothing changed
 
-export function registerAnalogAmps() {
-
-    registerDevice('lm358', {
-        terminals: ['vcc', 'gnd',
-            '1_pos', '1_neg', '1_out', '2_pos', '2_neg', '2_out'],
+function registerGroundSensingOpAmp(kind, channels, {
+    minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
+    inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
+} = {}) {
+    const channelTerminals = channels.flatMap(ch => [`${ch}_pos`, `${ch}_neg`, `${ch}_out`]);
+    registerDevice(kind, {
+        terminals: ['vcc', 'gnd', ...channelTerminals],
 
         init() {
             return {
-                drives: {
-                    '1_out': { vTh: 0, rTh: R_OUT },
-                    '2_out': { vTh: 0, rTh: R_OUT },
-                },
-                // Previous (applied output, resulting input error) pair per
-                // channel — the secant's second point. Null until the first
-                // round has produced one.
-                _prev: { 1: null, 2: null },
+                drives: Object.fromEntries(channels.map(ch => [`${ch}_out`, { vTh: 0, rTh: R_OUT }])),
+                _prev: Object.fromEntries(channels.map(ch => [ch, null])),
+                powered: false,
+                inputCommonMode: Object.fromEntries(channels.map(ch => [ch, 'unknown'])),
             };
         },
 
         update(part, state, read) {
-            const vcc = read('vcc') || 5.0;
+            const rawVcc = read('vcc');
+            const vcc = legacyUnwiredFiveVoltSupply && !rawVcc ? 5.0 : rawVcc;
             const gnd = read('gnd') || 0;
-            const hi = vcc - 1.5;              // the LM358's real top swing
-            const lo = gnd + 0.005;
-            if (!state._prev) state._prev = { 1: null, 2: null };
+            const powered = Number.isFinite(vcc) && Number.isFinite(gnd) && vcc - gnd >= minSupply;
+            state.powered = powered;
+            if (!state._prev) state._prev = Object.fromEntries(channels.map(ch => [ch, null]));
+            if (!state.inputCommonMode) state.inputCommonMode = {};
             let changed = false;
-            for (const ch of ['1', '2']) {
-                const e = read(`${ch}_pos`) - read(`${ch}_neg`);
+            if (!powered) {
+                for (const ch of channels) {
+                    state.inputCommonMode[ch] = 'unpowered';
+                    const cur = state.drives[`${ch}_out`];
+                    if (cur.vTh !== gnd || cur.rTh !== R_OFF) {
+                        state.drives[`${ch}_out`] = { vTh: gnd, rTh: R_OFF };
+                        state._prev[ch] = null;
+                        changed = true;
+                    }
+                }
+                return changed;
+            }
+
+            const hi = vcc - highHeadroom;
+            const lo = gnd + lowHeadroom;
+            const inputHi = vcc - inputHighHeadroom;
+            for (const ch of channels) {
+                const pos = read(`${ch}_pos`);
+                const neg = read(`${ch}_neg`);
+                const common = (pos + neg) / 2;
+                state.inputCommonMode[ch] = common < gnd ? 'below'
+                    : common > inputHi ? 'above' : 'valid';
+                // Outside the characterised common-mode range the real devices
+                // do not promise linear accuracy. We retain a deterministic,
+                // rail-bounded solve and publish the limitation in state; we
+                // deliberately do not invent phase reversal or precision.
+                const e = pos - neg;
                 const cur = state.drives[`${ch}_out`].vTh;
                 const prev = state._prev[ch];
-                // The secant needs two DISTINCT outputs to measure a slope.
                 let next = null;
                 if (prev && Math.abs(cur - prev.u) > U_TOL) {
-                    // e(u) = k − β·u ⇒ β = −de/du, measured, not assumed.
                     const beta = (prev.e - e) / (cur - prev.u);
                     if (Number.isFinite(beta) && beta > BETA_MIN) next = cur + e / beta;
                 }
-                // No usable slope (first round, open loop, positive feedback):
-                // the damped march, which is what makes the rails reachable.
                 if (next === null) next = cur + G_STEP * e;
                 next = Math.max(lo, Math.min(hi, next));
-                // The pair stored is always (output that was APPLIED, error it
-                // produced), so a rail clamp never corrupts the slope estimate.
                 state._prev[ch] = { u: cur, e };
-                // Settled means the INPUT error is closed, not that the output
-                // stopped moving: the old output-step halt is exactly what left
-                // 0.667 mV of input unamplified.
-                //
-                // …AND the drive is inside the part's own swing. A powered-up
-                // LM358 does not sit below its own bottom swing, and that is
-                // not pedantry: on the very first solve of an oscillator every
-                // node reads 0, so e = 0 EXACTLY on both channels, and an
-                // error-only halt leaves the whole analog section dead at 0 V
-                // forever. The old damped step broke that symmetry by
-                // accident, through the same clamp — pc85-led-lampe-puls (an
-                // LM358 triangle oscillator) is where the corpus differential
-                // caught it.
                 const inSwing = cur >= lo - U_TOL && cur <= hi + U_TOL;
                 if ((Math.abs(e) <= E_TOL && inSwing) || Math.abs(next - cur) <= U_TOL) continue;
                 state.drives[`${ch}_out`] = { vTh: next, rTh: R_OUT };
@@ -133,6 +139,13 @@ export function registerAnalogAmps() {
             return changed;
         },
     });
+}
+
+export function registerAnalogAmps() {
+    // Preserve LM358's historical implicit 5 V fallback for old benches that
+    // omitted its supply wire; LM324 is new and requires its real shared rails.
+    registerGroundSensingOpAmp('lm358', ['1', '2'], { legacyUnwiredFiveVoltSupply: true });
+    registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
 
     registerDevice('lm3915', {
         terminals: ['vcc', 'gnd', 'sig', 'mode',

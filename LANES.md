@@ -26,7 +26,7 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-26 CLAIM — `/root` (Codex), LM324 real powered quad op-amp engine model.
+2026-09-26 DONE — `/root` (Codex), LM324 real powered quad op-amp engine model.
 Isolated worktree `/tmp/wt-bwcx-lm324-board`, branch `lane/lm324-real-part`, exact
 base `915edc8f773538ad5065f72bda82ee6bc019279a`. Owns only this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js` and focused LM324/analog
@@ -38,6 +38,19 @@ contracts, feedback convergence, rail/supply behavior, common-mode refusal or
 declared limitation, and mutations for a missing fourth channel and an LM358
 two-channel alias. No generic `opamp`, AC/macromodel, MNA, importer/exporter,
 part face, package pin, UI, corpus, workflow, dependency pin or Lite change.
+The landed LM358 convergence loop is now one shared powered bipolar-op-amp
+implementation without changing its historical implicit-supply behavior. LM324
+registers four independent channels on shared rails, requires at least 3 V,
+goes high impedance below that supply, bounds output swing to ground+5 mV and
+VCC-1.5 V, and publishes `valid`/`below`/`above` common-mode state rather than
+claiming precision outside VCC-1.5 V. Its 3 mA supply budget is explicit. The
+four-channel/four-feedback, supply-off, common-mode, full LM358 and registry
+surface passes 52/52; a missing fourth channel or renaming the registration to
+LM358 makes the new behavioral tests fail. A broad local run reached 6,099
+passes/284 environment skips but ended with three failures after saturating this
+small host; that run is not accepted or rerun locally. The single exact-head
+hosted qualification must identify them as reproducible failures or clear them
+before landing.
 
 2026-09-26 DONE — `/root` (Codex), regenerate the ROM-free 80386/FreeDOS
 source-bound receipt after the landed AT UART/PIC wiring changed
