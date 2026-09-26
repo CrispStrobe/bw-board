@@ -140,10 +140,13 @@ it to avr8js is the end state.
 § The adapter applies LabWired's own `recommended_tick_interval()` (512 on this
 single-core, walk-deleted STM32F0 bus; 1 on timing-sensitive or multi-core
 buses). The fork also has an observer/interrupt/IT/MMIO-guarded Thumb-1 RAM-loop
-basic-block path that aligns and coalesces the loop from any entry phase. On
+basic-block path, plus a guarded closed-form path for rustc's current store-spin
+loop, that aligns and coalesces from any entry phase. On
 the same local artifact the exact per-cycle path measured 0.07×, safe batching
 alone 0.25×, and the guarded block path had an eight-run median of 4.03×
 (1.37–12.3× across five isolated and three full-suite runs).
+The core repository separately gates the native production path at ≥1.0× for
+all 38 modeled chips (74 board/mode measurements, with no coverage waivers).
 `LABWIRED_EXACT_TICK=1` keeps the benchmark's exact-policy A/B available.
 
 **Whole-system smokes** (each skips loudly without its local artifact):
