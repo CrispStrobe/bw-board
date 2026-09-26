@@ -28,6 +28,7 @@ const inputs = {
     coremark: process.env.RV_BENCH_DIR && join(process.env.RV_BENCH_DIR, 'coremark-ecall.elf'),
     dhrystone: process.env.RV_BENCH_DIR && join(process.env.RV_BENCH_DIR, 'dhrystone-ecall.elf'),
     kernel: process.env.XV6_KERNEL, fs: process.env.XV6_FS,
+    linuxImage: process.env.LINUX_IMAGE, linuxInitrd: process.env.LINUX_INITRD,
 };
 const TYPES = {'.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html'};
 const server = createServer((req, res) => {
@@ -49,6 +50,7 @@ const page = await browser.newPage();
 await page.goto(base + '/');
 console.log(`Chromium ${browser.version()}`);
 for (const w of workloads) {
+    if (w === 'linux' && !(inputs.linuxImage && inputs.linuxInitrd)) { console.log('linux: skipped (LINUX_IMAGE / LINUX_INITRD not set)'); continue; }
     const r = await page.evaluate(async w => {
         const {RiscV32Machine} = await import('/src/riscv32-machine.js');
         const W = await import('/scripts/riscv-bench/workloads.mjs');
@@ -56,6 +58,10 @@ for (const w of workloads) {
         if (w === 'alu') { const {assembleRiscv} = await import('/src/riscv-asm.js'); return W.runAlu(RiscV32Machine, assembleRiscv); }
         if (w === 'coremark' || w === 'dhrystone') { const x = W.runBareElf(RiscV32Machine, await bytes(w)); delete x.output; return x; }
         if (w === 'xv6') return W.runXv6(RiscV32Machine, await bytes('kernel'), await bytes('fs'));
+        if (w === 'linux') {
+            const {bootLinux} = await import('/src/riscv32-linux.js');
+            return W.runLinux(RiscV32Machine, bootLinux, await bytes('linuxImage'), await bytes('linuxInitrd'));
+        }
         throw new Error('unknown workload ' + w);
     }, w);
     console.log(`${w}: ${r.instructions} instructions in ${r.seconds.toFixed(2)} s = ${(r.instructions / r.seconds / 1e6).toFixed(2)} MIPS (chromium)`);

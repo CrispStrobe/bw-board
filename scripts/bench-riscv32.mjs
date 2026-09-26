@@ -54,6 +54,13 @@ async function runXv6() {
     return W.runXv6(RiscV32Machine, new Uint8Array(readFileSync(kpath)), new Uint8Array(readFileSync(fpath)));
 }
 
+async function runLinuxBench() {
+    const k = process.env.LINUX_IMAGE, i = process.env.LINUX_INITRD;
+    if (!k || !i) throw new Error('LINUX_IMAGE / LINUX_INITRD not set (test/linux-riscv/build.sh)');
+    const {bootLinux} = await import(pathToFileURL(join(SRC, 'riscv32-linux.js')).href);
+    return W.runLinux(RiscV32Machine, bootLinux, new Uint8Array(readFileSync(k)), new Uint8Array(readFileSync(i)));
+}
+
 let r;
 switch (workload) {
     case 'alu': r = await runAlu(true); break;
@@ -61,7 +68,8 @@ switch (workload) {
     case 'coremark': r = runElf('coremark'); break;
     case 'dhrystone': r = runElf('dhrystone'); break;
     case 'xv6': r = await runXv6(); break;
-    default: console.error('usage: bench-riscv32.mjs <alu|alu-noclint|coremark|dhrystone|xv6> [--src DIR] [--json]'); process.exit(2);
+    case 'linux': r = await runLinuxBench(); break;
+    default: console.error('usage: bench-riscv32.mjs <alu|alu-noclint|coremark|dhrystone|xv6|linux> [--src DIR] [--json]'); process.exit(2);
 }
 r.mips = r.instructions / r.seconds / 1e6;
 if (JSON_OUT) console.log(JSON.stringify({workload, ...r, output: undefined}));

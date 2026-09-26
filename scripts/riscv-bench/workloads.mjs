@@ -69,3 +69,16 @@ export function runXv6(RiscV32Machine, kernel, fsImg) {
     while (!cpu.halted && !/init: starting sh\n\$ /.test(out)) m.run(1_000_000);
     return {instructions: retired(cpu), seconds: now() - t0, reached: /\$ /.test(out)};
 }
+
+/** RV32 Linux (src/riscv32-linux.js) from reset to the busybox prompt. Returns
+ *  the instructions and seconds to the prompt. */
+export function runLinux(RiscV32Machine, bootLinux, kernel, initrd) {
+    let out = '';
+    const m = new RiscV32Machine({memSize: 1 << 26, ramBase: 0x80000000, uartIrq: 10},
+        {onSerial: b => { out += String.fromCharCode(b); }});
+    bootLinux(m, {kernel, initrd});
+    const cpu = m.cpu;
+    const t0 = now();
+    while (!cpu.halted && !/BWB-LINUX-USERSPACE-UP[\s\S]*# $/.test(out) && cpu.retired < 1e9) m.run(1_000_000);
+    return {instructions: cpu.retired, seconds: now() - t0, reached: /# $/.test(out)};
+}

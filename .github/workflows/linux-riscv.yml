@@ -1,0 +1,69 @@
+# Boot RV32 Linux (6.1, Sv32) to an interactive busybox shell on
+# RiscV32Machine, and time it. The kernel and userland are rv32emu's pinned
+# prebuilt image, fetched and SHA-checked by test/linux-riscv/build.sh (GPL, so
+# never committed); the machine's in-emulator SBI replaces OpenSBI. A clean
+# runner gives the real wall-clock numbers; the dev box is shared.
+name: Linux RISC-V boot
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'test/linux-riscv/**'
+      - '.github/workflows/linux-riscv.yml'
+      - 'src/riscv32*.js'
+      - 'src/fdt.js'
+      - 'scripts/riscv-bench/**'
+      - 'scripts/bench-riscv32*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Fetch the kernel and cut the initramfs
+        run: bash test/linux-riscv/build.sh linux-out
+      - name: Boot to an interactive shell (uname -a over the UART)
+        run: node --max-old-space-size=1024 test/linux-riscv/boot.mjs linux-out/Image linux-out/initramfs.cpio 3000000000 900
+      - name: Reset to power-off, three runs (instructions and wall time)
+        run: |
+          for i in 1 2 3; do
+            QUIET=1 node --max-old-space-size=1024 test/linux-riscv/poweroff.mjs linux-out/Image linux-out/initramfs-poweroff.cpio
+          done
+      - name: Reset to shell prompt in Node 22 and in headless Chromium (three runs each)
+        env:
+          LINUX_IMAGE: ${{ github.workspace }}/linux-out/Image
+          LINUX_INITRD: ${{ github.workspace }}/linux-out/initramfs.cpio
+        run: |
+          for i in 1 2 3; do node scripts/bench-riscv32.mjs linux | tail -1; done
+          mkdir -p ext/pw && cd ext/pw && echo '{}' > package.json
+          npm i --no-audit --no-fund playwright@1.62.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs linux linux linux
+      - name: rv32emu source (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: sysprog21/rv32emu
+          ref: 19f5a7984e54292df025d747f87a7728e7cfb3eb
+          path: ext/rv32emu
+      - name: Reference — rv32emu system mode (interpreter), same kernel and initramfs, reset to power-off
+        run: |
+          cd ext/rv32emu
+          sudo apt-get install -y device-tree-compiler >/dev/null
+          make system_defconfig >/dev/null
+          sed -i 's/^CONFIG_SDL=y/# CONFIG_SDL is not set/; s/^CONFIG_SDL_MIXER=y/# CONFIG_SDL_MIXER is not set/; s/^\(CONFIG_VIRTIO_NET[A-Z_]*\)=y/# \1 is not set/' .config
+          make -j"$(nproc)" INITRD_SIZE=8 >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          # rv32emu's time is its cycle count at a 65 MHz timebase (ours: retired
+          # instructions at 10 MHz, with a WFI idle skip), so the same kernel
+          # executes a different number of instructions; wall time is the comparison.
+          for i in 1 2 3; do
+            /usr/bin/time -f "rv32emu-system poweroff wall %e s" ext/rv32emu/build/rv32emu -k linux-out/Image -i linux-out/initramfs-poweroff.cpio -b "earlycon console=ttyS0" < /dev/null 2>&1 | grep -aE 'Power down|wall'
+          done
