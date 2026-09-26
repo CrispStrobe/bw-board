@@ -47,3 +47,23 @@ jobs:
           npm i --no-audit --no-fund playwright@1.62.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE"
           PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs linux linux linux
+      - name: rv32emu source (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: sysprog21/rv32emu
+          ref: 19f5a7984e54292df025d747f87a7728e7cfb3eb
+          path: ext/rv32emu
+      - name: Reference — rv32emu system mode (interpreter), same kernel and initramfs, reset to power-off
+        run: |
+          cd ext/rv32emu
+          sudo apt-get install -y device-tree-compiler >/dev/null
+          make system_defconfig >/dev/null
+          sed -i 's/^CONFIG_SDL=y/# CONFIG_SDL is not set/; s/^CONFIG_SDL_MIXER=y/# CONFIG_SDL_MIXER is not set/; s/^\(CONFIG_VIRTIO_NET[A-Z_]*\)=y/# \1 is not set/' .config
+          make -j"$(nproc)" INITRD_SIZE=8 >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          # rv32emu's time is its cycle count at a 65 MHz timebase (ours: retired
+          # instructions at 10 MHz, with a WFI idle skip), so the same kernel
+          # executes a different number of instructions; wall time is the comparison.
+          for i in 1 2 3; do
+            /usr/bin/time -f "rv32emu-system poweroff wall %e s" ext/rv32emu/build/rv32emu -k linux-out/Image -i linux-out/initramfs-poweroff.cpio -b "earlycon console=ttyS0" < /dev/null 2>&1 | grep -aE 'Power down|wall'
+          done
