@@ -15,8 +15,8 @@ The builder copies the MIT tree, checks its patch anchors, builds `xv6.img`,
 and writes `bw-xv6-up-receipt.json` with the source revision and image hash.
 This is a diagnostic guest variant; it does not change or weaken the stock
 xv6 acceptance claim. The current run reaches the xv6 console banner through
-the experimental 386 protected-mode, PSE-paged, 32-bit-ATA path. The next
-stock-image milestone is complete interrupt delivery through the WIP MP/LAPIC/IOAPIC
-profile; that profile currently proves metadata, register initialization, and
-vector selection in unit tests only. The full stock BIOS-to-SMP replay remains
-WIP because firmware memory-test ordering still needs a clean handoff point.
+the experimental 386 protected-mode, PSE-paged, 32-bit-ATA path. The stock
+MIT image now also reaches `xv6...` under the WIP MP/LAPIC/IOAPIC profile: the
+reproducible probe observes the first 32-bit ATA transfer at step 70,575,463
+and the UART banner by 76,000,000 steps. Full interrupt-driven userland remains
+WIP; this is a kernel-entry milestone, not a complete xv6 acceptance claim.
