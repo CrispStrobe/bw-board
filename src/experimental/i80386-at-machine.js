@@ -267,6 +267,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       cpu.interrupt(vector);
       return true;
     }
+    // Firmware uses the 8259 during POST.  Once xv6 has taken the MP/APIC
+    // handoff in protected mode, stale PIC edges must not leak into the
+    // kernel as vectors 8/14; hardware IRQs are then arbitrated by IOAPIC.
+    const apicMode = this._xv6Mp && this._mpReady && (cpu.cr0 & 1);
     if (this._xv6Mp && (cpu.eflags & 0x200) && !cpu._interruptShadow) {
       for (let irq = 0; irq < this._apicIrq.length; irq++) {
         if (!this._apicIrq[irq]) continue;
@@ -278,7 +282,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
         return true;
       }
     }
-    if (!this._pic || !this._pic.intActive || !(cpu.eflags & 0x200) || cpu._interruptShadow) return false;
+    if (apicMode || !this._pic || !this._pic.intActive || !(cpu.eflags & 0x200) || cpu._interruptShadow) return false;
     let vector;
     if (this._picCascade && this._pic._serviceable() === this._picCascade.line && this._picCascade.slave.intActive) {
       this._pic.acknowledge();
