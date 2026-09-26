@@ -79,7 +79,7 @@ Initial measured attempts:
 | ELKS 0.9.2 fd360-minix | 8086 | Earlier BIOS-service diagnostic reaches setup but is not acceptance |
 | ELKS 0.9.1 fd1440-fat | 8086 PC/XT | **Accepted:** kernel banner, floppy probe, root mount, timer and FDC IRQs; image remains external |
 | MINIX 2.0.0 TINYROOT | 8086/80186 | CPU reaches unsupported FE encoding before console output; root cause not yet established |
-| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | Source builds reproducibly with host 32-bit GCC; first IDE/AT probe did not reach a visible xv6 milestone within the bounded probe, so no OS acceptance yet |
+| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | Source builds reproducibly with host 32-bit GCC; the IBM 5170 Rev1 ROM now runs through POST memory status codes but remains in its 0x31/0x32 verification loop for 10M instructions with zero ATA commands, so no OS acceptance yet |
 | Either | wired 286 | Refused before download/execution: board/CPU prerequisites absent |
 
 An unsupported encoding can result from executing wrong bytes; it is not by
