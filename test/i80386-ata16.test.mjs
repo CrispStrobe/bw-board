@@ -226,7 +226,7 @@ test('386 AT dispatches ATA data as one 16-bit port access and persists sector w
   out8(0x1f7, 0x20);
   assert.equal(machine.cpu.inPort(0x1f0, 16), 0x0100);
   assert.deepEqual(accesses.at(-1), {dir: 'in', port: 0x1f0, width: 16, value: 0x0100});
-  assert.throws(() => machine.cpu.inPort(0x1f0, 8), /native 16-bit/);
+  assert.throws(() => machine.cpu.inPort(0x1f0, 8), /16- or 32-bit/);
   assert.equal(accesses.some(event => event.port === 0x1f1 && event.width === 8), false,
     'native data read never touches the adjacent error/features port');
 
@@ -239,6 +239,18 @@ test('386 AT dispatches ATA data as one 16-bit port access and persists sector w
   machine.reset();
   assert.deepEqual(Array.from(machine.ata.mediaBytes().slice(512, 518)),
     [0x00, 0x55, 0x01, 0x55, 0x02, 0x55], 'board reset retains disk media');
+  assert.equal(machine.cpu.inPort(0x1f7, 8), 0x50);
+});
+
+test('386 AT splits 32-bit ATA PIO into two little-endian words for REP INSL/OUTSL', () => {
+  const machine = new ExperimentalI80386ATMachine(undefined, {
+    ataImage: image(), ataGeometry: geometry, ataIntersectorDelayCycles: 1,
+  });
+  const out8 = (port, value) => machine.cpu.outPort(port, value, 8);
+  out8(0x1f2, 1); out8(0x1f3, 1); out8(0x1f4, 0); out8(0x1f5, 0);
+  out8(0x1f6, 0xa0); out8(0x1f7, 0x20);
+  assert.equal(machine.cpu.inPort(0x1f0, 32), 0x03020100);
+  for (let dword = 1; dword < 128; dword++) machine.cpu.inPort(0x1f0, 32);
   assert.equal(machine.cpu.inPort(0x1f7, 8), 0x50);
 });
 

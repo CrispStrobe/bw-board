@@ -91,8 +91,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
     if (this.ata && (port >= 0x1f0 && port <= 0x1f7 || port === 0x3f6)) this._flushChips();
     if (this.ata && port === 0x1f0) {
-      if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
-      const value = this.ata.readData16();
+      if (width !== 16 && width !== 32)
+        throw new Error('experimental ATA data register requires 16- or 32-bit I/O');
+      const low = this.ata.readData16();
+      const value = width === 32 ? (low | (this.ata.readData16() << 16)) >>> 0 : low;
       this.hooks.onPortAccess?.({dir: 'in', port, width, value});
       this._chipDeadline = this._wakeHorizon();
       return value;
@@ -118,9 +120,12 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
     if (this.ata && (port >= 0x1f0 && port <= 0x1f7 || port === 0x3f6)) this._flushChips();
     if (this.ata && port === 0x1f0) {
-      if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
-      this.ata.writeData16(value);
-      this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xffff});
+      if (width !== 16 && width !== 32)
+        throw new Error('experimental ATA data register requires 16- or 32-bit I/O');
+      this.ata.writeData16(value & 0xffff);
+      if (width === 32) this.ata.writeData16(value >>> 16);
+      this.hooks.onPortAccess?.({dir: 'out', port, width,
+        value: width === 32 ? value >>> 0 : value & 0xffff});
       this._chipDeadline = this._wakeHorizon();
       return;
     }
