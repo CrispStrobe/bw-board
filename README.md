@@ -113,7 +113,7 @@ order-of-magnitude — the *ranking* is what is stable:
 | AVR ATmega328P | avr8js ‡ | 16 MHz | ~12× |
 | 8051 | emu8051-stc (WASM) | — | ~3× |
 | RP2040 Cortex-M0+ | rp2040js † | 125 MHz | ~0.8–1.0× |
-| labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | ~4.0× |
+| labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | ~11× |
 
 The three cores we own run tens of times faster than the real silicon. The
 third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051 and the
@@ -141,10 +141,8 @@ it to avr8js is the end state.
 single-core, walk-deleted STM32F0 bus; 1 on timing-sensitive or multi-core
 buses). The fork also has an observer/interrupt/IT/MMIO-guarded Thumb-1 RAM-loop
 basic-block path, plus a guarded closed-form path for rustc's current store-spin
-loop, that aligns and coalesces from any entry phase. On
-the same local artifact the exact per-cycle path measured 0.07×, safe batching
-alone 0.25×, and the guarded block path had an eight-run median of 4.03×
-(1.37–12.3× across five isolated and three full-suite runs).
+loop, that aligns and coalesces from any entry phase. The final pinned artifact
+measured 11.0×, 11.9×, and 11.2× in the post-merge CI run (median 11.2×).
 The core repository separately gates the native production path at ≥1.0× for
 all 38 modeled chips (74 board/mode measurements, with no coverage waivers).
 `LABWIRED_EXACT_TICK=1` keeps the benchmark's exact-policy A/B available.
