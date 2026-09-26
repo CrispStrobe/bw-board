@@ -108,6 +108,10 @@ test('xv6 stock profile exposes the 14MiB PHYSTOP RAM window', () => {
   machine.cpu.write(0xe00000, 0x5a);
   assert.equal(machine.cpu.read(0xe00000), 0x5a);
   assert.equal(machine.cpu.read(0x1000000), 0xff);
+  const cmos = register => { machine._out(0x70, register); return machine._in(0x71); };
+  let checksum = 0;
+  for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
+  assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
 });
 
 test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC delivery status', () => {
