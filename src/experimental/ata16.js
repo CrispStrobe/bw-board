@@ -31,6 +31,7 @@ export class ExperimentalATA16 {
     if (slaveImage !== null && (!(slaveImage instanceof Uint8Array) || slaveImage.length !== image.length))
       throw new Error('ATA slave image must match the master image size');
     this.slaveImage = slaveImage?.slice() ?? null;
+    this.slaveEnabled = false;
     this.geometry = {cylinders, heads, sectors};
     this.onIRQ = onIRQ;
     if (!Number.isInteger(intersectorDelayCycles) || intersectorDelayCycles < 1)
@@ -39,7 +40,7 @@ export class ExperimentalATA16 {
     this.reset();
   }
 
-  _media() { return (this.driveHead & 0x10) && this.slaveImage ? this.slaveImage : this.image; }
+  _media() { return (this.driveHead & 0x10) && this.slaveImage && this.slaveEnabled ? this.slaveImage : this.image; }
 
   reset() {
     const wasOutput = this._irqOutput ?? false;
@@ -203,7 +204,7 @@ export class ExperimentalATA16 {
 
   writeCommand(command) {
     if (this.control & 4) return;
-    if ((this.driveHead & 0x10) && !this.slaveImage) return;
+    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled)) return;
     this.command = command & 0xff;
     this.error = 0;
     this._clearIRQ();
@@ -245,7 +246,7 @@ export class ExperimentalATA16 {
       this.status = STATUS_IDLE;
       this._raiseIRQ();
     } else if (this.command === 0x90) {
-      this.error = this.slaveImage ? 0 : 1;
+      this.error = this.slaveImage && this.slaveEnabled ? 0 : 1;
       this.status = STATUS_IDLE;
       this._raiseIRQ();
     }
@@ -254,7 +255,7 @@ export class ExperimentalATA16 {
 
   readData16() {
     if (this.control & 4) return 0xffff;
-    if ((this.driveHead & 0x10) && !this.slaveImage) return 0xffff;
+    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled)) return 0xffff;
     if (this.direction !== 'read' || !(this.status & STATUS_DRQ)) return 0xffff;
     const byte = this.wordIndex * 2;
     const value = this.buffer[byte] | this.buffer[byte + 1] << 8;
@@ -272,7 +273,7 @@ export class ExperimentalATA16 {
 
   writeData16(value) {
     if (this.control & 4) return;
-    if ((this.driveHead & 0x10) && !this.slaveImage) return;
+    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled)) return;
     if (this.direction !== 'write' || !(this.status & STATUS_DRQ)) return;
     const byte = this.wordIndex * 2;
     this.buffer[byte] = value & 0xff;
@@ -293,7 +294,7 @@ export class ExperimentalATA16 {
 
   readRegister(register, {alternate = false} = {}) {
     if (this.control & 4) return alternate || register === 7 ? this.status : 0;
-    if ((this.driveHead & 0x10) && !this.slaveImage) return 0;
+    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled)) return 0;
     if (alternate) return this.status;
     if (register === 1) return this.error;
     if (register === 2) return this.sectorCount;
@@ -333,7 +334,7 @@ export class ExperimentalATA16 {
     }
     if (this.status & STATUS_BSY) return;
     if (this.control & 4) return;
-    if ((this.driveHead & 0x10) && !this.slaveImage && register !== 6) return;
+    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled) && register !== 6) return;
     if (register === 1) this.features = byte;
     else if (register === 2) this.sectorCount = byte;
     else if (register === 3) this.sectorNumber = byte;
