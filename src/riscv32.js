@@ -91,6 +91,8 @@ const IRQ_MSI = 1 << 3, IRQ_MTI = 1 << 7, IRQ_MEI = 1 << 11;
 const IRQ_SSI = 1 << 1, IRQ_STI = 1 << 5, IRQ_SEI = 1 << 9;
 // Interrupt causes (with the high bit set in mcause).
 const CAUSE_MSI = 3, CAUSE_MTI = 7, CAUSE_MEI = 11;
+// Spec default interrupt priority, as (mip bit, cause) pairs: MEI, MSI, MTI, SEI, SSI, STI.
+const IRQ_ORDER = [IRQ_MEI, CAUSE_MEI, IRQ_MSI, CAUSE_MSI, IRQ_MTI, CAUSE_MTI, IRQ_SEI, 9, IRQ_SSI, 1, IRQ_STI, 5];
 // Synchronous exception causes: environment call from U/S/M mode.
 const CAUSE_ECALL_U = 8, CAUSE_ECALL_S = 9, CAUSE_ECALL_M = 11;
 const CAUSE_ILLEGAL = 2, CAUSE_BREAKPOINT = 3;
@@ -99,6 +101,8 @@ const CAUSE_FETCH_ACCESS = 1, CAUSE_LOAD_ACCESS = 5, CAUSE_STORE_ACCESS = 7;
 const ACCESS_FAULT = Object.freeze({accessFault: true});
 // Sv32 page-fault causes: instruction / load / store-or-AMO.
 const CAUSE_FETCH_PF = 12, CAUSE_LOAD_PF = 13, CAUSE_STORE_PF = 15;
+
+const RVC_CACHE = new Uint32Array(65536);
 
 export class RiscV32 {
     /**
@@ -150,11 +154,34 @@ export class RiscV32 {
         // (UART) routed by ld8/st8. Accepts a single device or an array.
         this.io = [].concat(hooks.io || []);
         this.io8 = [].concat(hooks.io8 || []);
+        // Fast RAM paths: halfword/word views over the same buffer (aligned
+        // accesses on a little-endian host), and a map of the 4 KiB RAM pages a
+        // device overlaps (those keep the device-routing slow path). The map is
+        // rebuilt whenever a device list changes length (checked per step).
+        this._memLen = mem.length;
+        const le = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+        const aligned = (mem.byteOffset & 3) === 0;
+        this._m16 = le && aligned ? new Uint16Array(mem.buffer, mem.byteOffset, mem.length >>> 1) : null;
+        this._m32 = le && aligned ? new Int32Array(mem.buffer, mem.byteOffset, mem.length >>> 2) : null;
+        this._devPage = new Uint8Array(Math.ceil(mem.length / 4096) + 1);
+        this._devCount = -1;
+        this._scanDevices();
+        // A software TLB for Sv32: direct-mapped, 256 entries per access type
+        // (fetch 0 / load 1 / store 2). An entry maps a 4 KiB virtual page to its
+        // physical page for one context — effective privilege | SUM<<2 | MXR<<3 —
+        // so privilege/MPRV changes need no flush. Filled only after a walk has
+        // passed every check with A (and, for a store, D) set; flushed on a satp
+        // write, SFENCE.VMA and reset — the invalidation the spec asks software for.
+        this._tlbTag = new Int32Array(768);     // vpn + 1 (0 = empty)
+        this._tlbCtx = new Int8Array(768);
+        this._tlbPpn = new Int32Array(768);     // physical page base
         // Zicntr: the `time` CSR reads this source (the machine wires the CLINT's
         // mtime); without one it follows the cycle count.
         this.timeSource = hooks.timeSource || null;
         this._resetCounters();
     }
+
+    _tlbFlush() { this._tlbTag.fill(0); }
 
     _resetCounters() {
         // Architectural retired-instruction count = steps retired minus traps
@@ -178,6 +205,7 @@ export class RiscV32 {
         this.priv = PRIV_M;
         this.waiting = false;
         this._resetCounters();
+        this._tlbFlush();
     }
 
     /** Raise (level-set) a machine interrupt line in mip — called by a device
@@ -298,7 +326,7 @@ export class RiscV32 {
             case CSR.MENVCFG: this.csr[n] = v & ((1 << 0) /*FIOM*/); return;
             case CSR.MENVCFGH: this.csr[n] = v & MENVCFGH_ADUE; return;
             case CSR.SENVCFG: this.csr[n] = v & 1; return;
-            case CSR.SATP: this.csr[n] = v; return;
+            case CSR.SATP: this.csr[n] = v; this._tlbFlush(); return;
             case CSR.MSCRATCH: case CSR.MCAUSE: case CSR.MTVAL: case CSR.SSCRATCH: case CSR.SCAUSE:
             case CSR.STVAL: case CSR.MCOUNTEREN: case CSR.SCOUNTEREN:
                 this.csr[n] = v; return;
@@ -355,9 +383,8 @@ export class RiscV32 {
         if (!pend) return false;
         const md = this.csr[CSR.MIDELEG], ms = this.csr[CSR.MSTATUS];
         // Spec default priority: MEI, MSI, MTI, SEI, SSI, STI.
-        const order = [[IRQ_MEI, CAUSE_MEI], [IRQ_MSI, CAUSE_MSI], [IRQ_MTI, CAUSE_MTI],
-            [IRQ_SEI, 9], [IRQ_SSI, 1], [IRQ_STI, 5]];
-        for (const [bit, cause] of order) {
+        for (let k = 0; k < IRQ_ORDER.length; k += 2) {
+            const bit = IRQ_ORDER[k], cause = IRQ_ORDER[k + 1];
             if (!(pend & bit)) continue;
             const toS = (md & bit) !== 0;
             const enabled = toS
@@ -384,11 +411,31 @@ export class RiscV32 {
      *  The walk reads/writes PTEs through the physical ld32/st32 (no recursion),
      *  handles 4 KiB pages and 4 MiB superpages, checks R/W/X + U/SUM/MXR, and
      *  sets the A (and, on a store, D) bits. */
+    /** The translation fast path: small enough for V8 to inline at each call
+     *  site. Paging off, or M-mode (MPRV considered for data): identity; a TLB
+     *  hit: the cached page; otherwise the full walk. kind: 0 fetch, 1 load,
+     *  2 store/AMO. */
+    _tx(va, kind) {
+        if ((this.csr[CSR.SATP] & 0x80000000) === 0) return va;
+        const ms = this.csr[CSR.MSTATUS];
+        const eff = (kind !== 0 && (ms & (1 << 17))) ? (ms >>> 11) & 3 : this.priv;
+        if (eff === PRIV_M) return va;
+        const vpn = va >>> 12, ti = (kind << 8) | (vpn & 0xff);
+        if (this._tlbTag[ti] === vpn + 1 && this._tlbCtx[ti] === (eff | ((ms >>> 16) & 0xc)))
+            return (this._tlbPpn[ti] + (va & 0xfff)) >>> 0;
+        return this._translate(va, kind === 0 ? 'fetch' : kind === 2 ? 'store' : 'load');
+    }
+
     _translate(va, access) {
         va >>>= 0;
         const satp = this.csr[CSR.SATP] >>> 0;
         const eff = this._effPriv(access);
         if ((satp >>> 31) === 0 || eff > PRIV_S) return va;          // Bare / M-mode: identity
+        const msx = this.csr[CSR.MSTATUS];
+        const ctx = eff | ((msx >>> 16) & 0xc);                      // SUM (bit 18) → 4, MXR (bit 19) → 8
+        const ti = (access === 'fetch' ? 0 : access === 'store' ? 512 : 256) | ((va >>> 12) & 0xff);
+        if (this._tlbTag[ti] === (va >>> 12) + 1 && this._tlbCtx[ti] === ctx)
+            return (this._tlbPpn[ti] + (va & 0xfff)) >>> 0;
         const cause = access === 'fetch' ? CAUSE_FETCH_PF : access === 'store' ? CAUSE_STORE_PF : CAUSE_LOAD_PF;
         const fault = () => { this._trap(cause, false, va); return null; };
         const vpn1 = (va >>> 22) & 0x3ff, vpn0 = (va >>> 12) & 0x3ff, off = va & 0xfff;
@@ -425,6 +472,9 @@ export class RiscV32 {
             if (!(this.csr[CSR.MENVCFGH] & MENVCFGH_ADUE)) return fault();
             this.st32(pteAddr, np);
         }
+        this._tlbTag[ti] = (va >>> 12) + 1;
+        this._tlbCtx[ti] = ctx;
+        this._tlbPpn[ti] = (phys - off) | 0;
         return phys;
     }
 
@@ -524,6 +574,22 @@ export class RiscV32 {
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
 
+    /** Rebuild the map of RAM pages that a device overlaps (see constructor).
+     *  Without the typed views every page is marked, so all accesses route
+     *  through the byte-wise slow path. */
+    _scanDevices() {
+        const n = this.io.length + this.io8.length;
+        if (n === this._devCount) return;
+        this._devCount = n;
+        const map = this._devPage;
+        map.fill(this._m32 ? 0 : 1);
+        for (const d of this.io.concat(this.io8)) {
+            const lo = ((d.base - this.ramBase) >>> 0), hi = lo + d.size;
+            if (lo >= this._memLen && ((d.base >>> 0) >= this.ramBase)) continue;   // entirely above RAM
+            for (let pg = Math.floor(Math.min(lo, this._memLen) / 4096); pg * 4096 < Math.min(hi, this._memLen); pg++) map[pg] = 1;
+        }
+    }
+
     /** Absolute address → flat RAM index (subtract the RAM base). An address
      *  outside RAM (and not claimed by a device) is an access fault: thrown
      *  here, turned into the architectural exception by step(). */
@@ -534,25 +600,44 @@ export class RiscV32 {
         throw ACCESS_FAULT;
     }
 
-    ld8(a)  {
-        const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
+    // Each accessor first tries the fast path — the address is in RAM, on a
+    // page no device overlaps, and (for 16/32 bits) naturally aligned — and
+    // otherwise takes the device-routing byte path, which is the reference.
+    ld8(a) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if (i < this._memLen && this._devPage[i >>> 12] === 0) return this.mem[i];
+        const d = this.io8.length && this._dev(this.io8, u);
         return d ? (d.load8((u - d.base) >>> 0) & 0xff) : this.mem[this._ram(u)];
     }
-    ld16(a) { return this.ld8(a) | (this.ld8(a + 1) << 8); }
-    ld32(a) {
-        const u = a >>> 0, d = this.io.length && this._dev(this.io, u);
-        return d ? (d.load32((u - d.base) >>> 0) >>> 0) : ((this.ld16(a) | (this.ld16(a + 2) << 16)) >>> 0);
+    ld16(a) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 1) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) return this._m16[i >>> 1];
+        return this.ld8(u) | (this.ld8(u + 1) << 8);
     }
-    st8(a, v)  {
-        const u = a >>> 0, d = this.io8.length && this._dev(this.io8, u);
+    ld32(a) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 3) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) return this._m32[i >>> 2] >>> 0;
+        const d = this.io.length && this._dev(this.io, u);
+        return d ? (d.load32((u - d.base) >>> 0) >>> 0) : ((this.ld16(u) | (this.ld16(u + 2) << 16)) >>> 0);
+    }
+    st8(a, v) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if (i < this._memLen && this._devPage[i >>> 12] === 0) { this.mem[i] = v; return; }
+        const d = this.io8.length && this._dev(this.io8, u);
         if (d) { d.store8((u - d.base) >>> 0, v & 0xff); return; }
         this.mem[this._ram(u)] = v & 0xff;
     }
-    st16(a, v) { this.st8(a, v); this.st8(a + 1, v >>> 8); }
+    st16(a, v) {
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 1) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) { this._m16[i >>> 1] = v; return; }
+        this.st8(u, v); this.st8(u + 1, v >>> 8);
+    }
     st32(a, v) {
-        const u = a >>> 0, d = this.io.length && this._dev(this.io, u);
+        const u = a >>> 0, i = (u - this.ramBase) >>> 0;
+        if ((i & 3) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) { this._m32[i >>> 2] = v; return; }
+        const d = this.io.length && this._dev(this.io, u);
         if (d) { d.store32((u - d.base) >>> 0, v >>> 0); return; }
-        this.st16(a, v); this.st16(a + 2, v >>> 16);
+        this.st16(u, v); this.st16(u + 2, v >>> 16);
     }
 
     /** Write a register (x0 discards). Accepts any 32-bit pattern. */
@@ -590,24 +675,30 @@ export class RiscV32 {
     }
 
     _exec() {
+        if (this.io.length + this.io8.length !== this._devCount) this._scanDevices();
         const pc = this.pc >>> 0;
         this._acc = CAUSE_FETCH_ACCESS; this._va = pc;
         // Translate then fetch. A halfword first: low two bits != 11 → a 16-bit
         // compressed (C) instruction, expanded and pc += 2; else the full 32-bit
         // word, pc += 4. The high half of a 32-bit instruction at an odd page
         // offset lands in the next page, so it is translated separately.
-        const pcPhys = this._translate(pc, 'fetch');
+        // Translate (identity when paging is off or in M-mode; a TLB hit inline).
+        const pcPhys = this._tx(pc, 0);
         if (pcPhys === null) { this.instret++; return 1; }   // instruction page fault taken
         const lo = this.ld16(pcPhys);
         let inst, ilen;
         if ((lo & 3) !== 3) {
-            inst = this._decompress(lo);
-            if (inst === null) return this._bad(lo);
+            // RVC expansion is a pure function of the 16 bits: memoised in a
+            // 64 K table shared by every core (0 = not yet expanded; an illegal
+            // encoding is stored as 1, which no expansion can produce).
+            inst = RVC_CACHE[lo];
+            if (inst === 0) { const e = this._decompress(lo); inst = RVC_CACHE[lo] = e === null ? 1 : e; }
+            if (inst === 1) return this._bad(lo);
             ilen = 2;
         } else {
             let hiPhys;
             if ((pc & 0xfff) === 0xffe) {                     // high half crosses into the next page
-                hiPhys = this._translate((pc + 2) >>> 0, 'fetch');
+                hiPhys = this._tx((pc + 2) >>> 0, 0);
                 if (hiPhys === null) { this.instret++; return 1; }
             } else {
                 hiPhys = (pcPhys + 2) >>> 0;
@@ -663,7 +754,7 @@ export class RiscV32 {
             case OPC.LOAD: {
                 const va = (a + sext(inst >>> 20, 12)) >>> 0;
                 this._acc = CAUSE_LOAD_ACCESS; this._va = va;
-                const addr = this._translate(va, 'load');
+                const addr = this._tx(va, 1);
                 if (addr === null) { this.instret++; return 1; }        // load page fault taken
                 switch (funct3) {
                     case 0: this.set(rd, sext(this.ld8(addr), 8)); break;   // LB
@@ -679,7 +770,7 @@ export class RiscV32 {
                 const imm = sext(((inst >>> 25) & 0x7f) << 5 | ((inst >>> 7) & 0x1f), 12);
                 const va = (a + imm) >>> 0;
                 this._acc = CAUSE_STORE_ACCESS; this._va = va;
-                const addr = this._translate(va, 'store');
+                const addr = this._tx(va, 2);
                 if (addr === null) { this.instret++; return 1; }        // store page fault taken
                 switch (funct3) {
                     case 0: this.st8(addr, b); break;    // SB
@@ -734,7 +825,7 @@ export class RiscV32 {
                 // A misaligned LR/SC/AMO is an access fault (Zicclsm covers only
                 // plain loads/stores; misaligned atomics are not emulated).
                 if (a & 3) throw ACCESS_FAULT;
-                const addr = this._translate(a >>> 0, funct5 === 0x02 ? 'load' : 'store'); // rs1 is the address
+                const addr = this._tx(a >>> 0, funct5 === 0x02 ? 1 : 2);   // rs1 is the address
                 if (addr === null) { this.instret++; return 1; }   // page fault taken
                 if (funct5 === 0x02) {                         // LR.W
                     if (rs2 !== 0) return this._bad(inst);
@@ -857,7 +948,8 @@ export class RiscV32 {
                 if (funct3 === 0 && funct7 === 0x09) {    // SFENCE.VMA
                     if (this.priv === PRIV_U || (this.priv === PRIV_S && (this.csr[CSR.MSTATUS] & MSTATUS_TVM)))
                         return this._bad(inst);
-                    break;                                // no TLB in this model — a nop
+                    this._tlbFlush();                     // (a whole-TLB flush covers any rs1/rs2 scope)
+                    break;
                 }
                 // CSR read/modify/write (funct3 1..7): rd <- old CSR; CSR <- new.
                 if (funct3 !== 0 && funct3 !== 4) {

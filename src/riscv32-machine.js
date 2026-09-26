@@ -173,14 +173,32 @@ export class RiscV32Machine {
      *  has Svadu, and what xv6 (which never sets A/D itself) relies on. */
     _firmwareInit() { this.cpu.csr[0x31a] |= 1 << 29; }
 
-    reset() { this.cpu.reset(); this._firmwareInit(); this.output = ''; this.exitCode = null; }
+    reset() {
+        const t = this.clint ? this.clint.mtime : 0;
+        this.cpu.reset();
+        if (this.clint) this.clint.rebase(t);            // mtime is continuous across a reset
+        this._firmwareInit(); this.output = ''; this.exitCode = null;
+    }
 
     /** One instruction; returns instructions retired (0 when halted). Advances
      *  the CLINT's mtime so a scheduled timer interrupt eventually fires. */
-    step() { const r = this.cpu.step(); if (this.clint && r) this.clint.tick(r); return r; }
+    step() {
+        const cpu = this.cpu, r = cpu.step();
+        if (this.clint && cpu.instret >= this.clint.deadline) this.clint.sync();
+        return r;
+    }
 
     /** Run until halt or `max` instructions; returns instructions executed. */
-    run(max = 10_000_000) { let n = 0; while (!this.cpu.halted && n++ < max) this.step(); return n; }
+    run(max = 10_000_000) {
+        const cpu = this.cpu, clint = this.clint;
+        let n = 0;
+        if (!clint) { while (!cpu.halted && n++ < max) cpu.step(); return n; }
+        while (!cpu.halted && n++ < max) {
+            cpu.step();
+            if (cpu.instret >= clint.deadline) clint.sync();
+        }
+        return n;
+    }
 
     /** True once the program exited (via the exit syscall) or trapped. */
     get halted() { return this.cpu.halted; }
