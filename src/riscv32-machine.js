@@ -51,12 +51,14 @@ export class RiscV32Machine {
             // which never take the SBI path.
             sbi: c => this._sbi(c)
         });
+        this._firmwareInit();
         // A CLINT (timer + software interrupt) so an RTOS gets its tick. It maps
         // outside any sane program's RAM footprint, so it's inert for the
         // bare-metal ecall programs that never touch it. Opt out with clint:false.
         if (config.clint !== false) {
             this.clint = createClint(this.cpu, {base: config.clintBase});
             this.cpu.io.push(this.clint);
+            this.cpu.timeSource = () => this.clint.mtime;   // the `time` CSR reads mtime
         }
         // A PLIC (external interrupts) so a device — the UART's receive line —
         // can trap the core via MEIP. The third of the standard CLINT+PLIC+UART.
@@ -166,7 +168,12 @@ export class RiscV32Machine {
         return this;
     }
 
-    reset() { this.cpu.reset(); this.output = ''; this.exitCode = null; }
+    /** Firmware-set state a supervisor kernel expects at hand-off: hardware
+     *  A/D updates (menvcfg.ADUE, Svadu) — what OpenSBI enables when the hart
+     *  has Svadu, and what xv6 (which never sets A/D itself) relies on. */
+    _firmwareInit() { this.cpu.csr[0x31a] |= 1 << 29; }
+
+    reset() { this.cpu.reset(); this._firmwareInit(); this.output = ''; this.exitCode = null; }
 
     /** One instruction; returns instructions retired (0 when halted). Advances
      *  the CLINT's mtime so a scheduled timer interrupt eventually fires. */

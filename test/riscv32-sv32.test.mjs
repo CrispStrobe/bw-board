@@ -18,6 +18,7 @@ function newCpu() {
     const c = new RiscV32(new Uint8Array(1 << 20), {});
     c.csr[MEDELEG] = 0xffffffff;         // a kernel delegates faults to S-mode
     c.csr[STVEC] = 0x900;
+    c.csr[0x31a] = 1 << 29;              // menvcfgh.ADUE: hardware A/D updates (Svadu), as the machine's firmware sets
     return c;
 }
 const w32 = (c, at, v) => { c.mem[at] = v & 0xff; c.mem[at+1] = (v>>>8)&0xff; c.mem[at+2] = (v>>>16)&0xff; c.mem[at+3] = (v>>>24)&0xff; };
@@ -107,4 +108,16 @@ test('a full instruction executes through translation (S-mode fetch + load)', ()
     c.step();
     assert.equal(c.x[5] >>> 0, 0xcafef00d, 'loaded through Sv32 from the data page');
     assert.equal(c.pc >>> 0, 0x00400004, 'advanced within the code page');
+});
+
+test('with menvcfg.ADUE clear (Svade), a clear A bit is a page fault and the PTE is untouched', () => {
+    const c = newCpu();
+    c.csr[0x31a] = 0;
+    mapPage(c, 0x5000, 0x7000, 0x0f);      // V|R|W|X, A=0 D=0
+    setSatp(c);
+    c.priv = 1;
+    const before = r32(c, PL0 + 5 * 4);
+    assert.equal(c._translate(0x5004, 'load'), null, 'load faults instead of setting A');
+    assert.equal(c.csr[0x142], 13, 'scause = load page fault');
+    assert.equal(r32(c, PL0 + 5 * 4), before, 'PTE unchanged');
 });
