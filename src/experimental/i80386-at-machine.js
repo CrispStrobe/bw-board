@@ -235,7 +235,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       // first actual boot-sector read is dispatched, so POST never sees it as
       // altered RAM.
       if (this._xv6Mp && port === 0x1f7 && (value & 0xff) === 0x20) this._mpReady = true;
-      this.ata.writeRegister(port - 0x1f0, value);
+      const taskValue = this.config.experimentalAtaSlaveAlias && port === 0x1f6
+        ? (value & ~0x10) : value;
+      this.ata.writeRegister(port - 0x1f0, taskValue);
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
       this._chipDeadline = this._wakeHorizon();
       return;
@@ -379,6 +381,7 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD = Object.freeze({
 export const PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD,
   experimentalXv6Mp: true,
+  experimentalAtaSlaveAlias: true,
 });
 
 /** 16MiB installed-RAM profile for stock xv6's PHYSTOP (14MiB) build. */
