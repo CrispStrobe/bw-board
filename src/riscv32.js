@@ -411,6 +411,21 @@ export class RiscV32 {
      *  The walk reads/writes PTEs through the physical ld32/st32 (no recursion),
      *  handles 4 KiB pages and 4 MiB superpages, checks R/W/X + U/SUM/MXR, and
      *  sets the A (and, on a store, D) bits. */
+    /** The translation fast path: small enough for V8 to inline at each call
+     *  site. Paging off, or M-mode (MPRV considered for data): identity; a TLB
+     *  hit: the cached page; otherwise the full walk. kind: 0 fetch, 1 load,
+     *  2 store/AMO. */
+    _tx(va, kind) {
+        if ((this.csr[CSR.SATP] & 0x80000000) === 0) return va;
+        const ms = this.csr[CSR.MSTATUS];
+        const eff = (kind !== 0 && (ms & (1 << 17))) ? (ms >>> 11) & 3 : this.priv;
+        if (eff === PRIV_M) return va;
+        const vpn = va >>> 12, ti = (kind << 8) | (vpn & 0xff);
+        if (this._tlbTag[ti] === vpn + 1 && this._tlbCtx[ti] === (eff | ((ms >>> 16) & 0xc)))
+            return (this._tlbPpn[ti] + (va & 0xfff)) >>> 0;
+        return this._translate(va, kind === 0 ? 'fetch' : kind === 2 ? 'store' : 'load');
+    }
+
     _translate(va, access) {
         va >>>= 0;
         const satp = this.csr[CSR.SATP] >>> 0;
@@ -667,8 +682,8 @@ export class RiscV32 {
         // compressed (C) instruction, expanded and pc += 2; else the full 32-bit
         // word, pc += 4. The high half of a 32-bit instruction at an odd page
         // offset lands in the next page, so it is translated separately.
-        // Paging off (satp.MODE = Bare) or M-mode: fetch is untranslated.
-        const pcPhys = ((this.csr[CSR.SATP] & 0x80000000) === 0 || this.priv === PRIV_M) ? pc : this._translate(pc, 'fetch');
+        // Translate (identity when paging is off or in M-mode; a TLB hit inline).
+        const pcPhys = this._tx(pc, 0);
         if (pcPhys === null) { this.instret++; return 1; }   // instruction page fault taken
         const lo = this.ld16(pcPhys);
         let inst, ilen;
@@ -683,7 +698,7 @@ export class RiscV32 {
         } else {
             let hiPhys;
             if ((pc & 0xfff) === 0xffe) {                     // high half crosses into the next page
-                hiPhys = this._translate((pc + 2) >>> 0, 'fetch');
+                hiPhys = this._tx((pc + 2) >>> 0, 0);
                 if (hiPhys === null) { this.instret++; return 1; }
             } else {
                 hiPhys = (pcPhys + 2) >>> 0;
@@ -739,7 +754,7 @@ export class RiscV32 {
             case OPC.LOAD: {
                 const va = (a + sext(inst >>> 20, 12)) >>> 0;
                 this._acc = CAUSE_LOAD_ACCESS; this._va = va;
-                const addr = (this.csr[CSR.SATP] & 0x80000000) === 0 ? va : this._translate(va, 'load');
+                const addr = this._tx(va, 1);
                 if (addr === null) { this.instret++; return 1; }        // load page fault taken
                 switch (funct3) {
                     case 0: this.set(rd, sext(this.ld8(addr), 8)); break;   // LB
@@ -755,7 +770,7 @@ export class RiscV32 {
                 const imm = sext(((inst >>> 25) & 0x7f) << 5 | ((inst >>> 7) & 0x1f), 12);
                 const va = (a + imm) >>> 0;
                 this._acc = CAUSE_STORE_ACCESS; this._va = va;
-                const addr = (this.csr[CSR.SATP] & 0x80000000) === 0 ? va : this._translate(va, 'store');
+                const addr = this._tx(va, 2);
                 if (addr === null) { this.instret++; return 1; }        // store page fault taken
                 switch (funct3) {
                     case 0: this.st8(addr, b); break;    // SB
@@ -810,7 +825,7 @@ export class RiscV32 {
                 // A misaligned LR/SC/AMO is an access fault (Zicclsm covers only
                 // plain loads/stores; misaligned atomics are not emulated).
                 if (a & 3) throw ACCESS_FAULT;
-                const addr = this._translate(a >>> 0, funct5 === 0x02 ? 'load' : 'store'); // rs1 is the address
+                const addr = this._tx(a >>> 0, funct5 === 0x02 ? 1 : 2);   // rs1 is the address
                 if (addr === null) { this.instret++; return 1; }   // page fault taken
                 if (funct5 === 0x02) {                         // LR.W
                     if (rs2 !== 0) return this._bad(inst);
