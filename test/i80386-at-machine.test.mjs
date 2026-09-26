@@ -129,9 +129,10 @@ test('xv6 SMP profile emits a deterministic periodic LAPIC timer interrupt', () 
   machine.cpu.eflags |= 0x200;
   let vector = null;
   machine.cpu.interrupt = value => { vector = value; };
-  machine._write386(0xfee000f0, 0x100); // software-enable the local APIC
-  machine._write386(0xfee00320, 0x20 | 0x20000); // periodic, vector 32
-  machine._write386(0xfee00380, 10); // initial count in functional cycles
+  const write32 = (address, value) => { for (let byte = 0; byte < 4; byte++) machine._write386(address + byte, value >>> (byte * 8)); };
+  write32(0xfee000f0, 0x100); // software-enable the local APIC
+  write32(0xfee00320, 0x20 | 0x20000); // periodic, vector 32
+  write32(0xfee00380, 10); // initial count in functional cycles
   machine.cycles = 10;
   assert.equal(machine._serviceInterrupts(), true);
   assert.equal(vector, 0x20);

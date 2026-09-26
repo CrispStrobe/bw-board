@@ -61,6 +61,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this._lapicTimerInterval = 0;
     this._lapicTimerPending = false;
     this._ioapic = new Uint32Array(256);
+    // Synthetic IOAPIC identity/version: ID 2 and 24 interrupt inputs, as
+    // described by the MP table exposed to xv6.
+    this._ioapic[0] = 2 << 24;
+    this._ioapic[1] = (23 << 16) | 0x11;
     this._ioapicSelect = 0;
     this._apicIrq = new Uint8Array(24);
     this.vgaMemory = null;
@@ -112,14 +116,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (this._xv6Mp && this._mpReady && decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80)
       return this._xv6Mp.config[decoded - MP_TABLE_BASE];
     if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
-      const index = (decoded - LAPIC_BASE) >>> 2;
+      const offset = decoded - LAPIC_BASE;
+      const index = offset >>> 2;
       // INIT/STARTUP delivery completes immediately in this single-CPU model.
-      return index === 0x300 / 4 ? (this._lapic[index] & ~0x1000) : (this._lapic[index] ?? 0);
+      const value = index === 0x300 / 4 ? (this._lapic[index] & ~0x1000) : (this._lapic[index] ?? 0);
+      return (value >>> ((offset & 3) * 8)) & 0xff;
     }
     if (this._xv6Mp && decoded >= IOAPIC_BASE && decoded < IOAPIC_BASE + 0x20) {
       const offset = decoded - IOAPIC_BASE;
-      if (offset === 0) return this._ioapicSelect;
-      if (offset === 0x10) return this._ioapic[this._ioapicSelect] ?? 0;
+      if (offset < 4) return (this._ioapicSelect >>> ((offset & 3) * 8)) & 0xff;
+      if (offset >= 0x10 && offset < 0x14) {
+        const value = this._ioapic[this._ioapicSelect] ?? 0;
+        return (value >>> ((offset & 3) * 8)) & 0xff;
+      }
       return 0;
     }
     const video = this.vgaMemory?.read(decoded);
@@ -132,13 +141,16 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (this._xv6Mp && this._mpReady && ((decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16) ||
         (decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80))) return;
     if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
-      const index = (decoded - LAPIC_BASE) >>> 2;
-      this._lapic[index] = value >>> 0;
+      const offset = decoded - LAPIC_BASE;
+      const index = offset >>> 2;
+      const shift = (offset & 3) * 8;
+      const mask = 0xff << shift;
+      this._lapic[index] = ((this._lapic[index] & ~mask) | ((value & 0xff) << shift)) >>> 0;
       // xv6 programs a periodic timer with an initial count.  Model it in
       // board-cycle units; this is deterministic functional timing rather
       // than a claim about a particular bus frequency.
       if (index === 0x380 / 4) {
-        this._lapicTimerInterval = value >>> 0;
+        this._lapicTimerInterval = this._lapic[index] >>> 0;
         this._lapicTimerNext = this.cycles + this._lapicTimerInterval;
         this._lapicTimerPending = false;
       } else if (index === 0x320 / 4 && (value & 0x10000)) {
@@ -148,8 +160,14 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     }
     if (this._xv6Mp && decoded >= IOAPIC_BASE && decoded < IOAPIC_BASE + 0x20) {
       const offset = decoded - IOAPIC_BASE;
-      if (offset === 0) this._ioapicSelect = value & 0xff;
-      else if (offset === 0x10) this._ioapic[this._ioapicSelect] = value >>> 0;
+      if (offset < 4) {
+        const shift = (offset & 3) * 8;
+        this._ioapicSelect = ((this._ioapicSelect & ~(0xff << shift)) | ((value & 0xff) << shift)) >>> 0;
+      } else if (offset >= 0x10 && offset < 0x14) {
+        const shift = (offset & 3) * 8;
+        const old = this._ioapic[this._ioapicSelect] ?? 0;
+        this._ioapic[this._ioapicSelect] = ((old & ~(0xff << shift)) | ((value & 0xff) << shift)) >>> 0;
+      }
       return;
     }
     if (this.vgaMemory?.write(decoded, value)) {
