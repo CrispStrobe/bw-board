@@ -11,7 +11,7 @@ on:
         required: false
         default: '40000000'
   push:
-    branches: ['lane/rtx-chip-benches', 'lane/rtx-labwired-and-docs', 'lane/avr-rtx-fork-reflect']
+    branches: ['master', 'lane/rtx-chip-benches', 'lane/rtx-labwired-and-docs', 'lane/avr-rtx-fork-reflect']
 
 permissions:
   contents: read
@@ -53,7 +53,7 @@ jobs:
           # `nodejs-` asset prefix into a proper out-dir. On any failure the bench
           # SKIPs labwired rather than failing (benchLabwired throws -> tryBench).
           mkdir -p lw/nodejs
-          if gh release download labwired-wasm-0c0cd0ec --repo "${{ github.repository }}" \
+          if gh release download labwired-wasm-8e4e58f2 --repo "${{ github.repository }}" \
                --pattern 'nodejs-*' --dir lw --clobber; then
             cp lw/nodejs-labwired_wasm.js      lw/nodejs/labwired_wasm.js
             cp lw/nodejs-labwired_wasm_bg.wasm lw/nodejs/labwired_wasm_bg.wasm

@@ -82,7 +82,7 @@ async function benchLabwired() {
   // here as an STM32F0 (Cortex-M0, 48 MHz). Gated on LABWIRED_WASM pointing at the
   // wasm-bindgen NODEJS out-dir (CI downloads the prebuilt release; locally, set it
   // to a `node scripts/build-labwired-wasm.mjs` out/nodejs). The engine is a full
-  // peripheral-accurate model, so it runs well below real time — that IS the number.
+  // peripheral-accurate model; the guarded production batch path now clears real time.
   const WASM_DIR = process.env.LABWIRED_WASM;
   if (!WASM_DIR) throw new Error('set LABWIRED_WASM to the wasm-bindgen nodejs out-dir');
   const { readFileSync, existsSync } = await import('node:fs');
