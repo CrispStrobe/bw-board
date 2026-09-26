@@ -71,7 +71,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
         cylinders: 306, heads: 4, sectors: 17,
       }, {
         onIRQ: active => {
-          if (this._xv6Mp) this._apicIrq[14] = active ? 1 : 0;
+          // Keep firmware diagnostics on the legacy PIC.  The BIOS does not
+          // know about the synthetic MP/IOAPIC surface; switch ATA IRQ14 to
+          // the APIC only once the table is published for the guest kernel.
+          if (this._xv6Mp && this._mpReady && (this.cpu.cr0 & 1)) this._apicIrq[14] = active ? 1 : 0;
           else this.chips.pic2?.setIRQ(6, active ? 1 : 0);
         },
         intersectorDelayCycles: hooks.ataIntersectorDelayCycles ?? 8192,
@@ -189,7 +192,11 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       return;
     }
     if (this.ata && width === 8 && port >= 0x1f1 && port <= 0x1f7) {
-      if (this._xv6Mp && port === 0x1f7 && (value & 0xff) === 0x90) this._mpReady = true;
+      // The Rev1 BIOS performs its last RAM verification after drive
+      // diagnostics (90h/91h). Publish the firmware MP table only when the
+      // first actual boot-sector read is dispatched, so POST never sees it as
+      // altered RAM.
+      if (this._xv6Mp && port === 0x1f7 && (value & 0xff) === 0x20) this._mpReady = true;
       this.ata.writeRegister(port - 0x1f0, value);
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
       this._chipDeadline = this._wakeHorizon();
