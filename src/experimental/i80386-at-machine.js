@@ -57,6 +57,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this._xv6Mp = config.experimentalXv6Mp ? xv6MpTable() : null;
     this._mpReady = false;
     this._lapic = new Uint32Array(1024);
+    this._lapicTimerNext = 0;
+    this._lapicTimerInterval = 0;
+    this._lapicTimerPending = false;
     this._ioapic = new Uint32Array(256);
     this._ioapicSelect = 0;
     this._apicIrq = new Uint8Array(24);
@@ -129,7 +132,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (this._xv6Mp && this._mpReady && ((decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16) ||
         (decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80))) return;
     if (this._xv6Mp && decoded >= LAPIC_BASE && decoded < LAPIC_BASE + 0x1000) {
-      this._lapic[(decoded - LAPIC_BASE) >>> 2] = value >>> 0; return;
+      const index = (decoded - LAPIC_BASE) >>> 2;
+      this._lapic[index] = value >>> 0;
+      // xv6 programs a periodic timer with an initial count.  Model it in
+      // board-cycle units; this is deterministic functional timing rather
+      // than a claim about a particular bus frequency.
+      if (index === 0x380 / 4) {
+        this._lapicTimerInterval = value >>> 0;
+        this._lapicTimerNext = this.cycles + this._lapicTimerInterval;
+        this._lapicTimerPending = false;
+      } else if (index === 0x320 / 4 && (value & 0x10000)) {
+        this._lapicTimerPending = false;
+      }
+      return;
     }
     if (this._xv6Mp && decoded >= IOAPIC_BASE && decoded < IOAPIC_BASE + 0x20) {
       const offset = decoded - IOAPIC_BASE;
@@ -219,6 +234,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       this._nmiPending = false;
       if (this.hooks.onInterrupt) this.hooks.onInterrupt({vector: 2, source: 'nmi'});
       cpu.interrupt(2, {nmi: true});
+      return true;
+    }
+    if (this._xv6Mp && this._lapicTimerInterval && this.cycles >= this._lapicTimerNext) {
+      const lvt = this._lapic[0x320 / 4] ?? 0;
+      const svr = this._lapic[0x0f0 / 4] ?? 0;
+      if (!(lvt & 0x10000) && (svr & 0x100)) this._lapicTimerPending = true;
+      this._lapicTimerNext += this._lapicTimerInterval;
+    }
+    if (this._xv6Mp && this._lapicTimerPending && (cpu.eflags & 0x200) && !cpu._interruptShadow) {
+      this._lapicTimerPending = false;
+      const vector = (this._lapic[0x320 / 4] ?? 0) & 0xff;
+      if (this.hooks.onInterrupt) this.hooks.onInterrupt({vector, source: 'lapic-timer'});
+      cpu.interrupt(vector);
       return true;
     }
     if (this._xv6Mp && (cpu.eflags & 0x200) && !cpu._interruptShadow) {

@@ -123,6 +123,20 @@ test('xv6 SMP profile routes an enabled IDE IRQ through the IOAPIC vector', () =
   assert.equal(machine._apicIrq[14], 0);
 });
 
+test('xv6 SMP profile emits a deterministic periodic LAPIC timer interrupt', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine._mpReady = true;
+  machine.cpu.eflags |= 0x200;
+  let vector = null;
+  machine.cpu.interrupt = value => { vector = value; };
+  machine._write386(0xfee000f0, 0x100); // software-enable the local APIC
+  machine._write386(0xfee00320, 0x20 | 0x20000); // periodic, vector 32
+  machine._write386(0xfee00380, 10); // initial count in functional cycles
+  machine.cycles = 10;
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(vector, 0x20);
+});
+
 test('experimental 386 AT routes a pending NMI through the 386 interrupt API', () => {
   const machine = new ExperimentalI80386ATMachine();
   machine.cpu.reset();
