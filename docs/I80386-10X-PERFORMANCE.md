@@ -22,6 +22,15 @@ seconds (1.018×). That is below the predeclared 5% board-only retention
 threshold, so the candidate was discarded. The [negative read-path receipt](receipts/2026-09-27-i80386-at-readfast-negative.json)
 pins both source variants and the identical guest result.
 
+An inline decoder for common 32-bit memory `MOV 8B` and `LEA 8D` forms also
+preserved the complete xv6 guest report, but two alternating A/B pairs averaged
+27.405 versus 27.05 user-CPU seconds (1.013×). The individual pairs disagreed
+on the winner, and the mean was below the predeclared 10% threshold for
+duplicating effective-address logic. That source experiment was discarded;
+the [negative MOV/LEA receipt](receipts/2026-09-27-i80386-mov-lea-fastpath-negative.json)
+records the measurements. A broad block executor with memory, branches and
+strings remains the next CPU speed project.
+
 A final-source V8 sample over the xv6 run attributed 17.7% of time to
 `_stepInstruction`, 7.1% to `_fetchN`, 5.0% to `_decodeEA`, 7.8% to
 `_translate`, 6.1% to `_read386`, and 6.1% to `_serviceInterrupts`. The
