@@ -2,9 +2,11 @@
 worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part-v2`, exact base
 `58db46525805505be2e8019e365ce78433d76929`. The implementation was replayed
 without source/test drift after the disjoint stock-xv6 series advanced master.
-Owns only this row,
-`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP07
-test. Add the manufacturer-backed single-amplifier DIP-8 electrical contract
+Owns this row, `src/devices/analog-amps.js`, `src/current-ratings.js`, one
+focused OP07 test, and the disjoint `.github/workflows/x86-xv6.yml` forward
+repair required when the replayed current-master workflow failed the existing
+external-input and literal-action pin gates. Add the manufacturer-backed
+single-amplifier DIP-8 electrical contract
 using the existing precision-op-amp controller: finite gain and differential
 input resistance, input offset, dual-supply/common-mode and loaded output
 limits, 0.6 MHz-class response, and 0.3 V/us slew. Null pins remain present
@@ -12,7 +14,9 @@ and explicitly unmodelled. Prove exact terminals, power refusal, feedback,
 finite open-loop gain, both swing directions, slew and small-signal response,
 with independent mutations of gain/slew/bandwidth. No generic op-amp, solver,
 other named device, face/art, importer/exporter, corpus, workflow, package pin,
-CUI, Parts, or Lite edit.
+CUI, Parts, or Lite edit. The inherited workflow repair changes no xv6 input:
+it fetches the same full xv6 commit without a moving-ref clone, verifies the
+resolved HEAD, and pins the three existing Actions to their full revisions.
 Implemented the OP07C typical bounded card from Analog Devices Rev. G: 400
 V/mV large-signal gain, 33 MOhm differential input, 60 uV input offset, 60
 ohm output resistance, +/-13 V guaranteed common-mode envelope and loaded

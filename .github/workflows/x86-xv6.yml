@@ -19,23 +19,26 @@ jobs:
   x86-xv6:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install 32-bit build toolchain
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
       - name: Fetch pinned MIT xv6 source
         run: |
-          git clone https://github.com/mit-pdos/xv6-public.git /tmp/xv6-public
-          git -C /tmp/xv6-public checkout eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          git init /tmp/xv6-public
+          git -C /tmp/xv6-public remote add origin https://github.com/mit-pdos/xv6-public.git
+          git -C /tmp/xv6-public fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          git -C /tmp/xv6-public checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/xv6-public rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
       - run: node --test test/i80386-at-machine.test.mjs test/i80386-ata16.test.mjs test/i80386-paging.test.mjs
       - run: node scripts/build-xv6-stock-4m.mjs
         env:
           XV6_SRC: /tmp/xv6-public
           XV6_STOCK_4M_OUT: /tmp/xv6-stock-4m
       - name: Upload build receipt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: xv6-stock-4m-receipt
           path: /tmp/xv6-stock-4m/bw-xv6-stock-4m-receipt.json
