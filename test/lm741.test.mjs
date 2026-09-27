@@ -37,7 +37,7 @@ describe('LM741 physical and electrical contract', () => {
     assert.deepEqual(getDevice('lm741').terminals, TERMINALS);
     const state = follower().getDeviceState('U1');
     assert.equal(state.offsetNull, 'unmodeled');
-    assert.equal(getSupplyCurrent('lm741'), 0.0017);
+    assert.equal(getSupplyCurrent('lm741'), 0.0028);
   });
 
   it('uses finite 200 V/mV open-loop gain instead of an ideal comparator', () => {

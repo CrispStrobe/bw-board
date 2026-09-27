@@ -45,7 +45,7 @@ face/art, corpus, workflow, package pin, CUI or Lite edit.
 Implemented canonical `lm741` from TI SNOSC25D's PDIP-8 and electrical tables:
 200 V/mV finite large-signal gain, 2 MOhm differential input, 1 mV default
 offset (authored `inputOffsetV` may override it), 1 MHz-class response,
-0.5 V/us slew, 1.7 mA supply budget, +/-12 V common-mode indication and the
+0.5 V/us slew, conservative 2.8 mA maximum supply budget, +/-12 V common-mode indication and the
 loaded +/-10 V output guarantee at +/-15 V. A 600-ohm Thevenin output behind
 the +/-13 V internal swing reproduces the 2 kOhm load boundary without
 pretending rail-to-rail drive. The event-time response retains a measured
