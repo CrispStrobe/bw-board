@@ -2524,8 +2524,9 @@ transistor/macromodel equivalence, solver/parser/import/export, CUI/Parts/Lite,
 workflow, corpus, and unrelated device work are outside this upstream slice.
 The official five-terminal defaults and every normalized deterministic
 parameter are now per-instance: 1 MV/V gain, 10 MHz GBW, 10 V/us slew,
-25 mA source/sink limit, zero rail headroom/offset, and 500 MOhm differential
-input resistance. Authored gain, offset, impedance, rail, current, bandwidth
+25 mA source/sink limit, zero rail headroom/offset, and the symbol's effective
+1 GOhm differential input resistance (four `2*Rin` rail-return legs around its
+authored `Rin=500Meg`). Authored gain, offset, impedance, rail, current, bandwidth
 and slew each drive the circuit rather than metadata. The single-amplifier
 controller resolves a dynamic card only for this identity; all 114 focused
 Universal/named/generic analog-amplifier checks pass, including every existing

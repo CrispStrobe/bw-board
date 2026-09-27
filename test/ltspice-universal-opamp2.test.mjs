@@ -65,20 +65,20 @@ describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
     assert.ok(Math.abs(board.nodeVoltage('out') - (1e6 / 1_000_001)) < 2e-6,
       `default 1 MV/V output ${board.nodeVoltage('out')} V`);
     const current = Math.abs(board.branchCurrent('VIN', 'pos'));
-    assert.ok(current > 1.9e-15 && current < 2.1e-15,
-      `default 500 MOhm input current ${current} A`);
+    assert.ok(current > 0.9e-15 && current < 1.1e-15,
+      `default 1 GOhm differential input current ${current} A`);
   });
 
   it('takes gain, offset and input resistance from each instance', () => {
     const board = amplifier({
       input: 1,
       load: 1e12,
-      params: { a0: 1000, inputOffsetV: 0, inputR: 1e6 },
+      params: { a0: 1000, inputOffsetV: 0, inputR: 2e6 },
     });
     board.advanceTo(10_000n);
     assert.ok(Math.abs(board.nodeVoltage('out') - (1000 / 1001)) < 2e-5,
       `authored gain/offset output ${board.nodeVoltage('out')} V`);
-    assert.ok(Math.abs(board.branchCurrent('VIN', 'pos')) > 0.9e-9);
+    assert.ok(Math.abs(board.branchCurrent('VIN', 'pos')) > 0.45e-9);
 
     const offset = amplifier({ input: 1, params: { a0: 1000, inputOffsetV: 1e-3 } });
     offset.advanceTo(10_000n);

@@ -608,7 +608,10 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
 // Analog Devices LTspice 26.0.2 ships Level 2 as the single-pole Level-1
 // gain block plus slew, symmetric output-voltage and output-current limits.
 // Its symbol defaults are Avol=1Meg, GBW=10Meg, Slew=10Meg V/s,
-// Ilimit=25m, Rail=0, Vos=0 and Rin=500Meg. The four noise parameters are
+// Ilimit=25m, Rail=0 and Vos=0. Its Rin=500Meg feeds four 2*Rin rail-return
+// resistors, making the effective differential input resistance 1 GOhm. The
+// normalized `inputR` below is that electrical differential resistance, not
+// the source subcircuit's intermediate parameter. The four noise parameters are
 // deliberately absent here: admitting them without a circuit/noise-analysis
 // path would turn authored physics into a silent no-op.
 function universalOpAmp2Spec(part) {
@@ -630,7 +633,7 @@ function universalOpAmp2Spec(part) {
     const a0 = positive('a0', 1e6);
     const gbwHz = positive('gbwHz', 10e6);
     const slewVPerUs = positive('slewVPerUs', 10);
-    const inputR = positive('inputR', 500e6);
+    const inputR = positive('inputR', 1e9);
     const outputCurrentLimitA = positive('outputCurrentLimitA', 0.025);
     const outputHeadroom = nonnegative('railHeadroomV', 0);
     const defaultOffsetV = params.inputOffsetV ?? 0;
