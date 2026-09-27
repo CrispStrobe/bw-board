@@ -2509,7 +2509,7 @@ precision/generic/current coverage passes 59/59. Independently halving gain,
 raising slew tenfold, or admitting the invalid negative common-mode witness
 makes its named caller consequence red. Exact hosted CI and Harris qualification
 remain the landing gates.
-2026-09-27 LTspice UniversalOpamp2 deterministic Level-2 model — CLAIM, Codex
+2026-09-27 LTspice UniversalOpamp2 deterministic Level-2 model — DONE candidate, Codex
 `/root`. Isolated worktree `/tmp/wt-bwcx-universal-opamp2-board`, branch
 `lane/ltspice-universal-opamp2`, exact base
 `19ef9a28f91d01dbdc4e0223be930ba58d969d77`. Owns this row,
@@ -2522,3 +2522,13 @@ byte-for-behaviour when the new resolver is absent. Noise density/corner
 parameters, extra poles/phase margin, package identity, a physical face,
 transistor/macromodel equivalence, solver/parser/import/export, CUI/Parts/Lite,
 workflow, corpus, and unrelated device work are outside this upstream slice.
+The official five-terminal defaults and every normalized deterministic
+parameter are now per-instance: 1 MV/V gain, 10 MHz GBW, 10 V/us slew,
+25 mA source/sink limit, zero rail headroom/offset, and 500 MOhm differential
+input resistance. Authored gain, offset, impedance, rail, current, bandwidth
+and slew each drive the circuit rather than metadata. The single-amplifier
+controller resolves a dynamic card only for this identity; all 114 focused
+Universal/named/generic analog-amplifier checks pass, including every existing
+named card unchanged. Noise densities/corners remain an explicit downstream
+refusal until the engine and scope have a calibrated noise-analysis path.
+Exact-head CI and Harris qualification are the landing gate.
