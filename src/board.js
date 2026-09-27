@@ -830,6 +830,14 @@ export class BoardImpl {
       }
     }
 
+    // Keep the fully expanded and parameter-resolved circuit as the immutable
+    // base for opt-in instrument loads. A scope channel may be attached and
+    // removed repeatedly; rebuilding from this base makes that operation
+    // idempotent and keeps virtual probes out of the public topology.
+    this._scopeBaseParts = this._solveParts;
+    this._scopeBaseNets = this._solveNets;
+    this._rebuildScopeLoadView();
+
     this._solve();
     this._recordLedSamples();
     this._notifyChange('netlist');
@@ -1377,6 +1385,59 @@ export class BoardImpl {
   // ─── Scope channels ────────────────────────────────────────────────────
 
   /**
+   * Rebuild the solver-only view with the finite input networks requested by
+   * scope channels. These parts are instruments, not authored circuit parts:
+   * they stay out of `parts`, `nets`, exports and snapshots of topology, but
+   * their electrical consequences are solved by the same MNA as everything
+   * else. Rebuilding from the post-expansion base prevents repeated add/remove
+   * cycles from accumulating phantom loads.
+   * @private
+   */
+  _rebuildScopeLoadView() {
+    if (!this._scopeBaseParts || !this._scopeBaseNets) return;
+    const parts = [...this._scopeBaseParts];
+    const nets = this._scopeBaseNets.map(n => ({ ...n, terminals: [...n.terminals] }));
+    const byNet = new Map(nets.map(n => [n.id, n]));
+    const liveCaps = new Set();
+    for (const [handle, ch] of this._scopeChannels) {
+      if (ch.type !== 'voltage' || ch.referenceNetId === null) continue;
+      const tip = byNet.get(ch.netId);
+      const reference = byNet.get(ch.referenceNetId);
+      if (!tip || !reference) continue;
+      const add = (suffix, kind, params) => {
+        const id = `@scope:${handle}:${suffix}`;
+        parts.push({ id, kind, params, terminals: ['a', 'b'] });
+        tip.terminals.push({ part: id, terminal: 'a' });
+        reference.terminals.push({ part: id, terminal: 'b' });
+        return id;
+      };
+      if (ch.inputOhms !== null) add('r', 'resistor', { ohms: ch.inputOhms });
+      if (ch.inputFarads !== null && ch.inputFarads > 0) {
+        const id = add('c', 'capacitor', { farads: ch.inputFarads });
+        liveCaps.add(id);
+        if (!this.capVoltages.has(id)) this.capVoltages.set(id, 0);
+      }
+    }
+    for (const id of [...this.capVoltages.keys()]) {
+      if (String(id).startsWith('@scope:') && !liveCaps.has(id)) this.capVoltages.delete(id);
+    }
+    this._solveParts = parts;
+    this._solveNets = nets;
+    this._mnaCache = null;
+    this._trapValid = false;
+  }
+
+  /** Voltage at a channel's tip relative to its explicit reference, or to
+   * engine ground for the historical ideal observer. @private */
+  _scopeVoltage(ch) {
+    const tip = this.nodeVoltages.get(ch.netId) ?? 0;
+    const reference = ch.referenceNetId === null
+      ? 0 : (this.nodeVoltages.get(ch.referenceNetId) ?? 0);
+    const value = tip - reference;
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  /**
    * Attach a scope channel with fixed sim-time cadence and (min,max) decimation.
    *
    * @param {object} opts
@@ -1389,9 +1450,45 @@ export class BoardImpl {
    *   (voltage) or transitions (digital, default 4096)
    * @param {number} [opts.threshold] - Digital logic threshold in volts
    *   (default vcc/2, captured at add time)
+   * @param {string} [opts.referenceNetId] - Explicit differential reference
+   *   for a voltage channel. Omit to preserve the historical ideal observer
+   *   against engine ground.
+   * @param {number} [opts.inputOhms] - Finite resistance stamped from tip to
+   *   reference. Requires referenceNetId.
+   * @param {number} [opts.inputFarads] - Finite parallel capacitance stamped
+   *   from tip to reference. Requires referenceNetId; zero is allowed.
    * @returns {number} Channel handle
    */
   addScopeChannel(opts) {
+    const referenceNetId = opts.referenceNetId ?? null;
+    const hasInputResistance = opts.inputOhms !== undefined;
+    const hasInputCapacitance = opts.inputFarads !== undefined;
+    const loadsCircuit = hasInputResistance || hasInputCapacitance;
+    if (opts.type === 'voltage' && referenceNetId !== null) {
+      if (!this.netMap?.has(opts.netId)) {
+        throw new Error(`scope probe tip net "${opts.netId}" does not exist`);
+      }
+      if (!this.netMap.has(referenceNetId)) {
+        throw new Error(`scope probe reference net "${referenceNetId}" does not exist`);
+      }
+    }
+    if (loadsCircuit) {
+      if (opts.type !== 'voltage') {
+        throw new Error('scope input loading is supported only for voltage channels');
+      }
+      if (referenceNetId === null) {
+        throw new Error('a loaded scope probe requires an explicit referenceNetId');
+      }
+      if (referenceNetId === opts.netId) {
+        throw new Error('a loaded scope probe tip and reference must be different nets');
+      }
+      if (hasInputResistance && !(Number.isFinite(opts.inputOhms) && opts.inputOhms > 0)) {
+        throw new Error('scope inputOhms must be a positive finite number');
+      }
+      if (hasInputCapacitance && !(Number.isFinite(opts.inputFarads) && opts.inputFarads >= 0)) {
+        throw new Error('scope inputFarads must be a non-negative finite number');
+      }
+    }
     const handle = this._nextScopeHandle++;
     if (opts.type === 'digital') {
       // E4.2: a logic-analyzer channel stores (t, level) TRANSITIONS,
@@ -1435,6 +1532,9 @@ export class BoardImpl {
     const ch = {
       type: opts.type,
       netId: opts.netId ?? null,
+      referenceNetId,
+      inputOhms: hasInputResistance ? opts.inputOhms : null,
+      inputFarads: hasInputCapacitance ? opts.inputFarads : null,
       partId: opts.partId ?? null,
       terminal: opts.terminal ?? null,
       sampleRateHz,
@@ -1459,6 +1559,10 @@ export class BoardImpl {
     };
 
     this._scopeChannels.set(handle, ch);
+    if (loadsCircuit) {
+      this._rebuildScopeLoadView();
+      this._solve();
+    }
     return handle;
   }
 
@@ -1467,12 +1571,25 @@ export class BoardImpl {
    * @param {number} handle
    */
   removeScopeChannel(handle) {
+    const loaded = this._scopeChannels.get(handle)?.referenceNetId !== null
+      && (this._scopeChannels.get(handle)?.inputOhms !== null
+        || this._scopeChannels.get(handle)?.inputFarads !== null);
     this._scopeChannels.delete(handle);
+    if (loaded) {
+      this._rebuildScopeLoadView();
+      this._solve();
+    }
   }
 
   /** Remove all scope channels. */
   clearScopeChannels() {
+    const loaded = [...this._scopeChannels.values()].some(ch => ch.referenceNetId !== null
+      && (ch.inputOhms !== null || ch.inputFarads !== null));
     this._scopeChannels.clear();
+    if (loaded) {
+      this._rebuildScopeLoadView();
+      this._solve();
+    }
   }
 
   /**
@@ -1548,8 +1665,7 @@ export class BoardImpl {
     for (const [, ch] of this._scopeChannels) {
       if (ch.type === 'digital') { this._feedDigital(ch, this.timeNs); continue; }
       if (ch.type !== 'voltage') continue;
-      const v = this.nodeVoltages.get(ch.netId) ?? 0;
-      const val = Number.isFinite(v) ? v : 0;
+      const val = this._scopeVoltage(ch);
       if (val < ch._bucketMin) ch._bucketMin = val;
       if (val > ch._bucketMax) ch._bucketMax = val;
       // A setPin/setControl edge is a DISCONTINUITY at this instant, not a
@@ -1585,8 +1701,7 @@ export class BoardImpl {
       if (ch.type !== 'voltage') continue;
 
       // Get current voltage
-      const v = this.nodeVoltages.get(ch.netId) ?? 0;
-      const val = Number.isFinite(v) ? v : 0;
+      const val = this._scopeVoltage(ch);
 
       // Track running min/max for this bucket
       if (val < ch._bucketMin) ch._bucketMin = val;
@@ -3922,6 +4037,13 @@ export class BoardImpl {
   }
 
   _needsMNA() {
+    // A finite probe input is a real parallel branch, and the capacitance is
+    // real storage. The closed-form walker knows neither; answering from it
+    // would display an unloaded voltage while the scope claims a loaded one.
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.type === 'voltage' && ch.referenceNetId !== null
+          && (ch.inputOhms !== null || ch.inputFarads !== null)) return true;
+    }
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
       // An opted-in Shockley junction is beyond the walker's knee
