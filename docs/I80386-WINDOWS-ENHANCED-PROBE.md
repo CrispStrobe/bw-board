@@ -60,6 +60,7 @@ The private Windows 3.11 run reached Program Manager, File Manager, and a
 keyboard-driven enhanced-mode DOS prompt that executed `ver`. A separate run
 wrote a text file from that DOS prompt to an exclusive-created disk clone;
 after a fresh boot, the DOS prompt read back its exact contents. Program
-Manager also launched Solitaire and rendered a dealt game at 640×480. This
-demonstrates one graphical Win16 game, not broad application compatibility.
+Manager also launched Solitaire and Minesweeper and rendered both games at
+640×480. This demonstrates two graphical Win16 games, not broad application
+compatibility.
 Keep Microsoft media outside this MIT repository.

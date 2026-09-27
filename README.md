@@ -171,7 +171,7 @@ fixture, while proprietary media stays a user-supplied input.
 | MS-DOS 2.00 / PC DOS 3.2 | 8086/286 DOS shell, compiler tools, and the Windows 3.0 disk path | Keep external; Microsoft DOS and Windows media are not MIT assets | More DOS utilities and filesystem stress from user-supplied images |
 | [FreeDOS 1.4](https://github.com/FDOS) | 386 AT shell, HDD directory access, persistence, and Doom launch path | **Bundleable in principle** under its GPL terms, with its notices and source offer; current receipts use an external image | Build a reproducible minimal FreeDOS image and pin its upstream revision/license files |
 | Windows 3.0 standard mode | Program Manager, File Manager, and Notepad save/reopen on the external image | Do not bundle Microsoft binaries or fonts | Broader application and persistence regression coverage |
-| Windows 3.11 enhanced mode | External image reaches Program Manager, File Manager, a VM86 DOS box that saves and reads a file across a fresh boot, and a dealt Solitaire game | Keep all Microsoft media and detailed provenance in the private fixture repository | PS/2 mouse interaction, more apps, 32-bit disk access, and broader reboot stress |
+| Windows 3.11 enhanced mode | External image reaches Program Manager, File Manager, a VM86 DOS box that saves and reads a file across a fresh boot, Solitaire, and Minesweeper | Keep all Microsoft media and detailed provenance in the private fixture repository | PS/2 mouse interaction, game input, 32-bit disk access, and broader reboot stress |
 | Doom 1.9 shareware | VGA title/menu, E1M1 movement/fire, and a short owned demo returning to DOS | Keep the original executable/WAD external; publish only hashes and test scripts | Full demo timing, save/load, sound, additional levels |
 | CP/M 2.2 + BBC BASIC | Z80 CP/M BIOS boots to `A>` and runs `BBCBASIC.COM` | Use the existing source/fixture notices; do not assume Digital Research binaries are redistributable | More BDOS/file and console programs |
 | [ELKS](https://github.com/jbruchon/elks) | **Accepted:** real 8086 PC/XT boot, kernel banner, floppy probe, root mount, timer/FDC IRQs | Keep the GPL image external; the acceptance test skips loudly and records the expected external hash | Extend from root mount to userland and shell behavior |
@@ -186,7 +186,7 @@ PIC/PIT, serial, filesystem, and a legally redistributable userland before a
 boot banner means anything.
 
 The current 386 receipts are deliberately bounded. Windows 3.11 enhanced mode
-has verified desktop, DOS-box persistence, and Solitaire milestones, while
+has verified desktop, DOS-box persistence, Solitaire, and Minesweeper milestones, while
 general Windows compatibility remains unaccepted. Doom's short demo is accepted, the full
 `demo1` timedemo still reaches its diagnostic ceiling without a completion/FPS
 result. The old 8086/8088 and Z80 sweeps remain the architectural ground truth;
@@ -228,7 +228,7 @@ so claims derived from them need a pinned local capture or a second source.
 The current external Windows 3.11 image contains `WIN386.EXE` and boots with
 a FreeDOS kernel, JEMM disabled, `SHARE`, and `InDOSPolling`. The emulator has
 observed protected mode, paging, VM86, Program Manager, a live DOS box with a
-saved file surviving a fresh boot, and Solitaire. The next Windows checks are
+saved file surviving a fresh boot, Solitaire, and Minesweeper. The next Windows checks are
 mouse interaction, more applications, and 32-bit disk access. A Program
 Manager screenshot alone would not establish those paths.
 
