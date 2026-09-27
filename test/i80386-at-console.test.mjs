@@ -84,4 +84,15 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.deepEqual(measured.modeCpuProfile.pureWindows,[1,0,0,0]);
   assert.equal(measured.modeCpuProfile.mixedWindows,0);
   assert.equal(measured.modeCpuProfile.samples,1);
+  const censusReport=join(dir,'native32-census.json');
+  execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,
+    '--steps','1'],{cwd,env:{...process.env,AT_BIOS_ROM:paths.bios,
+    AT_BIOS_SHA256:digest(bios),VGA_BIOS_ROM:paths.vga,VGA_BIOS_SHA256:digest(vga),
+    AT_HDD_SHA256:digest(hdd),AT_NATIVE32_CENSUS:'1',AT_CONSOLE_REPORT:censusReport},
+  encoding:'utf8'});
+  const observed=JSON.parse(readFileSync(censusReport,'utf8'));
+  assert.deepEqual(observed.cpu,configured.cpu);
+  assert.deepEqual(observed.vga.planeSha256,configured.vga.planeSha256);
+  assert.equal(observed.native32Census.entryAttempts,0);
+  assert.equal(observed.steps,configured.steps);
 });

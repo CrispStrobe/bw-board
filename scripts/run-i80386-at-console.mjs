@@ -16,6 +16,7 @@ import {renderObservedWindowsEga} from './lib/i80386-windows-vga-frame.mjs';
 import {renderObservedWindowsVga480} from './lib/i80386-windows-vga-480-frame.mjs';
 import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
+import {createI80386Native32Census} from '../src/experimental/i80386-native32-census.js';
 import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
 
 const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
@@ -75,6 +76,8 @@ const stepsLimit=Number(options.steps);
 const code16Coverage=process.env.AT_CODE16_COVERAGE==='1'?
   createI80386Code16Coverage():null;
 const code16WasmDiagnostics=process.env.AT_CODE16_WASM_DIAGNOSTICS==='1';
+const native32Census=process.env.AT_NATIVE32_CENSUS==='1'?
+  createI80386Native32Census():null;
 const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
   schema:'bw.i80386-mode-cpu-profile.v1',intervalSteps:1024,
   modes:['real','protected16','vm86','protected32'],
@@ -88,6 +91,9 @@ if(code16Coverage&&(options.nativeBlocks||options.code16Wasm))
   throw new Error('code16 coverage requires ordinary single-step execution');
 if(modeCpuProfile&&(options.nativeBlocks||options.code16Wasm||code16Coverage||options.code16Loads))
   throw new Error('mode CPU profile requires ordinary single-step execution');
+if(native32Census&&(options.nativeBlocks||options.code16Wasm||
+    options.code16Loads||code16Coverage||modeCpuProfile||options.live))
+  throw new Error('native32 census requires noninteractive ordinary single-step execution');
 if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
   throw new Error('code16 WASM is a separate opt-in dispatcher');
 if(code16WasmDiagnostics&&!options.code16Wasm)
@@ -128,6 +134,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../wasm/i80386-code16-wasm.wasm',
   '../src/experimental/i80386-native-dispatch.js',
   '../src/experimental/i80386-native-byte-block.js',
+  '../src/experimental/i80386-native32-census.js',
   '../src/experimental/i80386-ram-bridge.js',
   '../src/experimental/i80386-block-spike.js',
   '../src/experimental/i80386-read-window.js',
@@ -190,6 +197,7 @@ const recordModeStep=mode=>{
   if(++profileWindowSteps===modeCpuProfile.intervalSteps)flushModeCpuProfile();
 };
 const restoreCode16Interrupts=code16Coverage?.attach(machine);
+const restoreNative32Fetch=native32Census?.attach(machine);
 const textRam=()=>{
   const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
   return Array.from({length:25},(_,row)=>Array.from({length:Math.min(columns,160)},(_,col)=>
@@ -247,9 +255,11 @@ const runChunk=end=>{while(steps<end) {
   }
   try {
     code16Coverage?.observe(machine);
+    native32Census?.observe(machine);
     if(nativeDispatcher)steps+=nativeDispatcher.run(Math.min(64,budget));
     else if(code16WasmDispatcher)steps+=code16WasmDispatcher.run(Math.min(64,budget));
-    else {machine.step();code16Coverage?.retired(machine);steps++;
+    else {machine.step();code16Coverage?.retired(machine);
+      native32Census?.retired(machine);steps++;
       if(modeCpuProfile)recordModeStep(modeBeforeStep);}
   }
   catch(error) {
@@ -307,6 +317,7 @@ if(options.live) {
 } else runChunk(stepsLimit);
 flushModeCpuProfile();
 restoreCode16Interrupts?.();
+restoreNative32Fetch?.();
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
 const video=machine.chips.vga1.getVideoState();
@@ -318,6 +329,7 @@ if(vgaOutput)fs.writeFileSync(vgaOutput,JSON.stringify({schema:'bw.i80386-vga-sn
   planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
 const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(code16Coverage?{code16Coverage:code16Coverage.report()}:{}),
+  ...(native32Census?{native32Census:native32Census.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,
