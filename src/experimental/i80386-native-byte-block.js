@@ -70,8 +70,10 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
         const displacement = (take() << 24) >> 24;
         const target = (eip + 2 + displacement) >>> 0;
         const targetIndex = starts.get(target);
-        if (targetIndex === undefined) break; // Only linked backward branches.
-        ir = {op:op === 0x74 ? 4 : 5,dst:targetIndex,src:target,width:32};
+        // An unlinked target exits this block after the branch. The next
+        // dispatch validates and decodes its own code window at the target.
+        ir = {op:op === 0x74 ? 4 : 5,
+          dst:targetIndex ?? instructions.length + 1,src:target,width:32};
       } else if ([0x89,0x39,0x85,0x8b,0x8d].includes(op)) {
         const modrm = take(), mod = modrm >>> 6,
           reg = (modrm >>> 3) & 7, rm = modrm & 7;

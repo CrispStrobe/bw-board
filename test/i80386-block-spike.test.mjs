@@ -50,6 +50,20 @@ test('event horizon and fault boundary stop before the next guest instruction',a
   assert.deepEqual(bridge.run(0,1,10),{reason:'unsupported',completed:0});
 });
 
+test('terminal external branch exits while a nonterminal exit is rejected',async()=>{
+  const bridge=await createI80386BlockSpike();
+  bridge.setState({regs:[0,0,0,0,0,0,0,0],eip:0x100,eflags:2});
+  bridge.setProgram([{op:5,dst:1,src:0x120,width:32,length:2}]);
+  assert.deepEqual(bridge.run(0,1,1),{reason:'done',completed:1});
+  assert.equal(bridge.state().eip,0x120);
+  bridge.setState({regs:[0,0,0,0,0,0,0,0],eip:0x100,eflags:0x42});
+  assert.deepEqual(bridge.run(0,1,1),{reason:'done',completed:1});
+  assert.equal(bridge.state().eip,0x102);
+  bridge.setProgram([{op:5,dst:2,src:0x120,width:32,length:2},
+    {op:0,width:32,length:1}]);
+  assert.deepEqual(bridge.run(0,2,2),{reason:'unsupported',completed:0});
+});
+
 test('bounded CMP/TEST flag results match the JS 386 at both operand widths',async()=>{
   const bridge=await createI80386BlockSpike();
   let seed=0x386c0de;

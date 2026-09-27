@@ -228,6 +228,28 @@ test('TEST AL,imm8 matches interpreter flags without changing EAX',async()=>{
   }
 });
 
+test('terminal forward JZ and JNZ exit to their target or fallthrough',async()=>{
+  for(const opcode of [0x74,0x75]) for(const taken of [false,true]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const machine of [fast.machine,slow.machine]) {
+      // MOV EAX,1; Jcc +2; NOP; NOP; NOP.
+      [0xb8,1,0,0,0,opcode,2,0x90,0x90,0x90].forEach((byte,i)=>
+        machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.eflags=(taken === (opcode === 0x74)) ? 0x42 : 2;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.deepEqual(block?.instructions.map(ins=>ins.op),
+      [11,opcode === 0x74 ? 4 : 5]);
+    assert.equal(block.instructions[1].dst,2);
+    assert.deepEqual(runner.run(block,2),
+      {instructions:2,cycles:12,reason:'done'});
+    slow.machine.step();slow.machine.step();
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+    assert.equal(fast.machine.cpu.eip,CODE+(taken ? 9 : 7));
+  }
+});
+
 async function stosFixture({count=9,offset=0,direction=false,extraPage=false}={}) {
   const fast=await fixture(true),slow=await fixture(false);
   for(const {machine,put32} of [fast,slow]) {

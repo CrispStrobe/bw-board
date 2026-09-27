@@ -71,6 +71,17 @@ instruction count rose from 11,298,966 to 11,406,107, about 46.9% of the
 binds the rebuilt WASM and source hashes. This is coverage progress; a
 repeatable end-to-end speed gain has not been established for the new form.
 
+The native block runner now exits a decoded block cleanly when its terminal
+`JZ` or `JNZ` targets code outside that block. A full `forktest` A/B against
+ordinary execution matched every reported guest field and final RAM hash.
+Native coverage rose to 15,451,458 of 24,338,279 steps (63.5%). The single
+paired run used 18.68 user CPU seconds natively and 27.00 with ordinary
+execution, about 1.45×. A second direct A/B against the prior native runner
+used 20.52 versus 18.68 user CPU seconds, a 1.10× improvement from this
+branch change on the same workload. Host timings are not a 10× or real-time claim.
+The [branch-exit receipt](receipts/2026-09-27-i80386-native-branch-exit.json)
+binds the rebuilt WASM and the full comparison.
+
 A later CPU profile of the same `forktest` found instruction snapshots to be
 the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
 The executor now retains prior segment-cache and task-state objects by reference

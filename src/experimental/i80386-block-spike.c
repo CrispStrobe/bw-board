@@ -26,7 +26,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 8; }
+uint32_t block_spike_version(void) { return 9; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -167,7 +167,8 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
     const uint32_t ea = ins.op == OP_LOAD_WINDOW || ins.op == OP_LEA32;
     const uint32_t immediate = ins.op >= OP_CMP_IMM && ins.op <= OP_SHR_IMM;
     if (ins.op > OP_SHR_IMM ||
-        (branch ? (ins.dst < start || ins.dst >= end) :
+        (branch ? (ins.dst < start || ins.dst > end ||
+          (ins.dst == end && pc != end - 1)) :
           (ins.dst >= 8 || (ins.width != 16 && ins.width != 32) ||
             (immediate ? 0 :
               ea ? (ins.base > 8 || ins.index > 8 || ins.scale > 3) :

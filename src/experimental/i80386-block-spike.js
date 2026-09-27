@@ -23,7 +23,7 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
   if (!(memory instanceof WebAssembly.Memory) || memory.buffer.byteLength !== MEMORY_PAGES * 65536)
     throw new TypeError('i80386 block spike needs the fixed shared memory layout');
   const {exports: wasm} = await WebAssembly.instantiate(module, {env: {memory}});
-  if (wasm.block_spike_version() !== 8) throw new Error('i80386 block spike ABI mismatch');
+  if (wasm.block_spike_version() !== 9) throw new Error('i80386 block spike ABI mismatch');
   const words = new Uint32Array(memory.buffer);
   const stateAt = wasm.block_spike_state_ptr() >>> 2;
   const programAt = wasm.block_spike_program_ptr() >>> 2;
