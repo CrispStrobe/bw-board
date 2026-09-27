@@ -36,4 +36,13 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.equal(report.delivered[0].accepted,false); // guest has not enabled mouse streaming
   assert.equal(report.steps,1);
   assert.equal(report.vga.planeSha256.length,4);
+  const config=join(dir,'dosbox.conf'),configuredReport=join(dir,'configured.json');
+  writeFileSync(config,'[autoexec]\nimgmount 2 "hdd.img" -t hdd -fs none -size 512,1,1,1\nboot -l c\n');
+  execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,
+    '--steps','1'],{cwd,env:{...process.env,AT_BIOS_ROM:paths.bios,
+    AT_BIOS_SHA256:digest(bios),VGA_BIOS_ROM:paths.vga,VGA_BIOS_SHA256:digest(vga),
+    AT_HDD_SHA256:digest(hdd),AT_CONSOLE_REPORT:configuredReport},encoding:'utf8'});
+  const configured=JSON.parse(readFileSync(configuredReport,'utf8'));
+  assert.deepEqual(configured.inputs.geometry,[1,1,1]);
+  assert.equal(configured.inputs.dosboxConfig.parsed.imagePath,paths.hdd);
 });

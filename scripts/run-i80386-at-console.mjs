@@ -3,15 +3,45 @@
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
+import {resolve} from 'node:path';
 import Machine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from
   '../src/experimental/i80386-at-machine.js';
 import {I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
 import {parseAtConsoleEvents} from './lib/i80386-at-console-events.mjs';
+import {parseDosboxAtConfig} from './lib/i80386-at-dosbox-config.mjs';
+import {ansiRgbFrame,ansiTextFrame,decodeTerminalInput,flushTerminalEscape,
+  makeTerminalInputState} from
+  './lib/i80386-at-terminal.mjs';
+import {renderObservedWindowsEga} from './lib/i80386-windows-vga-frame.mjs';
+import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
+
+const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
+  geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
+  steps:process.env.AT_POST_STEPS??1_000_000};
+for(let index=0;index<process.argv.length-2;index++) {
+  const option=process.argv[index+2];
+  if(option==='--help') {
+    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live]\n');
+    process.exit(0);
+  }
+  if(option==='--live'){options.live=true;continue;}
+  const value=process.argv[++index+2];
+  if(!value)throw new Error(`${option} needs a value`);
+  if(option==='--dosbox-conf')options.conf=value;
+  else if(option==='--hdd-image')options.hdd=value;
+  else if(option==='--geometry')options.geometry=value;
+  else if(option==='--steps')options.steps=value;
+  else throw new Error(`unknown option ${option}`);
+}
+const dosbox=options.conf?parseDosboxAtConfig(fs.readFileSync(options.conf,'utf8'),resolve(options.conf)):null;
+if(!options.hdd)options.hdd=dosbox?.imagePath??null;
+if(!options.geometry)options.geometry=dosbox?.geometry.join(',')??null;
+if(!options.hdd||!options.geometry)throw new Error('provide an HDD image and geometry directly or in --dosbox-conf');
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const required=name=>{if(!process.env[name])throw new Error(`${name} is required`);return process.env[name];};
-const readPinned=(pathName,hashName)=>{
-  const bytes=fs.readFileSync(required(pathName));
+const readPinned=(pathName,hashName,pathOverride=null)=>{
+  const bytes=fs.readFileSync(pathOverride??required(pathName));
   const expected=required(hashName).toLowerCase();
   if(!/^[a-f0-9]{64}$/.test(expected)||sha(bytes)!==expected)
     throw new Error(`${pathName} does not match ${hashName}`);
@@ -19,10 +49,10 @@ const readPinned=(pathName,hashName)=>{
 };
 const bios=readPinned('AT_BIOS_ROM','AT_BIOS_SHA256');
 const vga=readPinned('VGA_BIOS_ROM','VGA_BIOS_SHA256');
-const hdd=readPinned('AT_HDD_IMAGE','AT_HDD_SHA256');
+const hdd=readPinned('AT_HDD_IMAGE','AT_HDD_SHA256',options.hdd);
 if(bios.bytes.length!==0x10000||vga.bytes.length<0x4000||vga.bytes.length>0x10000)
   throw new Error('expected a 64 KiB AT BIOS and 16–64 KiB VGA ROM');
-const geometry=required('AT_HDD_GEOMETRY').split(/[x,:]/).map(Number);
+const geometry=options.geometry.split(/[x,:]/).map(Number);
 if(geometry.length!==3||!geometry.every(Number.isInteger)||geometry[0]<1||
     geometry[0]>1024||geometry[1]<1||geometry[1]>16||geometry[2]<1||
     geometry[2]>63||hdd.bytes.length!==geometry[0]*geometry[1]*geometry[2]*512)
@@ -33,12 +63,13 @@ const cmosType=Number(process.env.AT_HDD_CMOS_TYPE??
 if(![2,47].includes(cmosType)||
     (cmosType===2&&(cylinders!==615||heads!==4||sectors!==17)))
   throw new Error('AT_HDD_CMOS_TYPE must be 2 for 615,4,17 or 47 for user geometry');
-const stepsLimit=Number(process.env.AT_POST_STEPS??1_000_000);
+const stepsLimit=Number(options.steps);
 if(!Number.isInteger(stepsLimit)||stepsLimit<1||stepsLimit>500_000_000)
   throw new Error('AT_POST_STEPS must be 1..500000000');
 const eventBytes=process.env.AT_CONSOLE_EVENTS?fs.readFileSync(process.env.AT_CONSOLE_EVENTS):Buffer.from('[]');
 const events=parseAtConsoleEvents(eventBytes,stepsLimit);
-const mouseEnabled=process.env.AT_ENABLE_MOUSE==='1'||events.some(event=>event.type==='mouse');
+const mouseEnabled=options.live||process.env.AT_ENABLE_MOUSE==='1'||
+  events.some(event=>event.type==='mouse');
 const profile=structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
 profile.a20.mouse=mouseEnabled;
 profile.regions=profile.regions.map(region=>region.kind==='rom'&&region.start===0xc0000?
@@ -59,7 +90,11 @@ rtc.initialCmos=[...cmos.entries()].filter(([,value])=>value!==0);
 
 const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/i8086-machine.js','../src/experimental/i80386.js',
-  '../src/experimental/i80386-at-machine.js','./lib/i80386-at-console-events.mjs',
+  '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
+  '../src/experimental/vga-memory.js','../src/vga-card.js',
+  './lib/i80386-at-console-events.mjs',
+  './lib/i80386-at-dosbox-config.mjs','./lib/i80386-at-terminal.mjs',
+  './lib/i80386-windows-vga-frame.mjs','./lib/i80386-doom-vga-frame.mjs',
   './run-i80386-at-console.mjs'];
 const sourceSha256=Object.fromEntries(sourcePaths.map(path=>
   [path,sha(fs.readFileSync(new URL(path,import.meta.url)))]));
@@ -75,13 +110,51 @@ machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
 machine.reset();
-for(;steps<stepsLimit;steps++) {
+const textRam=()=>{
+  const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
+  return Array.from({length:25},(_,row)=>Array.from({length:Math.min(columns,160)},(_,col)=>
+    String.fromCharCode(machine.vgaMemory.planes[0][(row*columns+col)*2]||32))
+    .join('').trimEnd());
+};
+const liveState=makeTerminalInputState(),pendingScan=[],pendingMouse=[];
+let quit=false,lastDraw=0,lastInputAt=0,forceDraw=true;
+const onTerminalData=chunk=>{
+  lastInputAt=Date.now();
+  const input=decodeTerminalInput(liveState,chunk);
+  if(input.focusChanged===false) {
+    pendingScan.length=0;
+    if(liveState.buttons)pendingMouse.push({dx:0,dy:0,buttons:0});
+    liveState.buttons=0;
+  }
+  if(liveState.focused){pendingScan.push(...input.scan);pendingMouse.push(...input.mouse);}
+  quit||=input.quit;forceDraw||=input.refresh;
+};
+const offerLiveInput=()=>{
+  if((steps&1023)!==0)return;
+  if(liveState.pending==='\x1b'&&Date.now()-lastInputAt>50)
+    pendingScan.push(...flushTerminalEscape(liveState));
+  if(pendingScan.length) {
+    try {
+      if(machine.keyIn(pendingScan[0])) {
+        delivered.push({step:steps,type:'live-key',code:pendingScan.shift(),accepted:true});
+      }
+    } catch(error) {
+      if(!error.message?.startsWith('AT 8042 output queue full'))throw error;
+    }
+  }
+  if(pendingMouse.length) {
+    const event=pendingMouse.shift(),accepted=machine.mouseIn(event);
+    delivered.push({step:steps,type:'live-mouse',...event,accepted});
+  }
+};
+const runChunk=end=>{for(;steps<end;steps++) {
   while(events[eventIndex]?.step===steps) {
     const event=events[eventIndex++];
     const accepted=event.type==='key'?machine.keyIn(event.code):
       event.type==='serial'?machine.serialIn(event.code):machine.mouseIn(event);
     delivered.push({...event,accepted});
   }
+  if(options.live)offerLiveInput();
   try { machine.step(); }
   catch(error) {
     if(!(error instanceof I80386Fault)&&!(error instanceof UnsupportedI80386)&&
@@ -91,11 +164,51 @@ for(;steps<stepsLimit;steps++) {
     refusal={name:error.name,message:error.message,step:steps};break;
   }
   if(machine.cpu.shutdown){stop='shutdown';break;}
-}
-const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
-const text=Array.from({length:25},(_,row)=>Array.from({length:Math.min(columns,160)},(_,col)=>
-  String.fromCharCode(machine.vgaMemory.planes[0][(row*columns+col)*2]||32))
-  .join('').trimEnd());
+}};
+const drawTerminal=()=>{
+  const now=Date.now();if(!forceDraw&&now-lastDraw<250)return;
+  lastDraw=now;forceDraw=false;
+  const columns=Math.max(1,Math.min(80,(process.stdout.columns??80)-1));
+  const rows=Math.max(1,Math.min(25,(process.stdout.rows??28)-2));
+  liveState.columns=columns;liveState.rows=rows;
+  const video=machine.chips.vga1.getVideoState();
+  const registers={misc:video.misc,seq:Array.from(video.seq),gc:Array.from(video.gc),
+    crtc:Array.from(video.crtc),attr:Array.from(video.attr),dac:Array.from(video.dac),
+    dacMask:video.dacMask};
+  const planesBase64=machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64'));
+  let frame=null;
+  try{frame=renderObservedWindowsEga({registers,planeBase64:planesBase64});}catch{}
+  if(!frame)try{frame=renderObservedDoomVga({...registers,
+    planesBase64,dacBase64:Buffer.from(video.dac).toString('base64')});}catch{}
+  const body=frame?ansiRgbFrame(frame,columns,rows):ansiTextFrame(textRam(),columns,rows);
+  liveState.width=frame?.width??640;liveState.height=frame?.height??350;
+  const header=`386 AT  step ${steps}/${stepsLimit}  ${frame?'VGA':'text RAM'}  Ctrl-] quit  Ctrl-L redraw`;
+  process.stdout.write(`\x1b[H\x1b[2J${header.slice(0,columns)}\n${body}\x1b[0m`);
+};
+if(options.live) {
+  if(!process.stdin.isTTY||!process.stdout.isTTY)
+    throw new Error('--live requires an interactive terminal for raw keyboard and display');
+  process.stdin.setRawMode(true);process.stdin.resume();
+  process.stdin.on('data',onTerminalData);
+  const onSignal=()=>{quit=true;};
+  process.on('SIGINT',onSignal);process.on('SIGTERM',onSignal);
+  try {
+    process.stdout.write('\x1b[?1049h\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1004h');
+    drawTerminal();
+    while(steps<stepsLimit&&stop==='budget'&&!quit) {
+      runChunk(Math.min(steps+50_000,stepsLimit));
+      drawTerminal();
+      await new Promise(resolve=>setImmediate(resolve));
+    }
+    if(quit&&stop==='budget')stop='user-quit';
+  } finally {
+    process.off('SIGINT',onSignal);process.off('SIGTERM',onSignal);
+    process.stdin.removeListener('data',onTerminalData);
+    process.stdin.setRawMode(false);process.stdin.pause();
+    process.stdout.write('\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l');
+  }
+} else runChunk(stepsLimit);
+const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
 const video=machine.chips.vga1.getVideoState();
 const vgaOutput=process.env.AT_CONSOLE_VGA_OUTPUT??null;
@@ -103,7 +216,8 @@ if(vgaOutput)fs.writeFileSync(vgaOutput,JSON.stringify({schema:'bw.i80386-vga-sn
   step:steps,registers:video,planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
 const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
-    events:sha(eventBytes),mouseEnabled},steps,stop,refusal,
+    events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
+      sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},

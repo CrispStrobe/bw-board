@@ -50,3 +50,43 @@ existing BIOS profiles and checkpoint shape retain the absent-mouse behavior.
 The event receipt records whether the device accepted each event. Its source
 and external media hashes make the run reproducible. This is an input/control
 path, not a Windows 3.1 enhanced-mode acceptance claim.
+
+## Live terminal
+
+Add `--live` (or `AT_CONSOLE_LIVE=1`) to draw the guest continuously in an
+alternate terminal screen. The runner yields between 50,000-instruction
+chunks so terminal input reaches the guest while it runs. Typing sends Set-1
+make/break pairs; Enter, Backspace, Tab, Escape, arrows, shifted letters and
+symbols, and Ctrl+letter are mapped. Ctrl+] quits cleanly; Ctrl+L redraws.
+An xterm-compatible terminal with SGR mouse reporting can send pointer clicks
+and motion; live mode attaches the opt-in mouse. The live view tries the two validated VGA renderers (Windows
+640×350 planar and Doom 320×200 unchained), then shows text RAM if the mode is
+not recognized. A full VGA snapshot remains available in every mode. Live
+mode requires a TTY. The report includes live input attempts and a `user-quit`
+stop reason when applicable.
+
+```sh
+# With the same BIOS/VGA/HDD environment shown above:
+node scripts/run-i80386-at-console.mjs --live --steps 500000000
+```
+
+## DOSBox image configurations
+
+The CLI accepts a raw HDD directly with `--hdd-image FILE --geometry C,H,S`,
+or reads one `imgmount` from a DOSBox config with `--dosbox-conf FILE`.
+Relative image paths resolve beside the config. The accepted form follows the
+[DOSBox manual's IMGMOUNT geometry](https://www.dosbox.com/DOSBoxManual.html):
+
+```ini
+[autoexec]
+imgmount 2 "Windows 3.1.img" -t hdd -fs none -size 512,17,4,615
+boot -l c
+```
+
+The `-size` tuple is bytes per sector, sectors per track, heads, cylinders;
+the CLI converts it to its internal cylinder/head/sector order and checks the
+image byte length. Only one primary HDD image is attached. Folder mounts and
+other autoexec lines are recorded as ignored; no host commands are executed.
+BIOS and VGA ROM inputs are still required. `AT_HDD_SHA256` remains required
+for the selected image. This runner boots the image through its own AT BIOS,
+even when a DOSBox config would instead start at DOSBox's built-in shell.
