@@ -19,6 +19,8 @@ let first32 = null;
 const serial = [];
 const interrupts = [];
 const postBootInterrupts = [];
+const lapicIdReads = [];
+const mycpuTrace = [];
 const machine = new Machine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP, {
   ataImage: image,
   ataGeometry: IBM_TYPE1_GEOMETRY,
@@ -34,14 +36,25 @@ const machine = new Machine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP, {
   },
 });
 machine.loadRom(rom, 0xf0000); machine.loadRom(rom); machine.reset();
-for (; steps < stepsLimit; steps++) machine.step();
+const read386 = machine._read386.bind(machine);
+machine._read386 = address => {
+  if (address >= 0xfee00020 && address < 0xfee00024 && lapicIdReads.length < 32)
+    lapicIdReads.push({step: steps, address, value: read386(address)});
+  return read386(address);
+};
+for (; steps < stepsLimit; steps++) {
+  if (machine.cpu.eip >= 0x801038d0 && machine.cpu.eip <= 0x80103910 && mycpuTrace.length < 64)
+    mycpuTrace.push({step: steps, eip: machine.cpu.eip, eflags: machine.cpu.eflags});
+  machine.step();
+}
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},
   slaveImage: {path: path.resolve(slavePath), sha256: crypto.createHash('sha256').update(slave).digest('hex')},
-  steps, first32, serial: Buffer.from(serial).toString('latin1'), interrupts, postBootInterrupts, screen,
+  steps, first32, serial: Buffer.from(serial).toString('latin1'), interrupts, postBootInterrupts,
+  lapicIdReads, mycpuTrace, screen,
   lapic: {svr: machine._lapic[0xf0 / 4], timer: machine._lapic[0x320 / 4], initialCount: machine._lapic[0x380 / 4]},
   ioapic: {id: machine._ioapic[0], version: machine._ioapic[1], ideLow: machine._ioapic[0x10 + 14 * 2], ideHigh: machine._ioapic[0x10 + 14 * 2 + 1], idePending: machine._apicIrq[14]},
   cpu: {cs: machine.cpu.cs, eip: machine.cpu.eip, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0, cr3: machine.cpu.cr3, cr4: machine.cpu.cr4},
