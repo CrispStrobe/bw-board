@@ -17,6 +17,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
+import { getDevice } from '../src/devices.js';
 
 registerAllDevices();
 
@@ -107,6 +108,38 @@ describe('bare attiny88 as MCU-pin surface', () => {
 
     board.setControl('BTN', 0);
     assert.equal(board.readPin('PC3'), 0, 'released again reads 0');
+  });
+});
+
+describe('ATtiny88 QFN-32 package surface', () => {
+  it('exposes the Blinkenrocket modem input without changing the PDIP pinout', () => {
+    const qfn = getDevice('attiny88_qfn32');
+    const dip = getDevice('attiny88');
+    assert.ok(qfn.terminals.includes('pa0'), 'QFN-32 bonds out PA0 / ADC6');
+    assert.ok(qfn.terminals.includes('pa1'), 'QFN-32 bonds out PA1 / ADC7');
+    assert.equal(qfn.terminals.length, 32, 'all QFN-32 pads represented');
+    assert.ok(!dip.terminals.includes('pa0'), 'PDIP-28 still has no imaginary PA0 lead');
+    assert.ok(dip.terminals.includes('gnd2'), 'PDIP pin 22 remains its second ground');
+  });
+
+  it('samples an analog source wired to PA0 / ADC6', () => {
+    const board = makeBoard(
+      [
+        {id: 'MCU', kind: 'attiny88_qfn32', params: {}, terminals: ['pa0']},
+        {id: 'VIN', kind: 'vsource', params: {volts: 2.5}, terminals: ['pos', 'neg']},
+        {id: 'GND1', kind: 'gnd', params: {}, terminals: ['gnd']},
+      ],
+      [
+        {id: 'n_adc6', terminals: [
+          {part: 'MCU', terminal: 'pa0'}, {part: 'VIN', terminal: 'pos'},
+        ]},
+        {id: 'n_gnd', terminals: [
+          {part: 'VIN', terminal: 'neg'}, {part: 'GND1', terminal: 'gnd'},
+        ]},
+      ],
+    );
+    assert.ok(Math.abs(board.readAnalog('PA0') - 2.5) < 1e-6,
+      `PA0 should see the modem source, got ${board.readAnalog('PA0')} V`);
   });
 });
 
