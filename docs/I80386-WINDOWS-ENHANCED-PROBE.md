@@ -14,7 +14,13 @@ profile models the clone fast-A20 latch at port 92h alongside the 8042 gate.
 The image must boot DOS and contain `WIN386.EXE`; arrange for `WIN /3` in `AUTOEXEC.BAT`,
 or send Set-1 make/break events after DOS reaches its prompt with
 `AT_KEY_SCRIPT=/path/to/events.json`. The script is an ordered JSON array of
-`{"step": integer, "code": byte}` objects. `checkpoints` help choose the step;
+`{"step": integer, "code": byte}` objects.
+`AT_MOUSE_SCRIPT=/path/to/mouse.json` enables the opt-in PS/2 auxiliary device
+and injects an ordered array of `{"step": integer, "dx": integer, "dy": integer,
+"buttons": bitmask}` events. Positive `dy` moves down; buttons 1, 2, and 4
+mean left, right, and middle. Each event records whether the guest accepted
+its packet. `AT_ENABLE_MOUSE=1` enables the device without scripted input.
+`checkpoints` help choose the step;
 set `AT_PROGRESS_OUTPUT=/path/to/progress.json` to inspect the latest checkpoint
 while a long run is still active. `AT_PROGRESS_EVERY` defaults to one million
 instructions. The progress file is atomically replaced at each checkpoint.
@@ -53,6 +59,7 @@ The public project records only the media-neutral harness and code fixes.
 The private Windows 3.11 run reached Program Manager, File Manager, and a
 keyboard-driven enhanced-mode DOS prompt that executed `ver`. A separate run
 wrote a text file from that DOS prompt to an exclusive-created disk clone;
-after a fresh boot, the DOS prompt read back its exact contents. Broader
-application compatibility remains a separate acceptance check. Keep Microsoft
-media outside this MIT repository.
+after a fresh boot, the DOS prompt read back its exact contents. Program
+Manager also launched Solitaire and rendered a dealt game at 640×480. This
+demonstrates one graphical Win16 game, not broad application compatibility.
+Keep Microsoft media outside this MIT repository.

@@ -60,9 +60,19 @@ if (!Array.isArray(keyScript) || keyScript.some((event, index) =>
   !Number.isInteger(event.code) || event.code < 0 || event.code > 255 ||
   (index > 0 && event.step <= keyScript[index - 1].step)))
   throw new Error('AT_KEY_SCRIPT must be an ordered JSON array of {step, code} Set-1 events');
+const mouseBytes = process.env.AT_MOUSE_SCRIPT ? fs.readFileSync(process.env.AT_MOUSE_SCRIPT) : null;
+const mouseScript = mouseBytes ? JSON.parse(mouseBytes) : [];
+if (!Array.isArray(mouseScript) || mouseScript.some((event, index) =>
+  !event || !Number.isInteger(event.step) || event.step < 0 || event.step >= limit ||
+  !Number.isInteger(event.dx) || event.dx < -255 || event.dx > 255 ||
+  !Number.isInteger(event.dy) || event.dy < -255 || event.dy > 255 ||
+  !Number.isInteger(event.buttons) || event.buttons < 0 || event.buttons > 7 ||
+  (index > 0 && event.step <= mouseScript[index - 1].step)))
+  throw new Error('AT_MOUSE_SCRIPT must be an ordered JSON array of {step, dx, dy, buttons} events');
 const hddOutputFd = hddOutputPath ? fs.openSync(hddOutputPath, 'wx') : null;
 
 const profile = structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
+profile.a20.mouse = mouseBytes !== null || process.env.AT_ENABLE_MOUSE === '1';
 profile.regions = profile.regions.map(region => region.kind === 'rom' && region.start === 0xc0000
   ? {...region, end: 0xc0000 + Math.ceil(vga.bytes.length / 0x1000) * 0x1000 - 1}
   : region);
@@ -100,7 +110,9 @@ const ata = {count: 0, tail: []};
 const kbc = {count: 0, tail: []};
 const checkpoints = [];
 const keyboard = [];
+const mouse = [];
 let nextKey = 0;
+let nextMouse = 0;
 let machine;
 machine = new Machine(profile, {
   ataImage: hdd.bytes,
@@ -138,6 +150,10 @@ try {
     if (steps === keyScript[nextKey]?.step) {
       const event = keyScript[nextKey++];
       keyboard.push({...event, accepted: machine.keyIn(event.code)});
+    }
+    if (steps === mouseScript[nextMouse]?.step) {
+      const event = mouseScript[nextMouse++];
+      mouse.push({...event, accepted: machine.mouseIn(event)});
     }
     machine.step();
     const cr0 = machine.cpu.cr0 >>> 0;
@@ -201,8 +217,9 @@ const report = {
     vga: {bytes: vga.bytes.length, sha256: vga.sha256},
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256,
       geometry: {cylinders, heads, sectors}, cmosType}},
-  milestones, post, ata, kbc, checkpoints, keyboard,
+  milestones, post, ata, kbc, checkpoints, keyboard, mouse,
   keyScriptSha256: keyBytes && hash(keyBytes), final: state(), finalContext,
+  mouseScriptSha256: mouseBytes && hash(mouseBytes),
   hddOutput: hddOutputPath ? {path: hddOutputPath,
     bytes: machine.ata.mediaBytes().length, sha256: hash(machine.ata.mediaBytes())} : null,
   executionRevision, sourceSha256,
