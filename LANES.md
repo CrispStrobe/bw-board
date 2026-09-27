@@ -2349,3 +2349,29 @@ The exact official LTspice audit additionally requires a hidden five-terminal
 package identity, and netlist LT1013 from LT1013.sub. The logical card shares
 the bounded electrical constants but never receives a face or whole-package
 identity; downstream must retain the model-substitution blocker.
+
+2026-09-27 OP747 physical quad micropower op amp — DONE candidate, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-op747-board`, branch
+`lane/op747-quad-model`, exact base
+`4f8ac9a9cc49ba184636be0ee92528295e77f52f`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP747
+test. Add the official R-14 shared-rail four-channel terminal contract and a
+separate hidden five-terminal package-neutral source channel. The bounded
+Rev. D behavior card covers 3 V..30 V single-supply / ±1.5 V..±15 V dual
+supply, rail-inclusive input range with the documented positive headroom,
+finite large-signal gain, honestly high-Z inputs, rail-to-rail loaded output,
+0.7 MHz response, 0.2 V/us slew, four independent channels, and the
+whole-package supply budget. Prove physical/logical separation, all channels,
+power/common-mode/output/dynamic boundaries, and named mutations. Excludes
+generic op-amp behavior, macro-model execution, solver, other named devices,
+part art, import/export, corpus, workflow, package pin, CUI, and Lite changes.
+Implemented the official nonstandard R-14 terminal order, one shared-rail quad
+controller and a separate package-neutral source channel. The bounded card uses
+2,500 V/mV typical gain, 0.7 MHz response, 0.2 V/us slew, 3 V minimum span,
+rail-inclusive low input and one-volt high headroom, loaded rail-to-rail output,
+30 uV typical offset, and a conservative 1.8 mA package budget. Rev. D does not
+specify differential input resistance, so no invented conductance is stamped;
+the shared multi-channel helper now mirrors the single-channel high-Z rule while
+leaving every finite-resistance card unchanged. Focused OP747 plus unchanged
+ADTL082/LT1014/analog/current coverage passes 49/49. Exact-head hosted CI and
+Harris qualification remain the landing gates.
