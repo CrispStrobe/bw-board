@@ -44,7 +44,14 @@ export class ExperimentalI80386 {
     this.read = bus.read ?? (() => 0);
     this.read32 = bus.read32 ?? null;
     this.fetch = bus.fetch ?? this.read;
-    this.write = bus.write ?? (() => {});
+    this._rawWrite = bus.write ?? (() => {});
+    this._translationCacheEnabled = !!options.translationCache;
+    this.write = this._translationCacheEnabled && !options.translationCacheWritesTrackedExternally
+      ? (address, value) => {
+          this.notePhysicalWrite(address);
+          this._rawWrite(address, value);
+        }
+      : this._rawWrite;
     this.inPort = bus.inPort ?? (() => 0xff);
     this.outPort = bus.outPort ?? (() => {});
     this.deliverFaults = !!options.deliverFaults;
@@ -82,6 +89,11 @@ export class ExperimentalI80386 {
   }
 
   reset() {
+    if (this._translationCacheEnabled) {
+      this._translations = new Array(512);
+      this._translationGeneration = 1;
+      this._translationTablePages = new Set();
+    }
     for (const r of REG_NAMES) this[r] = 0;
     this.eip = 0;
     this.eflags = 2;
@@ -311,8 +323,21 @@ export class ExperimentalI80386 {
     return v >>> 0;
   }
   _writePhysical(a, size, v) {
-    for (let i = 0; i < size; i++)
-      this.write((a + i) >>> 0, (v >>> (8 * i)) & 255);
+    this._pagingBitWrite = true;
+    try {
+      for (let i = 0; i < size; i++)
+        this._rawWrite((a + i) >>> 0, (v >>> (8 * i)) & 255);
+    } finally { this._pagingBitWrite = false; }
+  }
+  notePhysicalWrite(address) {
+    if (this._translationCacheEnabled && this._translationTablePages.has(address >>> 12))
+      this.invalidateTranslationCache();
+  }
+  /** Host/DMA writers can call this after changing page-table memory directly. */
+  invalidateTranslationCache() {
+    if (!this._translationCacheEnabled) return;
+    this._translationGeneration++;
+    this._translationTablePages.clear();
   }
   _pageFault(linear, write, user, protection) {
     this.cr2 = linear >>> 0;
@@ -322,10 +347,27 @@ export class ExperimentalI80386 {
       protection ? "page protection fault" : "page not present",
     );
   }
-  _translate(linear, { write = false, supervisor = false } = {}) {
+  _translate(linear, options) {
     linear >>>= 0;
     if (!(this.cr0 & 0x80000000)) return linear;
+    const write = options?.write === true;
+    const supervisor = options?.supervisor === true;
     const user = !supervisor && this.currentPrivilegeLevel === 3;
+    if (this._translationCacheEnabled) {
+      const page = linear >>> 12;
+      const cached = this._translations[page & 511];
+      if (cached?.generation === this._translationGeneration && cached.page === page &&
+          cached.cr3 === this.cr3 && cached.cr4 === this.cr4) {
+        if ((user && !cached.userPage) || (user && write && !cached.writable))
+          this._pageFault(linear, write, user, true);
+        if (write && !cached.dirty) {
+          this._writePhysical(cached.dirtyAddress, 4, cached.dirtyValue | 0x40);
+          cached.dirty = true;
+          cached.dirtyValue |= 0x40;
+        }
+        return (cached.physicalBase | (linear & 0xfff)) >>> 0;
+      }
+    }
     const pdeAddress =
       ((this.cr3 & 0xfffff000) + ((linear >>> 20) & 0xffc)) >>> 0;
     let pde = this._readPhysical(pdeAddress, 4);
@@ -343,7 +385,16 @@ export class ExperimentalI80386 {
         pde |= 0x40;
         this._writePhysical(pdeAddress, 4, pde);
       }
-      return ((pde & 0xffc00000) | (linear & 0x3fffff)) >>> 0;
+      const physical = ((pde & 0xffc00000) | (linear & 0x3fffff)) >>> 0;
+      if (this._translationCacheEnabled) {
+        this._translationTablePages.add(pdeAddress >>> 12);
+        this._translations[(linear >>> 12) & 511] = {
+          generation:this._translationGeneration,page:linear >>> 12,cr3:this.cr3,cr4:this.cr4,
+          physicalBase:physical & 0xfffff000,userPage,writable,
+          dirty:!!(pde & 0x40),dirtyAddress:pdeAddress,dirtyValue:pde,
+        };
+      }
+      return physical;
     }
     const pteAddress = ((pde & 0xfffff000) + ((linear >>> 10) & 0xffc)) >>> 0;
     let pte = this._readPhysical(pteAddress, 4);
@@ -359,6 +410,15 @@ export class ExperimentalI80386 {
     if (write && !(pte & 0x40)) {
       pte |= 0x40;
       this._writePhysical(pteAddress, 4, pte);
+    }
+    if (this._translationCacheEnabled) {
+      this._translationTablePages.add(pdeAddress >>> 12);
+      this._translationTablePages.add(pteAddress >>> 12);
+      this._translations[(linear >>> 12) & 511] = {
+        generation:this._translationGeneration,page:linear >>> 12,cr3:this.cr3,cr4:this.cr4,
+        physicalBase:pte & 0xfffff000,userPage,writable,
+        dirty:!!(pte & 0x40),dirtyAddress:pteAddress,dirtyValue:pte,
+      };
     }
     return ((pte & 0xfffff000) | (linear & 0xfff)) >>> 0;
   }
@@ -1388,6 +1448,7 @@ export class ExperimentalI80386 {
     this.tr = { ...incoming, type: incoming.format === 16 ? 3 : 11 };
     try {
       this.cr3 = image.cr3 >>> 0;
+      this.invalidateTranslationCache();
       this.cr0 |= 8;
       Object.assign(this, image);
       this._retainedRealCs = false;
@@ -2676,14 +2737,12 @@ export class ExperimentalI80386 {
     // LOCK on valid RMW forms.
     void lock;
     const width = operand32 ? 32 : 16;
-    const stringOpcodes = [
-      0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
-    ];
-    const repeatIoOpcodes = [0x6c, 0x6d, 0x6e, 0x6f];
+    const stringOpcode = op >= 0xa4 && op <= 0xaf && op !== 0xa8 && op !== 0xa9;
+    const repeatIoOpcode = op >= 0x6c && op <= 0x6f;
     if (
       repeat !== null &&
-      !stringOpcodes.includes(op) &&
-      !repeatIoOpcodes.includes(op)
+      !stringOpcode &&
+      !repeatIoOpcode
     )
       throw new I80386Fault(6, null, "REP prefix on non-string instruction");
     if (op < 0x40 && (op & 7) >= 4 && (op & 7) <= 5) {
@@ -2697,10 +2756,10 @@ export class ExperimentalI80386 {
         if (byte) this.al = result;
         else this._setReg(0, operandWidth, result);
       }
-    } else if (repeatIoOpcodes.includes(op)) {
+    } else if (repeatIoOpcode) {
       if (repeat === null) this._stringIo(op, width, address32, override);
       else this._repeatIo(op, width, address32, override, instructionStart);
-    } else if (stringOpcodes.includes(op)) {
+    } else if (stringOpcode) {
       if (repeat === null) this._string(op, width, address32, override);
       else
         this._repeatString(
@@ -3487,6 +3546,8 @@ export class ExperimentalI80386 {
             : control === 0
               ? (value & 0x8000001f) >>> 0
               : value;
+        if (control === 0 || control === 3 || control === 4)
+          this.invalidateTranslationCache();
         if (control === 0) {
           if (!wasProtected && this.protectedMode) this._retainedRealCs = true;
           else if (!this.protectedMode) this._retainedRealCs = false;
