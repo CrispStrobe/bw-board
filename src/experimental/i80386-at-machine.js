@@ -46,6 +46,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       throw new Error('experimental 386 functionalInstructionCycles must be 1 through 16');
     const bus = {
       read: address => this._read386(address),
+      read32: address => this._read386Ram32(address),
       fetch: address => this._read386(address),
       write: (address, value) => this._write386(address, value),
       inPort: (port, width) => this._in386(port, width),
@@ -67,6 +68,15 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this._ioapic[1] = (23 << 16) | 0x11;
     this._ioapicSelect = 0;
     this._apicIrq = new Uint8Array(24);
+    if (this.chips.uart1) {
+      this.chips.uart1.hooks.onIrqChange = active => {
+        if (this._xv6Mp && this._mpReady && (this.cpu.cr0 & 1)) {
+          // Receive IRQs are edge-latched for the IOAPIC after xv6's MP
+          // handoff. The firmware still sees COM1 on the legacy PIC.
+          if (active) this._apicIrq[4] = 1;
+        } else this.chips.pic1?.setIRQ(4, active ? 1 : 0);
+      };
+    }
     this.vgaMemory = null;
     if (config.experimentalVgaMemory) {
       const vga = this.chips[config.experimentalVgaMemory];
@@ -140,6 +150,22 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     const video = this.vgaMemory?.read(decoded);
     if (video !== undefined && video !== null) return video;
     return decoded < this.memoryBytes ? this._read(decoded) : 0xff;
+  }
+
+  // Paging fetches four bytes at a time. Bypass per-byte decode only inside a
+  // wholly mapped RAM page above 1 MiB; everything else keeps the bus path.
+  _read386Ram32(address) {
+    const decoded = this._decode386(address);
+    if ((!this._a20Configured || this._a20Enabled) &&
+        decoded >= 0x100000 && decoded < this.memoryBytes - 3 &&
+        (decoded & 0xfff) <= 0xffc && this._page[decoded >>> 12] === 1) {
+      const mem = this.mem;
+      return (mem[decoded] | (mem[decoded + 1] << 8) |
+        (mem[decoded + 2] << 16) | (mem[decoded + 3] << 24)) >>> 0;
+    }
+    return (this._read386(address) | (this._read386((address + 1) >>> 0) << 8) |
+      (this._read386((address + 2) >>> 0) << 16) |
+      (this._read386((address + 3) >>> 0) << 24)) >>> 0;
   }
 
   _write386(address, value) {
@@ -386,7 +412,7 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP = Object.freeze({
   experimentalAtaSlaveAlias: true,
 });
 
-/** 16MiB installed-RAM profile for stock xv6's PHYSTOP (14MiB) build. */
+/** Diagnostic 16MiB map; the IBM AT BIOS reports 164 with RAM over its top ROM mirror. */
 export const PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   regions: PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP.regions.map(region =>
@@ -396,6 +422,19 @@ export const PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP = Object.freeze({
     initialCmos: [[0x10, 0x20], [0x12, 0x10], [0x14, 0x21],
       [0x15, 0x80], [0x16, 0x02], [0x17, 0x00], [0x18, 0x3c],
       [0x2e, 0x01], [0x2f, 0x0f], [0x30, 0x00], [0x31, 0x3c], [0x32, 0x19]],
+  } : chip),
+});
+
+/** IBM AT ROM-safe 15MiB RAM profile for xv6 with PHYSTOP=14MiB. */
+export const PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
+  regions: PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP.regions.map(region =>
+    region.kind === 'ram' && region.start === 0x100000 ? {...region, end: 0xefffff} : region),
+  chips: PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP.chips.map(chip => chip.kind === 'rtc' ? {
+    ...chip,
+    initialCmos: [[0x10, 0x20], [0x12, 0x10], [0x14, 0x21],
+      [0x15, 0x80], [0x16, 0x02], [0x17, 0x00], [0x18, 0x38],
+      [0x2e, 0x01], [0x2f, 0x0b], [0x30, 0x00], [0x31, 0x38], [0x32, 0x19]],
   } : chip),
 });
 

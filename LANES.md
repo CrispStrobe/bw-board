@@ -1,3 +1,55 @@
+2026-09-27 OP27 real precision op-amp model — DONE candidate, Codex `/root`. Isolated
+worktree `/tmp/wt-bwcx-op27-board`, branch `lane/op27-real-model`, exact base
+`15f969cc755f41df594b5193c0ee50ebc8477672`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP27
+test. Add the manufacturer-backed single-amplifier PDIP-8 electrical contract
+through the existing precision-op-amp controller: 1.8M typical open-loop gain,
+8 MHz gain bandwidth, 2.8 V/us slew, offset, supply/common-mode range, and
+the guaranteed 600-ohm loaded swing. The data sheet specifies common-mode,
+not differential, input resistance, so this card keeps the inputs high-Z
+rather than laundering the 3 GOhm common-mode figure into a differential stamp.
+Offset-null pins stay physical and explicitly unmodelled. Prove exact
+terminals, power refusal, finite gain, feedback, both loaded swing directions,
+slew and small-signal response, with independent gain/slew/bandwidth mutations.
+No generic op-amp, solver, other named device, face/art, importer/exporter,
+corpus, workflow, package pin, CUI, Parts, or Lite edit.
+Implemented the Rev. H bounded card: 1.8M open-loop gain, 8 MHz GBW,
+2.8 V/us slew, 10 uV typical offset, 70 ohm open-loop output resistance,
+the +/-11 V common-mode guarantee, and a 600-ohm loaded output above the
+guaranteed +/-10 V floor. The focused OP27 plus unchanged OP07/analog/current
+surface passes 49/49. Independently changing gain 1.8M->0.9M, slew
+2.8->28 V/us, or bandwidth 8->80 MHz makes its named consequence red.
+Exact-head CI and Harris qualification remain the landing gates.
+
+2026-09-27 OP07 real precision op-amp model — DONE candidate, Codex bwcx. Isolated
+worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part-v2`, exact base
+`58db46525805505be2e8019e365ce78433d76929`. The implementation was replayed
+without source/test drift after the disjoint stock-xv6 series advanced master.
+Owns this row, `src/devices/analog-amps.js`, `src/current-ratings.js`, one
+focused OP07 test, and the disjoint `.github/workflows/x86-xv6.yml` forward
+repair required when the replayed current-master workflow failed the existing
+external-input and literal-action pin gates. Add the manufacturer-backed
+single-amplifier DIP-8 electrical contract
+using the existing precision-op-amp controller: finite gain and differential
+input resistance, input offset, dual-supply/common-mode and loaded output
+limits, 0.6 MHz-class response, and 0.3 V/us slew. Null pins remain present
+and explicitly unmodelled. Prove exact terminals, power refusal, feedback,
+finite open-loop gain, both swing directions, slew and small-signal response,
+with independent mutations of gain/slew/bandwidth. No generic op-amp, solver,
+other named device, face/art, importer/exporter, corpus, workflow, package pin,
+CUI, Parts, or Lite edit. The inherited workflow repair changes no xv6 input:
+it fetches the same full xv6 commit without a moving-ref clone, verifies the
+resolved HEAD, and pins the three existing Actions to their full revisions.
+Implemented the OP07C typical bounded card from Analog Devices Rev. G: 400
+V/mV large-signal gain, 33 MOhm differential input, 60 uV input offset, 60
+ohm output resistance, +/-13 V guaranteed common-mode envelope and loaded
+output held inside the +/-12 V floor at +/-15 V supplies, operation down to
++/-3 V, 0.6 MHz response and 0.3 V/us slew. The conservative supply budget is
+5 mA from the 150 mW OP07C maximum at +/-15 V. Focused OP07 plus unchanged
+precision/analog/current-rating coverage passes 59/59. Independently changing
+gain 400k->200k, slew 0.3->3 V/us, or bandwidth 0.6->6 MHz makes its named
+numerical assertion red. Exact-head hosted CI/Harris remain the landing gate.
+
 2026-09-27 LT1763 physical DC model — DONE, Codex bwcx. Isolated worktree
 `/tmp/wt-bwcx-lt1763-board`, branch `lane/lt1763-model`, base `d009a4f7`.
 Owns only `src/devices/power.js`, a focused LT1763 test, and this ledger row:
@@ -2221,3 +2273,39 @@ Paterson guest increment: source `f2eeb5964bc1285a6c8f3b1c297d2998833cc56f`, pai
 | lane | owner/session | worktree | exact scope | base SHA | status |
 | --- | --- | --- | --- | --- | --- |
 | 80286 functional integration and current Harris evidence | Astra coordinator / Sol agents, astra-286-sept19 | `/mnt/volume1/code/wt/astra-286-integration` | Preserves close-gap `76d0b9b` ancestry and current master; static dependency guard replaces false file-size heuristic, sampled fast vectors block failures and incomplete accounting, vector memory is isolated, exact-source full fast/Harris and bounded wired BIOS workflow added with separate manual reference DOS run. | claim `71d19e8` | **IMPLEMENTED 2026-09-19; hosted qualification required before guarded landing.** Focused CPU/guard/runner 51/51, workflow/census/input gates 25/25, guard direct/transitive mutations red, consecutive-case memory regression proven; new workflow actionlint clean. Current 20k-clock BIOS diagnostic reaches PIC/timer setup and CPU/bus transfers without claiming DOS completion. Historical reports retained with explicit source-hash limits; no protected-mode, timing or physical-board promotion. Initial full run at `431acef` exposed 58 fast-core cases; fixes preserve 286 high addresses, completed POP state on destination fault, AAM-zero/divider behavior and grade stray writes. All 45,000 cases in the nine affected files now pass; broad regression 634 pass, 0 fail, 1 optional skip. Current Harris full semantic and reference wired DOS receipts at `431acef` are preserved under docs/receipts with unchanged Harris source hashes; whole initial qualification was not green. The next full run passed 1,477,996 cases and exposed one PUSHA partial-write fault through the stronger write comparator; whole-stack preflight now fixes it (opcode 60: 5,000/5,000; focused 47/47). Final combined full qualification remains the landing gate. |
+2026-09-27 ADP151 fixed-output LDO model — CLAIM, Codex `/root`. Isolated
+worktree `/tmp/wt-bwcx-adp151-board`, branch `lane/adp151-real-model`, exact
+base `8146296d21fbcbc64b51ae07bba8322117e6bf31`. Owns this row,
+`src/devices/power.js`, `src/current-ratings.js`, and one focused ADP151 test.
+Add the manufacturer-bounded TSOT-5 fixed-output DC contract: 2.2 V to 5.5 V
+input, exact selected output, enable/UVLO refusal, characterized dropout,
+200 mA rating with the 220 mA guaranteed current-limit floor, quiescent and
+shutdown current, and full-device KCL. NC stays physical and unmodelled.
+No generic regulator, solver, other device, face/art, importer/exporter,
+corpus, workflow, package pin, CUI, Parts, or Lite edit.
+Implemented the 14 documented fixed-output selections, rated input refusal,
+EN threshold and pull-down, guaranteed TSOT loaded-dropout envelope, guaranteed
+220 mA current-limit floor, typical ground/shutdown current and full-device KCL.
+The focused ADP151 plus unchanged LDO/current surface passes 43/43. Independently
+weakening the current ceiling, dropout envelope, or EN threshold makes its named
+consequence red. Exact-head hosted CI/Harris remain the landing gate.
+2026-09-27 LT1006 real single-supply op-amp model — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-lt1006-board`, branch
+`lane/lt1006-real-model`, exact base
+`6682741c9a651352e99acc0a27337ef85a190882`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused LT1006
+test. Add the manufacturer-bounded S8 electrical contract through the existing
+precision-op-amp controller: exact eight physical pins, 2.7 V minimum supply,
+negative-rail input/output reach, asymmetric positive headroom, finite gain,
+input resistance, offset, supply current and dominant-pole/slew response.
+Pin 8 remains physical and explicitly unmodelled. Prove that asymmetric limits
+do not change the existing symmetric precision cards. No generic op-amp,
+solver, other named device, face/art, importer/exporter, corpus, workflow,
+package pin, CUI, Parts, or Lite edit.
+Implemented the S8 card with 2 MV/V typical 5 V gain, 0.7 MHz-class
+dominant-pole response, 0.4 V/us slew, 300 MOhm differential input, 2.7 V
+minimum supply, ground-inclusive input, 15 mV low output bound and separate
+positive headroom. Focused LT1006 plus unchanged precision/generic op-amp
+surface passes 43/43. Independently weakening finite gain, losing the
+ground-referred output, or relabelling physical pin 8 makes its named
+consequence red. Exact-head hosted CI and Harris remain the landing gates.

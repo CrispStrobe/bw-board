@@ -68,7 +68,7 @@ const BETA_MIN = 1e-4;
 const E_TOL = 1e-7;         // volts of residual (v+ − v−)
 const U_TOL = 1e-9;         // volts of output movement below which nothing changed
 
-// A single dynamic controller serves the two physical single op-amps below;
+// A single dynamic controller serves the physical single op-amps below;
 // every electrical number remains a part fact in its own immutable card.
 // Keeping LM741's prior values in the card is intentional: the extraction is
 // a refactor, not permission to alter an already shipped device.
@@ -102,6 +102,62 @@ const PRECISION_OP_AMPS = Object.freeze({
         commonHeadroom: 2,
         outputHeadroom: 1.5,
         defaultOffsetV: 5e-6,   // typical room-temperature offset
+    }),
+    // Analog Devices LT1006 data sheet, S8 commercial part at 5 V. Unlike
+    // the dual-supply precision cards, this part is explicitly asymmetric:
+    // its inputs include the negative rail and its output sinks to within
+    // millivolts of it, while both remain bounded away from the positive rail.
+    // Pin 8 can trade supply current for speed; that external programming
+    // network is physical but deliberately not simulated by this card.
+    lt1006: Object.freeze({
+        a0: 2e6,                // LT1006C typical large-signal gain at 5 V
+        gbwHz: 0.7e6,           // bounded 5 V unity-gain crossover from G20/G21
+        slewVPerUs: 0.4,        // room-temperature typical
+        inputR: 300e6,          // differential input resistance, typical
+        rOut: 100,              // conservative loaded single-supply swing
+        tickNs: 300n,
+        settledV: 1e-7,
+        minSupply: 2.7,
+        commonLowHeadroom: 0,   // guaranteed input range includes V-
+        commonHighHeadroom: 1.5,
+        outputLowHeadroom: 0.015,
+        outputHighHeadroom: 1.0,
+        defaultOffsetV: 80e-6,  // S8 at 5 V, room-temperature maximum
+        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'iset'],
+        pin8Role: 'supply-current-set',
+    }),
+    // Analog Devices OP07 Rev. G, OP07C typicals at VS=+/-15 V. This keeps
+    // the public electrical limits that matter to a circuit while declining
+    // to impersonate the vendor transistor macromodel: noise, temperature
+    // drift, bias current and the external trim network remain outside scope.
+    op07: Object.freeze({
+        a0: 400000,             // 400 V/mV typical large-signal gain
+        gbwHz: 0.6e6,           // 0.6 MHz typical gain-bandwidth product
+        slewVPerUs: 0.3,        // 0.3 V/us typical
+        inputR: 33e6,           // differential input resistance, typical
+        rOut: 60,               // open-loop output resistance, typical
+        tickNs: 300n,
+        settledV: 1e-7,
+        minSupply: 6,           // specified down to +/-3 V
+        commonHeadroom: 2,      // guaranteed +/-13 V at +/-15 V supplies
+        outputHeadroom: 2,      // loaded swing stays inside the +/-12 V floor
+        defaultOffsetV: 60e-6,  // OP07C room-temperature typical
+    }),
+    // Analog Devices OP27 Rev. H typicals at VS=+/-15 V. The data sheet does
+    // not specify differential input resistance, so unlike the older cards we
+    // leave that path high-Z instead of misusing its 3 GOhm common-mode value.
+    op27: Object.freeze({
+        a0: 1.8e6,              // 1,800 V/mV typical large-signal gain
+        gbwHz: 8e6,             // 8 MHz typical gain-bandwidth product
+        slewVPerUs: 2.8,        // 2.8 V/us typical
+        inputR: null,
+        rOut: 70,               // 70 ohm typical open-loop output resistance
+        tickNs: 25n,
+        settledV: 1e-8,
+        minSupply: 8,           // characterized down to +/-4 V
+        commonHeadroom: 4,      // guaranteed +/-11 V at +/-15 V supplies
+        outputHeadroom: 2,      // with 70 ohm Rout, retains 600-ohm loaded swing
+        defaultOffsetV: 10e-6,  // front-page room-temperature typical
     }),
 });
 
@@ -184,7 +240,8 @@ function registerPrecisionOpAmp(kind, spec) {
         // The LT1001 and LM741 share the industry-standard PDIP-8 top view:
         // 1 null, 2 -, 3 +, 4 V-, 5 null, 6 output, 7 V+, 8 NC. Null pins
         // remain present and high-Z; trim dynamics are explicitly unmodelled.
-        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
+        terminals: spec.terminals
+            || ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
 
         init(part) {
             return {
@@ -198,13 +255,15 @@ function registerPrecisionOpAmp(kind, spec) {
                 _beta: null,
                 _lastUpdateNs: null,
                 _wakeNs: null,
+                ...(spec.pin8Role === 'supply-current-set'
+                    ? { supplyCurrentSet: 'unmodeled' } : {}),
             };
         },
 
         stamp(ctx) {
             // This is differential input resistance. Stamping it between the
             // pins avoids inventing either input as ground.
-            ctx.conductance('inp', 'inn', 1 / spec.inputR);
+            if (Number.isFinite(spec.inputR)) ctx.conductance('inp', 'inn', 1 / spec.inputR);
         },
 
         update(part, state, read, tNs) {
@@ -225,15 +284,15 @@ function registerPrecisionOpAmp(kind, spec) {
                 return true;
             }
 
-            const commonLow = vneg + spec.commonHeadroom;
-            const commonHigh = vpos - spec.commonHeadroom;
+            const commonLow = vneg + (spec.commonLowHeadroom ?? spec.commonHeadroom);
+            const commonHigh = vpos - (spec.commonHighHeadroom ?? spec.commonHeadroom);
             const inp = read('inp');
             const inn = read('inn');
             state.inputCommonMode = (inp < commonLow || inn < commonLow) ? 'below'
                 : (inp > commonHigh || inn > commonHigh) ? 'above' : 'valid';
 
-            const low = vneg + spec.outputHeadroom;
-            const high = vpos - spec.outputHeadroom;
+            const low = vneg + (spec.outputLowHeadroom ?? spec.outputHeadroom);
+            const high = vpos - (spec.outputHighHeadroom ?? spec.outputHeadroom);
             const out = read('out');
             const drive = state.drives.out.vTh;
             const residual = inp - inn + state.inputOffsetV - out / spec.a0;
@@ -310,6 +369,9 @@ export function registerAnalogAmps() {
     registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
+    registerPrecisionOpAmp('lt1006', PRECISION_OP_AMPS.lt1006);
+    registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
+    registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
     registerDevice('lm3915', {
         terminals: ['vcc', 'gnd', 'sig', 'mode',

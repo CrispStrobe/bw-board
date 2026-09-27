@@ -42,6 +42,7 @@ function maskFor(width) {
 export class ExperimentalI80386 {
   constructor(bus = {}, options = {}) {
     this.read = bus.read ?? (() => 0);
+    this.read32 = bus.read32 ?? null;
     this.fetch = bus.fetch ?? this.read;
     this.write = bus.write ?? (() => {});
     this.inPort = bus.inPort ?? (() => 0xff);
@@ -302,6 +303,7 @@ export class ExperimentalI80386 {
     return (c.base + (off >>> 0)) >>> 0;
   }
   _readPhysical(a, size) {
+    if (size === 4 && this.read32) return this.read32(a >>> 0) >>> 0;
     let v = 0;
     for (let i = 0; i < size; i++)
       v += (this.read((a + i) >>> 0) & 255) * 2 ** (8 * i);

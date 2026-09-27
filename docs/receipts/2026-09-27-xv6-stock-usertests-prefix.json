@@ -1,0 +1,23 @@
+{
+  "schema": "bw.xv6-stock-usertests-prefix.v1",
+  "date": "2026-09-27",
+  "xv6SourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "emulatorRevision": "6682741c",
+  "firmware": "bochs",
+  "profile": "4m",
+  "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+  "vgaRomSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+  "bootImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+  "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+  "probeSourceSha256": "0756a2eff99930620906863c6840256d975eafc8a3caa61110a9defa7d1f3190",
+  "command": "usertests\r",
+  "stopMarker": "createdelete ok\n",
+  "steps": 163992924,
+  "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ usertests\nusertests starting\narg test passed\ncreatedelete test\ncreatedelete ok\n",
+  "syscallEntries": 533,
+  "userModeObserved": true,
+  "postBootIdeIrq14Observed": true,
+  "acceptedPrefix": true,
+  "fullSuitePassed": false,
+  "note": "The run used a diagnostic copy of the probe with only stderr progress and recent-instruction output added. It stopped at the createdelete completion marker; later usertests were not executed."
+}

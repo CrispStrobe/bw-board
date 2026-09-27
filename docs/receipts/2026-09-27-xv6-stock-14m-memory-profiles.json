@@ -1,0 +1,89 @@
+{
+  "schema": "bw.xv6-stock-14m-memory-profiles.v1",
+  "date": "2026-09-27",
+  "sourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "build": {
+    "phystop": "0xE00000",
+    "compilerTarget": "i386",
+    "stockSmpKernel": true
+  },
+  "rom": {
+    "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "external": true
+  },
+  "bootImageSha256": "3f037aff90819db4cee91e94e6afbe7284622a087c505c5895ad429043c74206",
+  "filesystemImageSha256": "8f432590f296ab35255aec958e62ed11c4e536690b8a0b53a1e9742301ee41a2",
+  "executionSources": {
+    "src/experimental/i80386-at-machine.js": "bfcbe44c91c210130eb51da4513e63e13d9cbe15531b715a6f854bd5a2754447",
+    "src/experimental/ata16.js": "aa00849fd241088736a0847d2a272b19f165e8834b396052ce964320df26a2ef",
+    "scripts/probe-xv6-stock.mjs": "67ae5d1f5bf89aa29079835e272e595c1e83a1d265a2e75280fb76ea0de9c674"
+  },
+  "diagnostic16MiB": {
+    "accepted": false,
+    "steps": 320000000,
+    "screen": [
+      "15872 KB OK",
+      " 164-Memory Size Error-(Run SETUP)",
+      " (RESUME = \"F1\" KEY)"
+    ],
+    "serial": "",
+    "reason": "IBM 5170 BIOS stopped at 164-Memory Size Error and requested F1"
+  },
+  "romSafe15MiB": {
+    "accepted": true,
+    "steps": 240808747,
+    "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ echo BW_XV6_14M_OK\nBW_XV6_14M_OK\n$ ",
+    "inputBytes": 19,
+    "milestones": {
+      "main": {
+        "count": 1,
+        "first": 231636405,
+        "last": 231636405
+      },
+      "userinit": {
+        "count": 1,
+        "first": 235537297,
+        "last": 235537297
+      },
+      "scheduler": {
+        "count": 1,
+        "first": 235866498,
+        "last": 235866498
+      },
+      "trapret": {
+        "count": 118,
+        "first": 235869329,
+        "last": 240800073
+      },
+      "forkret": {
+        "count": 3,
+        "first": 235871993,
+        "last": 239895286
+      },
+      "iinit": {
+        "count": 1,
+        "first": 235872354,
+        "last": 235872354
+      },
+      "initlog": {
+        "count": 1,
+        "first": 235898134,
+        "last": 235898134
+      },
+      "syscall": {
+        "count": 71,
+        "first": 235934012,
+        "last": 240800710
+      },
+      "exec": {
+        "count": 3,
+        "first": 235936934,
+        "last": 239921918
+      }
+    },
+    "userModeEntriesObserved": 16,
+    "sampledApicIdeInterrupts": 41,
+    "sampledApicCom1Interrupts": 2,
+    "interruptSampleLimit": 64
+  }
+}

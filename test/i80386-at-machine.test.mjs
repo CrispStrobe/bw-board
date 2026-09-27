@@ -7,6 +7,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M_HDD,
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
 } from '../src/experimental/i80386-at-machine.js';
 
@@ -53,6 +54,24 @@ test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 b
   assert.equal(machine.cpu.read(0x01000000), 0xff, '16MiB must not wrap to address zero');
   machine.setA20Enabled(true);
   assert.equal(machine.cpu.read(0x100000), 0x22);
+});
+
+test('experimental 386 physical dword reads preserve RAM and bus boundary semantics', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine.mem.set([0x11, 0x22, 0x33, 0x44], 0x100000);
+  machine.mem.set([0x55, 0x66, 0x77], 0x100ffd);
+  machine.mem[0] = 0x88;
+  machine.mem[0x45fffe] = 0x99;
+  const byBytes = address => Array.from({length: 4}, (_, index) =>
+    machine._read386((address + index) >>> 0) << (8 * index))
+    .reduce((value, byte) => value | byte, 0) >>> 0;
+  for (const address of [0x100000, 0x100ffd, 0x45fffe, 0x9fc00, 0xfffffff0])
+    assert.equal(machine.cpu._readPhysical(address, 4), byBytes(address));
+  machine.setA20Enabled(false);
+  assert.equal(machine.cpu._readPhysical(0x100000, 4), byBytes(0x100000));
+  machine.setA20Enabled(true);
+  machine._mpReady = true;
+  assert.equal(machine.cpu._readPhysical(0x9fc00, 4), byBytes(0x9fc00));
 });
 
 test('experimental 386 AT 4MiB profile exposes only installed RAM and matching CMOS sizes', () => {
@@ -114,6 +133,25 @@ test('xv6 stock profile exposes the 14MiB PHYSTOP RAM window', () => {
   assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
 });
 
+test('xv6 IBM BIOS profile advertises 15MiB without mapping RAM across the top ROM', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP);
+  machine.cpu.write(0xefffff, 0x5a);
+  machine.cpu.write(0xf00000, 0xa5);
+  assert.equal(machine.cpu.read(0xefffff), 0x5a);
+  assert.equal(machine.cpu.read(0xf00000), 0xff);
+  const rom = new Uint8Array(0x10000);
+  rom[0xfff0] = 0xea;
+  machine.loadRom(rom);
+  machine.cpu.write(0xff0000, 0xa5);
+  assert.equal(machine.cpu.read(0xff0000), 0, 'top ROM mirror stays read-only');
+  assert.equal(machine.cpu.read(0xfffffff0), 0xea, '386 reset alias still sees the ROM');
+  const cmos = register => { machine._out(0x70, register); return machine._in(0x71); };
+  assert.equal(cmos(0x17) | cmos(0x18) << 8, 14 * 1024);
+  let checksum = 0;
+  for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
+  assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
+});
+
 test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC delivery status', () => {
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
   machine._mpReady = true;
@@ -133,6 +171,23 @@ test('xv6 SMP profile routes an enabled IDE IRQ through the IOAPIC vector', () =
   assert.equal(machine._serviceInterrupts(), true);
   assert.equal(vector, 0x2e);
   assert.equal(machine._apicIrq[14], 0);
+});
+
+test('xv6 SMP profile routes COM1 receive through the IOAPIC after MP handoff', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine._mpReady = true;
+  machine.cpu.cr0 |= 1;
+  machine.cpu.eflags |= 0x200;
+  machine._ioapic[0x10 + 4 * 2] = 0x24;
+  machine.chips.uart1.write(1, 1);
+  machine.serialIn(0x78);
+  assert.equal(machine._apicIrq[4], 1);
+  let vector = null;
+  machine.cpu.interrupt = value => { vector = value; };
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(vector, 0x24);
+  assert.equal(machine.chips.uart1.read(0), 0x78);
+  assert.equal(machine._apicIrq[4], 0);
 });
 
 test('xv6 SMP profile emits a deterministic periodic LAPIC timer interrupt', () => {
