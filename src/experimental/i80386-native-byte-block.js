@@ -35,14 +35,15 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
       const op = take();
       if (op === 0xf3) {
         const stringOp=take();
-        if (n !== 0 || (stringOp !== 0xab && stringOp !== 0xa5) || !cpu.protectedMode ||
+        if (n !== 0 || (stringOp !== 0xaa && stringOp !== 0xab && stringOp !== 0xa5) || !cpu.protectedMode ||
             cpu.virtual8086 || cpu._repeatContext?.cs !== cpu.cs ||
             cpu._repeatContext?.eip !== startEip || !cpu.ecx) break;
         const destination=prevalidateI80386WriteWindow(machine,cpu.edi >>> 0);
         if (!destination) break;
         writeWindows.push(destination);
-        if (stringOp === 0xab) {
-          ir={op:17,width:32,base:destination.linearPage,
+        if (stringOp === 0xaa || stringOp === 0xab) {
+          ir={op:stringOp === 0xaa ? 21 : 17,
+            width:stringOp === 0xaa ? 8 : 32,base:destination.linearPage,
             disp:destination.delta,lo:destination.lo,hi:destination.hi};
         } else {
           const source=prevalidateI80386ReadWindow(machine,cpu.esi >>> 0,3);
@@ -130,7 +131,7 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
     starts.set(eip,instructions.length);
     instructions.push(ir);
     eip += length;
-    if (ir.op >= 4 && ir.op <= 6 || ir.op === 17 || ir.op === 20) break;
+    if (ir.op >= 4 && ir.op <= 6 || ir.op === 17 || ir.op === 20 || ir.op === 21) break;
   }
   if (!instructions.length) return null;
   const bytes=mem.slice(startPhysical,startPhysical+(eip-startEip));
@@ -163,7 +164,8 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
       if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
         throw new RangeError('native byte block budget must be 1 through 64');
       const repeatString=block?.instructions?.[0]?.op === 17 ||
-        block?.instructions?.[0]?.op === 20;
+        block?.instructions?.[0]?.op === 20 ||
+        block?.instructions?.[0]?.op === 21;
       if (!isI80386NativeByteBlockValid(block) || cpu.halted || cpu.shutdown ||
           machine._cycleEst !== null ||
           cpu.eflags & (0x100 | 0x10000) || cpu._interruptShadow || cpu._nmiShadow ||

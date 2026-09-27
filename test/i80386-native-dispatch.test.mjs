@@ -83,3 +83,30 @@ test('advanceToMs stops at the rounded cycle target and counts guest steps', asy
   assert.deepEqual(state(fast), state(slow));
   assert.equal(dispatcher.advanceToMs(targetMs), 0);
 });
+
+test('dispatcher admits a primed REP STOSB and counts retired byte stores', async () => {
+  const fast = fixture(), slow = fixture();
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  for (const machine of [fast, slow]) {
+    for (let i = 0; i < 4; i++)
+      machine._write386(0x4000 + 0x130 * 4 + i, (0x130007 >>> (8 * i)) & 255);
+    machine._write386(PHYSICAL, 0xf3);
+    machine._write386(PHYSICAL + 1, 0xaa);
+    machine.cpu.segmentCaches[0] = {base: 0, limit: 0xffffffff,
+      default32: true, present: true, code: false, readable: true, writable: true};
+    machine.cpu.eax = 0x123456a7;
+    machine.cpu.ecx = 6;
+    machine.cpu.edi = 0x80130010;
+    machine.step();
+  }
+  assert.equal(dispatcher.run(5), 5);
+  for (let i = 0; i < 5; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(fast.cpu.ecx, slow.cpu.ecx);
+  assert.equal(fast.cpu.edi, slow.cpu.edi);
+  assert.deepEqual(Array.from(fast.mem.slice(0x130010, 0x130016)),
+    Array.from(slow.mem.slice(0x130010, 0x130016)));
+  assert.equal(dispatcher.stats.repStosbDecoded, 1);
+  assert.equal(dispatcher.stats.repStosbBlockCalls, 1);
+  assert.equal(dispatcher.stats.repStosbIterations, 5);
+});

@@ -98,6 +98,15 @@ additional MOVSD iterations retired natively on this workload. The
 source and rebuilt WASM. The larger Windows-specific comparison is recorded
 only in the private media repository.
 
+The bounded runner also admits primed `REP STOSB` when ES points to a
+prevalidated writable RAM page. It stops before crossing that page or a chip
+event, preserving the interpreter's restart state. The stock `forktest` run
+matched ordinary execution and the prior native guest report, including its
+24,338,279 steps and final RAM hash. It retired 182 additional byte stores
+natively. The [STOSB receipt](receipts/2026-09-27-i80386-native-rep-stosb.json)
+records the source hashes and counters. This small coverage increase does not
+establish an end-to-end speed gain.
+
 A later CPU profile of the same `forktest` found instruction snapshots to be
 the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
 The executor now retains prior segment-cache and task-state objects by reference
