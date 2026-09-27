@@ -51,6 +51,7 @@ if (!Number.isInteger(limit) || limit < 1 || limit > 500_000_000)
 const progressEvery = Number(process.env.AT_PROGRESS_EVERY ?? 1_000_000);
 if (!Number.isInteger(progressEvery) || progressEvery < 1)
   throw new Error('AT_PROGRESS_EVERY must be a positive integer');
+const progressPath = process.env.AT_PROGRESS_OUTPUT ?? null;
 const keyBytes = process.env.AT_KEY_SCRIPT ? fs.readFileSync(process.env.AT_KEY_SCRIPT) : null;
 const keyScript = keyBytes ? JSON.parse(keyBytes) : [];
 if (!Array.isArray(keyScript) || keyScript.some((event, index) =>
@@ -127,6 +128,12 @@ try {
           row * 160 + 160).filter((_, index) => !(index & 1)))
           .replace(/\0/g, ' ').trimEnd());
       checkpoints.push({step: steps, ...state(), text: text.filter(Boolean).slice(-5)});
+      if (progressPath) {
+        const progress = {schema: 'bw.i80386-windows-enhanced-progress.v1',
+          step: steps, last: checkpoints.at(-1), milestones, postTail: post.slice(-8)};
+        fs.writeFileSync(`${progressPath}.tmp`, `${JSON.stringify(progress, null, 2)}\n`);
+        fs.renameSync(`${progressPath}.tmp`, progressPath);
+      }
     }
     if (machine.cpu.shutdown) { outcome = 'shutdown'; break; }
   }

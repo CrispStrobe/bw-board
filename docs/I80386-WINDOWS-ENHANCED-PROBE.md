@@ -13,7 +13,10 @@ The current probe uses the 4 MiB VGA AT profile. Use IBM drive type 2 only for a
 must boot DOS and contain `WIN386.EXE`; arrange for `WIN /3` in `AUTOEXEC.BAT`,
 or send Set-1 make/break events after DOS reaches its prompt with
 `AT_KEY_SCRIPT=/path/to/events.json`. The script is an ordered JSON array of
-`{"step": integer, "code": byte}` objects. `checkpoints` help choose the step.
+`{"step": integer, "code": byte}` objects. `checkpoints` help choose the step;
+set `AT_PROGRESS_OUTPUT=/path/to/progress.json` to inspect the latest checkpoint
+while a long run is still active. `AT_PROGRESS_EVERY` defaults to one million
+instructions. The progress file is atomically replaced at each checkpoint.
 Disk writes stay in the in-memory image clone.
 Both the 32 KiB SeaVGABIOS variant and the vendored 38.4 KiB Bochs VGA BIOS
 fit the probe's option-ROM mapping. A two-million-instruction type-47/Bochs
