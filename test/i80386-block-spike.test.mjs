@@ -128,3 +128,32 @@ test('prevalidated physical load reads live shared AT RAM without copying',async
   assert.deepEqual(bridge.run(0,1,1),{reason:'unsupported',completed:0});
   assert.deepEqual(bridge.state(),before);
 });
+
+test('shared load and linked branch observe a host write after an event exit',async()=>{
+  const bridge=await createI80386BlockSpike();
+  const physical=0x120000;
+  bridge.ram.set(Uint8Array.of(0x8b,0x05,0,0,0x12,0,0x39,0xd8,0x75,0xf6),0);
+  bridge.ram.set(Uint8Array.of(0x79,0x56,0x34,0x12),physical);
+  bridge.setState({regs:[0,0,0,0x12345678,0,0,0,0]});
+  bridge.setProgram([
+    {op:7,dst:0,src:physical,width:32,length:6},
+    {op:2,dst:0,src:3,width:32,length:2},
+    {op:5,dst:0,src:0,length:2},
+  ]);
+  const cpu=new I80386({read:a=>bridge.ram[a]??0,fetch:a=>bridge.ram[a]??0,write(){}});
+  cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:true,readable:true,writable:false};
+  cpu.segmentCaches[3]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:false,readable:true,writable:true};
+  cpu.ebx=0x12345678;
+  assert.deepEqual(bridge.run(0,3,3),{reason:'event',completed:3});
+  for(let i=0;i<3;i++)cpu.step();
+  assert.deepEqual([bridge.state().eip,bridge.state().eflags],
+    [cpu.eip,cpu.eflags]);
+  bridge.ram[physical]=0x78; // A host or DMA write becomes visible on retry.
+  assert.deepEqual(bridge.run(0,3,3),{reason:'done',completed:3});
+  for(let i=0;i<3;i++)cpu.step();
+  assert.deepEqual([bridge.state().regs[0],bridge.state().eip,
+    bridge.state().eflags,bridge.state().cycles],
+  [cpu.eax,cpu.eip,cpu.eflags,cpu.cycles]);
+});

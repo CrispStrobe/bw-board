@@ -17,6 +17,6 @@
     "nativeStateOffset": 16779264,
     "nativeProgramOffset": 16779312
   },
-  "validation": "Rebuilt WASM byte-identically with the same output basename; node --test test/i80386-block-spike.test.mjs passed five tests, including live AT/host RAM writes, CPU MOV equality, 16-bit load and end-of-RAM exit. The full test/i80386*.test.mjs suite passed 343, skipped 4, failed 0.",
+  "validation": "Rebuilt WASM byte-identically with the same output basename; node --test test/i80386-block-spike.test.mjs passed six tests, including live AT/host RAM writes, CPU MOV equality, 16-bit load, end-of-RAM exit, and LOAD/CMP/JNZ with a host write between event-bounded calls. The full test/i80386*.test.mjs suite before the last focused test passed 343, skipped 4, failed 0.",
   "scope": "Read-only prevalidated physical RAM IR in an experimental WASM module. The production AT board still executes the JavaScript 386; no paging, MMIO, store, code coherence, fault or end-to-end speedup claim."
 }

@@ -22,7 +22,8 @@ physical RAM value into a register. The host must first perform x86 segment,
 paging, permission and RAM/device checks; the IR never makes those decisions.
 An out-of-range physical read exits before changing state. The
 [shared-load receipt](receipts/2026-09-27-i80386-wasm-shared-load-spike.json)
-pins the layout and a comparison with the JavaScript CPU.
+pins the layout and comparisons with the JavaScript CPU, including a
+LOAD/CMP/JNZ loop that sees a host RAM write after an event exit.
 
 The full 24,338,279-step xv6 `forktest` supplied a decisive coverage bound
 before any board integration. The implemented register forms occurred
