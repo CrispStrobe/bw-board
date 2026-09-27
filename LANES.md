@@ -2375,3 +2375,26 @@ the shared multi-channel helper now mirrors the single-channel high-Z rule while
 leaving every finite-resistance card unchanged. Focused OP747 plus unchanged
 ADTL082/LT1014/analog/current coverage passes 49/49. Exact-head hosted CI and
 Harris qualification remain the landing gates.
+2026-09-27 LT1007 precision op-amp model — DONE candidate, Codex `/root`. Isolated
+worktree `/tmp/wt-bwcx-lt1007-board`, branch `lane/lt1007-precision-model`,
+exact base `b08f0cadf6e04b9fb91a9df870a0535b0befefcb`. Owns this claim,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused
+`test/lt1007.test.mjs`. Add the production single-amplifier eight-terminal
+contract through the existing precision-op-amp controller: 20 MV/V typical
+gain, 8 MHz GBW, 2.5 V/us slew, honestly high-Z inputs because the data
+sheet's 5 GOhm figure is common-mode rather than differential resistance, bounded supply,
+common-mode and loaded swing, offset, and high-Z unpowered behavior. Offset
+trim pins and NC remain physical but unmodelled. Prove exact pins, power and
+common-mode refusal, finite gain/feedback, loaded swing, slew and frequency
+response with independent caller-consequence mutations. No generic op-amp,
+solver, other named device, face/art, importer/exporter, corpus, workflow,
+package pin, CUI, Parts, Lite or x86 edit.
+Implemented the production N8 identity plus a separate package-neutral source
+channel: 20 MV/V open-loop gain, 8 MHz GBW, 2.5 V/us slew, 10 uV typical
+offset, 70 ohm output resistance, eight-volt minimum span, typical +/-12.5 V
+common-mode range and about +/-13.5 V loaded output at 2 kOhm. Inputs remain
+honestly high-Z because 5 GOhm is a common-mode specification. Focused LT1007
+plus unchanged precision/analog/current coverage passes 59/59. Independently
+changing gain 20M->10M, slew 2.5->25 V/us, or common-mode headroom 2.5->1 V
+makes its named consequence red. Exact-head CI and Harris qualification remain
+the landing gates.
