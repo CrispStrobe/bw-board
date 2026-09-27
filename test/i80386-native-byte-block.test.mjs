@@ -388,3 +388,85 @@ test('native REP STOSD requires exact bytes and matching interpreter restart sta
   fast.machine._write386(CODE_PHYS,0x66);
   assert.equal(runner.decode(1),null);
 });
+
+const DEST=0x80140000,DEST_PHYS=0x140000;
+
+async function movsFixture({count=7,sourceOffset=0,destinationOffset=0,
+  direction=false,overlap=false}={}) {
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine,put32} of [fast,slow]) {
+    put32(0x4000+0x140*4,DEST_PHYS|7);
+    for(let i=0;i<16;i++) put32(DATA_PHYS+i*4,0x12340000+i);
+    machine._write386(CODE_PHYS,0xf3);
+    machine._write386(CODE_PHYS+1,0xa5);
+    const cpu=machine.cpu;
+    cpu.esi=(DATA+sourceOffset)>>>0;
+    cpu.edi=((overlap?DATA:DEST)+destinationOffset)>>>0;
+    cpu.ecx=count;
+    cpu.eflags=0x202 | (direction?0x400:0);
+    machine.step(); // Prime source read, destination dirty bit and REP restart.
+  }
+  return {fast,slow,runner:await createI80386NativeByteRunner(fast.machine,fast.bridge)};
+}
+
+function movsState(machine) {
+  return {...state(machine),esi:machine.cpu.esi,edi:machine.cpu.edi,
+    repeatContext:machine.cpu._repeatContext,
+    source:Array.from(machine.mem.slice(DATA_PHYS,DATA_PHYS+0x1000)),
+    destination:Array.from(machine.mem.slice(DEST_PHYS,DEST_PHYS+0x1000))};
+}
+
+test('native REP MOVSD matches interpreter for forward and reverse overlap',async()=>{
+  for(const {direction,sourceOffset,destinationOffset} of [
+    {direction:false,sourceOffset:0,destinationOffset:4},
+    {direction:true,sourceOffset:20,destinationOffset:16},
+  ]) {
+    const {fast,slow,runner}=await movsFixture({count:5,direction,
+      sourceOffset,destinationOffset,overlap:true});
+    const block=runner.decode(8);
+    assert.deepEqual(block?.instructions.map(ins=>ins.op),[20]);
+    assert.deepEqual(runner.run(block,8),
+      {instructions:4,cycles:24,reason:'done'});
+    for(let i=0;i<4;i++)slow.machine.step();
+    assert.deepEqual(movsState(fast.machine),movsState(slow.machine));
+    assert.equal(fast.machine.cpu._repeatContext,null);
+  }
+});
+
+test('native REP MOVSD exits before source or destination page crossing',async()=>{
+  for(const boundary of ['source','destination']) {
+    const {fast,slow,runner}=await movsFixture({count:5,
+      sourceOffset:boundary==='source'?0xff8:0,
+      destinationOffset:boundary==='destination'?0xff8:0});
+    const block=runner.decode(8);
+    assert.equal(block?.instructions[0]?.op,20);
+    assert.deepEqual(runner.run(block,8),
+      {instructions:1,cycles:6,reason:'fault-boundary'});
+    slow.machine.step();
+    assert.deepEqual(movsState(fast.machine),movsState(slow.machine));
+  }
+});
+
+test('native REP MOVSD honors chip budgets and source mapping invalidation',async()=>{
+  const {fast,slow,runner}=await movsFixture({count:12});
+  const block=runner.decode(8);
+  fast.machine._chipDeadline=slow.machine._chipDeadline=fast.machine._chipDebt+7;
+  assert.deepEqual(runner.run(block,8),
+    {instructions:2,cycles:12,reason:'event'});
+  slow.machine.step();slow.machine.step();
+  assert.deepEqual(movsState(fast.machine),movsState(slow.machine));
+  fast.put32(0x4000+0x130*4,0x150007);
+  assert.equal(isI80386NativeByteBlockValid(block),false);
+  assert.deepEqual(runner.run(block,8),
+    {instructions:0,cycles:0,reason:'fallback'});
+});
+
+test('native REP MOVSD exits before a pending NMI without copying',async()=>{
+  const {fast,runner}=await movsFixture({count:5});
+  const block=runner.decode(8);
+  const before=movsState(fast.machine);
+  fast.machine._nmiPending=true;
+  assert.deepEqual(runner.run(block,8),
+    {instructions:0,cycles:0,reason:'fallback'});
+  assert.deepEqual(movsState(fast.machine),before);
+});

@@ -8,7 +8,7 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
        OP_CMP_IMM=10, OP_MOV_IMM=11,
        OP_ADD_IMM=12, OP_OR_IMM=13, OP_AND_IMM=14,
        OP_SHL_IMM=15, OP_SHR_IMM=16, OP_REP_STOSD=17,
-       OP_TEST_AL_IMM8=18, OP_OR_WINDOW=19,
+       OP_TEST_AL_IMM8=18, OP_OR_WINDOW=19, OP_REP_MOVSD=20,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -26,7 +26,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 10; }
+uint32_t block_spike_version(void) { return 11; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -146,6 +146,36 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       if (!state.regs[1]) return (EXIT_UNSUPPORTED << 24) | completed;
       write_ram32(address, state.regs[0]);
       state.regs[7] += (state.eflags & 0x400u) ? -4u : 4u;
+      state.regs[1]--;
+      if (!state.regs[1]) { state.eip += ins.length; pc++; }
+      state.cycles++;
+      completed++;
+      continue;
+    }
+    if (ins.op == OP_REP_MOVSD) {
+      // Destination: base/disp/lo/hi. Source: dst/src/index/scale.
+      // Both accesses must fit their proved pages before either is performed.
+      const uint32_t source_offset = state.regs[6];
+      const uint32_t destination_offset = state.regs[7];
+      const uint32_t source_address = source_offset + ins.src;
+      const uint32_t destination_address = destination_offset + ins.disp;
+      if (ins.length != 2 || ins.width != 32 || !state.regs[1] ||
+          ins.index >= ins.scale || ins.scale > ram_capacity ||
+          (source_offset & ~4095u) != ins.dst ||
+          (source_offset & 4095u) > 4092u ||
+          source_address < ins.index || source_address >= ins.scale ||
+          4u > ins.scale - source_address ||
+          ins.lo >= ins.hi || ins.hi > ram_capacity ||
+          (destination_offset & ~4095u) != ins.base ||
+          (destination_offset & 4095u) > 4092u ||
+          destination_address < ins.lo || destination_address >= ins.hi ||
+          4u > ins.hi - destination_address)
+        return (EXIT_FAULT_BOUNDARY << 24) | completed;
+      const uint32_t value = read_ram(source_address, 4);
+      write_ram32(destination_address, value);
+      const uint32_t delta = (state.eflags & 0x400u) ? -4u : 4u;
+      state.regs[6] += delta;
+      state.regs[7] += delta;
       state.regs[1]--;
       if (!state.regs[1]) { state.eip += ins.length; pc++; }
       state.cycles++;

@@ -89,6 +89,15 @@ old/new native pair used 17.84 versus 17.20 user CPU seconds, about a 3.6%
 reduction. The [OR-window receipt](receipts/2026-09-27-i80386-native-or-window.json)
 records the source, WASM, coverage, and timings.
 
+The native runner also admits primed `REP MOVSD` iterations when both source
+and destination lie in validated RAM pages. It exits before either page
+crosses, allowing the functional CPU to handle the boundary. A complete xv6
+`forktest` rerun matched the previous guest report and final RAM hash; 864
+additional MOVSD iterations retired natively on this workload. The
+[MOVSD receipt](receipts/2026-09-27-i80386-native-rep-movsd.json) binds the
+source and rebuilt WASM. The larger Windows-specific comparison is recorded
+only in the private media repository.
+
 A later CPU profile of the same `forktest` found instruction snapshots to be
 the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
 The executor now retains prior segment-cache and task-state objects by reference

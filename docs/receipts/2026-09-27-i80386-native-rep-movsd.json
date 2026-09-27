@@ -1,0 +1,55 @@
+{
+  "schema": "bw.i80386-native-rep-movsd-xv6.v1",
+  "date": "2026-09-27",
+  "baseRevision": "bea51b3998191fa4749b80cbdc2db285d49ff058",
+  "workload": "stock xv6 4 MiB forktest with vendored Bochs BIOS",
+  "sourceSha256": {
+    "src/experimental/i80386-block-spike.c": "f2a9bf1c1c161be00dab165d6ca56268fc4c4f43f36698c6b66c89fe96134511",
+    "src/experimental/i80386-block-spike.js": "33e32357734151e09a580c1bf0b34325d1e3eec8cf12336b0ec97206e9653423",
+    "src/experimental/i80386-native-byte-block.js": "cdad2397469919bdf5c47e10a0790220ed19152d0bb3b6b52bd6231d4da9ad7c",
+    "src/experimental/i80386-native-dispatch.js": "38c0d63874fd068eb3d0a89adfbf6590498ee6e0ea7d7ed993581ad40ada5301",
+    "wasm/i80386-block-spike.wasm": "9c8478ffea94af9c20fd730df0d24c686720a38ccb326f39236741eb56cb71ab"
+  },
+  "matchingFields": [
+    "steps",
+    "first32",
+    "serial",
+    "inputSent",
+    "interrupts",
+    "postBootInterrupts",
+    "lapicIdReads",
+    "milestones",
+    "userModeEntries",
+    "screen",
+    "lapic",
+    "ioapic",
+    "cpu",
+    "ramSha256"
+  ],
+  "steps": 24338279,
+  "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+  "beforeNativeStats": {
+    "attempts": 11912853,
+    "decoded": 23364,
+    "blockCalls": 4001739,
+    "instructions": 16427165,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "afterNativeStats": {
+    "attempts": 10381853,
+    "decoded": 23412,
+    "blockCalls": 4001835,
+    "instructions": 16428029,
+    "ineligibleModeSteps": 1530232,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309,
+    "repMovDecoded": 48,
+    "repMovBlockCalls": 96,
+    "repMovIterations": 864
+  },
+  "additionalNativeInstructions": 864,
+  "scope": "Bounded REP MOVSD with cached source and prevalidated write page; exact xv6 guest state and RAM match the previous native path. Windows media-specific comparison is kept in the private fixture repository."
+}

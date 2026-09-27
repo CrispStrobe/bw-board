@@ -4,6 +4,10 @@ import {createI80386RamBridge} from './i80386-ram-bridge.js';
 import {createI80386NativeByteRunner} from './i80386-native-byte-block.js';
 
 const REP_STOSD = 17;
+const REP_MOVSD = 20;
+const isRepeatBlock = block =>
+  block?.instructions?.[0]?.op === REP_STOSD ||
+  block?.instructions?.[0]?.op === REP_MOVSD;
 
 export async function createI80386NativeDispatcher(machine, {
   memoryBytes = machine?.memoryBytes,
@@ -29,7 +33,8 @@ export async function createI80386NativeDispatcher(machine, {
   const blocks = new Map();
   const stats = {attempts: 0, decoded: 0, blockCalls: 0, instructions: 0,
     ineligibleModeSteps: 0, repStosDecoded: 0, repStosBlockCalls: 0,
-    repStosIterations: 0};
+    repStosIterations: 0, repMovDecoded: 0, repMovBlockCalls: 0,
+    repMovIterations: 0};
 
   function run(maxInstructions = 64) {
     if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
@@ -49,10 +54,10 @@ export async function createI80386NativeDispatcher(machine, {
         entry.cr4 !== cpu.cr4 || (!entry.block &&
           cpu._repeatContext?.cs === cpu.cs && cpu._repeatContext?.eip === key)) {
       let block = runner.decode(decodeInstructions);
-      if (block && (block.instructions.length >= 2 ||
-          block.instructions[0]?.op === REP_STOSD)) {
+      if (block && (block.instructions.length >= 2 || isRepeatBlock(block))) {
         stats.decoded++;
         if (block.instructions[0]?.op === REP_STOSD) stats.repStosDecoded++;
+        if (block.instructions[0]?.op === REP_MOVSD) stats.repMovDecoded++;
       } else block = null;
       if (blocks.size >= maxCachedBlocks) blocks.delete(blocks.keys().next().value);
       entry = {cs: cpu.cs, cr3: cpu.cr3, cr4: cpu.cr4, block};
@@ -67,6 +72,10 @@ export async function createI80386NativeDispatcher(machine, {
         if (entry.block.instructions[0]?.op === REP_STOSD) {
           stats.repStosBlockCalls++;
           stats.repStosIterations += result.instructions;
+        }
+        if (entry.block.instructions[0]?.op === REP_MOVSD) {
+          stats.repMovBlockCalls++;
+          stats.repMovIterations += result.instructions;
         }
         return result.instructions;
       }

@@ -37,6 +37,10 @@ private Windows 3.11 diagnostic reached paged protected mode and matched the
 ordinary executor at a 60-million-step checkpoint, but native blocks covered
 only a small fraction of that mixed 16/32-bit run and the opt-in path remained
 slower overall. Keep ordinary execution as the default for Windows workloads.
+The bounded native path can now execute primed `REP MOVSD` in validated RAM.
+Its source and destination page checks preserve the ordinary executor at a
+page or event boundary. This improved coverage in a local Windows diagnostic,
+but did not reverse that workload's overall performance result.
 
 The optional events file is an ordered JSON array. Same-step events retain
 array order. Keyboard `code` is a Set-1 scan byte, serial `code` is one byte,

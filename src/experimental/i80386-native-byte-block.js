@@ -34,14 +34,26 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
     try {
       const op = take();
       if (op === 0xf3) {
-        if (n !== 0 || take() !== 0xab || !cpu.protectedMode ||
+        const stringOp=take();
+        if (n !== 0 || (stringOp !== 0xab && stringOp !== 0xa5) || !cpu.protectedMode ||
             cpu.virtual8086 || cpu._repeatContext?.cs !== cpu.cs ||
             cpu._repeatContext?.eip !== startEip || !cpu.ecx) break;
-        const window=prevalidateI80386WriteWindow(machine,cpu.edi >>> 0);
-        if (!window) break;
-        writeWindows.push(window);
-        ir={op:17,width:32,base:window.linearPage,
-          disp:window.delta,lo:window.lo,hi:window.hi};
+        const destination=prevalidateI80386WriteWindow(machine,cpu.edi >>> 0);
+        if (!destination) break;
+        writeWindows.push(destination);
+        if (stringOp === 0xab) {
+          ir={op:17,width:32,base:destination.linearPage,
+            disp:destination.delta,lo:destination.lo,hi:destination.hi};
+        } else {
+          const source=prevalidateI80386ReadWindow(machine,cpu.esi >>> 0,3);
+          if (!source) break;
+          readWindows.push(source);
+          // REP MOVSD reuses the IR's register/EA slots for its second window.
+          ir={op:20,width:32,base:destination.linearPage,
+            disp:destination.delta,lo:destination.lo,hi:destination.hi,
+            dst:source.linearPage,src:source.delta,
+            index:source.lo,scale:source.hi};
+        }
       } else if (op === 0x90) ir = {op:0,width:32};
       else if (op === 0xa8) ir = {op:18,dst:0,src:take(),width:8};
       else if (op >= 0xb8 && op <= 0xbf) {
@@ -118,7 +130,7 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
     starts.set(eip,instructions.length);
     instructions.push(ir);
     eip += length;
-    if (ir.op >= 4 && ir.op <= 6 || ir.op === 17) break;
+    if (ir.op >= 4 && ir.op <= 6 || ir.op === 17 || ir.op === 20) break;
   }
   if (!instructions.length) return null;
   const bytes=mem.slice(startPhysical,startPhysical+(eip-startEip));
@@ -150,11 +162,12 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
       const cpu=machine.cpu;
       if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
         throw new RangeError('native byte block budget must be 1 through 64');
-      const repeatStos=block?.instructions?.[0]?.op === 17;
+      const repeatString=block?.instructions?.[0]?.op === 17 ||
+        block?.instructions?.[0]?.op === 20;
       if (!isI80386NativeByteBlockValid(block) || cpu.halted || cpu.shutdown ||
           machine._cycleEst !== null ||
           cpu.eflags & (0x100 | 0x10000) || cpu._interruptShadow || cpu._nmiShadow ||
-          cpu._debugShadow || (repeatStos
+          cpu._debugShadow || (repeatString
             ? (!cpu.protectedMode || cpu.virtual8086 ||
               cpu._repeatContext?.cs !== cpu.cs ||
               cpu._repeatContext?.eip !== block.startEip || !cpu.ecx)
@@ -188,7 +201,7 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
       native.setProgram(block.instructions);
       const result=native.run(0,block.instructions.length,budget);
       native.copyStateToCpu(cpu);
-      if (repeatStos && result.completed && !cpu.ecx) cpu._repeatContext=null;
+      if (repeatString && result.completed && !cpu.ecx) cpu._repeatContext=null;
       const cycles=result.completed*charge;
       machine.cycles+=cycles;machine._chipDebt+=cycles;
       return {instructions:result.completed,cycles,reason:result.reason};
