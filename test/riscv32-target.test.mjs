@@ -26,7 +26,10 @@ const IMAGE = {segments: [{addr: 0, bytes: CODE}, {addr: 0x400, bytes: new Uint8
 
 test("createDebugTarget('riscv32') builds an adapter that runs a program to serial", async () => {
     const {target, adapter} = await createDebugTarget('riscv32', {image: IMAGE});
-    assert.equal(target, null, 'adapter-only mode (no debug UI yet)');
+    // A DebugTarget now (riscv32-debug.js): a host that hands every bench to
+    // createDebugSession could not drive the old adapter-only `target: null`.
+    for (const verb of ['run', 'halt', 'runFor', 'onHalt', 'state', 'capabilities', 'regs', 'readMem'])
+        assert.equal(typeof target[verb], 'function', `target.${verb}`);
     assert.equal(adapter.kind, 'riscv32');
     let out = '';
     adapter.onSerial(b => { out += String.fromCharCode(b); });
