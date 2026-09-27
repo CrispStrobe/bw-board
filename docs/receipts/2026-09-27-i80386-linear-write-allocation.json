@@ -1,0 +1,44 @@
+{
+  "schema": "astra.i80386-linear-write-allocation.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "profile": {
+    "mode": "baseline node --cpu-prof, complete 24,338,279-step forktest",
+    "wallSeconds": 50.74,
+    "topSelfMilliseconds": {
+      "_stepInstruction": 7306,
+      "_translate": 6039,
+      "_writeLinear": 4834,
+      "_fetchN": 2721,
+      "step": 2630
+    },
+    "note": "Sampled self times locate a target, but are not an exact accounting of time saved."
+  },
+  "baseline": {
+    "revision": "06b9bcae",
+    "sourceSha256": "4b75f07a5ed1627cc781d5e57d80db4994ebeabf4f5e9e6bfd646a143d5dbd14",
+    "userCpuSeconds": [44.97, 44.45],
+    "systemCpuSeconds": [0.49, 0.73],
+    "wallSeconds": [51.22, 61.42]
+  },
+  "optimized": {
+    "change": "Reuse one write-access options object and replace Array.from callback with a preflight loop; every byte still translates before any data byte is written",
+    "sourceSha256": "2e881319d8a00f4a50320ab68859d1d623222b50267398c1259b39126de21203",
+    "userCpuSeconds": [39.84, 39.08],
+    "systemCpuSeconds": [0.54, 0.71],
+    "wallSeconds": [58.85, 65.27]
+  },
+  "order": ["baseline", "optimized", "optimized", "baseline"],
+  "meanUserCpuSeconds": {"baseline": 44.71, "optimized": 39.46},
+  "userCpuSpeedup": 1.133046122655854,
+  "userCpuReduction": 0.11742339521359875,
+  "guest": {
+    "steps": 24338279,
+    "serialSha256": "57c12342f40ee749e094ed9b242a738a749104eb063db36d2e4ffecd5bdd42d4",
+    "syscallEntries": 189,
+    "identicalAcrossAllFourRuns": ["steps", "serial", "interrupts", "postBootInterrupts", "lapicIdReads", "milestones", "userModeEntries", "screen", "inputSent", "lapic", "ioapic", "cpu"]
+  },
+  "note": "Other jobs loaded the four-core host during measurement, so wall time varied and does not establish a speedup. The repeated per-process CPU-time difference is the bounded performance evidence."
+}

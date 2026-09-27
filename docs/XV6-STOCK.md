@@ -62,6 +62,14 @@ A fresh unprofiled A/B took 68.20 seconds before and 48.28 seconds after
 interrupts, milestones, and final CPU state. The [snapshot performance receipt](receipts/2026-09-27-i80386-snapshot-fast-path.json)
 records the measurement; host load can change wall time.
 
+A second complete `forktest` profile found `_writeLinear` at 4.8 seconds of
+self time. Its write preflight now reuses one access-options object and fills
+the physical-address array with a loop, while still translating every byte
+before any data write. Two unprofiled A/B pairs in alternating order averaged
+44.71 versus 39.46 process user CPU seconds (1.13×), with identical guest
+results. Concurrent jobs made wall times noisy, so the [linear-write receipt](receipts/2026-09-27-i80386-linear-write-allocation.json)
+reports both kinds of time and bases the speed comparison on CPU time.
+
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
 RAM through that window caused the BIOS to stop at `164-Memory Size Error`.

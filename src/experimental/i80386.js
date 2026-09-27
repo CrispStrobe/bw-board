@@ -370,9 +370,10 @@ export class ExperimentalI80386 {
     return value >>> 0;
   }
   _writeLinear(a, size, v, options) {
-    const physical = Array.from({ length: size }, (_, i) =>
-      this._translate((a + i) >>> 0, { ...options, write: true }),
-    );
+    const physical = new Array(size);
+    const access = { ...options, write: true };
+    for (let i = 0; i < size; i++)
+      physical[i] = this._translate((a + i) >>> 0, access);
     for (let i = 0; i < size; i++)
       this.write(physical[i], (v >>> (8 * i)) & 255);
   }
