@@ -2509,3 +2509,16 @@ precision/generic/current coverage passes 59/59. Independently halving gain,
 raising slew tenfold, or admitting the invalid negative common-mode witness
 makes its named caller consequence red. Exact hosted CI and Harris qualification
 remain the landing gates.
+2026-09-27 LTspice UniversalOpamp2 deterministic Level-2 model — CLAIM, Codex
+`/root`. Isolated worktree `/tmp/wt-bwcx-universal-opamp2-board`, branch
+`lane/ltspice-universal-opamp2`, exact base
+`19ef9a28f91d01dbdc4e0223be930ba58d969d77`. Owns this row,
+`src/devices/analog-amps.js`, and one focused UniversalOpamp2 test. Add a
+package-neutral five-terminal, per-instance parameter-driven model for the
+official deterministic Level-2 contract: finite open-loop gain and dominant
+pole/GBW, slew, symmetric rail headroom, output current limit, input offset,
+and differential input resistance. Preserve every existing named op-amp card
+byte-for-behaviour when the new resolver is absent. Noise density/corner
+parameters, extra poles/phase margin, package identity, a physical face,
+transistor/macromodel equivalence, solver/parser/import/export, CUI/Parts/Lite,
+workflow, corpus, and unrelated device work are outside this upstream slice.
