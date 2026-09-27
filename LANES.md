@@ -1,15 +1,16 @@
-2026-09-27 AD8602 physical/package-neutral dual rail-to-rail op-amp model — CLAIMED, Codex `/root`.
-Isolated worktree `/tmp/wt-bwcx-ad8602-board`, branch `lane/ad8602-model`, exact base
-`6ec8da77b82cb842f0c9b16ebc43436b65566aab`. Owns only this claim row,
-`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused AD8602
-test. Add distinct `ad8602` R-8 physical and `ad8602_channel` package-neutral
-identities with two shared-rail channels, bounded Rev. I 2.7 V to 5.5 V RRIO,
-finite gain/bandwidth/slew and maximum dual supply-current behavior. Preserve
-the external macro-model as a downstream named blocker; no proprietary payload,
-generic op-amp rewrite, unrelated solver/parser/device/CPU change, or claim of
-transistor/noise/distortion equivalence. Exact physical/logical terminal order,
-independent channel state, ratings, dynamic bounds, refusal, and load-bearing
-mutations gate landing.
+2026-09-27 AD8602 physical/package-neutral dual rail-to-rail op-amp model — DONE candidate, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-ad8602-board`, branch `lane/ad8602-model`, claim
+base `6ec8da77b82cb842f0c9b16ebc43436b65566aab`. Distinct `ad8602` R-8 physical
+and `ad8602_channel` package-neutral identities retain the exact eight/five
+terminal contracts, two independent shared-rail channels, honestly high-Z
+inputs, 2.7 V minimum supply, rail-to-rail common mode, guaranteed 1 mA output
+envelope, typical 80 V/mV gain, 8.4 MHz GBW and 6 V/us slew. The maximum budget
+is 3 mA for the dual and 1.5 mA for one logical channel; the datasheet headline
+750 uA is correctly treated as typical rather than maximum. Focused AD8602 plus
+unchanged AD8541/LT1678 coverage passes 20/20. Gain, slew and bandwidth mutants
+each make their named behavioral proof red. The external macro-model remains a
+downstream blocker; no proprietary payload, generic op-amp rewrite, unrelated
+solver/parser/device/CPU change, or transistor/noise/distortion equivalence claim.
 
 2026-09-27 AD8541 physical/package-neutral rail-to-rail op-amp model — DONE candidate, Codex `/root`.
 Isolated worktree `/tmp/wt-bwcx-ad8541-board`, branch `lane/ad8541-model`, exact

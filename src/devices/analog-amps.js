@@ -317,6 +317,30 @@ const AD8541_SPEC = Object.freeze({
     terminals: ['nc_1', 'inn', 'inp', 'vneg', 'nc_5', 'out', 'vpos', 'nc_8'],
 });
 
+// Analog Devices AD8601/AD8602/AD8604 Rev. I at 5 V. The physical AD8602 is
+// one shared-rail dual in either R-8 SOIC or RM-8 MSOP; this card names only
+// the R-8 package identity while the separate logical card remains package
+// neutral. Input bias is specified but differential resistance is not, so the
+// inputs stay honestly high-Z. This bounded model retains DC gain, the stated
+// rail envelopes, dominant bandwidth and slew behavior; noise, distortion,
+// bias/drift and the external transistor macromodel remain outside scope.
+const AD8602_SPEC = Object.freeze({
+    a0: 80000,               // 80 V/mV typical large-signal gain at 5 V
+    gbwHz: 8.4e6,            // 8.4 MHz typical gain-bandwidth product
+    slewVPerUs: 6,           // typical large-signal slew rate at 5 V
+    inputR: null,            // no differential resistance is specified
+    rOut: 10,                // specified closed-loop output impedance at 1 MHz
+    tickNs: 25n,
+    settledV: 1e-8,
+    minSupply: 2.7,          // specified 2.7 V to 5.5 V operation
+    commonLowHeadroom: 0,    // rail-to-rail input common-mode range
+    commonHighHeadroom: 0,
+    outputLowHeadroom: 0.020,// plus rOut drop retains 30 mV at 1 mA
+    outputHighHeadroom: 0.065,// plus rOut drop retains 4.925 V at 1 mA
+    defaultOffsetV: 80e-6,   // A-grade room-temperature typical
+    terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+});
+
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
     inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
@@ -699,6 +723,13 @@ export function registerAnalogAmps() {
         ...AD8541_SPEC,
         terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
     }));
+    registerPrecisionMultiOpAmp('ad8602', AD8602_SPEC, ['1', '2'], [
+        '1_out', '1_neg', '1_pos', 'vneg', '2_pos', '2_neg', '2_out', 'vpos',
+    ]);
+    // A five-terminal source symbol identifies one functional amplifier, not
+    // channel A/B or the R-8/RM-8 package. Importers keep this hidden logical
+    // identity together with the external-model substitution blocker.
+    registerPrecisionOpAmp('ad8602_channel', AD8602_SPEC);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
     registerPrecisionOpAmp('lt1007', PRECISION_OP_AMPS.lt1007);
