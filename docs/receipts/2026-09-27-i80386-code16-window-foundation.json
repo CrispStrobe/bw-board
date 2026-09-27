@@ -1,0 +1,19 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "a016fb54",
+  "scope": "Admission-only 16-bit CS code-window proof; no guest execution wiring or speed claim",
+  "sources": {
+    "src/experimental/i80386-code16-window.js": "sha256:b792ba1593483ca628fe791b9a285996b2f6bd0c9413d0bb612ee5f2ff058637",
+    "test/i80386-code16-window.test.mjs": "sha256:72ce7690925288574f6d20043b0b5684d543e71e5afefa39e7e4d4b9f9d296ed",
+    "docs/I80386-CODE16-WINDOW.md": "sha256:ca01060a687932f19a5f038a65ee12adc906ac4d8fd2bb09f004163f979f3aa0"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 396,
+    "passed": 392,
+    "failed": 0,
+    "skipped": 4,
+    "focusedCodeWindowTests": 5
+  },
+  "proofBoundary": "The validator covers the captured bytes and mapping, not current EIP or self-modifying writes during a future native run."
+}
