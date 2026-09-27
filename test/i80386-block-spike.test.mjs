@@ -254,6 +254,11 @@ test('read window uses an existing TLB mapping and rejects page-table changes',a
   const window=prevalidateI80386ReadWindow(machine,linear);
   assert.equal(window?.delta,0x80000000);
   assert.equal(isI80386ReadWindowValid(window),true);
+  cpu.segmentCaches[2]={...cpu.segmentCaches[3]};
+  const stackWindow=prevalidateI80386ReadWindow(machine,linear,2);
+  assert.equal(isI80386ReadWindowValid(stackWindow),true);
+  cpu.segmentCaches[2]={...cpu.segmentCaches[2],writable:false};
+  assert.equal(isI80386ReadWindowValid(stackWindow),false);
   native.ram.set(Uint8Array.of(0x78,0x56,0x34,0x12),0x120018);
   native.setState({regs:[0,2,0,virtualBase,0,0,0,0]});
   native.setProgram([{op:8,dst:0,width:32,length:4,base:3,index:1,scale:2,

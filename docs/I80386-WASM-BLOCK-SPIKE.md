@@ -31,7 +31,8 @@ before changing state if the address leaves its approved physical RAM page;
 LEA returns the guest offset without consulting RAM. The host can derive the
 physical-page delta from an **existing** 386 translation-cache hit through
 [`i80386-read-window.js`](../src/experimental/i80386-read-window.js), then
-recheck the descriptor before entering a block. A cache miss returns no
+recheck the descriptor before entering a block. It accepts flat DS and SS
+segments over plain RAM pages above 1 MiB. A cache miss returns no
 window, avoiding an early page walk, fault, or accessed-bit write. Host and
 guest page-table changes, CR0/CR3/CR4 changes, segment changes and A20
 gating invalidate the descriptor. Tests compare a changing SIB address and
@@ -40,6 +41,12 @@ a high virtual page with the JavaScript 386. The
 also covers a later out-of-window exit after an earlier instruction retires.
 The host still has to decode and validate each guest instruction; this spike
 is not an AT execution path.
+
+On a complete xv6 `forktest`, [read-window admission tracing](receipts/2026-09-27-i80386-read-window-admission.json)
+found 2,439,374 qualifying accesses out of 2,635,180 attempted memory
+`MOV 8B` reads (92.6%). The 1,636,949 SS accesses are more common than the
+998,231 DS accesses. This is an optimistic admission count, not a claim that
+those instructions have been decoded, grouped into blocks or accelerated.
 
 The full 24,338,279-step xv6 `forktest` supplied a decisive coverage bound
 before any board integration. The implemented register forms occurred

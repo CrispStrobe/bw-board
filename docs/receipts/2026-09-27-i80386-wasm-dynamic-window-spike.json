@@ -1,6 +1,7 @@
 {
   "schema": "astra.i80386-wasm-dynamic-window-spike.v1",
   "date": "2026-09-27",
+  "historicalFixtureCommit": "58feccf4",
   "sourceBaselineCommit": "ca8b1f3f1ecc35bc9db326437bc4cb9356189126",
   "moduleAbi": 4,
   "buildCommand": "clang --target=wasm32 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--export-memory -Wl,--import-memory -Wl,--global-base=16779264 -Wl,--initial-memory=16908288 -Wl,--max-memory=16908288 -o wasm/i80386-block-spike.wasm src/experimental/i80386-block-spike.c",

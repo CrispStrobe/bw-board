@@ -1,0 +1,35 @@
+{
+  "schema": "astra.i80386-read-window-admission.v1",
+  "date": "2026-09-27",
+  "sourceBaselineCommit": "75ed78aaadf75e64911888e5aa57f390f3849d63",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "command": "XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node --import ./scripts/measure-i80386-read-window.mjs scripts/probe-xv6-stock.mjs",
+    "nodeVersion": "v20.20.2",
+    "guestSteps": 24338279,
+    "serialEndsWith": "fork test OK\n$ ",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "guestReportSha256": "2d2d141c57c0a7fd6164e472259f2a02278ec9493436c407da43fc10945bd252",
+    "guestReportMatchesUninstrumented": true
+  },
+  "instrument": {
+    "path": "scripts/measure-i80386-read-window.mjs",
+    "sha256": "3dfeeef31cf32ca58b52d8a1bff6164f47a40c66835da17aec10ed0928071d61",
+    "readWindowSourceSha256": "8404578c6cc6a3b14397e052140625483da233f7aece7e0f83c2f7dbef5f4230"
+  },
+  "method": "Preload observes attempted MOV 8B memory operands before the ordinary JavaScript CPU reads them. It calls the side-effect-free read-window admission helper using the operand segment and offset, then leaves the original read and guest execution intact. Counts are access attempts, not retired native instructions or CPU time. Windows require an existing TLB hit, flat DS or SS, and plain RAM above 1 MiB; a future compiler must also validate code, page-table coherence, precise exits and block boundaries.",
+  "counts": {
+    "mov8bMemoryAttempts": 2635180,
+    "dsAttempts": 998231,
+    "ssAttempts": 1636949,
+    "admitted": 2439374,
+    "admittedFraction": 0.9256954,
+    "admittedDs": 901909,
+    "admittedDsFraction": 0.9035073,
+    "admittedSs": 1537465,
+    "admittedSsFraction": 0.9392260
+  },
+  "validation": "node --test test/i80386*.test.mjs: 348 passed, 4 skipped, 0 failed. Full instrumented xv6 guest report normalized for absolute media paths equals the ordinary lean run.",
+  "conclusion": "Flat DS and SS cached RAM windows cover most attempted MOV 8B memory reads in this workload. This supports continuing with a broad native decoder and exact AT board exits; the trace does not establish executable block coverage or any speedup."
+}

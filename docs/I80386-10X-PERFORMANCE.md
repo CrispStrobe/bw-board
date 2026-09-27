@@ -160,3 +160,10 @@ page-table write. This establishes a side-effect-free read admission and
 remap exit for one page, not a general native paging implementation. A
 decoder, wider opcode coverage, precise writes/faults and a measured AT
 integration remain necessary for 10×.
+
+The full xv6 [read-window trace](receipts/2026-09-27-i80386-read-window-admission.json)
+shows that 92.6% of attempted `MOV 8B` memory reads use an already cached,
+flat DS or SS mapping to plain RAM above 1 MiB. The complete guest report
+matches the ordinary probe. This makes dynamic RAM reads a credible component
+of a broad native block executor, but `MOV 8B` is only about 10.8% of retired
+instructions and no guest opcode was accelerated by this trace.
