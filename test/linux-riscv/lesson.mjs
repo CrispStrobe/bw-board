@@ -14,7 +14,14 @@
 // Prints frames and wall time to the prompt — the number the app's user waits.
 
 import {readFileSync} from 'node:fs';
-import {createDebugTarget} from '../../src/debug-target-factory.js';
+// The factory's riscv32 branch, inlined: debug-target-factory.js statically
+// imports every engine (avr8js…), and this workflow installs no node_modules.
+import {createRiscV32Adapter} from '../../src/riscv32-adapter.js';
+import {createRiscV32DebugTarget} from '../../src/riscv32-debug.js';
+const createDebugTarget = async (_kind, opts) => {
+    const adapter = createRiscV32Adapter(opts);
+    return {target: createRiscV32DebugTarget(adapter), adapter};
+};
 import {createDebugSession} from '../../src/debug-session.js';
 import {verifyLinuxMedia, runRiscvLinuxBundle} from '../../src/riscv32-linux-session.js';
 
