@@ -7,6 +7,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M_HDD,
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
 } from '../src/experimental/i80386-at-machine.js';
 
@@ -109,6 +110,25 @@ test('xv6 stock profile exposes the 14MiB PHYSTOP RAM window', () => {
   assert.equal(machine.cpu.read(0xe00000), 0x5a);
   assert.equal(machine.cpu.read(0x1000000), 0xff);
   const cmos = register => { machine._out(0x70, register); return machine._in(0x71); };
+  let checksum = 0;
+  for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
+  assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
+});
+
+test('xv6 IBM BIOS profile advertises 15MiB without mapping RAM across the top ROM', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP);
+  machine.cpu.write(0xefffff, 0x5a);
+  machine.cpu.write(0xf00000, 0xa5);
+  assert.equal(machine.cpu.read(0xefffff), 0x5a);
+  assert.equal(machine.cpu.read(0xf00000), 0xff);
+  const rom = new Uint8Array(0x10000);
+  rom[0xfff0] = 0xea;
+  machine.loadRom(rom);
+  machine.cpu.write(0xff0000, 0xa5);
+  assert.equal(machine.cpu.read(0xff0000), 0, 'top ROM mirror stays read-only');
+  assert.equal(machine.cpu.read(0xfffffff0), 0xea, '386 reset alias still sees the ROM');
+  const cmos = register => { machine._out(0x70, register); return machine._in(0x71); };
+  assert.equal(cmos(0x17) | cmos(0x18) << 8, 14 * 1024);
   let checksum = 0;
   for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
   assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);

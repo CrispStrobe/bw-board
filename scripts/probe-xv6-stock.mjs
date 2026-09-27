@@ -3,16 +3,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
+import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
 
 const romPath = process.env.XV6_ROM ?? '/tmp/ATBIOS-REV1.rom';
-const imagePath = process.env.XV6_IMG ?? '/tmp/xv6-stock-4m/xv6.img';
+const profile = process.env.XV6_PROFILE ?? '4m';
+if (!['4m', '14m'].includes(profile)) throw new Error('XV6_PROFILE must be 4m or 14m');
+const machineConfig = profile === '4m' ? PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP :
+  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP;
+const imagePath = process.env.XV6_IMG ?? `/tmp/xv6-stock-${profile}/xv6.img`;
 const slavePath = process.env.XV6_FS_IMG ?? path.join(path.dirname(imagePath), 'fs.img');
 const kernelPath = process.env.XV6_KERNEL ?? path.join(path.dirname(imagePath), 'kernel');
 const stepsLimit = Number(process.env.XV6_STEPS ?? 76_000_000);
 const command = process.env.XV6_COMMAND ?? '';
 const expectedSerial = process.env.XV6_EXPECT_SERIAL ?? '';
+const stopOnExpected = process.env.XV6_STOP_ON_EXPECT === '1';
+const progressEvery = Number(process.env.XV6_PROGRESS_EVERY ?? 0);
 const rom = fs.readFileSync(romPath);
 const raw = fs.readFileSync(imagePath);
 const slave = fs.readFileSync(slavePath);
@@ -29,19 +36,24 @@ const userModeEntries = [];
 const recentInstructions = [];
 const inputSent = [];
 let commandStarted = false;
+let expectedObserved = false;
 const wanted = new Set(['main', 'userinit', 'scheduler', 'forkret', 'trapret', 'syscall', 'exec', 'iinit', 'initlog']);
 const symbols = new Map();
 for (const line of execFileSync('nm', ['-n', kernelPath], {encoding: 'utf8'}).split('\n')) {
   const match = line.match(/^([0-9a-f]+) [A-Za-z] (\S+)$/);
   if (match && wanted.has(match[2])) symbols.set(Number.parseInt(match[1], 16), match[2]);
 }
-const machine = new Machine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP, {
+const machine = new Machine(machineConfig, {
   ataImage: image,
   ataGeometry: IBM_TYPE1_GEOMETRY,
   ataSlaveImage: (() => { const media = new Uint8Array(image.length); media.set(slave); return media; })(),
   onPortAccess: event => {
     if (event.port === 0x1f0 && event.width === 32 && first32 === null) first32 = steps;
-    if (event.dir === 'out' && event.port === 0x3f8) serial.push(event.value & 0xff);
+    if (event.dir === 'out' && event.port === 0x3f8) {
+      serial.push(event.value & 0xff);
+      if (expectedSerial && serial.length >= expectedSerial.length)
+        expectedObserved = Buffer.from(serial).toString('latin1').includes(expectedSerial);
+    }
   },
   onInterrupt: event => {
     const record = {step: steps, ...event};
@@ -57,6 +69,8 @@ machine._read386 = address => {
   return read386(address);
 };
 for (; steps < stepsLimit; steps++) {
+  if (progressEvery > 0 && steps % progressEvery === 0)
+    console.error(`PROGRESS step=${steps} screen=${String.fromCharCode(...Array.from({length: 10}, (_, i) => machine._read(0xb8000 + i * 2) || 32)).trim()}`);
   if (command && !commandStarted && serial.at(-2) === 36 && serial.at(-1) === 32)
     commandStarted = true;
   if (commandStarted && inputSent.length < command.length && machine.chips.uart1.rxFifo.length === 0) {
@@ -86,10 +100,12 @@ for (; steps < stepsLimit; steps++) {
         irqPending: machine.ata?._irqPending, irqOutput: machine.ata?._irqOutput}}, null, 2));
     throw error;
   }
+  if (stopOnExpected && expectedObserved) { steps++; break; }
 }
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
+  profile,
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},
   slaveImage: {path: path.resolve(slavePath), sha256: crypto.createHash('sha256').update(slave).digest('hex')},

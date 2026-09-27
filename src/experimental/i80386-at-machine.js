@@ -395,7 +395,7 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP = Object.freeze({
   experimentalAtaSlaveAlias: true,
 });
 
-/** 16MiB installed-RAM profile for stock xv6's PHYSTOP (14MiB) build. */
+/** Diagnostic 16MiB map; the IBM AT BIOS reports 164 with RAM over its top ROM mirror. */
 export const PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   regions: PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP.regions.map(region =>
@@ -405,6 +405,19 @@ export const PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP = Object.freeze({
     initialCmos: [[0x10, 0x20], [0x12, 0x10], [0x14, 0x21],
       [0x15, 0x80], [0x16, 0x02], [0x17, 0x00], [0x18, 0x3c],
       [0x2e, 0x01], [0x2f, 0x0f], [0x30, 0x00], [0x31, 0x3c], [0x32, 0x19]],
+  } : chip),
+});
+
+/** IBM AT ROM-safe 15MiB RAM profile for xv6 with PHYSTOP=14MiB. */
+export const PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
+  regions: PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP.regions.map(region =>
+    region.kind === 'ram' && region.start === 0x100000 ? {...region, end: 0xefffff} : region),
+  chips: PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP.chips.map(chip => chip.kind === 'rtc' ? {
+    ...chip,
+    initialCmos: [[0x10, 0x20], [0x12, 0x10], [0x14, 0x21],
+      [0x15, 0x80], [0x16, 0x02], [0x17, 0x00], [0x18, 0x38],
+      [0x2e, 0x01], [0x2f, 0x0b], [0x30, 0x00], [0x31, 0x38], [0x32, 0x19]],
   } : chip),
 });
 

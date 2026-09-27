@@ -79,7 +79,7 @@ Initial measured attempts:
 | ELKS 0.9.2 fd360-minix | 8086 | Earlier BIOS-service diagnostic reaches setup but is not acceptance |
 | ELKS 0.9.1 fd1440-fat | 8086 PC/XT | **Accepted:** kernel banner, floppy probe, root mount, timer and FDC IRQs; image remains external |
 | MINIX 2.0.0 TINYROOT | 8086/80186 | CPU reaches unsupported FE encoding before console output; root cause not yet established |
-| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | **Accepted for single-CPU boot and shell commands:** stock SMP kernel built with `PHYSTOP=4MiB` and `-march=i386` reaches `init: starting sh`, executes `echo`, and creates, reads, and deletes a file from COM1 input before returning to `$`. APIC-routed IDE and UART interrupts, user mode, `exec`, and syscalls are observed. See [receipt](XV6-STOCK.md). Broader guest regression and multiple CPUs remain WIP. |
+| MIT xv6 x86 (`eeb7b415`) | experimental 386 AT | **Accepted for single-CPU boot and shell commands:** stock SMP kernel built with `-march=i386` reaches `init: starting sh` at 4 MiB and with `PHYSTOP=14MiB` on a ROM-safe 15 MiB AT. Both execute external `echo`; the 4 MiB run also creates, reads, and deletes a file. APIC-routed IDE and UART interrupts, user mode, `exec`, and syscalls are observed. See [receipts](XV6-STOCK.md). The 16 MiB map stops at BIOS error 164; multiple CPUs remain WIP. |
 | Either | wired 286 | Refused before download/execution: board/CPU prerequisites absent |
 
 An unsupported encoding can result from executing wrong bytes; it is not by
