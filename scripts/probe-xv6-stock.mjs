@@ -12,6 +12,7 @@ const slavePath = process.env.XV6_FS_IMG ?? path.join(path.dirname(imagePath), '
 const kernelPath = process.env.XV6_KERNEL ?? path.join(path.dirname(imagePath), 'kernel');
 const stepsLimit = Number(process.env.XV6_STEPS ?? 76_000_000);
 const command = process.env.XV6_COMMAND ?? '';
+const expectedSerial = process.env.XV6_EXPECT_SERIAL ?? '';
 const rom = fs.readFileSync(romPath);
 const raw = fs.readFileSync(imagePath);
 const slave = fs.readFileSync(slavePath);
@@ -100,3 +101,5 @@ const receipt = {
   cpu: {cs: machine.cpu.cs, eip: machine.cpu.eip, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0, cr3: machine.cpu.cr3, cr4: machine.cpu.cr4},
 };
 console.log(JSON.stringify(receipt, null, 2));
+if (expectedSerial && !receipt.serial.includes(expectedSerial))
+  throw new Error(`xv6 serial output did not contain expected text ${JSON.stringify(expectedSerial)}`);

@@ -22,7 +22,8 @@ git clone https://github.com/mit-pdos/xv6-public.git /tmp/xv6-public
 git -C /tmp/xv6-public checkout eeb7b415dbcb12cc362d0783e41c3d1f44066b17
 node scripts/build-xv6-stock-4m.mjs
 XV6_ROM=/path/to/ATBIOS.rom XV6_STEPS=80000000 \
-  XV6_COMMAND=$'echo BW_XV6_OK\r' node scripts/probe-xv6-stock.mjs
+  XV6_COMMAND=$'echo BW_XV6_OK\r' \
+  XV6_EXPECT_SERIAL=$'\nBW_XV6_OK\n$ ' node scripts/probe-xv6-stock.mjs
 ```
 
 The probe reports source-media hashes, serial output, input bytes, IRQs,
