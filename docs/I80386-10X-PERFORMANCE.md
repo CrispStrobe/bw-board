@@ -37,6 +37,16 @@ RAM at every future native-block boundary, but still runs the JavaScript CPU
 for every instruction; its 27.45-second run is not a speedup claim. The native
 block executor, decoder coverage and exact fault/device exits remain unbuilt.
 
+An architectural reference is [v86's own description of its hot-page
+x86-to-WASM compiler](https://github.com/copy/v86/blob/master/docs/how-it-works.md):
+it profiles hot pages, emits blocks, and keeps physical-page translation,
+MMIO and code-write invalidation in a fast TLB path. This is a design reference,
+not evidence that v86 is a drop-in backend or that our 386 will reach 10×.
+Its [documented missing CPU features](https://github.com/copy/v86/blob/master/Readme.md)
+include task gates and some 16-bit protected-mode behavior that our accuracy
+lane explicitly tests. For our board, a future fast path must also retain the
+AT chip event contract and Debugger single-step behavior.
+
 A final-source V8 sample over the xv6 run attributed 17.7% of time to
 `_stepInstruction`, 7.1% to `_fetchN`, 5.0% to `_decodeEA`, 7.8% to
 `_translate`, 6.1% to `_read386`, and 6.1% to `_serviceInterrupts`. The
