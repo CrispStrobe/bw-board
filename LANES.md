@@ -2273,3 +2273,13 @@ Paterson guest increment: source `f2eeb5964bc1285a6c8f3b1c297d2998833cc56f`, pai
 | lane | owner/session | worktree | exact scope | base SHA | status |
 | --- | --- | --- | --- | --- | --- |
 | 80286 functional integration and current Harris evidence | Astra coordinator / Sol agents, astra-286-sept19 | `/mnt/volume1/code/wt/astra-286-integration` | Preserves close-gap `76d0b9b` ancestry and current master; static dependency guard replaces false file-size heuristic, sampled fast vectors block failures and incomplete accounting, vector memory is isolated, exact-source full fast/Harris and bounded wired BIOS workflow added with separate manual reference DOS run. | claim `71d19e8` | **IMPLEMENTED 2026-09-19; hosted qualification required before guarded landing.** Focused CPU/guard/runner 51/51, workflow/census/input gates 25/25, guard direct/transitive mutations red, consecutive-case memory regression proven; new workflow actionlint clean. Current 20k-clock BIOS diagnostic reaches PIC/timer setup and CPU/bus transfers without claiming DOS completion. Historical reports retained with explicit source-hash limits; no protected-mode, timing or physical-board promotion. Initial full run at `431acef` exposed 58 fast-core cases; fixes preserve 286 high addresses, completed POP state on destination fault, AAM-zero/divider behavior and grade stray writes. All 45,000 cases in the nine affected files now pass; broad regression 634 pass, 0 fail, 1 optional skip. Current Harris full semantic and reference wired DOS receipts at `431acef` are preserved under docs/receipts with unchanged Harris source hashes; whole initial qualification was not green. The next full run passed 1,477,996 cases and exposed one PUSHA partial-write fault through the stronger write comparator; whole-stack preflight now fixes it (opcode 60: 5,000/5,000; focused 47/47). Final combined full qualification remains the landing gate. |
+2026-09-27 ADP151 fixed-output LDO model — CLAIM, Codex `/root`. Isolated
+worktree `/tmp/wt-bwcx-adp151-board`, branch `lane/adp151-real-model`, exact
+base `8146296d21fbcbc64b51ae07bba8322117e6bf31`. Owns this row,
+`src/devices/power.js`, `src/current-ratings.js`, and one focused ADP151 test.
+Add the manufacturer-bounded TSOT-5 fixed-output DC contract: 2.2 V to 5.5 V
+input, exact selected output, enable/UVLO refusal, characterized dropout,
+200 mA rating with the 220 mA guaranteed current-limit floor, quiescent and
+shutdown current, and full-device KCL. NC stays physical and unmodelled.
+No generic regulator, solver, other device, face/art, importer/exporter,
+corpus, workflow, package pin, CUI, Parts, or Lite edit.
