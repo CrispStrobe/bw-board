@@ -1,0 +1,53 @@
+{
+  "schema": "bw.i80386-native-rep-stosb-xv6.v1",
+  "date": "2026-09-27",
+  "baseRevision": "6ec8da77b82cb842f0c9b16ebc43436b65566aab",
+  "workload": "stock xv6 4 MiB forktest with vendored Bochs BIOS; stop after the returned shell prompt",
+  "sourceSha256": {
+    "src/experimental/i80386-block-spike.c": "df3ac2d9bb402f3705ea7ccd76c12b4723c877e95bca1f88164f06d12aecb0cb",
+    "src/experimental/i80386-block-spike.js": "d020fbebda1d58db6cf3dab7d3649f42c836bf2716c430e5226f94bb797d411d",
+    "src/experimental/i80386-native-byte-block.js": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+    "src/experimental/i80386-native-dispatch.js": "0dc3fd4c952e8c2806d22c11381973800073af7f0e39e09366136e41ac459401",
+    "wasm/i80386-block-spike.wasm": "0e6cb0789a33500b512ec1ec5fc778b78a0459aebd2b3a0f89a786411f87a9c7"
+  },
+  "matchingFields": [
+    "steps", "first32", "serial", "inputSent", "interrupts",
+    "postBootInterrupts", "lapicIdReads", "milestones",
+    "userModeEntries", "screen", "lapic", "ioapic", "cpu", "ramSha256"
+  ],
+  "steps": 24338279,
+  "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+  "previousNativeStats": {
+    "attempts": 10381853,
+    "decoded": 23412,
+    "blockCalls": 4001835,
+    "instructions": 16428029,
+    "ineligibleModeSteps": 1530232,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309,
+    "repMovDecoded": 48,
+    "repMovBlockCalls": 96,
+    "repMovIterations": 864
+  },
+  "newNativeStats": {
+    "attempts": 10381684,
+    "decoded": 23414,
+    "blockCalls": 4001848,
+    "instructions": 16428211,
+    "ineligibleModeSteps": 1530232,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309,
+    "repMovDecoded": 48,
+    "repMovBlockCalls": 96,
+    "repMovIterations": 864,
+    "repStosbDecoded": 2,
+    "repStosbBlockCalls": 13,
+    "repStosbIterations": 182
+  },
+  "additionalNativeInstructions": 182,
+  "newNativeUserCpuSeconds": 17.78,
+  "newNativeElapsedSeconds": 22.79,
+  "scope": "Primed REP STOSB in validated RAM, bounded by destination page and chip events. Guest state and RAM match ordinary execution. Windows STOSB hit counts and timing details are recorded only in the private fixture repository. This run does not demonstrate a whole-system speed gain; host timing overlapped another workload."
+}

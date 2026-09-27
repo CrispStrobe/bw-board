@@ -389,6 +389,91 @@ test('native REP STOSD requires exact bytes and matching interpreter restart sta
   assert.equal(runner.decode(1),null);
 });
 
+async function stosbFixture({count=9,offset=0,direction=false,extraPage=false}={}) {
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine,put32} of [fast,slow]) {
+    if (extraPage) put32(0x4000+0x131*4,(DATA_PHYS+0x1000)|7);
+    machine._write386(CODE_PHYS,0xf3);
+    machine._write386(CODE_PHYS+1,0xaa);
+    const cpu=machine.cpu;
+    cpu.eax=0x89abcdef;cpu.ecx=count;cpu.edi=(DATA+offset)>>>0;
+    cpu.eflags=0x202 | (direction ? 0x400 : 0);
+    machine.step(); // Prime the write mapping and REP restart state.
+  }
+  return {fast,slow,runner:await createI80386NativeByteRunner(fast.machine,fast.bridge)};
+}
+
+test('native REP STOSB matches interpreter in both directions and writes AL only',async()=>{
+  for(const direction of [false,true]) {
+    const {fast,slow,runner}=await stosbFixture({count:9,
+      offset:direction ? 16 : 0,direction});
+    const block=runner.decode(8);
+    assert.deepEqual(block?.instructions.map(ins=>ins.op),[21]);
+    assert.deepEqual(runner.run(block,8),
+      {instructions:8,cycles:48,reason:'done'});
+    for(let i=0;i<8;i++)slow.machine.step();
+    assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+    assert.equal(fast.machine.cpu.eax,0x89abcdef);
+    assert.equal(fast.machine.cpu._repeatContext,null);
+    assert.equal(fast.machine.cpu.eip,CODE+2);
+  }
+});
+
+test('native REP STOSB stops at budgets and page boundaries with exact restart state',async()=>{
+  for(const {direction,offset} of [
+    {direction:false,offset:0xffb}, {direction:true,offset:3},
+  ]) {
+    const {fast,slow,runner}=await stosbFixture({count:8,offset,direction,
+      extraPage:!direction});
+    const block=runner.decode(8);
+    assert.equal(block?.instructions[0]?.op,21);
+    fast.machine._chipDeadline=slow.machine._chipDeadline=fast.machine._chipDebt+7;
+    assert.deepEqual(runner.run(block,8),
+      {instructions:2,cycles:12,reason:'event'});
+    slow.machine.step();slow.machine.step();
+    assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+    fast.machine._chipDeadline=slow.machine._chipDeadline=100;
+    assert.deepEqual(runner.run(block,8),
+      {instructions:direction ? 1 : 2,cycles:direction ? 6 : 12,
+        reason:'fault-boundary'});
+    for(let i=0;i<(direction ? 1 : 2);i++)slow.machine.step();
+    assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+    assert.deepEqual(runner.run(block,8),
+      {instructions:0,cycles:0,reason:'fault-boundary'});
+    if (!direction) {
+      fast.machine.step();slow.machine.step(); // JS primes the next write page.
+      const next=runner.decode(8);
+      assert.equal(next?.instructions[0]?.op,21);
+      assert.deepEqual(runner.run(next,8),
+        {instructions:2,cycles:12,reason:'done'});
+      slow.machine.step();slow.machine.step();
+      assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+    }
+  }
+});
+
+test('native REP STOSB falls back for pending NMI, stale mapping, and zero count',async()=>{
+  const {fast,runner}=await stosbFixture({count:5});
+  const block=runner.decode(8);
+  const before=stosState(fast.machine);
+  fast.machine._nmiPending=true;
+  assert.deepEqual(runner.run(block,8),
+    {instructions:0,cycles:0,reason:'fallback'});
+  assert.deepEqual(stosState(fast.machine),before);
+  fast.machine._nmiPending=false;
+  fast.put32(0x4000+0x130*4,0x140007);
+  assert.equal(isI80386NativeByteBlockValid(block),false);
+  assert.deepEqual(runner.run(block,8),
+    {instructions:0,cycles:0,reason:'fallback'});
+
+  const zero=await stosbFixture({count:0});
+  assert.equal(zero.fast.machine.cpu.eip,CODE+2);
+  assert.equal(zero.fast.machine.cpu.ecx,0);
+  assert.equal(zero.fast.machine.cpu._repeatContext,null);
+  assert.equal(zero.runner.decode(1),null);
+  assert.deepEqual(stosState(zero.fast.machine),stosState(zero.slow.machine));
+});
+
 const DEST=0x80140000,DEST_PHYS=0x140000;
 
 async function movsFixture({count=7,sourceOffset=0,destinationOffset=0,
