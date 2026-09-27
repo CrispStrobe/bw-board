@@ -1,0 +1,55 @@
+{
+  "schema": "bw.i80386-broad-block-potential-census-receipt.v1",
+  "date": "2026-09-27",
+  "scope": "Observation-only ordinary-step opcode-family run census on pinned Windows 3.11 60M and stock xv6 4 MiB forktest",
+  "grammar": "docs/I80386-BROAD-BLOCK-CENSUS.md",
+  "source": {
+    "measuredCommit": "7cc249c147edf3c101ec5073202ed2c3fd4d2ddb",
+    "finalBase": "af4fd8c19ba2868fff1283daff221ca3abec5e98",
+    "measuredAndFinalCensusSha256": "8b1b4bc3facc032086b8841d2eeb4877b79669952c37ef728481a834b6bf3ccf",
+    "measuredAndFinalAtCliSha256": "3d986cdc2700bf9ee33645f8e40d478e9f5cd4281eac7791c8293303a8ae3259",
+    "measuredAndFinalXv6ProbeSha256": "cc137414313c00ae9115a04e7f4c61fbbe0f4ab66ef11ec2367a3cae70e427ba",
+    "postRebaseDifference": "Only default-off code16 WASM implementation/source/binary hashes in the AT CLI source manifest changed with the concurrent terminal-store merge; the ordinary CPU, census, and both runners are byte-identical. No full workload was rerun for metadata."
+  },
+  "validation": {
+    "focusedTests": "6/6 pass after rebase, including census parity and native32 census regression",
+    "windowsNormalizedGuestSha256": "0dbb2b2c01b87a109fdaea6b05631941ba589aab1b96da4185466db95701ded6",
+    "windowsBaselineNormalizedGuestSha256": "0dbb2b2c01b87a109fdaea6b05631941ba589aab1b96da4185466db95701ded6",
+    "windowsNormalization": "jq -S 'del(.executionRevision,.sourceSha256,.broadBlockCensus)'",
+    "xv6NormalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "xv6BaselineNormalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "xv6Normalization": "jq -S 'del(.broadBlockCensus,.broadBlockCensusSourceSha256,.rom.path,.image.path,.slaveImage.path)'",
+    "invariants": "For every mode on both runs: attempts = retiredSteps + noRetirement + abortedCalls; retiredSteps = potentialSteps + nonCandidateSteps; histogram lengths sum to potentialSteps; histogram counts and runEndReasons each sum to runs; firstRefusals sum to nonCandidateSteps."
+  },
+  "windows60m": {
+    "rawReportSha256": "d49d0ab044415a1b97bc6bc40765a50d9b58563c7138f9dc77fa63a284a7a1de",
+    "steps": 60000000,
+    "completedCoreSteps": 59971215,
+    "potentialSteps": 44938027,
+    "potentialStepShare": 0.749327,
+    "runs": 22064746,
+    "meanPotentialStepsPerRun": 2.036644,
+    "modes": {
+      "real": {"attempts": 13438404, "completedCoreSteps": 13435142, "potentialSteps": 9838731, "runs": 4875029, "meanRun": 2.018189},
+      "protected16": {"attempts": 10043132, "completedCoreSteps": 10036060, "potentialSteps": 7299699, "runs": 4446055, "meanRun": 1.641837},
+      "vm86": {"attempts": 21240957, "completedCoreSteps": 21222506, "potentialSteps": 16695814, "runs": 6687013, "meanRun": 2.496752},
+      "protected32": {"attempts": 15277507, "completedCoreSteps": 15277507, "potentialSteps": 11103783, "runs": 6056649, "meanRun": 1.833321}
+    }
+  },
+  "xv6Forktest": {
+    "rawReportSha256": "399185aef01d9d7b09d88a081930a87f8c06403ca78f89e9ed9fb710db38dbe2",
+    "steps": 24338279,
+    "completedCoreSteps": 24335051,
+    "potentialSteps": 21604831,
+    "potentialStepShare": 0.887807,
+    "runs": 8578451,
+    "meanPotentialStepsPerRun": 2.5185,
+    "modes": {
+      "real": {"attempts": 1530231, "completedCoreSteps": 1527003, "potentialSteps": 1256221, "runs": 421663, "meanRun": 2.979206},
+      "protected16": {"attempts": 1, "completedCoreSteps": 1, "potentialSteps": 0, "runs": 0, "meanRun": 0},
+      "vm86": {"attempts": 0, "completedCoreSteps": 0, "potentialSteps": 0, "runs": 0, "meanRun": 0},
+      "protected32": {"attempts": 22808047, "completedCoreSteps": 22808047, "potentialSteps": 20348610, "runs": 8156788, "meanRun": 2.494684}
+    }
+  },
+  "decision": "No-go under the predeclared mean-four gate on either workload. These are syntactic potential runs, with no data/code proof, event proof, native execution, or CPU-time attribution. The diagnostic host times are not speed evidence. Further opcode-family additions alone are not justified as a performance patch; reduce entry costs or establish safe longer linked runs before executable A/B."
+}

@@ -41,7 +41,10 @@ non-candidate steps. `potentialSteps + nonCandidateSteps = retiredSteps`;
 potential steps in consecutive observed runs, while `runEndReasons` counts
 one termination per run. `firstRefusals` counts each non-candidate step's
 first syntactic/locality reason, including steps reached outside any run.
-These denominators are **not** native retirements or CPU-time shares.
+Here `retiredSteps` means ordinary step calls for which the core cycle counter
+advanced, including REP iterations; it is not a count of distinct static
+instructions. These denominators are **not** native retirements or CPU-time
+shares.
 
 Use the census only to decide whether a broad executable path merits a
 bounded implementation. A tactical gate is at least 50% potential retired
