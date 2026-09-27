@@ -17,6 +17,19 @@ The 14 MiB kernel on the 15 MiB machine also reaches the shell, executes
 `echo BW_XV6_14M_OK`, and returns to `$`; its [memory-profile receipt](receipts/2026-09-27-xv6-stock-14m-memory-profiles.json)
 records the image hashes, milestones, and the failed 16 MiB diagnostic.
 
+The 4 MiB kernel also boots with the redistributable LGPL Bochs legacy BIOS
+and VGA BIOS already vendored in this repository. It reaches the shell and
+completes `echo BW_XV6_FREE_BIOS_FS_OK > bwfile; cat bwfile; rm bwfile` on
+the attached xv6 filesystem disk. The [free-BIOS receipt](receipts/2026-09-27-xv6-stock-free-bios.json)
+records the boot and command. Public CI now builds the pinned MIT xv6 source,
+boots this firmware path, checks user-mode execution and IDE interrupts, and
+uploads a fresh full probe receipt. It needs no proprietary ROM or xv6 image.
+The Bochs BIOS needs the already-attached ATA slave visible from reset: its
+boot path writes sector parameters while the slave remains selected, before
+selecting the master and issuing the boot-sector read.
+The 14 MiB kernel also boots with this free firmware on the 15 MiB RAM
+profile, executes `echo BW_XV6_14M_FREE_OK`, and returns to `$`.
+
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
 RAM through that window caused the BIOS to stop at `164-Memory Size Error`.
@@ -39,6 +52,16 @@ XV6_PHYSTOP=0xE00000 node scripts/build-xv6-stock-4m.mjs
 XV6_ROM=/path/to/ATBIOS.rom XV6_PROFILE=14m XV6_STEPS=320000000 \
   XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'echo BW_XV6_14M_OK\r' \
   XV6_EXPECT_SERIAL=$'\nBW_XV6_14M_OK\n$ ' node scripts/probe-xv6-stock.mjs
+
+XV6_FIRMWARE=bochs XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
+  XV6_COMMAND=$'echo BW_XV6_FREE_BIOS_FS_OK > bwfile; cat bwfile; rm bwfile\r' \
+  XV6_EXPECT_SERIAL=$'\nBW_XV6_FREE_BIOS_FS_OK\n$ ' \
+  node scripts/probe-xv6-stock.mjs
+
+XV6_FIRMWARE=bochs XV6_PROFILE=14m XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
+  XV6_COMMAND=$'echo BW_XV6_14M_FREE_OK\r' \
+  XV6_EXPECT_SERIAL=$'\nBW_XV6_14M_FREE_OK\n$ ' \
+  node scripts/probe-xv6-stock.mjs
 ```
 
 The probe reports source-media hashes, serial output, input bytes, IRQs,

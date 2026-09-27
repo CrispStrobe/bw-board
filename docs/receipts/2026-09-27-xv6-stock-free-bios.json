@@ -1,0 +1,40 @@
+{
+  "schema": "bw.xv6-stock-free-bios.v1",
+  "date": "2026-09-27",
+  "sourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "profile": "4m",
+  "firmware": "bochs",
+  "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+  "vgaRomSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+  "bootImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+  "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+  "probeSourceSha256": "0756a2eff99930620906863c6840256d975eafc8a3caa61110a9defa7d1f3190",
+  "steps": 14643086,
+  "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ echo BW_XV6_FREE_BIOS_FS_OK > bwfile; cat bwfile; rm bwfile\nBW_XV6_FREE_BIOS_FS_OK\n$ ",
+  "firstAtaData32Step": 1530317,
+  "userModeObserved": true,
+  "milestones": {
+    "main": 1,
+    "userinit": 1,
+    "scheduler": 1,
+    "trapret": 355,
+    "forkret": 5,
+    "iinit": 1,
+    "initlog": 1,
+    "syscall": 137,
+    "exec": 5
+  },
+  "ideIrq14Count": 59,
+  "uartIrq4Count": 2,
+  "accepted": true,
+  "memory14m": {
+    "profile": "14m",
+    "bootImageSha256": "3f037aff90819db4cee91e94e6afbe7284622a087c505c5895ad429043c74206",
+    "filesystemImageSha256": "8f432590f296ab35255aec958e62ed11c4e536690b8a0b53a1e9742301ee41a2",
+    "steps": 10962834,
+    "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ echo BW_XV6_14M_FREE_OK\nBW_XV6_14M_FREE_OK\n$ ",
+    "userModeObserved": true,
+    "ideIrq14Count": 41,
+    "accepted": true
+  }
+}
