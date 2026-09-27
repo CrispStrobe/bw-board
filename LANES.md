@@ -1,3 +1,17 @@
+2026-09-27 OP27 real precision op-amp model — CLAIM, Codex `/root`. Isolated
+worktree `/tmp/wt-bwcx-op27-board`, branch `lane/op27-real-model`, exact base
+`15f969cc755f41df594b5193c0ee50ebc8477672`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP27
+test. Add the manufacturer-backed single-amplifier PDIP-8 electrical contract
+through the existing precision-op-amp controller: 1.8M typical open-loop gain,
+8 MHz gain bandwidth, 2.8 V/us slew, bounded differential input resistance,
+offset, supply/common-mode range, and the guaranteed 600-ohm loaded swing.
+Offset-null pins stay physical and explicitly unmodelled. Prove exact
+terminals, power refusal, finite gain, feedback, both loaded swing directions,
+slew and small-signal response, with independent gain/slew/bandwidth mutations.
+No generic op-amp, solver, other named device, face/art, importer/exporter,
+corpus, workflow, package pin, CUI, Parts, or Lite edit.
+
 2026-09-27 OP07 real precision op-amp model — DONE candidate, Codex bwcx. Isolated
 worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part-v2`, exact base
 `58db46525805505be2e8019e365ce78433d76929`. The implementation was replayed
