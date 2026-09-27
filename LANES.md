@@ -26,7 +26,7 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-26 CLAIM — `/root` (Codex), real uA741/LM741 single op-amp model.
+2026-09-27 DONE candidate — `/root` (Codex), real uA741/LM741 single op-amp model.
 Isolated worktree `/tmp/wt-bwcx-lm741-board`, branch `lane/lm741-real-part`, exact
 base `1df17d48fbd20cebe0be0b6e5dbd0545d34ad242`. Owns only this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and focused LM741 tests.
@@ -42,6 +42,22 @@ pins must remain present and explicitly reported if their trim network is not
 yet modeled; they may not silently disappear or pretend ideal cancellation.
 No LM358/LM324 behavior change, generic `opamp`, MNA/AC solver, importer,
 face/art, corpus, workflow, package pin, CUI or Lite edit.
+Implemented canonical `lm741` from TI SNOSC25D's PDIP-8 and electrical tables:
+200 V/mV finite large-signal gain, 2 MOhm differential input, 1 mV default
+offset (authored `inputOffsetV` may override it), 1 MHz-class response,
+0.5 V/us slew, 1.7 mA supply budget, +/-12 V common-mode indication and the
+loaded +/-10 V output guarantee at +/-15 V. A 600-ohm Thevenin output behind
+the +/-13 V internal swing reproduces the 2 kOhm load boundary without
+pretending rail-to-rail drive. The event-time response retains a measured
+closed-loop feedback factor, uses one bounded probe when a quiescent loop has
+not supplied it yet, and resets its time origin on an input change; this avoids
+both an instantaneous response after a long idle and a tenfold first-tick
+overshoot. Offset-null/NC pins remain physical and high-Z; device state publishes
+`offsetNull: unmodeled`. The focused LM741/LM324/LM358/honesty,
+current-budget and double-source surface passes 47/47. Independently changing
+gain 200k->100k, slew 0.5->5 V/us, or GBW 1->10 MHz makes its named numerical
+consequence red. Hosted CI/Harris at this exact implementation head remain the
+landing gate.
 
 2026-09-26 DONE — `/root` (Codex), LM324 real powered quad op-amp engine model.
 Isolated worktree `/tmp/wt-bwcx-lm324-board`, branch `lane/lm324-real-part`, exact

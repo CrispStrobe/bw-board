@@ -1,5 +1,5 @@
 /**
- * LM358/LM324 op-amps + LM3915 dot/bar display driver — the analog pair
+ * LM358/LM324/LM741 op-amps + LM3915 dot/bar display driver — the analog pair
  * behind every cheap VU meter, clean-room from the TI datasheets.
  *
  * The op-amp is the genuinely hard one: real feedback needs convergence
@@ -67,6 +67,17 @@ const G_STEP = 1.5;         // fallback damped step per settle round
 const BETA_MIN = 1e-4;
 const E_TOL = 1e-7;         // volts of residual (v+ − v−)
 const U_TOL = 1e-9;         // volts of output movement below which nothing changed
+
+// LM741 typical/minimum figures from TI SNOSC25D, electrical characteristics
+// at VS=+/-15 V.  The behavioural model keeps the important old-bipolar-op-amp
+// limits visible without embedding a proprietary transistor macromodel.
+const LM741_A0 = 200000;             // 200 V/mV typical large-signal gain
+const LM741_GBW_HZ = 1e6;            // conservative 1 MHz-class unity bandwidth
+const LM741_SLEW_V_PER_US = 0.5;     // unity-gain slew rate
+const LM741_INPUT_R = 2e6;           // differential input resistance, typical
+const LM741_R_OUT = 600;             // gives ~10 V into 2 kOhm at +/-15 V
+const LM741_TICK_NS = 200n;           // resolves 0.3 us typical rise time
+const LM741_SETTLED_V = 1e-6;
 
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
@@ -141,11 +152,141 @@ function registerGroundSensingOpAmp(kind, channels, {
     });
 }
 
+function registerLm741() {
+    const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    registerDevice('lm741', {
+        // TI PDIP-8 top-view contract: 1 null, 2 -, 3 +, 4 V-, 5 null,
+        // 6 output, 7 V+, 8 NC.  Null pins remain present and high-Z; their
+        // trim network is explicitly reported as outside this bounded model.
+        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
+
+        init(part) {
+            return {
+                drives: { out: { vTh: 0, rTh: R_OFF } },
+                powered: false,
+                inputCommonMode: 'unknown',
+                offsetNull: 'unmodeled',
+                inputOffsetV: Number.isFinite(part.params?.inputOffsetV)
+                    ? Number(part.params.inputOffsetV) : 0.001,
+                _prev: null,
+                _beta: null,
+                _lastUpdateNs: null,
+                _wakeNs: null,
+            };
+        },
+
+        stamp(ctx) {
+            // The 2 MOhm figure is differential input resistance.  Stamping
+            // it between the two pins avoids inventing either input as ground.
+            ctx.conductance('inp', 'inn', 1 / LM741_INPUT_R);
+        },
+
+        update(part, state, read, tNs) {
+            const vpos = read('vpos');
+            const vneg = read('vneg');
+            const powered = Number.isFinite(vpos) && Number.isFinite(vneg)
+                && vpos - vneg >= 10;
+            state.powered = powered;
+            if (!powered) {
+                state.inputCommonMode = 'unpowered';
+                state._prev = null;
+                state._beta = null;
+                state._lastUpdateNs = tNs;
+                state._wakeNs = null;
+                const old = state.drives.out;
+                if (old.vTh === vneg && old.rTh === R_OFF) return false;
+                state.drives.out = { vTh: vneg, rTh: R_OFF };
+                return true;
+            }
+
+            // At +/-15 V the guaranteed input range is +/-12 V and the
+            // loaded output guarantee is +/-10 V.  Three volts of input
+            // headroom and a +/-13 V Thevenin source behind 600 ohms express
+            // those two independent limits without claiming rail-to-rail I/O.
+            const commonLow = vneg + 3;
+            const commonHigh = vpos - 3;
+            const inp = read('inp');
+            const inn = read('inn');
+            state.inputCommonMode = (inp < commonLow || inn < commonLow) ? 'below'
+                : (inp > commonHigh || inn > commonHigh) ? 'above' : 'valid';
+
+            const low = vneg + 2;
+            const high = vpos - 2;
+            const out = read('out');
+            const drive = state.drives.out.vTh;
+            const residual = inp - inn + state.inputOffsetV - out / LM741_A0;
+            if (state._lastUpdateNs !== null && tNs <= state._lastUpdateNs) {
+                // The board re-solves immediately after a drive changes and
+                // calls us again at the SAME simulated instant.  That pass
+                // must not overwrite the before-drive sample used to measure
+                // feedback beta.  A changed input with an unchanged drive is
+                // different: retain that sample and arm the next real tick.
+                if (state._prev && Math.abs(drive - state._prev.u) <= U_TOL
+                    && Math.abs(residual - state._prev.r) > LM741_SETTLED_V) {
+                    state._prev = { u: drive, r: residual };
+                    state._lastUpdateNs = tNs;
+                    state._wakeNs = tNs + LM741_TICK_NS;
+                }
+                return false;
+            }
+            let beta = null;
+            let target;
+            const measuredSlope = state._prev && Math.abs(drive - state._prev.u) > U_TOL;
+            if (measuredSlope) {
+                beta = (state._prev.r - residual) / (drive - state._prev.u);
+            }
+            if (Number.isFinite(beta) && beta > BETA_MIN) state._beta = beta;
+            else beta = state._beta;
+            if (Number.isFinite(beta) && beta > BETA_MIN) {
+                target = drive + residual / beta;
+            } else if (!measuredSlope) {
+                // A quiescent zero-output follower has not yet supplied two
+                // points from which to infer feedback.  Use one bounded
+                // residual-sized probe; the next tick then distinguishes a
+                // real feedback network from open/positive-loop operation.
+                target = drive + residual;
+            } else {
+                target = drive + LM741_A0 * residual;
+            }
+            target = clamp(target, low, high);
+            state._prev = { u: drive, r: residual };
+
+            if (state._lastUpdateNs === null) {
+                state._lastUpdateNs = tNs;
+                state._wakeNs = tNs + LM741_TICK_NS;
+                return false;
+            }
+            if (state._wakeNs && tNs < state._wakeNs) {
+                return false;
+            }
+
+            const dtSec = Number(tNs - state._lastUpdateNs) / 1e9;
+            const dtUs = dtSec * 1e6;
+            const closedLoopBw = Number.isFinite(beta) && beta > BETA_MIN
+                ? LM741_GBW_HZ * Math.min(1, beta) : LM741_GBW_HZ;
+            const alpha = 1 - Math.exp(-2 * Math.PI * closedLoopBw * dtSec);
+            const bandwidthStep = (target - drive) * alpha;
+            const slewStep = LM741_SLEW_V_PER_US * dtUs;
+            const delta = clamp(bandwidthStep, -slewStep, slewStep);
+            const next = clamp(drive + delta, low, high);
+            state._lastUpdateNs = tNs;
+
+            const settled = Math.abs(target - next) <= LM741_SETTLED_V
+                && Math.abs(residual) <= LM741_SETTLED_V;
+            state._wakeNs = settled ? null : tNs + LM741_TICK_NS;
+            if (Math.abs(next - drive) <= U_TOL) return false;
+            state.drives.out = { vTh: next, rTh: LM741_R_OUT };
+            return true;
+        },
+    });
+}
+
 export function registerAnalogAmps() {
     // Preserve LM358's historical implicit 5 V fallback for old benches that
     // omitted its supply wire; LM324 is new and requires its real shared rails.
     registerGroundSensingOpAmp('lm358', ['1', '2'], { legacyUnwiredFiveVoltSupply: true });
     registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
+    registerLm741();
 
     registerDevice('lm3915', {
         terminals: ['vcc', 'gnd', 'sig', 'mode',
