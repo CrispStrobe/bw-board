@@ -83,3 +83,9 @@ runtime even if the moved work becomes infinitely fast. At 20× faster native
 execution, the required share rises to 94.7%, before board/device overhead.
 Guest instruction coverage is not CPU-time coverage, so the next trial must
 measure both full-workload time and the share spent at block exits.
+
+The [opt-in board block contract](I80386-RUN-BLOCK-CONTRACT.md) now defines a
+bounded entry and exact chip-event exit using the existing per-instruction
+step. It covers memory and branches semantically but has no fast backend and
+claims no acceleration. It is a baseline against which a native executor can
+be tested.

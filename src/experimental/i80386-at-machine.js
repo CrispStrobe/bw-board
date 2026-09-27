@@ -392,6 +392,31 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     return this.functionalInstructionCycles;
   }
 
+  /**
+   * Bounded board entry point for a future block executor. Until a native
+   * backend can preserve the boundaries below, each instruction deliberately
+   * uses the existing board step (chip flush, IRQ arbitration, fault rollback).
+   * The caller must use step() to service a chip-event exit before retrying.
+   */
+  runBlock(maxInstructions = 64) {
+    if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
+      throw new RangeError('experimental 386 block budget must be 1 through 64 instructions');
+    let instructions = 0, cycles = 0;
+    while (instructions < maxInstructions) {
+      if (this.cpu.shutdown) return {instructions, cycles, reason: 'shutdown'};
+      if (this.cpu.halted) return {instructions, cycles, reason: 'halted'};
+      if (this._chipDebt >= this._chipDeadline)
+        return {instructions, cycles, reason: 'chip-event'};
+      const before = this.cpu.cycles;
+      const charged = this.step();
+      cycles += charged;
+      if (this.cpu.cycles === before)
+        return {instructions, cycles, reason: this.cpu.shutdown ? 'shutdown' : 'fault'};
+      instructions++;
+    }
+    return {instructions, cycles, reason: 'instruction-budget'};
+  }
+
   enableI8088CycleTiming() {
     throw new Error('experimental 386 AT refuses 8088 cycle timing');
   }
