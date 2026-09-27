@@ -250,3 +250,16 @@ result. The paired private 60-million-step ordinary/native comparison took
 experiment must measure CPU time by execution mode and block-exit reason,
 then test broader memory, prefix, branch and string execution over multiple
 instructions per native call. The 10× target remains open.
+
+An [opt-in entry-mode CPU sampler](I80386-MODE-CPU-PROFILE.md) now measures
+process CPU over completed AT-console step calls, flushing its clock at each
+mode change. In two 60-million-step runs of the same external Windows 3.11
+workload, real, protected 16-bit and VM86 entry modes together accounted for
+69.8% and 70.2% of attributed user CPU; protected 32-bit accounted for 30.2%
+and 29.8%. No clock window mixed modes. The four paired control/profile runs
+had identical normalized guest output; the sampler added 2.41–2.86 user CPU
+seconds, or about 3.4% on average. These mode shares include board and runner
+work and are not strict retired-instruction costs. Even if 16-bit mode became
+free, the observed share implies only a 3.31–3.35× overall ceiling for this
+workload. A 10× path must accelerate substantial 32-bit work too. Pinned media,
+raw reports, timing files and source hashes live in the private fixture repo.
