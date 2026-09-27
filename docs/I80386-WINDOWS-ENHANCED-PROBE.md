@@ -1,6 +1,6 @@
 # Windows 3.1x enhanced-mode diagnostic
 
-`scripts/probe-i80386-windows-enhanced.mjs` is a read-only, media-neutral boot
+`scripts/probe-i80386-windows-enhanced.mjs` is a media-neutral boot
 probe for an externally supplied, installed Windows 3.1/3.11 hard-disk image.
 It deliberately never sets `windowsEnhancedAccepted` to true. The report records
 the first protected-mode, paging, and VM86 observations separately, plus bounded
@@ -22,7 +22,9 @@ Set `AT_VGA_CAPTURE=1` to include the final four VGA planes and complete
 registers in the external JSON report. The existing Windows 3.0 renderer
 accepts only its observed 640×350 EGA layout; a different Windows 3.11 VGA
 mode needs separate decoding before a desktop can be visually accepted.
-Disk writes stay in the in-memory image clone.
+Disk writes stay in the in-memory image clone unless `AT_HDD_OUTPUT` names a
+new external path. That option creates the output exclusively and records its
+SHA-256, so a subsequent boot can verify DOS or Windows disk persistence.
 Both the 32 KiB SeaVGABIOS variant and the vendored 38.4 KiB Bochs VGA BIOS
 fit the probe's option-ROM mapping. The report records bounded ATA task-file
 traffic, including device status and errors, so a boot-sector failure can be
@@ -48,5 +50,7 @@ separately in [I80386-WINDOWS300.md](I80386-WINDOWS300.md).
 Private Windows media, its provenance, hashes, derived images, and detailed
 execution receipts belong in the separately managed private fixture repository.
 The public project records only the media-neutral harness and code fixes.
-The existing Windows 3.0 image has no `WIN386.EXE`; Windows 3.1x enhanced mode
-remains unaccepted. Keep Microsoft media outside this MIT repository.
+The private Windows 3.11 run reached Program Manager, File Manager, and a
+keyboard-driven enhanced-mode DOS prompt that executed `ver`. Disk persistence
+and broader application compatibility remain separate acceptance checks. Keep
+Microsoft media outside this MIT repository.

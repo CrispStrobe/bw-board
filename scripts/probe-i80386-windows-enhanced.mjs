@@ -32,6 +32,7 @@ const readPinned = (pathName, hashName) => {
 const bios = readPinned('AT_BIOS_ROM', 'AT_BIOS_SHA256');
 const vga = readPinned('VGA_BIOS_ROM', 'VGA_BIOS_SHA256');
 const hdd = readPinned('AT_HDD_IMAGE', 'AT_HDD_SHA256');
+const hddOutputPath = process.env.AT_HDD_OUTPUT ?? null;
 if (bios.bytes.length !== 0x10000 || vga.bytes.length > 0x10000 || vga.bytes.length < 0x4000)
   throw new Error('expected a 64 KiB AT BIOS and a 16–64 KiB VGA option ROM');
 const chs = required('AT_HDD_GEOMETRY').split(/[x,:]/).map(Number);
@@ -59,6 +60,7 @@ if (!Array.isArray(keyScript) || keyScript.some((event, index) =>
   !Number.isInteger(event.code) || event.code < 0 || event.code > 255 ||
   (index > 0 && event.step <= keyScript[index - 1].step)))
   throw new Error('AT_KEY_SCRIPT must be an ordered JSON array of {step, code} Set-1 events');
+const hddOutputFd = hddOutputPath ? fs.openSync(hddOutputPath, 'wx') : null;
 
 const profile = structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
 profile.regions = profile.regions.map(region => region.kind === 'rom' && region.start === 0xc0000
@@ -201,6 +203,8 @@ const report = {
       geometry: {cylinders, heads, sectors}, cmosType}},
   milestones, post, ata, kbc, checkpoints, keyboard,
   keyScriptSha256: keyBytes && hash(keyBytes), final: state(), finalContext,
+  hddOutput: hddOutputPath ? {path: hddOutputPath,
+    bytes: machine.ata.mediaBytes().length, sha256: hash(machine.ata.mediaBytes())} : null,
   executionRevision, sourceSha256,
   sourceUnchanged: sourceFiles.every(file =>
     hash(fs.readFileSync(new URL(file, import.meta.url))) === sourceSha256[file]),
@@ -208,4 +212,9 @@ const report = {
     frame: video.frame, mode: {misc: video.misc, seq: [...video.seq], gc: [...video.gc]},
     snapshot},
 };
+if (hddOutputFd !== null) {
+  if (!report.sourceUnchanged) throw new Error('Windows run refused: executed source changed');
+  fs.writeFileSync(hddOutputFd, machine.ata.mediaBytes());
+  fs.closeSync(hddOutputFd);
+}
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
