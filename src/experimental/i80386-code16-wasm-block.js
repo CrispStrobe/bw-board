@@ -6,6 +6,7 @@ import {decodeI80386Code16EA as decodeEA,
   prevalidateI80386Code16EADataWindow as admitEA,
   isI80386Code16EADataWindowValid as validEA} from './i80386-code16-ea.js';
 import {createI80386RamBridge} from './i80386-ram-bridge.js';
+import {decodeI80386Code16ObservedForm} from './i80386-code16-form-census.js';
 
 const OP = {nop: 0, imm: 1, reg: 2, cmp: 3, load8: 4, load16: 5,
   jz: 6, jnz: 7};
@@ -77,7 +78,8 @@ function decodeBlock(machine, maxInstructions, refused = null) {
   if (instructions.length < 2) {
     const reason = instructions.length ? 'shortBlock' :
       stop === 'unsupportedOpcode' ? 'unsupportedFirstOpcode' : stop;
-    refused?.(reason, reason === 'unsupportedFirstOpcode' ? bytes[0] : stop);
+    refused?.(reason, reason === 'unsupportedFirstOpcode' ? bytes[0] : stop,
+      {bytes, at});
     return null;
   }
   const code = admitCode(machine, start, at);
@@ -187,11 +189,14 @@ function eligible(machine) {
 /** Separate opt-in dispatcher; never changes the production GUI/CPU path. */
 export async function createI80386Code16WasmDispatcher(machine, {
   maxCachedBlocks = 1024, decodeInstructions = 8, diagnosticReasons = false,
+  diagnosticForms = false,
 } = {}) {
   if (machine?.variant !== '80386' || !machine.cpu ||
       !Number.isInteger(maxCachedBlocks) || maxCachedBlocks < 1 ||
       !Number.isInteger(decodeInstructions) || decodeInstructions < 2 ||
-      decodeInstructions > 64 || typeof diagnosticReasons !== 'boolean')
+      decodeInstructions > 64 || typeof diagnosticReasons !== 'boolean' ||
+      typeof diagnosticForms !== 'boolean' ||
+      (diagnosticForms && !diagnosticReasons))
     throw new TypeError('invalid code16 WASM dispatcher');
   const bridge = machine._experimentalRamBridge ?? await createI80386RamBridge();
   if (!machine._experimentalRamBridge) {
@@ -214,6 +219,21 @@ export async function createI80386Code16WasmDispatcher(machine, {
   const diagnostics = diagnosticReasons ? {fallbacks: {}, exits: {},
     shortBlockStops: {}, unsupportedFirstOpcodes: {},
     preparationTruncations: {}, cacheInvalidations: 0} : null;
+  if (diagnosticForms) diagnostics.formCensus = {
+    excludedTerminalBranches: 0,
+    first26: {forms: {}, lengths: {}, outcomes: {}, calls: 0},
+    first66: {forms: {}, lengths: {}, outcomes: {}, calls: 0},
+    first8e: {forms: {}, lengths: {}, outcomes: {}, calls: 0},
+    shortBlockSequential: {forms: {}, lengths: {}, outcomes: {}, calls: 0},
+  };
+
+  function observeForm(bucket, bytes, at) {
+    const form = decodeI80386Code16ObservedForm(bytes, at);
+    bucket.calls++;
+    bump(bucket.forms, form.key);
+    bump(bucket.lengths, form.length ?? 'unknown');
+    bump(bucket.outcomes, form.reason);
+  }
 
   function run(maxInstructions = 64) {
     if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
@@ -228,11 +248,25 @@ export async function createI80386Code16WasmDispatcher(machine, {
     const key = `${cpu.cs}:${cpu.eip >>> 0}`;
     let block = blocks.get(key);
     let refusal = null;
-    const refused = diagnostics ? (reason, detail) => {
+    const refused = diagnostics ? (reason, detail, capture) => {
       refusal = reason;
       if (reason === 'shortBlock') bump(diagnostics.shortBlockStops, detail);
       if (reason === 'unsupportedFirstOpcode')
         bump(diagnostics.unsupportedFirstOpcodes, detail);
+      if (diagnosticForms && capture) {
+        if (reason === 'shortBlock') {
+          if (detail === 'terminalBranch')
+            diagnostics.formCensus.excludedTerminalBranches++;
+          else observeForm(diagnostics.formCensus.shortBlockSequential,
+            capture.bytes, capture.at);
+        }
+        else if (reason === 'unsupportedFirstOpcode') {
+          const bucket = detail === 0x26 ? diagnostics.formCensus.first26 :
+            detail === 0x66 ? diagnostics.formCensus.first66 :
+            detail === 0x8e ? diagnostics.formCensus.first8e : null;
+          if (bucket) observeForm(bucket, capture.bytes, capture.at);
+        }
+      }
     } : null;
     if (!block || !validCode(block.code)) {
       if (block && diagnostics) diagnostics.cacheInvalidations++;

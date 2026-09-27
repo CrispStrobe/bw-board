@@ -78,6 +78,7 @@ const code16Coverage=process.env.AT_CODE16_COVERAGE==='1'?
 const code16WasmDiagnostics=process.env.AT_CODE16_WASM_DIAGNOSTICS==='1';
 const native32Census=process.env.AT_NATIVE32_CENSUS==='1'?
   createI80386Native32Census():null;
+const code16WasmFormCensus=process.env.AT_CODE16_WASM_FORM_CENSUS==='1';
 const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
   schema:'bw.i80386-mode-cpu-profile.v1',intervalSteps:1024,
   modes:['real','protected16','vm86','protected32'],
@@ -98,6 +99,8 @@ if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
   throw new Error('code16 WASM is a separate opt-in dispatcher');
 if(code16WasmDiagnostics&&!options.code16Wasm)
   throw new Error('code16 WASM diagnostics require AT_CODE16_WASM=1');
+if(code16WasmFormCensus&&!code16WasmDiagnostics)
+  throw new Error('code16 WASM form census requires diagnostics');
 if(!Number.isInteger(stepsLimit)||stepsLimit<1||stepsLimit>500_000_000)
   throw new Error('AT_POST_STEPS must be 1..500000000');
 const eventBytes=process.env.AT_CONSOLE_EVENTS?fs.readFileSync(process.env.AT_CONSOLE_EVENTS):Buffer.from('[]');
@@ -130,6 +133,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
   '../src/experimental/i80386-code16-load-exec.js',
   '../src/experimental/i80386-code16-wasm-block.js',
+  '../src/experimental/i80386-code16-form-census.js',
   '../src/experimental/i80386-code16-wasm.c',
   '../wasm/i80386-code16-wasm.wasm',
   '../src/experimental/i80386-native-dispatch.js',
@@ -163,7 +167,8 @@ const nativeDispatcher=options.nativeBlocks?
 const code16WasmDispatcher=options.code16Wasm?
   await (await import('../src/experimental/i80386-code16-wasm-block.js'))
     .createI80386Code16WasmDispatcher(machine,
-      {diagnosticReasons:code16WasmDiagnostics}):null;
+      {diagnosticReasons:code16WasmDiagnostics,
+        diagnosticForms:code16WasmFormCensus}):null;
 machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);

@@ -7,6 +7,8 @@ import {ExperimentalI80386ATMachine, PCAT80386_EXPERIMENTAL_4M,
   '../src/experimental/i80386-at-machine.js';
 import {createI80386Code16WasmDispatcher} from
   '../src/experimental/i80386-code16-wasm-block.js';
+import {decodeI80386Code16ObservedForm} from
+  '../src/experimental/i80386-code16-form-census.js';
 
 function fixture(code, mode = 'real') {
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M);
@@ -292,6 +294,59 @@ test('opt-in diagnostic reasons identify exact refusal and exit sites', async ()
 
   const ordinary = await createI80386Code16WasmDispatcher(fixture([0x90, 0x90]));
   assert.equal(ordinary.diagnostics, null);
+});
+
+test('form census describes prefix, ModRM, width and bounded continuation lengths', async () => {
+  const forms = [
+    {code: [0x26, 0x8b, 0x46, 0xfe], key: '26:8b:mem:o16:a16', length: 4},
+    {code: [0x66, 0xb8, 0x78, 0x56, 0x34, 0x12],
+      key: '66:b8:plain:o32:a16', length: 6},
+    {code: [0x8e, 0xd8], key: '-:8e:reg/3:o16:a16', length: 2},
+    {code: [0x67, 0x26, 0x8b, 0x04, 0x25, 0x00, 0x20, 0x00, 0x00],
+      key: '67.26:8b:mem:o16:a32', length: 9},
+  ];
+  for (const {code, key, length} of forms) {
+    const described = decodeI80386Code16ObservedForm(code);
+    assert.equal(described.key, key);
+    assert.equal(described.length, length);
+    const machine = fixture(code);
+    machine.cpu.eax = 0x2000;
+    machine.cpu.bx = 0x20;
+    machine.cpu.bp = 0x22;
+    machine.step();
+    assert.equal(machine.cpu.eip, 0x20 + length);
+  }
+  assert.equal(decodeI80386Code16ObservedForm([0x26, 0x0f, 0x99]).length, null);
+  assert.equal(decodeI80386Code16ObservedForm([0x26]).reason, 'incomplete');
+
+  const cases = [
+    {code: [0x26, 0x8b, 0x07], bucket: 'first26',
+      form: '26:8b:mem:o16:a16', length: 3},
+    {code: [0x66, 0xb8, 0x78, 0x56, 0x34, 0x12], bucket: 'first66',
+      form: '66:b8:plain:o32:a16', length: 6},
+    {code: [0x8e, 0xd8], bucket: 'first8e',
+      form: '-:8e:reg/3:o16:a16', length: 2},
+    {code: [0x90, 0x26, 0x8b, 0x07], bucket: 'shortBlockSequential',
+      form: '26:8b:mem:o16:a16', length: 3},
+  ];
+  for (const {code, bucket, form, length} of cases) {
+    const fast = fixture(code), slow = fixture(code);
+    const dispatcher = await createI80386Code16WasmDispatcher(fast,
+      {diagnosticReasons: true, diagnosticForms: true});
+    assert.equal(dispatcher.run(2), 1);
+    slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.diagnostics.formCensus[bucket].calls, 1);
+    assert.equal(dispatcher.diagnostics.formCensus[bucket].forms[form], 1);
+    assert.equal(dispatcher.diagnostics.formCensus[bucket].lengths[length], 1);
+  }
+  const branch = fixture([0x74, 0x00, 0x26, 0x8b, 0x07]);
+  const branchDispatcher = await createI80386Code16WasmDispatcher(branch,
+    {diagnosticReasons: true, diagnosticForms: true});
+  assert.equal(branchDispatcher.run(2), 1);
+  assert.equal(branchDispatcher.diagnostics.shortBlockStops.terminalBranch, 1);
+  assert.equal(branchDispatcher.diagnostics.formCensus.shortBlockSequential.calls, 0);
+  assert.equal(branchDispatcher.diagnostics.formCensus.excludedTerminalBranches, 1);
 });
 
 test('vendored free BIOS bounded run preserves CPU and full guest RAM hash', async () => {
