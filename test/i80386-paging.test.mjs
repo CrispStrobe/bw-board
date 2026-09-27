@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import I80386, { I80386Fault } from "../src/experimental/i80386.js";
+import Machine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from
+  '../src/experimental/i80386-at-machine.js';
 
-function fixture() {
+function fixture(translationCache = false) {
   const memory = new Map(),
     reads = [],
     writes = [];
@@ -19,7 +21,7 @@ function fixture() {
       writes.push([address >>> 0, value & 255]);
       memory.set(address >>> 0, value & 255);
     },
-  });
+  }, {translationCache});
   const put = (address, bytes) =>
     bytes.forEach((byte, i) => memory.set(address + i, byte));
   const dword = (address) =>
@@ -65,6 +67,76 @@ function fixture() {
   };
   return { cpu, memory, reads, writes, put, dword, putDword, map };
 }
+
+test('opt-in translation cache retains walks and invalidates guest page-table writes',()=>{
+  const f=fixture(true);
+  f.map(0x4000,0x6000);
+  f.map(0x2000,0x2000); // Guest-visible identity mapping of its page table.
+  f.put(0x6000,[0x11]);f.put(0x7000,[0x22]);
+  assert.equal(f.cpu._readLinear(0x4000,1),0x11);
+  const afterFirst=f.reads.length;
+  assert.equal(f.cpu._readLinear(0x4000,1),0x11);
+  assert.equal(f.reads.length-afterFirst,1,'cached translation avoids PDE/PTE reads');
+  f.cpu._writeLinear(0x2010,4,0x7007); // Guest rewrites the cached PTE.
+  assert.equal(f.cpu._readLinear(0x4000,1),0x22);
+  assert.equal(f.dword(0x2010)&0x20,0x20,'new PTE is accessed');
+  f.cpu._writeLinear(0x4000,1,0x33);
+  assert.equal(f.dword(0x2010)&0x40,0x40,'write hit sets dirty');
+  assert.equal(f.memory.get(0x7000),0x33);
+});
+
+test('cached supervisor mapping still faults for user writes, and CR3/large-page changes flush',()=>{
+  const f=fixture(true);
+  f.map(0,0x3000,3);
+  f.put(0x3000,[0x44]);
+  assert.equal(f.cpu._readLinear(0,1,{supervisor:true}),0x44);
+  f.cpu.cs=3;
+  assert.throws(()=>f.cpu._writeLinear(0,1,0x55),e=>
+    e instanceof I80386Fault&&e.vector===14&&e.errorCode===7);
+  f.cpu.cs=0;
+  f.putDword(0x4000,0x5007);f.putDword(0x5000,0x7007);f.put(0x7000,[0x66]);
+  f.cpu.cr3=0x4000;f.cpu.invalidateTranslationCache();
+  assert.equal(f.cpu._readLinear(0,1),0x66);
+  f.cpu.cr3=0x1000;f.cpu.cr4=0x10;f.cpu.invalidateTranslationCache();
+  f.putDword(0x1000,0x00000083);
+  assert.equal(f.cpu._translate(0x1234),0x1234);
+  assert.equal(f.dword(0x1000)&0x20,0x20);
+  f.cpu._translate(0x1234,{write:true});
+  assert.equal(f.dword(0x1000)&0x40,0x40,'large-page write hit sets PDE dirty');
+});
+
+test('MOV CR0 paging off and back on invalidates the same CR3 after table edits',()=>{
+  const f=fixture(true);
+  f.map(0,0x3000);f.map(0x4000,0x6000);
+  f.put(0x3000,[0x0f,0x22,0xc0]); // MOV CR0,EAX while paging is on.
+  f.put(3,[0x0f,0x22,0xc0]); // Next instruction is fetched without paging.
+  f.put(0x6000,[0x11]);f.put(0x7000,[0x22]);
+  assert.equal(f.cpu._readLinear(0x4000,1),0x11);
+  f.cpu.eax=1;f.cpu.step();
+  assert.equal(f.cpu.cr0&0x80000000,0);
+  f.putDword(0x2010,0x7007); // External table edit while PG is off.
+  f.cpu.eax=0x80000001;f.cpu.step();
+  assert.equal(f.cpu._readLinear(0x4000,1),0x22);
+});
+
+test('AT host and DMA RAM write path invalidates cached page-table mappings',()=>{
+  const machine=new Machine(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
+  const cpu=machine.cpu;
+  const put=(address,value)=>{for(let i=0;i<4;i++)machine._write(address+i,value>>>(i*8));};
+  put(0x1000,0x2007);put(0x2010,0x6007);
+  machine._write(0x6000,0x11);machine._write(0x7000,0x22);
+  cpu.cr0=0x80000001;cpu.cr3=0x1000;
+  assert.equal(cpu._readLinear(0x4000,1),0x11);
+  put(0x2010,0x7007); // Same _write ingress used by AT FDC DMA.
+  assert.equal(cpu._readLinear(0x4000,1),0x22);
+  for(let i=0;i<4;i++)machine._write386(0x2010+i,0x6007>>>(i*8));
+  // _write386 is the host-facing physical-bus path; DMA uses _write.
+  assert.equal(cpu._readLinear(0x4000,1),0x11);
+  machine._a20Enabled=false;
+  put(0x2010,0x7007);
+  assert.equal(cpu._readLinear(0x4000,1),0x22,
+    'A20-gated RAM write conservatively flushes aliased table entries');
+});
 
 test("walks PDE/PTE, sets accessed/dirty in walk order, and honors original supervisor writes", () => {
   const f = fixture();

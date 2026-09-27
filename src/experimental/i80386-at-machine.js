@@ -44,7 +44,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this._fastA20Latch = 0;
     if (this._fastA20Port92 && this._a20Controller)
       this._a20Controller.onA20Change = enabled => {
-        this._a20Enabled = enabled || !!(this._fastA20Latch & 2);
+        const next = enabled || !!(this._fastA20Latch & 2);
+        if (next !== this._a20Enabled) this.cpu?.invalidateTranslationCache();
+        this._a20Enabled = next;
       };
     this.functionalInstructionCycles = config.functionalInstructionCycles ?? 1;
     if (!Number.isInteger(this.functionalInstructionCycles) ||
@@ -58,7 +60,8 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       inPort: (port, width) => this._in386(port, width),
       outPort: (port, value, width) => this._out386(port, value, width),
     };
-    this.cpu = new ExperimentalI80386(bus, {deliverFaults: true});
+    this.cpu = new ExperimentalI80386(bus, {deliverFaults: true,
+      translationCache: true, translationCacheWritesTrackedExternally: true});
     this.cpu.onInterrupt = event => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(event); };
     this.ata = null;
     this._xv6Mp = config.experimentalXv6Mp ? xv6MpTable() : null;
@@ -216,6 +219,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (decoded < this.memoryBytes) this._write(decoded, value);
   }
 
+  // The base AT DMA path writes through _write rather than the CPU bus. Watch
+  // the common RAM write here so DMA and host writes cannot leave stale TLBs.
+  _write(address, value) {
+    if (!this.cpu?._pagingBitWrite) {
+      // A20 aliases raw page-table addresses to different RAM pages. Flush
+      // conservatively while gated, including host/DMA writes through _write.
+      if (this._a20Configured && !this._a20Enabled)
+        this.cpu?.invalidateTranslationCache();
+      else this.cpu?.notePhysicalWrite(address);
+    }
+    return super._write(address, value);
+  }
+
   loadRom(bytes, at = 0xffff0000) {
     if (at === 0xffff0000) return super.loadRom(bytes, 0xff0000);
     return super.loadRom(bytes, at);
@@ -261,7 +277,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       // AT-clone system-control port A: bit 1 is the fast A20 source. The
       // effective gate is its OR with the 8042 output-port A20 bit.
       this._fastA20Latch = value & 2;
-      this._a20Enabled = !!((this._a20Controller?.outputPort & 2) || this._fastA20Latch);
+      const next = !!((this._a20Controller?.outputPort & 2) || this._fastA20Latch);
+      if (next !== this._a20Enabled) this.cpu.invalidateTranslationCache();
+      this._a20Enabled = next;
       if (value & 1) this._cpuResetPending = true;
       this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
       return;
