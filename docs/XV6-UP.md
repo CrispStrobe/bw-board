@@ -13,12 +13,7 @@ XV6_SRC=/tmp/xv6-public XV6_UP_OUT=/tmp/xv6-up \
 
 The builder copies the MIT tree, checks its patch anchors, builds `xv6.img`,
 and writes `bw-xv6-up-receipt.json` with the source revision and image hash.
-This is a diagnostic guest variant; it does not change or weaken the stock
-xv6 acceptance claim. The current run reaches the xv6 console banner through
-the experimental 386 protected-mode, PSE-paged, 32-bit-ATA path. The stock
-MIT image now also reaches `xv6...` under the WIP MP/LAPIC/IOAPIC profile: the
-reproducible probe observes the first 32-bit ATA transfer at step 70,575,463
-and the UART banner by 76,000,000 steps. The BIOS-compatible stock 4MiB build now reaches `cpu0: starting 0`, delivers
-IDE through APIC vector `0x2e`, and receives LAPIC timer vector `0x20` in the
-76M-step receipt. Shell and broader userland behavior remain WIP; this is not
-yet a complete xv6 acceptance claim.
+This is an earlier diagnostic guest variant. The stock SMP-capable kernel now
+boots to an interactive shell on the 4 MiB profile without the UP patch; see
+[the stock xv6 acceptance and reproduction notes](XV6-STOCK.md). Keep this
+builder only for comparing the legacy PIC path with the APIC path.

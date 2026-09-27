@@ -39,6 +39,27 @@ test('experimental ATA performs CHS sector reads and writes with a native word F
   assert.ok(irq.includes(true));
 });
 
+test('enabled slave disk raises its IRQ and returns its own sector data', () => {
+  const irq = [];
+  const slave = new Uint8Array(1024);
+  slave[0] = 0x34; slave[1] = 0x12;
+  const ata = new ExperimentalATA16(image(), geometry, {
+    slaveImage: slave, onIRQ: level => irq.push(level),
+  });
+  ata.writeRegister(6, 0xb0);
+  assert.equal(ata.readRegister(7), 0, 'firmware sees no slave before handoff');
+  ata.writeRegister(6, 0xa0);
+  ata.slaveEnabled = true;
+  ata.writeRegister(2, 1);
+  ata.writeRegister(3, 1);
+  ata.writeRegister(6, 0xb0);
+  ata.writeRegister(7, 0x20);
+  assert.deepEqual(irq, [true], 'slave DRQ asserts the shared IDE interrupt');
+  assert.equal(ata.readRegister(7), 0x58);
+  assert.deepEqual(irq, [true, false], 'status acknowledges the IRQ');
+  assert.equal(ata.readData16(), 0x1234);
+});
+
 test('experimental ATA raises and acknowledges each multi-sector PIO block', () => {
   const irq = [];
   const ata = new ExperimentalATA16(image(), geometry, {onIRQ: level => irq.push(level)});

@@ -67,7 +67,8 @@ export class ExperimentalATA16 {
   }
 
   _updateIRQ() {
-    const next = this._irqPending && !(this.control & 2) && !(this.driveHead & 0x10);
+    const selectedSlaveAvailable = !(this.driveHead & 0x10) || !!(this.slaveImage && this.slaveEnabled);
+    const next = this._irqPending && !(this.control & 2) && selectedSlaveAvailable;
     if (next === this._irqOutput) return;
     this._irqOutput = next;
     this.onIRQ?.(next);

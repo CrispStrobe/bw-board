@@ -67,6 +67,15 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this._ioapic[1] = (23 << 16) | 0x11;
     this._ioapicSelect = 0;
     this._apicIrq = new Uint8Array(24);
+    if (this.chips.uart1) {
+      this.chips.uart1.hooks.onIrqChange = active => {
+        if (this._xv6Mp && this._mpReady && (this.cpu.cr0 & 1)) {
+          // Receive IRQs are edge-latched for the IOAPIC after xv6's MP
+          // handoff. The firmware still sees COM1 on the legacy PIC.
+          if (active) this._apicIrq[4] = 1;
+        } else this.chips.pic1?.setIRQ(4, active ? 1 : 0);
+      };
+    }
     this.vgaMemory = null;
     if (config.experimentalVgaMemory) {
       const vga = this.chips[config.experimentalVgaMemory];

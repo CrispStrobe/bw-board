@@ -135,6 +135,23 @@ test('xv6 SMP profile routes an enabled IDE IRQ through the IOAPIC vector', () =
   assert.equal(machine._apicIrq[14], 0);
 });
 
+test('xv6 SMP profile routes COM1 receive through the IOAPIC after MP handoff', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine._mpReady = true;
+  machine.cpu.cr0 |= 1;
+  machine.cpu.eflags |= 0x200;
+  machine._ioapic[0x10 + 4 * 2] = 0x24;
+  machine.chips.uart1.write(1, 1);
+  machine.serialIn(0x78);
+  assert.equal(machine._apicIrq[4], 1);
+  let vector = null;
+  machine.cpu.interrupt = value => { vector = value; };
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(vector, 0x24);
+  assert.equal(machine.chips.uart1.read(0), 0x78);
+  assert.equal(machine._apicIrq[4], 0);
+});
+
 test('xv6 SMP profile emits a deterministic periodic LAPIC timer interrupt', () => {
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
   machine._mpReady = true;
