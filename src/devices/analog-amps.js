@@ -582,8 +582,14 @@ function registerPrecisionMultiOpAmp(kind, spec, channels, terminals) {
                 // denominator approach floating-point noise; accepting their
                 // quotient as a new beta can freeze the next authored input
                 // change behind an enormous bogus feedback factor.
-                if (Number.isFinite(beta) && beta > BETA_MIN && beta <= 1) cs.beta = beta;
-                else beta = cs.beta;
+                if (Number.isFinite(beta) && beta > BETA_MIN) {
+                    // Unity feedback can measure infinitesimally above one as
+                    // the residual and drive deltas approach machine noise.
+                    // Clamp that passive estimate; discarding it falls back to
+                    // open-loop slew and can strand an unloaded follower.
+                    cs.beta = Math.min(1, beta);
+                    beta = cs.beta;
+                } else beta = cs.beta;
                 if (Number.isFinite(beta) && beta > BETA_MIN) target = drive + residual / beta;
                 else if (!measuredSlope) target = drive + residual;
                 else target = drive + spec.a0 * residual;

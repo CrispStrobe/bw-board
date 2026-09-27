@@ -24,14 +24,16 @@ function fourFollowers({supply = 15, inputs = [-2, -1, 1, 2], offsets = 0, loadO
   const ground = [['G', 'gnd'], ['VP', 'neg'], ['VN', 'pos']];
   const nets = [];
   for (let ch = 1; ch <= 4; ch++) {
-    parts.push(
-      {id: `VIN${ch}`, kind: 'vsource', params: {volts: inputs[ch - 1]}, terminals: ['pos', 'neg']},
-      {id: `RL${ch}`, kind: 'resistor', params: {ohms: loadOhms}, terminals: ['a', 'b']},
-    );
-    ground.push([`VIN${ch}`, 'neg'], [`RL${ch}`, 'b']);
+    parts.push({id: `VIN${ch}`, kind: 'vsource', params: {volts: inputs[ch - 1]}, terminals: ['pos', 'neg']});
+    ground.push([`VIN${ch}`, 'neg']);
+    if (loadOhms !== null) {
+      parts.push({id: `RL${ch}`, kind: 'resistor', params: {ohms: loadOhms}, terminals: ['a', 'b']});
+      ground.push([`RL${ch}`, 'b']);
+    }
     nets.push(
       net(`in${ch}`, [`VIN${ch}`, 'pos'], ['U1', `${ch}_pos`]),
-      net(`out${ch}`, ['U1', `${ch}_neg`], ['U1', `${ch}_out`], [`RL${ch}`, 'a']),
+      net(`out${ch}`, ['U1', `${ch}_neg`], ['U1', `${ch}_out`],
+        ...(loadOhms === null ? [] : [[`RL${ch}`, 'a']])),
     );
   }
   nets.push(
@@ -62,6 +64,16 @@ describe('OP747 physical quad precision micropower op amp', () => {
     }
     assert.deepEqual(board.getDeviceState('U1').inputCommonMode,
       {1: 'valid', 2: 'valid', 3: 'valid', 4: 'valid'});
+  });
+
+  it('settles unloaded unity followers without freezing a noisy beta estimate', () => {
+    const board = fourFollowers({inputs: [-3, -1, 2, 4], offsets: 0, loadOhms: null});
+    board.advanceTo(500_000n);
+    for (let ch = 1; ch <= 4; ch++) {
+      const expected = [-3, -1, 2, 4][ch - 1];
+      assert.ok(Math.abs(board.nodeVoltage(`out${ch}`) - expected) < 0.001,
+        `unloaded channel ${ch}: ${board.nodeVoltage(`out${ch}`)} V`);
+    }
   });
 
   it('requires the documented three-volt total supply span once', () => {

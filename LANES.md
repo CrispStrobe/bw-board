@@ -24,6 +24,11 @@ become a false differential stamp. Focused LT1678 plus adjacent unchanged
 precision/current tests and independent channel/slew/bandwidth mutations are
 the exact-head qualification surface; the proprietary source macromodel stays
 explicitly outside the native card.
+The first downstream clean install exposed the controller's new passive-beta
+guard stranding an unloaded OP747 follower at -0.96 V: a numerically noisy
+unity factor just above one was discarded instead of bounded. The forward
+repair clamps any positive measured passive factor to one and adds the exact
+four-channel unloaded regression; restoring the discard makes that proof red.
 
 2026-09-27 OP27 real precision op-amp model — DONE candidate, Codex `/root`. Isolated
 worktree `/tmp/wt-bwcx-op27-board`, branch `lane/op27-real-model`, exact base
