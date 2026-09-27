@@ -37,8 +37,9 @@ guest page-table changes, CR0/CR3/CR4 changes, segment changes and A20
 gating invalidate the descriptor. Tests compare a changing SIB address and
 a high virtual page with the JavaScript 386. The
 [dynamic-window receipt](receipts/2026-09-27-i80386-wasm-dynamic-window-spike.json)
-pins the revised module and tests. The host still has to decode and validate
-each guest instruction; this spike is not an AT execution path.
+also covers a later out-of-window exit after an earlier instruction retires.
+The host still has to decode and validate each guest instruction; this spike
+is not an AT execution path.
 
 The full 24,338,279-step xv6 `forktest` supplied a decisive coverage bound
 before any board integration. The implemented register forms occurred

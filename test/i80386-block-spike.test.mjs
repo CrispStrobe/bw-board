@@ -275,3 +275,19 @@ test('read window uses an existing TLB mapping and rejects page-table changes',a
   machine._a20Enabled=false;
   assert.equal(isI80386ReadWindowValid(remapped),false);
 });
+
+test('a later out-of-window load exits after earlier native retirement',async()=>{
+  const bridge=await createI80386BlockSpike();
+  bridge.setState({regs:[0x12345678,0,0xdeadbeef,0x121000,0,0,0,0],
+    eip:0x100,eflags:0x202,cycles:9});
+  bridge.setProgram([
+    {op:1,dst:1,src:0,width:32,length:2},
+    {op:8,dst:2,width:32,length:4,base:3,index:8,scale:0,disp:0,
+      lo:0x120000,hi:0x121000},
+    {op:9,dst:0,width:32,length:4,base:3,index:8,scale:0,disp:0},
+  ]);
+  assert.deepEqual(bridge.run(0,3,3),{reason:'unsupported',completed:1});
+  assert.deepEqual(bridge.state(),{
+    regs:[0x12345678,0x12345678,0xdeadbeef,0x121000,0,0,0,0],
+    eip:0x102,eflags:0x202,cycles:10});
+});
