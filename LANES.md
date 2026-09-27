@@ -2531,4 +2531,6 @@ controller resolves a dynamic card only for this identity; all 114 focused
 Universal/named/generic analog-amplifier checks pass, including every existing
 named card unchanged. Noise densities/corners remain an explicit downstream
 refusal until the engine and scope have a calibrated noise-analysis path.
+Isolated default-gain decade, authored current-limit doubling, and authored
+slew-decade mutations each red the named numerical consequence independently.
 Exact-head CI and Harris qualification are the landing gate.
