@@ -178,6 +178,27 @@ const PRECISION_OP_AMPS = Object.freeze({
         defaultOffsetV: 10e-6,
         terminals: ['offset_1', 'inn', 'inp', 'vneg', 'nc', 'out', 'vpos', 'offset_8'],
     }),
+    // Analog Devices AD711 Rev. E J-grade typicals at VS=+/-15 V. Unlike
+    // several bipolar precision cards, this data sheet explicitly specifies
+    // differential input impedance, so the bounded model retains its 3 TOhm
+    // resistive term while leaving the parallel 5.5 pF, bias/noise/drift and
+    // external offset-trim network outside this slice.
+    ad711: Object.freeze({
+        a0: 400000,             // 400 V/mV typical open-loop gain
+        gbwHz: 4e6,             // 4 MHz typical small-signal bandwidth
+        slewVPerUs: 20,         // 20 V/us typical large-signal slew
+        inputR: 3e12,           // differential input impedance, typical
+        rOut: 0.01,             // low-frequency unity-gain output impedance
+        tickNs: 25n,
+        settledV: 1e-7,
+        minSupply: 9,           // operating range begins at +/-4.5 V
+        commonLowHeadroom: 3.5, // typical -11.5 V at a -15 V rail
+        commonHighHeadroom: 0.5,// typical +14.5 V at a +15 V rail
+        outputLowHeadroom: 1.9, // typical -13.1 V with the loaded table case
+        outputHighHeadroom: 1.2,// typical +13.8 V with the loaded table case
+        defaultOffsetV: 0.3e-3, // J-grade room-temperature typical
+        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
+    }),
 });
 
 // TI SLOS039D, LT1014 at 5 V unless noted. This is the physical quad package,
@@ -612,6 +633,15 @@ export function registerAnalogAmps() {
     // physical N8 device, and let importers retain the LTC.lib blocker.
     registerPrecisionOpAmp('lt1007_channel', Object.freeze({
         ...PRECISION_OP_AMPS.lt1007,
+        terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+    }));
+    registerPrecisionOpAmp('ad711', PRECISION_OP_AMPS.ad711);
+    // LTspice's official source symbol is one five-terminal logical channel
+    // without package identity and delegates to AD712 in ADI1.lib. Importers
+    // keep that substitution blocker; this card only supplies the electrical
+    // terminal contract without lending it the physical N-8 face.
+    registerPrecisionOpAmp('ad711_channel', Object.freeze({
+        ...PRECISION_OP_AMPS.ad711,
         terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
     }));
 

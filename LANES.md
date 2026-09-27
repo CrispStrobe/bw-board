@@ -2398,7 +2398,7 @@ plus unchanged precision/analog/current coverage passes 59/59. Independently
 changing gain 20M->10M, slew 2.5->25 V/us, or common-mode headroom 2.5->1 V
 makes its named consequence red. Exact-head CI and Harris qualification remain
 the landing gates.
-2026-09-27 AD711 BiFET precision op-amp model — CLAIM, Codex `/root`. Isolated
+2026-09-27 AD711 BiFET precision op-amp model — DONE candidate, Codex `/root`. Isolated
 worktree `/tmp/wt-bwcx-ad711-board`, branch `lane/ad711-precision-model`, exact
 base `b0831ea09b690ef3353c670a47fb3d268f1b88da`. Owns this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused AD711
@@ -2413,4 +2413,12 @@ gain, follower offset, common-mode/output limits, slew and bandwidth, with
 independent gain/slew/common-mode caller-consequence mutations. Excludes the
 external AD712 macro-model named by LTspice, generic op-amp behavior, solver,
 other named devices, face/art, importer/exporter, corpus, workflow, package pin,
-CUI, Parts, Lite, noise/drift/bias-current curves, and package parasitics.
+CUI, Parts, Lite, noise/drift/bias-current curves, and package parasitics. The
+physical N-8 and package-neutral five-terminal channel are distinct; the card
+retains 400 V/mV gain, 4 MHz bandwidth, 20 V/us slew, 3 TOhm differential
+input impedance, 0.3 mV J-grade offset, nine-volt minimum span, asymmetric
+common-mode/output limits and a 3.4 mA budget. Focused AD711 plus unchanged
+precision/generic/current coverage passes 59/59. Independently halving gain,
+raising slew tenfold, or admitting the invalid negative common-mode witness
+makes its named caller consequence red. Exact hosted CI and Harris qualification
+remain the landing gates.
