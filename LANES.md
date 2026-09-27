@@ -1,3 +1,21 @@
+2026-09-27 LT1678 physical dual precision op-amp model — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-lt1678-board`, branch
+`lane/lt1678-dual-model`, exact base
+`bb51e5fb594e7f2ce940bde78fb6775cce38002b`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused LT1678
+test. Add the manufacturer-bounded shared-rail two-channel SOIC-8 contract and
+a separate package-neutral five-terminal source channel: finite open-loop gain,
+20 MHz gain bandwidth, 6 V/us slew, honestly high-Z differential inputs because
+the specified 2 GOhm value is common-mode resistance, 3.1 V guaranteed minimum
+supply, asymmetric common-mode/output limits, independent channels, and the
+whole-package supply budget. Preserve the proprietary LTspice macro-model as a
+named downstream substitution blocker; this bounded native card is not a claim
+of transistor-level or numerical equivalence. Prove exact terminals, physical
+versus logical identity, both shared-rail channels, power refusal, finite gain,
+common-mode/output limits, slew, and bandwidth with independent mutations. No
+generic op-amp, solver, other named device, face/art, importer/exporter, corpus,
+workflow, package pin, CUI, Parts, or Lite edit.
+
 2026-09-27 OP27 real precision op-amp model — DONE candidate, Codex `/root`. Isolated
 worktree `/tmp/wt-bwcx-op27-board`, branch `lane/op27-real-model`, exact base
 `15f969cc755f41df594b5193c0ee50ebc8477672`. Owns this row,
