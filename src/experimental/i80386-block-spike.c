@@ -6,6 +6,8 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
        OP_JZ=4, OP_JNZ=5, OP_JMP=6, OP_LOAD_PHYS=7,
        OP_LOAD_WINDOW=8, OP_LEA32=9,
        OP_CMP_IMM=10, OP_MOV_IMM=11,
+       OP_ADD_IMM=12, OP_OR_IMM=13, OP_AND_IMM=14,
+       OP_SHL_IMM=15, OP_SHR_IMM=16,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -23,7 +25,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 5; }
+uint32_t block_spike_version(void) { return 6; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -77,6 +79,44 @@ static void cmp_flags(uint32_t left, uint32_t right, uint32_t width) {
   if (even_parity(result & 0xffu)) state.eflags |= PF;
   if (((left ^ right) & (left ^ result) & sign) != 0) state.eflags |= OF;
 }
+static uint32_t add_flags(uint32_t left, uint32_t right, uint32_t width) {
+  const uint32_t mask = width == 16 ? 0xffffu : 0xffffffffu;
+  const uint32_t sign = width == 16 ? 0x8000u : 0x80000000u;
+  left &= mask; right &= mask;
+  const uint32_t result = (left + right) & mask;
+  state.eflags &= ~(CF | PF | AF | ZF | SF | OF);
+  if ((uint64_t)left + right > mask) state.eflags |= CF;
+  if ((left ^ right ^ result) & 0x10u) state.eflags |= AF;
+  if (!result) state.eflags |= ZF;
+  if (result & sign) state.eflags |= SF;
+  if (even_parity(result & 0xffu)) state.eflags |= PF;
+  if ((~(left ^ right) & (left ^ result) & sign) != 0) state.eflags |= OF;
+  return result;
+}
+static uint32_t shift_flags(uint32_t original, uint32_t count,
+                            uint32_t width, uint32_t left) {
+  count &= 31u;
+  if (!count) return original;
+  const uint32_t mask = width == 16 ? 0xffffu : 0xffffffffu;
+  const uint32_t sign = width == 16 ? 0x8000u : 0x80000000u;
+  uint32_t result, carry;
+  original &= mask;
+  if (left) {
+    carry = count <= width ? (original >> (width - count)) & 1u : 0;
+    result = (uint32_t)((uint64_t)original << count) & mask;
+  } else {
+    carry = count <= width ? (original >> (count - 1u)) & 1u : 0;
+    result = count >= width ? 0 : original >> count;
+  }
+  state.eflags &= ~(CF | PF | ZF | SF | OF);
+  if (carry) state.eflags |= CF;
+  if (!result) state.eflags |= ZF;
+  if (result & sign) state.eflags |= SF;
+  if (even_parity(result & 0xffu)) state.eflags |= PF;
+  if (count == 1u && (left ? (!!(result & sign) != !!carry) : !!(original & sign)))
+    state.eflags |= OF;
+  return result;
+}
 
 // Return reason in bits 31..24 and completed guest instructions in 23..0.
 // The caller must validate code bytes, paging, CS bounds, and code-page
@@ -93,8 +133,8 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
     const uint32_t branch = ins.op >= OP_JZ && ins.op <= OP_JMP;
     const uint32_t load = ins.op == OP_LOAD_PHYS;
     const uint32_t ea = ins.op == OP_LOAD_WINDOW || ins.op == OP_LEA32;
-    const uint32_t immediate = ins.op == OP_CMP_IMM || ins.op == OP_MOV_IMM;
-    if (ins.op > OP_MOV_IMM ||
+    const uint32_t immediate = ins.op >= OP_CMP_IMM && ins.op <= OP_SHR_IMM;
+    if (ins.op > OP_SHR_IMM ||
         (branch ? (ins.dst < start || ins.dst >= end) :
           (ins.dst >= 8 || (ins.width != 16 && ins.width != 32) ||
             (immediate ? 0 :
@@ -131,6 +171,15 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       else if (ins.op == OP_CMP || ins.op == OP_CMP_IMM)
         cmp_flags(dst, src, ins.width);
       else if (ins.op == OP_TEST) logic_flags(dst & src, ins.width);
+      else if (ins.op == OP_ADD_IMM)
+        write_reg(ins.dst, ins.width, add_flags(dst, src, ins.width));
+      else if (ins.op == OP_OR_IMM || ins.op == OP_AND_IMM) {
+        const uint32_t result = ins.op == OP_OR_IMM ? dst | src : dst & src;
+        logic_flags(result, ins.width);
+        write_reg(ins.dst, ins.width, result);
+      } else if (ins.op == OP_SHL_IMM || ins.op == OP_SHR_IMM)
+        write_reg(ins.dst, ins.width,
+          shift_flags(dst, src, ins.width, ins.op == OP_SHL_IMM));
       state.eip += ins.length;
       pc++;
     }

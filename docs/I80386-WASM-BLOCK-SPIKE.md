@@ -1,7 +1,7 @@
 # Static WASM 386 block spike
 
-The bundled 5,336-byte WASM module executes prevalidated register-only MOV,
-CMP, TEST, register-immediate MOV and CMP, NOP, JZ, JNZ and JMP operations
+The bundled 6,032-byte WASM module executes prevalidated register-only MOV,
+CMP, TEST, immediate MOV/CMP/ADD/OR/AND/SHL/SHR, NOP, JZ, JNZ and JMP operations
 plus physical RAM loads and LEA
 in one JS→WASM call. It accepts an instruction budget from the board's event horizon. A budget of
 zero returns before execution; reaching the budget returns at the exact
@@ -74,6 +74,13 @@ the native time improves to 42.23 user CPU seconds, still slower than the
 25.82-second JavaScript run. The provenance file now gives the working
 shared-memory build command, including its imported memory and fixed global
 base.
+
+The [register ALU/shift expansion](receipts/2026-09-27-i80386-native-register-alu-shift.json)
+raises full xv6 native retirement to 36.2% and 4.70 instructions per call.
+Two opt-in full runs take 22.87 and 22.49 user CPU seconds, while recent
+ordinary runs take 26.89 and 27.99 seconds. Guest reports match exactly.
+This is a measured gain for the probe only; production AT stepping and the
+GUI/CLI adapters still use the JavaScript CPU.
 
 The host must check CS bounds, paging/permissions, code-page versions,
 instruction bytes, branch target EIPs and physical load addresses before writing IR. It

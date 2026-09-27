@@ -208,3 +208,14 @@ million. These are observed retired forms, not proof that a native block can
 execute them safely. Register shifts and immediate ALU operations are the
 next bounded decoder candidates. REP STOS needs an interruptible write path
 with code/page-table coherence and precise event exits.
+
+The [register ALU and shift A/B](receipts/2026-09-27-i80386-native-register-alu-shift.json)
+adds 32-bit register ADD/OR/AND immediate, `AND EAX, imm32`, and SHL/SHR
+immediate to the opt-in WASM blocks. On two full xv6 `forktest` runs, the
+native path retires 8,813,759 of 24,338,279 guest instructions (36.2%) in
+1,874,330 calls, about 4.70 instructions per call. Every ordinary guest-report
+field matches. Native user CPU time is 22.87 and 22.49 seconds, versus 26.89
+and 27.99 seconds for the recent ordinary runs. That is an observed roughly
+1.2× gain for the opt-in probe on this host, still far from 10× and still not
+integrated into normal CLI or GUI stepping. The next substantial coverage
+requires precise native writes for REP STOS and common memory ALU forms.

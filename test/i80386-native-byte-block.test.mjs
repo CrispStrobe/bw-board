@@ -110,3 +110,42 @@ test('full-width CMP immediate preserves ordinary 386 flags',async()=>{
   for(let i=0;i<6;i++)slow.machine.step();
   assert.deepEqual(state(fast.machine),state(slow.machine));
 });
+
+test('native register immediate ALU and shift bytes match interpreter flags',async()=>{
+  const cases=[
+    {name:'ADD overflow',code:[0x83,0xc0,0x01],eax:0x7fffffff,flags:0x202,op:12},
+    {name:'ADD sign-extended negative',code:[0x83,0xc0,0xff],eax:0,flags:0x202,op:12},
+    {name:'ADD full immediate',code:[0x81,0xc0,0x01,0,0,0x80],eax:0x80000000,flags:0x202,op:12},
+    {name:'OR sign-extended immediate',code:[0x83,0xc8,0x80],eax:0,flags:0x213,op:13},
+    {name:'AND sign-extended immediate',code:[0x83,0xe0,0x7f],eax:0xffffffff,flags:0x213,op:14},
+    {name:'AND EAX immediate',code:[0x25,0,0,0,0x80],eax:0xffffffff,flags:0x213,op:14},
+    {name:'SHL count one',code:[0xc1,0xe0,0x01],eax:0x80000001,flags:0x212,op:15},
+    {name:'SHR count one',code:[0xc1,0xe8,0x01],eax:0x80000001,flags:0x212,op:16},
+    {name:'SHR count thirteen',code:[0xc1,0xe8,0x0d],eax:0xa4680001,flags:0xa12,op:16},
+    {name:'SHL masked zero',code:[0xc1,0xe0,0x20],eax:0x80000001,flags:0xad7,op:15},
+    {name:'SHR masked zero',code:[0xc1,0xe8,0x00],eax:0x80000001,flags:0xad7,op:16},
+  ];
+  for(const entry of cases) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const machine of [fast.machine,slow.machine]) {
+      entry.code.forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.eax=entry.eax;machine.cpu.eflags=entry.flags;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(1);
+    assert.equal(block?.instructions[0]?.op,entry.op,entry.name);
+    assert.deepEqual(runner.run(block,1),
+      {instructions:1,cycles:6,reason:'done'},entry.name);
+    slow.machine.step();
+    assert.deepEqual(state(fast.machine),state(slow.machine),entry.name);
+  }
+});
+
+test('native immediate decoder rejects memory operands',async()=>{
+  const {machine,bridge}=await fixture(true);
+  const runner=await createI80386NativeByteRunner(machine,bridge);
+  for(const code of [[0x83,0x00,0x01],[0xc1,0x28,0x05]]) {
+    code.forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+    assert.equal(runner.decode(1),null);
+  }
+});

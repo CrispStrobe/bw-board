@@ -20,9 +20,9 @@ clang --target=wasm32 -O3 -nostdlib -fno-builtin -Werror -Wall -Wextra \
   -o wasm/i80386-block-spike.wasm
 ```
 
-Source SHA-256: `7a97166f39674bf89a0eecea6d5b51fafa95ae55c5a392511f9fc7b7377febe1`
+Source SHA-256: `7b3e7eb0234464f9ed35afbd434c6cbfa9f8aed0bdb84d385dc43bc7662a54b9`
 
-WASM SHA-256: `c878f72a7c49116e4957710ffa9c3d269ee48fb79145632cdc114971ab013027`
+WASM SHA-256: `4f49b057c51ebc09845b5b623ddbae96ecdc57a7c68020095c7191bdafac9e52`
 
 This is a bounded execution-contract demonstration. The production 80386 AT
 still uses the JavaScript CPU. No xv6 or Windows speedup is claimed.

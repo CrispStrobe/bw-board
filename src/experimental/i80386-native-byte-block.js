@@ -38,11 +38,22 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
         ir={op:11,dst:op-0xb8,src:immediate,width:32};
       } else if (op === 0x81 || op === 0x83) {
         const modrm=take();
-        if ((modrm >>> 6) !== 3 || ((modrm >>> 3) & 7) !== 7) break;
+        const extension=(modrm >>> 3) & 7;
+        if ((modrm >>> 6) !== 3 || ![0,1,4,7].includes(extension)) break;
         let immediate=0;
         if (op === 0x83) immediate=(take()<<24)>>24;
         else for(let i=0;i<4;i++) immediate=(immediate | (take() << (8*i)))>>>0;
-        ir={op:10,dst:modrm & 7,src:immediate>>>0,width:32};
+        ir={op:({0:12,1:13,4:14,7:10})[extension],
+          dst:modrm & 7,src:immediate>>>0,width:32};
+      } else if (op === 0x25) {
+        let immediate=0;
+        for(let i=0;i<4;i++) immediate=(immediate | (take() << (8*i)))>>>0;
+        ir={op:14,dst:0,src:immediate,width:32};
+      } else if (op === 0xc1) {
+        const modrm=take(), extension=(modrm >>> 3) & 7;
+        if ((modrm >>> 6) !== 3 || (extension !== 4 && extension !== 5)) break;
+        ir={op:extension === 4 ? 15 : 16,
+          dst:modrm & 7,src:take(),width:32};
       } else if (op === 0x74 || op === 0x75) {
         const displacement = (take() << 24) >> 24;
         const target = (eip + 2 + displacement) >>> 0;
