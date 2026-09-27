@@ -4,7 +4,7 @@
   "freeBios": true,
   "proprietaryRomUsed": false,
   "scope": "ROM-free 80386 AT: LGPL Bochs BIOS + LGPL VGABios boot FreeDOS 1.4 to A:\\>, decline installer, mount an ATA hard disk as C: (dir c:).",
-  "executionRevision": "1c4602131616fd6ef0ae93150d1c9229d6d68096",
+  "executionRevision": "77c628a4b5076750381446d5c589d2b78105a73d",
   "firmware": {
     "bios": {
       "path": "roms/free-at-bios/BIOS-bochs-legacy",
