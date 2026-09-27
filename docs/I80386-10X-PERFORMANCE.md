@@ -235,3 +235,18 @@ The final 4 MiB RAM SHA-256 matches exactly, as do CPU, serial, interrupts,
 screen and milestones. This is an observed roughly 1.3× end-to-end gain for
 the opt-in xv6 probe on this host, still far from 10×. Production CLI and GUI
 stepping do not use this backend yet.
+
+The [16-bit Windows decoder census](receipts/2026-09-27-i80386-code16-block-decode.json)
+found 44.72 million 16-bit steps in a 60-million-step Windows 3.11 run.
+The code window admitted 44.67 million, but the diagnostic decoder recognized
+the first opcode at only 19.14 million steps. Conservative observation credited
+18.05 million retired steps in disjoint decoded blocks, including 10.83 million
+in blocks of at least two instructions. No guest instructions ran through this
+decoder. Memory operands, prefixes and unsupported opcodes stop many blocks;
+the high code-window admission rate alone is therefore not an acceleration
+result. The paired private 60-million-step ordinary/native comparison took
+81.12 versus 87.43 user CPU seconds with matching guest state. A narrow
+16-bit dispatch bypass also showed no repeatable gain. The next performance
+experiment must measure CPU time by execution mode and block-exit reason,
+then test broader memory, prefix, branch and string execution over multiple
+instructions per native call. The 10× target remains open.
