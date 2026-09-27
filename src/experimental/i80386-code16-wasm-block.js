@@ -202,14 +202,15 @@ function eligible(machine) {
 /** Separate opt-in dispatcher; never changes the production GUI/CPU path. */
 export async function createI80386Code16WasmDispatcher(machine, {
   maxCachedBlocks = 1024, decodeInstructions = 8, diagnosticReasons = false,
-  diagnosticForms = false,
+  diagnosticForms = false, diagnosticBranchLinks = false,
 } = {}) {
   if (machine?.variant !== '80386' || !machine.cpu ||
       !Number.isInteger(maxCachedBlocks) || maxCachedBlocks < 1 ||
       !Number.isInteger(decodeInstructions) || decodeInstructions < 2 ||
       decodeInstructions > 64 || typeof diagnosticReasons !== 'boolean' ||
       typeof diagnosticForms !== 'boolean' ||
-      (diagnosticForms && !diagnosticReasons))
+      typeof diagnosticBranchLinks !== 'boolean' ||
+      ((diagnosticForms || diagnosticBranchLinks) && !diagnosticReasons))
     throw new TypeError('invalid code16 WASM dispatcher');
   const bridge = machine._experimentalRamBridge ?? await createI80386RamBridge();
   if (!machine._experimentalRamBridge) {
@@ -239,6 +240,87 @@ export async function createI80386Code16WasmDispatcher(machine, {
     first8e: {forms: {}, lengths: {}, outcomes: {}, calls: 0},
     shortBlockSequential: {forms: {}, lengths: {}, outcomes: {}, calls: 0},
   };
+  if (diagnosticBranchLinks) diagnostics.branchLinks = {
+    terminalSingleJcc: 0, firstFetchMismatch: 0, fetchedBytesMismatch: 0,
+    didNotRetire: 0, unexpectedSuccessor: 0, modeOrSegmentChange: 0,
+    directions: {taken: 0, fallthrough: 0},
+    landing: {samePage: 0, otherPage: 0},
+    samePage: {candidate: 0, postStepIneligible: 0, codeRefusal: 0,
+      shortOrUnsupported: 0, dataRefusal: 0, otherRefusal: 0},
+    candidateRefusals: {}, candidateLengths: {},
+    candidateKinds: {registerOnly: 0, memoryRead: 0},
+  };
+
+  // A diagnostic probe wraps only this ordinary fallback step. It observes
+  // the actual fetch bytes without adding a second bus read or retiring code.
+  function stepTerminalBranch(branch) {
+    const cpu = machine.cpu, census = diagnostics.branchLinks;
+    const ownFetch = Object.getOwnPropertyDescriptor(cpu, 'fetch');
+    const oldFetch = cpu.fetch, beforeCycles = cpu.cycles;
+    const fetched = [];
+    let firstFetch = null;
+    cpu.fetch = function(physical) {
+      if (!firstFetch) firstFetch = {cs: cpu.cs, eip: cpu.eip >>> 0};
+      const value = oldFetch.call(this, physical);
+      if (fetched.length < 2) fetched.push(value & 255);
+      return value;
+    };
+    try { machine.step(); } finally {
+      if (ownFetch) Object.defineProperty(cpu, 'fetch', ownFetch);
+      else delete cpu.fetch;
+    }
+    census.terminalSingleJcc++;
+    if (!firstFetch || firstFetch.cs !== branch.cs ||
+        firstFetch.eip !== branch.start) { census.firstFetchMismatch++; return; }
+    if (fetched[0] !== branch.op || fetched[1] !== branch.dispByte) {
+      census.fetchedBytesMismatch++; return;
+    }
+    if (cpu.cycles !== beforeCycles + 1) { census.didNotRetire++; return; }
+    const taken = branch.op === 0x74 ? !!(branch.eflags & 0x40) :
+      !(branch.eflags & 0x40);
+    const expected = taken ? branch.target : branch.fallthrough;
+    if (cpu.cs !== branch.cs || (cpu.eip >>> 0) !== expected) {
+      census.unexpectedSuccessor++; return;
+    }
+    if (cpu.cr0 !== branch.cr0 || cpu.cr3 !== branch.cr3 ||
+        cpu.cr4 !== branch.cr4 ||
+        cpu._translationGeneration !== branch.translationGeneration ||
+        machine._a20Configured !== branch.a20Configured ||
+        machine._a20Enabled !== branch.a20Enabled ||
+        (cpu.eflags & 0x20000) !== branch.vm ||
+        cpu.segmentCaches[1] !== branch.csCache ||
+        branch.csCache.base !== branch.csBase ||
+        branch.csCache.limit !== branch.csLimit ||
+        branch.csCache.default32 !== branch.csDefault32) {
+      census.modeOrSegmentChange++; return;
+    }
+    bump(census.directions, taken ? 'taken' : 'fallthrough');
+    const linear = (branch.csBase + expected) >>> 0;
+    if ((linear >>> 12) !== branch.linearPage) {
+      census.landing.otherPage++; return;
+    }
+    census.landing.samePage++;
+    if (!eligible(machine)) { census.samePage.postStepIneligible++; return; }
+    let reason = null;
+    const successor = decodeBlock(machine, decodeInstructions,
+      value => { reason = value; });
+    if (!successor) {
+      bump(census.candidateRefusals, reason ?? 'unknown');
+      bump(census.samePage, reason === 'codeWindowRefusal' ||
+        reason === 'codeAddressLimit' ? 'codeRefusal' :
+        reason === 'shortBlock' || reason === 'unsupportedFirstOpcode' ||
+        reason === 'unsupportedMemoryForm' ? 'shortOrUnsupported' : 'otherRefusal');
+      return;
+    }
+    const prepared = prepare(machine, successor);
+    if (!prepared || prepared.ready.length < 2) {
+      census.samePage.dataRefusal++; return;
+    }
+    census.samePage.candidate++;
+    bump(census.candidateLengths, prepared.ready.length);
+    census.candidateKinds[prepared.ready.some(item => item.ea) ?
+      'memoryRead' : 'registerOnly']++;
+  }
 
   function observeForm(bucket, bytes, at) {
     const form = decodeI80386Code16ObservedForm(bytes, at);
@@ -261,11 +343,28 @@ export async function createI80386Code16WasmDispatcher(machine, {
     const key = `${cpu.cs}:${cpu.eip >>> 0}`;
     let block = blocks.get(key);
     let refusal = null;
+    let terminalBranch = null;
     const refused = diagnostics ? (reason, detail, capture) => {
       refusal = reason;
       if (reason === 'shortBlock') bump(diagnostics.shortBlockStops, detail);
       if (reason === 'unsupportedFirstOpcode')
         bump(diagnostics.unsupportedFirstOpcodes, detail);
+      if (diagnosticBranchLinks && reason === 'shortBlock' &&
+          detail === 'terminalBranch' && capture?.at === 2) {
+        const displacement = (capture.bytes[1] << 24) >> 24;
+        const start = cpu.eip >>> 0, csCache = cpu.segmentCaches[1];
+        terminalBranch = {cs: cpu.cs, start, op: capture.bytes[0],
+          dispByte: capture.bytes[1], eflags: cpu.eflags, cr0: cpu.cr0,
+          cr3: cpu.cr3, cr4: cpu.cr4,
+          translationGeneration: cpu._translationGeneration,
+          a20Configured: machine._a20Configured,
+          a20Enabled: machine._a20Enabled,
+          vm: cpu.eflags & 0x20000, csCache, csBase: csCache.base,
+          csLimit: csCache.limit, csDefault32: csCache.default32,
+          linearPage: ((csCache.base + start) >>> 0) >>> 12,
+          fallthrough: (start + 2) >>> 0,
+          target: (start + 2 + displacement) & 0xffff};
+      }
       if (diagnosticForms && capture) {
         if (reason === 'shortBlock') {
           if (detail === 'terminalBranch')
@@ -294,7 +393,9 @@ export async function createI80386Code16WasmDispatcher(machine, {
       stats.fallback++;
       if (diagnostics) bump(diagnostics.fallbacks,
         prepared?.refusal ?? refusal ?? 'shortPreparedBlock');
-      machine.step(); return 1;
+      if (terminalBranch) stepTerminalBranch(terminalBranch);
+      else machine.step();
+      return 1;
     }
     if (diagnostics && prepared.refusal)
       bump(diagnostics.preparationTruncations, prepared.refusal);

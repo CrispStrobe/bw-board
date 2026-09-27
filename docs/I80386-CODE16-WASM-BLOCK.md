@@ -142,3 +142,52 @@ seconds; opt-in used 308.17, **3.92 times slower**. This remains correctness
 groundwork and should not be used for performance. The flat block length
 points to reducing block-entry frequency and broadening or linking control
 flow before another isolated opcode addition.
+
+## Branch-link opportunity observer
+
+Set `AT_CODE16_WASM=1 AT_CODE16_WASM_DIAGNOSTICS=1
+AT_CODE16_WASM_BRANCH_LINKS=1` in the external-media console CLI to observe
+single-instruction JZ/JNZ blocks that currently fall back to ordinary stepping.
+The observer wraps only that ordinary step's instruction fetch. It requires
+the first fetched CS:EIP and both branch bytes to match the pre-step code
+proof, and the branch to retire, before calling its post-step CS:EIP an actual
+successor. It classifies taken and fallthrough separately; an interrupt,
+fault, code edit, or other redirect is excluded rather than mistaken for a
+branch link. Untaken sequential EIP is kept at full width; a taken rel8
+target wraps to 16 bits.
+
+For an actual successor on the same linear code page, it checks the current
+mode, CS cache, paging and A20 identity, then runs the existing side-effect-free
+code-window decoder and data-read preparation to count a candidate of at least
+two instructions. It separately counts register-only and memory-read
+candidates and refusal reasons. The observer never executes a successor or
+speculatively fetches a target. Its post-step readiness check does not prove
+that a linked executor could have entered the successor within the *previous*
+chip-event budget; such an executor needs its own entry proof and event check.
+
+The pinned Windows 60-million-step A/B produced identical normalized guest
+reports and stopped at the same budget. There were 3,484,531 terminal
+single-Jcc fallbacks in this ES/XOR slice. Every observed first fetch and
+retired branch matched its proved bytes and predicted successor: 1,738,345
+taken and 1,746,186 fallthrough. Of these, 3,422,856 landed on the same
+linear code page. Only 223,020 destinations (6.40% of all terminal Jcc calls)
+had a currently supported two-or-more-instruction successor: 52,044
+register-only and 170,976 with a memory read. The current decoder refused
+877,964 same-page successors after one supported instruction; the report
+does not distinguish how many of those could link recursively. Candidate
+counts are a conservative lower bound under today's grammar, not a count of
+instructions a linked executor would retire.
+
+This result is a **no-go for implementing a narrow Jcc-to-current-block
+link** as a performance slice. Register-only ready successors account for
+only 1.49% of terminal Jcc calls; all ready successors including memory
+reads reach only 6.40%.
+The next experiment should first broaden safe opcode, stack, and store
+coverage and reduce block-entry cost. A later bounded link prototype can
+use one terminal Jcc root and two separately byte-proved successor spans,
+at most 64 IR slots, with exact per-slot EIP and event-budget checks. It
+must retain the current expected-offset guard for any memory read and leave
+unproved targets to ordinary stepping. The census executes no such links.
+The diagnostic opt-in used 363.14 versus 79.63 user CPU seconds; that
+includes millions of extra decode/proof probes and is not a native-link
+performance result.

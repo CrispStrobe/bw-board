@@ -64,6 +64,66 @@ test('real, protected16, and VM86 register MOV/CMP/JZ blocks match steps', async
   }
 });
 
+test('branch-link census observes retired JZ successors without executing them', async () => {
+  const code = [0x74, 0x02, 0x90, 0x90, 0x90, 0x90];
+  for (const mode of ['real', 'protected16', 'vm86'])
+    for (const taken of [false, true]) {
+      const machine = fixture(code, mode);
+      machine.cpu.eflags = (machine.cpu.eflags & ~0x40) | (taken ? 0x40 : 0);
+      const dispatcher = await createI80386Code16WasmDispatcher(machine,
+        {diagnosticReasons: true, diagnosticBranchLinks: true});
+      assert.equal(dispatcher.run(1), 1);
+      assert.equal(machine.cpu.eip, taken ? 0x24 : 0x22);
+      assert.equal(machine.cpu.cycles, 1);
+      const links = dispatcher.diagnostics.branchLinks;
+      assert.equal(links.terminalSingleJcc, 1);
+      assert.equal(links.directions[taken ? 'taken' : 'fallthrough'], 1);
+      assert.equal(links.landing.samePage, 1);
+      assert.equal(links.samePage.candidate, 1);
+      assert.equal(dispatcher.stats.blockCalls, 0);
+    }
+});
+
+test('branch-link census separates actual fetch redirects, byte changes, and other pages', async () => {
+  const code = [0x75, 0x00, 0x90, 0x90];
+  const redirected = fixture(code);
+  const originalStep = redirected.step.bind(redirected);
+  redirected.step = () => { redirected.cpu.eip = 0x22; return originalStep(); };
+  const redirectRunner = await createI80386Code16WasmDispatcher(redirected,
+    {diagnosticReasons: true, diagnosticBranchLinks: true});
+  assert.equal(redirectRunner.run(1), 1);
+  assert.equal(redirectRunner.diagnostics.branchLinks.firstFetchMismatch, 1);
+
+  const changed = fixture(code);
+  const changedStep = changed.step.bind(changed);
+  changed.step = () => { changed.mem[0x10020] = 0x74; return changedStep(); };
+  const changeRunner = await createI80386Code16WasmDispatcher(changed,
+    {diagnosticReasons: true, diagnosticBranchLinks: true});
+  assert.equal(changeRunner.run(1), 1);
+  assert.equal(changeRunner.diagnostics.branchLinks.fetchedBytesMismatch, 1);
+
+  const crossing = fixture([0x75, 0x00]);
+  crossing.cpu.segmentCaches[1].base = 0x10fde;
+  crossing.mem.set([0x75, 0x00, 0x90, 0x90], 0x10ffe);
+  const crossingRunner = await createI80386Code16WasmDispatcher(crossing,
+    {diagnosticReasons: true, diagnosticBranchLinks: true});
+  assert.equal(crossingRunner.run(1), 1);
+  assert.equal(crossingRunner.diagnostics.branchLinks.landing.otherPage, 1);
+  assert.equal(crossingRunner.diagnostics.branchLinks.samePage.candidate, 0);
+
+  const remapped = fixture(code);
+  const remappedStep = remapped.step.bind(remapped);
+  remapped.step = () => {
+    const result = remappedStep();
+    remapped.cpu.cr3 ^= 0x1000;
+    return result;
+  };
+  const remappedRunner = await createI80386Code16WasmDispatcher(remapped,
+    {diagnosticReasons: true, diagnosticBranchLinks: true});
+  assert.equal(remappedRunner.run(1), 1);
+  assert.equal(remappedRunner.diagnostics.branchLinks.modeOrSegmentChange, 1);
+});
+
 test('8B word and 8A high-byte reads use current shared RAM', async () => {
   // MOV AX,[BX]; MOV AH,[BX+2]; CMP AX,BX; JNZ +0.
   const code = [0x8b, 0x07, 0x8a, 0x67, 0x02, 0x39, 0xd8, 0x75, 0x00];
