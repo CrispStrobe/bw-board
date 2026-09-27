@@ -62,6 +62,23 @@ export function decodeTerminalInput(state,chunk) {
       const csi=text.match(/^\x1b\[[0-9;]*[~A-Za-z]/);
       if(csi){state.pending=text.slice(csi[0].length);continue;}
       if(text.startsWith('\x1b[')&&!/[A-Za-z~mM]$/.test(text)&&text.length<64)break;
+      // Most terminals encode Alt+printable as ESC followed by the character.
+      // Send an actual Alt chord to the guest (for example Program Manager
+      // Alt+F), instead of an Escape key followed by an unrelated letter.
+      const meta=text[1];
+      if(meta!=='\x1b'&&meta!=='O') {
+        const lower=meta.toLowerCase(),base=shifted[meta]??lower;
+        const code=keyCodes[base];
+        if(code!==undefined) {
+          const shift=shifted[meta]!==undefined||(meta!==lower&&/[A-Z]/.test(meta));
+          scan.push(0x38);
+          if(shift)scan.push(0x2a);
+          scan.push(...press(code));
+          if(shift)scan.push(0xaa);
+          scan.push(0xb8);
+          state.pending=text.slice(2);continue;
+        }
+      }
       scan.push(...press(1));state.pending=text.slice(1);continue;
     }
     const ch=text[0];state.pending=text.slice(1);

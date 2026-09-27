@@ -12,6 +12,9 @@ test('raw terminal input emits Set-1 make/break and waits for split escape seque
   assert.deepEqual(decodeTerminalInput(state,'A').scan,[0xe0,0x48,0xe0,0xc8]);
   assert.deepEqual(decodeTerminalInput(state,'\x1b').scan,[]);
   assert.deepEqual(flushTerminalEscape(state),[1,0x81]);
+  assert.deepEqual(decodeTerminalInput(state,'\x1bf').scan,[0x38,0x21,0xa1,0xb8]);
+  assert.deepEqual(decodeTerminalInput(state,'\x1bF').scan,
+    [0x38,0x2a,0x21,0xa1,0xaa,0xb8]);
   assert.equal(decodeTerminalInput(state,'\x1b[O').focusChanged,false);
   assert.equal(state.focused,false);
   assert.equal(decodeTerminalInput(state,'\x1b[I').focusChanged,true);
