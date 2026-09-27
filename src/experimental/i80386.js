@@ -1860,17 +1860,19 @@ export class ExperimentalI80386 {
       debugShadow: this._debugShadow,
       nmiActive: this._nmiActive,
       retainedRealCs: this._retainedRealCs,
+      // These entries are replaced on updates, never modified in place. Keep
+      // their prior references so a fault can still roll back a partial load.
       segmentCaches: [
-        { ...this.segmentCaches[0] },
-        { ...this.segmentCaches[1] },
-        { ...this.segmentCaches[2] },
-        { ...this.segmentCaches[3] },
-        { ...this.segmentCaches[4] },
-        { ...this.segmentCaches[5] },
+        this.segmentCaches[0],
+        this.segmentCaches[1],
+        this.segmentCaches[2],
+        this.segmentCaches[3],
+        this.segmentCaches[4],
+        this.segmentCaches[5],
       ],
-      repeatContext: this._repeatContext ? { ...this._repeatContext } : null,
-      ldtr: { ...this.ldtr },
-      tr: { ...this.tr },
+      repeatContext: this._repeatContext,
+      ldtr: this.ldtr,
+      tr: this.tr,
     };
   }
 
@@ -1898,18 +1900,16 @@ export class ExperimentalI80386 {
     this._nmiActive = state.nmiActive;
     this._retainedRealCs = state.retainedRealCs;
     this.segmentCaches = {
-      0: { ...state.segmentCaches[0] },
-      1: { ...state.segmentCaches[1] },
-      2: { ...state.segmentCaches[2] },
-      3: { ...state.segmentCaches[3] },
-      4: { ...state.segmentCaches[4] },
-      5: { ...state.segmentCaches[5] },
+      0: state.segmentCaches[0],
+      1: state.segmentCaches[1],
+      2: state.segmentCaches[2],
+      3: state.segmentCaches[3],
+      4: state.segmentCaches[4],
+      5: state.segmentCaches[5],
     };
-    this._repeatContext = state.repeatContext
-      ? { ...state.repeatContext }
-      : null;
-    this.ldtr = { ...state.ldtr };
-    this.tr = { ...state.tr };
+    this._repeatContext = state.repeatContext;
+    this.ldtr = state.ldtr;
+    this.tr = state.tr;
   }
 
   _faultClass(vector) {

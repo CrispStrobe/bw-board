@@ -1,0 +1,39 @@
+{
+  "schema": "astra.i80386-snapshot-fast-path.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "profile": {
+    "mode": "baseline node --cpu-prof, complete forktest run",
+    "wallSeconds": 85.63,
+    "topSelfMilliseconds": {
+      "_snapshotInstruction": 21942,
+      "_stepInstruction": 9328,
+      "_translate": 6758,
+      "_writeLinear": 5902,
+      "step": 5083
+    },
+    "note": "Sampling and host load affect these times; self time identifies the main optimization target, not an exact cost decomposition."
+  },
+  "baseline": {
+    "revision": "875aeb04",
+    "mode": "detached worktree, unprofiled",
+    "wallSeconds": 68.20,
+    "steps": 24338279,
+    "serialSha256": "57c12342f40ee749e094ed9b242a738a749104eb063db36d2e4ffecd5bdd42d4",
+    "syscallEntries": 189
+  },
+  "optimized": {
+    "mode": "same host, unprofiled; snapshot retains immutable cache entries by reference",
+    "wallSeconds": 48.28,
+    "steps": 24338279,
+    "serialSha256": "57c12342f40ee749e094ed9b242a738a749104eb063db36d2e4ffecd5bdd42d4",
+    "syscallEntries": 189,
+    "sourceSha256": "4b75f07a5ed1627cc781d5e57d80db4994ebeabf4f5e9e6bfd646a143d5dbd14"
+  },
+  "speedup": 1.4125932062966031,
+  "wallReduction": 0.2920821114369502,
+  "identical": ["steps", "serial", "interrupts", "milestones", "inputSent", "finalCpu"],
+  "note": "One sequential local A/B, so wall time is host-dependent. Segment cache entries, repeat context, LDTR, and TR are replaced rather than mutated in place by the executor; rollback still restores the prior references."
+}

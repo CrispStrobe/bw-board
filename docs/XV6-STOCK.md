@@ -53,6 +53,15 @@ The longer `createdelete` prefix also completed at the same 163,992,924
 instructions with identical serial output and kernel milestones after the
 change. Its optimized local run took 406.55 seconds.
 
+A later CPU profile of the same `forktest` found instruction snapshots to be
+the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
+The executor now retains prior segment-cache and task-state objects by reference
+when making each instruction snapshot; it replaces those objects on updates.
+A fresh unprofiled A/B took 68.20 seconds before and 48.28 seconds after
+(1.41×) for the same 24,338,279 guest instructions, serial transcript,
+interrupts, milestones, and final CPU state. The [snapshot performance receipt](receipts/2026-09-27-i80386-snapshot-fast-path.json)
+records the measurement; host load can change wall time.
+
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
 RAM through that window caused the BIOS to stop at `164-Memory Size Error`.
