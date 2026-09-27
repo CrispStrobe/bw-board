@@ -263,3 +263,29 @@ work and are not strict retired-instruction costs. Even if 16-bit mode became
 free, the observed share implies only a 3.31–3.35× overall ceiling for this
 workload. A 10× path must accelerate substantial 32-bit work too. Pinned media,
 raw reports, timing files and source hashes live in the private fixture repo.
+
+The [opt-in code16 WASM block slice](I80386-CODE16-WASM-BLOCK.md) can execute
+read-only `8A`/`8B` memory loads and a few register, immediate and branch
+forms. It matched all normalized guest output in a pinned 60-million-step
+Windows 3.11 A/B, but retired only 2.73 million instructions in 1.26 million
+WASM calls. It took 295.91 user CPU seconds against 78.40 for ordinary
+execution, a 3.77× slowdown, and remains off by default. A later opt-in
+[refusal census](receipts/2026-09-27-i80386-code16-wasm-diagnostics.json)
+accounted for all 57.27 million fallback calls: unsupported first opcode
+(29.85 million), 32-bit mode (15.28 million), short block (8.01 million),
+repeat context (2.15 million), and unsupported memory form (1.81 million)
+dominated. Data-proof refusals numbered only 13,319. These are dispatcher
+calls, not unique retired instructions or CPU-time shares. The immediate
+priority is to identify complete prefixed and stack/control instruction
+forms and find a way to keep useful blocks running across branches.
+
+The read-only [protected-32 native eligibility census](I80386-NATIVE32-CENSUS.md)
+observed 15.28 million protected-32 entries in the same Windows workload.
+The existing decoder returned null at 10.06 million entries; another 3.06
+million produced only a single-instruction candidate. Of 1.81 million
+retired `8B` instructions, 0.96 million had a single-instruction candidate,
+0.59 million a multi-instruction candidate, and 0.26 million no candidate.
+No newly missing narrow opcode family reached the preset 1.5-million
+retirement threshold. This census preserves the ordinary guest report and
+does not measure native speed. Its counts favor broad grouped-form coverage
+and cheaper entry/continuation over a small isolated opcode addition.
