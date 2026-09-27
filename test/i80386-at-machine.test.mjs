@@ -184,13 +184,33 @@ test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC deliv
 test('xv6 SMP profile routes an enabled IDE IRQ through the IOAPIC vector', () => {
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
   machine._ioapic[0x10 + 14 * 2] = 0x2e;
-  machine._apicIrq[14] = 1;
+  machine._latchApicIrq(14);
   machine.cpu.eflags |= 0x200;
   let vector = null;
   machine.cpu.interrupt = value => { vector = value; };
   assert.equal(machine._serviceInterrupts(), true);
   assert.equal(vector, 0x2e);
   assert.equal(machine._apicIrq[14], 0);
+});
+
+test('xv6 IOAPIC keeps masked edges pending and delivers the lowest eligible IRQ', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine.cpu.eflags |= 0x200;
+  machine._ioapic[0x10 + 4 * 2] = 0x24 | 0x10000;
+  machine._ioapic[0x10 + 14 * 2] = 0x2e;
+  machine._latchApicIrq(14);
+  machine._latchApicIrq(4);
+  const vectors = [];
+  machine.cpu.interrupt = value => vectors.push(value);
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.deepEqual(vectors, [0x2e]);
+  assert.equal(machine._apicIrq[4], 1, 'masked edge stays latched');
+  machine._ioapic[0x10 + 4 * 2] = 0x24;
+  machine._latchApicIrq(14);
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.equal(machine._serviceInterrupts(), true);
+  assert.deepEqual(vectors, [0x2e, 0x24, 0x2e]);
+  assert.equal(machine._apicIrqMask, 0);
 });
 
 test('xv6 SMP profile routes COM1 receive through the IOAPIC after MP handoff', () => {

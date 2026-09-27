@@ -77,12 +77,13 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this._ioapic[1] = (23 << 16) | 0x11;
     this._ioapicSelect = 0;
     this._apicIrq = new Uint8Array(24);
+    this._apicIrqMask = 0;
     if (this.chips.uart1) {
       this.chips.uart1.hooks.onIrqChange = active => {
         if (this._xv6Mp && this._mpReady && (this.cpu.cr0 & 1)) {
           // Receive IRQs are edge-latched for the IOAPIC after xv6's MP
           // handoff. The firmware still sees COM1 on the legacy PIC.
-          if (active) this._apicIrq[4] = 1;
+          if (active) this._latchApicIrq(4);
         } else this.chips.pic1?.setIRQ(4, active ? 1 : 0);
       };
     }
@@ -104,7 +105,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
             // ATA presents an edge-like request. Latch the assertion until
             // IOAPIC arbitration consumes it; do not lose a short pulse when
             // the device deasserts before the next CPU boundary.
-            if (active) this._apicIrq[14] = 1;
+            if (active) this._latchApicIrq(14);
           }
           else this.chips.pic2?.setIRQ(6, active ? 1 : 0);
         },
@@ -118,6 +119,8 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
   reset() {
     this._fastA20Latch = 0;
     super.reset();
+    this._apicIrq?.fill(0);
+    this._apicIrqMask = 0;
     this.ata?.reset();
     this.vgaMemory?.reset();
   }
@@ -319,6 +322,11 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       this._out((port + byte) & 0xffff, value >>> (byte * 8));
   }
 
+  _latchApicIrq(irq) {
+    this._apicIrq[irq] = 1;
+    this._apicIrqMask |= 1 << irq;
+  }
+
   _serviceInterrupts() {
     const cpu = this.cpu;
     if (cpu.shutdown) return false;
@@ -345,12 +353,13 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     // handoff in protected mode, stale PIC edges must not leak into the
     // kernel as vectors 8/14; hardware IRQs are then arbitrated by IOAPIC.
     const apicMode = this._xv6Mp && this._mpReady && (cpu.cr0 & 1);
-    if (this._xv6Mp && (cpu.eflags & 0x200) && !cpu._interruptShadow) {
+    if (this._xv6Mp && this._apicIrqMask && (cpu.eflags & 0x200) && !cpu._interruptShadow) {
       for (let irq = 0; irq < this._apicIrq.length; irq++) {
-        if (!this._apicIrq[irq]) continue;
+        if (!(this._apicIrqMask & (1 << irq))) continue;
         const low = this._ioapic[0x10 + irq * 2] ?? 0;
         if (low & 0x10000) continue;
         this._apicIrq[irq] = 0;
+        this._apicIrqMask &= ~(1 << irq);
         if (this.hooks.onInterrupt) this.hooks.onInterrupt({vector: low & 0xff, source: 'apic-irq', irq});
         cpu.interrupt(low & 0xff);
         return true;
