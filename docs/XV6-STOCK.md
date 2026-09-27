@@ -32,6 +32,10 @@ profile, executes `echo BW_XV6_14M_FREE_OK`, and returns to `$`.
 The stock `forktest` program also reports `fork test OK` and returns to the
 shell after exercising process exhaustion and `wait`; CI runs it as a third
 free-BIOS regression.
+The stock `stressfs` program completes its five concurrent write/read phases
+and returns to the shell in a bounded local run. Its own output does not check
+file contents, so this is completion evidence rather than a filesystem data
+integrity claim. The receipt records the serial transcript and step count.
 
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
@@ -68,6 +72,10 @@ XV6_FIRMWARE=bochs XV6_PROFILE=14m XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
 
 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 \
   XV6_COMMAND=$'forktest\r' XV6_EXPECT_SERIAL=$'fork test OK\n$ ' \
+  node scripts/probe-xv6-stock.mjs
+
+XV6_FIRMWARE=bochs XV6_STEPS=100000000 XV6_STOP_ON_EXPECT=1 \
+  XV6_COMMAND=$'stressfs\r' XV6_EXPECT_SERIAL=$'read\n$ ' \
   node scripts/probe-xv6-stock.mjs
 ```
 

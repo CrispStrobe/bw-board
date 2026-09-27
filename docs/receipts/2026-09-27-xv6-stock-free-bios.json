@@ -44,5 +44,13 @@
     "userModeObserved": true,
     "syscallCount": 189,
     "accepted": true
+  },
+  "stressfs": {
+    "profile": "4m",
+    "steps": 32796731,
+    "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ stressfs\nstressfs starting\nwrite 0\nwrite 1\nwrite 2\nwrite 3\nwrite 4\nread\nread\nread\nread\nread\n$ ",
+    "userModeObserved": true,
+    "syscallCount": 363,
+    "accepted": true
   }
 }
