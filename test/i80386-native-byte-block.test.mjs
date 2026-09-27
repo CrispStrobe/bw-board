@@ -207,6 +207,27 @@ test('native immediate decoder rejects memory operands',async()=>{
   }
 });
 
+test('TEST AL,imm8 matches interpreter flags without changing EAX',async()=>{
+  for(const [eax,immediate,flags] of [
+    [0x12345680,0x80,0xad7], [0x87654380,0x7f,0xad7],
+    [0xffffffff,0x55,0x202], [0xabcdef01,0x01,0x202],
+  ]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const machine of [fast.machine,slow.machine]) {
+      machine._write386(CODE_PHYS,0xa8);
+      machine._write386(CODE_PHYS+1,immediate);
+      machine.cpu.eax=eax;machine.cpu.eflags=flags;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(1);
+    assert.equal(block?.instructions[0]?.op,18);
+    assert.deepEqual(runner.run(block,1),
+      {instructions:1,cycles:6,reason:'done'});
+    slow.machine.step();
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+});
+
 async function stosFixture({count=9,offset=0,direction=false,extraPage=false}={}) {
   const fast=await fixture(true),slow=await fixture(false);
   for(const {machine,put32} of [fast,slow]) {

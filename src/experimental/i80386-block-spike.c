@@ -8,6 +8,7 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
        OP_CMP_IMM=10, OP_MOV_IMM=11,
        OP_ADD_IMM=12, OP_OR_IMM=13, OP_AND_IMM=14,
        OP_SHL_IMM=15, OP_SHR_IMM=16, OP_REP_STOSD=17,
+       OP_TEST_AL_IMM8=18,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -25,7 +26,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 7; }
+uint32_t block_spike_version(void) { return 8; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -62,8 +63,8 @@ static void write_ram32(uint32_t address, uint32_t value) {
   for (uint32_t i = 0; i < 4; i++) p[i] = (uint8_t)(value >> (8u * i));
 }
 static void logic_flags(uint32_t value, uint32_t width) {
-  const uint32_t mask = width == 16 ? 0xffffu : 0xffffffffu;
-  const uint32_t sign = width == 16 ? 0x8000u : 0x80000000u;
+  const uint32_t mask = width == 8 ? 0xffu : width == 16 ? 0xffffu : 0xffffffffu;
+  const uint32_t sign = width == 8 ? 0x80u : width == 16 ? 0x8000u : 0x80000000u;
   const uint32_t result = value & mask;
   state.eflags &= ~(CF | PF | AF | ZF | SF | OF);
   if (!result) state.eflags |= ZF;
@@ -149,6 +150,16 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       if (!state.regs[1]) { state.eip += ins.length; pc++; }
       state.cycles++;
       completed++;
+      continue;
+    }
+    if (ins.op == OP_TEST_AL_IMM8) {
+      if (ins.length != 2 || ins.width != 8 || ins.dst != 0 || ins.src > 255u)
+        return (EXIT_UNSUPPORTED << 24) | completed;
+      logic_flags(state.regs[0] & ins.src, 8);
+      state.eip += 2;
+      state.cycles++;
+      completed++;
+      pc++;
       continue;
     }
     const uint32_t branch = ins.op >= OP_JZ && ins.op <= OP_JMP;

@@ -63,6 +63,14 @@ instructions, including 2,145,309 REP STOSD iterations. The
 records source and media hashes. `XV6_NATIVE_DISPATCH=1` with `XV6_LEAN=1`
 selects this path; it remains opt-in.
 
+Native coverage now includes the register-only `TEST AL,imm8` form. A complete
+`forktest` rerun matched the prior native run in steps, serial output, input
+delivery, interrupts, milestones, CPU state, and final RAM hash. Native
+instruction count rose from 11,298,966 to 11,406,107, about 46.9% of the
+24,338,279-step run. The [A8 coverage receipt](receipts/2026-09-27-i80386-native-test-al.json)
+binds the rebuilt WASM and source hashes. This is coverage progress; a
+repeatable end-to-end speed gain has not been established for the new form.
+
 A later CPU profile of the same `forktest` found instruction snapshots to be
 the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
 The executor now retains prior segment-cache and task-state objects by reference

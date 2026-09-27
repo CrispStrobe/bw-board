@@ -43,6 +43,7 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
         ir={op:17,width:32,base:window.linearPage,
           disp:window.delta,lo:window.lo,hi:window.hi};
       } else if (op === 0x90) ir = {op:0,width:32};
+      else if (op === 0xa8) ir = {op:18,dst:0,src:take(),width:8};
       else if (op >= 0xb8 && op <= 0xbf) {
         let immediate=0;
         for(let i=0;i<4;i++) immediate=(immediate | (take() << (8*i)))>>>0;
