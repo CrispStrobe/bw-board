@@ -1,4 +1,4 @@
-2026-09-27 OP27 real precision op-amp model — CLAIM, Codex `/root`. Isolated
+2026-09-27 OP27 real precision op-amp model — DONE candidate, Codex `/root`. Isolated
 worktree `/tmp/wt-bwcx-op27-board`, branch `lane/op27-real-model`, exact base
 `15f969cc755f41df594b5193c0ee50ebc8477672`. Owns this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP27
@@ -13,6 +13,13 @@ terminals, power refusal, finite gain, feedback, both loaded swing directions,
 slew and small-signal response, with independent gain/slew/bandwidth mutations.
 No generic op-amp, solver, other named device, face/art, importer/exporter,
 corpus, workflow, package pin, CUI, Parts, or Lite edit.
+Implemented the Rev. H bounded card: 1.8M open-loop gain, 8 MHz GBW,
+2.8 V/us slew, 10 uV typical offset, 70 ohm open-loop output resistance,
+the +/-11 V common-mode guarantee, and a 600-ohm loaded output above the
+guaranteed +/-10 V floor. The focused OP27 plus unchanged OP07/analog/current
+surface passes 49/49. Independently changing gain 1.8M->0.9M, slew
+2.8->28 V/us, or bandwidth 8->80 MHz makes its named consequence red.
+Exact-head CI and Harris qualification remain the landing gates.
 
 2026-09-27 OP07 real precision op-amp model — DONE candidate, Codex bwcx. Isolated
 worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part-v2`, exact base
