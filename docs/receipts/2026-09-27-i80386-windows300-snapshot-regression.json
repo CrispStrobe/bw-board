@@ -1,0 +1,31 @@
+{
+  "schema": "bw.i80386-windows300-snapshot-regression.v1",
+  "date": "2026-09-27",
+  "executionRevision": "3f52fd47cb8d3f8617d083aa1356bda7fffdfe21",
+  "scope": "Windows 3.0 standard-mode regression after 386 snapshot optimization, not Windows 3.1 enhanced-mode acceptance",
+  "inputs": {
+    "biosSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "vgaRomSha256": "90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a",
+    "hddSha256": "127d214b6c4ff2520c95063e00028547cf287a22e56c0c7a8d550af08486f1aa",
+    "external": true
+  },
+  "run": {
+    "stepLimit": 120000000,
+    "steps": 120000000,
+    "wallSeconds": 183.93,
+    "stopReason": "budget",
+    "refusal": null,
+    "halted": false,
+    "shutdown": false,
+    "keyboard": [
+      {"step": 100000000, "code": 28, "accepted": true},
+      {"step": 100002000, "code": 156, "accepted": true}
+    ],
+    "rawReportLocalPath": "/tmp/bw-win300-post-snapshot.json",
+    "rawReportSha256": "4e5e4c20721623ed61e0e834948f4ebf72570cda6f6d16b67537988851f3d5c1",
+    "finalRgb24Sha256": "74fd79593d2a0d9f1bb61feeb22fe7b372228f747d3e8dcf0dbb97ed5b2b95e2",
+    "matchesEarlierFileManagerRgb24Sha256": true,
+    "observation": "Rendered File Manager displays drives A, B, C, the C:\\WINDOWS tree, and 16926720 bytes free."
+  },
+  "note": "Single shared-host wall-time measurement, not calibrated 386DX realtime. Raw report and rendered pixels remain external to the repository."
+}

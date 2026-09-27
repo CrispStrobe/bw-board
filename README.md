@@ -70,7 +70,8 @@ service-side objdump listings for toolchain targets).
   an opt-in 386 protected-mode/AT path. It has real-mode, paging, descriptor,
   VM86, task, VGA, ATA, FreeDOS, Windows 3.0 standard-mode, and Doom evidence,
   but it is not a claim of complete 386DX, x87, Windows enhanced-mode, or
-  hardware-timing compatibility. See `docs/I80386-EXPERIMENTAL.md`.
+  hardware-timing compatibility. See `docs/I80386-EXPERIMENTAL.md` and the
+  [Windows 3.1x enhanced-mode probe](docs/I80386-WINDOWS-ENHANCED-PROBE.md).
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
@@ -187,6 +188,12 @@ is accepted, enhanced mode is not; Doom's short demo is accepted, the full
 result. The old 8086/8088 and Z80 sweeps remain the architectural ground truth;
 the 286/386 work adds focused ISA/protection/AT receipts rather than silently
 turning partial OS boots into compatibility claims.
+Profiling the stock xv6 `forktest` path identified per-instruction snapshots
+as a major host cost; retaining immutable cache entries reduced one same-host
+run from 68.20 to 48.28 seconds for the same 24,338,279 guest instructions.
+The [performance receipt](docs/receipts/2026-09-27-i80386-snapshot-fast-path.json)
+records the comparison. The six-clock 386 board charge is functional device
+scheduling, so this wall rate is not calibrated 386DX RTx.
 
 ## Windows 3.1 reference comparison
 
