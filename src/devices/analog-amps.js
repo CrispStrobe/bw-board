@@ -247,6 +247,30 @@ const ADTL082_SPEC = Object.freeze({
     terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
 });
 
+// Analog Devices LT1678/LT1679 at +/-15 V. The physical LT1678 is one
+// shared-rail dual in the production S8 package. The proprietary LTspice
+// subcircuit remains a downstream source-model blocker: this card deliberately
+// bounds the public DC, dominant-pole and slew behavior, not transistor-level
+// noise, distortion, bias, drift, CMRR/PSRR or package parasitics. The data
+// sheet's 2 GOhm figure is common-mode resistance, so it is not stamped as a
+// made-up differential conductance.
+const LT1678_SPEC = Object.freeze({
+    a0: 7e6,                 // 7 V/uV typical large-signal gain, RL=10 kOhm
+    gbwHz: 20e6,             // 20 MHz typical gain-bandwidth product
+    slewVPerUs: 6,           // typical large-signal slew rate
+    inputR: null,            // 2 GOhm is specified as common-mode resistance
+    rOut: 100,               // typical open-loop output resistance
+    tickNs: 10n,
+    settledV: 1e-8,
+    minSupply: 3.1,          // guaranteed operating span over temperature
+    commonLowHeadroom: 1.7,  // guaranteed -13.3 V at a -15 V rail
+    commonHighHeadroom: 1.0, // guaranteed +14 V at a +15 V rail
+    outputLowHeadroom: 0.37, // typical 10 mA loaded rail-to-rail envelope
+    outputHighHeadroom: 0.20,
+    defaultOffsetV: 20e-6,   // typical at +/-15 V
+    terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+});
+
 // Analog Devices OP777/OP727/OP747 Rev. D. The physical OP747 is one
 // shared-rail quad in an R-14 SOIC or RU-14 TSSOP. This bounded card uses the
 // +/-15 V typical large-signal gain and the guaranteed common-mode/output
@@ -553,7 +577,12 @@ function registerPrecisionMultiOpAmp(kind, spec, channels, terminals) {
                 let target;
                 const measuredSlope = cs.prev && Math.abs(drive - cs.prev.u) > U_TOL;
                 if (measuredSlope) beta = (cs.prev.r - residual) / (drive - cs.prev.u);
-                if (Number.isFinite(beta) && beta > BETA_MIN) cs.beta = beta;
+                // A passive voltage-feedback fraction cannot exceed one.
+                // Near a fully settled, high-gain loop both numerator and
+                // denominator approach floating-point noise; accepting their
+                // quotient as a new beta can freeze the next authored input
+                // change behind an enormous bogus feedback factor.
+                if (Number.isFinite(beta) && beta > BETA_MIN && beta <= 1) cs.beta = beta;
                 else beta = cs.beta;
                 if (Number.isFinite(beta) && beta > BETA_MIN) target = drive + residual / beta;
                 else if (!measuredSlope) target = drive + residual;
@@ -617,6 +646,13 @@ export function registerAnalogAmps() {
     // not the whole SOIC-8 dual. Importers retain this package-neutral card
     // together with the ADI.lib/ADTL082 substitution blocker.
     registerPrecisionOpAmp('adtl082_channel', ADTL082_SPEC);
+    registerPrecisionMultiOpAmp('lt1678', LT1678_SPEC, ['1', '2'], [
+        '1_out', '1_neg', '1_pos', 'vneg', '2_pos', '2_neg', '2_out', 'vpos',
+    ]);
+    // The official LTspice symbol exposes one five-terminal functional
+    // amplifier, not a selected channel or the complete SOIC-8 package. Keep
+    // its package-neutral identity and proprietary-model blocker downstream.
+    registerPrecisionOpAmp('lt1678_channel', LT1678_SPEC);
     registerPrecisionMultiOpAmp('op747', OP747_SPEC, ['1', '2', '3', '4'], [
         '1_neg', '1_pos', 'vpos', '2_pos', '2_neg', '2_out', '4_out',
         '4_neg', '4_pos', 'vneg', '3_pos', '3_neg', '3_out', '1_out',
