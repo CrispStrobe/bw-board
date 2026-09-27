@@ -81,3 +81,32 @@ test('page-table remap invalidates a previously decoded native load',async()=>{
   assert.equal(isI80386NativeByteBlockValid(block),false);
   assert.deepEqual(runner.run(block,8),{instructions:0,cycles:0,reason:'fallback'});
 });
+
+test('register-immediate MOV and sign-extended CMP loop matches ordinary 386 flags',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  // MOV EAX,12345679h; CMP EAX,78h; JNZ back to MOV.
+  const code=[0xb8,0x79,0x56,0x34,0x12,0x83,0xf8,0x78,0x75,0xf6];
+  for(const machine of [fast.machine,slow.machine])
+    code.forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8);
+  assert.deepEqual(block?.instructions.map(ins=>ins.op),[11,10,5]);
+  assert.deepEqual(runner.run(block,6),{instructions:6,cycles:36,reason:'event'});
+  for(let i=0;i<6;i++)slow.machine.step();
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('full-width CMP immediate preserves ordinary 386 flags',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  // MOV EAX,FFFFFFFFh; CMP EAX,80000000h; JNZ back to MOV.
+  const code=[0xb8,0xff,0xff,0xff,0xff,0x81,0xf8,
+    0x00,0x00,0x00,0x80,0x75,0xf3];
+  for(const machine of [fast.machine,slow.machine])
+    code.forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8);
+  assert.deepEqual(block?.instructions.map(ins=>ins.op),[11,10,5]);
+  assert.deepEqual(runner.run(block,6),{instructions:6,cycles:36,reason:'event'});
+  for(let i=0;i<6;i++)slow.machine.step();
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});

@@ -32,7 +32,18 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
     try {
       const op = take();
       if (op === 0x90) ir = {op:0,width:32};
-      else if (op === 0x74 || op === 0x75) {
+      else if (op >= 0xb8 && op <= 0xbf) {
+        let immediate=0;
+        for(let i=0;i<4;i++) immediate=(immediate | (take() << (8*i)))>>>0;
+        ir={op:11,dst:op-0xb8,src:immediate,width:32};
+      } else if (op === 0x81 || op === 0x83) {
+        const modrm=take();
+        if ((modrm >>> 6) !== 3 || ((modrm >>> 3) & 7) !== 7) break;
+        let immediate=0;
+        if (op === 0x83) immediate=(take()<<24)>>24;
+        else for(let i=0;i<4;i++) immediate=(immediate | (take() << (8*i)))>>>0;
+        ir={op:10,dst:modrm & 7,src:immediate>>>0,width:32};
+      } else if (op === 0x74 || op === 0x75) {
         const displacement = (take() << 24) >> 24;
         const target = (eip + 2 + displacement) >>> 0;
         const targetIndex = starts.get(target);
@@ -131,13 +142,10 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
         machine._lapicTimerInterval
           ? Math.ceil((machine._lapicTimerNext-machine.cycles)/charge) : 64);
       if (budget < 1) return {instructions:0,cycles:0,reason:'chip-event'};
-      native.setState({regs:REG.map(name=>cpu[name]),eip:cpu.eip,
-        eflags:cpu.eflags,cycles:cpu.cycles});
+      native.setCpuState(cpu);
       native.setProgram(block.instructions);
       const result=native.run(0,block.instructions.length,budget);
-      const state=native.state();
-      for(let i=0;i<8;i++) cpu[REG[i]]=state.regs[i];
-      cpu.eip=state.eip;cpu.eflags=state.eflags;cpu.cycles=state.cycles;
+      native.copyStateToCpu(cpu);
       const cycles=result.completed*charge;
       machine.cycles+=cycles;machine._chipDebt+=cycles;
       return {instructions:result.completed,cycles,reason:result.reason};

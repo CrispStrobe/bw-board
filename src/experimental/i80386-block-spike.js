@@ -23,7 +23,7 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
   if (!(memory instanceof WebAssembly.Memory) || memory.buffer.byteLength !== MEMORY_PAGES * 65536)
     throw new TypeError('i80386 block spike needs the fixed shared memory layout');
   const {exports: wasm} = await WebAssembly.instantiate(module, {env: {memory}});
-  if (wasm.block_spike_version() !== 4) throw new Error('i80386 block spike ABI mismatch');
+  if (wasm.block_spike_version() !== 5) throw new Error('i80386 block spike ABI mismatch');
   const words = new Uint32Array(memory.buffer);
   const stateAt = wasm.block_spike_state_ptr() >>> 2;
   const programAt = wasm.block_spike_program_ptr() >>> 2;
@@ -42,6 +42,32 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
       words[stateAt + 8] = eip >>> 0;
       words[stateAt + 9] = eflags >>> 0;
       words[stateAt + 10] = cycles >>> 0;
+    },
+    setCpuState(cpu) {
+      words[stateAt] = cpu.eax >>> 0;
+      words[stateAt + 1] = cpu.ecx >>> 0;
+      words[stateAt + 2] = cpu.edx >>> 0;
+      words[stateAt + 3] = cpu.ebx >>> 0;
+      words[stateAt + 4] = cpu.esp >>> 0;
+      words[stateAt + 5] = cpu.ebp >>> 0;
+      words[stateAt + 6] = cpu.esi >>> 0;
+      words[stateAt + 7] = cpu.edi >>> 0;
+      words[stateAt + 8] = cpu.eip >>> 0;
+      words[stateAt + 9] = cpu.eflags >>> 0;
+      words[stateAt + 10] = cpu.cycles >>> 0;
+    },
+    copyStateToCpu(cpu) {
+      cpu.eax = words[stateAt];
+      cpu.ecx = words[stateAt + 1];
+      cpu.edx = words[stateAt + 2];
+      cpu.ebx = words[stateAt + 3];
+      cpu.esp = words[stateAt + 4];
+      cpu.ebp = words[stateAt + 5];
+      cpu.esi = words[stateAt + 6];
+      cpu.edi = words[stateAt + 7];
+      cpu.eip = words[stateAt + 8];
+      cpu.eflags = words[stateAt + 9];
+      cpu.cycles = words[stateAt + 10];
     },
     state() {
       return {regs: Array.from(words.slice(stateAt, stateAt + 8)),

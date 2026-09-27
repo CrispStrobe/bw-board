@@ -1,0 +1,40 @@
+{
+  "schema": "astra.i80386-native-immediate-direct-state.v1",
+  "date": "2026-09-27",
+  "sourceBaselineCommit": "5e5c0fcc6be93c7af669c781fe9f76a3bec64b3c",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "commandBase": "XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "commandNativeAddition": "XV6_NATIVE_BYTE=1",
+    "nodeVersion": "v20.20.2",
+    "guestSteps": 24338279,
+    "serialEndsWith": "fork test OK\n$ ",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "normalizedGuestReportSha256": "29ea533f6d2bfa93919d744fe5c3e9e35bdd660aac337c16e6161e2bcbfbef34",
+    "guestReportsMatch": true,
+    "normalization": "Remove nativeByte, nativeStats and sharedRam fields; replace rom, image and slaveImage absolute paths with <media>; retain all other report fields in original JSON order."
+  },
+  "implementation": {
+    "wasmSourceSha256": "7a97166f39674bf89a0eecea6d5b51fafa95ae55c5a392511f9fc7b7377febe1",
+    "wasmBinarySha256": "c878f72a7c49116e4957710ffa9c3d269ee48fb79145632cdc114971ab013027",
+    "wasmLoaderSha256": "062ec23a757845016f98e7e6528a54578c55656b3118c7380abcb6cd52943d85",
+    "nativeByteSourceSha256": "59627f978b102812b61b4cd671759f354f464f678b0071e597c0b95733843d66",
+    "probeSourceSha256": "382b32b165a918a7844e2b883f3acfd4d2f99e84c3b34626809cdffae419316c",
+    "change": "Add 32-bit register-immediate MOV and CMP (including sign-extended 83 /7) to the opt-in decoder and WASM IR. Copy CPU registers, EIP, flags and cycle state directly between the JavaScript CPU and shared WASM state to avoid per-call arrays."
+  },
+  "native": {
+    "attempts": 21247299,
+    "decodedBlocks": 111314,
+    "blockCalls": 2111674,
+    "retiredInstructions": 5202654,
+    "retiredFraction": 0.213764,
+    "instructionsPerCall": 2.46376,
+    "userCpuSeconds": 42.23
+  },
+  "ordinary": {"userCpuSeconds": 25.82},
+  "immediateExpansionBeforeDirectStateUserCpuSeconds": 48.83,
+  "nativeToOrdinaryUserCpuRatio": 1.63555,
+  "validation": "node --test test/i80386*.test.mjs: 353 passed, 4 skipped, 0 failed. Full xv6 ordinary and native guest reports match after opt-in metadata and absolute media path normalization.",
+  "conclusion": "Direct CPU state transfer saves measurable host work, while the average native call still retires fewer than 2.5 instructions. This path is slower than ordinary JavaScript stepping and remains opt-in."
+}

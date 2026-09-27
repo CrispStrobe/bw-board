@@ -180,3 +180,15 @@ The typical call retired only 2.47 instructions; the runner also checks code
 bytes, mappings, events and state on every entry. A 10× target needs much
 broader opcode coverage and cheaper block entry, plus precise writes and
 fault exits. The production CPU and ordinary probe remain unchanged.
+
+A second [real-byte A/B](receipts/2026-09-27-i80386-native-immediate-direct-state.json)
+adds 32-bit register-immediate MOV and CMP, including sign-extended `83 /7`,
+and copies CPU state directly to and from the shared WASM memory. The full
+guest report still matches. The new path retires 5,202,654 instructions in
+2,111,674 calls and takes 42.23 user CPU seconds; the paired ordinary run
+takes 25.82 seconds. Direct state transfer cut the expanded path from 48.83
+to 42.23 seconds, but the overall native path is still 1.64× slower. Reusing
+the last loaded WASM program was also tested and removed after it measured
+49.37 seconds on the earlier opcode set versus 46.31 without that cache.
+These measurements point to the per-call boundary and short blocks as the
+dominant problem; adding rare forms alone will not deliver 10×.

@@ -1,7 +1,8 @@
 # Static WASM 386 block spike
 
-The bundled 5,548-byte WASM module executes prevalidated register-only MOV,
-CMP, TEST, NOP, JZ, JNZ and JMP operations plus physical RAM loads and LEA
+The bundled 5,336-byte WASM module executes prevalidated register-only MOV,
+CMP, TEST, register-immediate MOV and CMP, NOP, JZ, JNZ and JMP operations
+plus physical RAM loads and LEA
 in one JS→WASM call. It accepts an instruction budget from the board's event horizon. A budget of
 zero returns before execution; reaching the budget returns at the exact
 instruction boundary. Unsupported or potentially faulting operations are
@@ -65,6 +66,14 @@ AT chip-event and interrupt exits. The full [A/B receipt](receipts/2026-09-27-i8
 matches the ordinary guest report but is 1.79× slower (46.31 versus 25.82
 user CPU seconds). This path is still experimental and is not wired into
 general board stepping, CLI sessions, or the GUI.
+
+The [register-immediate expansion and direct-state receipt](receipts/2026-09-27-i80386-native-immediate-direct-state.json)
+adds `B8+rd`, register `81 /7` and `83 /7` to the decoder and eliminates
+per-call register-array allocation. The full xv6 report still matches and
+the native time improves to 42.23 user CPU seconds, still slower than the
+25.82-second JavaScript run. The provenance file now gives the working
+shared-memory build command, including its imported memory and fixed global
+base.
 
 The host must check CS bounds, paging/permissions, code-page versions,
 instruction bytes, branch target EIPs and physical load addresses before writing IR. It
