@@ -44,6 +44,7 @@ export function createI80386Adapter(opts = {}) {
     },
     sendScancode(scancode) { return machine.keyIn?.(scancode) ?? false; },
     keyIn(scancode) { return machine.keyIn?.(scancode) ?? false; },
+    mouseIn(event) { return machine.mouseIn?.(event) ?? false; },
     video() { return machine.video?.() ?? null; },
   };
 }

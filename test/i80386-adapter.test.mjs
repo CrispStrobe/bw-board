@@ -10,6 +10,8 @@ test('experimental 80386 is a first-class browser target with VGA/key surfaces',
   assert.equal(target.capabilities().keys.includes('scancode'), true);
   assert.equal(target.video().width, 720);
   assert.equal(typeof adapter.sendScancode, 'function');
+  assert.equal(typeof adapter.mouseIn, 'function');
+  assert.equal(adapter.mouseIn({dx: 1, dy: 1, buttons: 1}), false);
 });
 
 test('DOSBox disk media can attach lazily to the experimental target', async () => {
