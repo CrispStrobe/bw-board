@@ -2349,3 +2349,19 @@ The exact official LTspice audit additionally requires a hidden five-terminal
 package identity, and netlist LT1013 from LT1013.sub. The logical card shares
 the bounded electrical constants but never receives a face or whole-package
 identity; downstream must retain the model-substitution blocker.
+
+2026-09-27 OP747 physical quad micropower op amp — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-op747-board`, branch
+`lane/op747-quad-model`, exact base
+`4f8ac9a9cc49ba184636be0ee92528295e77f52f`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP747
+test. Add the official R-14 shared-rail four-channel terminal contract and a
+separate hidden five-terminal package-neutral source channel. The bounded
+Rev. D behavior card covers 3 V..30 V single-supply / ±1.5 V..±15 V dual
+supply, rail-inclusive input range with the documented positive headroom,
+finite large-signal gain and input resistance, rail-to-rail loaded output,
+0.7 MHz response, 0.2 V/us slew, four independent channels, and the
+whole-package supply budget. Prove physical/logical separation, all channels,
+power/common-mode/output/dynamic boundaries, and named mutations. Excludes
+generic op-amp behavior, macro-model execution, solver, other named devices,
+part art, import/export, corpus, workflow, package pin, CUI, and Lite changes.
