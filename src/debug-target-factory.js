@@ -118,16 +118,20 @@ export async function createDebugTarget(kind, opts) {
 
 /**
  * The RISC-V (RV32IMA) bench: a console-only machine, so — like the z80/6502
- * console shapes — no board is required and there is no dedicated debug target
- * yet (adapter-only mode). `opts.image` is a linked program ({segments, entry},
- * e.g. from scripts/riscv-elf.mjs); its ecall ABI output reaches the adapter's
- * onSerial.
+ * console shapes — no board is required. `opts.image` is a linked program
+ * ({segments, entry}, e.g. from scripts/riscv-elf.mjs) whose ecall/UART output
+ * reaches the adapter's onSerial; `opts.linux` ({kernel, initrd?, bootargs?},
+ * sha256-verified by the caller — riscv32-linux-session.js verifyLinuxMedia)
+ * boots a Linux kernel instead, with console input into the 16550A. The target
+ * is riscv32-debug.js: run/pause/instruction step/code breakpoints/registers.
  */
 async function createRiscV32Target(opts = {}) {
-  const { createRiscV32Adapter } = await import('./riscv32-adapter.js');
+  const [{ createRiscV32Adapter }, { createRiscV32DebugTarget }] = await Promise.all([
+    import('./riscv32-adapter.js'), import('./riscv32-debug.js')
+  ]);
   const adapter = createRiscV32Adapter(opts);
   adapter.attachBoard(opts.board || { advanceTo() {}, setPin() {} });
-  return { target: null, adapter };
+  return { target: createRiscV32DebugTarget(adapter), adapter };
 }
 
 // ─── labwired target (the heavy tier) ───────────────────────────────────
