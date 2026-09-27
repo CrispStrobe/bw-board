@@ -184,6 +184,29 @@ const LT1014_SPEC = Object.freeze({
     terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
 });
 
+// Analog Devices ADTL082/ADTL084 Rev. B at +/-15 V. The physical ADTL082 is
+// one dual, shared-rail device; its JFET inputs are represented by the
+// specified 1 TOhm input impedance rather than by the bipolar cards' lower
+// differential resistances. This bounded card retains DC gain/ranges and the
+// dominant bandwidth/slew behavior, while noise, distortion, bias-current
+// drift and the proprietary transistor macromodel remain outside scope.
+const ADTL082_SPEC = Object.freeze({
+    a0: 200000,              // 200 V/mV typical large-signal gain
+    gbwHz: 5e6,              // 5 MHz typical gain-bandwidth product
+    slewVPerUs: 20,          // typical large-signal slew rate
+    inputR: 1e12,            // typical input impedance
+    rOut: 600,               // retains the guaranteed +/-10 V into 2 kOhm
+    tickNs: 25n,
+    settledV: 1e-7,
+    minSupply: 10,           // specified from +/-5 V through +/-15 V
+    commonLowHeadroom: 4,    // -11 V minimum at a -15 V rail
+    commonHighHeadroom: 0,   // common-mode maximum includes +15 V
+    outputLowHeadroom: 2,
+    outputHighHeadroom: 2,
+    defaultOffsetV: 1.5e-3,  // A-grade room-temperature typical
+    terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+});
+
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
     inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
@@ -385,13 +408,8 @@ function registerPrecisionOpAmp(kind, spec) {
     });
 }
 
-function registerPrecisionQuadOpAmp(kind, spec) {
-    const channels = ['1', '2', '3', '4'];
+function registerPrecisionMultiOpAmp(kind, spec, channels, terminals) {
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-    const terminals = [
-        '1_out', '1_neg', '1_pos', 'vpos', '2_pos', '2_neg', '2_out',
-        '3_out', '3_neg', '3_pos', 'vneg', '4_pos', '4_neg', '4_out',
-    ];
     registerDevice(kind, {
         terminals,
 
@@ -519,13 +537,23 @@ export function registerAnalogAmps() {
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
     registerPrecisionOpAmp('lt1006', PRECISION_OP_AMPS.lt1006);
-    registerPrecisionQuadOpAmp('lt1014', LT1014_SPEC);
+    registerPrecisionMultiOpAmp('lt1014', LT1014_SPEC, ['1', '2', '3', '4'], [
+        '1_out', '1_neg', '1_pos', 'vpos', '2_pos', '2_neg', '2_out',
+        '3_out', '3_neg', '3_pos', 'vneg', '4_pos', '4_neg', '4_out',
+    ]);
     // LTspice's official LT1014 symbols describe one five-terminal functional
     // unit and provide no package/channel identity. This hidden logical card
     // lets an importer preserve that channel without inventing a whole
     // 14-pin package. It is never a palette/face identity, and callers must
     // retain the source-model substitution blocker.
     registerPrecisionOpAmp('lt1014_channel', LT1014_SPEC);
+    registerPrecisionMultiOpAmp('adtl082', ADTL082_SPEC, ['1', '2'], [
+        '1_out', '1_neg', '1_pos', 'vneg', '2_pos', '2_neg', '2_out', 'vpos',
+    ]);
+    // The official LTspice symbol is one five-terminal functional amplifier,
+    // not the whole SOIC-8 dual. Importers retain this package-neutral card
+    // together with the ADI.lib/ADTL082 substitution blocker.
+    registerPrecisionOpAmp('adtl082_channel', ADTL082_SPEC);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
