@@ -1,9 +1,15 @@
-2026-09-27 LT1763 physical DC model — CLAIM, Codex bwcx. Isolated worktree
+2026-09-27 LT1763 physical DC model — DONE, Codex bwcx. Isolated worktree
 `/tmp/wt-bwcx-lt1763-board`, branch `lane/lt1763-model`, base `d009a4f7`.
 Owns only `src/devices/power.js`, a focused LT1763 test, and this ledger row:
 real package terminals, fixed/adjustable feedback, shutdown, input range,
 dropout/current limit and full-device KCL. Excludes physical artwork, CUI/Lite
 pins, transient bypass/noise/thermal behaviour, and every other regulator.
+Implemented the SO-8 lead contract and bonded ground pins; fixed and adjustable
+feedback; 1.8V..20V input refusal; SHDN hysteresis; load-dependent 130mV..300mV
+typical dropout; the guaranteed 520mA current-limit floor; the six-point typical
+ground-current curve; shutdown current; and eight-terminal KCL. Focused old/new
+power and source-once coverage is 18/18; threshold, limit and ground-current
+mutations each fail their independent consequence assertion.
 
 2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.

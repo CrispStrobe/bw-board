@@ -1,5 +1,5 @@
 /**
- * Power devices — battery, voltage regulator, ADP7118 LDO, fuse.
+ * Power devices — battery, voltage regulator, physical LDOs, fuse.
  *
  * battery: fixed voltage source (1.5V, 3V, 9V, etc.)
  * vreg: linear voltage regulator (78xx series) — drops to fixed output
@@ -189,6 +189,125 @@ export function registerPowerDevices() {
       state._outputAmps = outputAmps;
       state._inputAmps = inputAmps;
       state.drives.vout_1 = { vTh: driveV, rTh: rOut, ref: 'gnd' };
+      return changed;
+    },
+  });
+
+  // ─── LT1763 500 mA low-noise LDO ──────────────────────────────────
+  // SO-8 terminals follow the data-sheet lead order. The three ground
+  // leads are distinct physical terminals bonded to one die node. This is a
+  // bounded DC model: reference-bypass noise/transients and thermal dynamics
+  // are intentionally not synthesized from the static data-sheet limits.
+  registerDevice('lt1763', {
+    terminals: ['out', 'sense_adj', 'gnd_3', 'byp', 'shdn', 'gnd_6', 'gnd_7', 'in'],
+
+    init(part) {
+      const nominal = part.params?.adjustable ? 1.22 : (part.params?.vOut ?? 5.0);
+      const rOut = part.params?.rOut ?? 0.04;
+      return {
+        drives: { out: { vTh: 0, rTh: rOut, ref: 'gnd_3' } },
+        _enabled: false,
+        _command: nominal,
+        _driveV: 0,
+        _inputAmps: 0,
+        _outputAmps: 0,
+      };
+    },
+
+    stamp(ctx, part, state) {
+      // The SO-8 exposes three ground leads. Ten milliohms preserves their
+      // package identity while keeping the shared die ground equipotential.
+      ctx.conductance('gnd_3', 'gnd_6', 1 / 0.01);
+      ctx.conductance('gnd_3', 'gnd_7', 1 / 0.01);
+
+      // Delivering current through a ground-referenced output source must be
+      // paired with its VIN draw. The difference is the regulator's ground
+      // current, so the complete eight-terminal device conserves current.
+      ctx.current('in', -state._inputAmps);
+      ctx.current('gnd_3', state._inputAmps);
+    },
+
+    update(part, state, read) {
+      const vGnd = (read('gnd_3') + read('gnd_6') + read('gnd_7')) / 3;
+      const vIn = read('in') - vGnd;
+      const vOut = read('out') - vGnd;
+      const vSense = read('sense_adj') - vGnd;
+      const vShutdown = read('shdn') - vGnd;
+      const nominal = part.params?.adjustable ? 1.22 : (part.params?.vOut ?? 5.0);
+      const rOut = part.params?.rOut ?? 0.04;
+      // 520 mA is the guaranteed data-sheet floor. A caller may select the
+      // typical curve explicitly, but the default must not promise more.
+      const currentLimit = part.params?.currentLimit ?? 0.52;
+
+      const shdnOk = state._enabled ? vShutdown > 0.65 : vShutdown >= 0.8;
+      const inputOk = vIn >= 1.8 && vIn <= 20;
+      const enabled = shdnOk && inputOk;
+
+      let command = state._command;
+      let driveV = 0;
+      let outputAmps = 0;
+      if (enabled) {
+        command += nominal - vSense;
+        command = Math.min(20, Math.max(nominal, command));
+
+        const observed = Math.max(0, (state._driveV - vOut) / rOut);
+        const loadOhms = observed > 1e-12 ? Math.max(0, vOut / observed) : Infinity;
+        const preDropoutAmps = Number.isFinite(loadOhms)
+          ? Math.min(currentLimit, command / (loadOhms + rOut))
+          : observed;
+        // Typical dropout rises from about 130 mV at 10 mA to 300 mV at
+        // 500 mA. Interpolate that characterized interval and clamp it at
+        // both ends rather than inventing a zero-load or overload curve.
+        const loadFraction = Math.min(1, Math.max(0, (preDropoutAmps - 0.01) / 0.49));
+        const dropout = 0.13 + 0.17 * loadFraction;
+        command = Math.min(command, Math.max(0, vIn - dropout));
+
+        // Once one nonzero solved point identifies the external load line,
+        // compare the commanded operating point against the limit. Using
+        // only the present low limited current here would alternate between
+        // regulated and limited states on every settle pass.
+        const commandedAmps = Number.isFinite(loadOhms)
+          ? command / (loadOhms + rOut)
+          : observed;
+        outputAmps = Math.min(currentLimit, commandedAmps);
+        driveV = commandedAmps > currentLimit
+          ? currentLimit * (loadOhms + rOut)
+          : command;
+      } else {
+        command = nominal;
+      }
+
+      // Typical GND-pin current table: 30 uA at no load, 65 uA at 1 mA,
+      // 1.1 mA at 50 mA, 2 mA at 100 mA, 5 mA at 250 mA, 11 mA at 500 mA.
+      const groundCurve = [
+        [0, 30e-6], [0.001, 65e-6], [0.05, 1.1e-3],
+        [0.1, 2e-3], [0.25, 5e-3], [0.5, 11e-3],
+      ];
+      let groundAmps = 0.1e-6; // typical shutdown current at 6 V
+      if (enabled) {
+        groundAmps = groundCurve.at(-1)[1];
+        for (let i = 1; i < groundCurve.length; i += 1) {
+          const [hiLoad, hiCurrent] = groundCurve[i];
+          if (outputAmps <= hiLoad) {
+            const [loLoad, loCurrent] = groundCurve[i - 1];
+            const t = (outputAmps - loLoad) / (hiLoad - loLoad);
+            groundAmps = loCurrent + t * (hiCurrent - loCurrent);
+            break;
+          }
+        }
+      }
+      const inputAmps = outputAmps + groundAmps;
+
+      const changed = enabled !== state._enabled
+        || Math.abs(command - state._command) > 1e-6
+        || Math.abs(driveV - state._driveV) > 1e-6
+        || Math.abs(inputAmps - state._inputAmps) > 1e-9;
+      state._enabled = enabled;
+      state._command = command;
+      state._driveV = driveV;
+      state._outputAmps = outputAmps;
+      state._inputAmps = inputAmps;
+      state.drives.out = { vTh: driveV, rTh: rOut, ref: 'gnd_3' };
       return changed;
     },
   });
