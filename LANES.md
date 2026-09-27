@@ -2289,3 +2289,23 @@ EN threshold and pull-down, guaranteed TSOT loaded-dropout envelope, guaranteed
 The focused ADP151 plus unchanged LDO/current surface passes 43/43. Independently
 weakening the current ceiling, dropout envelope, or EN threshold makes its named
 consequence red. Exact-head hosted CI/Harris remain the landing gate.
+2026-09-27 LT1006 real single-supply op-amp model — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-lt1006-board`, branch
+`lane/lt1006-real-model`, exact base
+`6682741c9a651352e99acc0a27337ef85a190882`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused LT1006
+test. Add the manufacturer-bounded S8 electrical contract through the existing
+precision-op-amp controller: exact eight physical pins, 2.7 V minimum supply,
+negative-rail input/output reach, asymmetric positive headroom, finite gain,
+input resistance, offset, supply current and dominant-pole/slew response.
+Pin 8 remains physical and explicitly unmodelled. Prove that asymmetric limits
+do not change the existing symmetric precision cards. No generic op-amp,
+solver, other named device, face/art, importer/exporter, corpus, workflow,
+package pin, CUI, Parts, or Lite edit.
+Implemented the S8 card with 2 MV/V typical 5 V gain, 0.7 MHz-class
+dominant-pole response, 0.4 V/us slew, 300 MOhm differential input, 2.7 V
+minimum supply, ground-inclusive input, 15 mV low output bound and separate
+positive headroom. Focused LT1006 plus unchanged precision/generic op-amp
+surface passes 43/43. Independently weakening finite gain, losing the
+ground-referred output, or relabelling physical pin 8 makes its named
+consequence red. Exact-head hosted CI and Harris remain the landing gates.

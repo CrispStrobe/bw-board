@@ -103,6 +103,29 @@ const PRECISION_OP_AMPS = Object.freeze({
         outputHeadroom: 1.5,
         defaultOffsetV: 5e-6,   // typical room-temperature offset
     }),
+    // Analog Devices LT1006 data sheet, S8 commercial part at 5 V. Unlike
+    // the dual-supply precision cards, this part is explicitly asymmetric:
+    // its inputs include the negative rail and its output sinks to within
+    // millivolts of it, while both remain bounded away from the positive rail.
+    // Pin 8 can trade supply current for speed; that external programming
+    // network is physical but deliberately not simulated by this card.
+    lt1006: Object.freeze({
+        a0: 2e6,                // LT1006C typical large-signal gain at 5 V
+        gbwHz: 0.7e6,           // bounded 5 V unity-gain crossover from G20/G21
+        slewVPerUs: 0.4,        // room-temperature typical
+        inputR: 300e6,          // differential input resistance, typical
+        rOut: 100,              // conservative loaded single-supply swing
+        tickNs: 300n,
+        settledV: 1e-7,
+        minSupply: 2.7,
+        commonLowHeadroom: 0,   // guaranteed input range includes V-
+        commonHighHeadroom: 1.5,
+        outputLowHeadroom: 0.015,
+        outputHighHeadroom: 1.0,
+        defaultOffsetV: 80e-6,  // S8 at 5 V, room-temperature maximum
+        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'iset'],
+        pin8Role: 'supply-current-set',
+    }),
     // Analog Devices OP07 Rev. G, OP07C typicals at VS=+/-15 V. This keeps
     // the public electrical limits that matter to a circuit while declining
     // to impersonate the vendor transistor macromodel: noise, temperature
@@ -217,7 +240,8 @@ function registerPrecisionOpAmp(kind, spec) {
         // The LT1001 and LM741 share the industry-standard PDIP-8 top view:
         // 1 null, 2 -, 3 +, 4 V-, 5 null, 6 output, 7 V+, 8 NC. Null pins
         // remain present and high-Z; trim dynamics are explicitly unmodelled.
-        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
+        terminals: spec.terminals
+            || ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
 
         init(part) {
             return {
@@ -231,6 +255,8 @@ function registerPrecisionOpAmp(kind, spec) {
                 _beta: null,
                 _lastUpdateNs: null,
                 _wakeNs: null,
+                ...(spec.pin8Role === 'supply-current-set'
+                    ? { supplyCurrentSet: 'unmodeled' } : {}),
             };
         },
 
@@ -258,15 +284,15 @@ function registerPrecisionOpAmp(kind, spec) {
                 return true;
             }
 
-            const commonLow = vneg + spec.commonHeadroom;
-            const commonHigh = vpos - spec.commonHeadroom;
+            const commonLow = vneg + (spec.commonLowHeadroom ?? spec.commonHeadroom);
+            const commonHigh = vpos - (spec.commonHighHeadroom ?? spec.commonHeadroom);
             const inp = read('inp');
             const inn = read('inn');
             state.inputCommonMode = (inp < commonLow || inn < commonLow) ? 'below'
                 : (inp > commonHigh || inn > commonHigh) ? 'above' : 'valid';
 
-            const low = vneg + spec.outputHeadroom;
-            const high = vpos - spec.outputHeadroom;
+            const low = vneg + (spec.outputLowHeadroom ?? spec.outputHeadroom);
+            const high = vpos - (spec.outputHighHeadroom ?? spec.outputHeadroom);
             const out = read('out');
             const drive = state.drives.out.vTh;
             const residual = inp - inn + state.inputOffsetV - out / spec.a0;
@@ -343,6 +369,7 @@ export function registerAnalogAmps() {
     registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
+    registerPrecisionOpAmp('lt1006', PRECISION_OP_AMPS.lt1006);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
