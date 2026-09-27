@@ -1,0 +1,48 @@
+{
+  "schema": "bw.i80386-native-dispatch-profile-negative.v1",
+  "date": "2026-09-27",
+  "scope": "Opt-in native dispatcher, pinned Windows 3.11 console workload, 60 million guest steps. V8 CPU profile sampled wall time; no guest execution change.",
+  "measuredExecutionRevision": "8614ebdafbc8a2ff76342018aeec07f6331f6e3d",
+  "sourceSha256": {
+    "src/experimental/i80386-native-dispatch.js": "0dc3fd4c952e8c2806d22c11381973800073af7f0e39e09366136e41ac459401",
+    "src/experimental/i80386-native-byte-block.js": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+    "src/experimental/i80386-read-window.js": "4df76257e53f4b8e77da380b2748292743a47d4a9bf3fe6ce5e74882f50c9f5e",
+    "wasm/i80386-block-spike.wasm": "0e6cb0789a33500b512ec1ec5fc778b78a0459aebd2b3a0f89a786411f87a9c7",
+    "scripts/run-i80386-at-console.mjs": "33145250a3bea04b610006b4a24201b5cad2908dc3a35787ab94f009e588b90c"
+  },
+  "privateArtifactSha256": {
+    "rawReport": "406e1ac15d925533999d7ccf2f1b5868f1f3673340be35d98c4836d52a093990",
+    "rawV8Profile": "a0cb52c00bb8a73cf99c88574344fb29e174c2367ae52876cb076d3f9643f232"
+  },
+  "profile": {
+    "totalSamples": 64497,
+    "durationSeconds": 82.864086,
+    "disjointSelfSamples": {
+      "dispatcherMapGetSourcePosition": 1895,
+      "dispatcherOther": 2229,
+      "nativeByteBlockDecoderAndRunner": 1207,
+      "readWindow": 318,
+      "wasmFunctions": 88,
+      "allOther": 58760
+    },
+    "nativeSpecificSelfSamples": 5737,
+    "nativeSpecificSelfSharePercent": 8.895,
+    "dispatcherSelfSamples": 4124,
+    "dispatcherSelfSharePercent": 6.394,
+    "mapGetPositionSharePercent": 2.938,
+    "wasmFunctionSharePercent": 0.136,
+    "interpretation": "Map.get is a V8 source-position attribution within dispatcher self-samples; dispatcherOther includes entry checks, stats, fallbacks, and inlined work, so it is not a clean validation-only cost. Native-specific self-samples are an optimistic direct-cost ceiling for a change confined to these functions, not a CPU-time speedup prediction. Samples are wall-profile attribution under concurrent system load."
+  },
+  "guestParity": {
+    "steps": 60000000,
+    "nativeAttempts": 13828732,
+    "nativeInstructions": 1960873,
+    "comparison": "After removing execution revision, source hashes, and separately gated code16 report fields, every report field matches the prior native 60M report with the same pinned inputs, including CPU, delivered inputs, serial, text RAM, VGA, and native statistics.",
+    "normalizedJsonSha256": "4bcecfb4777f3e0f0bef2b0853b6c605e999519caf92c76e4de51c068576fc63"
+  },
+  "decision": {
+    "predeclaredKeepThreshold": "At least 10% robust reduction in paired native 60M user CPU time, with exact guest parity.",
+    "outcome": "No optimization patch: even deleting all sampled native dispatcher, byte-block, read-window, and WASM self-cost would remove only 8.895% of sampled wall-profile time. The Map.get position alone is 2.938%. The profile therefore does not justify a bounded candidate under the keep threshold.",
+    "timing": "The run used 89.02 user CPU seconds, but another 60M run overlapped. This is not a paired CPU-time A/B and supports no speed claim. No candidate was timed because the profile failed the predeclared gate."
+  }
+}
