@@ -101,7 +101,7 @@ const BW_PARTS_RATINGS = {
   "cd4017": { chip_mA: 0, supply_mA: 1 }, "cd4093": { chip_mA: 0, supply_mA: 1 }, "cd4511": { chip_mA: 0, supply_mA: 1 },
   "pcf8574": { chip_mA: 0, supply_mA: 0.1 }, "mcp4725": { chip_mA: 0, supply_mA: 0.3 },
   "555": { chip_mA: 0, supply_mA: 15 }, "556": { chip_mA: 0, supply_mA: 30 },
-  "opamp": { chip_mA: 0, supply_mA: 3 }, "lm324": { chip_mA: 0, supply_mA: 3 }, "lm741": { chip_mA: 0, supply_mA: 2.8 }, "lt1001": { chip_mA: 0, supply_mA: 1.5 }, "op07": { chip_mA: 0, supply_mA: 5 }, "op27": { chip_mA: 0, supply_mA: 4 }, "lm393": { chip_mA: 0, supply_mA: 2.5 },
+  "opamp": { chip_mA: 0, supply_mA: 3 }, "lm324": { chip_mA: 0, supply_mA: 3 }, "lm741": { chip_mA: 0, supply_mA: 2.8 }, "lt1001": { chip_mA: 0, supply_mA: 1.5 }, "op07": { chip_mA: 0, supply_mA: 5 }, "op27": { chip_mA: 0, supply_mA: 4 }, "adp151": { chip_mA: 0, supply_mA: 0.35 }, "lm393": { chip_mA: 0, supply_mA: 2.5 },
   "lm339": { chip_mA: 0, supply_mA: 2.5 },
   "arduino_uno": { chip_mA: 0, supply_mA: 50 }, "attiny85": { chip_mA: 0, supply_mA: 12 },
   "stc_mcu": { chip_mA: 0, supply_mA: 20 }, "mcu": { chip_mA: 0, supply_mA: 20 },

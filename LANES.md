@@ -2283,3 +2283,9 @@ input, exact selected output, enable/UVLO refusal, characterized dropout,
 shutdown current, and full-device KCL. NC stays physical and unmodelled.
 No generic regulator, solver, other device, face/art, importer/exporter,
 corpus, workflow, package pin, CUI, Parts, or Lite edit.
+Implemented the 14 documented fixed-output selections, rated input refusal,
+EN threshold and pull-down, guaranteed TSOT loaded-dropout envelope, guaranteed
+220 mA current-limit floor, typical ground/shutdown current and full-device KCL.
+The focused ADP151 plus unchanged LDO/current surface passes 43/43. Independently
+weakening the current ceiling, dropout envelope, or EN threshold makes its named
+consequence red. Exact-head hosted CI/Harris remain the landing gate.

@@ -10,6 +10,10 @@
 
 import { registerDevice } from '../devices.js';
 
+const ADP151_FIXED_OUTPUTS = new Set([
+  1.1, 1.2, 1.5, 1.8, 2.1, 2.5, 2.6, 2.7, 2.75, 2.8, 2.85, 2.9, 3.0, 3.3,
+]);
+
 /**
  * Register power device models.
  */
@@ -79,6 +83,98 @@ export function registerPowerDevices() {
       state._vOut = actualVout;
       state.drives.out = { vTh: vGnd + actualVout, rTh: rOut };
       return true;
+    },
+  });
+
+  // ─── ADP151 200 mA ultralow-noise LDO ────────────────────────────
+  // Bounded fixed-output DC model of the Rev. J data-sheet contract.
+  // The five terminals are the TSOT-5 physical leads; NC is deliberately
+  // visible but electrically inert. Noise/PSRR, start-up and thermal dynamics
+  // are outside this static slice rather than fabricated from headline data.
+  registerDevice('adp151', {
+    terminals: ['vin', 'gnd', 'en', 'nc', 'vout'],
+
+    init(part) {
+      const nominal = part.params?.vOut ?? 3.3;
+      const rOut = part.params?.rOut ?? 0.05;
+      return {
+        drives: { vout: { vTh: 0, rTh: 1e9, ref: 'gnd' } },
+        _enabled: false,
+        _driveV: 0,
+        _driveR: 1e9,
+        _inputAmps: 0,
+        _outputAmps: 0,
+        _nominal: nominal,
+        _rOut: rOut,
+      };
+    },
+
+    stamp(ctx, part, state) {
+      // Input current is delivered load plus the regulator's ground current.
+      // Pairing the two injections makes the complete five-terminal package
+      // conserve current; NC receives no stamp.
+      ctx.current('vin', -state._inputAmps);
+      ctx.current('gnd', state._inputAmps);
+      ctx.conductance('en', 'gnd', 1 / 2.6e6); // internal EN pull-down
+    },
+
+    update(part, state, read) {
+      const vGnd = read('gnd');
+      const vIn = read('vin') - vGnd;
+      const vOut = read('vout') - vGnd;
+      const vEnable = read('en') - vGnd;
+      const nominal = part.params?.vOut ?? 3.3;
+      const rOut = part.params?.rOut ?? 0.05;
+      // Default to the guaranteed 220 mA floor, not the 300 mA typical value.
+      const currentLimit = part.params?.currentLimit ?? 0.22;
+      const outputIsSpecified = ADP151_FIXED_OUTPUTS.has(nominal);
+      const enOk = state._enabled ? vEnable > 0.4 : vEnable >= 1.2;
+      const inputOk = vIn >= 2.2 && vIn <= 5.5;
+      const enabled = outputIsSpecified && enOk && inputOk;
+
+      let driveV = 0;
+      let driveR = 1e9;
+      let outputAmps = 0;
+      if (enabled) {
+        driveR = rOut;
+        const observed = Math.max(0,
+          (state._driveV - vOut) / Math.max(state._driveR, rOut));
+        const loadOhms = observed > 1e-12 ? Math.max(0, vOut / observed) : Infinity;
+        const preDropoutAmps = Number.isFinite(loadOhms)
+          ? Math.min(currentLimit, nominal / (loadOhms + rOut))
+          : observed;
+        // Rev. J guarantees <=30 mV at 10 mA and <=230 mV at 200 mA.
+        const loadFraction = Math.min(1, Math.max(0, (preDropoutAmps - 0.01) / 0.19));
+        const dropout = 0.03 + 0.20 * loadFraction;
+        const command = Math.min(nominal, Math.max(0, vIn - dropout));
+        const commandedAmps = Number.isFinite(loadOhms)
+          ? command / (loadOhms + rOut)
+          : observed;
+        outputAmps = Math.min(currentLimit, commandedAmps);
+        driveV = commandedAmps > currentLimit
+          ? currentLimit * (loadOhms + rOut)
+          : command;
+      }
+
+      // Typical IGND: 10 uA unloaded to 265 uA at 200 mA; 0.2 uA shut down.
+      // The separate DRC budget uses the maximum rather than this curve.
+      const iq = enabled
+        ? 10e-6 + 255e-6 * Math.min(outputAmps, 0.2) / 0.2
+        : 0.2e-6;
+      const inputAmps = outputAmps + iq;
+      const changed = enabled !== state._enabled
+        || Math.abs(driveV - state._driveV) > 1e-6
+        || driveR !== state._driveR
+        || Math.abs(inputAmps - state._inputAmps) > 1e-9;
+      state._enabled = enabled;
+      state._driveV = driveV;
+      state._driveR = driveR;
+      state._inputAmps = inputAmps;
+      state._outputAmps = outputAmps;
+      state._nominal = nominal;
+      state._rOut = rOut;
+      state.drives.vout = { vTh: driveV, rTh: driveR, ref: 'gnd' };
+      return changed;
     },
   });
 
