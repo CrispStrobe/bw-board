@@ -1,3 +1,10 @@
+2026-09-27 LT1763 physical DC model — CLAIM, Codex bwcx. Isolated worktree
+`/tmp/wt-bwcx-lt1763-board`, branch `lane/lt1763-model`, base `d009a4f7`.
+Owns only `src/devices/power.js`, a focused LT1763 test, and this ledger row:
+real package terminals, fixed/adjustable feedback, shutdown, input range,
+dropout/current limit and full-device KCL. Excludes physical artwork, CUI/Lite
+pins, transient bypass/noise/thermal behaviour, and every other regulator.
+
 2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.
 Owns documentation-only corrections in `docs/HARRIS-COMPILED-NETS.md` and
