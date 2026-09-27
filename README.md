@@ -198,6 +198,14 @@ run from 68.20 to 48.28 seconds for the same 24,338,279 guest instructions.
 The [performance receipt](docs/receipts/2026-09-27-i80386-snapshot-fast-path.json)
 records the comparison. The six-clock 386 board charge is functional device
 scheduling, so this wall rate is not calibrated 386DX RTx.
+On the later stock xv6 `forktest` path, a direct same-host user-CPU comparison
+of 24,338,279 identical guest instructions improved from 39.655 to 29.575
+seconds (1.34×) after coherent paging-cache, same-page read, and immediate
+fetch changes. The [combined receipt](docs/receipts/2026-09-27-i80386-combined-performance.json)
+binds the inputs and source. A further [APIC pending-mask experiment](docs/receipts/2026-09-27-i80386-apic-pending-mask.json)
+measured 1.08× on adjacent pairs; this is still far short of the requested
+roughly 10× speedup. These are workload-specific host CPU measurements, not
+silicon timing or a general real-time claim.
 
 ## Windows 3.1 reference comparison
 
