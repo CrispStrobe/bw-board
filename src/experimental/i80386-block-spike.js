@@ -23,7 +23,7 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
   if (!(memory instanceof WebAssembly.Memory) || memory.buffer.byteLength !== MEMORY_PAGES * 65536)
     throw new TypeError('i80386 block spike needs the fixed shared memory layout');
   const {exports: wasm} = await WebAssembly.instantiate(module, {env: {memory}});
-  if (wasm.block_spike_version() !== 3) throw new Error('i80386 block spike ABI mismatch');
+  if (wasm.block_spike_version() !== 4) throw new Error('i80386 block spike ABI mismatch');
   const words = new Uint32Array(memory.buffer);
   const stateAt = wasm.block_spike_state_ptr() >>> 2;
   const programAt = wasm.block_spike_program_ptr() >>> 2;
@@ -51,13 +51,20 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
       if (!Array.isArray(instructions) || instructions.length > capacity)
         throw new RangeError('i80386 block spike program exceeds fixed capacity');
       for (let i = 0; i < instructions.length; i++) {
-        const {op, dst = 0, src = 0, width = 32, length = 1} = instructions[i];
-        const at = programAt + i * 5;
+        const {op, dst = 0, src = 0, width = 32, length = 1,
+          base = 8, index = 8, scale = 0, disp = 0, lo = 0, hi = 0} = instructions[i];
+        const at = programAt + i * 11;
         words[at] = op >>> 0;
         words[at + 1] = dst >>> 0;
         words[at + 2] = src >>> 0;
         words[at + 3] = width >>> 0;
         words[at + 4] = length >>> 0;
+        words[at + 5] = base >>> 0;
+        words[at + 6] = index >>> 0;
+        words[at + 7] = scale >>> 0;
+        words[at + 8] = disp >>> 0;
+        words[at + 9] = lo >>> 0;
+        words[at + 10] = hi >>> 0;
       }
     },
     run(start, end, eventBudget) {

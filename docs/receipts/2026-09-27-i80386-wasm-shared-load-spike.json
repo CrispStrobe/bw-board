@@ -1,6 +1,7 @@
 {
   "schema": "astra.i80386-wasm-shared-load-spike.v1",
   "date": "2026-09-27",
+  "historicalFixtureCommit": "17031e69",
   "sourceBaselineCommit": "46b76ceea8aebbc9f96a97bc4410134658e0b4c3",
   "moduleAbi": 3,
   "buildCommand": "clang --target=wasm32 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--export-memory -Wl,--import-memory -Wl,--global-base=16779264 -Wl,--initial-memory=16908288 -Wl,--max-memory=16908288 -o wasm/i80386-block-spike.wasm src/experimental/i80386-block-spike.c",

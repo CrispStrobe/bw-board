@@ -151,3 +151,12 @@ for a fast CPU backend; paging, MMIO, writes and exact fault exits remain to
 be implemented before it can run xv6 instructions. The spike remains
 disconnected from the AT board's execution path and changes no end-to-end
 speed.
+
+The native spike now also evaluates register-based SIB addresses at runtime,
+and a host helper admits a physical RAM page only from an existing 386 TLB
+entry. A protected-mode test maps a high virtual page to low physical RAM,
+matches the JavaScript 386 for MOV/LEA, and rejects the window after a board
+page-table write. This establishes a side-effect-free read admission and
+remap exit for one page, not a general native paging implementation. A
+decoder, wider opcode coverage, precise writes/faults and a measured AT
+integration remain necessary for 10×.

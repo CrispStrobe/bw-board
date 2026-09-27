@@ -1,8 +1,8 @@
 # Static WASM 386 block spike
 
-The bundled 3,404-byte WASM module executes prevalidated register-only MOV,
-CMP, TEST, NOP, JZ, JNZ and JMP operations plus physical RAM loads in one
-JS→WASM call. It accepts an instruction budget from the board's event horizon. A budget of
+The bundled 5,548-byte WASM module executes prevalidated register-only MOV,
+CMP, TEST, NOP, JZ, JNZ and JMP operations plus physical RAM loads and LEA
+in one JS→WASM call. It accepts an instruction budget from the board's event horizon. A budget of
 zero returns before execution; reaching the budget returns at the exact
 instruction boundary. Unsupported or potentially faulting operations are
 represented by exit markers and cause no partial execution of that
@@ -25,6 +25,21 @@ An out-of-range physical read exits before changing state. The
 pins the layout and comparisons with the JavaScript CPU, including a
 LOAD/CMP/JNZ loop that sees a host RAM write after an event exit.
 
+`LOAD_WINDOW` and `LEA32` now calculate a 32-bit effective address from
+base, index, scale and displacement each time they execute. A load exits
+before changing state if the address leaves its approved physical RAM page;
+LEA returns the guest offset without consulting RAM. The host can derive the
+physical-page delta from an **existing** 386 translation-cache hit through
+[`i80386-read-window.js`](../src/experimental/i80386-read-window.js), then
+recheck the descriptor before entering a block. A cache miss returns no
+window, avoiding an early page walk, fault, or accessed-bit write. Host and
+guest page-table changes, CR0/CR3/CR4 changes, segment changes and A20
+gating invalidate the descriptor. Tests compare a changing SIB address and
+a high virtual page with the JavaScript 386. The
+[dynamic-window receipt](receipts/2026-09-27-i80386-wasm-dynamic-window-spike.json)
+pins the revised module and tests. The host still has to decode and validate
+each guest instruction; this spike is not an AT execution path.
+
 The full 24,338,279-step xv6 `forktest` supplied a decisive coverage bound
 before any board integration. The implemented register forms occurred
 3,659,017 times (15.03%) but formed 3,657,970 contiguous runs. Exactly
@@ -37,8 +52,8 @@ The temporary histogram instrumentation was removed after measurement.
 This module does not decode x86 or fetch guest instruction bytes. The host
 must check CS bounds, paging/permissions, code-page versions, instruction
 bytes, branch target EIPs and physical load addresses before writing IR. It
-must terminate a block before an
-IRQ/NMI-visible boundary, I/O, REP, HLT, indirect branch, control-register
+must terminate a block before an IRQ/NMI-visible boundary, I/O, REP, HLT,
+indirect branch, control-register
 change, segment reload, or any unmodelled faultable operation. A directly
 linked JZ/JNZ/JMP may stay inside the prevalidated block. A block exit
 returns control to the existing JavaScript interpreter, which handles faults
