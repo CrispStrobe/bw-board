@@ -1,0 +1,252 @@
+{
+  "schema": "bw.i80386-native32-census-windows60m.v1",
+  "date": "2026-09-27",
+  "scope": "Opt-in, read-only protected32 eligibility census over 60 million ordinary AT machine-step calls with external Windows 3.11 media. No media bytes or paths are included.",
+  "measuredExecutionRevision": "d23d4abfdcba4146872745dd42dae542dd7fcebf",
+  "guestParity": {
+    "result": "Exact equality with the pinned ordinary guest report after deleting only source/revision and later diagnostic/option fields.",
+    "normalization": "Delete executionRevision, sourceSha256, native32Census, inputs.code16Wasm, code16WasmStats, inputs.code16Loads, code16LoadExecutions; sort keys with jq -S.",
+    "normalizedSha256": "ebd37f619ab5afc90177e51efdf2c7ea36d4895461ec66329b989d03af0b8fac"
+  },
+  "counts": {
+    "entryAttempts": 15277507,
+    "completedCoreSteps": 15277507,
+    "sameEntryRetirements": 15277282,
+    "redirectedRetirements": 225,
+    "noRetirement": 0,
+    "codeWindowRefusedAttempts": 46481,
+    "decodeNullAttempts": 10055120,
+    "singleCandidateAttempts": 3063718,
+    "multiCandidateAttempts": 1062244,
+    "repeatCandidateAttempts": 1049944,
+    "candidateLengthHistogram": {
+      "1": 4113662,
+      "2": 725699,
+      "3": 250937,
+      "4": 66718,
+      "5": 18887,
+      "6": 3
+    },
+    "candidateStopReasons": {
+      "unsupported-or-page-boundary": 2404459,
+      "branch-exit": 1721503,
+      "repeat-exit": 1049944
+    }
+  },
+  "topRetiredOpcodes": [
+    [
+      "8b",
+      1813201
+    ],
+    [
+      "a5",
+      1142049
+    ],
+    [
+      "74",
+      833586
+    ],
+    [
+      "83",
+      797770
+    ],
+    [
+      "75",
+      583306
+    ],
+    [
+      "ff",
+      526704
+    ],
+    [
+      "c1",
+      448473
+    ],
+    [
+      "80",
+      445985
+    ],
+    [
+      "c3",
+      427998
+    ],
+    [
+      "89",
+      390481
+    ],
+    [
+      "f6",
+      334195
+    ],
+    [
+      "87",
+      332991
+    ],
+    [
+      "3b",
+      268788
+    ],
+    [
+      "aa",
+      266700
+    ],
+    [
+      "0fb6",
+      243123
+    ]
+  ],
+  "topRetiredModrmForms": [
+    [
+      "8b:m0",
+      909872
+    ],
+    [
+      "8b:m1",
+      561975
+    ],
+    [
+      "8b:m3",
+      300334
+    ],
+    [
+      "89:m1",
+      267401
+    ],
+    [
+      "c1:m3:g5",
+      169042
+    ],
+    [
+      "c1:m3:g4",
+      168131
+    ],
+    [
+      "83:m3:g2",
+      155680
+    ],
+    [
+      "83:m0:g7",
+      135468
+    ],
+    [
+      "83:m3:g5",
+      121257
+    ],
+    [
+      "83:m3:g0",
+      120887
+    ],
+    [
+      "8e:m3",
+      116372
+    ],
+    [
+      "89:m0",
+      116338
+    ],
+    [
+      "c1:m3:g1",
+      111290
+    ],
+    [
+      "85:m3",
+      96734
+    ],
+    [
+      "8e:m1",
+      81716
+    ]
+  ],
+  "topNullByRetiredOpcode": [
+    [
+      "83",
+      573481
+    ],
+    [
+      "ff",
+      525707
+    ],
+    [
+      "80",
+      445084
+    ],
+    [
+      "c3",
+      427979
+    ],
+    [
+      "89",
+      390120
+    ],
+    [
+      "87",
+      332991
+    ],
+    [
+      "f6",
+      328949
+    ],
+    [
+      "3b",
+      268756
+    ],
+    [
+      "aa",
+      266679
+    ],
+    [
+      "8b",
+      259850
+    ],
+    [
+      "0fb6",
+      243123
+    ],
+    [
+      "72",
+      198804
+    ],
+    [
+      "8e",
+      198088
+    ],
+    [
+      "0fb3",
+      160376
+    ],
+    [
+      "50",
+      159584
+    ]
+  ],
+  "mov8bBreakdown": {
+    "sameEntryRetirements": 1813201,
+    "decodeNull": 259850,
+    "singleCandidate": 961483,
+    "multiCandidate": 588875,
+    "codeWindowRefused": 2993
+  },
+  "decision": {
+    "threshold": "At least 1,500,000 same-entry retired calls for a new executable opcode family before implementation is considered.",
+    "result": "No new narrow family clears the threshold. MOV 8B clears it but is already supported; most of its calls have a single-instruction candidate or decode null. Investigate block exits and grouped forms before adding native execution.",
+    "upperBound": "At most 15,277,507 protected32 entry calls on this workload can be affected by a protected32-only path; candidate starts overlap and do not sum to unique executable coverage."
+  },
+  "limits": "The census decodes at every ordinary entry and does not mirror the native dispatcher cache. Its 10,055,120 decode-null attempts are not the 12,536,754 native null-cache hits reported by an earlier separate run. Candidate length does not prove executable coverage; unsupported-or-page-boundary is a coarse exit category. No speedup is claimed.",
+  "validation": "Measured revision: full i80386 suite 438 passed, 4 skipped, 0 failed. Final rebased candidate: full i80386 suite 439 passed, 4 skipped, 0 failed; private receipt pins external media and raw report hashes.",
+  "measuredSourceSha256": {
+    "../src/experimental/i80386-native32-census.js": "a57a7407368b685a9dfbe5e98ca44fe585225fd5b5e937aed025435763d2a2d5",
+    "../src/experimental/i80386-native-byte-block.js": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+    "../src/experimental/i80386-read-window.js": "4df76257e53f4b8e77da380b2748292743a47d4a9bf3fe6ce5e74882f50c9f5e",
+    "./run-i80386-at-console.mjs": "1f314715ae698fcc92d802a2c33f7133fb89ff5d0d031bb320d6b975262d2032"
+  },
+  "rebasedCandidate": {
+    "commit": "29dac7c2",
+    "sourceSha256": {
+      "src/experimental/i80386-native32-census.js": "a57a7407368b685a9dfbe5e98ca44fe585225fd5b5e937aed025435763d2a2d5",
+      "src/experimental/i80386-native-byte-block.js": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+      "src/experimental/i80386-read-window.js": "4df76257e53f4b8e77da380b2748292743a47d4a9bf3fe6ce5e74882f50c9f5e",
+      "scripts/run-i80386-at-console.mjs": "33145250a3bea04b610006b4a24201b5cad2908dc3a35787ab94f009e588b90c"
+    },
+    "note": "The 60M measurement used pre-rebase CLI SHA 1f314715ae698fcc92d802a2c33f7133fb89ff5d0d031bb320d6b975262d2032. The final merged CLI SHA is 33145250a3bea04b610006b4a24201b5cad2908dc3a35787ab94f009e588b90c; its only change from the measured CLI is the separately gated code16 WASM diagnostics option. Native32 census, decoder, and read-window hashes are identical between measured and final candidate. The measured execution revision and raw report source hashes remain separately recorded."
+  }
+}
