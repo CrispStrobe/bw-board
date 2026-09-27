@@ -23,3 +23,11 @@ not batch consecutive instructions. It is semantic groundwork, not a measured
 speed improvement. Differential tests compare the CPU and board state with
 ordinary stepping across all 24 memory ModR/M forms, page crossing, protected
 16-bit and VM86 modes, and fallbacks.
+
+The [60-million-step A/B receipt](receipts/2026-09-27-i80386-code16-load-exec.json)
+records 2,637,257 successful opt-in loads and exact normalized guest-report
+parity. The ordinary run used 83.13 user CPU seconds; the opt-in run used
+164.94 seconds on the same shared host. This per-step proof path is almost
+twice as costly overall. It remains off by default and should not be enabled
+for a performance-sensitive run. Broad multi-instruction execution and cheaper
+validated entry remain necessary for a meaningful speedup.
