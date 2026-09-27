@@ -39,7 +39,8 @@ and mouse movement uses screen coordinates (positive `dy` moves down). Mouse
 ```
 
 The mouse is opt-in: a mouse event, or `AT_ENABLE_MOUSE=1`, adds a standard
-three-byte PS/2 device to the 8042 auxiliary port. Its bytes set status bit 5
+three-byte PS/2 device to the 8042 auxiliary port and advertises its presence
+through CMOS equipment byte 14h bit 2. Its bytes set status bit 5
 and raise IRQ12 when enabled by the controller command byte. The host
 `machine.mouseIn({dx,dy,buttons})` API returns `false` until the guest enables
 the aux port and mouse reporting, or if its output queue lacks space. Mouse

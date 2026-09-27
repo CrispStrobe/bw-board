@@ -33,6 +33,7 @@ test('console CLI binds external bytes and records input acceptance without bund
     AT_CONSOLE_VGA_OUTPUT:paths.snapshot},encoding:'utf8'});
   const report=JSON.parse(readFileSync(paths.report,'utf8'));
   assert.equal(report.inputs.mouseEnabled,true);
+  assert.equal(report.inputs.cmosEquipment,0x05);
   assert.equal(report.delivered.length,1);
   assert.equal(report.delivered[0].accepted,false); // guest has not enabled mouse streaming
   assert.equal(report.steps,1);
@@ -49,5 +50,6 @@ test('console CLI binds external bytes and records input acceptance without bund
     AT_HDD_SHA256:digest(hdd),AT_CONSOLE_REPORT:configuredReport},encoding:'utf8'});
   const configured=JSON.parse(readFileSync(configuredReport,'utf8'));
   assert.deepEqual(configured.inputs.geometry,[1,1,1]);
+  assert.equal(configured.inputs.cmosEquipment,0x01);
   assert.equal(configured.inputs.dosboxConfig.parsed.imagePath,paths.hdd);
 });

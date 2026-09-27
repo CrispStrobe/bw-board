@@ -79,7 +79,10 @@ const rtc=profile.chips.find(chip=>chip.kind==='rtc');
 const cmos=new Uint8Array(0x40);
 for(const[index,value]of rtc.initialCmos)cmos[index]=value;
 cmos[0x10]=0x20; // one 1.2 MB floppy, required by the IBM Rev1 POST
-cmos[0x12]=cmosType===2?0x20:0xf0;cmos[0x14]=1;cmos[0x3d]=0x21;
+cmos[0x12]=cmosType===2?0x20:0xf0;
+// PC-compatible firmware/Windows probe CMOS equipment bit 2 for PS/2 mouse.
+// Without it Windows never invokes the BIOS mouse service, even with an aux device.
+cmos[0x14]=1|(mouseEnabled?4:0);cmos[0x3d]=0x21;
 if(cmosType===47){
   cmos[0x19]=47;cmos[0x1b]=cylinders&255;cmos[0x1c]=cylinders>>>8;
   cmos[0x1d]=heads;cmos[0x1e]=0xff;cmos[0x1f]=0xff;cmos[0x20]=0xc0;
@@ -222,6 +225,7 @@ if(vgaOutput)fs.writeFileSync(vgaOutput,JSON.stringify({schema:'bw.i80386-vga-sn
   planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
 const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
+    cmosEquipment:cmos[0x14],
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
