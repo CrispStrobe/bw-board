@@ -29,6 +29,9 @@ boot path writes sector parameters while the slave remains selected, before
 selecting the master and issuing the boot-sector read.
 The 14 MiB kernel also boots with this free firmware on the 15 MiB RAM
 profile, executes `echo BW_XV6_14M_FREE_OK`, and returns to `$`.
+The stock `forktest` program also reports `fork test OK` and returns to the
+shell after exercising process exhaustion and `wait`; CI runs it as a third
+free-BIOS regression.
 
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
@@ -61,6 +64,10 @@ XV6_FIRMWARE=bochs XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
 XV6_FIRMWARE=bochs XV6_PROFILE=14m XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
   XV6_COMMAND=$'echo BW_XV6_14M_FREE_OK\r' \
   XV6_EXPECT_SERIAL=$'\nBW_XV6_14M_FREE_OK\n$ ' \
+  node scripts/probe-xv6-stock.mjs
+
+XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 \
+  XV6_COMMAND=$'forktest\r' XV6_EXPECT_SERIAL=$'fork test OK\n$ ' \
   node scripts/probe-xv6-stock.mjs
 ```
 

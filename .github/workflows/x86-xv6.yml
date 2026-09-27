@@ -60,6 +60,12 @@ jobs:
             XV6_EXPECT_SERIAL=$'\nBW_XV6_14M_FREE_OK\n$ ' \
             node scripts/probe-xv6-stock.mjs > /tmp/xv6-stock-14m-free-bios-boot.json
           node -e "let r=require('/tmp/xv6-stock-14m-free-bios-boot.json'); if (r.firmware!=='bochs' || r.profile!=='14m' || !r.milestones.exec || !r.userModeEntries.length) process.exit(1)"
+      - name: Run stock xv6 process-exhaustion regression
+        run: |
+          XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 \
+            XV6_COMMAND=$'forktest\r' XV6_EXPECT_SERIAL=$'fork test OK\n$ ' \
+            node scripts/probe-xv6-stock.mjs > /tmp/xv6-stock-free-bios-forktest.json
+          node -e "let r=require('/tmp/xv6-stock-free-bios-forktest.json'); if (r.firmware!=='bochs' || !r.milestones.syscall || !r.userModeEntries.length) process.exit(1)"
       - name: Upload build receipts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -69,3 +75,4 @@ jobs:
             /tmp/xv6-stock-14m/bw-xv6-stock-14m-receipt.json
             /tmp/xv6-stock-free-bios-boot.json
             /tmp/xv6-stock-14m-free-bios-boot.json
+            /tmp/xv6-stock-free-bios-forktest.json

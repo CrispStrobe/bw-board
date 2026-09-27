@@ -36,5 +36,13 @@
     "userModeObserved": true,
     "ideIrq14Count": 41,
     "accepted": true
+  },
+  "forktest": {
+    "profile": "4m",
+    "steps": 24338279,
+    "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ forktest\nfork test\nfork test OK\n$ ",
+    "userModeObserved": true,
+    "syscallCount": 189,
+    "accepted": true
   }
 }
