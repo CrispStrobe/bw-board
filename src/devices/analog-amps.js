@@ -68,7 +68,7 @@ const BETA_MIN = 1e-4;
 const E_TOL = 1e-7;         // volts of residual (v+ − v−)
 const U_TOL = 1e-9;         // volts of output movement below which nothing changed
 
-// A single dynamic controller serves the two physical single op-amps below;
+// A single dynamic controller serves the physical single op-amps below;
 // every electrical number remains a part fact in its own immutable card.
 // Keeping LM741's prior values in the card is intentional: the extraction is
 // a refactor, not permission to alter an already shipped device.
@@ -102,6 +102,23 @@ const PRECISION_OP_AMPS = Object.freeze({
         commonHeadroom: 2,
         outputHeadroom: 1.5,
         defaultOffsetV: 5e-6,   // typical room-temperature offset
+    }),
+    // Analog Devices OP07 Rev. G, OP07C typicals at VS=+/-15 V. This keeps
+    // the public electrical limits that matter to a circuit while declining
+    // to impersonate the vendor transistor macromodel: noise, temperature
+    // drift, bias current and the external trim network remain outside scope.
+    op07: Object.freeze({
+        a0: 400000,             // 400 V/mV typical large-signal gain
+        gbwHz: 0.6e6,           // 0.6 MHz typical gain-bandwidth product
+        slewVPerUs: 0.3,        // 0.3 V/us typical
+        inputR: 33e6,           // differential input resistance, typical
+        rOut: 60,               // open-loop output resistance, typical
+        tickNs: 300n,
+        settledV: 1e-7,
+        minSupply: 6,           // specified down to +/-3 V
+        commonHeadroom: 2,      // guaranteed +/-13 V at +/-15 V supplies
+        outputHeadroom: 2,      // loaded swing stays inside the +/-12 V floor
+        defaultOffsetV: 60e-6,  // OP07C room-temperature typical
     }),
 });
 
@@ -310,6 +327,7 @@ export function registerAnalogAmps() {
     registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
+    registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
 
     registerDevice('lm3915', {
         terminals: ['vcc', 'gnd', 'sig', 'mode',

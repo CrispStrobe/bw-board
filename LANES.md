@@ -1,4 +1,4 @@
-2026-09-27 OP07 real precision op-amp model — CLAIM, Codex bwcx. Isolated
+2026-09-27 OP07 real precision op-amp model — DONE candidate, Codex bwcx. Isolated
 worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part`, exact base
 `8e1156dac12c98f33b83a5c3af8ac74a1a6927af`. Owns only this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP07
@@ -11,6 +11,15 @@ finite open-loop gain, both swing directions, slew and small-signal response,
 with independent mutations of gain/slew/bandwidth. No generic op-amp, solver,
 other named device, face/art, importer/exporter, corpus, workflow, package pin,
 CUI, Parts, or Lite edit.
+Implemented the OP07C typical bounded card from Analog Devices Rev. G: 400
+V/mV large-signal gain, 33 MOhm differential input, 60 uV input offset, 60
+ohm output resistance, +/-13 V guaranteed common-mode envelope and loaded
+output held inside the +/-12 V floor at +/-15 V supplies, operation down to
++/-3 V, 0.6 MHz response and 0.3 V/us slew. The conservative supply budget is
+5 mA from the 150 mW OP07C maximum at +/-15 V. Focused OP07 plus unchanged
+precision/analog/current-rating coverage passes 59/59. Independently changing
+gain 400k->200k, slew 0.3->3 V/us, or bandwidth 0.6->6 MHz makes its named
+numerical assertion red. Exact-head hosted CI/Harris remain the landing gate.
 
 2026-09-27 LT1763 physical DC model — DONE, Codex bwcx. Isolated worktree
 `/tmp/wt-bwcx-lt1763-board`, branch `lane/lt1763-model`, base `d009a4f7`.
