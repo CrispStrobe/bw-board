@@ -192,3 +192,19 @@ the last loaded WASM program was also tested and removed after it measured
 49.37 seconds on the earlier opcode set versus 46.31 without that cache.
 These measurements point to the per-call boundary and short blocks as the
 dominant problem; adding rare forms alone will not deliver 10×.
+
+The [numeric block-cache A/B and opcode-form trace](receipts/2026-09-27-i80386-numeric-cache-and-opcode-forms.json)
+removed a string allocation from each of roughly 21 million native lookup
+attempts. Two complete native `forktest` runs then took 26.50 and 27.17 user
+CPU seconds, versus 26.89 and 27.99 for the ordinary lean path. All four
+guest reports and the instrumented trace match. This is around parity, not
+a robust speedup; the 10× target remains open.
+
+The same trace identifies the next high-volume forms: REP STOS (`AB` with
+`F3`) retires 2,168,824 iterations; register SHR immediate (`C1 /5`) retires
+1,200,526; register AND immediate (`81 /4`), ADD immediate (`81 /0`), AND
+EAX immediate (`25`) and OR immediate (`83 /1`) each retire about 0.49–0.55
+million. These are observed retired forms, not proof that a native block can
+execute them safely. Register shifts and immediate ALU operations are the
+next bounded decoder candidates. REP STOS needs an interruptible write path
+with code/page-table coherence and precise event exits.

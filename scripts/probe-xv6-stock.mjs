@@ -160,16 +160,20 @@ for (; steps < stepsLimit; steps++) {
     if (nativeRunner) {
       nativeStats.attempts++;
       const cpu=machine.cpu;
-      const key=`${cpu.cs}:${cpu.eip}:${cpu.cr3}:${cpu.cr4}`;
-      let block=nativeBlocks.get(key);
-      if (block === undefined) {
+      const key=cpu.eip >>> 0;
+      let entry=nativeBlocks.get(key);
+      if (!entry || entry.cs !== cpu.cs || entry.cr3 !== cpu.cr3 ||
+          entry.cr4 !== cpu.cr4) {
+        let block;
         block=nativeRunner.decode(8);
         if (block && block.instructions.length >= 2) {
           nativeStats.decoded++;
         } else block=null;
         if (nativeBlocks.size >= 4096) nativeBlocks.delete(nativeBlocks.keys().next().value);
-        nativeBlocks.set(key,block);
+        entry={cs:cpu.cs,cr3:cpu.cr3,cr4:cpu.cr4,block};
+        nativeBlocks.set(key,entry);
       }
+      const block=entry.block;
       if (block) {
         const result=nativeRunner.run(block,Math.min(16,stepsLimit-steps));
         if (result.instructions > 0) {
