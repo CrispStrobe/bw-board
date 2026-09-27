@@ -1,6 +1,7 @@
 {
   "schema": "astra.i80386-wasm-safe-run-feasibility.v1",
   "date": "2026-09-27",
+  "historicalFixtureCommit": "3b385d47",
   "decision": "Do not integrate this narrow WASM kernel into the production 80386 executor",
   "workload": {
     "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
