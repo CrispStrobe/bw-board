@@ -19,7 +19,7 @@ test('console event parser admits ordered byte and pointer input and rejects amb
 test('console CLI binds external bytes and records input acceptance without bundled media',()=>{
   const dir=mkdtempSync(join(tmpdir(),'at-console-'));
   const paths={bios:join(dir,'bios.bin'),vga:join(dir,'vga.bin'),hdd:join(dir,'hdd.img'),
-    events:join(dir,'events.json'),report:join(dir,'report.json')};
+    events:join(dir,'events.json'),report:join(dir,'report.json'),snapshot:join(dir,'vga.json')};
   const bios=Buffer.alloc(0x10000),vga=Buffer.alloc(0x4000),hdd=Buffer.alloc(512);
   for(const[name,bytes]of [['bios',bios],['vga',vga],['hdd',hdd]])writeFileSync(paths[name],bytes);
   writeFileSync(paths.events,JSON.stringify([{step:0,type:'mouse',dx:1,dy:2,buttons:1}]));
@@ -29,13 +29,18 @@ test('console CLI binds external bytes and records input acceptance without bund
     AT_BIOS_ROM:paths.bios,AT_BIOS_SHA256:digest(bios),
     VGA_BIOS_ROM:paths.vga,VGA_BIOS_SHA256:digest(vga),AT_HDD_IMAGE:paths.hdd,
     AT_HDD_SHA256:digest(hdd),AT_HDD_GEOMETRY:'1,1,1',AT_POST_STEPS:'1',
-    AT_CONSOLE_EVENTS:paths.events,AT_CONSOLE_REPORT:paths.report},encoding:'utf8'});
+    AT_CONSOLE_EVENTS:paths.events,AT_CONSOLE_REPORT:paths.report,
+    AT_CONSOLE_VGA_OUTPUT:paths.snapshot},encoding:'utf8'});
   const report=JSON.parse(readFileSync(paths.report,'utf8'));
   assert.equal(report.inputs.mouseEnabled,true);
   assert.equal(report.delivered.length,1);
   assert.equal(report.delivered[0].accepted,false); // guest has not enabled mouse streaming
   assert.equal(report.steps,1);
   assert.equal(report.vga.planeSha256.length,4);
+  const snapshot=JSON.parse(readFileSync(paths.snapshot,'utf8'));
+  assert.equal(snapshot.planeBase64.length,4);
+  assert.ok(['seq','gc','crtc','attr','dac'].every(bank=>
+    Array.isArray(snapshot.registers[bank])));
   const config=join(dir,'dosbox.conf'),configuredReport=join(dir,'configured.json');
   writeFileSync(config,'[autoexec]\nimgmount 2 "hdd.img" -t hdd -fs none -size 512,1,1,1\nboot -l c\n');
   execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,

@@ -214,9 +214,12 @@ if(options.live) {
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
 const video=machine.chips.vga1.getVideoState();
+const serializableVideo={...video,seq:Array.from(video.seq),gc:Array.from(video.gc),
+  crtc:Array.from(video.crtc),attr:Array.from(video.attr),dac:Array.from(video.dac)};
 const vgaOutput=process.env.AT_CONSOLE_VGA_OUTPUT??null;
 if(vgaOutput)fs.writeFileSync(vgaOutput,JSON.stringify({schema:'bw.i80386-vga-snapshot.v1',
-  step:steps,registers:video,planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
+  step:steps,registers:serializableVideo,
+  planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
 const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
@@ -224,7 +227,8 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},
-  textRam:text,vga:{registers:video,planeSha256:planes.map(sha),snapshotPath:vgaOutput}};
+  textRam:text,vga:{registers:serializableVideo,planeSha256:planes.map(sha),
+    snapshotPath:vgaOutput}};
 const output=JSON.stringify(report,null,2)+'\n';
 if(process.env.AT_CONSOLE_REPORT)fs.writeFileSync(process.env.AT_CONSOLE_REPORT,output,{flag:'wx'});
 else process.stdout.write(output);
