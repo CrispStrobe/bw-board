@@ -102,6 +102,8 @@ const BW_PARTS_RATINGS = {
   "pcf8574": { chip_mA: 0, supply_mA: 0.1 }, "mcp4725": { chip_mA: 0, supply_mA: 0.3 },
   "555": { chip_mA: 0, supply_mA: 15 }, "556": { chip_mA: 0, supply_mA: 30 },
   "opamp": { chip_mA: 0, supply_mA: 3 }, "lm324": { chip_mA: 0, supply_mA: 3 }, "lm741": { chip_mA: 0, supply_mA: 2.8 }, "lt1001": { chip_mA: 0, supply_mA: 1.5 }, "lt1006": { chip_mA: 0, supply_mA: 0.57 }, "lt1014": { chip_mA: 0, supply_mA: 2.2 }, "lt1014_channel": { chip_mA: 0, supply_mA: 0.55 }, "adtl082": { chip_mA: 0, supply_mA: 4 }, "adtl082_channel": { chip_mA: 0, supply_mA: 2 }, "lt1678": { chip_mA: 0, supply_mA: 9 }, "lt1678_channel": { chip_mA: 0, supply_mA: 4.5 }, "op747": { chip_mA: 0, supply_mA: 1.8 }, "op747_channel": { chip_mA: 0, supply_mA: 0.45 }, "ad8541": { chip_mA: 0, supply_mA: 0.085 }, "ad8541_channel": { chip_mA: 0, supply_mA: 0.085 }, "ad8602": { chip_mA: 0, supply_mA: 3 }, "ad8602_channel": { chip_mA: 0, supply_mA: 1.5 }, "op07": { chip_mA: 0, supply_mA: 5 }, "op27": { chip_mA: 0, supply_mA: 4 }, "lt1007": { chip_mA: 0, supply_mA: 5 }, "lt1007_channel": { chip_mA: 0, supply_mA: 5 }, "ad711": { chip_mA: 0, supply_mA: 3.4 }, "ad711_channel": { chip_mA: 0, supply_mA: 3.4 }, "adp151": { chip_mA: 0, supply_mA: 0.35 }, "lm393": { chip_mA: 0, supply_mA: 2.5 },
+  "ada4522_1": { chip_mA: 0, supply_mA: 0.97 },
+  "ada4522_1_channel": { chip_mA: 0, supply_mA: 0.97 },
   "lm339": { chip_mA: 0, supply_mA: 2.5 },
   "arduino_uno": { chip_mA: 0, supply_mA: 50 }, "attiny85": { chip_mA: 0, supply_mA: 12 },
   "stc_mcu": { chip_mA: 0, supply_mA: 20 }, "mcu": { chip_mA: 0, supply_mA: 20 },

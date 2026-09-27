@@ -341,6 +341,29 @@ const AD8602_SPEC = Object.freeze({
     terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
 });
 
+// Analog Devices ADA4522-1/2/4 Rev. I. The physical identity here is the
+// single R-8 SOIC; the separate five-terminal card is package-neutral because
+// the official source symbol cannot distinguish R-8 from RM-8. These fixed
+// envelopes are conservative across the documented 4.5 V to 55 V range.
+// Zero-drift chopping, noise, EMI rejection, distortion, capacitance and the
+// external transistor macro-model remain outside this bounded card.
+const ADA4522_1_SPEC = Object.freeze({
+    a0: 1778279,             // 125 dB minimum large-signal gain over temperature
+    gbwHz: 2.7e6,            // specified gain-bandwidth product
+    slewVPerUs: 0.8,         // slowest stated edge (55 V falling slew)
+    inputR: 30000,           // specified differential input resistance
+    rOut: 4,                 // specified closed-loop output impedance at 1 MHz
+    tickNs: 50n,
+    settledV: 1e-9,
+    minSupply: 4.5,          // specified 4.5 V to 55 V operation
+    commonLowHeadroom: 0,    // input includes the negative rail
+    commonHighHeadroom: 1.5, // 0..VSY-1.5 V at 5/30/55 V
+    outputLowHeadroom: 0.35, // worst over-temperature rail clearance at 55 V
+    outputHighHeadroom: 0.35,
+    defaultOffsetV: 10e-6,   // worst over-temperature offset at 55 V
+    terminals: ['nic_1', 'inn', 'inp', 'vneg', 'nic_5', 'out', 'vpos', 'nic_8'],
+});
+
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
     inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
@@ -730,6 +753,13 @@ export function registerAnalogAmps() {
     // channel A/B or the R-8/RM-8 package. Importers keep this hidden logical
     // identity together with the external-model substitution blocker.
     registerPrecisionOpAmp('ad8602_channel', AD8602_SPEC);
+    registerPrecisionOpAmp('ada4522_1', ADA4522_1_SPEC);
+    // A five-terminal source symbol establishes one functional amplifier but
+    // no R-8/RM-8 package identity. Importers retain its external-model blocker.
+    registerPrecisionOpAmp('ada4522_1_channel', Object.freeze({
+        ...ADA4522_1_SPEC,
+        terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+    }));
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
     registerPrecisionOpAmp('lt1007', PRECISION_OP_AMPS.lt1007);

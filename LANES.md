@@ -163,7 +163,7 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-27 CLAIMED — root Codex: ADA4522-1 bounded op-amp model, isolated
+2026-09-27 DONE candidate — root Codex: ADA4522-1 bounded op-amp model, isolated
 worktree `/tmp/wt-bwcx-ada4522-board`, branch `lane/ada4522-1-model`, exact base
 `0e236a527aa55b5c76d5345e14b88438ebc0ea13`. Owns only the physical
 `ada4522_1` and package-neutral `ada4522_1_channel` device registrations, their
@@ -171,7 +171,12 @@ focused behavioural tests, and this ledger row. Model data-sheet-bounded DC
 gain, rails/common mode, output resistance, 4.5 V minimum supply, 1.3 V/us
 conservative slew, and 2.7 MHz GBW; retain unsupported zero-drift/noise/EMI and
 external macro-model behavior as nonclaims. Excludes solver/parser changes,
-other amplifier families, CUI/parts pins, workflows and deployment.
+other amplifier families, CUI/parts pins, workflows and deployment. The exact
+physical R-8 and package-neutral identities share one conservative Rev. I card:
+125 dB minimum gain, 2.7 MHz GBW, 0.8 V/us slow edge, 30 kohm differential
+input, 4 ohm output, 4.5 V minimum supply, guaranteed common-mode ceiling and
+worst rail envelope. Focused/adjacent tests pass 20/20; gain and slew mutations
+independently red. Exact-head CI and Harris remain the landing gates.
 
 2026-09-27 DONE candidate — `/root` (Codex), real uA741/LM741 single op-amp model.
 Isolated worktree `/tmp/wt-bwcx-lm741-board`, branch `lane/lm741-real-part`, exact
