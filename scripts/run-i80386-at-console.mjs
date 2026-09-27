@@ -16,10 +16,12 @@ import {renderObservedWindowsEga} from './lib/i80386-windows-vga-frame.mjs';
 import {renderObservedWindowsVga480} from './lib/i80386-windows-vga-480-frame.mjs';
 import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
+import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
 
 const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
   nativeBlocks:process.env.AT_NATIVE_BLOCKS==='1',
+  code16Loads:process.env.AT_CODE16_LOADS==='1',
   steps:process.env.AT_POST_STEPS??1_000_000};
 for(let index=0;index<process.argv.length-2;index++) {
   const option=process.argv[index+2];
@@ -102,6 +104,7 @@ rtc.initialCmos=[...cmos.entries()].filter(([,value])=>value!==0);
 const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/i8086-machine.js','../src/experimental/i80386.js',
   '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
+  '../src/experimental/i80386-code16-load-exec.js',
   '../src/experimental/i80386-native-dispatch.js',
   '../src/experimental/i80386-native-byte-block.js',
   '../src/experimental/i80386-ram-bridge.js',
@@ -125,6 +128,7 @@ const machine=new Machine(profile,{
   ataImage:hdd.bytes,ataGeometry:{cylinders,heads,sectors},
   onSerial:byte=>{if(serial.length<65536)serial.push(byte&255);},
 });
+if(options.code16Loads)enableI80386Code16LoadExecution(machine);
 const nativeDispatcher=options.nativeBlocks?
   await (await import('../src/experimental/i80386-native-dispatch.js'))
     .createI80386NativeDispatcher(machine):null;
@@ -253,12 +257,14 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(code16Coverage?{code16Coverage:code16Coverage.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     nativeBlocks:options.nativeBlocks,
+    code16Loads:options.code16Loads,
     cmosEquipment:cmos[0x14],
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   nativeStats:nativeDispatcher?.stats??null,
+  code16LoadExecutions:machine.code16LoadExecutions??0,
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},
   textRam:text,vga:{registers:serializableVideo,planeSha256:planes.map(sha),
     snapshotPath:vgaOutput}};

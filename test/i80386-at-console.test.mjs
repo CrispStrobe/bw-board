@@ -37,6 +37,8 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.equal(report.delivered.length,1);
   assert.equal(report.delivered[0].accepted,false); // guest has not enabled mouse streaming
   assert.equal(report.steps,1);
+  assert.equal(report.inputs.code16Loads,false);
+  assert.equal(report.code16LoadExecutions,0);
   assert.equal(report.vga.planeSha256.length,4);
   const snapshot=JSON.parse(readFileSync(paths.snapshot,'utf8'));
   assert.equal(snapshot.planeBase64.length,4);
@@ -52,6 +54,15 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.deepEqual(configured.inputs.geometry,[1,1,1]);
   assert.equal(configured.inputs.cmosEquipment,0x01);
   assert.equal(configured.inputs.dosboxConfig.parsed.imagePath,paths.hdd);
+  const loadReport=join(dir,'code16-loads.json');
+  execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,
+    '--steps','1'],{cwd,env:{...process.env,AT_BIOS_ROM:paths.bios,
+    AT_BIOS_SHA256:digest(bios),VGA_BIOS_ROM:paths.vga,VGA_BIOS_SHA256:digest(vga),
+    AT_HDD_SHA256:digest(hdd),AT_CODE16_LOADS:'1',AT_CONSOLE_REPORT:loadReport},encoding:'utf8'});
+  const loads=JSON.parse(readFileSync(loadReport,'utf8'));
+  assert.equal(loads.inputs.code16Loads,true);
+  assert.equal(loads.code16LoadExecutions,0);
+  assert.deepEqual(loads.cpu,configured.cpu);
   const nativeReport=join(dir,'native.json');
   execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,
     '--steps','1','--native-blocks'],{cwd,env:{...process.env,AT_BIOS_ROM:paths.bios,
