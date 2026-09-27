@@ -471,6 +471,26 @@ export class ExperimentalI80386 {
     return v;
   }
   _fetchN(size) {
+    // Keep the bytewise path for instruction-length, segment, and page
+    // boundaries so a later fault sees the same partially consumed EIP.
+    const cache = this.segmentCaches[SEG_CS];
+    const end = this.eip + size - 1;
+    if ((size === 2 || size === 4) &&
+        (this._instructionBytes ?? 0) + size <= 15 &&
+        cache?.present && !cache.null && !cache.expandDown &&
+        this.eip >= 0 && end >= this.eip && end <= cache.limit && end <= 0xffffffff) {
+      const linear = (cache.base + (this.eip >>> 0)) >>> 0;
+      if ((linear & 0xfff) + size <= 0x1000) {
+        const physical = this._translate(linear);
+        let value = 0;
+        for (let i = 0; i < size; i++) {
+          value += (this.fetch((physical + i) >>> 0) & 255) * 2 ** (8 * i);
+          this._instructionBytes = (this._instructionBytes ?? 0) + 1;
+          this.eip += 1;
+        }
+        return value >>> 0;
+      }
+    }
     let v = 0;
     for (let i = 0; i < size; i++) v += this._fetch8() * 2 ** (8 * i);
     return v >>> 0;

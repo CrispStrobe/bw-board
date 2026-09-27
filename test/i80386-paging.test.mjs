@@ -83,6 +83,26 @@ test('scalar read32 uses one same-page bus transaction and preserves cross-page 
   assert.deepEqual(reads,[['dword',0x100]]);
 });
 
+test('same-page immediate fetch walks once, while cross-page fault retains consumed EIP',()=>{
+  const same=fixture();
+  same.map(0,0x3000);
+  same.put(0x3000,[0x11,0x22,0x33,0x44]);
+  same.reads.length=0;
+  assert.equal(same.cpu._fetchN(4),0x44332211);
+  assert.equal(same.cpu.eip,4);
+  assert.equal(same.reads.filter(a=>a===0x1000).length,1,
+    'one PDE dword read for a same-page immediate');
+
+  const cross=fixture();
+  cross.map(0,0x3000);
+  cross.put(0x3ffe,[0x11,0x22]);
+  cross.cpu.eip=0xffe;
+  assert.throws(()=>cross.cpu._fetchN(4),e=>
+    e instanceof I80386Fault && e.vector===14 && e.errorCode===0);
+  assert.equal(cross.cpu.eip,0x1000);
+  assert.equal(cross.cpu.cr2,0x1000);
+});
+
 test('opt-in translation cache retains walks and invalidates guest page-table writes',()=>{
   const f=fixture(true);
   f.map(0x4000,0x6000);
