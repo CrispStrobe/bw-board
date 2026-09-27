@@ -1,4 +1,4 @@
-2026-09-27 AD8541 physical/package-neutral rail-to-rail op-amp model — CLAIM, Codex `/root`.
+2026-09-27 AD8541 physical/package-neutral rail-to-rail op-amp model — DONE candidate, Codex `/root`.
 Isolated worktree `/tmp/wt-bwcx-ad8541-board`, branch `lane/ad8541-model`, exact
 base `eddc5f8b295a575056817f31856699febe06ef9d`. Owns this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused AD8541
@@ -12,6 +12,17 @@ terminals, power refusal, finite gain, feedback, common-mode/output bounds,
 slew and bandwidth with independent mutations. No generic controller, solver,
 other device, face/art, importer/exporter, corpus, workflow, package pin, CUI,
 Parts or Lite edit.
+Implemented the Rev. H bounded card: the exact R-8 physical order and a
+separate five-terminal source identity, 40 V/mV typical finite gain, 1 MHz
+gain bandwidth, 0.92 V/us slew, 1 mV typical offset, guaranteed 2.7 V minimum
+supply, rail-to-rail common mode, and the guaranteed 125 mV loaded output
+floor at 1 mA through a conservative 100 ohm output. The unspecified
+differential resistance remains high-Z and the 85 uA maximum-temperature
+supply budget is explicit. Focused AD8541 plus adjacent unchanged
+precision/current coverage passes 51/51. Independently changing gain
+40k->20k, slew 0.92->9.2 V/us, or bandwidth 1->10 MHz makes its named
+consequence red. The proprietary source macromodel remains outside this card.
+Exact-head hosted CI/Harris remain the landing gates.
 
 2026-09-27 LT1678 physical dual precision op-amp model — DONE candidate, Codex `/root`.
 Isolated worktree `/tmp/wt-bwcx-lt1678-board`, branch

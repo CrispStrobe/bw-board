@@ -293,6 +293,30 @@ const OP747_SPEC = Object.freeze({
     terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
 });
 
+// Analog Devices AD8541 Rev. H at 5 V. The physical card is the R-8 SOIC
+// single amplifier; RJ-5 and KS-5 are different packages and must not inherit
+// this pin identity. The public data sheet specifies input bias rather than a
+// differential input resistance, so the inputs stay honestly high-Z. This
+// bounded card retains the DC gain, rail envelopes, dominant bandwidth and
+// slew behavior; noise, distortion, bias/drift, capacitive-load stability and
+// the proprietary AD8541.lib transistor macromodel remain outside scope.
+const AD8541_SPEC = Object.freeze({
+    a0: 40000,               // 40 V/mV typical large-signal gain at 5 V
+    gbwHz: 1e6,              // 1 MHz typical gain-bandwidth product
+    slewVPerUs: 0.92,        // typical large-signal slew rate at 5 V
+    inputR: null,            // no differential resistance is specified
+    rOut: 100,               // bounded loaded rail-to-rail output
+    tickNs: 200n,
+    settledV: 1e-7,
+    minSupply: 2.7,          // guaranteed 2.7 V to 5.5 V operation
+    commonLowHeadroom: 0,    // rail-to-rail input common-mode range
+    commonHighHeadroom: 0,
+    outputLowHeadroom: 0.025,// plus rOut drop retains 125 mV at 1 mA
+    outputHighHeadroom: 0.025,
+    defaultOffsetV: 1e-3,    // room-temperature typical at 5 V
+    terminals: ['nc_1', 'inn', 'inp', 'vneg', 'nc_5', 'out', 'vpos', 'nc_8'],
+});
+
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
     inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
@@ -667,6 +691,14 @@ export function registerAnalogAmps() {
     // carries no channel or package identity. Importers retain this hidden card
     // together with the ADI.lib/OP747 substitution blocker.
     registerPrecisionOpAmp('op747_channel', OP747_SPEC);
+    registerPrecisionOpAmp('ad8541', AD8541_SPEC);
+    // A package-neutral five-terminal source symbol does not identify R-8,
+    // RJ-5 or KS-5. Importers retain this hidden logical card together with
+    // the AD8541.lib substitution blocker instead of inventing a package.
+    registerPrecisionOpAmp('ad8541_channel', Object.freeze({
+        ...AD8541_SPEC,
+        terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+    }));
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
     registerPrecisionOpAmp('lt1007', PRECISION_OP_AMPS.lt1007);
