@@ -67,7 +67,7 @@ describe('LT1763 SO-8 physical DC contract', () => {
   });
 
   it('uses the characterized load-dependent dropout curve', () => {
-    near(makeRig({ vin: 5.2, loadOhms: 500 }).nodeVoltage('out'), 5.0, 0.02, '10 mA dropout');
+    near(makeRig({ vin: 5.1, loadOhms: 500 }).nodeVoltage('out'), 4.97, 0.012, '130 mV at 10 mA');
     near(makeRig({ vin: 5.2, loadOhms: 10, params: { vOut: 5, currentLimit: 0.8 } }).nodeVoltage('out'),
       4.9, 0.025, '500 mA dropout');
   });

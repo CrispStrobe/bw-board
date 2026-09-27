@@ -8,8 +8,8 @@ Implemented the SO-8 lead contract and bonded ground pins; fixed and adjustable
 feedback; 1.8V..20V input refusal; SHDN hysteresis; load-dependent 130mV..300mV
 typical dropout; the guaranteed 520mA current-limit floor; the six-point typical
 ground-current curve; shutdown current; and eight-terminal KCL. Focused old/new
-power and source-once coverage is 18/18; threshold, limit and ground-current
-mutations each fail their independent consequence assertion.
+power and source-once coverage is 18/18; dropout, threshold, limit and
+ground-current mutations each fail their independent consequence assertion.
 
 2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.
