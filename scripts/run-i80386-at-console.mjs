@@ -72,8 +72,19 @@ if(![2,47].includes(cmosType)||
 const stepsLimit=Number(options.steps);
 const code16Coverage=process.env.AT_CODE16_COVERAGE==='1'?
   createI80386Code16Coverage():null;
+const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
+  schema:'bw.i80386-mode-cpu-profile.v1',intervalSteps:1024,
+  modes:['real','protected16','vm86','protected32'],
+  steps:[0,0,0,0],pureWindows:[0,0,0,0],
+  pureUserMicroseconds:[0,0,0,0],pureSystemMicroseconds:[0,0,0,0],
+  mixedWindows:0,mixedSteps:[0,0,0,0],
+  mixedUserMicroseconds:0,mixedSystemMicroseconds:0,
+  samples:0,transitions:0,
+}:null;
 if(code16Coverage&&options.nativeBlocks)
   throw new Error('code16 coverage requires ordinary single-step execution');
+if(modeCpuProfile&&(options.nativeBlocks||code16Coverage||options.code16Loads))
+  throw new Error('mode CPU profile requires ordinary single-step execution');
 if(!Number.isInteger(stepsLimit)||stepsLimit<1||stepsLimit>500_000_000)
   throw new Error('AT_POST_STEPS must be 1..500000000');
 const eventBytes=process.env.AT_CONSOLE_EVENTS?fs.readFileSync(process.env.AT_CONSOLE_EVENTS):Buffer.from('[]');
@@ -136,6 +147,34 @@ machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
 machine.reset();
+let profileWindowSteps=0,profileWindowMask=0,profileLastMode=-1;
+let profileWindowModeSteps=[0,0,0,0];
+let profileLastCpu=modeCpuProfile?process.cpuUsage():null;
+const flushModeCpuProfile=()=>{
+  if(!modeCpuProfile||!profileWindowSteps)return;
+  const now=process.cpuUsage(),user=now.user-profileLastCpu.user,
+    system=now.system-profileLastCpu.system;
+  if((profileWindowMask&(profileWindowMask-1))===0){
+    const mode=31-Math.clz32(profileWindowMask);
+    modeCpuProfile.pureWindows[mode]++;
+    modeCpuProfile.pureUserMicroseconds[mode]+=user;
+    modeCpuProfile.pureSystemMicroseconds[mode]+=system;
+  }else{
+    modeCpuProfile.mixedWindows++;
+    modeCpuProfile.mixedUserMicroseconds+=user;
+    modeCpuProfile.mixedSystemMicroseconds+=system;
+    for(let mode=0;mode<4;mode++)modeCpuProfile.mixedSteps[mode]+=profileWindowModeSteps[mode];
+  }
+  modeCpuProfile.samples++;
+  profileLastCpu=now;profileWindowSteps=0;profileWindowMask=0;
+  profileWindowModeSteps=[0,0,0,0];
+};
+const recordModeStep=mode=>{
+  modeCpuProfile.steps[mode]++;
+  profileWindowModeSteps[mode]++;
+  profileWindowMask|=1<<mode;
+  if(++profileWindowSteps===modeCpuProfile.intervalSteps)flushModeCpuProfile();
+};
 const restoreCode16Interrupts=code16Coverage?.attach(machine);
 const textRam=()=>{
   const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
@@ -185,10 +224,18 @@ const runChunk=end=>{while(steps<end) {
   const nextEvent=events[eventIndex]?.step??end;
   const nextInput=options.live?(steps+1024&~1023):end;
   const budget=Math.min(end-steps,nextEvent-steps,nextInput-steps);
+  const modeBeforeStep=modeCpuProfile?(!(machine.cpu.cr0&1)?0:
+    (machine.cpu.eflags&0x20000)?2:
+    machine.cpu.segmentCaches[1].default32?3:1):-1;
+  if(modeCpuProfile&&profileLastMode!==modeBeforeStep){
+    if(profileLastMode!==-1){modeCpuProfile.transitions++;flushModeCpuProfile();}
+    profileLastMode=modeBeforeStep;
+  }
   try {
     code16Coverage?.observe(machine);
     if(nativeDispatcher)steps+=nativeDispatcher.run(Math.min(64,budget));
-    else {machine.step();code16Coverage?.retired(machine);steps++;}
+    else {machine.step();code16Coverage?.retired(machine);steps++;
+      if(modeCpuProfile)recordModeStep(modeBeforeStep);}
   }
   catch(error) {
     if(!(error instanceof I80386Fault)&&!(error instanceof UnsupportedI80386)&&
@@ -243,6 +290,7 @@ if(options.live) {
     process.stdout.write('\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l');
   }
 } else runChunk(stepsLimit);
+flushModeCpuProfile();
 restoreCode16Interrupts?.();
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
@@ -265,6 +313,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   nativeStats:nativeDispatcher?.stats??null,
   code16LoadExecutions:machine.code16LoadExecutions??0,
+  ...(modeCpuProfile?{modeCpuProfile}:{}),
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},
   textRam:text,vga:{registers:serializableVideo,planeSha256:planes.map(sha),
     snapshotPath:vgaOutput}};
