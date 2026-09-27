@@ -51,6 +51,8 @@ Private Windows media, its provenance, hashes, derived images, and detailed
 execution receipts belong in the separately managed private fixture repository.
 The public project records only the media-neutral harness and code fixes.
 The private Windows 3.11 run reached Program Manager, File Manager, and a
-keyboard-driven enhanced-mode DOS prompt that executed `ver`. Disk persistence
-and broader application compatibility remain separate acceptance checks. Keep
-Microsoft media outside this MIT repository.
+keyboard-driven enhanced-mode DOS prompt that executed `ver`. A separate run
+wrote a text file from that DOS prompt to an exclusive-created disk clone;
+after a fresh boot, the DOS prompt read back its exact contents. Broader
+application compatibility remains a separate acceptance check. Keep Microsoft
+media outside this MIT repository.
