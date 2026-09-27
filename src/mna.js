@@ -4996,7 +4996,8 @@ export function sourceVoltage(part, tSeconds, vcc) {
 
   // PCM playback: the source plays a sample buffer — an audio line-in.
   // { wave: 'pcm', samples: number[]|Float32Array, rate: Hz,
-  //   gain?: volts-per-unit (default 1), offset?: volts, loop?: bool }
+  //   gain?: volts-per-unit (default 1), offset?: volts, loop?: bool,
+  //   start?: board-time seconds (default 0) }
   // Linear interpolation between samples; past the end it holds the
   // offset (silence), or wraps when loop is set. This is the primitive
   // under every sound-into-a-pin experiment (the blinkenrocket modem,
@@ -5007,7 +5008,11 @@ export function sourceVoltage(part, tSeconds, vcc) {
     const gain = /** @type {number} */ (p.gain ?? 1);
     const offset = /** @type {number} */ (p.offset ?? 0);
     if (!samples || !samples.length) return offset;
-    let pos = tSeconds * rate;
+    const start = /** @type {number} */ (p.start ?? 0);
+    let pos = (tSeconds - start) * rate;
+    // A buffer scheduled in the future is silence, not a negative array index
+    // (which used to produce NaN and poison the whole analog solve).
+    if (pos < 0) return offset;
     if (p.loop) pos = pos % samples.length;
     if (pos < 0 || pos >= samples.length - 1) {
       // hold the final sample's tail only exactly at the end; past it, silence
