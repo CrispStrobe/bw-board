@@ -107,6 +107,11 @@ const machine = new Machine(machineConfig, {
     if (first32 !== null && postBootInterrupts.length < 64) postBootInterrupts.push(record);
   },
 });
+if (process.env.XV6_SHARED_RAM === '1') {
+  const {createI80386RamBridge} = await import('../src/experimental/i80386-ram-bridge.js');
+  machine._experimentalRamBridge = await createI80386RamBridge();
+  machine._experimentalRamBridge.attach(machine);
+}
 machine.loadRom(rom, 0xf0000); machine.loadRom(rom);
 if (vgaRom) machine.loadRom(vgaRom, 0xc0000);
 machine.reset();
@@ -158,6 +163,7 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
 const receipt = {
   profile,
   ...(lean ? {lean: true} : {}),
+  ...(process.env.XV6_SHARED_RAM === '1' ? {sharedRam: true} : {}),
   firmware,
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},

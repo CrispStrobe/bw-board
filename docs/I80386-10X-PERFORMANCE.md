@@ -31,6 +31,12 @@ the [negative MOV/LEA receipt](receipts/2026-09-27-i80386-mov-lea-fastpath-negat
 records the measurements. A broad block executor with memory, branches and
 strings remains the next CPU speed project.
 
+An [opt-in shared WASM RAM backing](I80386-SHARED-RAM.md) now passes a complete
+xv6 `forktest` with identical guest state. It removes the need to copy guest
+RAM at every future native-block boundary, but still runs the JavaScript CPU
+for every instruction; its 27.45-second run is not a speedup claim. The native
+block executor, decoder coverage and exact fault/device exits remain unbuilt.
+
 A final-source V8 sample over the xv6 run attributed 17.7% of time to
 `_stepInstruction`, 7.1% to `_fetchN`, 5.0% to `_decodeEA`, 7.8% to
 `_translate`, 6.1% to `_read386`, and 6.1% to `_serviceInterrupts`. The
