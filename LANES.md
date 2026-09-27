@@ -1,3 +1,17 @@
+2026-09-27 OP07 real precision op-amp model — CLAIM, Codex bwcx. Isolated
+worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part`, exact base
+`8e1156dac12c98f33b83a5c3af8ac74a1a6927af`. Owns only this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP07
+test. Add the manufacturer-backed single-amplifier DIP-8 electrical contract
+using the existing precision-op-amp controller: finite gain and differential
+input resistance, input offset, dual-supply/common-mode and loaded output
+limits, 0.6 MHz-class response, and 0.3 V/us slew. Null pins remain present
+and explicitly unmodelled. Prove exact terminals, power refusal, feedback,
+finite open-loop gain, both swing directions, slew and small-signal response,
+with independent mutations of gain/slew/bandwidth. No generic op-amp, solver,
+other named device, face/art, importer/exporter, corpus, workflow, package pin,
+CUI, Parts, or Lite edit.
+
 2026-09-27 LT1763 physical DC model — DONE, Codex bwcx. Isolated worktree
 `/tmp/wt-bwcx-lt1763-board`, branch `lane/lt1763-model`, base `d009a4f7`.
 Owns only `src/devices/power.js`, a focused LT1763 test, and this ledger row:
