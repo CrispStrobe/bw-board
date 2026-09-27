@@ -2320,3 +2320,8 @@ limits, and a whole-package supply budget. It must not represent the quad as
 four independently powered single-amplifier aliases. No generic op-amp,
 solver, other named device, face/art, importer/exporter, corpus, workflow,
 package pin, CUI, Parts, or Lite edit.
+The exact official LTspice audit additionally requires a hidden five-terminal
+`lt1014_channel` card: those symbols expose one functional channel, no unit or
+package identity, and netlist LT1013 from LT1013.sub. The logical card shares
+the bounded electrical constants but never receives a face or whole-package
+identity; downstream must retain the model-substitution blocker.

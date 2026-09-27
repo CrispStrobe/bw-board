@@ -181,6 +181,7 @@ const LT1014_SPEC = Object.freeze({
     outputLowHeadroom: 0.015,
     outputHighHeadroom: 1.0,
     defaultOffsetV: 90e-6,   // typical at 5 V
+    terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
 });
 
 function registerGroundSensingOpAmp(kind, channels, {
@@ -519,6 +520,12 @@ export function registerAnalogAmps() {
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
     registerPrecisionOpAmp('lt1006', PRECISION_OP_AMPS.lt1006);
     registerPrecisionQuadOpAmp('lt1014', LT1014_SPEC);
+    // LTspice's official LT1014 symbols describe one five-terminal functional
+    // unit and provide no package/channel identity. This hidden logical card
+    // lets an importer preserve that channel without inventing a whole
+    // 14-pin package. It is never a palette/face identity, and callers must
+    // retain the source-model substitution blocker.
+    registerPrecisionOpAmp('lt1014_channel', LT1014_SPEC);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
