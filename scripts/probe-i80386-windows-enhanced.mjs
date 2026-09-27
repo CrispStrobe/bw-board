@@ -32,8 +32,8 @@ const readPinned = (pathName, hashName) => {
 const bios = readPinned('AT_BIOS_ROM', 'AT_BIOS_SHA256');
 const vga = readPinned('VGA_BIOS_ROM', 'VGA_BIOS_SHA256');
 const hdd = readPinned('AT_HDD_IMAGE', 'AT_HDD_SHA256');
-if (bios.bytes.length !== 0x10000 || vga.bytes.length > 0x8000 || vga.bytes.length < 0x4000)
-  throw new Error('expected a 64 KiB AT BIOS and a 16–32 KiB VGA option ROM');
+if (bios.bytes.length !== 0x10000 || vga.bytes.length > 0x10000 || vga.bytes.length < 0x4000)
+  throw new Error('expected a 64 KiB AT BIOS and a 16–64 KiB VGA option ROM');
 const chs = required('AT_HDD_GEOMETRY').split(/[x,:]/).map(Number);
 if (chs.length !== 3 || !chs.every(Number.isInteger) || chs[0] < 1 || chs[0] > 1024 ||
     chs[1] < 1 || chs[1] > 16 || chs[2] < 1 || chs[2] > 63 ||
@@ -60,6 +60,9 @@ if (!Array.isArray(keyScript) || keyScript.some((event, index) =>
   throw new Error('AT_KEY_SCRIPT must be an ordered JSON array of {step, code} Set-1 events');
 
 const profile = structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
+profile.regions = profile.regions.map(region => region.kind === 'rom' && region.start === 0xc0000
+  ? {...region, end: 0xc0000 + Math.ceil(vga.bytes.length / 0x1000) * 0x1000 - 1}
+  : region);
 const rtc = profile.chips.find(chip => chip.kind === 'rtc');
 const cmos = new Uint8Array(0x40);
 for (const [index, value] of rtc.initialCmos) cmos[index] = value;
@@ -121,7 +124,8 @@ try {
     if (steps && steps % progressEvery === 0) {
       const text = Array.from({length: 25}, (_, row) =>
         String.fromCharCode(...machine.vgaMemory.planes[0].subarray(row * 160,
-          row * 160 + 160).filter((_, index) => !(index & 1))).trimEnd());
+          row * 160 + 160).filter((_, index) => !(index & 1)))
+          .replace(/\0/g, ' ').trimEnd());
       checkpoints.push({step: steps, ...state(), text: text.filter(Boolean).slice(-5)});
     }
     if (machine.cpu.shutdown) { outcome = 'shutdown'; break; }

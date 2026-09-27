@@ -15,6 +15,12 @@ or send Set-1 make/break events after DOS reaches its prompt with
 `AT_KEY_SCRIPT=/path/to/events.json`. The script is an ordered JSON array of
 `{"step": integer, "code": byte}` objects. `checkpoints` help choose the step.
 Disk writes stay in the in-memory image clone.
+Both the 32 KiB SeaVGABIOS variant and the vendored 38.4 KiB Bochs VGA BIOS
+fit the probe's option-ROM mapping. A two-million-instruction type-47/Bochs
+smoke run with the existing Windows 3.0 disk reached its budget without a host
+refusal; that short run establishes input wiring only, not a DOS or Windows
+boot. The Windows 3.0/type-2 IBM BIOS path has the separate accepted desktop
+receipt.
 
 ```sh
 AT_BIOS_ROM=/path/to/at-bios.rom AT_BIOS_SHA256=<64-hex> \
