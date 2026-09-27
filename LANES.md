@@ -2398,3 +2398,19 @@ plus unchanged precision/analog/current coverage passes 59/59. Independently
 changing gain 20M->10M, slew 2.5->25 V/us, or common-mode headroom 2.5->1 V
 makes its named consequence red. Exact-head CI and Harris qualification remain
 the landing gates.
+2026-09-27 AD711 BiFET precision op-amp model — CLAIM, Codex `/root`. Isolated
+worktree `/tmp/wt-bwcx-ad711-board`, branch `lane/ad711-precision-model`, exact
+base `b0831ea09b690ef3353c670a47fb3d268f1b88da`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused AD711
+test. Add the manufacturer-backed eight-terminal physical card and a separate
+five-terminal package-neutral source channel through the existing precision
+op-amp controller: 400 V/mV typical open-loop gain, 4 MHz typical small-signal
+bandwidth, 20 V/us typical slew, 0.3 mV J-grade typical offset, +/-4.5 V minimum
+operating rails, documented asymmetric common-mode/output limits, high input
+impedance, and bounded quiescent current. Offset-null pins stay physical and
+explicitly unmodelled. Prove exact terminals, unpowered/high-Z behavior, finite
+gain, follower offset, common-mode/output limits, slew and bandwidth, with
+independent gain/slew/common-mode caller-consequence mutations. Excludes the
+external AD712 macro-model named by LTspice, generic op-amp behavior, solver,
+other named devices, face/art, importer/exporter, corpus, workflow, package pin,
+CUI, Parts, Lite, noise/drift/bias-current curves, and package parasitics.
