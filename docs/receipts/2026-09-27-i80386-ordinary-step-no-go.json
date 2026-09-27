@@ -1,0 +1,35 @@
+{
+  "schema": "bw.i80386-ordinary-step-optimization-no-go.v1",
+  "date": "2026-09-27",
+  "decision": "Do not make a narrow ordinary-interpreter source change without a defensible prediction of at least 10% robust full-Windows user-CPU reduction and exact guest parity.",
+  "auditedRevision": "15d91265b10a500d31a2136e9bab7c17887b6a50",
+  "sourceSha256": {
+    "src/experimental/i80386.js": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
+    "src/experimental/i80386-at-machine.js": "0c15e925ec521be49ae82ecaeead74af3f2700eabc5f4c240a544b7fe554433c"
+  },
+  "ordinaryWindowsV8": {
+    "publicAttributionReceiptSha256": "94f2504c4d2b4199d099bfb9cb9dd46756a10ddf70d1ead2333eafff4f3e6329",
+    "samples": 66196,
+    "stepAndStepInstructionSelfSamples": 20943,
+    "stepAndStepInstructionSharePercent": 31.64,
+    "translateDecodeEaFetchNFetch8SelfSamples": 11525,
+    "translateDecodeEaFetchNFetch8SharePercent": 17.41,
+    "atMachineRead386SelfSamples": 3826,
+    "atMachineServiceInterruptsSelfSamples": 913,
+    "limitation": "These V8 self-sample categories are disjoint but are not mode-specific or an estimate of removable work. Step and instruction dispatch include necessary fault/restart, trap, and opcode behavior."
+  },
+  "directWindowsExperiment": {
+    "privateReceiptSha256": "1998aecc629e679f586996be1ce28b8824b2cc6fa1278cc4270e5747c826dfd5",
+    "change": "Reuse the per-instruction register/segment snapshot buffer with a reentrancy guard while preserving fault rollback and fresh public snapshots.",
+    "ordinary60mUserCpuSeconds": {"baseline": 77.39, "candidate": 82.37},
+    "guestParity": "Exact after deleting only execution revision and source hashes.",
+    "interpretation": "The closest low-risk attack on step overhead was slower on the direct ordinary Windows pair. A 10M GC trace reduced scavenges, but did not establish full-run CPU gain."
+  },
+  "otherBoundedEvidence": {
+    "samePageImmediateFetch": "Already in current core; prior xv6 paired user-CPU speedup was about 1.029x, with bytewise boundary fallback.",
+    "atRamReadShortcut": "Prior xv6 full-guest gain about 1.8%; candidate discarded. This is not a Windows timing measurement.",
+    "inlineMovLeaEa": "Prior xv6 ABBA mean gain about 1.3%; candidate discarded. This is not a Windows timing measurement.",
+    "interruptArbitration": "_serviceInterrupts is only 913/66196 (1.38%) of ordinary Windows V8 self-samples. Removing it entirely cannot reach the keep threshold."
+  },
+  "structuralFinding": "The current fetch path preserves each byte's 15-byte, CS-limit, paging, A20, bus, and partial-EIP fault semantics. Its same-page immediate shortcut is already present. A larger fetch or dispatch shortcut would need cross-mode code/data windows, coherent self-modifying and DMA writes, page-table side effects, precise fault rollback, and chip/IRQ boundaries. No bounded single-function change found in this audit has a credible >=10% whole-Windows CPU prediction. A broad validated multi-instruction path is the next architectural experiment; this note makes no speed claim and adds no emulator code."
+}
