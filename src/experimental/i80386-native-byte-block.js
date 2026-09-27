@@ -74,16 +74,16 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
         // dispatch validates and decodes its own code window at the target.
         ir = {op:op === 0x74 ? 4 : 5,
           dst:targetIndex ?? instructions.length + 1,src:target,width:32};
-      } else if ([0x89,0x39,0x85,0x8b,0x8d].includes(op)) {
+      } else if ([0x89,0x39,0x85,0x8b,0x8d,0x0b].includes(op)) {
         const modrm = take(), mod = modrm >>> 6,
           reg = (modrm >>> 3) & 7, rm = modrm & 7;
         if (mod === 3) {
-          if (op === 0x8d) break;
+          if (op === 0x8d || op === 0x0b) break;
           ir = op === 0x8b ? {op:1,dst:reg,src:rm,width:32} :
             {op:op === 0x89 ? 1 : op === 0x39 ? 2 : 3,
               dst:rm,src:reg,width:32};
         } else {
-          if (op !== 0x8b && op !== 0x8d) break;
+          if (op !== 0x8b && op !== 0x8d && op !== 0x0b) break;
           let base=rm,index=8,scale=0,disp=0,segment=3;
           if (rm === 4) {
             const sib=take();scale=sib>>>6;index=(sib>>>3)&7;base=sib&7;
@@ -103,7 +103,7 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
             const window=prevalidateI80386ReadWindow(machine,offset,segment);
             if (!window) break;
             readWindows.push(window);
-            ir={op:8,dst:reg,width:32,...ea,
+            ir={op:op === 0x0b ? 19 : 8,dst:reg,width:32,...ea,
               disp:(disp+window.delta)>>>0,lo:window.lo,hi:window.hi};
           }
         }

@@ -8,7 +8,7 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
        OP_CMP_IMM=10, OP_MOV_IMM=11,
        OP_ADD_IMM=12, OP_OR_IMM=13, OP_AND_IMM=14,
        OP_SHL_IMM=15, OP_SHR_IMM=16, OP_REP_STOSD=17,
-       OP_TEST_AL_IMM8=18,
+       OP_TEST_AL_IMM8=18, OP_OR_WINDOW=19,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -26,7 +26,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 9; }
+uint32_t block_spike_version(void) { return 10; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -164,9 +164,10 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
     }
     const uint32_t branch = ins.op >= OP_JZ && ins.op <= OP_JMP;
     const uint32_t load = ins.op == OP_LOAD_PHYS;
-    const uint32_t ea = ins.op == OP_LOAD_WINDOW || ins.op == OP_LEA32;
+    const uint32_t window_load = ins.op == OP_LOAD_WINDOW || ins.op == OP_OR_WINDOW;
+    const uint32_t ea = window_load || ins.op == OP_LEA32;
     const uint32_t immediate = ins.op >= OP_CMP_IMM && ins.op <= OP_SHR_IMM;
-    if (ins.op > OP_SHR_IMM ||
+    if (ins.op > OP_OR_WINDOW ||
         (branch ? (ins.dst < start || ins.dst > end ||
           (ins.dst == end && pc != end - 1)) :
           (ins.dst >= 8 || (ins.width != 16 && ins.width != 32) ||
@@ -181,7 +182,7 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       const uint32_t base = ins.base < 8 ? state.regs[ins.base] : 0;
       const uint32_t index = ins.index < 8 ? state.regs[ins.index] : 0;
       address = base + (index << ins.scale) + ins.disp;
-      if (ins.op == OP_LOAD_WINDOW &&
+      if (window_load &&
           (ins.lo >= ins.hi || ins.hi > ram_capacity ||
             address < ins.lo || address >= ins.hi ||
             ins.width / 8u > ins.hi - address))
@@ -196,10 +197,15 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       const uint32_t dst = read_reg(ins.dst, ins.width);
       const uint32_t src = immediate ? ins.src :
         load ? read_ram(ins.src, ins.width / 8u) :
-        ins.op == OP_LOAD_WINDOW ? read_ram(address, ins.width / 8u) :
+        window_load ? read_ram(address, ins.width / 8u) :
         ea ? address : read_reg(ins.src, ins.width);
       if (ins.op == OP_MOV || ins.op == OP_MOV_IMM)
         write_reg(ins.dst, ins.width, src);
+      else if (ins.op == OP_OR_WINDOW) {
+        const uint32_t result = dst | src;
+        logic_flags(result, ins.width);
+        write_reg(ins.dst, ins.width, result);
+      }
       else if (load || ea) write_reg(ins.dst, ins.width, src);
       else if (ins.op == OP_CMP || ins.op == OP_CMP_IMM)
         cmp_flags(dst, src, ins.width);

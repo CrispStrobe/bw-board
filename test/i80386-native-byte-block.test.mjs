@@ -250,6 +250,49 @@ test('terminal forward JZ and JNZ exit to their target or fallthrough',async()=>
   }
 });
 
+test('OR register from validated SS RAM matches interpreter flags and cycles',async()=>{
+  for(const [source,initial] of [[0x12345678,0x80000000],[0,0],[0xffffffff,0x12]]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const {machine,put32} of [fast,slow]) {
+      // OR ESI,1; OR ESI,[EBP+0]; NOP.
+      [0x83,0xce,1,0x0b,0x75,0,0x90].forEach((byte,i)=>
+        machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.segmentCaches[2]={base:0,limit:0xffffffff,default32:true,
+        present:true,code:false,readable:true,writable:true};
+      machine.cpu.ebp=DATA+24;machine.cpu.esi=initial;
+      machine.cpu.eflags=0xad7;
+      put32(DATA_PHYS+24,source);
+      machine.cpu._translate(DATA+24);
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.deepEqual(block?.instructions.map(ins=>ins.op),[13,19,0]);
+    assert.deepEqual(runner.run(block,2),
+      {instructions:2,cycles:12,reason:'event'});
+    slow.machine.step();slow.machine.step();
+    assert.deepEqual({...state(fast.machine),esi:fast.machine.cpu.esi},
+      {...state(slow.machine),esi:slow.machine.cpu.esi});
+  }
+});
+
+test('OR RAM window exits before a dynamic address leaves its page',async()=>{
+  const {machine,bridge}=await fixture(true);
+  [0x83,0xce,1,0x0b,0x75,0,0x90].forEach((byte,i)=>
+    machine._write386(CODE_PHYS+i,byte));
+  machine.cpu.segmentCaches[2]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:false,readable:true,writable:true};
+  machine.cpu.ebp=DATA+24;machine.cpu.esi=0x10;
+  machine.cpu._translate(DATA+24);
+  const runner=await createI80386NativeByteRunner(machine,bridge);
+  const block=runner.decode(8);
+  assert.equal(block?.instructions[1]?.op,19);
+  machine.cpu.ebp=DATA+0x1000;
+  assert.deepEqual(runner.run(block,3),
+    {instructions:1,cycles:6,reason:'unsupported'});
+  assert.equal(machine.cpu.esi,0x11);
+  assert.equal(machine.cpu.eip,CODE+3);
+});
+
 async function stosFixture({count=9,offset=0,direction=false,extraPage=false}={}) {
   const fast=await fixture(true),slow=await fixture(false);
   for(const {machine,put32} of [fast,slow]) {

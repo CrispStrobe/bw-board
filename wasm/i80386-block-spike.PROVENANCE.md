@@ -20,9 +20,9 @@ clang --target=wasm32 -O3 -nostdlib -fno-builtin -Werror -Wall -Wextra \
   -o wasm/i80386-block-spike.wasm
 ```
 
-Source SHA-256: `bfcb0b1b10c3c7014497563d0741d7e70df501c7b414ceb800ecfc94762655bd`
+Source SHA-256: `e0047aa2befe02bd420d245862be13004ba7ac90ff4953837cc755a73bcf3909`
 
-WASM SHA-256: `c126f716b2f4c842aecc9f0ac8bf82c5098ba3aeadec4697b22eb35c02aa714f`
+WASM SHA-256: `3ddf22bf4aa72f2a2148b1ce37d9c069e15715c20bb7bc698ca5337a3ee5f664`
 
 The module is used by the opt-in 386 CLI, GUI target, and stock-xv6 native-byte probe. Its
 [REP STOSD receipt](../docs/receipts/2026-09-27-i80386-native-rep-stosd.json)

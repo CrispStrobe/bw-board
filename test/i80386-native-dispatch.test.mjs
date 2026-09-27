@@ -61,6 +61,18 @@ test('dispatcher interprets unsupported and stale bytes', async () => {
   assert.equal(dispatcher.stats.instructions, 3);
 });
 
+test('dispatcher skips native admission for 16-bit code', async () => {
+  const fast = fixture(), slow = fixture();
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  for (const machine of [fast, slow])
+    machine.cpu.segmentCaches[1].default32 = false;
+  assert.equal(dispatcher.run(16), 1);
+  slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.stats.ineligibleModeSteps, 1);
+  assert.equal(dispatcher.stats.attempts, 0);
+});
+
 test('advanceToMs stops at the rounded cycle target and counts guest steps', async () => {
   const fast = fixture(), slow = fixture();
   const dispatcher = await createI80386NativeDispatcher(fast);

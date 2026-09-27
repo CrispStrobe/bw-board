@@ -1,0 +1,63 @@
+{
+  "schema": "bw.i80386-native-or-window.v1",
+  "date": "2026-09-27",
+  "baseRevision": "a316048e2fdd4d021c813794a601496d9b51676d",
+  "workload": "stock xv6 4 MiB forktest with vendored Bochs BIOS",
+  "sourceSha256": {
+    "src/experimental/i80386-block-spike.c": "e0047aa2befe02bd420d245862be13004ba7ac90ff4953837cc755a73bcf3909",
+    "src/experimental/i80386-block-spike.js": "d8f05a735f4a54fe391613297f727f5336e6aac13368d15c86308e1d33ddf9f1",
+    "src/experimental/i80386-native-byte-block.js": "0181a6be70e5b912874252d92dc6ebf34e90cab862a25e13de8a094aebc7af11",
+    "src/experimental/i80386-native-dispatch.js": "b603d7c7fdcd044071f77778aaf91f7393e74e76724dc13d69642d9ce0a970b0",
+    "wasm/i80386-block-spike.wasm": "3ddf22bf4aa72f2a2148b1ce37d9c069e15715c20bb7bc698ca5337a3ee5f664"
+  },
+  "matchingFields": [
+    "profile",
+    "lean",
+    "sharedRam",
+    "nativeByte",
+    "ramSha256",
+    "firmware",
+    "image",
+    "slaveImage",
+    "steps",
+    "first32",
+    "serial",
+    "inputSent",
+    "interrupts",
+    "postBootInterrupts",
+    "lapicIdReads",
+    "milestones",
+    "userModeEntries",
+    "screen",
+    "lapic",
+    "ioapic",
+    "cpu"
+  ],
+  "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+  "steps": 24338279,
+  "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+  "beforeNativeStats": {
+    "attempts": 12400434,
+    "decoded": 23296,
+    "blockCalls": 3513613,
+    "instructions": 15451458,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "afterNativeStats": {
+    "attempts": 11912853,
+    "decoded": 23364,
+    "blockCalls": 4001739,
+    "instructions": 16427165,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "additionalNativeInstructions": 975707,
+  "userCpuSeconds": {
+    "before": 17.84,
+    "after": 17.2
+  },
+  "scope": "One direct old/new native pair on a shared host. Guest state and final RAM matched; performance is not a 10x or real-time claim."
+}

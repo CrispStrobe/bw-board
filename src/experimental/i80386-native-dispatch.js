@@ -28,11 +28,19 @@ export async function createI80386NativeDispatcher(machine, {
   const runner = await createI80386NativeByteRunner(machine, ramBridge);
   const blocks = new Map();
   const stats = {attempts: 0, decoded: 0, blockCalls: 0, instructions: 0,
-    repStosDecoded: 0, repStosBlockCalls: 0, repStosIterations: 0};
+    ineligibleModeSteps: 0, repStosDecoded: 0, repStosBlockCalls: 0,
+    repStosIterations: 0};
 
   function run(maxInstructions = 64) {
     if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
       throw new RangeError('native dispatcher budget must be 1 through 64 instructions');
+    // The decoder refuses 16-bit code outright. Most DOS/Windows boot steps
+    // use it, so do not pay a cache lookup or window admission per instruction.
+    if (!machine.cpu.segmentCaches[1]?.default32) {
+      stats.ineligibleModeSteps++;
+      machine.step();
+      return 1;
+    }
     stats.attempts++;
     const cpu = machine.cpu;
     const key = cpu.eip >>> 0;

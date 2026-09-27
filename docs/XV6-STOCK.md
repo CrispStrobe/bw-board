@@ -82,6 +82,13 @@ branch change on the same workload. Host timings are not a 10× or real-time cla
 The [branch-exit receipt](receipts/2026-09-27-i80386-native-branch-exit.json)
 binds the rebuilt WASM and the full comparison.
 
+The next bounded form, `OR reg,[validated RAM]`, admits a frequent xv6 pair
+that had been interpreted together. Native retirement rose to 16,427,165
+instructions (67.5%) with exact guest-state and RAM equality. A direct
+old/new native pair used 17.84 versus 17.20 user CPU seconds, about a 3.6%
+reduction. The [OR-window receipt](receipts/2026-09-27-i80386-native-or-window.json)
+records the source, WASM, coverage, and timings.
+
 A later CPU profile of the same `forktest` found instruction snapshots to be
 the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
 The executor now retains prior segment-cache and task-state objects by reference

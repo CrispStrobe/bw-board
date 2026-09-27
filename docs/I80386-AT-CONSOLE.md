@@ -32,6 +32,11 @@ boundaries. Scripted keyboard, serial, and mouse events are still delivered
 at their specified guest step; live input is checked at its usual 1024-step
 boundary. The report records `inputs.nativeBlocks` and hashes the native
 implementation sources. This option requires WebAssembly support in Node.
+The dispatcher now bypasses native admission entirely for 16-bit code. A
+private Windows 3.11 diagnostic reached paged protected mode and matched the
+ordinary executor at a 60-million-step checkpoint, but native blocks covered
+only a small fraction of that mixed 16/32-bit run and the opt-in path remained
+slower overall. Keep ordinary execution as the default for Windows workloads.
 
 The optional events file is an ordered JSON array. Same-step events retain
 array order. Keyboard `code` is a Set-1 scan byte, serial `code` is one byte,
