@@ -9,7 +9,7 @@ import {createI80386RamBridge} from './i80386-ram-bridge.js';
 import {decodeI80386Code16ObservedForm} from './i80386-code16-form-census.js';
 
 const OP = {nop: 0, imm: 1, reg: 2, cmp: 3, load8: 4, load16: 5,
-  jz: 6, jnz: 7};
+  jz: 6, jnz: 7, cmpMem8: 8, xorReg16: 9};
 const REG = {bx: 3, bp: 5, si: 6, di: 7};
 const WORDS = 12;
 const MEMORY_PAGES = 258;
@@ -39,16 +39,29 @@ function decodeBlock(machine, maxInstructions, refused = null) {
     const op = bytes[at];
     let item;
     if (op === 0x90) item = {op: OP.nop, length: 1};
+    else if (op === 0x26) {
+      if (at + 3 > bytes.length) { stop = 'truncatedInstruction'; break; }
+      const following = bytes[at + 1];
+      if (following !== 0x8a && following !== 0x8b && following !== 0x3a) {
+        stop = 'unsupportedOpcode'; break;
+      }
+      const ea = decodeEA(bytes.slice(at + 2), {segmentOverride: 0});
+      if (!ea) { stop = 'unsupportedMemoryForm'; break; }
+      item = {op: following === 0x8a ? OP.load8 :
+        following === 0x8b ? OP.load16 : OP.cmpMem8,
+      dst: ea.reg, ea, length: 2 + ea.length};
+    }
     else if (op >= 0xb8 && op <= 0xbf) {
       if (at + 3 > bytes.length) { stop = 'truncatedInstruction'; break; }
       item = {op: OP.imm, dst: op & 7, disp: bytes[at + 1] | bytes[at + 2] << 8,
         length: 3};
-    } else if ([0x89, 0x8b, 0x39, 0x3b].includes(op)) {
+    } else if ([0x89, 0x8b, 0x39, 0x3b, 0x31, 0x33].includes(op)) {
       if (at + 2 > bytes.length) { stop = 'truncatedInstruction'; break; }
       const modrm = bytes[at + 1], mod = modrm >>> 6;
       if (mod === 3) {
         const reg = (modrm >>> 3) & 7, rm = modrm & 7;
-        item = {op: op === 0x89 || op === 0x8b ? OP.reg : OP.cmp,
+        item = {op: op === 0x89 || op === 0x8b ? OP.reg :
+          op === 0x31 || op === 0x33 ? OP.xorReg16 : OP.cmp,
           dst: (op & 2) ? reg : rm, src: (op & 2) ? rm : reg, length: 2};
       } else if (op === 0x8b) {
         const ea = decodeEA(bytes.slice(at + 1));
@@ -97,7 +110,7 @@ function prepare(machine, block) {
     const ir = {...item};
     if (item.ea) {
       const proof = admitEA(machine, block.code, item.ea,
-        item.op === OP.load8 ? 1 : 2, 'read');
+        item.op === OP.load16 ? 2 : 1, 'read');
       if (!proof || !validEA(proof)) {
         refusal = proof ? 'dataProofInvalidation' : 'dataProofRefusal'; break;
       }
@@ -206,7 +219,7 @@ export async function createI80386Code16WasmDispatcher(machine, {
   const module = await (bundledModule ??= WebAssembly.compile(await moduleBytes()));
   const {exports: wasm} = await WebAssembly.instantiate(module, {env: {memory: bridge.memory}});
   if (bridge.memory.buffer.byteLength !== MEMORY_PAGES * 65536 ||
-      wasm.code16_wasm_version() !== 1 ||
+      wasm.code16_wasm_version() !== 2 ||
       wasm.code16_wasm_capacity() !== 64 ||
       wasm.code16_wasm_bind_ram(bridge.ram.byteOffset, bridge.ram.length) !== 1)
     throw new Error('code16 WASM ABI or RAM mismatch');

@@ -9,12 +9,13 @@ experiment, and the diagnostic coverage observer. Production GUI execution is
 unchanged. No speed improvement is claimed.
 
 The decoder accepts unprefixed NOP, MOV immediate/register 16-bit, register
-CMP16, read-only memory `8A`/`8B` with 16-bit ModR/M addressing, and terminal
+CMP16 and XOR16, read-only memory `8A`/`8B` with 16-bit ModR/M addressing,
+exact `0x26`-prefixed ES memory `8A`/`8B` loads and `3A` byte CMP, and terminal
 short JZ/JNZ. A block contains at least two instructions and at most eight by
 default. It stays within one code page and the CS limit. The final code proof
 captures only the decoded bytes; every cached block rechecks those bytes and
 its mode, segment, A20, and paging identity before entry. Unsupported bytes,
-prefixes, register-only `8A`, stores, stack operations, and missing proofs
+other prefixes, register-only `8A`, stores, stack operations, and missing proofs
 fall back to ordinary board stepping.
 
 Each memory read obtains a fresh published EA/data proof at block entry. The
@@ -60,7 +61,8 @@ retired 2.73 million native instructions in 1.26 million WASM calls, only
 2.16 instructions per call on average: 4.55% of all 60 million steps. The
 remaining 57,269,596 steps fell back to ordinary execution. The measured
 user CPU cost was 3.77 times ordinary execution, so this option should not
-be used for performance. It remains off by default.
+be used for performance. It remains off by default. These figures describe
+the original unprefixed slice before the ES/XOR extension.
 
 The 60-million-step A/B used the pre-rebase console CLI. The final candidate
 adds an unrelated mode CPU profiler option and explicitly excludes profiling
@@ -113,3 +115,30 @@ stepping in that serial pair. This is a correctness and bottleneck census,
 not a performance improvement. It does not isolate the cost of diagnostics
 from the already slower WASM slice. The diagnostic WASM option should not be
 used for performance.
+
+## ES reads, byte CMP, and register XOR16
+
+The later opt-in extension admits only one `0x26` prefix followed by memory
+`8A`, `8B`, or `3A`. The pure EA descriptor receives explicit ES override
+index 0; its segment and physical data-window proof is checked before WASM
+entry. The module recomputes the live 16-bit offset before reading the proved
+physical byte or bytes. `3A` compares the selected low or high byte register
+against the ES byte and changes only flags, including CF, PF, AF, ZF, SF, and
+OF. Unprefixed register-only `31`/`33` XOR16 preserves the high halves of
+registers and follows the interpreter's logic-flag behavior. The WASM ABI is
+version 2. A refused proof leaves the instruction for ordinary stepping;
+this extension still does not write guest memory or enter the production GUI.
+
+Focused differential tests cover real, protected16, VM86 and paged execution,
+ES versus DS/SS, AH/AL flag edges and taken/fallthrough JZ, a word crossing
+noncontiguous physical pages, missing second-page and ES-limit refusal, code
+mutation, chip deadlines, and both XOR register orientations. A pinned
+private 60-million-step ordinary/opt-in A/B matched the full normalized guest
+report and stopped at the same budget without refusal. The extension retired
+5,039,835 native instructions in 2,344,005 calls, 8.40% of all steps, versus
+2,730,404 instructions and 4.55% for the original slice. Mean block length
+remained 2.15 instructions per call. Ordinary execution used 78.60 user CPU
+seconds; opt-in used 308.17, **3.92 times slower**. This remains correctness
+groundwork and should not be used for performance. The flat block length
+points to reducing block-entry frequency and broadening or linking control
+flow before another isolated opcode addition.

@@ -1,0 +1,42 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "800a24139735a2bf26e55fd782f4fdd9d5a9745b",
+  "scope": "Default-off code16 WASM ES-prefixed read-only 8A/8B/3A and register XOR16; no production GUI wiring",
+  "wasmAbiVersion": 2,
+  "buildCommand": "clang --target=wasm32 -O3 -Wall -Wextra -Werror -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--import-memory -Wl,--global-base=16779264 -Wl,--initial-memory=16908288 -Wl,--max-memory=16908288 -o wasm/i80386-code16-wasm.wasm src/experimental/i80386-code16-wasm.c",
+  "sources": {
+    "src/experimental/i80386-code16-wasm.c": "sha256:f2d6e3f734b8c51a61d46a897262d108d3fd8e48f1eae1281f6068a5513a1580",
+    "src/experimental/i80386-code16-wasm-block.js": "sha256:5ee779810389776a7328aa0e628eb0605ea37bd0bfeeea47b741bb3f7f4252ae",
+    "wasm/i80386-code16-wasm.wasm": "sha256:8aee0c0e1bc8714a4e886c345710449d6ae06d4e7afcb2d7780fcdb186d02aad",
+    "scripts/run-i80386-at-console.mjs": "sha256:dd9154d48bfcb4e52538fd7276f7c2a0416d4d4d0e56eb03a56c46d1cc520bf0",
+    "test/i80386-code16-wasm-block.test.mjs": "sha256:7765820a5b41d56b8428a1f33441d7e8eda54efb8b0fbc7d2e531b819e1e7bf8",
+    "docs/I80386-CODE16-WASM-BLOCK.md": "sha256:452a72417942ce9a431885f5def2cd105d5b5f59607147a969f788d40dd1e148"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 449,
+    "passed": 445,
+    "failed": 0,
+    "skipped": 4,
+    "focusedWasmTests": 21,
+    "focusedPass": 21
+  },
+  "privateLongRunObservation": {
+    "measuredExecutionRevision": "3dd2c0d9c427071242b4f17a52259fad55a1e6fd",
+    "stepsPerRun": 60000000,
+    "normalizedGuestReportsEqual": true,
+    "normalizedGuestReportSha256": "ebd37f619ab5afc90177e51efdf2c7ea36d4895461ec66329b989d03af0b8fac",
+    "ordinaryUserCpuSeconds": 78.60,
+    "optInUserCpuSeconds": 308.17,
+    "optInSlowdown": 3.92,
+    "nativeInstructions": 5039835,
+    "nativeInstructionCoveragePercent": 8.40,
+    "nativeBlockCalls": 2344005,
+    "meanNativeInstructionsPerCall": 2.15,
+    "fallbackSteps": 54960165,
+    "boundaryExits": 180069,
+    "priorSliceNativeInstructions": 2730404,
+    "priorSliceCoveragePercent": 4.55
+  },
+  "limitations": "The opt-in remains unsuitable for performance: 3.92x higher user CPU cost despite 8.40% native instruction coverage. Mean length stayed about 2.15 instructions per call; reducing block-entry frequency and broadening or linking control flow is the next performance question. Exact-address proof and event/fault boundaries still force interpreter fallback. No speed claim. Commercial media and raw reports are private."
+}

@@ -41,7 +41,7 @@ function paged(machine) {
 function state(machine) {
   const cpu = machine.cpu;
   return {regs: [cpu.eax, cpu.ecx, cpu.edx, cpu.ebx, cpu.esp, cpu.ebp,
-    cpu.esi, cpu.edi], eip: cpu.eip, eflags: cpu.eflags,
+    cpu.esi, cpu.edi].map(value => value >>> 0), eip: cpu.eip, eflags: cpu.eflags,
   cpuCycles: cpu.cycles, cycles: machine.cycles, debt: machine._chipDebt};
 }
 async function compare(code, count, customize = () => {}, mode = 'real') {
@@ -75,6 +75,63 @@ test('8B word and 8A high-byte reads use current shared RAM', async () => {
     }, mode);
     assert.equal(completed, 4);
     assert.equal(fast.cpu.eax, 0xdead7834);
+  }
+});
+
+test('ES-prefixed word and high-byte reads plus byte CMP match all code16 modes', async () => {
+  // MOV AX,ES:[BX]; MOV AH,ES:[BX+2]; CMP AH,ES:[BX+2]; JZ +2.
+  const code = [0x26, 0x8b, 0x07, 0x26, 0x8a, 0x67, 0x02,
+    0x26, 0x3a, 0x67, 0x02, 0x74, 0x02, 0x90, 0x90, 0x90];
+  for (const mode of ['real', 'protected16', 'vm86']) {
+    const {fast, slow, completed} = await compare(code, 4, machine => {
+      machine.cpu.es = 0x3000;
+      machine.cpu.segmentCaches[0] = {base: 0x30000, limit: 0xffff,
+        default32: false, present: true, code: false, readable: true, writable: true};
+      machine.cpu.bx = 0x20;
+      machine.cpu.eax = 0xdead0000;
+      machine.mem.set([0x34, 0x12, 0x78], 0x30020);
+      machine.mem.set([0xaa, 0xbb, 0xcc], 0x20020);
+    }, mode);
+    assert.equal(completed, 4);
+    assert.equal(fast.cpu.eax, 0xdead7834);
+    assert.equal(fast.cpu.eflags & 0x40, 0x40);
+    assert.equal(fast.cpu.eip, 0x2f);
+    assert.deepEqual(fast.mem.slice(0x30020, 0x30023),
+      slow.mem.slice(0x30020, 0x30023));
+  }
+});
+
+test('ES-prefixed CMP byte preserves full flags for AL and AH edge operands', async () => {
+  for (const reg of [0, 4]) {
+    const code = [0x26, 0x3a, (reg << 3) | 7, 0x74, 0x02, 0x90, 0x90, 0x90];
+    for (const [left, right] of [[0, 1], [1, 0], [0x7f, 0x80],
+      [0x80, 0x7f], [0xff, 0], [0, 0xff], [0xff, 0xff]]) {
+      const {completed, fast} = await compare(code, 2, machine => {
+        machine.cpu.es = 0x3000;
+        machine.cpu.segmentCaches[0] = {base: 0x30000, limit: 0xffff,
+          default32: false, present: true, code: false, readable: true, writable: true};
+        machine.cpu.bx = 0x20;
+        machine.cpu.eax = 0x12340000 | left << (reg ? 8 : 0);
+        machine.cpu.eflags = 0xa02;
+        machine.mem[0x30020] = right;
+      });
+      assert.equal(completed, 2);
+      assert.equal(fast.cpu.eip, left === right ? 0x27 : 0x25);
+    }
+  }
+});
+
+test('unprefixed register XOR16 matches both orientations and full EFLAGS', async () => {
+  for (const opcode of [0x31, 0x33]) {
+    const code = [opcode, 0xd8, 0x90];
+    for (const [ax, bx] of [[0, 0], [0, 1], [0xffff, 0], [0x8000, 0x7fff]]) {
+      const {completed} = await compare(code, 2, machine => {
+        machine.cpu.eax = 0x12340000 | ax;
+        machine.cpu.ebx = 0xabcd0000 | bx;
+        machine.cpu.eflags = 0xa93;
+      });
+      assert.equal(completed, 2);
+    }
   }
 });
 
@@ -112,6 +169,81 @@ test('word read crossing two cached, noncontiguous pages matches interpreter', a
   }, 'protected16');
   assert.equal(completed, 3);
   assert.equal(fast.cpu.ax, 0x1234);
+});
+
+test('ES-prefixed paged read and noncontiguous page crossing match interpreter', async () => {
+  const code = [0x90, 0x26, 0x8b, 0x07, 0x26, 0x3a, 0x07, 0x90];
+  const {fast, completed} = await compare(code, 4, machine => {
+    paged(machine);
+    machine.cpu.es = 0x3000;
+    machine.cpu.segmentCaches[0] = {base: 0x30f00, limit: 0xffff,
+      default32: false, present: true, code: false, readable: true, writable: true};
+    machine.cpu.bx = 0xff;
+    put32(machine, 0x4000 + ((0x30000 >>> 10) & 0xffc), 0x140007);
+    put32(machine, 0x4000 + ((0x31000 >>> 10) & 0xffc), 0x150007);
+    machine.cpu._translate(0x10020);
+    machine.cpu._translate(0x30fff);
+    machine.cpu._translate(0x31000);
+    machine.mem[0x140fff] = 0x34;
+    machine.mem[0x150000] = 0x12;
+  }, 'protected16');
+  assert.equal(completed, 4);
+  assert.equal(fast.cpu.ax, 0x1234);
+  assert.equal(fast.cpu.eflags & 0x40, 0x40);
+});
+
+test('failed ES proof, code mutation, and chip deadline preserve fallback boundaries', async () => {
+  const code = [0x90, 0x26, 0x8b, 0x07, 0x90];
+  for (const setup of [
+    machine => { machine.cpu.segmentCaches[0].base = 0xa0000; },
+    machine => { machine.cpu.segmentCaches[0].limit = 0x1f; },
+    machine => { paged(machine); machine.cpu.segmentCaches[0].base = 0x30000;
+      machine.cpu.invalidateTranslationCache(); machine.cpu._translate(0x10020); },
+    machine => { paged(machine); machine.cpu.segmentCaches[0].base = 0x30f00;
+      machine.cpu.bx = 0xff;
+      put32(machine, 0x4000 + ((0x30000 >>> 10) & 0xffc), 0x140007);
+      machine.cpu._translate(0x10020); machine.cpu._translate(0x30fff); },
+  ]) {
+    const fast = fixture(code, 'protected16'), slow = fixture(code, 'protected16');
+    for (const machine of [fast, slow]) {
+      machine.cpu.es = 0x3000;
+      machine.cpu.segmentCaches[0] = {base: 0x30000, limit: 0xffff,
+        default32: false, present: true, code: false, readable: true, writable: true};
+      machine.cpu.bx = 0x20;
+      setup(machine);
+    }
+    const dispatcher = await createI80386Code16WasmDispatcher(fast);
+    assert.equal(dispatcher.run(2), 1);
+    slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.stats.blockCalls, 0);
+  }
+
+  const event = await compare([0x26, 0x8a, 0x07, 0x26, 0x3a, 0x07, 0x90],
+    3, machine => {
+      machine.cpu.es = 0x3000;
+      machine.cpu.segmentCaches[0] = {base: 0x30000, limit: 0xffff,
+        default32: false, present: true, code: false, readable: true, writable: true};
+      machine.cpu.bx = 0x20;
+      machine._chipDeadline = machine.functionalInstructionCycles * 2;
+    });
+  assert.equal(event.completed, 2);
+
+  const mutable = fixture([0x26, 0x8b, 0x07, 0x90]);
+  mutable.cpu.es = 0x3000;
+  mutable.cpu.segmentCaches[0] = {base: 0x30000, limit: 0xffff,
+    default32: false, present: true, code: false, readable: true, writable: true};
+  const dispatcher = await createI80386Code16WasmDispatcher(mutable);
+  assert.equal(dispatcher.run(2), 2);
+  mutable.cpu.eip = 0x20;
+  mutable.mem[0x10021] = 0x8a;
+  const slow = fixture([0x26, 0x8a, 0x07, 0x90]);
+  slow.cpu.es = 0x3000;
+  slow.cpu.segmentCaches[0] = {...mutable.cpu.segmentCaches[0]};
+  slow.cpu.eax = mutable.cpu.eax;
+  assert.equal(dispatcher.run(2), 2);
+  slow.step(); slow.step();
+  assert.equal(mutable.cpu.eax, slow.cpu.eax);
 });
 
 test('CMP16 flags match ordinary subtraction across carry and overflow cases', async () => {
@@ -320,14 +452,14 @@ test('form census describes prefix, ModRM, width and bounded continuation length
   assert.equal(decodeI80386Code16ObservedForm([0x26]).reason, 'incomplete');
 
   const cases = [
-    {code: [0x26, 0x8b, 0x07], bucket: 'first26',
-      form: '26:8b:mem:o16:a16', length: 3},
+    {code: [0x26, 0x89, 0x07], bucket: 'first26',
+      form: '26:89:mem:o16:a16', length: 3},
     {code: [0x66, 0xb8, 0x78, 0x56, 0x34, 0x12], bucket: 'first66',
       form: '66:b8:plain:o32:a16', length: 6},
     {code: [0x8e, 0xd8], bucket: 'first8e',
       form: '-:8e:reg/3:o16:a16', length: 2},
-    {code: [0x90, 0x26, 0x8b, 0x07], bucket: 'shortBlockSequential',
-      form: '26:8b:mem:o16:a16', length: 3},
+    {code: [0x90, 0x26, 0x89, 0x07], bucket: 'shortBlockSequential',
+      form: '26:89:mem:o16:a16', length: 3},
   ];
   for (const {code, bucket, form, length} of cases) {
     const fast = fixture(code), slow = fixture(code);
