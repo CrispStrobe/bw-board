@@ -207,6 +207,28 @@ const ADTL082_SPEC = Object.freeze({
     terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
 });
 
+// Analog Devices OP777/OP727/OP747 Rev. D. The physical OP747 is one
+// shared-rail quad in an R-14 SOIC or RU-14 TSSOP. This bounded card uses the
+// +/-15 V typical large-signal gain and the guaranteed common-mode/output
+// envelopes; input bias is specified but differential input resistance is not,
+// so the inputs remain honestly high-Z rather than receiving an invented value.
+const OP747_SPEC = Object.freeze({
+    a0: 2.5e6,               // 2,500 V/mV typical large-signal gain at +/-15 V
+    gbwHz: 0.7e6,            // 0.7 MHz gain-bandwidth product
+    slewVPerUs: 0.2,         // specified large-signal slew rate
+    inputR: null,            // no differential resistance specified
+    rOut: 100,               // bounded rail-to-rail loaded output
+    tickNs: 300n,
+    settledV: 1e-8,
+    minSupply: 3,            // +3 V single supply / +/-1.5 V dual supply
+    commonLowHeadroom: 0,
+    commonHighHeadroom: 1,   // 0..4 V at 5 V; -15..+14 V at +/-15 V
+    outputLowHeadroom: 0.04, // plus rOut drop retains the 1 mA 140 mV limit
+    outputHighHeadroom: 0.02,// plus rOut drop retains the 1 mA 120 mV limit
+    defaultOffsetV: 30e-6,   // OP747 room-temperature typical
+    terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+});
+
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
     inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
@@ -436,6 +458,7 @@ function registerPrecisionMultiOpAmp(kind, spec, channels, terminals) {
         },
 
         stamp(ctx) {
+            if (!Number.isFinite(spec.inputR)) return;
             for (const ch of channels) {
                 ctx.conductance(`${ch}_pos`, `${ch}_neg`, 1 / spec.inputR);
             }
@@ -554,6 +577,14 @@ export function registerAnalogAmps() {
     // not the whole SOIC-8 dual. Importers retain this package-neutral card
     // together with the ADI.lib/ADTL082 substitution blocker.
     registerPrecisionOpAmp('adtl082_channel', ADTL082_SPEC);
+    registerPrecisionMultiOpAmp('op747', OP747_SPEC, ['1', '2', '3', '4'], [
+        '1_neg', '1_pos', 'vpos', '2_pos', '2_neg', '2_out', '4_out',
+        '4_neg', '4_pos', 'vneg', '3_pos', '3_neg', '3_out', '1_out',
+    ]);
+    // The official LTspice symbol is one five-terminal logical amplifier and
+    // carries no channel or package identity. Importers retain this hidden card
+    // together with the ADI.lib/OP747 substitution blocker.
+    registerPrecisionOpAmp('op747_channel', OP747_SPEC);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
