@@ -52,4 +52,13 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.deepEqual(configured.inputs.geometry,[1,1,1]);
   assert.equal(configured.inputs.cmosEquipment,0x01);
   assert.equal(configured.inputs.dosboxConfig.parsed.imagePath,paths.hdd);
+  const nativeReport=join(dir,'native.json');
+  execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,
+    '--steps','1','--native-blocks'],{cwd,env:{...process.env,AT_BIOS_ROM:paths.bios,
+    AT_BIOS_SHA256:digest(bios),VGA_BIOS_ROM:paths.vga,VGA_BIOS_SHA256:digest(vga),
+    AT_HDD_SHA256:digest(hdd),AT_CONSOLE_REPORT:nativeReport},encoding:'utf8'});
+  const native=JSON.parse(readFileSync(nativeReport,'utf8'));
+  assert.equal(native.inputs.nativeBlocks,true);
+  assert.deepEqual(native.cpu,configured.cpu);
+  assert.deepEqual(native.vga.planeSha256,configured.vga.planeSha256);
 });

@@ -18,14 +18,16 @@ import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
 
 const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
+  nativeBlocks:process.env.AT_NATIVE_BLOCKS==='1',
   steps:process.env.AT_POST_STEPS??1_000_000};
 for(let index=0;index<process.argv.length-2;index++) {
   const option=process.argv[index+2];
   if(option==='--help') {
-    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live]\n');
+    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live] [--native-blocks]\n');
     process.exit(0);
   }
   if(option==='--live'){options.live=true;continue;}
+  if(option==='--native-blocks'){options.nativeBlocks=true;continue;}
   const value=process.argv[++index+2];
   if(!value)throw new Error(`${option} needs a value`);
   if(option==='--dosbox-conf')options.conf=value;
@@ -95,6 +97,13 @@ rtc.initialCmos=[...cmos.entries()].filter(([,value])=>value!==0);
 const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/i8086-machine.js','../src/experimental/i80386.js',
   '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
+  '../src/experimental/i80386-native-dispatch.js',
+  '../src/experimental/i80386-native-byte-block.js',
+  '../src/experimental/i80386-ram-bridge.js',
+  '../src/experimental/i80386-block-spike.js',
+  '../src/experimental/i80386-read-window.js',
+  '../src/experimental/i80386-write-window.js',
+  '../wasm/i80386-block-spike.wasm','../wasm/i80386-ram-bridge.wasm',
   '../src/experimental/vga-memory.js','../src/vga-card.js',
   './lib/i80386-at-console-events.mjs',
   './lib/i80386-at-dosbox-config.mjs','./lib/i80386-at-terminal.mjs',
@@ -111,6 +120,9 @@ const machine=new Machine(profile,{
   ataImage:hdd.bytes,ataGeometry:{cylinders,heads,sectors},
   onSerial:byte=>{if(serial.length<65536)serial.push(byte&255);},
 });
+const nativeDispatcher=options.nativeBlocks?
+  await (await import('../src/experimental/i80386-native-dispatch.js'))
+    .createI80386NativeDispatcher(machine):null;
 machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
@@ -152,7 +164,7 @@ const offerLiveInput=()=>{
     delivered.push({step:steps,type:'live-mouse',...event,accepted});
   }
 };
-const runChunk=end=>{for(;steps<end;steps++) {
+const runChunk=end=>{while(steps<end) {
   while(events[eventIndex]?.step===steps) {
     const event=events[eventIndex++];
     const accepted=event.type==='key'?machine.keyIn(event.code):
@@ -160,7 +172,10 @@ const runChunk=end=>{for(;steps<end;steps++) {
     delivered.push({...event,accepted});
   }
   if(options.live)offerLiveInput();
-  try { machine.step(); }
+  const nextEvent=events[eventIndex]?.step??end;
+  const nextInput=options.live?(steps+1024&~1023):end;
+  const budget=Math.min(end-steps,nextEvent-steps,nextInput-steps);
+  try { steps+=nativeDispatcher?nativeDispatcher.run(Math.min(64,budget)):(machine.step(),1); }
   catch(error) {
     if(!(error instanceof I80386Fault)&&!(error instanceof UnsupportedI80386)&&
         !error.message?.startsWith('AT 8042 '))throw error;
@@ -225,11 +240,13 @@ if(vgaOutput)fs.writeFileSync(vgaOutput,JSON.stringify({schema:'bw.i80386-vga-sn
   planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
 const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
+    nativeBlocks:options.nativeBlocks,
     cmosEquipment:cmos[0x14],
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
+  nativeStats:nativeDispatcher?.stats??null,
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},
   textRam:text,vga:{registers:serializableVideo,planeSha256:planes.map(sha),
     snapshotPath:vgaOutput}};

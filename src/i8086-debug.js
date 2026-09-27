@@ -1378,6 +1378,25 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             let noProgressRun = 0;
             const deadlineCycles = machine.cycles + budgetNs * machine.clockHz / 1e9;
             while (machine.cycles < deadlineCycles) {
+                // The 386 native dispatcher may retire several instructions at
+                // once. Use it only when this target has no per-instruction
+                // stop or observation work to perform. Its own runner still
+                // checks machine IRQ and chip-event boundaries; a refused block
+                // falls through to the ordinary single-step path below.
+                if (cpuId === 'i80386' && adapter?.nativeDispatcher &&
+                    typeof adapter.runNativeBlocks === 'function' &&
+                    typeof adapter.step !== 'function' && !breakpoints.size &&
+                    !pendingStep && !writeWatches.size && !portWatches.size &&
+                    !intWatches.size && !debugEventSubscribers &&
+                    !watchHit && !eventHit &&
+                    !priorPortAccess && !priorInterrupt) {
+                    const remaining = deadlineCycles - machine.cycles;
+                    const budget = Math.max(1, Math.min(64,
+                        Math.ceil(remaining / machine.functionalInstructionCycles)));
+                    const before = machine.cycles;
+                    adapter.runNativeBlocks(budget);
+                    if (machine.cycles !== before) continue;
+                }
                 // The overwhelmingly common run has no code breakpoint, and
                 // constructing a Map iterator per instruction for an empty Map
                 // is a cost paid by every program that never sets one. The

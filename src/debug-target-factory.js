@@ -366,6 +366,9 @@ async function createI80386Target(opts) {
   const { createI8086DebugTarget } = await import('./i8086-debug.js');
   const { renderI80386VgaFrame } = await import('./experimental/i80386-vga-frame.js');
   const adapter = createI80386Adapter(opts);
+  if (opts.nativeBlocks) {
+    await adapter.enableNativeBlocks(opts.nativeBlocks === true ? {} : opts.nativeBlocks);
+  }
   adapter.attachBoard(opts.board);
   const target = createI8086DebugTarget(adapter, { cpuId: 'i80386' });
   const fallbackVideo = target.video.bind(target);

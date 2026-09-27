@@ -46,6 +46,19 @@ and a file create/read/delete sequence; both return to the shell prompt. The
 system-call milestones, and APIC-routed IDE and UART interrupts. This is a
 single-CPU guest acceptance, not a complete 386DX or multi-CPU qualification.
 
+The shared-RAM WebAssembly byte-block executor can now be selected by the
+regular 386 GUI target with `await createDebugTarget('i80386',
+{nativeBlocks: true, ...})`. The adapter also exposes asynchronous
+`enableNativeBlocks()` for callers that construct it directly. Normal GUI
+`runFor()` slices use bounded blocks only when the debugger has no per-step
+breakpoint, watchpoint, event subscriber, or pending step; all other slices
+retain ordinary stepping. Single-step always uses the functional executor.
+The [AT console](I80386-AT-CONSOLE.md) exposes the same dispatcher with
+`--native-blocks`. It is off by default and currently admits only a subset of
+validated paged 32-bit RAM instructions. The real-mode Windows boot path thus
+mostly remains on the ordinary executor. The xv6 `forktest` native receipt
+measured about 1.3× end-to-end speedup, well short of the 10× goal.
+
 The configured AT keyboard extension accepts F3h and a seven-bit rate/delay
 parameter with separate delayed, keyboard-originated FAh acknowledgements.
 It pauses injected scans while awaiting the parameter, retains the value,

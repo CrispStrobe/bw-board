@@ -12,6 +12,7 @@ export function createI80386Adapter(opts = {}) {
   });
   let board = null;
   let unloggedBoardInputs = false;
+  let nativeDispatcher = null;
   const stats = { pinChangeCount: 0, advanceToCount: 0 };
   function attachBoard(next) {
     board = next || { advanceTo() {}, setPin() {}, readPin() { return 0; } };
@@ -20,12 +21,25 @@ export function createI80386Adapter(opts = {}) {
   }
   function timeNs() { return BigInt(Math.round(machine.tMs * 1e6)); }
   function advanceNs(deltaNs) {
-    machine.advanceToMs(machine.tMs + Number(deltaNs) / 1e6);
+    const targetMs = machine.tMs + Number(deltaNs) / 1e6;
+    if (nativeDispatcher) nativeDispatcher.advanceToMs(targetMs);
+    else machine.advanceToMs(targetMs);
     board?.advanceTo?.(timeNs()); stats.advanceToCount++;
   }
   if (opts.rom) machine.loadRom(opts.rom, opts.romAt);
   return {
     machine, clockHz: config.clockHz, attachBoard, advanceNs, timeNs, stats,
+    get nativeDispatcher() { return nativeDispatcher; },
+    async enableNativeBlocks(options = {}) {
+      if (nativeDispatcher) return nativeDispatcher;
+      const { createI80386NativeDispatcher } = await import('./experimental/i80386-native-dispatch.js');
+      nativeDispatcher = await createI80386NativeDispatcher(machine, options);
+      return nativeDispatcher;
+    },
+    runNativeBlocks(maxInstructions) {
+      if (!nativeDispatcher) throw new Error('i80386 native blocks are not enabled');
+      return nativeDispatcher.run(maxInstructions);
+    },
     unloggedBoardInputs: () => unloggedBoardInputs,
     loadRom(bytes, at) { machine.loadRom(bytes, at); },
     loadDosboxConfig(text) { this.dosboxConfig = parseDosboxConfig(text); return this.dosboxConfig; },

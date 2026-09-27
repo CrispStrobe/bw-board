@@ -24,6 +24,15 @@ AT_CONSOLE_VGA_OUTPUT=/path/to/vga.json \
 node scripts/run-i80386-at-console.mjs
 ```
 
+Add `--native-blocks` (or set `AT_NATIVE_BLOCKS=1`) to opt in to the
+experimental shared-RAM WebAssembly block runner. It batches only admitted
+32-bit protected-mode RAM instructions and falls back to the functional
+executor for BIOS, I/O, unsupported instructions, interrupts, and other
+boundaries. Scripted keyboard, serial, and mouse events are still delivered
+at their specified guest step; live input is checked at its usual 1024-step
+boundary. The report records `inputs.nativeBlocks` and hashes the native
+implementation sources. This option requires WebAssembly support in Node.
+
 The optional events file is an ordered JSON array. Same-step events retain
 array order. Keyboard `code` is a Set-1 scan byte, serial `code` is one byte,
 and mouse movement uses screen coordinates (positive `dy` moves down). Mouse
