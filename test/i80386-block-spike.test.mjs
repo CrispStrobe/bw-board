@@ -66,3 +66,29 @@ test('bounded CMP/TEST flag results match the JS 386 at both operand widths',asy
       [cpu.eax,cpu.ebx,cpu.eflags,cpu.eip,cpu.cycles]);
   }
 });
+
+test('linked conditional branch loops stop at the event budget and match the JS 386',async()=>{
+  const bridge=await createI80386BlockSpike();
+  bridge.setState({regs:[1,2,0,0,0,0,0,0]});
+  bridge.setProgram([
+    {op:2,dst:0,src:1,width:32,length:2}, // CMP EAX,ECX
+    {op:5,dst:0,src:0,width:32,length:2}, // JNZ back to EIP 0
+  ]);
+  assert.deepEqual(bridge.run(0,2,5),{reason:'event',completed:5});
+  const code=Uint8Array.of(0x39,0xc8,0x75,0xfc);
+  const cpu=new I80386({read:a=>code[a]??0,fetch:a=>code[a]??0,write(){}});
+  cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:true,readable:true,writable:false};
+  cpu.eax=1;cpu.ecx=2;
+  for(let i=0;i<5;i++)cpu.step();
+  const state=bridge.state();
+  assert.deepEqual([state.eip,state.eflags,state.cycles],
+    [cpu.eip,cpu.eflags,cpu.cycles]);
+
+  bridge.setState({regs:[2,2,0,0,0,0,0,0]});
+  assert.deepEqual(bridge.run(0,2,5),{reason:'done',completed:2});
+  assert.equal(bridge.state().eip,4);
+  bridge.setProgram([{op:6,dst:9,src:0,length:2}]);
+  assert.deepEqual(bridge.run(0,1,5),{reason:'unsupported',completed:0});
+  assert.throws(()=>bridge.run(0,1,65),RangeError);
+});

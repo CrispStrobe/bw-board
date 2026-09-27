@@ -1,0 +1,13 @@
+{
+  "schema": "astra.i80386-wasm-branch-link-spike.v1",
+  "date": "2026-09-27",
+  "sourceBaselineCommit": "0c8c32f97630e3930d67fcfa568807729551243a",
+  "moduleAbi": 2,
+  "buildCommand": "clang --target=wasm32 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--export-memory -o wasm/i80386-block-spike.wasm src/experimental/i80386-block-spike.c",
+  "compiler": "Ubuntu clang 18.1.3",
+  "sourceSha256": "7f1c7440ef39f672cfea4eff9644aa5eb361d5341bbef14059ec4109ad761c5d",
+  "wasmSha256": "594f2458cc5743b1c1b6437de3379164e15fe08c967e77ff7feb161de788b1cb",
+  "wasmBytes": 1526,
+  "validation": "node --test test/i80386-block-spike.test.mjs; four passed, including linked CMP/JNZ loop state and event-budget comparison against the JavaScript 386, untaken branch and invalid target",
+  "scope": "Prevalidated register-only IR with bounded direct branch linking. No guest memory, paging, MMIO, code coherence, board integration or full-workload speedup claim."
+}

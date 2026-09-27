@@ -136,3 +136,10 @@ therefore only a ceiling for unlinked blocks. The next executor should use
 short blocks and cheap branch linking, with a separate interruptible REP
 path. A design that requires long straight-line runs cannot deliver the 10×
 end-to-end target on this workload.
+
+The static [WASM block spike](I80386-WASM-BLOCK-SPIKE.md) now links
+prevalidated JZ/JNZ/JMP targets inside a bounded call. A CMP/JNZ loop matches
+the JavaScript 386 at a five-instruction event exit, and an invalid target
+exits without committing the branch. This establishes only the control-flow
+contract. The spike still lacks guest memory and paging and is not connected
+to the AT board, so it changes no end-to-end speed.

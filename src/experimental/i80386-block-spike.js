@@ -18,7 +18,7 @@ export async function createI80386BlockSpike({wasmBytes} = {}) {
     ? await WebAssembly.compile(wasmBytes)
     : await (bundledModule ??= WebAssembly.compile(await moduleBytes()));
   const {exports: wasm} = await WebAssembly.instantiate(module);
-  if (wasm.block_spike_version() !== 1) throw new Error('i80386 block spike ABI mismatch');
+  if (wasm.block_spike_version() !== 2) throw new Error('i80386 block spike ABI mismatch');
   const words = new Uint32Array(wasm.memory.buffer);
   const stateAt = wasm.block_spike_state_ptr() >>> 2;
   const programAt = wasm.block_spike_program_ptr() >>> 2;
@@ -51,6 +51,8 @@ export async function createI80386BlockSpike({wasmBytes} = {}) {
       }
     },
     run(start, end, eventBudget) {
+      if (!Number.isInteger(eventBudget) || eventBudget < 0 || eventBudget > 64)
+        throw new RangeError('i80386 block spike event budget must be 0 through 64');
       const result = wasm.block_spike_run(start >>> 0, end >>> 0, eventBudget >>> 0);
       return {reason: REASONS[result >>> 24] ?? 'invalid', completed: result & 0xffffff};
     },
