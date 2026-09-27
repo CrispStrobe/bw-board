@@ -437,18 +437,23 @@ function registerGroundSensingOpAmp(kind, channels, {
     });
 }
 
-function registerPrecisionOpAmp(kind, spec) {
+function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) {
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    const resolveSpec = typeof specOrResolver === 'function'
+        ? specOrResolver : () => specOrResolver;
     registerDevice(kind, {
         // The LT1001 and LM741 share the industry-standard PDIP-8 top view:
         // 1 null, 2 -, 3 +, 4 V-, 5 null, 6 output, 7 V+, 8 NC. Null pins
         // remain present and high-Z; trim dynamics are explicitly unmodelled.
-        terminals: spec.terminals
+        terminals: terminalsOverride
+            || (typeof specOrResolver === 'function' ? null : specOrResolver.terminals)
             || ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc'],
 
         init(part) {
+            const spec = resolveSpec(part);
             return {
                 drives: { out: { vTh: 0, rTh: R_OFF } },
+                _spec: spec,
                 powered: false,
                 inputCommonMode: 'unknown',
                 offsetNull: 'unmodeled',
@@ -458,18 +463,21 @@ function registerPrecisionOpAmp(kind, spec) {
                 _beta: null,
                 _lastUpdateNs: null,
                 _wakeNs: null,
+                _currentLimitSign: null,
                 ...(spec.pin8Role === 'supply-current-set'
                     ? { supplyCurrentSet: 'unmodeled' } : {}),
             };
         },
 
-        stamp(ctx) {
+        stamp(ctx, part, state) {
+            const spec = state._spec;
             // This is differential input resistance. Stamping it between the
             // pins avoids inventing either input as ground.
             if (Number.isFinite(spec.inputR)) ctx.conductance('inp', 'inn', 1 / spec.inputR);
         },
 
         update(part, state, read, tNs) {
+            const spec = state._spec;
             const vpos = read('vpos');
             const vneg = read('vneg');
             const powered = Number.isFinite(vpos) && Number.isFinite(vneg)
@@ -481,6 +489,7 @@ function registerPrecisionOpAmp(kind, spec) {
                 state._beta = null;
                 state._lastUpdateNs = tNs;
                 state._wakeNs = null;
+                state._currentLimitSign = null;
                 const old = state.drives.out;
                 if (old.vTh === vneg && old.rTh === R_OFF) return false;
                 state.drives.out = { vTh: vneg, rTh: R_OFF };
@@ -518,6 +527,7 @@ function registerPrecisionOpAmp(kind, spec) {
             const measuredSlope = state._prev && Math.abs(drive - state._prev.u) > U_TOL;
             if (measuredSlope) {
                 beta = (state._prev.r - residual) / (drive - state._prev.u);
+                if (spec.separateIntrinsicGainSlope) beta -= 1 / spec.a0;
             }
             if (Number.isFinite(beta) && beta > BETA_MIN) state._beta = beta;
             else beta = state._beta;
@@ -546,22 +556,95 @@ function registerPrecisionOpAmp(kind, spec) {
 
             const dtSec = Number(tNs - state._lastUpdateNs) / 1e9;
             const dtUs = dtSec * 1e6;
-            const closedLoopBw = Number.isFinite(beta) && beta > BETA_MIN
-                ? spec.gbwHz * Math.min(1, beta) : spec.gbwHz;
+            const closedLoopBw = spec.separateIntrinsicGainSlope
+                ? spec.gbwHz * Math.min(1, Math.max(1 / spec.a0,
+                    Number.isFinite(beta) && beta > BETA_MIN ? beta + 1 / spec.a0 : 1 / spec.a0))
+                : (Number.isFinite(beta) && beta > BETA_MIN
+                    ? spec.gbwHz * Math.min(1, beta) : spec.gbwHz);
             const alpha = 1 - Math.exp(-2 * Math.PI * closedLoopBw * dtSec);
             const bandwidthStep = (target - drive) * alpha;
             const slewStep = spec.slewVPerUs * dtUs;
             const delta = clamp(bandwidthStep, -slewStep, slewStep);
             const next = clamp(drive + delta, low, high);
+            let limitedNext = next;
+            const outputCurrent = (drive - out) / spec.rOut;
+            state.outputCurrentA = outputCurrent;
+            state.outputCurrentLimited = false;
+            if (Number.isFinite(spec.outputCurrentLimitA)) {
+                if (Math.abs(outputCurrent) > spec.outputCurrentLimitA) {
+                    state._currentLimitSign = Math.sign(outputCurrent);
+                } else if (state._currentLimitSign
+                    && Math.sign(target - out) !== state._currentLimitSign) {
+                    state._currentLimitSign = null;
+                }
+            }
+            if (state._currentLimitSign) {
+                const loadR = Math.abs(outputCurrent) > 1e-15
+                    ? Math.abs(out / outputCurrent) : 0;
+                limitedNext = clamp(state._currentLimitSign * spec.outputCurrentLimitA
+                    * (loadR + spec.rOut), low, high);
+                state.outputCurrentLimited = true;
+            }
             state._lastUpdateNs = tNs;
 
-            const settled = Math.abs(target - next) <= spec.settledV
+            const settled = Math.abs(target - limitedNext) <= spec.settledV
                 && Math.abs(residual) <= spec.settledV;
             state._wakeNs = settled ? null : tNs + spec.tickNs;
-            if (Math.abs(next - drive) <= U_TOL) return false;
-            state.drives.out = { vTh: next, rTh: spec.rOut };
+            if (Math.abs(limitedNext - drive) <= U_TOL) return false;
+            state.drives.out = { vTh: limitedNext, rTh: spec.rOut };
             return true;
         },
+    });
+}
+
+// Analog Devices LTspice 26.0.2 ships Level 2 as the single-pole Level-1
+// gain block plus slew, symmetric output-voltage and output-current limits.
+// Its symbol defaults are Avol=1Meg, GBW=10Meg, Slew=10Meg V/s,
+// Ilimit=25m, Rail=0, Vos=0 and Rin=500Meg. The four noise parameters are
+// deliberately absent here: admitting them without a circuit/noise-analysis
+// path would turn authored physics into a silent no-op.
+function universalOpAmp2Spec(part) {
+    const params = part.params ?? {};
+    const positive = (name, fallback) => {
+        const value = params[name] ?? fallback;
+        if (!Number.isFinite(value) || value <= 0) {
+            throw new TypeError(`UniversalOpamp2 ${name} must be a positive finite number`);
+        }
+        return Number(value);
+    };
+    const nonnegative = (name, fallback) => {
+        const value = params[name] ?? fallback;
+        if (!Number.isFinite(value) || value < 0) {
+            throw new TypeError(`UniversalOpamp2 ${name} must be a non-negative finite number`);
+        }
+        return Number(value);
+    };
+    const a0 = positive('a0', 1e6);
+    const gbwHz = positive('gbwHz', 10e6);
+    const slewVPerUs = positive('slewVPerUs', 10);
+    const inputR = positive('inputR', 500e6);
+    const outputCurrentLimitA = positive('outputCurrentLimitA', 0.025);
+    const outputHeadroom = nonnegative('railHeadroomV', 0);
+    const defaultOffsetV = params.inputOffsetV ?? 0;
+    if (!Number.isFinite(defaultOffsetV)) {
+        throw new TypeError('UniversalOpamp2 inputOffsetV must be a finite number');
+    }
+    const tickNumber = Math.max(10, Math.min(300,
+        Math.floor(1e9 / (10 * gbwHz))));
+    return Object.freeze({
+        a0,
+        gbwHz,
+        slewVPerUs,
+        inputR,
+        outputCurrentLimitA,
+        rOut: 1e-3,
+        tickNs: BigInt(tickNumber),
+        settledV: 1e-9,
+        minSupply: Number.EPSILON,
+        commonHeadroom: 0,
+        outputHeadroom,
+        defaultOffsetV: Number(defaultOffsetV),
+        separateIntrinsicGainSlope: true,
     });
 }
 
@@ -704,6 +787,8 @@ export function registerAnalogAmps() {
     registerGroundSensingOpAmp('lm358', ['1', '2'], { legacyUnwiredFiveVoltSupply: true });
     registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
+    registerPrecisionOpAmp('ltspice_universal_opamp2', universalOpAmp2Spec,
+        ['inp', 'inn', 'vpos', 'vneg', 'out']);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
     registerPrecisionOpAmp('lt1006', PRECISION_OP_AMPS.lt1006);
     registerPrecisionMultiOpAmp('lt1014', LT1014_SPEC, ['1', '2', '3', '4'], [
