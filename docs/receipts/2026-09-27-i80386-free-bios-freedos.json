@@ -4,7 +4,7 @@
   "freeBios": true,
   "proprietaryRomUsed": false,
   "scope": "ROM-free 80386 AT: LGPL Bochs BIOS + LGPL VGABios boot FreeDOS 1.4 to A:\\>, decline installer, mount an ATA hard disk as C: (dir c:).",
-  "executionRevision": "cb399e02160b740ff3c865a91f599e732a98a517",
+  "executionRevision": "2af705822b3f8cbeec1e44fe0a00e5351917c696",
   "firmware": {
     "bios": {
       "path": "roms/free-at-bios/BIOS-bochs-legacy",
@@ -129,7 +129,7 @@
     "src/i8086-machine.js": "90f6ad69ae6a23b4412e2632232461be0c4505a05d4e272650790cf941d45731",
     "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
     "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-    "src/experimental/i80386.js": "e93db862fb236f4121e31c344e439cfc620c26a8c364552c18fb619d1a13a8d3",
+    "src/experimental/i80386.js": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
     "src/experimental/i80386-at-machine.js": "509fb910298fb6232bf642e760d3194af6ea4a15256683fccff5b9333b0292fa",
     "src/experimental/ata16.js": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7",
     "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
