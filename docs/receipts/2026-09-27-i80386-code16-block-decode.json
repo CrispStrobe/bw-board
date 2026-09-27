@@ -1,0 +1,44 @@
+{
+  "schema": "bw.i80386-code16-block-decode-diagnostic.v1",
+  "date": "2026-09-27",
+  "scope": "Read-only decoder and opt-in coverage probe; no guest execution or speed claim",
+  "sample": "60,000,000 ordinary guest steps on an externally supplied installed 16-bit Windows workload",
+  "guestParity": "All normalized guest outputs matched the committed ordinary private 60M receipt",
+  "guestSteps": 60000000,
+  "code16Steps": 44722493,
+  "admittedSteps": 44674498,
+  "decodedFirstOpcodeSteps": 19143475,
+  "decodedFirstOpcodePercentOfCode16": 42.805026544472824,
+  "conservativelyObservedRetiredSteps": 18054876,
+  "conservativelyObservedPercentOfCode16": 40.370906872298015,
+  "retiredInBlocksOfAtLeastTwo": 10825186,
+  "retiredInBlocksOfAtLeastTwoPercentOfCode16": 24.20523829027152,
+  "byMode": {
+    "real": {"steps": 13438404, "admitted": 13438403, "decodedFirstOpcode": 5350629},
+    "protected16": {"steps": 10043132, "admitted": 10028250, "decodedFirstOpcode": 3401925},
+    "vm86": {"steps": 21240957, "admitted": 21207845, "decodedFirstOpcode": 10390921}
+  },
+  "candidateBlockLengthHistogram": {
+    "0": 25531023, "1": 11416969, "2": 3895716, "3": 1939224,
+    "4": 944303, "5": 502040, "6": 196694, "7": 102186,
+    "8": 70508, "9": 66680, "10": 5353, "11": 2175,
+    "12": 1620, "13": 1, "14": 1, "15": 1, "16": 1,
+    "17": 1, "18": 1, "19": 1
+  },
+  "observedBlockLengthHistogram": {
+    "1": 7229690, "2": 2156856, "3": 911893, "4": 288658,
+    "5": 255813, "6": 81842, "7": 30304, "8": 3727,
+    "9": 61310, "10": 3176, "11": 555, "12": 1619, "19": 1
+  },
+  "stopReasons": {
+    "window-refused": 47995, "unsupported-opcode": 19690852,
+    "control-flow": 10596175, "prefix": 8134851,
+    "memory-operand": 6250538, "incomplete": 1626,
+    "window-end": 456
+  },
+  "ambiguousRetirements": {
+    "dynamic-return-target": 1088226,
+    "pre-step-interrupt": 373
+  },
+  "conclusion": "Diagnostic-only; measured coverage does not support native-runner integration or a 10x speed claim"
+}

@@ -6,6 +6,7 @@ import {execFileSync} from 'node:child_process';
 import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
+import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 
 const firmware = process.env.XV6_FIRMWARE ?? 'ibm';
 if (!['ibm', 'bochs'].includes(firmware)) throw new Error('XV6_FIRMWARE must be ibm or bochs');
@@ -60,12 +61,16 @@ const progressEvery = Number(process.env.XV6_PROGRESS_EVERY ?? 0);
 // Skip per-instruction diagnostic records when measuring the machine hot path.
 // Serial, command injection, stopping condition and final state stay intact.
 const lean = process.env.XV6_LEAN === '1';
+const code16Coverage = process.env.XV6_CODE16_COVERAGE === '1' ?
+  createI80386Code16Coverage() : null;
 const nativeByte = process.env.XV6_NATIVE_BYTE === '1';
 const nativeDispatch = process.env.XV6_NATIVE_DISPATCH === '1';
 if ((nativeByte || nativeDispatch) && !lean)
   throw new Error('native xv6 execution requires XV6_LEAN=1 for comparable guest-step receipts');
 if (nativeByte && nativeDispatch)
   throw new Error('select one native xv6 execution path');
+if (code16Coverage && (nativeByte || nativeDispatch))
+  throw new Error('code16 coverage requires ordinary single-step execution');
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -121,6 +126,7 @@ if (process.env.XV6_SHARED_RAM === '1' || nativeByte) {
 machine.loadRom(rom, 0xf0000); machine.loadRom(rom);
 if (vgaRom) machine.loadRom(vgaRom, 0xc0000);
 machine.reset();
+const restoreCode16Interrupts = code16Coverage?.attach(machine);
 if (firmware === 'bochs') machine.ata.slaveEnabled = true;
 const nativeRunner = nativeByte ? await (async () => {
   const {createI80386NativeByteRunner} = await import('../src/experimental/i80386-native-byte-block.js');
@@ -139,6 +145,7 @@ machine._read386 = address => {
   return read386(address);
 };
 for (; steps < stepsLimit; steps++) {
+  code16Coverage?.observe(machine);
   if (progressEvery > 0 && steps % progressEvery === 0)
     console.error(`PROGRESS step=${steps} screen=${String.fromCharCode(...Array.from({length: 40}, (_, i) => machine._read386(0xb8000 + i * 2) || 32)).trim()}`);
   if (command && !commandStarted && serial.at(-2) === 36 && serial.at(-1) === 32)
@@ -199,7 +206,7 @@ for (; steps < stepsLimit; steps++) {
             result.reason === 'fault-boundary') nativeBlocks.delete(key);
       }
     }
-    if (advanced === 0) {machine.step();advanced=1;}
+    if (advanced === 0) {machine.step();code16Coverage?.retired(machine);advanced=1;}
     steps+=advanced-1;
   } catch (error) {
     console.error(JSON.stringify({error: String(error), steps, milestones, userModeEntries,
@@ -211,6 +218,7 @@ for (; steps < stepsLimit; steps++) {
   }
   if (stopOnExpected && expectedObserved) { steps++; break; }
 }
+restoreCode16Interrupts?.();
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
@@ -219,6 +227,7 @@ const receipt = {
   ...(process.env.XV6_SHARED_RAM === '1' || nativeByte || nativeDispatch ? {sharedRam: true} : {}),
   ...(nativeByte ? {nativeByte:true,nativeStats} : {}),
   ...(nativeDispatch ? {nativeDispatch:true,nativeStats:nativeDispatcher.stats} : {}),
+  ...(code16Coverage ? {code16Coverage: code16Coverage.report()} : {}),
   ...(process.env.XV6_RAM_HASH === '1' ? {ramSha256:crypto.createHash('sha256')
     .update(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes))
     .digest('hex')} : {}),

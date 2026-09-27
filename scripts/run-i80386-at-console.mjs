@@ -15,6 +15,7 @@ import {ansiRgbFrame,ansiTextFrame,decodeTerminalInput,flushTerminalEscape,
 import {renderObservedWindowsEga} from './lib/i80386-windows-vga-frame.mjs';
 import {renderObservedWindowsVga480} from './lib/i80386-windows-vga-480-frame.mjs';
 import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
+import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 
 const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
@@ -67,6 +68,10 @@ if(![2,47].includes(cmosType)||
     (cmosType===2&&(cylinders!==615||heads!==4||sectors!==17)))
   throw new Error('AT_HDD_CMOS_TYPE must be 2 for 615,4,17 or 47 for user geometry');
 const stepsLimit=Number(options.steps);
+const code16Coverage=process.env.AT_CODE16_COVERAGE==='1'?
+  createI80386Code16Coverage():null;
+if(code16Coverage&&options.nativeBlocks)
+  throw new Error('code16 coverage requires ordinary single-step execution');
 if(!Number.isInteger(stepsLimit)||stepsLimit<1||stepsLimit>500_000_000)
   throw new Error('AT_POST_STEPS must be 1..500000000');
 const eventBytes=process.env.AT_CONSOLE_EVENTS?fs.readFileSync(process.env.AT_CONSOLE_EVENTS):Buffer.from('[]');
@@ -127,6 +132,7 @@ machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
 machine.reset();
+const restoreCode16Interrupts=code16Coverage?.attach(machine);
 const textRam=()=>{
   const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
   return Array.from({length:25},(_,row)=>Array.from({length:Math.min(columns,160)},(_,col)=>
@@ -175,7 +181,11 @@ const runChunk=end=>{while(steps<end) {
   const nextEvent=events[eventIndex]?.step??end;
   const nextInput=options.live?(steps+1024&~1023):end;
   const budget=Math.min(end-steps,nextEvent-steps,nextInput-steps);
-  try { steps+=nativeDispatcher?nativeDispatcher.run(Math.min(64,budget)):(machine.step(),1); }
+  try {
+    code16Coverage?.observe(machine);
+    if(nativeDispatcher)steps+=nativeDispatcher.run(Math.min(64,budget));
+    else {machine.step();code16Coverage?.retired(machine);steps++;}
+  }
   catch(error) {
     if(!(error instanceof I80386Fault)&&!(error instanceof UnsupportedI80386)&&
         !error.message?.startsWith('AT 8042 '))throw error;
@@ -229,6 +239,7 @@ if(options.live) {
     process.stdout.write('\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l');
   }
 } else runChunk(stepsLimit);
+restoreCode16Interrupts?.();
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
 const video=machine.chips.vga1.getVideoState();
@@ -239,6 +250,7 @@ if(vgaOutput)fs.writeFileSync(vgaOutput,JSON.stringify({schema:'bw.i80386-vga-sn
   step:steps,registers:serializableVideo,
   planeBase64:planes.map(plane=>plane.toString('base64'))})+'\n',{flag:'wx'});
 const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
+  ...(code16Coverage?{code16Coverage:code16Coverage.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     nativeBlocks:options.nativeBlocks,
     cmosEquipment:cmos[0x14],

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from
   '../src/experimental/i80386-at-machine.js';
 import {I80386Fault, UnsupportedI80386} from '../src/experimental/i80386.js';
+import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const sourceFiles = ['../src/experimental/i80386.js',
@@ -47,6 +48,8 @@ if (cmosType !== 2 && cmosType !== 47)
 if (cmosType === 2 && (cylinders !== 615 || heads !== 4 || sectors !== 17))
   throw new Error('IBM drive type 2 requires 615,4,17 geometry');
 const limit = Number(process.env.AT_POST_STEPS ?? 1_000_000);
+const code16Coverage = process.env.AT_CODE16_COVERAGE === '1' ?
+  createI80386Code16Coverage() : null;
 if (!Number.isInteger(limit) || limit < 1 || limit > 500_000_000)
   throw new Error('AT_POST_STEPS must be an integer from 1 to 500000000');
 const progressEvery = Number(process.env.AT_PROGRESS_EVERY ?? 1_000_000);
@@ -141,12 +144,14 @@ machine.loadRom(bios.bytes, 0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes, 0xc0000);
 machine.reset();
+const restoreCode16Interrupts = code16Coverage?.attach(machine);
 const state = () => ({cs: machine.cpu.cs, eip: machine.cpu.eip, cr0: machine.cpu.cr0 >>> 0,
   cr3: machine.cpu.cr3 >>> 0, eflags: machine.cpu.eflags >>> 0});
 let outcome = 'budget';
 let refusal = null;
 try {
   for (; steps < limit; steps++) {
+    code16Coverage?.observe(machine);
     if (steps === keyScript[nextKey]?.step) {
       const event = keyScript[nextKey++];
       keyboard.push({...event, accepted: machine.keyIn(event.code)});
@@ -156,6 +161,7 @@ try {
       mouse.push({...event, accepted: machine.mouseIn(event)});
     }
     machine.step();
+    code16Coverage?.retired(machine);
     const cr0 = machine.cpu.cr0 >>> 0;
     if ((cr0 & 1) && !milestones.protected) milestones.protected = {step: steps, ...state()};
     if ((cr0 & 0x80000000) && !milestones.paging) milestones.paging = {step: steps, ...state()};
@@ -182,6 +188,7 @@ try {
   outcome = error instanceof UnsupportedI80386 ? 'unsupported' : 'architectural-fault-surfaced';
   refusal = {name: error.name, message: error.message, step: steps, ...state()};
 }
+restoreCode16Interrupts?.();
 const video = machine.chips.vga1.getVideoState();
 const cpu = machine.cpu;
 const codeBase = cpu.segmentCaches[1].base >>> 0;
@@ -212,6 +219,7 @@ const snapshot = process.env.AT_VGA_CAPTURE === '1' ? {
 } : null;
 const report = {
   schema: 'bw.i80386-windows-enhanced-probe.v1', diagnosticOnly: true,
+  ...(code16Coverage ? {code16Coverage: code16Coverage.report()} : {}),
   windowsEnhancedAccepted: false, outcome, steps, stepLimit: limit, refusal,
   input: {bios: {bytes: bios.bytes.length, sha256: bios.sha256},
     vga: {bytes: vga.bytes.length, sha256: vga.sha256},
