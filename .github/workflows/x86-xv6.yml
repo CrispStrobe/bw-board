@@ -42,7 +42,7 @@ jobs:
       - run: node scripts/build-xv6-stock-4m.mjs
         env:
           XV6_SRC: /tmp/xv6-public
-          XV6_PHYSTOP: 0xE00000
+          XV6_PHYSTOP: '0xE00000'
           XV6_STOCK_OUT: /tmp/xv6-stock-14m
       - name: Upload build receipts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
