@@ -36,6 +36,12 @@ The stock `stressfs` program completes its five concurrent write/read phases
 and returns to the shell in a bounded local run. Its own output does not check
 file contents, so this is completion evidence rather than a filesystem data
 integrity claim. The receipt records the serial transcript and step count.
+The stock `usertests` program reaches `arg test passed` and completes its
+four-worker `createdelete` phase at 163,992,924 instructions. A 120-million-step
+run ended before that phase finished, while syscall activity continued; the
+longer [prefix receipt](receipts/2026-09-27-xv6-stock-usertests-prefix.json)
+establishes that the earlier cutoff was insufficient. The remaining `usertests`
+phases have not yet been accepted.
 
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
@@ -76,6 +82,10 @@ XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 \
 
 XV6_FIRMWARE=bochs XV6_STEPS=100000000 XV6_STOP_ON_EXPECT=1 \
   XV6_COMMAND=$'stressfs\r' XV6_EXPECT_SERIAL=$'read\n$ ' \
+  node scripts/probe-xv6-stock.mjs
+
+XV6_FIRMWARE=bochs XV6_STEPS=250000000 XV6_STOP_ON_EXPECT=1 \
+  XV6_COMMAND=$'usertests\r' XV6_EXPECT_SERIAL=$'createdelete ok\n' \
   node scripts/probe-xv6-stock.mjs
 ```
 
