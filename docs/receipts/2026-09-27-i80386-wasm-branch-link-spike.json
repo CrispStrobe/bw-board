@@ -1,6 +1,7 @@
 {
   "schema": "astra.i80386-wasm-branch-link-spike.v1",
   "date": "2026-09-27",
+  "historicalFixtureCommit": "78c076ee",
   "sourceBaselineCommit": "0c8c32f97630e3930d67fcfa568807729551243a",
   "moduleAbi": 2,
   "buildCommand": "clang --target=wasm32 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--export-memory -o wasm/i80386-block-spike.wasm src/experimental/i80386-block-spike.c",

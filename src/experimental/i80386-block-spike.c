@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
-       OP_JZ=4, OP_JNZ=5, OP_JMP=6,
+       OP_JZ=4, OP_JNZ=5, OP_JMP=6, OP_LOAD_PHYS=7,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -16,11 +16,20 @@ typedef struct { uint32_t op, dst, src, width, length; } Instruction;
 
 static State state;
 static Instruction program[64];
+static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 2; }
+uint32_t block_spike_version(void) { return 3; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
+uint32_t block_spike_bind_ram(uint32_t pointer, uint32_t capacity) {
+  // The host owns translation, RAM/device classification and permission
+  // checks. The native kernel only accepts a region below its private state.
+  if (pointer == 0 || capacity == 0 || pointer >= (uint32_t)(uintptr_t)&state ||
+      capacity > (uint32_t)(uintptr_t)&state - pointer) return 0;
+  ram_ptr = pointer; ram_capacity = capacity;
+  return 1;
+}
 
 static uint32_t even_parity(uint32_t value) {
   value ^= value >> 4;
@@ -34,6 +43,12 @@ static uint32_t read_reg(uint32_t index, uint32_t width) {
 static void write_reg(uint32_t index, uint32_t width, uint32_t value) {
   state.regs[index] = width == 16
     ? (state.regs[index] & 0xffff0000u) | (value & 0xffffu) : value;
+}
+static uint32_t read_ram(uint32_t address, uint32_t bytes) {
+  const uint8_t *p = (const uint8_t *)(uintptr_t)(ram_ptr + address);
+  uint32_t value = 0;
+  for (uint32_t i = 0; i < bytes; i++) value |= (uint32_t)p[i] << (8u * i);
+  return value;
 }
 static void logic_flags(uint32_t value, uint32_t width) {
   const uint32_t mask = width == 16 ? 0xffffu : 0xffffffffu;
@@ -70,9 +85,12 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
     if (ins.op == OP_FAULT_BOUNDARY)
       return (EXIT_FAULT_BOUNDARY << 24) | completed;
     const uint32_t branch = ins.op >= OP_JZ && ins.op <= OP_JMP;
-    if (ins.op > OP_JMP ||
+    const uint32_t load = ins.op == OP_LOAD_PHYS;
+    if (ins.op > OP_LOAD_PHYS ||
         (branch ? (ins.dst < start || ins.dst >= end) :
-          (ins.dst >= 8 || ins.src >= 8 || (ins.width != 16 && ins.width != 32))) ||
+          (ins.dst >= 8 || (ins.width != 16 && ins.width != 32) ||
+            (load ? (ram_capacity < ins.width / 8u ||
+              ins.src > ram_capacity - ins.width / 8u) : ins.src >= 8))) ||
         ins.length == 0 || ins.length > 15)
       return (EXIT_UNSUPPORTED << 24) | completed;
     if (branch) {
@@ -82,8 +100,10 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       else { state.eip += ins.length; pc++; }
     } else {
       const uint32_t dst = read_reg(ins.dst, ins.width);
-      const uint32_t src = read_reg(ins.src, ins.width);
+      const uint32_t src = load ? read_ram(ins.src, ins.width / 8u) :
+        read_reg(ins.src, ins.width);
       if (ins.op == OP_MOV) write_reg(ins.dst, ins.width, src);
+      else if (load) write_reg(ins.dst, ins.width, src);
       else if (ins.op == OP_CMP) cmp_flags(dst, src, ins.width);
       else if (ins.op == OP_TEST) logic_flags(dst & src, ins.width);
       state.eip += ins.length;

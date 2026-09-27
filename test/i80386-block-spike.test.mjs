@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createI80386BlockSpike} from '../src/experimental/i80386-block-spike.js';
+import {createI80386RamBridge} from '../src/experimental/i80386-ram-bridge.js';
+import {ExperimentalI80386ATMachine,
+  PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import I80386 from '../src/experimental/i80386.js';
 
 test('static WASM bridge executes multiple safe guest instructions per call',async()=>{
@@ -91,4 +94,37 @@ test('linked conditional branch loops stop at the event budget and match the JS 
   bridge.setProgram([{op:6,dst:9,src:0,length:2}]);
   assert.deepEqual(bridge.run(0,1,5),{reason:'unsupported',completed:0});
   assert.throws(()=>bridge.run(0,1,65),RangeError);
+});
+
+test('prevalidated physical load reads live shared AT RAM without copying',async()=>{
+  const machine=new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  const ramBridge=await createI80386RamBridge();
+  ramBridge.attach(machine);
+  const bridge=await createI80386BlockSpike({ramBridge});
+  assert.equal(bridge.memory,ramBridge.memory);
+  assert.equal(bridge.ram,ramBridge.ram);
+  const physical=0x120000;
+  const code=Uint8Array.of(0x8b,0x05,0,0,0x12,0);
+  bridge.ram.set(code,0);
+  for(let i=0;i<4;i++)machine._write386(physical+i,[0x78,0x56,0x34,0x12][i]);
+  bridge.setState({regs:[0,0,0,0,0,0,0,0]});
+  bridge.setProgram([{op:7,dst:0,src:physical,width:32,length:6}]);
+  assert.deepEqual(bridge.run(0,1,1),{reason:'done',completed:1});
+  const cpu=new I80386({read:a=>bridge.ram[a]??0,fetch:a=>bridge.ram[a]??0,write(){}});
+  cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:true,readable:true,writable:false};
+  cpu.segmentCaches[3]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:false,readable:true,writable:true};
+  cpu.step();
+  assert.deepEqual([bridge.state().regs[0],bridge.state().eip,bridge.state().cycles],
+    [cpu.eax,cpu.eip,cpu.cycles]);
+  machine._write(physical,0xab); // Host and DMA ingress changes the same bytes.
+  bridge.setState({regs:[0xdead0000,0,0,0,0,0,0,0]});
+  bridge.setProgram([{op:7,dst:0,src:physical,width:16,length:6}]);
+  assert.deepEqual(bridge.run(0,1,1),{reason:'done',completed:1});
+  assert.equal(bridge.state().regs[0],0xdead56ab);
+  bridge.setProgram([{op:7,dst:0,src:(1<<24)-2,width:32,length:6}]);
+  const before=bridge.state();
+  assert.deepEqual(bridge.run(0,1,1),{reason:'unsupported',completed:0});
+  assert.deepEqual(bridge.state(),before);
 });

@@ -1,5 +1,7 @@
 // Bounded execution-contract spike. This is not a board CPU backend.
 const REASONS = ['done', 'event', 'unsupported', 'fault-boundary'];
+const RAM_BYTES = 1 << 24;
+const MEMORY_PAGES = 258;
 let bundledModule;
 
 async function moduleBytes() {
@@ -13,18 +15,26 @@ async function moduleBytes() {
   return readFile(url);
 }
 
-export async function createI80386BlockSpike({wasmBytes} = {}) {
+export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
   const module = wasmBytes
     ? await WebAssembly.compile(wasmBytes)
     : await (bundledModule ??= WebAssembly.compile(await moduleBytes()));
-  const {exports: wasm} = await WebAssembly.instantiate(module);
-  if (wasm.block_spike_version() !== 2) throw new Error('i80386 block spike ABI mismatch');
-  const words = new Uint32Array(wasm.memory.buffer);
+  const memory = ramBridge?.memory ?? new WebAssembly.Memory({initial: MEMORY_PAGES, maximum: MEMORY_PAGES});
+  if (!(memory instanceof WebAssembly.Memory) || memory.buffer.byteLength !== MEMORY_PAGES * 65536)
+    throw new TypeError('i80386 block spike needs the fixed shared memory layout');
+  const {exports: wasm} = await WebAssembly.instantiate(module, {env: {memory}});
+  if (wasm.block_spike_version() !== 3) throw new Error('i80386 block spike ABI mismatch');
+  const words = new Uint32Array(memory.buffer);
   const stateAt = wasm.block_spike_state_ptr() >>> 2;
   const programAt = wasm.block_spike_program_ptr() >>> 2;
   const capacity = wasm.block_spike_capacity();
+  const ram = ramBridge?.ram ?? new Uint8Array(memory.buffer, 1024, RAM_BYTES);
+  if (!(ram instanceof Uint8Array) || ram.buffer !== memory.buffer ||
+      ram.length !== RAM_BYTES ||
+      wasm.block_spike_bind_ram(ram.byteOffset, ram.length) !== 1)
+    throw new TypeError('i80386 block spike needs guest RAM below its private state');
   return {
-    capacity,
+    capacity, memory, ram,
     setState({regs, eip = 0, eflags = 2, cycles = 0}) {
       if (!Array.isArray(regs) || regs.length !== 8)
         throw new TypeError('i80386 block spike needs eight registers');

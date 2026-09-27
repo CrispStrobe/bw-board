@@ -1,9 +1,8 @@
 # Static WASM 386 block spike
 
-The bundled 1,526-byte WASM module executes a sequence of prevalidated
-register-only MOV, CMP, TEST, NOP, JZ, JNZ and JMP instructions in one
-JS→WASM call. It
-accepts an instruction budget from the board's event horizon. A budget of
+The bundled 3,404-byte WASM module executes prevalidated register-only MOV,
+CMP, TEST, NOP, JZ, JNZ and JMP operations plus physical RAM loads in one
+JS→WASM call. It accepts an instruction budget from the board's event horizon. A budget of
 zero returns before execution; reaching the budget returns at the exact
 instruction boundary. Unsupported or potentially faulting operations are
 represented by exit markers and cause no partial execution of that
@@ -13,7 +12,17 @@ target instruction index and `src` as its already validated guest EIP.
 Conditional branches can loop within the call; each branch charges one
 instruction against the event budget. An invalid target exits before
 committing the branch. The [branch-link receipt](receipts/2026-09-27-i80386-wasm-branch-link-spike.json)
-pins the revised source, binary and focused tests.
+pins the branch-only predecessor and its focused tests.
+
+The module can now import the [shared guest RAM backing](I80386-SHARED-RAM.md)
+used by the AT board. Its state and program occupy reserved bytes above the
+16 MiB guest RAM region, leaving board, host, DMA and native reads on the same
+live buffer. The new `LOAD_PHYS` IR form reads a prevalidated 16- or 32-bit
+physical RAM value into a register. The host must first perform x86 segment,
+paging, permission and RAM/device checks; the IR never makes those decisions.
+An out-of-range physical read exits before changing state. The
+[shared-load receipt](receipts/2026-09-27-i80386-wasm-shared-load-spike.json)
+pins the layout and a comparison with the JavaScript CPU.
 
 The full 24,338,279-step xv6 `forktest` supplied a decisive coverage bound
 before any board integration. The implemented register forms occurred
@@ -24,14 +33,15 @@ bridge restricted to these forms would cross JS↔WASM almost once per guest
 instruction. This is a negative integration result, not a performance gain.
 The temporary histogram instrumentation was removed after measurement.
 
-This module does not decode x86 or fetch guest memory. The host must check
-CS bounds, paging/permissions, code-page versions, instruction bytes and
-branch target EIPs before writing IR. It must terminate a block before an
+This module does not decode x86 or fetch guest instruction bytes. The host
+must check CS bounds, paging/permissions, code-page versions, instruction
+bytes, branch target EIPs and physical load addresses before writing IR. It
+must terminate a block before an
 IRQ/NMI-visible boundary, I/O, REP, HLT, indirect branch, control-register
 change, segment reload, or any unmodelled faultable operation. A directly
 linked JZ/JNZ/JMP may stay inside the prevalidated block. A block exit
-returns control to the existing JavaScript interpreter, which handles faults and
-device interactions. The module's `event_budget` alone is insufficient to
+returns control to the existing JavaScript interpreter, which handles faults
+and device interactions. The module's `event_budget` alone is insufficient to
 make a board integration correct; the board must derive it from its nearest
 chip event and pending interrupts.
 

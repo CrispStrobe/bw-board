@@ -140,6 +140,14 @@ end-to-end target on this workload.
 The static [WASM block spike](I80386-WASM-BLOCK-SPIKE.md) now links
 prevalidated JZ/JNZ/JMP targets inside a bounded call. A CMP/JNZ loop matches
 the JavaScript 386 at a five-instruction event exit, and an invalid target
-exits without committing the branch. This establishes only the control-flow
-contract. The spike still lacks guest memory and paging and is not connected
-to the AT board, so it changes no end-to-end speed.
+exits without committing the branch. This established the control-flow
+contract; that predecessor had no guest memory access.
+
+The [shared-RAM load spike](I80386-WASM-BLOCK-SPIKE.md) now lets the native
+module read the AT board's live RAM without a copy. A prevalidated 32-bit
+physical load matches a JavaScript 386 `MOV` in a focused test, and an invalid
+end-of-RAM load exits without changing state. This removes one prerequisite
+for a fast CPU backend; paging, MMIO, writes and exact fault exits remain to
+be implemented before it can run xv6 instructions. The spike remains
+disconnected from the AT board's execution path and changes no end-to-end
+speed.
