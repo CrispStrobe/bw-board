@@ -567,7 +567,8 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
             const delta = clamp(bandwidthStep, -slewStep, slewStep);
             const next = clamp(drive + delta, low, high);
             let limitedNext = next;
-            const outputCurrent = (drive - out) / spec.rOut;
+            const presentROut = state.drives.out.rTh;
+            const outputCurrent = (drive - out) / presentROut;
             state.outputCurrentA = outputCurrent;
             state.outputCurrentLimited = false;
             if (Number.isFinite(spec.outputCurrentLimitA)) {
@@ -578,20 +579,27 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
                     state._currentLimitSign = null;
                 }
             }
+            let limitedROut = spec.rOut;
             if (state._currentLimitSign) {
-                const loadR = Math.abs(outputCurrent) > 1e-15
-                    ? Math.abs(out / outputCurrent) : 0;
-                limitedNext = clamp(state._currentLimitSign * spec.outputCurrentLimitA
-                    * (loadR + spec.rOut), low, high);
+                // A limited output is a voltage target behind enough dynamic
+                // source resistance to make the requested source/sink current
+                // equal Ilimit.  Deriving that resistance from (target-out)
+                // works for a load referred to any voltage.  Inferring a load
+                // as out/current would silently assume the other end is ground
+                // and drives a biased load in the wrong direction.
+                limitedROut = Math.max(spec.rOut,
+                    Math.abs(next - out) / spec.outputCurrentLimitA);
                 state.outputCurrentLimited = true;
             }
             state._lastUpdateNs = tNs;
 
             const settled = Math.abs(target - limitedNext) <= spec.settledV
-                && Math.abs(residual) <= spec.settledV;
+                && Math.abs(residual) <= spec.settledV
+                && Math.abs(limitedROut - presentROut) <= spec.settledV;
             state._wakeNs = settled ? null : tNs + spec.tickNs;
-            if (Math.abs(limitedNext - drive) <= U_TOL) return false;
-            state.drives.out = { vTh: limitedNext, rTh: spec.rOut };
+            if (Math.abs(limitedNext - drive) <= U_TOL
+                && Math.abs(limitedROut - presentROut) <= spec.settledV) return false;
+            state.drives.out = { vTh: limitedNext, rTh: limitedROut };
             return true;
         },
     });

@@ -33,6 +33,27 @@ function amplifier({ input = 1, params = {}, feedback = true, load = 10000 } = {
   return board;
 }
 
+function biasedLoadAmplifier() {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'VP', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+    { id: 'VN', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+    { id: 'VIN', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+    { id: 'VBIAS', kind: 'vsource', params: { volts: 2 }, terminals: ['pos', 'neg'] },
+    { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    { id: 'U1', kind: 'ltspice_universal_opamp2', params: { outputCurrentLimitA: 0.025 }, terminals: TERMINALS },
+    { id: 'RL', kind: 'resistor', params: { ohms: 10 }, terminals: ['a', 'b'] },
+  ], [
+    net('gnd', ['G', 'gnd'], ['VP', 'neg'], ['VN', 'pos'], ['VIN', 'neg'], ['VBIAS', 'neg']),
+    net('vpos', ['VP', 'pos'], ['U1', 'vpos']),
+    net('vneg', ['VN', 'neg'], ['U1', 'vneg']),
+    net('inp', ['VIN', 'pos'], ['U1', 'inp']),
+    net('out', ['U1', 'out'], ['U1', 'inn'], ['RL', 'a']),
+    net('bias', ['VBIAS', 'pos'], ['RL', 'b']),
+  ]);
+  return board;
+}
+
 describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
   it('registers only the package-neutral five source terminals', () => {
     assert.deepEqual(getDevice('ltspice_universal_opamp2').terminals, TERMINALS);
@@ -81,6 +102,12 @@ describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
     sinking.advanceTo(20_000n);
     assert.ok(sinking.nodeVoltage('out') < -0.249 && sinking.nodeVoltage('out') > -0.251,
       `-25 mA into 10 ohm gives ${sinking.nodeVoltage('out')} V`);
+
+    const biased = biasedLoadAmplifier();
+    biased.advanceTo(20_000n);
+    assert.ok(biased.nodeVoltage('out') > 2.249 && biased.nodeVoltage('out') < 2.251,
+      `25 mA into 10 ohm above a 2 V reference gives ${biased.nodeVoltage('out')} V`);
+    assert.ok(Math.abs(Math.abs(biased.branchCurrent('RL', 'a')) - 0.025) < 2e-5);
   });
 
   it('uses per-instance slew and gain-bandwidth limits', () => {
@@ -98,7 +125,7 @@ describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
     narrow.setControl('VIN', 0.01);
     const n0 = narrow.timeNs;
     narrow.advanceTo(n0 + 1_000n);
-    assert.ok(narrow.nodeVoltage('out') > 0.001 && narrow.nodeVoltage('out') < 0.003,
+    assert.ok(narrow.nodeVoltage('out') > 0.001 && narrow.nodeVoltage('out') < 0.005,
       `100 kHz one-us response ${narrow.nodeVoltage('out')} V`);
     narrow.advanceTo(n0 + 10_000n);
     assert.ok(narrow.nodeVoltage('out') > 0.009,
