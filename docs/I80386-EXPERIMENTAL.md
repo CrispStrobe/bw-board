@@ -544,17 +544,13 @@ mode privilege masking, VM86 entry, exception delivery, or timing. The external
 releases data files into the public domain unless otherwise noted and licenses
 its software under MIT; no vector data is vendored here.
 
-Additional bounded profiles cover byte XOR/MOV and byte MOVZX/MOVSX (36
-samples), and immediate SHL/SHR/SAR across operand/address sizes (36 samples).
-The three profiles exclude 888, 2,600 and 3,111 published exception cases,
-respectively, before deterministic selection. Those cases are neither passes
-nor evidence of exception compatibility. Six additional segment-move samples pass, with 46 exception inputs excluded.
-The admitted total is only 90
-samples, not the full 386 corpus. Owned IMUL tests pass, but IMUL hardware
-qualification remains pending. Unsupported instruction/protection paths still
-raise a diagnostic refusal. The bounded same-ring recovery above does not
-qualify the excluded hardware exception cases or complete segment-load,
-paging, task, and privilege-transition recovery.
+The verifier now defines 25 bounded profiles across 204 distinct MOO files,
+selecting 608 samples in total. The pinned corpus contains 941 real-mode MOO
+files; no unreal-mode, protected-mode, or VM86 files are published at this pin.
+Exception cases are excluded from these samples and counted separately. CI
+runs each profile and rejects selected register, flag, or RAM mutations. This
+sampling cannot qualify the excluded exception cases, paging, task switches,
+privilege transitions, or a complete 386 instruction set.
 
 ## Experimental AT bridge
 
