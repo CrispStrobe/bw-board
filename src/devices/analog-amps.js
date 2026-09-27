@@ -161,6 +161,29 @@ const PRECISION_OP_AMPS = Object.freeze({
     }),
 });
 
+// TI SLOS039D, LT1014 at 5 V unless noted. This is the physical quad package,
+// not four unrelated single-amplifier aliases: all four channels share the
+// same vpos/vneg rails and one device state. The bounded card retains the
+// circuit-relevant finite gain, differential input resistance, output swing,
+// offset and large-signal slew while leaving noise, bias-current and thermal
+// coupling outside the model.
+const LT1014_SPEC = Object.freeze({
+    a0: 1e6,                 // typical 5 V large-signal gain, 1 V/uV
+    gbwHz: 0.8e6,            // dominant-pole class shared with LT1013/1014
+    slewVPerUs: 0.4,         // typical at +/-15 V
+    inputR: 300e6,           // typical differential input resistance
+    rOut: 100,               // bounded loaded single-supply output
+    tickNs: 300n,
+    settledV: 1e-7,
+    minSupply: 4,
+    commonLowHeadroom: 0,
+    commonHighHeadroom: 1.5,
+    outputLowHeadroom: 0.015,
+    outputHighHeadroom: 1.0,
+    defaultOffsetV: 90e-6,   // typical at 5 V
+    terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+});
+
 function registerGroundSensingOpAmp(kind, channels, {
     minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
     inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
@@ -362,6 +385,132 @@ function registerPrecisionOpAmp(kind, spec) {
     });
 }
 
+function registerPrecisionQuadOpAmp(kind, spec) {
+    const channels = ['1', '2', '3', '4'];
+    const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    const terminals = [
+        '1_out', '1_neg', '1_pos', 'vpos', '2_pos', '2_neg', '2_out',
+        '3_out', '3_neg', '3_pos', 'vneg', '4_pos', '4_neg', '4_out',
+    ];
+    registerDevice(kind, {
+        terminals,
+
+        init(part) {
+            const configured = part.params?.inputOffsetV;
+            const offsets = channels.map((ch, index) => {
+                const perChannel = part.params?.[`inputOffsetV${ch}`];
+                if (Number.isFinite(perChannel)) return Number(perChannel);
+                if (Array.isArray(configured) && Number.isFinite(configured[index])) {
+                    return Number(configured[index]);
+                }
+                return Number.isFinite(configured) ? Number(configured) : spec.defaultOffsetV;
+            });
+            return {
+                drives: Object.fromEntries(channels.map(ch => [`${ch}_out`, { vTh: 0, rTh: R_OFF }])),
+                powered: false,
+                inputCommonMode: Object.fromEntries(channels.map(ch => [ch, 'unknown'])),
+                inputOffsetV: Object.fromEntries(channels.map((ch, index) => [ch, offsets[index]])),
+                _channels: Object.fromEntries(channels.map(ch => [ch, {
+                    prev: null, beta: null, lastUpdateNs: null, wakeNs: null,
+                }])),
+                _wakeNs: null,
+            };
+        },
+
+        stamp(ctx) {
+            for (const ch of channels) {
+                ctx.conductance(`${ch}_pos`, `${ch}_neg`, 1 / spec.inputR);
+            }
+        },
+
+        update(part, state, read, tNs) {
+            const vpos = read('vpos');
+            const vneg = read('vneg');
+            const powered = Number.isFinite(vpos) && Number.isFinite(vneg)
+                && vpos - vneg >= spec.minSupply;
+            state.powered = powered;
+            let changed = false;
+            if (!powered) {
+                state._wakeNs = null;
+                for (const ch of channels) {
+                    state.inputCommonMode[ch] = 'unpowered';
+                    state._channels[ch] = { prev: null, beta: null, lastUpdateNs: tNs, wakeNs: null };
+                    const old = state.drives[`${ch}_out`];
+                    if (old.vTh !== vneg || old.rTh !== R_OFF) {
+                        state.drives[`${ch}_out`] = { vTh: vneg, rTh: R_OFF };
+                        changed = true;
+                    }
+                }
+                return changed;
+            }
+
+            const commonLow = vneg + spec.commonLowHeadroom;
+            const commonHigh = vpos - spec.commonHighHeadroom;
+            const low = vneg + spec.outputLowHeadroom;
+            const high = vpos - spec.outputHighHeadroom;
+            for (const ch of channels) {
+                const cs = state._channels[ch];
+                const inp = read(`${ch}_pos`);
+                const inn = read(`${ch}_neg`);
+                state.inputCommonMode[ch] = (inp < commonLow || inn < commonLow) ? 'below'
+                    : (inp > commonHigh || inn > commonHigh) ? 'above' : 'valid';
+                const drive = state.drives[`${ch}_out`].vTh;
+                const out = read(`${ch}_out`);
+                const residual = inp - inn + state.inputOffsetV[ch] - out / spec.a0;
+
+                if (cs.lastUpdateNs !== null && tNs <= cs.lastUpdateNs) {
+                    if (cs.prev && Math.abs(drive - cs.prev.u) <= U_TOL
+                        && Math.abs(residual - cs.prev.r) > spec.settledV) {
+                        cs.prev = { u: drive, r: residual };
+                        cs.lastUpdateNs = tNs;
+                        cs.wakeNs = tNs + spec.tickNs;
+                    }
+                    continue;
+                }
+
+                let beta = null;
+                let target;
+                const measuredSlope = cs.prev && Math.abs(drive - cs.prev.u) > U_TOL;
+                if (measuredSlope) beta = (cs.prev.r - residual) / (drive - cs.prev.u);
+                if (Number.isFinite(beta) && beta > BETA_MIN) cs.beta = beta;
+                else beta = cs.beta;
+                if (Number.isFinite(beta) && beta > BETA_MIN) target = drive + residual / beta;
+                else if (!measuredSlope) target = drive + residual;
+                else target = drive + spec.a0 * residual;
+                target = clamp(target, low, high);
+                cs.prev = { u: drive, r: residual };
+
+                if (cs.lastUpdateNs === null) {
+                    cs.lastUpdateNs = tNs;
+                    cs.wakeNs = tNs + spec.tickNs;
+                    continue;
+                }
+                if (cs.wakeNs && tNs < cs.wakeNs) continue;
+
+                const dtSec = Number(tNs - cs.lastUpdateNs) / 1e9;
+                const dtUs = dtSec * 1e6;
+                const closedLoopBw = Number.isFinite(beta) && beta > BETA_MIN
+                    ? spec.gbwHz * Math.min(1, beta) : spec.gbwHz;
+                const alpha = 1 - Math.exp(-2 * Math.PI * closedLoopBw * dtSec);
+                const bandwidthStep = (target - drive) * alpha;
+                const slewStep = spec.slewVPerUs * dtUs;
+                const delta = clamp(bandwidthStep, -slewStep, slewStep);
+                const next = clamp(drive + delta, low, high);
+                cs.lastUpdateNs = tNs;
+                const settled = Math.abs(target - next) <= spec.settledV
+                    && Math.abs(residual) <= spec.settledV;
+                cs.wakeNs = settled ? null : tNs + spec.tickNs;
+                if (Math.abs(next - drive) <= U_TOL) continue;
+                state.drives[`${ch}_out`] = { vTh: next, rTh: spec.rOut };
+                changed = true;
+            }
+            const wakes = channels.map(ch => state._channels[ch].wakeNs).filter(Boolean);
+            state._wakeNs = wakes.length ? wakes.reduce((a, b) => a < b ? a : b) : null;
+            return changed;
+        },
+    });
+}
+
 export function registerAnalogAmps() {
     // Preserve LM358's historical implicit 5 V fallback for old benches that
     // omitted its supply wire; LM324 is new and requires its real shared rails.
@@ -370,6 +519,13 @@ export function registerAnalogAmps() {
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
     registerPrecisionOpAmp('lt1006', PRECISION_OP_AMPS.lt1006);
+    registerPrecisionQuadOpAmp('lt1014', LT1014_SPEC);
+    // LTspice's official LT1014 symbols describe one five-terminal functional
+    // unit and provide no package/channel identity. This hidden logical card
+    // lets an importer preserve that channel without inventing a whole
+    // 14-pin package. It is never a palette/face identity, and callers must
+    // retain the source-model substitution blocker.
+    registerPrecisionOpAmp('lt1014_channel', LT1014_SPEC);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
