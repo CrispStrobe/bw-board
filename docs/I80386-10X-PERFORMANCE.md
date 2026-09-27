@@ -166,4 +166,17 @@ shows that 92.6% of attempted `MOV 8B` memory reads use an already cached,
 flat DS or SS mapping to plain RAM above 1 MiB. The complete guest report
 matches the ordinary probe. This makes dynamic RAM reads a credible component
 of a broad native block executor, but `MOV 8B` is only about 10.8% of retired
-instructions and no guest opcode was accelerated by this trace.
+instructions and no guest opcode was accelerated by that trace.
+
+An [opt-in real-byte native probe](receipts/2026-09-27-i80386-native-byte-block-negative.json)
+now decodes a narrow subset of paged 32-bit guest code and executes bounded
+MOV/CMP/TEST/LEA/NOP/JZ/JNZ blocks against the board's shared RAM. On the full
+stock xv6 `forktest`, 5,131,681 of 24,338,279 guest instructions retired in
+2,076,324 WASM calls. Every ordinary guest-report field matched the paired
+JavaScript run, including CPU, serial, interrupts and 24,338,279 total steps.
+The native run took **46.31 user CPU seconds versus 25.82 seconds** for the
+ordinary lean run on the same host. This is a 1.79× slowdown, not a speedup.
+The typical call retired only 2.47 instructions; the runner also checks code
+bytes, mappings, events and state on every entry. A 10× target needs much
+broader opcode coverage and cheaper block entry, plus precise writes and
+fault exits. The production CPU and ordinary probe remain unchanged.

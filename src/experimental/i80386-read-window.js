@@ -8,12 +8,13 @@ export function prevalidateI80386ReadWindow(machine, linearAddress, segment = 3)
   const cpu = machine?.cpu;
   if (machine?.variant !== '80386' || !cpu?._translationCacheEnabled ||
       !Number.isInteger(linearAddress) || linearAddress < 0 ||
-      linearAddress > 0xffffffff || (segment !== 2 && segment !== 3) ||
+      linearAddress > 0xffffffff || (segment !== 1 && segment !== 2 && segment !== 3) ||
       !(cpu.cr0 & 0x80000000) || !cpu.protectedMode || cpu.virtual8086 ||
       (machine._a20Configured && !machine._a20Enabled)) return null;
   const linearPage = (linearAddress & ~0xfff) >>> 0;
   const cache = cpu.segmentCaches[segment];
   if (!cache || cache.null || !cache.present || !cache.readable ||
+      (segment === 1 && !cache.code) ||
       (segment === 2 && !cache.writable) ||
       cache.base !== 0 || cache.expandDown ||
       cache.limit < linearPage + PAGE_BYTES - 1) return null;
@@ -42,6 +43,7 @@ export function isI80386ReadWindowValid(window) {
     cpu.cr4 === window.cr4 && cpu._translationGeneration === window.generation &&
     cpu.segmentCaches[segment] === cache &&
     cache.base === 0 && cache.present && cache.readable && !cache.null &&
+    (segment !== 1 || cache.code) &&
     (segment !== 2 || cache.writable) &&
     !cache.expandDown && cache.limit >= linearPage + PAGE_BYTES - 1 &&
     !cpu.virtual8086 && (cpu.currentPrivilegeLevel !== 3 || translation.userPage) &&

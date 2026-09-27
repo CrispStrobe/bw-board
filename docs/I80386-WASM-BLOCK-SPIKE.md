@@ -57,9 +57,17 @@ bridge restricted to these forms would cross JS↔WASM almost once per guest
 instruction. This is a negative integration result, not a performance gain.
 The temporary histogram instrumentation was removed after measurement.
 
-This module does not decode x86 or fetch guest instruction bytes. The host
-must check CS bounds, paging/permissions, code-page versions, instruction
-bytes, branch target EIPs and physical load addresses before writing IR. It
+The WASM module itself does not decode x86 or fetch guest instruction bytes.
+An [opt-in host decoder](../src/experimental/i80386-native-byte-block.js)
+now checks cached flat 32-bit CS code and DS/SS RAM pages, translates a
+narrow real-byte subset into IR, and executes it inside the xv6 probe with
+AT chip-event and interrupt exits. The full [A/B receipt](receipts/2026-09-27-i80386-native-byte-block-negative.json)
+matches the ordinary guest report but is 1.79× slower (46.31 versus 25.82
+user CPU seconds). This path is still experimental and is not wired into
+general board stepping, CLI sessions, or the GUI.
+
+The host must check CS bounds, paging/permissions, code-page versions,
+instruction bytes, branch target EIPs and physical load addresses before writing IR. It
 must terminate a block before an IRQ/NMI-visible boundary, I/O, REP, HLT,
 indirect branch, control-register
 change, segment reload, or any unmodelled faultable operation. A directly
@@ -69,18 +77,18 @@ and device interactions. The module's `event_budget` alone is insufficient to
 make a board integration correct; the board must derive it from its nearest
 chip event and pending interrupts.
 
-The next useful implementation step is an end-to-end opt-in `runSafeBlock`
-path in `ExperimentalI80386ATMachine`:
+The next useful implementation step is to expand and streamline the opt-in
+`runSafeBlock` path before wiring it into `ExperimentalI80386ATMachine`:
 
-1. Record a bounded block from bytes fetched during successful instructions,
-   stopping at a physical code-page boundary or any unsafe instruction.
+1. Add common ALU, stack, write and branch forms to the bounded real-byte
+   decoder, stopping at a physical code-page boundary or any unsafe instruction.
 2. Invalidate on CPU, host, and DMA writes to watched physical code pages;
    also reject keys after CR0/CR3/CR4, A20, CS, privilege, or page-table
    changes. Reuse the existing translation-cache coherence ingress.
 3. At each call, cap the block by `_chipDeadline - _chipDebt`, pending IRQ/NMI,
    interrupt shadows, and single-step debug state. Return to the regular
    board loop after every exit and verify exact guest state.
-4. Measure the full xv6 `forktest` and Windows desktop transitions against
+4. Re-measure full xv6 `forktest` and Windows desktop transitions against
    JavaScript-only runs. Include state equality and paired user-CPU time.
    A microkernel throughput number would not establish emulator speed.
 
@@ -98,5 +106,5 @@ through a browser URL. Browser deployment needs a CSP that permits Wasm
 compilation; it never uses runtime JavaScript generation. Clang/wasm-ld 18.1.3
 and Rust 1.98.1 are available locally. The repository already has a bundled
 WASM loader in `src/riscv-cc-wasm.js`; this spike follows that loading shape.
-It is deliberately unconnected to the production CPU until the block keys,
-event exits, and full-guest A/B above exist.
+The opt-in probe connects it to the AT board for the measured A/B; the
+production CPU still uses the JavaScript interpreter.

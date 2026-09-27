@@ -60,6 +60,9 @@ const progressEvery = Number(process.env.XV6_PROGRESS_EVERY ?? 0);
 // Skip per-instruction diagnostic records when measuring the machine hot path.
 // Serial, command injection, stopping condition and final state stay intact.
 const lean = process.env.XV6_LEAN === '1';
+const nativeByte = process.env.XV6_NATIVE_BYTE === '1';
+if (nativeByte && !lean)
+  throw new Error('XV6_NATIVE_BYTE=1 requires XV6_LEAN=1 for comparable guest-step receipts');
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -107,7 +110,7 @@ const machine = new Machine(machineConfig, {
     if (first32 !== null && postBootInterrupts.length < 64) postBootInterrupts.push(record);
   },
 });
-if (process.env.XV6_SHARED_RAM === '1') {
+if (process.env.XV6_SHARED_RAM === '1' || nativeByte) {
   const {createI80386RamBridge} = await import('../src/experimental/i80386-ram-bridge.js');
   machine._experimentalRamBridge = await createI80386RamBridge();
   machine._experimentalRamBridge.attach(machine);
@@ -116,6 +119,12 @@ machine.loadRom(rom, 0xf0000); machine.loadRom(rom);
 if (vgaRom) machine.loadRom(vgaRom, 0xc0000);
 machine.reset();
 if (firmware === 'bochs') machine.ata.slaveEnabled = true;
+const nativeRunner = nativeByte ? await (async () => {
+  const {createI80386NativeByteRunner} = await import('../src/experimental/i80386-native-byte-block.js');
+  return createI80386NativeByteRunner(machine, machine._experimentalRamBridge);
+})() : null;
+const nativeBlocks = new Map();
+const nativeStats = {attempts:0, decoded:0, blockCalls:0, instructions:0};
 const read386 = machine._read386.bind(machine);
 machine._read386 = address => {
   if (address >= 0xfee00020 && address < 0xfee00024 && lapicIdReads.length < 32)
@@ -147,7 +156,31 @@ for (; steps < stepsLimit; steps++) {
     recentInstructions[steps % 32] = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip};
   }
   try {
-    machine.step();
+    let advanced=0;
+    if (nativeRunner) {
+      nativeStats.attempts++;
+      const cpu=machine.cpu;
+      const key=`${cpu.cs}:${cpu.eip}:${cpu.cr3}:${cpu.cr4}`;
+      let block=nativeBlocks.get(key);
+      if (block === undefined) {
+        block=nativeRunner.decode(8);
+        if (block && block.instructions.length >= 2) {
+          nativeStats.decoded++;
+        } else block=null;
+        if (nativeBlocks.size >= 4096) nativeBlocks.delete(nativeBlocks.keys().next().value);
+        nativeBlocks.set(key,block);
+      }
+      if (block) {
+        const result=nativeRunner.run(block,Math.min(16,stepsLimit-steps));
+        if (result.instructions > 0) {
+          advanced=result.instructions;
+          nativeStats.blockCalls++;
+          nativeStats.instructions+=advanced;
+        } else if (result.reason === 'fallback') nativeBlocks.delete(key);
+      }
+    }
+    if (advanced === 0) {machine.step();advanced=1;}
+    steps+=advanced-1;
   } catch (error) {
     console.error(JSON.stringify({error: String(error), steps, milestones, userModeEntries,
       serial: Buffer.from(serial).toString('latin1'), inputSent,
@@ -163,7 +196,8 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
 const receipt = {
   profile,
   ...(lean ? {lean: true} : {}),
-  ...(process.env.XV6_SHARED_RAM === '1' ? {sharedRam: true} : {}),
+  ...(process.env.XV6_SHARED_RAM === '1' || nativeByte ? {sharedRam: true} : {}),
+  ...(nativeByte ? {nativeByte:true,nativeStats} : {}),
   firmware,
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},
