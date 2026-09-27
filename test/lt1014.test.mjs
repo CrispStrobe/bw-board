@@ -50,6 +50,15 @@ describe('LT1014 physical quad precision op amp', () => {
     assert.deepEqual(state.inputOffsetV, {1: 0, 2: 0, 3: 0, 4: 0});
   });
 
+  it('separates the official source symbol channel from physical package identity', () => {
+    assert.deepEqual(getDevice('lt1014_channel').terminals,
+      ['inp', 'inn', 'vpos', 'vneg', 'out']);
+    assert.equal(getSupplyCurrent('lt1014_channel'), 0.00055,
+      'a logical imported channel carries one amplifier share, not a whole package');
+    assert.notDeepEqual(getDevice('lt1014_channel').terminals, getDevice('lt1014').terminals,
+      'a five-terminal source symbol cannot impersonate the 14-pin quad');
+  });
+
   it('settles four independent followers through the one shared supply', () => {
     const board = fourFollowers();
     board.advanceTo(80_000n);
