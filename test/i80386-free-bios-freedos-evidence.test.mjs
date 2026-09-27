@@ -12,7 +12,7 @@ import {createHash} from 'node:crypto';
 // asserts that receipt's source bindings equal the CURRENT source shas, with no
 // external input (no ROM, no disk image) -- that is the public-CI 386 gate.
 const receipt = JSON.parse(fs.readFileSync(
-  new URL('../docs/receipts/2026-09-26-i80386-free-bios-freedos.json', import.meta.url)));
+  new URL('../docs/receipts/2026-09-27-i80386-free-bios-freedos.json', import.meta.url)));
 const sha = file => createHash('sha256')
   .update(fs.readFileSync(new URL(`../${file}`, import.meta.url))).digest('hex');
 
