@@ -1,0 +1,38 @@
+{
+  "schema": "astra.i80386-event-horizon.v1",
+  "date": "2026-09-27",
+  "purpose": "Upper bound on AT chip-event batch capacity for a future 80386 block executor; not a safe decoded-block length or speedup measurement",
+  "command": "XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node --import ./scripts/measure-i80386-event-horizon.mjs scripts/probe-xv6-stock.mjs",
+  "nodeVersion": "v20.20.2",
+  "sourceSha256": {
+    "scripts/measure-i80386-event-horizon.mjs": "73cf6077526998348785bc7a082e616daa7b2ec42a779f0f80cd8776185e63b0",
+    "scripts/probe-xv6-stock.mjs": "9ea2458ae79585751b8402e524a719ce592cd2c20d1b212a3843c83ecc1e9873",
+    "src/i8086-machine.js": "90f6ad69ae6a23b4412e2632232461be0c4505a05d4e272650790cf941d45731",
+    "src/experimental/i80386-at-machine.js": "0c15e925ec521be49ae82ecaeead74af3f2700eabc5f4c240a544b7fe554433c"
+  },
+  "mediaSha256": {
+    "bochsBios": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "xv6Image": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImage": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernel": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "privateRawReportSha256": "30faec4d23d5220c72c3ec226769e4f4eaeba7e58a101fa6332d15cf287be9a6",
+  "privateCounterOutputSha256": "9828cc49a082e503663efc61e42f4c6490655668a3c88e56e3392573327d35fd",
+  "guest": {"machineSteps": 24338279, "completed": true, "serialEndsWith": "fork test OK\n$ "},
+  "chipSettlementIntervals": {
+    "nonzero": 42486,
+    "zero": 3176,
+    "retiredInstructionsObserved": 24335051,
+    "deadlineFlushes": 24660,
+    "eagerFlushes": 21001,
+    "maximumLength": 12727,
+    "length64OrMoreInstructionsIncludingTails": 24306589,
+    "length256OrMoreInstructionsIncludingTails": 24270649,
+    "complete64InstructionBatches": 23341632,
+    "tailOutsideComplete64Batches": 993419,
+    "complete256InstructionBatches": 19033856,
+    "tailOutsideComplete256Batches": 5301195,
+    "log2LengthBins": [16590,376,516,143,159,69,122,134,262,23862,127,19,20,87,0,0,0,0,0,0,0,0]
+  },
+  "interpretation": "95.92% of observed retired instructions fit complete 64-instruction intervals, and 78.22% fit complete 256-instruction intervals between chip settlements. Guest branches, faults, memory-mapped I/O, self-modifying code, page-table changes, interrupts and debug boundaries can shorten an executable block further. The 3,228 machine steps above the retired-instruction counter include non-retiring/idle boundaries; they are not native-executable instructions. No WASM or native block path was run in this measurement."
+}
