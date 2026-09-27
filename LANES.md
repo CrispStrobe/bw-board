@@ -4,8 +4,10 @@ worktree `/tmp/wt-bwcx-op27-board`, branch `lane/op27-real-model`, exact base
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP27
 test. Add the manufacturer-backed single-amplifier PDIP-8 electrical contract
 through the existing precision-op-amp controller: 1.8M typical open-loop gain,
-8 MHz gain bandwidth, 2.8 V/us slew, bounded differential input resistance,
-offset, supply/common-mode range, and the guaranteed 600-ohm loaded swing.
+8 MHz gain bandwidth, 2.8 V/us slew, offset, supply/common-mode range, and
+the guaranteed 600-ohm loaded swing. The data sheet specifies common-mode,
+not differential, input resistance, so this card keeps the inputs high-Z
+rather than laundering the 3 GOhm common-mode figure into a differential stamp.
 Offset-null pins stay physical and explicitly unmodelled. Prove exact
 terminals, power refusal, finite gain, feedback, both loaded swing directions,
 slew and small-signal response, with independent gain/slew/bandwidth mutations.

@@ -120,6 +120,22 @@ const PRECISION_OP_AMPS = Object.freeze({
         outputHeadroom: 2,      // loaded swing stays inside the +/-12 V floor
         defaultOffsetV: 60e-6,  // OP07C room-temperature typical
     }),
+    // Analog Devices OP27 Rev. H typicals at VS=+/-15 V. The data sheet does
+    // not specify differential input resistance, so unlike the older cards we
+    // leave that path high-Z instead of misusing its 3 GOhm common-mode value.
+    op27: Object.freeze({
+        a0: 1.8e6,              // 1,800 V/mV typical large-signal gain
+        gbwHz: 8e6,             // 8 MHz typical gain-bandwidth product
+        slewVPerUs: 2.8,        // 2.8 V/us typical
+        inputR: null,
+        rOut: 70,               // 70 ohm typical open-loop output resistance
+        tickNs: 25n,
+        settledV: 1e-8,
+        minSupply: 8,           // characterized down to +/-4 V
+        commonHeadroom: 4,      // guaranteed +/-11 V at +/-15 V supplies
+        outputHeadroom: 2,      // with 70 ohm Rout, retains 600-ohm loaded swing
+        defaultOffsetV: 10e-6,  // front-page room-temperature typical
+    }),
 });
 
 function registerGroundSensingOpAmp(kind, channels, {
@@ -221,7 +237,7 @@ function registerPrecisionOpAmp(kind, spec) {
         stamp(ctx) {
             // This is differential input resistance. Stamping it between the
             // pins avoids inventing either input as ground.
-            ctx.conductance('inp', 'inn', 1 / spec.inputR);
+            if (Number.isFinite(spec.inputR)) ctx.conductance('inp', 'inn', 1 / spec.inputR);
         },
 
         update(part, state, read, tNs) {
@@ -328,6 +344,7 @@ export function registerAnalogAmps() {
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
+    registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
 
     registerDevice('lm3915', {
         terminals: ['vcc', 'gnd', 'sig', 'mode',
