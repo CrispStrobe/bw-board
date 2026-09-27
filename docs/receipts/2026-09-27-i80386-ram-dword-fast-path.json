@@ -1,0 +1,27 @@
+{
+  "schema": "bw.i80386-ram-dword-fast-path.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, Bochs BIOS",
+  "baseline": {
+    "mode": "same checkout, read32 callback disabled",
+    "wallSeconds": 148.85,
+    "steps": 24338279,
+    "serialSha256": "57c12342f40ee749e094ed9b242a738a749104eb063db36d2e4ffecd5bdd42d4",
+    "syscallEntries": 189
+  },
+  "optimized": {
+    "mode": "RAM-only physical dword read enabled",
+    "wallSeconds": 59.27,
+    "steps": 24338279,
+    "serialSha256": "57c12342f40ee749e094ed9b242a738a749104eb063db36d2e4ffecd5bdd42d4",
+    "syscallEntries": 189
+  },
+  "speedup": 2.5113885608233506,
+  "identicalGuestResult": true,
+  "sourceSha256": {
+    "src/experimental/i80386.js": "677feba937852ef8523915c86367a782566738306bef36f465fc8ed57d37cbf6",
+    "src/experimental/i80386-at-machine.js": "93b557bfd0c02b30bb05a393691f4b7f1a53a3482c5fb4b0fa5edde7b57333d8"
+  },
+  "note": "Single controlled A/B on the same host; wall-clock performance varies with host load. Optimized path applies only to wholly mapped RAM dwords above 1 MiB. All other accesses use the byte bus."
+}

@@ -56,6 +56,24 @@ test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 b
   assert.equal(machine.cpu.read(0x100000), 0x22);
 });
 
+test('experimental 386 physical dword reads preserve RAM and bus boundary semantics', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP);
+  machine.mem.set([0x11, 0x22, 0x33, 0x44], 0x100000);
+  machine.mem.set([0x55, 0x66, 0x77], 0x100ffd);
+  machine.mem[0] = 0x88;
+  machine.mem[0x45fffe] = 0x99;
+  const byBytes = address => Array.from({length: 4}, (_, index) =>
+    machine._read386((address + index) >>> 0) << (8 * index))
+    .reduce((value, byte) => value | byte, 0) >>> 0;
+  for (const address of [0x100000, 0x100ffd, 0x45fffe, 0x9fc00, 0xfffffff0])
+    assert.equal(machine.cpu._readPhysical(address, 4), byBytes(address));
+  machine.setA20Enabled(false);
+  assert.equal(machine.cpu._readPhysical(0x100000, 4), byBytes(0x100000));
+  machine.setA20Enabled(true);
+  machine._mpReady = true;
+  assert.equal(machine.cpu._readPhysical(0x9fc00, 4), byBytes(0x9fc00));
+});
+
 test('experimental 386 AT 4MiB profile exposes only installed RAM and matching CMOS sizes', () => {
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M);
   machine.cpu.write(0x45ffff, 0x5a);

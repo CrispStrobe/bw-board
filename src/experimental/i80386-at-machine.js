@@ -46,6 +46,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       throw new Error('experimental 386 functionalInstructionCycles must be 1 through 16');
     const bus = {
       read: address => this._read386(address),
+      read32: address => this._read386Ram32(address),
       fetch: address => this._read386(address),
       write: (address, value) => this._write386(address, value),
       inPort: (port, width) => this._in386(port, width),
@@ -149,6 +150,22 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     const video = this.vgaMemory?.read(decoded);
     if (video !== undefined && video !== null) return video;
     return decoded < this.memoryBytes ? this._read(decoded) : 0xff;
+  }
+
+  // Paging fetches four bytes at a time. Bypass per-byte decode only inside a
+  // wholly mapped RAM page above 1 MiB; everything else keeps the bus path.
+  _read386Ram32(address) {
+    const decoded = this._decode386(address);
+    if ((!this._a20Configured || this._a20Enabled) &&
+        decoded >= 0x100000 && decoded < this.memoryBytes - 3 &&
+        (decoded & 0xfff) <= 0xffc && this._page[decoded >>> 12] === 1) {
+      const mem = this.mem;
+      return (mem[decoded] | (mem[decoded + 1] << 8) |
+        (mem[decoded + 2] << 16) | (mem[decoded + 3] << 24)) >>> 0;
+    }
+    return (this._read386(address) | (this._read386((address + 1) >>> 0) << 8) |
+      (this._read386((address + 2) >>> 0) << 16) |
+      (this._read386((address + 3) >>> 0) << 24)) >>> 0;
   }
 
   _write386(address, value) {

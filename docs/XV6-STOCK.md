@@ -43,6 +43,13 @@ longer [prefix receipt](receipts/2026-09-27-xv6-stock-usertests-prefix.json)
 establishes that the earlier cutoff was insufficient. The remaining `usertests`
 phases have not yet been accepted.
 
+The experimental 386 now reads page-table dwords directly from wholly mapped
+RAM above 1 MiB, falling back to the byte bus for boundaries and devices.
+A controlled 4 MiB `forktest` A/B completed the identical 24,338,279 guest
+instructions and serial transcript in 59.27 seconds with this path versus
+148.85 seconds with it disabled on the same host. The [performance receipt](receipts/2026-09-27-i80386-ram-dword-fast-path.json)
+records source hashes and the comparison; wall time is host-dependent.
+
 The IBM 5170 [Technical Reference](https://www.minuszerodegrees.net/manuals/IBM/IBM_5170_Technical_Reference_1502243_MAR84.pdf)
 maps motherboard ROM near the top of its 24-bit address space. Advertising
 RAM through that window caused the BIOS to stop at `164-Memory Size Error`.
