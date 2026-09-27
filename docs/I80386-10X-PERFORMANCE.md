@@ -16,6 +16,12 @@ the lean mode for future paired performance tests and the normal mode for
 diagnosis. The [lean-probe receipt](receipts/2026-09-27-i80386-lean-probe.json)
 pins the media and complete-run result.
 
+A direct-RAM byte-read shortcut in the AT board preserved the complete lean
+`forktest` report but changed one adjacent user-CPU pair from 26.64 to 26.16
+seconds (1.018×). That is below the predeclared 5% board-only retention
+threshold, so the candidate was discarded. The [negative read-path receipt](receipts/2026-09-27-i80386-at-readfast-negative.json)
+pins both source variants and the identical guest result.
+
 A final-source V8 sample over the xv6 run attributed 17.7% of time to
 `_stepInstruction`, 7.1% to `_fetchN`, 5.0% to `_decodeEA`, 7.8% to
 `_translate`, 6.1% to `_read386`, and 6.1% to `_serviceInterrupts`. The
