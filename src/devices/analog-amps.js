@@ -569,9 +569,9 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
             let limitedNext = next;
             const presentROut = state.drives.out.rTh;
             const outputCurrent = (drive - out) / presentROut;
-            state.outputCurrentA = outputCurrent;
-            state.outputCurrentLimited = false;
-            if (Number.isFinite(spec.outputCurrentLimitA)) {
+            if (spec.enforceOutputCurrentLimit) {
+                state.outputCurrentA = outputCurrent;
+                state.outputCurrentLimited = false;
                 if (Math.abs(outputCurrent) > spec.outputCurrentLimitA) {
                     state._currentLimitSign = Math.sign(outputCurrent);
                 } else if (state._currentLimitSign
@@ -653,6 +653,7 @@ function universalOpAmp2Spec(part) {
         outputHeadroom,
         defaultOffsetV: Number(defaultOffsetV),
         separateIntrinsicGainSlope: true,
+        enforceOutputCurrentLimit: true,
     });
 }
 
