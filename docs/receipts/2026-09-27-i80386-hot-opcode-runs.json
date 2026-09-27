@@ -4,7 +4,7 @@
   "sourceCommit": "d26e2a878d6d2051449a76af11ea1fe601ce207f",
   "instrument": {
     "path": "scripts/measure-i80386-hot-runs.mjs",
-    "sha256": "00566f2866584242b871c252dd13712626238c73899cbaab9685e12fbe096d22"
+    "sha256": "8ef44588c758ec34a42c2d4a6472bea348be4c7acf5d3edf75439e511daf7d7a"
   },
   "workload": {
     "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
@@ -21,13 +21,13 @@
     "guestReportMatchesUninstrumented": true,
     "comparison": "Normalized full JSON report equals the preceding uninstrumented lean forktest after removing only absolute media paths."
   },
-  "method": "Preload captures the first non-prefix opcode and first following byte during each original instruction, then counts successful retirements and maximal contiguous runs. Eligibility is opcode-family based and deliberately optimistic: it does not validate all operand forms, device access, faults, code-page boundaries, control-flow targets, page translations, or board chip-event exits. Strings are excluded from the noString variants because REP can retire many iterations at one EIP. complete64 and complete256 are floor(runLength / size) * size summed over runs, before any real block exit constraints.",
+  "method": "Preload captures the first non-prefix opcode and first following byte during each original instruction, then counts successful retirements and maximal contiguous runs. Eligibility is opcode-family based and deliberately optimistic: it does not validate all operand forms, device access, faults, code-page boundaries, control-flow targets, page translations, or board chip-event exits. Strings are excluded from the noString variants because REP can retire many iterations at one EIP. Each completeN count is floor(runLength / N) * N summed over runs, before any real block exit constraints.",
   "sets": [
-    {"name": "register", "instructions": 3659029, "fractionRetired": 0.1503604, "runs": 3657982, "singleInstructionRuns": 3656963, "longestRun": 3, "complete64Instructions": 0, "complete256Instructions": 0},
-    {"name": "memoryBranchString", "instructions": 17006113, "fractionRetired": 0.6988320, "runs": 3810396, "singleInstructionRuns": 1335711, "longestRun": 16384, "complete64Instructions": 2212288, "complete256Instructions": 2193664},
-    {"name": "memoryNoString", "instructions": 14837289, "fractionRetired": 0.6097086, "runs": 3810390, "singleInstructionRuns": 1335711, "longestRun": 321, "complete64Instructions": 44224, "complete256Instructions": 26112},
-    {"name": "wideOpcode", "instructions": 20628948, "fractionRetired": 0.8477051, "runs": 2497022, "singleInstructionRuns": 709426, "longestRun": 45007, "complete64Instructions": 4170816, "complete256Instructions": 4125184},
-    {"name": "wideNoString", "instructions": 17776835, "fractionRetired": 0.7305033, "runs": 3129578, "singleInstructionRuns": 710090, "longestRun": 604, "complete64Instructions": 56064, "complete256Instructions": 29696}
+    {"name": "register", "instructions": 3659029, "fractionRetired": 0.1503604, "runs": 3657982, "singleInstructionRuns": 3656963, "longestRun": 3, "complete4Instructions": 0, "complete8Instructions": 0, "complete16Instructions": 0, "complete32Instructions": 0, "complete64Instructions": 0, "complete256Instructions": 0},
+    {"name": "memoryBranchString", "instructions": 17006113, "fractionRetired": 0.6988320, "runs": 3810396, "singleInstructionRuns": 1335711, "longestRun": 16384, "complete4Instructions": 11198012, "complete8Instructions": 6136624, "complete16Instructions": 2217488, "complete32Instructions": 2215232, "complete64Instructions": 2212288, "complete256Instructions": 2193664},
+    {"name": "memoryNoString", "instructions": 14837289, "fractionRetired": 0.6097086, "runs": 3810390, "singleInstructionRuns": 1335711, "longestRun": 321, "complete4Instructions": 9029236, "complete8Instructions": 3968056, "complete16Instructions": 48992, "complete32Instructions": 46816, "complete64Instructions": 44224, "complete256Instructions": 26112},
+    {"name": "wideOpcode", "instructions": 20628948, "fractionRetired": 0.8477051, "runs": 2497022, "singleInstructionRuns": 709426, "longestRun": 45007, "complete4Instructions": 17022076, "complete8Instructions": 11383760, "complete16Instructions": 5926928, "complete32Instructions": 4227168, "complete64Instructions": 4170816, "complete256Instructions": 4125184},
+    {"name": "wideNoString", "instructions": 17776835, "fractionRetired": 0.7305033, "runs": 3129578, "singleInstructionRuns": 710090, "longestRun": 604, "complete4Instructions": 12904212, "complete8Instructions": 7262224, "complete16Instructions": 1807584, "complete32Instructions": 106720, "complete64Instructions": 56064, "complete256Instructions": 29696}
   ],
   "decision": "The opcode mix justifies prototyping a broad memory/ALU/branch executor, but a 64-instruction straight-line batch is a poor primary design: even the optimistic wide non-string set has only 0.230% of all retired instructions in complete 64-instruction spans. Next build and measure short blocks with branch linking and a separate REP string path. These counts do not establish executable coverage, correctness, or a speedup."
 }

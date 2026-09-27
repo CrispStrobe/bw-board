@@ -129,7 +129,10 @@ optimistic opcode-family matches, not valid compiled blocks. Only 56,064
 instructions, 0.230% of all retirements, fit complete 64-instruction spans in
 the broad non-string runs, even before a branch, fault, code page, device, or
 chip event splits them. Repeated strings account for most of the apparent
-long-run opportunity. The next executor should therefore use short blocks and
-cheap branch linking, with a separate interruptible REP path. A design that
-requires long straight-line runs cannot deliver the 10× end-to-end target on
-this workload.
+long-run opportunity. Four-instruction spans cover at most 53.0% of retired
+instructions in the same optimistic non-string set; eight cover 29.8%, and
+sixteen cover 7.4%. Each count ignores branches as block boundaries and is
+therefore only a ceiling for unlinked blocks. The next executor should use
+short blocks and cheap branch linking, with a separate interruptible REP
+path. A design that requires long straight-line runs cannot deliver the 10×
+end-to-end target on this workload.

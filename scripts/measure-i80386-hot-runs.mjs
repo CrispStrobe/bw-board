@@ -28,6 +28,7 @@ ExperimentalI80386.prototype._stepInstruction = function() {
 const hist = new Uint32Array(256);
 const sets = ['register', 'memoryBranchString', 'memoryNoString', 'wideOpcode', 'wideNoString'].map(name => ({
   name, current: 0, instructions: 0, runs: 0, singles: 0, longest: 0,
+  complete4: 0, complete8: 0, complete16: 0, complete32: 0,
   complete64: 0, complete256: 0, log2Runs: new Array(22).fill(0),
 }));
 let retired = 0, unclassified = 0;
@@ -53,6 +54,10 @@ function closeRun(set) {
   set.runs++;
   if (length === 1) set.singles++;
   if (length > set.longest) set.longest = length;
+  set.complete4 += Math.floor(length / 4) * 4;
+  set.complete8 += Math.floor(length / 8) * 8;
+  set.complete16 += Math.floor(length / 16) * 16;
+  set.complete32 += Math.floor(length / 32) * 32;
   set.complete64 += Math.floor(length / 64) * 64;
   set.complete256 += Math.floor(length / 256) * 256;
   set.log2Runs[Math.min(21, Math.floor(Math.log2(length)))]++;
