@@ -28,6 +28,14 @@ instructions. A narrowly cached register template can test feasibility, but
 it cannot by itself reach 10×. If its paired CPU-time gain is below 10% or
 within run-to-run noise, stop widening the JS template set.
 
+That bounded trial cached register-form `89`/`39`/`85` on extended RAM code
+pages with version checks for guest, host and DMA writes. Two adjacent xv6 A/B
+pairs took 27.925 seconds baseline versus 27.25 seconds candidate on average:
+1.025×, or about 2.4%. Complete guest reports matched except their worktree
+paths. The source experiment was discarded under the stopping rule; the code
+coherence and precise-fault tests remain. The dated negative receipt records
+the measurement.
+
 The next architectural experiment should use a static, CSP-safe decoder into
 compact typed-array basic blocks, with no `eval` or `new Function`. Populate a
 block only from instruction bytes already fetched during successful execution
@@ -46,8 +54,10 @@ If that bounded block interpreter cannot substantially cut total time, a
 static WebAssembly executor backed by the same RAM buffer is the likely next
 route. It must run multiple safe instructions per JS↔WASM crossing and return
 at exact device/event boundaries; one crossing per byte or instruction would
-erase the benefit. A fixed bundled `.wasm` module is compatible with browser
-CSP and the CLI, while runtime code generation is not. Benchmark the full
+erase the benefit. The repository's `src/riscv-cc-wasm.js` already shows a
+bundled module loader. A 386 module would need the site's explicit Wasm CSP
+allowance and a CLI loading path; it must not use runtime JavaScript code
+generation. Benchmark the full
 Windows transition and xv6 guest-state equality after each stage, including
 self-modifying code, host/DMA writes, CR3 remaps, and precise later-instruction
 faults. These are design requirements, not a claim that the 10× goal is solved.
