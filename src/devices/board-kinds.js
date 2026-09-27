@@ -243,6 +243,21 @@ const ATTINY88_TERMINALS = [
   'pc3', 'pc4', 'pc5', 'pc7',
 ];
 
+// ATtiny88 32-pad QFN / 32-lead TQFP package. Unlike the PDIP-28 above,
+// these packages bond out PA0-PA3; PA0/PA1 are ADC6/ADC7. This is the package
+// used by the Blinkenrocket hardware, whose audio modem reaches ADC6 through
+// PA0. Keep this a distinct board kind: adding PA0 to `attiny88` would make a
+// physically impossible lead appear on every breadboarded PDIP circuit.
+//
+// Package order from Microchip ATtiny48/88 datasheet doc8008, 32 QFN top view.
+// This is a terminal SET, but retaining package order makes audits mechanical.
+const ATTINY88_QFN32_TERMINALS = [
+  'pd3', 'pd4', 'pa2', 'vcc', 'gnd', 'pa3', 'pb6', 'pb7',
+  'pd5', 'pd6', 'pd7', 'pb0', 'pb1', 'pb2', 'pb3', 'pb4',
+  'pb5', 'avcc', 'pa0', 'pc7', 'gnd2', 'pa1', 'pc0', 'pc1',
+  'pc2', 'pd2', 'pc3', 'pc4', 'pc5', 'pc6', 'pd0', 'pd1',
+];
+
 // DIP-8. pb5 doubles as reset on the real part; electrically it is a pin.
 const ATTINY85_TERMINALS = [
   'pb5', 'pb3', 'pb4', 'gnd', 'pb0', 'pb1', 'pb2', 'vcc',
@@ -360,6 +375,7 @@ export function registerBoardKinds() {
   registerDevice('pybadge', boardModel(PYBADGE_TERMINALS, 3.3, PYBADGE_ROLES));
   registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
   registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));
+  registerDevice('attiny88_qfn32', bareChipModel(ATTINY88_QFN32_TERMINALS, 5.0));
   registerDevice('attiny85', bareChipModel(ATTINY85_TERMINALS, 5.0));
   registerDevice('stc15_mcu', bareChipModel(STC15_TERMINALS, 5.0));
   registerDevice('stm32f030', bareChipModel(STM32F030_TERMINALS, 3.3));
