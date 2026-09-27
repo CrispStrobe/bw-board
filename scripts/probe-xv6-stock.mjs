@@ -61,8 +61,11 @@ const progressEvery = Number(process.env.XV6_PROGRESS_EVERY ?? 0);
 // Serial, command injection, stopping condition and final state stay intact.
 const lean = process.env.XV6_LEAN === '1';
 const nativeByte = process.env.XV6_NATIVE_BYTE === '1';
-if (nativeByte && !lean)
-  throw new Error('XV6_NATIVE_BYTE=1 requires XV6_LEAN=1 for comparable guest-step receipts');
+const nativeDispatch = process.env.XV6_NATIVE_DISPATCH === '1';
+if ((nativeByte || nativeDispatch) && !lean)
+  throw new Error('native xv6 execution requires XV6_LEAN=1 for comparable guest-step receipts');
+if (nativeByte && nativeDispatch)
+  throw new Error('select one native xv6 execution path');
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -123,6 +126,9 @@ const nativeRunner = nativeByte ? await (async () => {
   const {createI80386NativeByteRunner} = await import('../src/experimental/i80386-native-byte-block.js');
   return createI80386NativeByteRunner(machine, machine._experimentalRamBridge);
 })() : null;
+const nativeDispatcher = nativeDispatch ? await (await import(
+  '../src/experimental/i80386-native-dispatch.js'))
+  .createI80386NativeDispatcher(machine) : null;
 const nativeBlocks = new Map();
 const nativeStats = {attempts:0, decoded:0, blockCalls:0, instructions:0,
   repStosDecoded:0, repStosBlockCalls:0, repStosIterations:0};
@@ -158,7 +164,8 @@ for (; steps < stepsLimit; steps++) {
   }
   try {
     let advanced=0;
-    if (nativeRunner) {
+    if (nativeDispatcher) advanced=nativeDispatcher.run(Math.min(64,stepsLimit-steps));
+    else if (nativeRunner) {
       nativeStats.attempts++;
       const cpu=machine.cpu;
       const key=cpu.eip >>> 0;
@@ -209,8 +216,9 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
 const receipt = {
   profile,
   ...(lean ? {lean: true} : {}),
-  ...(process.env.XV6_SHARED_RAM === '1' || nativeByte ? {sharedRam: true} : {}),
+  ...(process.env.XV6_SHARED_RAM === '1' || nativeByte || nativeDispatch ? {sharedRam: true} : {}),
   ...(nativeByte ? {nativeByte:true,nativeStats} : {}),
+  ...(nativeDispatch ? {nativeDispatch:true,nativeStats:nativeDispatcher.stats} : {}),
   ...(process.env.XV6_RAM_HASH === '1' ? {ramSha256:crypto.createHash('sha256')
     .update(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes))
     .digest('hex')} : {}),

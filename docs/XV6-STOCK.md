@@ -53,6 +53,16 @@ The longer `createdelete` prefix also completed at the same 163,992,924
 instructions with identical serial output and kernel milestones after the
 change. Its optimized local run took 406.55 seconds.
 
+The reusable native dispatcher used by the CLI and GUI also runs the complete
+4 MiB `forktest`. With the same vendored Bochs BIOS and xv6 disks, its result
+matches the earlier probe-specific native path at all recorded guest fields,
+including 24,338,279 steps, serial output, input delivery, interrupts, CPU
+state, and final 4 MiB RAM SHA-256. Both admit exactly 11,298,966 native
+instructions, including 2,145,309 REP STOSD iterations. The
+[dispatcher comparison](receipts/2026-09-27-i80386-shared-native-dispatch.json)
+records source and media hashes. `XV6_NATIVE_DISPATCH=1` with `XV6_LEAN=1`
+selects this path; it remains opt-in.
+
 A later CPU profile of the same `forktest` found instruction snapshots to be
 the largest single self-time cost (21.9 seconds in an 85.6-second sampled run).
 The executor now retains prior segment-cache and task-state objects by reference

@@ -1,0 +1,65 @@
+{
+  "schema": "bw.i80386-xv6-native-dispatch-comparison.v1",
+  "date": "2026-09-27",
+  "baseRevision": "f3a69a13",
+  "workload": "stock xv6 4 MiB forktest on vendored Bochs BIOS",
+  "invocation": {
+    "common": "XV6_FIRMWARE=bochs XV6_LEAN=1 XV6_RAM_HASH=1 XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=«forktest CR» XV6_EXPECT_SERIAL=«fork test OK LF $ space»",
+    "old": "XV6_NATIVE_BYTE=1",
+    "new": "XV6_NATIVE_DISPATCH=1"
+  },
+  "sourceSha256": {
+    "scripts/probe-xv6-stock.mjs": "3413bcefae161ab49052c051c89861c7aa90ddad9eba649f54cdccc8ad7957e6",
+    "src/experimental/i80386-native-dispatch.js": "d8b2f1fc7defdf5972cc3c4e912e94538969455479cc9b6be9c65e5d72872702",
+    "src/experimental/i80386-native-byte-block.js": "19ae049b5001f84f1adbcb64f2f687b30b0161cf7e3b23261c6f2241a197a715",
+    "src/experimental/i80386-ram-bridge.js": "316725acd8934cea10abae2b4625d4840d1ad34d6a4c67e77dab519da24722ef",
+    "wasm/i80386-block-spike.wasm": "4c854770221609169e535faacb32a5684a968c69ef87860a10bde847c89ca5fb",
+    "wasm/i80386-ram-bridge.wasm": "8051f3b0ffef80ddff38feeaf8c4a9c6454d75143dd80322b6c1f9e124484928"
+  },
+  "media": {
+    "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "imageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "slaveImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f"
+  },
+  "matchingFields": [
+    "steps",
+    "first32",
+    "serial",
+    "inputSent",
+    "interrupts",
+    "postBootInterrupts",
+    "lapicIdReads",
+    "milestones",
+    "userModeEntries",
+    "screen",
+    "lapic",
+    "ioapic",
+    "cpu",
+    "ramSha256",
+    "nativeStats"
+  ],
+  "steps": 24338279,
+  "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+  "nativeStats": {
+    "attempts": 15121837,
+    "decoded": 17373,
+    "blockCalls": 2082524,
+    "instructions": 11298966,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "timingSeconds": {
+    "old": {
+      "real": 20.32,
+      "user": 19.94,
+      "sys": 0.59
+    },
+    "new": {
+      "real": 18.82,
+      "user": 19.66,
+      "sys": 0.6
+    }
+  },
+  "scope": "The two native dispatch paths are functionally identical on this workload. Timings are one sample on a shared host, not a speedup claim or a 10x result."
+}
