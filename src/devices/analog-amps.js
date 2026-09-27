@@ -159,6 +159,25 @@ const PRECISION_OP_AMPS = Object.freeze({
         outputHeadroom: 2,      // with 70 ohm Rout, retains 600-ohm loaded swing
         defaultOffsetV: 10e-6,  // front-page room-temperature typical
     }),
+    // Analog Devices LT1007/LT1037 data sheet typicals at VS=+/-15 V. The
+    // specified 5 GOhm figure is common-mode input resistance, not authority
+    // for a differential resistor, so the two inputs remain honestly high-Z.
+    // Noise, drift, bias current and the external offset-trim network remain
+    // outside this bounded circuit model.
+    lt1007: Object.freeze({
+        a0: 20e6,
+        gbwHz: 8e6,
+        slewVPerUs: 2.5,
+        inputR: null,
+        rOut: 70,
+        tickNs: 25n,
+        settledV: 1e-8,
+        minSupply: 8,
+        commonHeadroom: 2.5,
+        outputHeadroom: 1,
+        defaultOffsetV: 10e-6,
+        terminals: ['offset_1', 'inn', 'inp', 'vneg', 'nc', 'out', 'vpos', 'offset_8'],
+    }),
 });
 
 // TI SLOS039D, LT1014 at 5 V unless noted. This is the physical quad package,
@@ -587,6 +606,14 @@ export function registerAnalogAmps() {
     registerPrecisionOpAmp('op747_channel', OP747_SPEC);
     registerPrecisionOpAmp('op07', PRECISION_OP_AMPS.op07);
     registerPrecisionOpAmp('op27', PRECISION_OP_AMPS.op27);
+    registerPrecisionOpAmp('lt1007', PRECISION_OP_AMPS.lt1007);
+    // Official LTspice symbols are five-terminal logical amplifiers without
+    // N8/S8 package identity. Keep that source contract separate from the
+    // physical N8 device, and let importers retain the LTC.lib blocker.
+    registerPrecisionOpAmp('lt1007_channel', Object.freeze({
+        ...PRECISION_OP_AMPS.lt1007,
+        terminals: ['inp', 'inn', 'vpos', 'vneg', 'out'],
+    }));
 
     registerDevice('lm3915', {
         terminals: ['vcc', 'gnd', 'sig', 'mode',
