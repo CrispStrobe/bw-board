@@ -80,7 +80,9 @@ const code16WasmDiagnostics=process.env.AT_CODE16_WASM_DIAGNOSTICS==='1';
 const native32Census=process.env.AT_NATIVE32_CENSUS==='1'?
   createI80386Native32Census():null;
 const broadBlockCensus=process.env.AT_BROAD_BLOCK_CENSUS==='1'?
-  createI80386BroadBlockCensus():null;
+  createI80386BroadBlockCensus({linkJcc:process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'}):null;
+if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
+  throw new Error('Jcc link census requires AT_BROAD_BLOCK_CENSUS=1');
 const code16WasmFormCensus=process.env.AT_CODE16_WASM_FORM_CENSUS==='1';
 const code16WasmBranchLinks=process.env.AT_CODE16_WASM_BRANCH_LINKS==='1';
 const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
@@ -255,6 +257,7 @@ const offerLiveInput=()=>{
 const runChunk=end=>{while(steps<end) {
   while(events[eventIndex]?.step===steps) {
     const event=events[eventIndex++];
+    broadBlockCensus?.externalEvent();
     const accepted=event.type==='key'?machine.keyIn(event.code):
       event.type==='serial'?machine.serialIn(event.code):machine.mouseIn(event);
     delivered.push({...event,accepted});

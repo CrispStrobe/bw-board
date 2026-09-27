@@ -9,6 +9,33 @@ code, translate an address, inspect data operands, or execute a candidate
 block. It can add substantial host overhead, so its runtime is **not** a
 performance comparison.
 
+To add a **separate hypothetical conditional-branch linked-run view**, set
+`AT_BROAD_BLOCK_JCC_LINKS=1` or `XV6_BROAD_BLOCK_JCC_LINKS=1` alongside the
+respective census switch. The original unlinked mode counters stay unchanged;
+the extra `jccLinkedPotential` view uses the same candidate steps and grammar.
+Only unprefixed short `70–7f` and near `0f 80–8f` Jcc may await one actual
+ordinary-step successor. CALL, RET, JMP, and strings remain terminal. A link
+requires the observed next fetch to match its entry CS:EIP, the prior branch's
+post-step EIP to equal its decoded taken target or full fallthrough EIP, the
+same mode, CS-cache object, linear code page, A20 state, CR0/CR3/CR4 and
+translation generation, and no due chip event or scripted external input.
+The 16-bit taken target wraps at 16 bits; fallthrough EIP is not silently
+wrapped. Prefixes on Jcc are refused in the linked view. No bytes are read
+ahead, and the next instruction must independently pass the existing
+syntactic/locality filter before it can join. These guards still do not
+establish a physical-code-page, data, mutation, event, or fault proof.
+
+The linked view reports branch outcomes and joins as taken, fallthrough, or
+ambiguous when both addresses coincide. It counts observed successor pages
+as same or cross, including outcome-specific counts, and records the first
+link refusal reason. Its histogram, >=4 and >=8 run tails, and step shares
+use completed ordinary step calls. `jccAttempts` partitions into joins and
+refusals; linked histogram lengths sum to linked potential steps. The
+predeclared tactical gate is **at least 50% potential completed-step coverage
+and mean linked run length at least four on both pinned Windows 60M and lean
+xv6 forktest**. Passing is only grounds for an executable experiment, not a
+speed or safety claim.
+
 The deliberately limited **syntactic potential** grammar is:
 
 * Linear forms: register INC/DEC/PUSH/POP (`40–5f`), MOV immediate register

@@ -12,6 +12,33 @@ const bump=(object,key,by=1)=>{object[key]=(object[key]??0)+by;};
 const modeOf=cpu=>!(cpu.cr0&1)?'real':(cpu.eflags&0x20000)?'vm86':
   cpu.segmentCaches[1].default32?'protected32':'protected16';
 const linearOf=(cpu,eip)=>((cpu.segmentCaches[1].base??0)+(eip>>>0))>>>0;
+const identityOf=machine=>{
+  const cpu=machine.cpu,cs=cpu.segmentCaches[1];
+  return [cpu.cr0>>>0,cpu.cr3>>>0,cpu.cr4>>>0,
+    cpu._translationGeneration??0,!!machine._a20Configured,!!machine._a20Enabled,
+    cs,cs.base>>>0,cs.limit>>>0,!!cs.default32,!!cs.present,
+    !!cs.code,!!cs.readable,!!cs.null,!!cs.expandDown];
+};
+const sameIdentity=(a,b)=>a.every((value,index)=>value===b[index]);
+const jccOf=(bytes,eip,default32,postEip)=>{
+  let at=0;
+  while(at<bytes.length&&PREFIXES.has(bytes[at]))at++;
+  const short=bytes[at]>=0x70&&bytes[at]<=0x7f;
+  const near=bytes[at]===0x0f&&bytes[at+1]>=0x80&&bytes[at+1]<=0x8f;
+  if(!short&&!near)return null;
+  if(at)return {reason:'prefixed-jcc'};
+  const size=short?1:default32?4:2,start=at+(short?1:2);
+  if(bytes.length!==start+size)return {reason:'jcc-incomplete-bytes'};
+  let displacement=0;
+  for(let i=0;i<size;i++)displacement|=bytes[start+i]<<(8*i);
+  displacement=short?(displacement<<24)>>24:size===2?(displacement<<16)>>16:displacement|0;
+  const fallthrough=(eip+bytes.length)>>>0;
+  const target=default32?(fallthrough+displacement)>>>0:
+    (fallthrough+displacement)&0xffff;
+  if(postEip!==fallthrough&&postEip!==target)return {reason:'post-jcc-redirect'};
+  return {outcome:target===fallthrough?'ambiguous':
+    postEip===target?'taken':'fallthrough'};
+};
 
 // This is an opcode-family hypothesis, not a semantic or fault-safety proof.
 export function classifyI80386BroadForm(bytes) {
@@ -38,7 +65,7 @@ export function classifyI80386BroadForm(bytes) {
   return {reason:'unsupported-opcode'};
 }
 
-export function createI80386BroadBlockCensus({maxRun=64}={}){
+export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>256)
     throw new RangeError('broad-block census run budget must be 1..256');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
@@ -46,8 +73,18 @@ export function createI80386BroadBlockCensus({maxRun=64}={}){
     runs:0,runLengthHistogram:{},runEndReasons:{},firstRefusals:{},
     forms:{},redirectedSteps:0,noRetirement:0,abortedCalls:0,
   }]));
+  const linked=linkJcc?{
+    schema:'bw.i80386-broad-jcc-linked-potential.v1',
+    modes:Object.fromEntries(MODES.map(mode=>[mode,{
+      potentialSteps:0,runs:0,runLengthHistogram:{},runEndReasons:{},
+      jccAttempts:0,jccOutcomes:{},jccJoined:{},jccRefusals:{},
+      successorPages:{},successorPageByOutcome:{},
+      runsAtLeast4:0,stepsInRunsAtLeast4:0,
+      runsAtLeast8:0,stepsInRunsAtLeast8:0,
+    }])),
+  }:null;
   let machine=null,fetch8=null,fetchN=null,own8=null,ownN=null,pending=null;
-  let bytes=[],run=null;
+  let bytes=[],run=null,linkedRun=null,externalEpoch=0;
   const endRun=reason=>{
     if(!run)return;
     const bucket=modes[run.mode];
@@ -55,6 +92,71 @@ export function createI80386BroadBlockCensus({maxRun=64}={}){
     bump(bucket.runLengthHistogram,run.length);
     bump(bucket.runEndReasons,reason);
     run=null;
+  };
+  const endLinkedRun=reason=>{
+    if(!linkedRun)return;
+    const bucket=linked.modes[linkedRun.mode],length=linkedRun.length;
+    bucket.runs++;bump(bucket.runLengthHistogram,length);
+    bump(bucket.runEndReasons,reason);
+    if(length>=4){bucket.runsAtLeast4++;bucket.stepsInRunsAtLeast4+=length;}
+    if(length>=8){bucket.runsAtLeast8++;bucket.stepsInRunsAtLeast8+=length;}
+    if(linkedRun.jcc)bump(bucket.jccRefusals,reason);
+    linkedRun=null;
+  };
+  const linkedRetired=(before,cpu,form,reason)=>{
+    if(!linked)return;
+    const bucket=linked.modes[before.mode],page=before.linear>>>12;
+    if(linkedRun){
+      const prior=linkedRun,wasJcc=!!prior.jcc;
+      if(wasJcc&&before.fetchCs===before.cs&&before.fetchEip===before.eip){
+        const pageKind=page===prior.page?'same':'cross',priorBucket=linked.modes[prior.mode];
+        bump(priorBucket.successorPages,pageKind);
+        bump(priorBucket.successorPageByOutcome,`${prior.jcc.outcome}:${pageKind}`);
+      }
+      const breakReason=prior.mode!==before.mode?'mode-change':
+        prior.cs!==before.cs?'cs-change':
+        prior.page!==page?'linear-page-change':
+        prior.nextEip!==before.eip?'nonsequential-entry':
+        wasJcc&&prior.externalEpoch!==externalEpoch?'external-event':
+        wasJcc&&before.chipEventDue?'chip-event-due':
+        wasJcc&&(prior.machineCycles!==before.machineCycles||
+          prior.chipDebt!==before.chipDebt||prior.chipDeadline!==before.chipDeadline)?
+          'board-state-change':
+        wasJcc&&!sameIdentity(prior.identity,before.identity)?'identity-change':
+        reason;
+      if(breakReason)endLinkedRun(breakReason);
+      else if(wasJcc){
+        bump(bucket.jccJoined,prior.jcc.outcome);
+        prior.jcc=null;
+      }
+    }
+    if(reason)return;
+    if(!linkedRun)linkedRun={mode:before.mode,cs:before.cs,page,length:0};
+    linkedRun.length++;
+    linkedRun.nextEip=cpu.eip>>>0;
+    linkedRun.machineCycles=machine.cycles;
+    linkedRun.chipDebt=machine._chipDebt;
+    linkedRun.chipDeadline=machine._chipDeadline;
+    linkedRun.externalEpoch=externalEpoch;
+    linkedRun.identity=identityOf(machine);
+    bucket.potentialSteps++;
+    if(form.kind==='control-flow'){
+      const jcc=jccOf(bytes,before.eip,before.default32,cpu.eip>>>0);
+      if(jcc){
+        bucket.jccAttempts++;
+        const postReason=cpu.cs!==before.cs||modeOf(cpu)!==before.mode?
+          'post-jcc-mode-or-cs-change':
+          !sameIdentity(before.identity,linkedRun.identity)?
+            'post-jcc-identity-change':jcc.reason;
+        if(postReason){linkedRun.jcc=jcc;endLinkedRun(postReason);}
+        else {
+          bump(bucket.jccOutcomes,jcc.outcome);
+          linkedRun.jcc=jcc;
+          if(linkedRun.length===maxRun)endLinkedRun('run-budget');
+        }
+      }else endLinkedRun('control-flow');
+    }else if(form.kind!=='linear')endLinkedRun(form.kind);
+    else if(linkedRun.length===maxRun)endLinkedRun('run-budget');
   };
   const recordByte=(cpu,eip,value)=>{
     if(!pending||bytes.length>=15)return;
@@ -87,7 +189,9 @@ export function createI80386BroadBlockCensus({maxRun=64}={}){
       return ()=>{
         if(cpu._fetch8===wrapped8){if(own8)Object.defineProperty(cpu,'_fetch8',own8);else delete cpu._fetch8;}
         if(cpu._fetchN===wrappedN){if(ownN)Object.defineProperty(cpu,'_fetchN',ownN);else delete cpu._fetchN;}
-        endRun('end-of-observation');machine=null;pending=null;
+        endRun('end-of-observation');
+        if(linked)endLinkedRun('end-of-observation');
+        machine=null;pending=null;
       };
     },
     observe(target){
@@ -95,18 +199,24 @@ export function createI80386BroadBlockCensus({maxRun=64}={}){
       if(pending)throw new Error('broad-block census step was not completed');
       const cpu=target.cpu,mode=modeOf(cpu),eip=cpu.eip>>>0;
       pending={mode,cs:cpu.cs,eip,linear:linearOf(cpu,eip),cycles:cpu.cycles,
-        fetchCs:null,fetchEip:null};
+        fetchCs:null,fetchEip:null,
+        ...(linked?{default32:!!cpu.segmentCaches[1].default32,
+          identity:identityOf(target),machineCycles:target.cycles,
+          chipDebt:target._chipDebt,chipDeadline:target._chipDeadline,
+          chipEventDue:target._chipDebt>=target._chipDeadline}:{})};
       bytes=[];modes[mode].entryAttempts++;
     },
     retired(target){
       if(target!==machine||!pending)throw new TypeError('broad-block census has no pending step');
       const before=pending,cpu=target.cpu,bucket=modes[before.mode];
       pending=null;
-      if(cpu.cycles===before.cycles){bucket.noRetirement++;endRun('no-retirement');return;}
+      if(cpu.cycles===before.cycles){bucket.noRetirement++;endRun('no-retirement');
+        if(linked)endLinkedRun('no-retirement');return;}
       bucket.retiredSteps++;
       if(before.fetchCs!==before.cs||before.fetchEip!==before.eip){
         bucket.redirectedSteps++;bucket.nonCandidateSteps++;
-        bump(bucket.firstRefusals,'entry-redirect');endRun('entry-redirect');return;
+        bump(bucket.firstRefusals,'entry-redirect');endRun('entry-redirect');
+        if(linked)endLinkedRun('entry-redirect');return;
       }
       if(run&&(run.mode!==before.mode||run.cs!==before.cs||
           run.nextEip!==before.eip||run.page!==(before.linear>>>12)))
@@ -117,6 +227,7 @@ export function createI80386BroadBlockCensus({maxRun=64}={}){
       const reason=bytes.length===0?'missing-fetch':
         (before.linear>>>12)!==(lastLinear>>>12)?'instruction-page-crossing':
         form.reason??null;
+      linkedRetired(before,cpu,form,reason);
       if(reason){
         bucket.nonCandidateSteps++;bump(bucket.firstRefusals,reason);endRun(reason);return;
       }
@@ -130,7 +241,10 @@ export function createI80386BroadBlockCensus({maxRun=64}={}){
       if(target!==machine||!pending)throw new TypeError('broad-block census has no pending step');
       modes[pending.mode].abortedCalls++;
       pending=null;endRun('aborted-call');
+      if(linked)endLinkedRun('aborted-call');
     },
-    report(){return {schema:'bw.i80386-broad-block-census.v1',maxRun,modes};},
+    externalEvent(){externalEpoch++;if(linkedRun?.jcc)endLinkedRun('external-event');},
+    report(){return {schema:'bw.i80386-broad-block-census.v1',maxRun,modes,
+      ...(linked?{jccLinkedPotential:linked}:{})};},
   };
 }

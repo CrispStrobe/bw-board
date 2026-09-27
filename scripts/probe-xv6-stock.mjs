@@ -65,7 +65,9 @@ const lean = process.env.XV6_LEAN === '1';
 const code16Coverage = process.env.XV6_CODE16_COVERAGE === '1' ?
   createI80386Code16Coverage() : null;
 const broadBlockCensus = process.env.XV6_BROAD_BLOCK_CENSUS === '1' ?
-  createI80386BroadBlockCensus() : null;
+  createI80386BroadBlockCensus({linkJcc:process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'}) : null;
+if(process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
+  throw new Error('Jcc link census requires XV6_BROAD_BLOCK_CENSUS=1');
 const nativeByte = process.env.XV6_NATIVE_BYTE === '1';
 const nativeDispatch = process.env.XV6_NATIVE_DISPATCH === '1';
 if ((nativeByte || nativeDispatch) && !lean)
@@ -159,6 +161,7 @@ for (; steps < stepsLimit; steps++) {
     commandStarted = true;
   if (commandStarted && inputSent.length < command.length && machine.chips.uart1.rxFifo.length === 0) {
     const byte = command.charCodeAt(inputSent.length);
+    broadBlockCensus?.externalEvent();
     machine.serialIn(byte);
     inputSent.push({step: steps, byte});
   }
