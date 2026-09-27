@@ -25,6 +25,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Fetch pinned MIT xv6 source
+        run: |
+          git clone https://github.com/mit-pdos/xv6-public.git /tmp/xv6-public
+          git -C /tmp/xv6-public checkout eeb7b415dbcb12cc362d0783e41c3d1f44066b17
       - run: node --test test/i80386-at-machine.test.mjs test/i80386-ata16.test.mjs test/i80386-paging.test.mjs
       - run: node scripts/build-xv6-stock-4m.mjs
         env:
