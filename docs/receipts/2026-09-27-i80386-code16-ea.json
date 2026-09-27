@@ -1,0 +1,19 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "19ef9a28f91d01dbdc4e0223be930ba58d969d77",
+  "scope": "Pure 16-bit ModR/M memory EA descriptor and admission-only data-window pairing; no guest execution wiring or speed claim",
+  "sources": {
+    "src/experimental/i80386-code16-ea.js": "sha256:087bb8fbeba2e963d792275ebd5ca964f0e7a68ef0ca185f24c6fb05283723d2",
+    "test/i80386-code16-ea.test.mjs": "sha256:5d4692e62bd93b638a2da57034765fbda5701dd26c3db802b2638e0c769c3c9c",
+    "docs/I80386-CODE16-EA.md": "sha256:4c6342a94b2c9c5bc86a4e4455e754235ead85f8951aba8ddce5c2d03cf0b2ed"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 411,
+    "passed": 407,
+    "failed": 0,
+    "skipped": 4,
+    "focusedEATests": 7
+  },
+  "proofBoundary": "Caller supplies bytes from a validated code window; the pure decoder does not prove fetch identity. The paired proof must be rechecked immediately before each future access."
+}
