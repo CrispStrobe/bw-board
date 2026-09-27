@@ -124,7 +124,8 @@ const nativeRunner = nativeByte ? await (async () => {
   return createI80386NativeByteRunner(machine, machine._experimentalRamBridge);
 })() : null;
 const nativeBlocks = new Map();
-const nativeStats = {attempts:0, decoded:0, blockCalls:0, instructions:0};
+const nativeStats = {attempts:0, decoded:0, blockCalls:0, instructions:0,
+  repStosDecoded:0, repStosBlockCalls:0, repStosIterations:0};
 const read386 = machine._read386.bind(machine);
 machine._read386 = address => {
   if (address >= 0xfee00020 && address < 0xfee00024 && lapicIdReads.length < 32)
@@ -163,11 +164,14 @@ for (; steps < stepsLimit; steps++) {
       const key=cpu.eip >>> 0;
       let entry=nativeBlocks.get(key);
       if (!entry || entry.cs !== cpu.cs || entry.cr3 !== cpu.cr3 ||
-          entry.cr4 !== cpu.cr4) {
+          entry.cr4 !== cpu.cr4 || (!entry.block &&
+            cpu._repeatContext?.cs === cpu.cs && cpu._repeatContext?.eip === key)) {
         let block;
         block=nativeRunner.decode(8);
-        if (block && block.instructions.length >= 2) {
+        if (block && (block.instructions.length >= 2 ||
+            block.instructions[0]?.op === 17)) {
           nativeStats.decoded++;
+          if (block.instructions[0]?.op === 17) nativeStats.repStosDecoded++;
         } else block=null;
         if (nativeBlocks.size >= 4096) nativeBlocks.delete(nativeBlocks.keys().next().value);
         entry={cs:cpu.cs,cr3:cpu.cr3,cr4:cpu.cr4,block};
@@ -180,7 +184,12 @@ for (; steps < stepsLimit; steps++) {
           advanced=result.instructions;
           nativeStats.blockCalls++;
           nativeStats.instructions+=advanced;
-        } else if (result.reason === 'fallback') nativeBlocks.delete(key);
+          if (block.instructions[0]?.op === 17) {
+            nativeStats.repStosBlockCalls++;
+            nativeStats.repStosIterations+=advanced;
+          }
+        } else if (result.reason === 'fallback' ||
+            result.reason === 'fault-boundary') nativeBlocks.delete(key);
       }
     }
     if (advanced === 0) {machine.step();advanced=1;}
@@ -202,6 +211,9 @@ const receipt = {
   ...(lean ? {lean: true} : {}),
   ...(process.env.XV6_SHARED_RAM === '1' || nativeByte ? {sharedRam: true} : {}),
   ...(nativeByte ? {nativeByte:true,nativeStats} : {}),
+  ...(process.env.XV6_RAM_HASH === '1' ? {ramSha256:crypto.createHash('sha256')
+    .update(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes))
+    .digest('hex')} : {}),
   firmware,
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},

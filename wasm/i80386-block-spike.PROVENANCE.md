@@ -20,9 +20,11 @@ clang --target=wasm32 -O3 -nostdlib -fno-builtin -Werror -Wall -Wextra \
   -o wasm/i80386-block-spike.wasm
 ```
 
-Source SHA-256: `7b3e7eb0234464f9ed35afbd434c6cbfa9f8aed0bdb84d385dc43bc7662a54b9`
+Source SHA-256: `1fecfdd39bd1fddbd5cd41043e0f3e13b0f6cfd8d8fa134c25ed5943058b3f84`
 
-WASM SHA-256: `4f49b057c51ebc09845b5b623ddbae96ecdc57a7c68020095c7191bdafac9e52`
+WASM SHA-256: `4c854770221609169e535faacb32a5684a968c69ef87860a10bde847c89ca5fb`
 
-This is a bounded execution-contract demonstration. The production 80386 AT
-still uses the JavaScript CPU. No xv6 or Windows speedup is claimed.
+The module is used by the opt-in stock-xv6 native-byte probe. Its
+[REP STOSD receipt](../docs/receipts/2026-09-27-i80386-native-rep-stosd.json)
+records matching guest RAM and an observed xv6 speed gain. The production
+80386 AT, CLI and GUI still use the JavaScript CPU; no Windows gain is claimed.

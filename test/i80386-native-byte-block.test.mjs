@@ -26,6 +26,8 @@ async function fixture(shared) {
   const cpu=machine.cpu;
   cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,
     present:true,code:true,readable:true,writable:false};
+  cpu.segmentCaches[0]={base:0,limit:0xffffffff,default32:true,
+    present:true,code:false,readable:true,writable:true};
   cpu.segmentCaches[3]={base:0,limit:0xffffffff,default32:true,
     present:true,code:false,readable:true,writable:true};
   cpu.cr0=0x80000001;cpu.cr3=0x1000;cpu.eip=CODE;
@@ -70,6 +72,61 @@ test('native block exits at the same AT chip horizon as ordinary steps',async()=
   assert.deepEqual(state(fast.machine),state(slow.machine));
   fast.machine.cpu.eflags|=0x100; // Single-step tracing uses the JS CPU.
   assert.deepEqual(runner.run(block,8),{instructions:0,cycles:0,reason:'fallback'});
+});
+
+test('stale PIC interrupt does not block native execution after xv6 APIC handoff',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    machine._mpReady=true;
+    machine._pic._intActive=true;
+    machine.cpu.eflags|=0x200;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8);
+  assert.deepEqual(runner.run(block,3),{instructions:3,cycles:18,reason:'event'});
+  for(let i=0;i<3;i++)slow.machine.step();
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('a masked PIC interrupt does not block native execution with IF clear',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    machine._pic._intActive=true;
+    machine.cpu.eflags&=~0x200;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8);
+  assert.deepEqual(runner.run(block,3),{instructions:3,cycles:18,reason:'event'});
+  for(let i=0;i<3;i++)slow.machine.step();
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('a masked IOAPIC edge does not block native execution',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    machine._mpReady=true;
+    machine._apicIrqMask=1 << 14;
+    machine._ioapic[0x10 + 14 * 2]=0x10000;
+    machine.cpu.eflags|=0x200;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8);
+  assert.deepEqual(runner.run(block,3),{instructions:3,cycles:18,reason:'event'});
+  for(let i=0;i<3;i++)slow.machine.step();
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('a deliverable IOAPIC edge exits before native execution',async()=>{
+  const {machine,bridge}=await fixture(true);
+  machine._mpReady=true;
+  machine._apicIrqMask=1 << 14;
+  machine._ioapic[0x10 + 14 * 2]=0x32;
+  machine.cpu.eflags|=0x200;
+  const runner=await createI80386NativeByteRunner(machine,bridge);
+  const block=runner.decode(8),before=state(machine);
+  assert.deepEqual(runner.run(block,3),
+    {instructions:0,cycles:0,reason:'fallback'});
+  assert.deepEqual(state(machine),before);
 });
 
 test('page-table remap invalidates a previously decoded native load',async()=>{
@@ -148,4 +205,100 @@ test('native immediate decoder rejects memory operands',async()=>{
     code.forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
     assert.equal(runner.decode(1),null);
   }
+});
+
+async function stosFixture({count=9,offset=0,direction=false,extraPage=false}={}) {
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine,put32} of [fast,slow]) {
+    if (extraPage) put32(0x4000+0x131*4,(DATA_PHYS+0x1000)|7);
+    machine._write386(CODE_PHYS,0xf3);
+    machine._write386(CODE_PHYS+1,0xab);
+    const cpu=machine.cpu;
+    cpu.eax=0x89abcdef;cpu.ecx=count;cpu.edi=(DATA+offset)>>>0;
+    cpu.eflags=0x202 | (direction ? 0x400 : 0);
+    machine.step(); // The interpreter sets REP restart state and the dirty TLB bit.
+  }
+  return {fast,slow,runner:await createI80386NativeByteRunner(fast.machine,fast.bridge)};
+}
+
+function stosState(machine) {
+  return {...state(machine),edi:machine.cpu.edi,
+    repeatContext:machine.cpu._repeatContext,
+    data:Array.from(machine.mem.slice(DATA_PHYS-8,DATA_PHYS+0x1010))};
+}
+
+test('native REP STOSD completes after the first interpreted iteration in both directions',async()=>{
+  for(const direction of [false,true]) {
+    const {fast,slow,runner}=await stosFixture({count:9,
+      offset:direction ? 32 : 0,direction});
+    const block=runner.decode(8);
+    assert.deepEqual(block?.instructions.map(ins=>ins.op),[17]);
+    assert.deepEqual(runner.run(block,8),
+      {instructions:8,cycles:48,reason:'done'});
+    for(let i=0;i<8;i++)slow.machine.step();
+    assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+    assert.equal(fast.machine.cpu._repeatContext,null);
+    assert.equal(fast.machine.cpu.eip,CODE+2);
+  }
+});
+
+test('native REP STOSD respects instruction and chip budgets and retains restart state',async()=>{
+  const {fast,slow,runner}=await stosFixture({count:12});
+  const block=runner.decode(8);
+  assert.deepEqual(runner.run(block,3),
+    {instructions:3,cycles:18,reason:'event'});
+  for(let i=0;i<3;i++)slow.machine.step();
+  assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+  fast.machine._chipDeadline=slow.machine._chipDeadline=fast.machine._chipDebt+7;
+  assert.deepEqual(runner.run(block,8),
+    {instructions:2,cycles:12,reason:'event'});
+  for(let i=0;i<2;i++)slow.machine.step();
+  assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+});
+
+test('native REP STOSD exits before a page crossing and resumes after JS primes next page',async()=>{
+  const {fast,slow,runner}=await stosFixture({count:5,offset:0xff8,extraPage:true});
+  const block=runner.decode(8);
+  assert.equal(block?.instructions[0]?.op,17);
+  assert.deepEqual(runner.run(block,8),
+    {instructions:1,cycles:6,reason:'fault-boundary'});
+  slow.machine.step();
+  assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+  assert.deepEqual(runner.run(block,8),
+    {instructions:0,cycles:0,reason:'fault-boundary'});
+  fast.machine.step();slow.machine.step(); // New page first write runs through JS.
+  assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+  const next=runner.decode(8);
+  assert.equal(next?.instructions[0]?.op,17);
+  assert.deepEqual(runner.run(next,8),
+    {instructions:2,cycles:12,reason:'done'});
+  slow.machine.step();slow.machine.step();
+  assert.deepEqual(stosState(fast.machine),stosState(slow.machine));
+});
+
+test('native REP STOSD invalidates for code mutation and page remap',async()=>{
+  const {fast,runner}=await stosFixture({count:5});
+  const block=runner.decode(8);
+  assert.equal(isI80386NativeByteBlockValid(block),true);
+  fast.machine._write386(CODE_PHYS+1,0xaa);
+  assert.equal(isI80386NativeByteBlockValid(block),false);
+  fast.machine._write386(CODE_PHYS+1,0xab);
+  fast.put32(0x4000+0x130*4,0x140007);
+  assert.equal(isI80386NativeByteBlockValid(block),false);
+  assert.deepEqual(runner.run(block,8),
+    {instructions:0,cycles:0,reason:'fallback'});
+});
+
+test('native REP STOSD requires exact bytes and matching interpreter restart state',async()=>{
+  const {fast,runner}=await stosFixture({count:5});
+  const cpu=fast.machine.cpu;
+  assert.equal(runner.decode(1)?.instructions[0]?.op,17);
+  const context=cpu._repeatContext;
+  cpu._repeatContext=null;
+  assert.equal(runner.decode(1),null);
+  cpu._repeatContext={...context,eip:CODE+2};
+  assert.equal(runner.decode(1),null);
+  cpu._repeatContext=context;
+  fast.machine._write386(CODE_PHYS,0x66);
+  assert.equal(runner.decode(1),null);
 });

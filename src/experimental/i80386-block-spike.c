@@ -7,7 +7,7 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
        OP_LOAD_WINDOW=8, OP_LEA32=9,
        OP_CMP_IMM=10, OP_MOV_IMM=11,
        OP_ADD_IMM=12, OP_OR_IMM=13, OP_AND_IMM=14,
-       OP_SHL_IMM=15, OP_SHR_IMM=16,
+       OP_SHL_IMM=15, OP_SHR_IMM=16, OP_REP_STOSD=17,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -25,7 +25,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 6; }
+uint32_t block_spike_version(void) { return 7; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -56,6 +56,10 @@ static uint32_t read_ram(uint32_t address, uint32_t bytes) {
   uint32_t value = 0;
   for (uint32_t i = 0; i < bytes; i++) value |= (uint32_t)p[i] << (8u * i);
   return value;
+}
+static void write_ram32(uint32_t address, uint32_t value) {
+  uint8_t *p = (uint8_t *)(uintptr_t)(ram_ptr + address);
+  for (uint32_t i = 0; i < 4; i++) p[i] = (uint8_t)(value >> (8u * i));
 }
 static void logic_flags(uint32_t value, uint32_t width) {
   const uint32_t mask = width == 16 ? 0xffffu : 0xffffffffu;
@@ -120,8 +124,8 @@ static uint32_t shift_flags(uint32_t original, uint32_t count,
 
 // Return reason in bits 31..24 and completed guest instructions in 23..0.
 // The caller must validate code bytes, paging, CS bounds, and code-page
-// versions before filling this IR. RAM loads are permitted only in a physical
-// window whose mapping and permissions the host has already proved safe.
+// versions before filling this IR. RAM accesses are permitted only in physical
+// windows whose mapping and permissions the host has already proved safe.
 uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
   if (start > end || end > 64) return EXIT_UNSUPPORTED << 24;
   uint32_t completed = 0;
@@ -130,6 +134,23 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
     const Instruction ins = program[pc];
     if (ins.op == OP_FAULT_BOUNDARY)
       return (EXIT_FAULT_BOUNDARY << 24) | completed;
+    if (ins.op == OP_REP_STOSD) {
+      const uint32_t offset = state.regs[7];
+      const uint32_t address = offset + ins.disp;
+      if (ins.length != 2 || ins.width != 32 || ins.lo >= ins.hi ||
+          ins.hi > ram_capacity || (offset & ~4095u) != ins.base ||
+          (offset & 4095u) > 4092u || address < ins.lo ||
+          address >= ins.hi || 4u > ins.hi - address)
+        return (EXIT_FAULT_BOUNDARY << 24) | completed;
+      if (!state.regs[1]) return (EXIT_UNSUPPORTED << 24) | completed;
+      write_ram32(address, state.regs[0]);
+      state.regs[7] += (state.eflags & 0x400u) ? -4u : 4u;
+      state.regs[1]--;
+      if (!state.regs[1]) { state.eip += ins.length; pc++; }
+      state.cycles++;
+      completed++;
+      continue;
+    }
     const uint32_t branch = ins.op >= OP_JZ && ins.op <= OP_JMP;
     const uint32_t load = ins.op == OP_LOAD_PHYS;
     const uint32_t ea = ins.op == OP_LOAD_WINDOW || ins.op == OP_LEA32;

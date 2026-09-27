@@ -1,6 +1,6 @@
 # Static WASM 386 block spike
 
-The bundled 6,032-byte WASM module executes prevalidated register-only MOV,
+The bundled 6,287-byte WASM module executes prevalidated register-only MOV,
 CMP, TEST, immediate MOV/CMP/ADD/OR/AND/SHL/SHR, NOP, JZ, JNZ and JMP operations
 plus physical RAM loads and LEA
 in one JS→WASM call. It accepts an instruction budget from the board's event horizon. A budget of
@@ -81,6 +81,18 @@ Two opt-in full runs take 22.87 and 22.49 user CPU seconds, while recent
 ordinary runs take 26.89 and 27.99 seconds. Guest reports match exactly.
 This is a measured gain for the probe only; production AT stepping and the
 GUI/CLI adapters still use the JavaScript CPU.
+
+The [REP STOSD integration receipt](receipts/2026-09-27-i80386-native-rep-stosd.json)
+adds a bounded 32-bit write operation for exact `F3 AB` continuations after
+the JavaScript CPU has performed the first iteration. A side-effect-free
+[ES write-window helper](../src/experimental/i80386-write-window.js) admits
+only an already cached, dirty, writable high-RAM page; the WASM operation
+checks every four-byte store against that page and exits before crossing it.
+The host then falls back to the interpreter, which primes the next page and
+retains precise faults, paging bits and interrupt behavior. A full xv6 A/B
+matches the final 4 MiB RAM hash and all ordinary report fields. Two native
+runs take 20.02 and 19.72 user CPU seconds versus 26.43 and 26.77 for the
+ordinary probe. This is still an opt-in xv6 path, not a general native CPU.
 
 The host must check CS bounds, paging/permissions, code-page versions,
 instruction bytes, branch target EIPs and physical load addresses before writing IR. It

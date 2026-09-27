@@ -1,9 +1,11 @@
 // Opt-in first integration of real 386 bytes with the bounded WASM spike.
-// Deliberately narrow: cached flat 32-bit RAM code, read-only guest effects,
-// and no instruction that can alter interrupt/debug/segment/paging state.
+// Deliberately narrow: cached flat 32-bit RAM code and prevalidated RAM
+// windows, with no instruction that can alter interrupt/debug/segment/paging state.
 import {createI80386BlockSpike} from './i80386-block-spike.js';
 import {prevalidateI80386ReadWindow, isI80386ReadWindowValid} from
   './i80386-read-window.js';
+import {prevalidateI80386WriteWindow, isI80386WriteWindowValid} from
+  './i80386-write-window.js';
 
 const REG = ['eax','ecx','edx','ebx','esp','ebp','esi','edi'];
 
@@ -18,7 +20,7 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
   const pageEnd = codeWindow.linearPage + 4096;
   const startPhysical = codeWindow.physicalPage + (startEip - codeWindow.linearPage);
   const mem = machine.mem;
-  const instructions = [], readWindows = [];
+  const instructions = [], readWindows = [], writeWindows = [];
   const starts = new Map();
   let eip = startEip;
   for (let n = 0; n < maxInstructions && eip < pageEnd; n++) {
@@ -31,7 +33,16 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
     let ir;
     try {
       const op = take();
-      if (op === 0x90) ir = {op:0,width:32};
+      if (op === 0xf3) {
+        if (n !== 0 || take() !== 0xab || !cpu.protectedMode ||
+            cpu.virtual8086 || cpu._repeatContext?.cs !== cpu.cs ||
+            cpu._repeatContext?.eip !== startEip || !cpu.ecx) break;
+        const window=prevalidateI80386WriteWindow(machine,cpu.edi >>> 0);
+        if (!window) break;
+        writeWindows.push(window);
+        ir={op:17,width:32,base:window.linearPage,
+          disp:window.delta,lo:window.lo,hi:window.hi};
+      } else if (op === 0x90) ir = {op:0,width:32};
       else if (op >= 0xb8 && op <= 0xbf) {
         let immediate=0;
         for(let i=0;i<4;i++) immediate=(immediate | (take() << (8*i)))>>>0;
@@ -104,11 +115,11 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
     starts.set(eip,instructions.length);
     instructions.push(ir);
     eip += length;
-    if (ir.op >= 4 && ir.op <= 6) break;
+    if (ir.op >= 4 && ir.op <= 6 || ir.op === 17) break;
   }
   if (!instructions.length) return null;
   const bytes=mem.slice(startPhysical,startPhysical+(eip-startEip));
-  return {machine,cpu,startEip,codeWindow,readWindows,instructions,
+  return {machine,cpu,startEip,codeWindow,readWindows,writeWindows,instructions,
     physicalStart:startPhysical,bytes};
 }
 
@@ -116,7 +127,8 @@ export function isI80386NativeByteBlockValid(block) {
   if (!block || block.machine?.cpu !== block.cpu ||
       block.cpu.eip !== block.startEip ||
       !isI80386ReadWindowValid(block.codeWindow) ||
-      !block.readWindows.every(isI80386ReadWindowValid)) return false;
+      !block.readWindows.every(isI80386ReadWindowValid) ||
+      !block.writeWindows.every(isI80386WriteWindowValid)) return false;
   const mem=block.machine.mem;
   for(let i=0;i<block.bytes.length;i++)
     if (mem[block.physicalStart+i] !== block.bytes[i]) return false;
@@ -135,16 +147,32 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
       const cpu=machine.cpu;
       if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
         throw new RangeError('native byte block budget must be 1 through 64');
+      const repeatStos=block?.instructions?.[0]?.op === 17;
       if (!isI80386NativeByteBlockValid(block) || cpu.halted || cpu.shutdown ||
           machine._cycleEst !== null ||
           cpu.eflags & (0x100 | 0x10000) || cpu._interruptShadow || cpu._nmiShadow ||
-          cpu._debugShadow || cpu._repeatContext || cpu.busTrace ||
+          cpu._debugShadow || (repeatStos
+            ? (!cpu.protectedMode || cpu.virtual8086 ||
+              cpu._repeatContext?.cs !== cpu.cs ||
+              cpu._repeatContext?.eip !== block.startEip || !cpu.ecx)
+            : cpu._repeatContext) || cpu.busTrace ||
           machine._cpuResetPending || cpu.cycles > 0xffffffff-64)
         return {instructions:0,cycles:0,reason:'fallback'};
       if (machine._chipDebt >= machine._chipDeadline)
         return {instructions:0,cycles:0,reason:'chip-event'};
-      if (machine._nmiPending || machine._lapicTimerPending ||
-          machine._apicIrqMask || machine._pic?.intActive ||
+      const apicMode=machine._xv6Mp && machine._mpReady && (cpu.cr0 & 1);
+      let apicIrqReady=false;
+      if (machine._xv6Mp && machine._apicIrqMask && (cpu.eflags & 0x200)) {
+        for(let irq=0;irq<machine._apicIrq.length;irq++) {
+          if (!(machine._apicIrqMask & (1 << irq))) continue;
+          const low=machine._ioapic[0x10 + irq * 2] ?? 0;
+          if (!(low & 0x10000)) {apicIrqReady=true;break;}
+        }
+      }
+      if (machine._nmiPending ||
+          (machine._xv6Mp && machine._lapicTimerPending && (cpu.eflags & 0x200)) ||
+          apicIrqReady ||
+          (!apicMode && (cpu.eflags & 0x200) && machine._pic?.intActive) ||
           (machine._lapicTimerInterval && machine.cycles >= machine._lapicTimerNext))
         return {instructions:0,cycles:0,reason:'fallback'};
       const charge=machine.functionalInstructionCycles;
@@ -157,6 +185,7 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
       native.setProgram(block.instructions);
       const result=native.run(0,block.instructions.length,budget);
       native.copyStateToCpu(cpu);
+      if (repeatStos && result.completed && !cpu.ecx) cpu._repeatContext=null;
       const cycles=result.completed*charge;
       machine.cycles+=cycles;machine._chipDebt+=cycles;
       return {instructions:result.completed,cycles,reason:result.reason};

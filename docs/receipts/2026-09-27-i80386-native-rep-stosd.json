@@ -1,0 +1,50 @@
+{
+  "schema": "astra.i80386-native-rep-stosd.v1",
+  "date": "2026-09-27",
+  "sourceBaselineCommit": "4519dbc9941a0192d2bad51a22b6961ab09d2d91",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "commandBase": "XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "commandNativeAddition": "XV6_NATIVE_BYTE=1",
+    "commandMemoryAddition": "XV6_RAM_HASH=1",
+    "nodeVersion": "v20.20.2",
+    "guestSteps": 24338279,
+    "serialEndsWith": "fork test OK\n$ ",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "finalPhysicalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "normalizedGuestReportWithRamSha256": "ffa2d9a490265ce580b88485b3e983895c26e9a4e20a0862dd0ecc56377d873c",
+    "guestReportsAndRamMatch": true,
+    "normalization": "Remove nativeByte, nativeStats and sharedRam fields; replace rom, image and slaveImage absolute paths with <media>; retain RAM SHA-256 and all other report fields in original JSON order."
+  },
+  "implementation": {
+    "wasmSourceSha256": "1fecfdd39bd1fddbd5cd41043e0f3e13b0f6cfd8d8fa134c25ed5943058b3f84",
+    "wasmBinarySha256": "4c854770221609169e535faacb32a5684a968c69ef87860a10bde847c89ca5fb",
+    "wasmLoaderSha256": "d4e7ce4a4e5eb85269bcb6793b006a04267ca8b2ced2fd0c7f808ed2b3f77c2d",
+    "nativeByteSourceSha256": "19ae049b5001f84f1adbcb64f2f687b30b0161cf7e3b23261c6f2241a197a715",
+    "writeWindowSourceSha256": "d18d0f81d2cecd850d38dbaac14f03dcaafc504e5759142be0c672f37bf27bda",
+    "probeSourceSha256": "0617aecc357843515dcc5be7b9e3bb3cbe03e6fbcc76aa82d49e712dcc63b280",
+    "scope": "Opt-in exact F3 AB in flat paged 32-bit CS/ES, after the interpreter has performed the first iteration. Only cached, dirty, writable plain high-RAM ES pages outside current code and tracked page-table pages qualify. Each four-byte store is checked against its page. The runner exits before unsafe writes, page crossings, chip deadlines and deliverable interrupts."
+  },
+  "native": {
+    "attempts": 15121837,
+    "decodedBlocks": 17373,
+    "blockCalls": 2082524,
+    "retiredInstructions": 11298966,
+    "retiredFraction": 0.464247,
+    "instructionsPerCall": 5.42561,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309,
+    "repStosReferenceRetirements": 2168824,
+    "repStosNativeFraction": 0.989158,
+    "userCpuSeconds": [20.02, 19.72],
+    "userCpuSecondsWithMemoryHash": 19.61
+  },
+  "ordinary": {
+    "userCpuSeconds": [26.43, 26.77]
+  },
+  "interruptBoundaryFinding": "The initial native REP attempt was slower because the runner rejected persistent legacy PIC and masked IOAPIC edges. The AT board ignores PIC after APIC handoff and ignores masked IOAPIC edges. The runner now checks IF, APIC handoff and IOAPIC redirection mask before accepting a pending interrupt as deliverable; focused tests cover masked and deliverable cases.",
+  "validation": "node --test test/i80386*.test.mjs: 368 passed, 4 skipped, 0 failed. Focused native tests compare forward/backward REP stores, completion, event budget, page crossing, code mutation, page remap and interrupt boundaries against ordinary stepping. Full stock xv6 native and ordinary reports, including final 4 MiB physical RAM SHA-256, match after opt-in metadata and absolute media path normalization.",
+  "conclusion": "The opt-in xv6 native path shows about 1.3x full-workload speedup on this host with matching guest RAM and state. It remains far from 10x and is not wired into general CLI or GUI stepping."
+}

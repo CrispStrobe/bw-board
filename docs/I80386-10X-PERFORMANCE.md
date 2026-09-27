@@ -219,3 +219,19 @@ and 27.99 seconds for the recent ordinary runs. That is an observed roughly
 1.2× gain for the opt-in probe on this host, still far from 10× and still not
 integrated into normal CLI or GUI stepping. The next substantial coverage
 requires precise native writes for REP STOS and common memory ALU forms.
+
+The [bounded REP STOSD A/B](receipts/2026-09-27-i80386-native-rep-stosd.json)
+adds native writes only to already cached, writable, dirty ES pages in plain
+high RAM. It rejects page-table pages, the current code page, A20 gating,
+MMIO, unvalidated translations and page crossings; other writes fall back to
+the JavaScript CPU. The runner also now checks whether PIC or IOAPIC edges
+are *deliverable*, matching the AT board's IF, APIC handoff and IOAPIC mask
+rules. On full xv6 `forktest`, 2,145,309 REP STOSD iterations retire natively,
+98.9% of the 2,168,824 REP STOS events observed in the earlier opcode trace.
+Overall native retirement reaches 11,298,966 of 24,338,279 guest steps
+(46.4%), at 5.43 instructions per block call. Two native runs take 20.02 and
+19.72 user CPU seconds; recent ordinary runs take 26.43 and 26.77 seconds.
+The final 4 MiB RAM SHA-256 matches exactly, as do CPU, serial, interrupts,
+screen and milestones. This is an observed roughly 1.3× end-to-end gain for
+the opt-in xv6 probe on this host, still far from 10×. Production CLI and GUI
+stepping do not use this backend yet.

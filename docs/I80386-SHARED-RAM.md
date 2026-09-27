@@ -7,12 +7,14 @@ bytes that a future WASM executor would read, without a copy at each block
 boundary. The module reserves 16 MiB, the board's maximum physical address
 space, and forbids memory growth so the JavaScript view cannot detach.
 
-This is a storage contract, **not an accelerated CPU**. The JavaScript 386
-still executes every instruction, translates pages, handles faults, and
-arbitrates devices. The ordinary board bus remains responsible for A20 alias,
-ROM/MMIO, APIC, VGA, paging A/D effects, and write coherence. A future WASM
-executor must use that same backing view but cannot bypass those checks just
-because the bytes are shared.
+The bridge itself is a storage contract. The JavaScript 386 still handles
+ordinary board execution, faults and devices. An opt-in xv6 probe now uses
+the same backing for bounded native read, register and REP STOSD blocks; its
+[full A/B receipt](receipts/2026-09-27-i80386-native-rep-stosd.json) records
+matching guest RAM and state. The ordinary board bus remains responsible for
+A20 alias, ROM/MMIO, APIC, VGA, paging A/D effects and write coherence.
+Native writes are admitted only when those effects have already been proved
+unnecessary for the current physical page.
 
 Set `XV6_SHARED_RAM=1` on `scripts/probe-xv6-stock.mjs` to exercise the bridge.
 The complete lean stock xv6 `forktest` ran for 24,338,279 machine steps and
@@ -23,10 +25,11 @@ run used 27.45 user-CPU seconds; no speedup is claimed. The
 media and source hashes. Two focused tests also cover CPU/host/DMA byte
 visibility, A20 aliasing, APIC decode and the fixed memory size.
 
-The next implementation has to execute a *broad* instruction block against
-this backing memory, with exits before faults and device boundaries. The
-earlier narrow register-only WASM spike cannot accelerate real xv6, because
-almost every eligible instruction is isolated. The board event-horizon trace
-shows that chip deadlines alone allow complete 64-instruction spans for
-95.9% of retired xv6 instructions; code and memory semantics are the remaining
-constraint. This bridge is opt-in and does not change the shipped 386 target.
+The earlier register-only WASM spike could not accelerate real xv6 because
+almost every eligible instruction was isolated. Bounded memory reads,
+register ALU/shift forms, linked short branches and REP STOSD now move 46.4%
+of stock-xv6 `forktest` guest steps through the opt-in native path. The board
+event-horizon trace shows that chip deadlines alone allow complete
+64-instruction spans for 95.9% of retired xv6 instructions; code, paging and
+device semantics still limit broader blocks. This bridge is opt-in and does
+not change the shipped 386 target.
