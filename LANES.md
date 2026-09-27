@@ -1,3 +1,18 @@
+2026-09-27 AD8541 physical/package-neutral rail-to-rail op-amp model — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-ad8541-board`, branch `lane/ad8541-model`, exact
+base `eddc5f8b295a575056817f31856699febe06ef9d`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused AD8541
+test. Add one manufacturer-bounded R-8 physical contract and a separate
+five-terminal package-neutral source contract: 2.7 V to 5.5 V operation,
+rail-to-rail input, guaranteed loaded output envelope, finite gain, 1 MHz GBW,
+documented slew and maximum supply budget. Preserve `AD8541.lib` as a named
+downstream source-model substitution blocker; no proprietary model payload or
+claim of transistor/noise/distortion equivalence. Prove exact physical/logical
+terminals, power refusal, finite gain, feedback, common-mode/output bounds,
+slew and bandwidth with independent mutations. No generic controller, solver,
+other device, face/art, importer/exporter, corpus, workflow, package pin, CUI,
+Parts or Lite edit.
+
 2026-09-27 LT1678 physical dual precision op-amp model — DONE candidate, Codex `/root`.
 Isolated worktree `/tmp/wt-bwcx-lt1678-board`, branch
 `lane/lt1678-dual-model`, exact base
