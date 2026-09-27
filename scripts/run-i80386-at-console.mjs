@@ -22,15 +22,17 @@ const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAG
   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
   nativeBlocks:process.env.AT_NATIVE_BLOCKS==='1',
   code16Loads:process.env.AT_CODE16_LOADS==='1',
+  code16Wasm:process.env.AT_CODE16_WASM==='1',
   steps:process.env.AT_POST_STEPS??1_000_000};
 for(let index=0;index<process.argv.length-2;index++) {
   const option=process.argv[index+2];
   if(option==='--help') {
-    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live] [--native-blocks]\n');
+    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live] [--native-blocks] [--code16-wasm]\n');
     process.exit(0);
   }
   if(option==='--live'){options.live=true;continue;}
   if(option==='--native-blocks'){options.nativeBlocks=true;continue;}
+  if(option==='--code16-wasm'){options.code16Wasm=true;continue;}
   const value=process.argv[++index+2];
   if(!value)throw new Error(`${option} needs a value`);
   if(option==='--dosbox-conf')options.conf=value;
@@ -81,10 +83,12 @@ const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
   mixedUserMicroseconds:0,mixedSystemMicroseconds:0,
   samples:0,transitions:0,
 }:null;
-if(code16Coverage&&options.nativeBlocks)
+if(code16Coverage&&(options.nativeBlocks||options.code16Wasm))
   throw new Error('code16 coverage requires ordinary single-step execution');
-if(modeCpuProfile&&(options.nativeBlocks||code16Coverage||options.code16Loads))
+if(modeCpuProfile&&(options.nativeBlocks||options.code16Wasm||code16Coverage||options.code16Loads))
   throw new Error('mode CPU profile requires ordinary single-step execution');
+if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
+  throw new Error('code16 WASM is a separate opt-in dispatcher');
 if(!Number.isInteger(stepsLimit)||stepsLimit<1||stepsLimit>500_000_000)
   throw new Error('AT_POST_STEPS must be 1..500000000');
 const eventBytes=process.env.AT_CONSOLE_EVENTS?fs.readFileSync(process.env.AT_CONSOLE_EVENTS):Buffer.from('[]');
@@ -116,6 +120,9 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/i8086-machine.js','../src/experimental/i80386.js',
   '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
   '../src/experimental/i80386-code16-load-exec.js',
+  '../src/experimental/i80386-code16-wasm-block.js',
+  '../src/experimental/i80386-code16-wasm.c',
+  '../wasm/i80386-code16-wasm.wasm',
   '../src/experimental/i80386-native-dispatch.js',
   '../src/experimental/i80386-native-byte-block.js',
   '../src/experimental/i80386-ram-bridge.js',
@@ -143,6 +150,9 @@ if(options.code16Loads)enableI80386Code16LoadExecution(machine);
 const nativeDispatcher=options.nativeBlocks?
   await (await import('../src/experimental/i80386-native-dispatch.js'))
     .createI80386NativeDispatcher(machine):null;
+const code16WasmDispatcher=options.code16Wasm?
+  await (await import('../src/experimental/i80386-code16-wasm-block.js'))
+    .createI80386Code16WasmDispatcher(machine):null;
 machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
@@ -234,6 +244,7 @@ const runChunk=end=>{while(steps<end) {
   try {
     code16Coverage?.observe(machine);
     if(nativeDispatcher)steps+=nativeDispatcher.run(Math.min(64,budget));
+    else if(code16WasmDispatcher)steps+=code16WasmDispatcher.run(Math.min(64,budget));
     else {machine.step();code16Coverage?.retired(machine);steps++;
       if(modeCpuProfile)recordModeStep(modeBeforeStep);}
   }
@@ -306,12 +317,14 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,
+    code16Wasm:options.code16Wasm,
     cmosEquipment:cmos[0x14],
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   nativeStats:nativeDispatcher?.stats??null,
+  code16WasmStats:code16WasmDispatcher?.stats??null,
   code16LoadExecutions:machine.code16LoadExecutions??0,
   ...(modeCpuProfile?{modeCpuProfile}:{}),
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},

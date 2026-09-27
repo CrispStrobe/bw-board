@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "a49685885f8e9d900109aff832d9e9bdcf895603",
+  "scope": "Opt-in bounded multi-instruction 16-bit WASM slice; no production GUI wiring or speed claim",
+  "buildCommand": "clang --target=wasm32 -O3 -Wall -Wextra -Werror -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--import-memory -Wl,--global-base=16779264 -Wl,--initial-memory=16908288 -Wl,--max-memory=16908288 -o wasm/i80386-code16-wasm.wasm src/experimental/i80386-code16-wasm.c",
+  "sources": {
+    "src/experimental/i80386-code16-wasm.c": "sha256:b443fed0612d8f25e02659f9ef476a812cd15f5c664fcd97786c5e8e96895870",
+    "src/experimental/i80386-code16-wasm-block.js": "sha256:c5ebddd15bdb4c681530d12808bd9f130cc3430f3646206348e9f8238ee38497",
+    "wasm/i80386-code16-wasm.wasm": "sha256:74774050128374ed18c757dee6e1ab01bab2a7d5a8528aec3c9d4e5e4987211d",
+    "scripts/run-i80386-at-console.mjs": "sha256:a20445355c22155cfb19bb21d01c2a7988c35865d0414984682da8ae5c9a50bf",
+    "test/i80386-code16-wasm-block.test.mjs": "sha256:fc305d0707c84750b5f7e83c2b1e4d52d1fa905c9884d345fd71e918e629c051",
+    "docs/I80386-CODE16-WASM-BLOCK.md": "sha256:fc2259537605754c28cd28c9be6694bb9e1dde2aa4c623329531331e25dc4529"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 439,
+    "passed": 435,
+    "failed": 0,
+    "skipped": 4,
+    "focusedWasmTests": 14
+  },
+  "freeBiosSmoke": {
+    "steps": 512,
+    "nativeInstructions": 31,
+    "nativeBlockCalls": 19,
+    "guestRamSha256": "cc18df2ef672d8c903fef5f19b00e2713fde3da915dae76dadf989dd3581d866",
+    "parity": "CPU state and full guest RAM SHA-256 matched ordinary stepping"
+  },
+  "privateLongRunObservation": "Pinned 60-million-step Windows A/B used the pre-rebase CLI SHA-256 01342af139cd84727c7eb4d4a6b36f6acfe88878b92da20d65f550413f6dfd41. Its normalized guest report matched ordinary stepping, including CPU, serial, text, VGA, events and inputs. Ordinary cost 78.40 user CPU seconds versus 295.91 for opt-in (3.77x slower); 2,730,404 native instructions (4.55%) in 1,263,367 calls (mean 2.16), with 57,269,596 fallbacks. The final CLI adds the unrelated mode CPU profiler option and rejects concurrent profiling; the long-run timing is not attributed to its changed CLI bytes. Raw reports and commercial media remain private.",
+  "limitations": "Exact-address read proof exits if prior instructions change an EA register. This option is disabled by default and should not be used for performance; the measured opt-in was 3.77x slower in user CPU time.",
+  "defaultPathComparison": "A prior ordinary 60-million-step report and both new A/B reports have identical normalized guest report SHA-256 45f189dc6022f65f4f354e8f50e3b4767540b5c52a2e888452ffa5189b57196b after dropping source/revision and disabled-option metadata. Raw JSON bytes differ because new metadata and source hashes were added."
+}
