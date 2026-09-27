@@ -852,10 +852,12 @@ export class I8086Machine {
                 keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
                 keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
                 keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
+                mouse:!!this.config.a20.mouse,
                 allowReset:!!this.config.a20.allowReset,
                 onResetRequest:()=>{this._cpuResetPending=true;},
                 onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
-                onIRQ:(active)=>{if(!this._restoring)this._pic?.setIRQ(1,active?1:0);}});
+                onIRQ:(active)=>{if(!this._restoring)this._pic?.setIRQ(1,active?1:0);},
+                onAuxIRQ:(active)=>{if(!this._restoring)this.chips.pic2?.setIRQ(4,active?1:0);}});
         } else this._a20Controller=null;
 
         // The master PIC — the one step() polls to deliver INTR. A breadboard
@@ -1930,6 +1932,13 @@ export class I8086Machine {
         return true;
     }
 
+    /** Optional PS/2 aux port; positive dy means screen down. */
+    canTakeMouse() { return !!(this._a20Controller?.mouse && this.chips.pic2); }
+
+    mouseIn({dx=0,dy=0,buttons=0}={}) {
+        return this.canTakeMouse() ? this._a20Controller.injectMouse({dx,dy,buttons}) : false;
+    }
+
     /** CPU state keys to snapshot (same pattern as M6502Machine.CPU_STATE). */
     static CPU_STATE = ['ax', 'bx', 'cx', 'dx', 'sp', 'bp', 'si', 'di',
         'ip', 'cs', 'ds', 'es', 'ss', 'flags', 'halted', 'cycles',
@@ -2165,7 +2174,8 @@ export class I8086Machine {
                 powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
                 keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
                 keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
-                keyboardUnlocked:!!this.config.a20.keyboardUnlocked} : null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
+                ...(this.config.a20.mouse?{mouse:true}:{})} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
@@ -2210,7 +2220,8 @@ export class I8086Machine {
                 powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
                 keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
                 keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
-                keyboardUnlocked:!!this.config.a20.keyboardUnlocked} : null
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
+                ...(this.config.a20.mouse?{mouse:true}:{})} : null
         });
     }
 

@@ -1,13 +1,17 @@
+import {ATPS2Mouse} from './at-ps2-mouse.js';
+
 /** Bounded, cycle-driven IBM AT 8042 keyboard/system-control model. */
 export class AT8042A20 {
-    constructor({a20Enabled=false,onA20Change=null,onIRQ=null,onResetRequest=null,allowReset=false,
+    constructor({a20Enabled=false,onA20Change=null,onIRQ=null,onAuxIRQ=null,onResetRequest=null,allowReset=false,
         queueLimit=16,inputBusyCycles=0,responseDelayCycles=0,inputPort=0xb0,
         powerOnKeyboardBatCycles=null,keyboardAckCycles=null,keyboardBatCycles=null,
-        keyboardUnlocked=false}={}) {
+        keyboardUnlocked=false,mouse=false}={}) {
         if (!Number.isInteger(queueLimit)||queueLimit<1||queueLimit>256) throw new Error('AT 8042 queueLimit must be 1..256');
         this.initialA20Enabled=!!a20Enabled;
         this.onA20Change=onA20Change;
         this.onIRQ=onIRQ;
+        this.onAuxIRQ=onAuxIRQ;
+        this.mouse=mouse?new ATPS2Mouse():null;
         this.onResetRequest=onResetRequest;
         this.allowReset=!!allowReset;
         this.queueLimit=queueLimit;
@@ -45,6 +49,7 @@ export class AT8042A20 {
         this.systemFlag=false;
         this.keyboardSchedule=this.powerOnKeyboardBatCycles===null?[]:
             [{remaining:this.powerOnKeyboardBatCycles,value:0xaa}];
+        this.mouse?.reset();
         this._publish();
     }
     _publish() {
@@ -54,11 +59,23 @@ export class AT8042A20 {
             this._irq=active;
             this.onIRQ?.(active);
         }
+        const aux=!!((this.commandByte&2)&&this.outputQueue[0]?.aux);
+        if(aux!==this._auxIrq) {
+            this._auxIrq=aux;
+            this.onAuxIRQ?.(aux);
+        }
     }
-    _queue(value,keyboard=false) {
+    _queue(value,keyboard=false,aux=false) {
         if(this.outputQueue.length>=this.queueLimit) throw new Error('AT 8042 output queue full');
-        this.outputQueue.push({value:value&255,keyboard:!!keyboard});
+        const entry={value:value&255,keyboard:!!keyboard};
+        if(aux)entry.aux=true;
+        this.outputQueue.push(entry);
         this._publish();
+    }
+    _queueAux(bytes) {
+        if(this.outputQueue.length+bytes.length>this.queueLimit)return false;
+        for(const byte of bytes)this._queue(byte,false,true);
+        return true;
     }
     _respond(value) {
         if(!this.responseDelayCycles){this._queue(value);return;}
@@ -79,7 +96,8 @@ export class AT8042A20 {
     setA20Enabled(enabled) { this.outputPort=(this.outputPort&~2)|(enabled?2:0); this._publish(); }
     readStatus() {
         return (this.outputQueue.length?1:0)|(this.inputBusyCyclesRemaining>0?2:0)|
-            (this.systemFlag?4:0)|(this.keyboardUnlocked?0x10:0);
+            (this.systemFlag?4:0)|(this.keyboardUnlocked?0x10:0)|
+            (this.outputQueue[0]?.aux?0x20:0);
     }
     advance(cycles) {
         if(!Number.isFinite(cycles)||cycles<=0)return;
@@ -126,6 +144,10 @@ export class AT8042A20 {
             this._irq=false;
             this.onIRQ?.(false);
         }
+        if(entry.aux&&this._auxIrq&&this.outputQueue[0]?.aux) {
+            this._auxIrq=false;
+            this.onAuxIRQ?.(false);
+        }
         this._publish();
         return v;
     }
@@ -151,13 +173,12 @@ export class AT8042A20 {
         // free Bochs BIOS does. Modelling them as a strict SUPERSET -- command
         // byte bit 5 is the standard "aux disable" flag, and the aux interface
         // test reports no error -- leaves every keyboard-only command path (and
-        // therefore the qualified IBM-BIOS behaviour) unchanged. There is no
-        // emulated mouse, so an aux write (D4h) is accepted and dropped; the
-        // BIOS then observes no device and moves on.
+        // therefore the qualified IBM-BIOS behaviour) unchanged. Without the
+        // opt-in mouse, an aux write (D4h) is accepted and dropped.
         if(value===0xa7){this.commandByte|=0x20;this.pendingCommand=null;return;} // disable aux port
         if(value===0xa8){this.commandByte&=~0x20;this.pendingCommand=null;return;} // enable aux port
         if(value===0xa9){this._respond(0x00);this.pendingCommand=null;return;} // test aux interface: 0 = no error
-        if(value===0xd4){this.pendingCommand=0xd4;return;} // next data byte goes to the (absent) aux device
+        if(value===0xd4){this.pendingCommand=0xd4;return;} // next data byte goes to the aux device, if configured
         if(value===0xfe){
             if(!this.allowReset)throw new Error('AT 8042 command feh is outside the bounded A20 subset unless CPU reset is enabled');
             this.pendingCommand=null;
@@ -172,11 +193,20 @@ export class AT8042A20 {
             this.pendingCommand=null;this.commandByte=value;this.systemFlag=!!(value&4);
             this._releaseKeyboardSchedule();this._publish();return;
         }
-        // A byte written to the auxiliary (mouse) device after a D4h command.
-        // There is no emulated mouse, so it is accepted and dropped: no ACK is
-        // queued, and the free BIOS's mouse probe then observes no device. This
-        // path is unreachable for the keyboard-only IBM BIOS (a strict superset).
-        if(this.pendingCommand===0xd4){this.pendingCommand=null;return;}
+        // A byte written to the optional auxiliary mouse after D4h. The default
+        // keyboard-only profile keeps the historical no-device response.
+        if(this.pendingCommand===0xd4){
+            this.pendingCommand=null;
+            if(this.mouse){
+                const previous=this.mouse.getState();
+                const reply=this.mouse.command(value);
+                if(reply&&!this._queueAux(reply)){
+                    this.mouse.setState(previous);
+                    throw new Error('AT 8042 aux output queue full');
+                }
+            }
+            return;
+        }
         if(this.pendingCommand===null&&value===0xff&&this.keyboardAckCycles!==null) {
             // Forwarding a host command to the keyboard releases its clock;
             // the IBM BIOS sends FFh after ADh without a separate AEh.
@@ -255,21 +285,28 @@ export class AT8042A20 {
         this._queue(value,true);
         return true;
     }
+    injectMouse({dx=0,dy=0,buttons=this.mouse?.buttons??0}={}) {
+        if(!this.mouse||!this.mouse.reporting||this.mouse.remote||(this.commandByte&0x20))return false;
+        if(this.outputQueue.length+3>this.queueLimit)return false;
+        return this._queueAux(this.mouse.packet(dx,dy,buttons));
+    }
     getState() {
-        return {v:7,outputPort:this.outputPort,commandByte:this.commandByte,
+        return {v:this.mouse?8:7,outputPort:this.outputPort,commandByte:this.commandByte,
             pendingCommand:this.pendingCommand,outputQueue:this.outputQueue.map(e=>({...e})),
             responseCyclesRemaining:this.responseCyclesRemaining,inputBusyCyclesRemaining:this.inputBusyCyclesRemaining,
             delayedResponse:this.delayedResponse&&{...this.delayedResponse},
             keyboardSchedule:this.keyboardSchedule.map(event=>({...event})),
             systemFlag:this.systemFlag,pendingKeyboardCommand:this.pendingKeyboardCommand,
-            typematicParameter:this.typematicParameter};
+            typematicParameter:this.typematicParameter,...(this.mouse?{mouse:this.mouse.getState()}: {})};
     }
     validateState(s) {
-        if(!s||s.v!==7||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
+        if(!s||s.v!==(this.mouse?8:7)||!Number.isInteger(s.outputPort)||s.outputPort<0||s.outputPort>255||!(s.outputPort&1)||
             !Number.isInteger(s.commandByte)||s.commandByte<0||s.commandByte>255||
-            ![null,0x60,0xd1].includes(s.pendingCommand)||!Array.isArray(s.outputQueue)||
+            ![null,0x60,0xd1,...(this.mouse?[0xd4]:[])].includes(s.pendingCommand)||!Array.isArray(s.outputQueue)||
             s.outputQueue.length>this.queueLimit||s.outputQueue.some(e=>!e||!Number.isInteger(e.value)||
-                e.value<0||e.value>255||typeof e.keyboard!=='boolean')||
+                e.value<0||e.value>255||typeof e.keyboard!=='boolean'||
+                (e.aux!==undefined&&e.aux!==true)||(e.aux&&e.keyboard)||
+                (e.aux&&!this.mouse))||
             !Number.isFinite(s.responseCyclesRemaining)||s.responseCyclesRemaining<0||
             s.responseCyclesRemaining>this.responseDelayCycles||
             !Number.isFinite(s.inputBusyCyclesRemaining)||s.inputBusyCyclesRemaining<0||
@@ -289,6 +326,7 @@ export class AT8042A20 {
                     event.afterRelease>0&&event.afterRelease<=100_000_000)))||
             (this.keyboardAckCycles===null&&this.powerOnKeyboardBatCycles===null&&s.keyboardSchedule.length>0)||
             typeof s.systemFlag!=='boolean')throw new Error('AT 8042 state is invalid');
+        if(this.mouse)new ATPS2Mouse().setState(s.mouse);
     }
     setState(s) {
         this.validateState(s);
@@ -303,7 +341,9 @@ export class AT8042A20 {
         this.systemFlag=s.systemFlag;
         this.pendingKeyboardCommand=s.pendingKeyboardCommand;
         this.typematicParameter=s.typematicParameter;
+        this.mouse?.setState(s.mouse);
         this._irq=undefined;
+        this._auxIrq=undefined;
         this._releaseKeyboardSchedule();
         this._publish();
     }
