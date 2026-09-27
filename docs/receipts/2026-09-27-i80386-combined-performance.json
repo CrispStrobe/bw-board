@@ -1,0 +1,35 @@
+{
+  "schema": "astra.i80386-combined-performance.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, bundled Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "inputSha256": {
+    "xv6.img": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fs.img": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernel": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "baseline": {
+    "revision": "2feb23a3c4799f285c56d7304ed48873a79e6cc3",
+    "cpuSourceSha256": "db27e7540a388bc06ebd9194b459d3fd014f0cc26ac395d8c874959806055b0b",
+    "userCpuSeconds": [38.64, 40.67],
+    "meanUserCpuSeconds": 39.655,
+    "reportSha256": "d14a0bbc476567c19b10026e32e2673fcb96436f73f5ea5ee2e860f30cce6b02"
+  },
+  "optimized": {
+    "revision": "bc539d33a87e3bf31421ea2bcc88d4712fcd7632",
+    "cpuSourceSha256": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
+    "userCpuSeconds": [29.67, 29.48],
+    "meanUserCpuSeconds": 29.575,
+    "reportSha256": "98893ad5a1c94ffe425facf370976a62841298758015e3c18e6c0d124e890686"
+  },
+  "order": ["baseline", "optimized", "baseline", "optimized"],
+  "userCpuSpeedup": 1.340828402366864,
+  "userCpuReduction": 0.25419240953221545,
+  "guest": {
+    "steps": 24338279,
+    "comparison": "After excluding the absolute worktree-local ROM path, every JSON field matches exactly across all four runs, including serial, CPU, display, interrupts, LAPIC and IOAPIC. ROM SHA is the same."
+  },
+  "excludedTrial": "An earlier 40.12s baseline / 30.23s optimized pair may have overlapped a separate Windows replay and is excluded from the two clean A/B pairs.",
+  "limits": "This direct 1.34x gain is for the bounded xv6 forktest workload and does not establish the requested 10x overall speed target. Wall time is not used as evidence."
+}
