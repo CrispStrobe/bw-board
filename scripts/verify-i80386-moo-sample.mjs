@@ -130,6 +130,11 @@ const PROFILES={
     files:['9C','9D','669C','669D'],
     scope:'12 fixed deterministic real-mode PUSHF/POPF and PUSHFD/POPFD samples grading stack bytes, stack pointer, and defined flags',
   },
+  'string-move-store':{
+    files:['A4','A5','66A5','67A4','67A5','6766A5','AA','AB','66AB','67AA','67AB','6766AB'],
+    excludeRepeat:true,
+    scope:'36 fixed non-REP MOVS/STOS samples spanning byte, word, dword, 16/32-bit addresses, segment overrides, and direction-flag states',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
@@ -199,7 +204,7 @@ function execute(test,globalMasks,mutate) {
 const results=[];let admitted=0,unsupported=0,revokedCount=0,exceptionExcluded=0,profileExcluded=0;
 for(const name of FILES){
   const path=resolve(root,`v1_ex_real_mode/${name}.MOO.gz`),moo=readMoo386(path);
-  const eligible=moo.tests.filter(test=>{if(revoked.has(test.hash)){revokedCount++;return false;}if(test.exception){exceptionExcluded++;return false;}if(profile.excludedPrefixes?.includes(test.bytes[0])){profileExcluded++;return false;}return true;});
+  const eligible=moo.tests.filter(test=>{if(revoked.has(test.hash)){revokedCount++;return false;}if(test.exception){exceptionExcluded++;return false;}if(profile.excludedPrefixes?.includes(test.bytes[0])||(profile.excludeRepeat&&test.bytes.some(byte=>byte===0xf2||byte===0xf3))){profileExcluded++;return false;}return true;});
   const selected=profile.samples?.[name]
     ? profile.samples[name].map(index=>eligible.find(test=>test.index===index))
     : [eligible[0],eligible[Math.floor(eligible.length/2)],eligible.at(-1)];

@@ -544,8 +544,15 @@ mode privilege masking, VM86 entry, exception delivery, or timing. The external
 releases data files into the public domain unless otherwise noted and licenses
 its software under MIT; no vector data is vendored here.
 
-The verifier now defines 25 bounded profiles across 204 distinct MOO files,
-selecting 608 samples in total. The pinned corpus contains 941 real-mode MOO
+The `string-move-store` profile samples real-mode MOVS and STOS with byte,
+word, and dword operands, 16- and 32-bit addresses, segment overrides, and
+both direction-flag states. It excludes REP-prefixed captures so each selected
+case executes exactly one string iteration before the published trailing HLT.
+The source's revoked and exception cases are separately excluded and counted;
+the comparator checks final registers, RAM, and unexpected writes.
+
+The verifier now defines 26 bounded profiles across 216 distinct MOO files,
+selecting 644 samples in total. The pinned corpus contains 941 real-mode MOO
 files; no unreal-mode, protected-mode, or VM86 files are published at this pin.
 Exception cases are excluded from these samples and counted separately. CI
 runs each profile and rejects selected register, flag, or RAM mutations. This
