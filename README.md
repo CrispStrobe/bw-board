@@ -40,12 +40,24 @@ fire at the correct simulated time, not just at the destination.
 - Connectors: header, USB-A
 
 **DebugTarget implementations** — emu8051 (with `emu_disasm`, verified
-237/0 against an independent table), avr8js (ATmega328P/2560, ATtiny85
-via chip param), rp2040js, eater6502, 8086/80286, the opt-in experimental
-80386 AT target, and serial (real firmware over UART).
+237/0 against an independent table), avr8js (first-class ATmega328P/2560 and
+ATtiny85/88 targets; adapter profiles also cover ATmega88PA/32U4 and
+ATtiny13/2313), rp2040js, eater6502, 8086/80286, the opt-in experimental 80386
+AT target, and serial (real firmware over UART).
 Factory at `src/debug-target-factory.js`. Disassembly panes for the
 non-8051 targets are planned (live table disasm for owned cores,
 service-side objdump listings for toolchain targets).
+
+The ATtiny88 path is exercised as a board, not just as an instruction core.
+The Blinkenrocket acceptance tests boot its real 8 MHz firmware, drive the
+PB/PD 8x8 matrix and PC3/PC7 buttons, feed an encoded `"Hi"` waveform through
+ADC6, and verify that the firmware writes the received pattern through TWI to
+an external EEPROM (`test/avr-attiny88.test.js`,
+`test/blinkenrocket-modem-e2e.test.mjs`). The same avr8js target exposes the
+normal DebugTarget run control, instruction/block/over/out stepping,
+breakpoints, SRAM write watchpoints, registers, code/SRAM memory, and
+instruction/device/memory events; source/block positions additionally require
+compiler symbols.
 
 ## The retro tier (2026-08)
 
@@ -148,6 +160,13 @@ loop, that aligns and coalesces from any entry phase. The final pinned artifact
 measured 11.0×, 11.9×, and 11.2× in the post-merge CI run (median 11.2×).
 The core repository separately gates the native production path at ≥1.0× for
 all 38 modeled chips (74 board/mode measurements, with no coverage waivers).
+Later same-VPS optimization receipts improved its ATmega328P `INC`/`RJMP`
+throughput loop from 3.57× to a 21.43× three-run median (18.47–22.13×), while
+cutting deterministic Callgrind cost from 223.9 to 12.0 Ir/step. That is the
+LabWired AVR core, distinct from the avr8js measurement in this README's AVR
+row. A pinned GitHub run of the real ESP32-C3 e-paper workload reached 1.020×
+RTx (187.5 ms guest in 183.7 ms wall); exact-tick and batched runs produced the
+same identity receipt.
 `LABWIRED_EXACT_TICK=1` keeps the benchmark's exact-policy A/B available.
 
 **Whole-system smokes** (each skips loudly without its local artifact):
