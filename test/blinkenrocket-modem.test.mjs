@@ -83,4 +83,25 @@ describe("the 'pcm' source wave — audio into a net", () => {
         assert.ok(Math.abs(at(9) - 4.5) < 0.15, `t=9ms ≈ 4.5 V, got ${at(9)}`);
         assert.ok(Math.abs(at(20) - 0) < 0.05, 'past the buffer: silence');
     });
+
+    it('can schedule a modem buffer relative to the current board time', () => {
+        const b = new BoardImpl(5.0);
+        b.setNetlist([
+            {id: 's1', kind: 'vsource', params: {
+                wave: 'pcm', samples: [0, 1, 0], rate: 1000,
+                gain: 2, offset: 2.5, start: 0.010,
+            }, terminals: ['pos', 'neg']},
+            {id: 'r1', kind: 'resistor', params: {ohms: 1000}, terminals: ['a', 'b']},
+            {id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd']},
+        ], [
+            {id: 'n_s', terminals: [{part: 's1', terminal: 'pos'}, {part: 'r1', terminal: 'a'}]},
+            {id: 'n_g', terminals: [{part: 'g1', terminal: 'gnd'}, {part: 's1', terminal: 'neg'}, {part: 'r1', terminal: 'b'}]},
+        ]);
+        b.advanceTo(5_000_000n);
+        assert.ok(Math.abs(b.nodeVoltages.get('n_s') - 2.5) < 0.05,
+          'before start: biased silence, never NaN');
+        b.advanceTo(11_000_000n);
+        assert.ok(Math.abs(b.nodeVoltages.get('n_s') - 4.5) < 0.05,
+          'one millisecond after start: sample 1');
+    });
 });
