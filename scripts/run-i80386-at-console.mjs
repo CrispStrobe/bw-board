@@ -13,6 +13,7 @@ import {ansiRgbFrame,ansiTextFrame,decodeTerminalInput,flushTerminalEscape,
   makeTerminalInputState} from
   './lib/i80386-at-terminal.mjs';
 import {renderObservedWindowsEga} from './lib/i80386-windows-vga-frame.mjs';
+import {renderObservedWindowsVga480} from './lib/i80386-windows-vga-480-frame.mjs';
 import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
 
 const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
@@ -94,7 +95,8 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/vga-memory.js','../src/vga-card.js',
   './lib/i80386-at-console-events.mjs',
   './lib/i80386-at-dosbox-config.mjs','./lib/i80386-at-terminal.mjs',
-  './lib/i80386-windows-vga-frame.mjs','./lib/i80386-doom-vga-frame.mjs',
+  './lib/i80386-windows-vga-frame.mjs','./lib/i80386-windows-vga-480-frame.mjs',
+  './lib/i80386-doom-vga-frame.mjs',
   './run-i80386-at-console.mjs'];
 const sourceSha256=Object.fromEntries(sourcePaths.map(path=>
   [path,sha(fs.readFileSync(new URL(path,import.meta.url)))]));
@@ -177,7 +179,8 @@ const drawTerminal=()=>{
     dacMask:video.dacMask};
   const planesBase64=machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64'));
   let frame=null;
-  try{frame=renderObservedWindowsEga({registers,planeBase64:planesBase64});}catch{}
+  try{frame=renderObservedWindowsVga480({registers,planeBase64:planesBase64});}catch{}
+  if(!frame)try{frame=renderObservedWindowsEga({registers,planeBase64:planesBase64});}catch{}
   if(!frame)try{frame=renderObservedDoomVga({...registers,
     planesBase64,dacBase64:Buffer.from(video.dac).toString('base64')});}catch{}
   const body=frame?ansiRgbFrame(frame,columns,rows):ansiTextFrame(textRam(),columns,rows);

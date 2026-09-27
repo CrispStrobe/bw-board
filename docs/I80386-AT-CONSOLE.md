@@ -59,8 +59,8 @@ chunks so terminal input reaches the guest while it runs. Typing sends Set-1
 make/break pairs; Enter, Backspace, Tab, Escape, arrows, shifted letters and
 symbols, and Ctrl+letter are mapped. Ctrl+] quits cleanly; Ctrl+L redraws.
 An xterm-compatible terminal with SGR mouse reporting can send pointer clicks
-and motion; live mode attaches the opt-in mouse. The live view tries the two validated VGA renderers (Windows
-640×350 planar and Doom 320×200 unchained), then shows text RAM if the mode is
+and motion; live mode attaches the opt-in mouse. The live view tries the validated VGA renderers (Windows
+640×350 and 640×480 planar, and Doom 320×200 unchained), then shows text RAM if the mode is
 not recognized. A full VGA snapshot remains available in every mode. Live
 mode requires a TTY. The report includes live input attempts and a `user-quit`
 stop reason when applicable.
