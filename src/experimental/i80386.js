@@ -423,6 +423,17 @@ export class ExperimentalI80386 {
     return ((pte & 0xfffff000) | (linear & 0xfff)) >>> 0;
   }
   _readLinear(a, size, options) {
+    // A scalar wholly inside one page has one translation and identical
+    // physical byte order. The bus read32 fast path only coalesces RAM;
+    // devices fall back to ordered byte reads in the bus implementation.
+    if ((size === 2 || size === 4) && ((a & 0xfff) + size <= 0x1000)) {
+      const physical = this._translate(a >>> 0, options);
+      if (size === 4 && this.read32) return this.read32(physical) >>> 0;
+      let value = this.read(physical) & 255;
+      for (let i = 1; i < size; i++)
+        value += (this.read((physical + i) >>> 0) & 255) * 2 ** (8 * i);
+      return value >>> 0;
+    }
     let value = 0;
     for (let i = 0; i < size; i++)
       value +=

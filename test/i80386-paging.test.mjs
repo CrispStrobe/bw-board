@@ -68,6 +68,21 @@ function fixture(translationCache = false) {
   return { cpu, memory, reads, writes, put, dword, putDword, map };
 }
 
+test('scalar read32 uses one same-page bus transaction and preserves cross-page byte order',()=>{
+  const reads=[];
+  const memory=new Map([[0xffe,0x11],[0xfff,0x22],[0x1000,0x33],[0x1001,0x44]]);
+  const cpu=new I80386({
+    read(address){reads.push(['byte',address]);return memory.get(address)??0;},
+    read32(address){reads.push(['dword',address]);return 0x44332211;},
+    write(){},
+  });
+  assert.equal(cpu._readLinear(0xffe,4),0x44332211);
+  assert.deepEqual(reads,[['byte',0xffe],['byte',0xfff],['byte',0x1000],['byte',0x1001]]);
+  reads.length=0;
+  assert.equal(cpu._readLinear(0x100,4),0x44332211);
+  assert.deepEqual(reads,[['dword',0x100]]);
+});
+
 test('opt-in translation cache retains walks and invalidates guest page-table writes',()=>{
   const f=fixture(true);
   f.map(0x4000,0x6000);
