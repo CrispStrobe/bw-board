@@ -1,0 +1,33 @@
+{
+  "schema": "astra.i80386-lean-probe.v1",
+  "date": "2026-09-27",
+  "purpose": "Separate xv6 diagnostic-runner overhead from the machine hot path; no emulator code changed",
+  "nodeVersion": "v20.20.2",
+  "source": {
+    "revisionParent": "3b385d47",
+    "script": "scripts/probe-xv6-stock.mjs",
+    "scriptSha256": "9ea2458ae79585751b8402e524a719ce592cd2c20d1b212a3843c83ecc1e9873"
+  },
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "leanSwitch": "XV6_LEAN=1",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "runs": [
+    {"mode": "normal", "userCpuSeconds": 27.88, "reportSha256": "2f86531ec28b703c48e8be7433b862e96c8217ec68ca6ae54c3f731063ba791f"},
+    {"mode": "lean", "userCpuSeconds": 26.24, "reportSha256": "920afdebd8c84e4322596e380493cf47204f7265a37b56b1ae446379c8c46824"},
+    {"mode": "lean", "userCpuSeconds": 26.48, "reportSha256": "920afdebd8c84e4322596e380493cf47204f7265a37b56b1ae446379c8c46824"}
+  ],
+  "guestEquality": {
+    "steps": 24338279,
+    "serialSha256": "57c12342f40ee749e094ed9b242a738a749104eb063db36d2e4ffecd5bdd42d4",
+    "screenSha256": "a4d4c82a4861ed5c67af9e46382f741664f9d54f657087a583c1291f4ebcfb4d",
+    "same": ["inputSent", "interrupts", "postBootInterrupts", "lapicIdReads", "screen", "lapic", "ioapic", "cpu"],
+    "omittedInLean": ["milestones", "userModeEntries"],
+    "errorContextDifference": "The lean mode also omits the per-step recent-instruction ring, so a thrown exception has less context."
+  },
+  "conclusion": "The mean lean run used 26.36 rather than 27.88 user CPU seconds (1.058x). This is only diagnostic-runner overhead, not faster emulation. Use lean mode for future full-guest performance A/B and normal mode when milestone or fault-context records are needed. One normal run and two lean runs are not a broad host-variance study."
+}

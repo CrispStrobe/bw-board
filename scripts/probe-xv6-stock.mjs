@@ -57,6 +57,9 @@ const command = process.env.XV6_COMMAND ?? '';
 const expectedSerial = process.env.XV6_EXPECT_SERIAL ?? '';
 const stopOnExpected = process.env.XV6_STOP_ON_EXPECT === '1';
 const progressEvery = Number(process.env.XV6_PROGRESS_EVERY ?? 0);
+// Skip per-instruction diagnostic records when measuring the machine hot path.
+// Serial, command injection, stopping condition and final state stay intact.
+const lean = process.env.XV6_LEAN === '1';
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -124,18 +127,20 @@ for (; steps < stepsLimit; steps++) {
     machine.serialIn(byte);
     inputSent.push({step: steps, byte});
   }
-  const name = symbols.get(machine.cpu.eip);
-  if (name && (machine.cpu.cs & 3) === 0) {
-    const seen = milestones[name] ?? {count: 0, first: steps};
-    seen.count++;
-    seen.last = steps;
-    milestones[name] = seen;
+  if (!lean) {
+    const name = symbols.get(machine.cpu.eip);
+    if (name && (machine.cpu.cs & 3) === 0) {
+      const seen = milestones[name] ?? {count: 0, first: steps};
+      seen.count++;
+      seen.last = steps;
+      milestones[name] = seen;
+    }
+    if ((machine.cpu.cs & 3) === 3 && userModeEntries.length < 16 &&
+        (userModeEntries.length === 0 || userModeEntries.at(-1).cs !== machine.cpu.cs ||
+         steps - userModeEntries.at(-1).step > 100_000))
+      userModeEntries.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip});
+    recentInstructions[steps % 32] = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip};
   }
-  if ((machine.cpu.cs & 3) === 3 && userModeEntries.length < 16 &&
-      (userModeEntries.length === 0 || userModeEntries.at(-1).cs !== machine.cpu.cs ||
-       steps - userModeEntries.at(-1).step > 100_000))
-    userModeEntries.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip});
-  recentInstructions[steps % 32] = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip};
   try {
     machine.step();
   } catch (error) {
@@ -152,6 +157,7 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
   profile,
+  ...(lean ? {lean: true} : {}),
   firmware,
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},

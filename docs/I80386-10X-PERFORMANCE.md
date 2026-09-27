@@ -6,6 +6,16 @@ IOAPIC pending-mask experiment measured another 1.078× on the same workload.
 These are bounded measurements, not evidence of the requested 10× overall
 speedup. Reproduction details and hashes are in the dated receipts.
 
+The `probe-xv6-stock.mjs` runner can now set `XV6_LEAN=1` to omit its
+per-instruction milestone, user-mode, and recent-instruction records while
+retaining the serial command, stopping condition, interrupts, display, and
+final CPU state. One normal and two lean full `forktest` runs took 27.88 versus
+26.24 and 26.48 user-CPU seconds, respectively. This isolates roughly 1.5
+seconds of diagnostic-runner cost; it is **not** an emulator improvement. Use
+the lean mode for future paired performance tests and the normal mode for
+diagnosis. The [lean-probe receipt](receipts/2026-09-27-i80386-lean-probe.json)
+pins the media and complete-run result.
+
 A final-source V8 sample over the xv6 run attributed 17.7% of time to
 `_stepInstruction`, 7.1% to `_fetchN`, 5.0% to `_decodeEA`, 7.8% to
 `_translate`, 6.1% to `_read386`, and 6.1% to `_serviceInterrupts`. The
