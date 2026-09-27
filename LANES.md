@@ -2309,3 +2309,14 @@ positive headroom. Focused LT1006 plus unchanged precision/generic op-amp
 surface passes 43/43. Independently weakening finite gain, losing the
 ground-referred output, or relabelling physical pin 8 makes its named
 consequence red. Exact-head hosted CI and Harris remain the landing gates.
+2026-09-27 LT1014 physical quad precision op-amp — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-lt1014-board`, branch
+`lane/lt1014-quad-model`, exact base
+`b2ae6bc5921925739a019fe7e1e359d0f46d8cbe`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused LT1014
+test. Add one real 14-pin four-channel controller with shared rails, finite
+gain/input resistance/offset/bandwidth/slew, ground-inclusive single-supply
+limits, and a whole-package supply budget. It must not represent the quad as
+four independently powered single-amplifier aliases. No generic op-amp,
+solver, other named device, face/art, importer/exporter, corpus, workflow,
+package pin, CUI, Parts, or Lite edit.
