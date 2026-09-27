@@ -335,7 +335,11 @@ export class ExperimentalATA16 {
     }
     if (this.status & STATUS_BSY) return;
     if (this.control & 4) return;
-    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled) && register !== 6) return;
+    // Task-file address/count writes also reach the master while the absent
+    // slave is selected.  Bochs BIOS sets these fields during its slave probe,
+    // then selects the master immediately before issuing the boot read.
+    // Commands addressed to the missing slave still have no responder.
+    if ((this.driveHead & 0x10) && !(this.slaveImage && this.slaveEnabled) && register === 7) return;
     if (register === 1) this.features = byte;
     else if (register === 2) this.sectorCount = byte;
     else if (register === 3) this.sectorNumber = byte;

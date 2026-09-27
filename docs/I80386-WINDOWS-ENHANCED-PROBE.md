@@ -23,11 +23,10 @@ accepts only its observed 640×350 EGA layout; a different Windows 3.11 VGA
 mode needs separate decoding before a desktop can be visually accepted.
 Disk writes stay in the in-memory image clone.
 Both the 32 KiB SeaVGABIOS variant and the vendored 38.4 KiB Bochs VGA BIOS
-fit the probe's option-ROM mapping. A two-million-instruction type-47/Bochs
-smoke run with the existing Windows 3.0 disk reached its budget without a host
-refusal; that short run establishes input wiring only, not a DOS or Windows
-boot. The Windows 3.0/type-2 IBM BIOS path has the separate accepted desktop
-receipt.
+fit the probe's option-ROM mapping. The report records bounded ATA task-file
+traffic, including device status and errors, so a boot-sector failure can be
+separated from a CPU or Windows failure. The Windows 3.0/type-2 IBM BIOS path
+has the separate accepted desktop receipt.
 
 ```sh
 AT_BIOS_ROM=/path/to/at-bios.rom AT_BIOS_SHA256=<64-hex> \
@@ -45,8 +44,8 @@ and verify a saved file. Record the media, BIOS, code revision, and output
 hashes outside the repository. Windows 3.0 standard-mode evidence is documented
 separately in [I80386-WINDOWS300.md](I80386-WINDOWS300.md).
 
-There is no suitable Windows 3.1x input among the project test media currently
-identified. The existing Windows 3.0 image has no `WIN386.EXE`. The previously
-referenced Internet Archive `win3_stock` item is marked access-restricted and
-stream-only; its page does not provide a reusable raw hard-disk fixture. Keep
-Microsoft media outside this MIT repository.
+Private Windows media, its provenance, hashes, derived images, and detailed
+execution receipts belong in the separately managed private fixture repository.
+The public project records only the media-neutral harness and code fixes.
+The existing Windows 3.0 image has no `WIN386.EXE`; Windows 3.1x enhanced mode
+remains unaccepted. Keep Microsoft media outside this MIT repository.

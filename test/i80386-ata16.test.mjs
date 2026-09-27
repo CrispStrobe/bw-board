@@ -200,6 +200,19 @@ test('experimental ATA rejects invalid CHS and unsupported commands without medi
   assert.deepEqual(ata.mediaBytes(), initial);
 });
 
+test('task-file fields written during an absent-slave probe survive master reselection', () => {
+  const ata = new ExperimentalATA16(image(), geometry);
+  ata.writeRegister(3, 0);
+  ata.writeRegister(6, 0xb0);
+  ata.writeRegister(3, 1);
+  ata.writeRegister(7, 0x20);
+  assert.equal(ata.readRegister(7), 0, 'absent slave never responds to commands');
+  ata.writeRegister(6, 0xa0);
+  assert.equal(ata.readRegister(3), 1);
+  ata.writeRegister(7, 0x20);
+  assert.equal(ata.readRegister(7), 0x58, 'master can read the addressed sector');
+});
+
 test('experimental ATA covers the IBM AT BIOS diagnostic, parameter, seek, recalibrate, and verify commands', () => {
   const ata = new ExperimentalATA16(image(), geometry);
   const command = value => {

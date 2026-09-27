@@ -70,6 +70,9 @@ for (const [index, value] of rtc.initialCmos) cmos[index] = value;
 cmos[0x10] = 0x20; // 1.2 MB drive A, as required by the IBM Rev1 POST.
 cmos[0x12] = cmosType === 2 ? 0x20 : 0xf0;
 cmos[0x14] = 0x01; // VGA.
+// Bochs firmware reads this extended CMOS boot order: floppy, then HDD.
+// IBM Rev1 ignores it, but omitting it leaves Bochs at "No bootable device".
+cmos[0x3d] = 0x21;
 if (cmosType === 47) {
   cmos[0x19] = 47;
   cmos[0x1b] = cylinders & 0xff;
@@ -91,15 +94,26 @@ rtc.initialCmos = [...cmos.entries()].filter(([, value]) => value !== 0);
 let steps = 0;
 const milestones = {};
 const post = [];
+const ata = {count: 0, tail: []};
 const checkpoints = [];
 const keyboard = [];
 let nextKey = 0;
-const machine = new Machine(profile, {
+let machine;
+machine = new Machine(profile, {
   ataImage: hdd.bytes,
   ataGeometry: {cylinders, heads, sectors},
   onPortAccess(event) {
     if (event.dir === 'out' && event.port === 0x80 && post.length < 128)
       post.push({step: steps, value: event.value});
+    if (event.port >= 0x1f0 && event.port <= 0x1f7 || event.port === 0x3f6) {
+      ata.count++;
+      ata.tail.push({step: steps, dir: event.dir, port: event.port, value: event.value,
+        status: machine.ata.status, error: machine.ata.error,
+        count: machine.ata.sectorCount, sector: machine.ata.sectorNumber,
+        cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
+        head: machine.ata.driveHead});
+      if (ata.tail.length > 128) ata.tail.shift();
+    }
   },
 });
 machine.loadRom(bios.bytes, 0xf0000);
@@ -130,7 +144,8 @@ try {
       checkpoints.push({step: steps, ...state(), text: text.filter(Boolean).slice(-5)});
       if (progressPath) {
         const progress = {schema: 'bw.i80386-windows-enhanced-progress.v1',
-          step: steps, last: checkpoints.at(-1), milestones, postTail: post.slice(-8)};
+          step: steps, last: checkpoints.at(-1), milestones,
+          postTail: post.slice(-8), ataTail: ata.tail.slice(-8)};
         fs.writeFileSync(`${progressPath}.tmp`, `${JSON.stringify(progress, null, 2)}\n`);
         fs.renameSync(`${progressPath}.tmp`, progressPath);
       }
@@ -161,7 +176,7 @@ const report = {
     vga: {bytes: vga.bytes.length, sha256: vga.sha256},
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256,
       geometry: {cylinders, heads, sectors}, cmosType}},
-  milestones, post, checkpoints, keyboard,
+  milestones, post, ata, checkpoints, keyboard,
   keyScriptSha256: keyBytes && hash(keyBytes), final: state(),
   executionRevision, sourceSha256,
   sourceUnchanged: sourceFiles.every(file =>
