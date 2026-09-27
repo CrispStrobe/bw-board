@@ -534,6 +534,16 @@ first/middle/last non-revoked, non-exception cases from ADD files `01`, `6601`, 
 SHA-256. This is register/RAM evidence across the four operand/address-size
 combinations. Cycle chunks are skipped and remain ungraded.
 
+The `flags-stack` profile adds three deterministic non-exception samples each
+from `9C`, `9D`, `669C`, and `669D`, covering real-mode PUSHF/POPF and
+PUSHFD/POPFD. The comparator checks the published final register and RAM state
+under its masks, including stack contents and pointer changes, after applying
+the published revocation list. These 386EX observations do not grade protected
+mode privilege masking, VM86 entry, exception delivery, or timing. The external
+[SingleStepTests/80386](https://github.com/SingleStepTests/80386) `LICENSE`
+releases data files into the public domain unless otherwise noted and licenses
+its software under MIT; no vector data is vendored here.
+
 Additional bounded profiles cover byte XOR/MOV and byte MOVZX/MOVSX (36
 samples), and immediate SHL/SHR/SAR across operand/address sizes (36 samples).
 The three profiles exclude 888, 2,600 and 3,111 published exception cases,

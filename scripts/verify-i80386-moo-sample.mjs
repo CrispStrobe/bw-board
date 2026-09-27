@@ -126,6 +126,10 @@ const PROFILES={
     files:['0F06'],
     scope:'three fixed deterministic real-mode CLTS decode/completion samples grading unchanged TS=0 through final-state delta reconstruction; all 100 published inputs start with TS clear, so no physical TS=1 to TS=0 transition is claimed',
   },
+  'flags-stack':{
+    files:['9C','9D','669C','669D'],
+    scope:'12 fixed deterministic real-mode PUSHF/POPF and PUSHFD/POPFD samples grading stack bytes, stack pointer, and defined flags',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
