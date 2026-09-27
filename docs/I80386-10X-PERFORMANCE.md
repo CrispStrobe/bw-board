@@ -61,3 +61,15 @@ generation. Benchmark the full
 Windows transition and xv6 guest-state equality after each stage, including
 self-modifying code, host/DMA writes, CR3 remaps, and precise later-instruction
 faults. These are design requirements, not a claim that the 10× goal is solved.
+
+A [static WASM block spike](I80386-WASM-BLOCK-SPIKE.md) now proves the toolchain
+and an event-budgeted multi-instruction call, but its register-only instruction
+set is too narrow to integrate. On the complete xv6 `forktest`, only 1,019 of
+3,657,970 eligible runs had at least two instructions; these covered just
+2,066 of 24,338,279 guest steps. The [negative feasibility receipt](receipts/2026-09-27-i80386-wasm-safe-run-feasibility.json)
+records exact counts and hashes. The production executor was not changed.
+For a 10× total speedup, Amdahl's law requires moving at least 90% of total
+runtime even if the moved work becomes infinitely fast. At 20× faster native
+execution, the required share rises to 94.7%, before board/device overhead.
+Guest instruction coverage is not CPU-time coverage, so the next trial must
+measure both full-workload time and the share spent at block exits.

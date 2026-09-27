@@ -1,0 +1,35 @@
+{
+  "schema": "astra.i80386-wasm-safe-run-feasibility.v1",
+  "date": "2026-09-27",
+  "decision": "Do not integrate this narrow WASM kernel into the production 80386 executor",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "nodeVersion": "v20.20.2",
+    "guestSteps": 24338279,
+    "completed": true,
+    "serialEndsWith": "fork test OK\n$ ",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d",
+    "privateLocalReportSha256": "309b7ff8b94428e6429c829b7764b805958457632ad4a0e8b46a771983039358"
+  },
+  "method": "Temporary counters on successful guest instruction retirement grouped contiguous register-only MOV 89, CMP 39, and TEST 85 forms supported by the spike. Counters and modified executor were restored after this completed run; this receipt records the result but is not a source-bound instrumentation artifact.",
+  "coverage": {
+    "supportedInstructions": 3659017,
+    "supportedInstructionFraction": 0.1503,
+    "contiguousRuns": 3657970,
+    "runLengthDistribution": {"1": 3656951, "2": 991, "3": 28, "4OrMore": 0},
+    "runsWithTwoOrMore": 1019,
+    "instructionsInRunsWithTwoOrMore": 2066,
+    "multiInstructionRunFractionOfGuestSteps": 0.00008489
+  },
+  "spike": {
+    "description": "Static precompiled WASM kernel for bounded, prevalidated register-only MOV, CMP, TEST and NOP IR; no guest fetch, memory access, or board integration",
+    "cSourceSha256": "f9964798b3003f314610dadcd33eee95d97f7a2fb5bba3f830e537f35e812a60",
+    "wasmSha256": "07e8f06813854c78ed2b4a97b8a6fa5fb40c5be53f137d1e95c194d051d34754",
+    "compiler": "Ubuntu clang 18.1.3",
+    "tests": "node --test test/i80386-block-spike.test.mjs; 3 passed"
+  },
+  "conclusion": "Almost every eligible run is one instruction. A JS-to-WASM call for this subset would cross the boundary almost once per guest instruction; the narrow subset cannot materially advance the 10x target. No end-to-end WASM A/B was run and no emulator speedup is claimed. Broader memory, branch and string execution plus precise events, faults and code/page-table coherence are prerequisites for a production block path."
+}
