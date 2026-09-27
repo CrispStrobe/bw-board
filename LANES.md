@@ -2309,6 +2309,21 @@ positive headroom. Focused LT1006 plus unchanged precision/generic op-amp
 surface passes 43/43. Independently weakening finite gain, losing the
 ground-referred output, or relabelling physical pin 8 makes its named
 consequence red. Exact-head hosted CI and Harris remain the landing gates.
+2026-09-27 ADTL082 physical dual JFET-input op amp — CLAIM, Codex `/root`.
+Isolated worktree `/tmp/wt-bwcx-adtl082-board`, branch
+`lane/adtl082-dual-model`, exact base
+`06b9bcaebe1d7659207ba23eb065885b1eb93d67`. Owns this row,
+`src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused ADTL082
+test. Add the real shared-rail two-channel SOIC-8 contract: JFET-high-impedance
+inputs, finite 200 V/mV open-loop gain, the documented ±5 V to ±15 V supply
+domain, −11 V to +15 V common-mode envelope at ±15 V, loaded output swing,
+5 MHz gain bandwidth, 20 V/us slew, independent channels, and whole-package
+supply budget. Also add a hidden five-terminal package-neutral channel for the
+official LTspice symbol; it may not borrow the physical package. Excludes
+generic/TL082 behavior, noise/distortion/macromodel execution, solver, other
+named devices, part art, import/export, corpus, workflow, package pin, CUI, and
+Lite changes.
+
 2026-09-27 LT1014 physical quad precision op-amp — CLAIM, Codex `/root`.
 Isolated worktree `/tmp/wt-bwcx-lt1014-board`, branch
 `lane/lt1014-quad-model`, exact base
