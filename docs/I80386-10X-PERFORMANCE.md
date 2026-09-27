@@ -120,3 +120,16 @@ bounded entry and exact chip-event exit using the existing per-instruction
 step. It covers memory and branches semantically but has no fast backend and
 claims no acceleration. It is a baseline against which a native executor can
 be tested.
+
+A [source-bound opcode-run trace](receipts/2026-09-27-i80386-hot-opcode-runs.json)
+now measures the complete xv6 `forktest` with the ordinary CPU left intact.
+Its broad memory/ALU/branch/stack opcode set accounts for 84.8% of retired
+instructions, or 73.1% after removing string operations. These are
+optimistic opcode-family matches, not valid compiled blocks. Only 56,064
+instructions, 0.230% of all retirements, fit complete 64-instruction spans in
+the broad non-string runs, even before a branch, fault, code page, device, or
+chip event splits them. Repeated strings account for most of the apparent
+long-run opportunity. The next executor should therefore use short blocks and
+cheap branch linking, with a separate interruptible REP path. A design that
+requires long straight-line runs cannot deliver the 10× end-to-end target on
+this workload.
