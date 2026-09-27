@@ -205,7 +205,8 @@ fetch changes. The [combined receipt](docs/receipts/2026-09-27-i80386-combined-p
 binds the inputs and source. A further [APIC pending-mask experiment](docs/receipts/2026-09-27-i80386-apic-pending-mask.json)
 measured 1.08× on adjacent pairs; this is still far short of the requested
 roughly 10× speedup. These are workload-specific host CPU measurements, not
-silicon timing or a general real-time claim.
+silicon timing or a general real-time claim. The measured bottlenecks and
+next architectural experiment are in [Experimental 80386 speed path](docs/I80386-10X-PERFORMANCE.md).
 
 ## Windows 3.1 reference comparison
 
