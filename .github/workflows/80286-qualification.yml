@@ -728,7 +728,7 @@ jobs:
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
               > "$I386_RECEIPTS/$profile.json"
           done
-          for pair in imul-immediate:carry setcc:ram double-shift:carry enter-ret:stray-write bit-test:carry bcd-adjust:carry bit-scan:zf clts:cr0-ts; do
+          for pair in flags-stack:carry imul-immediate:carry setcc:ram double-shift:carry enter-ret:stray-write bit-test:carry bcd-adjust:carry bit-scan:zf clts:cr0-ts; do
             profile=${pair%:*}
             mutation=${pair#*:}
             if I386_MOO_PROFILE="$profile" I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs > "$I386_RECEIPTS/rejected-$profile.json"; then
