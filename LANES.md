@@ -2511,8 +2511,8 @@ makes its named caller consequence red. Exact hosted CI and Harris qualification
 remain the landing gates.
 2026-09-27 LTspice UniversalOpamp2 deterministic Level-2 model — DONE candidate, Codex
 `/root`. Isolated worktree `/tmp/wt-bwcx-universal-opamp2-board`, branch
-`lane/ltspice-universal-opamp2`, exact base
-`19ef9a28f91d01dbdc4e0223be930ba58d969d77`. Owns this row,
+`lane/ltspice-universal-opamp2-v3`, exact replay base
+`73eae5171ea59f28cc17a50bb71108f1946a32a0`. Owns this row,
 `src/devices/analog-amps.js`, and one focused UniversalOpamp2 test. Add a
 package-neutral five-terminal, per-instance parameter-driven model for the
 official deterministic Level-2 contract: finite open-loop gain and dominant
@@ -2531,6 +2531,9 @@ controller resolves a dynamic card only for this identity; all 114 focused
 Universal/named/generic analog-amplifier checks pass, including every existing
 named card unchanged. Noise densities/corners remain an explicit downstream
 refusal until the engine and scope have a calibrated noise-analysis path.
-Isolated default-gain decade, authored current-limit doubling, and authored
-slew-decade mutations each red the named numerical consequence independently.
+Isolated default-gain decade, authored GBW decade, authored current-limit
+doubling, grounded-load slew decade, and the historical ground-referenced
+current-limit inference each red a named numerical consequence independently.
+The last mutation is exercised against a 10-ohm load referred to 2 V, proving
+the limiter does not silently assume that every load returns to ground.
 Exact-head CI and Harris qualification are the landing gate.
