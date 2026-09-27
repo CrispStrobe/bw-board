@@ -52,7 +52,8 @@ pretending rail-to-rail drive. The event-time response retains a measured
 closed-loop feedback factor, uses one bounded probe when a quiescent loop has
 not supplied it yet, and resets its time origin on an input change; this avoids
 both an instantaneous response after a long idle and a tenfold first-tick
-overshoot. Offset-null/NC pins remain physical and high-Z; device state publishes
+overshoot. Its 300 ns device cadence also keeps a full +13 V to -13 V reversal
+within the board's bounded transient-attempt budget. Offset-null/NC pins remain physical and high-Z; device state publishes
 `offsetNull: unmodeled`. The focused LM741/LM324/LM358/honesty,
 current-budget and double-source surface passes 47/47. Independently changing
 gain 200k->100k, slew 0.5->5 V/us, or GBW 1->10 MHz makes its named numerical

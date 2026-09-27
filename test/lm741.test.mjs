@@ -76,11 +76,12 @@ describe('LM741 physical and electrical contract', () => {
       + `prev ${JSON.stringify(high.getDeviceState('U1')._prev)}, `
       + `last ${String(high.getDeviceState('U1')._lastUpdateNs)}, wake ${String(high.getDeviceState('U1')._wakeNs)}`);
 
-    const low = follower({ input: -13, load: 2000 });
-    low.advanceTo(80_000n);
-    assert.equal(low.getDeviceState('U1').inputCommonMode, 'below');
-    assert.ok(low.nodeVoltage('out') >= -10.1 && low.nodeVoltage('out') <= -9.8,
-      `2 kOhm negative swing ${low.nodeVoltage('out')} V`);
+    const reversalStart = high.timeNs;
+    high.setControl('VIN', -13);
+    high.advanceTo(reversalStart + 60_000n);
+    assert.equal(high.getDeviceState('U1').inputCommonMode, 'below');
+    assert.ok(high.nodeVoltage('out') >= -10.1 && high.nodeVoltage('out') <= -9.8,
+      `full positive-to-negative reversal reaches loaded swing, got ${high.nodeVoltage('out')} V`);
   });
 
   it('limits a large-signal transition to the 0.5 V/us slew contract', () => {
@@ -109,7 +110,7 @@ describe('LM741 physical and electrical contract', () => {
     const t0 = board.timeNs;
     board.advanceTo(t0 + 300n);
     const early = board.nodeVoltage('out');
-    assert.ok(early > 0.005 && early < 0.008,
+    assert.ok(early > 0.0075 && early < 0.009,
       `300 ns response must be in flight, got ${early}; state `
       + `${JSON.stringify({ drive: board.getDeviceState('U1').drives.out, prev: board.getDeviceState('U1')._prev, beta: board.getDeviceState('U1')._beta })}`);
     board.advanceTo(t0 + 2_000n);

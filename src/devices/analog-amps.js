@@ -76,7 +76,7 @@ const LM741_GBW_HZ = 1e6;            // conservative 1 MHz-class unity bandwidth
 const LM741_SLEW_V_PER_US = 0.5;     // unity-gain slew rate
 const LM741_INPUT_R = 2e6;           // differential input resistance, typical
 const LM741_R_OUT = 600;             // gives ~10 V into 2 kOhm at +/-15 V
-const LM741_TICK_NS = 200n;           // resolves 0.3 us typical rise time
+const LM741_TICK_NS = 300n;           // resolves 0.3 us typical rise time
 const LM741_SETTLED_V = 1e-6;
 
 function registerGroundSensingOpAmp(kind, channels, {
