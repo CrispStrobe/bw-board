@@ -124,6 +124,133 @@ test('branch-link census separates actual fetch redirects, byte changes, and oth
   assert.equal(remappedRunner.diagnostics.branchLinks.modeOrSegmentChange, 1);
 });
 
+test('terminal direct word store uses live register and matches ordinary RAM and flags', async () => {
+  // MOV BX,1234h; MOV DS:[0080h],BX; NOP. Store must terminate this call.
+  const code = [0xbb, 0x34, 0x12, 0x89, 0x1e, 0x80, 0x00, 0x90];
+  for (const mode of ['real', 'protected16', 'vm86']) {
+    const fast = fixture(code, mode), slow = fixture(code, mode);
+    fast.cpu.ebx = slow.cpu.ebx = 0xface0000;
+    fast.cpu.eflags = slow.cpu.eflags = 0x8d7;
+    const dispatcher = await createI80386Code16WasmDispatcher(fast);
+    assert.equal(dispatcher.run(3), 2);
+    slow.step(); slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.deepEqual([...fast.mem.subarray(0x20080, 0x20082)], [0x34, 0x12]);
+    assert.deepEqual([...fast.mem.subarray(0x20080, 0x20082)],
+      [...slow.mem.subarray(0x20080, 0x20082)]);
+    assert.equal(fast.cpu.eip, 0x27);
+    assert.equal(dispatcher.stats.instructions, 2);
+    assert.equal(fast.cpu._translationGeneration, slow.cpu._translationGeneration);
+    assert.equal(fast.displayRevision, slow.displayRevision);
+  }
+});
+
+test('paged terminal store preserves dirty translation and page-table bytes', async () => {
+  const code = [0xbb, 0x78, 0x56, 0x89, 0x1e, 0x80, 0x00];
+  const fast = fixture(code, 'protected16'), slow = fixture(code, 'protected16');
+  for (const machine of [fast, slow]) {
+    paged(machine);
+    machine.cpu._translate(0x20080, {write: true});
+  }
+  const beforeTable = fast.mem.slice(0x1000, 0x5000);
+  const dispatcher = await createI80386Code16WasmDispatcher(fast);
+  assert.equal(dispatcher.run(2), 2);
+  slow.step(); slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.deepEqual([...fast.mem.subarray(0x120080, 0x120082)], [0x78, 0x56]);
+  assert.deepEqual([...fast.mem.subarray(0x120080, 0x120082)],
+    [...slow.mem.subarray(0x120080, 0x120082)]);
+  assert.deepEqual(fast.mem.subarray(0x1000, 0x5000), beforeTable);
+  assert.deepEqual(fast.mem.subarray(0x1000, 0x5000),
+    slow.mem.subarray(0x1000, 0x5000));
+  assert.equal(fast.cpu._translationGeneration, slow.cpu._translationGeneration);
+  assert.deepEqual([...fast.cpu._translationTablePages],
+    [...slow.cpu._translationTablePages]);
+  assert.equal(fast.displayRevision, slow.displayRevision);
+});
+
+test('terminal store refuses page crossing, tracked table, code overlap and event edge', async () => {
+  const code = [0x90, 0x89, 0x06, 0xff, 0x0f];
+  const crossing = fixture(code, 'protected16');
+  paged(crossing);
+  crossing.mem[0x120fff] = 0xa5;
+  const crossingRunner = await createI80386Code16WasmDispatcher(crossing);
+  assert.equal(crossingRunner.run(2), 1);
+  assert.equal(crossingRunner.stats.blockCalls, 0);
+  assert.equal(crossing.mem[0x120fff], 0xa5);
+  crossingRunner.run(1); // Ordinary page fault still cannot write byte one.
+  assert.equal(crossing.mem[0x120fff], 0xa5);
+
+  const table = fixture([0x90, 0x89, 0x06, 0x80, 0x00], 'protected16');
+  paged(table);
+  table.cpu._translate(0x20080, {write: true});
+  table.cpu._translationTablePages.add(0x120);
+  const tableRunner = await createI80386Code16WasmDispatcher(table);
+  assert.equal(tableRunner.run(2), 1);
+  assert.equal(tableRunner.stats.blockCalls, 0);
+
+  const overlap = fixture([0x90, 0x89, 0x06, 0x20, 0x00]);
+  overlap.cpu.ds = overlap.cpu.cs;
+  overlap.cpu.segmentCaches[3].base = 0x10000;
+  const overlapRunner = await createI80386Code16WasmDispatcher(overlap);
+  assert.equal(overlapRunner.run(2), 1);
+  assert.equal(overlapRunner.stats.blockCalls, 0);
+
+  const event = fixture([0x90, 0x89, 0x06, 0x80, 0x00]);
+  event._chipDeadline = 1;
+  const eventRunner = await createI80386Code16WasmDispatcher(event);
+  assert.equal(eventRunner.run(2), 1);
+  assert.equal(event.mem[0x20080], 0);
+  assert.equal(event.cpu.eip, 0x21);
+});
+
+test('terminal store falls back for clean paging, gated A20, ROM, MMIO and CS edge', async () => {
+  const code = [0x90, 0x89, 0x06, 0x80, 0x00];
+  const clean = fixture(code, 'protected16');
+  paged(clean); // Read-cached target still has a clear D bit.
+  const cleanRunner = await createI80386Code16WasmDispatcher(clean);
+  assert.equal(cleanRunner.run(2), 1);
+  assert.equal(cleanRunner.stats.blockCalls, 0);
+  assert.equal(clean.mem[0x120080], 0);
+
+  const a20 = fixture(code);
+  a20._a20Configured = true; a20._a20Enabled = false;
+  const a20Runner = await createI80386Code16WasmDispatcher(a20);
+  assert.equal(a20Runner.run(2), 1);
+  assert.equal(a20Runner.stats.blockCalls, 0);
+
+  for (const base of [0xa0000, 0xf0000]) {
+    const machine = fixture(code);
+    machine.cpu.segmentCaches[3].base = base;
+    const dispatcher = await createI80386Code16WasmDispatcher(machine);
+    assert.equal(dispatcher.run(2), 1);
+    assert.equal(dispatcher.stats.blockCalls, 0);
+  }
+
+  const limited = fixture(code, 'protected16');
+  limited.cpu.segmentCaches[1].limit = 0x23;
+  const limitedRunner = await createI80386Code16WasmDispatcher(limited);
+  assert.equal(limitedRunner.run(2), 1);
+  assert.equal(limitedRunner.stats.blockCalls, 0);
+  assert.equal(limited.mem[0x20080], 0);
+});
+
+test('host code mutation invalidates cached terminal-store displacement', async () => {
+  const machine = fixture([0x90, 0x89, 0x06, 0x80, 0x00]);
+  machine.cpu.ax = 0x1234;
+  const dispatcher = await createI80386Code16WasmDispatcher(machine);
+  assert.equal(dispatcher.run(2), 2);
+  assert.deepEqual([...machine.mem.subarray(0x20080, 0x20082)], [0x34, 0x12]);
+  machine.cpu.eip = 0x20;
+  machine.cpu.ax = 0x5678;
+  machine._write(0x10023, 0x90); // Host/DMA-equivalent edit of captured code.
+  machine._write(0x20090, 0xa5); // External data edit is visible in shared RAM.
+  assert.equal(dispatcher.run(2), 2);
+  assert.deepEqual([...machine.mem.subarray(0x20090, 0x20092)], [0x78, 0x56]);
+  assert.deepEqual([...machine.mem.subarray(0x20080, 0x20082)], [0x34, 0x12]);
+  assert.equal(machine.cpu.eip, 0x25);
+});
+
 test('8B word and 8A high-byte reads use current shared RAM', async () => {
   // MOV AX,[BX]; MOV AH,[BX+2]; CMP AX,BX; JNZ +0.
   const code = [0x8b, 0x07, 0x8a, 0x67, 0x02, 0x39, 0xd8, 0x75, 0x00];

@@ -10,12 +10,13 @@ unchanged. No speed improvement is claimed.
 
 The decoder accepts unprefixed NOP, MOV immediate/register 16-bit, register
 CMP16 and XOR16, read-only memory `8A`/`8B` with 16-bit ModR/M addressing,
-exact `0x26`-prefixed ES memory `8A`/`8B` loads and `3A` byte CMP, and terminal
-short JZ/JNZ. A block contains at least two instructions and at most eight by
+exact `0x26`-prefixed ES memory `8A`/`8B` loads and `3A` byte CMP, terminal
+short JZ/JNZ, and terminal unprefixed `89 /r` mod00/rm6 (`MOV DS:[disp16],r16`).
+A block contains at least two instructions and at most eight by
 default. It stays within one code page and the CS limit. The final code proof
 captures only the decoded bytes; every cached block rechecks those bytes and
 its mode, segment, A20, and paging identity before entry. Unsupported bytes,
-other prefixes, register-only `8A`, stores, stack operations, and missing proofs
+other prefixes, register-only `8A`, other stores, stack operations, and missing proofs
 fall back to ordinary board stepping.
 
 Each memory read obtains a fresh published EA/data proof at block entry. The
@@ -26,7 +27,8 @@ before reading current shared memory. A preceding instruction that changes an
 EA register can cause a boundary exit. Already completed instructions remain
 committed; the ordinary interpreter resumes at the refused instruction.
 Uncached pages fall back so interpreter page walks retain accessed-bit writes
-and fault behavior. This first slice never writes guest memory.
+and fault behavior. The initial read-only slice never wrote guest memory;
+the later terminal-store extension has a separate write proof below.
 
 The kernel copies eight full 32-bit registers, full EIP, EFLAGS, and CPU cycle
 count. Width-16 register writes preserve upper halves; `8A` handles both low
@@ -191,3 +193,43 @@ unproved targets to ordinary stepping. The census executes no such links.
 The diagnostic opt-in used 363.14 versus 79.63 user CPU seconds; that
 includes millions of extra decode/proof probes and is not a native-link
 performance result.
+
+## Terminal plain-RAM word store
+
+The next default-off extension admits only unprefixed `89 /r` with
+mod00/rm6, a direct DS:disp16 word destination. It must end a block with at
+least one earlier supported instruction. The host rechecks the captured code
+bytes and obtains the published two-byte write proof before entering WASM.
+It further requires both bytes in one physically contiguous kind-1 RAM page.
+The proof refuses segment/limit/privilege failures, uncached or clean paging
+translations, gated-A20 writes, ROM, device overlays, tracked page-table
+pages, and overlap with the captured code bytes. A refusal executes the
+ordinary instruction, preserving its page walk, fault, CR2 and rollback
+effects. The ordinary CPU translates both bytes before either is stored;
+the native path writes only after both addresses are proved.
+
+The WASM instruction samples its source register when reached, writes its
+low and high bytes to the proved shared-RAM addresses, leaves flags intact,
+and returns immediately. This preserves an earlier register update in the
+same block and prevents execution of code that the store might modify.
+For the admitted RAM page, the board's ordinary `notePhysicalWrite` call
+would not invalidate a TLB entry: tracked page-table pages and A20-gated
+writes are refused. The ordinary base write has no other effect there beyond
+the two RAM bytes; display and device ranges are refused. A later call
+revalidates its own code window, including host/DMA edits. The WASM ABI is
+version 3. This remains a proof-bounded experiment outside the production
+GUI, without a speed claim.
+
+Focused differential tests cover real, protected16, VM86 and paged stores,
+live source registers, flags and high register halves, dirty-bit and tracked
+page-table rules, page crossing and zero writes before a second-page fault,
+CS/code overlap, A20, ROM/MMIO, chip-event boundaries, and host/DMA-equivalent
+code and data edits. The full 386 suite passed 452 tests with four skips.
+In a pinned 60-million-step Windows A/B, the complete normalized guest
+reports matched exactly and both stopped at the budget without refusal.
+The extension retired 5,042,482 native instructions in 2,345,288 calls,
+only 2,647 more instructions and 1,283 more calls than the prior ES/XOR
+slice. Ordinary execution used 79.20 user CPU seconds; the opt-in used
+303.48, **3.83 times slower**. It stays default-off and should not be used
+for performance. The result reinforces that an isolated store opcode does
+not solve limited block length or entry overhead.

@@ -2,7 +2,8 @@
 #include <stdint.h>
 
 enum { NOP=0, MOV_IMM16=1, MOV_REG16=2, CMP_REG16=3,
-       LOAD8=4, LOAD16=5, JZ=6, JNZ=7, CMP_MEM8=8, XOR_REG16=9 };
+       LOAD8=4, LOAD16=5, JZ=6, JNZ=7, CMP_MEM8=8, XOR_REG16=9,
+       STORE16=10 };
 enum { DONE=0, EVENT=1, UNSUPPORTED=2, BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
 typedef struct { uint32_t regs[8], eip, eflags, cycles; } State;
@@ -14,7 +15,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t code16_wasm_version(void) { return 2; }
+uint32_t code16_wasm_version(void) { return 3; }
 uint32_t code16_wasm_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t code16_wasm_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t code16_wasm_capacity(void) { return 64; }
@@ -81,18 +82,28 @@ uint32_t code16_wasm_run(uint32_t count, uint32_t budget) {
     if (completed >= budget) return (EVENT << 24) | completed;
     const Instruction ins = program[pc];
     if (!ins.length || ins.length > 15u || ins.dst > 7u || ins.src > 7u ||
-        ins.op > XOR_REG16) return (BOUNDARY << 24) | completed;
-    if (ins.op == LOAD8 || ins.op == LOAD16 || ins.op == CMP_MEM8) {
+        ins.op > STORE16) return (BOUNDARY << 24) | completed;
+    if (ins.op == LOAD8 || ins.op == LOAD16 || ins.op == CMP_MEM8 ||
+        ins.op == STORE16) {
       if (ins.base > 8u || ins.index > 8u ||
           ins.physical0 >= ram_capacity ||
-          (ins.op == LOAD16 && ins.physical1 >= ram_capacity))
+          ((ins.op == LOAD16 || ins.op == STORE16) &&
+            ins.physical1 >= ram_capacity))
         return (BOUNDARY << 24) | completed;
       uint32_t off = ins.disp;
       if (ins.base < 8u) off += state.regs[ins.base] & 0xffffu;
       if (ins.index < 8u) off += state.regs[ins.index] & 0xffffu;
       if ((off & 0xffffu) != ins.expected_offset)
         return (BOUNDARY << 24) | completed;
-      const uint8_t *ram = (const uint8_t *)(uintptr_t)ram_ptr;
+      uint8_t *ram = (uint8_t *)(uintptr_t)ram_ptr;
+      if (ins.op == STORE16) {
+        const uint32_t value = state.regs[ins.src] & 0xffffu;
+        ram[ins.physical0] = value & 255u;
+        ram[ins.physical1] = (value >> 8u) & 255u;
+        state.eip += ins.length;
+        state.cycles++; completed++;
+        return (DONE << 24) | completed;
+      }
       const uint32_t value = ram[ins.physical0] |
         (ins.op == LOAD16 ? (uint32_t)ram[ins.physical1] << 8u : 0u);
       if (ins.op == LOAD8) write8(ins.dst, value);

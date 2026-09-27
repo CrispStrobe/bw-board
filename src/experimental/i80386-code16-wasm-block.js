@@ -9,7 +9,7 @@ import {createI80386RamBridge} from './i80386-ram-bridge.js';
 import {decodeI80386Code16ObservedForm} from './i80386-code16-form-census.js';
 
 const OP = {nop: 0, imm: 1, reg: 2, cmp: 3, load8: 4, load16: 5,
-  jz: 6, jnz: 7, cmpMem8: 8, xorReg16: 9};
+  jz: 6, jnz: 7, cmpMem8: 8, xorReg16: 9, store16: 10};
 const REG = {bx: 3, bp: 5, si: 6, di: 7};
 const WORDS = 12;
 const MEMORY_PAGES = 258;
@@ -63,6 +63,10 @@ function decodeBlock(machine, maxInstructions, refused = null) {
         item = {op: op === 0x89 || op === 0x8b ? OP.reg :
           op === 0x31 || op === 0x33 ? OP.xorReg16 : OP.cmp,
           dst: (op & 2) ? reg : rm, src: (op & 2) ? rm : reg, length: 2};
+      } else if (op === 0x89 && (modrm & 0xc7) === 0x06) {
+        const ea = decodeEA(bytes.slice(at + 1));
+        if (!ea) { stop = 'unsupportedMemoryForm'; break; }
+        item = {op: OP.store16, src: ea.reg, ea, length: 1 + ea.length};
       } else if (op === 0x8b) {
         const ea = decodeEA(bytes.slice(at + 1));
         if (!ea) { stop = 'unsupportedMemoryForm'; break; }
@@ -84,8 +88,8 @@ function decodeBlock(machine, maxInstructions, refused = null) {
     }
     instructions.push(Object.freeze(item));
     at += item.length;
-    if (item.op === OP.jz || item.op === OP.jnz) {
-      stop = 'terminalBranch'; break;
+    if (item.op === OP.jz || item.op === OP.jnz || item.op === OP.store16) {
+      stop = item.op === OP.store16 ? 'terminalStore' : 'terminalBranch'; break;
     }
   }
   if (instructions.length < 2) {
@@ -109,9 +113,15 @@ function prepare(machine, block) {
   for (const item of block.instructions) {
     const ir = {...item};
     if (item.ea) {
+      const write = item.op === OP.store16;
       const proof = admitEA(machine, block.code, item.ea,
-        item.op === OP.load16 ? 2 : 1, 'read');
-      if (!proof || !validEA(proof)) {
+        item.op === OP.load16 || write ? 2 : 1, write ? 'write' : 'read');
+      // This first store slice is a plain, physically contiguous RAM word.
+      // Refuse a crossing before WASM can store either byte.
+      if (!proof || !validEA(proof) ||
+          (write && (proof.dataWindow.pages.length !== 1 ||
+            proof.dataWindow.physicalAddresses[1] !==
+              proof.dataWindow.physicalAddresses[0] + 1))) {
         refusal = proof ? 'dataProofInvalidation' : 'dataProofRefusal'; break;
       }
       proofs.push(proof);
@@ -220,7 +230,7 @@ export async function createI80386Code16WasmDispatcher(machine, {
   const module = await (bundledModule ??= WebAssembly.compile(await moduleBytes()));
   const {exports: wasm} = await WebAssembly.instantiate(module, {env: {memory: bridge.memory}});
   if (bridge.memory.buffer.byteLength !== MEMORY_PAGES * 65536 ||
-      wasm.code16_wasm_version() !== 2 ||
+      wasm.code16_wasm_version() !== 3 ||
       wasm.code16_wasm_capacity() !== 64 ||
       wasm.code16_wasm_bind_ram(bridge.ram.byteOffset, bridge.ram.length) !== 1)
     throw new Error('code16 WASM ABI or RAM mismatch');
