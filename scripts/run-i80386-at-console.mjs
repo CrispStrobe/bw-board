@@ -74,6 +74,7 @@ if(![2,47].includes(cmosType)||
 const stepsLimit=Number(options.steps);
 const code16Coverage=process.env.AT_CODE16_COVERAGE==='1'?
   createI80386Code16Coverage():null;
+const code16WasmDiagnostics=process.env.AT_CODE16_WASM_DIAGNOSTICS==='1';
 const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
   schema:'bw.i80386-mode-cpu-profile.v1',intervalSteps:1024,
   modes:['real','protected16','vm86','protected32'],
@@ -89,6 +90,8 @@ if(modeCpuProfile&&(options.nativeBlocks||options.code16Wasm||code16Coverage||op
   throw new Error('mode CPU profile requires ordinary single-step execution');
 if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
   throw new Error('code16 WASM is a separate opt-in dispatcher');
+if(code16WasmDiagnostics&&!options.code16Wasm)
+  throw new Error('code16 WASM diagnostics require AT_CODE16_WASM=1');
 if(!Number.isInteger(stepsLimit)||stepsLimit<1||stepsLimit>500_000_000)
   throw new Error('AT_POST_STEPS must be 1..500000000');
 const eventBytes=process.env.AT_CONSOLE_EVENTS?fs.readFileSync(process.env.AT_CONSOLE_EVENTS):Buffer.from('[]');
@@ -152,7 +155,8 @@ const nativeDispatcher=options.nativeBlocks?
     .createI80386NativeDispatcher(machine):null;
 const code16WasmDispatcher=options.code16Wasm?
   await (await import('../src/experimental/i80386-code16-wasm-block.js'))
-    .createI80386Code16WasmDispatcher(machine):null;
+    .createI80386Code16WasmDispatcher(machine,
+      {diagnosticReasons:code16WasmDiagnostics}):null;
 machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
@@ -325,6 +329,8 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   nativeStats:nativeDispatcher?.stats??null,
   code16WasmStats:code16WasmDispatcher?.stats??null,
+  ...(code16WasmDiagnostics?
+    {code16WasmDiagnostics:code16WasmDispatcher.diagnostics}:{}),
   code16LoadExecutions:machine.code16LoadExecutions??0,
   ...(modeCpuProfile?{modeCpuProfile}:{}),
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},

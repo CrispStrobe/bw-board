@@ -208,9 +208,11 @@ test('taken CS-limit branch exits at boundary after prior instructions', async (
   const code = [0xb8, 0x01, 0x00, 0x39, 0xc0, 0x74, 0x20];
   const machine = fixture(code, 'protected16');
   machine.cpu.segmentCaches[1].limit = 0x28;
-  const dispatcher = await createI80386Code16WasmDispatcher(machine);
+  const dispatcher = await createI80386Code16WasmDispatcher(machine,
+    {diagnosticReasons: true});
   assert.equal(dispatcher.run(3), 2);
   assert.equal(dispatcher.stats.boundary, 1);
+  assert.equal(dispatcher.diagnostics.exits.branchTargetLimit, 1);
   assert.equal(machine.cpu.eip, 0x25);
   assert.equal(machine.cpu.eflags & 0x40, 0x40);
 });
@@ -244,6 +246,52 @@ test('interrupt shadow and pending IRQ force ordinary board stepping', async () 
   const pendingRunner = await createI80386Code16WasmDispatcher(pending);
   pendingRunner.run(2);
   assert.equal(pendingRunner.stats.blockCalls, 0);
+});
+
+test('opt-in diagnostic reasons identify exact refusal and exit sites', async () => {
+  const cases = [
+    {code: [0x40, 0x90], reason: 'unsupportedFirstOpcode'},
+    {code: [0x90, 0x40], reason: 'shortBlock', shortStop: 'unsupportedOpcode'},
+    {code: [0x74, 0x00, 0x90], reason: 'shortBlock', shortStop: 'terminalBranch'},
+    {code: [0x90, 0x8b, 0x07], reason: 'dataProofRefusal',
+      setup: machine => { machine.cpu.bx = 0x20;
+        machine.cpu.segmentCaches[3].base = 0xa0000; }},
+    {code: [0x90, 0x90], reason: 'mode32',
+      setup: machine => { machine.cpu.segmentCaches[1].default32 = true; }},
+    {code: [0x90, 0x90], reason: 'interruptShadow',
+      setup: machine => { machine.cpu._interruptShadow = 1; }},
+    {code: [0x90, 0x90], reason: 'codeWindowRefusal', mode: 'protected16',
+      setup: machine => { paged(machine); machine.cpu.invalidateTranslationCache(); }},
+  ];
+  for (const {code, reason, shortStop, setup, mode} of cases) {
+    const fast = fixture(code, mode), slow = fixture(code, mode);
+    setup?.(fast); setup?.(slow);
+    const dispatcher = await createI80386Code16WasmDispatcher(fast,
+      {diagnosticReasons: true});
+    assert.equal(dispatcher.run(2), 1);
+    slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.diagnostics.fallbacks[reason], 1);
+    if (shortStop) assert.equal(dispatcher.diagnostics.shortBlockStops[shortStop], 1);
+    if (reason === 'unsupportedFirstOpcode')
+      assert.equal(dispatcher.diagnostics.unsupportedFirstOpcodes[0x40], 1);
+  }
+
+  const code = [0xbb, 0x20, 0x00, 0x8b, 0x07, 0x90];
+  const fast = fixture(code), slow = fixture(code);
+  fast.mem.set([0x34, 0x12], 0x20000);
+  slow.mem.set([0x34, 0x12], 0x20000);
+  const dispatcher = await createI80386Code16WasmDispatcher(fast,
+    {diagnosticReasons: true});
+  assert.equal(dispatcher.run(3), 1);
+  slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.diagnostics.exits.dynamicEA, 1);
+  assert.equal(dispatcher.stats.boundary, 1);
+  assert.equal(dispatcher.stats.fallback, 0);
+
+  const ordinary = await createI80386Code16WasmDispatcher(fixture([0x90, 0x90]));
+  assert.equal(ordinary.diagnostics, null);
 });
 
 test('vendored free BIOS bounded run preserves CPU and full guest RAM hash', async () => {

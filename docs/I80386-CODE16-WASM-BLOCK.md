@@ -68,3 +68,48 @@ with this WASM path. The WASM implementation bytes and ordinary guest step
 path did not change in that rebase. The final candidate passed the focused
 tests and full 386 suite; the long-run timing is bound to the measured CLI
 hash in the private evidence, not presented as a final-candidate timing.
+
+## Opt-in refusal diagnostics
+
+Set `AT_CODE16_WASM=1 AT_CODE16_WASM_DIAGNOSTICS=1` to add a
+`code16WasmDiagnostics` object to the AT console report. Diagnostics require
+the WASM option and leave the ordinary/default guest path untouched. The
+dispatcher keeps the reason maps absent when diagnostics are off. The maps
+count dispatcher **calls**, not retired guest instructions:
+
+- `fallbacks` assigns one reason to each call that executes one ordinary
+  `machine.step()`. The sum equals `code16WasmStats.fallback`.
+- `exits` assigns one reason to each WASM call that commits at least one
+  instruction. The sum equals `code16WasmStats.blockCalls`.
+- `shortBlockStops` records why decoding stopped when it found only one
+  supported instruction. `unsupportedFirstOpcodes` uses decimal byte keys
+  for first-byte refusals. `preparationTruncations` records data proofs that
+  cut a block after at least two ready instructions; those calls can still
+  execute. `cacheInvalidations` counts stale cached code proofs.
+
+Reasons are tied to observed guards. When several eligibility guards are true,
+the first matching guard supplies the category; it is not a causal timing
+attribution. `dynamicEA` means the WASM-computed live offset differed from
+the exact address proved before entry. `branchTargetLimit` means a taken
+branch crossed the CS limit. `wasmGuard` covers a boundary that these
+observable checks cannot distinguish; no such exit appeared in the pinned
+run. Diagnostics do not attempt to classify instruction internals beyond the
+first opcode byte.
+
+A pinned private 60-million-step ordinary/diagnostic A/B matched the full
+normalized guest report. Of 57,269,596 fallback calls, 29,848,776 began with
+an unsupported opcode byte, 15,277,507 were in 32-bit mode, and 8,005,084
+had fewer than two supported instructions. Further blockers were repeat
+context (2,150,307 calls) and unsupported memory forms (1,811,593). Only
+13,319 fallbacks were data-proof refusals; 98,169 native exits were caused
+by a changed effective address. The leading refused first bytes include
+`0x26`, `0x8E`, `0x66`, `0xE8`, `0xC3`, `0x50`, and `0xF3`. A first byte alone
+does not establish its full instruction form. These counts favor broader
+opcode, prefix, stack, and control-flow support, followed by useful block
+linking; they do not identify a page-window proof as the leading blocker.
+
+The diagnostic opt-in used 311.13 user CPU seconds versus 78.33 for ordinary
+stepping in that serial pair. This is a correctness and bottleneck census,
+not a performance improvement. It does not isolate the cost of diagnostics
+from the already slower WASM slice. The diagnostic WASM option should not be
+used for performance.
