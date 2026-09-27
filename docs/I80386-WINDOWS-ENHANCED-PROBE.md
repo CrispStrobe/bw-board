@@ -20,14 +20,15 @@ and injects an ordered array of `{"step": integer, "dx": integer, "dy": integer,
 "buttons": bitmask}` events. Positive `dy` moves down; buttons 1, 2, and 4
 mean left, right, and middle. Each event records whether the guest accepted
 its packet. `AT_ENABLE_MOUSE=1` enables the device without scripted input.
+The mouse-enabled profile also advertises it in CMOS equipment byte 14h;
+Windows otherwise leaves the auxiliary port disabled.
 `checkpoints` help choose the step;
 set `AT_PROGRESS_OUTPUT=/path/to/progress.json` to inspect the latest checkpoint
 while a long run is still active. `AT_PROGRESS_EVERY` defaults to one million
 instructions. The progress file is atomically replaced at each checkpoint.
 Set `AT_VGA_CAPTURE=1` to include the final four VGA planes and complete
-registers in the external JSON report. The existing Windows 3.0 renderer
-accepts only its observed 640×350 EGA layout; a different Windows 3.11 VGA
-mode needs separate decoding before a desktop can be visually accepted.
+registers in the external JSON report. The observed Windows 3.0 640×350 and
+Windows 3.11 640×480 layouts have separate strict decoders in the AT console.
 Disk writes stay in the in-memory image clone unless `AT_HDD_OUTPUT` names a
 new external path. That option creates the output exclusively and records its
 SHA-256, so a subsequent boot can verify DOS or Windows disk persistence.

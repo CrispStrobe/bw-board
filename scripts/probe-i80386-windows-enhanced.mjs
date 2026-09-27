@@ -81,7 +81,7 @@ const cmos = new Uint8Array(0x40);
 for (const [index, value] of rtc.initialCmos) cmos[index] = value;
 cmos[0x10] = 0x20; // 1.2 MB drive A, as required by the IBM Rev1 POST.
 cmos[0x12] = cmosType === 2 ? 0x20 : 0xf0;
-cmos[0x14] = 0x01; // VGA.
+cmos[0x14] = 0x01 | (profile.a20.mouse ? 0x04 : 0); // VGA and, when present, PS/2 mouse.
 // Bochs firmware reads this extended CMOS boot order: floppy, then HDD.
 // IBM Rev1 ignores it, but omitting it leaves Bochs at "No bootable device".
 cmos[0x3d] = 0x21;
@@ -216,7 +216,8 @@ const report = {
   input: {bios: {bytes: bios.bytes.length, sha256: bios.sha256},
     vga: {bytes: vga.bytes.length, sha256: vga.sha256},
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256,
-      geometry: {cylinders, heads, sectors}, cmosType}},
+      geometry: {cylinders, heads, sectors}, cmosType},
+    mouseEnabled: profile.a20.mouse, cmosEquipment: cmos[0x14]},
   milestones, post, ata, kbc, checkpoints, keyboard, mouse,
   keyScriptSha256: keyBytes && hash(keyBytes), final: state(), finalContext,
   mouseScriptSha256: mouseBytes && hash(mouseBytes),
