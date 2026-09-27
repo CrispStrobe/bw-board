@@ -1,6 +1,8 @@
 2026-09-27 OP07 real precision op-amp model — DONE candidate, Codex bwcx. Isolated
-worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part`, exact base
-`8e1156dac12c98f33b83a5c3af8ac74a1a6927af`. Owns only this row,
+worktree `/tmp/wt-bwcx-op07-board`, branch `lane/op07-real-part-v2`, exact base
+`58db46525805505be2e8019e365ce78433d76929`. The implementation was replayed
+without source/test drift after the disjoint stock-xv6 series advanced master.
+Owns only this row,
 `src/devices/analog-amps.js`, `src/current-ratings.js`, and one focused OP07
 test. Add the manufacturer-backed single-amplifier DIP-8 electrical contract
 using the existing precision-op-amp controller: finite gain and differential
