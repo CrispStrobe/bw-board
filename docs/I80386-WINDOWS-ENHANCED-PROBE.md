@@ -17,6 +17,10 @@ or send Set-1 make/break events after DOS reaches its prompt with
 set `AT_PROGRESS_OUTPUT=/path/to/progress.json` to inspect the latest checkpoint
 while a long run is still active. `AT_PROGRESS_EVERY` defaults to one million
 instructions. The progress file is atomically replaced at each checkpoint.
+Set `AT_VGA_CAPTURE=1` to include the final four VGA planes and complete
+registers in the external JSON report. The existing Windows 3.0 renderer
+accepts only its observed 640×350 EGA layout; a different Windows 3.11 VGA
+mode needs separate decoding before a desktop can be visually accepted.
 Disk writes stay in the in-memory image clone.
 Both the 32 KiB SeaVGABIOS variant and the vendored 38.4 KiB Bochs VGA BIOS
 fit the probe's option-ROM mapping. A two-million-instruction type-47/Bochs

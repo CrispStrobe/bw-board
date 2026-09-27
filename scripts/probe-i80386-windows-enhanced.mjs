@@ -143,6 +143,17 @@ try {
   refusal = {name: error.name, message: error.message, step: steps, ...state()};
 }
 const video = machine.chips.vga1.getVideoState();
+const snapshot = process.env.AT_VGA_CAPTURE === '1' ? {
+  planeBytes: machine.vgaMemory.planes.map(plane => plane.length),
+  planeBase64: machine.vgaMemory.planes.map(plane => Buffer.from(plane).toString('base64')),
+  registers: {
+    misc: video.misc, seq: [...video.seq], gc: [...video.gc],
+    crtc: [...video.crtc], attr: [...video.attr], dac: [...video.dac],
+    dacMask: video.dacMask, dacWriteIndex: video.dacWriteIndex,
+    dacReadIndex: video.dacReadIndex, inVRetrace: video.inVRetrace,
+    frame: video.frame,
+  },
+} : null;
 const report = {
   schema: 'bw.i80386-windows-enhanced-probe.v1', diagnosticOnly: true,
   windowsEnhancedAccepted: false, outcome, steps, stepLimit: limit, refusal,
@@ -156,6 +167,7 @@ const report = {
   sourceUnchanged: sourceFiles.every(file =>
     hash(fs.readFileSync(new URL(file, import.meta.url))) === sourceSha256[file]),
   vga: {planeSha256: machine.vgaMemory.planes.map(hash),
-    frame: video.frame, mode: {misc: video.misc, seq: [...video.seq], gc: [...video.gc]}},
+    frame: video.frame, mode: {misc: video.misc, seq: [...video.seq], gc: [...video.gc]},
+    snapshot},
 };
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
