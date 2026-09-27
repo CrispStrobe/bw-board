@@ -95,6 +95,7 @@ let steps = 0;
 const milestones = {};
 const post = [];
 const ata = {count: 0, tail: []};
+const kbc = {count: 0, tail: []};
 const checkpoints = [];
 const keyboard = [];
 let nextKey = 0;
@@ -113,6 +114,12 @@ machine = new Machine(profile, {
         cylinder: machine.ata.cylinderLow | machine.ata.cylinderHigh << 8,
         head: machine.ata.driveHead});
       if (ata.tail.length > 128) ata.tail.shift();
+    }
+    if (event.port === 0x60 || event.port === 0x64) {
+      kbc.count++;
+      kbc.tail.push({step: steps, dir: event.dir, port: event.port,
+        value: event.value, cs: machine.cpu.cs, eip: machine.cpu.eip});
+      if (kbc.tail.length > 128) kbc.tail.shift();
     }
   },
 });
@@ -158,6 +165,22 @@ try {
   refusal = {name: error.name, message: error.message, step: steps, ...state()};
 }
 const video = machine.chips.vga1.getVideoState();
+const cpu = machine.cpu;
+const codeBase = cpu.segmentCaches[1].base >>> 0;
+const finalContext = {
+  registers: Object.fromEntries(['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'ebp', 'esp',
+    'cs', 'ds', 'es', 'ss', 'fs', 'gs'].map(name => [name, cpu[name] >>> 0])),
+  codeBase, instructionBytes: Array.from({length: 32}, (_, index) =>
+    machine._read386((codeBase + cpu.eip + index) >>> 0)),
+  halted: cpu.halted, shutdown: cpu.shutdown,
+  kbc: machine._a20Controller && {
+    status: machine._a20Controller.readStatus(),
+    commandByte: machine._a20Controller.commandByte,
+    outputPort: machine._a20Controller.outputPort,
+    outputQueue: machine._a20Controller.outputQueue,
+    pendingCommand: machine._a20Controller.pendingCommand,
+  },
+};
 const snapshot = process.env.AT_VGA_CAPTURE === '1' ? {
   planeBytes: machine.vgaMemory.planes.map(plane => plane.length),
   planeBase64: machine.vgaMemory.planes.map(plane => Buffer.from(plane).toString('base64')),
@@ -176,8 +199,8 @@ const report = {
     vga: {bytes: vga.bytes.length, sha256: vga.sha256},
     hdd: {bytes: hdd.bytes.length, sha256: hdd.sha256,
       geometry: {cylinders, heads, sectors}, cmosType}},
-  milestones, post, ata, checkpoints, keyboard,
-  keyScriptSha256: keyBytes && hash(keyBytes), final: state(),
+  milestones, post, ata, kbc, checkpoints, keyboard,
+  keyScriptSha256: keyBytes && hash(keyBytes), final: state(), finalContext,
   executionRevision, sourceSha256,
   sourceUnchanged: sourceFiles.every(file =>
     hash(fs.readFileSync(new URL(file, import.meta.url))) === sourceSha256[file]),

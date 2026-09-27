@@ -40,6 +40,12 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this.config = config;
     this.variant = '80386';
     this.cpuBackend = 'i80386-experimental';
+    this._fastA20Port92 = !!config.experimentalFastA20Port92;
+    this._fastA20Latch = 0;
+    if (this._fastA20Port92 && this._a20Controller)
+      this._a20Controller.onA20Change = enabled => {
+        this._a20Enabled = enabled || !!(this._fastA20Latch & 2);
+      };
     this.functionalInstructionCycles = config.functionalInstructionCycles ?? 1;
     if (!Number.isInteger(this.functionalInstructionCycles) ||
         this.functionalInstructionCycles < 1 || this.functionalInstructionCycles > 16)
@@ -107,6 +113,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
   }
 
   reset() {
+    this._fastA20Latch = 0;
     super.reset();
     this.ata?.reset();
     this.vgaMemory?.reset();
@@ -216,6 +223,11 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _in386(port, width) {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
+    if (this._fastA20Port92 && port === 0x92 && width === 8) {
+      const value = this._fastA20Latch;
+      this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      return value;
+    }
     if (this.ata && (port >= 0x1f0 && port <= 0x1f7 || port === 0x3f6)) this._flushChips();
     if (this.ata && port === 0x1f0) {
       if (width !== 16 && width !== 32)
@@ -245,6 +257,15 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _out386(port, value, width) {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
+    if (this._fastA20Port92 && port === 0x92 && width === 8) {
+      // AT-clone system-control port A: bit 1 is the fast A20 source. The
+      // effective gate is its OR with the 8042 output-port A20 bit.
+      this._fastA20Latch = value & 2;
+      this._a20Enabled = !!((this._a20Controller?.outputPort & 2) || this._fastA20Latch);
+      if (value & 1) this._cpuResetPending = true;
+      this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
+      return;
+    }
     if (this.ata && (port >= 0x1f0 && port <= 0x1f7 || port === 0x3f6)) this._flushChips();
     if (this.ata && port === 0x1f0) {
       if (width !== 16 && width !== 32)
@@ -448,6 +469,7 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS = Object.freeze({
 /** Opt-in VGA board profile with external C000h option-ROM decode. */
 export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
+  experimentalFastA20Port92: true,
   experimentalVgaMemory: 'vga1',
   regions: [
     ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS.regions.filter(region =>

@@ -6,6 +6,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M,
   PCAT80386_EXPERIMENTAL_4M_HDD,
   PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
+  PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
@@ -54,6 +55,25 @@ test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 b
   assert.equal(machine.cpu.read(0x01000000), 0xff, '16MiB must not wrap to address zero');
   machine.setA20Enabled(true);
   assert.equal(machine.cpu.read(0x100000), 0x22);
+});
+
+test('VGA AT clone port 92h reads low and ORs fast A20 with the 8042 gate', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
+  machine.mem[0] = 0x11;
+  machine.mem[0x100000] = 0x22;
+  machine.setA20Enabled(false);
+  assert.equal(machine._in386(0x92, 8), 0);
+  assert.equal(machine.cpu.read(0x100000), 0x11);
+  machine._out386(0x92, 2, 8);
+  assert.equal(machine._in386(0x92, 8), 2);
+  assert.equal(machine.cpu.read(0x100000), 0x22);
+  machine._out386(0x92, 0, 8);
+  assert.equal(machine.cpu.read(0x100000), 0x11);
+  machine.setA20Enabled(true);
+  assert.equal(machine.cpu.read(0x100000), 0x22,
+    'clearing fast A20 does not override an enabled 8042 output');
+  machine.reset();
+  assert.equal(machine._in386(0x92, 8), 0);
 });
 
 test('experimental 386 physical dword reads preserve RAM and bus boundary semantics', () => {

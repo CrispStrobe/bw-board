@@ -89,6 +89,19 @@ test("real-mode #UD saves the faulting IP and IRET resumes after a repaired inst
   assert.equal(f.cpu.halted, true);
 });
 
+test("invalid 386 two-byte opcodes enter the guest invalid-opcode handler", () => {
+  for (const opcode of [0xa6, 0xa7, 0xff]) {
+    const f = fixture({ deliverFaults: true });
+    f.cpu.ss = 0x100;
+    f.cpu._loadSeg(2, 0x100);
+    f.cpu.sp = 0x100;
+    f.put(6 * 4, [0x00, 0x02, 0x00, 0x20]);
+    f.put(0, [0x0f, opcode, 0xc0]);
+    f.cpu.step();
+    assert.deepEqual([f.cpu.cs, f.cpu.ip, f.word(0x10fa)], [0x2000, 0x200, 0]);
+  }
+});
+
 test("32-bit interrupt and 16-bit trap gates build independently expected same-ring frames", () => {
   const interrupt = protectedFixture(0x0e);
   interrupt.cpu.eflags = 0x302;

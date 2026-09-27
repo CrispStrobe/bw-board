@@ -89,6 +89,7 @@ export class ExperimentalI80386 {
     this.cr2 = 0;
     this.cr3 = 0;
     this.cr4 = 0;
+    this._debugRegisters = new Uint32Array(8);
     this._coprocessorProfile = "none";
     this.halted = false;
     this.cycles = 0;
@@ -1874,6 +1875,7 @@ export class ExperimentalI80386 {
       repeatContext: this._repeatContext,
       ldtr: this.ldtr,
       tr: this.tr,
+      debugRegisters: this._debugRegisters,
     };
   }
 
@@ -1900,6 +1902,7 @@ export class ExperimentalI80386 {
     this._debugShadow = state.debugShadow;
     this._nmiActive = state.nmiActive;
     this._retainedRealCs = state.retainedRealCs;
+    this._debugRegisters = state.debugRegisters;
     this.segmentCaches = {
       0: state.segmentCaches[0],
       1: state.segmentCaches[1],
@@ -3439,6 +3442,27 @@ export class ExperimentalI80386 {
       else this.idtr = table;
       return;
     }
+    if (op === 0x21 || op === 0x23) {
+      const m = this._fetch8();
+      if (m >>> 6 !== 3)
+        throw new I80386Fault(6, null, "MOV DR requires a register");
+      const debug = (m >>> 3) & 7,
+        register = m & 7;
+      if (debug === 4 || debug === 5)
+        throw new I80386Fault(6, null, "reserved 80386 debug register");
+      if (this.protectedMode && this.currentPrivilegeLevel !== 0)
+        throw new I80386Fault(13, 0, "MOV DR requires CPL0");
+      if (op === 0x21) this._setReg(register, 32, this._debugRegisters[debug]);
+      else {
+        const value = this._reg(register, 32);
+        if (debug === 7 && (value & 0xff))
+          throw new UnsupportedI80386("enabled 80386 hardware breakpoints");
+        const next = this._debugRegisters.slice();
+        next[debug] = value;
+        this._debugRegisters = next;
+      }
+      return;
+    }
     if (op === 0x20 || op === 0x22) {
       const m = this._fetch8();
       if (m >>> 6 !== 3)
@@ -3470,6 +3494,11 @@ export class ExperimentalI80386 {
       }
       return;
     }
+    // XBTS/IBTS were removed with the B1 80386 stepping. Windows probes them
+    // through an INT 6 handler to identify the CPU; refusing host-side would
+    // prevent the guest from observing the architecturally required #UD.
+    if (op === 0xa6 || op === 0xa7 || op === 0xff)
+      throw new I80386Fault(6, null, "invalid 80386 two-byte opcode");
     throw new UnsupportedI80386(`0f ${op.toString(16).padStart(2, "0")}`);
   }
 }

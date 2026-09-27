@@ -9,8 +9,9 @@ does not prove that Windows reached Program Manager or that a DOS box works.
 
 Supply an exact SHA-256 for each input and the image's physical CHS geometry.
 The current probe uses the 4 MiB VGA AT profile. Use IBM drive type 2 only for a
-615/4/17 image; type 47 needs firmware that supports user geometry. The image
-must boot DOS and contain `WIN386.EXE`; arrange for `WIN /3` in `AUTOEXEC.BAT`,
+615/4/17 image; type 47 needs firmware that supports user geometry. The VGA
+profile models the clone fast-A20 latch at port 92h alongside the 8042 gate.
+The image must boot DOS and contain `WIN386.EXE`; arrange for `WIN /3` in `AUTOEXEC.BAT`,
 or send Set-1 make/break events after DOS reaches its prompt with
 `AT_KEY_SCRIPT=/path/to/events.json`. The script is an ordered JSON array of
 `{"step": integer, "code": byte}` objects. `checkpoints` help choose the step;
