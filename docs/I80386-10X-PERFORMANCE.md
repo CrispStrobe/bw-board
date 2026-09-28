@@ -362,9 +362,19 @@ remain exact. The [xv6 proof audit](receipts/2026-09-28-i80386-xv6-hot-loop-prot
 found a 25-step page-table-writing `mappages` loop, an 18-step loop with a
 PDE-dependent PTE read, and a nine-step loop with dependent reads and a
 write. Current entry-only code/data windows cannot admit these without
-losing translation coherence or precise later-instruction faults. No
-executable prototype or CPU-time A/B was run after these safety refusals.
+losing translation coherence or precise later-instruction faults. That
+initial audit stopped without executable work or CPU-time A/B.
 The next architectural work is dynamic per-instruction translation and fault
 checkpoints, immediate page-table-write coherence, and bounded event-aware
 batching; any implementation still needs full Windows/xv6 parity and paired
 CPU-time evidence before a speed claim.
+
+A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
+admitted 51,150 of 51,200 reached second-read attempts using cached RAM
+proofs. A guarded [two-phase xv6 prototype](receipts/2026-09-28-i80386-deallocuvm-two-phase-negative.json)
+then preserved the full guest report and RAM hash while retiring 1,038,726
+instructions natively. Serial user-CPU pairs were 27.90/31.39 and
+26.55/32.92 seconds for ordinary/opt-in: the opt-in mean was 18.11% slower.
+The full-workload no-regression gate failed, so its executable changes were
+discarded. Those native retirements cover 4.268% of completed step calls;
+that is not a measured CPU-time share.

@@ -1,0 +1,67 @@
+{
+  "schema": "bw.i80386-deallocuvm-two-phase-negative-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Rejected opt-in two-phase native prototype for one pinned xv6 read-only loop; documentation only, no public executable change",
+  "source": {
+    "baseCommit": "cc708cc5aad42193afc2e3c6978c63ca3743da68",
+    "privateEvidenceCommit": "8d3aaaa0ba0d71d8b4965adbb0a8859eea2353b6",
+    "privateEvidenceNote": "performance/2026-09-28/i80386-deallocuvm-two-phase-negative.json",
+    "rejectedCandidateArchiveSha256": "e918583561fceaf7dc0ba011b1e3d4d2e5f23b33bcb2c61d98ddc98c7452a2b1",
+    "rejectedCandidateSha256": {
+      "wasmC": "79c94079dcc365f308ee9c13c8edaa39574616a6a03d27edf36cb55b2256a768",
+      "wasmBinary": "ca78b2405bca8abffaf941148f6c37869c82a9bf42560aedd3f8e892c0fe4dc0",
+      "wasmHost": "b8119aa8189601df0b74483cca66b639b7502917cd73a07c0ac0b5c774291d8a",
+      "twoPhaseRunner": "004e640708a5552f96a9d0a569daa3a437ad238e36750db9d5e98fcc31990671",
+      "xv6Probe": "dcdc3e9b673c108867ae1faba1050cc7ba91583c10a46d2606ba933691db1926",
+      "irTests": "f2287acfb503dc6ef4615ad6dab84d0d626f877ca6c6caa40f2444c97d576c2f",
+      "phaseTests": "8fdaa6d35007cc27057a35cf17a9239735829f9743f9c73d5fe3eb6f160b9cd8"
+    }
+  },
+  "fixture": {
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d",
+    "run": "Pinned lean stock xv6 forktest, Bochs firmware, 40M step cap, stop on expected serial, full RAM SHA enabled"
+  },
+  "prototype": "Phase A executes only the proved read-only prefix, exits before the dependent second load, and commits its retired instructions. At the reached second-load slot, phase B checks the captured first value and derived address with the dependent-read helper, current code bytes/CS/DS/TLB/A20/RAM identity, and the existing event budget. Unsafe or stale admission returns to ordinary stepping before the second load. Taken branches exit to the host at their exact targets. The candidate and narrow IR additions were archived privately and removed from public source after failing the keep gate.",
+  "validation": {
+    "syntheticTests": "51/51 combined nearby tests passed; four new phase tests covered full 18-step ordinary-vs-native state parity, early branch exits, stale-value/CS-limit refusal, and chip-budget stop.",
+    "completedStepCallsEachRun": 24338279,
+    "normalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "normalization": "Ordinary: jq -S 'del(.ramSha256,.rom.path,.image.path,.slaveImage.path)'. Opt-in additionally deletes .deallocTwoPhase,.deallocTwoPhaseStats,.deallocTwoPhaseSourceSha256,.sharedRam. Both arms equal the prior pinned ordinary baseline exactly; the additional RAM hash is reported separately.",
+    "ramSha256EveryRun": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "rawReportRepeatEquality": "ordinary A == ordinary B; opt-in A == opt-in B, byte-for-byte",
+    "optinStats": {
+      "phaseAAttempts": 76750,
+      "phaseACalls": 76644,
+      "phaseARetired": 737137,
+      "phaseAToB": 50502,
+      "phaseBAttempts": 51200,
+      "phaseBProofs": 50502,
+      "phaseBCalls": 50458,
+      "phaseBRetired": 301589,
+      "phaseBRefusals": 742,
+      "totalNativeRetired": 1038726,
+      "fractionOfCompletedStepCalls": 0.042679
+    }
+  },
+  "serialUserCpuSeconds": {
+    "order": "ordinary A, opt-in A, opt-in B, ordinary B on one host",
+    "ordinaryA": 27.90,
+    "optinA": 31.39,
+    "optinB": 32.92,
+    "ordinaryB": 26.55,
+    "ordinaryMean": 27.225,
+    "optinMean": 32.155,
+    "optinSlowerPercentOfMeans": 18.11,
+    "predeclaredKeepGate": ">=10% focused-loop user-CPU gain and no full pinned xv6 user-CPU regression",
+    "focusedGate": "Not timed after the full-workload no-regression gate failed twice"
+  },
+  "privateRawSha256": {
+    "ordinaryReport": "7d438ae89a90e1e0b0d8c9b2aec001d2b257f679a38c80c547b6fd3dd54177d6",
+    "optinReport": "a8e0778e44ac5051fc75744ddfdd94d065ca5ff833821f84cc272781a67277df",
+    "ordinaryATime": "4c569c30e51dfb3986a5434312ccefb870b75a5ace75ea07f8f09370de6c82e3",
+    "ordinaryBTime": "97bebb9f99226a5bd773b512e73a153f7be8cb919dad2cdb0500422d317cc727",
+    "optinATime": "3edcf08c29f0f4e63c79febf3faacaa705fb12166373e9991b0d3262728477f3",
+    "optinBTime": "4b9a14327408dd0871b1bcd656672010cd6121d484c7b615265cfafecdfc379e"
+  },
+  "decision": "No-go. Exact guest parity and 1,038,726 native retirements did not overcome admission and the two phases' WASM dispatch costs. Both serial pairs regressed full-run user CPU. The native retirement count is 4.268% of completed step calls, not a measured CPU-time share; equal-cost-per-step, zero-cost-removal would project only 1.0446x, not a rigorous speed bound. No executable candidate or speed claim is retained."
+}
