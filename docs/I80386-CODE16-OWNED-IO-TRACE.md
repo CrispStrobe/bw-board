@@ -22,7 +22,8 @@ At `stepsUntilChipEvent:3`, the taken case returns:
 device reads. One ordinary `cpu.step()` then performs exactly one 8-bit
 read of PIC1 port `0021` and stops at `CS:EIP=0008:7C3D` with `AL=A5`.
 The full test checkpoint compares all eight general registers, all six
-segment selectors, EIP, EFLAGS, CR0, cycle count and device-read count
+segment selectors, EIP, EFLAGS, CR0, cycle count, the core's instruction
+rollback snapshot, the fixture RAM SHA-256 and device-read count
 against three ordinary steps and the one-step resume. The selected
 CS/segment/EIP/EFLAGS/BX/DX/AL fields also match the existing
 [QEMU pre/post checkpoints](receipts/2026-09-28-i80386-win16-io-boundary-oracle.json).

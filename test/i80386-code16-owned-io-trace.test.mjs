@@ -42,12 +42,12 @@ function fixture(cmpImmediate=1){
   cpu.segmentCaches[3]=cpu._descriptor(0x10);
   return {cpu,memory,get reads(){return reads;}};
 }
-function checkpoint({cpu,reads}){
+function checkpoint({cpu,reads,memory}){
   return {eax:cpu.eax,ebx:cpu.ebx,ecx:cpu.ecx,edx:cpu.edx,
     esp:cpu.esp,ebp:cpu.ebp,esi:cpu.esi,edi:cpu.edi,
     cs:cpu.cs,ds:cpu.ds,ss:cpu.ss,es:cpu.es,fs:cpu.fs,gs:cpu.gs,
     eip:cpu.eip,eflags:cpu.eflags,cr0:cpu.cr0,cycles:cpu.cycles,
-    reads};
+    reads,memorySha256:hash(memory),instructionSnapshot:cpu._snapshotInstruction()};
 }
 function referenceFields({cpu}){
   return {cs:cpu.cs,ds:cpu.ds,ss:cpu.ss,es:cpu.es,fs:cpu.fs,gs:cpu.gs,
@@ -96,8 +96,9 @@ test('CMP immediate two takes fallthrough with exact ordinary state',()=>{
 });
 
 test('code mutation is refused before any state or port change',()=>{
-  const fixtureState=fixture(),before=checkpoint(fixtureState);
+  const fixtureState=fixture();
   fixtureState.memory[0x7c35]=0x07;
+  const before=checkpoint(fixtureState);
   assert.deepEqual(runOwnedI80386Code16IoTrace(fixtureState.cpu,
     {stepsUntilChipEvent:3}),
   {accepted:false,completed:0,reason:'code-mismatch'});
