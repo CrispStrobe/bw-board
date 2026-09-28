@@ -118,3 +118,26 @@ and hidden CPU state, so the acceptance claim must stay at reported-field
 parity. Default-path adoption would additionally require a contemporaneous
 ordinary-vs-candidate comparison. This tranche changed no runtime code and
 made no second full-run timing sweep.
+
+The source-bound observer is available as `AT_CODE16_EVENT_OBSERVER=1` in
+`run-i80386-at-console.mjs` and requires ordinary, noninteractive,
+single-step execution. It calls the original board and CPU fetch, memory,
+I/O, chip, and interrupt paths and records only what the completed step did.
+Its deliberately narrow admission grammar handles unprefixed register and
+proved RAM memory forms, unprefixed short/near conditional jumps and direct
+jumps, and cuts at device I/O, event, fault, unsafe mapping, code or tracked
+page-table write, code-page crossing, or instruction-slot budget. It refuses
+protected32 and prefix-bearing forms pending separate proof. Host/DMA RAM
+writes through the board `_write` path split runs; direct edits to `mem`
+outside the board API are outside this observer's mutation witness.
+
+The emitted report checks three partitions per mode: entry attempts equal
+retired steps plus no-retirement calls plus aborted calls; retired steps equal
+admitted plus refused ordinals; and the run-length histogram expands to
+exactly the admitted ordinals. A run is recorded only once, on closure, so
+long-run coverage is a subset of admitted ordinals. The owned fixture tests
+exercise taken and fallthrough JZ joins, the first I/O read, chip/event and
+fault cuts, bytewise and direct 32-bit immediate fetch reconstruction,
+physical page-table and code writes, and host code mutation. These are
+observer correctness checks, not proof that a future executor may safely
+implement the same grammar.
