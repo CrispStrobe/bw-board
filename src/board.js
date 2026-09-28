@@ -4391,6 +4391,7 @@ export class BoardImpl {
         if (![p.tau1, p.tau2].every(admit)) return null;
       } else if (wave === 'spice-sine') {
         if (!admit(1 / p.freq)) return null;
+        if (p.theta > 0 && !admit(1 / p.theta)) return null;
       } else if (wave === 'sine' || wave === 'triangle'
           || wave === 'square' || wave === 'pulse') {
         const freq = p.freq ?? 1000;
