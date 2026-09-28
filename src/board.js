@@ -1252,9 +1252,10 @@ export class BoardImpl {
    *
    * Must be selected on a fresh board, before transient state exists.
    * @param {'interactive-v1'|'precision-v1'} id
+   * @param {{maxStepSec?: number}} [options]
    * @returns {Readonly<Record<string, number|string>>}
    */
-  configureTransientAnalysis(id) {
+  configureTransientAnalysis(id, options = undefined) {
     if (this.timeNs !== 0n || this._trapValid || this.capCurrents.size || this.inductorVoltages.size) {
       throw new Error('configureTransientAnalysis: requires a fresh board at time zero');
     }
@@ -1275,7 +1276,31 @@ export class BoardImpl {
     if (!Object.prototype.hasOwnProperty.call(profiles, id)) {
       throw new Error(`configureTransientAnalysis: unsupported profile ${String(id)}`);
     }
-    this._transientAnalysisProfile = Object.freeze({ ...profiles[id] });
+    if (options !== undefined && (options === null || Array.isArray(options)
+      || typeof options !== 'object')) {
+      throw new Error('configureTransientAnalysis: options must be an object');
+    }
+    const optionKeys = options === undefined ? [] : Object.keys(options);
+    const unknown = optionKeys.filter(key => key !== 'maxStepSec');
+    if (unknown.length) {
+      throw new Error(`configureTransientAnalysis: unsupported option ${unknown[0]}`);
+    }
+    const profile = { ...profiles[id] };
+    if (Object.prototype.hasOwnProperty.call(options ?? {}, 'maxStepSec')) {
+      const requested = options.maxStepSec;
+      if (!Number.isFinite(requested) || requested <= 0) {
+        throw new Error('configureTransientAnalysis: maxStepSec must be finite and positive');
+      }
+      if (requested < profile.minStepSec) {
+        throw new Error(`configureTransientAnalysis: maxStepSec must be at least ${profile.minStepSec}`);
+      }
+      if (requested > profile.maxStepSec) {
+        throw new Error(`configureTransientAnalysis: maxStepSec may only tighten ${id}`);
+      }
+      profile.maxStepSec = requested;
+      profile.maxStepSource = 'bounded-override';
+    }
+    this._transientAnalysisProfile = Object.freeze(profile);
     this._transientAccuracyUnmet = null;
     this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
     return this.transientAnalysisStatus().profile;
@@ -4421,7 +4446,8 @@ export class BoardImpl {
     const H_SEED = profile.seedStepSec;
     // Trace-fidelity floor (see doc above).
     const H_SAMPLE = profile.maxStepSec;
-    const sampleCapped = this._scopeChannels.size > 0 || this._hasTimeVaryingSource();
+    const sampleCapped = this._scopeChannels.size > 0 || this._hasTimeVaryingSource()
+      || profile.maxStepSource === 'bounded-override';
     // A 'sample'-capture channel asks for the value AT a grid of instants, so
     // the step must not straddle more than one of them: with 100 µs steps and
     // a 10 µs capture grid, nine samples in ten came off the same line segment

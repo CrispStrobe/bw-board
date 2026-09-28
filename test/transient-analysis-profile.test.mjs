@@ -81,6 +81,51 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.throws(() => board.configureTransientAnalysis('precision-v1'), /fresh board/);
   });
 
+  it('honours a bounded internal maximum step without inventing public advances', () => {
+    const board = new BoardImpl(5);
+    const selected = board.configureTransientAnalysis('precision-v1', { maxStepSec: 1e-6 });
+    assert.deepEqual(selected, {
+      id: 'precision-v1', relativeTolerance: 1e-8,
+      absoluteVoltage: 1e-10, absoluteCurrent: 1e-13,
+      minStepSec: 1e-12, seedStepSec: 1e-12,
+      maxStepSec: 1e-6, maxAttempts: 20000,
+      maxStepSource: 'bounded-override',
+    });
+    board.setNetlist([
+      { id: 'V1', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+      { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      { id: 'C1', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
+      ground,
+    ], [
+      { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'out', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'C1', terminal: 'a' }] },
+      { id: '0', terminals: [{ part: 'V1', terminal: 'neg' },
+        { part: 'C1', terminal: 'b' }, { part: 'GND', terminal: 'gnd' }] },
+    ]);
+    board.initializeTransientFromOperatingPoint();
+    board.advanceTo(10_000n);
+    const status = board.transientAnalysisStatus();
+    assert.equal(status.work.advances, 1, 'one observation remains one public advance');
+    assert.ok(status.work.attempts >= 10,
+      `10 us interval must be internally subdivided at 1 us (got ${status.work.attempts} attempts)`);
+    assert.equal(status.accuracyMet, true);
+  });
+
+  it('rejects malformed, unknown, below-floor, and widening step overrides', () => {
+    const invalid = [
+      [null, /options must be an object/],
+      [{ maxStepSec: 0 }, /finite and positive/],
+      [{ maxStepSec: Number.NaN }, /finite and positive/],
+      [{ maxStepSec: 1e-13 }, /at least/],
+      [{ maxStepSec: 1e-4 }, /may only tighten/],
+      [{ maxStepSec: 1e-6, tolerance: 1 }, /unsupported option tolerance/],
+    ];
+    for (const [options, message] of invalid) {
+      const board = new BoardImpl(5);
+      assert.throws(() => board.configureTransientAnalysis('precision-v1', options), message);
+    }
+  });
+
   it('resolves a 1 ns authored PULSE edge in a 1 us RC without changing its t=0 bias', () => {
     const params = { wave: 'spice-pulse', v1: 0, v2: 5,
       td: 1e-6, tr: 1e-9, tf: 1e-9, pw: 19e-6, per: 20e-6 };
