@@ -13,7 +13,7 @@ const sha = file => createHash('sha256').update(fs.readFileSync(new URL(
 test('headless browser target replays the pinned free-BIOS FreeDOS shell and C: mount', () => {
   assert.equal(browser.schema, 'astra.i80386-browser-target-freedos.v1');
   assert.equal(browser.passed, true);
-  assert.equal(browser.executionRevision, '5e92af060889d7c1b743e6b3ac4b871791964f53');
+  assert.equal(browser.executionRevision, '70405d5412bcb18b4acbef6cb7d6fc2c2d8c14bf');
   assert.deepEqual(browser.adapter, {profile:'freedos-vga',
     mediaApplied:['bios','vga-rom','hdd','floppy'],
     debuggerRunFor:true,keyboardViaTarget:true,frameViaTarget:true});
