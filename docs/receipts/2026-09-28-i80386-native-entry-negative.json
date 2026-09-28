@@ -1,0 +1,114 @@
+{
+  "schema": "bw.i80386-native-entry-negative.v1",
+  "date": "2026-09-28",
+  "sourceCommit": "4deb1871bfc78fa2b5d5a77ac9ef2d00632560b5",
+  "sourceSha256": {
+    "src/experimental/i80386-native-byte-block.js": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+    "src/experimental/i80386-native-dispatch.js": "0dc3fd4c952e8c2806d22c11381973800073af7f0e39e09366136e41ac459401"
+  },
+  "host": {
+    "place": "shared VPS",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX), KVM, 4 vCPU",
+    "node": "v20.20.2",
+    "loadNote": "Other host activity changed wall time; adjacent user-CPU comparisons are the performance measure. One post-pair load average was 6.83 on four vCPUs."
+  },
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "command": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "profile": {
+    "method": "Full forktest under Node --cpu-prof, separate ordinary and opt-in native runs; self-samples are diagnostic, not additive CPU-time shares.",
+    "ordinaryUserCpuSeconds": 24.96,
+    "nativeUserCpuSeconds": 19.27,
+    "ordinaryProfileSha256": "a0028d7822a4619072ee1866dea2c09173971aab8ad3ce445ac424b969627a36",
+    "nativeProfileSha256": "69860306ddec138dc9ad8ec59a98fdd98094d7d09aba3be55cdc4879d6eaecff",
+    "ordinarySelfSamples": {
+      "_stepInstruction": 4212,
+      "step": 1961,
+      "_translate": 1526,
+      "_read386": 1262
+    },
+    "nativeSelfSamples": {
+      "nativeByteRunnerRun": 2331,
+      "nativeDispatcherRun": 1389,
+      "setProgram": 816,
+      "wasmBlockSpikeRun": 360,
+      "remainingJsStepInstruction": 1667
+    },
+    "nativeRetiredInstructions": 16428211,
+    "nativeBlockCalls": 4001848,
+    "nativeInstructionsPerCall": 4.105,
+    "totalGuestSteps": 24338279
+  },
+  "experiments": [
+    {
+      "change": "Raise native dispatcher default blockInstructions from 16 to 64; existing chip and LAPIC deadline clipping remains active.",
+      "baselineUserCpuSeconds": [18.71],
+      "candidateUserCpuSeconds": [18.41],
+      "baselineNativeBlockCalls": 4001848,
+      "candidateNativeBlockCalls": 3901353,
+      "sameNativeRetiredInstructions": 16428211,
+      "result": "Only 2.5% fewer native calls and 1.6% lower user CPU time in one pair; discarded as too small for a default change."
+    },
+    {
+      "change": "Freeze decoded IR and skip setProgram when the same block is already loaded into the WASM program buffer.",
+      "order": ["baseline", "candidate", "baseline", "candidate"],
+      "baselineUserCpuSeconds": [18.71, 17.97],
+      "candidateUserCpuSeconds": [18.33, 18.07],
+      "baselineMeanUserCpuSeconds": 18.34,
+      "candidateMeanUserCpuSeconds": 18.2,
+      "result": "First pair favored the candidate and second pair favored baseline; 0.8% mean reduction, within host variation. Discarded."
+    }
+  ],
+  "guestParity": {
+    "steps": 24338279,
+    "finalPhysicalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "normalizedCompleteReportSha256": "9eb2e22fb4316470c93a03125b41e85e4385dcc91eb66f9d6be82f59022e7834",
+    "comparison": "All recorded baseline and candidate guest reports match after replacing only the absolute ROM worktree path and omitting nativeStats, which changes with batch size. Serial, CPU, interrupts, screen, step count and RAM hash remain in the comparison."
+  },
+  "executedFallbackCensus": {
+    "method": "A temporary Node --import observer recorded the first bytes actually fetched by completed JavaScript CPU steps while the opt-in native dispatcher ran the same full xv6 workload. It did not decode ahead or change guest memory. The observed run matched ordinary native-dispatch steps, serial, RAM hash and all native statistics.",
+    "observerSha256": "5dae1eddafcb9c50133d0debce116cf10ae4abf655d4d833311c01cc044f96b9",
+    "histogramSha256": "c89cd1dfa60010324e85d7a98e84356a1714296afd8e9c76f2dd753c9326ae4f",
+    "protected32JsFallbackRetirements": 6379836,
+    "nativeRetirements": 16428211,
+    "protected32TotalRetirements": 22808047,
+    "topExecutedFallbackForms": {
+      "89_memory_store": 549946,
+      "f6_0_test_byte": 649280,
+      "a4_single_movsb": 632108,
+      "0f85_near_jnz": 493931,
+      "8b_memory_load": 345623,
+      "89_register_form_already_decoded_but_fell_back": 164082,
+      "0fb6_movzx": 95557
+    },
+    "f6_0Modes": {"memory_mod0": 488938, "register_mod3": 160339},
+    "note": "F6 /0 has three additional memory-mode retirements outside the two displayed modes. A fetched form may have fallen back because the block was too short, a cached data window was absent, an event boundary was due or the opcode was unsupported; these counts do not isolate a single reason or prove native eligibility."
+  },
+  "observedBroadRunEndsFromEarlierOrdinaryCensus": {
+    "source": "docs/receipts/2026-09-27-i80386-broad-block-potential-census.json and its pinned raw xv6 report; this is an observational syntactic census, not native-dispatch exits",
+    "protected32": {
+      "controlFlow": 4200502,
+      "stringExit": 2830230,
+      "unsupportedOpcode": 1020840,
+      "unsupported0f": 95076,
+      "linearPageChange": 5235,
+      "lockPrefix": 4859
+    },
+    "limits": "The later selected-form hypothetical Jcc-link census changes these run-end counts and still has no code/data/fault proof. Neither census is a native execution performance measurement."
+  },
+  "nextDesignRecommendation": {
+    "group": "A bounded dynamic-data/control-flow slice: page-safe 89 memory stores, F6 /0 byte TEST, single A4 MOVSB, 8B memory loads and near 0F85 JNZ linking. Treat register forms and existing decoder support as eligibility questions, not new opcode coverage.",
+    "observedSiteCount": 2670888,
+    "shareOfProtected32JsFallbackSteps": 0.418645,
+    "shareOfAllXv6GuestSteps": 0.10974,
+    "optimisticEqualCostZeroTimeFactor": 1.123268,
+    "ceilingWarning": "The 1.123x figure assumes every selected step costs the same and becomes free. It is an arithmetic illustration, not an estimated CPU-time gain; actual data-window admissions and short blocks reduce coverage, while memory and string forms can cost more than an average step.",
+    "requiredProofs": "Use fetched bytes and cached RAM windows only; check segment/privilege/paging A/D bits and exact later-instruction faults; preflight every write without skipping MMIO, code mutation or page-table coherence; stop at chip/LAPIC/IRQ/NMI and observer boundaries; preserve DF and page crossings for MOVSB; link only validated Jcc successors. Require full xv6 and protected-mode or Windows guest/RAM parity, then serial paired user-CPU A/B with a predeclared material-gain threshold before keeping executable code.",
+    "windowsWarning": "The existing Windows selected-form syntax trial reaches only 3.20 linked steps per run and fails its mean-four gate. A 32-bit-only slice cannot establish a general Windows speedup; measure Windows mode coverage before implementing this group."
+  },
+  "conclusion": "Neither entry-boundary experiment clears a material full-workload gain. Both source changes were reverted; the product remains at sourceCommit. The measured native runner retires 4.1 instructions per call and leaves 7.91 million xv6 steps in JavaScript. Wider safe opcode/control-flow coverage is needed before another entry-boundary optimization is likely to matter. No 386DX real-time claim follows from these host CPU times."
+}
