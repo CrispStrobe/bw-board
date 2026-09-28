@@ -31,6 +31,27 @@ test('static WASM bridge executes multiple safe guest instructions per call',asy
     [cpu.eax,cpu.ecx,cpu.ebx,cpu.eip,cpu.eflags,cpu.cycles]);
 });
 
+test('packed program copies the same IR and preserves event exits',async()=>{
+  const bridge=await createI80386BlockSpike();
+  const instructions=[
+    {op:11,dst:0,src:0x12345678,width:32,length:5},
+    {op:10,dst:0,src:0x12345678,width:32,length:6},
+    {op:5,dst:3,src:0x1010,width:32,length:2},
+  ];
+  const initial={regs:[0,0,0,0,0,0,0,0],eip:0x1000,eflags:2,cycles:7};
+  bridge.setState(initial);
+  bridge.setProgram(instructions);
+  const scalarExit=bridge.run(0,3,2),scalarState=bridge.state();
+  const packed=bridge.packProgram(instructions);
+  assert.deepEqual(Array.from(packed.slice(0,11)),
+    [11,0,0x12345678,32,5,8,8,0,0,0,0]);
+  bridge.setState(initial);
+  bridge.setPackedProgram(packed);
+  assert.deepEqual(bridge.run(0,3,2),scalarExit);
+  assert.deepEqual(bridge.state(),scalarState);
+  assert.throws(()=>bridge.setPackedProgram(new Uint32Array(10)),RangeError);
+});
+
 test('event horizon and fault boundary stop before the next guest instruction',async()=>{
   const bridge=await createI80386BlockSpike();
   bridge.setState({regs:[0x12345678,0,0,0xabcd0000,0,0,0,0],eip:0x100,cycles:9});
