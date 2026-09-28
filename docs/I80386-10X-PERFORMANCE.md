@@ -289,3 +289,50 @@ No newly missing narrow opcode family reached the preset 1.5-million
 retirement threshold. This census preserves the ordinary guest report and
 does not measure native speed. Its counts favor broad grouped-form coverage
 and cheaper entry/continuation over a small isolated opcode addition.
+
+Later [ordinary Windows V8 attribution](receipts/2026-09-27-i80386-ordinary-windows-profile-attribution.json)
+put 79.65% of samples in the 386 CPU and 10.19% in the AT board;
+`step` plus `_stepInstruction` accounted for 31.64%. An independent
+[native-dispatch profile](receipts/2026-09-27-i80386-native-dispatch-profile-negative.json)
+put all native-specific self samples at only 8.90% of its measured run,
+below the preset 10% threshold for a narrow entry/cache patch. These
+different profiles cannot be multiplied into a speedup estimate.
+
+The code16 slice later added ES-prefixed reads and a proved, terminal
+plain-RAM word store. The [store A/B](receipts/2026-09-27-i80386-code16-wasm-terminal-store.json)
+preserved the complete normalized 60-million-step Windows guest report,
+but gained only 2,647 native instructions over the prior ES/read slice.
+It took 303.48 versus 79.20 user CPU seconds, a 3.83× slowdown. This
+write contract is useful correctness groundwork, not a faster path.
+
+Three execution-neutral probes then measured the possible length of broader
+blocks before implementing them. The [unlinked broad-grammar census](receipts/2026-09-27-i80386-broad-block-potential-census.json)
+found 44.94 million syntactically potential Windows steps in 22.06 million
+runs (2.04 steps/run), and 21.60 million xv6 steps in 8.58 million runs
+(2.52). Following only [actual conditional-Jcc successors](receipts/2026-09-27-i80386-broad-jcc-linked-potential.json)
+raised those means to 2.56 and 3.58. An [opcode-refusal histogram](receipts/2026-09-28-i80386-broad-refusal-opcodes.json)
+identified concentrated missing forms: Windows protected16 `3A`/`3C`
+accounted for 64.34% of unsupported Jcc successors, while xv6 protected32
+`25`/`F6 /0` accounted for 88.82%. `FF` mixed indirect control flow and
+other operations and cannot be admitted as one form.
+
+A parallel [selected-form syntax scenario](receipts/2026-09-28-i80386-selected-forms-potential.json)
+then included read-only byte compares/tests, accumulator immediate ALU,
+`F6/F7 /0` TEST and `0F B6/B7` MOVZX in the observed grammar. Windows
+rose to 48.47 million potential steps in 15.13 million linked runs, or
+**3.20 steps/run**; xv6 reached 23.72 million in 4.17 million, or **5.69**.
+Both full guest reports and the preexisting census views matched exactly.
+The predeclared gate required at least 50% potential coverage and four
+steps/run on *both* workloads. Windows fails, so no executable path follows
+from this selected set. These are optimistic syntax counts, not code/data
+proofs, CPU-time shares or measured acceleration.
+
+The next speed experiment must address Windows' short protected16 and
+protected32 runs and the expensive per-call admission boundary together.
+Adding another isolated opcode to the current code16 WASM dispatcher is not
+supported by these measurements. A guarded hot-trace continuation probe
+should first measure repeated same-identity traces and exact event/fault
+exit frequency in both Windows modes and xv6. Only a replayable workload
+share large enough to amortize one entry proof can justify an executable
+prototype, which must then preserve guest state and beat ordinary execution
+in serial paired full-workload CPU-time tests. The 10× target remains open.
