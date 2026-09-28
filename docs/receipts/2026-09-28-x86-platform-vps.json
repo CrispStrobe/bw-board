@@ -1,0 +1,107 @@
+{
+  "schema": "bw.x86-platform-benchmark.v1",
+  "revision": "853c667de3f7025eb3bc6342d1c7f5f1e74b76cf",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": [
+      "Intel Xeon Processor (Skylake, IBRS, no TSX)"
+    ],
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "githubRunner": null,
+    "kaggleGpu": null
+  },
+  "note": "386 real-mode workload; its virtual factor uses configured synthetic instruction charges and is not measured 80386 timing",
+  "rows": [
+    {
+      "name": "8086-core",
+      "clockHz": 4772727,
+      "cycleMeaning": "estimated 8086 instruction cycles",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 10976281.638390923,
+      "virtualFactor": 22.537966252046484,
+      "medianSeconds": 0.091105534,
+      "cycles": 9800000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.091105534,
+        0.105437715,
+        0.075031782
+      ]
+    },
+    {
+      "name": "8086-machine",
+      "clockHz": 4772727,
+      "cycleMeaning": "estimated 8086 instruction cycles",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 6698476.301614758,
+      "virtualFactor": 13.754205458603565,
+      "medianSeconds": 0.149287682,
+      "cycles": 9800000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.149287682,
+        0.169537977,
+        0.143347317
+      ]
+    },
+    {
+      "name": "386-core",
+      "clockHz": 16000000,
+      "cycleMeaning": "one synthetic cycle per completed instruction",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 2217404.2708603223,
+      "virtualFactor": 0.13858776692877015,
+      "medianSeconds": 0.450977755,
+      "cycles": 1000000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.504798586,
+        0.450977755,
+        0.412786695
+      ]
+    },
+    {
+      "name": "386-at-machine",
+      "clockHz": 16000000,
+      "cycleMeaning": "six synthetic scheduling cycles per completed instruction",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 1222739.4743055392,
+      "virtualFactor": 0.45852730286457716,
+      "medianSeconds": 0.817835705,
+      "cycles": 6000000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.926780165,
+        0.817835705,
+        0.769046
+      ]
+    }
+  ]
+}
