@@ -163,19 +163,21 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-28 CLAIM — root Codex: exact source-constrained inductor endpoint path,
+2026-09-28 DONE candidate — root Codex: exact source-constrained inductor endpoint path,
 isolated worktree `/mnt/volume1/code/wt/board-source-constrained-inductor`, branch
 `lane/source-constrained-inductor-direct`, exact base
 `98808922c7e4ddcc8ae6155b636a5f02bafa825e`. Owns this row, the exact SPICE-SINE
-derivative in `src/source-waveforms.js`, a strict topology classifier and endpoint
-evaluation in `src/board.js`, and focused tests. Admit only one ideal inductor and
-one ideal SPICE-SINE current source across the same grounded two nets, with no
-scope/device/extra electrical element. This topology has no free storage history:
-KCL fixes inductor current from the source and its voltage is L*dI/dt, avoiding
-subtractive companion cancellation near current extrema. Everything else remains
-adaptive. Excludes tolerance/profile/budget changes, generic symbolic reduction,
-scope interpolation, other waveforms/topologies, CUI pins, corpus/workflows/docs,
-and unrelated devices.
+derivative in `src/source-waveforms.js`, the strict classifier and endpoint evaluator
+in `src/board.js`, and focused tests. Exact ADI row 5158 completes all 100 requested
+nonzero endpoints with 100 analytic attempts, zero MNA solves, exact sine current,
+exact L*dI/dt voltage (including derivative zero crossings), and exact terminal KCL.
+Only one ideal inductor and one ideal SPICE-SINE current source across the same
+grounded two nets is admitted; loads, scopes, devices, other waveforms and extra
+parts remain adaptive. Focused and adjacent coverage passes 54/54. Independently
+zeroing the derivative, dropping the exact part-count guard, or ignoring polarity
+reds a named consequence. No tolerance/profile/budget change, generic symbolic
+reduction, scope interpolation, CUI pin, corpus/workflow/docs, or unrelated device
+change.
 
 2026-09-28 DONE candidate — root Codex: transient selective-shunt correction, isolated
 worktree `/mnt/volume1/code/wt/board-transient-selective-shunt`, branch

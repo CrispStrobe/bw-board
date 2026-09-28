@@ -193,6 +193,19 @@ export function spiceSineValue(params, tSeconds) {
     * Math.exp(-p.theta * elapsed);
 }
 
+/** Exact time derivative of a validated SPICE sine value. */
+export function spiceSineDerivative(params, tSeconds) {
+  if (!finite(tSeconds)) throw new Error('spice-sine: simulation time must be finite');
+  const p = spiceSineParams(params);
+  if (tSeconds < p.td) return 0;
+  const elapsed = tSeconds - p.td;
+  const phase = p.phase * Math.PI / 180;
+  const angle = 2 * Math.PI * p.freq * elapsed + phase;
+  const decay = Math.exp(-p.theta * elapsed);
+  return p.amplitude * decay
+    * (2 * Math.PI * p.freq * Math.cos(angle) - p.theta * Math.sin(angle));
+}
+
 /** Delay is the sole derivative corner of a SPICE sine. */
 export function nextSpiceSineCorner(params, tSeconds) {
   const p = spiceSineParams(params);

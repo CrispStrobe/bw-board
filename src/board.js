@@ -33,6 +33,7 @@ import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
 import {
   nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
+  spiceSineDerivative,
 } from './source-waveforms.js';
 
 /**
@@ -4331,14 +4332,45 @@ export class BoardImpl {
    * leaves it on the adaptive path because scope buckets require intermediate
    * samples, not merely the final endpoint.
    *
-   * @returns {'algebraic-direct'|'adaptive'}
+   * @returns {'algebraic-direct'|'source-constrained-inductor-direct'|'adaptive'}
    */
   _transientIntegrationMode() {
+    if (this._sourceConstrainedInductorDirect()) return 'source-constrained-inductor-direct';
     return !this._hasReactive()
       && this._deviceStates.size === 0
       && this._shiftRegisters.size === 0
       && this._scopeChannels.size === 0
       ? 'algebraic-direct' : 'adaptive';
+  }
+
+  /**
+   * Recognize the one reactive topology whose state is not free: an ideal
+   * current source directly across one ideal inductor. KCL fixes iL(t) from
+   * the source at every instant and vL=L*diL/dt, so subtracting two nearly
+   * equal companion currents is both needless and ill-conditioned.
+   */
+  _sourceConstrainedInductorDirect() {
+    if (this._scopeChannels.size || this._deviceStates.size || this._shiftRegisters.size) return null;
+    const parts = this._solveParts ?? this.parts;
+    if (parts.length !== 3) return null;
+    const inductor = parts.find(part => part.kind === 'inductor');
+    const source = parts.find(part => part.kind === 'isource');
+    const ground = parts.find(part => part.kind === 'gnd');
+    if (!inductor || !source || !ground || source.params?.wave !== 'spice-sine') return null;
+    const henrys = Number(inductor.params?.henrys ?? inductor.params?.henries);
+    if (!(henrys > 0) || !Number.isFinite(henrys)) return null;
+    const a = this._netForTerminal(inductor.id, 'a');
+    const b = this._netForTerminal(inductor.id, 'b');
+    const pos = this._netForTerminal(source.id, 'pos');
+    const neg = this._netForTerminal(source.id, 'neg');
+    const reference = this._netForTerminal(ground.id, 'gnd');
+    if (!a || !b || !pos || !neg || !reference || a === b
+        || this._solveNets.length !== 2 || ![a, b].includes(reference)) return null;
+    const same = pos === a && neg === b;
+    const opposite = pos === b && neg === a;
+    if (!same && !opposite) return null;
+    return { inductor, source, a, b, reference, henrys,
+      currentSign: same ? 1 : -1 };
   }
 
   /** Any source whose value moves with time? */
@@ -4701,6 +4733,44 @@ export class BoardImpl {
     const pinSources = this._pinSources();
     const qual = this._qualifiedSources();
     let nSolves = 0;
+
+    const constrained = this._sourceConstrainedInductorDirect();
+    if (constrained) {
+      const amps = sourceCurrent(constrained.source, tEnd);
+      const current = constrained.currentSign * amps;
+      const voltage = constrained.henrys * constrained.currentSign
+        * spiceSineDerivative(constrained.source.params ?? {}, tEnd);
+      const voltageA = constrained.a === constrained.reference ? 0 : voltage;
+      const voltageB = constrained.b === constrained.reference ? 0 : -voltage;
+      this.nodeVoltages = new Map([
+        [constrained.reference, 0], [constrained.a, voltageA], [constrained.b, voltageB],
+      ]);
+      this.inductorCurrents = new Map([[constrained.inductor.id, current]]);
+      this.inductorVoltages = new Map([[constrained.inductor.id, voltage]]);
+      this._mnaCache = {
+        nodeVoltages: new Map(this.nodeVoltages),
+        branchCurrents: new Map([
+          [constrained.inductor.id, new Map([['a', -current], ['b', current]])],
+          [constrained.source.id, new Map([['pos', amps], ['neg', -amps]])],
+          ...this._solveParts.filter(part => part.kind === 'gnd')
+            .map(part => [part.id, new Map()]),
+        ]),
+        converged: true,
+        deviceStamps: new Map(),
+      };
+      this._lastSolveConverged = true;
+      this._trapValid = false;
+      this._lastTransientSolves = 0;
+      this._transientAttemptOverflow = false;
+      this._transientAccuracyUnmet = null;
+      this._transientAnalysisWork = {
+        attempts: this._transientAnalysisWork.attempts + 1,
+        solves: this._transientAnalysisWork.solves,
+        advances: this._transientAnalysisWork.advances + 1,
+      };
+      return;
+    }
+
     const markSolveFailure = (r, stage, atSec) => {
       if (this._transientAccuracyUnmet) return;
       const maps = [r?.nodeVoltages, r?.branchCurrents, r?.capVoltagesNext,
