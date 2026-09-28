@@ -103,12 +103,14 @@ extractors):
   8255 PPI, 8237 DMA, 8251 USART, CGA/EGA/Hercules, uPD765 FDC). Presets from
   a minimal-GPIO breadboard (`BLINK8086`) up to a PC/XT that boots real MS-DOS.
   Chip advance is deadline-batched, so the machine layer stays thin over the
-  core. **Speed (measured off-box on a fresh CI runner, functional path):**
-  ~150x a 4.77 MHz IBM XT for the bare core, and **~3.3x real time booting real
-  MS-DOS** through the full PC/XT. The *wired* path (GPIO pins driven into the
-  breadboard's MNA circuit solver) is not a single figure — it is the
-  functional speed gated by one circuit solve per pin edge, so it depends on
-  the circuit and how often the program toggles pins.
+  core. On the pinned 2026-09-28 VPS, five runs of the functional benchmark
+  had medians of **24× XT** for the bare core, **15.9×** for a synthetic PC/XT
+  machine, and **2.3×** for an MS-DOS workload with DOS service hooks. These
+  are three different workloads, not full-PC boot or wired-board rates; see
+  the [VPS receipt](docs/receipts/2026-09-28-x86-vps-throughput.json) and
+  [cross-platform benchmark](docs/X86-RTX-PLATFORMS.md). The actual-net Harris
+  wired board has separate, much lower capacity and its own
+  [performance ledger](docs/WIRED-X86-PERFORMANCE-PLAN.md).
 - `src/vdu-decoder.js` — the BBC VDU byte protocol as typed events
   (graphics without video hardware); `src/devices/hd44780.js` — the
   parallel character LCD as a board part.
@@ -122,7 +124,6 @@ order-of-magnitude — the *ranking* is what is stable:
 
 | Core | Engine | Clock | RTx (off-box) |
 |------|--------|-------|---------------|
-| 8086/8088 (`i8086.js`) | ours | 4.77 MHz | ~150× core · ~3.3× booting MS-DOS through the full PC/XT |
 | Z80 (`z80.js`) | ours | 4 MHz | 186× |
 | 6502 (`w65c02.js`) | ours | 1 MHz | 150× |
 | AVR ATmega328P | avr8js ‡ | 16 MHz | 13.3× |
@@ -130,7 +131,8 @@ order-of-magnitude — the *ranking* is what is stable:
 | RP2040 Cortex-M0+ | rp2040js † | 125 MHz | 1.66× |
 | labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | 24.2× |
 
-The three cores we own run tens of times faster than the real silicon. The
+The Z80 and 6502 cores run tens of times faster than the real silicon on this
+loop. The
 third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051 and the
 peripheral-accurate labwired STM32/RISC-V/Xtensa engine — are heavier than the
 owned cores. Every measured engine now clears real time on this loop. These are
@@ -269,6 +271,12 @@ qualifications, and the full 386 test suite. Their detailed paired timings and
 raw reports are retained in `brickwright-firmware-private/performance/2026-09-28`.
 The guarded mappages trace experiment instead regressed by 16–20% and was not
 merged. None of these measurements establishes 10× or a calibrated 386DX RTx.
+At source revision `8261e891`, the [current VPS xv6 forktest receipt](docs/receipts/2026-09-28-x86-vps-throughput.json)
+records three runs of the same 24,338,279-step boot and command: median user
+CPU fell from 25.16 s in JavaScript to 18.21 s with opt-in native blocks,
+while the guest output, RAM hash, and 163,891,880 configured board cycles
+matched. Its 6 MHz virtual board clock yields 27.315 s of *configured* guest
+time, not a calibrated 386DX real-time factor.
 
 ## Windows 3.1 reference comparison
 
