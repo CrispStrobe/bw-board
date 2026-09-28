@@ -292,3 +292,29 @@ describe('firmware-only on the real engine', { skip: skipEngine }, () => {
         assert.equal(target.regs().r5, 16, 'popcount32(0xF0F0F0F0) through the ROM table');
     });
 });
+
+describe('RTT / semihosting / ITM reach a listener', () => {
+    it('each stream is drained on the pump and labelled by channel; the UART listener is untouched', () => {
+        const queued = { rtt: [0x68, 0x69], semihosting: [0x6f, 0x6b], itm: [] };
+        const sim = {
+            get_pc: () => 0, step_single() {}, step_batch() {},
+            read_logic_edges: () => ({ cursor: 0, dropped: 0, nowCycle: 0, edges: [] }),
+            drain_uart_output: () => [0x55],
+            drain_rtt_output: () => queued.rtt.splice(0),
+            drain_semihosting_output: () => queued.semihosting.splice(0),
+            drain_itm_output: () => { throw new Error('ITM not attached'); },
+        };
+        const wasm = { WasmSimulator: { new_from_config: () => sim } };
+        const adapter = createLabwiredAdapter({ wasm, chipYaml: LABWIRED_CATALOG.stm32f103.chipYaml,
+            firmware: ELF_MAGIC, firmwareOnly: true });
+        const traces = [];
+        const uart = [];
+        adapter.onTrace((ch, bytes) => traces.push([ch, [...bytes]]));
+        adapter.onSerial(b => uart.push(b));
+        adapter.pump();
+        assert.deepEqual(traces, [['rtt', [0x68, 0x69]], ['semihosting', [0x6f, 0x6b]]]);
+        assert.deepEqual(uart, [0x55]);
+        adapter.pump();
+        assert.equal(traces.length, 2, 'drained, not re-read');
+    });
+});

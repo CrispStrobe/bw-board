@@ -241,7 +241,7 @@ describe('labwired fault halt and diagnostics', () => {
         assert.match(d.fault.summary, /HardFault/);
         assert.deepEqual(d.fidelityGaps, [{ kind: 'undecoded', addr: 0x0800_0300 }]);
         const bare = build({ get_pc: () => 0 }).diagnostics();
-        assert.deepEqual(bare, { fault: null, fidelityGaps: [] });
+        assert.deepEqual(bare, { fault: null, fidelityGaps: [], consoleMismatch: null });
     });
 });
 
