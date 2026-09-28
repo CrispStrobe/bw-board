@@ -92,6 +92,35 @@ export function createLabwiredDebugTarget (opts) {
   // Function names from the user's own ELF (firmware-only), when it has a
   // symbol table: `main+0x12` beside a PC is what makes a raw run readable.
   const symbolAt = symbolizer(opts.elf ? readElfFunctionSymbols(opts.elf, { thumb }) : []);
+  /** The engine can write memory / registers / decode any address (newer wasm). */
+  const canWrite = () => typeof sim().write_memory === 'function';
+  const canDecodeAt = () => typeof sim().disassemble_at === 'function';
+  const byteAt = (a) => {
+    try { const b = sim().read_memory(a >>> 0, 1); return b && b.length ? b[0] : null; } catch (e) { return null; }
+  };
+  /**
+   * Bytes in the instruction at `addr`, from its first bytes and the chip's
+   * architecture: Thumb 2/4 (32-bit when bits 15:13 are 111 and 12:11 != 00),
+   * RISC-V 2/4 (compressed unless the low two bits are 11), Xtensa 2/3 (op0
+   * 8..13 is a narrow form), AVR 2/4 (CALL/JMP/LDS/STS take a second word).
+   * null when the bytes cannot be read.
+   */
+  const instrLength = (addr) => {
+    const a = codeAddr(addr);
+    const b0 = byteAt(a);
+    const b1 = byteAt(a + 1);
+    if (b0 === null) return null;
+    const arch = adapter.arch ?? 'arm';
+    if (arch.startsWith('xtensa')) { const op0 = b0 & 0x0f; return op0 >= 8 && op0 <= 13 ? 2 : 3; }
+    if (b1 === null) return null;
+    const hw = b0 | (b1 << 8);
+    if (arch === 'riscv') return (hw & 0b11) === 0b11 ? 4 : 2;
+    if (arch === 'avr') {
+      const long = (hw & 0xfe0c) === 0x940c || (hw & 0xfe0f) === 0x9000 || (hw & 0xfe0f) === 0x9200;
+      return long ? 4 : 2;
+    }
+    return (hw & 0xe000) === 0xe000 && (hw & 0x1800) !== 0 ? 4 : 2;
+  };
   const nameOf = (a) => {
     const hit = symbolAt(a);
     return hit ? (hit.offset ? `${hit.name}+0x${hit.offset.toString(16)}` : hit.name) : null;
@@ -241,7 +270,9 @@ export function createLabwiredDebugTarget (opts) {
         runTo: [{ kind: 'address', space: 'code', addressMin: 0, addressMax: CODE_ADDRESS_MAX,
           stopSides: ['before'], installation: 'sync' }],
         spaces: ['code', 'sram'],
-        writable: [],
+        // Memory write needs the engine's write_memory (labwired wasm with the
+        // debugger writes); an older engine offers none, and says so.
+        writable: canWrite() ? ['code', 'sram'] : [],
         sfrs: 'memory-mapped',
         haltPolicy: 'freeze-timers',
         timeFreezes: true,
@@ -474,9 +505,44 @@ export function createLabwiredDebugTarget (opts) {
       }
     },
 
-    writeMem () {
-      return { unsupported: 'labwired-wasm exposes no memory write; this pane is read-only ' +
-        'rather than silently ineffective.' };
+    writeMem (space, addr, bytes) {
+      if (!canWrite()) {
+        return { unsupported: 'this labwired-wasm build exposes no memory write; this pane is read-only ' +
+          'rather than silently ineffective.' };
+      }
+      if (space !== 'sram' && space !== 'code') return { unsupported: `no such address space: ${space}` };
+      try {
+        sim().write_memory(addr >>> 0, Uint8Array.from(bytes));
+      } catch (e) {
+        return { unsupported: `write refused: ${e.message || e}` };
+      }
+      adapter.pump();
+      return undefined;
+    },
+
+    /**
+     * Set a register by the engine's own name ('R0', 'SP', 'x5', 'a2' --
+     * case-insensitive). Needs the engine's set_register; refused otherwise.
+     */
+    writeReg (name, value) {
+      if (typeof sim().set_register !== 'function') {
+        return { unsupported: 'this labwired-wasm build exposes no register write' };
+      }
+      let names;
+      try { names = sim().get_register_names(); } catch (e) { names = []; }
+      const i = Array.isArray(names) ? names.findIndex(n => String(n).toLowerCase() === String(name).toLowerCase()) : -1;
+      if (i < 0) return { unsupported: `this core has no register named ${name}` };
+      try { sim().set_register(i, value >>> 0); } catch (e) { return { unsupported: `write refused: ${e.message || e}` }; }
+      return undefined;
+    },
+
+    /** Bytes in the instruction at `addr` (see instrLength), or null. */
+    instructionLength (addr) { return instrLength(addr); },
+
+    /** The address after `addr`'s instruction of `length` bytes (0: `addr` itself). */
+    nextCodeAddress (addr, length) {
+      if (!Number.isSafeInteger(addr) || !Number.isInteger(length) || length < 0) return null;
+      return length === 0 ? codeAddr(addr) : codeAddr(addr) + length;
     },
 
     /**
@@ -501,10 +567,13 @@ export function createLabwiredDebugTarget (opts) {
      */
     disasm (addr) {
       if (detached) return '';
-      if (codeAddr(addr) !== codeAddr(pc())) return '';
+      const atPc = codeAddr(addr) === codeAddr(pc());
+      // A newer engine decodes any address; an older one only the PC, and
+      // then any other address answers '' rather than the PC's instruction.
+      if (!atPc && !canDecodeAt()) return '';
       let text;
       try {
-        text = sim().get_disassembly() || '';
+        text = (atPc && !canDecodeAt() ? sim().get_disassembly() : sim().disassemble_at(codeAddr(addr) >>> 0)) || '';
       } catch (e) {
         return '';
       }
