@@ -37,6 +37,7 @@ import { createSerialDebugTarget } from './serial-debug.js';
 import { createAvr8jsAdapter } from './avr8js-adapter.js';
 import { createLabwiredAdapter } from './labwired-adapter.js';
 import { createLabwiredDebugTarget } from './labwired-debug.js';
+import { buildBootrom } from './rp2040-bootrom.js';
 import { labwiredAdapterOptionsFor } from './labwired-bridge.js';
 import { parseIntelHex } from './intel-hex.js';
 // Re-exported so every existing consumer keeps working; see target-kinds.js
@@ -162,8 +163,12 @@ async function createLabwiredTarget(opts) {
   if (opts.chip && !board) {
     const { chip } = opts;
     if (!chip.chipYaml || !chip.name) throw new Error('labwired firmware-only target needs a catalog chip');
+    // The RP2040's mask ROM is an image_env region the browser cannot fill
+    // from disk; this repo's clean-room ROM (rp2040-bootrom.js, from the
+    // datasheet) is what every pico-sdk `rom_func_lookup` needs to find there.
+    const blobs = chip.name === 'rp2040' ? { bootrom: buildBootrom() } : undefined;
     const adapter = createLabwiredAdapter({
-      wasm, chipYaml: chip.chipYaml, firmware, firmwareOnly: true,
+      wasm, chipYaml: chip.chipYaml, firmware, firmwareOnly: true, blobs,
       clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
     });
     const target = createLabwiredDebugTarget({ adapter });
