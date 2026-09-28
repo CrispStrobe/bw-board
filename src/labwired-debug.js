@@ -190,24 +190,32 @@ export function createLabwiredDebugTarget (opts) {
       }
     },
 
+    /**
+     * Every register the ENGINE names, under the engine's own names.
+     *
+     * This used to read the first 16 registers and label index 13 `sp` and 14
+     * `lr` — ARM anatomy applied to every core. On labwired's AVR (R0..R31, SP,
+     * SREG, PC) that showed R13 and R14 as `sp`/`lr` and dropped R16 upward,
+     * SP and SREG; a RISC-V core would have shown x13 as `sp`. The core already
+     * says what it has (`get_register_names()`, index i is register i), so the
+     * list is its list: ARM gives r0..r12 sp lr, AVR r0..r31 sp sreg, RISC-V
+     * x0..x31, Xtensa a0..a15, each lower-cased.
+     *
+     * Named keys, not an `r` array: bw-debug's inspect() reads an `r` array as
+     * the 8051 shape and goes looking for `sfr`/`iram` spaces this target does
+     * not have. `pc` stays the target's own (get_pc, the one breakpoints and
+     * run-to compare), not the core's PC register slot.
+     */
     regs () {
       const out = { pc: pc() & ~1, cycles: Number(adapter.timeNs() * clockHzBig / NS_PER_S) };
-      try {
-        const names = sim().get_register_names();
-        const list = Array.isArray(names) ? names : [];
-        const r = [];
-        for (let i = 0; i < list.length && i < 16; i++) {
-          try { r.push(sim().get_register(i) >>> 0); } catch { r.push(0); }
-        }
-        if (r.length) {
-          out.r = r.slice(0, 13);
-          if (r.length > 13) out.sp = r[13];
-          if (r.length > 14) out.lr = r[14];
-        }
-        out.names = list;
-      } catch (e) {
-        // A register view that cannot be read is empty, not a thrown debugger.
-      }
+      let names;
+      try { names = sim().get_register_names(); } catch (e) { return out; }
+      if (!Array.isArray(names)) return out;
+      names.forEach((name, i) => {
+        const key = String(name).toLowerCase();
+        if (key === 'pc' || key in out) return;
+        try { out[key] = sim().get_register(i) >>> 0; } catch (e) { /* unreadable: omitted, not zero */ }
+      });
       return out;
     },
 
