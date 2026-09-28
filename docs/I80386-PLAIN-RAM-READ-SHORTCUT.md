@@ -26,6 +26,10 @@ edges, A20 off/on, reset alias, MP table bytes, APIC, ROM/open bus, VGA latch
 reads, a partial-page MMIO callback, wrapped `_read`, and ordinary instructions
 in real, protected16, VM86, and protected32 modes. They establish local
 boundary parity, not full-workload parity or a measured speed gain.
+The dated FreeDOS and xv6 receipts remain bound to the revisions that ran
+them. Their hashes are not rewritten to qualify this branch. The live
+default-off behavior is tested here; a new source-bound FreeDOS result would
+require a new boot and receipt.
 
 Before any guest pair, pin the exact board revision, executable source hashes,
 media hashes and host configuration. Run three **serial** baseline/shortcut
