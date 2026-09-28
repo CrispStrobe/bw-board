@@ -1,0 +1,33 @@
+{
+  "schema": "bw.i80386-native-trace-side-exit-design.v1",
+  "date": "2026-09-28",
+  "sourceCommit": "140afc7aec2ae126400ebf7fde080ad56a7c06ff",
+  "publicationBaseCommit": "544037d7b7e013096662d9f7d44b26d5f373d319",
+  "scope": "Source-linked protected32 multi-block trace design and standalone nonterminal branch side-exit proof; no production dispatcher/WASM integration or full workload measurement",
+  "design": "docs/I80386-NATIVE-TRACE-NEXT.md",
+  "sourceSha256": {
+    "src/experimental/i80386-native-dispatch.js": "0dc3fd4c952e8c2806d22c11381973800073af7f0e39e09366136e41ac459401",
+    "src/experimental/i80386-native-byte-block.js": "dfcd43bffbcf4cf42e044b60574ac0089421c5e63c1647cfd37b43d12ca78057",
+    "src/experimental/i80386-dynamic-memory-spike.js": "2d154e6137ec0ef84f9f8def0facf33ca2af95efb97a968dce7f6026f9d9e01b",
+    "src/experimental/i80386-native-trace-side-exit-spike.c": "fc7d930a13969bf322310182a516f5550d31864aa9094106c37897b428c4de3b",
+    "scripts/prove-i80386-native-trace-side-exit.mjs": "d4baa28a49a6a51974610b0eebb61604171f35e1bc1fd8be8e82ac90d1078c8e"
+  },
+  "proof": {
+    "command": "node scripts/prove-i80386-native-trace-side-exit.mjs",
+    "compiler": "Ubuntu clang 18.1.3 (1ubuntu1), wasm32 -O3; exact flags in proof script",
+    "wasmArtifactLocation": "Temporary directory only; no binary is committed",
+    "wasmSha256": "1643f2053bb1391c211fe2372ee9691d5035448c89839f764bd08c5007f131cf",
+    "wasmBytes": 1594,
+    "cases": "6/6 ordinary I80386 parity: taken nonterminal JNZ side exit before fallthrough; not-taken continuation through two successor NOPs; event budgets of 1, 2, 3 and 4 instructions with exact EIP, registers, flags and CPU cycles",
+    "limit": "The event budget is supplied to the standalone WASM loop; this proof does not compute real AT chip/LAPIC deadlines or validate multi-page code windows. Those remain integration gates."
+  },
+  "opportunity": {
+    "measuredCurrentNativeBlockCalls": 4001848,
+    "measuredCurrentNativeRetirements": 16428211,
+    "source": "docs/receipts/2026-09-28-i80386-packed-entry-performance.json",
+    "notYetMeasured": "Disjoint linkable-successor call count and post-packed V8 entry share on the current source. The design predeclares gates before either full xv6 measurement.",
+    "preCodeGate": "A disjoint current-source successor census must find at least 1.5 million call boundaries elidable in two-or-more-block first-tranche traces. Exclude branches already linked in one native call, chip/LAPIC deadline exits, invalidated blocks, self-loop/budget artifacts and cold/missing/unsafe successors. Separately, a post-packed V8 profile must put at least 15% of self samples in the affected entry path. Both are necessary, not sufficient.",
+    "retentionGate": "After focused differential tests and full guest/RAM parity, at least 5% lower mean user CPU in three serial paired xv6 A/B runs with all pairs favorable. Measure Windows separately."
+  },
+  "safety": "First tranche uses only already supported register-only forms, prevalidates all constituent code windows/bytes once at trace entry, excludes every write and control-state change, clips per-instruction execution to existing event horizons, and side-exits at the exact next EIP. A later dynamic read tranche must use only already-valid mirrored translations and slow-exit before faultable/MMIO/page-crossing accesses; JS owns page walks, A/D bits, CR2 and faults. No speed claim is made."
+}
