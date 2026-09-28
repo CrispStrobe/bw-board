@@ -45,6 +45,7 @@
  *  wasm boundary is not the bottleneck, small enough to stay responsive. */
 import { plain } from './labwired-adapter.js';
 import { logicalTimeDomain } from './instruction-debug-events.js';
+import { readElfFunctionSymbols, symbolizer } from './elf-symbols.js';
 
 const FREE_RUN_CHUNK = 200_000;
 const CODE_ADDRESS_MAX = 0xfffffffe;
@@ -81,6 +82,13 @@ export function createLabwiredDebugTarget (opts) {
   // and masking it would move every breakpoint and every reported PC. AVR and
   // RISC-V PCs are even anyway; masking is ARM's rule, so it is ARM's alone.
   const thumb = (adapter.arch ?? 'arm') === 'arm';
+  // Function names from the user's own ELF (firmware-only), when it has a
+  // symbol table: `main+0x12` beside a PC is what makes a raw run readable.
+  const symbolAt = symbolizer(opts.elf ? readElfFunctionSymbols(opts.elf, { thumb }) : []);
+  const nameOf = (a) => {
+    const hit = symbolAt(a);
+    return hit ? (hit.offset ? `${hit.name}+0x${hit.offset.toString(16)}` : hit.name) : null;
+  };
   const codeAddr = a => (thumb ? (a & ~1) : a) >>> 0;
   const pc = () => sim().get_pc() >>> 0;
 
@@ -470,12 +478,18 @@ export function createLabwiredDebugTarget (opts) {
     disasm (addr) {
       if (detached) return '';
       if (codeAddr(addr) !== codeAddr(pc())) return '';
+      let text;
       try {
-        return sim().get_disassembly() || '';
+        text = sim().get_disassembly() || '';
       } catch (e) {
         return '';
       }
+      const where = nameOf(codeAddr(addr));
+      return where && text ? `<${where}> ${text}` : text;
     },
+
+    /** The function containing `addr` in the user's ELF, `{name, offset}`, or null. */
+    symbolize (addr) { return symbolAt(codeAddr(addr)); },
 
     /**
      * Every register the ENGINE names, under the engine's own names.

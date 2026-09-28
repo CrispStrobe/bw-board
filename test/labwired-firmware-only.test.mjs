@@ -257,6 +257,8 @@ describe('firmware-only on the real engine', { skip: skipEngine }, () => {
             target.run();
             assert.equal(target.runFor(1_000_000), 'halted');
             assert.equal(target.regs().pc, loop, 'stopped at the loop head');
+            assert.deepEqual(target.symbolize(loop), { name: 'reset', offset: 2 },
+                'the gcc ELF\'s own symbol table names the PC');
             assert.ok(target.regs().r0 > before, 'r0 counted while running');
             assert.deepEqual(Object.keys(target.regs()).filter(k => /^r\d+$/.test(k)).length, 13);
         });
