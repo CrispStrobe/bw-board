@@ -56,7 +56,8 @@ const isControlTransfer=bytes=>{
 };
 
 export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null,
-  formResolvedAdmission=false,firstRefusalContext=false}={}) {
+  formResolvedAdmission=false,firstRefusalContext=false,
+  groupedShadowAdmission=false}={}) {
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>64)
     throw new RangeError('cross-mode potential trace run budget must be 1..64');
   if(onObservedStep!==null&&typeof onObservedStep!=='function')
@@ -66,6 +67,9 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
   if(typeof firstRefusalContext!=='boolean'||
       firstRefusalContext&&!formResolvedAdmission)
     throw new TypeError('firstRefusalContext requires formResolvedAdmission');
+  if(typeof groupedShadowAdmission!=='boolean'||
+      groupedShadowAdmission&&(formResolvedAdmission||firstRefusalContext))
+    throw new TypeError('grouped shadow admission must be a separate observer variant');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,completedStepCalls:0,eligibleRetiredOrdinals:0,
     repeatIterationCalls:0,noRetirement:0,abortedCalls:0,
@@ -81,7 +85,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
     codePageRevocations:0,translationRevocations:0,
     chipExits:0,interruptExits:0,faultExits:0,abortedExits:0,
     refusals:{}}]));
-  const formModes=formResolvedAdmission?Object.fromEntries(MODES.map(mode=>[mode,{
+  const formModes=formResolvedAdmission||groupedShadowAdmission?
+    Object.fromEntries(MODES.map(mode=>[mode,{
     eligibleRetiredOrdinals:0,admittedOrdinals:0,refusedOrdinals:0,
     runs:0,ordinalsInRunsAtLeast8:0,runLengthHistogram:{},runEndReasons:{},
     refusals:{},observedPrefixSignatures:{},observedOpcodeCounts:{},
@@ -375,7 +380,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
           default32:before.default32,startEip:before.eip,postEip,
           dataAccesses:before.dataAccesses,dataReads:before.dataReads,
           dataWrites:before.dataWrites,io:before.io,
-          dataPageCrossing:before.dataPageCrossing});
+          dataPageCrossing:before.dataPageCrossing,
+          groupedShadowAdmission});
         bump(formBucket.observedPrefixSignatures,form.prefixSignature);
         bump(formBucket.observedOpcodeCounts,form.opcode);
         const formReason=reason??form.reason;
@@ -515,8 +521,12 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         const long=formSum('ordinalsInRunsAtLeast8');
         const long16=formModes.protected16.ordinalsInRunsAtLeast8+
           formModes.vm86.ordinalsInRunsAtLeast8;
-        formResolvedPotential={schema:'bw.i80386-form-resolved-admission.v1',
-          grammar:'typed-mov-cmp-test-group7-short-control-byte-io.v1',
+        formResolvedPotential={schema:groupedShadowAdmission?
+            'bw.i80386-grouped-shadow-admission.v1':
+            'bw.i80386-form-resolved-admission.v1',
+          grammar:groupedShadowAdmission?
+            'typed-mov-cmp-test-group7-short-control-byte-io-plus-a8-8d-0b-31-ff0.v1':
+            'typed-mov-cmp-test-group7-short-control-byte-io.v1',
           maxRun,modes:formModes,
           eligibleRetiredOrdinals:formSum('eligibleRetiredOrdinals'),
           admittedOrdinals:formSum('admittedOrdinals'),
@@ -549,7 +559,9 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
           uniqueOrdinalsInRunsAtLeast8/eligibleRetiredOrdinals:0,
         predeclaredOpportunityGatePassed:uniqueOrdinalsInRunsAtLeast8>=30_000_000&&
           protected16OrVm86OrdinalsInRunsAtLeast8>=5_000_000,
-        ...(formResolvedPotential?{formResolvedPotential}:{})};
+        ...(formResolvedPotential?
+          (groupedShadowAdmission?{groupedShadowPotential:formResolvedPotential}:
+            {formResolvedPotential}):{})};
     },
   };
 }

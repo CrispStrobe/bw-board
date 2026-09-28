@@ -10,11 +10,18 @@ const IO_OPS=new Set([0xe4,0xe6,0xec,0xee]);
 const BYTE_OPS=new Set([0x88,0x8a,0x3a,0x84,0x3c,0x80,...IO_OPS]);
 const CONTROL_OPS=new Set([0xeb,...Array.from({length:16},(_,i)=>0x70+i)]);
 const SUPPORTED=new Set([...MODRM_OPS,...IMM_OPS,...IO_OPS,...CONTROL_OPS]);
+const GROUPED_MODRM_OPS=new Set([0x0b,0x31,0x8d,0xff]);
+const GROUPED_IMM_OPS=new Set([0xa8]);
+const GROUPED_BYTE_OPS=new Set([0xa8]);
+const DEFERRED_STACK=new Set([...Array.from({length:16},(_,i)=>0x50+i),
+  0x06,0x07,0x0e,0x16,0x17,0x1e,0x1f,
+  0x60,0x61,0x68,0x6a,0x8f,0x9c,0x9d]);
+const DEFERRED_CONTROL_STACK=new Set([0x9a,0xc2,0xc3,0xca,0xcb,0xe8]);
 
 export function classifyI80386FormResolvedAdmission(bytes,{
   default32=false,startEip=0,postEip=0,dataAccesses=0,
   dataReads=dataAccesses,dataWrites=dataAccesses,io=false,
-  dataPageCrossing=false}={}){
+  dataPageCrossing=false,groupedShadowAdmission=false}={}){
   if(!Array.isArray(bytes))throw new TypeError('fetched bytes must be an array');
   let at=0,operandOverride=false,addressOverride=false,segment=null,
     invalidPrefix=null;
@@ -32,23 +39,41 @@ export function classifyI80386FormResolvedAdmission(bytes,{
   const prefixSignature=[segment===null?'-':hex(segment),
     operandOverride?'66':'-',addressOverride?'67':'-'].join('/');
   const base={opcode:hex(opcode),prefixSignature,
-    operandWidth:BYTE_OPS.has(opcode)?8:operand32?32:16,
+    operandWidth:BYTE_OPS.has(opcode)||groupedShadowAdmission&&
+      GROUPED_BYTE_OPS.has(opcode)?8:operand32?32:16,
     addressWidth:address32?32:16,
     modrm:null,eaClass:'none',accessClass:'none',formKey:null};
   const refusal=reason=>({...base,reason});
   if(invalidPrefix)return refusal(invalidPrefix);
   if(opcode===undefined)return refusal('missing-opcode');
-  if(!SUPPORTED.has(opcode))return refusal('unsupported-opcode');
+  if(!SUPPORTED.has(opcode)&&!(groupedShadowAdmission&&
+      (GROUPED_MODRM_OPS.has(opcode)||GROUPED_IMM_OPS.has(opcode)))){
+    if(groupedShadowAdmission){
+      if(opcode===0x8e)return refusal('deferred-segment-state');
+      if(DEFERRED_STACK.has(opcode))return refusal('deferred-stack-state');
+      if(DEFERRED_CONTROL_STACK.has(opcode))
+        return refusal('deferred-control-stack-state');
+    }
+    return refusal('unsupported-opcode');
+  }
   if((IO_OPS.has(opcode)||CONTROL_OPS.has(opcode))&&at)
     return refusal('prefixed-io-or-control');
   at++;
   let modrm=null,eaClass='none',accessClass='register';
-  if(MODRM_OPS.has(opcode)){
+  if(MODRM_OPS.has(opcode)||groupedShadowAdmission&&GROUPED_MODRM_OPS.has(opcode)){
     if(at>=bytes.length)return refusal('missing-modrm');
     const value=bytes[at++],mod=value>>>6,reg=(value>>>3)&7,rm=value&7;
     modrm={mod,reg,rm,sib:null,displacementBytes:0};
     if([0x80,0x81,0x83].includes(opcode)&&reg!==7){
       base.modrm=modrm;return refusal('unsupported-group-extension');
+    }
+    if(groupedShadowAdmission&&opcode===0xff&&reg!==0){
+      base.modrm=modrm;
+      return refusal(reg===2||reg===3||reg===4||reg===5?
+        'deferred-control-stack-state':'deferred-stack-state');
+    }
+    if(groupedShadowAdmission&&opcode===0x8d&&mod===3){
+      base.modrm=modrm;return refusal('invalid-lea-register-form');
     }
     if(mod===3)eaClass='register';
     else{
@@ -67,10 +92,14 @@ export function classifyI80386FormResolvedAdmission(bytes,{
       }
       at+=displacementBytes;
       eaClass=`mem${address32?32:16}${modrm.sib?'-sib':''}-disp${displacementBytes*8}`;
-      accessClass=[0x88,0x89].includes(opcode)?'ram-write':'ram-read';
+      accessClass=opcode===0x8d?'address-only':
+        groupedShadowAdmission&&(opcode===0x31||opcode===0xff)?
+          'ram-read+write':
+          [0x88,0x89].includes(opcode)?'ram-write':'ram-read';
     }
   }
-  const immediateBytes=IMM_OPS.has(opcode)?
+  const immediateBytes=IMM_OPS.has(opcode)||groupedShadowAdmission&&
+      GROUPED_IMM_OPS.has(opcode)?
     [0x3d,0x81].includes(opcode)?(operand32?4:2):1:
     CONTROL_OPS.has(opcode)?1:0;
   if(at+immediateBytes!==bytes.length){
@@ -85,9 +114,13 @@ export function classifyI80386FormResolvedAdmission(bytes,{
   if(dataPageCrossing&&accessClass.startsWith('ram-'))
     return formRefusal('data-page-crossing');
   if(accessClass==='ram-read'&&!dataReads||
+      accessClass==='ram-read+write'&&(!dataReads||!dataWrites)||
       accessClass==='ram-write'&&!dataWrites)
     return formRefusal('unproved-memory-access');
-  if((accessClass==='register'||accessClass==='control')&&dataAccesses)
+  if(groupedShadowAdmission&&opcode===0x0b&&dataWrites)
+    return formRefusal('unexpected-memory-write');
+  if((accessClass==='register'||accessClass==='control'||
+      accessClass==='address-only')&&dataAccesses)
     return formRefusal('unexpected-memory-access');
   if(accessClass.startsWith('port-')&&!io)return formRefusal('unproved-port-io');
   if(!accessClass.startsWith('port-')&&io)return formRefusal('unexpected-port-io');

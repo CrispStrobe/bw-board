@@ -90,14 +90,16 @@ const code16EventObserver=process.env.AT_CODE16_EVENT_OBSERVER==='1'?
   createI80386Code16EventRunObserver():null;
 const formResolvedAdmission=process.env.AT_FORM_RESOLVED_ADMISSION==='1';
 const firstRefusalContext=process.env.AT_FORM_REFUSAL_CONTEXT==='1';
-if([formResolvedAdmission,firstRefusalContext,
+const groupedShadowAdmission=process.env.AT_GROUPED_SHADOW_ADMISSION==='1';
+if([formResolvedAdmission,firstRefusalContext,groupedShadowAdmission,
     process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'].filter(Boolean).length>1)
   throw new Error('select one cross-mode observer variant');
 const crossModeTraceObserver=(formResolvedAdmission||firstRefusalContext||
+  groupedShadowAdmission||
   process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')?
   createI80386CrossModePotentialTraceObserver({
     formResolvedAdmission:formResolvedAdmission||firstRefusalContext,
-    firstRefusalContext}):null;
+    firstRefusalContext,groupedShadowAdmission}):null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
