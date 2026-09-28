@@ -1,0 +1,58 @@
+{
+  "sourceRevision": "8261e89181bd0b43c4bef725e747a4e07e1e8ade",
+  "baseRevision": "bdffe9471ace9bfa4023211bc6488d117344f41d",
+  "host": {
+    "type": "KVM VPS",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2"
+  },
+  "i8086": {
+    "command": "node scripts/bench-i8086.mjs --json",
+    "clockHz": 4772727,
+    "samples": 5,
+    "xRealXtRuns": {
+      "core": [28.0, 24.0, 22.6, 26.1, 19.2],
+      "syntheticMachine": [15.9, 9.6, 20.5, 16.3, 14.5],
+      "dosServiceBoot": [2.3, 2.5, 2.3, 2.2, 2.5]
+    },
+    "medianXRealXt": {
+      "core": 24.0,
+      "syntheticMachine": 15.9,
+      "dosServiceBoot": 2.3
+    },
+    "caveat": "The boot row uses DOS service hooks; none of these rows measures the wired Harris board. The core and synthetic machine rows execute a fixed instruction mix. Shared-host variance is substantial."
+  },
+  "i80386Xv6": {
+    "command": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "nativeVariant": "add XV6_NATIVE_BYTE=1",
+    "firmwareSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "bootImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "guestSteps": 24338279,
+    "clockHz": 6000000,
+    "functionalInstructionCycles": 6,
+    "machineCycles": 163891880,
+    "configuredVirtualSeconds": 27.315313333333332,
+    "finalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "serialEndsWith": "fork test OK\n$ ",
+    "js": {
+      "userCpuSeconds": [25.96, 25.16, 23.68],
+      "wallSeconds": [28.67, 25.37, 23.49],
+      "medianUserCpuSeconds": 25.16,
+      "medianWallSeconds": 25.37,
+      "medianInstructionsPerSecond": 959333,
+      "configuredVirtualTimeFactor": 1.077
+    },
+    "nativeByte": {
+      "userCpuSeconds": [18.83, 18.21, 17.35],
+      "wallSeconds": [25.35, 16.51, 14.55],
+      "medianUserCpuSeconds": 18.21,
+      "medianWallSeconds": 16.51,
+      "medianInstructionsPerSecond": 1474154,
+      "configuredVirtualTimeFactor": 1.654,
+      "retiredNativeInstructionsOnThirdRun": 16427165
+    },
+    "caveat": "The six-cycle instruction charge and 6 MHz clock are a deterministic device-scheduling convention, not measured Intel 80386DX timings. Configured virtual-time factors are not physical 386DX RTx. Same guest step count, output, board cycles, and RAM hash were observed in both modes. Wall times varied on the shared VPS."
+  }
+}
