@@ -10,15 +10,18 @@ opt-in native executor has an 18.21-second median. Both produce the same
 serial output, final RAM hash, and 163,891,880 board cycles. These are host
 execution times from source `8261e891`; 27.315 seconds at the configured
 6 MHz board clock is *virtual* time. Neither ratio is a measured speed
-relative to a physical
-16 MHz 386DX.
+relative to a physical 16 MHz 386DX.
 
 A later [same-page write optimization](receipts/2026-09-28-i80386-same-page-write-performance.json)
 improved a paired three-run ordinary-executor mean from 24.53 to 23.55
 user-CPU seconds (1.042×), with the complete guest result unchanged. These
 different-source samples should not be spliced into an invented cumulative
-RTx figure. The [cross-platform benchmark](X86-RTX-PLATFORMS.md) has VPS and
-Kaggle CPU-host receipts; its GitHub-hosted run is pending. Its reported 386
+RTx figure. The [cross-platform benchmark](X86-RTX-PLATFORMS.md) now has
+VPS, Kaggle CPU-host, and [GitHub-hosted](receipts/2026-09-28-x86-platform-gh.json)
+receipts. The GitHub runner's AMD EPYC 7763 measured 4.05 million 386-core
+and 2.24 million 386-AT instructions/s on its fixed real-mode benchmark.
+The three hosts ran identical benchmark source files, but these short
+media-free probes are not xv6 or Windows workloads. Their reported 386
 factors use configured virtual time and explicitly are not physical-386 RTx.
 
 The [reference-emulator audit](I80386-REFERENCE-EMULATORS.md) identifies the
