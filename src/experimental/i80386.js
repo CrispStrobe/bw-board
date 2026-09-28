@@ -259,15 +259,53 @@ export class ExperimentalI80386 {
   }
 
   _reg(index, width) {
-    const value = this[REG_NAMES[index]] >>> 0;
+    // The decoded register number is stable at this boundary. Direct fields
+    // avoid a name-array lookup and dynamic property access on every operand.
+    let value;
+    switch (index) {
+      case 0: value = this.eax; break;
+      case 1: value = this.ecx; break;
+      case 2: value = this.edx; break;
+      case 3: value = this.ebx; break;
+      case 4: value = this.esp; break;
+      case 5: value = this.ebp; break;
+      case 6: value = this.esi; break;
+      case 7: value = this.edi; break;
+      default: value = this[REG_NAMES[index]];
+    }
+    value >>>= 0;
     return width === 32 ? value : value & 0xffff;
   }
   _setReg(index, width, value) {
+    if (width === 32) {
+      const v = value >>> 0;
+      switch (index) {
+        case 0: this.eax = v; return;
+        case 1: this.ecx = v; return;
+        case 2: this.edx = v; return;
+        case 3: this.ebx = v; return;
+        case 4: this.esp = v; return;
+        case 5: this.ebp = v; return;
+        case 6: this.esi = v; return;
+        case 7: this.edi = v; return;
+      }
+    } else {
+      const low = value & 0xffff;
+      switch (index) {
+        case 0: this.eax = ((this.eax & 0xffff0000) | low) >>> 0; return;
+        case 1: this.ecx = ((this.ecx & 0xffff0000) | low) >>> 0; return;
+        case 2: this.edx = ((this.edx & 0xffff0000) | low) >>> 0; return;
+        case 3: this.ebx = ((this.ebx & 0xffff0000) | low) >>> 0; return;
+        case 4: this.esp = ((this.esp & 0xffff0000) | low) >>> 0; return;
+        case 5: this.ebp = ((this.ebp & 0xffff0000) | low) >>> 0; return;
+        case 6: this.esi = ((this.esi & 0xffff0000) | low) >>> 0; return;
+        case 7: this.edi = ((this.edi & 0xffff0000) | low) >>> 0; return;
+      }
+    }
+    // Preserve the legacy behavior for an invalid internal index.
     const n = REG_NAMES[index];
-    this[n] =
-      width === 32
-        ? value >>> 0
-        : ((this[n] & 0xffff0000) | (value & 0xffff)) >>> 0;
+    this[n] = width === 32 ? value >>> 0 :
+      ((this[n] & 0xffff0000) | (value & 0xffff)) >>> 0;
   }
   _reg8(index) {
     return index < 4
