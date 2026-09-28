@@ -56,7 +56,11 @@ def preflight():
     require(not git(BOARD, 'status', '--porcelain'), 'board worktree is dirty')
     require(git(XV6_SOURCE, 'rev-parse', 'HEAD') == XV6_REVISION,
             'stock MIT xv6 source revision differs')
-    source = (XV6_SOURCE / 'usertests.c').read_text()
+    source_bytes = (XV6_SOURCE / 'usertests.c').read_bytes()
+    committed_source = subprocess.check_output(
+        ['git', 'show', f'{XV6_REVISION}:usertests.c'], cwd=XV6_SOURCE)
+    require(source_bytes == committed_source, 'stock usertests.c differs from pinned revision')
+    source = source_bytes.decode()
     require(source.index('createdelete();') < source.index('linkunlink();'),
             'stock test order changed')
     require('printf(1, "linkunlink ok\\n")' in source, 'next marker changed')
@@ -64,6 +68,7 @@ def preflight():
         require(file.is_file(), f'{name} missing')
         require(sha(file.read_bytes()) == expected, f'{name} pin changed')
     return {'boardRevision': revision, 'xv6SourceRevision': XV6_REVISION,
+            'xv6UsertestsSourceSha256': sha(source_bytes),
             'mediaSha256': {name: expected for name, (_, expected) in PINS.items()},
             'sourceSha256': {name: sha((BOARD / name).read_bytes()) for name in SOURCE_FILES},
             'probeWrapperSha256': sha(Path(__file__).read_bytes()),
