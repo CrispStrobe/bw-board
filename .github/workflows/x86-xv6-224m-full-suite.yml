@@ -12,8 +12,9 @@ jobs:
     timeout-minutes: 240
     env:
       XV6_SOURCE_DIR: /tmp/xv6-public
-      XV6_224M_IMAGE_DIR: /tmp/xv6-stock-224m
-      XV6_IMAGE_DIR: /tmp/xv6-stock-224m
+      # The pinned kernel contains DW_AT_comp_dir from this exact build path.
+      XV6_224M_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
+      XV6_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
       XV6_OUTPUT_DIR: /tmp/xv6-board-full-suite-224m
       XV6_REVISION: eeb7b415dbcb12cc362d0783e41c3d1f44066b17
     steps:
