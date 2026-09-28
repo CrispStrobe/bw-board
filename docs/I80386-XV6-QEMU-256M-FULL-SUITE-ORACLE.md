@@ -37,8 +37,20 @@ The sole success condition is the exact serial sequence
 300 wall-clock seconds, with 30-second boot and 60-second shell limits. A
 stock sbrk failure, panic, timeout, missing or reordered marker, or early exit
 is recorded as a failure. Private output includes raw serial, QEMU stderr,
-post-run writable-disk hashes, and a receipt. The 256 MiB guest has **not**
-been run by this change.
+post-run writable-disk hashes, and a receipt.
+
+The pinned 256 MiB run **passed the stock full suite**. The
+[media-neutral public result](receipts/2026-09-28-xv6-stock-qemu-256m-full-suite.json)
+records ordered prefix marker offsets 192, 224, and 253, then the exact final
+`ALL TESTS PASSED\n$ ` marker at serial byte 4639. The raw serial has SHA-256
+`a60b4272f7e6ec98bf10fb598c1976021354bb9af3fce19f792602175928efc8`
+and length 4658 bytes; it contains no failure marker. The runner stopped on
+the target after 140.439 wall-clock seconds. The original boot image hash was
+unchanged; the writable filesystem image changed as expected during testing.
+The private manifest, receipt, serial, and stderr are preserved on branch
+`evidence/xv6-qemu-4m-negative-20260928` at `88f2424`. This result establishes
+an independent stock xv6 QEMU oracle pass. It does not establish board xv6
+execution or performance parity.
 
 With the pinned source checkout and matching media already present, preflight
 and prepare from a clean board worktree:
@@ -52,7 +64,8 @@ XV6_SOURCE_DIR=/tmp/xv6-public XV6_IMAGE_DIR=/tmp/xv6-stock-224m-qemu \
   python3 -B scripts/probe-xv6-usertests-qemu-256m-full-suite.py --prepare
 ```
 
-Only after a guest CPU slot is available, execute the prepared run once:
+To reproduce the oracle when a guest CPU slot is available, execute the
+prepared run once in a new output directory:
 
 ```sh
 XV6_SOURCE_DIR=/tmp/xv6-public XV6_IMAGE_DIR=/tmp/xv6-stock-224m-qemu \
