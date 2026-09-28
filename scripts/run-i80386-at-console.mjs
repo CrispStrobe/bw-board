@@ -18,6 +18,7 @@ import {renderObservedDoomVga} from './lib/i80386-doom-vga-frame.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 import {createI80386Native32Census} from '../src/experimental/i80386-native32-census.js';
 import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
+import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
 import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
 
 const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
@@ -83,6 +84,8 @@ const broadBlockCensus=process.env.AT_BROAD_BLOCK_CENSUS==='1'?
   createI80386BroadBlockCensus({linkJcc:process.env.AT_BROAD_BLOCK_JCC_LINKS==='1',
     refusalOpcodes:process.env.AT_BROAD_BLOCK_REFUSAL_OPCODES==='1',
     selectedFormsPotential:process.env.AT_BROAD_BLOCK_SELECTED_FORMS==='1'}):null;
+const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
+  createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
   throw new Error('Jcc link census requires AT_BROAD_BLOCK_CENSUS=1');
 if(process.env.AT_BROAD_BLOCK_REFUSAL_OPCODES==='1'&&!broadBlockCensus)
@@ -110,6 +113,9 @@ if(native32Census&&(options.nativeBlocks||options.code16Wasm||
 if(broadBlockCensus&&(options.nativeBlocks||options.code16Wasm||options.code16Loads||
     options.live||native32Census||code16Coverage||modeCpuProfile))
   throw new Error('broad-block census requires noninteractive ordinary single-step execution');
+if(hotLoopLocator&&(options.nativeBlocks||options.code16Wasm||options.code16Loads||
+    options.live||native32Census||code16Coverage||modeCpuProfile||broadBlockCensus))
+  throw new Error('hot-loop locator requires noninteractive ordinary single-step execution');
 if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
   throw new Error('code16 WASM is a separate opt-in dispatcher');
 if(code16WasmDiagnostics&&!options.code16Wasm)
@@ -157,6 +163,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-native-byte-block.js',
   '../src/experimental/i80386-native32-census.js',
   '../src/experimental/i80386-broad-block-census.js',
+  '../src/experimental/i80386-hot-loop-locator.js',
   '../src/experimental/i80386-ram-bridge.js',
   '../src/experimental/i80386-block-spike.js',
   '../src/experimental/i80386-read-window.js',
@@ -223,6 +230,7 @@ const recordModeStep=mode=>{
 const restoreCode16Interrupts=code16Coverage?.attach(machine);
 const restoreNative32Fetch=native32Census?.attach(machine);
 const restoreBroadBlockFetch=broadBlockCensus?.attach(machine);
+const restoreHotLoopFetch=hotLoopLocator?.attach(machine);
 const textRam=()=>{
   const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
   return Array.from({length:25},(_,row)=>Array.from({length:Math.min(columns,160)},(_,col)=>
@@ -264,6 +272,7 @@ const runChunk=end=>{while(steps<end) {
   while(events[eventIndex]?.step===steps) {
     const event=events[eventIndex++];
     broadBlockCensus?.externalEvent();
+    hotLoopLocator?.externalEvent();
     const accepted=event.type==='key'?machine.keyIn(event.code):
       event.type==='serial'?machine.serialIn(event.code):machine.mouseIn(event);
     delivered.push({...event,accepted});
@@ -283,15 +292,18 @@ const runChunk=end=>{while(steps<end) {
     code16Coverage?.observe(machine);
     native32Census?.observe(machine);
     broadBlockCensus?.observe(machine);
+    hotLoopLocator?.observe(machine);
     if(nativeDispatcher)steps+=nativeDispatcher.run(Math.min(64,budget));
     else if(code16WasmDispatcher)steps+=code16WasmDispatcher.run(Math.min(64,budget));
     else {machine.step();code16Coverage?.retired(machine);
       native32Census?.retired(machine);steps++;
       broadBlockCensus?.retired(machine);
+      hotLoopLocator?.retired(machine);
       if(modeCpuProfile)recordModeStep(modeBeforeStep);}
   }
   catch(error) {
     broadBlockCensus?.aborted(machine);
+    hotLoopLocator?.aborted(machine);
     if(!(error instanceof I80386Fault)&&!(error instanceof UnsupportedI80386)&&
         !error.message?.startsWith('AT 8042 '))throw error;
     stop=error instanceof UnsupportedI80386?'unsupported':
@@ -348,6 +360,7 @@ flushModeCpuProfile();
 restoreCode16Interrupts?.();
 restoreNative32Fetch?.();
 restoreBroadBlockFetch?.();
+restoreHotLoopFetch?.();
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
 const video=machine.chips.vga1.getVideoState();
@@ -361,6 +374,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(code16Coverage?{code16Coverage:code16Coverage.report()}:{}),
   ...(native32Census?{native32Census:native32Census.report()}:{}),
   ...(broadBlockCensus?{broadBlockCensus:broadBlockCensus.report()}:{}),
+  ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,

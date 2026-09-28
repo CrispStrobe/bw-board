@@ -8,6 +8,7 @@ import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
 import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
+import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
 
 const firmware = process.env.XV6_FIRMWARE ?? 'ibm';
 if (!['ibm', 'bochs'].includes(firmware)) throw new Error('XV6_FIRMWARE must be ibm or bochs');
@@ -68,6 +69,8 @@ const broadBlockCensus = process.env.XV6_BROAD_BLOCK_CENSUS === '1' ?
   createI80386BroadBlockCensus({linkJcc:process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1',
     refusalOpcodes:process.env.XV6_BROAD_BLOCK_REFUSAL_OPCODES==='1',
     selectedFormsPotential:process.env.XV6_BROAD_BLOCK_SELECTED_FORMS==='1'}) : null;
+const hotLoopLocator=process.env.XV6_HOT_LOOP_LOCATOR==='1'?
+  createI80386HotLoopLocator():null;
 if(process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
   throw new Error('Jcc link census requires XV6_BROAD_BLOCK_CENSUS=1');
 if(process.env.XV6_BROAD_BLOCK_REFUSAL_OPCODES==='1'&&!broadBlockCensus)
@@ -84,6 +87,8 @@ if (code16Coverage && (nativeByte || nativeDispatch))
   throw new Error('code16 coverage requires ordinary single-step execution');
 if (broadBlockCensus && (nativeByte || nativeDispatch || code16Coverage))
   throw new Error('broad-block census requires ordinary single-step execution');
+if (hotLoopLocator && (nativeByte || nativeDispatch || code16Coverage || broadBlockCensus))
+  throw new Error('hot-loop locator requires ordinary single-step execution');
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -141,6 +146,7 @@ if (vgaRom) machine.loadRom(vgaRom, 0xc0000);
 machine.reset();
 const restoreCode16Interrupts = code16Coverage?.attach(machine);
 const restoreBroadBlockFetch = broadBlockCensus?.attach(machine);
+const restoreHotLoopFetch=hotLoopLocator?.attach(machine);
 if (firmware === 'bochs') machine.ata.slaveEnabled = true;
 const nativeRunner = nativeByte ? await (async () => {
   const {createI80386NativeByteRunner} = await import('../src/experimental/i80386-native-byte-block.js');
@@ -161,6 +167,7 @@ machine._read386 = address => {
 for (; steps < stepsLimit; steps++) {
   code16Coverage?.observe(machine);
   broadBlockCensus?.observe(machine);
+  hotLoopLocator?.observe(machine);
   if (progressEvery > 0 && steps % progressEvery === 0)
     console.error(`PROGRESS step=${steps} screen=${String.fromCharCode(...Array.from({length: 40}, (_, i) => machine._read386(0xb8000 + i * 2) || 32)).trim()}`);
   if (command && !commandStarted && serial.at(-2) === 36 && serial.at(-1) === 32)
@@ -168,6 +175,7 @@ for (; steps < stepsLimit; steps++) {
   if (commandStarted && inputSent.length < command.length && machine.chips.uart1.rxFifo.length === 0) {
     const byte = command.charCodeAt(inputSent.length);
     broadBlockCensus?.externalEvent();
+    hotLoopLocator?.externalEvent();
     machine.serialIn(byte);
     inputSent.push({step: steps, byte});
   }
@@ -223,10 +231,12 @@ for (; steps < stepsLimit; steps++) {
       }
     }
     if (advanced === 0) {machine.step();code16Coverage?.retired(machine);
-      broadBlockCensus?.retired(machine);advanced=1;}
+      broadBlockCensus?.retired(machine);hotLoopLocator?.retired(machine);
+      advanced=1;}
     steps+=advanced-1;
   } catch (error) {
     broadBlockCensus?.aborted(machine);
+    hotLoopLocator?.aborted(machine);
     console.error(JSON.stringify({error: String(error), steps, milestones, userModeEntries,
       serial: Buffer.from(serial).toString('latin1'), inputSent,
       recentInstructions: [...recentInstructions].sort((a, b) => a.step - b.step),
@@ -238,6 +248,7 @@ for (; steps < stepsLimit; steps++) {
 }
 restoreCode16Interrupts?.();
 restoreBroadBlockFetch?.();
+restoreHotLoopFetch?.();
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
@@ -251,6 +262,10 @@ const receipt = {
     broadBlockCensusSourceSha256:crypto.createHash('sha256').update(fs.readFileSync(
       new URL('../src/experimental/i80386-broad-block-census.js',import.meta.url)))
       .digest('hex')} : {}),
+  ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report(),
+    hotLoopLocatorSourceSha256:crypto.createHash('sha256').update(fs.readFileSync(
+      new URL('../src/experimental/i80386-hot-loop-locator.js',import.meta.url)))
+      .digest('hex')}:{}),
   ...(process.env.XV6_RAM_HASH === '1' ? {ramSha256:crypto.createHash('sha256')
     .update(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes))
     .digest('hex')} : {}),
