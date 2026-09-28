@@ -8,7 +8,7 @@
 # Not silicon-verified. Bench silicon may be ItsyBitsy M4 (SAMD51G19A);
 # Playground pinout is Metro M4. QSPI, USB, NeoPixel, and unused SERCOMs
 # are intentionally stubbed / omitted — only the MCU core, PORT, MCLK/GCLK,
-# SERCOM3 UART (Serial1), and SysTick are modelled here.
+# SERCOM1/3 UARTs and SysTick are modelled here.
 # Pin labels follow Adafruit ArduinoCore-samd variants/metro_m4/variant.cpp.
 
 name: "atsamd51j19a"
@@ -25,12 +25,14 @@ ram:
 # Arcade application payloads carry their vector table at this offset.
 reset_vector_offset: 0x4000
 pins:
+  # PyBadge Feather TX/RX — SERCOM1 PAD[0]/PAD[1].
+  PA17: { gpio: porta, bit: 17, functions: [{ type: uart, peripheral: sercom1, role: rx }] }
   # D0 / RX — variant.cpp: PORTA 23 (SERCOM3/PAD[1]).
   PA23: { gpio: porta, bit: 23, functions: [{ type: uart, peripheral: sercom3, role: rx }] }
   # D1 / TX — variant.cpp: PORTA 22 (SERCOM3/PAD[0]).
   PA22: { gpio: porta, bit: 22, functions: [{ type: uart, peripheral: sercom3, role: tx }] }
-  # D13 / LED — variant.cpp: PORTA 16.
-  PA16: { gpio: porta, bit: 16, functions: [{ type: gpio, peripheral: porta }] }
+  # Metro D13 LED / PyBadge Feather TX.
+  PA16: { gpio: porta, bit: 16, functions: [{ type: gpio, peripheral: porta }, { type: uart, peripheral: sercom1, role: tx }] }
 peripherals:
   - id: "mclk"
     type: "sam_mclk"
@@ -52,6 +54,20 @@ peripherals:
     size: "128B"
     config:
       profile: "sam_port"
+  # PyBadge Feather UART on PA16/PA17 (SERCOM1 PAD0/PAD1).
+  # MCLK.APBAMASK bit 13; GCLK PCHCTRL[8] = SERCOM1_CORE.
+  - id: "sercom1"
+    type: "uart"
+    base_address: 0x40003400
+    size: "256B"
+    irq: 50
+    clock:
+      controller: "mclk"
+      reg: "APBAMASK"
+      bit: 13
+    config:
+      profile: "sercom"
+      gclk_id: 8
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
