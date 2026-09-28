@@ -27,8 +27,14 @@ retaining the IBM type-1 fixed-disk geometry; this boot-order byte is outside
 the CMOS checksum range.
 
 The adapter's synthetic all-media test establishes ROM placement, FDC/HDD
-attachment, reset, keyboard delivery, and the VGA frame surface. A GUI Doom
-acceptance still requires the actual circuits/widgets/code host to select this
+attachment, reset, keyboard delivery, and the VGA frame surface. The
+[headless browser-target FreeDOS receipt](receipts/2026-09-28-i80386-browser-target-freedos.json)
+then boots the pinned external FreeDOS floppy with vendored LGPL firmware via
+`createDebugTarget`, `applyMedia`, `target.runFor`, `target.keyIn`, and
+`target.video`. Its 45.8-million-step settled A: prompt and C: directory
+screen exactly match the ordinary CLI receipt. This is adapter-path evidence;
+it does not exercise the browser widget or Doom. A GUI Doom acceptance still
+requires the actual circuits/widgets/code host to select this
 preset, attach the pinned private inputs, enter the short-demo command via
 set-1 make/break events, and observe the completion line, DOS prompt, and
 audited 320×200 frame specified in [I80386-DOOM.md](I80386-DOOM.md). The

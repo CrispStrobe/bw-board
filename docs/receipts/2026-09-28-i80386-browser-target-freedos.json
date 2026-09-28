@@ -1,0 +1,115 @@
+{
+  "schema": "astra.i80386-browser-target-freedos.v1",
+  "passed": true,
+  "scope": "Headless browser-target FreeDOS boot and C: mount; no GUI widget or Doom acceptance.",
+  "executionRevision": "433b9301ce137eb7962bcd9a8d7a41819c4a4051",
+  "sourceSha256": {
+    "src/debug-target-factory.js": "1467d8e8b8b9e0fb6ccb7f73f4083bb503bc00858456fba8cc5f9ac58f2c459c",
+    "src/i80386-adapter.js": "76ce7241e141861be087da530a40cec76f0644debfb9bcc0dcf2511b152e9ddd",
+    "src/i8086-debug.js": "b09e265d7664557e6b96031223fc88aeb733a562de23e5182cdf582bf9879a5e",
+    "src/machine-media.js": "e9f28283137c71d0296da7f73b8ab5ae5a62f984cbe48bc0d3535936feffab09",
+    "src/i8086-machine.js": "90f6ad69ae6a23b4412e2632232461be0c4505a05d4e272650790cf941d45731",
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "src/experimental/i80386.js": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
+    "src/experimental/i80386-at-machine.js": "eeedf22f8730c054cfe77372af0f44a64aff7f9937b6ffe3d393fa5e17c0a3d9",
+    "src/experimental/ata16.js": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7",
+    "src/at-8042-a20.js": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8",
+    "src/at-ps2-mouse.js": "b75f93e3a4473e21568af438d658941e9a9703ab330147b8f444baba278281ea",
+    "src/upd765.js": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4",
+    "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+    "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+    "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+    "src/experimental/i80386-vga-frame.js": "d8ffe74222b0abbe0665e3af61be8a2b2de591434c42fbea5b4627f22ae8d97a",
+    "scripts/lib/i80386-free-bios-fat16.mjs": "c6b2bd6f13d264b07b64f517e1dcd6b385e3a71016d1b871dfbadf3855b30cd3",
+    "scripts/run-i80386-browser-target-freedos.mjs": "7d2d068641a0e1b629866c1713a5d247eb37e21e6754555f7b0a8fdee79f74ae"
+  },
+  "media": {
+    "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "floppySha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+    "hddSha256": "2fa9c252f22cec4f8c5bdc82d1587293ffcaed791e0982384628d19a7316a851"
+  },
+  "adapter": {
+    "profile": "freedos-vga",
+    "mediaApplied": [
+      "bios",
+      "vga-rom",
+      "hdd",
+      "floppy"
+    ],
+    "debuggerRunFor": true,
+    "keyboardViaTarget": true,
+    "frameViaTarget": true
+  },
+  "comparator": "docs/receipts/2026-09-28-i80386-free-bios-freedos.json",
+  "reset": {
+    "cs": 61440,
+    "ip": 65520,
+    "pc": 4294967280,
+    "firstByte": 234
+  },
+  "stepCalls": 45800000,
+  "stopReason": "settled",
+  "installerDeclined": true,
+  "reachedDosPrompt": true,
+  "cMounted": true,
+  "guestMatch": true,
+  "keyboardScript": {
+    "requested": "n\rdir c:\r",
+    "injected": [
+      "\r",
+      "n",
+      "\r",
+      "\r",
+      "\r",
+      "d",
+      "i",
+      "r",
+      " ",
+      "c",
+      "S",
+      ":",
+      "s",
+      "\r"
+    ]
+  },
+  "evidence": {
+    "volumeLine": " Volume in drive C has no label",
+    "markerLine": "CMOUNTOK TXT            27  00/00/1980 12:00a",
+    "bytesFreeLine": "         0 dir(s)      10,585,088 bytes free"
+  },
+  "screenText": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Welcome to the FreeDOS 1.4 installation program.",
+    "",
+    "FreeDOS is a complete operating system. If you choose to install this on",
+    "your computer, you may  overwrite the operating system you have now",
+    "(for example, Windows.) If this is not what you intend, please stop NOW!",
+    "",
+    "Do you want to proceed [Y,N]?N",
+    "",
+    "The installation of FreeDOS 1.4 has been aborted.",
+    "A:\\>",
+    "A:\\>",
+    "A:\\>dir c:",
+    " Volume in drive C has no label",
+    " Volume Serial Number is 386D-0019",
+    " Directory of C:\\",
+    "",
+    "CMOUNTOK TXT            27  00/00/1980 12:00a",
+    "         1 file(s)             27 bytes",
+    "         0 dir(s)      10,585,088 bytes free",
+    "A:\\>"
+  ],
+  "frame": {
+    "width": 720,
+    "height": 400,
+    "mode": 3,
+    "why": "386 VGA text planes",
+    "unsupported": null
+  }
+}
