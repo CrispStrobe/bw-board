@@ -3,7 +3,7 @@ import {execFileSync, spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
-import {tmpdir} from 'node:os';
+import {tmpdir,cpus,platform,arch} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import I80386 from '../src/experimental/i80386.js';
 
@@ -81,10 +81,13 @@ try {
   const differences=[];
   if(reference!=='BHV')differences.push({field:'reference.output',expected:'BHV',actual:reference});
   if(actual!=='BHV')differences.push({field:'actual.output',expected:'BHV',actual});
+  if(!bochsLog.includes('Booting from 0000:7c00'))
+    differences.push({field:'reference.boot',expected:'Booting from 0000:7c00',actual:null});
   if(bochsLog.includes('>>PANIC<<'))differences.push({field:'reference.panic',actual:true});
   execFileSync('git',['diff','--quiet','HEAD','--',...paths],{cwd:repo});
   if(paths.some(p=>hash(readFileSync(resolve(repo,p)))!==sourceHashes[p]))throw new Error('execution source changed');
   const report={oracle:'Bochs CPU-level-3 software emulator',revision,sourceHashes,
+    host:{platform:platform(),arch:arch(),cpuModels:[...new Set(cpus().map(cpu=>cpu.model))],node:process.version},
     bochsRevision,bochsSha256,bochsConfigSha256:hash(configHeader),
     biosSha256:hash(readFileSync(bios)),vgaBiosSha256:hash(readFileSync(vgaBios)),
     imageSha256:hash(binary),floppySha256:hash(floppy),
