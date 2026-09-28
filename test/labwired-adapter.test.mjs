@@ -288,13 +288,15 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
         it('declares only what labwired can actually do', async () => {
             const { target } = await makeTarget();
             const c = target.capabilities();
-            assert.deepEqual(c.steps, ['insn'], 'block stepping needs a yield set we do not have');
+            // insn, plus over/out on an ARM core (Thumb call decode + SP/LR);
+            // 'block' still needs a yield set we do not have.
+            assert.deepEqual(c.steps, ['insn', 'over', 'out']);
             assert.deepEqual(c.breakpoints, ['code']);
             assert.deepEqual(c.writable, [],
                 'the wasm surface has no memory write — offering one would be a lie');
             assert.equal(c.haltPolicy, 'freeze-timers');
             // And the refusals are by name, not silence.
-            assert.match(target.step('over').unsupported, /single-instruction/);
+            assert.match(target.step('block').unsupported, /yield set/);
             assert.match(target.writeMem('sram', 0, new Uint8Array(1)).unsupported, /no memory write/);
             assert.match(target.setBreakpoint({kind: 'write', addr: 0}).unsupported, /code breakpoints only/);
         });
