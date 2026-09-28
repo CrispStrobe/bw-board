@@ -448,6 +448,12 @@ diagnostic configuration. The [public aggregate receipt](receipts/2026-09-28-i80
 retains source hashes, modes and exit reasons without private media IDs or
 guest text. The bounded next step is an event-aware multi-instruction trace
 architecture, not another isolated 16-bit opcode addition.
+An [owned protected-16 branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md)
+now pins the first acceptance boundary: a taken JZ reaches an `IN` with zero
+device reads, then ordinary execution performs one read. QEMU supplies the
+pre/post CPU-state checkpoints; Bochs CPU-level 3 independently emits the
+same output marker. This is an oracle harness, not an executable block-engine
+speed result.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
