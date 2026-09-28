@@ -1,7 +1,8 @@
 // Opt-in dispatcher for the bounded native byte runner. The machine remains
 // responsible for chip events, interrupts, faults, and unsupported opcodes.
 import {createI80386RamBridge} from './i80386-ram-bridge.js';
-import {createI80386NativeByteRunner} from './i80386-native-byte-block.js';
+import {createI80386NativeByteRunner, isI80386NativeByteBlockValid} from
+  './i80386-native-byte-block.js';
 
 const REP_STOSD = 17;
 const REP_MOVSD = 20;
@@ -16,6 +17,7 @@ export async function createI80386NativeDispatcher(machine, {
   maxCachedBlocks = 4096,
   decodeInstructions = 8,
   blockInstructions = 16,
+  successorObserver = null,
 } = {}) {
   if (machine?.variant !== '80386' || !machine.cpu ||
       !Number.isInteger(memoryBytes) || memoryBytes !== machine.memoryBytes)
@@ -25,6 +27,9 @@ export async function createI80386NativeDispatcher(machine, {
       decodeInstructions > 64 || !Number.isInteger(blockInstructions) ||
       blockInstructions < 1 || blockInstructions > 64)
     throw new RangeError('invalid native dispatcher cache or block budget');
+  if (successorObserver !== null &&
+      typeof successorObserver?.observe !== 'function')
+    throw new TypeError('native successor observer needs observe(record)');
 
   const ramBridge = machine._experimentalRamBridge ?? await createI80386RamBridge();
   if (!machine._experimentalRamBridge) {
@@ -38,6 +43,43 @@ export async function createI80386NativeDispatcher(machine, {
     repStosIterations: 0, repMovDecoded: 0, repMovBlockCalls: 0,
     repMovIterations: 0, repStosbDecoded: 0, repStosbBlockCalls: 0,
     repStosbIterations: 0};
+  const registerOnly = block => !!block && !block.readWindows.length &&
+    !block.writeWindows.length && block.instructions.every(ins =>
+      ins.op <= 6 || ins.op === 9 || ins.op >= 10 && ins.op <= 16 ||
+      ins.op === 18);
+
+  function observeCompletedCall(block, before, result, limits) {
+    const cpu = machine.cpu;
+    const nextEip = cpu.eip >>> 0;
+    const successor = blocks.get(nextEip);
+    let successorStatus;
+    if (!successor) successorStatus = 'cold';
+    else if (successor.cs !== cpu.cs || successor.cr3 !== cpu.cr3 ||
+        successor.cr4 !== cpu.cr4) successorStatus = 'cached-identity-stale';
+    else if (!successor.block) successorStatus = 'cached-negative';
+    else if (!isI80386NativeByteBlockValid(successor.block))
+      successorStatus = 'cached-code-or-window-unsafe';
+    else successorStatus = registerOnly(successor.block)
+      ? 'cached-valid-register-only' : 'cached-valid-memory-or-repeat';
+    const linkedEdgePresent = block.instructions.some((ins, index) =>
+      ins.op >= 4 && ins.op <= 6 && ins.dst < index);
+    const repeat = isRepeatBlock(block);
+    successorObserver.observe({
+      beforeCs: before.cs, beforeEip: before.eip,
+      afterCs: cpu.cs, afterEip: nextEip,
+      resultReason: result.reason, retired: result.instructions,
+      sourceInstructions: block.instructions.length,
+      sourceRegisterOnly: registerOnly(block),
+      linkedInside: !linkedEdgePresent ? 'none' :
+        !repeat && result.instructions > block.instructions.length
+          ? 'taken-proven' : 'present-taken-unknown',
+      successorStatus,
+      postChipDue:machine._chipDebt >= machine._chipDeadline,
+      postLapicDue:!!machine._lapicTimerInterval &&
+        machine.cycles >= machine._lapicTimerNext,
+      limits,
+    });
+  }
 
   function run(maxInstructions = 64) {
     if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
@@ -68,6 +110,15 @@ export async function createI80386NativeDispatcher(machine, {
       blocks.set(key, entry);
     }
     if (entry.block) {
+      const before = successorObserver ? {cs:cpu.cs,eip:cpu.eip>>>0} : null;
+      const limits = successorObserver ? {
+        caller:Math.min(blockInstructions,maxInstructions),
+        chip:Math.ceil((machine._chipDeadline-machine._chipDebt)/
+          machine.functionalInstructionCycles),
+        lapic:machine._lapicTimerInterval
+          ? Math.ceil((machine._lapicTimerNext-machine.cycles)/
+            machine.functionalInstructionCycles) : Infinity,
+      } : null;
       const result = runner.run(entry.block,
         Math.min(blockInstructions, maxInstructions));
       if (result.instructions > 0) {
@@ -85,6 +136,8 @@ export async function createI80386NativeDispatcher(machine, {
           stats.repStosbBlockCalls++;
           stats.repStosbIterations += result.instructions;
         }
+        if (successorObserver)
+          observeCompletedCall(entry.block, before, result, limits);
         return result.instructions;
       }
       if (result.reason === 'fallback' || result.reason === 'fault-boundary')
