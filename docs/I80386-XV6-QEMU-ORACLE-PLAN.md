@@ -4,25 +4,27 @@
 
 The installed QEMU is 8.2.2. The declared guest configuration is `pc-i440fx-8.2`, `qemu32`, single-thread TCG, one CPU, 4 MiB RAM, the pinned SeaBIOS/VGA pair, two IDE disks in master/slave positions, and a Unix socket for COM1. Python creates the socket listener before launching QEMU; QEMU connects as a client. The runner waits for the xv6 shell prompt, sends `usertests\r`, and records raw serial bytes. It stops at `concreate ok\n` or after 900 wall-clock seconds. A 30-second boot guard requires `xv6...`; a 60-second shell guard requires the prompt before injecting the command. The private receipt records ordered positions of `createdelete ok\n`, `linkunlink ok\n` and `concreate ok\n`, plus hashes of the transcript and writable disks. It cannot compare emulator guest-step counts, because QEMU has a different execution model and PC chipset.
 
-From the board worktree, the preparation commands are:
+For a replay, choose a new unused output directory. From a clean board worktree, the preparation commands are:
 
 ```sh
 XV6_SOURCE_DIR=/tmp/xv6-public XV6_IMAGE_DIR=/tmp/xv6-stock-4m \
-  XV6_ORACLE_OUTPUT_DIR=/tmp/xv6-qemu-oracle-seabios-20260928 \
+  XV6_ORACLE_OUTPUT_DIR=/tmp/xv6-qemu-oracle-seabios-fresh-run \
   python3 -B scripts/probe-xv6-usertests-qemu-oracle.py --preflight
 XV6_SOURCE_DIR=/tmp/xv6-public XV6_IMAGE_DIR=/tmp/xv6-stock-4m \
-  XV6_ORACLE_OUTPUT_DIR=/tmp/xv6-qemu-oracle-seabios-20260928 \
+  XV6_ORACLE_OUTPUT_DIR=/tmp/xv6-qemu-oracle-seabios-fresh-run \
   python3 -B scripts/probe-xv6-usertests-qemu-oracle.py --prepare
 ```
 
-When the shared CPU slot is free, run this exact command in the prepared, clean worktree:
+After preparation and when the shared CPU slot is free, run:
 
 ```sh
 XV6_SOURCE_DIR=/tmp/xv6-public XV6_IMAGE_DIR=/tmp/xv6-stock-4m \
-  XV6_ORACLE_OUTPUT_DIR=/tmp/xv6-qemu-oracle-seabios-20260928 \
+  XV6_ORACLE_OUTPUT_DIR=/tmp/xv6-qemu-oracle-seabios-fresh-run \
   python3 -B scripts/probe-xv6-usertests-qemu-oracle.py --run
 ```
 
-`manifest-private.json` contains the complete QEMU argument vector and local paths. The runner refuses reused serial/receipt files or disk copies whose hashes changed before the run. A reached marker would independently corroborate the stock guest's serial behavior under QEMU; it would not establish that the board completed the whole suite. Prior pinned-Bochs QEMU attempts produced zero serial bytes. A bounded QMP diagnostic found QEMU marked `running` while the Bochs BIOS CPU halted at `f000:0872` in its timer wait. A three-second diagnostic with the pinned SeaBIOS pair and fresh copies of the same disks reached the xv6 shell; it did not run `usertests`. The full SeaBIOS oracle has not started.
+`manifest-private.json` contains the complete QEMU argument vector and local paths. The runner refuses reused serial/receipt files or disk copies whose hashes changed before the run. Prior pinned-Bochs QEMU attempts produced zero serial bytes. A bounded QMP diagnostic found QEMU marked `running` while the Bochs BIOS CPU halted at `f000:0872` in its timer wait. A three-second diagnostic with the pinned SeaBIOS pair and fresh copies of the same disks reached the xv6 shell.
+
+The [SeaBIOS concreate oracle receipt](receipts/2026-09-28-xv6-stock-qemu-seabios-concreate.json) records a subsequent fresh run that sent `usertests\r` and observed `createdelete ok\n`, `linkunlink ok\n` and `concreate ok\n` in source order. It stopped at the target after 20.734 wall seconds. Its raw serial, manifest, host capture, stderr and full receipt are preserved privately at firmware commit `ae38dca`. The disposable filesystem copy changed, while the boot disk and original pinned media remained unchanged. This independently corroborates stock xv6's bounded serial prefix on QEMU with different firmware and chipset; it does not establish complete `usertests` or compare QEMU wall time to board guest steps.
 
 For a later full-suite oracle, start again from fresh copies of the pinned disks and allow the program to continue past `concreate()`. The pinned `usertests.c` ends with `exectest()`, which executes `echo` with the arguments `ALL TESTS PASSED`. A stronger completion gate is the exact serial text `ALL TESTS PASSED\n` followed by a return to the shell prompt (`$ `). The present runner stops at `concreate ok\n`; it does not make that full-suite claim.
