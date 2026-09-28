@@ -48,6 +48,7 @@ test('real-mode RAM and ROM windows match bytewise fetch, including A20 alias', 
   machine.loadRom(Uint8Array.of(0xea, 0x12, 0x34), 0xf0020);
   assert.equal(machine._page[0xf0000 >>> 12], 2);
   const rom = sameAsFetch(machine, 0x20, 3);
+  assert.equal(peek(machine, 0x20, 3), rom.bytes[0]);
   machine.loadRom(Uint8Array.of(0x90), 0xf0021);
   assert.equal(valid(rom), false, 'host ROM reload invalidates captured bytes');
   code(cpu, 0x120000);
@@ -60,8 +61,10 @@ test('real-mode RAM and ROM windows match bytewise fetch, including A20 alias', 
   code(cpu, 0x120000);
   const aliased = sameAsFetch(machine, 0x20, 3);
   assert.equal(aliased.physicalAddress, 0x20020);
+  assert.equal(peek(machine, 0x20, 3), 0x31);
   machine._a20Enabled = true;
   assert.equal(valid(aliased), false);
+  assert.equal(peek(machine, 0x20, 3), 0xcc);
   sameAsFetch(machine, 0x20, 3);
 });
 

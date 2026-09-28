@@ -1,0 +1,163 @@
+{
+  "schema": "bw.i80386-code16-first-byte-admission.v1",
+  "baselineRevision": "ade888dae14b8cc8b6fe555a25e8dbd954c1cbe2",
+  "candidateRevision": "f6aac9189c6fc6715ee1340b220ccfc0a4ee0695",
+  "observerSha256": "86536b52385c63943e89e9084dd3373dda2c68fddc54084729a49b13339aee3c",
+  "source": {
+    "reportedFilesChecked": 31,
+    "allOtherReportedExecutionSourcesIdentical": true,
+    "baselineDispatcherSha256": "d34e118b23f42ab24822bf9559bab11d723cb3ce65ad27246312589e511dc758",
+    "candidateDispatcherSha256": "d6571c5e8ad028546dcc7ef2ed79f49ed3e517514dcd2fa20244dabbe1eb1ea0",
+    "baselineCodeWindowSha256": "b792ba1593483ca628fe791b9a285996b2f6bd0c9413d0bb612ee5f2ff058637",
+    "candidateCodeWindowSha256": "5d6c34acb249b9326e3733dc5fcc821747ee761d3c4f162d65f3429294e09aa3",
+    "codeWindowHashScope": "Captured from each exact local revision; CLI source inventory omits this module."
+  },
+  "normalizedFullReportedJsonEqual": true,
+  "expectedRawReportDiffPaths": [
+    "/executionRevision",
+    "/sourceSha256/../src/experimental/i80386-code16-wasm-block.js"
+  ],
+  "rawArtifactSha256": {
+    "a1": {
+      "report": "e7a8dacf25f9f2e4b00acb7a6446818bd79dc21b4f05d58b149c3a9c6bf49d54",
+      "time": "657c332eb684ba76c328f95c227093fcaa4aa88276e338e1b897e63545e3e460",
+      "host": "8a0ea851c5ab62778176a4f2a4cbbb92429d955079cf2ed7cfe81e12ec82ed8c"
+    },
+    "b1": {
+      "report": "2654476e56740770b0270f167039710bb3b2d250539cb5e59ae2372c7ee6d67c",
+      "time": "f956b6aa9e330b6ee41590e0a3e5e963999e13b40c74ce8565ab06880c2c019b",
+      "host": "a96fbd451e0e6f678d97451d7c58aaeeec065fa20d98fee49032450f991d8a18"
+    },
+    "a2": {
+      "report": "e7a8dacf25f9f2e4b00acb7a6446818bd79dc21b4f05d58b149c3a9c6bf49d54",
+      "time": "8099b5fdf70104f6aa3c7ca6deaa0a00a75680951012a23db9dbdf76cca5a9e9",
+      "host": "2d0e9ac2608cea56ced783eb0900a50022b7a1ff0cc75647f110612bdb7a640d"
+    },
+    "b2": {
+      "report": "2654476e56740770b0270f167039710bb3b2d250539cb5e59ae2372c7ee6d67c",
+      "time": "7a554ddf4ff5a12add5f2cbef97e63cdba6a263422103a552ed77e5aea9a10ea",
+      "host": "e4f207f86e2aa0ca732a3b0bbfa4f459b343719c231d2a4830ecff779ecdbf37"
+    }
+  },
+  "scope": "Two serial alternating unprofiled 60M Windows opt-in A/B pairs with diagnostics and form census enabled",
+  "selectedReportedFields": [
+    "steps",
+    "stop",
+    "refusal",
+    "cpu",
+    "delivered",
+    "serial",
+    "textRam",
+    "vga"
+  ],
+  "selectedReportedFieldsSha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
+  "reportedInputsAndOptinSwitchIdentical": true,
+  "host": {
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "load": {
+      "a1": {
+        "startUtc": "2026-09-28T15:54:18Z",
+        "endUtc": "2026-09-28T16:08:59Z",
+        "loadStart": [
+          8.93359375,
+          8.115234375,
+          9.88330078125
+        ],
+        "loadEnd": [
+          11.2109375,
+          12.65283203125,
+          12.376953125
+        ]
+      },
+      "b1": {
+        "startUtc": "2026-09-28T16:09:05Z",
+        "endUtc": "2026-09-28T16:14:07Z",
+        "loadStart": [
+          10.71337890625,
+          12.525390625,
+          12.3369140625
+        ],
+        "loadEnd": [
+          5.03564453125,
+          8.7099609375,
+          10.82275390625
+        ]
+      },
+      "a2": {
+        "startUtc": "2026-09-28T16:14:11Z",
+        "endUtc": "2026-09-28T16:21:23Z",
+        "loadStart": [
+          4.71240234375,
+          8.58154296875,
+          10.76953125
+        ],
+        "loadEnd": [
+          8.09814453125,
+          7.4970703125,
+          9.2802734375
+        ]
+      },
+      "b2": {
+        "startUtc": "2026-09-28T16:21:30Z",
+        "endUtc": "2026-09-28T16:30:36Z",
+        "loadStart": [
+          7.76953125,
+          7.43896484375,
+          9.25146484375
+        ],
+        "loadEnd": [
+          11.9404296875,
+          13.46435546875,
+          11.81005859375
+        ]
+      }
+    }
+  },
+  "timing": {
+    "a1": {
+      "wall": 880.42,
+      "user": 389.08,
+      "system": 12.15,
+      "maxrss": 164440
+    },
+    "b1": {
+      "wall": 302.13,
+      "user": 255.63,
+      "system": 3.81,
+      "maxrss": 197120
+    },
+    "a2": {
+      "wall": 431.85,
+      "user": 352.8,
+      "system": 4.57,
+      "maxrss": 220244
+    },
+    "b2": {
+      "wall": 546.05,
+      "user": 263.49,
+      "system": 6.26,
+      "maxrss": 191816
+    }
+  },
+  "exact": {
+    "steps": 60000000,
+    "eligibleAttempts": 39761006,
+    "decodedBlocks": 390473,
+    "nativeCalls": 2345288,
+    "nativeRetirements": 5042482,
+    "ordinaryFallbackCalls": 54957518,
+    "boundaryExits": 180069
+  },
+  "retentionGate": "Predeclared: two alternating unprofiled 60M A/B pairs, matching selected reported guest fields, private inputs, unaffected source blobs and exact opt-in counters, >=10% mean user-CPU gain, and no individual pair regression.",
+  "result": {
+    "baselineMeanUserSeconds": 370.94,
+    "candidateMeanUserSeconds": 259.56,
+    "candidateToBaselineUserRatio": 0.6997358063298647,
+    "meanUserCpuGainFraction": 0.30026419367013535,
+    "noIndividualRegression": true,
+    "passed": true
+  },
+  "limits": "The normalized full reported JSON equality extends beyond the selected digest, but the console reports omit full guest RAM, disk state, complete hidden CPU state and diagnostic-census maps. Host load may affect wall time and user-CPU variability; two pairs are a bounded retention gate, not a population estimate. Private media identifiers and guest text are omitted."
+}
