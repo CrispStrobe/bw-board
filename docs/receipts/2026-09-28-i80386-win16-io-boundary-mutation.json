@@ -1,0 +1,136 @@
+{
+  "schema": "bw.i80386-win16-io-boundary-oracle.v1",
+  "revision": "ccc6dcd8dab4caf7fa0010acf45ed341e6ad5389",
+  "sourceHashes": {
+    "test/fixtures/i80386-win16-io-boundary.S": "7ac5f928dcba55afab2e6aeb10b2145e30341859727f9222aca3b36a264db82c",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "scripts/compare-qemu-i80386-win16-io-boundary.mjs": "64627a6646c54f89ddf69e2543a5305d0a21656cfd0b7a38081194e536f04eb9"
+  },
+  "imageSha256": "cbdeb72912212f004ba8641bd1288b2bae10d10d26834197f1718cad3e6c64dd",
+  "reference": {
+    "name": "QEMU TCG 8.2.2, 486 CPU",
+    "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "qemuSha256": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+    "biosSha256": "4d597f68e06a0e28498e12e96e1f2ce64aee88a519685c61da92eb775c95a445",
+    "exitStatus": 3,
+    "outputHex": "a54b",
+    "before": {
+      "cs": 8,
+      "ds": 16,
+      "ss": 16,
+      "es": 0,
+      "fs": 0,
+      "gs": 0,
+      "eip": 31804,
+      "eflags": 70,
+      "bx": 1,
+      "dx": 33,
+      "al": 165
+    },
+    "after": {
+      "cs": 8,
+      "ds": 16,
+      "ss": 16,
+      "es": 0,
+      "fs": 0,
+      "gs": 0,
+      "eip": 31805,
+      "eflags": 70,
+      "bx": 1,
+      "dx": 33,
+      "al": 165
+    }
+  },
+  "bochs": {
+    "name": "Bochs REL_2_7_FINAL CPU level 3 output witness",
+    "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "bochsSha256": "2282de6986025228b177e648f3ca41957aad4bf276438fa2501afda0af802ff9",
+    "configHeaderSha256": "793a8ce99efadd1d34defb8746d9b211535677368a6900096abd933044f3bdd2",
+    "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaBiosSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "floppySha256": "c85f68a4e11c7ead5d7868865356d773af574f98e8e60110b30a72727d01db37",
+    "outputHex": "a54b",
+    "booted": true,
+    "panic": false,
+    "stop": "process terminated immediately after owned A5K marker; later guest behavior is outside this oracle"
+  },
+  "local": {
+    "core": "ExperimentalI80386 protected16",
+    "trail": [
+      31790,
+      31793,
+      31796
+    ],
+    "before": {
+      "cs": 8,
+      "ds": 16,
+      "ss": 16,
+      "es": 0,
+      "fs": 0,
+      "gs": 0,
+      "eip": 31804,
+      "eflags": 70,
+      "bx": 1,
+      "dx": 33,
+      "al": 165
+    },
+    "after": {
+      "cs": 8,
+      "ds": 16,
+      "ss": 16,
+      "es": 0,
+      "fs": 0,
+      "gs": 0,
+      "eip": 31805,
+      "eflags": 70,
+      "bx": 1,
+      "dx": 33,
+      "al": 164
+    },
+    "readsBefore": 0,
+    "readsAfter": 1
+  },
+  "contract": {
+    "entry": "CS=0008, DS=SS=0010, ES=FS=GS=0000, EIP=7c2e; PIC1 IMR preloaded A5",
+    "stopEvent": "io-read-required at CS:7c3c before IN DX; no device read yet",
+    "resume": "ordinary IN reads port 0021 exactly once and reaches CS:7c3d with AL=A5",
+    "referenceReadCountLimit": "QEMU CPU log proves the pre/post instruction boundary and output A5K; it does not instrument device read count. The owned code contains exactly one IN between checkpoints."
+  },
+  "host": {
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "node": "v20.20.2"
+  },
+  "mutation": "io-value",
+  "status": "fail",
+  "differences": [
+    {
+      "field": "local.after",
+      "expected": {
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "es": 0,
+        "fs": 0,
+        "gs": 0,
+        "eip": 31805,
+        "eflags": 70,
+        "bx": 1,
+        "dx": 33,
+        "al": 165
+      },
+      "actual": {
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "es": 0,
+        "fs": 0,
+        "gs": 0,
+        "eip": 31805,
+        "eflags": 70,
+        "bx": 1,
+        "dx": 33,
+        "al": 164
+      }
+    }
+  ]
+}

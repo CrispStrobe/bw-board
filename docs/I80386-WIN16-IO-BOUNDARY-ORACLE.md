@@ -33,6 +33,9 @@ stops Bochs at that marker, so later guest behavior is outside its claim.
 
 `I386_WIN16_IO_MUTATION=io-value` changes only the local read value to `A4`.
 The pre-I/O checkpoint still matches, but the post-I/O `AL` assertion fails.
+The [negative-control receipt](receipts/2026-09-28-i80386-win16-io-boundary-mutation.json)
+records that exact `local.after` difference against unchanged QEMU and Bochs
+references.
 This negative control detects a trace that skips, duplicates, or substitutes
 the device result when the future engine resumes at the boundary. The harness
 does not yet execute any speculative block engine and does not establish
