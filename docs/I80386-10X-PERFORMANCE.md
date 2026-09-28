@@ -29,11 +29,18 @@ useful design gap: QEMU TCG translates and chains host-code blocks; Bochs
 caches decoded traces; this board still pays much of the JavaScript decode,
 translation, event, and JS↔WASM dispatch cost. The next retained change must
 show a meaningful paired full-xv6 user-CPU gain, identical complete guest
-state, and FreeDOS/Windows plus protected-mode requalification. CPU samples
-and refusal counts should determine whether to widen native block coverage
-or reduce dispatch and board-event overhead. The measurements below are an
-experiment ledger; earlier statements about work remaining refer to their
-dated source revisions.
+state, and FreeDOS/Windows plus protected-mode requalification. A
+[full-xv6 native fallback census](receipts/2026-09-28-i80386-native-entry-negative.json)
+found 16.43 million native instructions in 4.00 million calls and 7.91 million
+JavaScript steps. Raising the block budget and caching program transfers
+preserved guest state but gained only 1.6% in one pair and 0.8% across two
+pairs, respectively; both were discarded. The published
+[fallback observer](../scripts/observe-i80386-native-fallback.mjs) identifies
+executed memory, string, TEST and branch forms for a grouped, page-safe
+coverage experiment. Its five selected forms are only 11.0% of all xv6 steps,
+so they cannot alone deliver 10×. The measurements below are an experiment
+ledger; earlier statements about work remaining refer to their dated source
+revisions.
 
 The direct stock-xv6 `forktest` A/B from `2feb23a3` to `bc539d33` took 39.655
 versus 29.575 user-CPU seconds for 24,338,279 guest steps (1.341×). The later
