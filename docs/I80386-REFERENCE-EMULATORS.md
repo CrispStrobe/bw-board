@@ -83,6 +83,9 @@ returns by NT IRET and emits `BHV` on port E9. The
 event with the local 386 executor, pins the Bochs source revision and build
 configuration, and records executable, ROM and image hashes. It stops Bochs
 on the first `BHV` because the fixture's port-F4 exit is specific to QEMU.
+Bochs can subsequently reset when a timer interrupt reaches the fixture's
+intentional VM86 idle loop; that later state is outside this checkpoint and
+is preserved in the receipt log rather than presented as a clean whole-OS run.
 The [receipt](receipts/2026-09-28-i80386-bochs-vm-task.json) records the
 accepted event; an owned result mutation is rejected. This is one bounded
 software-oracle witness, not a complete original-386 qualification.

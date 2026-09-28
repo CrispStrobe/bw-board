@@ -92,7 +92,8 @@ try {
     biosSha256:hash(readFileSync(bios)),vgaBiosSha256:hash(readFileSync(vgaBios)),
     imageSha256:hash(binary),floppySha256:hash(floppy),
     execution:{reference:'Bochs BIOS boots owned floppy; stop on first E9 BHV',
-      actual:'same image at 0x7c00; starts owned setup at 0x7e00 after disk load'},
+      actual:'same image at 0x7c00; starts owned setup at 0x7e00 after disk load',
+      postCheckpoint:'The fixture exits via QEMU port F4; Bochs can later reset from its VM86 idle loop. Only the first BHV checkpoint is compared.'},
     mutation,status:differences.length?'fail':'pass',expected:'BHV',reference,actual,differences,
     bochsExit:{code:run.code,signal:run.signal},
     bochsLogTail:bochsLog.split('\n').filter(line=>line.includes('BIOS')||line.includes('CPU')).slice(-12)};
