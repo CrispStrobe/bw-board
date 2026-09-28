@@ -49,6 +49,22 @@ test('386 browser Doom preset is opt-in and rejects ambiguous profiles', async (
   const plain = await createDebugTarget('i80386', {});
   assert.equal(plain.adapter.machine.vgaMemory, null);
   assert.ok(plain.adapter.machine.chips.cga1);
+  assert.equal(plain.adapter.machine.canTakeMouse(), false);
+  const doom = await createDebugTarget('i80386', {profile: 'freedos-vga'});
+  assert.equal(doom.adapter.machine.canTakeMouse(), true);
+  const cmos = doom.adapter.machine.chips.rtc1.ram;
+  assert.equal(cmos[0x14] & 4, 4);
+  let checksum = 0;
+  for (let index = 0x10; index <= 0x2d; index++) checksum = (checksum + cmos[index]) & 0xffff;
+  assert.equal((cmos[0x2e] << 8) | cmos[0x2f], checksum);
+  const controller = doom.adapter.machine._a20Controller;
+  controller.writeCommand(0x60); controller.writeData(3);
+  controller.writeCommand(0xd4); controller.writeData(0xf4);
+  assert.equal(controller.readData(), 0xfa);
+  assert.equal(doom.adapter.mouseIn({dx: 4, dy: 2, buttons: 1}), true);
+  assert.equal(doom.adapter.machine.chips.pic2.getState().irr & 0x10, 0x10);
+  assert.deepEqual([controller.readData(), controller.readData(), controller.readData()],
+    [0x29, 4, 0xfe]);
   await assert.rejects(createDebugTarget('i80386', {profile: 'unknown'}), /unknown 386 adapter profile/);
   await assert.rejects(createDebugTarget('i80386', {
     profile: 'freedos-vga', config: PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,

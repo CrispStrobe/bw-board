@@ -4,12 +4,30 @@ import { ExperimentalI80386ATMachine, PCAT80386_EXPERIMENTAL,
 import ExperimentalATA16 from './experimental/ata16.js';
 import { parseDosboxConfig } from './dosbox-config.js';
 
+function browserFreeDosVgaConfig() {
+  const base = PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA;
+  return {...base, a20: {...base.a20, mouse: true}, chips: base.chips.map(chip => {
+    if (chip.kind !== 'rtc') return chip;
+    const cmos = new Uint8Array(0x40);
+    for (const [index, value] of chip.initialCmos) cmos[index] = value;
+    cmos[0x14] |= 4; // PS/2 auxiliary mouse in the AT equipment byte.
+    let checksum = 0;
+    for (let index = 0x10; index <= 0x2d; index++) checksum = (checksum + cmos[index]) & 0xffff;
+    cmos[0x2e] = checksum >>> 8;
+    cmos[0x2f] = checksum & 0xff;
+    const initialCmos = chip.initialCmos.map(([index]) => [index, cmos[index]]);
+    for (const index of [0x14, 0x2e, 0x2f])
+      if (!initialCmos.some(([present]) => present === index)) initialCmos.push([index, cmos[index]]);
+    return {...chip, initialCmos};
+  })};
+}
+
 export function createI80386Adapter(opts = {}) {
   if (opts.config && opts.profile) throw new Error('386 adapter accepts config or profile, not both');
   if (opts.profile && opts.profile !== 'freedos-vga')
     throw new Error(`unknown 386 adapter profile: ${opts.profile}`);
   const config = opts.config ?? (opts.profile === 'freedos-vga'
-    ? PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA : PCAT80386_EXPERIMENTAL);
+    ? browserFreeDosVgaConfig() : PCAT80386_EXPERIMENTAL);
   const machine = new ExperimentalI80386ATMachine(config, {
     ataImage: opts.ataImage, ataGeometry: opts.ataGeometry,
     ataIntersectorDelayCycles: opts.ataIntersectorDelayCycles,

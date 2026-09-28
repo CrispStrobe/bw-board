@@ -17,6 +17,11 @@ both F0000h and the high reset alias, the VGA option ROM in C0000h–C9FFFh
 images and copies input bytes before the guest can write them. Apply all four
 media slots, reset the machine, then run it through the target. The preset is
 opt-in; the generic 386 target still uses the smaller CGA board.
+The named browser preset also enables the 8042 PS/2 auxiliary mouse and
+advertises it in CMOS equipment byte 14h; `adapter.mouseIn({dx, dy, buttons})`
+delivers a packet only after guest software enables mouse reporting. The
+exported AT/VGA machine profile used by CLI probes, and smaller defaults,
+remain mouse-disabled.
 
 The adapter's synthetic all-media test establishes ROM placement, FDC/HDD
 attachment, reset, keyboard delivery, and the VGA frame surface. A GUI Doom
@@ -27,8 +32,8 @@ audited 320×200 frame specified in [I80386-DOOM.md](I80386-DOOM.md). The
 browser must supply the media bytes; no original Doom file is bundled here.
 The Lite host still needs to expose/select `freedos-vga` and supply all four
 media slots; no actual GUI Doom keyboard/run/render replay has been accepted.
-The widget has no mouse forwarding. Generic DOSBox `imgmount -size` CHS is
-handled by the CLI AT parser but is not yet honored by the browser adapter,
+Generic DOSBox `imgmount -size` CHS is handled by the CLI AT parser but is not
+yet honored by the browser adapter,
 which infers 4 heads and 17 sectors; the pinned short-demo HDD has that CHS.
 
 The profile remains explicitly experimental. No production machine default is
