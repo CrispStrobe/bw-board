@@ -244,3 +244,30 @@ describe('labwired fault halt and diagnostics', () => {
         assert.deepEqual(bare, { fault: null, fidelityGaps: [] });
     });
 });
+
+describe('labwired halts use the shared halt shape', () => {
+    it('a breakpoint halt names its cause and the handle that fired', () => {
+        let pc = 0x0800_0100;
+        const t = createLabwiredDebugTarget({ adapter: { ...stubAdapter(),
+            sim: { get_pc: () => pc, step_single: () => { pc += 2; }, step_batch: () => {} } } });
+        const halts = [];
+        t.onHalt(h => halts.push(h));
+        t.setBreakpoint({ kind: 'code', addr: 0x0800_0200 });            // a decoy, never reached
+        const handle = t.setBreakpoint({ kind: 'code', addr: 0x0800_0104 });
+        t.run();
+        assert.equal(t.runFor(1_000_000), 'halted');
+        assert.equal(halts[0].cause, 'breakpoint');
+        assert.equal(halts[0].bp, handle, 'bw-debug maps this handle back to the UI breakpoint');
+        assert.equal(halts[0].bpKind, 'code');
+        assert.equal(halts[0].pc, 0x0800_0104);
+        assert.equal(halts[0].tNs, 12_345n);
+    });
+    it('a user halt is `pause`, like every other target', () => {
+        const t = createLabwiredDebugTarget({ adapter: stubAdapter() });
+        const halts = [];
+        t.onHalt(h => halts.push(h));
+        t.run(); t.halt();
+        assert.equal(halts[0].cause, 'pause');
+        assert.equal(halts[0].bp, undefined);
+    });
+});
