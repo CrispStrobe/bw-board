@@ -54,6 +54,8 @@ test('386 browser Doom preset is opt-in and rejects ambiguous profiles', async (
   assert.equal(doom.adapter.machine.canTakeMouse(), true);
   const cmos = doom.adapter.machine.chips.rtc1.ram;
   assert.equal(cmos[0x14] & 4, 4);
+  assert.equal(cmos[0x3d], 0x21);
+  assert.equal(cmos[0x12], 0x10, 'IBM type-1 fixed-disk geometry stays selected');
   let checksum = 0;
   for (let index = 0x10; index <= 0x2d; index++) checksum = (checksum + cmos[index]) & 0xffff;
   assert.equal((cmos[0x2e] << 8) | cmos[0x2f], checksum);

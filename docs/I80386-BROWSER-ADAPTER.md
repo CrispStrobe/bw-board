@@ -22,6 +22,9 @@ advertises it in CMOS equipment byte 14h; `adapter.mouseIn({dx, dy, buttons})`
 delivers a packet only after guest software enables mouse reporting. The
 exported AT/VGA machine profile used by CLI probes, and smaller defaults,
 remain mouse-disabled.
+The browser preset sets Bochs-compatible CMOS boot order A: then C: while
+retaining the IBM type-1 fixed-disk geometry; this boot-order byte is outside
+the CMOS checksum range.
 
 The adapter's synthetic all-media test establishes ROM placement, FDC/HDD
 attachment, reset, keyboard delivery, and the VGA frame surface. A GUI Doom

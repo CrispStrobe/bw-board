@@ -11,12 +11,13 @@ function browserFreeDosVgaConfig() {
     const cmos = new Uint8Array(0x40);
     for (const [index, value] of chip.initialCmos) cmos[index] = value;
     cmos[0x14] |= 4; // PS/2 auxiliary mouse in the AT equipment byte.
+    cmos[0x3d] = 0x21; // Bochs BIOS: try floppy A: before fixed disk C:.
     let checksum = 0;
     for (let index = 0x10; index <= 0x2d; index++) checksum = (checksum + cmos[index]) & 0xffff;
     cmos[0x2e] = checksum >>> 8;
     cmos[0x2f] = checksum & 0xff;
     const initialCmos = chip.initialCmos.map(([index]) => [index, cmos[index]]);
-    for (const index of [0x14, 0x2e, 0x2f])
+    for (const index of [0x14, 0x2e, 0x2f, 0x3d])
       if (!initialCmos.some(([present]) => present === index)) initialCmos.push([index, cmos[index]]);
     return {...chip, initialCmos};
   })};
