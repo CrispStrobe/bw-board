@@ -327,6 +327,70 @@ export function createLabwiredDebugTarget (opts) {
     },
 
     /**
+     * Why save points are unavailable here, or null when they work.
+     *
+     * The engine's snapshots are a journal: a restore builds a fresh machine
+     * from the same inputs and replays the recorded calls, and refuses when
+     * the replay does not reproduce the saved state. With a CIRCUIT attached
+     * that is only half a rewind — the board simulation moves forward in time
+     * only, so the firmware would go back while the pins, voltages and parts
+     * stayed where they were. Offered, therefore, on a firmware-only target;
+     * on a bench it is refused by name rather than half-done.
+     * @returns {string|null}
+     */
+    snapshotUnavailable () {
+      if (detached) return 'the target is detached';
+      if (!adapter.firmwareOnly) {
+        return 'save points need the firmware-only mode: the circuit cannot be rewound with the firmware';
+      }
+      if (typeof sim().snapshot_save !== 'function') return 'this engine build has no snapshots';
+      try {
+        const why = typeof sim().snapshot_unavailable_reason === 'function'
+          ? sim().snapshot_unavailable_reason() : null;
+        return why || null;
+      } catch (e) {
+        return `snapshots unavailable: ${e.message || e}`;
+      }
+    },
+
+    /** Save the current point. @returns {{id,label,cycles}|{unsupported:string}} */
+    saveSnapshot (label) {
+      const why = target.snapshotUnavailable();
+      if (why) return { unsupported: why };
+      try {
+        return JSON.parse(sim().snapshot_save(label ?? null));
+      } catch (e) {
+        return { unsupported: `snapshot_save failed: ${e.message || e}` };
+      }
+    },
+
+    /** Saved points, oldest first. [] when unavailable. */
+    listSnapshots () {
+      if (target.snapshotUnavailable()) return [];
+      try { return JSON.parse(sim().snapshot_list()) || []; } catch (e) { return []; }
+    },
+
+    /**
+     * Return to save point `id`. Halts first (a restore mid-run would race the
+     * pump), then republishes what the engine now says — its time went back.
+     * @returns {undefined|{unsupported:string}}
+     */
+    restoreSnapshot (id) {
+      const why = target.snapshotUnavailable();
+      if (why) return { unsupported: why };
+      if (running) halted('user');
+      try {
+        sim().snapshot_restore(id >>> 0);
+      } catch (e) {
+        // The engine refuses, machine untouched, when the replay diverges.
+        return { unsupported: `restore refused: ${e.message || e}` };
+      }
+      faultSeen = false;
+      adapter.pump();
+      return undefined;
+    },
+
+    /**
      * What the engine knows that the run itself does not show:
      *   fault         the Cortex-M fault verdict (see readFault), or null;
      *   fidelityGaps  instructions it could not decode and addresses nothing
