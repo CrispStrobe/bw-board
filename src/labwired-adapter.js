@@ -121,7 +121,8 @@ export function generateSystemYaml (name, chipPath, pins) {
  * @param {object} opts
  * @param {object} opts.wasm            the instantiated labwired-wasm module
  * @param {string} opts.chipYaml        chip descriptor YAML
- * @param {Uint8Array} opts.firmware    ELF, or a raw flash image (wrapped for you)
+ * @param {Uint8Array} opts.firmware    ELF, or a contiguous raw flash image (wrapped for you)
+ * @param {number} [opts.firmwareAddress] load address of a raw image; ignored for ELF
  * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
  * @param {number} [opts.clockHz]       engine cycle rate, for cycle→ns
  * @param {string} [opts.systemYaml]    override the generated manifest
@@ -136,8 +137,11 @@ export function createLabwiredAdapter (opts) {
   // by a toolchain lite does not have. See bin-to-elf.js for what is lost
   // (symbols; there were none in a .bin to lose).
   const isAvr = /^\s*arch:\s*["']?avr["']?\s*$/m.test(chipYaml ?? '');
+  const firmwareOpts = isAvr
+    ? { architecture: 'avr', loadAddress: opts.firmwareAddress }
+    : { loadAddress: opts.firmwareAddress };
   const firmware = opts.firmware
-    ? toLoadableElf(opts.firmware, isAvr ? { architecture: 'avr' } : undefined)
+    ? toLoadableElf(opts.firmware, firmwareOpts)
     : opts.firmware;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
   if (!chipYaml) throw new Error('labwired-adapter: opts.chipYaml is required');

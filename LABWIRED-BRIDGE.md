@@ -504,8 +504,27 @@ no accessor reports it. Both are named in §6.
    minimal `EM_AVR` ELF rather than mislabeled as ARM. ATtiny85/88 deliberately
    remain on avr8js: LabWired's AVR
    core and descriptor are ATmega328P-class and do not yet model those parts'
-   register and peripheral differences. The F103 remains the next ARM entry
-   and needs a GPIO **v1** profile, not `stm32v2`.
+   register and peripheral differences. **micro:bit v2 / nRF52833 and PyBadge /
+   SAMD51J19A are now registered too**, with byte-pinned LabWired descriptors
+   and board-label-to-package-pin maps from CODAL and Microsoft's PyBadge CF2
+   table. Both parts map flash at address zero; the raw-image wrapper therefore
+   takes the chip's `flashOrigin` instead of inheriting the STM32 default.
+
+   A PyBadge UF2 application is the important exception to the simple
+   "flash starts at zero" rule: its app payload is normally linked above the
+   bootloader (commonly `0x4000`). A caller must decode UF2 and pass that base as
+   `firmwareAddress`; flattening the payload and pretending it begins at zero
+   boots a different machine. Sparse micro:bit Intel HEX must likewise be
+   materialized with erased (`0xff`) gaps from address zero. ELF remains the
+   lossless path and ignores `firmwareAddress`.
+
+   These entries are **MCU/edge-header support, not yet complete board
+   emulation**. The nRF52833 model runs the committed micro:bit-v2 UART smoke
+   and has GPIO, UARTE, timers, EasyDMA, SPI/I2C and other Nordic blocks, but
+   the charlieplexed 5x5 matrix and on-board sensors are not attached. The
+   SAMD51 model runs the committed Metro-M4 UART smoke, but SERCOM SPI/I2C,
+   PyBadge's ST7735 display, 74HC165-style button mux, NeoPixels, QSPI and USB
+   are not end-to-end models. The bridge does not claim those surfaces.
 
 ## 7. Housekeeping note
 
