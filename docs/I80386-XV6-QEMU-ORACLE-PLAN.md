@@ -24,3 +24,5 @@ XV6_SOURCE_DIR=/tmp/xv6-public XV6_IMAGE_DIR=/tmp/xv6-stock-4m \
 ```
 
 `manifest-private.json` contains the complete QEMU argument vector and local paths. The runner refuses reused serial/receipt files or disk copies whose hashes changed before the run. A reached marker would independently corroborate the stock guest's serial behavior under QEMU; it would not establish that the board completed the whole suite. This oracle run has not started.
+
+For a later full-suite oracle, start again from fresh copies of the pinned disks and allow the program to continue past `concreate()`. The pinned `usertests.c` ends with `exectest()`, which executes `echo` with the arguments `ALL TESTS PASSED`. A stronger completion gate is the exact serial text `ALL TESTS PASSED\n` followed by a return to the shell prompt (`$ `). The present runner stops at `concreate ok\n`; it does not make that full-suite claim.
