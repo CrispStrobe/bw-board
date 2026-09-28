@@ -37,7 +37,8 @@ PINS = {
     'kernel': (XV6_IMAGE_DIR / 'kernel',
                '10bf65351fe69951a42673bc314049c15a1432cd5cdab004df5e7268cff8eafb'),
 }
-SOURCE_FILES = ('scripts/probe-xv6-stock.mjs', 'src/experimental/i80386.js',
+SOURCE_FILES = ('scripts/probe-xv6-stock.mjs', 'scripts/lib/xv6-serial-tee.mjs',
+                'src/experimental/i80386.js',
                 'src/experimental/i80386-at-machine.js', 'src/i8086-machine.js')
 
 
@@ -91,8 +92,10 @@ def preflight():
 def run():
     pins = preflight()
     OUTPUT.mkdir(parents=True, exist_ok=True)
+    live_serial = os.environ.get('XV6_LIVE_SERIAL') == '1'
     for name in ('raw-private.json', 'stderr-private.txt',
-                 'host-private.json', 'receipt-public-candidate.json'):
+                 'host-private.json', 'receipt-public-candidate.json',
+                 *(['serial-private.bin'] if live_serial else [])):
         require(not (OUTPUT / name).exists(), f'refusing to reuse {name}')
     env = {key: value for key, value in os.environ.items()
            if not key.startswith('XV6_') and key != 'NODE_OPTIONS'}
@@ -102,6 +105,8 @@ def run():
                XV6_COMMAND='usertests\r', XV6_EXPECT_SERIAL=NEXT_MARKER,
                XV6_STOP_ON_EXPECT='1', XV6_LEAN='1',
                XV6_PROGRESS_EVERY=str(PROGRESS_EVERY))
+    if live_serial:
+        env['XV6_SERIAL_TEE_PATH'] = str(OUTPUT / 'serial-private.bin')
     start = time.monotonic()
     started_utc = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     with (OUTPUT / 'stderr-private.txt').open('xb') as stderr_file:

@@ -7,6 +7,7 @@ import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
+import {createXv6SerialTee} from './lib/xv6-serial-tee.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
 import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
@@ -113,6 +114,7 @@ image.set(raw);
 let steps = 0;
 let first32 = null;
 const serial = [];
+const serialTee = createXv6SerialTee(process.env.XV6_SERIAL_TEE_PATH);
 const interrupts = [];
 const postBootInterrupts = [];
 const lapicIdReads = [];
@@ -136,6 +138,7 @@ const machine = new Machine(machineConfig, {
     if (event.port === 0x1f0 && event.width === 32 && first32 === null) first32 = steps;
     if (event.dir === 'out' && event.port === 0x3f8) {
       serial.push(event.value & 0xff);
+      serialTee?.writeByte(event.value);
       if (expectedSerial && serial.length >= expectedSerial.length)
         expectedObserved = Buffer.from(serial).toString('latin1').includes(expectedSerial);
     }
@@ -259,6 +262,7 @@ for (; steps < stepsLimit; steps++) {
 restoreCode16Interrupts?.();
 restoreBroadBlockFetch?.();
 restoreHotLoopFetch?.();
+serialTee?.close();
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
