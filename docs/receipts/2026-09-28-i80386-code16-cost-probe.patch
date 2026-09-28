@@ -1,0 +1,92 @@
+diff --git a/src/experimental/i80386-code16-wasm-block.js b/src/experimental/i80386-code16-wasm-block.js
+index 7d48016d..dade7bde 100644
+--- a/src/experimental/i80386-code16-wasm-block.js
++++ b/src/experimental/i80386-code16-wasm-block.js
+@@ -240,6 +240,16 @@ export async function createI80386Code16WasmDispatcher(machine, {
+   const blocks = new Map();
+   const stats = {attempts: 0, decoded: 0, blockCalls: 0, instructions: 0,
+     fallback: 0, boundary: 0};
++  // TEMPORARY sampled wall-time cost probe. Discard after receipt generation.
++  const cost={sampleRate:256,calls:0,sampledCalls:0,phases:{}};
++  stats.costProbe=cost;
++  const mark=(name,from)=>{
++    const now=performance.now(),bucket=cost.phases[name]??={samples:0,ms:0};
++    bucket.samples++;bucket.ms+=now-from;return now;
++  };
++  const finish=(start,last)=>{
++    mark('tail',last);mark('total',start);
++  };
+   const diagnostics = diagnosticReasons ? {fallbacks: {}, exits: {},
+     shortBlockStops: {}, unsupportedFirstOpcodes: {},
+     preparationTruncations: {}, cacheInvalidations: 0} : null;
+@@ -344,14 +354,24 @@ export async function createI80386Code16WasmDispatcher(machine, {
+     if (!Number.isInteger(maxInstructions) || maxInstructions < 1 || maxInstructions > 64)
+       throw new RangeError('invalid code16 block budget');
+     const cpu = machine.cpu;
+-    if (!eligible(machine)) {
++    const sampled=((Math.imul(++cost.calls,0x9e3779b1)>>>0)<0x01000000);
++    if(sampled)cost.sampledCalls++;
++    const start=sampled?performance.now():0;
++    let tick=start;
++    const canRun=eligible(machine);
++    if(sampled)tick=mark('admission',tick);
++    if (!canRun) {
+       stats.fallback++;
+       if (diagnostics) bump(diagnostics.fallbacks, ineligibleReason(machine));
+-      machine.step(); return 1;
++      if(sampled)tick=mark('fallbackSetup',tick);
++      machine.step();
++      if(sampled){tick=mark('fallbackStep',tick);finish(start,tick);}
++      return 1;
+     }
+     stats.attempts++;
+     const key = `${cpu.cs}:${cpu.eip >>> 0}`;
+     let block = blocks.get(key);
++    if(sampled)tick=mark('cacheLookup',tick);
+     let refusal = null;
+     let terminalBranch = null;
+     const refused = diagnostics ? (reason, detail, capture) => {
+@@ -397,14 +417,18 @@ export async function createI80386Code16WasmDispatcher(machine, {
+       if (blocks.size >= maxCachedBlocks) blocks.delete(blocks.keys().next().value);
+       blocks.set(key, block);
+     }
++    if(sampled)tick=mark('decodeAndCache',tick);
+     const prepared = block && prepare(machine, block);
++    if(sampled)tick=mark('prepare',tick);
+     if (block && !prepared) refusal = 'codeRevalidationRefusal';
+     if (!prepared || prepared.ready.length < 2) {
+       stats.fallback++;
+       if (diagnostics) bump(diagnostics.fallbacks,
+         prepared?.refusal ?? refusal ?? 'shortPreparedBlock');
++      if(sampled)tick=mark('fallbackSetup',tick);
+       if (terminalBranch) stepTerminalBranch(terminalBranch);
+       else machine.step();
++      if(sampled){tick=mark('fallbackStep',tick);finish(start,tick);}
+       return 1;
+     }
+     if (diagnostics && prepared.refusal)
+@@ -431,7 +455,9 @@ export async function createI80386Code16WasmDispatcher(machine, {
+         ir.targetLimit ?? 0];
+       fields.forEach((value, j) => { words[programAt + i * WORDS + j] = value >>> 0; });
+     });
++    if(sampled)tick=mark('statePack',tick);
+     const packed = wasm.code16_wasm_run(prepared.ready.length, budget) >>> 0;
++    if(sampled)tick=mark('wasmRun',tick);
+     const completed = packed & 0xffffff, reason = packed >>> 24;
+     if (completed > budget || reason > 3) throw new Error('invalid code16 WASM exit');
+     const exit = diagnostics ? reason === 3 ?
+@@ -449,11 +475,14 @@ export async function createI80386Code16WasmDispatcher(machine, {
+       stats.instructions += completed;
+       if (reason === 3) stats.boundary++;
+       if (diagnostics) bump(diagnostics.exits, exit);
++      if(sampled){tick=mark('stateCommit',tick);finish(start,tick);}
+       return completed;
+     }
+     stats.fallback++;
+     if (diagnostics) bump(diagnostics.fallbacks, exit);
++    if(sampled)tick=mark('fallbackSetup',tick);
+     machine.step();
++    if(sampled){tick=mark('fallbackStep',tick);finish(start,tick);}
+     return 1;
+   }
+   return {run, stats, diagnostics, ramBridge: bridge};
