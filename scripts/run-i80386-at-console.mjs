@@ -89,11 +89,15 @@ const broadBlockCensus=process.env.AT_BROAD_BLOCK_CENSUS==='1'?
 const code16EventObserver=process.env.AT_CODE16_EVENT_OBSERVER==='1'?
   createI80386Code16EventRunObserver():null;
 const formResolvedAdmission=process.env.AT_FORM_RESOLVED_ADMISSION==='1';
-if(formResolvedAdmission&&process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')
+const firstRefusalContext=process.env.AT_FORM_REFUSAL_CONTEXT==='1';
+if([formResolvedAdmission,firstRefusalContext,
+    process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'].filter(Boolean).length>1)
   throw new Error('select one cross-mode observer variant');
-const crossModeTraceObserver=(formResolvedAdmission||
+const crossModeTraceObserver=(formResolvedAdmission||firstRefusalContext||
   process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')?
-  createI80386CrossModePotentialTraceObserver({formResolvedAdmission}):null;
+  createI80386CrossModePotentialTraceObserver({
+    formResolvedAdmission:formResolvedAdmission||firstRefusalContext,
+    firstRefusalContext}):null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
@@ -187,6 +191,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-code16-event-run-observer.js',
   '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
   '../src/experimental/i80386-form-resolved-admission.js',
+  '../src/experimental/i80386-first-refusal-shape.js',
   '../src/experimental/i80386-hot-loop-locator.js',
   '../src/experimental/i80386-ram-bridge.js',
   '../src/experimental/i80386-block-spike.js',

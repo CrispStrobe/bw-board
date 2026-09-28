@@ -2,6 +2,8 @@
 // this observer never decodes ahead or executes a guest instruction.
 import {classifyI80386BroadForm} from './i80386-broad-block-census.js';
 import {classifyI80386FormResolvedAdmission} from './i80386-form-resolved-admission.js';
+import {classifyI80386FirstRefusalShape,
+  createI80386FirstRefusalContextTracker} from './i80386-first-refusal-shape.js';
 
 const MODES=['real','protected16','vm86','protected32'];
 const PREFIXES=new Set([0x26,0x2e,0x36,0x3e,0x64,0x65,0x66,0x67,
@@ -54,13 +56,16 @@ const isControlTransfer=bytes=>{
 };
 
 export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null,
-  formResolvedAdmission=false}={}) {
+  formResolvedAdmission=false,firstRefusalContext=false}={}) {
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>64)
     throw new RangeError('cross-mode potential trace run budget must be 1..64');
   if(onObservedStep!==null&&typeof onObservedStep!=='function')
     throw new TypeError('onObservedStep must be a function');
   if(typeof formResolvedAdmission!=='boolean')
     throw new TypeError('formResolvedAdmission must be boolean');
+  if(typeof firstRefusalContext!=='boolean'||
+      firstRefusalContext&&!formResolvedAdmission)
+    throw new TypeError('firstRefusalContext requires formResolvedAdmission');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,completedStepCalls:0,eligibleRetiredOrdinals:0,
     repeatIterationCalls:0,noRetirement:0,abortedCalls:0,
@@ -85,8 +90,15 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
     admittedEaClasses:{},admittedModrmShapes:{},
     optimisticIoOrdinalsInRunsAtLeast8:0,
   }])):null;
+  const contextTracker=firstRefusalContext?
+    createI80386FirstRefusalContextTracker({maxRun}):null;
   let machine=null,pending=null,run=null,externalEpoch=0,deviceReads=0,
-    deviceWrites=0,restores=[],formRun=null;
+    deviceWrites=0,restores=[],formRun=null,pendingRefusal=null;
+  const cutPendingRefusal=reason=>{
+    if(!pendingRefusal)return;
+    contextTracker.resolve(pendingRefusal.token,0,reason);
+    pendingRefusal=null;
+  };
   const endRun=reason=>{
     if(!run)return;
     const bucket=modes[run.mode];
@@ -118,6 +130,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         bucket.longRunAccessClasses[key]=
           (bucket.longRunAccessClasses[key]??0)+count;
     }
+    if(formRun.linkedRefusal)
+      contextTracker.resolve(formRun.linkedRefusal,formRun.length,reason);
     formRun=null;
   };
   const restoreOwn=(object,key,wrapped)=>{
@@ -241,6 +255,7 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
             modes[run.mode].translationRevocations++;
           externalEpoch++;endRun('host-or-dma-write');
           if(formModes)endFormRun('host-or-dma-write');
+          cutPendingRefusal('host-or-dma-write');
         }
         return original.call(this,address,value,...args);
       });
@@ -268,6 +283,7 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       return ()=>{
         endRun('end-of-observation');
         if(formModes)endFormRun('end-of-observation');
+        cutPendingRefusal('end-of-observation');
         for(const restore of restores.reverse())restore();
         restores=[];machine=null;pending=null;
       };
@@ -298,7 +314,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       if(cpu.cycles===before.cycles){
         if(before.fault)bucket.faultExits++;
         bucket.noRetirement++;endRun('no-retirement');
-        if(formModes)endFormRun('no-retirement');return;
+        if(formModes)endFormRun('no-retirement');
+        cutPendingRefusal('no-retirement');return;
       }
       bucket.completedStepCalls++;
       onObservedStep?.({mode:before.mode,cs:before.cs,eip:before.eip,
@@ -310,7 +327,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       // such call from the instruction-retirement denominator and trace.
       if(isRepeat(before.bytes)){
         bucket.repeatIterationCalls++;endRun('repeat-iteration');
-        if(formModes)endFormRun('repeat-iteration');return;
+        if(formModes)endFormRun('repeat-iteration');
+        cutPendingRefusal('repeat-iteration');return;
       }
       bucket.eligibleRetiredOrdinals++;
       if(before.io)bucket.observedIoOrdinals++;
@@ -332,6 +350,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       if(run){const breakReason=continuationBreak(run);if(breakReason)endRun(breakReason);}
       if(formRun){const breakReason=continuationBreak(formRun);
         if(breakReason)endFormRun(breakReason);}
+      if(pendingRefusal){const breakReason=continuationBreak(pendingRefusal);
+        if(breakReason)cutPendingRefusal(breakReason);}
       const postIdentity=identityOf(target);
       const postEip=cpu.eip>>>0;
       const reason=before.fetchCs!==before.cs||before.fetchEip!==before.eip?
@@ -361,11 +381,31 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         const formReason=reason??form.reason;
         if(formReason){
           formBucket.refusedOrdinals++;bump(formBucket.refusals,formReason);
+          const precedingLength=formRun?.length??0;
+          cutPendingRefusal('next-refusal');
           endFormRun(formReason);
+          if(contextTracker){
+            const shape=classifyI80386FirstRefusalShape(before.bytes,{
+              default32:before.default32,dataReads:before.dataReads,
+              dataWrites:before.dataWrites,io:before.io});
+            const token=contextTracker.record(before.mode,formReason,shape,
+              precedingLength);
+            if(reason||before.io||before.chipEvent||
+                target._chipDebt>=target._chipDeadline||
+                target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext)
+              contextTracker.resolve(token,0,'refusal-side-exit');
+            else pendingRefusal={token,mode:before.mode,cs:before.cs,
+              codePage:before.codePage,expectedEip:postEip,
+              identity:postIdentity,boardCycles:target.cycles,
+              chipDebt:target._chipDebt,chipDeadline:target._chipDeadline,
+              externalEpoch};
+          }
         }else{
           if(!formRun)formRun={mode:before.mode,cs:before.cs,
             codePage:before.codePage,length:0,ioOrdinals:0,
-            forms:{},accessClasses:{}};
+            forms:{},accessClasses:{},
+            linkedRefusal:pendingRefusal?.token??null};
+          pendingRefusal=null;
           formRun.length++;formBucket.admittedOrdinals++;
           bump(formBucket.admittedFormCounts,form.formKey);
           bump(formBucket.admittedAccessClasses,form.accessClass);
@@ -420,12 +460,15 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       if(pending.fault)modes[pending.mode].faultExits++;
       pending=null;endRun('aborted-call');
       if(formModes)endFormRun('aborted-call');
+      cutPendingRefusal('aborted-call');
     },
     externalEvent(){externalEpoch++;endRun('external-event');
-      if(formModes)endFormRun('external-event');},
+      if(formModes)endFormRun('external-event');
+      cutPendingRefusal('external-event');},
     report(){
       endRun('report-boundary');
       if(formModes)endFormRun('report-boundary');
+      cutPendingRefusal('report-boundary');
       for(const [mode,bucket] of Object.entries(modes)){
         const runSteps=Object.entries(bucket.runLengthHistogram).reduce(
           (sum,[length,count])=>sum+Number(length)*count,0);
@@ -483,7 +526,10 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
           protected16OrVm86OrdinalsInRunsAtLeast8:long16,
           optimisticIoOrdinalsInRunsAtLeast8:
             formSum('optimisticIoOrdinalsInRunsAtLeast8'),
-          predeclaredSubsetOpportunityPassed:long>=15_000_000&&long16>=5_000_000};
+          predeclaredSubsetOpportunityPassed:long>=15_000_000&&long16>=5_000_000,
+          ...(contextTracker?{firstRefusalContext:contextTracker.report(
+            Object.fromEntries(MODES.map(mode=>
+              [mode,formModes[mode].refusedOrdinals])))}:{})};
       }
       return {schema:'bw.i80386-cross-mode-potential-trace-observer.v1',maxRun,
         model:'observed-successful-opcode; actual successor; optimistic synchronous IO helper',
