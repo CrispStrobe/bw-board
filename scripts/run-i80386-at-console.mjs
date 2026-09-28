@@ -91,15 +91,19 @@ const code16EventObserver=process.env.AT_CODE16_EVENT_OBSERVER==='1'?
 const formResolvedAdmission=process.env.AT_FORM_RESOLVED_ADMISSION==='1';
 const firstRefusalContext=process.env.AT_FORM_REFUSAL_CONTEXT==='1';
 const groupedShadowAdmission=process.env.AT_GROUPED_SHADOW_ADMISSION==='1';
+const groupedFirstRefusalContext=process.env.AT_GROUPED_FIRST_REFUSAL_CONTEXT==='1';
 if([formResolvedAdmission,firstRefusalContext,groupedShadowAdmission,
+    groupedFirstRefusalContext,
     process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'].filter(Boolean).length>1)
   throw new Error('select one cross-mode observer variant');
 const crossModeTraceObserver=(formResolvedAdmission||firstRefusalContext||
-  groupedShadowAdmission||
+  groupedShadowAdmission||groupedFirstRefusalContext||
   process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')?
   createI80386CrossModePotentialTraceObserver({
     formResolvedAdmission:formResolvedAdmission||firstRefusalContext,
-    firstRefusalContext,groupedShadowAdmission}):null;
+    firstRefusalContext,
+    groupedShadowAdmission:groupedShadowAdmission||groupedFirstRefusalContext,
+    groupedFirstRefusalContext}):null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
@@ -207,6 +211,8 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   './lib/i80386-doom-vga-frame.mjs',
   './summarize-i80386-cross-mode-potential-trace.mjs',
   './summarize-i80386-form-resolved-admission.mjs',
+  './summarize-i80386-grouped-shadow-admission.mjs',
+  './summarize-i80386-grouped-first-refusal-context.mjs',
   './run-i80386-at-console.mjs'];
 const sourceSha256=Object.fromEntries(sourcePaths.map(path=>
   [path,sha(fs.readFileSync(new URL(path,import.meta.url)))]));

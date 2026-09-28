@@ -57,7 +57,7 @@ const isControlTransfer=bytes=>{
 
 export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null,
   formResolvedAdmission=false,firstRefusalContext=false,
-  groupedShadowAdmission=false}={}) {
+  groupedShadowAdmission=false,groupedFirstRefusalContext=false}={}) {
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>64)
     throw new RangeError('cross-mode potential trace run budget must be 1..64');
   if(onObservedStep!==null&&typeof onObservedStep!=='function')
@@ -70,6 +70,9 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
   if(typeof groupedShadowAdmission!=='boolean'||
       groupedShadowAdmission&&(formResolvedAdmission||firstRefusalContext))
     throw new TypeError('grouped shadow admission must be a separate observer variant');
+  if(typeof groupedFirstRefusalContext!=='boolean'||
+      groupedFirstRefusalContext&&!groupedShadowAdmission)
+    throw new TypeError('grouped first refusal requires grouped shadow admission');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,completedStepCalls:0,eligibleRetiredOrdinals:0,
     repeatIterationCalls:0,noRetirement:0,abortedCalls:0,
@@ -95,8 +98,9 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
     admittedEaClasses:{},admittedModrmShapes:{},
     optimisticIoOrdinalsInRunsAtLeast8:0,
   }])):null;
-  const contextTracker=firstRefusalContext?
-    createI80386FirstRefusalContextTracker({maxRun}):null;
+  const contextTracker=firstRefusalContext||groupedFirstRefusalContext?
+    createI80386FirstRefusalContextTracker({maxRun,
+      groupedTargetsOnly:groupedFirstRefusalContext}):null;
   let machine=null,pending=null,run=null,externalEpoch=0,deviceReads=0,
     deviceWrites=0,restores=[],formRun=null,pendingRefusal=null;
   const cutPendingRefusal=reason=>{
@@ -396,11 +400,11 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
               dataWrites:before.dataWrites,io:before.io});
             const token=contextTracker.record(before.mode,formReason,shape,
               precedingLength);
-            if(reason||before.io||before.chipEvent||
+            if(token&&(reason||before.io||before.chipEvent||
                 target._chipDebt>=target._chipDeadline||
-                target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext)
+                target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext))
               contextTracker.resolve(token,0,'refusal-side-exit');
-            else pendingRefusal={token,mode:before.mode,cs:before.cs,
+            else if(token)pendingRefusal={token,mode:before.mode,cs:before.cs,
               codePage:before.codePage,expectedEip:postEip,
               identity:postIdentity,boardCycles:target.cycles,
               chipDebt:target._chipDebt,chipDeadline:target._chipDeadline,
