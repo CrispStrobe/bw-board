@@ -1,4 +1,4 @@
-name: x86 xv6 224 MiB full suite (manual)
+name: x86 xv6 224 MiB 6B full suite (manual)
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
       # The pinned kernel contains DW_AT_comp_dir from this exact build path.
       XV6_224M_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
       XV6_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
-      XV6_OUTPUT_DIR: /tmp/xv6-board-full-suite-224m
+      XV6_OUTPUT_DIR: /tmp/xv6-board-full-suite-224m-6b
       XV6_LIVE_SERIAL: '1'
       XV6_REVISION: eeb7b415dbcb12cc362d0783e41c3d1f44066b17
     steps:
@@ -42,16 +42,16 @@ jobs:
       - name: Verify pinned source, media, and free Bochs firmware
         run: |
           mkdir -p "$XV6_OUTPUT_DIR"
-          python3 -B scripts/probe-xv6-usertests-224m-full-suite.py --preflight \
+          python3 -B scripts/probe-xv6-usertests-224m-6b-full-suite.py --preflight \
             > "$XV6_OUTPUT_DIR/preflight.json"
       - name: Run bounded board full-suite probe
         id: probe
-        # Leave time for upload after the 3-billion-step probe. This is not a
+        # Leave time for upload after the 6-billion-step probe. This is not a
         # performance benchmark and may stop at its step or wall-clock bound.
         run: |
           set +e
           timeout --signal=TERM --kill-after=30s 225m \
-            python3 -B scripts/probe-xv6-usertests-224m-full-suite.py --run \
+            python3 -B scripts/probe-xv6-usertests-224m-6b-full-suite.py --run \
             > "$XV6_OUTPUT_DIR/probe-stdout.txt" \
             2> "$XV6_OUTPUT_DIR/probe-stderr.txt"
           status=$?
@@ -96,7 +96,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: xv6-board-224m-full-suite-${{ github.run_id }}
+          name: xv6-board-224m-6b-full-suite-${{ github.run_id }}
           path: ${{ env.XV6_OUTPUT_DIR }}/
           if-no-files-found: error
           retention-days: 14
