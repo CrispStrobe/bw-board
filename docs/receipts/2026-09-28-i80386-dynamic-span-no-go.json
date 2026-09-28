@@ -1,0 +1,92 @@
+{
+  "schema": "bw.i80386-dynamic-span-no-go-receipt.v1",
+  "date": "2026-09-28",
+  "decision": "No grouped-grammar dispatcher integration: all measured tiers miss the predeclared long-run coverage gate; executable emulator source is unchanged.",
+  "source": {
+    "baseCommit": "ebe29605fef245084d44fdde96c09693edac8efe",
+    "publicationBaseCommit": "d4fcda0bbe481339410b3f083dd69d862bbcab8a",
+    "observer": "scripts/observe-i80386-dynamic-span-potential.mjs",
+    "observerSha256": "99c1ff2db38bfad07f1aaf8ff6da72153769e6d032068fa7df5bed3e95219ed5",
+    "probe": "scripts/probe-xv6-stock.mjs",
+    "probeSha256": "f35a71839a62f17d862923c78c9d1d230c27f41f1a1d3d4c3bde53470130da9c"
+  },
+  "method": {
+    "command": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node --import ./scripts/observe-i80386-dynamic-span-potential.mjs scripts/probe-xv6-stock.mjs",
+    "comparison": "Repeat the command without --import ./scripts/observe-i80386-dynamic-span-potential.mjs and compare stdout byte-for-byte. The observer writes its single DYNAMIC_SPAN_POTENTIAL JSON line to stderr at process exit.",
+    "denominator": "6,379,836 completed protected32 ordinary-JS fallback _stepInstruction calls in the opt-in native-dispatch xv6 run, among 24,338,279 total guest steps. Existing native-block retirements are excluded from the fallback span census.",
+    "counting": "Fetched instruction bytes are captured only during ordinary _stepInstruction, after a completed-step cycle check. A run continues only across selected forms with contiguous CS:EIP and cycles. No guest decode-ahead, data access, page walk, or execution change is introduced.",
+    "priorCensusContrast": "docs/receipts/2026-09-28-i80386-selected-forms-potential.json counted 22,808,047 protected32 completed ordinary steps on an earlier source without this native-dispatch fallback denominator. Its linked-run potential cannot be substituted for these 6,379,836 current-source fallback retirements.",
+    "limits": "These counts are syntax-only observational upper bounds, not native eligibility or speed estimates. They do not prove segment/paging A-D, fault, MMIO, code-write, privilege, or chip/LAPIC event safety. EIP discontinuity includes control transfer and possible intervening native work; the observer does not attribute it more narrowly."
+  },
+  "fixture": {
+    "workload": "Lean stock xv6 forktest; Bochs firmware; 40M step cap; stop on expected serial",
+    "firmwareSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "kernelImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f"
+  },
+  "gate": {
+    "predeclaredMinimumSelectedFallbackStepsInRunsAtLeast4": 2400000,
+    "predeclaredMinimumMeanRunLengthForThoseRuns": 4,
+    "result": "fail for every tier; broadest tier is 298,330 steps below the long-run minimum"
+  },
+  "tiers": [
+    {
+      "name": "narrow",
+      "grammar": "Exact standalone-spike 8B/89 two-byte mod00 non-SIB non-disp form",
+      "selectedFallbackSteps": 628843,
+      "runsAtLeast2": 1,
+      "stepsInRunsAtLeast2": 2,
+      "runsAtLeast4": 0,
+      "stepsInRunsAtLeast4": 0,
+      "meanRunLengthAtLeast4": 0,
+      "maxRun": 2,
+      "runEnds": {"nextFormNotSelected": 586251, "noncontiguousEip": 42591}
+    },
+    {
+      "name": "memoryAluBranch",
+      "grammar": "8B/89 memory addressing plus 8D, common ALU/compare/test, selected 81/83 immediate groups, 25/A8/90/B8..BF, short and near Jcc",
+      "selectedFallbackSteps": 2501347,
+      "runsAtLeast2": 305978,
+      "stepsInRunsAtLeast2": 871631,
+      "runsAtLeast4": 74449,
+      "stepsInRunsAtLeast4": 303631,
+      "meanRunLengthAtLeast4": 4.078375800883826,
+      "maxRun": 21,
+      "runEnds": {"nextFormNotSelected": 1257508, "noncontiguousEip": 678154, "interveningNativeOrOtherSteps": 32}
+    },
+    {
+      "name": "plusStackControl",
+      "grammar": "memoryAluBranch plus push/pop, near call/jump/return, leave, FF /2,/4,/6 and 8F /0",
+      "selectedFallbackSteps": 3997935,
+      "runsAtLeast2": 675628,
+      "stepsInRunsAtLeast2": 2443886,
+      "runsAtLeast4": 310323,
+      "stepsInRunsAtLeast4": 1637107,
+      "meanRunLengthAtLeast4": 5.275493598605324,
+      "maxRun": 37,
+      "runEnds": {"nextFormNotSelected": 1406068, "noncontiguousEip": 823577, "interveningNativeOrOtherSteps": 32}
+    },
+    {
+      "name": "plusByteString",
+      "grammar": "plusStackControl plus F6 /0 TEST byte, A4 MOVSB, and 0F B6/B7 MOVZX",
+      "selectedFallbackSteps": 5374894,
+      "runsAtLeast2": 1214974,
+      "stepsInRunsAtLeast2": 3798999,
+      "runsAtLeast4": 421479,
+      "stepsInRunsAtLeast4": 2101670,
+      "meanRunLengthAtLeast4": 4.986416879607288,
+      "maxRun": 37,
+      "runEnds": {"nextFormNotSelected": 849232, "noncontiguousEip": 1941605, "interveningNativeOrOtherSteps": 32}
+    }
+  ],
+  "parity": {
+    "rawObserverStderrSha256": "11f9417e634c5d5ffc1f8ac6b742febdfcdf6a999f9599cb1b51daec44b8090f",
+    "observerReportSha256": "6002b58995b777b8f27ea126fb56e1725a440236de1863c0c5d87bb0a7254b41",
+    "unobservedReportSha256": "6002b58995b777b8f27ea126fb56e1725a440236de1863c0c5d87bb0a7254b41",
+    "comparison": "byte-for-byte identical stdout JSON",
+    "guestSteps": 24338279,
+    "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "serialEndsWith": "fork test OK\n$ "
+  },
+  "nextDesign": "Change the entry-cost model before expanding another opcode tier: test a cheap short-span resume or a dynamic multi-page trace that retains native state across ordinary RAM operations and slow-exits before faultable/MMIO/event boundaries. The standalone dynamic-memory contract has no production dispatcher wiring; stack/control and byte/string inclusion would add substantial proof burden. Require a new measured cost/coverage gate, full guest/RAM parity, and paired user-CPU A/B before a speed claim."
+}
