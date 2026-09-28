@@ -38,9 +38,18 @@ pairs, respectively; both were discarded. The published
 [fallback observer](../scripts/observe-i80386-native-fallback.mjs) identifies
 executed memory, string, TEST and branch forms for a grouped, page-safe
 coverage experiment. Its five selected forms are only 11.0% of all xv6 steps,
-so they cannot alone deliver 10×. The measurements below are an experiment
-ledger; earlier statements about work remaining refer to their dated source
-revisions.
+so they cannot alone deliver 10×. A subsequent
+[grouped 32-bit trial](receipts/2026-09-28-i80386-native-coverage-no-go.json)
+retired 579,024 more xv6 instructions natively yet gained only 0.22% mean
+user CPU across three pairs, with one reversal; its executable changes were
+discarded. The [current Windows code16 diagnostic](I80386-CODE16-WINDOWS-CURRENT.md)
+matched selected reported guest fields but took 392.05 versus 78.52 user CPU
+seconds, about 4.99× longer. Neither result supports another narrow opcode
+addition. The next experiment is a bounded dynamic-memory slow-exit contract
+that can preserve exact faults, page-table/code coherence and device-event
+boundaries while reducing block-entry work. The measurements below are an
+experiment ledger; earlier statements about work remaining refer to their
+dated source revisions.
 
 The direct stock-xv6 `forktest` A/B from `2feb23a3` to `bc539d33` took 39.655
 versus 29.575 user-CPU seconds for 24,338,279 guest steps (1.341×). The later
