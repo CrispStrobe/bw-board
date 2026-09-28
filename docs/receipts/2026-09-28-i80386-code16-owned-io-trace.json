@@ -1,9 +1,9 @@
 {
   "schema": "bw.i80386-code16-owned-io-trace.v1",
-  "revision": "a124a5b5b9246d028b8536a56a90b8b49f54b2e3",
+  "revision": "a3b256976f0b841282cbf49348072c703d68b7a0",
   "sourceHashes": {
     "src/experimental/i80386-code16-owned-io-trace.js": "f404aa2a275d9ab4ff44c58843e52e35ba516eeae322ed63844aea989cbe0f5f",
-    "test/i80386-code16-owned-io-trace.test.mjs": "6e1ee7d054453a8dcfa6838215605970640c1cfc1095bf88812aa5d0f8c63a41",
+    "test/i80386-code16-owned-io-trace.test.mjs": "3246dfa9109eba43a2cde665b1751cd5b4b50f19be7791bde28c667a75081f4e",
     "test/fixtures/i80386-win16-io-boundary.S": "7ac5f928dcba55afab2e6aeb10b2145e30341859727f9222aca3b36a264db82c",
     "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
     "scripts/record-i80386-code16-owned-io-trace.mjs": "84546d597b8ea6e841980e468b5f79d6e6797eeb93e8cb5fd7279f32f271d73b"
