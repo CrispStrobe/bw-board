@@ -1,6 +1,7 @@
 // Observation only. Successful ordinary decode/execute is the grammar oracle;
 // this observer never decodes ahead or executes a guest instruction.
 import {classifyI80386BroadForm} from './i80386-broad-block-census.js';
+import {classifyI80386FormResolvedAdmission} from './i80386-form-resolved-admission.js';
 
 const MODES=['real','protected16','vm86','protected32'];
 const PREFIXES=new Set([0x26,0x2e,0x36,0x3e,0x64,0x65,0x66,0x67,
@@ -52,11 +53,14 @@ const isControlTransfer=bytes=>{
   return opcode===0xff&&[2,3,4,5].includes(((bytes[at+1]??0)>>>3)&7);
 };
 
-export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null}={}) {
+export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null,
+  formResolvedAdmission=false}={}) {
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>64)
     throw new RangeError('cross-mode potential trace run budget must be 1..64');
   if(onObservedStep!==null&&typeof onObservedStep!=='function')
     throw new TypeError('onObservedStep must be a function');
+  if(typeof formResolvedAdmission!=='boolean')
+    throw new TypeError('formResolvedAdmission must be boolean');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,completedStepCalls:0,eligibleRetiredOrdinals:0,
     repeatIterationCalls:0,noRetirement:0,abortedCalls:0,
@@ -72,8 +76,17 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
     codePageRevocations:0,translationRevocations:0,
     chipExits:0,interruptExits:0,faultExits:0,abortedExits:0,
     refusals:{}}]));
+  const formModes=formResolvedAdmission?Object.fromEntries(MODES.map(mode=>[mode,{
+    eligibleRetiredOrdinals:0,admittedOrdinals:0,refusedOrdinals:0,
+    runs:0,ordinalsInRunsAtLeast8:0,runLengthHistogram:{},runEndReasons:{},
+    refusals:{},observedPrefixSignatures:{},observedOpcodeCounts:{},
+    admittedFormCounts:{},longRunFormCounts:{},
+    admittedAccessClasses:{},longRunAccessClasses:{},
+    admittedEaClasses:{},admittedModrmShapes:{},
+    optimisticIoOrdinalsInRunsAtLeast8:0,
+  }])):null;
   let machine=null,pending=null,run=null,externalEpoch=0,deviceReads=0,
-    deviceWrites=0,restores=[];
+    deviceWrites=0,restores=[],formRun=null;
   const endRun=reason=>{
     if(!run)return;
     const bucket=modes[run.mode];
@@ -90,6 +103,22 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
           (bucket.longRunOpcodeCounts[opcode]??0)+count;
     }
     run=null;
+  };
+  const endFormRun=reason=>{
+    if(!formRun)return;
+    const bucket=formModes[formRun.mode];
+    bucket.runs++;bump(bucket.runLengthHistogram,formRun.length);
+    bump(bucket.runEndReasons,reason);
+    if(formRun.length>=8){
+      bucket.ordinalsInRunsAtLeast8+=formRun.length;
+      bucket.optimisticIoOrdinalsInRunsAtLeast8+=formRun.ioOrdinals;
+      for(const [key,count] of Object.entries(formRun.forms))
+        bucket.longRunFormCounts[key]=(bucket.longRunFormCounts[key]??0)+count;
+      for(const [key,count] of Object.entries(formRun.accessClasses))
+        bucket.longRunAccessClasses[key]=
+          (bucket.longRunAccessClasses[key]??0)+count;
+    }
+    formRun=null;
   };
   const restoreOwn=(object,key,wrapped)=>{
     const own=Object.getOwnPropertyDescriptor(object,key),old=object[key];
@@ -118,9 +147,14 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
   const recordAccess=(address,width,write)=>{
     if(!pending)return;
     pending.dataAccesses++;
+    if(formModes)pending[write?'dataWrites':'dataReads']++;
     for(let i=0;i<width;i++){
       const raw=(address+i)>>>0,decoded=machine._decode386(raw);
       const page=decoded>>>12,kind=machine._page?.[page];
+      if(formModes){
+        if(pending.dataPage===null)pending.dataPage=page;
+        else if(pending.dataPage!==page)pending.dataPageCrossing=true;
+      }
       const overlay=(decoded>=0xa0000&&decoded<0xc0000)||
         (decoded>=0x9fc00&&decoded<0x9fd50)||
         (decoded>=0xfee00000&&decoded<0xfee01000)||
@@ -206,6 +240,7 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
           if(run&&this.cpu._translationTablePages?.has(page))
             modes[run.mode].translationRevocations++;
           externalEpoch++;endRun('host-or-dma-write');
+          if(formModes)endFormRun('host-or-dma-write');
         }
         return original.call(this,address,value,...args);
       });
@@ -232,6 +267,7 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       });
       return ()=>{
         endRun('end-of-observation');
+        if(formModes)endFormRun('end-of-observation');
         for(const restore of restores.reverse())restore();
         restores=[];machine=null;pending=null;
       };
@@ -241,12 +277,15 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       const cpu=target.cpu,mode=modeOf(cpu),eip=cpu.eip>>>0;
       pending={mode,cs:cpu.cs,eip,linear:((cpu.segmentCaches[1].base??0)+eip)>>>0,
         cycles:cpu.cycles,identity:identityOf(target),
+        ...(formModes?{default32:!!cpu.segmentCaches[1].default32}:{}),
         boardCycles:target.cycles,chipDebt:target._chipDebt,
         chipDeadline:target._chipDeadline,externalEpoch,
         eventDue:target._chipDebt>=target._chipDeadline||
           (target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext),
         bytes:[],fetchCs:null,fetchEip:null,codePage:null,
         codePageCrossing:false,unsafeCode:false,dataAccesses:0,unsafeData:false,
+        ...(formModes?{dataPage:null,dataPageCrossing:false,
+          dataReads:0,dataWrites:0}:{}),
         codeOrTableWrite:false,codeWrite:false,translationWrite:false,
         pageWalkWrite:false,io:false,
         chipEvent:false,interrupt:false,fault:false};
@@ -258,7 +297,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       pending=null;
       if(cpu.cycles===before.cycles){
         if(before.fault)bucket.faultExits++;
-        bucket.noRetirement++;endRun('no-retirement');return;
+        bucket.noRetirement++;endRun('no-retirement');
+        if(formModes)endFormRun('no-retirement');return;
       }
       bucket.completedStepCalls++;
       onObservedStep?.({mode:before.mode,cs:before.cs,eip:before.eip,
@@ -269,7 +309,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       // Without a precise architectural completion marker, exclude every
       // such call from the instruction-retirement denominator and trace.
       if(isRepeat(before.bytes)){
-        bucket.repeatIterationCalls++;endRun('repeat-iteration');return;
+        bucket.repeatIterationCalls++;endRun('repeat-iteration');
+        if(formModes)endFormRun('repeat-iteration');return;
       }
       bucket.eligibleRetiredOrdinals++;
       if(before.io)bucket.observedIoOrdinals++;
@@ -279,18 +320,18 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       if(before.interrupt)bucket.interruptExits++;
       if(before.chipEvent||before.eventDue)bucket.chipExits++;
       if(before.fault)bucket.faultExits++;
-      if(run){
-        const reason=run.mode!==before.mode?'mode-change':
-          run.cs!==before.cs?'cs-change':
-          run.codePage!==before.codePage?'code-page-change':
-          run.expectedEip!==before.eip?'nonsequential-entry':
-          run.externalEpoch!==before.externalEpoch?'external-event':
-          run.boardCycles!==before.boardCycles||
-          run.chipDebt!==before.chipDebt||
-          run.chipDeadline!==before.chipDeadline?'board-state-change':
-          !sameIdentity(run.identity,before.identity)?'identity-change':null;
-        if(reason)endRun(reason);
-      }
+      const continuationBreak=prior=>prior.mode!==before.mode?'mode-change':
+        prior.cs!==before.cs?'cs-change':
+        prior.codePage!==before.codePage?'code-page-change':
+        prior.expectedEip!==before.eip?'nonsequential-entry':
+        prior.externalEpoch!==before.externalEpoch?'external-event':
+        prior.boardCycles!==before.boardCycles||
+        prior.chipDebt!==before.chipDebt||
+        prior.chipDeadline!==before.chipDeadline?'board-state-change':
+        !sameIdentity(prior.identity,before.identity)?'identity-change':null;
+      if(run){const breakReason=continuationBreak(run);if(breakReason)endRun(breakReason);}
+      if(formRun){const breakReason=continuationBreak(formRun);
+        if(breakReason)endFormRun(breakReason);}
       const postIdentity=identityOf(target);
       const postEip=cpu.eip>>>0;
       const reason=before.fetchCs!==before.cs||before.fetchEip!==before.eip?
@@ -307,6 +348,49 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         before.codeOrTableWrite?'code-or-table-write':
         !sameIdentity(before.identity,postIdentity)?'identity-change':
         (!before.bytes.length?'missing-fetch':null);
+      if(formModes){
+        const formBucket=formModes[before.mode];
+        formBucket.eligibleRetiredOrdinals++;
+        const form=classifyI80386FormResolvedAdmission(before.bytes,{
+          default32:before.default32,startEip:before.eip,postEip,
+          dataAccesses:before.dataAccesses,dataReads:before.dataReads,
+          dataWrites:before.dataWrites,io:before.io,
+          dataPageCrossing:before.dataPageCrossing});
+        bump(formBucket.observedPrefixSignatures,form.prefixSignature);
+        bump(formBucket.observedOpcodeCounts,form.opcode);
+        const formReason=reason??form.reason;
+        if(formReason){
+          formBucket.refusedOrdinals++;bump(formBucket.refusals,formReason);
+          endFormRun(formReason);
+        }else{
+          if(!formRun)formRun={mode:before.mode,cs:before.cs,
+            codePage:before.codePage,length:0,ioOrdinals:0,
+            forms:{},accessClasses:{}};
+          formRun.length++;formBucket.admittedOrdinals++;
+          bump(formBucket.admittedFormCounts,form.formKey);
+          bump(formBucket.admittedAccessClasses,form.accessClass);
+          bump(formBucket.admittedEaClasses,form.eaClass);
+          if(form.modrm){
+            const m=form.modrm;
+            bump(formBucket.admittedModrmShapes,
+              `m${m.mod}r${m.reg}b${m.rm}`+
+              (m.sib?`s${m.sib.scale}${m.sib.index}${m.sib.base}`:'')+
+              `d${m.displacementBytes}`);
+          }
+          bump(formRun.forms,form.formKey);
+          bump(formRun.accessClasses,form.accessClass);
+          if(form.accessClass.startsWith('port-'))formRun.ioOrdinals++;
+          formRun.expectedEip=postEip;formRun.identity=postIdentity;
+          formRun.boardCycles=target.cycles;formRun.chipDebt=target._chipDebt;
+          formRun.chipDeadline=target._chipDeadline;
+          formRun.externalEpoch=externalEpoch;
+          if(target._chipDebt>=target._chipDeadline||
+             (target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext))
+            endFormRun('post-step-event-horizon');
+          else if(before.chipEvent)endFormRun('io-helper-chip-flush');
+          else if(formRun.length===maxRun)endFormRun('run-budget');
+        }
+      }
       if(reason){refuse(before.mode,reason);return;}
       if(!run)run={mode:before.mode,cs:before.cs,
         codePage:before.codePage,length:0,ioOrdinals:0,
@@ -335,10 +419,13 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       modes[pending.mode].abortedExits++;
       if(pending.fault)modes[pending.mode].faultExits++;
       pending=null;endRun('aborted-call');
+      if(formModes)endFormRun('aborted-call');
     },
-    externalEvent(){externalEpoch++;endRun('external-event');},
+    externalEvent(){externalEpoch++;endRun('external-event');
+      if(formModes)endFormRun('external-event');},
     report(){
       endRun('report-boundary');
+      if(formModes)endFormRun('report-boundary');
       for(const [mode,bucket] of Object.entries(modes)){
         const runSteps=Object.entries(bucket.runLengthHistogram).reduce(
           (sum,[length,count])=>sum+Number(length)*count,0);
@@ -364,6 +451,40 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       const protected16OrVm86OrdinalsInRunsAtLeast8=
         modes.protected16.ordinalsInRunsAtLeast8+
         modes.vm86.ordinalsInRunsAtLeast8;
+      let formResolvedPotential=null;
+      if(formModes){
+        for(const mode of MODES){
+          const typed=formModes[mode],ordinary=modes[mode];
+          const all=Object.entries(typed.runLengthHistogram).reduce(
+            (n,[length,count])=>n+Number(length)*count,0);
+          const long=Object.entries(typed.runLengthHistogram).reduce(
+            (n,[length,count])=>n+(Number(length)>=8?Number(length)*count:0),0);
+          if(typed.eligibleRetiredOrdinals!==ordinary.eligibleRetiredOrdinals||
+              typed.eligibleRetiredOrdinals!==typed.admittedOrdinals+
+                typed.refusedOrdinals||all!==typed.admittedOrdinals||
+              long!==typed.ordinalsInRunsAtLeast8||
+              Object.values(typed.admittedFormCounts).reduce((a,b)=>a+b,0)!==all||
+              Object.values(typed.longRunFormCounts).reduce((a,b)=>a+b,0)!==long||
+              Object.values(typed.longRunAccessClasses).reduce((a,b)=>a+b,0)!==long)
+            throw new Error(`form-resolved partition mismatch in ${mode}`);
+        }
+        const formSum=field=>MODES.reduce((n,mode)=>n+formModes[mode][field],0);
+        const long=formSum('ordinalsInRunsAtLeast8');
+        const long16=formModes.protected16.ordinalsInRunsAtLeast8+
+          formModes.vm86.ordinalsInRunsAtLeast8;
+        formResolvedPotential={schema:'bw.i80386-form-resolved-admission.v1',
+          grammar:'typed-mov-cmp-test-group7-short-control-byte-io.v1',
+          maxRun,modes:formModes,
+          eligibleRetiredOrdinals:formSum('eligibleRetiredOrdinals'),
+          admittedOrdinals:formSum('admittedOrdinals'),
+          refusedOrdinals:formSum('refusedOrdinals'),
+          disjointRuns:formSum('runs'),
+          uniqueOrdinalsInRunsAtLeast8:long,
+          protected16OrVm86OrdinalsInRunsAtLeast8:long16,
+          optimisticIoOrdinalsInRunsAtLeast8:
+            formSum('optimisticIoOrdinalsInRunsAtLeast8'),
+          predeclaredSubsetOpportunityPassed:long>=15_000_000&&long16>=5_000_000};
+      }
       return {schema:'bw.i80386-cross-mode-potential-trace-observer.v1',maxRun,
         model:'observed-successful-opcode; actual successor; optimistic synchronous IO helper',
         modes,deviceReads,deviceWrites,completedStepCalls,
@@ -381,7 +502,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         longRunShareOfEligibleRetirements:eligibleRetiredOrdinals?
           uniqueOrdinalsInRunsAtLeast8/eligibleRetiredOrdinals:0,
         predeclaredOpportunityGatePassed:uniqueOrdinalsInRunsAtLeast8>=30_000_000&&
-          protected16OrVm86OrdinalsInRunsAtLeast8>=5_000_000};
+          protected16OrVm86OrdinalsInRunsAtLeast8>=5_000_000,
+        ...(formResolvedPotential?{formResolvedPotential}:{})};
     },
   };
 }
