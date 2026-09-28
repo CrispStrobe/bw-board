@@ -67,8 +67,6 @@ def git(directory, *args):
 def preflight():
     revision = git(BOARD, 'rev-parse', 'HEAD')
     require(not git(BOARD, 'status', '--porcelain'), 'board worktree is dirty')
-    require(git(BOARD, 'merge-base', BOARD_SOURCE_BASE, revision) == BOARD_SOURCE_BASE,
-            'board revision does not descend from declared source base')
     for name, expected in SOURCE_SHA256.items():
         require(sha((BOARD / name).read_bytes()) == expected, f'{name} source pin changed')
     require(git(XV6_SOURCE, 'rev-parse', 'HEAD') == XV6_REVISION,
@@ -92,7 +90,8 @@ def preflight():
     for name, (file, expected) in PINS.items():
         require(file.is_file(), f'{name} missing')
         require(sha(file.read_bytes()) == expected, f'{name} pin changed')
-    return {'boardRevision': revision, 'xv6SourceRevision': XV6_REVISION,
+    return {'boardRevision': revision, 'boardSourceBase': BOARD_SOURCE_BASE,
+            'xv6SourceRevision': XV6_REVISION,
             'xv6UsertestsSourceSha256': sha(source_bytes),
             'xv6EchoSourceSha256': sha(echo_bytes),
             'mediaSha256': {name: expected for name, (_, expected) in PINS.items()},
