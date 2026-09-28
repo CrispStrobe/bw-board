@@ -5,8 +5,11 @@ records one ordinary run and one opt-in code16 WASM diagnostic run at source
 `e7434073afc67aa5803c01502315609b49cd108e`. Both used the same pinned
 private Windows 3.11 image, ROMs, geometry, empty event replay, and emulator
 sources. The reducer compares those inputs privately and publishes no media
-identifier or guest text. It also checks the complete reported CPU, interrupt,
-serial, text-RAM and VGA results; the two runs have the same guest digest.
+identifier or guest text. The selected reported guest fields match: step
+count, stop/refusal, the report's CPU subset, delivered events, serial,
+text-RAM and VGA plane results. The receipt hashes only these fields.
+The console report has no full RAM hash, disk state or complete hidden CPU
+state, so this acceptance check does not prove full guest-state equivalence.
 The host had four virtual Intel Xeon Skylake CPUs and Node 20.20.2.
 
 | 60M step run | User CPU | Wall | Max RSS |
@@ -73,5 +76,6 @@ node scripts/summarize-i80386-code16-windows.mjs ordinary.json optin.json ordina
 ```
 
 The reducer refuses different sources, private inputs, step budgets, switch
-pairs or guest results. Its output is aggregate counts, source hashes, host
-and timing metadata, plus a guest-state digest; raw reports stay private.
+pairs or selected reported guest fields. Its output is aggregate counts,
+source hashes, host and timing metadata, plus a digest of those selected
+fields; raw reports stay private.

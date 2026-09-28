@@ -20,8 +20,13 @@ const timing=path=>{
   return values;
 };
 const ordinaryTime=timing(ordinaryTimePath),optinTime=timing(optinTimePath);
-const guest=r=>Object.fromEntries(['steps','stop','refusal','cpu','delivered',
-  'serial','textRam','vga'].map(key=>[key,r[key]]));
+const selectedReportedFields=['steps','stop','refusal','cpu','delivered',
+  'serial','textRam','vga'];
+const guest=r=>{
+  for(const key of selectedReportedFields)
+    if(!Object.hasOwn(r,key))throw new Error(`missing reported field: ${key}`);
+  return Object.fromEntries(selectedReportedFields.map(key=>[key,r[key]]));
+};
 if(ordinary.steps!==60_000_000||optin.steps!==ordinary.steps)
   throw new Error('expected matching 60M-step reports');
 if(ordinary.executionRevision!==optin.executionRevision)
@@ -39,7 +44,7 @@ for(const key of ['bios','vga','hdd','geometry','cmosType','cmosEquipment',
 const ordinaryGuest=sha(JSON.stringify(guest(ordinary)));
 const optinGuest=sha(JSON.stringify(guest(optin)));
 if(ordinaryGuest!==optinGuest)
-  throw new Error('guest results differ across the two reports');
+  throw new Error('selected reported guest fields differ across the two reports');
 const stats=optin.code16WasmStats,diag=optin.code16WasmDiagnostics;
 if(!stats||!diag)throw new Error('missing code16 diagnostics');
 if(stats.instructions+stats.fallback!==ordinary.steps)
@@ -50,7 +55,8 @@ const receipt={schema:'bw.i80386-code16-windows-census.v1',
   observerSha256:sha(readFileSync(new URL(import.meta.url))),
   executionRevision:ordinary.executionRevision,
   scope:'60M ordinary Windows 3.11 steps; current-source 32-bit count and opt-in code16 WASM eligibility',
-  privateInputsIdentical:true,guestParitySha256:ordinaryGuest,
+  privateInputsIdentical:true,
+  selectedReportedFields,selectedReportedFieldsSha256:ordinaryGuest,
   sourceSha256:Object.fromEntries(['../src/experimental/i80386.js',
     '../src/experimental/i80386-at-machine.js',
     '../src/experimental/i80386-code16-wasm-block.js',
@@ -69,5 +75,5 @@ const receipt={schema:'bw.i80386-code16-windows-census.v1',
     unsupportedFirstOpcodes:top(diag.unsupportedFirstOpcodes),
     formCensus:Object.fromEntries(Object.entries(diag.formCensus??{}).filter(([,value])=>value&&typeof value==='object')
       .map(([name,value])=>[name,{calls:value.calls,forms:top(value.forms,12),outcomes:top(value.outcomes,12)}]))},
-  limits:'Observed opt-in execution and CPU modes, not a safe admission proof or 386DX timing claim; private input identifiers and guest text are omitted.'};
+  limits:'Acceptance compares only the selected reported fields: step count, stop/refusal, reported CPU subset, delivered events, serial/text-RAM and VGA plane results. The console report does not include a full RAM hash, disk state, or complete hidden CPU state; matching fields do not prove full guest-state equivalence. Observed opt-in execution and CPU modes are not a safe admission proof or 386DX timing claim. Private input identifiers and guest text are omitted.'};
 console.log(JSON.stringify(receipt,null,2));

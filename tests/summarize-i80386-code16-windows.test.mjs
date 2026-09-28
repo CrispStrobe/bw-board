@@ -37,12 +37,17 @@ test('private identifiers and guest text never enter the public receipt',()=>{
   assert.equal(result.status,0,result.stderr);
   assert.equal(result.stdout.includes(privateMarker),false);
   const receipt=JSON.parse(result.stdout);
-  assert.equal(receipt.guestParitySha256.length,64);
+  assert.deepEqual(receipt.selectedReportedFields,
+    ['steps','stop','refusal','cpu','delivered','serial','textRam','vga']);
+  assert.equal(receipt.selectedReportedFieldsSha256.length,64);
   assert.equal(receipt.code16.stats.instructions,2);
 });
 
-test('guest divergence blocks receipt publication',()=>{
-  const result=reduce({cpu:{eip:2}});
-  assert.notEqual(result.status,0);
-  assert.match(result.stderr,/guest results differ/);
-});
+for(const [key,value] of Object.entries({steps:59_999_999,stop:'halt',
+  refusal:'fault',cpu:{eip:2},delivered:[1],serial:'different',
+  textRam:'different',vga:{text:'different'}}))
+  test(`divergence in selected field ${key} blocks publication`,()=>{
+    const result=reduce({[key]:value});
+    assert.notEqual(result.status,0);
+    assert.match(result.stderr,/expected matching 60M-step reports|selected reported guest fields differ/);
+  });

@@ -1,10 +1,20 @@
 {
   "schema": "bw.i80386-code16-windows-census.v1",
-  "observerSha256": "172f50a24981eb23e07d01e758be540f0ee85bca944ad7508e0057ad2958a91b",
+  "observerSha256": "75e07404d5dc62a0c087616cc87d27d148221b1a8d839890412d43dc4d40be3a",
   "executionRevision": "e7434073afc67aa5803c01502315609b49cd108e",
   "scope": "60M ordinary Windows 3.11 steps; current-source 32-bit count and opt-in code16 WASM eligibility",
   "privateInputsIdentical": true,
-  "guestParitySha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
+  "selectedReportedFields": [
+    "steps",
+    "stop",
+    "refusal",
+    "cpu",
+    "delivered",
+    "serial",
+    "textRam",
+    "vga"
+  ],
+  "selectedReportedFieldsSha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
   "sourceSha256": {
     "../src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
     "../src/experimental/i80386-at-machine.js": "cd590385f617841429e5de2f2bf7759fcd064f67db61a474272f3188e86c31fb",
@@ -445,5 +455,5 @@
       }
     }
   },
-  "limits": "Observed opt-in execution and CPU modes, not a safe admission proof or 386DX timing claim; private input identifiers and guest text are omitted."
+  "limits": "Acceptance compares only the selected reported fields: step count, stop/refusal, reported CPU subset, delivered events, serial/text-RAM and VGA plane results. The console report does not include a full RAM hash, disk state, or complete hidden CPU state; matching fields do not prove full guest-state equivalence. Observed opt-in execution and CPU modes are not a safe admission proof or 386DX timing claim. Private input identifiers and guest text are omitted."
 }

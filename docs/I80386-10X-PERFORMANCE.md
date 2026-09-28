@@ -429,8 +429,10 @@ CPU-time evidence before a speed claim.
 
 A [current-source Windows code16 follow-up](I80386-CODE16-WINDOWS-CURRENT.md)
 paired ordinary and opt-in diagnostic runs at `e7434073` for the same 60
-million guest steps and complete guest-state digest. The opt-in path retired
-5.04 million steps in 2.35 million block calls, averaging 2.15 steps/call;
+million guest steps and matching selected reported guest fields. The console
+report omits full RAM, disk state and complete hidden CPU state. The opt-in
+path retired 5.04 million steps in 2.35 million block calls, averaging
+2.15 steps/call;
 ordinary and opt-in user CPU were 78.52 and 392.05 seconds on a four-vCPU
 Xeon Skylake host. Its **4.99× CPU cost** is a no-go for the current
 diagnostic configuration. The [public aggregate receipt](receipts/2026-09-28-i80386-code16-windows-current.json)
