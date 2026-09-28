@@ -163,16 +163,22 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-28 CLAIM — root Codex: transient selective-shunt correction, isolated
+2026-09-28 DONE candidate — root Codex: transient selective-shunt correction, isolated
 worktree `/mnt/volume1/code/wt/board-transient-selective-shunt`, branch
 `lane/transient-selective-shunt`, exact base `c77f3d324f45836a35a7b3836f587db21756b31b`.
 Owns this row, the transient invocation of the existing matrix-derived selective
-node-shunt mode in `src/mna.js`, and a focused transient test. The target is exact
-ADI row 5158: an ideal inductor driven by a 1 Hz SINE current source must not see
-the numerical blanket node shunt become a physical 1 ps time constant. Preserve
-the shunt on genuinely undetermined rows, junction GMIN, DC refinement, profiles,
-tolerances, work ceilings and source semantics. Excludes Board/CUI package pins,
-other solver continuation, importer/corpus/workflow/docs, and unrelated devices.
+node-shunt mode in `src/mna.js`, and its focused test. The exact ADI row 5158
+ideal-inductor/SINE-current topology no longer sees the numerical blanket shunt
+become a physical 1 ps time constant: its first 30 ms remains qualified and its
+current and voltage agree with the exact sine and derivative. A genuinely empty
+matrix row proves the fallback shunt remains load-bearing. Focused transient,
+inductor, non-UIC and PULSE coverage passes 44/44; restoring the blanket shunt
+reds the row-5158 consequence while the floating-row control stays green. The
+separate near-current-extremum derivative-cancellation failure remains honestly
+open and is not hidden by a tolerance, floor or budget change. Junction GMIN, DC
+refinement, profiles, ceilings and source semantics are unchanged. Excludes
+Board/CUI package pins, other continuation, importer/corpus/workflow/docs, and
+unrelated devices.
 
 2026-09-27 DONE candidate — root Codex: ADA4522-1 bounded op-amp model, isolated
 worktree `/tmp/wt-bwcx-ada4522-board`, branch `lane/ada4522-1-model`, exact base

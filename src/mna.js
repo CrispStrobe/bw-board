@@ -2636,7 +2636,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   return false;
   };
 
-  converged = runNewton(GMIN);
+  // A transient companion already determines every storage node it touches.
+  // Treating the blanket numerical node shunt as a physical parallel element
+  // gives an ideal inductor an artificial L/R time constant (1 ps for the
+  // 1 H / 1 pS row-5158 topology), exactly where the precision controller is
+  // trying to seed its history. Use the existing matrix-derived selective
+  // mode from the first transient solve: genuinely undetermined rows retain
+  // GMIN, while rows held by a companion or branch unknown do not.
+  converged = runNewton(GMIN, 1, transient !== null);
 
   // E1.4 fallback ladder: GMIN stepping. A heavily inflated gmin makes any
   // operating point easy; each rung's solution seeds the next as gmin
