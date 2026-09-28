@@ -4,7 +4,11 @@ import {readFileSync} from 'node:fs';
 import {dirname,relative,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+const toSourcePath=path=>path.replaceAll('\\','/');
+
 test('console source hashes cover the static code16 dispatcher import closure', () => {
+  assert.equal(toSourcePath('..\\src\\experimental\\code.js'),
+    '../src/experimental/code.js');
   const script=fileURLToPath(new URL('../scripts/run-i80386-at-console.mjs',
     import.meta.url));
   const text=readFileSync(script,'utf8');
@@ -21,7 +25,7 @@ test('console source hashes cover the static code16 dispatcher import closure', 
     const source=readFileSync(filename,'utf8');
     for(const [,dependency] of source.matchAll(/\bfrom\s+['"](\.[^'"]+)['"]/g)){
       const target=resolve(dirname(filename),dependency);
-      visit(relative(dirname(script),target));
+      visit(toSourcePath(relative(dirname(script),target)));
     }
   };
   visit('../src/experimental/i80386-code16-wasm-block.js');

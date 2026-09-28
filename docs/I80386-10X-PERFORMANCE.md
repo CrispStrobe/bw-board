@@ -498,6 +498,15 @@ then passed that gate: two 60M Windows pairs cut opt-in mean user CPU from
 reported guest fields equal after expected source/revision normalization.
 It remains opt-in and about 3.31× slower than the earlier ordinary Windows
 checkpoint; the default CPU path is unchanged.
+The [next code16 gate](I80386-CODE16-NEXT-GATE.md) predeclares a post-change
+V8 profile screen and a disjoint, event-aware trace-coverage observer before
+another executable prototype. No new runtime change follows from the
+first-byte result alone.
+The single post-change 5 ms V8 profile found 34,905 of 52,168 all-process
+self samples (66.91%) in the disjoint non-window dispatcher and ordinary
+fallback bins. This clears the predeclared sample screen, but the samples
+are not removable CPU time. The separate four-step/25%-unique-step observer
+gate remains unmet and no broader executor was added.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
