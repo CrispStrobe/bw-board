@@ -481,8 +481,17 @@ export class ExperimentalI80386 {
     return value >>> 0;
   }
   _writeLinear(a, size, v, options) {
-    const physical = new Array(size);
     const access = { ...options, write: true };
+    // Address translation cannot change between bytes until the first bus
+    // write. Preserve the bytewise bus writes, but avoid repeated page walks
+    // and a temporary array when the entire value stays in one page.
+    if ((size === 2 || size === 4) && ((a & 0xfff) + size <= 0x1000)) {
+      const physical = this._translate(a >>> 0, access);
+      for (let i = 0; i < size; i++)
+        this.write((physical + i) >>> 0, (v >>> (8 * i)) & 255);
+      return;
+    }
+    const physical = new Array(size);
     for (let i = 0; i < size; i++)
       physical[i] = this._translate((a + i) >>> 0, access);
     for (let i = 0; i < size; i++)
