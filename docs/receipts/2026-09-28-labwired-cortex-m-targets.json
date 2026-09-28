@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "metric": "emulated cycles per wall-second divided by nominal chip clock",
+  "coreCommit": "313252d4ce741c4ea5e3f48da7e1376736764916",
+  "boardCommit": "47e0cb0b163ef2c36f7aa32b3ede5f11cc00321f",
+  "artifactRelease": "https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-313252d4",
+  "artifactWasmSha256": "9def9365ca7866da47e8592445232a0b7cf6a29466b94b1252202b1ca18d8a87",
+  "qualification": {
+    "host": "Kaggle CPU worker",
+    "kernel": "https://www.kaggle.com/code/chr1s4/labwired-cortex-m-self-branch-benchmark",
+    "runsPerTarget": 7,
+    "peripheralTickInterval": 1024,
+    "timedPhase": "terminal Thumb self-branch after UART smoke completion",
+    "results": [
+      {
+        "target": "micro:bit v2",
+        "chip": "nRF52833",
+        "clockHz": 64000000,
+        "uart": "OK\n",
+        "terminalPc": "0x4a4",
+        "rtx": [
+          2.040384930859526,
+          2.9213943347736775,
+          3.135852991211788,
+          3.3233582734754927,
+          3.3470114534732227,
+          3.351888831255046,
+          3.4406056842246207
+        ],
+        "medianRtx": 3.3233582734754927
+      },
+      {
+        "target": "PyBadge",
+        "chip": "ATSAMD51J19A",
+        "clockHz": 120000000,
+        "uart": "OK\n",
+        "terminalPc": "0x48a",
+        "rtx": [
+          3.494736577241016,
+          3.757732944683535,
+          3.7676221105163874,
+          3.784580182197214,
+          3.8132091854108405,
+          7.8597475213302745,
+          9.623342379274877
+        ],
+        "medianRtx": 3.784580182197214
+      }
+    ]
+  },
+  "preChangeReference": {
+    "host": "loaded project VPS",
+    "peripheralTickInterval": 1024,
+    "note": "Different host from qualification; threshold context only, not a controlled speedup ratio.",
+    "medianRtx": {
+      "microbitV2Nrf52833": 0.0339,
+      "pybadgeAtsamd51": 0.0112
+    }
+  },
+  "artifactReproduction": {
+    "builders": [
+      "https://www.kaggle.com/code/chr1s4/labwired-wasm-313252d4-independent-build-a",
+      "https://www.kaggle.com/code/chr1s4/labwired-wasm-313252d4-independent-build-b"
+    ],
+    "allJavascriptAndWasmPayloadsByteIdentical": true,
+    "nodeJavascriptSha256": "6c494e08793c9251bbd089b05ec1a571c4ecd8f20b7af206641feb19863f258a",
+    "webJavascriptSha256": "a3351d19734de276dc6bd45f47b4660dab32befb0a33efea7263373a9549571f",
+    "wasmSha256": "9def9365ca7866da47e8592445232a0b7cf6a29466b94b1252202b1ca18d8a87"
+  },
+  "minimumMedianRtx": 1.0,
+  "allMeetMinimum": true
+}
