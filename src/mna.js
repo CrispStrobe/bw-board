@@ -1275,9 +1275,9 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  *   source holding its stored voltage — which is what a capacitor IS at an instant.
  *   Without it, capacitors are DC-open (legacy operating-point behaviour).
  * @param {{dtSec: number, capVoltages: Map<string, number>, inductorCurrents: Map<string, number>}} [opts.transient]
- *   Backward-Euler transient step: capacitors stamp as G=C/dt ∥ I=G·V_prev,
- *   inductors as G=dt/L ∥ I=I_prev. The result then carries capVoltagesNext /
- *   inductorCurrentsNext for the caller to store.
+ *   Transient step: capacitors use an MNA branch-current/Thevenin companion;
+ *   inductors use G=dt/L in parallel with their history current. The result
+ *   carries capVoltagesNext / inductorCurrentsNext for the caller to store.
  * Raw branchCurrents are amperes OUT of the named part terminal into its net.
  * Source-row unknowns retain their MNA orientation; extraction converts them.
  * @returns {{ nodeVoltages: Map<string, number>, branchCurrents: Map<string, Map<string, number>>,
@@ -1562,6 +1562,26 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           capPairSeen.add(pairKey);
           vsIndex.set(part.id, vsCount++);
         }
+      }
+    }
+  }
+
+  // A positive finite transient capacitor is stamped as its Thevenin
+  // companion with one branch-current unknown.  Allocate these rows outside
+  // the powerOff block: stored charge must still be able to discharge when
+  // the independent supplies are omitted.  Unlike instantaneous ideal
+  // capacitor constraints, each transient row has a non-zero series term, so
+  // parallel capacitors remain independent and need no pair deduplication.
+  if (transient) {
+    for (const part of parts) {
+      if (part.kind !== 'capacitor') continue;
+      const C = /** @type {number} */ (part.params.farads ?? 0.0001);
+      if (!Number.isFinite(C) || C <= 0) continue;
+      const netA = findNet(nets, part.id, 'a');
+      const netB = findNet(nets, part.id, 'b');
+      if (netA !== netB && ((netA && nodeIndex.has(netA)) ||
+          (netB && nodeIndex.has(netB)))) {
+        vsIndex.set(part.id, vsCount++);
       }
     }
   }
@@ -1898,24 +1918,24 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         case 'capacitor': {
           if (transient) {
             // Companion models (spec-updates/adaptive-transient.md):
-            //   BE:   i = (C/h)·(v(t+h) − v(t))
-            //         → G = C/h, Norton I = G·v(t)
-            //   trap: i = (2C/h)·(v(t+h) − v(t)) − i(t)
-            //         → G = 2C/h, Norton I = G·v(t) + i(t)
+            //   BE:   v(t+h) - (h/C)·i(t+h) = v(t)
+            //   trap: v(t+h) - (h/2C)·i(t+h)
+            //           = v(t) + (h/2C)·i(t)
+            //
+            // This Thevenin/MNA form is algebraically equivalent to the old
+            // Norton conductance, but it does not manufacture C/h values in
+            // the billions at precision-profile picosecond steps.  Those
+            // values made a small differential signal disappear beside the
+            // common-mode voltage even though the circuit was well posed.
             const C = /** @type {number} */ (part.params.farads ?? 0.0001);
+            if (!Number.isFinite(C) || C <= 0) break;
             const h = Math.max(transient.dtSec, 1e-15);
             const trap = transient.method === 'trap';
-            const g = (trap ? 2 * C : C) / h;
             const vPrev = transient.capVoltages.get(part.id) ?? 0;
             const iPrev = trap ? (transient.capCurrents?.get(part.id) ?? 0) : 0;
-            const iNorton = g * vPrev + iPrev;
-            const netA = findNet(nets, part.id, 'a');
-            const netB = findNet(nets, part.id, 'b');
-            stampTwoTerminal(A, netA, netB, g, nodeIndex);
-            const idxA = netA ? nodeIndex.get(netA) : undefined;
-            const idxB = netB ? nodeIndex.get(netB) : undefined;
-            if (idxA !== undefined) b[idxA] += iNorton;
-            if (idxB !== undefined) b[idxB] -= iNorton;
+            const resistance = h / ((trap ? 2 : 1) * C);
+            stampCapTransientSource(A, b, part, nets, nodeIndex, vsIndex,
+              resistance, vPrev + resistance * iPrev);
           } else if (capVoltagesIn && vsIndex.has(part.id)) {
             // Instantaneous solve: hold the stored voltage as a source row.
             // (Only the first cap of each net pair carries the row — see
@@ -3216,15 +3236,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
       let i = 0;
       if (transient) {
-        const C = /** @type {number} */ (part.params.farads ?? 0.0001);
-        const vPrev = transient.capVoltages.get(part.id) ?? 0;
-        const h = Math.max(transient.dtSec, 1e-15);
-        if (transient.method === 'trap') {
-          const iPrev = transient.capCurrents?.get(part.id) ?? 0;
-          i = (2 * C / h) * ((vA - vB) - vPrev) - iPrev;
-        } else {
-          i = (C / h) * ((vA - vB) - vPrev);
-        }
+        const vsIdx = vsIndex.get(part.id);
+        i = vsIdx === undefined ? 0 : solution[nodeCount + vsIdx];
       } else if (vsIndex.has(part.id)) {
         // Instantaneous: the source row's current variable is the cap current.
         i = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
@@ -4962,6 +4975,25 @@ function stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex, vStored) {
   // its voltage to ~0.3 µV — inside the solver suite's 1e-6 contract.
   A.set(row, row, -1e-4);
   b[row] = vStored;
+}
+
+/**
+ * Stamp a transient capacitor's Thevenin companion:
+ * V(a) - V(b) - resistance * I(a->b) = vHistory.
+ */
+function stampCapTransientSource(A, b, part, nets, nodeIndex, vsIndex,
+  resistance, vHistory) {
+  const netA = findNet(nets, part.id, 'a');
+  const netB = findNet(nets, part.id, 'b');
+  const idxA = netA ? nodeIndex.get(netA) : undefined;
+  const idxB = netB ? nodeIndex.get(netB) : undefined;
+  const vsIdx = vsIndex.get(part.id);
+  if (vsIdx === undefined) return;
+  const row = nodeIndex.size + vsIdx;
+  if (idxA !== undefined) { A.set(row, idxA, 1); A.set(idxA, row, 1); }
+  if (idxB !== undefined) { A.set(row, idxB, -1); A.set(idxB, row, -1); }
+  A.set(row, row, -resistance);
+  b[row] = vHistory;
 }
 
 /**
