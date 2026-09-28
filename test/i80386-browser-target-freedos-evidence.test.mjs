@@ -13,7 +13,7 @@ const sha = file => createHash('sha256').update(fs.readFileSync(new URL(
 test('headless browser target replays the pinned free-BIOS FreeDOS shell and C: mount', () => {
   assert.equal(browser.schema, 'astra.i80386-browser-target-freedos.v1');
   assert.equal(browser.passed, true);
-  assert.equal(browser.executionRevision, '433b9301ce137eb7962bcd9a8d7a41819c4a4051');
+  assert.equal(browser.executionRevision, '05871d5777a54c17f14f4e1ec70e884e941fa458');
   assert.deepEqual(browser.adapter, {profile:'freedos-vga',
     mediaApplied:['bios','vga-rom','hdd','floppy'],
     debuggerRunFor:true,keyboardViaTarget:true,frameViaTarget:true});
@@ -36,7 +36,8 @@ test('headless browser target replays the pinned free-BIOS FreeDOS shell and C: 
 
 test('browser-target receipt binds the executed adapter, debugger, media and 386 sources', () => {
   for (const file of ['src/debug-target-factory.js','src/i80386-adapter.js',
-    'src/i8086-debug.js','src/machine-media.js',
+    'src/i8086-debug.js','src/machine-media.js','src/i8259.js',
+    'src/i8237.js','src/machine-checkpoint.js',
     'src/experimental/i80386-at-machine.js',
     'scripts/run-i80386-browser-target-freedos.mjs'])
     assert.ok(file in browser.sourceSha256, `${file} must be bound`);
