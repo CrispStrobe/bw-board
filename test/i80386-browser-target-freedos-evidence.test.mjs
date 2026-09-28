@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
+import {assertI80386HistoricalSourceBindings} from
+  './lib/i80386-historical-source-binding.mjs';
 
 const browser = JSON.parse(fs.readFileSync(new URL(
   '../docs/receipts/2026-09-28-i80386-browser-target-freedos.json', import.meta.url)));
@@ -35,12 +37,10 @@ test('headless browser target replays the pinned free-BIOS FreeDOS shell and C: 
 });
 
 test('browser-target receipt binds the executed adapter, debugger, media and 386 sources', () => {
-  for (const file of ['src/debug-target-factory.js','src/i80386-adapter.js',
+  assertI80386HistoricalSourceBindings(browser,
+    ['src/debug-target-factory.js','src/i80386-adapter.js',
     'src/i8086-debug.js','src/machine-media.js','src/i8259.js',
     'src/i8237.js','src/machine-checkpoint.js',
     'src/experimental/i80386-at-machine.js',
-    'scripts/run-i80386-browser-target-freedos.mjs'])
-    assert.ok(file in browser.sourceSha256, `${file} must be bound`);
-  for (const [file, hash] of Object.entries(browser.sourceSha256))
-    assert.equal(hash, sha(file), `${file} source binding`);
+    'scripts/run-i80386-browser-target-freedos.mjs']);
 });
