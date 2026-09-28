@@ -2,7 +2,7 @@
   "schema": "bw.i80386-bochs-vm-task-checkpoint.v1",
   "positive": {
     "oracle": "Bochs CPU-level-3 software emulator",
-    "revision": "5221bcf71c1e5a4ddfe7a0e640ede8605b795c57",
+    "revision": "591d982de0f27e7c4eb8c01a0de6e644eac9c2e4",
     "sourceHashes": {
       "test/fixtures/i80386-vm-task.S": "4c7d5e77fcc8b5f9d97c0325e03dbb3732402b8d855a5fd553446c850a690972",
       "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
