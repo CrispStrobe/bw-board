@@ -12,6 +12,13 @@ and a declared 16 MHz 386 AT profile.
 The first VPS receipt is [here](receipts/2026-09-28-x86-platform-vps.json).
 It records a KVM Skylake 4-vCPU host running Node 20.20.2 at source revision
 `853c667de3f7025eb3bc6342d1c7f5f1e74b76cf`.
+The [GitHub receipt](receipts/2026-09-28-x86-platform-gh.json) and
+[runner CPU details](receipts/2026-09-28-x86-platform-gh-lscpu.txt) are from
+[run 36422589375](https://github.com/CrispStrobe/bw-board/actions/runs/36422589375)
+at source revision `6b74b9364e706ca11e00178e6e67e22f619aac67`: an AMD
+EPYC 7763 runner with four logical CPUs and Node 22.23.2. Its 8086 core and
+machine measured 47.19× and 29.84× XT; the 386 core and AT machine measured
+0.253× and 0.839× configured virtual time under the synthetic charges.
 
 The 8086 factor uses estimated instruction cycles. The 386 executor has no
 measured 80386 instruction timing: its core assigns one cycle per instruction,
