@@ -139,8 +139,10 @@ async function createRiscV32Target(opts = {}) {
 /**
  * @param {object} opts
  * @param {object} opts.wasm      instantiated labwired-wasm module
- * @param {object} opts.board     BoardImpl — ALSO the default source of the
- *   chip descriptor, the header map and the manifest (see below)
+ * @param {object} [opts.board]   BoardImpl — ALSO the default source of the
+ *   chip descriptor, the header map and the manifest (see below). Omit it and
+ *   pass `opts.chip` for a firmware-only target.
+ * @param {object} [opts.chip]    a labwired-catalog.js entry (firmware-only)
  * @param {Uint8Array} opts.firmware  ELF, or a raw flash image
  * @param {string} [opts.chipKind] our board-part kind, default `stm32f030`
  * @param {string} [opts.chipYaml]  chip descriptor, if not derived from the board
@@ -151,8 +153,23 @@ async function createRiscV32Target(opts = {}) {
 async function createLabwiredTarget(opts) {
   const { wasm, board, firmware, name } = opts;
   if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
-  if (!board) throw new Error('labwired target requires opts.board');
   if (!firmware) throw new Error('labwired target requires opts.firmware (an ELF)');
+
+  // FIRMWARE-ONLY: `opts.chip` is a labwired-catalog.js entry and there is no
+  // circuit. The user's own ELF on the engine's own chip descriptor; no header
+  // map, so no pads and no refusals to report. The bench path below is the
+  // one to use whenever there IS a board — a circuit is never silently dropped.
+  if (opts.chip && !board) {
+    const { chip } = opts;
+    if (!chip.chipYaml || !chip.name) throw new Error('labwired firmware-only target needs a catalog chip');
+    const adapter = createLabwiredAdapter({
+      wasm, chipYaml: chip.chipYaml, firmware, firmwareOnly: true,
+      clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
+    });
+    const target = createLabwiredDebugTarget({ adapter });
+    return { target, adapter, refusals: [] };
+  }
+  if (!board) throw new Error('labwired target requires opts.board (or opts.chip for firmware-only)');
 
   // THE BOARD IS THE NETLIST, so it is where the manifest comes from unless the
   // caller insists otherwise. Requiring a host to hand over `chipYaml` and
