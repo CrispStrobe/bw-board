@@ -2,7 +2,7 @@
   "schema": "astra.i80386-browser-target-freedos.v1",
   "passed": true,
   "scope": "Headless browser-target FreeDOS boot and C: mount; no GUI widget or Doom acceptance.",
-  "executionRevision": "0cdf73151a0c4c9aa586e76e61139dea57debd6e",
+  "executionRevision": "0f1a8b22af447b8cd286517e89efe38414ed727d",
   "sourceSha256": {
     "src/debug-target-factory.js": "3539e855367b448513bc999771fd83f9c8a8f4408687db87ae621435431e35e9",
     "src/i80386-adapter.js": "76ce7241e141861be087da530a40cec76f0644debfb9bcc0dcf2511b152e9ddd",
@@ -27,7 +27,7 @@
     "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
     "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
     "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
-    "src/experimental/i80386-vga-frame.js": "d8ffe74222b0abbe0665e3af61be8a2b2de591434c42fbea5b4627f22ae8d97a",
+    "src/experimental/i80386-vga-frame.js": "1f219251e4d1e799500610d6460c46c2208125c6009973358e4aed86bd46ed4f",
     "scripts/lib/i80386-free-bios-fat16.mjs": "c6b2bd6f13d264b07b64f517e1dcd6b385e3a71016d1b871dfbadf3855b30cd3",
     "scripts/run-i80386-browser-target-freedos.mjs": "0b9870beb968c4f4b6fef5ef487dda775fa53255439a8479fde2bf54d25d492b"
   },
