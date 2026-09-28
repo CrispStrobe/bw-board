@@ -274,12 +274,17 @@ qualifications, and the full 386 test suite. Their detailed paired timings and
 raw reports are retained in `brickwright-firmware-private/performance/2026-09-28`.
 The guarded mappages trace experiment instead regressed by 16–20% and was not
 merged. None of these measurements establishes 10× or a calibrated 386DX RTx.
-At source revision `8261e891`, the [current VPS xv6 forktest receipt](docs/receipts/2026-09-28-x86-vps-throughput.json)
+At source revision `8261e891`, a [VPS xv6 forktest receipt](docs/receipts/2026-09-28-x86-vps-throughput.json)
 records three runs of the same 24,338,279-step boot and command: median user
 CPU fell from 25.16 s in JavaScript to 18.21 s with opt-in native blocks,
 while the guest output, RAM hash, and 163,891,880 configured board cycles
 matched. Its 6 MHz virtual board clock yields 27.315 s of *configured* guest
 time, not a calibrated 386DX real-time factor.
+A later [packed-entry measurement](docs/receipts/2026-09-28-i80386-packed-entry-performance.json)
+cut the opt-in native path's paired mean from 18.26 to 16.40 user-CPU seconds
+on the same complete xv6 task (10.19%); all three pairs favored the change and
+the complete guest reports matched. That result is specific to the VPS and
+xv6. The 10× target and physical 386DX RTx measurement remain open.
 
 ## Windows 3.1 reference comparison
 
