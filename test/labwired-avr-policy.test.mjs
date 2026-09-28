@@ -2,15 +2,34 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createLabwiredAdapter } from '../src/labwired-adapter.js';
+import { avrBinToElf } from '../src/bin-to-elf.js';
 import { ATMEGA328P_CHIP_YAML } from '../src/labwired-chips.js';
 
 describe('LabWired AVR admission', () => {
-    it('refuses a raw AVR image instead of wrapping it as an ARM ELF', () => {
-        assert.throws(() => createLabwiredAdapter({
-            wasm: { WasmSimulator: {} },
+    it('wraps raw AVR bytes as AVR ELF, never ARM ELF', () => {
+        const elf = avrBinToElf(new Uint8Array([0x00, 0xc0]));
+        const view = new DataView(elf.buffer, elf.byteOffset, elf.byteLength);
+        assert.equal(view.getUint16(18, true), 83, 'ELF e_machine is EM_AVR');
+        assert.equal(view.getUint32(24, true), 0, 'AVR reset entry is flash byte zero');
+        assert.deepEqual([...elf.slice(84)], [0x00, 0xc0]);
+    });
+
+    it('hands the architecture-correct wrapper to LabWired', () => {
+        let firmware;
+        const sim = {
+            recommended_tick_interval: () => 1,
+            set_peripheral_tick_interval: () => {},
+            watch_logic_signals: () => [],
+        };
+        createLabwiredAdapter({
+            wasm: { WasmSimulator: { new_from_config: (_system, _chip, bytes) => {
+                firmware = bytes;
+                return sim;
+            } } },
             chipYaml: ATMEGA328P_CHIP_YAML,
             firmware: new Uint8Array([0x00, 0xc0]),
             pins: { D13: { peripheral: 'portb', pin: 5 } },
-        }), /AVR firmware must be an ELF/);
+        });
+        assert.equal(new DataView(firmware.buffer, firmware.byteOffset).getUint16(18, true), 83);
     });
 });

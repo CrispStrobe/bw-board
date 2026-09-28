@@ -90,7 +90,7 @@ export function plain (v) {
   return v;
 }
 
-import { isElf, toLoadableElf } from './bin-to-elf.js';
+import { toLoadableElf } from './bin-to-elf.js';
 
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
@@ -136,12 +136,8 @@ export function createLabwiredAdapter (opts) {
   // by a toolchain lite does not have. See bin-to-elf.js for what is lost
   // (symbols; there were none in a .bin to lose).
   const isAvr = /^\s*arch:\s*["']?avr["']?\s*$/m.test(chipYaml ?? '');
-  if (isAvr && opts.firmware && !isElf(opts.firmware)) {
-    throw new Error('labwired-adapter: AVR firmware must be an ELF; wrapping a raw image '
-      + 'as Cortex-M ELF would mislabel its architecture. ATtiny raw images stay on avr8js.');
-  }
   const firmware = opts.firmware
-    ? (isAvr ? opts.firmware : toLoadableElf(opts.firmware))
+    ? toLoadableElf(opts.firmware, isAvr ? { architecture: 'avr' } : undefined)
     : opts.firmware;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
   if (!chipYaml) throw new Error('labwired-adapter: opts.chipYaml is required');
