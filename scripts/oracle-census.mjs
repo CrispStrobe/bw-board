@@ -113,6 +113,19 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const INPUTS = [
     {
+        id: 'i80386-win16-qemu', kind: 'oracle',
+        what: 'Pinned QEMU 8.2.2 TCG 486 supplies protected-16 CPU-state checkpoints '
+            + 'for the owned branch-to-I/O fixture. The test requires the exact executable '
+            + 'SHA-256 before running; mere file presence is not acceptance.',
+        paths: ['/usr/bin/qemu-system-i386'],
+        gates: ['test/i80386-win16-io-boundary-oracle.test.mjs'],
+        obtain: 'Install the QEMU 8.2.2 i386 system emulator at /usr/bin/qemu-system-i386 '
+            + 'and verify its SHA-256 against the pin in the test. See '
+            + 'docs/I80386-WIN16-IO-BOUNDARY-ORACLE.md.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI does not install the pinned QEMU executable; the test skips there',
+    },
+    {
         id: 'harris-native-wasm', kind: 'fixture',
         what: 'Locally built owned native wired-kernel prototype. Enables differential checks against our JavaScript net, memory and phase implementations; not an independent CPU oracle or full-board capacity proof.',
         env: 'HARRIS_NET_WASM', paths: [],
