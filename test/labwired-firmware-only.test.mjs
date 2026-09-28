@@ -23,6 +23,8 @@ import { CATALOG_CHIPS, buildScriptPin } from '../scripts/gen-labwired-catalog.m
 import { createDebugTarget } from '../src/debug-target-factory.js';
 import { createLabwiredAdapter, chipArch } from '../src/labwired-adapter.js';
 import { createLabwiredDebugTarget } from '../src/labwired-debug.js';
+import { parseUf2, uf2ToElf, UF2_FAMILY_RP2040 } from '../src/uf2-to-elf.js';
+import { buildBootrom } from '../src/rp2040-bootrom.js';
 
 /** A WasmSimulator stand-in that records its construction. */
 function stubWasm(pcSeq = [0x100]) {
@@ -38,7 +40,7 @@ function stubWasm(pcSeq = [0x100]) {
     };
     return {
         built,
-        wasm: { WasmSimulator: { new_from_config: (sys, chip, fw) => { built.push({ sys, chip, fw }); return sim; } } },
+        wasm: { WasmSimulator: { new_from_config: (sys, chip, fw, blobs) => { built.push({ sys, chip, fw, blobs }); return sim; } } },
     };
 }
 
@@ -78,13 +80,80 @@ describe('firmware-only construction (no engine)', () => {
         assert.throws(() => createLabwiredAdapter({
             wasm, chipYaml: LABWIRED_CATALOG.rp2040.chipYaml, firmware: Uint8Array.of(0, 0x20, 0, 0, 1, 1, 0, 0x10),
             firmwareOnly: true,
-        }), /needs an ELF image/);
+        }), /needs an ELF or UF2 image/);
         assert.equal(built.length, 0, 'nothing was constructed');
     });
     it('the bench path still requires a header map', () => {
         const { wasm } = stubWasm();
         assert.throws(() => createLabwiredAdapter({ wasm, chipYaml: 'arch: arm', firmware: ELF_MAGIC }),
             /opts.pins is required/);
+    });
+});
+
+/** A UF2 of `blocks` = [{addr, data, flags?}], family RP2040. */
+function makeUf2(blocks, family = UF2_FAMILY_RP2040) {
+    const out = new Uint8Array(512 * blocks.length);
+    const dv = new DataView(out.buffer);
+    blocks.forEach((b, i) => {
+        const o = i * 512;
+        dv.setUint32(o, 0x0A324655, true); dv.setUint32(o + 4, 0x9E5D5157, true);
+        dv.setUint32(o + 8, (b.flags ?? 0) | 0x2000, true);
+        dv.setUint32(o + 12, b.addr, true); dv.setUint32(o + 16, b.data.length, true);
+        dv.setUint32(o + 20, i, true); dv.setUint32(o + 24, blocks.length, true);
+        dv.setUint32(o + 28, family, true);
+        out.set(b.data, o + 32);
+        dv.setUint32(o + 508, 0x0AB16F30, true);
+    });
+    return out;
+}
+const fill = (n, v) => new Uint8Array(n).fill(v);
+
+describe('UF2 → ELF', () => {
+    it('merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks', () => {
+        const vt = new Uint8Array(256); new DataView(vt.buffer).setUint32(4, 0x10000201, true);
+        const uf2 = makeUf2([
+            { addr: 0x10000000, data: fill(256, 0xB2) },          // stage 2
+            { addr: 0x10000100, data: vt },                      // vector table
+            { addr: 0x10002000, data: fill(16, 0xC3) },          // after a gap
+            { addr: 0x0, data: fill(8, 0xEE), flags: 1 },        // NOT_MAIN_FLASH: metadata
+        ]);
+        const { familyId, segments } = parseUf2(uf2);
+        assert.equal(familyId, UF2_FAMILY_RP2040);
+        assert.deepEqual(segments.map(s => [s.addr, s.data.length]), [[0x10000000, 512], [0x10002000, 16]]);
+        const { elf } = uf2ToElf(uf2);
+        const dv = new DataView(elf.buffer);
+        assert.equal(dv.getUint16(18, true), 40, 'EM_ARM');
+        assert.equal(dv.getUint32(24, true), 0x10000201, 'entry is the reset vector AFTER boot2');
+        assert.equal(dv.getUint16(44, true), 2, 'one PT_LOAD per segment');
+        assert.equal(dv.getUint32(52 + 8, true), 0x10000000);
+        assert.equal(dv.getUint32(52 + 32 + 8, true), 0x10002000);
+    });
+    it('refuses a corrupt block by position instead of loading half an image', () => {
+        const uf2 = makeUf2([{ addr: 0x10000000, data: fill(256, 1) }, { addr: 0x10000100, data: fill(256, 2) }]);
+        new DataView(uf2.buffer).setUint32(512 + 508, 0, true);
+        assert.throws(() => parseUf2(uf2), /block at byte 512 has bad magic/);
+    });
+    it('firmware-only accepts a UF2 (converted), and hands the engine an ELF', () => {
+        const { wasm, built } = stubWasm();
+        const vt = new Uint8Array(256); new DataView(vt.buffer).setUint32(4, 0x10000201, true);
+        createLabwiredAdapter({ wasm, chipYaml: LABWIRED_CATALOG.rp2040.chipYaml, firmwareOnly: true,
+            firmware: makeUf2([{ addr: 0x10000000, data: fill(256, 0) }, { addr: 0x10000100, data: vt }]) });
+        assert.deepEqual([...built[0].fw.subarray(0, 4)], [0x7f, 0x45, 0x4c, 0x46]);
+    });
+});
+
+describe('RP2040 bootrom as a named blob', () => {
+    it('firmware-only rp2040 hands the engine this repo\'s clean-room ROM as `bootrom`', async () => {
+        const { wasm, built } = stubWasm();
+        await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG.rp2040, firmware: ELF_MAGIC });
+        assert.deepEqual([...built[0].blobs.bootrom], [...buildBootrom()]);
+    });
+    it('no other chip gets a blob', async () => {
+        for (const name of ['stm32f103', 'nrf52840', 'rp2350', 'esp32c3']) {
+            const { wasm, built } = stubWasm();
+            await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG[name], firmware: ELF_MAGIC });
+            assert.equal(built[0].blobs, undefined, name);
+        }
     });
 });
 
@@ -140,6 +209,38 @@ function cortexSpinElf(flash, ram) {
     return { bytes: new Uint8Array(readFileSync(elf)), loop };
 }
 
+/**
+ * An RP2040 ELF that finds `popcount32` through the ROM's table pointers
+ * (0x14 function table, 0x18 rom_table_lookup) and calls it on 0xF0F0F0F0.
+ * r5 == 16 only if a ROM is actually mapped at 0 — without the bootrom blob
+ * those halfwords are the flash alias and the call goes nowhere.
+ */
+function rp2040RomLookupElf() {
+    const dir = mkdtempSync(join(tmpdir(), 'lw-rp2040-'));
+    writeFileSync(join(dir, 's.S'), [
+        '.syntax unified', '.cpu cortex-m0plus', '.thumb',
+        '.section .boot2,"a"', '.fill 256, 1, 0',
+        '.section .vectors,"a"', '.word _estack', '.word reset + 1',
+        '.text', '.thumb_func', '.global reset', 'reset:',
+        '  ldr r3, =0x18', '  ldrh r3, [r3]',          /* rom_table_lookup */
+        '  ldr r0, =0x14', '  ldrh r0, [r0]',          /* function table */
+        '  ldr r1, =0x3350',                           /* \'P3\' popcount32 */
+        '  blx r3', '  mov r4, r0',
+        '  ldr r0, =0xF0F0F0F0', '  blx r4', '  mov r5, r0',
+        'done:', '  b done', '.ltorg', '',
+    ].join('\n'));
+    writeFileSync(join(dir, 'l.ld'), [
+        'MEMORY { FLASH (rx) : ORIGIN = 0x10000000, LENGTH = 64K  RAM (rwx) : ORIGIN = 0x20000000, LENGTH = 16K }',
+        '_estack = ORIGIN(RAM) + LENGTH(RAM);',
+        'SECTIONS { .boot2 : { KEEP(*(.boot2)) } > FLASH  .vectors : { KEEP(*(.vectors)) } > FLASH  .text : { *(.text*) } > FLASH }', '',
+    ].join('\n'));
+    const elf = join(dir, 's.elf');
+    execFileSync('arm-none-eabi-gcc', ['-mcpu=cortex-m0plus', '-mthumb', '-nostdlib', '-T', join(dir, 'l.ld'),
+        join(dir, 's.S'), '-o', elf]);
+    const nm = execFileSync('arm-none-eabi-nm', [elf], { encoding: 'utf8' });
+    return { bytes: new Uint8Array(readFileSync(elf)), done: parseInt(nm.match(/^([0-9a-f]+) t done$/m)[1], 16) };
+}
+
 describe('firmware-only on the real engine', { skip: skipEngine }, () => {
     const require = createRequire(import.meta.url);
     const wasm = WASM_DIR ? require(join(WASM_DIR, 'labwired_wasm.js')) : null;
@@ -160,4 +261,12 @@ describe('firmware-only on the real engine', { skip: skipEngine }, () => {
             assert.deepEqual(Object.keys(target.regs()).filter(k => /^r\d+$/.test(k)).length, 13);
         });
     }
+    it('rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom', { skip: haveGcc ? false : 'arm-none-eabi-gcc not installed' }, async () => {
+        const { bytes, done } = rp2040RomLookupElf();
+        const { target } = await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG.rp2040, firmware: bytes });
+        target.setBreakpoint({ kind: 'code', addr: done });
+        target.run();
+        assert.equal(target.runFor(1_000_000), 'halted', 'reached `done`: the ROM calls returned');
+        assert.equal(target.regs().r5, 16, 'popcount32(0xF0F0F0F0) through the ROM table');
+    });
 });

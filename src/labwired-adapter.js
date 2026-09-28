@@ -91,6 +91,7 @@ export function plain (v) {
 }
 
 import { toLoadableElf, isElf } from './bin-to-elf.js';
+import { isUf2, uf2ToElf } from './uf2-to-elf.js';
 
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
@@ -139,6 +140,7 @@ export function chipArch (chipYaml) {
  * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
  * @param {number} [opts.clockHz]       engine cycle rate, for cycle→ns
  * @param {string} [opts.systemYaml]    override the generated manifest
+ * @param {Record<string,Uint8Array>} [opts.blobs] images for image_env regions, by name
  * @param {string} [opts.name]
  * @returns {object} boundary-A adapter
  */
@@ -159,16 +161,21 @@ export function createLabwiredAdapter (opts) {
   // by a toolchain lite does not have. See bin-to-elf.js for what is lost
   // (symbols; there were none in a .bin to lose).
   const isAvr = arch === 'avr';
-  if (firmwareOnly && opts.firmware && !isElf(opts.firmware)) {
-    throw new Error('labwired-adapter: firmware-only needs an ELF image (a raw .bin carries no ' +
-      'load address, and guessing one boots the chip from the wrong memory)');
+  // A UF2 says where every block loads, so it converts without a guess; a raw
+  // .bin does not, and is refused rather than loaded at a made-up origin.
+  const given = firmwareOnly && opts.firmware && isUf2(opts.firmware)
+    ? uf2ToElf(opts.firmware).elf
+    : opts.firmware;
+  if (firmwareOnly && given && !isElf(given)) {
+    throw new Error('labwired-adapter: firmware-only needs an ELF or UF2 image (a raw .bin carries ' +
+      'no load address, and guessing one boots the chip from the wrong memory)');
   }
   const firmwareOpts = isAvr
     ? { architecture: 'avr', loadAddress: opts.firmwareAddress }
     : { loadAddress: opts.firmwareAddress };
-  const firmware = opts.firmware
-    ? toLoadableElf(opts.firmware, firmwareOpts)
-    : opts.firmware;
+  const firmware = given
+    ? toLoadableElf(given, firmwareOpts)
+    : given;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
   if (!chipYaml) throw new Error('labwired-adapter: opts.chipYaml is required');
   if (!pins || (!firmwareOnly && Object.keys(pins).length === 0)) {
@@ -186,7 +193,9 @@ export function createLabwiredAdapter (opts) {
     ?? generateSystemYaml(opts.name ?? 'bw-labwired', opts.chipPath ?? './chip.yaml', pins);
 
   const build = () => {
-    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, undefined);
+    // Named images for the chip's `image_env` ROM regions (the RP2040's
+    // `bootrom`): the browser has no filesystem to read a ROM dump from.
+    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, opts.blobs);
     // LabWired knows which buses are fully event-scheduled and which still
     // require a peripheral service pass after every instruction.  Use that
     // answer instead of leaving every chip on the exact-but-slow default.
