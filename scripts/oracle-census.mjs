@@ -635,7 +635,7 @@ export const INPUTS = [
             + 'to it. Can only stand in CI if the job fetches them explicitly.',
     },
     {
-        id: 'doom-vga-snapshot-report', kind: 'fixture',
+        id: 'doom-vga-report', kind: 'fixture',
         what: 'Pinned source-bound Doom VGA snapshot report. Checks that the browser target '
             + 'raster matches the strict independent decoder at the first and latest observed '
             + 'graphics frames; it does not establish live Doom gameplay or include media pixels.',

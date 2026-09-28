@@ -2,7 +2,7 @@
   "schema": "astra.i80386-browser-target-freedos.v1",
   "passed": true,
   "scope": "Headless browser-target FreeDOS boot and C: mount; no GUI widget or Doom acceptance.",
-  "executionRevision": "e96cee7bdbafa289cd03c70a75ac9bf1bb167520",
+  "executionRevision": "0f1a8b22af447b8cd286517e89efe38414ed727d",
   "sourceSha256": {
     "src/debug-target-factory.js": "3539e855367b448513bc999771fd83f9c8a8f4408687db87ae621435431e35e9",
     "src/i80386-adapter.js": "76ce7241e141861be087da530a40cec76f0644debfb9bcc0dcf2511b152e9ddd",
