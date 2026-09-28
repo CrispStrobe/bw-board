@@ -1,10 +1,10 @@
 {
   "oracle": "Bochs CPU-level-3 software emulator",
-  "revision": "f3db4b67f0b834c88764fd637fa5b366d464b1c9",
+  "revision": "d7ef306e34410b5941e220f27e08040a7ea32f55",
   "sourceHashes": {
     "test/fixtures/i80386-vm-task.S": "acc2a072c686a187afa398dc29e2e41f8da8b9c7841ff1d06cfc4f535d3fc488",
     "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
-    "scripts/compare-bochs-i80386-task-vm86.mjs": "0622cc857a2131fc0a99835d51159fbae52405e78b9772cc0cfe823c2a4ec06b"
+    "scripts/compare-bochs-i80386-task-vm86.mjs": "8b6469b985b71838d85cd81b16a5d66891f1d7d8dc71944cb82586c6b89bec63"
   },
   "host": {
     "platform": "linux",
