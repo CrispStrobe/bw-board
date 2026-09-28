@@ -16,6 +16,7 @@ jobs:
       XV6_224M_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
       XV6_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
       XV6_OUTPUT_DIR: /tmp/xv6-board-full-suite-224m
+      XV6_LIVE_SERIAL: '1'
       XV6_REVISION: eeb7b415dbcb12cc362d0783e41c3d1f44066b17
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -67,6 +68,7 @@ jobs:
 
           output = Path(os.environ['XV6_OUTPUT_DIR'])
           names = ('raw-private.json', 'host-private.json', 'stderr-private.txt',
+                   'serial-private.bin',
                    'receipt-public-candidate.json', 'preflight.json',
                    'probe-stdout.txt', 'probe-stderr.txt', 'probe-exit-status.txt')
           inventory = {'expected': list(names),
