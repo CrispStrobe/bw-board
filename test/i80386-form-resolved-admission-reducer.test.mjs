@@ -83,3 +83,21 @@ test('paired reducer requires complete source bytes and ordinary baseline',()=>{
   assert.throws(()=>summarizeI80386FormResolvedAdmission(raw,baseline,options),
     /baseline must have/);
 });
+
+test('paired reducer requires and validates first-refusal context when selected',()=>{
+  const {raw,baseline}=pair();
+  assert.throws(()=>summarizeI80386FormResolvedAdmission(raw,baseline,
+    {...options,requireFirstRefusalContext:true}),/missing required first-refusal/);
+  const typed=raw.crossModeTraceObserver.formResolvedPotential;
+  typed.firstRefusalContext={schema:'bw.i80386-first-refusal-context.v1',
+    maxRun:64,modes:Object.fromEntries(modeNames.map(mode=>[mode,{
+      refusedOrdinals:0,followingResolved:0,bridgeAtLeast4:0,
+      bridgeAtLeast8:0,records:{}}])),refusedOrdinals:0,
+    bridgeAtLeast4:0,bridgeAtLeast8:0};
+  assert.equal(summarizeI80386FormResolvedAdmission(raw,baseline,
+    {...options,requireFirstRefusalContext:true}).selectedReportedGuestParity,true);
+  typed.firstRefusalContext.modes.real.refusedOrdinals=1;
+  assert.throws(()=>summarizeI80386FormResolvedAdmission(raw,baseline,
+    {...options,requireFirstRefusalContext:true}),
+  /first-refusal context partition mismatch/);
+});

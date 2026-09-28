@@ -49,6 +49,41 @@ export function summarizeI80386FormResolvedAdmission(raw,baseline,options={}){
         long>ordinary.ordinalsInRunsAtLeast8)
       throw new Error(`typed admission partition mismatch in ${mode}`);
   }
+  const context=typed.firstRefusalContext;
+  if(options.requireFirstRefusalContext&&!context)
+    throw new Error('missing required first-refusal context');
+  if(context){
+    if(context.schema!=='bw.i80386-first-refusal-context.v1'||
+        context.maxRun!==typed.maxRun||!context.modes)
+      throw new Error('first-refusal context schema or run budget mismatch');
+    for(const mode of MODES){
+      const bucket=context.modes[mode],typedBucket=typed.modes[mode];
+      if(!bucket)throw new Error(`missing first-refusal mode ${mode}`);
+      const records=Object.values(bucket.records??{});
+      const sum=field=>records.reduce((n,entry)=>n+entry[field],0);
+      const validHistogram=(histogram,count)=>histogram&&
+        Object.entries(histogram).every(([length,n])=>
+          Number.isInteger(Number(length))&&Number(length)>=0&&
+          Number(length)<=context.maxRun&&Number.isInteger(n)&&n>=0)&&
+        count===Object.values(histogram).reduce((n,value)=>n+value,0);
+      if(bucket.refusedOrdinals!==typedBucket.refusedOrdinals||
+          bucket.followingResolved!==bucket.refusedOrdinals||
+          sum('count')!==bucket.refusedOrdinals||
+          sum('followingResolved')!==bucket.refusedOrdinals||
+          sum('bridgeAtLeast4')!==bucket.bridgeAtLeast4||
+          sum('bridgeAtLeast8')!==bucket.bridgeAtLeast8||
+          records.some(entry=>!validHistogram(entry.precedingLengthHistogram,
+            entry.count)||!validHistogram(entry.followingLengthHistogram,
+            entry.count)||count(entry.followingEndReasons)!==entry.count||
+            entry.bridgeAtLeast8>entry.bridgeAtLeast4||
+            entry.bridgeAtLeast4>entry.count))
+        throw new Error(`first-refusal context partition mismatch in ${mode}`);
+    }
+    if(context.refusedOrdinals!==sum(context.modes,'refusedOrdinals')||
+        context.bridgeAtLeast4!==sum(context.modes,'bridgeAtLeast4')||
+        context.bridgeAtLeast8!==sum(context.modes,'bridgeAtLeast8'))
+      throw new Error('first-refusal context aggregate mismatch');
+  }
   const long=sum(typed.modes,'ordinalsInRunsAtLeast8');
   const long16=typed.modes.protected16.ordinalsInRunsAtLeast8+
     typed.modes.vm86.ordinalsInRunsAtLeast8;
@@ -77,7 +112,9 @@ export function summarizeI80386FormResolvedAdmission(raw,baseline,options={}){
 }
 
 if(process.argv[1]&&new URL(import.meta.url).pathname===process.argv[1]){
-  const [rawPath,baselinePath]=process.argv.slice(2);
+  const requireFirstRefusalContext=process.argv.includes('--require-first-refusal-context');
+  const [rawPath,baselinePath]=process.argv.slice(2).filter(arg=>
+    arg!=='--require-first-refusal-context');
   if(!rawPath||!baselinePath)
     throw new Error('usage: summarize-i80386-form-resolved-admission.mjs raw.json baseline.json');
   const rawBytes=fs.readFileSync(rawPath),baselineBytes=fs.readFileSync(baselinePath);
@@ -91,7 +128,8 @@ if(process.argv[1]&&new URL(import.meta.url).pathname===process.argv[1]){
       {cwd:new URL('..',import.meta.url)});
   }
   const receipt=summarizeI80386FormResolvedAdmission(raw,baseline,{
-    rawSha256:sha(rawBytes),baselineSha256:sha(baselineBytes),sourceBlobs});
+    rawSha256:sha(rawBytes),baselineSha256:sha(baselineBytes),sourceBlobs,
+    requireFirstRefusalContext});
   if(!receipt.selectedReportedGuestParity||!receipt.sourceHashesVerified)
     throw new Error('guest or source parity failed; refusing public receipt');
   process.stdout.write(JSON.stringify(receipt,null,2)+'\n');
