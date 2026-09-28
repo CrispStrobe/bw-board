@@ -253,6 +253,11 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
   profile,
+  // Board time is a configured scheduling clock, not measured 80386 silicon time.
+  clockHz: machine.clockHz,
+  functionalInstructionCycles: machine.functionalInstructionCycles,
+  machineCycles: machine.cycles,
+  virtualSeconds: machine.cycles / machine.clockHz,
   ...(lean ? {lean: true} : {}),
   ...(process.env.XV6_SHARED_RAM === '1' || nativeByte || nativeDispatch ? {sharedRam: true} : {}),
   ...(nativeByte ? {nativeByte:true,nativeStats} : {}),
