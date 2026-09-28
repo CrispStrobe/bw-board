@@ -18,18 +18,19 @@ from pathlib import Path
 BOARD = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('XV6_SOURCE_DIR', '/tmp/xv6-public')).expanduser().resolve()
 IMAGES = Path(os.environ.get('XV6_IMAGE_DIR', '/tmp/xv6-stock-4m')).expanduser().resolve()
-OUTPUT = Path(os.environ.get('XV6_ORACLE_OUTPUT_DIR', '/tmp/xv6-qemu-oracle-client-20260928')).expanduser().resolve()
+OUTPUT = Path(os.environ.get('XV6_ORACLE_OUTPUT_DIR', '/tmp/xv6-qemu-oracle-seabios-20260928')).expanduser().resolve()
 QEMU = Path(os.environ.get('XV6_QEMU_BIN', '/usr/bin/qemu-system-i386')).expanduser().resolve()
 SOURCE_REVISION = 'eeb7b415dbcb12cc362d0783e41c3d1f44066b17'
 TIMEOUT_SECONDS = 900
 BOOT_TIMEOUT_SECONDS = 30
+SHELL_TIMEOUT_SECONDS = 60
 TARGET = b'concreate ok\n'
 MARKERS = (b'createdelete ok\n', b'linkunlink ok\n', TARGET)
 PINS = {
-    'bios': (BOARD / 'roms/free-at-bios/BIOS-bochs-legacy',
-             '6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac'),
-    'vgaRom': (BOARD / 'roms/free-at-bios/vgabios-lgpl.bin',
-               '76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1'),
+    'bios': (Path(os.environ.get('XV6_QEMU_BIOS', '/usr/share/seabios/bios-256k.bin')).expanduser().resolve(),
+             '1a9ea4f17bcfb27bda5728e2c21d9fa074cf7947b9b4910bb28213a735c96735'),
+    'vgaRom': (Path(os.environ.get('XV6_QEMU_VGA_ROM', '/usr/share/seabios/vgabios-stdvga.bin')).expanduser().resolve(),
+               '4eecd8e752efc02c6c0fe87eb92bf66934cb9ea67b0e1bc41e86f8430c8bf8a0'),
     'bootImage': (IMAGES / 'xv6.img',
                   'b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0'),
     'filesystemImage': (IMAGES / 'fs.img',
@@ -84,6 +85,8 @@ def preflight():
             'machine': 'pc-i440fx-8.2', 'cpu': 'qemu32', 'accel': 'tcg,thread=single',
             'memoryMiB': 4, 'smp': 1, 'timeoutSeconds': TIMEOUT_SECONDS,
             'bootTimeoutSeconds': BOOT_TIMEOUT_SECONDS,
+            'shellTimeoutSeconds': SHELL_TIMEOUT_SECONDS,
+            'firmwarePair': 'SeaBIOS 256K and standard VGA ROM',
             'command': 'usertests\r', 'targetMarker': TARGET.decode()}
 
 
@@ -142,6 +145,9 @@ def run():
             while time.monotonic() - started < TIMEOUT_SECONDS:
                 if b'xv6...' not in serial and time.monotonic() - started >= BOOT_TIMEOUT_SECONDS:
                     stop = 'boot-timeout'
+                    break
+                if not sent and time.monotonic() - started >= SHELL_TIMEOUT_SECONDS:
+                    stop = 'shell-timeout'
                     break
                 if sock is None:
                     try:
