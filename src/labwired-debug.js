@@ -539,8 +539,14 @@ export function createLabwiredDebugTarget (opts) {
     /** Bytes in the instruction at `addr` (see instrLength), or null. */
     instructionLength (addr) { return instrLength(addr); },
 
-    /** The address after `addr`'s instruction of `length` bytes (0: `addr` itself). */
+    /**
+     * The address after `addr`'s instruction of `length` bytes (0: `addr`
+     * itself). null -- no listing -- unless the engine decodes any address: an
+     * older one answers only the PC, and a listing of blank rows would be a
+     * listing that lies about being one.
+     */
     nextCodeAddress (addr, length) {
+      if (!canDecodeAt()) return null;
       if (!Number.isSafeInteger(addr) || !Number.isInteger(length) || length < 0) return null;
       return length === 0 ? codeAddr(addr) : codeAddr(addr) + length;
     },

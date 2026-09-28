@@ -606,3 +606,10 @@ describe('labwired memory/register writes and any-address decode (when the engin
         assert.equal(t.disasm(0x200), '', 'never the PC\'s instruction labelled as another address');
     });
 });
+
+describe('labwired listing needs an engine that decodes any address', () => {
+    it('nextCodeAddress is null on an older engine, so a host lists nothing rather than blank rows', () => {
+        const t = createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim: { get_pc: () => 0x100 } } });
+        assert.equal(t.nextCodeAddress(0x100, 0), null);
+    });
+});
