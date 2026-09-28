@@ -55,6 +55,21 @@ jobs:
             > "$XV6_OUTPUT_DIR/probe-stdout.txt" \
             2> "$XV6_OUTPUT_DIR/probe-stderr.txt"
           status=$?
+          if [ "$status" -eq 0 ]; then
+            python3 - "$XV6_OUTPUT_DIR/receipt-public-candidate.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          receipt = json.loads(Path(sys.argv[1]).read_text())
+          passed = (receipt.get('fullUsertestsPassed') is True and
+                    receipt.get('nextMarkerReached') is True and
+                    receipt.get('stop') == 'full-suite-marker')
+          print(f"stock xv6 full-suite marker reached: {passed}")
+          sys.exit(0 if passed else 1)
+          PY
+            status=$?
+          fi
           printf '%s\n' "$status" > "$XV6_OUTPUT_DIR/probe-exit-status.txt"
           exit "$status"
       - name: Record evidence inventory
