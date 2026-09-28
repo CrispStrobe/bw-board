@@ -54,7 +54,7 @@ try {
     'debug: action=ignore',
     'mouse: enabled=0',
   ].join('\n')+'\n');
-  // stdbuf makes the first E9 checkpoint observable before the fixture's
+  // stdbuf makes the E9 checkpoint observable before the fixture's
   // QEMU-specific exit port falls through to Bochs' otherwise idle guest loop.
   const run=await new Promise((resolveRun,reject)=>{
     const child=spawn('stdbuf',['-o0','-e0',bochs,'-q','-f',rc],{stdio:['ignore','pipe','pipe']});
@@ -62,27 +62,29 @@ try {
     const timer=setTimeout(()=>child.kill('SIGTERM'),5000);
     child.stdout.on('data',chunk=>{
       output+=chunk.toString('latin1');
-      if(!sawCheckpoint&&output.includes('BHV')){sawCheckpoint=true;child.kill('SIGTERM');}
+      if(!sawCheckpoint&&output.includes('BHVK001')){sawCheckpoint=true;child.kill('SIGTERM');}
     });
     child.stderr.on('data',chunk=>{error+=chunk.toString('latin1');});
     child.once('error',err=>{clearTimeout(timer);reject(err);});
     child.once('close',(code,signal)=>{clearTimeout(timer);resolveRun({output,error,code,signal,sawCheckpoint});});
   });
-  const reference=run.sawCheckpoint?'BHV':null;
+  const reference=run.sawCheckpoint?'BHVK001':null;
   const memory=new Uint8Array(0x10000);memory.set(binary,0x7c00);
   let actual='';
   const cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>memory[a]=v,
     inPort:()=>0,outPort:(port,value)=>{if(port===0xe9)actual+=String.fromCharCode(value&255);}});
   cpu.cs=0;cpu.eip=0x7e00;
   cpu.segmentCaches[1]={base:0,limit:0xffff,default32:false,present:true,code:true,readable:true,writable:false};
-  for(let step=0;step<200&&actual!=='BHV';step++)cpu.step();
+  for(let step=0;step<250&&actual.length<7;step++)cpu.step();
   const mutation=process.env.I386_BOCHS_VM_TASK_MUTATION??null;
-  if(![null,'result'].includes(mutation))throw new Error('unknown mutation');
+  if(![null,'result','checkpoint'].includes(mutation))throw new Error('unknown mutation');
   if(mutation==='result')actual=actual.slice(0,-1)+'X';
+  if(mutation==='checkpoint')actual=actual.slice(0,3)+'X'+actual.slice(4);
   const bochsLog=readFileSync(log,'utf8');
   const differences=[];
-  if(reference!=='BHV')differences.push({field:'reference.output',expected:'BHV',actual:reference});
-  if(actual!=='BHV')differences.push({field:'actual.output',expected:'BHV',actual});
+  if(reference!=='BHVK001')differences.push({field:'reference.output',expected:'BHVK001',actual:reference});
+  if(actual!=='BHVK001')differences.push({field:'actual.output',expected:'BHVK001',actual});
+  if(memory[0x500]!==0x4b)differences.push({field:'actual.handlerMemory',expected:0x4b,actual:memory[0x500]});
   if(!bochsLog.includes('Booting from 0000:7c00'))
     differences.push({field:'reference.boot',expected:'Booting from 0000:7c00',actual:null});
   if(bochsLog.includes('>>PANIC<<'))differences.push({field:'reference.panic',actual:true});
@@ -93,10 +95,11 @@ try {
     bochsRevision,bochsSha256,bochsConfigSha256:hash(configHeader),
     biosSha256:hash(readFileSync(bios)),vgaBiosSha256:hash(readFileSync(vgaBios)),
     imageSha256:hash(binary),floppySha256:hash(floppy),
-    execution:{reference:'Bochs BIOS boots owned floppy; stop on first E9 BHV',
+    execution:{reference:'Bochs BIOS boots owned floppy; compare E9 BHV plus handler-memory, resumed CS and VM flag checkpoint',
       actual:'same image at 0x7c00; starts owned setup at 0x7e00 after disk load',
-      postCheckpoint:'The fixture exits via QEMU port F4; Bochs can later reset from its VM86 idle loop. Only the first BHV checkpoint is compared.'},
-    mutation,status:differences.length?'fail':'pass',expected:'BHV',reference,actual,differences,
+      checkpoint:{handlerMemory:'K at physical 0x0500',resumedCS:'00',vmFlag:'1'},
+      postCheckpoint:'The fixture exits via QEMU port F4; Bochs can later reset from its VM86 idle loop. Stop at the complete seven-byte checkpoint.'},
+    mutation,status:differences.length?'fail':'pass',expected:'BHVK001',reference,actual,differences,
     bochsExit:{code:run.code,signal:run.signal},
     bochsLogTail:bochsLog.split('\n').filter(line=>line.includes('BIOS')||line.includes('CPU')).slice(-12)};
   console.log(JSON.stringify(report,null,2));
