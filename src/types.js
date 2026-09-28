@@ -135,7 +135,7 @@
  *   unsupported, floating, or non-ideal circuit semantics throw rather than
  *   being approximated.
  *
- * @property {() => {analysis: object, converged: true,
+ * @property {(options?: {fallback?: 'refuse'|'proven-zero-state'}) => {analysis: object, converged: true,
  *   nodeVoltages: Map<string, number>,
  *   branchCurrents: Map<string, Map<string, number>>,
  *   capacitorVoltages: Map<string, number>,
@@ -145,7 +145,10 @@
  *   from its exact transient value at t=0; its separate `dcValue` belongs to
  *   explicit DC/AC bias analysis and is never substituted here. Explicit
  *   reactive initial conditions, advanced or already-reactive state, and every unsupported
- *   operating-point topology refuse without mutation.
+ *   operating-point topology refuse without mutation. The explicit
+ *   `proven-zero-state` fallback admits only a fresh grounded linear R/C/L/V/I
+ *   network whose independent sources are exactly zero at transient t=0; it
+ *   does not broaden the observational operating-point contract.
  *
  * @property {(a: string, b: string) => number | 'requires-power-off'} resistance
  *   Resistance between two nets. Returns the reason, NOT a number, when the

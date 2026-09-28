@@ -22,7 +22,7 @@ import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
   solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
-  sourceDcValue, sourceVoltage,
+  sourceDcValue, sourceVoltage, sourceCurrent,
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
@@ -2387,7 +2387,10 @@ export class BoardImpl {
    *   branchCurrents: Map<string, Map<string, number>>, capacitorVoltages: Map<string, number>,
    *   inductorCurrents: Map<string, number>}}
    */
-  initializeTransientFromOperatingPoint() {
+  initializeTransientFromOperatingPoint({ fallback = 'refuse' } = {}) {
+    if (!['refuse', 'proven-zero-state'].includes(fallback)) {
+      throw new Error(`initializeTransientFromOperatingPoint: unknown fallback ${fallback}`);
+    }
     if (this.timeNs !== 0n) {
       throw new Error('initializeTransientFromOperatingPoint: requires a fresh board at time zero');
     }
@@ -2411,7 +2414,13 @@ export class BoardImpl {
     const hasTimeVaryingSource = this._solveParts.some(part =>
       (part.kind === 'vsource' || part.kind === 'isource')
       && part.params?.wave && part.params.wave !== 'dc');
-    const point = this.operatingPoint({ waveformBias: 'time-zero' });
+    let point;
+    try {
+      point = this.operatingPoint({ waveformBias: 'time-zero' });
+    } catch (error) {
+      if (fallback !== 'proven-zero-state' || !this._canInitializeProvenZeroState()) throw error;
+      return this._initializeProvenZeroState({ hasTimeVaryingSource });
+    }
     if (point.converged !== true) {
       throw new Error('initializeTransientFromOperatingPoint: DC operating point did not converge');
     }
@@ -2514,6 +2523,114 @@ export class BoardImpl {
       converged: true,
       nodeVoltages: new Map(point.nodeVoltages),
       branchCurrents: new Map([...point.branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      capacitorVoltages: new Map(capacitorVoltages),
+      inductorCurrents: new Map(inductorCurrents),
+    };
+  }
+
+  /**
+   * Prove the narrow case where zero is an exact transient initial state even
+   * though DC branch-current attribution is not unique (notably parallel ideal
+   * inductors). This is deliberately stricter than transient solvability.
+   * @private
+   */
+  _canInitializeProvenZeroState() {
+    if (!this.powered || this._solveParts.some(part =>
+      !['resistor', 'capacitor', 'inductor', 'vsource', 'isource', 'gnd'].includes(part.kind))) return false;
+    const byId = new Map(this._solveParts.map(part => [part.id, part]));
+    if ([...this.controls].some(([id]) => byId.get(id)?.kind !== 'vsource')) return false;
+
+    const nodes = new Set(this._solveNets.map(net => net.id));
+    const adjacency = new Map([...nodes].map(id => [id, new Set()]));
+    const connect = (a, b) => {
+      if (!adjacency.has(a) || !adjacency.has(b)) return false;
+      adjacency.get(a).add(b); adjacency.get(b).add(a); return true;
+    };
+    const idealParent = new Map([...nodes].map(id => [id, id]));
+    const root = id => {
+      let value = id;
+      while (idealParent.get(value) !== value) value = idealParent.get(value);
+      while (idealParent.get(id) !== id) { const next = idealParent.get(id); idealParent.set(id, value); id = next; }
+      return value;
+    };
+    const joinIdeal = (a, b) => {
+      const left = root(a); const right = root(b);
+      if (left === right) return false;
+      idealParent.set(left, right); return true;
+    };
+    let ground = null;
+    try {
+      for (const part of this._solveParts) {
+        if (part.kind === 'gnd') {
+          const net = this._netForTerminal(part.id, 'gnd');
+          if (!nodes.has(net) || (ground !== null && ground !== net)) return false;
+          ground = net; continue;
+        }
+        if (part.kind === 'resistor' || part.kind === 'capacitor' || part.kind === 'inductor') {
+          const parameter = part.kind === 'resistor' ? 'ohms' : part.kind === 'capacitor' ? 'farads' : 'henrys';
+          if (!Number.isFinite(part.params?.[parameter]) || part.params[parameter] <= 0) return false;
+          if (!connect(this._netForTerminal(part.id, 'a'), this._netForTerminal(part.id, 'b'))) return false;
+          continue;
+        }
+        const pos = this._netForTerminal(part.id, 'pos'); const neg = this._netForTerminal(part.id, 'neg');
+        const value = part.kind === 'vsource'
+          ? (this.controls.has(part.id) ? Number(this.controls.get(part.id)) : sourceVoltage(part, 0, this.vcc))
+          : sourceCurrent(part, 0);
+        if (!Number.isFinite(value) || value !== 0) return false;
+        if (part.kind === 'isource') continue;
+        const rInternal = part.params?.rInternal ?? 0;
+        const iLimit = part.params?.iLimit ?? 0;
+        if (!Number.isFinite(rInternal) || rInternal < 0 || !Number.isFinite(iLimit) || iLimit !== 0
+            || !connect(pos, neg)) return false;
+        if (rInternal === 0 && !joinIdeal(pos, neg)) return false;
+      }
+    } catch { return false; }
+    if (ground === null) return false;
+    const reached = new Set([ground]); const pending = [ground];
+    while (pending.length) for (const next of adjacency.get(pending.pop()) || []) {
+      if (!reached.has(next)) { reached.add(next); pending.push(next); }
+    }
+    return reached.size === nodes.size;
+  }
+
+  /** @private */
+  _initializeProvenZeroState({ hasTimeVaryingSource }) {
+    const capacitorVoltages = new Map(this._solveParts.filter(part => part.kind === 'capacitor').map(part => [part.id, 0]));
+    const inductorCurrents = new Map(this._solveParts.filter(part => part.kind === 'inductor').map(part => [part.id, 0]));
+    const nodeVoltages = new Map(this._solveNets.map(net => [net.id, 0]));
+    const branchCurrents = new Map(this._solveParts.map(part =>
+      [part.id, new Map(part.terminals.map(terminal => [terminal, 0]))]));
+    this.capVoltages = new Map(capacitorVoltages);
+    this.inductorCurrents = new Map(inductorCurrents);
+    this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
+    this.inductorVoltages = new Map([...inductorCurrents.keys()].map(id => [id, 0]));
+    this.nodeVoltages = new Map(nodeVoltages);
+    this._mnaCache = { nodeVoltages: new Map(nodeVoltages), branchCurrents: new Map(branchCurrents),
+      converged: true, deviceStamps: new Map() };
+    this._lastSolveConverged = true;
+    this._trapValid = false;
+    this._transH = 1e-4;
+    this._lastTransientSolves = 0;
+    this._transientAttemptOverflow = false;
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
+    return {
+      analysis: {
+        kind: 'non-uic-transient-initialization',
+        scope: 'grounded-linear-r-c-l-v-i-proven-zero-state',
+        supportedKinds: ['resistor', 'capacitor', 'inductor', 'vsource', 'isource', 'gnd'],
+        sources: 'exact-waveform-time-zero-zero-only',
+        initialization: hasTimeVaryingSource
+          ? 'source-declared-waveform-time-zero-zero-state'
+          : 'source-declared-quiescent-zero-state',
+        quiescent: !hasTimeVaryingSource,
+        storage: 'explicit-zero-capacitor-voltage-and-inductor-current',
+        integrationRestart: 'backward-euler',
+        timeNs: 0n,
+      },
+      converged: true,
+      nodeVoltages: new Map(nodeVoltages),
+      branchCurrents: new Map([...branchCurrents].map(([id, values]) => [id, new Map(values)])),
       capacitorVoltages: new Map(capacitorVoltages),
       inductorCurrents: new Map(inductorCurrents),
     };
