@@ -267,5 +267,73 @@ export const STM32F0 = {
   boardKinds: ['stm32f030'],
 };
 
+/** LabWired's proven AVR target is ATmega328P-class, not ATtiny88. */
+export const ATMEGA328P_CHIP_YAML = `name: "atmega328p"
+arch: "avr"
+core: "avr8"
+registers_count: 32
+cpu_hz: 16_000_000
+io_voltage_v: 5.0
+gpio_input_thresholds:
+  vil: 0.3
+  vih: 0.6
+flash:
+  base: 0x00000000
+  size: "32KB"
+ram:
+  base: 0x00000100
+  size: "2KB"
+peripherals:
+  - id: "spi"
+    type: "spi"
+    base_address: 0x00010000
+    size: "16"
+  - id: "i2c"
+    type: "i2c"
+    base_address: 0x00010010
+    size: "16"
+  - id: "portb"
+    type: "avr_gpio"
+    base_address: 0x00010023
+    size: "3"
+  - id: "portc"
+    type: "avr_gpio"
+    base_address: 0x00010026
+    size: "3"
+  - id: "portd"
+    type: "avr_gpio"
+    base_address: 0x00010029
+    size: "3"
+  - id: "adc"
+    type: "avr_adc"
+    base_address: 0x00010030
+    size: "16"
+`;
+
+export const ATMEGA328P_LABWIRED_PINS = (() => {
+  const defs = {};
+  for (let bit = 0; bit <= 7; bit++) defs[`D${bit}`] = { peripheral: 'portd', pin: bit };
+  for (let bit = 0; bit <= 5; bit++) defs[`D${bit + 8}`] = { peripheral: 'portb', pin: bit };
+  for (let bit = 0; bit <= 5; bit++) defs[`A${bit}`] = { peripheral: 'portc', pin: bit };
+  return defs;
+})();
+
+export const ATMEGA328P_ADC_CHANNELS = (() => {
+  const defs = {};
+  for (let bit = 0; bit <= 5; bit++) defs[`A${bit}`] = bit;
+  return defs;
+})();
+
+export const ATMEGA328P = {
+  chipYaml: ATMEGA328P_CHIP_YAML,
+  pins: ATMEGA328P_LABWIRED_PINS,
+  adcChannels: ATMEGA328P_ADC_CHANNELS,
+  pwmPins: [],
+  clockHz: 16_000_000,
+  name: 'bw-atmega328p',
+  adcPeripheral: 'adc',
+  boardKinds: ['arduino_uno'],
+};
+
 /** Board-part kind → heavy-tier chip. The one place a new chip gets added. */
-export const LABWIRED_CHIPS = { stm32f030: STM32F0 };
+export const LABWIRED_CHIPS = { stm32f030: STM32F0, arduino_uno: ATMEGA328P };

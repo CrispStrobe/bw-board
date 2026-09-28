@@ -16,23 +16,28 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const fixture = join(root, 'test/fixtures/labwired/stm32f0-chip.yaml');
 const target = join(root, 'src/labwired-chips.js');
 const check = process.argv.includes('--check');
+const descriptors = [
+    ['STM32F0_CHIP_YAML', 'stm32f0-chip.yaml'],
+    ['ATMEGA328P_CHIP_YAML', 'atmega328p-chip.yaml'],
+];
 
-const yaml = readFileSync(fixture, 'utf8');
-// Backslash first, or the escapes we add get escaped again.
-const esc = yaml.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
-
+let next = readFileSync(target, 'utf8');
+for (const [constant, filename] of descriptors) {
+    const fixture = join(root, 'test/fixtures/labwired', filename);
+    const yaml = readFileSync(fixture, 'utf8');
+    // Backslash first, or the escapes we add get escaped again.
+    const esc = yaml.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+    const marker = `export const ${constant} = \``;
+    const start = next.indexOf(marker);
+    if (start === -1) throw new Error(`${target}: no ${constant} literal to replace`);
+    const from = start + marker.length;
+    const to = next.indexOf('`;', from);
+    if (to === -1) throw new Error(`${target}: unterminated ${constant} literal`);
+    next = next.slice(0, from) + esc + next.slice(to);
+}
 const current = readFileSync(target, 'utf8');
-const marker = 'export const STM32F0_CHIP_YAML = `';
-const start = current.indexOf(marker);
-if (start === -1) throw new Error(`${target}: no STM32F0_CHIP_YAML literal to replace`);
-const from = start + marker.length;
-const to = current.indexOf('`;', from);
-if (to === -1) throw new Error(`${target}: unterminated STM32F0_CHIP_YAML literal`);
-
-const next = current.slice(0, from) + esc + current.slice(to);
 if (next === current) {
     console.log('labwired-chips: up to date.');
     process.exit(0);
@@ -42,4 +47,4 @@ if (check) {
     process.exit(1);
 }
 writeFileSync(target, next);
-console.log(`labwired-chips: regenerated from ${fixture.replace(root, '.')}`);
+console.log(`labwired-chips: regenerated ${descriptors.length} descriptors.`);

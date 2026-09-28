@@ -499,8 +499,12 @@ no accessor reports it. Both are named in §6.
 4. **Chips beyond the F0.** `LABWIRED_CHIPS` in `src/labwired-chips.js` is the
    one place a new one is added: a chip YAML, a header pin map that MATCHES the
    light tier's, an ADC channel map, and the board kinds our registry uses for
-   it. The F103 is the obvious next entry and needs a GPIO **v1** profile, not
-   `stm32v2`.
+   it. ATmega328P/Arduino Uno is now the second entry. It accepts a real AVR ELF
+   and uses LabWired's AVR port model; raw AVR images are refused rather than
+   mislabeled as ARM. ATtiny85/88 deliberately remain on avr8js: LabWired's AVR
+   core and descriptor are ATmega328P-class and do not yet model those parts'
+   register and peripheral differences. The F103 remains the next ARM entry
+   and needs a GPIO **v1** profile, not `stm32v2`.
 
 ## 7. Housekeeping note
 

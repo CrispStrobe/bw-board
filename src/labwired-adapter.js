@@ -90,7 +90,7 @@ export function plain (v) {
   return v;
 }
 
-import { toLoadableElf } from './bin-to-elf.js';
+import { isElf, toLoadableElf } from './bin-to-elf.js';
 
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
@@ -135,7 +135,14 @@ export function createLabwiredAdapter (opts) {
   // a raw image — so without this the heavy tier could only run firmware built
   // by a toolchain lite does not have. See bin-to-elf.js for what is lost
   // (symbols; there were none in a .bin to lose).
-  const firmware = opts.firmware ? toLoadableElf(opts.firmware) : opts.firmware;
+  const isAvr = /^\s*arch:\s*["']?avr["']?\s*$/m.test(chipYaml ?? '');
+  if (isAvr && opts.firmware && !isElf(opts.firmware)) {
+    throw new Error('labwired-adapter: AVR firmware must be an ELF; wrapping a raw image '
+      + 'as Cortex-M ELF would mislabel its architecture. ATtiny raw images stay on avr8js.');
+  }
+  const firmware = opts.firmware
+    ? (isAvr ? opts.firmware : toLoadableElf(opts.firmware))
+    : opts.firmware;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
   if (!chipYaml) throw new Error('labwired-adapter: opts.chipYaml is required');
   if (!pins || Object.keys(pins).length === 0) throw new Error('labwired-adapter: opts.pins is required');
@@ -294,7 +301,9 @@ export function createLabwiredAdapter (opts) {
         // the change detector for `publishAll`: two accessor calls per drain,
         // against a full routing + republish pass only when the firmware has
         // actually reconfigured something.
-        const sig = snap ? `${snap.moder}|${snap.pupdr}|${snap.otyper}` : 'none';
+        const sig = snap
+          ? `${snap.moder}|${snap.pupdr}|${snap.otyper}|${snap.ddr}|${snap.port}`
+          : 'none';
         if (portConfig.get(port) !== sig) { portConfig.set(port, sig); changed = true; }
       }
       const snap = perPort.get(port);
@@ -304,6 +313,14 @@ export function createLabwiredAdapter (opts) {
       // PIN_CNF) reports push-pull rather than acquiring an invented drive.
       const otyper = snap && typeof snap.otyper === 'number' ? snap.otyper : null;
       openDrain.set(name, otyper === null ? false : ((otyper >>> pins[name].pin) & 1) === 1);
+      // Classic AVR enables its input pull-up with PORTx=1 while DDRx=0.
+      // The LabWired AVR snapshot exposes those exact two latches. It has no
+      // pull-down mode, so a clear PORT bit remains a plain high-Z input.
+      if (snap && typeof snap.ddr === 'number' && typeof snap.port === 'number') {
+        const bit = 1 << pins[name].pin;
+        pulls.set(name, (snap.ddr & bit) === 0 && (snap.port & bit) !== 0 ? 'up' : null);
+        continue;
+      }
       const pupdr = snap && typeof snap.pupdr === 'number' ? snap.pupdr : null;
       if (pupdr === null) { pulls.set(name, null); continue; }
       const field = (pupdr >>> (2 * pins[name].pin)) & 3;
