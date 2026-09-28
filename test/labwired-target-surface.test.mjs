@@ -200,3 +200,47 @@ describe('labwired regs() is the core\'s own register list', () => {
         assert.equal('lr' in regs, false);
     });
 });
+
+describe('labwired fault halt and diagnostics', () => {
+    /** A sim that faults once `faultAfter` batches have run. */
+    const faultingSim = (faultAfter) => {
+        let batches = 0;
+        return {
+            get_pc: () => 0x0800_0200,
+            step_batch: () => { batches++; },
+            step_single: () => {},
+            fault_verdict: () => batches >= faultAfter
+                ? JSON.stringify({ summary: 'HardFault: UsageFault (UNDEFINSTR) at 0x08000200', pc: 0x0800_0200 })
+                : undefined,
+            fidelity_gaps: () => [{ kind: 'undecoded', addr: 0x0800_0300 }],
+        };
+    };
+    const build = sim => createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim } });
+
+    it('halts with reason `fault` and the engine\'s one-sentence summary, once', () => {
+        const t = build(faultingSim(2));
+        const halts = [];
+        t.onHalt(h => halts.push(h));
+        t.run();
+        assert.equal(t.runFor(1_000_000), 'running', 'no fault yet');
+        assert.equal(t.runFor(1_000_000), 'halted');
+        assert.equal(halts.length, 1);
+        assert.equal(halts[0].reason, 'fault');
+        assert.match(halts[0].summary, /UsageFault/);
+        t.run();
+        assert.equal(t.runFor(1_000_000), 'running', 'Continue past a fault it already reported');
+    });
+    it('reset re-arms the fault halt', () => {
+        const t = build(faultingSim(1));
+        t.run(); assert.equal(t.runFor(1_000_000), 'halted');
+        t.reset(); t.run();
+        assert.equal(t.runFor(1_000_000), 'halted', 'the same verdict, after a reset, is a new fault');
+    });
+    it('diagnostics(): fault verdict and fidelity gaps; empty on an engine without them', () => {
+        const d = build(faultingSim(0)).diagnostics();
+        assert.match(d.fault.summary, /HardFault/);
+        assert.deepEqual(d.fidelityGaps, [{ kind: 'undecoded', addr: 0x0800_0300 }]);
+        const bare = build({ get_pc: () => 0 }).diagnostics();
+        assert.deepEqual(bare, { fault: null, fidelityGaps: [] });
+    });
+});
