@@ -417,3 +417,60 @@ describe('labwired serial input is recorded and replayed at its instruction', ()
         assert.equal(t.replayToInputBoundary({ ticks: 'x', domain: 'labwired-instructions' }).code, 'invalid-input-boundary');
     });
 });
+
+describe('labwired step over / out / run-to (ARM)', () => {
+    /**
+     * A tiny Thumb machine: memory holds real encodings, the "CPU" follows a
+     * script of PCs and SP values, one entry per step_single.
+     *   0x100: BL 0x200 (f000 f87e)   0x104: next
+     *   0x200..: callee body, returns to 0x104
+     */
+    const machine = (trace) => {
+        const mem = new Map([[0x100, 0xf000], [0x102, 0xf87e], [0x104, 0xbf00], [0x106, 0x4780]]);
+        let i = 0;
+        const at = () => trace[Math.min(i, trace.length - 1)];
+        return {
+            get_pc: () => at().pc,
+            step_single: () => { i++; },
+            step_batch: () => {},
+            read_memory: (a, n) => { const hw = mem.get(a) ?? 0; return n === 2 ? [hw & 0xff, hw >> 8] : []; },
+            get_register_names: () => [...Array.from({ length: 13 }, (_, k) => `R${k}`), 'SP', 'LR', 'PC'],
+            get_register: k => (k === 13 ? at().sp : k === 14 ? at().lr ?? 0 : 0),
+        };
+    };
+    const on = sim => createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim } });
+
+    it('over a BL runs the whole call and stops at the return site', () => {
+        const t = on(machine([{ pc: 0x100, sp: 0x1000 }, { pc: 0x200, sp: 0x1000 }, { pc: 0x202, sp: 0xff8 },
+            { pc: 0x204, sp: 0xff8 }, { pc: 0x104, sp: 0x1000 }, { pc: 0x106, sp: 0x1000 }]));
+        assert.equal(t.step('over'), undefined);
+        assert.equal(t.runFor(1_000_000), 'halted');
+        assert.equal(t.regs().pc, 0x104);
+    });
+    it('over a non-call is one instruction', () => {
+        const t = on(machine([{ pc: 0x104, sp: 0x1000 }, { pc: 0x106, sp: 0x1000 }, { pc: 0x108, sp: 0x1000 }]));
+        t.step('over'); t.runFor(1_000_000);
+        assert.equal(t.regs().pc, 0x106);
+    });
+    it('over a 16-bit BLX Rm stops at +2', () => {
+        const t = on(machine([{ pc: 0x106, sp: 0x1000 }, { pc: 0x300, sp: 0x1000 }, { pc: 0x108, sp: 0x1000 }]));
+        t.step('over'); t.runFor(1_000_000);
+        assert.equal(t.regs().pc, 0x108);
+    });
+    it('out stops on the return to LR, or when SP rises above the entry value', () => {
+        const byLr = on(machine([{ pc: 0x200, sp: 0xff8, lr: 0x105 }, { pc: 0x202, sp: 0xff8 }, { pc: 0x104, sp: 0xff8 }, { pc: 0x106, sp: 0xff8 }]));
+        byLr.step('out'); byLr.runFor(1_000_000);
+        assert.equal(byLr.regs().pc, 0x104, 'LR 0x105 names Thumb 0x104');
+        const bySp = on(machine([{ pc: 0x200, sp: 0xff8, lr: 0x999 }, { pc: 0x202, sp: 0xff0 }, { pc: 0x210, sp: 0x1000 }, { pc: 0x212, sp: 0x1000 }]));
+        bySp.step('out'); bySp.runFor(1_000_000);
+        assert.equal(bySp.regs().pc, 0x210, 'a stacked return (SP rise) ends it even when LR was replaced');
+    });
+    it('capabilities declare over/out and a synchronous run-to on ARM only', () => {
+        const arm = createLabwiredDebugTarget({ adapter: stubAdapter() });
+        assert.deepEqual(arm.capabilities().steps, ['insn', 'over', 'out']);
+        assert.deepEqual(arm.capabilities().runTo[0].stopSides, ['before']);
+        const xt = createLabwiredDebugTarget({ adapter: { ...stubAdapter(), arch: 'xtensa-lx7' } });
+        assert.deepEqual(xt.capabilities().steps, ['insn']);
+        assert.match(xt.step('over').unsupported, /ARM \(Thumb\) chips only/);
+    });
+});

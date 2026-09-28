@@ -84,6 +84,42 @@ export function createLabwiredDebugTarget (opts) {
   const codeAddr = a => (thumb ? (a & ~1) : a) >>> 0;
   const pc = () => sim().get_pc() >>> 0;
 
+  /** A register by the engine's own name ('SP', 'LR'), or null. */
+  const regNamed = (name) => {
+    try {
+      const names = sim().get_register_names();
+      const i = Array.isArray(names) ? names.indexOf(name) : -1;
+      return i < 0 ? null : sim().get_register(i) >>> 0;
+    } catch (e) {
+      return null;
+    }
+  };
+  const halfword = (addr) => {
+    try {
+      const b = sim().read_memory(addr >>> 0, 2);
+      return b && b.length === 2 ? (b[0] | (b[1] << 8)) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  /**
+   * The return address if the instruction at `at` is a Thumb call, else null.
+   * BL (32-bit: 11110… then 11x1…) returns to at+4; BLX Rm (16-bit
+   * 0100 0111 1xxx x000) to at+2. Same decode rp2040js-debug uses, plus BLX.
+   */
+  const callReturn = (at) => {
+    const hw1 = halfword(at);
+    if (hw1 === null) return null;
+    if ((hw1 & 0xff87) === 0x4780) return at + 2;
+    if ((hw1 & 0xf800) === 0xf000) {
+      const hw2 = halfword(at + 2);
+      if (hw2 !== null && (hw2 & 0xd000) === 0xd000) return at + 4;
+    }
+    return null;
+  };
+  /** Step-over / step-out in flight: { kind, returnPc, sp0 }. */
+  let depthStep = null;
+
   /**
    * The engine's Cortex-M fault verdict (why and where the firmware faulted,
    * `summary` is one sentence), or null — also null on an engine or core that
@@ -160,6 +196,7 @@ export function createLabwiredDebugTarget (opts) {
   const halted = (reason, detail = {}) => {
     running = false;
     insnRemaining = null;
+    depthStep = null;
     const cause = reason === 'user' ? 'pause' : reason;
     let bp;
     if (cause === 'breakpoint') {
@@ -179,8 +216,13 @@ export function createLabwiredDebugTarget (opts) {
   const target = {
     capabilities () {
       return {
-        steps: ['insn'],
+        // over/out on ARM only: they read the Thumb call encodings and SP/LR.
+        steps: thumb ? ['insn', 'over', 'out'] : ['insn'],
         breakpoints: ['code'],
+        // Run-to is one temporary code breakpoint, installed synchronously —
+        // bw-debug's run-to coordinator owns it; nothing target-side to add.
+        runTo: [{ kind: 'address', space: 'code', addressMin: 0, addressMax: CODE_ADDRESS_MAX,
+          stopSides: ['before'], installation: 'sync' }],
         spaces: ['code', 'sram'],
         writable: [],
         sfrs: 'memory-mapped',
@@ -324,6 +366,32 @@ export function createLabwiredDebugTarget (opts) {
     halt () { if (running) halted('user'); },
 
     step (kind, count = 1) {
+      if ((kind === 'over' || kind === 'out') && thumb) {
+        const here = codeAddr(pc());
+        if (kind === 'over') {
+          const ret = callReturn(here);
+          // Not a call: step over IS step into — one instruction.
+          if (ret === null) { insnRemaining = 1; depthStep = null; running = true; return undefined; }
+          depthStep = { kind: 'over', returnPc: ret };
+        } else {
+          // LR catches a leaf's BX lr; an SP rise catches a stacked return
+          // after a nested BL replaced LR. Both heuristics, as on rp2040js: an
+          // early stop is preferable to never stopping.
+          const lr = regNamed('LR');
+          const sp = regNamed('SP');
+          if (lr === null || sp === null) {
+            return { unsupported: 'step out needs the SP and LR registers, which this core does not name' };
+          }
+          depthStep = { kind: 'out', returnPc: codeAddr(lr), sp0: sp };
+        }
+        insnRemaining = null;
+        running = true;
+        return undefined;
+      }
+      if (kind === 'over' || kind === 'out') {
+        return { unsupported: `step ${kind} is implemented for ARM (Thumb) chips only; ` +
+          'this core would need its own call/return decode' };
+      }
       if (kind !== 'insn') {
         return { unsupported: `labwired offers single-instruction stepping only; ` +
           `'${kind}' would need a symbol-driven yield set, which this target does not have.` };
@@ -447,6 +515,7 @@ export function createLabwiredDebugTarget (opts) {
       if (adapter.resetToProgram) adapter.resetToProgram();
       running = false;
       insnRemaining = null;
+      depthStep = null;
       faultSeen = false;
       // A reset rebuilds the engine: its snapshots (and so every checkpoint)
       // are gone, and the timeline restarts — a new epoch, not ticks falling.
@@ -463,7 +532,7 @@ export function createLabwiredDebugTarget (opts) {
       // Single-instruction stepping, and breakpoint checking, both need the PC
       // between instructions — so they share one slow path. Everything else
       // runs in batches, which is the only way the wasm boundary stays cheap.
-      const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording;
+      const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording || depthStep !== null;
 
       if (!mustWatch) {
         let left = budgetCycles;
@@ -483,6 +552,16 @@ export function createLabwiredDebugTarget (opts) {
           adapter.pump();
           halted('breakpoint', { addr: here });
           return 'halted';
+        }
+        if (depthStep) {
+          const done = here === depthStep.returnPc ||
+            (depthStep.kind === 'out' && (regNamed('SP') ?? 0) > depthStep.sp0);
+          if (done) {
+            depthStep = null;
+            adapter.pump();
+            halted('step');
+            return 'halted';
+          }
         }
         if (insnRemaining !== null && --insnRemaining <= 0) {
           adapter.pump();
