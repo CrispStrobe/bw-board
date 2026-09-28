@@ -1,0 +1,35 @@
+name: X86 platform throughput
+
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: 'Instructions per measured pass'
+        required: false
+        default: '1000000'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Record host and benchmark
+        env:
+          BENCH_STEPS: ${{ inputs.steps || '1000000' }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/x86-platforms
+          lscpu > artifacts/x86-platforms/lscpu.txt
+          node scripts/bench-x86-platforms.mjs --steps "$BENCH_STEPS" --passes 3 | tee artifacts/x86-platforms/result.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: x86-platforms-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/x86-platforms
