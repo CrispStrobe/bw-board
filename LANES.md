@@ -163,6 +163,17 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-28 CLAIM — root Codex: transient selective-shunt correction, isolated
+worktree `/mnt/volume1/code/wt/board-transient-selective-shunt`, branch
+`lane/transient-selective-shunt`, exact base `c77f3d324f45836a35a7b3836f587db21756b31b`.
+Owns this row, the transient invocation of the existing matrix-derived selective
+node-shunt mode in `src/mna.js`, and a focused transient test. The target is exact
+ADI row 5158: an ideal inductor driven by a 1 Hz SINE current source must not see
+the numerical blanket node shunt become a physical 1 ps time constant. Preserve
+the shunt on genuinely undetermined rows, junction GMIN, DC refinement, profiles,
+tolerances, work ceilings and source semantics. Excludes Board/CUI package pins,
+other solver continuation, importer/corpus/workflow/docs, and unrelated devices.
+
 2026-09-27 DONE candidate — root Codex: ADA4522-1 bounded op-amp model, isolated
 worktree `/tmp/wt-bwcx-ada4522-board`, branch `lane/ada4522-1-model`, exact base
 `0e236a527aa55b5c76d5345e14b88438ebc0ea13`. Owns only the physical
