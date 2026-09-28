@@ -169,7 +169,8 @@ jobs:
           # tiers and driving 0 must still sink on both.
           node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
                       test/labwired-roundtrip.test.mjs \
-                      test/pad-drive-parity.test.mjs 2>&1 | tee out.txt
+                      test/pad-drive-parity.test.mjs \
+                      test/labwired-firmware-only.test.mjs 2>&1 | tee out.txt
           # A suite that does not RUN is not a suite that passes, and these skip
           # themselves whenever LABWIRED_WASM or the ARM toolchain is missing —
           # which in this job would mean the wiring broke, not that there is

@@ -32,9 +32,11 @@
  *                          `skewNs` is 0n — no wall clock runs on without us.
  *
  * THUMB BIT. ARM PCs are byte addresses, but bit 0 of a code address carries
- * the Thumb execution-state flag and is never part of the address. It is masked
- * at the compare site, and an odd breakpoint address is refused rather than
- * quietly never matching.
+ * the Thumb execution-state flag and is never part of the address. On an ARM
+ * chip it is masked at the compare site, and an odd breakpoint address is
+ * refused rather than quietly never matching. ARM ONLY: Xtensa's 16/24-bit
+ * instructions sit at odd addresses, so there the PC is used as-is (the
+ * adapter reports the chip's `arch`).
  *
  * @module
  */
@@ -71,6 +73,12 @@ export function createLabwiredDebugTarget (opts) {
   const codeBps = new Set();
 
   const sim = () => adapter.sim;
+  // Bit 0 of an ARM code address is the Thumb flag, never part of it. Xtensa
+  // has 16- and 24-bit instructions, so an odd PC is an ordinary address there,
+  // and masking it would move every breakpoint and every reported PC. AVR and
+  // RISC-V PCs are even anyway; masking is ARM's rule, so it is ARM's alone.
+  const thumb = (adapter.arch ?? 'arm') === 'arm';
+  const codeAddr = a => (thumb ? (a & ~1) : a) >>> 0;
   const pc = () => sim().get_pc() >>> 0;
 
   const halted = (reason, detail) => {
@@ -123,7 +131,7 @@ export function createLabwiredDebugTarget (opts) {
       if (!isCodeAddress(bp.addr)) {
         return { unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe' };
       }
-      if ((bp.addr & 1) !== 0) {
+      if (thumb && (bp.addr & 1) !== 0) {
         return { unsupported: `Thumb code address ${bp.addr.toString(16)} is odd. Bit 0 is the ` +
           'execution-state flag, not part of the address — a breakpoint set on it could never match.' };
       }
@@ -182,7 +190,7 @@ export function createLabwiredDebugTarget (opts) {
      */
     disasm (addr) {
       if (detached) return '';
-      if (((addr >>> 0) & ~1) !== (pc() & ~1)) return '';
+      if (codeAddr(addr) !== codeAddr(pc())) return '';
       try {
         return sim().get_disassembly() || '';
       } catch (e) {
@@ -207,7 +215,7 @@ export function createLabwiredDebugTarget (opts) {
      * run-to compare), not the core's PC register slot.
      */
     regs () {
-      const out = { pc: pc() & ~1, cycles: Number(adapter.timeNs() * clockHzBig / NS_PER_S) };
+      const out = { pc: codeAddr(pc()), cycles: Number(adapter.timeNs() * clockHzBig / NS_PER_S) };
       let names;
       try { names = sim().get_register_names(); } catch (e) { return out; }
       if (!Array.isArray(names)) return out;
@@ -254,7 +262,7 @@ export function createLabwiredDebugTarget (opts) {
 
       for (let i = 0; i < budgetCycles; i++) {
         sim().step_single();
-        const here = pc() & ~1;
+        const here = codeAddr(pc());
         if (codeBps.has(here)) {
           adapter.pump();
           halted('breakpoint', { addr: here });
