@@ -1,0 +1,96 @@
+{
+  "schema": "bw.i80386-short-span-cost-model-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Full lean stock xv6 forktest with the current opt-in protected32 native dispatcher; no emulator code change or speed claim",
+  "source": {
+    "measuredCommit": "76061ae8834380223a23108ff1e716b0a9c4ccc9",
+    "publicationBaseCommit": "cea5451cee687316b5cd1b316983ba91f8f37d4c",
+    "nativeDispatcherSha256": "0dc3fd4c952e8c2806d22c11381973800073af7f0e39e09366136e41ac459401",
+    "nativeByteRunnerSha256": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+    "wasmInterfaceSha256": "d020fbebda1d58db6cf3dab7d3649f42c836bf2716c430e5226f94bb797d411d",
+    "probeSha256": "f35a71839a62f17d862923c78c9d1d230c27f41f1a1d3d4c3bde53470130da9c",
+    "profileSummarizer": "scripts/summarize-i80386-native-profile.py",
+    "profileSummarizerSha256": "ccf013c80781a32d8c8373a9e250482ec2e5576fb5c1a9cbad31cfee255b7fd5"
+  },
+  "host": {
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX), KVM, 4 vCPU",
+    "node": "v20.20.2",
+    "loadNote": "The shared VPS had substantial competing load (10.78 one-minute load average on four vCPUs shortly after measurement). Wall times differ materially; the two user-CPU times are diagnostic, not a paired A/B."
+  },
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "baselineCommand": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "profileCommand": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node --cpu-prof --cpu-prof-dir=/tmp/bw386-shortspan-20260928 scripts/probe-xv6-stock.mjs",
+    "summarizeCommand": "python3 scripts/summarize-i80386-native-profile.py /tmp/bw386-shortspan-20260928/CPU.*.cpuprofile",
+    "summarizeNote": "Use an empty profile directory so the glob expands to exactly one file.",
+    "completedGuestSteps": 24338279,
+    "nativeAttempts": 10381684,
+    "nativeBlockCalls": 4001848,
+    "nativeRetirements": 16428211,
+    "nativeInstructionsPerCall": 4.105,
+    "protected32JsFallbackRetirements": 6379836,
+    "firmwareSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "kernelImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f"
+  },
+  "measurements": {
+    "baselineUserCpuSeconds": 18.28,
+    "baselineElapsedSeconds": 23.45,
+    "profiledUserCpuSeconds": 18.78,
+    "profiledElapsedSeconds": 17.92,
+    "profileSha256": "ec24b085d13c7f480bf20b63fa98c04045cb85e466c38092c456ff41c899501f",
+    "profileSummarySha256": "1c0ee98442ccb94dec39c38a407a6f0fdd42c998ab35e6c87927653474ac7cab",
+    "durationMicroseconds": 17799208,
+    "totalProfileSelfSamples": 13336,
+    "categoryDefinitions": {
+      "dispatcherMixed": "all self samples in i80386-native-dispatch.js, chiefly run()",
+      "nativeRunnerMixed": "run() self samples in i80386-native-byte-block.js",
+      "directBlockValidation": "isI80386NativeByteBlockValid() self samples in i80386-native-byte-block.js",
+      "directWindowValidation": "all self samples in i80386-read-window.js and i80386-write-window.js, including prevalidation and validity checks",
+      "nativeDecode": "decode() and decodeI80386NativeByteBlock() self samples in i80386-native-byte-block.js",
+      "nativeRunnerOther": "remaining i80386-native-byte-block.js self samples",
+      "cpuStateCopy": "setCpuState() and copyStateToCpu() self samples in i80386-block-spike.js",
+      "setProgram": "setProgram() self samples in i80386-block-spike.js",
+      "wasmCallWrapper": "run() self samples in i80386-block-spike.js",
+      "wasmExecution": "all self samples in i80386-block-spike.wasm",
+      "ordinaryCpuCore": "all self samples in i80386.js, including ordinary fallback step and translation",
+      "boardAndDevices": "all self samples in i80386-at-machine.js, i8086-machine.js and named AT device modules",
+      "otherHostRuntime": "all remaining source positions, including probe, V8 GC and Node runtime"
+    },
+    "disjointSelfSamples": {
+      "dispatcherMixed": 1428,
+      "nativeRunnerMixed": 2158,
+      "directBlockValidation": 25,
+      "directWindowValidation": 218,
+      "nativeDecode": 136,
+      "nativeRunnerOther": 4,
+      "cpuStateCopy": 55,
+      "setProgram": 655,
+      "wasmCallWrapper": 108,
+      "wasmExecution": 376,
+      "ordinaryCpuCore": 5599,
+      "boardAndDevices": 1412,
+      "otherHostRuntime": 1162
+    },
+    "mixedDispatcherAndRunnerSamples": 3586,
+    "mixedDispatcherAndRunnerSharePercent": 26.89,
+    "directBlockAndWindowHelperSamples": 243,
+    "directBlockAndWindowHelperSharePercent": 1.822,
+    "cpuStateCopySharePercent": 0.412,
+    "setProgramSharePercent": 4.912,
+    "wasmCallWrapperPlusExecutionSharePercent": 3.629,
+    "ordinaryCpuCorePlusBoardSharePercent": 52.572
+  },
+  "parity": {
+    "baselineReportSha256": "ee8cfbdd0c04a2bdd719446f642781e3ef5f7babbe9a0cf1f72d20693857bf78",
+    "profiledReportSha256": "ee8cfbdd0c04a2bdd719446f642781e3ef5f7babbe9a0cf1f72d20693857bf78",
+    "comparison": "Byte-for-byte identical complete JSON reports, including guest serial ending fork test OK, CPU/device state, native statistics and final physical RAM hash.",
+    "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9"
+  },
+  "interpretation": "V8 CPU-profile self samples provide source-position attribution, not exclusive phase timing. The 1,428 dispatcher and 2,158 native-runner samples are a mixed attribution envelope, not removable overhead: these frames include inlined cache lookup, block/code/window validation, event guards, CPU state transfers, and fallback decisions. Direct block-validation (25), window-helper (218), and state-copy (55) bins are lower bounds for their functions because V8 inlines work into callers; the window-helper bin includes prevalidation as well as validity checks. Ordinary CPU and board bins are attributed self samples from fallback execution, not a complete inclusive fallback cost. The raw profile is intentionally excluded from the PR; its hash and the media-free summarizer make the analysis reproducible.",
+  "prototypeGate": {
+    "candidate": "A bounded cheap-entry fast path for already decoded short protected32 native blocks, preserving code/window validity, event and fault boundaries, and all guest state. No opcode or grammar expansion in this milestone.",
+    "planningCeiling": "The 26.89% mixed-frame share is an attribution envelope, not entirely removable overhead. A prototype would need to eliminate at least 25% of those samples without shifting equivalent cost into other frames to plausibly clear a 5% end-to-end target. This is an untested hypothesis, not observed gain.",
+    "retention": "Predeclare at least 5% lower mean unprofiled user-CPU time over three serial paired baseline/candidate full xv6 runs, with all three pair directions favorable; byte-identical guest report and RAM hash for every run; focused event, fault, code-write, and page-window regression tests. If the gate fails, discard executable optimization and publish a negative receipt."
+  }
+}
