@@ -38,7 +38,7 @@ const budget=mutation==='budget'?10:200;
 const actualTrail=[];
 for(let step=0;step<budget&&actual.length<7;step++){actualTrail.push(`${cpu.cs.toString(16)}:${cpu.eip.toString(16)}`);cpu.step();}
 if(mutation==='result')actual=actual.slice(0,-1)+'X';
-const expected='BHVK001',differences=[];
+const expected='BHVK003',differences=[];
 if(reference!==expected)differences.push({field:'reference.output',expected,actual:reference});
 if(actual!==expected)differences.push({field:'actual.output',expected,actual});
 execFileSync('git',['diff','--quiet','HEAD','--',...paths],{cwd:repo});

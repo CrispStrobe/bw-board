@@ -62,13 +62,13 @@ try {
     const timer=setTimeout(()=>child.kill('SIGTERM'),5000);
     child.stdout.on('data',chunk=>{
       output+=chunk.toString('latin1');
-      if(!sawCheckpoint&&output.includes('BHVK001')){sawCheckpoint=true;child.kill('SIGTERM');}
+      if(!sawCheckpoint&&output.includes('BHVK003')){sawCheckpoint=true;child.kill('SIGTERM');}
     });
     child.stderr.on('data',chunk=>{error+=chunk.toString('latin1');});
     child.once('error',err=>{clearTimeout(timer);reject(err);});
     child.once('close',(code,signal)=>{clearTimeout(timer);resolveRun({output,error,code,signal,sawCheckpoint});});
   });
-  const reference=run.sawCheckpoint?'BHVK001':null;
+  const reference=run.sawCheckpoint?'BHVK003':null;
   const memory=new Uint8Array(0x10000);memory.set(binary,0x7c00);
   let actual='';
   const cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>memory[a]=v,
@@ -82,8 +82,8 @@ try {
   if(mutation==='checkpoint')actual=actual.slice(0,3)+'X'+actual.slice(4);
   const bochsLog=readFileSync(log,'utf8');
   const differences=[];
-  if(reference!=='BHVK001')differences.push({field:'reference.output',expected:'BHVK001',actual:reference});
-  if(actual!=='BHVK001')differences.push({field:'actual.output',expected:'BHVK001',actual});
+  if(reference!=='BHVK003')differences.push({field:'reference.output',expected:'BHVK003',actual:reference});
+  if(actual!=='BHVK003')differences.push({field:'actual.output',expected:'BHVK003',actual});
   if(memory[0x500]!==0x4b)differences.push({field:'actual.handlerMemory',expected:0x4b,actual:memory[0x500]});
   if(!bochsLog.includes('Booting from 0000:7c00'))
     differences.push({field:'reference.boot',expected:'Booting from 0000:7c00',actual:null});
@@ -95,11 +95,11 @@ try {
     bochsRevision,bochsSha256,bochsConfigSha256:hash(configHeader),
     biosSha256:hash(readFileSync(bios)),vgaBiosSha256:hash(readFileSync(vgaBios)),
     imageSha256:hash(binary),floppySha256:hash(floppy),
-    execution:{reference:'Bochs BIOS boots owned floppy; compare E9 BHV plus handler-memory, resumed CS and VM flag checkpoint',
+    execution:{reference:'Bochs BIOS boots owned floppy; compare E9 BHV plus handler-memory, resumed CS and IOPL checkpoint',
       actual:'same image at 0x7c00; starts owned setup at 0x7e00 after disk load',
-      checkpoint:{handlerMemory:'K at physical 0x0500',resumedCS:'00',vmFlag:'1'},
+      checkpoint:{handlerMemory:'K at physical 0x0500',resumedCS:'00',iopl:'3'},
       postCheckpoint:'The fixture exits via QEMU port F4; Bochs can later reset from its VM86 idle loop. Stop at the complete seven-byte checkpoint.'},
-    mutation,status:differences.length?'fail':'pass',expected:'BHVK001',reference,actual,differences,
+    mutation,status:differences.length?'fail':'pass',expected:'BHVK003',reference,actual,differences,
     bochsExit:{code:run.code,signal:run.signal},
     bochsLogTail:bochsLog.split('\n').filter(line=>line.includes('BIOS')||line.includes('CPU')).slice(-12)};
   console.log(JSON.stringify(report,null,2));

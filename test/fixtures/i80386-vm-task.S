@@ -58,10 +58,10 @@ vmcode:
   movb %ah,%al
   addb $'0',%al
   outb %al,$0xe9
-  pushfl
-  popl %eax
-  shrl $17,%eax
-  andb $1,%al
+  pushfw
+  popw %ax
+  shrw $12,%ax
+  andb $3,%al
   addb $'0',%al
   outb %al,$0xe9
   outb %al,$0xf4
