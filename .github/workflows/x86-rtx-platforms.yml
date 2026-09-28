@@ -1,6 +1,8 @@
 name: X86 platform throughput
 
 on:
+  push:
+    branches: ['lane/x86-rtx-platform']
   workflow_dispatch:
     inputs:
       steps:
