@@ -25,19 +25,35 @@ export function parseDosboxConfig(text) {
   for (const command of autoexec) {
     let m = command.match(/^mount\s+([a-z]):?\s+(.+?)(?:\s+-t\s+(\S+))?$/i);
     if (m) { mounts.push({ drive: m[1].toLowerCase(), source: m[2].replace(/^"|"$/g, ''), type: m[3]?.toLowerCase() || 'dir' }); continue; }
-    m = command.match(/^imgmount\s+([a-z]):?\s+("[^"]*"|'[^']*'|\S+)(?:\s+-t\s+(\S+))?/i);
-    if (m) mounts.push({ drive: m[1].toLowerCase(), source: m[2].replace(/^["']|["']$/g, ''), type: m[3]?.toLowerCase() || 'hdd' });
+    m = command.match(/^imgmount\s+(2|[a-z]):?\s+("[^"]*"|'[^']*'|\S+)(?:\s+-t\s+(\S+))?/i);
+    if (m) mounts.push({ drive: m[1] === '2' ? 'c' : m[1].toLowerCase(), source: m[2].replace(/^["']|["']$/g, ''), type: m[3]?.toLowerCase() || 'hdd' });
     m = command.match(/^boot\s+(.+)$/i); if (m) boots.push(m[1].trim().replace(/^"|"$/g, ''));
   }
   return { sections, mounts, boots, autoexec };
 }
 export function resolveDosboxMedia(config, files = {}) {
   const result = { images: [], missing: [], refused: [] };
+  const driveCounts = new Map();
+  for (const mount of config?.mounts || [])
+    driveCounts.set(mount.drive, (driveCounts.get(mount.drive) || 0) + 1);
   for (const mount of config?.mounts || []) {
+    if (driveCounts.get(mount.drive) > 1) {
+      result.refused.push({ source: mount.source, reason: `multiple DOSBox mounts for drive ${mount.drive}` });
+      continue;
+    }
     if (mount.type === 'dir') { result.refused.push({ source: mount.source, reason: 'host directory mounts are not browser media' }); continue; }
     const key = mount.source.split(/[\\/]/).pop();
     if (!files[key]) result.missing.push(key); else result.images.push({ drive: mount.drive, type: mount.type, name: key, bytes: files[key] });
   }
-  for (const boot of config?.boots || []) { const key = boot.split(/[\\/]/).pop(); if (!files[key] && !result.missing.includes(key)) result.missing.push(key); }
+  for (const boot of config?.boots || []) {
+    const drive = boot.match(/^-l\s+([a-z]):?$/i)?.[1]?.toLowerCase();
+    if (drive) {
+      if (!driveCounts.has(drive))
+        result.refused.push({ source: boot, reason: `boot drive ${drive} has no image mount` });
+      continue;
+    }
+    const key = boot.split(/[\\/]/).pop();
+    if (!files[key] && !result.missing.includes(key)) result.missing.push(key);
+  }
   return result;
 }

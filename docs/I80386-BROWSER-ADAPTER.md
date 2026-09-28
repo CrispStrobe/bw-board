@@ -15,4 +15,6 @@ architectural state is covered.
 DOSBox configs are handled declaratively by `parseDosboxConfig()` and
 `resolveDosboxMedia()`. `mount` of a host directory is reported as a refusal;
 `imgmount` and `boot` names resolve only against files the host supplied. The
-browser never executes `autoexec` commands.
+browser never executes `autoexec` commands. Primary HDD `imgmount 2` is
+resolved as drive C; `boot -l c` selects that drive rather than naming another
+image. Conflicting mounts for the same drive are refused.

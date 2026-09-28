@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDebugTarget, getTargetKinds } from '../src/debug-target-factory.js';
 import { applyMedia } from '../src/machine-media.js';
+import { resolveDosboxMedia } from '../src/dosbox-config.js';
 import { PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 80386 is a first-class browser target with VGA/key surfaces', async () => {
@@ -23,6 +24,21 @@ test('DOSBox disk media can attach lazily to the experimental target', async () 
   assert.deepEqual(result.applied, ['hdd']);
   assert.equal(adapter.machine.ata.mediaBytes().length, image.length);
   assert.equal(target.capabilities().keys.includes('scancode'), true);
+});
+
+test('DOSBox primary HDD config resolves through browser adapter media', async () => {
+  const { adapter } = await createDebugTarget('i80386', {});
+  const image = new Uint8Array(4 * 17 * 512);
+  const config = new TextEncoder().encode('[autoexec]\nimgmount 2 "disk/owned.img" -t hdd\nboot -l c');
+  const configured = applyMedia({ adapter, machine: adapter.machine, kind: 'i80386' }, { 'dosbox-conf': config });
+  assert.deepEqual(configured.applied, ['dosbox-conf']);
+  const resolved = resolveDosboxMedia(adapter.dosboxConfig, { 'owned.img': image });
+  assert.deepEqual(resolved.missing, []);
+  assert.deepEqual(resolved.refused, []);
+  assert.equal(resolved.images[0].bytes, image);
+  const attached = applyMedia({ adapter, machine: adapter.machine, kind: 'i80386' }, { hdd: resolved.images[0].bytes });
+  assert.deepEqual(attached.applied, ['hdd']);
+  assert.equal(adapter.machine.ata.mediaBytes().length, image.length);
 });
 
 test('native blocks are opt-in and the GUI run loop reaches the dispatcher', async () => {
