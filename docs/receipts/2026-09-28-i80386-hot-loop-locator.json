@@ -1,0 +1,627 @@
+{
+  "schema": "bw.i80386-hot-loop-locator-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Execution-neutral backward-Jcc traversal locator on pinned ordinary Windows 3.11 60M and lean stock xv6 forktest",
+  "source": {
+    "baseCommit": "3862e54f732e617ddeaa63f30da74f60127e37c7",
+    "measuredCommit": "98e9cbb738a986eb02d3d9eae59bb6a5390003de",
+    "rebasedSourceCommit": "9f5df5f903b9fc041d1e7a071610115a3ce523ce",
+    "rebaseNote": "The measured source commit preceded an unrelated browser-media master change; the locator, AT CLI, and xv6 probe hashes are identical after rebase. The full workloads were not rerun solely for commit metadata.",
+    "locatorSha256": "5bdf2dfdd99b91e032f7bcde6d72f58e1faa81eb61811098f4bb3329aa59f7ca",
+    "atCliSha256": "3923895ca14256d838bd65331126b1df06ed37d6bfed2797a32ec68f657957bb",
+    "xv6ProbeSha256": "2fff2a97c3d40554f3a3c53d4ed68552924403b9be739173259acd049dc8fb55",
+    "contract": "docs/I80386-HOT-LOOP-LOCATOR.md"
+  },
+  "validation": {
+    "focusedTests": "7/7 hot-loop tests; 26/26 combined broad-census and locator tests; syntax and diff checks passed",
+    "windowsNormalizedGuestSha256": "0dbb2b2c01b87a109fdaea6b05631941ba589aab1b96da4185466db95701ded6",
+    "xv6NormalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "normalization": "Windows: jq -S del(.executionRevision,.sourceSha256,.hotLoopLocator); xv6: jq -S del(.hotLoopLocator,.hotLoopLocatorSourceSha256,.rom.path,.image.path,.slaveImage.path). Both equal prior normalized guest baselines.",
+    "partitions": "For each mode, entry attempts = completed steps + no-retirement + aborted; histogram counts and weighted steps equal completed traversals and summed traversal steps; >=8 and >=16 tails equal corresponding exact-histogram sums.",
+    "windowsRepeat": {
+      "rawReportSha256": "b2bd10a937747123e07a2ba0bc0c464e34135f25bca12ce80443c353d33ddef5",
+      "timeSha256": "628aebe40e42355044a4199dc5cc6bc127caf1a04251099d4cf9f69360bd77da",
+      "exactRawReportEquality": true,
+      "protected16StrongestRetainedAtLeast8PrivateKeySha256": "cc0be1a2b16c53eb456bf521514cef1eefc6285936778e94f4f939e6e32cda46"
+    }
+  },
+  "workloads": {
+    "windows60m": {
+      "rawReportSha256": "b2bd10a937747123e07a2ba0bc0c464e34135f25bca12ce80443c353d33ddef5",
+      "timeSha256": "a211697202d13946ab8d87d8debe34129ad37e1711ffadfcc0beeae46a55969a",
+      "candidateEvictions": 6052,
+      "activeOverflows": 0,
+      "modes": {
+        "real": {
+          "entryAttempts": 13438404,
+          "completedSteps": 13435142,
+          "noRetirement": 3262,
+          "abortedCalls": 0,
+          "redirectedSteps": 277,
+          "backwardJccTaken": 114052,
+          "backwardJccFallthrough": 65467,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 146,
+          "completedTraversals": 93998,
+          "stepsInTraversals": 1868630,
+          "traversalsAtLeast8": 65312,
+          "stepsInTraversalsAtLeast8": 1736047,
+          "traversalsAtLeast16": 34115,
+          "stepsInTraversalsAtLeast16": 1400265,
+          "breaks": {
+            "traversal-budget": 136,
+            "chip-event-due": 1243,
+            "linear-page-change": 16913,
+            "post-step-identity-change": 1547,
+            "no-retirement": 55,
+            "interrupt": 14
+          },
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 287,
+              "summedSteps": 574
+            },
+            "3": {
+              "traversals": 92,
+              "summedSteps": 276
+            },
+            "4-7": {
+              "traversals": 28307,
+              "summedSteps": 131733
+            },
+            "8-15": {
+              "traversals": 31197,
+              "summedSteps": 335782
+            },
+            "16-31": {
+              "traversals": 2248,
+              "summedSteps": 45098
+            },
+            "32-63": {
+              "traversals": 30155,
+              "summedSteps": 1179552
+            },
+            "64-127": {
+              "traversals": 1301,
+              "summedSteps": 107335
+            },
+            "128-255": {
+              "traversals": 411,
+              "summedSteps": 68280
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.129217,
+          "retainedTopCandidateCount": 64,
+          "strongestRetainedAtLeast8": {
+            "traversals": 18304,
+            "steps": 695552,
+            "maxSteps": 38,
+            "outcomes": {
+              "taken": 18304
+            }
+          }
+        },
+        "protected16": {
+          "entryAttempts": 10043132,
+          "completedSteps": 10036060,
+          "noRetirement": 7072,
+          "abortedCalls": 0,
+          "redirectedSteps": 228,
+          "backwardJccTaken": 678181,
+          "backwardJccFallthrough": 66241,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 0,
+          "completedTraversals": 651789,
+          "stepsInTraversals": 4279986,
+          "traversalsAtLeast8": 158050,
+          "stepsInTraversalsAtLeast8": 3089886,
+          "traversalsAtLeast16": 66502,
+          "stepsInTraversalsAtLeast16": 2157156,
+          "breaks": {
+            "post-step-identity-change": 7273,
+            "linear-page-change": 11031,
+            "chip-event-due": 5614,
+            "traversal-budget": 2358,
+            "interrupt": 85,
+            "observed-code-mutation": 31
+          },
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 438658,
+              "summedSteps": 877316
+            },
+            "3": {
+              "traversals": 931,
+              "summedSteps": 2793
+            },
+            "4-7": {
+              "traversals": 54150,
+              "summedSteps": 309991
+            },
+            "8-15": {
+              "traversals": 91548,
+              "summedSteps": 932730
+            },
+            "16-31": {
+              "traversals": 56640,
+              "summedSteps": 1422443
+            },
+            "32-63": {
+              "traversals": 6368,
+              "summedSteps": 285862
+            },
+            "64-127": {
+              "traversals": 2609,
+              "summedSteps": 275723
+            },
+            "128-255": {
+              "traversals": 882,
+              "summedSteps": 172360
+            },
+            "256": {
+              "traversals": 3,
+              "summedSteps": 768
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.307878,
+          "retainedTopCandidateCount": 64,
+          "strongestRetainedAtLeast8": {
+            "traversals": 6580,
+            "steps": 52640,
+            "maxSteps": 8,
+            "outcomes": {
+              "taken": 6580
+            }
+          }
+        },
+        "vm86": {
+          "entryAttempts": 21240957,
+          "completedSteps": 21222506,
+          "noRetirement": 18451,
+          "abortedCalls": 0,
+          "redirectedSteps": 400,
+          "backwardJccTaken": 98099,
+          "backwardJccFallthrough": 53507,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 0,
+          "completedTraversals": 82116,
+          "stepsInTraversals": 1022546,
+          "traversalsAtLeast8": 56681,
+          "stepsInTraversalsAtLeast8": 895804,
+          "traversalsAtLeast16": 21372,
+          "stepsInTraversalsAtLeast16": 501428,
+          "breaks": {
+            "linear-page-change": 14278,
+            "chip-event-due": 1406,
+            "traversal-budget": 209,
+            "interrupt": 18,
+            "instruction-page-crossing": 1,
+            "post-step-identity-change": 71
+          },
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "3": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "4-7": {
+              "traversals": 25435,
+              "summedSteps": 126742
+            },
+            "8-15": {
+              "traversals": 35309,
+              "summedSteps": 394376
+            },
+            "16-31": {
+              "traversals": 18293,
+              "summedSteps": 372828
+            },
+            "32-63": {
+              "traversals": 2835,
+              "summedSteps": 111325
+            },
+            "64-127": {
+              "traversals": 244,
+              "summedSteps": 17275
+            },
+            "128-255": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.04221,
+          "retainedTopCandidateCount": 64,
+          "strongestRetainedAtLeast8": {
+            "traversals": 245,
+            "steps": 2778,
+            "maxSteps": 48,
+            "outcomes": {
+              "taken": 245
+            }
+          }
+        },
+        "protected32": {
+          "entryAttempts": 15277507,
+          "completedSteps": 15277507,
+          "noRetirement": 0,
+          "abortedCalls": 0,
+          "redirectedSteps": 225,
+          "backwardJccTaken": 248506,
+          "backwardJccFallthrough": 133488,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 9571,
+          "completedTraversals": 149912,
+          "stepsInTraversals": 1287480,
+          "traversalsAtLeast8": 11701,
+          "stepsInTraversalsAtLeast8": 589378,
+          "traversalsAtLeast16": 10717,
+          "stepsInTraversalsAtLeast16": 579679,
+          "breaks": {
+            "traversal-budget": 357,
+            "chip-event-due": 2303,
+            "linear-page-change": 81878,
+            "post-step-identity-change": 4464,
+            "interrupt": 21
+          },
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 300,
+              "summedSteps": 600
+            },
+            "3": {
+              "traversals": 64,
+              "summedSteps": 192
+            },
+            "4-7": {
+              "traversals": 137847,
+              "summedSteps": 697310
+            },
+            "8-15": {
+              "traversals": 984,
+              "summedSteps": 9699
+            },
+            "16-31": {
+              "traversals": 934,
+              "summedSteps": 16390
+            },
+            "32-63": {
+              "traversals": 7115,
+              "summedSteps": 259523
+            },
+            "64-127": {
+              "traversals": 1757,
+              "summedSteps": 170286
+            },
+            "128-255": {
+              "traversals": 911,
+              "summedSteps": 133480
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.038578,
+          "retainedTopCandidateCount": 64,
+          "strongestRetainedAtLeast8": null
+        }
+      }
+    },
+    "xv6Forktest": {
+      "rawReportSha256": "01f92950c09e348ab7cd1e753ff9e0557de60a8191201eb1aaf5fc69b1235270",
+      "timeSha256": "d766b14af79231c09041b8bcafdaa0ccb3bf13305f0e11d8bd64126b5bf96b10",
+      "candidateEvictions": 0,
+      "activeOverflows": 0,
+      "modes": {
+        "real": {
+          "entryAttempts": 1530231,
+          "completedSteps": 1527003,
+          "noRetirement": 3228,
+          "abortedCalls": 0,
+          "redirectedSteps": 59,
+          "backwardJccTaken": 31215,
+          "backwardJccFallthrough": 3019,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 125,
+          "completedTraversals": 28978,
+          "stepsInTraversals": 1070335,
+          "traversalsAtLeast8": 28976,
+          "stepsInTraversalsAtLeast8": 1070322,
+          "traversalsAtLeast16": 27182,
+          "stepsInTraversalsAtLeast16": 1045179,
+          "breaks": {
+            "traversal-budget": 8,
+            "chip-event-due": 191,
+            "linear-page-change": 1498,
+            "post-step-identity-change": 360,
+            "no-retirement": 55
+          },
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "3": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "4-7": {
+              "traversals": 2,
+              "summedSteps": 13
+            },
+            "8-15": {
+              "traversals": 1794,
+              "summedSteps": 25143
+            },
+            "16-31": {
+              "traversals": 39,
+              "summedSteps": 624
+            },
+            "32-63": {
+              "traversals": 26887,
+              "summedSteps": 1024951
+            },
+            "64-127": {
+              "traversals": 244,
+              "summedSteps": 17632
+            },
+            "128-255": {
+              "traversals": 12,
+              "summedSteps": 1972
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.70093,
+          "retainedTopCandidateCount": 64,
+          "strongestRetainedAtLeast8": {
+            "traversals": 18304,
+            "steps": 695552,
+            "maxSteps": 38,
+            "outcomes": {
+              "taken": 18304
+            }
+          }
+        },
+        "protected16": {
+          "entryAttempts": 1,
+          "completedSteps": 1,
+          "noRetirement": 0,
+          "abortedCalls": 0,
+          "redirectedSteps": 0,
+          "backwardJccTaken": 0,
+          "backwardJccFallthrough": 0,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 0,
+          "completedTraversals": 0,
+          "stepsInTraversals": 0,
+          "traversalsAtLeast8": 0,
+          "stepsInTraversalsAtLeast8": 0,
+          "traversalsAtLeast16": 0,
+          "stepsInTraversalsAtLeast16": 0,
+          "breaks": {},
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "3": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "4-7": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "8-15": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "16-31": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "32-63": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "64-127": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "128-255": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.0,
+          "retainedTopCandidateCount": 0,
+          "strongestRetainedAtLeast8": null
+        },
+        "vm86": {
+          "entryAttempts": 0,
+          "completedSteps": 0,
+          "noRetirement": 0,
+          "abortedCalls": 0,
+          "redirectedSteps": 0,
+          "backwardJccTaken": 0,
+          "backwardJccFallthrough": 0,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 0,
+          "completedTraversals": 0,
+          "stepsInTraversals": 0,
+          "traversalsAtLeast8": 0,
+          "stepsInTraversalsAtLeast8": 0,
+          "traversalsAtLeast16": 0,
+          "stepsInTraversalsAtLeast16": 0,
+          "breaks": {},
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "3": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "4-7": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "8-15": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "16-31": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "32-63": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "64-127": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "128-255": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": null,
+          "retainedTopCandidateCount": 0,
+          "strongestRetainedAtLeast8": null
+        },
+        "protected32": {
+          "entryAttempts": 22808047,
+          "completedSteps": 22808047,
+          "noRetirement": 0,
+          "abortedCalls": 0,
+          "redirectedSteps": 55,
+          "backwardJccTaken": 1335685,
+          "backwardJccFallthrough": 218999,
+          "backwardJccPageCrossing": 0,
+          "backwardJccTargetCrossing": 24,
+          "completedTraversals": 1309215,
+          "stepsInTraversals": 15744650,
+          "traversalsAtLeast8": 581071,
+          "stepsInTraversalsAtLeast8": 13307611,
+          "traversalsAtLeast16": 524356,
+          "stepsInTraversalsAtLeast16": 12772732,
+          "breaks": {
+            "chip-event-due": 17473,
+            "traversal-budget": 387,
+            "linear-page-change": 8268,
+            "post-step-identity-change": 310,
+            "interrupt": 8
+          },
+          "lengthHistogramBins": {
+            "1": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "2": {
+              "traversals": 0,
+              "summedSteps": 0
+            },
+            "3": {
+              "traversals": 629050,
+              "summedSteps": 1887150
+            },
+            "4-7": {
+              "traversals": 99094,
+              "summedSteps": 549889
+            },
+            "8-15": {
+              "traversals": 56715,
+              "summedSteps": 534879
+            },
+            "16-31": {
+              "traversals": 524266,
+              "summedSteps": 12756937
+            },
+            "32-63": {
+              "traversals": 3,
+              "summedSteps": 149
+            },
+            "64-127": {
+              "traversals": 7,
+              "summedSteps": 766
+            },
+            "128-255": {
+              "traversals": 80,
+              "summedSteps": 14880
+            },
+            "256": {
+              "traversals": 0,
+              "summedSteps": 0
+            }
+          },
+          "atLeast8SummedStepsOverCompletedSteps": 0.583461,
+          "retainedTopCandidateCount": 64,
+          "strongestRetainedAtLeast8": {
+            "traversals": 8961,
+            "steps": 224025,
+            "maxSteps": 25,
+            "outcomes": {
+              "taken": 8954,
+              "fallthrough": 7
+            }
+          }
+        }
+      }
+    }
+  },
+  "decision": "Both workloads contain a repeated >=8-step candidate: Windows protected16 strongest retained long candidate 6,580 traversals / 52,640 summed steps (0.5245% of protected16 completed steps; 0.0878% of all 60M step calls); xv6 protected32 8,961 traversals / 224,025 summed steps. They are bounded proof targets, not a plausible 10x route alone. Windows candidate table evicted 6,052 records; retained candidate counts are lower bounds, while per-mode aggregate traversal counts are exact.",
+  "limits": "Traversal step sums can overlap for nested branches and are not disjoint coverage. Repeated branch recurrence does not prove invariant body bytes, data/page/fault safety, or native speed. Instrumented timings are not performance A/B. Raw guest addresses and branch bytes are private."
+}
