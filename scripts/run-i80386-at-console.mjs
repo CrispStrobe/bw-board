@@ -88,8 +88,12 @@ const broadBlockCensus=process.env.AT_BROAD_BLOCK_CENSUS==='1'?
     selectedFormsPotential:process.env.AT_BROAD_BLOCK_SELECTED_FORMS==='1'}):null;
 const code16EventObserver=process.env.AT_CODE16_EVENT_OBSERVER==='1'?
   createI80386Code16EventRunObserver():null;
-const crossModeTraceObserver=process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'?
-  createI80386CrossModePotentialTraceObserver():null;
+const formResolvedAdmission=process.env.AT_FORM_RESOLVED_ADMISSION==='1';
+if(formResolvedAdmission&&process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')
+  throw new Error('select one cross-mode observer variant');
+const crossModeTraceObserver=(formResolvedAdmission||
+  process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')?
+  createI80386CrossModePotentialTraceObserver({formResolvedAdmission}):null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
@@ -182,6 +186,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-broad-block-census.js',
   '../src/experimental/i80386-code16-event-run-observer.js',
   '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
+  '../src/experimental/i80386-form-resolved-admission.js',
   '../src/experimental/i80386-hot-loop-locator.js',
   '../src/experimental/i80386-ram-bridge.js',
   '../src/experimental/i80386-block-spike.js',
@@ -193,6 +198,8 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   './lib/i80386-at-dosbox-config.mjs','./lib/i80386-at-terminal.mjs',
   './lib/i80386-windows-vga-frame.mjs','./lib/i80386-windows-vga-480-frame.mjs',
   './lib/i80386-doom-vga-frame.mjs',
+  './summarize-i80386-cross-mode-potential-trace.mjs',
+  './summarize-i80386-form-resolved-admission.mjs',
   './run-i80386-at-console.mjs'];
 const sourceSha256=Object.fromEntries(sourcePaths.map(path=>
   [path,sha(fs.readFileSync(new URL(path,import.meta.url)))]));
