@@ -192,6 +192,15 @@ export function createLabwiredAdapter (opts) {
     // Named images for the chip's `image_env` ROM regions (the RP2040's
     // `bootrom`): the browser has no filesystem to read a ROM dump from.
     const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, opts.blobs);
+    // An nRF51 S110 application (micro:bit V1 / Calliope mini) needs the
+    // emulated SoftDevice attached before it runs -- on every build, so a
+    // reset (which rebuilds) keeps it.
+    if (opts.softdeviceS110) {
+      if (typeof instance.attach_softdevice_s110 !== 'function') {
+        throw new Error('labwired-adapter: this labwired-wasm build cannot emulate the S110 SoftDevice');
+      }
+      instance.attach_softdevice_s110(String(opts.softdeviceS110));
+    }
     // LabWired knows which buses are fully event-scheduled and which still
     // require a peripheral service pass after every instruction.  Use that
     // answer instead of leaving every chip on the exact-but-slow default.

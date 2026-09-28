@@ -38,6 +38,7 @@ import { createAvr8jsAdapter } from './avr8js-adapter.js';
 import { createLabwiredAdapter } from './labwired-adapter.js';
 import { createLabwiredDebugTarget } from './labwired-debug.js';
 import { buildBootrom } from './rp2040-bootrom.js';
+import { s110AppRegionElf } from './hex-app-region.js';
 import { labwiredAdapterOptionsFor } from './labwired-bridge.js';
 import { parseIntelHex } from './intel-hex.js';
 // Re-exported so every existing consumer keeps working; see target-kinds.js
@@ -173,14 +174,24 @@ async function createLabwiredTarget(opts) {
     // from disk; this repo's clean-room ROM (rp2040-bootrom.js, from the
     // datasheet) is what every pico-sdk `rom_func_lookup` needs to find there.
     const blobs = chip.name === 'rp2040' ? { bootrom: buildBootrom() } : undefined;
+    // An S110 board (micro:bit V1 / Calliope): the image is usually a .hex
+    // carrying the Nordic SoftDevice -- keep only the APPLICATION window, and
+    // let the engine emulate the SoftDevice (never a Nordic byte loaded).
+    const s110 = labBoard && labBoard.softdevice === 's110';
+    let image = firmware;
+    if (s110 && !(image instanceof Uint8Array && image[0] === 0x7f)) {
+      const text = typeof image === 'string' ? image : new TextDecoder().decode(image);
+      image = s110AppRegionElf(text).elf;
+    }
     const adapter = createLabwiredAdapter({
-      wasm, chipYaml: chip.chipYaml, firmware, firmwareOnly: true, blobs,
+      wasm, chipYaml: chip.chipYaml, firmware: image, firmwareOnly: true, blobs,
+      softdeviceS110: s110 ? (name ?? labBoard.name) : undefined,
       clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
       systemYaml: labBoard ? labBoard.systemYaml : undefined,
     });
     // The user's own ELF carries its symbol table (a UF2 does not): hand it to
     // the target so a PC reads as a function name.
-    const target = createLabwiredDebugTarget({ adapter, elf: firmware,
+    const target = createLabwiredDebugTarget({ adapter, elf: image,
       displays: labBoard ? labBoard.displays : undefined });
     return { target, adapter, refusals: [] };
   }
