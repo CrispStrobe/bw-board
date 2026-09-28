@@ -56,6 +56,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
       read: address => this._read386(address),
       read32: address => this._read386Ram32(address),
       fetch: address => this._read386(address),
+      fetchRam32: address => this._fetch386Ram32(address),
       write: (address, value) => this._write386(address, value),
       inPort: (port, width) => this._in386(port, width),
       outPort: (port, value, width) => this._out386(port, value, width),
@@ -179,6 +180,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     return (this._read386(address) | (this._read386((address + 1) >>> 0) << 8) |
       (this._read386((address + 2) >>> 0) << 16) |
       (this._read386((address + 3) >>> 0) << 24)) >>> 0;
+  }
+
+  _fetch386Ram32(address) {
+    // Code fetches are coalesced only when all four bytes are ordinary RAM.
+    // A20 and reset aliases, MP tables, devices and page crossings retain
+    // the ordered bytewise fetch path in the CPU.
+    if (this._a20Configured && !this._a20Enabled ||
+        address < 0x100000 || address >= this.memoryBytes - 3 ||
+        (address & 0xfff) > 0xffc || this._page[address >>> 12] !== 1)
+      return undefined;
+    const mem = this.mem;
+    return (mem[address] | (mem[address + 1] << 8) |
+      (mem[address + 2] << 16) | (mem[address + 3] << 24)) >>> 0;
   }
 
   _write386(address, value) {

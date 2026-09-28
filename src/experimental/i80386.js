@@ -44,6 +44,7 @@ export class ExperimentalI80386 {
     this.read = bus.read ?? (() => 0);
     this.read32 = bus.read32 ?? null;
     this.fetch = bus.fetch ?? this.read;
+    this.fetchRam32 = bus.fetchRam32 ?? null;
     this._rawWrite = bus.write ?? (() => {});
     this._translationCacheEnabled = !!options.translationCache;
     this.write = this._translationCacheEnabled && !options.translationCacheWritesTrackedExternally
@@ -482,6 +483,17 @@ export class ExperimentalI80386 {
       const linear = (cache.base + (this.eip >>> 0)) >>> 0;
       if ((linear & 0xfff) + size <= 0x1000) {
         const physical = this._translate(linear);
+        // The board callback returns a value only for side-effect-free RAM.
+        // Keep the byte path for devices, page/segment crossings and callers
+        // whose fetch operation can throw after consuming earlier bytes.
+        if (size === 4 && this.fetchRam32) {
+          const fast = this.fetchRam32(physical);
+          if (fast !== undefined) {
+            this._instructionBytes = (this._instructionBytes ?? 0) + 4;
+            this.eip += 4;
+            return fast >>> 0;
+          }
+        }
         let value = 0;
         for (let i = 0; i < size; i++) {
           value += (this.fetch((physical + i) >>> 0) & 255) * 2 ** (8 * i);

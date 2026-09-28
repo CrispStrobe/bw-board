@@ -103,6 +103,47 @@ test('same-page immediate fetch walks once, while cross-page fault retains consu
   assert.equal(cross.cpu.cr2,0x1000);
 });
 
+test('RAM dword fetch avoids byte callbacks but refused fast fetch keeps byte order',()=>{
+  const memory=new Map([[0x100,0x11],[0x101,0x22],[0x102,0x33],[0x103,0x44]]);
+  const reads=[],fast=[];
+  let allow=true;
+  const cpu=new I80386({
+    fetch(address){reads.push(address);return memory.get(address)??0;},
+    fetchRam32(address){fast.push(address);return allow?0x44332211:undefined;},
+  });
+  cpu.segmentCaches[1]={base:0,limit:0xffffffff,default32:true,present:true,
+    code:true,readable:true,writable:false};
+  cpu.eip=0x100;
+  assert.equal(cpu._fetchN(4),0x44332211);
+  assert.deepEqual(fast,[0x100]);
+  assert.deepEqual(reads,[]);
+  assert.equal(cpu.eip,0x104);
+  assert.equal(cpu._instructionBytes,4);
+
+  allow=false;
+  cpu.eip=0x100;
+  assert.equal(cpu._fetchN(4),0x44332211);
+  assert.deepEqual(reads,[0x100,0x101,0x102,0x103]);
+  cpu.eip=0xffe;
+  cpu._fetchN(4);
+  assert.deepEqual(fast,[0x100,0x100],
+    'page-crossing fetch never asks the coalesced callback');
+});
+
+test('AT coalesced fetch accepts only A20-enabled ordinary RAM',()=>{
+  const machine=new Machine(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
+  machine._a20Enabled=true;
+  for(let i=0;i<4;i++)machine._write(0x100000+i,0x11+i);
+  assert.equal(machine._fetch386Ram32(0x100000),0x14131211);
+  assert.equal(machine._fetch386Ram32(0xffffe),undefined,
+    'crossing the 1 MiB boundary retains bytewise bus fetch');
+  assert.equal(machine._fetch386Ram32(0xa0000),undefined,
+    'VGA memory retains device reads');
+  machine._a20Enabled=false;
+  assert.equal(machine._fetch386Ram32(0x100000),undefined,
+    'A20 alias retains bytewise bus fetch');
+});
+
 test('opt-in translation cache retains walks and invalidates guest page-table writes',()=>{
   const f=fixture(true);
   f.map(0x4000,0x6000);
