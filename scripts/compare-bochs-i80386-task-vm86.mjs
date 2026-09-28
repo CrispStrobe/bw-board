@@ -20,6 +20,8 @@ const bochsRoot=process.env.BOCHS_386_ROOT;
 if(!bochsRoot)throw new Error('Set BOCHS_386_ROOT to a clean Bochs REL_2_7_FINAL source checkout built with --enable-cpu-level=3 --with-nogui');
 const bochsRevision=execFileSync('git',['rev-parse','HEAD'],{cwd:bochsRoot,encoding:'utf8'}).trim();
 if(bochsRevision!=='0e45b736ef9792eb9b752b0a35db49eaf2faea47')throw new Error('unexpected Bochs source revision');
+if(execFileSync('git',['status','--porcelain','--untracked-files=no'],{cwd:bochsRoot,encoding:'utf8'}).trim())
+  throw new Error('Bochs tracked source must be clean');
 const configHeader=readFileSync(resolve(bochsRoot,'bochs/config.h'),'utf8');
 if(!configHeader.includes('#define BX_CPU_LEVEL 3'))throw new Error('Bochs must be built at CPU level 3');
 const bochs=resolve(bochsRoot,'bochs/bochs');
