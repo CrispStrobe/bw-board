@@ -18,7 +18,7 @@ techniques and independent-behavior checks worth using:
 | Engine | Relevant mechanism | Role here |
 | --- | --- | --- |
 | [QEMU TCG](https://www.qemu.org/docs/master/devel/tcg.html) | Translates guest basic blocks to host code; records mode-dependent state in block keys, chains blocks, and invalidates code when needed. KVM is a separate hardware-assisted mode. | Architecture model for a much larger functional fast path; existing VM-task fixture runs under QEMU 8.2.2 TCG as a **486**, so use it only for overlapping 386 behavior. |
-| [Bochs](https://bochs.sourceforge.io/How%20the%20Bochs%20works%20under%20the%20hood%202nd%20edition.pdf) | Portable C++ interpreter with decoded trace caching and code-write invalidation, without requiring a host JIT. | Independent 386-mode VM86 task-switch oracle now established for one owned fixture; expand to detailed checkpoints. |
+| [Bochs](https://bochs.sourceforge.io/How%20the%20Bochs%20works%20under%20the%20hood%202nd%20edition.pdf) | Portable C++ interpreter with decoded trace caching and code-write invalidation, without requiring a host JIT. | Independent 386-mode VM86 task-switch oracle for one owned fixture; its task-return checkpoint now compares a protected handler RAM write, resumed CS and IOPL. |
 | [MAME i386 core](https://github.com/mamedev/mame/blob/master/src/devices/cpu/i386/i386.cpp) | C++ interpreter with opcode-handler tables, cycle budgets and a virtual TLB. Its i386 core is not evidence that all MAME CPU cores use a dynarec. | Second 386-specific oracle, especially for descriptors, faults, task switches and instruction timing tables. |
 | [PCem](https://github.com/sarah-walker-pcem/pcem) / [86Box](https://github.com/86Box/86Box) | Interpreted and dynamic-recompiler 386 paths, with full PC devices. | System compatibility comparison with matched ROM/media; run their interpreter modes for easier instruction-level divergence. |
 | [ThreeAteSix](https://github.com/andrewjc/threeatesix) | Educational Go 386 interpreter: `CpuCore.Step()` calls a per-instruction decoder and handler table. Its README calls it work in progress. | Readable independent implementation; use as an oracle only for instructions and machine modes it actually passes. No speed ranking is established. |
@@ -31,8 +31,10 @@ Bochs' traces are useful designs. For our functional AT, block exits must still
 honor IRQ/event deadlines, page and descriptor changes, exceptions, self-modified
 code, port I/O and MMIO. The actual-net Harris board must continue to resolve
 its bus phases and edited wiring; a functional block engine cannot silently
-replace those semantics. One recent local same-page write-translation candidate
-is being measured separately and is not a claimed 10× result.
+replace those semantics. The retained same-page write-translation candidate
+measured a paired mean of 24.53 to 23.55 user-CPU seconds (1.042×) on xv6;
+the [receipt](receipts/2026-09-28-i80386-same-page-write-performance.json)
+preserves the guest-state comparison. It is not a claimed 10× result.
 
 ## Oracle expansion
 
@@ -55,6 +57,20 @@ is being measured separately and is not a claimed 10× result.
 4. Benchmark speed only after matching firmware, media, host, guest stop event,
    cache/JIT mode and displayed frame/audio settings. Report wall time and
    actual host CPU. Never infer original 386DX RTx from our six-cycle charge.
+
+The owned VM86 task fixture now yields the seven-byte `BHVK003` checkpoint
+in pinned 386-level Bochs, pinned QEMU TCG and our 386. `B` is setup, `H` is
+the protected task-gate handler, and `V` is the VM86 task after that handler's
+`IRET` returns to it. The handler writes `K` to physical RAM `0x0500`; the
+resumed VM86 code reads that byte and emits `K`, then emits visible CS `00`
+and IOPL `3` from `PUSHF`. Our core also directly checks that byte, VM in
+EFLAGS and TR `0x20` at the same checkpoint. Bochs' separate E9 output is the
+reference for the emitted fields. The [Bochs receipt](receipts/2026-09-28-i80386-bochs-vm-task-checkpoint.json)
+records source/Bochs/ROM hashes and three rejected mutations; the
+[QEMU receipt](receipts/2026-09-28-i80386-qemu-vm-task-checkpoint.json) records
+the same fixture on its later-model TCG CPU. Bochs can reset after this
+checkpoint because the fixture's F4 exit port is QEMU-specific, so the oracle
+stops at the complete seven-byte event.
 
 ## Reuse boundaries
 
