@@ -36,10 +36,11 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     if (config.cpuBackend !== 'i80386-experimental')
       throw new Error("experimental 386 AT requires cpuBackend 'i80386-experimental'");
     const bootstrap = {...config, variant: '80286', cpuBackend: 'protected286-experimental'};
-    super(bootstrap, hooks);
+    super(bootstrap, hooks, {allow386HighMemory: config.memoryBytes > (16 << 20)});
     this.config = config;
     this.variant = '80386';
     this.cpuBackend = 'i80386-experimental';
+    this._resetRomAliasBase = config.experimentalResetRomAliasBase ?? 0xff0000;
     this._fastA20Port92 = !!config.experimentalFastA20Port92;
     this._fastA20Latch = 0;
     if (this._fastA20Port92 && this._a20Controller)
@@ -133,9 +134,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _decode386(address) {
     const gated = this._gate386(address);
-    // IBM AT-compatible reset alias. It is decode, not address truncation:
-    // unrelated addresses above 16MiB remain open bus.
-    if (gated >= 0xffff0000) return 0xff0000 + (gated - 0xffff0000);
+    // Decode only the 64KiB reset alias. The high-memory profile maps it to
+    // the low F0000 BIOS ROM so physical 15–16MiB remains ordinary RAM.
+    if (gated >= 0xffff0000) return this._resetRomAliasBase + (gated - 0xffff0000);
     return gated;
   }
 
@@ -250,7 +251,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
   }
 
   loadRom(bytes, at = 0xffff0000) {
-    if (at === 0xffff0000) return super.loadRom(bytes, 0xff0000);
+    if (at === 0xffff0000) return super.loadRom(bytes, this._resetRomAliasBase);
     return super.loadRom(bytes, at);
   }
 
@@ -523,6 +524,30 @@ export const PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP = Object.freeze({
       [0x15, 0x80], [0x16, 0x02], [0x17, 0x00], [0x18, 0x38],
       [0x2e, 0x01], [0x2f, 0x0b], [0x30, 0x00], [0x31, 0x38], [0x32, 0x19]],
   } : chip),
+});
+
+/** Stock xv6 PHYSTOP=224MiB: continuous RAM through 0xDFFFFFF, with 256MiB backing. */
+export const PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
+  memoryBytes: 256 << 20,
+  experimentalResetRomAliasBase: 0xf0000,
+  regions: PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP.regions
+    .filter(region => !(region.kind === 'rom' && region.start === 0xff0000))
+    .map(region => region.kind === 'ram' && region.start === 0x100000
+      ? {...region, end: 0xdffffff} : region),
+  chips: PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP.chips.map(chip => {
+    if (chip.kind !== 'rtc') return chip;
+    const cmos = new Map(chip.initialCmos);
+    // 15MiB below 16MiB, then 208MiB in 64KiB blocks above it.
+    cmos.set(0x17, 0x00); cmos.set(0x18, 0x3c);
+    cmos.set(0x30, 0x00); cmos.set(0x31, 0x3c);
+    cmos.set(0x34, 0x00); cmos.set(0x35, 0x0d);
+    let checksum = 0;
+    for (let register = 0x10; register <= 0x2d; register++)
+      checksum = (checksum + (cmos.get(register) ?? 0)) & 0xffff;
+    cmos.set(0x2e, checksum >> 8); cmos.set(0x2f, checksum & 0xff);
+    return {...chip, initialCmos: [...cmos]};
+  }),
 });
 
 /** FreeDOS media profile: a 1.2MB disk in the AT high-capacity drive. */

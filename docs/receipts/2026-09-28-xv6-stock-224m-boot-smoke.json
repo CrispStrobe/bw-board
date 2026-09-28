@@ -1,0 +1,21 @@
+{
+  "schema": "bw.xv6-stock-224m-board-boot-smoke.v1",
+  "boardCodeRevision": "52ba8c285dbfcee33fbd882eda792f4e59ba6dfb",
+  "xv6SourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "firmware": "bochs",
+  "profile": "224m",
+  "mediaSha256": {
+    "rom": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaRom": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "bootImage": "de7f0e4aab39c0fc6d21aa283943e8dfe6420ef0806df87efb21bf336e1a353a",
+    "filesystemImage": "0b86e83c68d45d34fd0cecddd627b2d71893ab9df7d77d5372941c701d4eae22",
+    "kernel": "10bf65351fe69951a42673bc314049c15a1432cd5cdab004df5e7268cff8eafb"
+  },
+  "stepBudget": 120000000,
+  "completedSteps": 74948430,
+  "shellPromptReached": true,
+  "usertestsStarted": false,
+  "serialSha256": "3bafafb1211216a622dbec12a3b5f9d280190c5d1a2a9179fca88733b1456084",
+  "privateRawReportSha256": "852215b5d464fa69f84f7f2d730ba6f31ad54673bfa4b102d9cf411740814573",
+  "privateEvidenceCommit": "ad83714"
+}

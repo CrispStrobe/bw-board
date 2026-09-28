@@ -4,7 +4,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
-  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
+  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
@@ -17,9 +18,11 @@ if (!['ibm', 'bochs'].includes(firmware)) throw new Error('XV6_FIRMWARE must be 
 const romPath = process.env.XV6_ROM ?? (firmware === 'bochs' ?
   'roms/free-at-bios/BIOS-bochs-legacy' : '/tmp/ATBIOS-REV1.rom');
 const profile = process.env.XV6_PROFILE ?? '4m';
-if (!['4m', '14m'].includes(profile)) throw new Error('XV6_PROFILE must be 4m or 14m');
+if (!['4m', '14m', '224m'].includes(profile))
+  throw new Error('XV6_PROFILE must be 4m, 14m or 224m');
 const xv6Config = profile === '4m' ? PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP :
-  PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP;
+  profile === '14m' ? PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP :
+    PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP;
 const geometry = IBM_TYPE1_GEOMETRY;
 const hdCmos = [
   [0x19, 47], [0x1b, geometry.cylinders & 0xff], [0x1c, geometry.cylinders >> 8],
