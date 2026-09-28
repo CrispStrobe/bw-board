@@ -87,6 +87,13 @@ const PMOS_OPERATING_POINT_PARAMS = new Set([
 ]);
 const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
 
+// A source-only trace needs a sampling theorem as well as the adaptive LTE
+// controller: two endpoint samples can otherwise alias a whole smooth cycle.
+// Sixty-four intervals per shortest declared feature is deliberately more
+// conservative than a display trace while allowing a 1 Hz source to remain a
+// 1 Hz source instead of inheriting the profile's unrelated 10 us ceiling.
+const SOURCE_WAVEFORM_INTERVALS = 64;
+
 const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
 const NONIDEAL_CONTROLLED_PARAMS = ['railLow', 'railHigh', 'rout', 'iShort', 'iMax'];
 
@@ -4346,6 +4353,63 @@ export class BoardImpl {
   }
 
   /**
+   * Conservative anti-alias ceiling derived from authored source features.
+   * `null` means a moving/unknown waveform could not be characterised and the
+   * caller must retain the fixed profile ceiling. Exact source corners remain
+   * separate step barriers; this bound controls the intervals between them.
+   *
+   * @returns {number|null}
+   */
+  _sourceWaveformStepSec() {
+    let bound = Infinity;
+    let found = false;
+    const admit = featureSec => {
+      if (!(typeof featureSec === 'number' && Number.isFinite(featureSec) && featureSec > 0)) {
+        return false;
+      }
+      bound = Math.min(bound, featureSec / SOURCE_WAVEFORM_INTERVALS);
+      found = true;
+      return true;
+    };
+    for (const part of this.parts) {
+      if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
+      const p = part.params ?? {};
+      const wave = p.wave ?? 'dc';
+      if (wave === 'dc') continue;
+      if (wave === 'spice-pulse') {
+        // Corners already land exactly and adaptive LTE resolves each finite
+        // ramp. The repeating period is the independent anti-alias authority;
+        // dividing a 1 ns ramp again would only manufacture 15 ps steps.
+        if (!admit(p.per)) return null;
+      } else if (wave === 'spice-pwl') {
+        if (!Array.isArray(p.points) || p.points.length < 2) return null;
+        for (let i = 1; i < p.points.length; i++) {
+          if (!Array.isArray(p.points[i - 1]) || !Array.isArray(p.points[i])
+              || !admit(p.points[i][0] - p.points[i - 1][0])) return null;
+        }
+      } else if (wave === 'spice-exp') {
+        if (![p.tau1, p.tau2].every(admit)) return null;
+      } else if (wave === 'spice-sine') {
+        if (!admit(1 / p.freq)) return null;
+      } else if (wave === 'sine' || wave === 'triangle'
+          || wave === 'square' || wave === 'pulse') {
+        const freq = p.freq ?? 1000;
+        if (!admit(1 / freq)) return null;
+      } else if (wave === 'pcm') {
+        // PCM is piecewise linear and has no separate corner scheduler, so
+        // visit every authored sample interval rather than dividing it again.
+        const rate = p.rate ?? 44100;
+        if (!(typeof rate === 'number' && Number.isFinite(rate) && rate > 0)) return null;
+        bound = Math.min(bound, 1 / rate);
+        found = true;
+      } else {
+        return null;
+      }
+    }
+    return found && Number.isFinite(bound) ? bound : null;
+  }
+
+  /**
    * Effective internal transient-step ceiling before the finite duration of a
    * particular advance is known. The profile ceiling is a trace-fidelity cap:
    * it applies when a waveform source or scope makes intermediate time
@@ -4360,9 +4424,24 @@ export class BoardImpl {
     const profile = this._transientAnalysisProfile;
     let maxStepSec = Infinity;
     const basis = [];
-    if (this._scopeChannels.size > 0 || this._hasTimeVaryingSource()) {
+    if (this._scopeChannels.size > 0) {
       maxStepSec = Math.min(maxStepSec, profile.maxStepSec);
-      basis.push(this._scopeChannels.size > 0 ? 'profile-scope-fidelity' : 'profile-waveform-fidelity');
+      basis.push('profile-scope-fidelity');
+    } else if (this._hasTimeVaryingSource()) {
+      const sourceStepSec = this._sourceWaveformStepSec();
+      // The source-derived bound is a precision-analysis relaxation, never a
+      // tightening: existing fast waveforms already rely on adaptive LTE and
+      // exact corners, and must not gain thousands of invented substeps. The
+      // interactive default keeps its shipped byte-for-behaviour cap.
+      const derivedStepSec = profile.id === 'precision-v1' && sourceStepSec !== null
+        ? Math.max(profile.maxStepSec, sourceStepSec)
+        : null;
+      maxStepSec = Math.min(maxStepSec, derivedStepSec ?? profile.maxStepSec);
+      basis.push(derivedStepSec !== null
+        ? 'source-waveform-fidelity'
+        : (profile.id === 'precision-v1'
+          ? 'profile-waveform-fidelity-fallback'
+          : 'profile-waveform-fidelity'));
     }
     if (Number.isFinite(profile.authoredMaxStepSec)) {
       maxStepSec = Math.min(maxStepSec, profile.authoredMaxStepSec);
@@ -4582,10 +4661,10 @@ export class BoardImpl {
    * the extra half-step solves are numeric refactors, not fresh
    * factorizations.
    *
-   * Sampling floor: while scope channels or waveform sources are live, h
-   * is capped at 100 µs so traces keep the fidelity the fixed-step
-   * integrator had. An idle advance with neither runs to h = dtRemaining
-   * in a handful of steps instead of 200.
+   * Sampling ceiling: a scope retains the profile cap; a source-only analysis
+   * derives a conservative anti-alias cap from its shortest authored feature.
+   * Adaptive LTE, exact source-corner barriers and authored maxima can only
+   * tighten it. An idle advance with neither runs to h = dtRemaining.
    *
    * @param {number} dtSec
    */

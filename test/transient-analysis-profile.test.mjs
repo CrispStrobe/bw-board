@@ -179,6 +179,126 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.equal(board.transientAnalysisStatus().accuracyMet, true);
   });
 
+  it('derives slow SINE fidelity from frequency without weakening adaptive accuracy', () => {
+    for (const [frequency, duration, maximumAttempts] of [[1, 3, 6000], [10, 1, 19000]]) {
+      const params = { wave: 'spice-sine', offset: 0, amplitude: 1, freq: frequency,
+        td: 0, theta: 0, phase: 0 };
+      const board = rcBoard(params, 1000, 1e-6, 'precision-v1');
+      assert.deepEqual(board.transientAnalysisStatus().stepBound, {
+        maxStepSec: 1 / frequency / 64,
+        basis: ['source-waveform-fidelity'],
+      });
+      board.advanceTo(BigInt(duration * 1e9));
+      const expected = sineRcExact(duration, 1, frequency, 1e-3);
+      assert.ok(Math.abs(board.nodeVoltage('out') - expected) < 1e-7,
+        `${frequency} Hz result ${board.nodeVoltage('out')} vs closed-form ${expected}`);
+      const status = board.transientAnalysisStatus();
+      assert.equal(status.accuracyMet, true);
+      assert.ok(status.work.attempts < maximumAttempts,
+        `${frequency} Hz should fit the unchanged budget (${status.work.attempts})`);
+    }
+  });
+
+  it('uses the repeating PULSE period and keeps exact corner barriers', () => {
+    const board = rcBoard({ wave: 'spice-pulse', v1: 0, v2: 1,
+      td: 0, tr: 4, tf: 1, pw: 0, per: 5 }, 1000, 1e-6, 'precision-v1');
+    assert.deepEqual(board.transientAnalysisStatus().stepBound, {
+      maxStepSec: 5 / 64,
+      basis: ['source-waveform-fidelity'],
+    });
+    assert.equal(board._nextSourceEdgeSec(3.5), 4,
+      'the falling-edge corner remains an exact discontinuity');
+    board.advanceTo(10_000_000_000n);
+    const status = board.transientAnalysisStatus();
+    assert.equal(status.accuracyMet, true);
+    assert.ok(status.work.attempts < 2000,
+      `multi-second edges must not inherit a 10 us cap (${status.work.attempts})`);
+  });
+
+  it('retains an honest budget refusal for a 16 kHz source', () => {
+    const board = rcBoard({ wave: 'spice-sine', offset: 0, amplitude: 2, freq: 16000,
+      td: 0, theta: 0, phase: 0 }, 5000, 1e-9, 'precision-v1');
+    assert.deepEqual(board.transientAnalysisStatus().stepBound, {
+      maxStepSec: 1e-5,
+      basis: ['source-waveform-fidelity'],
+    });
+    board.advanceTo(100_000_000n);
+    const status = board.transientAnalysisStatus();
+    assert.equal(status.accuracyMet, false);
+    assert.equal(status.failure.code, 'step-attempt-budget-exceeded');
+    assert.equal(status.work.attempts, status.profile.maxAttempts);
+  });
+
+  it('keeps scope and authored ceilings independent from source anti-aliasing', () => {
+    const params = { wave: 'spice-sine', offset: 0, amplitude: 1, freq: 1,
+      td: 0, theta: 0, phase: 0 };
+    const scoped = rcBoard(params, 1000, 1e-6, 'precision-v1');
+    scoped.addScopeChannel({ type: 'voltage', netId: 'out' });
+    assert.deepEqual(scoped.transientAnalysisStatus().stepBound, {
+      maxStepSec: 1e-5,
+      basis: ['profile-scope-fidelity'],
+    });
+
+    const authored = new BoardImpl(5);
+    authored.configureTransientAnalysis('precision-v1', { maxStepSec: 1e-4 });
+    authored.setNetlist([
+      { id: 'V1', kind: 'vsource', params, terminals: ['pos', 'neg'] },
+      ground,
+    ], [
+      { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }] },
+      { id: '0', terminals: [{ part: 'V1', terminal: 'neg' },
+        { part: 'GND', terminal: 'gnd' }] },
+    ]);
+    assert.deepEqual(authored.transientAnalysisStatus().stepBound, {
+      maxStepSec: 1e-4,
+      basis: ['source-waveform-fidelity', 'authored-analysis-maximum'],
+    });
+
+    const unknown = new BoardImpl(5);
+    unknown.configureTransientAnalysis('precision-v1');
+    unknown.setNetlist([
+      { id: 'V1', kind: 'vsource', params: { wave: 'future-shape', volts: 1 },
+        terminals: ['pos', 'neg'] },
+      ground,
+    ], [
+      { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }] },
+      { id: '0', terminals: [{ part: 'V1', terminal: 'neg' },
+        { part: 'GND', terminal: 'gnd' }] },
+    ]);
+    assert.deepEqual(unknown.transientAnalysisStatus().stepBound, {
+      maxStepSec: 1e-5,
+      basis: ['profile-waveform-fidelity-fallback'],
+    });
+  });
+
+  it('derives every supported source family from its authored cadence', () => {
+    const cases = [
+      [{ wave: 'spice-pulse', v1: 0, v2: 1, td: 0, tr: 1e-9, tf: 2e-9,
+        pw: 1, per: 2 }, 2 / 64],
+      [{ wave: 'spice-pwl', points: [[0, 0], [2, 1], [2.5, 0]] }, 0.5 / 64],
+      [{ wave: 'spice-exp', v1: 0, v2: 1, td1: 0, tau1: 0.2,
+        td2: 1, tau2: 0.1 }, 0.1 / 64],
+      [{ wave: 'triangle', freq: 2, amplitude: 1, offset: 0 }, 0.5 / 64],
+      [{ wave: 'pcm', samples: [0, 1, 0], rate: 8 }, 1 / 8],
+    ];
+    for (const [params, maxStepSec] of cases) {
+      const board = new BoardImpl(5);
+      board.configureTransientAnalysis('precision-v1');
+      board.setNetlist([
+        { id: 'V1', kind: 'vsource', params, terminals: ['pos', 'neg'] },
+        ground,
+      ], [
+        { id: 'out', terminals: [{ part: 'V1', terminal: 'pos' }] },
+        { id: '0', terminals: [{ part: 'V1', terminal: 'neg' },
+          { part: 'GND', terminal: 'gnd' }] },
+      ]);
+      assert.deepEqual(board.transientAnalysisStatus().stepBound, {
+        maxStepSec,
+        basis: ['source-waveform-fidelity'],
+      }, params.wave);
+    }
+  });
+
   it('resolves the three retained narrow-edge high-pass RC families', () => {
     for (const [r, c] of [[1000, 470e-12], [330, 470e-12], [330, 3.3e-9]]) {
       const board = highpassBoard(r, c, 'precision-v1');
