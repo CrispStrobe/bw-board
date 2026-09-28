@@ -232,6 +232,14 @@ measured 1.08× on adjacent pairs; this is still far short of the requested
 roughly 10× speedup. These are workload-specific host CPU measurements, not
 silicon timing or a general real-time claim. The measured bottlenecks and
 next architectural experiment are in [Experimental 80386 speed path](docs/I80386-10X-PERFORMANCE.md).
+Later guarded RAM dword fetch and direct register-field access each preserved
+the complete 24,338,279-step stock xv6 `forktest` report and improved paired
+user CPU by 5–11% and 5–8%, respectively. Both changes passed a 60-million-step
+Windows checkpoint, fresh 45.8-million-step ordinary and browser-target FreeDOS
+qualifications, and the full 386 test suite. Their detailed paired timings and
+raw reports are retained in `brickwright-firmware-private/performance/2026-09-28`.
+The guarded mappages trace experiment instead regressed by 16–20% and was not
+merged. None of these measurements establishes 10× or a calibrated 386DX RTx.
 
 ## Windows 3.1 reference comparison
 

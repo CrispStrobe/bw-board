@@ -6,6 +6,22 @@ IOAPIC pending-mask experiment measured another 1.078× on the same workload.
 These are bounded measurements, not evidence of the requested 10× overall
 speedup. Reproduction details and hashes are in the dated receipts.
 
+On 2026-09-28, a guarded 25-instruction mappages trace preserved xv6 and a
+bounded Windows report, but repeated admission slowed paired xv6 user CPU by
+16.0% and 19.8%. It still executed every instruction through the ordinary
+interpreter, so that prototype is a no-go. Two smaller CPU changes were
+retained instead. Coalescing a four-byte immediate fetch only from ordinary
+same-page RAM improved paired xv6 user CPU by 10.7% and 5.2%; direct register
+field access improved it by 8.4% and 5.4% on the resulting board. Each pair
+retired the same 24,338,279 guest steps with identical serial output and final
+RAM hash. The Windows 60-million-step diagnostic matched its preceding source
+except provenance fields; both free-BIOS and browser-target FreeDOS receipts
+were rerun for 45.8 million steps after each source change. The full 386 suite
+passed 494 tests with four skips after each qualification. Raw reports, timings,
+profiles, and negative results are kept under
+`brickwright-firmware-private/performance/2026-09-28`. These are bounded xv6
+host-CPU gains, still far short of the 10× target or a hardware RTx calibration.
+
 The `probe-xv6-stock.mjs` runner can now set `XV6_LEAN=1` to omit its
 per-instruction milestone, user-mode, and recent-instruction records while
 retaining the serial command, stopping condition, interrupts, display, and
