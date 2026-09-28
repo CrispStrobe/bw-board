@@ -1,0 +1,101 @@
+{
+  "schema": "bw.i80386-code16-owned-io-trace.v1",
+  "revision": "a124a5b5b9246d028b8536a56a90b8b49f54b2e3",
+  "sourceHashes": {
+    "src/experimental/i80386-code16-owned-io-trace.js": "f404aa2a275d9ab4ff44c58843e52e35ba516eeae322ed63844aea989cbe0f5f",
+    "test/i80386-code16-owned-io-trace.test.mjs": "6e1ee7d054453a8dcfa6838215605970640c1cfc1095bf88812aa5d0f8c63a41",
+    "test/fixtures/i80386-win16-io-boundary.S": "7ac5f928dcba55afab2e6aeb10b2145e30341859727f9222aca3b36a264db82c",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "scripts/record-i80386-code16-owned-io-trace.mjs": "84546d597b8ea6e841980e468b5f79d6e6797eeb93e8cb5fd7279f32f271d73b"
+  },
+  "priorOracle": {
+    "positiveReceiptSha256": "db80c5a40a561a0ae29af6ce94bfb7772eee24a079753f82221efc5120857aaa",
+    "negativeReceiptSha256": "2466c2dabd8689b3eac01b7cfc03a2026950a6720f7d31c2ca2d4644e40c9f6e",
+    "imageSha256": "cbdeb72912212f004ba8641bd1288b2bae10d10d26834197f1718cad3e6c64dd",
+    "qemuSha256": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+    "bochsSha256": "2282de6986025228b177e648f3ca41957aad4bf276438fa2501afda0af802ff9",
+    "scope": "QEMU 486 CPU-state checkpoints; Bochs CPU-level-3 output witness only"
+  },
+  "acceptance": {
+    "entry": {
+      "cs": 8,
+      "eip": 31790,
+      "eflags": 6
+    },
+    "taken": {
+      "completed": 3,
+      "exit": "io-required",
+      "stop": {
+        "cs": 8,
+        "eip": 31804
+      },
+      "readCounts": [
+        0,
+        1
+      ],
+      "referenceBefore": {
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "es": 0,
+        "fs": 0,
+        "gs": 0,
+        "eip": 31804,
+        "eflags": 70,
+        "bx": 1,
+        "dx": 33,
+        "al": 165
+      },
+      "referenceAfter": {
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "es": 0,
+        "fs": 0,
+        "gs": 0,
+        "eip": 31805,
+        "eflags": 70,
+        "bx": 1,
+        "dx": 33,
+        "al": 165
+      }
+    },
+    "deadline": {
+      "one": "chip-deadline, completed 0, unchanged state",
+      "two": "chip-deadline, completed 0, unchanged state",
+      "three": "accepted, completed 3"
+    },
+    "fallthrough": {
+      "cmpImmediate": 2,
+      "exit": "branch-fallthrough",
+      "stop": {
+        "cs": 8,
+        "eip": 31798
+      },
+      "readCount": 0,
+      "ordinaryParity": true
+    },
+    "mutation": {
+      "kind": "JZ displacement changed from 06 to 07",
+      "exit": "code-mismatch",
+      "completed": 0,
+      "unchangedCpuAndPortState": true
+    }
+  },
+  "validation": {
+    "command": "node --test test/i80386-code16-owned-io-trace.test.mjs",
+    "passed": 4,
+    "failed": 0,
+    "testNames": [
+      "one bounded call takes the branch and exits before IN; ordinary resume reads once",
+      "chip deadline at one or two instructions refuses without changing state",
+      "CMP immediate two takes fallthrough with exact ordinary state",
+      "code mutation is refused before any state or port change"
+    ]
+  },
+  "host": {
+    "node": "v20.20.2",
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)"
+  },
+  "limits": "Fixture-specific protected16 correctness only. No production integration, general ISA coverage, real chip scheduler, Windows media, VM86 result, or speed claim."
+}
