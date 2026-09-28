@@ -24,6 +24,9 @@ if (!['4m', '14m', '224m'].includes(profile))
 const xv6Config = profile === '4m' ? PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP :
   profile === '14m' ? PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP :
     PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP;
+if(![undefined,'0','1'].includes(process.env.XV6_PLAIN_RAM_READ_SHORTCUT))
+  throw new Error('XV6_PLAIN_RAM_READ_SHORTCUT must be 0 or 1');
+const plainRamReadShortcut=process.env.XV6_PLAIN_RAM_READ_SHORTCUT==='1';
 const geometry = IBM_TYPE1_GEOMETRY;
 const hdCmos = [
   [0x19, 47], [0x1b, geometry.cylinders & 0xff], [0x1c, geometry.cylinders >> 8],
@@ -57,7 +60,8 @@ const machineConfig = firmware === 'bochs' ? {
       chip.kind === 'rtc' ? {...chip, initialCmos: bochsCmos(chip.initialCmos)} : chip),
     {kind: 'vga', name: 'vga1', at: 0x3c0},
   ],
-} : xv6Config;
+} : {...xv6Config};
+machineConfig.experimentalPlainRamReadShortcut=plainRamReadShortcut;
 const imagePath = process.env.XV6_IMG ?? `/tmp/xv6-stock-${profile}/xv6.img`;
 const slavePath = process.env.XV6_FS_IMG ?? path.join(path.dirname(imagePath), 'fs.img');
 const kernelPath = process.env.XV6_KERNEL ?? path.join(path.dirname(imagePath), 'kernel');
@@ -94,6 +98,8 @@ if ((nativeByte || nativeDispatch) && !lean)
   throw new Error('native xv6 execution requires XV6_LEAN=1 for comparable guest-step receipts');
 if (nativeByte && nativeDispatch)
   throw new Error('select one native xv6 execution path');
+if(plainRamReadShortcut&&(nativeByte||nativeDispatch))
+  throw new Error('plain RAM read shortcut requires ordinary single-step execution');
 if (code16Coverage && (nativeByte || nativeDispatch))
   throw new Error('code16 coverage requires ordinary single-step execution');
 if (broadBlockCensus && (nativeByte || nativeDispatch || code16Coverage))
@@ -267,6 +273,7 @@ const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_,
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
   profile,
+  plainRamReadShortcut,
   // Board time is a configured scheduling clock, not measured 80386 silicon time.
   clockHz: machine.clockHz,
   functionalInstructionCycles: machine.functionalInstructionCycles,

@@ -40,6 +40,10 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     this.config = config;
     this.variant = '80386';
     this.cpuBackend = 'i80386-experimental';
+    if (config.experimentalPlainRamReadShortcut !== undefined &&
+        typeof config.experimentalPlainRamReadShortcut !== 'boolean')
+      throw new TypeError('experimentalPlainRamReadShortcut must be boolean');
+    this._plainRamReadShortcut = config.experimentalPlainRamReadShortcut === true;
     this._resetRomAliasBase = config.experimentalResetRomAliasBase ?? 0xff0000;
     this._fastA20Port92 = !!config.experimentalFastA20Port92;
     this._fastA20Latch = 0;
@@ -142,6 +146,14 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _read386(address) {
     const decoded = this._decode386(address);
+    // Opt-in ordinary RAM read. Page kind 1 has no MMIO/ROM/partial region,
+    // but synthetic MP bytes and VGA planes overlay the underlying page map.
+    // A wrapped _read may itself be an observer; preserve its callback order.
+    if (this._plainRamReadShortcut &&
+        this._read === I8086Machine.prototype._read &&
+        decoded < this.memoryBytes && this._page[decoded >>> 12] === 1 &&
+        (decoded < MP_FLOAT_BASE || decoded >= 0xc0000))
+      return this.mem[decoded];
     if (this._xv6Mp && this._mpReady && decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16)
       return this._xv6Mp.float[decoded - MP_FLOAT_BASE];
     if (this._xv6Mp && this._mpReady && decoded >= MP_TABLE_BASE && decoded < MP_TABLE_BASE + 80)

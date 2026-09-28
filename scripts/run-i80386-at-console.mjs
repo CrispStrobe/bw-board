@@ -29,6 +29,9 @@ const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAG
   code16Loads:process.env.AT_CODE16_LOADS==='1',
   code16Wasm:process.env.AT_CODE16_WASM==='1',
   steps:process.env.AT_POST_STEPS??1_000_000};
+if(![undefined,'0','1'].includes(process.env.AT_PLAIN_RAM_READ_SHORTCUT))
+  throw new Error('AT_PLAIN_RAM_READ_SHORTCUT must be 0 or 1');
+const plainRamReadShortcut=process.env.AT_PLAIN_RAM_READ_SHORTCUT==='1';
 for(let index=0;index<process.argv.length-2;index++) {
   const option=process.argv[index+2];
   if(option==='--help') {
@@ -146,6 +149,8 @@ if(crossModeTraceObserver&&(options.nativeBlocks||options.code16Wasm||options.co
   throw new Error('cross-mode trace observer requires noninteractive ordinary single-step execution');
 if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
   throw new Error('code16 WASM is a separate opt-in dispatcher');
+if(plainRamReadShortcut&&(options.nativeBlocks||options.code16Loads||options.code16Wasm))
+  throw new Error('plain RAM read shortcut requires ordinary single-step execution');
 if(code16WasmDiagnostics&&!options.code16Wasm)
   throw new Error('code16 WASM diagnostics require AT_CODE16_WASM=1');
 if(code16WasmFormCensus&&!code16WasmDiagnostics)
@@ -159,6 +164,7 @@ const events=parseAtConsoleEvents(eventBytes,stepsLimit);
 const mouseEnabled=options.live||process.env.AT_ENABLE_MOUSE==='1'||
   events.some(event=>event.type==='mouse');
 const profile=structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
+profile.experimentalPlainRamReadShortcut=plainRamReadShortcut;
 profile.a20.mouse=mouseEnabled;
 profile.regions=profile.regions.map(region=>region.kind==='rom'&&region.start===0xc0000?
   {...region,end:0xc0000+Math.ceil(vga.bytes.length/0x1000)*0x1000-1}:region);
@@ -429,12 +435,14 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(crossModeTraceObserver?{crossModeTraceObserver:crossModeTraceObserver.report()}:{}),
   ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
+    plainRamReadShortcut,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,
     code16Wasm:options.code16Wasm,
     cmosEquipment:cmos[0x14],
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
+  ramSha256:sha(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes)),
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   nativeStats:nativeDispatcher?.stats??null,
