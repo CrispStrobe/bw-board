@@ -1,0 +1,56 @@
+{
+  "purpose": "Execution-neutral disjoint completed-native-call successor census for the first protected32 register-only trace tranche",
+  "source": {
+    "baseMasterSha": "7d6f4a626f7115e5fce19f6140582e9f251cd80d",
+    "observedSourceCommit": "9d5039fff0aa79c9db521d8e640fc810c77fb789",
+    "dispatcherSha256": "d96a13682f00e74d7f3302444c7608233f94b492d1ea757ee1a8b3bccfde6ed5",
+    "accumulatorSha256": "4cab86970413b23e7091bd782f395590175d2d15bb62236e3fbb3a024a13d10d",
+    "nativeByteBlockSha256": "dfcd43bffbcf4cf42e044b60574ac0089421c5e63c1647cfd37b43d12ca78057",
+    "probeSha256": "d75485ccddf47fe1491bcff8fc9ac208683a9324b4e1b3cbfc416f76ca814533",
+    "testSha256": "65267ee6f0a819873e53f776661bbd49b3c60b2fcc484d8663def37b04df89ea",
+    "wasmSha256": "0e6cb0789a33500b512ec1ec5fc778b78a0459aebd2b3a0f89a786411f87a9c7"
+  },
+  "workload": {
+    "command": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "observedAddition": "XV6_NATIVE_SUCCESSOR_CENSUS=/tmp/native-successor-census.json",
+    "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "imageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "slaveImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "completeReportSha256": "1ffe2db7916951597e42d3a2cd30b6b14870571ebb6355d6c65caacc3c5af451",
+    "observedAndUnobservedCompleteReportsByteIdentical": true,
+    "censusSha256": "aa244d7b1bf2c3c94dde6c8ea7a0b5009d815b3cc8ee25b6f8314ccef389c7b1",
+    "steps": 24338279,
+    "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "expectedSerialFound": "fork test OK\n$ "
+  },
+  "validation": {
+    "focusedCommand": "node --test test/i80386-native-successor-census.test.mjs test/i80386-native-dispatch.test.mjs",
+    "focusedPassed": 9,
+    "focusedFailed": 0,
+    "nativeBlockCallsMatchObservedCompletedCalls": true,
+    "nativeRetirementsMatchObservedRetirements": true,
+    "allObserverPartitionsSumToCompletedCalls": true
+  },
+  "denominator": {
+    "completedNativeCalls": 4001848,
+    "retiredNativeInstructions": 16428211,
+    "allGuestSteps": 24338279
+  },
+  "counts": {
+    "exitReasons": {"done": 3855515, "event": 145398, "unsupported": 935},
+    "eventLimits": {"not-event": 3856450, "caller": 131816, "chip": 13452, "tie-unknown": 123, "lapic": 7},
+    "postEventStatus": {"none": 3984261, "chip": 17577, "lapic": 10},
+    "nextPcRelations": {"same-cs-different-eip": 3867749, "same-cs-same-eip": 134099},
+    "successorStatuses": {"cold": 2363, "cached-valid-memory-or-repeat": 646800, "cached-negative": 2242993, "cached-code-or-window-unsafe": 375, "cached-valid-register-only": 1103092, "cached-identity-stale": 6225},
+    "withinBlockLinks": {"none": 4001848},
+    "firstTranche": {"source-memory-or-repeat": 1702062, "successor-cold": 973, "exit-event": 145398, "successor-cached-negative": 1557440, "post-event-boundary": 4005, "optimistic-elidable": 557642, "successor-cached-identity-stale": 2943, "exit-unsupported": 935, "successor-cached-valid-memory-or-repeat": 30325, "successor-cached-code-or-window-unsafe": 125},
+    "optimisticElidableCalls": 557642
+  },
+  "gate": {
+    "predeclaredMinimumElidableCalls": 1500000,
+    "optimisticUpperBoundFractionOfNativeCalls": 0.13934612209159368,
+    "firstTrancheOpportunityGatePassed": false,
+    "interpretation": "The 557642-call count is a disjoint current-cache/code-window-validity upper bound, not a proven prevalidated multi-block trace or realized call saving. It is below the 1.5M-call necessary gate even before trace-admission, IRQ/NMI, branch-path, and profitability checks. No production trace integration or speed claim follows."
+  },
+  "limits": "The observer checks only the actual returned CS:EIP after completed native calls. A direct successor validity scan is observer-only and is not a production cost model. Cached-negative does not distinguish unsupported grammar from invalidation. Tied event deadlines and unprovable linked-branch outcomes remain unknown. The observed run is not a timing measurement because extra validity checks are enabled."
+}

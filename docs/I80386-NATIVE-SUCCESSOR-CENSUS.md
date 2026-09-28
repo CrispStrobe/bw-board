@@ -60,5 +60,4 @@ event boundary.
 The [owned tests](../test/i80386-native-successor-census.test.mjs) check
 partition sums, an existing linked loop, exact chip/LAPIC budget categories,
 actual cached successor EIP, and revocation after a code edit. Full-run
-counts and their interpretation belong in a source-pinned receipt, not in
-this method document.
+counts and their interpretation are in the [source-pinned xv6 receipt](receipts/2026-09-28-i80386-native-successor-census.json).
