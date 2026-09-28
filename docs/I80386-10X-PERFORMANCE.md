@@ -330,9 +330,13 @@ proofs, CPU-time shares or measured acceleration.
 The next speed experiment must address Windows' short protected16 and
 protected32 runs and the expensive per-call admission boundary together.
 Adding another isolated opcode to the current code16 WASM dispatcher is not
-supported by these measurements. A guarded hot-trace continuation probe
-should first measure repeated same-identity traces and exact event/fault
-exit frequency in both Windows modes and xv6. Only a replayable workload
-share large enough to amortize one entry proof can justify an executable
-prototype, which must then preserve guest state and beat ordinary execution
+supported by these measurements. The selected-form receipt already bounds a
+proposed eight-step hot-trace gate: only 3.45 million of 10.04 million
+Windows protected16 steps (34.35%) and 3.03 million of 15.28 million
+protected32 steps (19.83%) occur in potential runs of at least eight.
+Identity/replay checks can only reduce those shares, so a proposed 50%
+per-mode hot-trace gate fails without another full probe. A path toward 10×
+must instead handle more control, stack, segment and string boundaries per
+entry, or cut entry cost enough that short runs become worthwhile. Any
+executable prototype must preserve guest state and beat ordinary execution
 in serial paired full-workload CPU-time tests. The 10× target remains open.
