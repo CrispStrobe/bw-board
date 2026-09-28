@@ -513,3 +513,42 @@ describe('labwired runFor: program time is the engine\'s, and a step error halts
         assert.match(halts[0].message, /bus fault at 0xdead/);
     });
 });
+
+describe('labwired write watchpoints', () => {
+    /** Memory where instruction n writes `writes[n]` = [addr, byte]. */
+    const writer = (writes) => {
+        const mem = new Map();
+        let n = 0;
+        return {
+            get_pc: () => 0x100 + 2 * n,
+            step_single: () => { const w = writes[n++]; if (w) mem.set(w[0], w[1]); },
+            step_batch() {},
+            read_memory: (a, len) => Array.from({ length: len }, (_, k) => mem.get(a + k) ?? 0),
+        };
+    };
+    const on = sim => createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim } });
+
+    it('halts on the instruction that changes a watched byte, naming the watch', () => {
+        const t = on(writer([[0x2000_0100, 1], [0x2000_0004, 9], [0x2000_0101, 2]]));
+        const halts = [];
+        t.onHalt(h => halts.push(h));
+        const h = t.setBreakpoint({ kind: 'write', addr: 0x2000_0004, len: 1 });
+        assert.equal(typeof h, 'number');
+        assert.ok(t.capabilities().breakpoints.includes('write'));
+        t.run();
+        assert.equal(t.runFor(1_000_000), 'halted');
+        assert.equal(halts[0].cause, 'watchpoint');
+        assert.equal(halts[0].bp, h);
+        assert.equal(halts[0].bpKind, 'write');
+        assert.deepEqual(halts[0].value, [9]);
+        assert.equal(t.regs().pc, 0x104, 'stopped after the writing instruction, not at a neighbour');
+    });
+    it('cleared, it no longer stops; a bad length is refused by name', () => {
+        const t = on(writer([[0x10, 1], [0x10, 2]]));
+        const h = t.setBreakpoint({ kind: 'write', addr: 0x10 });
+        t.clearBreakpoint(h);
+        t.run();
+        assert.equal(t.runFor(100), 'running');
+        assert.match(t.setBreakpoint({ kind: 'write', addr: 0x10, len: 64 }).unsupported, /1\.\.8 bytes/);
+    });
+});
