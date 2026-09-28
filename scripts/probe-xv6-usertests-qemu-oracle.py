@@ -18,10 +18,11 @@ from pathlib import Path
 BOARD = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('XV6_SOURCE_DIR', '/tmp/xv6-public')).expanduser().resolve()
 IMAGES = Path(os.environ.get('XV6_IMAGE_DIR', '/tmp/xv6-stock-4m')).expanduser().resolve()
-OUTPUT = Path(os.environ.get('XV6_ORACLE_OUTPUT_DIR', '/tmp/xv6-qemu-oracle-20260928')).expanduser().resolve()
+OUTPUT = Path(os.environ.get('XV6_ORACLE_OUTPUT_DIR', '/tmp/xv6-qemu-oracle-client-20260928')).expanduser().resolve()
 QEMU = Path(os.environ.get('XV6_QEMU_BIN', '/usr/bin/qemu-system-i386')).expanduser().resolve()
 SOURCE_REVISION = 'eeb7b415dbcb12cc362d0783e41c3d1f44066b17'
 TIMEOUT_SECONDS = 900
+BOOT_TIMEOUT_SECONDS = 30
 TARGET = b'concreate ok\n'
 MARKERS = (b'createdelete ok\n', b'linkunlink ok\n', TARGET)
 PINS = {
@@ -82,6 +83,7 @@ def preflight():
             'runnerSha256': sha(Path(__file__)),
             'machine': 'pc-i440fx-8.2', 'cpu': 'qemu32', 'accel': 'tcg,thread=single',
             'memoryMiB': 4, 'smp': 1, 'timeoutSeconds': TIMEOUT_SECONDS,
+            'bootTimeoutSeconds': BOOT_TIMEOUT_SECONDS,
             'command': 'usertests\r', 'targetMarker': TARGET.decode()}
 
 
@@ -93,7 +95,7 @@ def command():
             '-drive', f'file={OUTPUT / "xv6-writable.img"},if=ide,index=0,media=disk,format=raw',
             '-drive', f'file={OUTPUT / "fs-writable.img"},if=ide,index=1,media=disk,format=raw',
             '-boot', 'order=c', '-display', 'none', '-monitor', 'none',
-            '-chardev', f'socket,id=oracle,path={OUTPUT / "serial.sock"},server=on,wait=on',
+            '-chardev', f'socket,id=oracle,path={OUTPUT / "serial.sock"},server=off',
             '-serial', 'chardev:oracle', '-no-reboot']
 
 
@@ -129,23 +131,25 @@ def run():
     stop = 'timeout'
     with (OUTPUT / 'serial-private.bin').open('xb') as serial_file, \
             (OUTPUT / 'qemu-stderr-private.txt').open('xb') as stderr_file:
+        listener = socket.socket(socket.AF_UNIX)
+        listener.bind(str(OUTPUT / 'serial.sock'))
+        listener.listen(1)
+        listener.settimeout(0.2)
         proc = subprocess.Popen(command(), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                 stderr=stderr_file)
         try:
             sock = None
             while time.monotonic() - started < TIMEOUT_SECONDS:
+                if b'xv6...' not in serial and time.monotonic() - started >= BOOT_TIMEOUT_SECONDS:
+                    stop = 'boot-timeout'
+                    break
                 if sock is None:
                     try:
-                        sock = socket.socket(socket.AF_UNIX)
-                        sock.connect(str(OUTPUT / 'serial.sock'))
-                    except (FileNotFoundError, ConnectionRefusedError):
-                        if sock is not None:
-                            sock.close()
-                        sock = None
+                        sock, _ = listener.accept()
+                    except socket.timeout:
                         if proc.poll() is not None:
                             stop = 'qemu-exit'
                             break
-                        time.sleep(0.1)
                         continue
                 readable, _, _ = select.select([sock], [], [], 0.2)
                 if readable:
@@ -168,6 +172,7 @@ def run():
         finally:
             if sock is not None:
                 sock.close()
+            listener.close()
             if proc.poll() is None:
                 proc.terminate()
             try:
