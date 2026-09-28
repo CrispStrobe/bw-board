@@ -604,14 +604,19 @@ export class I8086Machine {
      * @param {MachineConfig} [config]
      * @param {{ onPinChange?: (pin: string, level: 0|1, tMs: number) => void,
      *           onSerial?: (byte: number, tMs: number) => void }} [hooks]
+     * @param {{ allow386HighMemory?: boolean }} [internal]
      */
-    constructor(config = BREADBOARD8086, hooks = {}) {
+    constructor(config = BREADBOARD8086, hooks = {}, internal = {}) {
         this.config = config;
         this.hooks = hooks;
         this.clockHz = config.clockHz;
         const memoryBytes=config.memoryBytes ?? (1 << 20);
-        if (!Number.isInteger(memoryBytes) || memoryBytes < (1 << 20) || memoryBytes > (1 << 24))
-            throw new Error('machine config: memoryBytes must be an integer from 1 MiB through 16 MiB');
+        // Only the experimental 386 adapter opts into a larger physical
+        // backing. Ordinary 8086/286 boards retain their 24-bit ceiling.
+        const maxMemoryBytes = internal.allow386HighMemory &&
+            config.cpuBackend === 'protected286-experimental' ? 256 << 20 : 1 << 24;
+        if (!Number.isInteger(memoryBytes) || memoryBytes < (1 << 20) || memoryBytes > maxMemoryBytes)
+            throw new Error(`machine config: memoryBytes must be an integer from 1 MiB through ${maxMemoryBytes >> 20} MiB`);
         if (config.a20 && config.a20.controller !== '8042')
             throw new Error("machine config: a20.controller must be '8042'; port 92h fast A20 is not implemented");
         if (config.cpuBackend && config.cpuBackend !== 'protected286-experimental')

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {I8086Machine, PCAT80286_BOOT_640K} from '../src/i8086-machine.js';
 
 import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL,
@@ -10,6 +11,7 @@ import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_16M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP,
 } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
@@ -170,6 +172,59 @@ test('xv6 IBM BIOS profile advertises 15MiB without mapping RAM across the top R
   let checksum = 0;
   for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
   assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
+});
+
+test('386 high-memory profile keeps 224MiB contiguous RAM and a low-ROM reset alias', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP);
+  assert.equal(machine.memoryBytes, 256 << 20);
+  const rom = new Uint8Array(0x10000);
+  rom[0xfff0] = 0xea;
+  assert.equal(machine.loadRom(rom), 0xf0000);
+  assert.equal(machine.cpu.read(0xfffffff0), 0xea);
+  machine.cpu.write(0xff0000, 0x5a);
+  assert.equal(machine.cpu.read(0xff0000), 0x5a, '15–16MiB is RAM, not a ROM mirror');
+  for (const address of [0x1000000, 0x6400000, 0xdffffff]) {
+    machine.cpu.write(address, 0xa5);
+    assert.equal(machine.cpu.read(address), 0xa5);
+  }
+  machine.cpu.write(0xe000000, 0x77);
+  assert.equal(machine.cpu.read(0xe000000), 0xff, 'first byte beyond installed RAM is open bus');
+  assert.equal(machine.cpu.read(0xfffefff0), 0xff, 'reset alias does not cover nearby high addresses');
+  const cmos = register => { machine._out(0x70, register); return machine._in(0x71); };
+  assert.equal(cmos(0x17) | cmos(0x18) << 8, 15 * 1024);
+  assert.equal(cmos(0x34) | cmos(0x35) << 8, 208 * 16);
+  let checksum = 0;
+  for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
+  assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
+});
+
+test('386 high-memory physical dword reads and page walks preserve addresses above 16MiB', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP);
+  const put32 = (address, value) => {
+    for (let i = 0; i < 4; i++) machine.cpu.write(address + i, value >>> (8 * i));
+  };
+  put32(0x1000000, 0x44332211);
+  assert.equal(machine.cpu._readPhysical(0x1000000, 4), 0x44332211);
+  const directory = 0x1100000, table = 0x1200000, frame = 0x6400000;
+  put32(directory, table | 7);
+  put32(table + 4 * 4, frame | 7);
+  machine.cpu.write(frame, 0x5a);
+  machine.cpu.cr3 = directory;
+  machine.cpu.cr0 = 0x80000001;
+  machine.cpu.invalidateTranslationCache();
+  assert.equal(machine.cpu._readLinear(0x4000, 1), 0x5a);
+  machine.cpu._writeLinear(0x4001, 1, 0xa6);
+  assert.equal(machine.cpu.read(frame + 1), 0xa6);
+  machine.setA20Enabled(false);
+  machine.cpu.write(0x2100000, 0x77);
+  assert.equal(machine.cpu.read(0x2000000), 0x77, 'A20 clears only bit 20 above 16MiB');
+});
+
+test('ordinary 8086 and 286 constructors retain the 16MiB limit and 24-bit A20 mask', () => {
+  assert.throws(() => new I8086Machine({...PCAT80286_BOOT_640K, memoryBytes: 256 << 20}),
+    /through 16 MiB/);
+  const machine = new I8086Machine(PCAT80286_BOOT_640K);
+  assert.equal(machine._applyA20(0x11000000), 0);
 });
 
 test('xv6 SMP profile exposes checksummed MP metadata and non-sticky LAPIC delivery status', () => {
