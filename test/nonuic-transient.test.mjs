@@ -119,3 +119,78 @@ test('initializer failure is atomic for advanced, precharged, explicit-IC and ma
     unchanged(board, before);
   }
 });
+
+function parallelInductors(sourceParams = { volts: 0 }, extraParts = [], extraNets = [], connections = {}) {
+  const board = new BoardImpl();
+  board.setNetlist([
+    { id: 'V1', kind: 'vsource', params: sourceParams, terminals: ['pos', 'neg'] },
+    { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'C1', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
+    { id: 'L1', kind: 'inductor', params: { henrys: 0.001 }, terminals: ['a', 'b'] },
+    { id: 'L2', kind: 'inductor', params: { henrys: 0.002 }, terminals: ['a', 'b'] },
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ...extraParts,
+  ], [
+    { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'R1', terminal: 'a' },
+      ...(connections.in || [])] },
+    { id: 'mid', terminals: [{ part: 'R1', terminal: 'b' },
+      { part: 'C1', terminal: 'a' }, { part: 'L1', terminal: 'a' }, { part: 'L2', terminal: 'a' },
+      ...(connections.mid || [])] },
+    { id: 'gnd', terminals: [{ part: 'V1', terminal: 'neg' },
+      { part: 'C1', terminal: 'b' }, { part: 'L1', terminal: 'b' },
+      { part: 'L2', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+      ...(connections.gnd || [])] },
+    ...extraNets,
+  ]);
+  return board;
+}
+
+test('explicit proven-zero fallback starts parallel ideal inductors without broadening public OP', () => {
+  const board = parallelInductors();
+  assert.throws(() => board.operatingPoint(), /individual branch currents are indeterminate/);
+  assert.throws(() => board.initializeTransientFromOperatingPoint(), /individual branch currents are indeterminate/,
+    'the no-options path remains the strict operating-point path');
+  const initialized = board.initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' });
+  assert.equal(initialized.analysis.initialization, 'source-declared-quiescent-zero-state');
+  assert.equal(initialized.analysis.quiescent, true);
+  assert.deepEqual([...initialized.inductorCurrents], [['L1', 0], ['L2', 0]]);
+  assert.deepEqual([...initialized.nodeVoltages.values()], [0, 0, 0]);
+  board.advanceTo(1000n);
+  assert.equal(board.nodeVoltage('mid'), 0);
+  assert.equal(board.inductorCurrents.get('L1'), 0);
+  assert.equal(board.inductorCurrents.get('L2'), 0);
+  assert.equal(board._lastSolveConverged, true);
+});
+
+test('a waveform that is zero only at t=0 gets zero state but never a quiescent claim', () => {
+  const board = parallelInductors({ volts: 0, wave: 'sine', freq: 1000, amplitude: 1, offset: 0 });
+  const initialized = board.initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' });
+  assert.equal(initialized.analysis.initialization, 'source-declared-waveform-time-zero-zero-state');
+  assert.equal(initialized.analysis.quiescent, false);
+  board.advanceTo(250_000n);
+  assert.ok(board.nodeVoltage('in') > 0.9, 'the later waveform is live rather than frozen at its t=0 value');
+});
+
+test('proven-zero fallback refuses nonzero, floating, redundant-ideal and explicit-IC cases atomically', () => {
+  const nonzero = parallelInductors({ volts: 1 });
+  const floating = parallelInductors({ volts: 0 },
+    [{ id: 'RF', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+    [{ id: 'fa', terminals: [{ part: 'RF', terminal: 'a' }] },
+      { id: 'fb', terminals: [{ part: 'RF', terminal: 'b' }] }]);
+  const loop = parallelInductors({ volts: 0 },
+    [{ id: 'V2', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] }], [],
+    { in: [{ part: 'V2', terminal: 'pos' }], gnd: [{ part: 'V2', terminal: 'neg' }] });
+  const explicit = parallelInductors();
+  explicit._solveParts.find(part => part.id === 'L1').params.ic = 0;
+  const unsupported = parallelInductors({ volts: 0 },
+    [{ id: 'D1', kind: 'diode', params: { model: 'shockley', is: 1e-12, n: 1, rs: 0 },
+      terminals: ['anode', 'cathode'] }], [],
+    { mid: [{ part: 'D1', terminal: 'anode' }], gnd: [{ part: 'D1', terminal: 'cathode' }] });
+  for (const board of [nonzero, floating, loop, explicit, unsupported]) {
+    const before = state(board);
+    assert.throws(() => board.initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' }));
+    unchanged(board, before);
+  }
+  assert.throws(() => parallelInductors().initializeTransientFromOperatingPoint({ fallback: 'guess' }),
+    /unknown fallback guess/);
+});
