@@ -552,3 +552,57 @@ describe('labwired write watchpoints', () => {
         assert.match(t.setBreakpoint({ kind: 'write', addr: 0x10, len: 64 }).unsupported, /1\.\.8 bytes/);
     });
 });
+
+describe('labwired memory/register writes and any-address decode (when the engine has them)', () => {
+    const newEngine = (mem = new Map()) => ({
+        mem,
+        get_pc: () => 0x100,
+        step_single() {}, step_batch() {},
+        read_memory: (a, n) => Array.from({ length: n }, (_, k) => mem.get(a + k) ?? 0),
+        write_memory: (a, bytes) => bytes.forEach((b, k) => mem.set(a + k, b)),
+        get_register_names: () => ['R0', 'R1', 'SP'],
+        get_register: () => 0,
+        set_register: (i, v) => { mem.set(`r${i}`, v); },
+        disassemble_at: a => `decode@${a.toString(16)}`,
+        get_disassembly: () => 'decode@pc',
+    });
+    const on = (sim, arch) => createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim, arch } });
+
+    it('writes memory and a register by name; decodes any address', () => {
+        const sim = newEngine();
+        const t = on(sim);
+        assert.deepEqual(t.capabilities().writable, ['code', 'sram']);
+        assert.equal(t.writeMem('sram', 0x2000_0000, [1, 2]), undefined);
+        assert.deepEqual(sim.read_memory(0x2000_0000, 2), [1, 2]);
+        assert.equal(t.writeReg('sp', 0x2000_4000), undefined);
+        assert.equal(sim.mem.get('r2'), 0x2000_4000);
+        assert.match(t.writeReg('lr', 1).unsupported, /no register named lr/);
+        assert.equal(t.disasm(0x200), 'decode@200');
+    });
+    it('instruction lengths per architecture, and the listing stride', () => {
+        const mem = new Map([[0x0, 0x00], [0x1, 0xf0], [0x10, 0x00], [0x11, 0xbf],   // Thumb BL (f000) / NOP (bf00)
+            [0x20, 0x13], [0x21, 0x00], [0x30, 0x01], [0x31, 0x00],                   // RV addi (…13) / c.nop (0001)
+            [0x40, 0x22], [0x50, 0x3d],                                               // Xtensa addi (op0 2) / nop.n (op0 d)
+            [0x60, 0x0c], [0x61, 0x94], [0x70, 0x00], [0x71, 0x00]]);                 // AVR JMP (940c) / NOP
+        assert.equal(on(newEngine(mem)).instructionLength(0x0), 4);
+        assert.equal(on(newEngine(mem)).instructionLength(0x10), 2);
+        assert.equal(on(newEngine(mem), 'riscv').instructionLength(0x20), 4);
+        assert.equal(on(newEngine(mem), 'riscv').instructionLength(0x30), 2);
+        assert.equal(on(newEngine(mem), 'xtensa-lx7').instructionLength(0x40), 3);
+        assert.equal(on(newEngine(mem), 'xtensa-lx7').instructionLength(0x50), 2);
+        assert.equal(on(newEngine(mem), 'avr').instructionLength(0x60), 4);
+        assert.equal(on(newEngine(mem), 'avr').instructionLength(0x70), 2);
+        const t = on(newEngine(mem));
+        assert.equal(t.nextCodeAddress(0x10, 0), 0x10);
+        assert.equal(t.nextCodeAddress(0x10, 2), 0x12);
+    });
+    it('an older engine refuses writes by name and decodes only the PC', () => {
+        const t = createLabwiredDebugTarget({ adapter: { ...stubAdapter(),
+            sim: { get_pc: () => 0x100, get_disassembly: () => 'decode@pc', step_single() {}, step_batch() {} } } });
+        assert.deepEqual(t.capabilities().writable, []);
+        assert.match(t.writeMem('sram', 0, [1]).unsupported, /no memory write/);
+        assert.match(t.writeReg('R0', 1).unsupported, /no register write/);
+        assert.equal(t.disasm(0x100), 'decode@pc');
+        assert.equal(t.disasm(0x200), '', 'never the PC\'s instruction labelled as another address');
+    });
+});
