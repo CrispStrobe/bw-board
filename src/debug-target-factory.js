@@ -171,7 +171,9 @@ async function createLabwiredTarget(opts) {
       wasm, chipYaml: chip.chipYaml, firmware, firmwareOnly: true, blobs,
       clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
     });
-    const target = createLabwiredDebugTarget({ adapter });
+    // The user's own ELF carries its symbol table (a UF2 does not): hand it to
+    // the target so a PC reads as a function name.
+    const target = createLabwiredDebugTarget({ adapter, elf: firmware });
     return { target, adapter, refusals: [] };
   }
   if (!board) throw new Error('labwired target requires opts.board (or opts.chip for firmware-only)');
