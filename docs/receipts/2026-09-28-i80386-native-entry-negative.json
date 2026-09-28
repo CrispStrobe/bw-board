@@ -70,8 +70,13 @@
     "comparison": "All recorded baseline and candidate guest reports match after replacing only the absolute ROM worktree path and omitting nativeStats, which changes with batch size. Serial, CPU, interrupts, screen, step count and RAM hash remain in the comparison."
   },
   "executedFallbackCensus": {
-    "method": "A temporary Node --import observer recorded the first bytes actually fetched by completed JavaScript CPU steps while the opt-in native dispatcher ran the same full xv6 workload. It did not decode ahead or change guest memory. The observed run matched ordinary native-dispatch steps, serial, RAM hash and all native statistics.",
-    "observerSha256": "5dae1eddafcb9c50133d0debce116cf10ae4abf655d4d833311c01cc044f96b9",
+    "method": "The published Node --import observer records the first bytes actually fetched by completed JavaScript CPU steps while the opt-in native dispatcher runs the same full xv6 workload. It does not decode ahead or make independent guest-memory accesses. It counts a step only when cycles advance in protected mode with a default-32 CS; native retirements are counted separately by the dispatcher. Opcode and ModR/M classifications are syntactic, not proof of native eligibility.",
+    "observerSource": "scripts/observe-i80386-native-fallback.mjs",
+    "observerSha256": "a9e74eeb7aca31f5e31ca3aa3f72678bf6c2e6cb0c28ebed32abd175c7c06a9a",
+    "invocation": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' I80386_FALLBACK_HISTOGRAM=/tmp/fallback-histogram.json node --import ./scripts/observe-i80386-native-fallback.mjs scripts/probe-xv6-stock.mjs > /tmp/fallback-observed-report.json",
+    "unobservedNativeReportSha256": "410ceac6853fc629e188da47f1babf2f576cd17a733d4e007e4ac1f5cc24cd9a",
+    "publishedObserverReportSha256": "410ceac6853fc629e188da47f1babf2f576cd17a733d4e007e4ac1f5cc24cd9a",
+    "parity": "The full unobserved and published-observer xv6 JSON reports are byte-for-byte equal, including steps, serial, CPU/device state, final RAM SHA-256 and all native statistics. The published observer rerun also reproduced the original histogram byte for byte.",
     "histogramSha256": "c89cd1dfa60010324e85d7a98e84356a1714296afd8e9c76f2dd753c9326ae4f",
     "protected32JsFallbackRetirements": 6379836,
     "nativeRetirements": 16428211,
