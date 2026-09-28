@@ -278,6 +278,8 @@ describe('bounded transient numerical-analysis profile', () => {
       [{ wave: 'spice-pwl', points: [[0, 0], [2, 1], [2.5, 0]] }, 0.5 / 64],
       [{ wave: 'spice-exp', v1: 0, v2: 1, td1: 0, tau1: 0.2,
         td2: 1, tau2: 0.1 }, 0.1 / 64],
+      [{ wave: 'spice-sine', offset: 0, amplitude: 1, freq: 0.1,
+        td: 0, theta: 10, phase: 0 }, 0.1 / 64],
       [{ wave: 'triangle', freq: 2, amplitude: 1, offset: 0 }, 0.5 / 64],
       [{ wave: 'pcm', samples: [0, 1, 0], rate: 8 }, 1 / 8],
     ];
