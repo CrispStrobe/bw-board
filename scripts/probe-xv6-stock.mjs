@@ -9,6 +9,8 @@ import {IBM_TYPE1_GEOMETRY} from './lib/i80386-at-hdd-image.mjs';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
 import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
 import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
+import {createI80386NativeSuccessorCensus} from
+  '../src/experimental/i80386-native-successor-census.js';
 
 const firmware = process.env.XV6_FIRMWARE ?? 'ibm';
 if (!['ibm', 'bochs'].includes(firmware)) throw new Error('XV6_FIRMWARE must be ibm or bochs');
@@ -79,6 +81,11 @@ if(process.env.XV6_BROAD_BLOCK_SELECTED_FORMS==='1'&&!broadBlockCensus)
   throw new Error('selected-form census requires XV6_BROAD_BLOCK_CENSUS=1');
 const nativeByte = process.env.XV6_NATIVE_BYTE === '1';
 const nativeDispatch = process.env.XV6_NATIVE_DISPATCH === '1';
+const successorCensusPath=process.env.XV6_NATIVE_SUCCESSOR_CENSUS ?? '';
+if (successorCensusPath && !nativeDispatch)
+  throw new Error('native successor census requires XV6_NATIVE_DISPATCH=1');
+const successorCensus=successorCensusPath ?
+  createI80386NativeSuccessorCensus() : null;
 if ((nativeByte || nativeDispatch) && !lean)
   throw new Error('native xv6 execution requires XV6_LEAN=1 for comparable guest-step receipts');
 if (nativeByte && nativeDispatch)
@@ -154,7 +161,7 @@ const nativeRunner = nativeByte ? await (async () => {
 })() : null;
 const nativeDispatcher = nativeDispatch ? await (await import(
   '../src/experimental/i80386-native-dispatch.js'))
-  .createI80386NativeDispatcher(machine) : null;
+  .createI80386NativeDispatcher(machine,{successorObserver:successorCensus}) : null;
 const nativeBlocks = new Map();
 const nativeStats = {attempts:0, decoded:0, blockCalls:0, instructions:0,
   repStosDecoded:0, repStosBlockCalls:0, repStosIterations:0};
@@ -288,3 +295,5 @@ const receipt = {
 console.log(JSON.stringify(receipt, null, 2));
 if (expectedSerial && !receipt.serial.includes(expectedSerial))
   throw new Error(`xv6 serial output did not contain expected text ${JSON.stringify(expectedSerial)}`);
+if (successorCensus)
+  fs.writeFileSync(successorCensusPath,JSON.stringify(successorCensus.report(),null,2)+'\n');
