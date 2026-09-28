@@ -1,0 +1,107 @@
+{
+  "schema": "bw.i80386-bochs-vm-task-checkpoint.v1",
+  "positive": {
+    "oracle": "Bochs CPU-level-3 software emulator",
+    "revision": "5221bcf71c1e5a4ddfe7a0e640ede8605b795c57",
+    "sourceHashes": {
+      "test/fixtures/i80386-vm-task.S": "4c7d5e77fcc8b5f9d97c0325e03dbb3732402b8d855a5fd553446c850a690972",
+      "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+      "scripts/compare-bochs-i80386-task-vm86.mjs": "7463b2a3cd555b1a91dc96a269ca5cf5d2f2ec88c0fc7ae504c31c2d4c019868"
+    },
+    "host": {
+      "platform": "linux",
+      "arch": "x64",
+      "cpuModels": [
+        "Intel Xeon Processor (Skylake, IBRS, no TSX)"
+      ],
+      "node": "v20.20.2"
+    },
+    "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "bochsSha256": "2282de6986025228b177e648f3ca41957aad4bf276438fa2501afda0af802ff9",
+    "bochsConfigSha256": "793a8ce99efadd1d34defb8746d9b211535677368a6900096abd933044f3bdd2",
+    "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaBiosSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "imageSha256": "3f52637b99e7dac85e052e212ce4f520c64ad9116b83c4e67a648cb18ed513ae",
+    "floppySha256": "8749207d9c4fd9cd56532d122d6daa1865b637cd1d7c3bb52e90f3cf14bf9035",
+    "execution": {
+      "reference": "Bochs BIOS boots owned floppy; compare E9 BHV plus handler-memory, resumed CS and IOPL checkpoint",
+      "actual": "same image at 0x7c00; starts owned setup at 0x7e00 after disk load",
+      "checkpoint": {
+        "boundary": "after IDT task gate handler IRET restores the VM86 task, before its F4 exit port",
+        "encoding": "B=setup; H=protected handler; V=VM86 resume; K=handler RAM byte at physical 0x0500; 00=CS; 3=IOPL"
+      },
+      "postCheckpoint": "The fixture exits via QEMU port F4; Bochs can later reset from its VM86 idle loop. Stop at the complete seven-byte checkpoint."
+    },
+    "mutation": null,
+    "status": "pass",
+    "expected": "BHVK003",
+    "reference": "BHVK003",
+    "actual": "BHVK003",
+    "referenceCheckpoint": {
+      "handlerMemory": 75,
+      "cs": 0,
+      "iopl": 3
+    },
+    "actualCheckpoint": {
+      "handlerMemory": 75,
+      "cs": 0,
+      "eip": 32354,
+      "eflags": 143878,
+      "tr": 32
+    },
+    "differences": [],
+    "bochsExit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "bochsLogTail": [
+      "00000000000i[      ] CPU configuration",
+      "00000000000i[MEM0  ] rom at 0xffff0000/65536 ('/mnt/volume1/code/lego/wt-bochs-vm86-checkpoint/roms/free-at-bios/BIOS-bochs-legacy')",
+      "00000000000i[CPU0  ] cpu hardware reset",
+      "00000004635i[BIOS  ] $Revision: 14314 $ $Date: 2021-07-14 18:10:19 +0200 (Mi, 14. Jul 2021) $",
+      "00000449867i[VBIOS ] VGABios $Id: vgabios.c 288 2021-05-28 19:05:28Z vruppert $\r",
+      "00000452613i[VBIOS ] VBE Bios $Id: vbe.c 292 2021-06-03 12:24:22Z vruppert $",
+      "00031210136i[BIOS  ] Booting from 0000:7c00"
+    ]
+  },
+  "negative": {
+    "result": {
+      "mutation": "result",
+      "status": "fail",
+      "differences": [
+        {
+          "field": "actual.output",
+          "expected": "BHVK003",
+          "actual": "BHVK00X"
+        }
+      ]
+    },
+    "checkpoint": {
+      "mutation": "checkpoint",
+      "status": "fail",
+      "differences": [
+        {
+          "field": "actual.output",
+          "expected": "BHVK003",
+          "actual": "BHVX003"
+        }
+      ]
+    },
+    "memory": {
+      "mutation": "memory",
+      "status": "fail",
+      "differences": [
+        {
+          "field": "actual.handlerMemory",
+          "expected": 75,
+          "actual": 74
+        },
+        {
+          "field": "handlerMemory",
+          "reference": 75,
+          "actual": 74
+        }
+      ]
+    }
+  }
+}

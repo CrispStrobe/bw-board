@@ -58,6 +58,20 @@ preserves the guest-state comparison. It is not a claimed 10× result.
    cache/JIT mode and displayed frame/audio settings. Report wall time and
    actual host CPU. Never infer original 386DX RTx from our six-cycle charge.
 
+The owned VM86 task fixture now yields the seven-byte `BHVK003` checkpoint
+in pinned 386-level Bochs, pinned QEMU TCG and our 386. `B` is setup, `H` is
+the protected task-gate handler, and `V` is the VM86 task after that handler's
+`IRET` returns to it. The handler writes `K` to physical RAM `0x0500`; the
+resumed VM86 code reads that byte and emits `K`, then emits visible CS `00`
+and IOPL `3` from `PUSHF`. Our core also directly checks that byte, VM in
+EFLAGS and TR `0x20` at the same checkpoint. Bochs' separate E9 output is the
+reference for the emitted fields. The [Bochs receipt](receipts/2026-09-28-i80386-bochs-vm-task-checkpoint.json)
+records source/Bochs/ROM hashes and three rejected mutations; the
+[QEMU receipt](receipts/2026-09-28-i80386-qemu-vm-task-checkpoint.json) records
+the same fixture on its later-model TCG CPU. Bochs can reset after this
+checkpoint because the fixture's F4 exit port is QEMU-specific, so the oracle
+stops at the complete seven-byte event.
+
 ## Reuse boundaries
 
 Brickwright is MIT licensed. [MAME's i386 source](https://github.com/mamedev/mame/blob/master/src/devices/cpu/i386/i386.cpp)
