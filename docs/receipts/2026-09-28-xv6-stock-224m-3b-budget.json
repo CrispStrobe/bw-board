@@ -1,0 +1,72 @@
+{
+  "schema": "bw.xv6-stock-usertests-224m-3b-budget-public.v1",
+  "xv6SourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "xv6UsertestsSourceSha256": "02b4e8801903491dfb8fb294de4dbe0747c17b654f8339258bcd26e072b1d70c",
+  "xv6EchoSourceSha256": "56166560ff38559739eeb3158c92321cceee0585689833f5f98100787662c6b9",
+  "boardRevisions": {
+    "localVps": "c3b41bc8995e88679b68f23cb0a29a39887dcd63",
+    "githubActions": "5d1f041e0a9941a13e098cbaa10d0634581287bf"
+  },
+  "sourceSha256": {
+    "scripts/probe-xv6-stock.mjs": "5a8d39a22caac9860ad7e1b02cf0dbb3e820c0b443fc66ab54cab76be878907a",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "src/experimental/i80386-at-machine.js": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0",
+    "src/i8086-machine.js": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+  },
+  "probeWrapperSha256": "5aab24ea3a76715ff71c62114c4d80c0a0420e1a15a7f2f6a3902e4b6b6437c1",
+  "mediaSha256": {
+    "rom": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaRom": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "bootImage": "de7f0e4aab39c0fc6d21aa283943e8dfe6420ef0806df87efb21bf336e1a353a",
+    "filesystemImage": "0b86e83c68d45d34fd0cecddd627b2d71893ab9df7d77d5372941c701d4eae22",
+    "kernel": "10bf65351fe69951a42673bc314049c15a1432cd5cdab004df5e7268cff8eafb"
+  },
+  "stepBudget": 3000000000,
+  "completedSteps": 3000000000,
+  "markersInSourceOrder": {
+    "createdelete ok\n": 193,
+    "linkunlink ok\n": 225,
+    "concreate ok\n": 254,
+    "sbrk test OK\n": 3813,
+    "validate ok\n": 3840,
+    "big files ok\n": 4003,
+    "mem test\n": 4176
+  },
+  "missingMarkers": [
+    "mem ok\n",
+    "ALL TESTS PASSED\n$ "
+  ],
+  "stop": "budget-before-full-suite-marker",
+  "fullUsertestsPassed": false,
+  "serialComparison": {
+    "localAndActionsIdentical": true,
+    "boardSerialByteLength": 4208,
+    "boardSerialSha256": "1733ad1287387d552146e2bde778e08ef013aaff7df4c9b7852322eaf4202dac",
+    "boardLeadingByte": "0x0c",
+    "boardCompleteLineCountAfterLeadingByte": 97,
+    "qemuOraclePrivateCommit": "88f242401ac01e96e579f971228dd06d89841ae0",
+    "qemuOracleSerialByteLength": 4658,
+    "qemuOracleSerialSha256": "a60b4272f7e6ec98bf10fb598c1976021354bb9af3fce19f792602175928efc8",
+    "qemuOracleLineCount": 127,
+    "boardAfterLeadingByteIsExactQemuPrefix": true
+  },
+  "dualHostParityFields": [
+    "serial",
+    "inputSent",
+    "steps",
+    "cpu",
+    "screen"
+  ],
+  "privateEvidence": {
+    "commit": "7a8aaa006dd8a442380187cab8dd00bcab3fc6fd",
+    "localRawSha256": "12af8e9a3aa77387b29be9af79b0404cae319a675ae5a42273677018a6f2d89b",
+    "githubActionsRawSha256": "62bb25e8b8eae7c62700561c189625a4c4ba129deff805919e6e022c67898a6f"
+  },
+  "githubActions": {
+    "runId": 36489215362,
+    "workflowConclusion": "success",
+    "probeExitStatus": 1,
+    "interpretation": "workflow success reported measurement completion; full suite marker absent"
+  },
+  "limitations": "Both hosts stopped at the declared 3B-step ceiling during mem test after allocuvm out of memory. QEMU prefix agreement does not establish board completion or performance parity. Raw serial, host logs, and guest media are archived privately."
+}
