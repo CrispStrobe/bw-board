@@ -283,6 +283,36 @@ describe('firmware-only on the real engine', { skip: skipEngine }, () => {
         const strip = e => ({ ...e, time: { ...e.time, domain: e.time.domain.replace(/-rewind-\d+$/, '') } });
         assert.deepEqual(events.map(strip), live, 'the replay is the recording, field for field');
     });
+    // Hand-assembled (no Xtensa toolchain in CI, so this cannot skip):
+    //   base+0: addi a2, a2, 1   (22 c2 01)
+    //   base+3: j base          (46 fe ff: target = pc + 4 - 7)
+    // base+3 is ODD -- the address the old ARM-only Thumb mask would have moved.
+    for (const [chip, base] of [['esp32', 0x40080000], ['esp32s3', 0x40370000]]) {
+        it(`${chip}: a hand-assembled Xtensa loop runs, and stops on its odd-address branch`, async () => {
+            const code = Uint8Array.of(0x22, 0xc2, 0x01, 0x46, 0xfe, 0xff);
+            const off = 52 + 32;
+            const elf = new Uint8Array(off + code.length);
+            const dv = new DataView(elf.buffer);
+            elf.set([0x7f, 0x45, 0x4c, 0x46, 1, 1, 1]);
+            dv.setUint16(16, 2, true); dv.setUint16(18, 94, true); dv.setUint32(20, 1, true);   // EXEC, EM_XTENSA
+            dv.setUint32(24, base, true); dv.setUint32(28, 52, true);
+            dv.setUint16(40, 52, true); dv.setUint16(42, 32, true); dv.setUint16(44, 1, true);
+            dv.setUint32(52, 1, true); dv.setUint32(56, off, true); dv.setUint32(60, base, true);
+            dv.setUint32(64, base, true); dv.setUint32(68, code.length, true); dv.setUint32(72, code.length, true);
+            dv.setUint32(76, 5, true);
+            elf.set(code, off);
+            const { target } = await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG[chip], firmware: elf });
+            assert.equal(target.regs().pc, base);
+            assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: base + 3 }), 'number');
+            target.run();
+            assert.equal(target.runFor(1_000_000), 'halted');
+            assert.equal(target.regs().pc, base + 3, 'stopped on the odd address itself');
+            const a2 = target.regs().a2;
+            target.run();
+            target.runFor(1_000_000);
+            assert.equal(target.regs().a2, a2 + 1, 'one more trip round the loop');
+        });
+    }
     it('rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom', { skip: haveGcc ? false : 'arm-none-eabi-gcc not installed' }, async () => {
         const { bytes, done } = rp2040RomLookupElf();
         const { target } = await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG.rp2040, firmware: bytes });
