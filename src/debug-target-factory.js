@@ -162,6 +162,12 @@ async function createLabwiredTarget(opts) {
   // one to use whenever there IS a board — a circuit is never silently dropped.
   if (opts.chip && !board) {
     const { chip } = opts;
+    // A labwired BOARD (labwired-catalog.js LABWIRED_BOARDS) brings its own
+    // manifest -- the devices it wires, a display among them -- on this chip.
+    const labBoard = opts.labwiredBoard;
+    if (labBoard && labBoard.chip !== chip.name) {
+      throw new Error(`board ${labBoard.name} is built on ${labBoard.chip}, not ${chip.name}`);
+    }
     if (!chip.chipYaml || !chip.name) throw new Error('labwired firmware-only target needs a catalog chip');
     // The RP2040's mask ROM is an image_env region the browser cannot fill
     // from disk; this repo's clean-room ROM (rp2040-bootrom.js, from the
@@ -170,10 +176,12 @@ async function createLabwiredTarget(opts) {
     const adapter = createLabwiredAdapter({
       wasm, chipYaml: chip.chipYaml, firmware, firmwareOnly: true, blobs,
       clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
+      systemYaml: labBoard ? labBoard.systemYaml : undefined,
     });
     // The user's own ELF carries its symbol table (a UF2 does not): hand it to
     // the target so a PC reads as a function name.
-    const target = createLabwiredDebugTarget({ adapter, elf: firmware });
+    const target = createLabwiredDebugTarget({ adapter, elf: firmware,
+      displays: labBoard ? labBoard.displays : undefined });
     return { target, adapter, refusals: [] };
   }
   if (!board) throw new Error('labwired target requires opts.board (or opts.chip for firmware-only)');

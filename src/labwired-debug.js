@@ -46,6 +46,7 @@
 import { plain } from './labwired-adapter.js';
 import { logicalTimeDomain } from './instruction-debug-events.js';
 import { readElfFunctionSymbols, symbolizer } from './elf-symbols.js';
+import { decodeDisplay } from './display-decode.js';
 
 const FREE_RUN_CHUNK = 200_000;
 const CODE_ADDRESS_MAX = 0xfffffffe;
@@ -176,6 +177,8 @@ export function createLabwiredDebugTarget (opts) {
   const domain = () => (epoch ? `${DOMAIN}-rewind-${epoch}` : DOMAIN);
   const clockHz = Number(clockHzBig);
   let eventListeners = [];
+  let videoCache = null;
+  let videoFrames = 0;
   let inputListeners = [];
   /** One instruction, and — while recording — its retire event. */
   const stepOne = () => {
@@ -486,6 +489,30 @@ export function createLabwiredDebugTarget (opts) {
       }
       const where = nameOf(codeAddr(addr));
       return where && text ? `<${where}> ${text}` : text;
+    },
+
+    /**
+     * The board's display, as the frame every video() here returns. Only when
+     * a labwired board with a drawable display was picked (opts.displays);
+     * re-decoded only when the engine's `generation` changes. null when there
+     * is nothing to draw, never a guessed frame.
+     */
+    video () {
+      const disp = (opts.displays || [])[0];
+      if (!disp || detached || typeof sim().get_display !== 'function') return null;
+      let meta;
+      try { meta = plain(sim().get_display(disp.id, false)); } catch (e) { return null; }
+      if (!meta) return null;
+      const gen = String(meta.meta?.generation ?? meta.generation ?? '');
+      if (videoCache && videoCache.gen === gen && gen) return videoCache.frame;
+      let full;
+      try { full = plain(sim().get_display(disp.id, true)); } catch (e) { return null; }
+      const decoded = decodeDisplay({ ...full, format: full?.format ?? full?.meta?.format });
+      if (!decoded || decoded.refused) return null;
+      videoFrames += 1;
+      const frame = { ...decoded, frame: videoFrames, signal: true };
+      videoCache = { gen, frame };
+      return frame;
     },
 
     /** The function containing `addr` in the user's ELF, `{name, offset}`, or null. */
