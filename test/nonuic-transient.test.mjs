@@ -145,6 +145,63 @@ function parallelInductors(sourceParams = { volts: 0 }, extraParts = [], extraNe
   return board;
 }
 
+function sourceFreeSi7li3835() {
+  const board = new BoardImpl();
+  board.setNetlist([
+    { id: 'C1', kind: 'capacitor', params: { farads: 5e-5 }, terminals: ['a', 'b'] },
+    { id: 'L1', kind: 'inductor', params: { henrys: 100 }, terminals: ['a', 'b'] },
+    { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'R2', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ], [
+    { id: 'N001', terminals: [{ part: 'C1', terminal: 'a' }, { part: 'R1', terminal: 'b' }] },
+    { id: 'N002', terminals: [{ part: 'L1', terminal: 'a' }, { part: 'R2', terminal: 'b' }] },
+    { id: 'V2', terminals: [{ part: 'R1', terminal: 'a' }, { part: 'R2', terminal: 'a' }] },
+    { id: '0', terminals: [{ part: 'C1', terminal: 'b' }, { part: 'L1', terminal: 'b' },
+      { part: 'G1', terminal: 'gnd' }] },
+  ]);
+  return board;
+}
+
+test('successful OP certifies the exact source-free Si7li row 3835 as quiescent', () => {
+  const board = sourceFreeSi7li3835();
+  const point = board.operatingPoint();
+  assert.equal(point.converged, true, 'the ordinary OP path succeeds; no fallback is involved');
+  const initialized = board.initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' });
+  assert.equal(initialized.analysis.initialization, 'source-declared-quiescent-zero-state');
+  assert.equal(initialized.analysis.quiescent, true);
+  assert.deepEqual(Object.fromEntries(initialized.nodeVoltages), { 0: 0, N001: 0, N002: 0, V2: 0 });
+  assert.deepEqual([...initialized.capacitorVoltages], [['C1', 0]]);
+  assert.deepEqual([...initialized.inductorCurrents], [['L1', 0]]);
+  assert.deepEqual(board._transientAnalysisWork, { attempts: 0, solves: 0, advances: 0 });
+});
+
+test('successful OP quiescence requires the actual returned state to be exactly zero', () => {
+  const board = sourceFreeSi7li3835();
+  const operatingPoint = board.operatingPoint.bind(board);
+  board.operatingPoint = options => {
+    const point = operatingPoint(options);
+    point.branchCurrents.get('R1').set('a', 1);
+    return point;
+  };
+  const initialized = board.initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' });
+  assert.equal(initialized.analysis.initialization, 'source-declared-dc-operating-point');
+  assert.equal(initialized.analysis.quiescent, false,
+    'a topology proof cannot conceal a nonzero solver result');
+  assert.equal(initialized.nodeVoltages.get('N001'), 0);
+});
+
+test('biased and time-varying successful operating points are never certified quiescent', () => {
+  const biased = rcl(1).initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' });
+  assert.equal(biased.analysis.quiescent, false);
+  const waveformBoard = rcl(0);
+  Object.assign(waveformBoard._solveParts.find(part => part.id === 'V1').params,
+    { wave: 'sine', freq: 1000, amplitude: 1, offset: 0 });
+  const waveform = waveformBoard.initializeTransientFromOperatingPoint({ fallback: 'proven-zero-state' });
+  assert.equal(waveform.analysis.quiescent, false);
+  assert.equal(waveform.analysis.initialization, 'source-declared-waveform-time-zero-operating-point');
+});
+
 test('explicit proven-zero fallback starts parallel ideal inductors without broadening public OP', () => {
   const board = parallelInductors();
   assert.throws(() => board.operatingPoint(), /individual branch currents are indeterminate/);

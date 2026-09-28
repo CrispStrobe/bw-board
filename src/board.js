@@ -2472,6 +2472,19 @@ export class BoardImpl {
       }
     }
 
+    // A successful operating point is not by itself a quiescence certificate:
+    // biased static circuits and a waveform sampled at zero both have valid
+    // time-zero points.  Reuse the deliberately narrow proven-zero topology
+    // authority, then verify the result it produced byte-for-value before
+    // allowing a caller to omit all later transient integration work.
+    const quiescent = !hasTimeVaryingSource
+      && this._canInitializeProvenZeroState()
+      && [...point.nodeVoltages.values()].every(value => value === 0)
+      && [...point.branchCurrents.values()].every(values =>
+        [...values.values()].every(value => value === 0))
+      && [...capacitorVoltages.values()].every(value => value === 0)
+      && [...inductorCurrents.values()].every(value => value === 0);
+
     this.capVoltages = new Map(capacitorVoltages);
     this.inductorCurrents = new Map(inductorCurrents);
     this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
@@ -2513,9 +2526,12 @@ export class BoardImpl {
       analysis: {
         ...point.analysis,
         kind: 'non-uic-transient-initialization',
-        initialization: hasTimeVaryingSource
-          ? 'source-declared-waveform-time-zero-operating-point'
-          : 'source-declared-dc-operating-point',
+        initialization: quiescent
+          ? 'source-declared-quiescent-zero-state'
+          : hasTimeVaryingSource
+            ? 'source-declared-waveform-time-zero-operating-point'
+            : 'source-declared-dc-operating-point',
+        quiescent,
         storage: 'capacitor-voltage-and-inductor-current',
         integrationRestart: 'backward-euler',
         timeNs: 0n,
