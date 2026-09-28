@@ -427,6 +427,17 @@ checkpoints, immediate page-table-write coherence, and bounded event-aware
 batching; any implementation still needs full Windows/xv6 parity and paired
 CPU-time evidence before a speed claim.
 
+A [current-source Windows code16 follow-up](I80386-CODE16-WINDOWS-CURRENT.md)
+paired ordinary and opt-in diagnostic runs at `e7434073` for the same 60
+million guest steps and complete guest-state digest. The opt-in path retired
+5.04 million steps in 2.35 million block calls, averaging 2.15 steps/call;
+ordinary and opt-in user CPU were 78.52 and 392.05 seconds on a four-vCPU
+Xeon Skylake host. Its **4.99× CPU cost** is a no-go for the current
+diagnostic configuration. The [public aggregate receipt](receipts/2026-09-28-i80386-code16-windows-current.json)
+retains source hashes, modes and exit reasons without private media IDs or
+guest text. The bounded next step is an event-aware multi-instruction trace
+architecture, not another isolated 16-bit opcode addition.
+
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
 proofs. A guarded [two-phase xv6 prototype](receipts/2026-09-28-i80386-deallocuvm-two-phase-negative.json)
