@@ -43,6 +43,8 @@
 
 /** Engine cycles per pump slice when nothing is armed — big enough that the
  *  wasm boundary is not the bottleneck, small enough to stay responsive. */
+import { plain } from './labwired-adapter.js';
+
 const FREE_RUN_CHUNK = 200_000;
 const CODE_ADDRESS_MAX = 0xfffffffe;
 
@@ -80,6 +82,32 @@ export function createLabwiredDebugTarget (opts) {
   const thumb = (adapter.arch ?? 'arm') === 'arm';
   const codeAddr = a => (thumb ? (a & ~1) : a) >>> 0;
   const pc = () => sim().get_pc() >>> 0;
+
+  /**
+   * The engine's Cortex-M fault verdict (why and where the firmware faulted,
+   * `summary` is one sentence), or null — also null on an engine or core that
+   * has none. Non-draining on the engine side, so it is safe to ask per slice.
+   */
+  const readFault = () => {
+    if (typeof sim().fault_verdict !== 'function') return null;
+    try {
+      const json = sim().fault_verdict();
+      return json ? JSON.parse(json) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  /** Latched once the first fault halts the run, so Continue does not stop again at once. */
+  let faultSeen = false;
+  /** Halt on the FIRST fault, the way a hardware debugger stops on HardFault. */
+  const haltOnNewFault = () => {
+    if (faultSeen) return false;
+    const verdict = readFault();
+    if (!verdict) return false;
+    faultSeen = true;
+    halted('fault', { summary: verdict.summary, verdict });
+    return true;
+  };
 
   const halted = (reason, detail) => {
     running = false;
@@ -236,6 +264,7 @@ export function createLabwiredDebugTarget (opts) {
       if (adapter.resetToProgram) adapter.resetToProgram();
       running = false;
       insnRemaining = null;
+      faultSeen = false;
     },
 
     runFor (budgetNs) {
@@ -257,7 +286,7 @@ export function createLabwiredDebugTarget (opts) {
           left -= chunk;
         }
         adapter.pump();
-        return 'running';
+        return haltOnNewFault() ? 'halted' : 'running';
       }
 
       for (let i = 0; i < budgetCycles; i++) {
@@ -275,7 +304,23 @@ export function createLabwiredDebugTarget (opts) {
         }
       }
       adapter.pump();
-      return 'running';
+      return haltOnNewFault() ? 'halted' : 'running';
+    },
+
+    /**
+     * What the engine knows that the run itself does not show:
+     *   fault         the Cortex-M fault verdict (see readFault), or null;
+     *   fidelityGaps  instructions it could not decode and addresses nothing
+     *                 claimed — each one a silent no-op that looks exactly like
+     *                 firmware running correctly. [] when there are none.
+     * Optional on a DebugTarget; a host asks with `typeof target.diagnostics`.
+     */
+    diagnostics () {
+      let fidelityGaps = [];
+      if (typeof sim().fidelity_gaps === 'function') {
+        try { fidelityGaps = plain(sim().fidelity_gaps()) || []; } catch (e) { fidelityGaps = []; }
+      }
+      return { fault: readFault(), fidelityGaps: Array.isArray(fidelityGaps) ? fidelityGaps : [] };
     },
 
     // The runner calls this UNGUARDED — board.advanceTo(target.timeNs()) on
