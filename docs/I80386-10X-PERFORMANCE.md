@@ -45,9 +45,19 @@ user CPU across three pairs, with one reversal; its executable changes were
 discarded. The [current Windows code16 diagnostic](I80386-CODE16-WINDOWS-CURRENT.md)
 matched selected reported guest fields but took 392.05 versus 78.52 user CPU
 seconds, about 4.99× longer. Neither result supports another narrow opcode
-addition. The next experiment is a bounded dynamic-memory slow-exit contract
-that can preserve exact faults, page-table/code coherence and device-event
-boundaries while reducing block-entry work. The measurements below are an
+addition. The [bounded dynamic-memory slow-exit contract](I80386-DYNAMIC-MEMORY-SLOW-EXIT.md)
+now demonstrates two narrow memory forms without wiring them into the normal
+dispatcher. A [full-xv6 fallback-span census](receipts/2026-09-28-i80386-dynamic-span-no-go.json)
+then found **zero** four-instruction runs of those exact forms. Even a much
+broader syntax-only grammar reached 2,101,670 fallback steps in runs of at
+least four, below its predeclared 2.4-million-step gate. The observer left
+the complete guest report and RAM hash unchanged; no grouped executor was
+retained or speedup claimed. Separately, an [owned protected-16 executable
+trace](I80386-CODE16-OWNED-IO-TRACE.md) retires three fixture instructions
+in one call and exits before a device read, with ordinary-state parity and
+QEMU/Bochs witnesses. It is outside the AT dispatcher and has no Windows
+speed result. Current work is attributing short-span entry and fallback costs
+before selecting another executable prototype. The measurements below are an
 experiment ledger; earlier statements about work remaining refer to their
 dated source revisions.
 
