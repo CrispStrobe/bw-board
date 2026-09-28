@@ -37,7 +37,8 @@ PINS = {
     'kernel': (XV6_IMAGE_DIR / 'kernel',
                '10bf65351fe69951a42673bc314049c15a1432cd5cdab004df5e7268cff8eafb'),
 }
-SOURCE_FILES = ('scripts/probe-xv6-stock.mjs', 'src/experimental/i80386.js',
+SOURCE_FILES = ('scripts/probe-xv6-stock.mjs', 'scripts/lib/xv6-serial-tee.mjs',
+                'src/experimental/i80386.js',
                 'src/experimental/i80386-at-machine.js', 'src/i8086-machine.js')
 
 
