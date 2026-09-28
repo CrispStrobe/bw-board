@@ -1,0 +1,239 @@
+{
+  "schema": "bw.i80386-selected-forms-potential-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Parallel observational selected-form linked-run scenario on pinned ordinary Windows 3.11 60M and lean stock xv6 forktest",
+  "source": {
+    "baseCommit": "b9220f4dfcb1a8d5990cbff2330ee806dd00db15",
+    "measuredCommit": "c6768e01e6b8d1fa777f1775aee9879331804348",
+    "censusSha256": "ca1a61df0248dde589bd6171101cb20248c846c0a97daef3b9dedaa564b8b4cb",
+    "atCliSha256": "dc81133cccb5d31ff9c8c65bcdd9c21665e32fcc5a46767e392f08b8117b625e",
+    "xv6ProbeSha256": "d78661676d50cfa152c2bc6ff02ba91a1ea42b8efe74261e855933805a62172d",
+    "grammarAndLimits": "docs/I80386-BROAD-BLOCK-CENSUS.md"
+  },
+  "gate": {
+    "minimumPotentialCompletedStepShare": 0.5,
+    "minimumMeanLinkedStepsPerRun": 4,
+    "requiredOnBothWorkloads": true,
+    "result": "no-go: Windows mean 3.203929 < 4; no executable selected-form path or speed claim"
+  },
+  "validation": {
+    "focusedTests": "19/19 pass; exact admitted/refused forms, fetched group ModR/M, high-byte register forms, Jcc successor breaks, baseline object and guest parity",
+    "baselineObjects": "For both workloads, jq -S of broadBlockCensus excluding selectedFormsPotential is byte-identical to the preceding refusal-opcode census object.",
+    "partitions": "In every mode: selected potential = prior linked potential + added steps; added forms sum to added steps; histogram run counts and run ends equal runs; weighted histogram steps equal selected potential; Jcc joins plus refusals equal attempts; >=4 and >=8 tails equal histogram sums. Existing attempt/completed/noncandidate partitions also hold.",
+    "normalization": "Windows: jq -S del(.executionRevision,.sourceSha256,.broadBlockCensus). xv6: jq -S del(.broadBlockCensus,.broadBlockCensusSourceSha256,.rom.path,.image.path,.slaveImage.path). Exact normalized guest equality to prior reports."
+  },
+  "workloads": {
+    "windows60m": {
+      "rawReportSha256": "1d19d0c29ade503798732334e10d8b2dd7040391c06e73c1b5e08293985cd17c",
+      "timeSha256": "89b2fd82c74df7e6ded0f75197b2653c19f9794df20da7fe2b6f4a6134526be8",
+      "oldCensusObjectSha256": "bbecda015b30f5c281f06ec6c98cc44b50a7499554ed34664626f7634969c50a",
+      "normalizedGuestSha256": "0dbb2b2c01b87a109fdaea6b05631941ba589aab1b96da4185466db95701ded6",
+      "total": {
+        "completedSteps": 59971215,
+        "oldLinkedPotentialSteps": 44938027,
+        "selectedPotentialSteps": 48468513,
+        "addedSteps": 3530486,
+        "linkedRuns": 15127834,
+        "runsAtLeast4": 4699786,
+        "stepsInRunsAtLeast4": 32147560,
+        "runsAtLeast8": 1215012,
+        "stepsInRunsAtLeast8": 14887995,
+        "potentialCompletedStepShare": 0.808196,
+        "meanLinkedStepsPerRun": 3.203929
+      },
+      "modes": {
+        "real": {
+          "completedSteps": 13435142,
+          "oldLinkedPotentialSteps": 9838731,
+          "selectedPotentialSteps": 10502565,
+          "addedSteps": 663834,
+          "addedForms": {
+            "24": 125150,
+            "25": 45967,
+            "84": 130687,
+            "3c": 111492,
+            "3d": 99784,
+            "a8": 2182,
+            "3a": 23456,
+            "05": 34347,
+            "f6/0": 61243,
+            "f7/0": 18886,
+            "0fb7": 775,
+            "0fb6": 9865
+          },
+          "linkedRuns": 3524019,
+          "runsAtLeast4": 1067766,
+          "stepsInRunsAtLeast4": 6729305,
+          "runsAtLeast8": 209628,
+          "stepsInRunsAtLeast8": 2571391
+        },
+        "protected16": {
+          "completedSteps": 10036060,
+          "oldLinkedPotentialSteps": 7299699,
+          "selectedPotentialSteps": 8381345,
+          "addedSteps": 1081646,
+          "addedForms": {
+            "24": 12408,
+            "25": 11095,
+            "84": 240,
+            "3c": 308061,
+            "0fb7": 7841,
+            "f6/0": 72475,
+            "3d": 72757,
+            "a8": 48174,
+            "f7/0": 58422,
+            "3a": 487571,
+            "05": 2230,
+            "0fb6": 372
+          },
+          "linkedRuns": 2682804,
+          "runsAtLeast4": 593820,
+          "stepsInRunsAtLeast4": 5434180,
+          "runsAtLeast8": 204049,
+          "stepsInRunsAtLeast8": 3447863
+        },
+        "vm86": {
+          "completedSteps": 21222506,
+          "oldLinkedPotentialSteps": 16695814,
+          "selectedPotentialSteps": 17511862,
+          "addedSteps": 816048,
+          "addedForms": {
+            "24": 51618,
+            "25": 50043,
+            "84": 118185,
+            "3d": 230247,
+            "3c": 129098,
+            "f6/0": 180293,
+            "3a": 17150,
+            "05": 36689,
+            "a8": 2051,
+            "f7/0": 644,
+            "0fb7": 30
+          },
+          "linkedRuns": 4590500,
+          "runsAtLeast4": 1955233,
+          "stepsInRunsAtLeast4": 12673636,
+          "runsAtLeast8": 571105,
+          "stepsInRunsAtLeast8": 5839879
+        },
+        "protected32": {
+          "completedSteps": 15277507,
+          "oldLinkedPotentialSteps": 11103783,
+          "selectedPotentialSteps": 12072741,
+          "addedSteps": 968958,
+          "addedForms": {
+            "24": 253,
+            "25": 57645,
+            "84": 7607,
+            "0fb7": 108452,
+            "0fb6": 243123,
+            "f6/0": 334167,
+            "3c": 19751,
+            "3a": 96367,
+            "f7/0": 51595,
+            "3d": 22423,
+            "05": 2633,
+            "a8": 24942
+          },
+          "linkedRuns": 4330511,
+          "runsAtLeast4": 1082967,
+          "stepsInRunsAtLeast4": 7310439,
+          "runsAtLeast8": 230230,
+          "stepsInRunsAtLeast8": 3028862
+        }
+      }
+    },
+    "xv6Forktest": {
+      "rawReportSha256": "03e07fb4109e2620b10a09ab3cf172b51aa92010c1a165daacb63068ff8cf859",
+      "timeSha256": "d4dce346104301104a5608fb791113280a7009127054384565f286a52e25c331",
+      "oldCensusObjectSha256": "21dc773c108ddcd16d0e4eba05b2d9e20e5fdb516ecc49482d17ef26792e41af",
+      "normalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+      "total": {
+        "completedSteps": 24335051,
+        "oldLinkedPotentialSteps": 21604831,
+        "selectedPotentialSteps": 23720972,
+        "addedSteps": 2116141,
+        "linkedRuns": 4172196,
+        "runsAtLeast4": 973961,
+        "stepsInRunsAtLeast4": 18994694,
+        "runsAtLeast8": 373002,
+        "stepsInRunsAtLeast8": 16205684,
+        "potentialCompletedStepShare": 0.974766,
+        "meanLinkedStepsPerRun": 5.685488
+      },
+      "modes": {
+        "real": {
+          "completedSteps": 1527003,
+          "oldLinkedPotentialSteps": 1256221,
+          "selectedPotentialSteps": 1328317,
+          "addedSteps": 72096,
+          "addedForms": {
+            "24": 30094,
+            "25": 148,
+            "84": 30742,
+            "3c": 5958,
+            "3d": 2018,
+            "a8": 3,
+            "3a": 2957,
+            "05": 174,
+            "f6/0": 2
+          },
+          "linkedRuns": 304047,
+          "runsAtLeast4": 165433,
+          "stepsInRunsAtLeast4": 1089474,
+          "runsAtLeast8": 34369,
+          "stepsInRunsAtLeast8": 496229
+        },
+        "protected16": {
+          "completedSteps": 1,
+          "oldLinkedPotentialSteps": 0,
+          "selectedPotentialSteps": 0,
+          "addedSteps": 0,
+          "addedForms": {},
+          "linkedRuns": 0,
+          "runsAtLeast4": 0,
+          "stepsInRunsAtLeast4": 0,
+          "runsAtLeast8": 0,
+          "stepsInRunsAtLeast8": 0
+        },
+        "vm86": {
+          "completedSteps": 0,
+          "oldLinkedPotentialSteps": 0,
+          "selectedPotentialSteps": 0,
+          "addedSteps": 0,
+          "addedForms": {},
+          "linkedRuns": 0,
+          "runsAtLeast4": 0,
+          "stepsInRunsAtLeast4": 0,
+          "runsAtLeast8": 0,
+          "stepsInRunsAtLeast8": 0
+        },
+        "protected32": {
+          "completedSteps": 22808047,
+          "oldLinkedPotentialSteps": 20348610,
+          "selectedPotentialSteps": 22392655,
+          "addedSteps": 2044045,
+          "addedForms": {
+            "25": 541218,
+            "84": 890,
+            "3c": 314,
+            "0fb7": 14,
+            "f7/0": 1539,
+            "3d": 43315,
+            "a8": 619077,
+            "0fb6": 95557,
+            "f6/0": 649280,
+            "05": 92693,
+            "3a": 148
+          },
+          "linkedRuns": 3868149,
+          "runsAtLeast4": 808528,
+          "stepsInRunsAtLeast4": 17905220,
+          "runsAtLeast8": 338633,
+          "stepsInRunsAtLeast8": 15709455
+        }
+      }
+    }
+  },
+  "interpretation": "These are syntactic upper bounds from completed ordinary step calls, not native eligibility, cycle shares, or speed. Selected forms need separate operand/data/code/fault/event proof before any executable candidate. Diagnostic wall/user times are not A/B performance measurements."
+}
