@@ -15,9 +15,11 @@ RAM are allowed; this helper returns only read windows and a `readOnly` marker.
 The separate native write-window proof refuses page-table targets. It
 captures CS/DS selectors and descriptor scalars, the current code page,
 CR/paging translation and A20 identity, RAM mapping, and the first scalar
-value. Validation rereads the
-first bytes because host, DMA, or an earlier guest store can change plain RAM
+value. Validation rereads the first bytes because host, DMA, or an earlier
+guest store can change plain RAM
 without changing translation generation.
+For privilege checks, an absent separate descriptor `dpl` is decoded from
+the cached access byte; conflicting explicit and access-byte DPLs refuse.
 
 This is not an executable block contract. A future executor must validate at
 the actual dependent-read instruction slot after any preceding native steps,

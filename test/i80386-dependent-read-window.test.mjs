@@ -136,6 +136,20 @@ test('user mode cannot use a cached supervisor-only source mapping', () => {
   assert.equal(admit(machine), null);
 });
 
+test('descriptor access encodes DPL when a cache omits the separate field', () => {
+  const {machine, cpu} = fixture();
+  delete cpu.segmentCaches[1].dpl;
+  delete cpu.segmentCaches[3].dpl;
+  cpu.segmentCaches[1].access = 0x9b;
+  cpu.segmentCaches[3].access = 0x93;
+  assert.ok(admit(machine), 'ordinary xv6 DS cache stores DPL only in access');
+  cpu.segmentCaches[3].dpl = 3;
+  assert.equal(admit(machine), null, 'conflicting explicit/access DPL refuses');
+  delete cpu.segmentCaches[3].dpl;
+  cpu.segmentCaches[1].dpl = 3;
+  assert.equal(admit(machine), null, 'conflicting CS DPL also refuses');
+});
+
 test('uncached, crossed, and aliased pages refuse without speculative translation', () => {
   const {machine, cpu} = fixture({cacheSecond:false});
   const before = Array.from(machine.mem.subarray(SECOND_PTE, SECOND_PTE + 4));

@@ -20,6 +20,17 @@ function unchanged(object, fields, values) {
   return fields.every((field, index) => Object.is(object?.[field], values[index]));
 }
 
+function descriptorDpl(cache) {
+  const explicit = cache?.dpl;
+  const access = cache?.access;
+  const fromAccess = Number.isInteger(access) && access >= 0 && access <= 255 ?
+    (access >>> 5) & 3 : null;
+  if (explicit === undefined) return fromAccess;
+  if (!Number.isInteger(explicit) || explicit < 0 || explicit > 3 ||
+      (fromAccess !== null && explicit !== fromAccess)) return null;
+  return explicit;
+}
+
 function scalarAddress(offset, width) {
   return Number.isInteger(offset) && offset >= 0 && offset <= 0xffffffff &&
     (width === 1 || width === 2 || width === 4) &&
@@ -57,11 +68,12 @@ export function prevalidateI80386DependentRead(machine, firstOffset, firstWidth,
       !scalarAddress(firstOffset, firstWidth) ||
       !scalarAddress(cpu.eip, 1)) return null;
   const cs = cpu.segmentCaches[CS], ds = cpu.segmentCaches[DS];
-  if (!Number.isInteger(cs.dpl) ||
-      (cs.conforming ? cs.dpl > cpu.currentPrivilegeLevel :
-        cs.dpl !== cpu.currentPrivilegeLevel) ||
-      !ds || ds.code || !Number.isInteger(ds.dpl) ||
-      Math.max(cpu.currentPrivilegeLevel, cpu.ds & 3) > ds.dpl) return null;
+  const csDpl = descriptorDpl(cs), dsDpl = descriptorDpl(ds);
+  if (csDpl === null ||
+      (cs.conforming ? csDpl > cpu.currentPrivilegeLevel :
+        csDpl !== cpu.currentPrivilegeLevel) ||
+      !ds || ds.code || dsDpl === null ||
+      Math.max(cpu.currentPrivilegeLevel, cpu.ds & 3) > dsDpl) return null;
   const code = plainWindow(machine, cpu.eip, 1, CS);
   const first = plainWindow(machine, firstOffset, firstWidth, DS);
   if (!code || !first || code.physicalPage === first.physicalPage) return null;
