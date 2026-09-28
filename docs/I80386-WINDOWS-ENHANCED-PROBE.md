@@ -63,5 +63,13 @@ wrote a text file from that DOS prompt to an exclusive-created disk clone;
 after a fresh boot, the DOS prompt read back its exact contents. Program
 Manager also launched Solitaire and Minesweeper and rendered both games at
 640×480. This demonstrates two graphical Win16 games, not broad application
-compatibility.
+compatibility. A later [controlled pointer replay](receipts/2026-09-28-i80386-windows311-solitaire-pointer.json)
+used the same source, mouse-enabled CMOS profile, disk/ROM/key hashes and 170M
+instruction budget in both arms. The candidate's only extra input was a PS/2
+left press/release over Solitaire stock; Windows read both packets and the
+candidate showed a new waste card, absent in control. The named stock/waste
+region differed by 7,122 RGB pixels after both cursors were parked outside it.
+This establishes one CLI-hosted game pointer interaction. Lite Widgets browser
+delivery into Windows, general mouse behavior and broad application compatibility
+remain separate checks.
 Keep Microsoft media outside this MIT repository.

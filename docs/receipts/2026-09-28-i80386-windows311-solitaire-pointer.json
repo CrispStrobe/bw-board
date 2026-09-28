@@ -1,0 +1,69 @@
+{
+  "schema": "bw.i80386-windows311-pointer-acceptance.v1",
+  "date": "2026-09-28",
+  "accepted": true,
+  "claim": "In a controlled CLI-hosted Windows 3.11 enhanced-mode pair, an injected PS/2 left click on Solitaire stock caused a guest-visible card to appear in the waste pile.",
+  "scope": {
+    "execution": "ordinary 80386 AT machine stepped by scripts/probe-i80386-windows-enhanced.mjs",
+    "notEstablished": [
+      "Lite Widgets browser end-to-end pointer delivery into Windows",
+      "general Windows 3.11 mouse or application compatibility",
+      "full Windows 3.11 compatibility or timing accuracy"
+    ],
+    "privateEvidence": "brickwright-firmware-private/windows/2026-09-28/windows311-pointer-solitaire-controlled-170m.md"
+  },
+  "source": {
+    "revision": "11e48d3df3dfc5896e77ea48f7b87eda09f82e86",
+    "unchangedInBothReports": true,
+    "sha256": {
+      "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+      "src/experimental/i80386-at-machine.js": "cd590385f617841429e5de2f2bf7759fcd064f67db61a474272f3188e86c31fb",
+      "scripts/probe-i80386-windows-enhanced.mjs": "b3da0d2b724b6e3adcf1dc0aa42536291a78b6ea5c30e1ff2b74b6cc0d784c0e",
+      "scripts/lib/i80386-windows-vga-480-frame.mjs": "b40810347f914a1680599d3600a490ecf78a52f29135485ea311300784c1cd58",
+      "scripts/lib/i80386-windows-pointer-feedback.mjs": "0e14467314f9f2668050180d31e6f0ba7fd7242273e57117be4f808510fb0a2f"
+    }
+  },
+  "inputs": {
+    "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaBiosSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "windowsDiskSha256": "a6d869d0e1352143a60b917d1e3ba7720fe48c7931a088ed82f4302a6b76e9d9",
+    "keyboardScriptSha256": "f43ee2661c178a9d328705433afb171501a46eec8ab0de7e2ab29bffa238d43d",
+    "geometry": {"cylinders": 1000, "heads": 4, "sectors": 17},
+    "cmosType": 47,
+    "cmosEquipment": 5,
+    "mouseEnabledInBothArms": true
+  },
+  "pair": {
+    "stepsEach": 170000000,
+    "outcomeEach": "budget",
+    "keyboardAndProtectedPagingVm86MilestonesEqual": true,
+    "preInputFrameRgbSha256Both": "351065009372841eb4a9de01dd54cb0c823a9a21f142c312b6e881099e3b3d35",
+    "preClickFrameRgbSha256Both": "eff8af768cf2e977c7ec1671b1281d851cc69aec2bcb52e02fab4b4b6ca28c52",
+    "sharedMoves": [
+      {"step": 150000000, "dx": -160, "dy": -100, "buttons": 0},
+      {"step": 150050000, "dx": 25, "dy": 30, "buttons": 0},
+      {"step": 150250000, "dx": 95, "dy": 105, "buttons": 0}
+    ],
+    "candidateOnlyClick": [
+      {"step": 150150000, "dx": 0, "dy": 0, "buttons": 1, "guestAuxBytesHex": "09 00 00"},
+      {"step": 150200000, "dx": 0, "dy": 0, "buttons": 0, "guestAuxBytesHex": "08 00 00"}
+    ],
+    "eachInjectedPacket": "accepted by 8042, followed by three auxiliary-status/data reads and three IRQ12 vector 0x5c deliveries before the next packet",
+    "controlReportSha256": "08119d639f6bf7255b15a846c3368222a80a2133eccc530c8f87463c7ed52109",
+    "candidateReportSha256": "f5ed0d41c70b84b81a7959a7b799ca655a61be7ed3c2ed256ff51184b7c7acf2"
+  },
+  "visibleResult": {
+    "atStep": 150250000,
+    "control": "stock card remained and waste slot was empty",
+    "candidate": "3 of clubs appeared in Solitaire waste pile after click",
+    "applicationRoi": {"name": "Solitaire stock/waste", "x": 15, "y": 47, "width": 155, "height": 98},
+    "finalChangedRgbPixelsInRoi": 7122,
+    "predeclaredMinChangedPixels": 500,
+    "parking": {"x": 210, "y": 275, "width": 80, "height": 80},
+    "reviewedCursorCropRawRgbSha256BothAndFinal": "15a4dbc1565afb2829393b33e1a891a1d9d596e5516e62056dc3ad7bbb61b17f",
+    "controlFinalRgbSha256": "4f66c6bfa8fa21ead198a7db49efc6f58245175ebc7167e77fe07f03ffa9201a",
+    "candidateFinalRgbSha256": "bfa92249ca7ef50bc76475406d397d030c805f2eb2a8d0c3c33b5c14ed59706a",
+    "comparisonAccepted": true,
+    "privateComparisonSha256": "950590dc9448e64d4a7b8a76000bdc25fa194d160b5d526605fdb3d0f736f346"
+  }
+}

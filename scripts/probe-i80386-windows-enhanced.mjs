@@ -3,15 +3,21 @@
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from
   '../src/experimental/i80386-at-machine.js';
 import {I80386Fault, UnsupportedI80386} from '../src/experimental/i80386.js';
 import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-coverage.js';
+import {renderObservedWindowsVga480} from './lib/i80386-windows-vga-480-frame.mjs';
+import {createPointerFeedbackSession} from './lib/i80386-windows-pointer-feedback.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const sourceFiles = ['../src/experimental/i80386.js',
   '../src/experimental/i80386-at-machine.js', '../src/experimental/ata16.js',
-  './probe-i80386-windows-enhanced.mjs'];
+  './probe-i80386-windows-enhanced.mjs',
+  './lib/i80386-windows-vga-480-frame.mjs',
+  './lib/i80386-windows-pointer-feedback.mjs'];
 const sourceSha256 = Object.fromEntries(sourceFiles.map(file =>
   [file, hash(fs.readFileSync(new URL(file, import.meta.url)))]));
 const executionRevision = execFileSync('git', ['rev-parse', 'HEAD'], {
@@ -65,6 +71,8 @@ if (!Array.isArray(keyScript) || keyScript.some((event, index) =>
   throw new Error('AT_KEY_SCRIPT must be an ordered JSON array of {step, code} Set-1 events');
 const mouseBytes = process.env.AT_MOUSE_SCRIPT ? fs.readFileSync(process.env.AT_MOUSE_SCRIPT) : null;
 const mouseScript = mouseBytes ? JSON.parse(mouseBytes) : [];
+const feedbackDir = process.env.AT_MOUSE_FEEDBACK_DIR ?? null;
+if(feedbackDir&&mouseBytes)throw new Error('AT_MOUSE_FEEDBACK_DIR and AT_MOUSE_SCRIPT are mutually exclusive');
 if (!Array.isArray(mouseScript) || mouseScript.some((event, index) =>
   !event || !Number.isInteger(event.step) || event.step < 0 || event.step >= limit ||
   !Number.isInteger(event.dx) || event.dx < -255 || event.dx > 255 ||
@@ -75,7 +83,7 @@ if (!Array.isArray(mouseScript) || mouseScript.some((event, index) =>
 const hddOutputFd = hddOutputPath ? fs.openSync(hddOutputPath, 'wx') : null;
 
 const profile = structuredClone(PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA);
-profile.a20.mouse = mouseBytes !== null || process.env.AT_ENABLE_MOUSE === '1';
+profile.a20.mouse = mouseBytes !== null || feedbackDir !== null || process.env.AT_ENABLE_MOUSE === '1';
 profile.regions = profile.regions.map(region => region.kind === 'rom' && region.start === 0xc0000
   ? {...region, end: 0xc0000 + Math.ceil(vga.bytes.length / 0x1000) * 0x1000 - 1}
   : region);
@@ -114,6 +122,14 @@ const kbc = {count: 0, tail: []};
 const checkpoints = [];
 const keyboard = [];
 const mouse = [];
+const pointerDelivery = [];
+const capturePointerDelivery = (kind,event) => {
+  for(const input of pointerDelivery){
+    if(steps<input.step||steps>input.step+250_000)continue;
+    const target=kind==='port'?input.auxPorts:input.irq12;
+    if(target.length<64)target.push({step:steps,...event});
+  }
+};
 let nextKey = 0;
 let nextMouse = 0;
 let machine;
@@ -137,7 +153,14 @@ machine = new Machine(profile, {
       kbc.tail.push({step: steps, dir: event.dir, port: event.port,
         value: event.value, cs: machine.cpu.cs, eip: machine.cpu.eip});
       if (kbc.tail.length > 128) kbc.tail.shift();
+      if(pointerDelivery.length)capturePointerDelivery('port',
+        {dir:event.dir,port:event.port,value:event.value});
     }
+  },
+  onInterrupt(event){
+    if(event.source==='irq'&&machine.chips.pic2&&
+        event.vector===(machine.chips.pic2.vectorBase|4))
+      capturePointerDelivery('irq',{vector:event.vector});
   },
 });
 machine.loadRom(bios.bytes, 0xf0000);
@@ -147,11 +170,37 @@ machine.reset();
 const restoreCode16Interrupts = code16Coverage?.attach(machine);
 const state = () => ({cs: machine.cpu.cs, eip: machine.cpu.eip, cr0: machine.cpu.cr0 >>> 0,
   cr3: machine.cpu.cr3 >>> 0, eflags: machine.cpu.eflags >>> 0});
+const captureVga480 = () => {
+  const video=machine.chips.vga1.getVideoState();
+  return renderObservedWindowsVga480({
+    planeBase64:machine.vgaMemory.planes.map(plane=>Buffer.from(plane).toString('base64')),
+    registers:{misc:video.misc,seq:[...video.seq],gc:[...video.gc],
+      crtc:[...video.crtc],attr:[...video.attr],dac:[...video.dac],
+      dacMask:video.dacMask},
+  });
+};
+let pointerFeedback=null;
+if(feedbackDir){
+  const root=fileURLToPath(new URL('..',import.meta.url));
+  const output=path.resolve(feedbackDir);
+  const relative=path.relative(root,output);
+  if(!relative||(!relative.startsWith(`..${path.sep}`)&&relative!=='..'&&!path.isAbsolute(relative)))
+    throw new Error('AT_MOUSE_FEEDBACK_DIR must be outside the public source tree');
+  pointerFeedback=createPointerFeedbackSession({directory:output,
+    firstStep:Number(process.env.AT_MOUSE_FEEDBACK_STEP),limit,
+    timeoutMs:Number(process.env.AT_MOUSE_FEEDBACK_TIMEOUT_MS??600_000),
+    readFrame:captureVga480,injectMouse:event=>{
+      const accepted=machine.mouseIn(event);
+      if(accepted)pointerDelivery.push({step:steps,mouse:event,auxPorts:[],irq12:[]});
+      return accepted;
+    }});
+}
 let outcome = 'budget';
 let refusal = null;
 try {
   for (; steps < limit; steps++) {
     code16Coverage?.observe(machine);
+    if(steps===pointerFeedback?.nextStep)await pointerFeedback.checkpoint(steps);
     if (steps === keyScript[nextKey]?.step) {
       const event = keyScript[nextKey++];
       keyboard.push({...event, accepted: machine.keyIn(event.code)});
@@ -227,6 +276,8 @@ const report = {
       geometry: {cylinders, heads, sectors}, cmosType},
     mouseEnabled: profile.a20.mouse, cmosEquipment: cmos[0x14]},
   milestones, post, ata, kbc, checkpoints, keyboard, mouse,
+  ...(pointerFeedback?{pointerFeedback:pointerFeedback.events}:{}),
+  ...(pointerFeedback?{pointerDelivery}:{}),
   keyScriptSha256: keyBytes && hash(keyBytes), final: state(), finalContext,
   mouseScriptSha256: mouseBytes && hash(mouseBytes),
   hddOutput: hddOutputPath ? {path: hddOutputPath,
