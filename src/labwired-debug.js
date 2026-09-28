@@ -76,6 +76,12 @@ export function createLabwiredDebugTarget (opts) {
   const breakpoints = new Map();
   /** Code breakpoints, Thumb bit already masked off. */
   const codeBps = new Set();
+  /**
+   * Write watchpoints: handle -> { addr, len, last }. Not native: after every
+   * instruction the watched bytes are read back and compared, which is why
+   * arming one forces the single-step path (slower, and exact).
+   */
+  const writeWatches = new Map();
 
   const sim = () => adapter.sim;
   // Bit 0 of an ARM code address is the Thumb flag, never part of it. Xtensa
@@ -229,7 +235,7 @@ export function createLabwiredDebugTarget (opts) {
       return {
         // over/out on ARM only: they read the Thumb call encodings and SP/LR.
         steps: thumb ? ['insn', 'over', 'out'] : ['insn'],
-        breakpoints: ['code'],
+        breakpoints: ['code', 'write'],
         // Run-to is one temporary code breakpoint, installed synchronously —
         // bw-debug's run-to coordinator owns it; nothing target-side to add.
         runTo: [{ kind: 'address', space: 'code', addressMin: 0, addressMax: CODE_ADDRESS_MAX,
@@ -414,9 +420,23 @@ export function createLabwiredDebugTarget (opts) {
 
     setBreakpoint (bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
+      if (bp.kind === 'write') {
+        const len = bp.len ?? 1;
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > 0xffffffff ||
+            !Number.isInteger(len) || len < 1 || len > 8) {
+          return { unsupported: 'a write watchpoint needs an address and a length of 1..8 bytes' };
+        }
+        let last;
+        try { last = Array.from(sim().read_memory(bp.addr >>> 0, len)); } catch (e) {
+          return { unsupported: `cannot watch ${bp.addr.toString(16)}: ${e.message || e}` };
+        }
+        const handle = nextBreakpointHandle++;
+        writeWatches.set(handle, { addr: bp.addr >>> 0, len, last });
+        return handle;
+      }
       if (bp.kind !== 'code') {
-        return { unsupported: `labwired offers code breakpoints only; '${bp.kind}' is not ` +
-          'available (there is no write-watch on this bus, and no yield set).' };
+        return { unsupported: `labwired offers code and write breakpoints; '${bp.kind}' is not ` +
+          'available (there is no yield set).' };
       }
       if (!isCodeAddress(bp.addr)) {
         return { unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe' };
@@ -433,6 +453,7 @@ export function createLabwiredDebugTarget (opts) {
     },
 
     clearBreakpoint (handle) {
+      if (writeWatches.delete(handle)) return undefined;
       const addr = breakpoints.get(handle);
       if (addr === undefined) return undefined;
       breakpoints.delete(handle);
@@ -582,7 +603,8 @@ export function createLabwiredDebugTarget (opts) {
       // Single-instruction stepping, and breakpoint checking, both need the PC
       // between instructions — so they share one slow path. Everything else
       // runs in batches, which is the only way the wasm boundary stays cheap.
-      const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording || depthStep !== null;
+      const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording || depthStep !== null ||
+        writeWatches.size > 0;
 
       try {
         if (!mustWatch) {
@@ -611,6 +633,15 @@ export function createLabwiredDebugTarget (opts) {
         for (let i = 0; i < budgetCycles; i++) {
           stepOne();
           const here = codeAddr(pc());
+          for (const [handle, w] of writeWatches) {
+            const now = Array.from(sim().read_memory(w.addr, w.len));
+            if (now.some((b, k) => b !== w.last[k])) {
+              w.last = now;
+              adapter.pump();
+              halted('watchpoint', { bp: handle, bpKind: 'write', addr: w.addr, value: now });
+              return 'halted';
+            }
+          }
           if (codeBps.has(here)) {
             adapter.pump();
             halted('breakpoint', { addr: here });
@@ -754,6 +785,7 @@ export function createLabwiredDebugTarget (opts) {
       inputListeners = [];
       breakpoints.clear();
       codeBps.clear();
+      writeWatches.clear();
     },
   };
 
