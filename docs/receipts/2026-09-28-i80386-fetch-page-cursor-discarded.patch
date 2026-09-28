@@ -1,0 +1,523 @@
+diff --git a/scripts/run-i80386-at-console.mjs b/scripts/run-i80386-at-console.mjs
+index 2951744c..91c1d2dc 100644
+--- a/scripts/run-i80386-at-console.mjs
++++ b/scripts/run-i80386-at-console.mjs
+@@ -20,21 +20,24 @@ import {createI80386Native32Census} from '../src/experimental/i80386-native32-ce
+ import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
+ import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
+ import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
++import {enableI80386FetchPageCursor} from '../src/experimental/i80386-fetch-page-cursor.js';
+ 
+ const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
+   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
+   nativeBlocks:process.env.AT_NATIVE_BLOCKS==='1',
++  fetchPageCursor:process.env.AT_FETCH_PAGE_CURSOR==='1',
+   code16Loads:process.env.AT_CODE16_LOADS==='1',
+   code16Wasm:process.env.AT_CODE16_WASM==='1',
+   steps:process.env.AT_POST_STEPS??1_000_000};
+ for(let index=0;index<process.argv.length-2;index++) {
+   const option=process.argv[index+2];
+   if(option==='--help') {
+-    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live] [--native-blocks] [--code16-wasm]\n');
++    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live] [--native-blocks] [--code16-wasm] [--fetch-page-cursor]\n');
+     process.exit(0);
+   }
+   if(option==='--live'){options.live=true;continue;}
+   if(option==='--native-blocks'){options.nativeBlocks=true;continue;}
++  if(option==='--fetch-page-cursor'){options.fetchPageCursor=true;continue;}
+   if(option==='--code16-wasm'){options.code16Wasm=true;continue;}
+   const value=process.argv[++index+2];
+   if(!value)throw new Error(`${option} needs a value`);
+@@ -105,6 +108,8 @@ const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{
+ }:null;
+ if(code16Coverage&&(options.nativeBlocks||options.code16Wasm))
+   throw new Error('code16 coverage requires ordinary single-step execution');
++if(options.fetchPageCursor&&(options.nativeBlocks||options.code16Wasm||options.code16Loads))
++  throw new Error('fetch-page cursor requires ordinary single-step execution');
+ if(modeCpuProfile&&(options.nativeBlocks||options.code16Wasm||code16Coverage||options.code16Loads))
+   throw new Error('mode CPU profile requires ordinary single-step execution');
+ if(native32Census&&(options.nativeBlocks||options.code16Wasm||
+@@ -155,6 +160,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
+   '../src/i8086-machine.js','../src/experimental/i80386.js',
+   '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
+   '../src/experimental/i80386-code16-load-exec.js',
++  '../src/experimental/i80386-fetch-page-cursor.js',
+   '../src/experimental/i80386-code16-wasm-block.js',
+   '../src/experimental/i80386-code16-window.js',
+   '../src/experimental/i80386-code16-ea.js',
+@@ -202,6 +208,9 @@ machine.loadRom(bios.bytes,0xf0000);
+ machine.loadRom(bios.bytes);
+ machine.loadRom(vga.bytes,0xc0000);
+ machine.reset();
++const fetchPageCursor=options.fetchPageCursor?
++  enableI80386FetchPageCursor(machine,
++    {diagnostics:process.env.AT_FETCH_PAGE_CURSOR_DIAGNOSTICS==='1'}):null;
+ let profileWindowSteps=0,profileWindowMask=0,profileLastMode=-1;
+ let profileWindowModeSteps=[0,0,0,0];
+ let profileLastCpu=modeCpuProfile?process.cpuUsage():null;
+@@ -360,6 +369,7 @@ if(options.live) {
+   }
+ } else runChunk(stepsLimit);
+ flushModeCpuProfile();
++fetchPageCursor?.disable();
+ restoreCode16Interrupts?.();
+ restoreNative32Fetch?.();
+ restoreBroadBlockFetch?.();
+@@ -380,6 +390,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
+   ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
+   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
+     nativeBlocks:options.nativeBlocks,
++    fetchPageCursor:options.fetchPageCursor,
+     code16Loads:options.code16Loads,
+     code16Wasm:options.code16Wasm,
+     cmosEquipment:cmos[0x14],
+@@ -388,6 +399,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
+   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
+     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
+   nativeStats:nativeDispatcher?.stats??null,
++  fetchPageCursorStats:fetchPageCursor?.stats??null,
+   code16WasmStats:code16WasmDispatcher?.stats??null,
+   ...(code16WasmDiagnostics?
+     {code16WasmDiagnostics:code16WasmDispatcher.diagnostics}:{}),
+diff --git a/src/experimental/i80386-fetch-page-cursor.js b/src/experimental/i80386-fetch-page-cursor.js
+new file mode 100644
+index 00000000..5564b1bc
+--- /dev/null
++++ b/src/experimental/i80386-fetch-page-cursor.js
+@@ -0,0 +1,100 @@
++import {I80386Fault} from './i80386.js';
++
++// Opt-in ordinary fetch accelerator. Cache only a translated physical page
++// base; every instruction byte still goes through the original board fetch.
++// Host writers of page tables must use the tracked board write path or call
++// cpu.invalidateTranslationCache(), exactly as the ordinary JS TLB requires.
++export function enableI80386FetchPageCursor(machine, {diagnostics = false} = {}) {
++  const cpu = machine.cpu;
++  if (!cpu || typeof cpu._fetch8 !== 'function')
++    throw new TypeError('expected an 80386 AT machine');
++  const original = cpu._fetch8;
++  const originalN = cpu._fetchN;
++  const stats = {hits:0, misses:0, directNBytes:0, nonRamMisses:0};
++  let cursor = null;
++  const csFields = cache => [cache.base, cache.limit, cache.present,
++    cache.null, cache.expandDown, cache.default32, cache.code,
++    cache.readable, cache.writable];
++  const csMatches = (cache, fields) => {
++    const current = csFields(cache);
++    for (let i = 0; i < current.length; i++)
++      if (current[i] !== fields[i]) return false;
++    return true;
++  };
++  const currentTlb = linear => cpu._translations?.[(linear >>> 12) & 511];
++  const ordinaryRamPage = physical => {
++    const decoded = machine._decode386(physical);
++    return decoded >= 0x100000 && decoded < machine.memoryBytes &&
++      machine._page[decoded >>> 12] === 1;
++  };
++  const canReuse = (linear, cs) => {
++    if (!cursor || cursor.page !== (linear >>> 12) ||
++        cursor.cs !== cs || !csMatches(cs, cursor.csFields) ||
++        cursor.csSelector !== cpu.cs || cursor.cpl !== cpu.currentPrivilegeLevel ||
++        cursor.virtual8086 !== cpu.virtual8086 ||
++        cursor.cr0 !== (cpu.cr0 >>> 0) || cursor.cr3 !== (cpu.cr3 >>> 0) ||
++        cursor.cr4 !== (cpu.cr4 >>> 0) ||
++        cursor.generation !== cpu._translationGeneration ||
++        cursor.a20Configured !== !!machine._a20Configured ||
++        cursor.a20Enabled !== !!machine.a20Enabled) return false;
++    if (!(cpu.cr0 & 0x80000000)) return true;
++    const tlb = currentTlb(linear);
++    return tlb === cursor.tlb && tlb?.generation === cpu._translationGeneration &&
++      tlb.page === (linear >>> 12) && tlb.cr3 === cpu.cr3 && tlb.cr4 === cpu.cr4 &&
++      tlb.physicalBase === cursor.physicalBase &&
++      (cpu.currentPrivilegeLevel !== 3 || tlb.userPage);
++  };
++  const remember = (linear, physical, cs) => {
++    if (!ordinaryRamPage(physical)) {
++      cursor = null;
++      if (diagnostics) stats.nonRamMisses++;
++      return;
++    }
++    const tlb = (cpu.cr0 & 0x80000000) ? currentTlb(linear) : null;
++    if ((cpu.cr0 & 0x80000000) &&
++        (!tlb || tlb.generation !== cpu._translationGeneration ||
++          tlb.page !== (linear >>> 12) || tlb.physicalBase !== (physical & 0xfffff000))) {
++      cursor = null;
++      return;
++    }
++    cursor = {page:linear >>> 12, physicalBase:physical & 0xfffff000,
++      tlb, cs, csFields:csFields(cs), csSelector:cpu.cs,
++      cpl:cpu.currentPrivilegeLevel, virtual8086:cpu.virtual8086,
++      cr0:cpu.cr0 >>> 0, cr3:cpu.cr3 >>> 0, cr4:cpu.cr4 >>> 0,
++      generation:cpu._translationGeneration,
++      a20Configured:!!machine._a20Configured,
++      a20Enabled:!!machine.a20Enabled};
++  };
++  cpu._fetch8 = function () {
++    if ((this._instructionBytes ?? 0) >= 15)
++      throw new I80386Fault(13, 0, 'instruction exceeds 15-byte limit');
++    const cs = this.segmentCaches[1];
++    const linear = this._linear(1, this.eip, 1);
++    const hit = canReuse(linear, cs);
++    const physical = hit
++      ? (cursor.physicalBase | (linear & 0xfff)) >>> 0
++      : this._translate(linear);
++    const value = this.fetch(physical) & 255;
++    this._instructionBytes = (this._instructionBytes ?? 0) + 1;
++    this.eip += 1;
++    if (hit) { if (diagnostics) stats.hits++; }
++    else {
++      if (diagnostics) stats.misses++;
++      remember(linear, physical, cs);
++    }
++    return value;
++  };
++  if (diagnostics) cpu._fetchN = function (...args) {
++    const beforeBytes = this._instructionBytes ?? 0;
++    const before8 = stats.hits + stats.misses;
++    try { return originalN.apply(this, args); }
++    finally {
++      const delta = (this._instructionBytes ?? 0) - beforeBytes;
++      stats.directNBytes += Math.max(0, delta - (stats.hits + stats.misses - before8));
++    }
++  };
++  return {
++    stats,
++    disable() { cpu._fetch8 = original; cpu._fetchN = originalN; cursor = null; },
++  };
++}
+diff --git a/test/i80386-fetch-page-cursor-audit.test.mjs b/test/i80386-fetch-page-cursor-audit.test.mjs
+new file mode 100644
+index 00000000..c6805b5d
+--- /dev/null
++++ b/test/i80386-fetch-page-cursor-audit.test.mjs
+@@ -0,0 +1,221 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import Machine,{PCAT80386_EXPERIMENTAL_4M} from
++  '../src/experimental/i80386-at-machine.js';
++import {I80386Fault} from '../src/experimental/i80386.js';
++import {enableI80386FetchPageCursor} from
++  '../src/experimental/i80386-fetch-page-cursor.js';
++
++function fixture(base=0x10000){
++  const machine=new Machine(PCAT80386_EXPERIMENTAL_4M),cpu=machine.cpu;
++  machine._a20Enabled=true;
++  cpu.cs=0x1000;cpu.eip=0x20;
++  cpu.segmentCaches[1]={base,limit:0xffff,default32:false,
++    present:true,code:true,readable:true,writable:false};
++  const reads=[];
++  const original=machine._read386;
++  machine._read386=function(address){reads.push(address>>>0);
++    return original.call(this,address);};
++  return {machine,cpu,reads};
++}
++const pair=(base=0x10000)=>{
++  const ordinary=fixture(base),cursor=fixture(base);
++  cursor.handle=enableI80386FetchPageCursor(cursor.machine,{diagnostics:true});
++  return {ordinary,cursor};
++};
++const both=(pair,fn)=>{
++  const first=fn(pair.ordinary),second=fn(pair.cursor);
++  assert.deepEqual(second,first);
++  assert.deepEqual(pair.cursor.reads,pair.ordinary.reads,
++    'cursor must not add or remove board fetch/page-walk reads');
++  return first;
++};
++const state=f=>({eip:f.cpu.eip,bytes:f.cpu._instructionBytes,
++  cr2:f.cpu.cr2,cr0:f.cpu.cr0>>>0,cr3:f.cpu.cr3>>>0,
++  generation:f.cpu._translationGeneration});
++const put32=(machine,address,value)=>{
++  for(let i=0;i<4;i++)machine._write(address+i,value>>>(8*i));
++};
++function mapCode(f,physical=0x120000){
++  const {machine,cpu}=f;
++  cpu.segmentCaches[1].base=0;cpu.eip=0x20;
++  put32(machine,0x1000,0x4007);
++  put32(machine,0x4000,physical|7);
++  cpu.cr0=0x80000001;cpu.cr3=0x1000;
++  machine.mem.set([0x90,0x91,0x92,0x93],physical+0x20);
++}
++
++test('in-place CS base and limit edits revoke a warm cursor before fetch',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor]){
++    f.machine.mem[0x10020]=0x11;
++    f.machine.mem[0x20021]=0x22;
++  }
++  both(p,f=>f.cpu._fetch8());
++  for(const f of [p.ordinary,p.cursor])f.cpu.segmentCaches[1].base=0x20000;
++  both(p,f=>f.cpu._fetch8());
++  assert.equal(p.cursor.cpu.eip,0x22);
++  assert.equal(p.cursor.handle.stats.misses,2);
++  for(const f of [p.ordinary,p.cursor])f.cpu.segmentCaches[1].limit=0x21;
++  for(const f of [p.ordinary,p.cursor]){
++    assert.throws(()=>f.cpu._fetch8(),e=>e instanceof I80386Fault&&
++      e.vector===13&&e.errorCode===0);
++    assert.equal(f.cpu.eip,0x22,'CS-limit fault leaves EIP unconsumed');
++  }
++  assert.deepEqual(p.cursor.reads,p.ordinary.reads);
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('direct code-byte edits stay live; tracked and invalidated PTE remaps revoke physical cursor',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor])mapCode(f);
++  both(p,f=>f.cpu._fetch8());
++  for(const f of [p.ordinary,p.cursor])f.machine.mem[0x120021]=0x42;
++  both(p,f=>f.cpu._fetch8());
++  for(const f of [p.ordinary,p.cursor]){
++    f.machine.mem[0x130020]=0x77;
++    put32(f.machine,0x4000,0x130007); // Tracked host/DMA RAM write.
++    f.cpu.eip=0x20;
++  }
++  both(p,f=>f.cpu._fetch8());
++  for(const f of [p.ordinary,p.cursor]){
++    f.machine.mem[0x140020]=0x88;
++    f.machine.mem.set([0x07,0x00,0x14,0x00],0x4000);
++    f.cpu.invalidateTranslationCache(); // Required for a raw host PTE edit.
++    f.cpu.eip=0x20;
++  }
++  both(p,f=>f.cpu._fetch8());
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('bare raw PTE edit without invalidation retains the ordinary TLB mapping',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor])mapCode(f);
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x90);
++  for(const f of [p.ordinary,p.cursor]){
++    f.machine.mem[0x130020]=0x77;
++    f.machine.mem.set([0x07,0x00,0x13,0x00],0x4000);
++    f.cpu.eip=0x20;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x90);
++  assert.equal(p.cursor.machine.mem[0x130020],0x77);
++  assert.equal(p.cursor.machine.mem[0x120020],0x90);
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('a colliding TLB slot evicts a cursor after an untracked raw PTE remap',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor]){
++    mapCode(f);
++    f.cpu.segmentCaches[1].limit=0xffffffff;
++    f.cpu.segmentCaches[1].default32=true;
++    put32(f.machine,0x4800,0x150007); // Linear 0x200000: same 512-entry TLB slot.
++    f.machine.mem[0x130020]=0x77;
++    f.machine.mem[0x150020]=0x55;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x90);
++  for(const f of [p.ordinary,p.cursor]){
++    // An untracked PTE edit is not coherent while the old TLB entry is live.
++    f.machine.mem.set([0x07,0x00,0x13,0x00],0x4000);
++    f.cpu.eip=0x200020;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x55);
++  for(const f of [p.ordinary,p.cursor])f.cpu.eip=0x20;
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x77,
++    'after slot eviction, both fetch paths must rewalk the remapped PTE');
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('CR3, CPL permission and A20 transitions retain translation and fault parity',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor]){
++    mapCode(f);
++    f.machine.mem[0x120020]=0x11;
++    f.machine.mem[0x130020]=0x22;
++    f.machine.mem[0x20020]=0x33;
++    put32(f.machine,0x2000,0x5007); // Alternative page directory/table.
++    put32(f.machine,0x5000,0x130007);
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x11);
++  for(const f of [p.ordinary,p.cursor]){
++    f.cpu.cr3=0x2000;f.cpu.eip=0x20;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x22);
++  for(const f of [p.ordinary,p.cursor]){
++    f.cpu.cs=0x1003;f.cpu.eip=0x20; // Same cache, user CPL.
++    put32(f.machine,0x5000,0x130003); // Supervisor-only PTE, tracked.
++  }
++  for(const f of [p.ordinary,p.cursor]){
++    assert.throws(()=>f.cpu._fetch8(),e=>e instanceof I80386Fault&&
++      e.vector===14&&e.errorCode===5);
++    assert.equal(f.cpu.eip,0x20);
++  }
++  assert.deepEqual(p.cursor.reads,p.ordinary.reads);
++  for(const f of [p.ordinary,p.cursor]){
++    f.cpu.cs=0x1000;f.cpu.cr3=0x1000;f.cpu.eip=0x20;
++    f.machine._a20Enabled=false;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x33);
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('CR4 PSE mapping change revokes a warm 4 KiB translation',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor]){
++    mapCode(f);
++    f.machine.mem[0x120020]=0x11;
++    f.machine.mem[0x20]=0x44;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x11);
++  for(const f of [p.ordinary,p.cursor]){
++    // PDE 0x87 is a present 4 MiB supervisor page when PSE is enabled.
++    put32(f.machine,0x1000,0x87);
++    f.cpu.cr4=0x10;
++    f.cpu.eip=0x20;
++  }
++  assert.equal(both(p,f=>f.cpu._fetch8()),0x44);
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('cross-page immediate fault retains partial EIP, CR2, A/D writes and read order',()=>{
++  const p=pair();
++  for(const f of [p.ordinary,p.cursor]){
++    mapCode(f);
++    f.cpu.eip=0xffe;
++    f.machine.mem.set([0x11,0x22],0x120ffe);
++  }
++  for(const f of [p.ordinary,p.cursor]){
++    assert.throws(()=>f.cpu._fetchN(4),e=>e instanceof I80386Fault&&
++      e.vector===14&&e.errorCode===0);
++    assert.equal(f.cpu.eip,0x1000);
++    assert.equal(f.cpu.cr2,0x1000);
++    assert.equal(f.machine.mem[0x4000]&0x20,0x20,
++      'only the first mapped PTE is accessed');
++  }
++  assert.deepEqual(p.cursor.reads,p.ordinary.reads);
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
++
++test('ROM and VGA fetches retain one board read per byte; fast dword fetch remains separate',()=>{
++  for(const base of [0xf0000,0xa0000]){
++    const p=pair(base);
++    if(base===0xf0000)
++      for(const f of [p.ordinary,p.cursor])
++        f.machine.loadRom(Uint8Array.of(0x12,0x34),base+0x20);
++    both(p,f=>f.cpu._fetch8());both(p,f=>f.cpu._fetch8());
++    assert.equal(p.cursor.reads.length,2);
++  }
++  const p=pair(0x120000);
++  for(const f of [p.ordinary,p.cursor])f.machine.mem.set([1,2,3,4,5],0x120020);
++  const fast=[];
++  for(const f of [p.ordinary,p.cursor]){
++    const original=f.cpu.fetchRam32;
++    f.cpu.fetchRam32=address=>{fast.push([f===p.cursor?'cursor':'ordinary',address]);
++      return original(address);};
++  }
++  both(p,f=>f.cpu._fetchN(4));
++  assert.deepEqual(fast,[['ordinary',0x120020],['cursor',0x120020]]);
++  assert.equal(p.cursor.reads.length,0);
++  both(p,f=>f.cpu._fetch8());
++  assert.deepEqual(state(p.cursor),state(p.ordinary));
++});
+diff --git a/test/i80386-fetch-page-cursor.test.mjs b/test/i80386-fetch-page-cursor.test.mjs
+new file mode 100644
+index 00000000..8433ab2e
+--- /dev/null
++++ b/test/i80386-fetch-page-cursor.test.mjs
+@@ -0,0 +1,103 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import I80386 from '../src/experimental/i80386.js';
++import {enableI80386FetchPageCursor} from
++  '../src/experimental/i80386-fetch-page-cursor.js';
++
++function fixture(enabled = false) {
++  const mem = new Uint8Array(0x400000);
++  const fetches = [];
++  const machine = {_a20Configured:true, _a20Enabled:true, mem,
++    memoryBytes:mem.length, _page:new Uint8Array(mem.length >>> 12).fill(1),
++    get a20Enabled() { return this._a20Enabled; },
++    _decode386(address) {
++      return this._a20Configured && !this._a20Enabled
++        ? (address & ~0x100000) >>> 0 : address >>> 0;
++    }};
++  const raw = address => mem[machine._decode386(address)] ?? 0xff;
++  const cpu = new I80386({
++    read:raw,
++    fetch(address) { fetches.push(address >>> 0); return raw(address); },
++    write(address, value) {
++      if (!cpu._pagingBitWrite) cpu.notePhysicalWrite(address);
++      mem[machine._decode386(address)] = value & 255;
++    },
++  }, {translationCache:true, translationCacheWritesTrackedExternally:true});
++  machine.cpu = cpu;
++  cpu.segmentCaches[1] = {base:0,limit:0xffffffff,default32:true,
++    present:true,code:true,readable:true,writable:false};
++  const put32 = (address, value) => {
++    for (let i = 0; i < 4; i++) mem[address+i] = value >>> (i*8);
++  };
++  const write32 = (address, value) => {
++    for (let i = 0; i < 4; i++) cpu.write(address+i, value >>> (i*8));
++  };
++  const map = (linear, physical, table = 0x2000) => {
++    put32(0x1000 + ((linear >>> 20) & 0xffc), table | 7);
++    put32(table + ((linear >>> 10) & 0xffc), physical | 7);
++  };
++  const cursor = enabled ? enableI80386FetchPageCursor(machine,{diagnostics:true}) : null;
++  return {machine,cpu,mem,fetches,cursor,put32,write32,map};
++}
++
++function readAt(f, address) {
++  f.cpu.eip = address;
++  f.cpu._instructionBytes = 0;
++  return f.cpu._fetch8();
++}
++
++test('ordinary RAM fetch remains byte-live and side-effect parity holds', () => {
++  const base = fixture();
++  const fast = fixture(true);
++  for (const f of [base,fast]) {
++    f.mem[0x100000] = 0x90;
++    f.mem[0x100001] = 0x91;
++    assert.equal(readAt(f,0x100000),0x90);
++    f.mem[0x100001] = 0xcc; // direct code-byte edit, no copied code bytes
++    assert.equal(readAt(f,0x100001),0xcc);
++    f.cpu.segmentCaches[1].base = 0x1000; // mutate same CS object
++    f.mem[0x101000] = 0xf4;
++    assert.equal(readAt(f,0x100000),0xf4);
++  }
++  assert.deepEqual(fast.fetches,base.fetches);
++  assert.equal(fast.cursor.stats.hits,1);
++});
++
++test('tracked PTE write, raw PTE plus TLB-slot eviction, and A20 retain parity', () => {
++  const base = fixture();
++  const fast = fixture(true);
++  for (const f of [base,fast]) {
++    f.map(0x100000,0x300000);
++    f.map(0x300000,0x302000);
++    f.mem[0x300000] = 0x11;
++    f.mem[0x301000] = 0x22;
++    f.cpu.cr0 = 0x80000001;
++    f.cpu.cr3 = 0x1000;
++    assert.equal(readAt(f,0x100000),0x11);
++    assert.equal(readAt(f,0x100000),0x11);
++    f.write32(0x2400,0x301007); // tracked host/guest PTE path
++    assert.equal(readAt(f,0x100000),0x22);
++    f.put32(0x2400,0x300007); // raw PTE edit: ordinary TLB stays stale
++    assert.equal(readAt(f,0x100000),0x22);
++    f.cpu._translate(0x300000); // same 512-slot TLB index evicts code entry
++    assert.equal(readAt(f,0x100000),0x11);
++    f.machine._a20Enabled = false;
++    assert.equal(readAt(f,0x100000),0);
++  }
++  assert.deepEqual(fast.fetches,base.fetches);
++  assert.equal(fast.cpu.eip,base.cpu.eip);
++  assert.equal(fast.cpu.cr2,base.cpu.cr2);
++});
++
++test('ROM/MMIO-like page cannot acquire cursor and each byte uses board fetch', () => {
++  const base = fixture();
++  const fast = fixture(true);
++  for (const f of [base,fast]) {
++    f.mem[0xf0000] = 0x90;
++    f.mem[0xf0001] = 0x91;
++    assert.equal(readAt(f,0xf0000),0x90);
++    assert.equal(readAt(f,0xf0001),0x91);
++  }
++  assert.deepEqual(fast.fetches,base.fetches);
++  assert.equal(fast.cursor.stats.hits,0);
++});
