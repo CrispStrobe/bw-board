@@ -1,5 +1,37 @@
 # Experimental 80386 speed path
 
+## Current checkpoint (2026-09-28)
+
+The 10× goal is still open. On the VPS (four KVM Skylake vCPUs, Node
+20.20), a complete stock-xv6 `forktest` retires 24,338,279 guest steps.
+The [three-run xv6 baseline](receipts/2026-09-28-x86-vps-throughput.json)
+has a 25.16-second median user-CPU time for the ordinary JS executor; its
+opt-in native executor has an 18.21-second median. Both produce the same
+serial output, final RAM hash, and 163,891,880 board cycles. These are host
+execution times from source `8261e891`; 27.315 seconds at the configured
+6 MHz board clock is *virtual* time. Neither ratio is a measured speed
+relative to a physical
+16 MHz 386DX.
+
+A later [same-page write optimization](receipts/2026-09-28-i80386-same-page-write-performance.json)
+improved a paired three-run ordinary-executor mean from 24.53 to 23.55
+user-CPU seconds (1.042×), with the complete guest result unchanged. These
+different-source samples should not be spliced into an invented cumulative
+RTx figure. The [cross-platform benchmark](X86-RTX-PLATFORMS.md) has VPS and
+Kaggle CPU-host receipts; its GitHub-hosted run is pending. Its reported 386
+factors use configured virtual time and explicitly are not physical-386 RTx.
+
+The [reference-emulator audit](I80386-REFERENCE-EMULATORS.md) identifies the
+useful design gap: QEMU TCG translates and chains host-code blocks; Bochs
+caches decoded traces; this board still pays much of the JavaScript decode,
+translation, event, and JS↔WASM dispatch cost. The next retained change must
+show a meaningful paired full-xv6 user-CPU gain, identical complete guest
+state, and FreeDOS/Windows plus protected-mode requalification. CPU samples
+and refusal counts should determine whether to widen native block coverage
+or reduce dispatch and board-event overhead. The measurements below are an
+experiment ledger; earlier statements about work remaining refer to their
+dated source revisions.
+
 The direct stock-xv6 `forktest` A/B from `2feb23a3` to `bc539d33` took 39.655
 versus 29.575 user-CPU seconds for 24,338,279 guest steps (1.341×). The later
 IOAPIC pending-mask experiment measured another 1.078× on the same workload.
