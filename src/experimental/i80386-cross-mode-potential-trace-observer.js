@@ -1,0 +1,387 @@
+// Observation only. Successful ordinary decode/execute is the grammar oracle;
+// this observer never decodes ahead or executes a guest instruction.
+import {classifyI80386BroadForm} from './i80386-broad-block-census.js';
+
+const MODES=['real','protected16','vm86','protected32'];
+const PREFIXES=new Set([0x26,0x2e,0x36,0x3e,0x64,0x65,0x66,0x67,
+  0xf0,0xf2,0xf3]);
+const bump=(map,key)=>{map[key]=(map[key]??0)+1;};
+const modeOf=cpu=>!(cpu.cr0&1)?'real':(cpu.eflags&0x20000)?'vm86':
+  cpu.segmentCaches[1].default32?'protected32':'protected16';
+const identityOf=machine=>{
+  const cpu=machine.cpu;
+  const identity=[cpu.cr0>>>0,cpu.cr3>>>0,cpu.cr4>>>0,
+    cpu._translationGeneration??0,cpu.cs,cpu.currentPrivilegeLevel,
+    !!machine._a20Configured,!!machine._a20Enabled];
+  for(let index=0;index<6;index++){
+    const cache=cpu.segmentCaches?.[index];
+    identity.push(cache?.base,cache?.limit,!!cache?.null,!!cache?.present,
+      !!cache?.code,!!cache?.readable,!!cache?.writable,
+      !!cache?.expandDown,!!cache?.default32);
+  }
+  return identity;
+};
+const sameIdentity=(a,b)=>a.length===b.length&&
+  a.every((value,index)=>value===b[index]);
+const opcodeOf=bytes=>{
+  let at=0,repeat=false;
+  while(at<bytes.length&&PREFIXES.has(bytes[at])){
+    repeat ||= bytes[at]===0xf2||bytes[at]===0xf3;
+    at++;
+  }
+  return {opcode:bytes[at],at,repeat};
+};
+const isRepeat=bytes=>{
+  const {opcode,repeat}=opcodeOf(bytes);
+  return repeat&&(opcode>=0x6c&&opcode<=0x6f||
+    opcode>=0xa4&&opcode<=0xaf&&opcode!==0xa8&&opcode!==0xa9);
+};
+const opcodeKey=bytes=>{
+  const {opcode,at}=opcodeOf(bytes);
+  const first=opcode===undefined?'??':opcode.toString(16).padStart(2,'0');
+  return opcode===0x0f?`0f${(bytes[at+1]??0).toString(16).padStart(2,'0')}`:first;
+};
+const isControlTransfer=bytes=>{
+  const {opcode,at}=opcodeOf(bytes);
+  if(opcode>=0x70&&opcode<=0x7f||opcode>=0xe0&&opcode<=0xe3||
+      opcode===0x9a||opcode===0xc2||opcode===0xc3||
+      opcode===0xca||opcode===0xcb||opcode===0xcc||opcode===0xcd||
+      opcode===0xce||opcode===0xcf||opcode===0xe8||opcode===0xe9||
+      opcode===0xea||opcode===0xeb)return true;
+  if(opcode===0x0f&&bytes[at+1]>=0x80&&bytes[at+1]<=0x8f)return true;
+  return opcode===0xff&&[2,3,4,5].includes(((bytes[at+1]??0)>>>3)&7);
+};
+
+export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null}={}) {
+  if(!Number.isInteger(maxRun)||maxRun<1||maxRun>64)
+    throw new RangeError('cross-mode potential trace run budget must be 1..64');
+  if(onObservedStep!==null&&typeof onObservedStep!=='function')
+    throw new TypeError('onObservedStep must be a function');
+  const modes=Object.fromEntries(MODES.map(mode=>[mode,{
+    entryAttempts:0,completedStepCalls:0,eligibleRetiredOrdinals:0,
+    repeatIterationCalls:0,noRetirement:0,abortedCalls:0,
+    admittedOrdinals:0,refusedOrdinals:0,runs:0,
+    ordinalsInRunsAtLeast8:0,optimisticIoOrdinalsInRunsAtLeast8:0,
+    runLengthHistogram:{},runEndReasons:{},
+    observedIoOrdinals:0,admittedOptimisticIoOrdinals:0,
+    admittedControlTransferOrdinals:0,
+    controlTransferOrdinalsInRunsAtLeast8:0,
+    admittedOutsideBroadGrammarOrdinals:0,
+    outsideBroadGrammarOrdinalsInRunsAtLeast8:0,
+    admittedOpcodeCounts:{},longRunOpcodeCounts:{},
+    codePageRevocations:0,translationRevocations:0,
+    chipExits:0,interruptExits:0,faultExits:0,abortedExits:0,
+    refusals:{}}]));
+  let machine=null,pending=null,run=null,externalEpoch=0,deviceReads=0,
+    deviceWrites=0,restores=[];
+  const endRun=reason=>{
+    if(!run)return;
+    const bucket=modes[run.mode];
+    bucket.runs++;
+    bump(bucket.runLengthHistogram,run.length);
+    bump(bucket.runEndReasons,reason);
+    if(run.length>=8){
+      bucket.ordinalsInRunsAtLeast8+=run.length;
+      bucket.optimisticIoOrdinalsInRunsAtLeast8+=run.ioOrdinals;
+      bucket.controlTransferOrdinalsInRunsAtLeast8+=run.controlTransfers;
+      bucket.outsideBroadGrammarOrdinalsInRunsAtLeast8+=run.outsideBroad;
+      for(const [opcode,count] of Object.entries(run.opcodeCounts))
+        bucket.longRunOpcodeCounts[opcode]=
+          (bucket.longRunOpcodeCounts[opcode]??0)+count;
+    }
+    run=null;
+  };
+  const restoreOwn=(object,key,wrapped)=>{
+    const own=Object.getOwnPropertyDescriptor(object,key),old=object[key];
+    object[key]=wrapped(old);
+    restores.push(()=>{
+      if(own)Object.defineProperty(object,key,own);
+      else delete object[key];
+    });
+  };
+  const recordCode=(address,width=1)=>{
+    if(!pending)return;
+    const firstAddress=machine._decode386(address>>>0);
+    const lastAddress=machine._decode386((address+width-1)>>>0);
+    const first=firstAddress>>>12,last=lastAddress>>>12;
+    if(pending.codePage===null)pending.codePage=first;
+    if(first!==pending.codePage||last!==pending.codePage)
+      pending.codePageCrossing=true;
+    // Executable ROM and mapped devices can carry read side effects or
+    // aliasing beyond the proposed RAM-only code-window proof.
+    if(firstAddress>=machine.memoryBytes||lastAddress>=machine.memoryBytes||
+        machine._page?.[first]!==1||machine._page?.[last]!==1||
+        firstAddress>=0x9fc00&&firstAddress<0xc0000||
+        lastAddress>=0x9fc00&&lastAddress<0xc0000)
+      pending.unsafeCode=true;
+  };
+  const recordAccess=(address,width,write)=>{
+    if(!pending)return;
+    pending.dataAccesses++;
+    for(let i=0;i<width;i++){
+      const raw=(address+i)>>>0,decoded=machine._decode386(raw);
+      const page=decoded>>>12,kind=machine._page?.[page];
+      const overlay=(decoded>=0xa0000&&decoded<0xc0000)||
+        (decoded>=0x9fc00&&decoded<0x9fd50)||
+        (decoded>=0xfee00000&&decoded<0xfee01000)||
+        (decoded>=0xfec00000&&decoded<0xfec00020);
+      if(raw>=0xffff0000||decoded>=machine.memoryBytes||overlay||
+         kind!==1)pending.unsafeData=true;
+      if(write&&page===pending.codePage){
+        pending.codeOrTableWrite=true;pending.codeWrite=true;
+      }
+      if(write&&machine.cpu._translationTablePages?.has(page))
+        pending.codeOrTableWrite=true;
+    }
+  };
+  const recordByte=(cpu,eip,value)=>{
+    if(!pending||pending.bytes.length>=15)return;
+    if(pending.bytes.length===0){
+      pending.fetchCs=cpu.cs;pending.fetchEip=eip>>>0;
+    }
+    pending.bytes.push(value&255);
+  };
+  const refuse=(mode,reason)=>{
+    const bucket=modes[mode];bucket.refusedOrdinals++;bump(bucket.refusals,reason);
+    endRun(reason);
+  };
+  return {
+    attach(target){
+      if(machine||!target?.cpu||typeof target.cpu._fetch8!=='function'||
+          typeof target.cpu._fetchN!=='function')
+        throw new TypeError('cross-mode observer needs an unattached 386 board');
+      machine=target;
+      const cpu=target.cpu;
+      restoreOwn(cpu,'_fetch8',original=>function(...args){
+        const eip=this.eip,value=original.apply(this,args);
+        recordByte(this,eip,value);return value;
+      });
+      restoreOwn(cpu,'_fetchN',original=>function(size,...args){
+        const eip=this.eip,before=pending?.bytes.length??0;
+        const value=original.call(this,size,...args);
+        if(pending&&pending.bytes.length===before)
+          for(let i=0;i<size;i++)
+            recordByte(this,eip+i,value/(2**(8*i))&255);
+        return value;
+      });
+      restoreOwn(cpu,'fetch',original=>function(address,...args){
+        const value=original.call(this,address,...args);
+        recordCode(address);return value;
+      });
+      if(typeof cpu.fetchRam32==='function')
+        restoreOwn(cpu,'fetchRam32',original=>function(address,...args){
+          const value=original.call(this,address,...args);
+          if(value!==undefined)recordCode(address,4);
+          return value;
+        });
+      restoreOwn(cpu,'read',original=>function(address,...args){
+        const value=original.call(this,address,...args);
+        recordAccess(address,1,false);return value;
+      });
+      if(typeof cpu.read32==='function')
+        restoreOwn(cpu,'read32',original=>function(address,...args){
+          const value=original.call(this,address,...args);
+          recordAccess(address,4,false);return value;
+        });
+      restoreOwn(target,'_write386',original=>function(address,value,...args){
+        if(pending&&this.cpu._pagingBitWrite)pending.pageWalkWrite=true;
+        recordAccess(address,1,true);
+        if(pending&&this.cpu._translationTablePages?.has(
+            this._decode386(address>>>0)>>>12))pending.translationWrite=true;
+        return original.call(this,address,value,...args);
+      });
+      restoreOwn(target,'_write',original=>function(address,value,...args){
+        // CPU writes already pass _write386. This also sees host/DMA writes
+        // through the board's ordinary RAM path between observed steps.
+        if(pending){
+          const page=(address>>>0)>>>12;
+          if(page===pending.codePage||
+              this.cpu._translationTablePages?.has(page))
+            pending.codeOrTableWrite=true;
+          if(page===pending.codePage)pending.codeWrite=true;
+          if(this.cpu._translationTablePages?.has(page))pending.translationWrite=true;
+        }else{
+          const page=this._decode386(address>>>0)>>>12;
+          if(run&&page===run.codePage)modes[run.mode].codePageRevocations++;
+          if(run&&this.cpu._translationTablePages?.has(page))
+            modes[run.mode].translationRevocations++;
+          externalEpoch++;endRun('host-or-dma-write');
+        }
+        return original.call(this,address,value,...args);
+      });
+      restoreOwn(cpu,'inPort',original=>function(...args){
+        if(pending){pending.io=true;deviceReads++;}
+        return original.apply(this,args);
+      });
+      restoreOwn(cpu,'outPort',original=>function(...args){
+        if(pending){pending.io=true;deviceWrites++;}
+        return original.apply(this,args);
+      });
+      restoreOwn(target,'_flushChips',original=>function(...args){
+        if(pending)pending.chipEvent=true;
+        return original.apply(this,args);
+      });
+      restoreOwn(target,'_serviceInterrupts',original=>function(...args){
+        const delivered=original.apply(this,args);
+        if(pending&&delivered)pending.interrupt=true;
+        return delivered;
+      });
+      restoreOwn(cpu,'_deliverFault',original=>function(...args){
+        if(pending)pending.fault=true;
+        return original.apply(this,args);
+      });
+      return ()=>{
+        endRun('end-of-observation');
+        for(const restore of restores.reverse())restore();
+        restores=[];machine=null;pending=null;
+      };
+    },
+    observe(target){
+      if(target!==machine||pending)throw new TypeError('observer step mismatch');
+      const cpu=target.cpu,mode=modeOf(cpu),eip=cpu.eip>>>0;
+      pending={mode,cs:cpu.cs,eip,linear:((cpu.segmentCaches[1].base??0)+eip)>>>0,
+        cycles:cpu.cycles,identity:identityOf(target),
+        boardCycles:target.cycles,chipDebt:target._chipDebt,
+        chipDeadline:target._chipDeadline,externalEpoch,
+        eventDue:target._chipDebt>=target._chipDeadline||
+          (target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext),
+        bytes:[],fetchCs:null,fetchEip:null,codePage:null,
+        codePageCrossing:false,unsafeCode:false,dataAccesses:0,unsafeData:false,
+        codeOrTableWrite:false,codeWrite:false,translationWrite:false,
+        pageWalkWrite:false,io:false,
+        chipEvent:false,interrupt:false,fault:false};
+      modes[mode].entryAttempts++;
+    },
+    retired(target){
+      if(target!==machine||!pending)throw new TypeError('observer has no pending step');
+      const before=pending,cpu=target.cpu,bucket=modes[before.mode];
+      pending=null;
+      if(cpu.cycles===before.cycles){
+        if(before.fault)bucket.faultExits++;
+        bucket.noRetirement++;endRun('no-retirement');return;
+      }
+      bucket.completedStepCalls++;
+      onObservedStep?.({mode:before.mode,cs:before.cs,eip:before.eip,
+        bytes:before.bytes.slice(),codePage:before.codePage,
+        codeOrTableWrite:before.codeOrTableWrite,
+        pageWalkWrite:before.pageWalkWrite,io:before.io});
+      // REP is implemented as one interruptible iteration per board step.
+      // Without a precise architectural completion marker, exclude every
+      // such call from the instruction-retirement denominator and trace.
+      if(isRepeat(before.bytes)){
+        bucket.repeatIterationCalls++;endRun('repeat-iteration');return;
+      }
+      bucket.eligibleRetiredOrdinals++;
+      if(before.io)bucket.observedIoOrdinals++;
+      if(before.codeWrite)bucket.codePageRevocations++;
+      if(before.translationWrite||before.pageWalkWrite)
+        bucket.translationRevocations++;
+      if(before.interrupt)bucket.interruptExits++;
+      if(before.chipEvent||before.eventDue)bucket.chipExits++;
+      if(before.fault)bucket.faultExits++;
+      if(run){
+        const reason=run.mode!==before.mode?'mode-change':
+          run.cs!==before.cs?'cs-change':
+          run.codePage!==before.codePage?'code-page-change':
+          run.expectedEip!==before.eip?'nonsequential-entry':
+          run.externalEpoch!==before.externalEpoch?'external-event':
+          run.boardCycles!==before.boardCycles||
+          run.chipDebt!==before.chipDebt||
+          run.chipDeadline!==before.chipDeadline?'board-state-change':
+          !sameIdentity(run.identity,before.identity)?'identity-change':null;
+        if(reason)endRun(reason);
+      }
+      const postIdentity=identityOf(target);
+      const postEip=cpu.eip>>>0;
+      const reason=before.fetchCs!==before.cs||before.fetchEip!==before.eip?
+          'entry-redirect':
+        before.codePage===null?'missing-code-page-proof':
+        before.fault?'fault-delivery':
+        before.interrupt?'interrupt-delivery':
+        before.eventDue?'pre-step-event-horizon':
+        before.chipEvent&&!before.io?'chip-event':
+        before.codePageCrossing?'code-page-crossing':
+        before.unsafeCode?'unsafe-code':
+        before.unsafeData?'unsafe-data':
+        before.pageWalkWrite?'page-walk-write':
+        before.codeOrTableWrite?'code-or-table-write':
+        !sameIdentity(before.identity,postIdentity)?'identity-change':
+        (!before.bytes.length?'missing-fetch':null);
+      if(reason){refuse(before.mode,reason);return;}
+      if(!run)run={mode:before.mode,cs:before.cs,
+        codePage:before.codePage,length:0,ioOrdinals:0,
+        outsideBroad:0,controlTransfers:0,opcodeCounts:{}};
+      run.length++;bucket.admittedOrdinals++;
+      if(before.io){run.ioOrdinals++;bucket.admittedOptimisticIoOrdinals++;}
+      if(isControlTransfer(before.bytes)){
+        run.controlTransfers++;bucket.admittedControlTransferOrdinals++;
+      }
+      const opcode=opcodeKey(before.bytes),broad=classifyI80386BroadForm(before.bytes);
+      bump(run.opcodeCounts,opcode);bump(bucket.admittedOpcodeCounts,opcode);
+      if(broad.reason){run.outsideBroad++;bucket.admittedOutsideBroadGrammarOrdinals++;}
+      run.expectedEip=postEip;run.identity=postIdentity;
+      run.boardCycles=target.cycles;run.chipDebt=target._chipDebt;
+      run.chipDeadline=target._chipDeadline;
+      run.externalEpoch=externalEpoch;
+      if(target._chipDebt>=target._chipDeadline||
+         (target._lapicTimerInterval&&target.cycles>=target._lapicTimerNext))
+        endRun('post-step-event-horizon');
+      else if(before.chipEvent)endRun('io-helper-chip-flush');
+      else if(run?.length===maxRun)endRun('run-budget');
+    },
+    aborted(target){
+      if(target!==machine||!pending)throw new TypeError('observer has no pending step');
+      modes[pending.mode].abortedCalls++;
+      modes[pending.mode].abortedExits++;
+      if(pending.fault)modes[pending.mode].faultExits++;
+      pending=null;endRun('aborted-call');
+    },
+    externalEvent(){externalEpoch++;endRun('external-event');},
+    report(){
+      endRun('report-boundary');
+      for(const [mode,bucket] of Object.entries(modes)){
+        const runSteps=Object.entries(bucket.runLengthHistogram).reduce(
+          (sum,[length,count])=>sum+Number(length)*count,0);
+        const longSteps=Object.entries(bucket.runLengthHistogram).reduce(
+          (sum,[length,count])=>sum+(Number(length)>=8?Number(length)*count:0),0);
+        if(bucket.entryAttempts!==bucket.completedStepCalls+bucket.noRetirement+
+            bucket.abortedCalls||bucket.completedStepCalls!==
+            bucket.repeatIterationCalls+bucket.eligibleRetiredOrdinals||
+            bucket.eligibleRetiredOrdinals!==bucket.admittedOrdinals+
+            bucket.refusedOrdinals||runSteps!==bucket.admittedOrdinals||
+            longSteps!==bucket.ordinalsInRunsAtLeast8||
+            bucket.optimisticIoOrdinalsInRunsAtLeast8>longSteps||
+            bucket.controlTransferOrdinalsInRunsAtLeast8>longSteps||
+            Object.values(bucket.longRunOpcodeCounts).reduce((a,b)=>a+b,0)!==longSteps||
+            Object.values(bucket.admittedOpcodeCounts).reduce((a,b)=>a+b,0)!==
+              bucket.admittedOrdinals)
+          throw new Error(`cross-mode observer partition mismatch in ${mode}`);
+      }
+      const sum=field=>MODES.reduce((total,mode)=>total+modes[mode][field],0);
+      const completedStepCalls=sum('completedStepCalls');
+      const eligibleRetiredOrdinals=sum('eligibleRetiredOrdinals');
+      const uniqueOrdinalsInRunsAtLeast8=sum('ordinalsInRunsAtLeast8');
+      const protected16OrVm86OrdinalsInRunsAtLeast8=
+        modes.protected16.ordinalsInRunsAtLeast8+
+        modes.vm86.ordinalsInRunsAtLeast8;
+      return {schema:'bw.i80386-cross-mode-potential-trace-observer.v1',maxRun,
+        model:'observed-successful-opcode; actual successor; optimistic synchronous IO helper',
+        modes,deviceReads,deviceWrites,completedStepCalls,
+        repeatIterationCalls:sum('repeatIterationCalls'),
+        noRetirementCalls:sum('noRetirement'),abortedCalls:sum('abortedCalls'),
+        eligibleRetiredOrdinals,admittedOrdinals:sum('admittedOrdinals'),
+        disjointRuns:sum('runs'),uniqueOrdinalsInRunsAtLeast8,
+        optimisticIoOrdinalsInRunsAtLeast8:
+          sum('optimisticIoOrdinalsInRunsAtLeast8'),
+        controlTransferOrdinalsInRunsAtLeast8:
+          sum('controlTransferOrdinalsInRunsAtLeast8'),
+        outsideBroadGrammarOrdinalsInRunsAtLeast8:
+          sum('outsideBroadGrammarOrdinalsInRunsAtLeast8'),
+        protected16OrVm86OrdinalsInRunsAtLeast8,
+        longRunShareOfEligibleRetirements:eligibleRetiredOrdinals?
+          uniqueOrdinalsInRunsAtLeast8/eligibleRetiredOrdinals:0,
+        predeclaredOpportunityGatePassed:uniqueOrdinalsInRunsAtLeast8>=30_000_000&&
+          protected16OrVm86OrdinalsInRunsAtLeast8>=5_000_000};
+    },
+  };
+}

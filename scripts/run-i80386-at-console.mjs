@@ -19,6 +19,7 @@ import {createI80386Code16Coverage} from '../src/experimental/i80386-code16-cove
 import {createI80386Native32Census} from '../src/experimental/i80386-native32-census.js';
 import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-block-census.js';
 import {createI80386Code16EventRunObserver} from '../src/experimental/i80386-code16-event-run-observer.js';
+import {createI80386CrossModePotentialTraceObserver} from '../src/experimental/i80386-cross-mode-potential-trace-observer.js';
 import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
 import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
 
@@ -87,6 +88,8 @@ const broadBlockCensus=process.env.AT_BROAD_BLOCK_CENSUS==='1'?
     selectedFormsPotential:process.env.AT_BROAD_BLOCK_SELECTED_FORMS==='1'}):null;
 const code16EventObserver=process.env.AT_CODE16_EVENT_OBSERVER==='1'?
   createI80386Code16EventRunObserver():null;
+const crossModeTraceObserver=process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'?
+  createI80386CrossModePotentialTraceObserver():null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
@@ -123,6 +126,10 @@ if(code16EventObserver&&(options.nativeBlocks||options.code16Wasm||options.code1
     options.live||native32Census||code16Coverage||modeCpuProfile||broadBlockCensus||
     hotLoopLocator))
   throw new Error('code16 event observer requires noninteractive ordinary single-step execution');
+if(crossModeTraceObserver&&(options.nativeBlocks||options.code16Wasm||options.code16Loads||
+    options.live||native32Census||code16Coverage||modeCpuProfile||broadBlockCensus||
+    hotLoopLocator||code16EventObserver))
+  throw new Error('cross-mode trace observer requires noninteractive ordinary single-step execution');
 if(options.code16Wasm&&(options.nativeBlocks||options.code16Loads))
   throw new Error('code16 WASM is a separate opt-in dispatcher');
 if(code16WasmDiagnostics&&!options.code16Wasm)
@@ -174,6 +181,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-native32-census.js',
   '../src/experimental/i80386-broad-block-census.js',
   '../src/experimental/i80386-code16-event-run-observer.js',
+  '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
   '../src/experimental/i80386-hot-loop-locator.js',
   '../src/experimental/i80386-ram-bridge.js',
   '../src/experimental/i80386-block-spike.js',
@@ -242,6 +250,7 @@ const restoreCode16Interrupts=code16Coverage?.attach(machine);
 const restoreNative32Fetch=native32Census?.attach(machine);
 const restoreBroadBlockFetch=broadBlockCensus?.attach(machine);
 const restoreCode16EventObserver=code16EventObserver?.attach(machine);
+const restoreCrossModeTraceObserver=crossModeTraceObserver?.attach(machine);
 const restoreHotLoopFetch=hotLoopLocator?.attach(machine);
 const textRam=()=>{
   const columns=(machine._read(0x44a)|(machine._read(0x44b)<<8))||80;
@@ -285,6 +294,7 @@ const runChunk=end=>{while(steps<end) {
     const event=events[eventIndex++];
     broadBlockCensus?.externalEvent();
     code16EventObserver?.externalEvent();
+    crossModeTraceObserver?.externalEvent();
     hotLoopLocator?.externalEvent();
     const accepted=event.type==='key'?machine.keyIn(event.code):
       event.type==='serial'?machine.serialIn(event.code):machine.mouseIn(event);
@@ -306,6 +316,7 @@ const runChunk=end=>{while(steps<end) {
     native32Census?.observe(machine);
     broadBlockCensus?.observe(machine);
     code16EventObserver?.observe(machine);
+    crossModeTraceObserver?.observe(machine);
     hotLoopLocator?.observe(machine);
     if(nativeDispatcher)steps+=nativeDispatcher.run(Math.min(64,budget));
     else if(code16WasmDispatcher)steps+=code16WasmDispatcher.run(Math.min(64,budget));
@@ -313,12 +324,14 @@ const runChunk=end=>{while(steps<end) {
       native32Census?.retired(machine);steps++;
       broadBlockCensus?.retired(machine);
       code16EventObserver?.retired(machine);
+      crossModeTraceObserver?.retired(machine);
       hotLoopLocator?.retired(machine);
       if(modeCpuProfile)recordModeStep(modeBeforeStep);}
   }
   catch(error) {
     broadBlockCensus?.aborted(machine);
     code16EventObserver?.aborted(machine);
+    crossModeTraceObserver?.aborted(machine);
     hotLoopLocator?.aborted(machine);
     if(!(error instanceof I80386Fault)&&!(error instanceof UnsupportedI80386)&&
         !error.message?.startsWith('AT 8042 '))throw error;
@@ -377,6 +390,7 @@ restoreCode16Interrupts?.();
 restoreNative32Fetch?.();
 restoreBroadBlockFetch?.();
 restoreCode16EventObserver?.();
+restoreCrossModeTraceObserver?.();
 restoreHotLoopFetch?.();
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
@@ -392,6 +406,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(native32Census?{native32Census:native32Census.report()}:{}),
   ...(broadBlockCensus?{broadBlockCensus:broadBlockCensus.report()}:{}),
   ...(code16EventObserver?{code16EventObserver:code16EventObserver.report()}:{}),
+  ...(crossModeTraceObserver?{crossModeTraceObserver:crossModeTraceObserver.report()}:{}),
   ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
     nativeBlocks:options.nativeBlocks,
