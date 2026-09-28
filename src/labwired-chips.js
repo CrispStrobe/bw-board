@@ -793,6 +793,9 @@ flash:
 ram:
   base: 0x20000000
   size: "192KB"
+# PyBadge's resident UF2 bootloader occupies the first 16 KiB. Raw MakeCode
+# Arcade application payloads carry their vector table at this offset.
+reset_vector_offset: 0x4000
 pins:
   # D0 / RX — variant.cpp: PORTA 23 (SERCOM3/PAD[1]).
   PA23: { gpio: porta, bit: 23, functions: [{ type: uart, peripheral: sercom3, role: rx }] }
@@ -872,6 +875,9 @@ export const PYBADGE = {
   pwmPins: ['d5', 'd6', 'd9', 'd13'],
   clockHz: 120_000_000,
   flashOrigin: 0,
+  // MakeCode Arcade UF2 payloads begin after the resident 16 KiB bootloader.
+  // Callers with a full-flash image can still override `firmwareAddress: 0`.
+  firmwareOrigin: 0x4000,
   name: 'bw-pybadge',
   boardKinds: ['pybadge'],
 };

@@ -181,6 +181,10 @@ describe('labwired bridge: our netlist → their system manifest', () => {
         assert.deepEqual(pybadge.pins.d13, { peripheral: 'porta', pin: 23 });
         assert.equal(labwiredAdapterOptionsFor({
             netlist: netlist([['U1', 'pybadge']], []), chipKind: 'pybadge', firmware: null,
+        }).firmwareAddress, 0x4000);
+        assert.equal(labwiredAdapterOptionsFor({
+            netlist: netlist([['U1', 'pybadge']], []), chipKind: 'pybadge', firmware: null,
+            firmwareAddress: 0,
         }).firmwareAddress, 0);
     });
 
