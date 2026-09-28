@@ -185,7 +185,7 @@ jobs:
           fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)
           skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)
           echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
-          [ "${tests:-0}" -ge 59 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          [ "${tests:-0}" -ge 60 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
           [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
           [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 

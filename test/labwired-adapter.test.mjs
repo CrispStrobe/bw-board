@@ -29,6 +29,7 @@ import { dirname } from 'node:path';
 import { createLabwiredAdapter, generateSystemYaml } from '../src/labwired-adapter.js';
 import { binToElf } from '../src/bin-to-elf.js';
 import { createDebugTarget } from '../src/debug-target-factory.js';
+import { ATMEGA328P } from '../src/labwired-chips.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WASM_DIR = process.env.LABWIRED_WASM;
@@ -239,6 +240,40 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
         // move, and it must not overshoot the request.
         assert.ok(t > 0n, 'time did not advance');
         assert.ok(t <= 10_000_000n, `time overshot the request: ${t}`);
+    });
+
+    it('the released AVR core publishes DDR output and PORT pull-up modes', () => {
+        // ldi r16,0x24; out PORTB,r16; ldi r16,0x20; out DDRB,r16;
+        // rjmp .  PB5 becomes a driven-high D13 while PB2/D10 remains an
+        // input whose PORT latch enables the classic AVR pull-up.
+        const avrFlash = Uint8Array.from([
+            0x04, 0xe2, 0x05, 0xb9, 0x00, 0xe2, 0x04, 0xb9, 0xff, 0xcf,
+        ]);
+        const adapter = createLabwiredAdapter({
+            wasm,
+            chipYaml: ATMEGA328P.chipYaml,
+            firmware: avrFlash,
+            pins: ATMEGA328P.pins,
+            clockHz: ATMEGA328P.clockHz,
+            name: 'bw-avr-gpio-test',
+        });
+        const board = recordingBoard();
+        adapter.attachBoard(board);
+        board.calls.length = 0;
+        adapter.advanceNs(1_000_000n);
+
+        const last = name => board.calls
+            .filter(call => call.k === 'setPin' && call.name === name).pop();
+        assert.deepEqual(
+            {mode: last('D13')?.mode, high: last('D13')?.high},
+            {mode: 'pushpull', high: true},
+            'DDRB5/PORTB5 must reach the board as a driven-high output'
+        );
+        assert.deepEqual(
+            {mode: last('D10')?.mode, high: last('D10')?.high},
+            {mode: 'input-pullup', high: true},
+            'PORTB2 with DDRB2 clear must reach the board as an input pull-up'
+        );
     });
 
     describe('the debug target, over the same engine', () => {
