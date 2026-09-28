@@ -44,6 +44,7 @@
 /** Engine cycles per pump slice when nothing is armed — big enough that the
  *  wasm boundary is not the bottleneck, small enough to stay responsive. */
 import { plain } from './labwired-adapter.js';
+import { logicalTimeDomain } from './instruction-debug-events.js';
 
 const FREE_RUN_CHUNK = 200_000;
 const CODE_ADDRESS_MAX = 0xfffffffe;
@@ -109,6 +110,45 @@ export function createLabwiredDebugTarget (opts) {
     return true;
   };
 
+  // ── Reverse (opt-in recording) ───────────────────────────────────────
+  //
+  // bw-debug's reverse step restores the nearest checkpoint and replays one
+  // instruction at a time, comparing each replayed retire event with the
+  // recorded one. That needs a retire event per instruction, which on this
+  // engine means single-stepping across the wasm boundary — far slower than
+  // batched running. So it is OPT-IN (`setRecording(true)`), and only where
+  // save points work (firmware-only): a checkpoint IS an engine snapshot.
+  //
+  // TICKS ARE RETIRED INSTRUCTIONS, and the domain says so. The engine has no
+  // per-instruction cycle count to read, and this target already treats one
+  // instruction as one cycle for program time; naming the clock
+  // `labwired-instructions` keeps anyone from reading these ticks as cycles.
+  // A restore opens a new epoch (`-rewind-<n>`): the timeline branched, and
+  // bw-debug requires ticks never to fall within one domain.
+  const DOMAIN = 'labwired-instructions';
+  let recording = false;
+  let retired = 0;
+  let epoch = 0;
+  const domain = () => (epoch ? `${DOMAIN}-rewind-${epoch}` : DOMAIN);
+  const clockHz = Number(clockHzBig);
+  let eventListeners = [];
+  let inputListeners = [];
+  /** One instruction, and — while recording — its retire event. */
+  const stepOne = () => {
+    const pcBefore = codeAddr(pc());
+    sim().step_single();
+    if (!recording) return;
+    retired += 1;
+    const ev = {
+      cpuId: 0, kind: 'instruction', phase: 'retire', fidelity: 'recorded',
+      time: { ticks: retired, domain: domain(), hz: clockHz },
+      pcBefore, pcAfter: codeAddr(pc()),
+    };
+    for (const cb of eventListeners) {
+      try { cb(ev); } catch (e) { /* a listener must not stop the run */ }
+    }
+  };
+
   /**
    * Tell every listener why the run stopped, in the halt shape every other
    * target uses (avr8js/emu8051/riscv32: `cause`, `pc`, `bp`, `bpKind`, `tNs`,
@@ -147,7 +187,131 @@ export function createLabwiredDebugTarget (opts) {
         haltPolicy: 'freeze-timers',
         timeFreezes: true,
         consumes: [],
+        // Reverse only while opted in (see setRecording): a checkpoint is an
+        // engine snapshot, and a retire event needs single-stepping.
+        recording: recording ? ['checkpoint', 'restore'] : [],
+        extensions: recording ? { eventBreakpointBoundary: 'instruction-retire' } : {},
       };
+    },
+
+    /**
+     * Opt in to reverse. Refused, by name, where save points are refused (a
+     * bench cannot rewind its circuit). While on, every instruction is
+     * single-stepped so it can be announced — the run is much slower.
+     * @returns {undefined|{unsupported:string}}
+     */
+    setRecording (on) {
+      if (on) {
+        const why = target.snapshotUnavailable();
+        if (why) return { unsupported: why };
+      }
+      recording = !!on;
+      return undefined;
+    },
+    isRecording () { return recording; },
+
+    onDebugEvent (cb) {
+      eventListeners.push(cb);
+      return () => { eventListeners = eventListeners.filter(f => f !== cb); };
+    },
+
+    debugTime () { return { ticks: retired, domain: domain(), hz: clockHz }; },
+
+    /** A checkpoint: an engine snapshot plus this target's retire count. Plain data. */
+    captureCheckpoint () {
+      if (!recording) return { refused: 'recording is off' };
+      const saved = target.saveSnapshot('checkpoint');
+      if (!saved || saved.unsupported) return { refused: saved ? saved.unsupported : 'snapshot failed' };
+      return { snapshotId: saved.id, retired, time: target.debugTime() };
+    },
+
+    /** Restore a checkpoint and open a fresh epoch. undefined on success. */
+    restoreCheckpoint (cp) {
+      if (!cp || typeof cp.snapshotId !== 'number') return { refused: 'not a labwired checkpoint' };
+      const r = target.restoreSnapshot(cp.snapshotId);
+      if (r && r.unsupported) return { refused: r.unsupported };
+      retired = cp.retired;
+      epoch += 1;
+      return undefined;
+    },
+
+    /** Retire exactly one instruction, announcing it exactly as a live run does. */
+    replayInstruction () {
+      if (!recording) return { accepted: false, code: 'not-recording', reason: 'recording is off' };
+      if (detached) return { accepted: false, code: 'detached', reason: 'the target is detached' };
+      stepOne();
+      return { accepted: true, boundary: 'instruction', cycles: 1 };
+    },
+
+    // ── Inputs: the serial console is this tier's one host input ──────────
+    //
+    // A byte typed into the console changes what the firmware does, so a
+    // replay that skipped it would diverge without anyone noticing. Every byte
+    // therefore goes through feedSerial(), which announces it as a fact on the
+    // instruction clock before the engine sees it, and applyReplayInput() puts
+    // the same byte back during a replay. With a CIRCUIT attached the board
+    // drives this chip's pins outside that log, so a replay is refused and the
+    // refusal names the board.
+
+    // `onDebugInput(` / `applyReplayInput(` are spelled without this file's
+    // usual space ON PURPOSE: test/replay-surface-conformance.test.mjs finds
+    // implementers by that exact text, and this target must be in its table.
+    onDebugInput(cb) {
+      inputListeners.push(cb);
+      return () => { inputListeners = inputListeners.filter(f => f !== cb); };
+    },
+
+    /** Type one byte into the firmware's UART, recording it as an input fact. */
+    feedSerial (byte) {
+      const b = byte & 0xff;
+      const fact = { producer: 'labwired.uart', payload: { byte: b }, time: target.debugTime() };
+      for (const cb of inputListeners) {
+        try { cb(fact); } catch (e) { /* a TELL listener cannot stop the input */ }
+      }
+      adapter.feedSerial(b);
+      return true;
+    },
+
+    /** Why this session cannot be replayed, if it cannot. See replaySupport(). */
+    replayRefusalReasons () {
+      return adapter.firmwareOnly ? []
+        : ['a circuit board drives this chip\'s inputs outside the replay log'];
+    },
+
+    /** Put a recorded input back: the same byte into the same UART. */
+    applyReplayInput(fact) {
+      if (!adapter.firmwareOnly) {
+        return { accepted: false, code: 'board-inputs-unlogged',
+          reason: 'a circuit board drives this chip\'s inputs outside the replay log' };
+      }
+      const byte = fact && fact.producer === 'labwired.uart' && fact.payload ? fact.payload.byte : undefined;
+      if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
+        return { accepted: false, code: 'invalid-input',
+          reason: `not a labwired.uart byte fact: ${fact && fact.producer}` };
+      }
+      adapter.feedSerial(byte);
+      return { accepted: true };
+    },
+
+    /**
+     * Run forward to the exact instruction count at which a recorded input was
+     * delivered. Coded refusals, nothing coerced (see m6502-debug.js for why
+     * ticks are parsed with BigInt).
+     */
+    replayToInputBoundary (boundary) {
+      let requested;
+      try { requested = BigInt(boundary?.ticks); } catch {
+        return { accepted: false, code: 'invalid-input-boundary', reason: 'recorded input boundary ticks must be an integer' };
+      }
+      if (logicalTimeDomain(boundary?.domain) !== DOMAIN || requested < 0n) {
+        return { accepted: false, code: 'invalid-input-boundary', reason: 'recorded input boundary is outside the labwired instruction clock' };
+      }
+      if (requested < BigInt(retired)) {
+        return { accepted: false, code: 'input-boundary-passed', reason: 'already past the recorded input boundary' };
+      }
+      if (!recording) return { accepted: false, code: 'not-recording', reason: 'recording is off' };
+      while (BigInt(retired) < requested) stepOne();
+      return { accepted: true, boundary: 'input', time: target.debugTime() };
     },
 
     state () {
@@ -284,6 +448,10 @@ export function createLabwiredDebugTarget (opts) {
       running = false;
       insnRemaining = null;
       faultSeen = false;
+      // A reset rebuilds the engine: its snapshots (and so every checkpoint)
+      // are gone, and the timeline restarts — a new epoch, not ticks falling.
+      retired = 0;
+      epoch += 1;
     },
 
     runFor (budgetNs) {
@@ -295,7 +463,7 @@ export function createLabwiredDebugTarget (opts) {
       // Single-instruction stepping, and breakpoint checking, both need the PC
       // between instructions — so they share one slow path. Everything else
       // runs in batches, which is the only way the wasm boundary stays cheap.
-      const mustWatch = insnRemaining !== null || codeBps.size > 0;
+      const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording;
 
       if (!mustWatch) {
         let left = budgetCycles;
@@ -309,7 +477,7 @@ export function createLabwiredDebugTarget (opts) {
       }
 
       for (let i = 0; i < budgetCycles; i++) {
-        sim().step_single();
+        stepOne();
         const here = codeAddr(pc());
         if (codeBps.has(here)) {
           adapter.pump();
@@ -422,6 +590,8 @@ export function createLabwiredDebugTarget (opts) {
       detached = true;
       running = false;
       listeners = [];
+      eventListeners = [];
+      inputListeners = [];
       breakpoints.clear();
       codeBps.clear();
     },
