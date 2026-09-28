@@ -56,8 +56,16 @@ retained or speedup claimed. Separately, an [owned protected-16 executable
 trace](I80386-CODE16-OWNED-IO-TRACE.md) retires three fixture instructions
 in one call and exits before a device read, with ordinary-state parity and
 QEMU/Bochs witnesses. It is outside the AT dispatcher and has no Windows
-speed result. Current work is attributing short-span entry and fallback costs
-before selecting another executable prototype. The measurements below are an
+speed result. A [V8 short-span profile](receipts/2026-09-28-i80386-short-span-cost-model.json)
+then motivated packing each decoded protected-32 native block's IR once.
+The [retained packed-entry change](receipts/2026-09-28-i80386-packed-entry-performance.json)
+cut mean full-xv6 user CPU from 18.26 to 16.40 seconds across three serial
+pairs, a **10.19% reduction** on the opt-in native path. Every pair favored
+the candidate; all six complete guest reports, native statistics and RAM
+hashes matched. This is one VPS/workload result, not Windows performance or
+physical 386DX RTx. A later [Windows sampled-timer probe](I80386-CODE16-WASM-COST-ATTRIBUTION.md)
+was too intrusive for absolute phase attribution, so the next 16-bit
+measurement uses low-rate V8 profiling. The measurements below are an
 experiment ledger; earlier statements about work remaining refer to their
 dated source revisions.
 
@@ -470,6 +478,12 @@ returns `io-required` before `IN`. Focused parity and refusal tests cover
 ordinary resume, a chip-event horizon, branch fallthrough and code mutation.
 The fixture is too narrow to imply a Windows speedup and remains outside
 the default execution paths.
+A [sampled code16 WASM cost probe](I80386-CODE16-WASM-COST-ATTRIBUTION.md)
+preserved the selected Windows guest fields and exact retirement counts,
+but its 256× sampled-time extrapolation exceeded observed wall time.
+That distortion prevents a whole-run phase attribution or a retained
+optimization. The opt-in diagnostic remains roughly five times the
+ordinary user CPU in the prior uninstrumented pair.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM

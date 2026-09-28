@@ -93,6 +93,34 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
         words[at + 10] = hi >>> 0;
       }
     },
+    packProgram(instructions) {
+      if (!Array.isArray(instructions) || instructions.length > capacity)
+        throw new RangeError('i80386 block spike program exceeds fixed capacity');
+      const packed = new Uint32Array(instructions.length * 11);
+      for (let i = 0; i < instructions.length; i++) {
+        const {op, dst = 0, src = 0, width = 32, length = 1,
+          base = 8, index = 8, scale = 0, disp = 0, lo = 0, hi = 0} = instructions[i];
+        const at = i * 11;
+        packed[at] = op >>> 0;
+        packed[at + 1] = dst >>> 0;
+        packed[at + 2] = src >>> 0;
+        packed[at + 3] = width >>> 0;
+        packed[at + 4] = length >>> 0;
+        packed[at + 5] = base >>> 0;
+        packed[at + 6] = index >>> 0;
+        packed[at + 7] = scale >>> 0;
+        packed[at + 8] = disp >>> 0;
+        packed[at + 9] = lo >>> 0;
+        packed[at + 10] = hi >>> 0;
+      }
+      return packed;
+    },
+    setPackedProgram(packed) {
+      if (!(packed instanceof Uint32Array) || packed.length > capacity * 11 ||
+          packed.length % 11 !== 0)
+        throw new RangeError('i80386 block spike packed program exceeds fixed capacity');
+      words.set(packed, programAt);
+    },
     run(start, end, eventBudget) {
       if (!Number.isInteger(eventBudget) || eventBudget < 0 || eventBudget > 64)
         throw new RangeError('i80386 block spike event budget must be 0 through 64');

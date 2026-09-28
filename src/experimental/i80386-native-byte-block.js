@@ -157,7 +157,9 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
   const native=await createI80386BlockSpike({ramBridge});
   return {
     decode(maxInstructions=8) {
-      return decodeI80386NativeByteBlock(machine,maxInstructions);
+      const block=decodeI80386NativeByteBlock(machine,maxInstructions);
+      if (block) block.packedProgram=native.packProgram(block.instructions);
+      return block;
     },
     run(block, maxInstructions=8) {
       const cpu=machine.cpu;
@@ -200,7 +202,8 @@ export async function createI80386NativeByteRunner(machine, ramBridge) {
           ? Math.ceil((machine._lapicTimerNext-machine.cycles)/charge) : 64);
       if (budget < 1) return {instructions:0,cycles:0,reason:'chip-event'};
       native.setCpuState(cpu);
-      native.setProgram(block.instructions);
+      native.setPackedProgram(block.packedProgram ??=
+        native.packProgram(block.instructions));
       const result=native.run(0,block.instructions.length,budget);
       native.copyStateToCpu(cpu);
       if (repeatString && result.completed && !cpu.ecx) cpu._repeatContext=null;
