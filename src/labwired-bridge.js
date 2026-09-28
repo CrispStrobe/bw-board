@@ -262,7 +262,7 @@ export function buildLabwiredSystem (opts = {}) {
   const name = opts.name ?? `bw-${chipKind}`;
   const refusals = [];
   const fail = (extra = {}) => ({
-    ok: false, systemYaml: null, chipYaml: null, pins: {}, clockHz: null,
+    ok: false, systemYaml: null, chipYaml: null, pins: {}, clockHz: null, flashOrigin: null,
     name, bindings: [], attachments: [], refusals, mcuId: null, ...extra,
   });
 
@@ -436,6 +436,7 @@ export function buildLabwiredSystem (opts = {}) {
     chipYaml: chip.chipYaml,
     pins: chip.pins,
     clockHz: chip.clockHz,
+    flashOrigin: chip.flashOrigin ?? 0x08000000,
     name,
     bindings,
     attachments,
@@ -480,6 +481,7 @@ export function labwiredAdapterOptionsFor (opts = {}) {
     clockHz: built.clockHz,
     name: built.name,
     firmware: opts.firmware,
+    firmwareAddress: opts.firmwareAddress ?? built.flashOrigin,
     refusals: built.refusals,
   };
 }

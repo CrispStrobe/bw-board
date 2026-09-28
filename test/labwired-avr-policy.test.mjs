@@ -33,3 +33,29 @@ describe('LabWired AVR admission', () => {
         assert.equal(new DataView(firmware.buffer, firmware.byteOffset).getUint16(18, true), 83);
     });
 });
+
+describe('LabWired raw ARM placement', () => {
+    it('preserves a PyBadge application offset in the generated ELF segment', () => {
+        let firmware;
+        const sim = {
+            recommended_tick_interval: () => 1,
+            set_peripheral_tick_interval: () => {},
+            watch_logic_signals: () => [],
+        };
+        const raw = new Uint8Array(8);
+        new DataView(raw.buffer).setUint32(4, 0x00004101, true);
+        createLabwiredAdapter({
+            wasm: { WasmSimulator: { new_from_config: (_system, _chip, bytes) => {
+                firmware = bytes;
+                return sim;
+            } } },
+            chipYaml: 'name: samd51\narch: arm\n',
+            firmware: raw,
+            firmwareAddress: 0x4000,
+            pins: { d13: { peripheral: 'porta', pin: 23 } },
+        });
+        const view = new DataView(firmware.buffer, firmware.byteOffset);
+        assert.equal(view.getUint32(24, true), 0x00004101, 'ELF entry comes from app vector');
+        assert.equal(view.getUint32(52 + 8, true), 0x4000, 'PT_LOAD address preserves UF2 base');
+    });
+});

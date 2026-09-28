@@ -32,7 +32,11 @@ export { NetlistBuilder } from './builder.js';
 export { createSerialDebugTarget } from './serial-debug.js';
 export { createStm32Isp } from './stm32-isp.js';
 export { createDebugTarget, getTargetKinds, LABWIRED_KIND } from './debug-target-factory.js';
-export { STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0_ADC_CHANNELS, STM32F0_PWM_PINS, STM32F0, LABWIRED_CHIPS } from './labwired-chips.js';
+export {
+  STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0_ADC_CHANNELS, STM32F0_PWM_PINS, STM32F0,
+  NRF52833_CHIP_YAML, MICROBIT_V2_LABWIRED_PINS, MICROBIT_V2,
+  ATSAMD51_CHIP_YAML, PYBADGE_LABWIRED_PINS, PYBADGE, LABWIRED_CHIPS,
+} from './labwired-chips.js';
 export { buildLabwiredSystem, labwiredAdapterOptionsFor, refusalsFor, classifyAttachment } from './labwired-bridge.js';
 export { registerDevice, unregisterDevice, getDevice, hasDevice, registeredKinds, initDeviceState } from './devices.js';
 export { registerLogicGates } from './devices/logic-gates.js';

@@ -142,6 +142,7 @@ async function createRiscV32Target(opts = {}) {
  * @param {object} opts.board     BoardImpl — ALSO the default source of the
  *   chip descriptor, the header map and the manifest (see below)
  * @param {Uint8Array} opts.firmware  ELF, or a raw flash image
+ * @param {number} [opts.firmwareAddress] load address for a raw image
  * @param {string} [opts.chipKind] our board-part kind, default `stm32f030`
  * @param {string} [opts.chipYaml]  chip descriptor, if not derived from the board
  * @param {Record<string,{peripheral:string,pin:number}>} [opts.pins] header map
@@ -161,7 +162,7 @@ async function createLabwiredTarget(opts) {
   // that the pin map matches what the designer actually drew. `refusals` rides
   // out on the result so a host can SAY why something on the bench will not
   // move, instead of showing a dead knob.
-  let { chipYaml, pins, clockHz, systemYaml } = opts;
+  let { chipYaml, pins, clockHz, systemYaml, firmwareAddress } = opts;
   let refusals = [];
   if (!chipYaml || !pins) {
     const derived = labwiredAdapterOptionsFor({
@@ -171,13 +172,14 @@ async function createLabwiredTarget(opts) {
     pins = pins ?? derived.pins;
     clockHz = clockHz ?? derived.clockHz;
     systemYaml = systemYaml ?? derived.systemYaml;
+    firmwareAddress = firmwareAddress ?? derived.firmwareAddress;
     refusals = derived.refusals;
   }
 
   // Ordering, as everywhere in this factory: adapter, then board, then target.
   // attachBoard is what arms the engine's logic capture AND seats every pin, so
   // a target built before it would read a board nothing has published to.
-  const adapter = createLabwiredAdapter({ wasm, chipYaml, firmware, pins, clockHz, systemYaml, name });
+  const adapter = createLabwiredAdapter({ wasm, chipYaml, firmware, firmwareAddress, pins, clockHz, systemYaml, name });
   adapter.attachBoard(board);
   const target = createLabwiredDebugTarget({ adapter });
   return { target, adapter, refusals };
