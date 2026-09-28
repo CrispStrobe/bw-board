@@ -15,9 +15,10 @@ import time
 from pathlib import Path
 
 BOARD = Path(__file__).resolve().parents[1]
-XV6_SOURCE = Path('/tmp/xv6-public')
-XV6_IMAGE_DIR = Path('/tmp/xv6-stock-4m')
-OUTPUT = Path('/mnt/volume1/tmp-astra/xv6-usertests-next-marker-20260928')
+XV6_SOURCE = Path(os.environ.get('XV6_SOURCE_DIR', '/tmp/xv6-public')).expanduser().resolve()
+XV6_IMAGE_DIR = Path(os.environ.get('XV6_IMAGE_DIR', '/tmp/xv6-stock-4m')).expanduser().resolve()
+OUTPUT = Path(os.environ.get('XV6_OUTPUT_DIR',
+                             '/tmp/xv6-usertests-next-marker')).expanduser().resolve()
 STEPS = 300_000_000
 NEXT_MARKER = 'linkunlink ok\n'
 PREFIX_MARKER = 'createdelete ok\n'
