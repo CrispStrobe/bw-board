@@ -271,3 +271,57 @@ describe('labwired halts use the shared halt shape', () => {
         assert.equal(halts[0].bp, undefined);
     });
 });
+
+describe('labwired save points (engine snapshots)', () => {
+    const snapSim = () => {
+        const saved = [];
+        let cycles = 0;
+        return {
+            saved,
+            get_pc: () => 0x100,
+            step_batch: n => { cycles += n; },
+            step_single: () => { cycles++; },
+            snapshot_unavailable_reason: () => null,
+            snapshot_save: label => { const p = { id: saved.length + 1, label, cycles }; saved.push(p); return JSON.stringify(p); },
+            snapshot_list: () => JSON.stringify(saved),
+            snapshot_restore: id => {
+                const p = saved.find(s => s.id === id);
+                if (!p) throw new Error(`no save point ${id}`);
+                cycles = p.cycles; return JSON.stringify(p);
+            },
+            now: () => cycles,
+        };
+    };
+    const fwOnly = sim => createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim, firmwareOnly: true } });
+
+    it('a bench (circuit attached) refuses by name — the circuit cannot be rewound', () => {
+        const t = createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim: snapSim() } });
+        assert.match(t.snapshotUnavailable(), /circuit cannot be rewound/);
+        assert.match(t.saveSnapshot('x').unsupported, /circuit/);
+        assert.deepEqual(t.listSnapshots(), []);
+    });
+    it('firmware-only: save, list and restore round-trip through the engine', () => {
+        const sim = snapSim();
+        const t = fwOnly(sim);
+        assert.equal(t.snapshotUnavailable(), null);
+        t.run(); t.runFor(1000);
+        const a = t.saveSnapshot('before');
+        t.run(); t.runFor(5000);
+        assert.ok(sim.now() > a.cycles);
+        assert.deepEqual(t.listSnapshots().map(p => p.label), ['before']);
+        assert.equal(t.restoreSnapshot(a.id), undefined);
+        assert.equal(sim.now(), a.cycles, 'the engine went back to the save point');
+    });
+    it('a restore the engine refuses is reported, and restoring mid-run halts first', () => {
+        const sim = snapSim();
+        const t = fwOnly(sim);
+        const halts = [];
+        t.onHalt(h => halts.push(h));
+        assert.match(t.restoreSnapshot(99).unsupported, /restore refused: no save point 99/);
+        const p = t.saveSnapshot();
+        t.run();
+        t.restoreSnapshot(p.id);
+        assert.equal(t.state(), 'halted');
+        assert.equal(halts.at(-1).cause, 'pause');
+    });
+});
