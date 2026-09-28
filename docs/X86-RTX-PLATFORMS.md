@@ -9,6 +9,10 @@ gets an excluded warmup followed by the requested measured passes; the factor
 uses the median wall time. The default comparison clocks are a 4.772727 MHz XT
 and a declared 16 MHz 386 AT profile.
 
+The first VPS receipt is [here](receipts/2026-09-28-x86-platform-vps.json).
+It records a KVM Skylake 4-vCPU host running Node 20.20.2 at source revision
+`853c667de3f7025eb3bc6342d1c7f5f1e74b76cf`.
+
 The 8086 factor uses estimated instruction cycles. The 386 executor has no
 measured 80386 instruction timing: its core assigns one cycle per instruction,
 and the board charges six synthetic scheduling cycles. The 386 factors are
@@ -39,7 +43,8 @@ Upload the directory as a Kaggle dataset with its usual `dataset-metadata.json`,
 then attach that dataset to a script kernel whose `code_file` is
 `scripts/kaggle/x86-rtx-platforms.py`. Use `enable_gpu: "false"` for the CPU
 run and `enable_gpu: "true"` for the GPU-attached run. The runner uses the
-archive on `/kaggle/input`, so it does not rely on Kaggle worker internet.
+source on `/kaggle/input` (Kaggle may unpack the archive at upload), so it does
+not rely on Kaggle worker internet.
 Both runs execute Node on the CPU; the GPU model is recorded but no GPU kernel
 is used. A Kaggle script push immediately starts a run and uses quota, so only
 push after the source dataset and kernel metadata are ready.
