@@ -1,0 +1,40 @@
+name: "atmega328p"
+arch: "avr"
+core: "avr8"
+registers_count: 32
+cpu_hz: 16_000_000
+io_voltage_v: 5.0
+gpio_input_thresholds:
+  vil: 0.3
+  vih: 0.6
+flash:
+  base: 0x00000000
+  size: "32KB"
+ram:
+  base: 0x00000100
+  size: "2KB"
+peripherals:
+  - id: "spi"
+    type: "spi"
+    base_address: 0x00010000
+    size: "16"
+  - id: "i2c"
+    type: "i2c"
+    base_address: 0x00010010
+    size: "16"
+  - id: "portb"
+    type: "avr_gpio"
+    base_address: 0x00010023
+    size: "3"
+  - id: "portc"
+    type: "avr_gpio"
+    base_address: 0x00010026
+    size: "3"
+  - id: "portd"
+    type: "avr_gpio"
+    base_address: 0x00010029
+    size: "3"
+  - id: "adc"
+    type: "avr_adc"
+    base_address: 0x00010030
+    size: "16"

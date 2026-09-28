@@ -123,26 +123,31 @@ order-of-magnitude — the *ranking* is what is stable:
 | Core | Engine | Clock | RTx (off-box) |
 |------|--------|-------|---------------|
 | 8086/8088 (`i8086.js`) | ours | 4.77 MHz | ~150× core · ~3.3× booting MS-DOS through the full PC/XT |
-| Z80 (`z80.js`) | ours | 4 MHz | ~80–100× |
-| 6502 (`w65c02.js`) | ours | 1 MHz | ~60–80× |
-| AVR ATmega328P | avr8js ‡ | 16 MHz | ~12× |
-| 8051 | emu8051-stc (WASM) | — | ~3× |
-| RP2040 Cortex-M0+ | rp2040js † | 125 MHz | ~0.8–1.0× |
-| labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | ~11× |
+| Z80 (`z80.js`) | ours | 4 MHz | 186× |
+| 6502 (`w65c02.js`) | ours | 1 MHz | 150× |
+| AVR ATmega328P | avr8js ‡ | 16 MHz | 13.3× |
+| 8051 | emu8051-stc (WASM) | — | 5.23× |
+| RP2040 Cortex-M0+ | rp2040js † | 125 MHz | 1.66× |
+| labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | 24.2× |
 
 The three cores we own run tens of times faster than the real silicon. The
 third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051 and the
 peripheral-accurate labwired STM32/RISC-V/Xtensa engine — are heavier than the
-owned cores. The LabWired fork now clears real time on this loop while keeping
-the engine's whole-SoC peripheral model.
+owned cores. Every measured engine now clears real time on this loop. These are
+the medians of three passes from pinned GitHub run
+[`36384508630`](https://github.com/CrispStrobe/bw-board/actions/runs/36384508630);
+the machine-readable receipt is
+[`docs/receipts/2026-09-28-chip-rtx.json`](docs/receipts/2026-09-28-chip-rtx.json).
 
 † rp2040js's Thumb decoder is an 82-branch linear `if/else` chain; we run it
 through a **switch-dispatch fork** (`src/vendor/rp2040js-fast/`, default-on and
 behavior-identical — verified by an exhaustive 65,536-opcode stock-vs-fork
-differential, `test/rp2040-fast-dispatch-differential.test.mjs`). Off-box it is
-~1.11× on a realistic instruction mix and ~1.6× on decode-bound (MOVS-heavy)
-loops; the all-ADDS RTx loop above is its weak case, so the table figure is
-unchanged. Upstreaming the restructuring to rp2040js is the end state.
+differential, `test/rp2040-fast-dispatch-differential.test.mjs`). Complete
+MOVS/CMP/ADDS/SUBS-immediate and unconditional-branch families take an exact
+tier-zero path before generic wide-instruction probing. That raised the hosted
+RTx loop from a 0.94× pre-change median to 1.66×, with the exhaustive
+differential still green. Upstreaming the restructuring to rp2040js is the end
+state.
 
 ‡ avr8js's instruction decoder is a 99-branch linear `if/else` chain; we run it
 through the same kind of **switch-dispatch fork** (`src/vendor/avr8js-fast/`,
@@ -156,8 +161,9 @@ it to avr8js is the end state.
 single-core, walk-deleted STM32F0 bus; 1 on timing-sensitive or multi-core
 buses). The fork also has an observer/interrupt/IT/MMIO-guarded Thumb-1 RAM-loop
 basic-block path, plus a guarded closed-form path for rustc's current store-spin
-loop, that aligns and coalesces from any entry phase. The final pinned artifact
-measured 11.0×, 11.9×, and 11.2× in the post-merge CI run (median 11.2×).
+loop, that aligns and coalesces from any entry phase. The current pinned
+artifact measured 22.5×, 24.2×, and 25.4× in the 2026-09-28 hosted run
+(median 24.2×).
 The core repository separately gates the native production path at ≥1.0× for
 all 38 modeled chips (74 board/mode measurements, with no coverage waivers).
 Later same-VPS optimization receipts improved its ATmega328P `INC`/`RJMP`

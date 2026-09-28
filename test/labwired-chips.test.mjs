@@ -13,7 +13,10 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0 } from '../src/labwired-chips.js';
+import {
+    ATMEGA328P, ATMEGA328P_CHIP_YAML, ATMEGA328P_LABWIRED_PINS,
+    STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0,
+} from '../src/labwired-chips.js';
 import { STM32F0_PINS } from '../src/stm32-adapter.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -57,5 +60,17 @@ describe('labwired chip descriptors', () => {
         assert.equal(STM32F0.chipYaml, STM32F0_CHIP_YAML);
         assert.equal(STM32F0.clockHz, 48_000_000);
         assert.ok(Object.keys(STM32F0.pins).length > 0);
+    });
+
+    it('embeds the pinned LabWired ATmega328P descriptor byte-for-byte', () => {
+        const fixture = readFileSync(join(root, 'test/fixtures/labwired/atmega328p-chip.yaml'), 'utf8');
+        assert.equal(ATMEGA328P_CHIP_YAML, fixture);
+        assert.equal(ATMEGA328P.clockHz, 16_000_000);
+        assert.deepEqual(ATMEGA328P.boardKinds, ['arduino_uno']);
+        assert.deepEqual(Object.keys(ATMEGA328P_LABWIRED_PINS), [
+            'D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
+            'D8', 'D9', 'D10', 'D11', 'D12', 'D13',
+            'A0', 'A1', 'A2', 'A3', 'A4', 'A5',
+        ]);
     });
 });

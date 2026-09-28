@@ -149,6 +149,18 @@ describe('labwired bridge: our netlist → their system manifest', () => {
         assert.equal(built.ok, false);
         assert.equal(built.refusals[0].code, 'chip-unmapped');
         assert.match(built.refusals[0].reason, /stm32f030/);
+        assert.match(built.refusals[0].reason, /arduino_uno/);
+    });
+
+    it('maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support', () => {
+        const uno = netlist([['UNO', 'arduino_uno'], ['D1', 'led']], [
+            ['signal', 'UNO.d13', 'D1.anode'],
+        ]);
+        const built = buildLabwiredSystem({ netlist: uno, chipKind: 'arduino_uno' });
+        assert.equal(built.ok, true, JSON.stringify(built.refusals));
+        assert.equal(built.clockHz, 16_000_000);
+        assert.deepEqual(built.pins.D13, { peripheral: 'portb', pin: 5 });
+        assert.match(built.chipYaml, /arch: "avr"/);
     });
 
     it('no controller, or two, refuses rather than guessing', () => {
