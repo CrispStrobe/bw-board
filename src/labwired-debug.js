@@ -109,11 +109,30 @@ export function createLabwiredDebugTarget (opts) {
     return true;
   };
 
-  const halted = (reason, detail) => {
+  /**
+   * Tell every listener why the run stopped, in the halt shape every other
+   * target uses (avr8js/emu8051/riscv32: `cause`, `pc`, `bp`, `bpKind`, `tNs`,
+   * `skewNs`). This target used to send `{ reason, addr }` only, so bw-debug —
+   * which reads `why.cause` and maps `why.bp` back to the UI breakpoint that
+   * fired — could not tell which breakpoint hit or record the cause in its
+   * trace. `reason` stays as an alias. A user halt is `pause`, as elsewhere.
+   */
+  const halted = (reason, detail = {}) => {
     running = false;
     insnRemaining = null;
+    const cause = reason === 'user' ? 'pause' : reason;
+    let bp;
+    if (cause === 'breakpoint') {
+      for (const [handle, addr] of breakpoints) if (addr === detail.addr) { bp = handle; break; }
+    }
+    const why = {
+      cause, reason, pc: codeAddr(pc()),
+      bp, bpKind: bp !== undefined ? 'code' : undefined,
+      tNs: adapter.timeNs(), skewNs: 0n,
+      ...detail,
+    };
     for (const cb of listeners) {
-      try { cb({ reason, ...detail }); } catch (e) { /* a listener must not stop the halt */ }
+      try { cb(why); } catch (e) { /* a listener must not stop the halt */ }
     }
   };
 
