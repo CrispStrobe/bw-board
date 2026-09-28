@@ -1,0 +1,26 @@
+{
+  "schema": "bw.xv6-stock-usertests-next-marker-candidate.v1",
+  "boardRevision": "cd1bef69ac91d7b52d6fe9bf76bb08325ee371f5",
+  "xv6SourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "sourceSha256": {
+    "scripts/probe-xv6-stock.mjs": "d75485ccddf47fe1491bcff8fc9ac208683a9324b4e1b3cbfc416f76ca814533",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "src/experimental/i80386-at-machine.js": "cd590385f617841429e5de2f2bf7759fcd064f67db61a474272f3188e86c31fb",
+    "src/i8086-machine.js": "90f6ad69ae6a23b4412e2632232461be0c4505a05d4e272650790cf941d45731"
+  },
+  "probeWrapperSha256": "e3101b1db94ebed4e12fa161f54ea637fbe81d39baeb14e1b6e56b01270655df",
+  "mediaSha256": {
+    "rom": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaRom": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "bootImage": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "filesystemImage": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernel": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "privateRawReportSha256": "6cb85aa1d870409d40a61dc63f21cf6b3eb6a5242964ee168061e622c03755bc",
+  "stepBudget": 300000000,
+  "completedSteps": 232651147,
+  "priorMarkerReached": true,
+  "nextMarkerReached": true,
+  "stop": "next-marker",
+  "fullUsertestsPassed": false
+}
