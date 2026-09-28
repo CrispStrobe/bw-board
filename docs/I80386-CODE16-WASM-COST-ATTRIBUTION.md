@@ -62,3 +62,54 @@ The media-neutral reducer is
 [`scripts/summarize-i80386-code16-cost.mjs`](../scripts/summarize-i80386-code16-cost.mjs).
 The probe patch is retained solely to reproduce this receipt; it is not
 applied to the CPU, AT machine, CLI or GUI on this branch.
+
+## Follow-on V8 CPU profile
+
+The [lower-distortion receipt](receipts/2026-09-28-i80386-code16-v8-profile.json)
+records four serial runs at execution revision
+`55da2360a14e1aecb806d3867bd627351a48d115`: ordinary with a V8 CPU
+profile, ordinary control, opt-in code16 diagnostic with a profile, and opt-in
+control. The profiler requested a 5 ms sampling interval. All four reached
+60 million steps with identical selected reported guest fields, private
+inputs and the 31 reported execution-source hashes. The two opt-in runs also
+match their decoded-block, native-call, native-retirement and fallback counts
+exactly. The CLI source inventory omits the code-window module; the receipt
+separately hashes that file from the execution revision. These checks retain
+the earlier limit: no full RAM, disk or hidden CPU-state comparison.
+
+| Run | User CPU | Wall | V8 self samples |
+| --- | ---: | ---: | ---: |
+| Ordinary profiled | 84.50 s | 87.04 s | 16,356 |
+| Ordinary control | 82.71 s | 85.57 s | — |
+| Opt-in profiled | 382.96 s | 502.74 s | 87,597 |
+| Opt-in control | 398.92 s | 954.47 s | — |
+
+The host was a four-vCPU virtual Intel Xeon Skylake with Node 20.20.2.
+One-minute load average rose from 6.19 to 13.10 during the opt-in profile,
+and from 13.41 to 17.15 during its control. Concurrent builds were visible
+during the control. Its wall time is especially load-biased; these single
+profile/control pairs cannot isolate profiler overhead or a causal speed
+difference.
+
+Before the runs, the sole architecture candidate was cheaper code-window and
+cache admission. Its screening gate required at least 20% of **all opt-in
+process self samples** in the code-window module plus `decodeBlock`, with
+input/source/selected-guest parity. The candidate has **41,473 of 87,597
+samples (47.35%)**: 34,767 (39.69%) in the code-window module and 6,706
+(7.66%) in `decodeBlock`. Within the code-window module,
+`prevalidateI80386Code16Window` alone has 33,277 samples (37.99%). The WASM
+frame has 78 samples (0.09%); JS call-boundary cost can appear in its caller.
+The ordinary interpreter and board, when reached below the opt-in dispatcher,
+account for 20,283 samples (23.15%). These are sample counts, **not removable CPU
+shares**; moving validation work elsewhere, preserving mutation checks, and
+host contention can change the result.
+
+The screening gate therefore admits one **prototype investigation**:
+reduce repeated byte-array allocation and validation in code-window/cache
+admission while preserving proof for guest writes, DMA and code mutation.
+No executor change or speed claim follows from this receipt. Retention still
+requires two alternating unprofiled 60M A/B pairs, matching selected guest
+fields, at least 10% mean user-CPU gain and no individual regression. The
+media-neutral reducer is
+[`scripts/summarize-i80386-code16-v8-profile.mjs`](../scripts/summarize-i80386-code16-v8-profile.mjs);
+raw profiles and guest reports remain private.

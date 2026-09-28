@@ -484,6 +484,14 @@ but its 256× sampled-time extrapolation exceeded observed wall time.
 That distortion prevents a whole-run phase attribution or a retained
 optimization. The opt-in diagnostic remains roughly five times the
 ordinary user CPU in the prior uninstrumented pair.
+A [follow-on V8 profile/control receipt](I80386-CODE16-WASM-COST-ATTRIBUTION.md#follow-on-v8-cpu-profile)
+at the same 60M input finds 47.35% of all opt-in self samples in the
+code-window module plus `decodeBlock`, with selected reported guest fields
+and exact opt-in counts matching. This clears a predeclared screen for a
+cheaper code-window/cache admission prototype, **not** a removable-cost or
+speed claim. Host load rose sharply during the serial runs; no executor
+change was made. Any retained prototype still needs alternating unprofiled
+full-run parity/timing pairs and a 10% mean user-CPU gain without regressions.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
