@@ -22,7 +22,8 @@ test('386 browser target loads the Doom board media at BIOS, VGA and FDC address
     profile: 'freedos-vga',
   });
   const bios = new Uint8Array(0x10000).fill(0xf4);
-  const vgaRom = new Uint8Array(0x7e00).fill(0x5a);
+  const vgaRom = new Uint8Array(38400).fill(0x5a);
+  vgaRom[vgaRom.length - 1] = 0xa5;
   const hdd = new Uint8Array(306 * 4 * 17 * 512);
   const floppy = new Uint8Array(80 * 2 * 15 * 512);
   floppy[0] = 0xeb;
@@ -33,6 +34,7 @@ test('386 browser target loads the Doom board media at BIOS, VGA and FDC address
   assert.equal(machine._read386(0xf0000), 0xf4);
   assert.equal(machine._read386(0xfffffff0), 0xf4);
   assert.equal(machine._read386(0xc0000), 0x5a);
+  assert.equal(machine._read386(0xc0000 + vgaRom.length - 1), 0xa5);
   assert.deepEqual(machine.ata.geometry, {cylinders: 306, heads: 4, sectors: 17});
   assert.deepEqual(machine.chips.fdc1.drives[0].geom,
     {cylinders: 80, heads: 2, sectors: 15, bytesPerSector: 512});

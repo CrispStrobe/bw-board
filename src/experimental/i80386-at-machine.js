@@ -518,7 +518,7 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS = Object.freeze({
     ? {...chip,acceptedCcrByImageBytes:{1228800:[0]}} : chip),
 });
 
-/** Opt-in VGA board profile with external C000h option-ROM decode. */
+/** Opt-in VGA board profile with a 40KiB C000h option-ROM decode. */
 export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA = Object.freeze({
   ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS,
   experimentalFastA20Port92: true,
@@ -526,7 +526,7 @@ export const PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA = Object.freeze({
   regions: [
     ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS.regions.filter(region =>
       !(region.kind === 'ram' && region.start === 0xb8000)),
-    {kind: 'rom', start: 0xc0000, end: 0xc7fff},
+    {kind: 'rom', start: 0xc0000, end: 0xc9fff},
   ],
   chips: [
     ...PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS.chips
