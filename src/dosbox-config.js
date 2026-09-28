@@ -1,8 +1,19 @@
 /** Parse the declarative DOSBox config subset; never executes host commands. */
+function withoutComment(raw) {
+  let quote = null;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === quote) quote = null;
+    else if (!quote && (ch === '"' || ch === "'")) quote = ch;
+    else if (!quote && (ch === ';' || ch === '#')) return raw.slice(0, i);
+  }
+  return raw;
+}
+
 export function parseDosboxConfig(text) {
   const sections = {}; let section = '';
   for (const raw of String(text).split(/\r?\n/)) {
-    const line = raw.replace(/[;#].*$/, '').trim(); if (!line) continue;
+    const line = withoutComment(raw).trim(); if (!line) continue;
     const header = line.match(/^\[([^\]]+)\]$/);
     if (header) { section = header[1].trim().toLowerCase(); sections[section] ||= {}; continue; }
     const eq = line.indexOf('=');
@@ -14,8 +25,8 @@ export function parseDosboxConfig(text) {
   for (const command of autoexec) {
     let m = command.match(/^mount\s+([a-z]):?\s+(.+?)(?:\s+-t\s+(\S+))?$/i);
     if (m) { mounts.push({ drive: m[1].toLowerCase(), source: m[2].replace(/^"|"$/g, ''), type: m[3]?.toLowerCase() || 'dir' }); continue; }
-    m = command.match(/^imgmount\s+([a-z]):?\s+(\S+)(?:\s+-t\s+(\S+))?/i);
-    if (m) mounts.push({ drive: m[1].toLowerCase(), source: m[2].replace(/^"|"$/g, ''), type: m[3]?.toLowerCase() || 'hdd' });
+    m = command.match(/^imgmount\s+([a-z]):?\s+("[^"]*"|'[^']*'|\S+)(?:\s+-t\s+(\S+))?/i);
+    if (m) mounts.push({ drive: m[1].toLowerCase(), source: m[2].replace(/^["']|["']$/g, ''), type: m[3]?.toLowerCase() || 'hdd' });
     m = command.match(/^boot\s+(.+)$/i); if (m) boots.push(m[1].trim().replace(/^"|"$/g, ''));
   }
   return { sections, mounts, boots, autoexec };

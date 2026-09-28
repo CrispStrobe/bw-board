@@ -20,3 +20,21 @@ test('DOSBox media resolution refuses host directories and resolves image bytes'
   assert.equal(result.refused[0].reason, 'host directory mounts are not browser media');
   assert.deepEqual(result.missing, []);
 });
+
+test('DOSBox imgmount resolves a quoted image path with spaces', () => {
+  const cfg = parseDosboxConfig('[autoexec]\nimgmount c "disks/Windows 3.1.img" -t hdd\nboot "disks/Windows 3.1.img"');
+  assert.deepEqual(cfg.mounts, [
+    { drive: 'c', source: 'disks/Windows 3.1.img', type: 'hdd' },
+  ]);
+  const image = new Uint8Array([1, 2]);
+  const result = resolveDosboxMedia(cfg, { 'Windows 3.1.img': image });
+  assert.deepEqual(result.missing, []);
+  assert.equal(result.images[0].bytes, image);
+});
+
+test('DOSBox quoted image paths keep comment characters', () => {
+  const cfg = parseDosboxConfig('[autoexec]\nimgmount c "disks/Win; #3.1.img" -t hdd ; attached media\nboot "disks/Win; #3.1.img"');
+  assert.equal(cfg.mounts[0].source, 'disks/Win; #3.1.img');
+  assert.equal(cfg.mounts[0].type, 'hdd');
+  assert.deepEqual(resolveDosboxMedia(cfg, { 'Win; #3.1.img': new Uint8Array([1]) }).missing, []);
+});
