@@ -104,11 +104,11 @@ def run():
                XV6_PROGRESS_EVERY=str(PROGRESS_EVERY))
     start = time.monotonic()
     started_utc = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-    result = subprocess.run(['node', 'scripts/probe-xv6-stock.mjs'], cwd=BOARD,
-                            env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    with (OUTPUT / 'stderr-private.txt').open('xb') as stderr_file:
+        result = subprocess.run(['node', 'scripts/probe-xv6-stock.mjs'], cwd=BOARD,
+                                env=env, stdout=subprocess.PIPE, stderr=stderr_file)
     raw = result.stdout
     (OUTPUT / 'raw-private.json').write_bytes(raw)
-    (OUTPUT / 'stderr-private.txt').write_bytes(result.stderr)
     host = {'host': socket.gethostname(), 'platform': platform.platform(),
             'startedUtc': started_utc,
             'endedUtc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
