@@ -79,6 +79,53 @@ export function fastExecuteInstruction() {
   // ARM Thumb instruction encoding - 16 bits / 2 bytes
   const opcodePC = this.PC & ~1; //ensure no LSB set PC are executed
   const opcode = this.readUint16(opcodePC);
+
+  // Tier-zero decode for the compact immediate ALU forms that dominate
+  // compiler-generated loop bodies.  These are complete 0xf800 opcode
+  // families, so recognizing them here is the same decode as the cases
+  // below; it only avoids wide-instruction probing and the outer switch.
+  // Keep the bodies byte-for-byte equivalent to their generic counterparts:
+  // the exhaustive stock-vs-fast differential covers all 65,536 halfwords.
+  switch (opcode & 0xf800) {
+    case 0x2000: { // MOVS Rd, #imm8
+      const value = opcode & 0xff;
+      const Rd = (opcode >> 8) & 7;
+      this.registers[Rd] = value;
+      this.N = false;
+      this.Z = value === 0;
+      this.PC += 2;
+      this.cycles++;
+      return 1;
+    }
+    case 0x2800: { // CMP Rn, #imm8
+      const Rn = (opcode >> 8) & 7;
+      this.substractUpdateFlags(this.registers[Rn], opcode & 0xff);
+      this.PC += 2;
+      this.cycles++;
+      return 1;
+    }
+    case 0x3000: { // ADDS Rdn, #imm8
+      const Rdn = (opcode >> 8) & 7;
+      this.registers[Rdn] = this.addUpdateFlags(this.registers[Rdn], opcode & 0xff);
+      this.PC += 2;
+      this.cycles++;
+      return 1;
+    }
+    case 0x3800: { // SUBS Rdn, #imm8
+      const Rdn = (opcode >> 8) & 7;
+      this.registers[Rdn] = this.substractUpdateFlags(this.registers[Rdn], opcode & 0xff);
+      this.PC += 2;
+      this.cycles++;
+      return 1;
+    }
+    case 0xe000: { // B #imm11
+      let imm11 = (opcode & 0x7ff) << 1;
+      if (imm11 & (1 << 11)) imm11 = (imm11 & 0x7ff) - 0x800;
+      this.PC += imm11 + 4;
+      this.cycles += 2;
+      return 2;
+    }
+  }
   const wideInstruction = opcode >> 12 === 0b1111 || opcode >> 11 === 0b11101;
   const opcode2 = wideInstruction ? this.readUint16(opcodePC + 2) : 0;
   this.PC += 2;
