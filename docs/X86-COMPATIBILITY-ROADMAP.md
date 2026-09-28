@@ -5,6 +5,17 @@ Astra audits/integrates; two Sol agents implement independently. This is an
 execution roadmap, not a compatibility receipt. Keep each completed milestone
 usable and publish its exact source, input and qualification revisions.
 
+Current checkpoint (2026-09-28): the separately identified private Windows
+3.11 [enhanced-mode run](I80386-WINDOWS-ENHANCED-PROBE.md) reached Program
+Manager, a keyboard-driven DOS prompt, a persisted file after fresh boot,
+Solitaire and Minesweeper. Original Doom 1.9 [completed an owned short demo
+and returned to DOS](I80386-DOOM.md), with a separate keyboard gameplay
+replay. These are bounded software results; full 386DX ISA coverage, general
+Windows/Doom compatibility, Doom GUI replay, and physical-hardware RTx remain
+open. The [opt-in native speed path](I80386-10X-PERFORMANCE.md) has measured
+xv6 gains, but the 10× target is not met. The historical investigation below
+records what was known at earlier revisions.
+
 ## Ordered acceptance
 
 | Milestone | Required observable result | Current evidence |
@@ -14,8 +25,8 @@ usable and publish its exact source, input and qualification revisions.
 | AT disk boot | Firmware reads actual mounted sectors via emulated controller/DMA and reaches an identifiable DOS shell; command/file round trip persists across reboot | Source-bound DOS2.00/Command2.02 ECHO/TYPE and fresh-boot TYPE pass on functional286 and experimental386 AT profiles, with exact file bytes, final prompts and linked image hashes; FreeDOS persistence is accepted on functional286 only |
 | 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Landed at `3cd5927`; all three hosted qualification workflows green |
 | 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; original386 4KiB paging, reset, scalar I/O, privilege transitions and VM86 have bounded tests; complete ISA, tasking and full OS acceptance remain |
-| Windows | Windows 3.0 standard mode, then a separately identified 386 enhanced-mode configuration; desktop plus keyboard-driven application open/edit/save/reopen | Original Windows 3.0 / PC DOS 3.2 disk reaches Program Manager on experimental386 AT; real Enter launches File Manager and displays C:\WINDOWS. Notepad creates and saves an owned file, then reopens it after fresh reset/remount. Enhanced mode and functional286 Windows remain separate |
-| Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Original shareware 1.9 boots through FreeDOS and reaches E1M1; controlled arrow and Ctrl inputs visibly move and fire, reducing ammo from 50 to 48. The original executable also loads/renders an owned 24-tic demo, emits its completion line and returns to DOS. Full demo1 and save/load remain separate |
+| Windows | Windows 3.0 standard mode, then a separately identified 386 enhanced-mode configuration; desktop plus keyboard-driven application open/edit/save/reopen | Windows 3.0 standard-mode Notepad save/reopen passed; a private Windows 3.11 enhanced-mode run reached Program Manager, File Manager, a keyboard-driven DOS prompt with persistent file round trip, Solitaire and Minesweeper. General application compatibility remains open; see [enhanced-mode evidence](I80386-WINDOWS-ENHANCED-PROBE.md). |
+| Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Original shareware 1.9 boots through FreeDOS and reaches E1M1; controlled input moves and fires. An owned 24-tic demo completes and returns to DOS. Full demo1, save/load, and [GUI replay](I80386-DOOM.md) remain open. |
 
 Windows 3.0 standard mode is the initial working target, not a claim covering
 all Windows releases. Doom's version and media hashes must be fixed before its
@@ -94,7 +105,10 @@ configuration; `PCAT80286_BOOT_640K` now supplies it explicitly. The default
 - FreeDOS 1.4 archive SHA-256: `45b1fa7c52dd996c3bfa5e352ffcd410781b952a6ad629f15a4c9ec4bbaefc5a`.
   `120m/x86BOOT.img`: `03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77`.
 
-## Platform work after the first DOS boot
+## Platform work after the first DOS boot (2026-09-19/20 checkpoint)
+
+This section preserves the earlier implementation trail. Its open boundaries
+were later advanced as summarized in the current checkpoint above.
 
 The 286 DOS2 and FreeDOS persistence acceptance do not establish a 386
 application platform. The experimental 386 adapter now charges six functional
