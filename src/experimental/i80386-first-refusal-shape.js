@@ -65,7 +65,7 @@ export function classifyI80386FirstRefusalShape(bytes,{
         eaClass=`mem${addressWidth}${modrm.sib?'-sib':''}-disp${disp*8}`;
       }
     }
-  }else if(primary>=0x50&&primary<=0x5f||
+  }else if(primary>=0x50&&primary<=0x5f||primary===0x06||primary===0x07||
       [0x68,0x6a,0x9c,0x9d,0xe8,0xc2,0xc3,0xca,0xcb].includes(primary))
     eaClass='implicit-stack-or-control';
   const modrmKey=modrm?`m${modrm.mod}g${modrm.reg}b${modrm.rm}`+
@@ -79,15 +79,28 @@ export function classifyI80386FirstRefusalShape(bytes,{
 
 const MODES=['real','protected16','vm86','protected32'];
 const bump=(map,key)=>{map[key]=(map[key]??0)+1;};
-export function createI80386FirstRefusalContextTracker({maxRun=64}={}){
+const GROUPED_TARGETS=new Set(['06','07','8e','e8','c1','c2','c3','ca','cb','ff',
+  ...Array.from({length:16},(_,i)=>hex(0x50+i))]);
+export const isI80386GroupedRefusalTarget=shape=>
+  GROUPED_TARGETS.has(shape.opcode)||shape.opcode.startsWith('0f');
+
+export function createI80386FirstRefusalContextTracker({maxRun=64,
+  groupedTargetsOnly=false}={}){
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
-    refusedOrdinals:0,followingResolved:0,bridgeAtLeast4:0,
+    refusedOrdinals:0,unselectedRefusals:0,selectedRefusals:0,
+    followingResolved:0,bridgeAtLeast4:0,
     bridgeAtLeast8:0,records:{},
   }]));
   const record=(mode,reason,shape,precedingLength)=>{
     const bucket=modes[mode];
     if(!bucket||!Number.isInteger(precedingLength)||precedingLength<0||
         precedingLength>maxRun)throw new RangeError('invalid refusal context');
+    bucket.refusedOrdinals++;
+    if(groupedTargetsOnly&&!isI80386GroupedRefusalTarget(shape)){
+      bucket.unselectedRefusals++;
+      return null;
+    }
+    bucket.selectedRefusals++;
     const key=`${reason}|${shape.shapeKey}`;
     const entry=bucket.records[key]??={reason,opcode:shape.opcode,
       prefixSignature:shape.prefixSignature,operandWidth:shape.operandWidth,
@@ -96,7 +109,7 @@ export function createI80386FirstRefusalContextTracker({maxRun=64}={}){
       parseStatus:shape.parseStatus,count:0,followingResolved:0,
       precedingLengthHistogram:{},followingLengthHistogram:{},
       followingEndReasons:{},bridgeAtLeast4:0,bridgeAtLeast8:0};
-    entry.count++;bucket.refusedOrdinals++;
+    entry.count++;
     bump(entry.precedingLengthHistogram,precedingLength);
     return {mode,key,precedingLength,resolved:false};
   };
@@ -120,9 +133,10 @@ export function createI80386FirstRefusalContextTracker({maxRun=64}={}){
       const records=Object.values(bucket.records);
       const sum=field=>records.reduce((n,entry)=>n+entry[field],0);
       if(bucket.refusedOrdinals!==eligibleByMode[mode]||
-          bucket.followingResolved!==bucket.refusedOrdinals||
-          sum('count')!==bucket.refusedOrdinals||
-          sum('followingResolved')!==bucket.refusedOrdinals||
+          bucket.unselectedRefusals+bucket.selectedRefusals!==bucket.refusedOrdinals||
+          bucket.followingResolved!==bucket.selectedRefusals||
+          sum('count')!==bucket.selectedRefusals||
+          sum('followingResolved')!==bucket.selectedRefusals||
           sum('bridgeAtLeast4')!==bucket.bridgeAtLeast4||
           sum('bridgeAtLeast8')!==bucket.bridgeAtLeast8||
           records.some(entry=>Object.values(entry.precedingLengthHistogram)
@@ -133,8 +147,12 @@ export function createI80386FirstRefusalContextTracker({maxRun=64}={}){
               .reduce((a,b)=>a+b,0)!==entry.count))
         throw new Error(`first-refusal context partition mismatch in ${mode}`);
     }
-    return {schema:'bw.i80386-first-refusal-context.v1',maxRun,modes,
+    return {schema:groupedTargetsOnly?
+      'bw.i80386-grouped-first-refusal-context.v1':
+      'bw.i80386-first-refusal-context.v1',maxRun,modes,
       refusedOrdinals:MODES.reduce((n,m)=>n+modes[m].refusedOrdinals,0),
+      selectedRefusals:MODES.reduce((n,m)=>n+modes[m].selectedRefusals,0),
+      unselectedRefusals:MODES.reduce((n,m)=>n+modes[m].unselectedRefusals,0),
       bridgeAtLeast4:MODES.reduce((n,m)=>n+modes[m].bridgeAtLeast4,0),
       bridgeAtLeast8:MODES.reduce((n,m)=>n+modes[m].bridgeAtLeast8,0)};
   };

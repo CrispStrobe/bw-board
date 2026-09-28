@@ -5,6 +5,8 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import {summarizeI80386CrossModePotentialTrace} from
   './summarize-i80386-cross-mode-potential-trace.mjs';
+import {isI80386GroupedRefusalTarget} from
+  '../src/experimental/i80386-first-refusal-shape.js';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const MODES=['real','protected16','vm86','protected32'];
@@ -28,8 +30,51 @@ export function summarizeI80386GroupedShadowAdmission(raw,baseline,options={}){
       typed?.schema!=='bw.i80386-grouped-shadow-admission.v1'||
       typed.grammar!==GROUPED_GRAMMAR||
       typed.maxRun!==base.observer.maxRun||!typed.modes||
-      typed.firstRefusalContext!==undefined)
+      (typed.firstRefusalContext!==undefined&&
+        !options.requireGroupedFirstRefusalContext))
     throw new Error('missing or mismatched grouped shadow report');
+  if(options.requireGroupedFirstRefusalContext){
+    const context=typed.firstRefusalContext;
+    if(context?.schema!=='bw.i80386-grouped-first-refusal-context.v1'||
+        context.maxRun!==typed.maxRun||!context.modes)
+      throw new Error('missing grouped first-refusal context');
+    const validHistogram=(map,total)=>map&&
+      Object.entries(map).every(([key,value])=>
+        /^(0|[1-9]\d*)$/.test(key)&&Number(key)<=context.maxRun&&
+        Number.isSafeInteger(value)&&value>=0)&&count(map)===total;
+    for(const mode of MODES){
+      const bucket=context.modes[mode],typedBucket=typed.modes[mode];
+      if(!bucket)throw new Error(`missing grouped refusal mode ${mode}`);
+      const records=Object.values(bucket.records??{});
+      if(bucket.refusedOrdinals!==typedBucket.refusedOrdinals||
+          bucket.selectedRefusals+bucket.unselectedRefusals!==
+            bucket.refusedOrdinals||
+          bucket.followingResolved!==bucket.selectedRefusals||
+          records.reduce((n,record)=>n+record.count,0)!==
+            bucket.selectedRefusals||
+          records.reduce((n,record)=>n+record.followingResolved,0)!==
+            bucket.selectedRefusals||
+          records.reduce((n,record)=>n+record.bridgeAtLeast4,0)!==
+            bucket.bridgeAtLeast4||
+          records.reduce((n,record)=>n+record.bridgeAtLeast8,0)!==
+            bucket.bridgeAtLeast8||
+          records.some(record=>!isI80386GroupedRefusalTarget(record)||
+            !Number.isSafeInteger(record.count)||record.count<1||
+            record.followingResolved!==record.count||
+            record.bridgeAtLeast8>record.bridgeAtLeast4||
+            record.bridgeAtLeast4>record.count||
+            !validHistogram(record.precedingLengthHistogram,record.count)||
+            !validHistogram(record.followingLengthHistogram,record.count)||
+            count(record.followingEndReasons)!==record.count))
+        throw new Error(`grouped refusal partition mismatch in ${mode}`);
+    }
+    if(context.refusedOrdinals!==sum(context.modes,'refusedOrdinals')||
+        context.selectedRefusals!==sum(context.modes,'selectedRefusals')||
+        context.unselectedRefusals!==sum(context.modes,'unselectedRefusals')||
+        context.bridgeAtLeast4!==sum(context.modes,'bridgeAtLeast4')||
+        context.bridgeAtLeast8!==sum(context.modes,'bridgeAtLeast8'))
+      throw new Error('grouped refusal aggregate mismatch');
+  }
   for(const mode of MODES){
     const bucket=typed.modes[mode],ordinary=base.observer.modes[mode];
     if(!bucket||!ordinary)throw new Error(`missing ${mode} mode`);
