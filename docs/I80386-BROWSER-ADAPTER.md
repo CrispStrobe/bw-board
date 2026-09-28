@@ -32,15 +32,21 @@ attachment, reset, keyboard delivery, and the VGA frame surface. The
 then boots the pinned external FreeDOS floppy with vendored LGPL firmware via
 `createDebugTarget`, `applyMedia`, `target.runFor`, `target.keyIn`, and
 `target.video`. Its 45.8-million-step settled A: prompt and C: directory
-screen exactly match the ordinary CLI receipt. This is adapter-path evidence;
-it does not exercise the browser widget or Doom. A GUI Doom acceptance still
-requires the actual circuits/widgets/code host to select this
-preset, attach the pinned private inputs, enter the short-demo command via
-set-1 make/break events, and observe the completion line, DOS prompt, and
-audited 320×200 frame specified in [I80386-DOOM.md](I80386-DOOM.md). The
-browser must supply the media bytes; no original Doom file is bundled here.
-The Lite host still needs to expose/select `freedos-vga` and supply all four
-media slots; no actual GUI Doom keyboard/run/render replay has been accepted.
+screen exactly match the ordinary CLI receipt. The Lite Machine Manager now
+exposes the named `freedos-vga` profile and accepts its floppy, hard disk,
+BIOS, and VGA ROM slots. A real Chromium run with the pinned FreeDOS 1.4 floppy
+and type-1 FAT16 hard disk reached the installer question, accepted physical
+keyboard input through the Widgets canvas, returned to `A:\>`, and displayed
+`dir c:` with the hard-disk marker. This proves the GUI media, video, and
+keyboard path for that bounded run. The optional real-media acceptance script
+is in the Lite repository; the media and screenshots remain external.
+
+A GUI Doom acceptance still requires the actual circuits/widgets/code host to
+attach the pinned private Doom inputs, enter the short-demo command via set-1
+make/break events, and observe the completion line, DOS prompt, and audited
+320×200 frame specified in [I80386-DOOM.md](I80386-DOOM.md). No original Doom
+file is bundled here, and no GUI Doom keyboard/run/render replay has been
+accepted.
 Generic DOSBox `imgmount -size` CHS is handled by the CLI AT parser but is not
 yet honored by the browser adapter,
 which infers 4 heads and 17 sectors; the pinned short-demo HDD has that CHS.
