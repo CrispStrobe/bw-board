@@ -36,6 +36,25 @@ and mean linked run length at least four on both pinned Windows 60M and lean
 xv6 forktest**. Passing is only grounds for an executable experiment, not a
 speed or safety claim.
 
+To diagnose the **observed first opcode at unsupported cuts**, add
+`AT_BROAD_BLOCK_REFUSAL_OPCODES=1` or
+`XV6_BROAD_BLOCK_REFUSAL_OPCODES=1` alongside the respective broad-census
+switch. With the Jcc switch also enabled, the report separately counts
+unsupported successor opcodes that actually ended a pending Jcc link.
+`refusalOpcodeHistograms` contains per-mode primary-opcode buckets after
+prefixes, bounded canonical prefix+opcode buckets, 0F second-opcode buckets,
+and fetched ModR/M group-extension buckets such as `f6/0` or `ff/2`. A missing
+observed second byte or ModR/M byte uses `??`. Canonical prefix keys collapse
+duplicates into effective segment, operand/address-size, LOCK, and REP flags
+in fixed order; they are not raw instruction traces. Each histogram has a
+finite opcode/key space and stores counts only. The general primary bucket
+partitions `unsupported-opcode` plus `unsupported-0f` first refusals; its 0F
+second-byte bucket partitions `unsupported-0f`. The two Jcc-successor buckets
+partition the corresponding linked-run refusal reasons. Group buckets are a
+subset of these counts and must not be added to the primary totals. All bytes
+come from the ordinary executed step; the option does not read ahead or
+prove that any missing form is safe to execute natively.
+
 The deliberately limited **syntactic potential** grammar is:
 
 * Linear forms: register INC/DEC/PUSH/POP (`40–5f`), MOV immediate register

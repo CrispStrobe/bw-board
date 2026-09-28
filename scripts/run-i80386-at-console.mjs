@@ -80,9 +80,12 @@ const code16WasmDiagnostics=process.env.AT_CODE16_WASM_DIAGNOSTICS==='1';
 const native32Census=process.env.AT_NATIVE32_CENSUS==='1'?
   createI80386Native32Census():null;
 const broadBlockCensus=process.env.AT_BROAD_BLOCK_CENSUS==='1'?
-  createI80386BroadBlockCensus({linkJcc:process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'}):null;
+  createI80386BroadBlockCensus({linkJcc:process.env.AT_BROAD_BLOCK_JCC_LINKS==='1',
+    refusalOpcodes:process.env.AT_BROAD_BLOCK_REFUSAL_OPCODES==='1'}):null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
   throw new Error('Jcc link census requires AT_BROAD_BLOCK_CENSUS=1');
+if(process.env.AT_BROAD_BLOCK_REFUSAL_OPCODES==='1'&&!broadBlockCensus)
+  throw new Error('refusal opcode census requires AT_BROAD_BLOCK_CENSUS=1');
 const code16WasmFormCensus=process.env.AT_CODE16_WASM_FORM_CENSUS==='1';
 const code16WasmBranchLinks=process.env.AT_CODE16_WASM_BRANCH_LINKS==='1';
 const modeCpuProfile=process.env.AT_MODE_CPU_PROFILE==='1'?{

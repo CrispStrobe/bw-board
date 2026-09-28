@@ -7,8 +7,31 @@ const LINEAR=new Set([0x01,0x03,0x09,0x0b,0x21,0x23,0x29,0x2b,0x31,0x33,
 const TERMINAL=new Set([0xc2,0xc3,0xe8,0xe9,0xeb]);
 const STRING=new Set([0xa4,0xa5,0xaa,0xab,0xac,0xad,0xae,0xaf]);
 const MODRM=new Set([...LINEAR].filter(op=>op!==0x90));
+const GROUP_MODRM=new Set([0x80,0x81,0x83,0x8f,0xc0,0xc1,0xc6,0xc7,
+  0xd0,0xd1,0xd2,0xd3,0xf6,0xf7,0xfe,0xff]);
 const MODES=['real','protected16','vm86','protected32'];
 const bump=(object,key,by=1)=>{object[key]=(object[key]??0)+by;};
+const hex=byte=>byte.toString(16).padStart(2,'0');
+const opcodeAfterPrefixes=bytes=>{
+  let at=0,segment=null,size=false,address=false,repeat=null,lock=false;
+  while(at<bytes.length&&PREFIXES.has(bytes[at])){
+    const prefix=bytes[at++];
+    if([0x26,0x2e,0x36,0x3e,0x64,0x65].includes(prefix))segment=hex(prefix);
+    else if(prefix===0x66)size=true;
+    else if(prefix===0x67)address=true;
+    else if(prefix===0xf2||prefix===0xf3)repeat=hex(prefix);
+    else if(prefix===0xf0)lock=true;
+  }
+  const signature=[segment,size?'66':null,address?'67':null,
+    lock?'f0':null,repeat].filter(Boolean).join('+')||'-';
+  const primary=bytes[at],secondary=bytes[at+1];
+  const modrm=primary===0x0f&&secondary===0xba?bytes[at+2]:
+    GROUP_MODRM.has(primary)?bytes[at+1]:null;
+  return {first:bytes[at]===undefined?'??':hex(bytes[at]),
+    second:secondary===undefined?'??':hex(secondary),signature,
+    group:modrm===null?null:
+      `${primary===0x0f?'0fba':hex(primary)}/${modrm===undefined?'??':(modrm>>>3)&7}`};
+};
 const modeOf=cpu=>!(cpu.cr0&1)?'real':(cpu.eflags&0x20000)?'vm86':
   cpu.segmentCaches[1].default32?'protected32':'protected16';
 const linearOf=(cpu,eip)=>((cpu.segmentCaches[1].base??0)+(eip>>>0))>>>0;
@@ -65,9 +88,12 @@ export function classifyI80386BroadForm(bytes) {
   return {reason:'unsupported-opcode'};
 }
 
-export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
+export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
+  refusalOpcodes=false}={}){
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>256)
     throw new RangeError('broad-block census run budget must be 1..256');
+  if(typeof linkJcc!=='boolean'||typeof refusalOpcodes!=='boolean')
+    throw new TypeError('broad-block census options must be boolean');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,retiredSteps:0,potentialSteps:0,nonCandidateSteps:0,
     runs:0,runLengthHistogram:{},runEndReasons:{},firstRefusals:{},
@@ -81,6 +107,15 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
       successorPages:{},successorPageByOutcome:{},
       runsAtLeast4:0,stepsInRunsAtLeast4:0,
       runsAtLeast8:0,stepsInRunsAtLeast8:0,
+    }])),
+  }:null;
+  const refusalOpcodeHistograms=refusalOpcodes?{
+    schema:'bw.i80386-broad-refusal-opcodes.v1',
+    modes:Object.fromEntries(MODES.map(mode=>[mode,{
+      unsupportedFirstOpcode:{},unsupported0fSecondOpcode:{},
+      unsupportedPrefixedForm:{},unsupportedGroupExtension:{},
+      jccSuccessorFirstOpcode:{},jccSuccessor0fSecondOpcode:{},
+      jccSuccessorPrefixedForm:{},jccSuccessorGroupExtension:{},
     }])),
   }:null;
   let machine=null,fetch8=null,fetchN=null,own8=null,ownN=null,pending=null;
@@ -103,6 +138,18 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
     if(linkedRun.jcc)bump(bucket.jccRefusals,reason);
     linkedRun=null;
   };
+  const recordRefusalOpcode=(mode,reason,successor=false)=>{
+    if(!refusalOpcodeHistograms||
+        (reason!=='unsupported-opcode'&&reason!=='unsupported-0f'))return;
+    const {first,second,signature,group}=opcodeAfterPrefixes(bytes);
+    const bucket=refusalOpcodeHistograms.modes[mode];
+    bump(bucket[successor?'jccSuccessorFirstOpcode':'unsupportedFirstOpcode'],first);
+    bump(bucket[successor?'jccSuccessorPrefixedForm':'unsupportedPrefixedForm'],
+      `${signature}:${first}${first==='0f'?second:''}`);
+    if(reason==='unsupported-0f')
+      bump(bucket[successor?'jccSuccessor0fSecondOpcode':'unsupported0fSecondOpcode'],second);
+    if(group)bump(bucket[successor?'jccSuccessorGroupExtension':'unsupportedGroupExtension'],group);
+  };
   const linkedRetired=(before,cpu,form,reason)=>{
     if(!linked)return;
     const bucket=linked.modes[before.mode],page=before.linear>>>12;
@@ -124,7 +171,10 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
           'board-state-change':
         wasJcc&&!sameIdentity(prior.identity,before.identity)?'identity-change':
         reason;
-      if(breakReason)endLinkedRun(breakReason);
+      if(breakReason){
+        if(wasJcc)recordRefusalOpcode(prior.mode,breakReason,true);
+        endLinkedRun(breakReason);
+      }
       else if(wasJcc){
         bump(bucket.jccJoined,prior.jcc.outcome);
         prior.jcc=null;
@@ -229,6 +279,7 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
         form.reason??null;
       linkedRetired(before,cpu,form,reason);
       if(reason){
+        recordRefusalOpcode(before.mode,reason);
         bucket.nonCandidateSteps++;bump(bucket.firstRefusals,reason);endRun(reason);return;
       }
       if(!run)run={mode:before.mode,cs:before.cs,page:before.linear>>>12,length:0};
@@ -245,6 +296,7 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false}={}){
     },
     externalEvent(){externalEpoch++;if(linkedRun?.jcc)endLinkedRun('external-event');},
     report(){return {schema:'bw.i80386-broad-block-census.v1',maxRun,modes,
-      ...(linked?{jccLinkedPotential:linked}:{})};},
+      ...(linked?{jccLinkedPotential:linked}:{}),
+      ...(refusalOpcodeHistograms?{refusalOpcodeHistograms}:{})};},
   };
 }

@@ -194,3 +194,49 @@ test('linked run histograms and >=4/>=8 tails partition potential steps',()=>{
   assert.equal(Object.values(view.jccJoined).reduce((n,count)=>n+count,0)+
     Object.values(view.jccRefusals).reduce((n,count)=>n+count,0),view.jccAttempts);
 });
+
+test('refusal opcode view records bounded prefix and fetched group forms with parity',()=>{
+  const code=[0x26,0xf6,0xc0,0x01,0x66,0xff,0xc0,0x0f,0xb6,0xc0];
+  const measured=fixture(code),ordinary=fixture(code);
+  const census=createI80386BroadBlockCensus({refusalOpcodes:true});
+  const report=observeSteps(measured,census,3);
+  for(let step=0;step<3;step++)ordinary.step();
+  assert.deepEqual(state(measured),state(ordinary));
+  const mode=report.modes.protected32;
+  const hist=report.refusalOpcodeHistograms.modes.protected32;
+  assert.equal(mode.firstRefusals['unsupported-opcode'],2);
+  assert.equal(mode.firstRefusals['unsupported-0f'],1);
+  assert.deepEqual(hist.unsupportedFirstOpcode,{f6:1,ff:1,'0f':1});
+  assert.deepEqual(hist.unsupported0fSecondOpcode,{b6:1});
+  assert.deepEqual(hist.unsupportedPrefixedForm,{'26:f6':1,'66:ff':1,'-:0fb6':1});
+  assert.deepEqual(hist.unsupportedGroupExtension,{'f6/0':1,'ff/0':1});
+  assert.equal(Object.values(hist.unsupportedFirstOpcode).reduce((a,b)=>a+b,0),
+    mode.firstRefusals['unsupported-opcode']+mode.firstRefusals['unsupported-0f']);
+});
+
+test('Jcc successor refusal histograms partition linked reasons without changing old views',()=>{
+  for(const [code,reason,first,second,group] of [
+    [[0x75,0,0x0f,0xb6,0xc0],'unsupported-0f','0f','b6',null],
+    [[0x75,0,0xf6,0xd0],'unsupported-opcode','f6',null,'f6/2'],
+  ]){
+    const measured=fixture(code),ordinary=fixture(code);
+    const withHist=observeSteps(measured,
+      createI80386BroadBlockCensus({linkJcc:true,refusalOpcodes:true}),2);
+    const withoutHist=observeSteps(ordinary,
+      createI80386BroadBlockCensus({linkJcc:true}),2);
+    assert.deepEqual(state(measured),state(ordinary));
+    assert.deepEqual(withHist.modes,withoutHist.modes);
+    assert.deepEqual(withHist.jccLinkedPotential,withoutHist.jccLinkedPotential);
+    const linked=withHist.jccLinkedPotential.modes.protected32;
+    const hist=withHist.refusalOpcodeHistograms.modes.protected32;
+    assert.equal(linked.jccRefusals[reason],1);
+    assert.equal(hist.jccSuccessorFirstOpcode[first],1);
+    if(second)assert.equal(hist.jccSuccessor0fSecondOpcode[second],1);
+    if(group)assert.equal(hist.jccSuccessorGroupExtension[group],1);
+  }
+});
+
+test('refusal opcode options must be booleans',()=>{
+  assert.throws(()=>createI80386BroadBlockCensus({refusalOpcodes:1}),TypeError);
+  assert.throws(()=>createI80386BroadBlockCensus({linkJcc:'yes'}),TypeError);
+});

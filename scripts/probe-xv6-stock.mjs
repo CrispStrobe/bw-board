@@ -65,9 +65,12 @@ const lean = process.env.XV6_LEAN === '1';
 const code16Coverage = process.env.XV6_CODE16_COVERAGE === '1' ?
   createI80386Code16Coverage() : null;
 const broadBlockCensus = process.env.XV6_BROAD_BLOCK_CENSUS === '1' ?
-  createI80386BroadBlockCensus({linkJcc:process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'}) : null;
+  createI80386BroadBlockCensus({linkJcc:process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1',
+    refusalOpcodes:process.env.XV6_BROAD_BLOCK_REFUSAL_OPCODES==='1'}) : null;
 if(process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
   throw new Error('Jcc link census requires XV6_BROAD_BLOCK_CENSUS=1');
+if(process.env.XV6_BROAD_BLOCK_REFUSAL_OPCODES==='1'&&!broadBlockCensus)
+  throw new Error('refusal opcode census requires XV6_BROAD_BLOCK_CENSUS=1');
 const nativeByte = process.env.XV6_NATIVE_BYTE === '1';
 const nativeDispatch = process.env.XV6_NATIVE_DISPATCH === '1';
 if ((nativeByte || nativeDispatch) && !lean)
