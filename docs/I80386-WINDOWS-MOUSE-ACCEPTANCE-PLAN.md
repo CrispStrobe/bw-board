@@ -19,3 +19,31 @@ For Windows acceptance, run the private immutable image twice at one current boa
 Calibrate movement against the guest cursor rather than assuming one CSS pixel equals one guest pixel: the Widgets canvas uses `object-fit: contain` while the current pointer path sends relative CSS pixel deltas. Record displayed canvas bounds, guest raster size and observed cursor position before choosing the click target. Preserve separate evidence for GUI event delivery, 8042/IRQ12 guest consumption, visible cursor movement, and application action. Only the final application-action gate supports a Solitaire, Minesweeper or Program Manager pointer-interaction claim.
 
 The local private image, scripts and historical board revision are available for a bounded replay, but the static `AT_MOUSE_SCRIPT` harness cannot adjust a click after observing where Windows placed the cursor. A single new 170M static-script run would therefore risk repeating the prior missed click. First derive a calibrated target displacement from a guest frame or add a private checkpoint-time observation/input hook; then run the controlled acceptance replay. The public repository should retain only the media-neutral method and result boundary.
+
+## Checkpoint-time feedback method (unrun)
+
+The opt-in [probe](../scripts/probe-i80386-windows-enhanced.mjs) now accepts `AT_MOUSE_FEEDBACK_DIR` and `AT_MOUSE_FEEDBACK_STEP` instead of `AT_MOUSE_SCRIPT`; set `AT_VGA_CAPTURE=1` for the final comparison. It enables the same PS/2/CMOS mouse profile in **both** arms. At each requested instruction step it saves a strict 640×480 P6 RGB frame, then pauses for a command. The [session helper](../scripts/lib/i80386-windows-pointer-feedback.mjs) creates a fresh directory, writes `frame-N.ppm` before `ready-N.json`, reads only the complete `command-N.json` filename, and times out within 10 minutes by default. A producer must write `command-N.tmp`, flush/close it, then atomically rename it to `command-N.json` in that directory. Missing, malformed, rejected, stale-step, or out-of-budget commands stop the run; no input checkpoint is silently skipped. Commands have this shape:
+
+```json
+{"seq":0,"atStep":150000000,"nextStep":150100000,"mouse":{"dx":12,"dy":-8,"buttons":0}}
+```
+
+`mouse` can be omitted for a no-op control checkpoint. `nextStep:null` ends the feedback sequence. Capture the first frame and visually calibrate the guest cursor before choosing the click: use one or more **identical** movement packets in both arms, no-op control commands at the candidate's press/release steps, then identical final movement to a cursor parking box outside the named application rectangle. Follow that move with one final no-op checkpoint to capture the parked cursor. Both arms must use the same board executable/source hashes, pristine clone hash of the same Windows disk, BIOS/VGA ROMs, geometry, mouse-enabled CMOS, keyboard script, command checkpoint schedule, instruction limit and VGA decoder. Only two zero-motion candidate packets may differ: left press (`buttons:1`) and release (`buttons:0`) between calibration and final park. The output disk clones must be separate; do not feed a mutated first-run disk into the second arm.
+
+The [comparator](../scripts/compare-i80386-windows-pointer.mjs) takes the two complete JSON reports and a private JSON plan. It refuses differing run identity, incomplete budgets, source mutation, changed movement/checkpoint schedule, missing 8042 auxiliary read triplets, or missing IRQ12 delivery. The plan format is:
+
+```json
+{
+  "schema":"bw.i80386-windows-pointer-plan.v1",
+  "application":{"name":"Solitaire stock/waste","rect":{"x":15,"y":47,"width":155,"height":98}},
+  "parking":{"x":520,"y":360,"width":80,"height":80},
+  "minChangedPixels":500,
+  "parkingBeforeSeq":3,"parkingAfterSeq":4,
+  "control":{"directory":"/private/control-feedback","cursorTip":{"x":540,"y":380},
+    "cursorCrop":{"x":536,"y":376,"width":24,"height":28},"reviewedCropSha256":"<64 lowercase hex>"},
+  "candidate":{"directory":"/private/candidate-feedback","cursorTip":{"x":540,"y":380},
+    "cursorCrop":{"x":536,"y":376,"width":24,"height":28},"reviewedCropSha256":"<64 lowercase hex>"}
+}
+```
+
+Before running the comparator, an operator must inspect each final parked-cursor crop and record its exact raw-RGB SHA-256 in the private plan. The comparator binds each before/after park frame to the run report's frame hash, checks visible change within the reviewed cursor crop, and requires that crop to remain byte-identical in the final decoded frame. Both reviewed crops fit inside the parking area, which is disjoint from the named application rectangle; a 500-pixel change in that application rectangle therefore cannot be the parked cursor. The recorded cursor tip and crop review are human observations, not automatic mouse-shape recognition; without that review the program fails closed. A passing comparison is an application-region difference with driver-consumed pointer packets, not by itself proof of which Solitaire card or menu item was activated. Save reports, PPM frames, reviewed crops, and comparison JSON only in the private fixture repository. No full Windows replay has been run for this method yet.
