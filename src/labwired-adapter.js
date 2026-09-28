@@ -207,6 +207,7 @@ export function createLabwiredAdapter (opts) {
 
   let board = null;
   let serialListener = null;
+  let traceListener = null;
   let inInputSync = false;
   let cursor = 0;
   let cycleNow = 0n;
@@ -408,7 +409,29 @@ export function createLabwiredAdapter (opts) {
    * wherever the engine has just run, and `onSerial` behaves the same
    * everywhere.
    */
+  /**
+   * RTT, semihosting and ITM: the other ways firmware prints. The engine
+   * captures all three and nothing surfaced them, so a `SEGGER_RTT_printf` or
+   * a semihosted `printf` produced a silent console. Drained with the UART, on
+   * the same pump; a stream the firmware does not use drains empty.
+   */
+  const TRACE_CHANNELS = [
+    ['rtt', 'drain_rtt_output'],
+    ['semihosting', 'drain_semihosting_output'],
+    ['itm', 'drain_itm_output'],
+  ];
+  function drainTraces () {
+    if (!traceListener) return;
+    for (const [channel, fn] of TRACE_CHANNELS) {
+      if (typeof sim[fn] !== 'function') continue;
+      let out;
+      try { out = sim[fn](); } catch (e) { continue; }   // not attached is not an error
+      if (out && out.length) traceListener(channel, Uint8Array.from(out));
+    }
+  }
+
   function drainSerial () {
+    drainTraces();
     if (!serialListener || !sim.drain_uart_output) return;
     let out;
     try {
@@ -511,6 +534,9 @@ export function createLabwiredAdapter (opts) {
     },
 
     onSerial (cb) { serialListener = cb; },
+
+    /** RTT / semihosting / ITM output: cb(channel, bytes). See drainTraces. */
+    onTrace (cb) { traceListener = cb; },
 
     feedSerial (byte) {
       sim.feed_uart_input(Uint8Array.from([byte & 0xff]));

@@ -664,7 +664,13 @@ export function createLabwiredDebugTarget (opts) {
       if (typeof sim().fidelity_gaps === 'function') {
         try { fidelityGaps = plain(sim().fidelity_gaps()) || []; } catch (e) { fidelityGaps = []; }
       }
-      return { fault: readFault(), fidelityGaps: Array.isArray(fidelityGaps) ? fidelityGaps : [] };
+      // The firmware printed to a console the host is not listening to (the
+      // engine's own sentence), e.g. UART1 when the board routes UART0.
+      let consoleMismatch = null;
+      if (typeof sim().console_mismatch === 'function') {
+        try { consoleMismatch = sim().console_mismatch() || null; } catch (e) { consoleMismatch = null; }
+      }
+      return { fault: readFault(), fidelityGaps: Array.isArray(fidelityGaps) ? fidelityGaps : [], consoleMismatch };
     },
 
     // The runner calls this UNGUARDED — board.advanceTo(target.timeNs()) on
