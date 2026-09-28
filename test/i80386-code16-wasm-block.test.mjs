@@ -615,6 +615,37 @@ test('opt-in diagnostic reasons identify exact refusal and exit sites', async ()
   assert.equal(ordinary.diagnostics, null);
 });
 
+test('unsupported-head admission notices host, guest and DMA code writes', async () => {
+  const changes = [
+    (machine, value) => { machine.mem[0x10020] = value; },
+    (machine, value) => { machine._write386(0x10020, value); },
+    (machine, value) => { machine.mem.set([value], 0x10020); },
+  ];
+  for (const change of changes) {
+    const fast = fixture([0x40, 0x90, 0x90]);
+    const slow = fixture([0x40, 0x90, 0x90]);
+    const dispatcher = await createI80386Code16WasmDispatcher(fast,
+      {diagnosticReasons: true, diagnosticForms: true});
+    assert.equal(dispatcher.run(2), 1);
+    slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.diagnostics.unsupportedFirstOpcodes[0x40], 1);
+    assert.equal(dispatcher.diagnostics.formCensus.first26.calls, 0);
+    change(fast, 0x90); change(slow, 0x90);
+    fast.cpu.eip = 0x20; slow.cpu.eip = 0x20;
+    const completed = dispatcher.run(2);
+    assert.equal(completed, 2);
+    slow.step(); slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    change(fast, 0x40); change(slow, 0x40);
+    fast.cpu.eip = 0x20; slow.cpu.eip = 0x20;
+    assert.equal(dispatcher.run(2), 1);
+    slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.diagnostics.unsupportedFirstOpcodes[0x40], 2);
+  }
+});
+
 test('form census describes prefix, ModRM, width and bounded continuation lengths', async () => {
   const forms = [
     {code: [0x26, 0x8b, 0x46, 0xfe], key: '26:8b:mem:o16:a16', length: 4},

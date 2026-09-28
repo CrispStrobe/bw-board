@@ -113,3 +113,7 @@ fields, at least 10% mean user-CPU gain and no individual regression. The
 media-neutral reducer is
 [`scripts/summarize-i80386-code16-v8-profile.mjs`](../scripts/summarize-i80386-code16-v8-profile.mjs);
 raw profiles and guest reports remain private.
+
+The screened [first-byte admission prototype](I80386-CODE16-WINDOW-ADMISSION.md)
+subsequently passed its two-pair unprofiled retention gate for the opt-in
+path: 370.94 to 259.56 seconds mean user CPU, with no pair regression.

@@ -492,6 +492,12 @@ cheaper code-window/cache admission prototype, **not** a removable-cost or
 speed claim. Host load rose sharply during the serial runs; no executor
 change was made. Any retained prototype still needs alternating unprofiled
 full-run parity/timing pairs and a 10% mean user-CPU gain without regressions.
+The [bounded first-byte admission prototype](I80386-CODE16-WINDOW-ADMISSION.md)
+then passed that gate: two 60M Windows pairs cut opt-in mean user CPU from
+370.94 to 259.56 seconds (30.03%), with no individual regression and all
+reported guest fields equal after expected source/revision normalization.
+It remains opt-in and about 3.31× slower than the earlier ordinary Windows
+checkpoint; the default CPU path is unchanged.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
