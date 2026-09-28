@@ -325,3 +325,95 @@ describe('labwired save points (engine snapshots)', () => {
         assert.equal(halts.at(-1).cause, 'pause');
     });
 });
+
+describe('labwired opt-in reverse (recording)', () => {
+    /** Deterministic engine: PC walks 2 bytes per instruction, snapshots restore it. */
+    const detSim = () => {
+        let pcNow = 0x100;
+        const saved = [];
+        return {
+            get_pc: () => pcNow,
+            step_single: () => { pcNow += 2; },
+            step_batch: () => { throw new Error('recording must never batch'); },
+            snapshot_unavailable_reason: () => null,
+            snapshot_save: () => { saved.push(pcNow); return JSON.stringify({ id: saved.length, cycles: 0 }); },
+            snapshot_list: () => JSON.stringify(saved.map((_, i) => ({ id: i + 1 }))),
+            snapshot_restore: id => { pcNow = saved[id - 1]; return '{}'; },
+        };
+    };
+    const fwOnly = () => createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim: detSim(), firmwareOnly: true } });
+
+    it('refused on a bench; capabilities follow the toggle', () => {
+        const bench = createLabwiredDebugTarget({ adapter: { ...stubAdapter(), sim: detSim() } });
+        assert.match(bench.setRecording(true).unsupported, /circuit/);
+        assert.deepEqual(bench.capabilities().recording, []);
+        const t = fwOnly();
+        assert.deepEqual(t.capabilities().recording, []);
+        assert.equal(t.setRecording(true), undefined);
+        assert.deepEqual(t.capabilities().recording, ['checkpoint', 'restore']);
+        assert.equal(t.capabilities().extensions.eventBreakpointBoundary, 'instruction-retire');
+    });
+
+    it('a restored checkpoint replays the exact recorded retire events', () => {
+        const t = fwOnly();
+        t.setRecording(true);
+        const events = [];
+        t.onDebugEvent(e => events.push(e));
+        const cp = t.captureCheckpoint();
+        assert.equal(typeof cp.snapshotId, 'number');
+        assert.deepEqual(structuredClone(cp), cp, 'a checkpoint survives structuredClone');
+        t.run();
+        t.runFor(105);                                  // 5 instructions at 48 MHz (floor), forced slow path
+        const live = events.splice(0);
+        assert.equal(live.length, 5);
+        assert.deepEqual(live.map(e => e.time.ticks), [1, 2, 3, 4, 5]);
+        assert.deepEqual(live.map(e => [e.pcBefore, e.pcAfter]), [[0x100, 0x102], [0x102, 0x104], [0x104, 0x106], [0x106, 0x108], [0x108, 0x10a]]);
+
+        assert.equal(t.restoreCheckpoint(cp), undefined);
+        assert.match(t.debugTime().domain, /^labwired-instructions-rewind-1$/);
+        for (let i = 0; i < 5; i++) assert.equal(t.replayInstruction().accepted, true);
+        const strip = e => ({ ...e, time: { ...e.time, domain: e.time.domain.replace(/-rewind-\d+$/, '') } });
+        assert.deepEqual(events.map(strip), live, 'replay reproduces every recorded field');
+    });
+
+    it('recording off: no events, and replay/checkpoint are refused', () => {
+        const t = fwOnly();
+        const events = [];
+        t.onDebugEvent(e => events.push(e));
+        t.step('insn', 2); t.runFor(1e6);
+        assert.equal(events.length, 0);
+        assert.equal(t.replayInstruction().accepted, false);
+        assert.ok(t.captureCheckpoint().refused);
+        assert.equal(t.applyReplayInput({}).accepted, false);
+    });
+});
+
+describe('labwired serial input is recorded and replayed at its instruction', () => {
+    it('a typed byte is stamped with the retire count, and replay re-applies it there', () => {
+        let pcNow = 0x100;
+        const saved = [];
+        const fed = [];
+        const t = createLabwiredDebugTarget({ adapter: { ...stubAdapter(), firmwareOnly: true, feedSerial: b => fed.push(b),
+            sim: { get_pc: () => pcNow, step_single: () => { pcNow += 2; }, step_batch: () => {},
+                snapshot_unavailable_reason: () => null,
+                snapshot_save: () => { saved.push(pcNow); return JSON.stringify({ id: saved.length }); },
+                snapshot_list: () => '[]', snapshot_restore: id => { pcNow = saved[id - 1]; return '{}'; } } } });
+        t.setRecording(true);
+        const facts = [];
+        t.onDebugInput(f => facts.push(f));
+        const cp = t.captureCheckpoint();
+        t.step('insn', 3); t.runFor(1e6);
+        t.feedSerial(0x41);
+        assert.deepEqual(facts[0].payload, { byte: 0x41 });
+        assert.equal(facts[0].time.ticks, 3, 'stamped on the instruction clock');
+
+        t.restoreCheckpoint(cp);
+        const back = t.replayToInputBoundary(facts[0].time);
+        assert.equal(back.accepted, true);
+        assert.equal(t.debugTime().ticks, 3);
+        assert.equal(t.applyReplayInput(facts[0]).accepted, true);
+        assert.deepEqual(fed, [0x41, 0x41], 'the same byte, live and on replay');
+        assert.equal(t.replayToInputBoundary({ ticks: 1, domain: 'labwired-instructions' }).code, 'input-boundary-passed');
+        assert.equal(t.replayToInputBoundary({ ticks: 'x', domain: 'labwired-instructions' }).code, 'invalid-input-boundary');
+    });
+});
