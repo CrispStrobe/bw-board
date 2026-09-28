@@ -1,10 +1,15 @@
 /** Browser-safe adapter for the opt-in experimental 80386 AT machine. */
-import { ExperimentalI80386ATMachine, PCAT80386_EXPERIMENTAL } from './experimental/i80386-at-machine.js';
+import { ExperimentalI80386ATMachine, PCAT80386_EXPERIMENTAL,
+  PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA } from './experimental/i80386-at-machine.js';
 import ExperimentalATA16 from './experimental/ata16.js';
 import { parseDosboxConfig } from './dosbox-config.js';
 
 export function createI80386Adapter(opts = {}) {
-  const config = opts.config ?? PCAT80386_EXPERIMENTAL;
+  if (opts.config && opts.profile) throw new Error('386 adapter accepts config or profile, not both');
+  if (opts.profile && opts.profile !== 'freedos-vga')
+    throw new Error(`unknown 386 adapter profile: ${opts.profile}`);
+  const config = opts.config ?? (opts.profile === 'freedos-vga'
+    ? PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA : PCAT80386_EXPERIMENTAL);
   const machine = new ExperimentalI80386ATMachine(config, {
     ataImage: opts.ataImage, ataGeometry: opts.ataGeometry,
     ataIntersectorDelayCycles: opts.ataIntersectorDelayCycles,
@@ -55,6 +60,17 @@ export function createI80386Adapter(opts = {}) {
       const expected = machine.ata.geometry.cylinders * machine.ata.geometry.heads * machine.ata.geometry.sectors * 512;
       if (image.length !== expected) throw new Error(`ATA image is ${image.length} bytes; expected ${expected}`);
       machine.ata.image = image.slice(); machine.ata.reset();
+    },
+    attachFloppyImage(bytes) {
+      const image = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      const geometry = {
+        368640: {cylinders: 40, heads: 2, sectors: 9, bytesPerSector: 512},
+        1228800: {cylinders: 80, heads: 2, sectors: 15, bytesPerSector: 512},
+      }[image.length];
+      if (!geometry) throw new Error('386 AT floppy image must be 360KiB or 1.2MiB');
+      const fdc = machine.chips.fdc1;
+      if (typeof fdc?.insert !== 'function') throw new Error('386 AT profile has no floppy controller');
+      fdc.insert(0, image.slice(), geometry);
     },
     sendScancode(scancode) { return machine.keyIn?.(scancode) ?? false; },
     keyIn(scancode) { return machine.keyIn?.(scancode) ?? false; },

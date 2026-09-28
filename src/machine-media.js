@@ -62,9 +62,11 @@ const SLOTS = {
     ],
     i80386: [
         { id: 'bios', label: 'AT BIOS ROM', accept: BIN_EXT, at: 0xffff0000, required: true },
-        { id: 'vga-rom', label: 'VGA BIOS ROM', accept: BIN_EXT, hint: 'optional VGA option ROM bytes' },
+        { id: 'vga-rom', label: 'VGA BIOS ROM', accept: BIN_EXT, at: 0xc0000,
+          hint: 'optional VGA option ROM bytes at C0000h' },
         { id: 'hdd', label: 'ATA hard-disk image', accept: ['.img', '.ima', '.vhd'], hint: 'raw image attached to the experimental ATA device' },
-        { id: 'floppy', label: 'Floppy image', accept: ['.img', '.ima', '.dsk'], hint: 'raw floppy input for a future FDC profile' },
+        { id: 'floppy', label: 'Floppy image', accept: ['.img', '.ima', '.dsk'],
+          hint: '360KB or 1.2MB raw image for the AT floppy controller' },
         { id: 'dosbox-conf', label: 'DOSBox config', accept: ['.conf', '.cfg'], hint: 'declarative media manifest; no host commands execute' },
     ],
     z80: [

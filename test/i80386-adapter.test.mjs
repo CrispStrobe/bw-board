@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { createDebugTarget, getTargetKinds } from '../src/debug-target-factory.js';
 import { applyMedia } from '../src/machine-media.js';
 import { resolveDosboxMedia } from '../src/dosbox-config.js';
-import { PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP } from '../src/experimental/i80386-at-machine.js';
+import { PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
+  PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 80386 is a first-class browser target with VGA/key surfaces', async () => {
   assert.ok(getTargetKinds().some(k => k.kind === 'i80386'));
@@ -14,6 +15,55 @@ test('experimental 80386 is a first-class browser target with VGA/key surfaces',
   assert.equal(typeof adapter.sendScancode, 'function');
   assert.equal(typeof adapter.mouseIn, 'function');
   assert.equal(adapter.mouseIn({dx: 1, dy: 1, buttons: 1}), false);
+});
+
+test('386 browser target loads the Doom board media at BIOS, VGA and FDC addresses', async () => {
+  const {adapter, target} = await createDebugTarget('i80386', {
+    profile: 'freedos-vga',
+  });
+  const bios = new Uint8Array(0x10000).fill(0xf4);
+  const vgaRom = new Uint8Array(0x7e00).fill(0x5a);
+  const hdd = new Uint8Array(306 * 4 * 17 * 512);
+  const floppy = new Uint8Array(80 * 2 * 15 * 512);
+  floppy[0] = 0xeb;
+  const media = applyMedia({adapter, machine: adapter.machine, kind: 'i80386'},
+    {bios, 'vga-rom': vgaRom, hdd, floppy});
+  assert.deepEqual(media, {applied: ['bios', 'vga-rom', 'hdd', 'floppy'], errors: []});
+  const machine = adapter.machine;
+  assert.equal(machine._read386(0xfffffff0), 0xf4);
+  assert.equal(machine._read386(0xc0000), 0x5a);
+  assert.deepEqual(machine.ata.geometry, {cylinders: 306, heads: 4, sectors: 17});
+  assert.deepEqual(machine.chips.fdc1.drives[0].geom,
+    {cylinders: 80, heads: 2, sectors: 15, bytesPerSector: 512});
+  assert.equal(machine.chips.fdc1.drives[0].image[0], 0xeb);
+  machine.reset();
+  assert.equal(machine.cpu.pc, 0xfffffff0);
+  assert.equal(target.keyIn(0x1e), true);
+  assert.equal(target.video().width, 720);
+});
+
+test('386 browser Doom preset is opt-in and rejects ambiguous profiles', async () => {
+  const plain = await createDebugTarget('i80386', {});
+  assert.equal(plain.adapter.machine.vgaMemory, null);
+  assert.ok(plain.adapter.machine.chips.cga1);
+  await assert.rejects(createDebugTarget('i80386', {profile: 'unknown'}), /unknown 386 adapter profile/);
+  await assert.rejects(createDebugTarget('i80386', {
+    profile: 'freedos-vga', config: PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,
+  }), /config or profile/);
+});
+
+test('386 adapter refuses unsupported floppy size without replacing installed media', async () => {
+  const {adapter} = await createDebugTarget('i80386', {
+    config: PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,
+  });
+  const first = new Uint8Array(80 * 2 * 15 * 512);
+  first[0] = 0xeb;
+  adapter.attachFloppyImage(first);
+  const installed = adapter.machine.chips.fdc1.drives[0].image;
+  assert.notEqual(installed, first);
+  assert.equal(installed[0], 0xeb);
+  assert.throws(() => adapter.attachFloppyImage(new Uint8Array(123)), /360KiB or 1.2MiB/);
+  assert.equal(adapter.machine.chips.fdc1.drives[0].image, installed);
 });
 
 test('DOSBox disk media can attach lazily to the experimental target', async () => {
