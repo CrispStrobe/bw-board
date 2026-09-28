@@ -261,6 +261,26 @@ describe('firmware-only on the real engine', { skip: skipEngine }, () => {
             assert.deepEqual(Object.keys(target.regs()).filter(k => /^r\d+$/.test(k)).length, 13);
         });
     }
+    it('stm32f103: record, restore the checkpoint, and replay reproduces every retire event', { skip: haveGcc ? false : 'arm-none-eabi-gcc not installed' }, async () => {
+        const { bytes } = cortexSpinElf('0x08000000', '0x20000000');
+        const { target } = await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG.stm32f103, firmware: bytes });
+        assert.equal(target.setRecording(true), undefined, 'firmware-only can record');
+        const events = [];
+        target.onDebugEvent(e => events.push(e));
+        target.step('insn', 4);
+        target.runFor(1_000_000);
+        const cp = target.captureCheckpoint();
+        assert.equal(typeof cp.snapshotId, 'number', JSON.stringify(cp));
+        events.length = 0;
+        target.step('insn', 25);
+        assert.equal(target.runFor(1_000_000), 'halted');
+        const live = events.splice(0);
+        assert.equal(live.length, 25);
+        assert.equal(target.restoreCheckpoint(cp), undefined, 'the engine replayed its journal to the checkpoint');
+        for (let i = 0; i < 25; i++) assert.equal(target.replayInstruction().accepted, true);
+        const strip = e => ({ ...e, time: { ...e.time, domain: e.time.domain.replace(/-rewind-\d+$/, '') } });
+        assert.deepEqual(events.map(strip), live, 'the replay is the recording, field for field');
+    });
     it('rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom', { skip: haveGcc ? false : 'arm-none-eabi-gcc not installed' }, async () => {
         const { bytes, done } = rp2040RomLookupElf();
         const { target } = await createDebugTarget('labwired', { wasm, chip: LABWIRED_CATALOG.rp2040, firmware: bytes });
