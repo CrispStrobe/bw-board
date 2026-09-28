@@ -1,13 +1,63 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import fs from 'node:fs';
 import {createDebugTarget} from '../src/debug-target-factory.js';
 import {renderMode} from '../src/i8086-cga.js';
 import {renderObservedWindowsVga480} from '../scripts/lib/i80386-windows-vga-480-frame.mjs';
+import {renderObservedDoomVga} from '../scripts/lib/i80386-doom-vga-frame.mjs';
 import {PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from '../src/experimental/i80386-at-machine.js';
 
 const vgaTarget = () => createDebugTarget('i80386', {
   config: PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA,
 });
+
+const doomSnapshot = () => {
+  const planes = Array.from({length: 4}, () => Buffer.alloc(0x10000));
+  const dac = Buffer.alloc(768);
+  for (let i = 0; i < 256; i++) {
+    dac[i * 3] = i & 63;
+    dac[i * 3 + 1] = (i >>> 2) & 63;
+    dac[i * 3 + 2] = (i >>> 4) & 63;
+  }
+  for (const start of [0, 0x4000, 0x8000])
+    for (let y = 0; y < 200; y++)
+      for (let x = 0; x < 320; x++)
+        planes[x & 3][(start + y * 80 + (x >>> 2)) & 0xffff] =
+          (x + 3 * y + (start >>> 8)) & 255;
+  return {misc: 0x63, seq: [3, 1, 15, 0, 6], gc: [0, 0, 0, 0, 0, 0x40, 5],
+    crtc: Object.assign(Array(32).fill(0), {1: 79, 6: 0xbf, 7: 0x1f,
+      9: 0x41, 0x12: 0x8f, 0x13: 40, 0x17: 0xe3, 0x18: 0xff}),
+    attr: Object.assign(Array(32).fill(0), {0x10: 0x41, 0x12: 15}),
+    dacMask: 255, dacBase64: dac.toString('base64'),
+    planesBase64: planes.map(plane => plane.toString('base64'))};
+};
+
+function installDoomSnapshot(machine, snapshot) {
+  const card = machine.chips.vga1;
+  card.misc = snapshot.misc;
+  for (const name of ['seq', 'gc', 'crtc', 'attr']) card[name].set(snapshot[name]);
+  card.dac.set(Buffer.from(snapshot.dacBase64, 'base64'));
+  card.dacMask = snapshot.dacMask;
+  snapshot.planesBase64.forEach((value, i) =>
+    machine.vgaMemory.planes[i].set(Buffer.from(value, 'base64')));
+  machine.displayRevision++;
+}
+
+function assertDoomRaster(frame, oracle) {
+  assert.equal(frame.width, 320);
+  assert.equal(frame.height, 200);
+  assert.equal(frame.mode, 0x13);
+  assert.equal(frame.why, 'observed Doom unchained 320x200 VGA');
+  const rgb = Buffer.alloc(320 * 200 * 3);
+  for (let i = 0; i < 320 * 200; i++) {
+    rgb[i * 3] = frame.rgba[i * 4];
+    rgb[i * 3 + 1] = frame.rgba[i * 4 + 1];
+    rgb[i * 3 + 2] = frame.rgba[i * 4 + 2];
+    assert.equal(frame.rgba[i * 4 + 3], 255);
+  }
+  assert.equal(createHash('sha256').update(rgb).digest('hex'), oracle.rgbSha256);
+}
 
 test('386 VGA text display reads the planes written by the guest', async () => {
   const {adapter, target} = await vgaTarget();
@@ -90,3 +140,60 @@ test('observed Windows 3.11 VGA graphics matches the independent 480-line oracle
     assert.deepEqual(Array.from(frame.rgba.slice(i * 4, i * 4 + 3)),
       Array.from(oracle.rgb.slice(i * 3, i * 3 + 3)));
 });
+
+test('browser Doom unchained raster matches the strict decoder at all observed page starts', async () => {
+  const {adapter, target} = await vgaTarget();
+  const snapshot = doomSnapshot();
+  for (const start of [0, 0x4000, 0x8000]) {
+    snapshot.crtc[0x0c] = start >>> 8;
+    installDoomSnapshot(adapter.machine, snapshot);
+    assertDoomRaster(target.video(), renderObservedDoomVga(snapshot));
+  }
+  snapshot.dacMask = 0x0f;
+  installDoomSnapshot(adapter.machine, snapshot);
+  assertDoomRaster(target.video(), renderObservedDoomVga(snapshot));
+});
+
+test('browser Doom decoder refuses unobserved register and page layouts', async () => {
+  const {adapter, target} = await vgaTarget();
+  for (const change of [
+    snapshot => { snapshot.seq[0] = 1; },
+    snapshot => { snapshot.seq[4] = 2; },
+    snapshot => { snapshot.gc[5] = 0; },
+    snapshot => { snapshot.crtc[8] = 1; },
+    snapshot => { snapshot.crtc[0x13] = 80; },
+    snapshot => { snapshot.crtc[0x17] = 0x8e; },
+    snapshot => { snapshot.crtc[0x0c] = 0x20; },
+    snapshot => { snapshot.attr[0x10] = 1; },
+    snapshot => { snapshot.dacMask = 256; },
+    snapshot => {
+      const dac = Buffer.from(snapshot.dacBase64, 'base64');
+      dac[0] = 64; snapshot.dacBase64 = dac.toString('base64');
+    },
+  ]) {
+    const snapshot = doomSnapshot();
+    change(snapshot);
+    installDoomSnapshot(adapter.machine, snapshot);
+    assert.ok(target.video().unsupported, 'unobserved state must not claim Doom pixels');
+  }
+});
+
+test('optional pinned Doom report matches browser raster without storing media pixels',
+  {skip: !process.env.I80386_DOOM_SNAPSHOT_REPORT}, async () => {
+    const bytes = fs.readFileSync(process.env.I80386_DOOM_SNAPSHOT_REPORT);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'),
+      '4d109a1ffb5c132f48839341f4a3ab9c32d50f04e429b709a7d8b033f321d363');
+    const report = JSON.parse(bytes);
+    const {adapter, target} = await vgaTarget();
+    const expected = {
+      firstGraphicsSnapshot: 'ea0787f65f73b0013d03b359490e3125211b28ad5c1502ffb1544c0ded4192f5',
+      latestGraphicsSnapshot: '941e7414ef1599ca01564e4c073544462fd708eeac44a4307194240e75079100',
+    };
+    for (const name of Object.keys(expected)) {
+      const snapshot = report.vgaEvidence[name];
+      installDoomSnapshot(adapter.machine, snapshot);
+      const oracle = renderObservedDoomVga(snapshot);
+      assert.equal(oracle.rgbSha256, expected[name]);
+      assertDoomRaster(target.video(), oracle);
+    }
+  });

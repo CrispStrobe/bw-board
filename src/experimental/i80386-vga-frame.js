@@ -15,6 +15,24 @@ function isObserved480(r) {
     r.attr[0x13] === 0 && r.attr[0x14] === 0;
 }
 
+// The byte-addressed, unchained 320x200 state observed in Doom title/menu
+// snapshots. Keep this in step with the strict source-bound CLI decoder.
+function isObservedDoom(r) {
+  const start = (r.crtc[0x0c] << 8) | r.crtc[0x0d];
+  return r.seq[0] === 3 && r.seq[1] === 1 && r.seq[4] === 6 &&
+    r.gc[5] === 0x40 && r.gc[6] === 5 &&
+    r.crtc[1] === 79 && r.crtc[6] === 0xbf && r.crtc[7] === 0x1f &&
+    r.crtc[8] === 0 && r.crtc[9] === 0x41 && r.crtc[0x12] === 0x8f &&
+    r.crtc[0x13] === 40 && r.crtc[0x14] === 0 &&
+    r.crtc[0x17] === 0xe3 && r.crtc[0x18] === 0xff &&
+    r.attr[0x10] === 0x41 && r.attr[0x12] === 15 &&
+    r.attr[0x13] === 0 && r.attr[0x14] === 0 &&
+    Number.isInteger(r.crtc[0x0c]) && Number.isInteger(r.crtc[0x0d]) &&
+    (start === 0 || start === 0x4000 || start === 0x8000) &&
+    Number.isInteger(r.dacMask) && r.dacMask >= 0 && r.dacMask <= 255 &&
+    r.dac.length === 768 && r.dac.every(value => value <= 63);
+}
+
 /** Render from the live VGA planes. The generic 8086 debug target reads its
  * conventional RAM map, but a 386 VGA write goes to these planes instead. */
 export function renderI80386VgaFrame(machine) {
@@ -53,8 +71,27 @@ export function renderI80386VgaFrame(machine) {
     return {width, height, rgba, frame: machine.displayRevision >>> 0,
       mode: 0x13, why: '386 VGA chain-4 planes'};
   }
+  if (isObservedDoom(r)) {
+    const width = 320, height = 200;
+    const start = (r.crtc[0x0c] << 8) | r.crtc[0x0d];
+    const stride = r.crtc[0x13] * 2;
+    const rgba = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      const row = start + y * stride;
+      for (let x = 0; x < width; x++) {
+        const index = planes[x & 3][(row + (x >>> 2)) & 0xffff] & r.dacMask;
+        const pixel = (y * width + x) * 4, dac = index * 3;
+        rgba[pixel] = sixToEight(r.dac[dac]);
+        rgba[pixel + 1] = sixToEight(r.dac[dac + 1]);
+        rgba[pixel + 2] = sixToEight(r.dac[dac + 2]);
+        rgba[pixel + 3] = 255;
+      }
+    }
+    return {width, height, rgba, frame: machine.displayRevision >>> 0,
+      mode: 0x13, why: 'observed Doom unchained 320x200 VGA'};
+  }
   if (!isObserved480(r)) return {unsupported:
-    '386 VGA graphics mode is outside qualified chain-4 320x200 and Windows 640x480 states'};
+    '386 VGA graphics mode is outside qualified chain-4 320x200, Doom unchained 320x200, and Windows 640x480 states'};
 
   const width = 640, height = 480, stride = r.crtc[0x13] * 2;
   const rgba = new Uint8ClampedArray(width * height * 4);
