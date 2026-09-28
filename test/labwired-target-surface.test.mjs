@@ -202,14 +202,14 @@ describe('labwired regs() is the core\'s own register list', () => {
 });
 
 describe('labwired fault halt and diagnostics', () => {
-    /** A sim that faults once `faultAfter` batches have run. */
+    /** A sim that faults once `faultAfter` 1 ms slices (48 000 instructions each at 48 MHz) have run. */
     const faultingSim = (faultAfter) => {
-        let batches = 0;
+        let steps = 0;
         return {
             get_pc: () => 0x0800_0200,
-            step_batch: () => { batches++; },
-            step_single: () => {},
-            fault_verdict: () => batches >= faultAfter
+            step_batch: n => { steps += n; return n; },
+            step_single: () => { steps++; },
+            fault_verdict: () => steps >= faultAfter * 48_000
                 ? JSON.stringify({ summary: 'HardFault: UsageFault (UNDEFINSTR) at 0x08000200', pc: 0x0800_0200 })
                 : undefined,
             fidelity_gaps: () => [{ kind: 'undecoded', addr: 0x0800_0300 }],
@@ -472,5 +472,44 @@ describe('labwired step over / out / run-to (ARM)', () => {
         const xt = createLabwiredDebugTarget({ adapter: { ...stubAdapter(), arch: 'xtensa-lx7' } });
         assert.deepEqual(xt.capabilities().steps, ['insn']);
         assert.match(xt.step('over').unsupported, /ARM \(Thumb\) chips only/);
+    });
+});
+
+describe('labwired runFor: program time is the engine\'s, and a step error halts', () => {
+    /** An engine whose instructions cost 4 cycles, with time published at pump. */
+    const cpi4 = () => {
+        let cycles = 0n;
+        let pending = 0n;
+        const hz = 48_000_000n;
+        const sim = { get_pc: () => 0x100, step_single: () => { pending += 4n; }, step_batch: n => { pending += 4n * BigInt(n); return n; } };
+        const adapter = { ...stubAdapter(), sim, timeNs: () => (cycles * 1_000_000_000n) / hz, pump() { cycles += pending; pending = 0n; } };
+        return { adapter, sim, cycles: () => cycles };
+    };
+    it('the slow path stops when the engine\'s cycles cover the slice, not after budget-many steps', () => {
+        const m = cpi4();
+        const t = createLabwiredDebugTarget({ adapter: m.adapter });
+        assert.equal(typeof t.setBreakpoint({ kind: 'code', addr: 0x998 }), 'number');   // forces the slow path
+        t.run();
+        t.runFor(100_000);                                               // 4800 cycles at 48 MHz
+        assert.ok(m.cycles() >= 4800n && m.cycles() < 4800n + 64n * 4n,
+            `ran ${m.cycles()} cycles for a 4800-cycle slice (old loop: 19200)`);
+    });
+    it('the free path is bounded by engine time too', () => {
+        const m = cpi4();
+        const t = createLabwiredDebugTarget({ adapter: m.adapter });
+        t.run();
+        t.runFor(100_000);
+        assert.ok(m.cycles() >= 4800n && m.cycles() < 4800n + 4096n * 4n, `${m.cycles()}`);
+        assert.ok(m.cycles() < 19_200n, 'not budget-many steps of 4 cycles each');
+    });
+    it('an engine error in a step halts with its message instead of throwing', () => {
+        const t = createLabwiredDebugTarget({ adapter: { ...stubAdapter(),
+            sim: { get_pc: () => 0x100, step_single: () => { throw new Error('Simulation Error: bus fault at 0xdead'); }, step_batch() {} } } });
+        const halts = [];
+        t.onHalt(h => halts.push(h));
+        t.step('insn', 1);
+        assert.equal(t.runFor(1_000_000), 'halted');
+        assert.equal(halts[0].cause, 'error');
+        assert.match(halts[0].message, /bus fault at 0xdead/);
     });
 });

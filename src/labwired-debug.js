@@ -401,7 +401,7 @@ export function createLabwiredDebugTarget (opts) {
           'this core would need its own call/return decode' };
       }
       if (kind !== 'insn') {
-        return { unsupported: `labwired offers single-instruction stepping only; ` +
+        return { unsupported: `labwired steps by instruction (and over/out on ARM); ` +
           `'${kind}' would need a symbol-driven yield set, which this target does not have.` };
       }
       insnRemaining = count;
@@ -543,45 +543,79 @@ export function createLabwiredDebugTarget (opts) {
       const budgetCycles = Number((BigInt(budgetNs) * clockHzBig) / NS_PER_S);
       if (budgetCycles <= 0) return 'running';
 
+      // PROGRAM TIME IS THE ENGINE'S. A step is an instruction, and an
+      // instruction is not always one cycle, so counting `budgetCycles` steps
+      // ran program time past the slice. Both paths now stop once the engine's
+      // own clock (read at each pump) covers the budget -- with the step count
+      // kept as a hard cap, so an adapter that reports no time can only ever
+      // do what the old loop did.
+      const endNs = adapter.timeNs() + BigInt(budgetNs);
+      const cyclesLeft = () => Number(((endNs - adapter.timeNs()) * clockHzBig) / NS_PER_S);
+
       // Single-instruction stepping, and breakpoint checking, both need the PC
       // between instructions — so they share one slow path. Everything else
       // runs in batches, which is the only way the wasm boundary stays cheap.
       const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording || depthStep !== null;
 
-      if (!mustWatch) {
-        let left = budgetCycles;
-        while (left > 0) {
-          const chunk = Math.min(left, FREE_RUN_CHUNK);
-          sim().step_batch(chunk);
-          left -= chunk;
+      try {
+        if (!mustWatch) {
+          // Batch size from the OBSERVED cycles per instruction: a batch of
+          // "cycles left" instructions overshoots by the CPI (4x at CPI 4). The
+          // first batch is small, to measure it.
+          let stepsLeft = budgetCycles;
+          let cpi = 1;
+          let first = true;
+          while (stepsLeft > 0) {
+            const left = cyclesLeft();
+            if (left <= 0) break;
+            const chunk = Math.max(1, Math.min(stepsLeft, FREE_RUN_CHUNK,
+              first ? Math.min(left, 4096) : Math.floor(left / cpi)));
+            const before = adapter.timeNs();
+            sim().step_batch(chunk);
+            stepsLeft -= chunk;
+            adapter.pump();
+            const advanced = Number(((adapter.timeNs() - before) * clockHzBig) / NS_PER_S);
+            if (advanced > 0) cpi = Math.max(1, advanced / chunk);
+            first = false;
+          }
+          return haltOnNewFault() ? 'halted' : 'running';
         }
-        adapter.pump();
-        return haltOnNewFault() ? 'halted' : 'running';
-      }
 
-      for (let i = 0; i < budgetCycles; i++) {
-        stepOne();
-        const here = codeAddr(pc());
-        if (codeBps.has(here)) {
-          adapter.pump();
-          halted('breakpoint', { addr: here });
-          return 'halted';
-        }
-        if (depthStep) {
-          const done = here === depthStep.returnPc ||
-            (depthStep.kind === 'out' && (regNamed('SP') ?? 0) > depthStep.sp0);
-          if (done) {
-            depthStep = null;
+        for (let i = 0; i < budgetCycles; i++) {
+          stepOne();
+          const here = codeAddr(pc());
+          if (codeBps.has(here)) {
+            adapter.pump();
+            halted('breakpoint', { addr: here });
+            return 'halted';
+          }
+          if (depthStep) {
+            const done = here === depthStep.returnPc ||
+              (depthStep.kind === 'out' && (regNamed('SP') ?? 0) > depthStep.sp0);
+            if (done) {
+              depthStep = null;
+              adapter.pump();
+              halted('step');
+              return 'halted';
+            }
+          }
+          if (insnRemaining !== null && --insnRemaining <= 0) {
             adapter.pump();
             halted('step');
             return 'halted';
           }
+          if ((i & 63) === 63) {
+            adapter.pump();
+            if (cyclesLeft() <= 0) break;
+          }
         }
-        if (insnRemaining !== null && --insnRemaining <= 0) {
-          adapter.pump();
-          halted('step');
-          return 'halted';
-        }
+      } catch (e) {
+        // The engine refused a step (it answers with an Err rather than a
+        // panic). That used to escape runFor and take the host's frame loop
+        // down with it; it is a halt with the engine's own sentence.
+        try { adapter.pump(); } catch (e2) { /* the report below still stands */ }
+        halted('error', { message: String((e && e.message) || e) });
+        return 'halted';
       }
       adapter.pump();
       return haltOnNewFault() ? 'halted' : 'running';
