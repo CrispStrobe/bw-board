@@ -1,0 +1,85 @@
+name: x86 xv6 224 MiB full suite (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stock-xv6-224m-full-suite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      XV6_SOURCE_DIR: /tmp/xv6-public
+      # The pinned kernel contains DW_AT_comp_dir from this exact build path.
+      XV6_224M_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
+      XV6_IMAGE_DIR: /tmp/xv6-stock-224m-qemu
+      XV6_OUTPUT_DIR: /tmp/xv6-board-full-suite-224m
+      XV6_REVISION: eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Install public xv6 build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib make
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install board dependencies
+        run: npm ci --ignore-scripts
+      - name: Fetch pinned MIT xv6 source
+        run: |
+          git init "$XV6_SOURCE_DIR"
+          git -C "$XV6_SOURCE_DIR" remote add origin https://github.com/mit-pdos/xv6-public.git
+          git -C "$XV6_SOURCE_DIR" fetch --depth 1 origin "$XV6_REVISION"
+          git -C "$XV6_SOURCE_DIR" checkout --detach FETCH_HEAD
+          test "$(git -C "$XV6_SOURCE_DIR" rev-parse HEAD)" = "$XV6_REVISION"
+      - name: Build stock 224 MiB xv6 media
+        run: python3 -B scripts/build-xv6-stock-qemu-224m.py
+      - name: Verify pinned source, media, and free Bochs firmware
+        run: |
+          mkdir -p "$XV6_OUTPUT_DIR"
+          python3 -B scripts/probe-xv6-usertests-224m-full-suite.py --preflight \
+            > "$XV6_OUTPUT_DIR/preflight.json"
+      - name: Run bounded board full-suite probe
+        id: probe
+        # Leave time for upload after the 3-billion-step probe. This is not a
+        # performance benchmark and may stop at its step or wall-clock bound.
+        run: |
+          set +e
+          timeout --signal=TERM --kill-after=30s 225m \
+            python3 -B scripts/probe-xv6-usertests-224m-full-suite.py --run \
+            > "$XV6_OUTPUT_DIR/probe-stdout.txt" \
+            2> "$XV6_OUTPUT_DIR/probe-stderr.txt"
+          status=$?
+          printf '%s\n' "$status" > "$XV6_OUTPUT_DIR/probe-exit-status.txt"
+          exit "$status"
+      - name: Record evidence inventory
+        if: always()
+        run: |
+          mkdir -p "$XV6_OUTPUT_DIR"
+          python3 -B - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          output = Path(os.environ['XV6_OUTPUT_DIR'])
+          names = ('raw-private.json', 'host-private.json', 'stderr-private.txt',
+                   'receipt-public-candidate.json', 'preflight.json',
+                   'probe-stdout.txt', 'probe-stderr.txt', 'probe-exit-status.txt')
+          inventory = {'expected': list(names),
+                       'present': [name for name in names if (output / name).is_file()],
+                       'missing': [name for name in names if not (output / name).is_file()]}
+          (output / 'evidence-inventory.json').write_text(json.dumps(inventory, indent=2) + '\n')
+          print(json.dumps(inventory, indent=2))
+          PY
+      - name: Upload raw, host, stderr, and public candidate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: xv6-board-224m-full-suite-${{ github.run_id }}
+          path: ${{ env.XV6_OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
