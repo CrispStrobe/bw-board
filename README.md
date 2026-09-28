@@ -86,6 +86,8 @@ compiler symbols.
   The [interactive AT console](docs/I80386-AT-CONSOLE.md) accepts pinned raw
   disk images and DOSBox `imgmount` geometry. See `docs/I80386-EXPERIMENTAL.md` and the
   [Windows 3.1x enhanced-mode probe](docs/I80386-WINDOWS-ENHANCED-PROBE.md).
+  The [reference-emulator audit](docs/I80386-REFERENCE-EMULATORS.md) compares
+  its speed architecture and oracle roles with QEMU, Bochs, MAME and others.
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
