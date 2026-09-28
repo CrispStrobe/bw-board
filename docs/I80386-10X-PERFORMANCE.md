@@ -470,6 +470,12 @@ returns `io-required` before `IN`. Focused parity and refusal tests cover
 ordinary resume, a chip-event horizon, branch fallthrough and code mutation.
 The fixture is too narrow to imply a Windows speedup and remains outside
 the default execution paths.
+A [sampled code16 WASM cost probe](I80386-CODE16-WASM-COST-ATTRIBUTION.md)
+preserved the selected Windows guest fields and exact retirement counts,
+but its 256× sampled-time extrapolation exceeded observed wall time.
+That distortion prevents a whole-run phase attribution or a retained
+optimization. The opt-in diagnostic remains roughly five times the
+ordinary user CPU in the prior uninstrumented pair.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
