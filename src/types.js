@@ -104,6 +104,7 @@
  *   on a fresh board, optionally tightening (never widening) its maximum internal step.
  * @property {() => {profile: Readonly<Record<string, number|string>>,
  *   integrationMode: 'algebraic-direct'|'adaptive', accuracyMet: boolean|null,
+ *   stepBound: Readonly<{maxStepSec:number|null,basis:string[]}>,
  *   failure: Readonly<Record<string, number|string>>|null,
  *   work: Readonly<{attempts:number, solves:number, advances:number}>}} transientAnalysisStatus
  *   Qualify whether the selected local-error target was met (`null` before work); an analysis must not claim a

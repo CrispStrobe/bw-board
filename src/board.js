@@ -1294,11 +1294,7 @@ export class BoardImpl {
       if (requested < profile.minStepSec) {
         throw new Error(`configureTransientAnalysis: maxStepSec must be at least ${profile.minStepSec}`);
       }
-      if (requested > profile.maxStepSec) {
-        throw new Error(`configureTransientAnalysis: maxStepSec may only tighten ${id}`);
-      }
-      profile.maxStepSec = requested;
-      profile.maxStepSource = 'bounded-override';
+      profile.authoredMaxStepSec = requested;
     }
     this._transientAnalysisProfile = Object.freeze(profile);
     this._transientAccuracyUnmet = null;
@@ -1311,6 +1307,7 @@ export class BoardImpl {
     return {
       profile: Object.freeze({ ...this._transientAnalysisProfile }),
       integrationMode: this._transientIntegrationMode(),
+      stepBound: Object.freeze(this._transientStepBound()),
       accuracyMet: this._transientAnalysisWork.advances > 0
         ? this._transientAccuracyUnmet === null : null,
       failure: this._transientAccuracyUnmet ? Object.freeze({ ...this._transientAccuracyUnmet }) : null,
@@ -4216,6 +4213,38 @@ export class BoardImpl {
   }
 
   /**
+   * Effective internal transient-step ceiling before the finite duration of a
+   * particular advance is known. The profile ceiling is a trace-fidelity cap:
+   * it applies when a waveform source or scope makes intermediate time
+   * observable. An authored analysis ceiling is independent and applies even
+   * to a static-source storage network. Keeping these authorities separate is
+   * what lets `.tran ... TMAX` honestly request 0.1 s without turning the
+   * interactive profile's 100 us waveform cap into 200,000 invented steps.
+   *
+   * @returns {{maxStepSec:number|null,basis:string[]}}
+   */
+  _transientStepBound() {
+    const profile = this._transientAnalysisProfile;
+    let maxStepSec = Infinity;
+    const basis = [];
+    if (this._scopeChannels.size > 0 || this._hasTimeVaryingSource()) {
+      maxStepSec = Math.min(maxStepSec, profile.maxStepSec);
+      basis.push(this._scopeChannels.size > 0 ? 'profile-scope-fidelity' : 'profile-waveform-fidelity');
+    }
+    if (Number.isFinite(profile.authoredMaxStepSec)) {
+      maxStepSec = Math.min(maxStepSec, profile.authoredMaxStepSec);
+      basis.push('authored-analysis-maximum');
+    }
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.capture === 'sample' && ch.type === 'voltage') {
+        maxStepSec = Math.min(maxStepSec, Number(ch.intervalNs) / 1e9);
+        basis.push('scope-sample-grid');
+      }
+    }
+    return { maxStepSec: Number.isFinite(maxStepSec) ? maxStepSec : null, basis };
+  }
+
+  /**
    * Full-MNA instantaneous solve: node voltages, LED currents and the
    * instrument cache all come from one solution.
    */
@@ -4444,24 +4473,12 @@ export class BoardImpl {
     // from wherever the next chunk boundary happened to fall (measured:
     // an 80 ns-late observation shifted a scheduled flip by 80 ns).
     const H_SEED = profile.seedStepSec;
-    // Trace-fidelity floor (see doc above).
-    const H_SAMPLE = profile.maxStepSec;
-    const sampleCapped = this._scopeChannels.size > 0 || this._hasTimeVaryingSource()
-      || profile.maxStepSource === 'bounded-override';
-    // A 'sample'-capture channel asks for the value AT a grid of instants, so
-    // the step must not straddle more than one of them: with 100 µs steps and
-    // a 10 µs capture grid, nine samples in ten came off the same line segment
-    // and a 1 kHz sine reconstructed 128 mV wrong. Capping h at the finest
-    // sample-series interval brings that to under a millivolt. Only channels
-    // that OPT IN pay for it — an envelope channel's cost is unchanged, which
-    // matters because the envelope is what every existing bench uses.
-    let hSeries = Infinity;
-    for (const [, ch] of this._scopeChannels) {
-      if (ch.capture === 'sample' && ch.type === 'voltage') {
-        hSeries = Math.min(hSeries, Number(ch.intervalNs) / 1e9);
-      }
-    }
-    const hMax = Math.min(sampleCapped ? H_SAMPLE : dtSec, hSeries);
+    // The same copy-safe bound reported by transientAnalysisStatus(): profile
+    // waveform/scope fidelity, authored analysis maximum and sample grid each
+    // contribute independently. A board with none keeps the historical
+    // endpoint-sized ceiling.
+    const activeStepBound = this._transientStepBound().maxStepSec;
+    const hMax = Math.min(dtSec, activeStepBound ?? dtSec);
     // A runaway backstop far above any real circuit; hitting it is
     // reported, never silently absorbed (the old 200-step cap's honesty,
     // kept at the new scale).
