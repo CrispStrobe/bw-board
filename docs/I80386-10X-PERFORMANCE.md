@@ -454,6 +454,12 @@ device reads, then ordinary execution performs one read. QEMU supplies the
 pre/post CPU-state checkpoints; Bochs CPU-level 3 independently emits the
 same output marker. This is an oracle harness, not an executable block-engine
 speed result.
+A separate [owned executable trace spike](I80386-CODE16-OWNED-IO-TRACE.md)
+now retires its three protected-16 instructions in one opt-in call and
+returns `io-required` before `IN`. Focused parity and refusal tests cover
+ordinary resume, a chip-event horizon, branch fallthrough and code mutation.
+The fixture is too narrow to imply a Windows speedup and remains outside
+the default execution paths.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM
