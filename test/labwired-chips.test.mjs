@@ -16,6 +16,8 @@ import { fileURLToPath } from 'node:url';
 import {
     ATMEGA328P, ATMEGA328P_CHIP_YAML, ATMEGA328P_LABWIRED_PINS,
     STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0,
+    NRF52833_CHIP_YAML, MICROBIT_V2_LABWIRED_PINS, MICROBIT_V2,
+    ATSAMD51_CHIP_YAML, PYBADGE_LABWIRED_PINS, PYBADGE,
 } from '../src/labwired-chips.js';
 import { STM32F0_PINS } from '../src/stm32-adapter.js';
 
@@ -72,5 +74,25 @@ describe('labwired chip descriptors', () => {
             'D8', 'D9', 'D10', 'D11', 'D12', 'D13',
             'A0', 'A1', 'A2', 'A3', 'A4', 'A5',
         ]);
+    });
+
+    it('embeds the exact nRF52833 and SAMD51 descriptors byte-for-byte', () => {
+        assert.equal(NRF52833_CHIP_YAML,
+            readFileSync(join(root, 'test/fixtures/labwired/nrf52833-chip.yaml'), 'utf8'));
+        assert.equal(ATSAMD51_CHIP_YAML,
+            readFileSync(join(root, 'test/fixtures/labwired/atsamd51-chip.yaml'), 'utf8'));
+        assert.equal(MICROBIT_V2.flashOrigin, 0);
+        assert.equal(PYBADGE.flashOrigin, 0);
+        assert.match(NRF52833_CHIP_YAML, /name: "nrf52833"/);
+        assert.match(ATSAMD51_CHIP_YAML, /name: "atsamd51j19a"/);
+    });
+
+    it('maps official board labels to package pins, not connector ordinals', () => {
+        assert.deepEqual(MICROBIT_V2_LABWIRED_PINS.p0, { peripheral: 'gpio0', pin: 2 });
+        assert.deepEqual(MICROBIT_V2_LABWIRED_PINS.p6, { peripheral: 'gpio1', pin: 5 });
+        assert.deepEqual(MICROBIT_V2_LABWIRED_PINS.p20, { peripheral: 'gpio1', pin: 0 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.a0, { peripheral: 'porta', pin: 2 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.d2, { peripheral: 'portb', pin: 3 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.stemma_sda, PYBADGE_LABWIRED_PINS.sda);
     });
 });

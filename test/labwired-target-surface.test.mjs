@@ -156,3 +156,47 @@ describe('labwired code breakpoint only', () => {
         assert.equal(target.runFor(1_000n), 'running');
     });
 });
+
+/** A sim that names registers like one labwired core and answers index*3+1. */
+const namedSim = names => ({
+    get_pc: () => 0x100,
+    get_register_names: () => names,
+    get_register: i => {
+        if (i >= names.length) throw new Error(`register ${i} out of range`);
+        return i * 3 + 1;
+    },
+});
+
+describe('labwired regs() is the core\'s own register list', () => {
+    const cores = {
+        'cortex-m': [...Array.from({length: 13}, (_, i) => `R${i}`), 'SP', 'LR', 'PC'],
+        avr: [...Array.from({length: 32}, (_, i) => `R${i}`), 'SP', 'SREG', 'PC'],
+        riscv: [...Array.from({length: 32}, (_, i) => `x${i}`), 'pc'],
+        xtensa: Array.from({length: 16}, (_, i) => `a${i}`),
+    };
+    for (const [core, names] of Object.entries(cores)) {
+        it(`${core}: every named register, under its own name, with its own value`, () => {
+            const target = createLabwiredDebugTarget({adapter: {...stubAdapter(), sim: namedSim(names)}});
+            const regs = target.regs();
+            assert.equal(regs.pc, 0x100, 'pc is get_pc, not the PC slot');
+            assert.equal('r' in regs, false, 'no `r` array: inspect() would read it as an 8051');
+            names.forEach((name, i) => {
+                const key = name.toLowerCase();
+                if (key === 'pc') return;
+                assert.equal(regs[key], i * 3 + 1, `${key} is register ${i}`);
+            });
+            const shown = Object.keys(regs).filter(k => k !== 'pc' && k !== 'cycles');
+            assert.equal(shown.length, names.filter(n => n.toLowerCase() !== 'pc').length);
+        });
+    }
+    it('avr: R13/R14 keep their names and SP/SREG are present (the old ARM labelling lost them)', () => {
+        const target = createLabwiredDebugTarget({adapter: {...stubAdapter(), sim: namedSim(cores.avr)}});
+        const regs = target.regs();
+        assert.equal(regs.r13, 13 * 3 + 1);
+        assert.equal(regs.r14, 14 * 3 + 1);
+        assert.equal(regs.r31, 31 * 3 + 1);
+        assert.equal(regs.sp, 32 * 3 + 1);
+        assert.equal(regs.sreg, 33 * 3 + 1);
+        assert.equal('lr' in regs, false);
+    });
+});

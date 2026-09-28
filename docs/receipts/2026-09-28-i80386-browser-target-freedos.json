@@ -4,7 +4,7 @@
   "scope": "Headless browser-target FreeDOS boot and C: mount; no GUI widget or Doom acceptance.",
   "executionRevision": "e96cee7bdbafa289cd03c70a75ac9bf1bb167520",
   "sourceSha256": {
-    "src/debug-target-factory.js": "1467d8e8b8b9e0fb6ccb7f73f4083bb503bc00858456fba8cc5f9ac58f2c459c",
+    "src/debug-target-factory.js": "3539e855367b448513bc999771fd83f9c8a8f4408687db87ae621435431e35e9",
     "src/i80386-adapter.js": "76ce7241e141861be087da530a40cec76f0644debfb9bcc0dcf2511b152e9ddd",
     "src/i8086-debug.js": "b09e265d7664557e6b96031223fc88aeb733a562de23e5182cdf582bf9879a5e",
     "src/machine-media.js": "e9f28283137c71d0296da7f73b8ab5ae5a62f984cbe48bc0d3535936feffab09",

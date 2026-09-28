@@ -21,6 +21,8 @@ const check = process.argv.includes('--check');
 const descriptors = [
     ['STM32F0_CHIP_YAML', 'stm32f0-chip.yaml'],
     ['ATMEGA328P_CHIP_YAML', 'atmega328p-chip.yaml'],
+    ['NRF52833_CHIP_YAML', 'nrf52833-chip.yaml'],
+    ['ATSAMD51_CHIP_YAML', 'atsamd51-chip.yaml'],
 ];
 
 let next = readFileSync(target, 'utf8');

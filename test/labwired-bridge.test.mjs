@@ -163,6 +163,31 @@ describe('labwired bridge: our netlist → their system manifest', () => {
         assert.match(built.chipYaml, /arch: "avr"/);
     });
 
+    it('bridges micro:bit v2 and PyBadge at their zero-based flash geometry', () => {
+        const microbit = buildLabwiredSystem({
+            netlist: netlist([['U1', 'microbit'], ['D1', 'led']], [['sig', 'U1.p0', 'D1.anode']]),
+            chipKind: 'microbit_v2',
+        });
+        assert.equal(microbit.ok, true, JSON.stringify(microbit.refusals));
+        assert.equal(microbit.flashOrigin, 0);
+        assert.deepEqual(microbit.pins.p0, { peripheral: 'gpio0', pin: 2 });
+
+        const pybadge = buildLabwiredSystem({
+            netlist: netlist([['U1', 'pybadge'], ['D1', 'led']], [['sig', 'U1.d13', 'D1.anode']]),
+            chipKind: 'pybadge',
+        });
+        assert.equal(pybadge.ok, true, JSON.stringify(pybadge.refusals));
+        assert.equal(pybadge.flashOrigin, 0);
+        assert.deepEqual(pybadge.pins.d13, { peripheral: 'porta', pin: 23 });
+        assert.equal(labwiredAdapterOptionsFor({
+            netlist: netlist([['U1', 'pybadge']], []), chipKind: 'pybadge', firmware: null,
+        }).firmwareAddress, 0x4000);
+        assert.equal(labwiredAdapterOptionsFor({
+            netlist: netlist([['U1', 'pybadge']], []), chipKind: 'pybadge', firmware: null,
+            firmwareAddress: 0,
+        }).firmwareAddress, 0);
+    });
+
     it('no controller, or two, refuses rather than guessing', () => {
         const empty = buildLabwiredSystem({ netlist: netlist([['R1', 'resistor']], []) });
         assert.equal(empty.refusals[0].code, 'mcu-absent');
