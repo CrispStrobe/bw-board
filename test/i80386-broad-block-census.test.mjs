@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ExperimentalI80386ATMachine,
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
-import {classifyI80386BroadForm,createI80386BroadBlockCensus} from
+import {classifyI80386BroadForm,classifyI80386SelectedForm,
+  createI80386BroadBlockCensus} from
   '../src/experimental/i80386-broad-block-census.js';
 
 const CODE=0x80120000,PHYSICAL=0x120000;
@@ -239,4 +240,99 @@ test('Jcc successor refusal histograms partition linked reasons without changing
 test('refusal opcode options must be booleans',()=>{
   assert.throws(()=>createI80386BroadBlockCensus({refusalOpcodes:1}),TypeError);
   assert.throws(()=>createI80386BroadBlockCensus({linkJcc:'yes'}),TypeError);
+  assert.throws(()=>createI80386BroadBlockCensus({selectedFormsPotential:1}),TypeError);
+});
+
+test('selected scenario admits exactly its observed forms and requires group ModR/M',()=>{
+  for(const [bytes,key] of [
+    [[0x3a,0xe0],'3a'],[[0x3c,1],'3c'],[[0x24,1],'24'],
+    [[0x66,0x3d,1,0],'3d'],[[0x05,1,0,0,0],'05'],
+    [[0x25,1,0,0,0],'25'],[[0xa8,1],'a8'],[[0x84,0xe0],'84'],
+    [[0xf6,0xc4,1],'f6/0'],[[0x66,0xf7,0xc4,1,0],'f7/0'],
+    [[0x0f,0xb6,0xc4],'0fb6'],[[0x0f,0xb7,0xc0],'0fb7'],
+  ])assert.equal(classifyI80386SelectedForm(bytes),key);
+  for(const bytes of [[0xf6],[0xf7],[0x3a],[0x84],[0x0f,0xb6],
+    [0x0f,0xb7],[0xff,0xc0],[0x0f,0xb3,0xc0],
+    ...Array.from({length:7},(_,index)=>[0xf6,0xc0+8*(index+1)]),
+    ...Array.from({length:7},(_,index)=>[0xf7,0xc0+8*(index+1)])])
+    assert.equal(classifyI80386SelectedForm(bytes),null);
+});
+
+test('selected scenario joins Jcc to new form while old views and guest stay equal',()=>{
+  const code=[0x75,0,0x3c,1,0x24,1,0xa8,1,0x90];
+  const measured=fixture(code),ordinary=fixture(code);
+  measured.cpu.eflags|=0x40;ordinary.cpu.eflags|=0x40;
+  const selected=observeSteps(measured,createI80386BroadBlockCensus({
+    linkJcc:true,refusalOpcodes:true,selectedFormsPotential:true}),5);
+  const baseline=observeSteps(ordinary,createI80386BroadBlockCensus({
+    linkJcc:true,refusalOpcodes:true}),5);
+  assert.deepEqual(state(measured),state(ordinary));
+  assert.deepEqual(measured.mem.slice(0x1000,0x5000),ordinary.mem.slice(0x1000,0x5000));
+  assert.deepEqual(selected.modes,baseline.modes);
+  assert.deepEqual(selected.jccLinkedPotential,baseline.jccLinkedPotential);
+  assert.deepEqual(selected.refusalOpcodeHistograms,baseline.refusalOpcodeHistograms);
+  const view=selected.selectedFormsPotential.modes.protected32;
+  assert.equal(view.potentialSteps,5);
+  assert.equal(view.addedSteps,3);
+  assert.deepEqual(view.addedForms,{'3c':1,'24':1,a8:1});
+  assert.equal(view.jccJoined.ambiguous,1);
+  assert.deepEqual(view.runLengthHistogram,{'5':1});
+  assert.equal(view.runsAtLeast4,1);
+  assert.equal(view.stepsInRunsAtLeast4,5);
+  assert.equal(Object.entries(view.runLengthHistogram).reduce((n,[length,count])=>
+    n+Number(length)*count,0),view.potentialSteps);
+  assert.equal(Object.values(view.addedForms).reduce((n,count)=>n+count,0),view.addedSteps);
+  assert.equal(Object.values(view.jccJoined).reduce((n,count)=>n+count,0)+
+    Object.values(view.jccRefusals).reduce((n,count)=>n+count,0),view.jccAttempts);
+});
+
+test('selected scenario excludes REP and LOCK while tracking no-retirement break',()=>{
+  assert.equal(classifyI80386BroadForm([0xf3,0x3c,1]).reason,'repeat-non-string');
+  assert.equal(classifyI80386BroadForm([0xf0,0x24,1]).reason,'lock-prefix');
+  for(const code of [[0xf3,0x3c,1],[0xf0,0x24,1]]){
+    const machine=fixture(code);
+    const report=observeSteps(machine,createI80386BroadBlockCensus({
+      selectedFormsPotential:true}),1);
+    assert.equal(report.selectedFormsPotential.modes.protected32.addedSteps,0);
+  }
+  const idle=fixture([0x90]);
+  const census=createI80386BroadBlockCensus({selectedFormsPotential:true});
+  const restore=census.attach(idle);
+  try{
+    census.observe(idle);idle.step();census.retired(idle);
+    census.observe(idle);census.retired(idle);
+  }finally{restore();}
+  assert.equal(census.report().modes.protected32.noRetirement,1);
+  assert.equal(census.report().selectedFormsPotential.modes.protected32.runEndReasons['no-retirement'],1);
+});
+
+test('selected high-byte register forms preserve ordinary execution',()=>{
+  const code=[0x3a,0xe0,0x84,0xe0,0xf6,0xc4,1,0x0f,0xb6,0xc4];
+  const measured=fixture(code),ordinary=fixture(code);
+  measured.cpu.eax=0x1234;ordinary.cpu.eax=0x1234;
+  const report=observeSteps(measured,createI80386BroadBlockCensus({
+    selectedFormsPotential:true}),4);
+  for(let i=0;i<4;i++)ordinary.step();
+  assert.deepEqual(state(measured),state(ordinary));
+  const view=report.selectedFormsPotential.modes.protected32;
+  assert.deepEqual(view.addedForms,{'3a':1,'84':1,'f6/0':1,'0fb6':1});
+  assert.equal(view.potentialSteps,4);
+});
+
+test('selected Jcc view refuses observed event, redirect, page and mode changes',()=>{
+  for(const [name,code,offset,between,reason] of [
+    ['event',[0x75,0,0x3c,1],0,(step,_machine,census)=>{
+      if(step===1)census.externalEvent();},'external-event'],
+    ['redirect',[0x75,0,0x90,0x90,0x3c,1],0,(step,machine)=>{
+      if(step===1)machine.cpu.eip++;},'nonsequential-entry'],
+    ['page',[0x75,0,0x3c,1],0xffe,()=>{},'linear-page-change'],
+    ['mode',[0x75,0,0x3c,1],0,(step,machine)=>{
+      if(step===1)machine.cpu.segmentCaches[1]={
+        ...machine.cpu.segmentCaches[1],default32:false};},'mode-change'],
+  ]){
+    const report=observeSteps(fixture(code,offset),createI80386BroadBlockCensus({
+      selectedFormsPotential:true}),2,between).selectedFormsPotential;
+    assert.equal(report.modes.protected32.jccRefusals[reason],1,name);
+    assert.equal(report.modes.protected32.jccJoined.ambiguous??0,0,name);
+  }
 });

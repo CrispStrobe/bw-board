@@ -25,6 +25,28 @@ ahead, and the next instruction must independently pass the existing
 syntactic/locality filter before it can join. These guards still do not
 establish a physical-code-page, data, mutation, event, or fault proof.
 
+To measure a **parallel selected-form scenario**, set
+`AT_BROAD_BLOCK_SELECTED_FORMS=1` or `XV6_BROAD_BLOCK_SELECTED_FORMS=1` with
+the respective broad-census switch. The `selectedFormsPotential` view uses
+the same actual fetched-byte trace and the same Jcc-successor checks, without
+changing guest execution or any existing `modes`, `jccLinkedPotential`, or
+`refusalOpcodeHistograms` counter. It additionally treats only `3a` (CMP
+r8,r/m8), `3c` (CMP AL,imm8), `24` (AND AL,imm8), `3d` (CMP accumulator,imm),
+`05` (ADD accumulator,imm), `25` (AND accumulator,imm), `a8` (TEST AL,imm8),
+`84` (TEST r/m8,r8), `f6/0` and `f7/0` (TEST), and `0f b6/b7` (MOVZX) as
+potential linear forms. The ModR/M byte must have been fetched for `3a`,
+`84`, `f6/f7`, and `0f b6/b7`; `f6/f7` extensions other than `/0` remain
+refusals. LOCK and REP/REPNZ non-string prefixes remain refusals, while size,
+address, and segment prefixes follow the existing syntactic filter. These
+completed ordinary steps do **not** prove operand width, memory access,
+page-crossing data safety, flags, faults, or native execution correctness.
+`addedSteps` partitions into `addedForms`; selected run histogram lengths
+sum to selected `potentialSteps`, and Jcc attempts partition into joins plus
+refusals. The predeclared gate is at least **50% selected potential completed
+steps** and **mean selected linked run length at least four**, each on both
+pinned Windows 60M and lean xv6 forktest. A pass would only justify a later
+proof and serial paired user-CPU A/B; it is not a speed claim.
+
 The linked view reports branch outcomes and joins as taken, fallthrough, or
 ambiguous when both addresses coincide. It counts observed successor pages
 as same or cross, including outcome-specific counts, and records the first

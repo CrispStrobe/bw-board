@@ -62,6 +62,20 @@ const jccOf=(bytes,eip,default32,postEip)=>{
   return {outcome:target===fallthrough?'ambiguous':
     postEip===target?'taken':'fallthrough'};
 };
+const SELECTED_SIMPLE=new Set([0x24,0x3c,0x3d,0x05,0x25,0xa8]);
+const SELECTED_MODRM=new Set([0x3a,0x84]);
+export const classifyI80386SelectedForm=bytes=>{
+  let at=0;
+  while(at<bytes.length&&PREFIXES.has(bytes[at]))at++;
+  const op=bytes[at],modrm=bytes[at+1];
+  if(SELECTED_SIMPLE.has(op))return hex(op);
+  if(SELECTED_MODRM.has(op)&&modrm!==undefined)return hex(op);
+  if((op===0xf6||op===0xf7)&&modrm!==undefined&&((modrm>>>3)&7)===0)
+    return `${hex(op)}/0`;
+  if(op===0x0f&&(bytes[at+1]===0xb6||bytes[at+1]===0xb7)&&
+      bytes[at+2]!==undefined)return `0f${hex(bytes[at+1])}`;
+  return null;
+};
 
 // This is an opcode-family hypothesis, not a semantic or fault-safety proof.
 export function classifyI80386BroadForm(bytes) {
@@ -89,10 +103,11 @@ export function classifyI80386BroadForm(bytes) {
 }
 
 export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
-  refusalOpcodes=false}={}){
+  refusalOpcodes=false,selectedFormsPotential=false}={}){
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>256)
     throw new RangeError('broad-block census run budget must be 1..256');
-  if(typeof linkJcc!=='boolean'||typeof refusalOpcodes!=='boolean')
+  if(typeof linkJcc!=='boolean'||typeof refusalOpcodes!=='boolean'||
+      typeof selectedFormsPotential!=='boolean')
     throw new TypeError('broad-block census options must be boolean');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,retiredSteps:0,potentialSteps:0,nonCandidateSteps:0,
@@ -118,8 +133,19 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
       jccSuccessorPrefixedForm:{},jccSuccessorGroupExtension:{},
     }])),
   }:null;
+  const selected=selectedFormsPotential?{
+    schema:'bw.i80386-selected-forms-potential.v1',
+    modes:Object.fromEntries(MODES.map(mode=>[mode,{
+      potentialSteps:0,addedSteps:0,addedForms:{},
+      runs:0,runLengthHistogram:{},runEndReasons:{},
+      jccAttempts:0,jccOutcomes:{},jccJoined:{},jccRefusals:{},
+      successorPages:{},successorPageByOutcome:{},
+      runsAtLeast4:0,stepsInRunsAtLeast4:0,
+      runsAtLeast8:0,stepsInRunsAtLeast8:0,
+    }])),
+  }:null;
   let machine=null,fetch8=null,fetchN=null,own8=null,ownN=null,pending=null;
-  let bytes=[],run=null,linkedRun=null,externalEpoch=0;
+  let bytes=[],run=null,linkedRun=null,selectedRun=null,externalEpoch=0;
   const endRun=reason=>{
     if(!run)return;
     const bucket=modes[run.mode];
@@ -208,6 +234,72 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
     }else if(form.kind!=='linear')endLinkedRun(form.kind);
     else if(linkedRun.length===maxRun)endLinkedRun('run-budget');
   };
+  const endSelectedRun=reason=>{
+    if(!selectedRun)return;
+    const bucket=selected.modes[selectedRun.mode],length=selectedRun.length;
+    bucket.runs++;bump(bucket.runLengthHistogram,length);
+    bump(bucket.runEndReasons,reason);
+    if(length>=4){bucket.runsAtLeast4++;bucket.stepsInRunsAtLeast4+=length;}
+    if(length>=8){bucket.runsAtLeast8++;bucket.stepsInRunsAtLeast8+=length;}
+    if(selectedRun.jcc)bump(bucket.jccRefusals,reason);
+    selectedRun=null;
+  };
+  const selectedRetired=(before,cpu,form,reason,addedForm)=>{
+    if(!selected)return;
+    const bucket=selected.modes[before.mode],page=before.linear>>>12;
+    if(selectedRun){
+      const prior=selectedRun,wasJcc=!!prior.jcc;
+      if(wasJcc&&before.fetchCs===before.cs&&before.fetchEip===before.eip){
+        const pageKind=page===prior.page?'same':'cross',priorBucket=selected.modes[prior.mode];
+        bump(priorBucket.successorPages,pageKind);
+        bump(priorBucket.successorPageByOutcome,`${prior.jcc.outcome}:${pageKind}`);
+      }
+      const breakReason=prior.mode!==before.mode?'mode-change':
+        prior.cs!==before.cs?'cs-change':
+        prior.page!==page?'linear-page-change':
+        prior.nextEip!==before.eip?'nonsequential-entry':
+        wasJcc&&prior.externalEpoch!==externalEpoch?'external-event':
+        wasJcc&&before.chipEventDue?'chip-event-due':
+        wasJcc&&(prior.machineCycles!==before.machineCycles||
+          prior.chipDebt!==before.chipDebt||prior.chipDeadline!==before.chipDeadline)?
+          'board-state-change':
+        wasJcc&&!sameIdentity(prior.identity,before.identity)?'identity-change':
+        reason;
+      if(breakReason)endSelectedRun(breakReason);
+      else if(wasJcc){
+        bump(bucket.jccJoined,prior.jcc.outcome);
+        prior.jcc=null;
+      }
+    }
+    if(reason)return;
+    if(!selectedRun)selectedRun={mode:before.mode,cs:before.cs,page,length:0};
+    selectedRun.length++;
+    selectedRun.nextEip=cpu.eip>>>0;
+    selectedRun.machineCycles=machine.cycles;
+    selectedRun.chipDebt=machine._chipDebt;
+    selectedRun.chipDeadline=machine._chipDeadline;
+    selectedRun.externalEpoch=externalEpoch;
+    selectedRun.identity=identityOf(machine);
+    bucket.potentialSteps++;
+    if(addedForm){bucket.addedSteps++;bump(bucket.addedForms,addedForm);}
+    if(form.kind==='control-flow'){
+      const jcc=jccOf(bytes,before.eip,before.default32,cpu.eip>>>0);
+      if(jcc){
+        bucket.jccAttempts++;
+        const postReason=cpu.cs!==before.cs||modeOf(cpu)!==before.mode?
+          'post-jcc-mode-or-cs-change':
+          !sameIdentity(before.identity,selectedRun.identity)?
+            'post-jcc-identity-change':jcc.reason;
+        if(postReason){selectedRun.jcc=jcc;endSelectedRun(postReason);}
+        else {
+          bump(bucket.jccOutcomes,jcc.outcome);
+          selectedRun.jcc=jcc;
+          if(selectedRun.length===maxRun)endSelectedRun('run-budget');
+        }
+      }else endSelectedRun('control-flow');
+    }else if(form.kind!=='linear')endSelectedRun(form.kind);
+    else if(selectedRun.length===maxRun)endSelectedRun('run-budget');
+  };
   const recordByte=(cpu,eip,value)=>{
     if(!pending||bytes.length>=15)return;
     if(bytes.length===0){pending.fetchCs=cpu.cs;pending.fetchEip=eip>>>0;}
@@ -241,6 +333,7 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
         if(cpu._fetchN===wrappedN){if(ownN)Object.defineProperty(cpu,'_fetchN',ownN);else delete cpu._fetchN;}
         endRun('end-of-observation');
         if(linked)endLinkedRun('end-of-observation');
+        if(selected)endSelectedRun('end-of-observation');
         machine=null;pending=null;
       };
     },
@@ -250,7 +343,7 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
       const cpu=target.cpu,mode=modeOf(cpu),eip=cpu.eip>>>0;
       pending={mode,cs:cpu.cs,eip,linear:linearOf(cpu,eip),cycles:cpu.cycles,
         fetchCs:null,fetchEip:null,
-        ...(linked?{default32:!!cpu.segmentCaches[1].default32,
+        ...((linked||selected)?{default32:!!cpu.segmentCaches[1].default32,
           identity:identityOf(target),machineCycles:target.cycles,
           chipDebt:target._chipDebt,chipDeadline:target._chipDeadline,
           chipEventDue:target._chipDebt>=target._chipDeadline}:{})};
@@ -261,12 +354,14 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
       const before=pending,cpu=target.cpu,bucket=modes[before.mode];
       pending=null;
       if(cpu.cycles===before.cycles){bucket.noRetirement++;endRun('no-retirement');
-        if(linked)endLinkedRun('no-retirement');return;}
+        if(linked)endLinkedRun('no-retirement');
+        if(selected)endSelectedRun('no-retirement');return;}
       bucket.retiredSteps++;
       if(before.fetchCs!==before.cs||before.fetchEip!==before.eip){
         bucket.redirectedSteps++;bucket.nonCandidateSteps++;
         bump(bucket.firstRefusals,'entry-redirect');endRun('entry-redirect');
-        if(linked)endLinkedRun('entry-redirect');return;
+        if(linked)endLinkedRun('entry-redirect');
+        if(selected)endSelectedRun('entry-redirect');return;
       }
       if(run&&(run.mode!==before.mode||run.cs!==before.cs||
           run.nextEip!==before.eip||run.page!==(before.linear>>>12)))
@@ -278,6 +373,12 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
         (before.linear>>>12)!==(lastLinear>>>12)?'instruction-page-crossing':
         form.reason??null;
       linkedRetired(before,cpu,form,reason);
+      if(selected){
+        const addedForm=(reason==='unsupported-opcode'||reason==='unsupported-0f')?
+          classifyI80386SelectedForm(bytes):null;
+        selectedRetired(before,cpu,addedForm?{kind:'linear'}:form,
+          addedForm?null:reason,addedForm);
+      }
       if(reason){
         recordRefusalOpcode(before.mode,reason);
         bucket.nonCandidateSteps++;bump(bucket.firstRefusals,reason);endRun(reason);return;
@@ -293,10 +394,14 @@ export function createI80386BroadBlockCensus({maxRun=64,linkJcc=false,
       modes[pending.mode].abortedCalls++;
       pending=null;endRun('aborted-call');
       if(linked)endLinkedRun('aborted-call');
+      if(selected)endSelectedRun('aborted-call');
     },
-    externalEvent(){externalEpoch++;if(linkedRun?.jcc)endLinkedRun('external-event');},
+    externalEvent(){externalEpoch++;
+      if(linkedRun?.jcc)endLinkedRun('external-event');
+      if(selectedRun?.jcc)endSelectedRun('external-event');},
     report(){return {schema:'bw.i80386-broad-block-census.v1',maxRun,modes,
       ...(linked?{jccLinkedPotential:linked}:{}),
-      ...(refusalOpcodeHistograms?{refusalOpcodeHistograms}:{})};},
+      ...(refusalOpcodeHistograms?{refusalOpcodeHistograms}:{}),
+      ...(selected?{selectedFormsPotential:selected}:{})};},
   };
 }
