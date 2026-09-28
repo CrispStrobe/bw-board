@@ -22,6 +22,8 @@ function pair(){
       cmosType:2,cmosEquipment:0,events:[],mouseEnabled:false}};
   const raw=structuredClone(baseline);
   raw.executionRevision='abc';raw.sourceSha256={'../src/experimental/i80386.js':sha('core')};
+  baseline.executionRevision=raw.executionRevision;
+  baseline.sourceSha256=structuredClone(raw.sourceSha256);
   raw.crossModeTraceObserver={schema:'bw.i80386-cross-mode-potential-trace-observer.v1',
     modes,completedStepCalls:0,eligibleRetiredOrdinals:0,repeatIterationCalls:0,
     noRetirementCalls:60_000_000,abortedCalls:0,uniqueOrdinalsInRunsAtLeast8:0,
@@ -38,6 +40,7 @@ test('reducer checks the full 60M partition, source and selected guest parity',(
     sourceBlobs:{'../src/experimental/i80386.js':'core'},
     rawSha256:'raw',baselineSha256:'baseline'});
   assert.equal(receipt.selectedReportedGuestParity,true);
+  assert.equal(receipt.sourceHashesVerified,true);
   assert.deepEqual(receipt.sourceHashDifferences,[]);
   assert.equal(receipt.observer.predeclaredOpportunityGatePassed,false);
 });
@@ -45,10 +48,36 @@ test('reducer checks the full 60M partition, source and selected guest parity',(
 test('reducer detects changed guest output and inconsistent denominators',()=>{
   const {raw,baseline}=pair();
   raw.cpu.eip=3;
-  const receipt=summarizeI80386CrossModePotentialTrace(raw,baseline);
+  const sourceBlobs={'../src/experimental/i80386.js':'core'};
+  const receipt=summarizeI80386CrossModePotentialTrace(raw,baseline,{sourceBlobs});
   assert.equal(receipt.selectedReportedGuestParity,false);
   assert.deepEqual(receipt.guestReportedFieldDifferences,['cpu']);
   raw.crossModeTraceObserver.modes.real.noRetirement--;
-  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline),
+  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline,{sourceBlobs}),
     /observer partition mismatch/);
+});
+
+test('reducer refuses a baseline from another revision or source hash map',()=>{
+  const {raw,baseline}=pair();
+  const sourceBlobs={'../src/experimental/i80386.js':'core'};
+  baseline.executionRevision='older';
+  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline,{sourceBlobs}),
+    /execution revisions/);
+  baseline.executionRevision=raw.executionRevision;
+  baseline.sourceSha256['../src/experimental/i80386.js']=sha('older core');
+  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline,{sourceBlobs}),
+    /complete source hash maps/);
+  baseline.sourceSha256=structuredClone(raw.sourceSha256);
+  baseline.sourceSha256['../src/extra.js']=sha('extra');
+  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline,{sourceBlobs}),
+    /complete source hash maps/);
+});
+
+test('reducer requires complete source blobs whose bytes match the report',()=>{
+  const {raw,baseline}=pair();
+  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline),
+    /source blobs do not cover/);
+  assert.throws(()=>summarizeI80386CrossModePotentialTrace(raw,baseline,{
+    sourceBlobs:{'../src/experimental/i80386.js':'wrong'}}),
+  /source bytes disagree/);
 });

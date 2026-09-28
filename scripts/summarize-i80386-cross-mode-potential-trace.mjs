@@ -29,15 +29,31 @@ export function summarizeI80386CrossModePotentialTrace(raw,baseline,{
   if(raw.steps!==60_000_000||raw.stop!=='budget'||
       baseline.steps!==60_000_000||baseline.stop!=='budget')
     throw new Error('paired reports did not complete pinned 60M budget');
+  if(typeof raw.executionRevision!=='string'||!raw.executionRevision||
+      raw.executionRevision!==baseline.executionRevision)
+    throw new Error('paired reports have different or missing execution revisions');
+  if(!raw.sourceSha256||typeof raw.sourceSha256!=='object'||
+      Array.isArray(raw.sourceSha256)||
+      !baseline.sourceSha256||typeof baseline.sourceSha256!=='object'||
+      Array.isArray(baseline.sourceSha256)||
+      Object.keys(raw.sourceSha256).length===0||
+      !same(Object.keys(raw.sourceSha256).sort(),
+        Object.keys(baseline.sourceSha256).sort())||
+      differencePaths(raw.sourceSha256,baseline.sourceSha256).length)
+    throw new Error('paired reports have different or missing complete source hash maps');
+  const sourceKeys=Object.keys(raw.sourceSha256).sort();
+  if(!same(sourceKeys,Object.keys(sourceBlobs).sort()))
+    throw new Error('source blobs do not cover the complete reported source hash map');
   const guestDifferences=guestFields.filter(field=>!same(raw[field],baseline[field]));
   const inputDifferences=inputFields.filter(field=>
     !same(raw.inputs?.[field],baseline.inputs?.[field]));
   const fullReportedDifferencePaths=differencePaths(raw,baseline);
   const unexpectedReportedDifferencePaths=fullReportedDifferencePaths.filter(path=>
-    path!=='executionRevision'&&path!=='sourceSha256'&&
-    !path.startsWith('sourceSha256.')&&path!=='crossModeTraceObserver');
+    path!=='crossModeTraceObserver');
   const sourceHashDifferences=Object.entries(sourceBlobs).filter(([path,bytes])=>
     raw.sourceSha256?.[path]!==sha(bytes)).map(([path])=>path);
+  if(sourceHashDifferences.length)
+    throw new Error(`source bytes disagree with reported hashes: ${sourceHashDifferences.join(', ')}`);
   if(!observer.modes||MODES.some(mode=>!observer.modes[mode]))
     throw new Error('missing observer mode');
   for(const mode of MODES){
@@ -76,7 +92,8 @@ export function summarizeI80386CrossModePotentialTrace(raw,baseline,{
     throw new Error('observer aggregate or gate mismatch');
   return {schema:'bw.i80386-cross-mode-potential-trace-receipt.v1',
     sourceRevision:raw.executionRevision,
-    sourceHashDifferences,privateRawReportSha256:rawSha256,
+    sourceHashesVerified:true,sourceHashDifferences,
+    privateRawReportSha256:rawSha256,
     privateBaselineReportSha256:baselineSha256,
     completedSteps:raw.steps,guestReportedFieldDifferences:guestDifferences,
     inputPinDifferences:inputDifferences,fullReportedDifferencePaths,
