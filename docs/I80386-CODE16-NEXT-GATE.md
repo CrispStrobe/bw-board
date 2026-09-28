@@ -141,3 +141,71 @@ fault cuts, bytewise and direct 32-bit immediate fetch reconstruction,
 physical page-table and code writes, and host code mutation. These are
 observer correctness checks, not proof that a future executor may safely
 implement the same grammar.
+
+The single pinned 60M Windows 3.11 census finished at source
+`e1fd5c60a30e8c5a8dcc3d13ddc96a49fa45ad95`; its
+[media-neutral receipt](receipts/2026-09-28-i80386-code16-event-run-observer.json)
+retains every mode's full run-length histogram and refusal counts. The four
+vCPU KVM Intel Xeon Skylake host used Node 20.20.2. Wall/user/system CPU
+seconds were 497.76/497.82/3.32. These are observer overhead, not an
+executor speed measurement. The input pins and all selected reported guest
+fields match both the retained opt-in 60M report and an older ordinary 60M
+report. The ordinary CPU, AT board, and base board source blobs match the
+retained opt-in report; opt-in executor modules and the runner differ.
+An exhaustive normalized JSON diff against that opt-in report has only
+14 expected provenance, observer, input-option, and opt-in diagnostic field
+paths, with zero other differences. The reducer records those paths without
+publishing their guest values.
+Neither report includes full RAM, disk state, or hidden CPU state.
+
+The run made 60,000,000 ordinary step calls. Exactly 59,971,215 retired an
+instruction; 28,785 no-retirement calls are outside the completed-step
+denominator. The real, protected16, and VM86 completed-step denominator is
+**44,693,708**: real 13,435,142; protected16 10,036,060; VM86 21,222,506.
+The observer admitted 21,516,981 unique ordinals in 7,254,598 disjoint
+runs, giving **2.966 retired steps per run**. Runs of length at least four
+contain 13,015,581 unique ordinals, **29.12%** of the denominator. The
+coverage gate passes, but the predeclared mean-four gate fails. No broader
+runtime executor is justified by this census.
+
+The largest cuts are ROM or mapped-code refusal in real and VM86, and
+prefix-bearing forms in protected16 (2,439,708 refusals). Ordinary input,
+chip, interrupt, fault and code-write boundaries remain cut. Prefix support
+is a plausible grammar extension, but its operand/address/segment semantics
+and frequency of safe joins were not established by this run. There is no
+measured, clearly safe addition shown to lift the all-run mean from 2.966
+to four. The source stays an observer only; the next experiment needs an
+owned prefix/stack semantic proof and a bounded, non-executing reach check
+before any executor work.
+
+At the observed admission count, mean four would require at most 5,379,245
+runs, **1,875,353 fewer** than observed (25.85% of current runs). More
+generally, if an extended observer admits `N` new ordinals and changes the
+run count by `ΔR`, it must satisfy `N - 4ΔR ≥ 7,501,411`. One newly admitted
+instruction that perfectly bridges two current runs reduces `ΔR` by one
+and improves this deficit by five, so even that idealized case needs at
+least **1,500,283** such bridges. A prefix instruction that forms a new
+isolated run makes the mean worse. These are exact arithmetic requirements,
+not a forecast from the 5,811,973 prefix refusals.
+
+The existing opt-in code16 WASM slice has differential proof for one
+`0x26` ES override on memory `8A`/`8B` loads and `3A` byte CMP, including
+segment selection, paging, faults and JZ flag effects. An observer-only
+extension could recognize **only those exact uncombined forms** after the
+ordinary CPU has fetched and retired them, with exact instruction length,
+non-device data addresses, unchanged segment/translation identity, and the
+same event/write cuts. The existing `0x66` form census parses instruction
+width but does not execute those forms natively; it is not an equivalent
+semantic proof. The old opt-in `first26` and `first66` histograms count
+dispatcher refusals, not all ordinary retired prefix steps or disjoint
+bridges, so they cannot establish the required 1.5M useful bridges.
+
+The next bounded measurement would first add owned ES-versus-DS/SS,
+paged/fault, MMIO, code-write, taken/fallthrough JZ, and event-cut tests to
+an **observer-only** shadow classifier for exact `26 8A/8B/3A` forms. After
+those pass and a VPS window is available, at most one pinned 60M ordinary
+replay would compare all selected reported guest fields and input pins,
+report incremental admitted ordinals, bridges versus isolated additions,
+the full disjoint run histogram, and the same two gates. It must not infer
+full RAM/disk parity or runtime speed from that replay. No `0x66` or
+general prefix support follows without separate owned proof.
