@@ -39,6 +39,7 @@ const EI_NIDENT = 16;
 const EHDR_SIZE = 52;   // ELF32
 const PHDR_SIZE = 32;   // ELF32
 const EM_ARM = 40;
+const EM_AVR = 83;
 const ET_EXEC = 2;
 const PT_LOAD = 1;
 const PF_X = 1, PF_R = 4;
@@ -113,6 +114,54 @@ export function binToElf (image, opts = {}) {
   return out;
 }
 
+/**
+ * Wrap a flat AVR flash image in the ELF32 shape LabWired's AVR loader takes.
+ * AVR reset starts at flash byte 0, so unlike Cortex-M there is no vector-table
+ * entry word to interpret. This deliberately carries no symbols: a raw image
+ * had none to preserve.
+ */
+export function avrBinToElf (image, opts = {}) {
+  if (!(image instanceof Uint8Array)) throw new TypeError('avrBinToElf: image must be a Uint8Array');
+  if (image.length === 0) throw new Error('avrBinToElf: AVR flash image is empty');
+  const loadAddress = opts.loadAddress ?? 0;
+  const entry = opts.entry ?? 0;
+  const dataOffset = EHDR_SIZE + PHDR_SIZE;
+  const out = new Uint8Array(dataOffset + image.length);
+  const dv = new DataView(out.buffer);
+
+  out.set([0x7f, 0x45, 0x4c, 0x46], 0);
+  out[4] = 1; // ELFCLASS32
+  out[5] = 1; // ELFDATA2LSB
+  out[6] = 1; // EV_CURRENT
+
+  let o = EI_NIDENT;
+  dv.setUint16(o, ET_EXEC, true); o += 2;
+  dv.setUint16(o, EM_AVR, true); o += 2;
+  dv.setUint32(o, 1, true); o += 4;
+  dv.setUint32(o, entry >>> 0, true); o += 4;
+  dv.setUint32(o, EHDR_SIZE, true); o += 4;
+  dv.setUint32(o, 0, true); o += 4;
+  dv.setUint32(o, 0, true); o += 4; // no AVR architecture flags are needed
+  dv.setUint16(o, EHDR_SIZE, true); o += 2;
+  dv.setUint16(o, PHDR_SIZE, true); o += 2;
+  dv.setUint16(o, 1, true); o += 2;
+  dv.setUint16(o, 40, true); o += 2;
+  dv.setUint16(o, 0, true); o += 2;
+  dv.setUint16(o, 0, true);
+
+  o = EHDR_SIZE;
+  dv.setUint32(o, PT_LOAD, true); o += 4;
+  dv.setUint32(o, dataOffset, true); o += 4;
+  dv.setUint32(o, loadAddress >>> 0, true); o += 4;
+  dv.setUint32(o, loadAddress >>> 0, true); o += 4;
+  dv.setUint32(o, image.length, true); o += 4;
+  dv.setUint32(o, image.length, true); o += 4;
+  dv.setUint32(o, PF_R | PF_X, true); o += 4;
+  dv.setUint32(o, 2, true);
+  out.set(image, dataOffset);
+  return out;
+}
+
 /** True when `bytes` already looks like an ELF, so a caller can accept either. */
 export function isElf (bytes) {
   return bytes instanceof Uint8Array && bytes.length >= 4 &&
@@ -124,7 +173,8 @@ export function isElf (bytes) {
  * The point of entry for a caller that does not want to care which it has.
  */
 export function toLoadableElf (bytes, opts) {
-  return isElf(bytes) ? bytes : binToElf(bytes, opts);
+  if (isElf(bytes)) return bytes;
+  return opts?.architecture === 'avr' ? avrBinToElf(bytes, opts) : binToElf(bytes, opts);
 }
 
 export default binToElf;
