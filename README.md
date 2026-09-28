@@ -245,8 +245,9 @@ boot banner means anything.
 
 The current 386 receipts are deliberately bounded. Windows 3.11 enhanced mode
 has verified desktop, DOS-box persistence, Solitaire, and Minesweeper milestones, while
-general Windows compatibility remains unaccepted. Doom's short demo is accepted, the full
-`demo1` timedemo still reaches its diagnostic ceiling without a completion/FPS
+general Windows compatibility remains unaccepted. Doom's short demo is accepted
+in CLI and one strict Lite Widgets browser replay; the full `demo1` timedemo
+still reaches its diagnostic ceiling without a completion/FPS
 result. The old 8086/8088 and Z80 sweeps remain the architectural ground truth;
 the 286/386 work adds focused ISA/protection/AT receipts rather than silently
 turning partial OS boots into compatibility claims.

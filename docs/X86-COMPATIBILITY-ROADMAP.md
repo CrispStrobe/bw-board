@@ -10,8 +10,10 @@ Current checkpoint (2026-09-28): the separately identified private Windows
 Manager, a keyboard-driven DOS prompt, a persisted file after fresh boot,
 Solitaire and Minesweeper. Original Doom 1.9 [completed an owned short demo
 and returned to DOS](I80386-DOOM.md), with a separate keyboard gameplay
-replay. These are bounded software results; full 386DX ISA coverage, general
-Windows/Doom compatibility, Doom GUI replay, and physical-hardware RTx remain
+replay. A [strict Lite Widgets replay](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/receipts/2026-09-28-i80386-doom-widgets-browser.json)
+also completed that short demo, matched the guest and canvas RGB frame, and
+returned to DOS. These are bounded software results; full 386DX ISA coverage,
+general Windows/Doom compatibility, and physical-hardware RTx remain
 open. The [opt-in native speed path](I80386-10X-PERFORMANCE.md) has measured
 xv6 gains, but the 10× target is not met. The historical investigation below
 records what was known at earlier revisions.
@@ -26,7 +28,7 @@ records what was known at earlier revisions.
 | 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Landed at `3cd5927`; all three hosted qualification workflows green |
 | 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; original386 4KiB paging, reset, scalar I/O, privilege transitions and VM86 have bounded tests; complete ISA, tasking and full OS acceptance remain |
 | Windows | Windows 3.0 standard mode, then a separately identified 386 enhanced-mode configuration; desktop plus keyboard-driven application open/edit/save/reopen | Windows 3.0 standard-mode Notepad save/reopen passed; a private Windows 3.11 enhanced-mode run reached Program Manager, File Manager, a keyboard-driven DOS prompt with persistent file round trip, Solitaire and Minesweeper. General application compatibility remains open; see [enhanced-mode evidence](I80386-WINDOWS-ENHANCED-PROBE.md). |
-| Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Original shareware 1.9 boots through FreeDOS and reaches E1M1; controlled input moves and fires. An owned 24-tic demo completes and returns to DOS. Full demo1, save/load, and [GUI replay](I80386-DOOM.md) remain open. |
+| Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Original shareware 1.9 boots through FreeDOS and reaches E1M1; controlled input moves and fires. An owned 24-tic demo completes and returns to DOS in CLI and one [strict Widgets browser replay](I80386-DOOM.md). Full demo1 and save/load remain open. |
 
 Windows 3.0 standard mode is the initial working target, not a claim covering
 all Windows releases. Doom's version and media hashes must be fixed before its

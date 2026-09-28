@@ -41,12 +41,12 @@ keyboard input through the Widgets canvas, returned to `A:\>`, and displayed
 keyboard path for that bounded run. The optional real-media acceptance script
 is in the Lite repository; the media and screenshots remain external.
 
-A GUI Doom acceptance still requires the actual circuits/widgets/code host to
-attach the pinned private Doom inputs, enter the short-demo command via set-1
-make/break events, and observe the completion line, DOS prompt, and audited
-320×200 frame specified in [I80386-DOOM.md](I80386-DOOM.md). No original Doom
-file is bundled here, and no GUI Doom keyboard/run/render replay has been
-accepted.
+A [strict Lite Chromium replay](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/receipts/2026-09-28-i80386-doom-widgets-browser.json)
+has now attached the pinned private Doom inputs through Machine Manager,
+entered the owned short-demo command through the Widgets keyboard, observed
+the completion line and returned DOS prompt, and matched the guest 320×200
+frame to the visible Widgets canvas. See [I80386-DOOM.md](I80386-DOOM.md).
+No original Doom file is bundled here; this is one bounded GUI run.
 Generic DOSBox `imgmount -size` CHS is handled by the CLI AT parser but is not
 yet honored by the browser adapter,
 which infers 4 heads and 17 sectors; the pinned short-demo HDD has that CHS.
