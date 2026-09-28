@@ -163,6 +163,20 @@ both cases. The seven infer and validate suites pass 101/101.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-28 CLAIM — root Codex: exact source-constrained inductor endpoint path,
+isolated worktree `/mnt/volume1/code/wt/board-source-constrained-inductor`, branch
+`lane/source-constrained-inductor-direct`, exact base
+`98808922c7e4ddcc8ae6155b636a5f02bafa825e`. Owns this row, the exact SPICE-SINE
+derivative in `src/source-waveforms.js`, a strict topology classifier and endpoint
+evaluation in `src/board.js`, and focused tests. Admit only one ideal inductor and
+one ideal SPICE-SINE current source across the same grounded two nets, with no
+scope/device/extra electrical element. This topology has no free storage history:
+KCL fixes inductor current from the source and its voltage is L*dI/dt, avoiding
+subtractive companion cancellation near current extrema. Everything else remains
+adaptive. Excludes tolerance/profile/budget changes, generic symbolic reduction,
+scope interpolation, other waveforms/topologies, CUI pins, corpus/workflows/docs,
+and unrelated devices.
+
 2026-09-28 DONE candidate — root Codex: transient selective-shunt correction, isolated
 worktree `/mnt/volume1/code/wt/board-transient-selective-shunt`, branch
 `lane/transient-selective-shunt`, exact base `c77f3d324f45836a35a7b3836f587db21756b31b`.
