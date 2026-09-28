@@ -57,7 +57,9 @@ boundary; otherwise I/O is a slow exit. An eight-instruction polling loop is
 useful only if this exit/re-entry cost is small enough. This is a different
 cost model from static code16 event runs that stopped at each I/O access.
 
-**Next measurable experiment, before a backend:** make an execution-neutral
+**Measured opportunity screen:** the [source-bound 60M Windows receipt](receipts/2026-09-28-i80386-cross-mode-potential-trace.json) passes the predeclared 30M/5M gate with 38.84M disjoint long-run ordinals overall and 21.74M protected16/VM86. This result uses a very optimistic ordinary-successful-execution grammar and assumes unproved I/O continuation; it does not establish an executable trace or speed gain. The original experiment specification follows.
+
+**Predeclared measurement (now completed):** make an execution-neutral
 observer on the current 60M Windows source that follows *actual retired*
 CS:EIP and mode transitions. Build disjoint potential traces using the full
 currently modeled opcode grammar, conditional branch outcomes, one physical
@@ -72,7 +74,7 @@ That is roughly half the step-call budget and only a necessary opportunity scree
 still require more than 20% cost reduction on covered steps for a 10% total
 gain, before entry and helper overhead. If it fails, do not build a backend.
 
-If it passes, prove a small branch + RAM load + port-I/O loop against ordinary
+With that screen passed, next prove a small branch + RAM load + port-I/O loop against ordinary
 state and exact device/fault order, then run an opt-in full Windows 60M and
 lean xv6 parity pair. Only after parity would three serial AB/BA/AB user-CPU
 pairs test a predeclared ≥10% mean Windows improvement with every pair
