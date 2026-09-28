@@ -1,0 +1,19 @@
+# Form-resolved 386 Windows admission: narrow grammar fails its opportunity gate
+
+The [predeclared form observer](I80386-FORM-RESOLVED-ADMISSION.md) completed a paired 60,000,000-step Windows run at board revision `c159bb35bc75812df7eff535131ff987f893ac18`. The [media-neutral reducer receipt](receipts/2026-09-28-i80386-form-resolved-admission.json) verifies the same revision and complete source-hash map, source bytes, selected guest state and input pins across ordinary baseline and observer-on arms. It contains private raw-report hashes without the guest transcript or media paths. The observer changes no guest execution. Its measured runtime is instrumentation overhead and supplies no speed estimate.
+
+The **15M total / 5M protected16+VM86** predeclared screen failed on both sides. There were 55,316,160 eligible retired instruction ordinals, 21,057,233 (38.07%) admitted by the typed grammar, but only 3,023,405 (5.47% of eligible, 14.36% of admitted) in disjoint admitted runs of at least eight. Protected16+VM86 contributed 2,710,535 of those, against the 5M threshold. For scale, the broader successful-ordinary-execution observer found 38,839,499 long-run ordinals on the same pinned guest path; those were an optimistic upper bound, not executable-form coverage.
+
+| Entry mode | Eligible ordinals | Typed admitted | Typed ordinals in ≥8 runs |
+| --- | ---: | ---: | ---: |
+| Real | 12,134,947 | 2,368,452 | 145,605 |
+| Protected16 | 9,068,664 | 4,774,350 | 1,470,308 |
+| VM86 | 20,282,881 | 8,524,952 | 1,240,227 |
+| Protected32 | 13,829,668 | 5,389,479 | 167,265 |
+| **Total** | **55,316,160** | **21,057,233** | **3,023,405** |
+
+The largest refusal reasons are 22,906,374 `unsupported-opcode`, 8,003,890 `unsafe-code`, 1,641,503 `identity-change`, and 1,273,443 `unsupported-group-extension`. These partition refusals by the observer's first applicable reason; an `unsafe-code` ordinal may also carry an unsupported opcode. Unsupported opcodes ended 7,606,510 typed runs, while unsupported group extensions ended 422,714. The strict code guard accounts for 5,531,915 real-mode and 2,471,975 VM86 refusals; expanding the instruction grammar does not resolve those. Identity, page, write and event cuts remain required even for an enlarged grammar.
+
+The raw observed opcode histogram suggests possible expansion targets but does not show which single form would lift ≥8-run coverage. Outside this subset, `C3` RET appeared 1,516,235 times, `8E` segment-register MOV 1,396,522, `E8` CALL 1,270,823, `50` PUSH 1,261,241, `FF` mixed extensions 1,161,162, `0F` primary escape 1,139,443, and `C1` shifts 682,511. Those are **all observed eligible ordinals**, not refusal-specific counts; `0F` hides its secondary opcode, and `FF` and `C1` hide extension and memory form. The accepted long runs contain 1,242,269 control instructions, 917,138 RAM reads, 118,897 RAM writes and only 79 optimistic byte port-I/O ordinals. These counts do not prove a reusable decoder or device-order contract.
+
+The next useful work is measurement, not the narrow executor. Cross-tab refusal reason with full opcode, prefixes, ModR/M extension, effective address class and neighboring run length, then replay one predeclared expanded grammar over ordered ordinals. Group `80/81/83` arithmetic extensions are a bounded first candidate because 1,273,443 group-extension refusals already identify a measurable cut, but its `/reg` and RAM-write/flags mix must be resolved before selecting operations. Stack, call/return, segment and mixed `FF` forms have high raw frequency yet need precise fault, commit and control-state semantics; they should enter an executable grammar only after those guards are proved. A new opportunity gate must be declared before its 60M pair. The current 15M/5M failure rules out building this narrow subset as a Windows performance backend.
