@@ -340,3 +340,31 @@ must instead handle more control, stack, segment and string boundaries per
 entry, or cut entry cost enough that short runs become worthwhile. Any
 executable prototype must preserve guest state and beat ordinary execution
 in serial paired full-workload CPU-time tests. The 10× target remains open.
+
+An opt-in [observed backward-Jcc locator](I80386-HOT-LOOP-LOCATOR.md) then
+measured actual branch recurrence without changing execution. Its
+[aggregate receipt](receipts/2026-09-28-i80386-hot-loop-locator.json) has
+exact guest-state parity for pinned Windows 60M and lean xv6; two Windows
+reports are byte-identical. Long traversal sums overlap at nested branches
+and are not disjoint executable coverage. The strongest retained Windows
+protected16 site with at least eight steps repeats 6,580 times for 52,640
+steps, just 0.524% of protected16 completed steps and 0.0878% of all 60M
+step calls. Windows evicted 6,052 candidate records, so retained per-site
+counts are lower bounds. The strongest xv6 protected32 exact-identity site
+repeats 8,961 times at 25 steps. Neither single site can deliver a whole-run
+10× gain.
+
+Targeted ordinary-step body traces exposed why those sites cannot yet be
+batched. The [Windows protected16 audit](I80386-WIN16-HOT-SITE-AUDIT.md)
+found a COM1 line-status `IN` on every eight-step traversal; the read has
+UART and IRQ side effects, and chip/event and I/O privilege boundaries must
+remain exact. The [xv6 proof audit](receipts/2026-09-28-i80386-xv6-hot-loop-prototype-no-go.json)
+found a 25-step page-table-writing `mappages` loop, an 18-step loop with a
+PDE-dependent PTE read, and a nine-step loop with dependent reads and a
+write. Current entry-only code/data windows cannot admit these without
+losing translation coherence or precise later-instruction faults. No
+executable prototype or CPU-time A/B was run after these safety refusals.
+The next architectural work is dynamic per-instruction translation and fault
+checkpoints, immediate page-table-write coherence, and bounded event-aware
+batching; any implementation still needs full Windows/xv6 parity and paired
+CPU-time evidence before a speed claim.
