@@ -437,6 +437,7 @@ export function buildLabwiredSystem (opts = {}) {
     pins: chip.pins,
     clockHz: chip.clockHz,
     flashOrigin: chip.flashOrigin ?? 0x08000000,
+    firmwareOrigin: chip.firmwareOrigin ?? chip.flashOrigin ?? 0x08000000,
     name,
     bindings,
     attachments,
@@ -481,7 +482,7 @@ export function labwiredAdapterOptionsFor (opts = {}) {
     clockHz: built.clockHz,
     name: built.name,
     firmware: opts.firmware,
-    firmwareAddress: opts.firmwareAddress ?? built.flashOrigin,
+    firmwareAddress: opts.firmwareAddress ?? built.firmwareOrigin,
     refusals: built.refusals,
   };
 }
