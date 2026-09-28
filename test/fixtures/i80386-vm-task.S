@@ -42,12 +42,27 @@ pm:
   ljmp $0x20,$0
 hang: jmp hang
 handler:
+  movb $'K',0x0500
   movb $'H',%al
   outb %al,$0xe9
   iret
 vmcode:
   int $0x20
   movb $'V',%al
+  outb %al,$0xe9
+  movb 0x0500,%al
+  outb %al,$0xe9
+  movw %cs,%ax
+  addb $'0',%al
+  outb %al,$0xe9
+  movb %ah,%al
+  addb $'0',%al
+  outb %al,$0xe9
+  pushfw
+  popw %ax
+  shrw $12,%ax
+  andb $3,%al
+  addb $'0',%al
   outb %al,$0xe9
   outb %al,$0xf4
 vmhang: jmp vmhang

@@ -86,6 +86,8 @@ compiler symbols.
   The [interactive AT console](docs/I80386-AT-CONSOLE.md) accepts pinned raw
   disk images and DOSBox `imgmount` geometry. See `docs/I80386-EXPERIMENTAL.md` and the
   [Windows 3.1x enhanced-mode probe](docs/I80386-WINDOWS-ENHANCED-PROBE.md).
+  The [reference-emulator audit](docs/I80386-REFERENCE-EMULATORS.md) compares
+  its speed architecture and oracle roles with QEMU, Bochs, MAME and others.
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
@@ -103,12 +105,14 @@ extractors):
   8255 PPI, 8237 DMA, 8251 USART, CGA/EGA/Hercules, uPD765 FDC). Presets from
   a minimal-GPIO breadboard (`BLINK8086`) up to a PC/XT that boots real MS-DOS.
   Chip advance is deadline-batched, so the machine layer stays thin over the
-  core. **Speed (measured off-box on a fresh CI runner, functional path):**
-  ~150x a 4.77 MHz IBM XT for the bare core, and **~3.3x real time booting real
-  MS-DOS** through the full PC/XT. The *wired* path (GPIO pins driven into the
-  breadboard's MNA circuit solver) is not a single figure — it is the
-  functional speed gated by one circuit solve per pin edge, so it depends on
-  the circuit and how often the program toggles pins.
+  core. On the pinned 2026-09-28 VPS, five runs of the functional benchmark
+  had medians of **24× XT** for the bare core, **15.9×** for a synthetic PC/XT
+  machine, and **2.3×** for an MS-DOS workload with DOS service hooks. These
+  are three different workloads, not full-PC boot or wired-board rates; see
+  the [VPS receipt](docs/receipts/2026-09-28-x86-vps-throughput.json) and
+  [cross-platform benchmark](docs/X86-RTX-PLATFORMS.md). The actual-net Harris
+  wired board has separate, much lower capacity and its own
+  [performance ledger](docs/WIRED-X86-PERFORMANCE-PLAN.md).
 - `src/vdu-decoder.js` — the BBC VDU byte protocol as typed events
   (graphics without video hardware); `src/devices/hd44780.js` — the
   parallel character LCD as a board part.
@@ -122,7 +126,6 @@ order-of-magnitude — the *ranking* is what is stable:
 
 | Core | Engine | Clock | RTx (off-box) |
 |------|--------|-------|---------------|
-| 8086/8088 (`i8086.js`) | ours | 4.77 MHz | ~150× core · ~3.3× booting MS-DOS through the full PC/XT |
 | Z80 (`z80.js`) | ours | 4 MHz | 186× |
 | 6502 (`w65c02.js`) | ours | 1 MHz | 150× |
 | AVR ATmega328P | avr8js ‡ | 16 MHz | 13.3× |
@@ -130,7 +133,8 @@ order-of-magnitude — the *ranking* is what is stable:
 | RP2040 Cortex-M0+ | rp2040js † | 125 MHz | 1.66× |
 | labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | 24.2× |
 
-The three cores we own run tens of times faster than the real silicon. The
+The Z80 and 6502 cores run tens of times faster than the real silicon on this
+loop. The
 third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051 and the
 peripheral-accurate labwired STM32/RISC-V/Xtensa engine — are heavier than the
 owned cores. Every measured engine now clears real time on this loop. These are
@@ -173,6 +177,35 @@ LabWired AVR core, distinct from the avr8js measurement in this README's AVR
 row. A pinned GitHub run of the real ESP32-C3 e-paper workload reached 1.020×
 RTx (187.5 ms guest in 183.7 ms wall); exact-tick and batched runs produced the
 same identity receipt.
+
+The two Cortex-M board targets added in `labwired-core` `313252d4` also clear
+real time in their representative UART boot smokes. With the adapter's real
+policy (`recommended_tick_interval()` = 1024), seven independent hosted runs
+gave a **3.323358273× median for micro:bit v2 / nRF52833** and a
+**3.784580182× median for PyBadge / ATSAMD51**. The same smokes measured
+0.0339× and 0.0112× medians respectively on the pre-change VPS build. Treat
+those before/after numbers as threshold evidence, not a precise speedup ratio:
+the hosts differ, and the timed phase is the firmware's terminal Thumb `b .`
+loop (after UART `OK`, at PC `0x4a4` / `0x48a`), not an application workload.
+The optimization coalesces only that exact self-branch while preserving the
+scheduler boundary and disabling itself for observers, pending interrupts,
+IT state, taps, and active debugging. Both optimized medians exceed the 1.0×
+shipping floor. The exact seven samples, firmware checks and qualification
+URLs are in
+[`docs/receipts/2026-09-28-labwired-cortex-m-targets.json`](docs/receipts/2026-09-28-labwired-cortex-m-targets.json);
+the reproduced browser/Node artifact is release
+[`labwired-wasm-313252d4`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-313252d4).
+
+That target support is intentionally narrower than a whole-board simulation.
+micro:bit v2's standalone manifest exposes buttons A/B, and the BW bridge maps
+its edge-connector GPIO; neither models the 5×5 matrix, motion sensor,
+microphone, speaker, touch logo or BLE stack. The BW bridge maps PyBadge header
+GPIO, D13/PA23 and Feather UART on SERCOM1 (PA16/PA17); LabWired's standalone
+PyBadge manifest additionally attaches the five PA15 NeoPixels. The ST7735
+display/SERCOM4, seven-button shift-register mux, QSPI and native USB are not
+yet modelled. Raw PyBadge applications default to the UF2 bootloader boundary
+at `0x4000`; full-flash images may explicitly request address zero.
+
 `LABWIRED_EXACT_TICK=1` keeps the benchmark's exact-policy A/B available.
 
 **Whole-system smokes** (each skips loudly without its local artifact):
@@ -240,6 +273,12 @@ qualifications, and the full 386 test suite. Their detailed paired timings and
 raw reports are retained in `brickwright-firmware-private/performance/2026-09-28`.
 The guarded mappages trace experiment instead regressed by 16–20% and was not
 merged. None of these measurements establishes 10× or a calibrated 386DX RTx.
+At source revision `8261e891`, the [current VPS xv6 forktest receipt](docs/receipts/2026-09-28-x86-vps-throughput.json)
+records three runs of the same 24,338,279-step boot and command: median user
+CPU fell from 25.16 s in JavaScript to 18.21 s with opt-in native blocks,
+while the guest output, RAM hash, and 163,891,880 configured board cycles
+matched. Its 6 MHz virtual board clock yields 27.315 s of *configured* guest
+time, not a calibrated 386DX real-time factor.
 
 ## Windows 3.1 reference comparison
 

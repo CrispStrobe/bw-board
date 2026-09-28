@@ -1,0 +1,129 @@
+{
+  "schema": "bw.x86-platform-gh-receipt.v1",
+  "workflowRun": "https://github.com/CrispStrobe/bw-board/actions/runs/36422589375",
+  "workflowRunId": 36422589375,
+  "workflowConclusion": "success",
+  "artifact": "x86-platforms-6b74b9364e706ca11e00178e6e67e22f619aac67-1",
+  "lscpuSha256": "4476e601951bb5e5dc85ca4b9d2e3bc795bb83c0d4e62b8d9f2bdec6659b0e7a",
+  "result": {
+    "schema": "bw.x86-platform-benchmark.v1",
+    "revision": "6b74b9364e706ca11e00178e6e67e22f619aac67",
+    "dirty": false,
+    "host": {
+      "platform": "linux",
+      "arch": "x64",
+      "cpus": [
+        "AMD EPYC 7763 64-Core Processor"
+      ],
+      "logicalCpus": 4,
+      "node": "v22.23.2",
+      "githubRunner": "GitHub Actions 1000292168",
+      "kaggleGpu": null
+    },
+    "note": "386 real-mode workload; its virtual factor uses configured synthetic instruction charges and is not measured 80386 timing",
+    "rows": [
+      {
+        "name": "8086-core",
+        "clockHz": 4772727,
+        "cycleMeaning": "estimated 8086 instruction cycles",
+        "steps": 1000000,
+        "passes": 3,
+        "instructionsPerSecond": 22982488.561787814,
+        "virtualFactor": 47.19071254348312,
+        "medianSeconds": 0.043511389,
+        "cycles": 9800000,
+        "state": {
+          "ax": 65534,
+          "bx": 65535,
+          "ip": 0,
+          "word": 65535
+        },
+        "runSeconds": [
+          0.060255625,
+          0.043511389,
+          0.038406378
+        ]
+      },
+      {
+        "name": "8086-machine",
+        "clockHz": 4772727,
+        "cycleMeaning": "estimated 8086 instruction cycles",
+        "steps": 1000000,
+        "passes": 3,
+        "instructionsPerSecond": 14529907.43882295,
+        "virtualFactor": 29.834744979225697,
+        "medianSeconds": 0.068823563,
+        "cycles": 9800000,
+        "state": {
+          "ax": 65534,
+          "bx": 65535,
+          "ip": 0,
+          "word": 65535
+        },
+        "runSeconds": [
+          0.072013919,
+          0.068823563,
+          0.066818478
+        ]
+      },
+      {
+        "name": "386-core",
+        "clockHz": 16000000,
+        "cycleMeaning": "one synthetic cycle per completed instruction",
+        "steps": 1000000,
+        "passes": 3,
+        "instructionsPerSecond": 4054284.370278862,
+        "virtualFactor": 0.25339277314242886,
+        "medianSeconds": 0.246652654,
+        "cycles": 1000000,
+        "state": {
+          "ax": 65534,
+          "bx": 65535,
+          "ip": 0,
+          "word": 65535
+        },
+        "runSeconds": [
+          0.268841471,
+          0.241959215,
+          0.246652654
+        ]
+      },
+      {
+        "name": "386-at-machine",
+        "clockHz": 16000000,
+        "cycleMeaning": "six synthetic scheduling cycles per completed instruction",
+        "steps": 1000000,
+        "passes": 3,
+        "instructionsPerSecond": 2238012.494510435,
+        "virtualFactor": 0.8392546854414132,
+        "medianSeconds": 0.44682503,
+        "cycles": 6000000,
+        "state": {
+          "ax": 65534,
+          "bx": 65535,
+          "ip": 0,
+          "word": 65535
+        },
+        "runSeconds": [
+          0.455890539,
+          0.44431568,
+          0.44682503
+        ]
+      }
+    ]
+  },
+  "limits": "386 virtual factors use synthetic one/six-cycle charges, not measured 80386DX instruction timing",
+  "sourceEquivalence": {
+    "kaggleBundleRevision": "853c667de3f7025eb3bc6342d1c7f5f1e74b76cf",
+    "githubRunRevision": "6b74b9364e706ca11e00178e6e67e22f619aac67",
+    "method": "git rev-parse REV:path for both revisions; all five Git blob IDs match",
+    "identical": true,
+    "blobIds": {
+      "scripts/bench-x86-platforms.mjs": "339e45fffbef0702d89a6bec208aaf2bb3b3a61a",
+      "src/i8086.js": "d514b5e73aa2406128307cadb668ccff27695460",
+      "src/i8086-machine.js": "d7e88d32fcea8801711c68c122de77dd21e9eeba",
+      "src/experimental/i80386.js": "88d6b56201365d7952c4b7417c35d8443187560a",
+      "src/experimental/i80386-at-machine.js": "760aedfa280a804e3ca43761061f4add05e9da33"
+    }
+  }
+}

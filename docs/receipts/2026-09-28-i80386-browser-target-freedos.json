@@ -2,7 +2,7 @@
   "schema": "astra.i80386-browser-target-freedos.v1",
   "passed": true,
   "scope": "Headless browser-target FreeDOS boot and C: mount; no GUI widget or Doom acceptance.",
-  "executionRevision": "0f1a8b22af447b8cd286517e89efe38414ed727d",
+  "executionRevision": "46de3726abe68cb8ff106ddb4131f5d0b7bd7578",
   "sourceSha256": {
     "src/debug-target-factory.js": "3539e855367b448513bc999771fd83f9c8a8f4408687db87ae621435431e35e9",
     "src/i80386-adapter.js": "76ce7241e141861be087da530a40cec76f0644debfb9bcc0dcf2511b152e9ddd",
@@ -12,7 +12,7 @@
     "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
     "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
     "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
-    "src/experimental/i80386.js": "afc1e6c1812e60118e0569dbdd89c1f74d3f65ac1d26eea64c3adbf3f6c0ea0d",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
     "src/experimental/i80386-at-machine.js": "cd590385f617841429e5de2f2bf7759fcd064f67db61a474272f3188e86c31fb",
     "src/experimental/ata16.js": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7",
     "src/at-8042-a20.js": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8",
