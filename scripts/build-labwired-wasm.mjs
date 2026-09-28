@@ -115,7 +115,16 @@ try {
     // 1. the pinned source. Shallow, but a sha needs the full history to be
     //    fetchable by --branch, so clone the branch and check the sha out.
     run('git', ['clone', '--quiet', '--depth', '50', '--branch', 'main', REPO, src]);
-    run('git', ['checkout', '--quiet', ref], { cwd: src });
+    // A ref that is not in main's recent history (a commit on a branch, built
+    // to validate an engine change before it lands) is fetched by sha: GitHub
+    // serves any commit reachable from a ref. Without this the build died on
+    // `fatal: unable to read tree` for everything but main.
+    try {
+        run('git', ['checkout', '--quiet', ref], { cwd: src });
+    } catch {
+        run('git', ['fetch', '--quiet', '--depth', '50', 'origin', ref], { cwd: src });
+        run('git', ['checkout', '--quiet', ref], { cwd: src });
+    }
     const head = capture('git', ['rev-parse', 'HEAD'], { cwd: src });
     console.log(`  source at ${head}`);
 
