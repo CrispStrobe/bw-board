@@ -7,6 +7,7 @@ import path from 'node:path';
 import {createPointerFeedbackSession, comparePointerApplicationFrames, verifyPointerParking,
   validatePointerPair,validatePointerClickDifference,readPointerPpm} from
   '../scripts/lib/i80386-windows-pointer-feedback.mjs';
+import {publishPointerCommand} from '../scripts/send-i80386-windows-pointer-command.mjs';
 
 const WIDTH=640,HEIGHT=480;
 const frame=()=>({width:WIDTH,height:HEIGHT,rgb:Buffer.alloc(WIDTH*HEIGHT*3)});
@@ -127,4 +128,18 @@ test('checkpoint handshake writes frame, accepts one bounded command, then fails
     await assert.rejects(waiting,/timed out/);
     assert.equal(session.nextStep,20,'timeout does not silently skip an input checkpoint');
   } finally { rmSync(root,{recursive:true,force:true}); }
+});
+
+test('producer publishes only an atomic ready-step command once',()=>{
+  const root=mkdtempSync(path.join(tmpdir(),'win-pointer-producer-'));
+  try{
+    writeFileSync(path.join(root,'ready-3.json'),JSON.stringify({
+      schema:'bw.i80386-windows-pointer-ready.v1',seq:3,step:100}));
+    const command=publishPointerCommand(root,3,200,{dx:12,dy:-7,buttons:0});
+    assert.deepEqual(command,{seq:3,atStep:100,nextStep:200,
+      mouse:{dx:12,dy:-7,buttons:0}});
+    assert.deepEqual(JSON.parse(readFileSync(path.join(root,'command-3.json'),'utf8')),command);
+    assert.throws(()=>publishPointerCommand(root,3,200,null),/already published/);
+    assert.throws(()=>publishPointerCommand(root,3,99,null),/does not match/);
+  }finally{rmSync(root,{recursive:true,force:true});}
 });
