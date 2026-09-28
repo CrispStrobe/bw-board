@@ -1,6 +1,7 @@
 // Opt-in, bounded code16 WASM blocks. The ordinary AT machine remains the
 // oracle and handles every refused instruction, page walk, fault and event.
-import {prevalidateI80386Code16Window as admitCode,
+import {peekI80386Code16WindowFirstByte as peekCode,
+  prevalidateI80386Code16Window as admitCode,
   isI80386Code16WindowValid as validCode} from './i80386-code16-window.js';
 import {decodeI80386Code16EA as decodeEA,
   prevalidateI80386Code16EADataWindow as admitEA,
@@ -31,6 +32,20 @@ function decodeBlock(machine, maxInstructions, refused = null) {
   if (!cs || start > cs.limit) { refused?.('codeAddressLimit'); return null; }
   const linear = (cs.base + start) >>> 0;
   const available = Math.min(64, 4096 - (linear & 0xfff), cs.limit - start + 1);
+  const first = peekCode(machine, start, available);
+  if (first === null) { refused?.('codeWindowRefusal'); return null; }
+  // Most refused starts need only the opcode. Preserve the full capture for
+  // executable starts and the three unsupported heads whose form census
+  // reads following bytes. The ordinary board still retires every refusal.
+  if (first !== 0x90 && first !== 0x26 &&
+      !(first >= 0xb8 && first <= 0xbf) &&
+      first !== 0x89 && first !== 0x8b && first !== 0x39 &&
+      first !== 0x3b && first !== 0x31 && first !== 0x33 &&
+      first !== 0x8a && first !== 0x74 && first !== 0x75 &&
+      first !== 0x66 && first !== 0x8e) {
+    refused?.('unsupportedFirstOpcode', first);
+    return null;
+  }
   const capture = admitCode(machine, start, available);
   if (!capture) { refused?.('codeWindowRefusal'); return null; }
   const bytes = capture.bytes, instructions = [];
