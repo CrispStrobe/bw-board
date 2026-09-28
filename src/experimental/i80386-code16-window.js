@@ -60,6 +60,12 @@ function inspect(machine, offset, length) {
     address, pageKind: machine._page[gatedPage >>> 12]};
 }
 
+/** Prove the full requested fetch span, then read its first byte without a copy. */
+export function peekI80386Code16WindowFirstByte(machine, offset, length) {
+  const proof = inspect(machine, offset, length);
+  return proof ? machine.mem[proof.address] : null;
+}
+
 /** Admit only a requested, single-page 16-bit CS span whose bytes equal fetch. */
 export function prevalidateI80386Code16Window(machine, offset, length) {
   const proof = inspect(machine, offset, length);

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ExperimentalI80386ATMachine, PCAT80386_EXPERIMENTAL_4M} from
   '../src/experimental/i80386-at-machine.js';
-import {prevalidateI80386Code16Window as admit,
+import {peekI80386Code16WindowFirstByte as peek,
+  prevalidateI80386Code16Window as admit,
   isI80386Code16WindowValid as valid} from
   '../src/experimental/i80386-code16-window.js';
 
@@ -163,15 +164,18 @@ test('admission/validation never access the bus and reject altered map or CS', (
   try {
     const window = admit(machine, 0x10, 2);
     assert.ok(window);
+    assert.equal(peek(machine, 0x10, 2), window.bytes[0]);
     assert.equal(valid(window), true);
     cpu.eip = 0x11;
     assert.equal(valid(window), true, 'runner must check starting EIP separately');
     machine._page[0x22000 >>> 12] = 3;
     assert.equal(valid(window), false, 'slow map kind');
     assert.equal(admit(machine, 0x10, 2), null);
+    assert.equal(peek(machine, 0x10, 2), null);
     machine._page[0x22000 >>> 12] = 1;
     cpu.segmentCaches[1].limit = 0x10;
     assert.equal(valid(window), false, 'mutated CS limit');
+    assert.equal(peek(machine, 0x10, 2), null);
     cpu.segmentCaches[1].limit = 0xffff;
     assert.equal(valid(window), true);
     cpu.segmentCaches[1].code = false;
@@ -180,4 +184,32 @@ test('admission/validation never access the bus and reject altered map or CS', (
     machine._read386 = oldRead;
     machine._write386 = oldWrite;
   }
+});
+
+test('first-byte proof keeps full-span, paging and direct-mutation boundaries', () => {
+  const machine = board(), cpu = machine.cpu;
+  code(cpu, 0x20000);
+  machine.mem.set([0x40, 0x90], 0x20ff0);
+  assert.equal(peek(machine, 0xff0, 2), 0x40);
+  machine.mem[0x20ff0] = 0x90; // Host/DMA writes are visible on next admission.
+  assert.equal(peek(machine, 0xff0, 2), 0x90);
+  machine._write386(0x20ff0, 0x41); // Guest write is visible too.
+  assert.equal(peek(machine, 0xff0, 2), 0x41);
+  assert.equal(peek(machine, 0xfff, 2), null, 'full span crosses page');
+  cpu.segmentCaches[1].limit = 0xff0;
+  assert.equal(peek(machine, 0xff0, 2), null, 'full span crosses CS limit');
+  code(cpu, 0xa0000);
+  assert.equal(peek(machine, 0, 1), null, 'device overlay');
+  code(cpu, 0x30000);
+  cpu.cr0 = 0x80000001;
+  const linear = 0x30020, physical = 0x122000;
+  page(machine, linear, physical, false);
+  machine.mem[physical + 0x20] = 0x8e;
+  assert.equal(peek(machine, 0x20, 1), null, 'uncached translation');
+  cpu._translate(linear);
+  assert.equal(peek(machine, 0x20, 1), 0x8e);
+  cpu.cs = 0x1003;
+  assert.equal(peek(machine, 0x20, 1), null, 'CPL3 permission');
+  cpu.eflags |= 0x20000;
+  assert.equal(peek(machine, 0x20, 1), null, 'VM86 permission');
 });
