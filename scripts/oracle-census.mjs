@@ -635,6 +635,23 @@ export const INPUTS = [
             + 'to it. Can only stand in CI if the job fetches them explicitly.',
     },
     {
+        id: 'doom-vga-snapshot-report', kind: 'fixture',
+        what: 'Pinned source-bound Doom VGA snapshot report. Checks that the browser target '
+            + 'raster matches the strict independent decoder at the first and latest observed '
+            + 'graphics frames; it does not establish live Doom gameplay or include media pixels.',
+        env: 'I80386_DOOM_SNAPSHOT_REPORT', paths: [],
+        gates: ['test/i80386-vga-browser-frame.test.mjs'],
+        obtain: 'Generate the private raw Doom short-demo report from the externally held '
+            + 'IBM AT BIOS, SeaVGABIOS, FreeDOS and shareware media described by '
+            + 'docs/receipts/2026-09-20-386-doom-short-demo.json. Set '
+            + 'I80386_DOOM_SNAPSHOT_REPORT to the local JSON file whose SHA-256 is '
+            + '4d109a1ffb5c132f48839341f4a3ab9c32d50f04e429b709a7d8b033f321d363. '
+            + 'The repository does not publish the report or media.',
+        ciAvailable: false,
+        ci: 'no — public CI has no private source-bound Doom snapshot report; this '
+            + 'specific browser raster comparison is explicitly optional.',
+    },
+    {
         id: 'doom-short-report', kind: 'fixture',
         what: 'Source-bound raw report from the bounded original Doom 1.9 shareware short-demo run. '
             + 'Enables mutation checks for the exact external media, 24-gametic guest completion, '
