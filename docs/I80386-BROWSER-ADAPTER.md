@@ -11,7 +11,8 @@ DOSBox config.
 
 The original Doom/FreeDOS board is an explicit `createDebugTarget('i80386',
 {profile: 'freedos-vga'})` preset. The browser media slots load the AT BIOS at
-the reset alias, the VGA option ROM at C0000h, a type-1 306×4×17 HDD, and an
+both F0000h and the high reset alias, the VGA option ROM at C0000h, a type-1
+306×4×17 HDD, and an
 80×2×15 1.2MB FreeDOS floppy. The floppy loader also accepts 360KB 40×2×9
 images and copies input bytes before the guest can write them. Apply all four
 media slots, reset the machine, then run it through the target. The preset is

@@ -30,6 +30,7 @@ test('386 browser target loads the Doom board media at BIOS, VGA and FDC address
     {bios, 'vga-rom': vgaRom, hdd, floppy});
   assert.deepEqual(media, {applied: ['bios', 'vga-rom', 'hdd', 'floppy'], errors: []});
   const machine = adapter.machine;
+  assert.equal(machine._read386(0xf0000), 0xf4);
   assert.equal(machine._read386(0xfffffff0), 0xf4);
   assert.equal(machine._read386(0xc0000), 0x5a);
   assert.deepEqual(machine.ata.geometry, {cylinders: 306, heads: 4, sectors: 17});

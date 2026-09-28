@@ -47,6 +47,12 @@ export function createI80386Adapter(opts = {}) {
     },
     unloggedBoardInputs: () => unloggedBoardInputs,
     loadRom(bytes, at) { machine.loadRom(bytes, at); },
+    loadBiosRom(bytes) {
+      // The reset alias is fetched high, then the AT BIOS executes in F000h.
+      // Mirror the accepted CLI setup without changing other ROM slots.
+      machine.loadRom(bytes, 0xf0000);
+      machine.loadRom(bytes, 0xffff0000);
+    },
     loadDosboxConfig(text) { this.dosboxConfig = parseDosboxConfig(text); return this.dosboxConfig; },
     attachAtaImage(bytes) {
       const image = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);

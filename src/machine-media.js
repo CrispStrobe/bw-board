@@ -219,7 +219,16 @@ export function applyMedia(target, entries, opts = {}) {
                     loadConfig.call(adapter.loadDosboxConfig ? adapter : machine, new TextDecoder().decode(bytes));
                     break;
                 }
-                case 'bios':
+                case 'bios': {
+                    if (kind === 'i80386' && typeof adapter.loadBiosRom === 'function') {
+                        adapter.loadBiosRom(bytes);
+                        break;
+                    }
+                    const load = adapter.loadRom || machine?.loadRom;
+                    if (!load) throw new Error('target has no ROM loader');
+                    load.call(adapter.loadRom ? adapter : machine, bytes, slot.at);
+                    break;
+                }
                 case 'vga-rom': {
                     const load = adapter.loadRom || machine?.loadRom;
                     if (!load) throw new Error('target has no ROM loader');
