@@ -48,3 +48,24 @@ not rely on Kaggle worker internet.
 Both runs execute Node on the CPU; the GPU model is recorded but no GPU kernel
 is used. A Kaggle script push immediately starts a run and uses quota, so only
 push after the source dataset and kernel metadata are ready.
+
+## Kaggle receipts
+
+Both Kaggle runs used bundle revision `853c667de3f7025eb3bc6342d1c7f5f1e74b76cf`
+with Node 20.19.0 and four logical CPUs. The [CPU run](https://www.kaggle.com/code/chr1s4/bw-board-x86-rtx-cpu)
+reported a Xeon at 2.20 GHz; the [GPU-attached run](https://www.kaggle.com/code/chr1s4/bw-board-x86-rtx-gpu)
+reported a Xeon at 2.00 GHz and two Tesla T4s. Raw [CPU](receipts/2026-09-28-x86-platform-kaggle-cpu.json)
+and [GPU-attached](receipts/2026-09-28-x86-platform-kaggle-gpu.json) JSON
+receipts preserve all three pass times and final guest state.
+
+| Path | Kaggle CPU instructions/s | Kaggle GPU host instructions/s |
+|---|---:|---:|
+| 8086 core | 14.18 M | 16.61 M |
+| 8086 machine | 7.82 M | 9.28 M |
+| 386 core | 2.64 M | 3.20 M |
+| 386 AT machine | 1.48 M | 1.85 M |
+
+The GPU column measures its CPU host. On this loop, 8086 XT factors were
+29.12×/16.06× on the Kaggle CPU host (core/machine) and 34.11×/19.05× on the
+GPU host. The 386 configured virtual-time factors were 0.165×/0.556× and
+0.200×/0.692×, respectively, under the synthetic one/six-cycle charges.

@@ -1,0 +1,113 @@
+{
+  "schema": "bw.x86-platform-benchmark.v1",
+  "revision": "853c667de3f7025eb3bc6342d1c7f5f1e74b76cf",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": [
+      "Intel(R) Xeon(R) CPU @ 2.20GHz"
+    ],
+    "logicalCpus": 4,
+    "node": "v20.19.0",
+    "githubRunner": null,
+    "kaggleGpu": ""
+  },
+  "note": "386 real-mode workload; its virtual factor uses configured synthetic instruction charges and is not measured 80386 timing",
+  "rows": [
+    {
+      "name": "8086-core",
+      "clockHz": 4772727,
+      "cycleMeaning": "estimated 8086 instruction cycles",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 14183612.940095881,
+      "virtualFactor": 29.123686901207552,
+      "medianSeconds": 0.070503898,
+      "cycles": 9800000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.093183366,
+        0.070384958,
+        0.070503898
+      ]
+    },
+    {
+      "name": "8086-machine",
+      "clockHz": 4772727,
+      "cycleMeaning": "estimated 8086 instruction cycles",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 7821597.067345366,
+      "virtualFactor": 16.060346896016593,
+      "medianSeconds": 0.127851127,
+      "cycles": 9800000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.137249937,
+        0.127851127,
+        0.127172349
+      ]
+    },
+    {
+      "name": "386-core",
+      "clockHz": 16000000,
+      "cycleMeaning": "one synthetic cycle per completed instruction",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 2637551.634458174,
+      "virtualFactor": 0.1648469771536359,
+      "medianSeconds": 0.379139497,
+      "cycles": 1000000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.451460463,
+        0.379139497,
+        0.375190115
+      ]
+    },
+    {
+      "name": "386-at-machine",
+      "clockHz": 16000000,
+      "cycleMeaning": "six synthetic scheduling cycles per completed instruction",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 1481680.5776445526,
+      "virtualFactor": 0.5556302166167073,
+      "medianSeconds": 0.674909299,
+      "cycles": 6000000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.674909299,
+        0.68329143,
+        0.659567314
+      ]
+    }
+  ],
+  "kaggle": {
+    "gpuAttached": false,
+    "gpuModel": null,
+    "gpuUsedByBenchmark": false,
+    "sourceBundle": "/kaggle/input/datasets/chr1s4/bw-board-x86-rtx-bundle"
+  }
+}
