@@ -55,8 +55,8 @@ ordinary fallback and WASM execution, and verify selected guest fields and
 source blobs again. A paired unprofiled control would bound profiler
 overhead and host drift. If code-window work remains a substantial
 whole-run cost, test a cheaper validation/cache architecture behind the
-same parity and paired-time gate. No additional full run was made in this
-tranche.
+same parity and paired-time gate. This tranche made one full sampled run
+and no follow-up full run.
 
 The media-neutral reducer is
 [`scripts/summarize-i80386-code16-cost.mjs`](../scripts/summarize-i80386-code16-cost.mjs).
