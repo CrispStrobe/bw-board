@@ -209,3 +209,30 @@ report incremental admitted ordinals, bridges versus isolated additions,
 the full disjoint run histogram, and the same two gates. It must not infer
 full RAM/disk parity or runtime speed from that replay. No `0x66` or
 general prefix support follows without separate owned proof.
+
+An audit of the retained [pre-ES form census](receipts/2026-09-27-i80386-code16-wasm-form-census.json)
+adds a useful negative screen. At its older source, exact first-byte
+`26:8B:mem:o16:a16`, `26:3A:mem:o16:a16`, and
+`26:8A:mem:o16:a16` dispatcher refusals were 670,274, 482,417, and
+407,566 calls, respectively: **1,560,257 combined**. Each was an eligible
+dispatcher start that fell back to an ordinary step, not a census of all
+completed ES instructions or disjoint bridges. The current observer's
+5,811,973 prefix refusals cover *all* prefixes, including `0x66`, and do
+not identify this subset. The older CPU and AT-board source blobs also
+differ from the current run, so 1,560,257 is **not an upper bound** on the
+current trace.
+
+As a deliberately optimistic arithmetic proxy, if exactly those 1,560,257
+calls were the only newly admitted ordinals now, and every one bridged two
+current runs, mean length would reach only **4.053**. If the rest merely
+joined one neighboring run, at least **95.2%** would have to be perfect
+bridges to meet mean four; any isolated additions, unsafe mappings, or
+event cuts tighten that requirement. The current opt-in `first26` census
+cannot fill the gap because it omits ES forms already handled by its WASM
+slice. Thus the retained full-run form census is a better decision screen
+than a new first-5M-step prefix sample: an early boot sample would miss the
+later Windows mode mix and cannot certify a 60M disjoint-run gate. The
+defensible decision is to defer the ES-only observer extension. If a future
+broader grammar merits another measurement, use a source-bound full-run
+shadow census in a free VPS window; a 5M run can validate instrumentation
+only, not promote an executor candidate.
