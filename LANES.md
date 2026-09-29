@@ -1,3 +1,27 @@
+2026-09-29 Actuator intent through the pin, servo calibration, averaged meters — DONE candidate, Claude (Lite task B5).
+Worktree `/mnt/volume1/code/wt/b5-pwm-followups-board`, branch `lane/b5-pwm-followups`,
+base `93185447`. Owns this row, `setDeviceControl`'s motor-speed/servo-angle
+routes, `_mcuPinsDriving`/`_drivingPin`/`_motorSpeed`/`_servoPulse` and the meter
+watches (`meterVoltage`/`meterCurrent`) in `src/board.js`, `servoCalibration` and
+the `signal` field in `src/devices/servo.js`, the typedefs in `src/types.js`,
+`spec-updates/set-pwm.md` + `set-device-control.md`, the servo cases in
+`test/pwm-duty.test.mjs` and `test/actuator-intent-and-meter-mean.test.mjs`.
+Measured first: `setDeviceControl(motor, 'speed', N)` was refused ("has no
+simulator action"), so Lite's devices `set motor speed` did nothing; `angle` set a
+servo target with no pulse, so the canvas said "no signal"; the servo default
+calibration was 1000..2000 us while every driver that reaches it emits 500..2500
+us (a 45-degree program read 0, a 0-degree one was ignored); a meter on a 25 %
+PWM net read the instant (0 or 4.94 V). Now: speed N = N % duty (clamped 0..100)
+by setPwm on the MCU pin found by walking the drawn netlist (through base
+resistor/driver transistor/H-bridge, rails stop it; ambiguity and absence refused
+by name) — same omega as setPwm on the pin, bit for bit; servo angle also sends
+the 50 Hz frame the servo decodes (0/45/90/180 within 0.5 degree); default
+calibration 500..2500 us; `meterVoltage`/`meterCurrent` = 100 ms mean (25 % PWM
+reads the duty-weighted mean to 1e-9; DC reads exactly nodeVoltage/branchCurrent).
+10 new tests; mutations: no motor route reds 4, no servo pulse 1, old 1000 us
+calibration 1, instantaneous meter 2, no meter recording 2. Motor `direction`
+stays refused (needs an H-bridge IN-pin mapping). No solver or CUI edit.
+
 2026-09-29 Driven PWM: setPwm switches the pin, so analog outputs follow duty — DONE candidate, Claude (Lite task B1).
 Worktree `/mnt/volume1/code/wt/b1-pwm-duty-board`, branch `lane/b1-pwm-duty`,
 base `d29c3482`. Owns this row, `setPwm`/`getPwm` and the advanceTo edge split in

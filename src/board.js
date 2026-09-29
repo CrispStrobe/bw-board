@@ -28,6 +28,7 @@ import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
+import { servoCalibration } from './devices/servo.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
@@ -180,6 +181,14 @@ const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
  * It is also within 2 % of the Arduino Uno's 490 Hz analogWrite carrier.
  */
 const DEFAULT_PWM_HZ = 500;
+/**
+ * A DMM's integration window: 100 ms, five 20 ms mains cycles — the reading
+ * rate of a bench meter (~10/s) and a whole number of periods of every carrier
+ * this board drives by default (500 Hz PWM, 50 Hz servo and micro:bit analog).
+ */
+const METER_WINDOW_NS = 100_000_000n;
+/** A meter watch nobody has read for this long (sim time) is dropped. */
+const METER_IDLE_NS = 2_000_000_000n;
 
 /**
  * The next edge time of a driven PWM (BoardImpl.drivenPwm entry), or null for
@@ -253,6 +262,14 @@ export class BoardImpl {
      * @type {Map<string, Array<{tNs: bigint, current: number}>>}
      */
     this.ledHistory = new Map();
+
+    /**
+     * What the meters are watching: key → {kind, a, b, part, terminal,
+     * hist: [{tNs, v}], readNs}. Only watched quantities are recorded, and
+     * a watch is created by its first meterVoltage/meterCurrent read.
+     * @type {Map<string, object>}
+     */
+    this._meterWatches = new Map();
 
     /**
      * Buzzer edge history: part id → array of timestamps when the driving net toggled.
@@ -801,6 +818,7 @@ export class BoardImpl {
       }
     }
     this.ledHistory.clear();
+    this._meterWatches.clear();
     this.buzzerEdges.clear();
     this.drivenTones.clear();
     this.nodeVoltages.clear();
@@ -1519,6 +1537,106 @@ export class BoardImpl {
     if (this._solveDirty) this._flushSolve();
     const v = this.nodeVoltages.get(netId) ?? 0;
     return Number.isFinite(v) ? v : 0;
+  }
+
+  // ─── Meters: what a DMM shows ───────────────────────────────────────────
+
+  /**
+   * The voltage a DMM shows between two nets: the MEAN of the difference over
+   * the last 100 ms (METER_WINDOW_NS), not the instantaneous solve.
+   *
+   * On a steady net the two are the same number. On a PWM net they are not:
+   * `nodeVoltage` reads the pin on or off, depending on the instant, and a real
+   * meter reads the average — 1.25 V for a 25 % PWM of 5 V into a resistor.
+   * The window is five 20 ms cycles, a whole number of periods of the board's
+   * default carriers (500 Hz PWM, 50 Hz servo/micro:bit analog), where the mean
+   * is exact; at any other carrier the partial period at the window's edge
+   * moves a reading by at most period / 100 ms of the swing.
+   *
+   * The first read of a pair starts watching it and returns the instantaneous
+   * value (there is no history yet); later reads average what the board
+   * recorded at every solve since, over at most the window. A watch that is
+   * not read for 2 s of sim time is dropped.
+   *
+   * @param {string} netA
+   * @param {string|null} [netB] reference net; omitted = ground (0 V)
+   * @returns {number}
+   */
+  meterVoltage(netA, netB = null) {
+    return this._meterRead(`v\0${netA}\0${netB ?? ''}`, { kind: 'v', a: netA, b: netB });
+  }
+
+  /**
+   * The current a DMM in series with `partId`'s `terminal` shows: the mean of
+   * branchCurrent over the last 100 ms, signed as branchCurrent is (out of the
+   * part). Same window, first-read and expiry rules as meterVoltage.
+   * @param {string} partId
+   * @param {string} terminal
+   * @returns {number}
+   */
+  meterCurrent(partId, terminal) {
+    return this._meterRead(`i\0${partId}\0${terminal}`, { kind: 'i', part: partId, terminal });
+  }
+
+  /** @private */
+  _meterValue(w) {
+    if (w.kind === 'v') {
+      const at = (net) => {
+        if (net == null || net === '') return 0;
+        const ov = this._digitalOverlay.get(net);
+        const v = ov !== undefined ? ov : (this.nodeVoltages.get(net) ?? 0);
+        return Number.isFinite(v) ? v : 0;
+      };
+      return at(w.a) - at(w.b);
+    }
+    if (!this.powered) return 0;
+    if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const i = this._mnaCache.branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
+    return Number.isFinite(i) ? i : 0;
+  }
+
+  /** @private */
+  _meterRead(key, spec) {
+    this._flushSolve();
+    let w = this._meterWatches.get(key);
+    if (!w) {
+      w = { ...spec, hist: [], readNs: this.timeNs };
+      this._meterWatches.set(key, w);
+      w.hist.push({ tNs: this.timeNs, v: this._meterValue(w) });
+      return w.hist[0].v;
+    }
+    w.readNs = this.timeNs;
+    const now = this.timeNs;
+    const h = w.hist;
+    const windowStart = now > METER_WINDOW_NS ? now - METER_WINDOW_NS : 0n;
+    const from = h[0].tNs > windowStart ? h[0].tNs : windowStart;
+    if (now <= from) return h[h.length - 1].v;
+    // Step function: each sample holds from its instant to the next one's.
+    let sum = 0;
+    for (let k = 0; k < h.length; k++) {
+      const t0 = h[k].tNs > from ? h[k].tNs : from;
+      const t1 = k + 1 < h.length ? h[k + 1].tNs : now;
+      if (t1 > t0) sum += h[k].v * Number(t1 - t0);
+    }
+    return sum / Number(now - from);
+  }
+
+  /** Called at every solve point (from _recordLedSamples). @private */
+  _recordMeterSamples() {
+    const now = this.timeNs;
+    const windowStart = now > METER_WINDOW_NS ? now - METER_WINDOW_NS : 0n;
+    for (const [key, w] of this._meterWatches) {
+      if (now - w.readNs > METER_IDLE_NS) { this._meterWatches.delete(key); continue; }
+      const v = this._meterValue(w);
+      const h = w.hist;
+      const last = h[h.length - 1];
+      if (last && last.tNs === now) { last.v = v; }
+      else if (!last || last.v !== v) h.push({ tNs: now, v });
+      // Keep the one sample at or before the window start, drop the rest.
+      let keep = 0;
+      while (keep + 1 < h.length && h[keep + 1].tNs <= windowStart) keep++;
+      if (keep > 0) h.splice(0, keep);
+    }
   }
 
   // ─── Oscilloscope probes ────────────────────────────────────────────────
@@ -2355,8 +2473,15 @@ export class BoardImpl {
       this._recordRefusedControl(partId, verb, 'no such part');
       return false;
     }
+    // A motor's speed and a servo's angle are what the MCU pin that drives
+    // the part says, so the intent is carried out ON THAT PIN, as a PWM the
+    // board switches (setPwm) — one mechanism with analogWrite and the
+    // emulated timers, which every consumer already reads (spec-updates/
+    // set-pwm.md, "Actuator intent").
+    if (part.kind === 'dc_motor' && verb === 'speed') return this._motorSpeed(part, value);
     const model = getDevice(part.kind);
     const state = this._deviceStates.get(partId);
+    if (part.kind === 'servo' && verb === 'angle' && state) this._servoPulse(part, state, value);
     if (model && model.control && state) {
       let handled = false;
       try {
@@ -2380,6 +2505,132 @@ export class BoardImpl {
     this._recordRefusedControl(partId, verb,
       `"${part.kind}" has no simulator action for this`);
     return false;
+  }
+
+  /**
+   * The MCU pins that drive a part, found by walking its nets.
+   *
+   * From each named terminal of `part`, the walk crosses nets and the parts on
+   * them — a base resistor, a driver transistor, an H-bridge — up to `maxHops`
+   * parts deep, and collects every MCU-surface terminal it reaches (the bare
+   * `mcu` body or any `gpioFollowsPinStates` board). A power rail stops it: a
+   * net holding a supply or ground, or an MCU power pin, is shared by
+   * everything and says nothing about who drives this part.
+   *
+   * Each hit carries `enable`: whether the net it was found on also holds an
+   * enable-named terminal (EN/ENA/ENB/EN1/EN12/PWM), the pin an H-bridge takes
+   * its speed from.
+   *
+   * @param {object} part
+   * @param {string[]} terminals where to start
+   * @param {number} [maxHops]
+   * @returns {Array<{pin: string, enable: boolean}>} unique by pin
+   */
+  _mcuPinsDriving(part, terminals, maxHops = 3) {
+    const RAIL_KINDS = /^(vcc|gnd|ground|battery|power|power_supply|dc_supply|supply|vsource|dc_source|coin_cell)$/i;
+    const POWER_PIN = /^(vcc|vdd|vss|gnd|5v|3v3|3\.3v|3v|vin|vbus|vsys|aref|ioref|reset|rst)$/i;
+    const ENABLE = /^(en|ena|enb|en\d+|enable|pwm)$/i;
+    const isSurface = (p) => p.kind === 'mcu' || !!getDevice(p.kind)?.gpioFollowsPinStates;
+    const isRail = (net) => net.terminals.some((t) => {
+      const p = this.partMap.get(t.part);
+      if (!p) return false;
+      if (RAIL_KINDS.test(p.kind)) return true;
+      return isSurface(p) && POWER_PIN.test(String(t.terminal));
+    });
+    // The DRAWN netlist, not the solver view: the solver moves an expanded
+    // motor's 'a' onto a hidden winding net, which no MCU pin is on.
+    const netOf = new Map();
+    for (const net of this.nets) {
+      for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+    }
+    const hits = new Map();
+    const seenParts = new Set([part.id]);
+    const seenNets = new Set();
+    let frontier = terminals.map((terminal) => netOf.get(`${part.id}\0${terminal}`)).filter(Boolean);
+    for (let depth = 0; depth <= maxHops && frontier.length; depth++) {
+      const next = [];
+      for (const netId of frontier) {
+        if (seenNets.has(netId)) continue;
+        seenNets.add(netId);
+        const net = this.netMap.get(netId);
+        if (!net || isRail(net)) continue;
+        const enable = net.terminals.some((t) => ENABLE.test(String(t.terminal))
+          && !isSurface(this.partMap.get(t.part) || {}));
+        for (const t of net.terminals) {
+          const p = this.partMap.get(t.part);
+          if (!p) continue;
+          if (isSurface(p)) {
+            const pin = String(t.terminal);
+            const prev = hits.get(pin.toLowerCase());
+            hits.set(pin.toLowerCase(), { pin, enable: enable || !!prev?.enable });
+            continue;
+          }
+          if (seenParts.has(p.id) || depth === maxHops) continue;
+          seenParts.add(p.id);
+          for (const other of p.terminals || []) {
+            const n = netOf.get(`${p.id}\0${other}`);
+            if (n && !seenNets.has(n)) next.push(n);
+          }
+        }
+      }
+      frontier = next;
+    }
+    return [...hits.values()];
+  }
+
+  /**
+   * The one MCU pin that drives `part`, or null with the reason recorded.
+   * Several candidates narrow to those on an enable net; still several is
+   * refused by name rather than guessed.
+   * @returns {string|null}
+   */
+  _drivingPin(part, terminals, verb) {
+    let pins = this._mcuPinsDriving(part, terminals);
+    if (pins.length > 1 && pins.some((p) => p.enable)) pins = pins.filter((p) => p.enable);
+    if (pins.length === 1) return pins[0].pin;
+    this._recordRefusedControl(part.id, verb, pins.length
+      ? `driven by several MCU pins (${pins.map((p) => p.pin).join(', ')}); drive one of them`
+      : 'no MCU pin drives it');
+    return null;
+  }
+
+  /**
+   * `set motor speed to N`: N % duty (0..100, clamped — the C and MicroPython
+   * drivers' clamp) on the pin that drives the motor, switched by the board.
+   * The motor integrates its torque over the real on/off intervals, so its
+   * speed follows the duty exactly as it does under analogWrite.
+   */
+  _motorSpeed(part, value) {
+    const pct = Number(value);
+    if (!Number.isFinite(pct)) {
+      this._recordRefusedControl(part.id, 'speed', `${value} is not a speed`);
+      return false;
+    }
+    const pin = this._drivingPin(part, ['a', 'b'], 'speed');
+    if (!pin) return false;
+    const ok = this.setPwm(pin, Math.max(0, Math.min(100, pct)));
+    if (ok) this._notifyChange('deviceControl', { partId: part.id, verb: 'speed' });
+    return ok;
+  }
+
+  /**
+   * `set servo angle to N`, on a servo an MCU pin drives: the 50 Hz frame
+   * whose pulse THIS servo decodes to N degrees (its own minPulseUs /
+   * maxPulseUs / maxAngle), so the horn moves by the same decode an emulated
+   * timer's pulses go through and the canvas sees a signal. The target is
+   * still set directly by the model's control hook, as before, so a servo no
+   * pin drives (a bench with the signal left open) keeps working.
+   */
+  _servoPulse(part, state, value) {
+    const deg = Number(value);
+    if (!Number.isFinite(deg)) return;
+    const pin = this._mcuPinsDriving(part, ['signal']);
+    if (pin.length !== 1) return;
+    const cal = servoCalibration(part);
+    const a = Math.max(0, Math.min(cal.maxAngle, deg));
+    this.setPwm(pin[0].pin, 0, {
+      hz: 50, pulseUs: cal.minPulseUs + (a / cal.maxAngle) * (cal.maxPulseUs - cal.minPulseUs),
+    });
   }
 
   /** @param {string} partId @param {string} verb @param {string} why */
@@ -3939,6 +4190,7 @@ export class BoardImpl {
     this.timeNs = 0n;
     this.capVoltages.clear();
     this.ledHistory.clear();
+    this._meterWatches.clear();
     this.buzzerEdges.clear();
     this.drivenTones.clear();
     this.nodeVoltages.clear();
@@ -4013,6 +4265,7 @@ export class BoardImpl {
 
     // Re-initialize LED/buzzer tracking
     this.ledHistory.clear();
+    this._meterWatches.clear();
     this.buzzerEdges.clear();
     this.drivenTones.clear();
     for (const p of this.parts) {
@@ -6064,6 +6317,7 @@ export class BoardImpl {
    * Record current LED current values as samples for brightness integration.
    */
   _recordLedSamples() {
+    if (this._meterWatches.size > 0) this._recordMeterSamples();
     for (const [partId, history] of this.ledHistory) {
       const current = this.ledCurrents.get(partId) ?? 0;
 

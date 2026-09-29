@@ -162,6 +162,14 @@
  *   switches the pin itself at real edge times inside advanceTo, so every
  *   consumer sees true switching. See spec-updates/set-pwm.md.
  *
+ * @property {(netA: string, netB?: string|null) => number} meterVoltage
+ *   What a DMM shows between two nets: the mean over the last 100 ms, so a
+ *   PWM net reads its average where nodeVoltage reads on or off. The first
+ *   read of a pair starts watching it and returns the instantaneous value.
+ *
+ * @property {(part: string, terminal: string) => number} meterCurrent
+ *   The same 100 ms mean of branchCurrent, for a DMM in series.
+ *
  * @property {(part: string) => {hz: number, on: boolean}} buzzerTone
  *   Frequency derived from toggle period. The UI feeds this to Web Audio.
  *

@@ -18,6 +18,29 @@ import { registerDevice } from '../devices.js';
 // node. See spec-updates/ideal-high-z-inputs.md.
 
 /**
+ * The pulse widths a servo maps onto its travel.
+ *
+ * Default 500..2500 us for 0..180 degrees: what every driver that reaches
+ * this model emits — sb3-creator's C for the 8051 PCA, AVR Timer 1 and the
+ * Pico PWM slice, its MicroPython servo driver, and the micro:bit's CODAL
+ * setServoValue (range 2000 us about a 1500 us centre). The default used to
+ * be 1000..2000, so every one of those programs was decoded wrong except at
+ * 90 degrees: `set servo angle to 45` (1000 us) showed 0, and 0 (500 us)
+ * fell outside the accepted band and was ignored. A part whose real servo
+ * differs says so in params.minPulseUs / maxPulseUs / maxAngle.
+ *
+ * @param {{params?: object}} part
+ * @returns {{minPulseUs: number, maxPulseUs: number, maxAngle: number}}
+ */
+export function servoCalibration(part) {
+  return {
+    minPulseUs: part.params?.minPulseUs ?? 500,
+    maxPulseUs: part.params?.maxPulseUs ?? 2500,
+    maxAngle: part.params?.maxAngle ?? 180,
+  };
+}
+
+/**
  * Register the servo device model.
  */
 export function registerServo() {
@@ -32,6 +55,11 @@ export function registerServo() {
         _lastTNs: 0n,
         _signalHigh: false,
         _riseNs: 0n,
+        // What the angle last came from: 'pulse' (a decoded pulse on the
+        // signal pin), 'control' (setDeviceControl with no pulse behind
+        // it), or null (nothing yet — the servo sits at power-up centre).
+        // A face shows "no signal" only for null.
+        signal: null,
       };
     },
 
@@ -46,15 +74,14 @@ export function registerServo() {
     control(part, state, verb, value) {
       if (verb === 'angle') {
         state.targetAngle = Math.max(0, Math.min(180, Number(value) || 0));
+        if (state.signal !== 'pulse') state.signal = 'control';
         return true;
       }
       return false;
     },
 
     update(part, state, read, tNs) {
-      const minPulseUs = part.params?.minPulseUs ?? 1000;
-      const maxPulseUs = part.params?.maxPulseUs ?? 2000;
-      const maxAngle = part.params?.maxAngle ?? 180;
+      const { minPulseUs, maxPulseUs, maxAngle } = servoCalibration(part);
       const slewRate = part.params?.slewRate ?? 300; // deg/s
 
       const vcc = read('vcc') || 5.0;
@@ -76,6 +103,7 @@ export function registerServo() {
         if (pulseUs >= minPulseUs * 0.8 && pulseUs <= maxPulseUs * 1.2) {
           const frac = (pulseUs - minPulseUs) / (maxPulseUs - minPulseUs);
           const newTarget = Math.max(0, Math.min(maxAngle, frac * maxAngle));
+          state.signal = 'pulse';
           if (Math.abs(newTarget - state.targetAngle) > 0.1) {
             state.targetAngle = newTarget;
             angleChanged = true;

@@ -327,7 +327,7 @@ describe('DC motor speed follows duty', () => {
 // ─── Servo: angle follows pulse width ───────────────────────────────────────
 
 describe('servo angle follows pulse width', () => {
-  const cases = [[1000, 0], [1250, 45], [1500, 90], [2000, 180]];
+  const cases = [[500, 0], [1000, 45], [1500, 90], [2500, 180]];
 
   for (const [us, deg] of cases) {
     it(`AVR Timer1 mode 14, ${us} µs pulse → ${deg}°`, () => {

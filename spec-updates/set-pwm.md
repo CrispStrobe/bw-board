@@ -65,8 +65,35 @@ average is 25 % of full-on.
 - Cost: one solve per edge, ~50 ms of CPU per simulated second at 500 Hz for
   the LED bench.
 
+## Actuator intent (2026-09-29, Lite B5)
+
+`setDeviceControl(motor, 'speed', N)` and `setDeviceControl(servo, 'angle', N)`
+drive the MCU pin behind the part with `setPwm` (N % duty; the 50 Hz frame
+the servo decodes to N degrees) — one mechanism for every actuator, see
+spec-updates/set-device-control.md. The servo's default calibration is now
+500..2500 us for 0..180 degrees, what every driver that reaches it emits
+(sb3-creator's C for the 8051 PCA, AVR Timer 1 and the Pico slice, its
+MicroPython driver, CODAL's setServoValue); at the old 1000..2000 default a
+45-degree program (1000 us) showed 0 and a 0-degree one (500 us) was ignored.
+The servo state names where its angle came from: `signal` = 'pulse' | 'control'
+| null.
+
+## What a meter shows (2026-09-29, Lite B5)
+
+`meterVoltage(netA, netB?)` and `meterCurrent(part, terminal)` are what a DMM
+shows: the mean over the last 100 ms of the same quantity `nodeVoltage` /
+`branchCurrent` report per instant. 100 ms is five 20 ms cycles — a bench
+meter's reading rate and a whole number of periods of every carrier the board
+drives by default (500 Hz, 50 Hz), where the mean is exact; at any other
+carrier the partial period at the window's edge moves one reading by at most
+period / 100 ms of the swing. A steady net reads exactly the instantaneous
+value. Only watched quantities are recorded: the first read of a pair starts
+the watch (and returns the instantaneous value); a watch unread for 2 s of sim
+time is dropped; setNetlist/reset/restore clear them.
+
 ## Not covered (named gaps)
 
-- `branchCurrent`/`nodeVoltage` stay instantaneous on a PWM net (as on the
-  emulated routes); a meter reads on or off, not the average a DMM shows.
+- `nodeVoltage`/`branchCurrent` stay instantaneous on a PWM net by design (the
+  solve is per instant; scopes and the LED window read them); the meters above
+  are the averaged reading.
 - `operatingPoint()` sees the pin's instantaneous level.
