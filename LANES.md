@@ -1,3 +1,19 @@
+2026-09-29 micro:bit board model: GND/3V pads are real supply pads — DONE candidate, Claude (Lite task A1).
+Worktree `/mnt/volume1/code/wt/a1-microbit-gnd-board`, branch `lane/a1-microbit-gnd`,
+base `3f964432`. Owns this row, `src/devices/board-kinds.js` (registration of
+`microbit` and `microbit_breakout` only) and `test/makecode-boards.test.mjs`.
+Root cause: `registerBoardKinds()` registered calliopemini/CPX/PyBadge but never
+`microbit`, so bw-circuit-ui's `engineKindFor` collapsed the micro:bit to the
+generic `mcu` surface. Reproduced on `3f964432`: P0 (setPin high) -> 220 R ->
+LED -> the micro:bit's own GND pad measured 0.000 mA with every node at 5.000 V.
+Both kinds are now `boardModel`s at 3.3 V with `3v`/`3v_l`/`3v_r` -> 3v3 and
+`gnd_l`/`gnd_r` -> gnd roles; the same loop measures 5.880 mA with P0 at
+3.153 V and the GND pad at 0.0006 V, identical to the Calliope. Mutations:
+dropping the `microbit` registration reds 7 (the A1 loop reads "GND pad 5.0000 V
+is not a ground"), dropping its `3v` role reds 2, dropping the breakout's
+`gnd_r` role reds 8. Current ratings untouched (`microbit` stays bw-parts'
+not-yet-rated row). No solver, CUI, Parts, 386 or workflow edit.
+
 2026-09-27 AD8602 physical/package-neutral dual rail-to-rail op-amp model — DONE candidate, Codex `/root`.
 Isolated worktree `/tmp/wt-bwcx-ad8602-board`, branch `lane/ad8602-model`, claim
 base `6ec8da77b82cb842f0c9b16ebc43436b65566aab`. Distinct `ad8602` R-8 physical
