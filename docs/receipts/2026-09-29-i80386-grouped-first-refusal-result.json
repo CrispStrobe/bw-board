@@ -1,0 +1,467 @@
+{
+  "schema": "bw.i80386-grouped-first-refusal-result.v1",
+  "sourceRevision": "b6f8f958b00113e67d28decc761e58dc21c0842c",
+  "completedSteps": 60000000,
+  "sourceHashesVerified": true,
+  "selectedReportedGuestParity": true,
+  "privateEvidenceSha256": {
+    "baselineReport": "e47c4dd06bf54928542b20730a02530c7b51787fb3fba7f66ee71467457ea4f7",
+    "observedReport": "1b90de5a4de7a52b48552f0de21c840278f142429bc930f9c86b6565486ab502",
+    "sourceBoundCandidate": "8d146e2acf8738b2b65667014c92de01a0793c30efa40c59f0feb4dde7e881e0"
+  },
+  "groupedAdmission": {
+    "eligibleRetiredOrdinals": 55316160,
+    "admittedOrdinals": 22624178,
+    "refusedOrdinals": 32691982,
+    "uniqueOrdinalsInRunsAtLeast8": 4642606,
+    "protected16OrVm86OrdinalsInRunsAtLeast8": 4298838,
+    "predeclaredSubsetOpportunityPassed": false
+  },
+  "firstRefusal": {
+    "refusedOrdinals": 32691982,
+    "selectedRefusals": 14843442,
+    "unselectedRefusals": 17848540,
+    "bridgeAtLeast4": 100787,
+    "bridgeAtLeast8": 1248,
+    "modes": {
+      "real": {
+        "refusedOrdinals": 9608639,
+        "selectedRefusals": 3255508,
+        "unselectedRefusals": 6353131,
+        "bridgeAtLeast4": 3197,
+        "bridgeAtLeast8": 72,
+        "topBridgeOpcodes": [
+          {
+            "opcode": "8e",
+            "refusedOrdinals": 149739,
+            "bridgeAtLeast4": 3103,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "c3",
+            "refusedOrdinals": 485028,
+            "bridgeAtLeast4": 91,
+            "bridgeAtLeast8": 72
+          },
+          {
+            "opcode": "50",
+            "refusedOrdinals": 392335,
+            "bridgeAtLeast4": 1,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "ff",
+            "refusedOrdinals": 174236,
+            "bridgeAtLeast4": 1,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "51",
+            "refusedOrdinals": 51101,
+            "bridgeAtLeast4": 1,
+            "bridgeAtLeast8": 0
+          }
+        ],
+        "topBridgeForms": [
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 3,
+              "reg": 0,
+              "rm": 2,
+              "sib": null,
+              "displacementBytes": 0
+            },
+            "eaClass": "register",
+            "observedAccess": "none",
+            "refusedOrdinals": 8130,
+            "bridgeAtLeast4": 1912,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 1,
+              "reg": 0,
+              "rm": 6,
+              "sib": null,
+              "displacementBytes": 1
+            },
+            "eaClass": "mem16-disp8",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 17685,
+            "bridgeAtLeast4": 539,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 3,
+              "reg": 0,
+              "rm": 6,
+              "sib": null,
+              "displacementBytes": 0
+            },
+            "eaClass": "register",
+            "observedAccess": "none",
+            "refusedOrdinals": 569,
+            "bridgeAtLeast4": 536,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-control-stack-state",
+            "opcode": "c3",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": null,
+            "eaClass": "implicit-stack-or-control",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 267657,
+            "bridgeAtLeast4": 91,
+            "bridgeAtLeast8": 72
+          },
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 3,
+              "reg": 3,
+              "rm": 2,
+              "sib": null,
+              "displacementBytes": 0
+            },
+            "eaClass": "register",
+            "observedAccess": "none",
+            "refusedOrdinals": 304,
+            "bridgeAtLeast4": 81,
+            "bridgeAtLeast8": 0
+          }
+        ]
+      },
+      "protected16": {
+        "refusedOrdinals": 3749034,
+        "selectedRefusals": 1440646,
+        "unselectedRefusals": 2308388,
+        "bridgeAtLeast4": 46120,
+        "bridgeAtLeast8": 1176,
+        "topBridgeOpcodes": [
+          {
+            "opcode": "8e",
+            "refusedOrdinals": 235293,
+            "bridgeAtLeast4": 44239,
+            "bridgeAtLeast8": 1176
+          },
+          {
+            "opcode": "e8",
+            "refusedOrdinals": 148005,
+            "bridgeAtLeast4": 1556,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "c3",
+            "refusedOrdinals": 107821,
+            "bridgeAtLeast4": 214,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "ff",
+            "refusedOrdinals": 106806,
+            "bridgeAtLeast4": 91,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "56",
+            "refusedOrdinals": 49469,
+            "bridgeAtLeast4": 18,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "59",
+            "refusedOrdinals": 20176,
+            "bridgeAtLeast4": 2,
+            "bridgeAtLeast8": 0
+          }
+        ],
+        "topBridgeForms": [
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 1,
+              "reg": 0,
+              "rm": 6,
+              "sib": null,
+              "displacementBytes": 1
+            },
+            "eaClass": "mem16-disp8",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 82713,
+            "bridgeAtLeast4": 44230,
+            "bridgeAtLeast8": 1176
+          },
+          {
+            "reason": "deferred-control-stack-state",
+            "opcode": "e8",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": null,
+            "eaClass": "implicit-stack-or-control",
+            "observedAccess": "ram-write",
+            "refusedOrdinals": 147540,
+            "bridgeAtLeast4": 1556,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-control-stack-state",
+            "opcode": "c3",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": null,
+            "eaClass": "implicit-stack-or-control",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 107724,
+            "bridgeAtLeast4": 214,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-control-stack-state",
+            "opcode": "ff",
+            "prefixSignature": "2e",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 2,
+              "reg": 4,
+              "rm": 7,
+              "sib": null,
+              "displacementBytes": 2
+            },
+            "eaClass": "mem16-disp16",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 678,
+            "bridgeAtLeast4": 55,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-stack-state",
+            "opcode": "ff",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 1,
+              "reg": 1,
+              "rm": 6,
+              "sib": null,
+              "displacementBytes": 1
+            },
+            "eaClass": "mem16-disp8",
+            "observedAccess": "ram-read+write",
+            "refusedOrdinals": 10931,
+            "bridgeAtLeast4": 34,
+            "bridgeAtLeast8": 0
+          }
+        ]
+      },
+      "vm86": {
+        "refusedOrdinals": 11208884,
+        "selectedRefusals": 6445929,
+        "unselectedRefusals": 4762955,
+        "bridgeAtLeast4": 50135,
+        "bridgeAtLeast8": 0,
+        "topBridgeOpcodes": [
+          {
+            "opcode": "8e",
+            "refusedOrdinals": 813402,
+            "bridgeAtLeast4": 50135,
+            "bridgeAtLeast8": 0
+          }
+        ],
+        "topBridgeForms": [
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 3,
+              "reg": 0,
+              "rm": 2,
+              "sib": null,
+              "displacementBytes": 0
+            },
+            "eaClass": "register",
+            "observedAccess": "none",
+            "refusedOrdinals": 113847,
+            "bridgeAtLeast4": 48853,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 1,
+              "reg": 0,
+              "rm": 6,
+              "sib": null,
+              "displacementBytes": 1
+            },
+            "eaClass": "mem16-disp8",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 195626,
+            "bridgeAtLeast4": 1236,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-segment-state",
+            "opcode": "8e",
+            "prefixSignature": "-",
+            "operandWidth": 16,
+            "addressWidth": 16,
+            "modrm": {
+              "mod": 3,
+              "reg": 0,
+              "rm": 6,
+              "sib": null,
+              "displacementBytes": 0
+            },
+            "eaClass": "register",
+            "observedAccess": "none",
+            "refusedOrdinals": 54,
+            "bridgeAtLeast4": 46,
+            "bridgeAtLeast8": 0
+          }
+        ]
+      },
+      "protected32": {
+        "refusedOrdinals": 8125425,
+        "selectedRefusals": 3701359,
+        "unselectedRefusals": 4424066,
+        "bridgeAtLeast4": 1335,
+        "bridgeAtLeast8": 0,
+        "topBridgeOpcodes": [
+          {
+            "opcode": "ff",
+            "refusedOrdinals": 473797,
+            "bridgeAtLeast4": 1048,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "c3",
+            "refusedOrdinals": 427998,
+            "bridgeAtLeast4": 274,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "56",
+            "refusedOrdinals": 79788,
+            "bridgeAtLeast4": 10,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "opcode": "50",
+            "refusedOrdinals": 160838,
+            "bridgeAtLeast4": 3,
+            "bridgeAtLeast8": 0
+          }
+        ],
+        "topBridgeForms": [
+          {
+            "reason": "deferred-control-stack-state",
+            "opcode": "ff",
+            "prefixSignature": "-",
+            "operandWidth": 32,
+            "addressWidth": 32,
+            "modrm": {
+              "mod": 0,
+              "reg": 2,
+              "rm": 4,
+              "sib": {
+                "scale": 2,
+                "index": 1,
+                "base": 5
+              },
+              "displacementBytes": 4
+            },
+            "eaClass": "mem32-sib-disp32",
+            "observedAccess": "ram-read+write",
+            "refusedOrdinals": 2928,
+            "bridgeAtLeast4": 1048,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-control-stack-state",
+            "opcode": "c3",
+            "prefixSignature": "-",
+            "operandWidth": 32,
+            "addressWidth": 32,
+            "modrm": null,
+            "eaClass": "implicit-stack-or-control",
+            "observedAccess": "ram-read",
+            "refusedOrdinals": 427806,
+            "bridgeAtLeast4": 274,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-stack-state",
+            "opcode": "56",
+            "prefixSignature": "-",
+            "operandWidth": 32,
+            "addressWidth": 32,
+            "modrm": null,
+            "eaClass": "implicit-stack-or-control",
+            "observedAccess": "ram-write",
+            "refusedOrdinals": 79445,
+            "bridgeAtLeast4": 10,
+            "bridgeAtLeast8": 0
+          },
+          {
+            "reason": "deferred-stack-state",
+            "opcode": "50",
+            "prefixSignature": "-",
+            "operandWidth": 32,
+            "addressWidth": 32,
+            "modrm": null,
+            "eaClass": "implicit-stack-or-control",
+            "observedAccess": "ram-write",
+            "refusedOrdinals": 159487,
+            "bridgeAtLeast4": 3,
+            "bridgeAtLeast8": 0
+          }
+        ]
+      }
+    }
+  },
+  "predeclaredTriageGate": {
+    "overall": 250000,
+    "protected16OrVm86": 100000,
+    "protected16OrVm86BridgeAtLeast4": 96255,
+    "passed": false
+  },
+  "limitation": "Local adjacent-run bridges overlap and are not disjoint retired-run coverage or executor feasibility; diagnostic runtime is instrumentation overhead, not speed evidence."
+}
