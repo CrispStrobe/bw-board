@@ -728,14 +728,7 @@ export class ExperimentalI80386 {
     }
     if (this.virtual8086) {
       this._setSegValue(id, selector);
-      this.segmentCaches[id] = {
-        base: (selector << 4) >>> 0,
-        limit: 0xffff,
-        default32: false,
-        present: true,
-        code: id === SEG_CS,
-        writable: id !== SEG_CS,
-      };
+      this.segmentCaches[id] = this._virtualSegmentCache(id, selector);
       if (id === SEG_CS) this._retainedRealCs = false;
       return;
     }
