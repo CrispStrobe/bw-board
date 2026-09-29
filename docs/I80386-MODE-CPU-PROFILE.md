@@ -31,3 +31,13 @@ is the relevant starting point for an Amdahl bound; a share of guest steps is
 not a share of CPU time. Keep the full guest report and media hashes for any
 private workload comparison. Do not put commercial media or private guest
 output in this repository.
+
+In two pinned 60-million-step Windows 3.11 runs, real, protected16 and VM86
+entry modes accounted for 69.8% and 70.2% of attributed user CPU;
+protected32 accounted for 30.2% and 29.8%. No sampling interval mixed modes.
+The paired flagged/unflagged controls had identical normalized guest output;
+sampling added 2.41–2.86 user CPU seconds. The
+[source-bound aggregate receipt](receipts/2026-09-27-i80386-ordinary-windows-profile-attribution.json)
+records these mode shares alongside a separate V8 profile. The mode clock
+includes board and runner work, so it does not measure removable emulator
+cost or imply a speedup from any execution path.
