@@ -323,7 +323,7 @@ export const INPUTS = [
         env: 'LABWIRED_WASM',
         paths: [],
         gates: ['test/labwired-adapter.test.mjs', 'test/labwired-roundtrip.test.mjs',
-            'test/pad-drive-parity.test.mjs'],
+            'test/pad-drive-parity.test.mjs', 'test/labwired-firmware-only.test.mjs'],
         obtain: 'point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node)',
         ciAvailable: false,
         ci: 'no',
