@@ -24,15 +24,13 @@ protected16:
   movw %ax,%ss
   movw $0x7000,%sp
 witness_start:
-  movw selector_slot,%ax
-  movw %ax,%es
+  movw selector_slot,%es
   movb gdt+29,%al         # descriptor 3 access byte, initially 92
   outb %al,$0xe9          # expected 93: CPU set Accessed
   movb $0xa0,gdt+27      # change descriptor 3 base 9000 -> a000
   movb %es:0,%al         # cache still points at 9000
   outb %al,$0xe9          # expected a1
-  movw selector_slot,%ax
-  movw %ax,%es            # reload same selector from modified GDT
+  movw selector_slot,%es  # reload same selector from modified GDT
 after_second_load:
   movb %es:0,%al         # cache now points at a000
   outb %al,$0xe9          # expected b2

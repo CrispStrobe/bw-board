@@ -15,6 +15,10 @@ const sha=data=>createHash('sha256').update(data).digest('hex');
 const revision=execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim();
 const sourceHashes=Object.fromEntries([source,self,core].map(path=>
   [path,sha(readFileSync(resolve(repo,path)))]));
+for(const [path,hash] of Object.entries(sourceHashes)){
+  const committed=execFileSync('git',['show',`${revision}:${path}`],{cwd:repo});
+  if(sha(committed)!==hash)throw new Error(`${path} differs from ${revision}`);
+}
 const mutation=process.env.I386_ES_CACHE_MUTATION??null;
 if(![null,'stale-after-reload'].includes(mutation))throw new Error('unknown mutation');
 const qemu=process.env.QEMU_I386_PATH??'/usr/bin/qemu-system-i386';
@@ -40,7 +44,7 @@ try{
   const symbols=Object.fromEntries(execFileSync('nm',['-n',elf],{encoding:'utf8'})
     .split('\n').map(line=>line.match(/^([0-9a-f]+) [A-Za-z] (\w+)$/))
     .filter(Boolean).map(([,address,name])=>[name,parseInt(address,16)]));
-  const expectedSymbols={witness_start:0x7c32,after_second_load:0x7c4c,
+  const expectedSymbols={witness_start:0x7c32,after_second_load:0x7c4a,
     gdt:0x7c60,selector_slot:0x7c86};
   for(const [name,address] of Object.entries(expectedSymbols))
     if(symbols[name]!==address)throw new Error(`unexpected ${name} address`);
