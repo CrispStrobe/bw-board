@@ -455,15 +455,17 @@ export function createLabwiredAdapter (opts) {
   let matrixGeneration = null;
   function publishMatrix () {
     const bm = opts.boardMatrix;
-    if (!bm || !board || typeof board.getDeviceState !== 'function'
-      || typeof sim.get_display !== 'function') return;
-    const state = board.getDeviceState(bm.partId);
-    if (!state) return;
+    if (!bm || !board || typeof sim.get_display !== 'function') return;
+    // A board that can host a module's display (setPartMatrix) takes it
+    // whatever the part's kind; otherwise a registered part's state does.
+    const state = typeof board.setPartMatrix === 'function' ? null
+      : (typeof board.getDeviceState === 'function' ? board.getDeviceState(bm.partId) : null);
+    if (typeof board.setPartMatrix !== 'function' && !state) return;
     let meta;
     try { meta = plain(sim.get_display(bm.display, false)); } catch (e) { return; }
     if (!meta) return;
     const gen = String(meta.meta?.generation ?? meta.generation ?? '');
-    if (gen && gen === matrixGeneration && state.matrix) return;
+    if (gen && gen === matrixGeneration) return;
     let full;
     try { full = plain(sim.get_display(bm.display, true)); } catch (e) { return; }
     const width = full?.width ?? full?.meta?.w;
@@ -478,7 +480,9 @@ export function createLabwiredAdapter (opts) {
       brightness[i] = b / 255;
       levels[i] = Math.round(b * 9 / 255);
     }
-    state.matrix = { width, height, brightness, levels };
+    const matrix = { width, height, brightness, levels };
+    if (typeof board.setPartMatrix === 'function') board.setPartMatrix(bm.partId, matrix);
+    else state.matrix = matrix;
     matrixGeneration = gen;
   }
 

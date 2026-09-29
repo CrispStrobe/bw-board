@@ -25,6 +25,8 @@ import { buildLabwiredSystem } from '../src/labwired-bridge.js';
 import { createLabwiredAdapter } from '../src/labwired-adapter.js';
 import { MICROBIT_V2 } from '../src/labwired-chips.js';
 import { LABWIRED_BOARDS } from '../src/labwired-catalog.js';
+import { BoardImpl } from '../src/board.js';
+import { registerBoardKinds } from '../src/devices/board-kinds.js';
 
 const px = (f, x, y) => [...f.rgba.subarray((y * f.width + x) * 4, (y * f.width + x) * 4 + 4)];
 
@@ -49,6 +51,30 @@ describe('the micro:bit matrix, without an engine', () => {
         });
         assert.doesNotMatch(f0.systemYaml ?? '', /external_devices/,
             'circuit parts stay our board\'s: no second model of them');
+    });
+
+    it('Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it', () => {
+        const board = new BoardImpl(3.3);
+        board.setNetlist([{ id: 'mb', kind: 'mcu', terminals: ['p0', 'gnd'] }], []);
+        assert.equal(board.getDeviceState('mb'), null, 'an mcu part has no device model');
+        const matrix = { width: 5, height: 5, brightness: new Float64Array(25), levels: new Uint8Array(25) };
+        matrix.levels[0] = 9;
+        board.setPartMatrix('mb', matrix);
+        assert.equal(board.getDeviceState('mb').matrix, matrix);
+        board.setNetlist([{ id: 'mb', kind: 'mcu', terminals: ['p0', 'gnd'] }], []);
+        assert.equal(board.getDeviceState('mb'), null, 'a new netlist starts without the old picture');
+    });
+
+    it('Board.setPartMatrix: a part with a registered model gets it on its own state', () => {
+        registerBoardKinds();
+        const board = new BoardImpl(3.3);
+        board.setNetlist([{ id: 'mb', kind: 'microbit', terminals: ['p0', 'p1', 'p2', '3v', 'gnd'] }], []);
+        const state = board.getDeviceState('mb');
+        assert.ok(state, 'the microbit board model has state');
+        const matrix = { width: 5, height: 5, brightness: new Float64Array(25), levels: new Uint8Array(25) };
+        board.setPartMatrix('mb', matrix);
+        assert.equal(board.getDeviceState('mb'), state, 'the same state object');
+        assert.equal(state.matrix, matrix);
     });
 
     it('binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs', () => {
