@@ -217,6 +217,8 @@ async function createLabwiredTarget(opts) {
   // move, instead of showing a dead knob.
   let { chipYaml, pins, clockHz, systemYaml, firmwareAddress } = opts;
   let refusals = [];
+  let onBoardDisplays = [];
+  let boardMatrix;
   if (!chipYaml || !pins) {
     const derived = labwiredAdapterOptionsFor({
       netlist: board, chipKind: opts.chipKind ?? 'stm32f030', mcuId: opts.mcuId, name,
@@ -227,14 +229,22 @@ async function createLabwiredTarget(opts) {
     systemYaml = systemYaml ?? derived.systemYaml;
     firmwareAddress = firmwareAddress ?? derived.firmwareAddress;
     refusals = derived.refusals;
+    // A display ON the controller module (the micro:bit's LED matrix): the
+    // target draws it (video()) and the adapter keeps the part's face current.
+    onBoardDisplays = derived.onBoardDisplays ?? [];
+    if (derived.onBoardMatrix && derived.mcuId) {
+      boardMatrix = { display: derived.onBoardMatrix, partId: derived.mcuId };
+    }
   }
 
   // Ordering, as everywhere in this factory: adapter, then board, then target.
   // attachBoard is what arms the engine's logic capture AND seats every pin, so
   // a target built before it would read a board nothing has published to.
-  const adapter = createLabwiredAdapter({ wasm, chipYaml, firmware, firmwareAddress, pins, clockHz, systemYaml, name });
+  const adapter = createLabwiredAdapter({ wasm, chipYaml, firmware, firmwareAddress, pins, clockHz, systemYaml, name,
+    boardMatrix, extraSegments: opts.extraSegments });
   adapter.attachBoard(board);
-  const target = createLabwiredDebugTarget({ adapter });
+  const target = createLabwiredDebugTarget({ adapter,
+    displays: onBoardDisplays.length ? onBoardDisplays : undefined });
   return { target, adapter, refusals };
 }
 
