@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 const repo=new URL('../',import.meta.url);
 const script=fileURLToPath(new URL('../scripts/compare-qemu-i80386-es-cache-witness.mjs',import.meta.url));
 const receipt=JSON.parse(readFileSync(new URL('../docs/receipts/2026-09-29-i80386-es-cache-witness.json',import.meta.url)));
+const negative=JSON.parse(readFileSync(new URL('../docs/receipts/2026-09-29-i80386-es-cache-witness-negative.json',import.meta.url)));
 const sha=data=>createHash('sha256').update(data).digest('hex');
 const qemu='/usr/bin/qemu-system-i386';
 let available=false;
@@ -22,6 +23,15 @@ test('committed ES-cache receipt binds its exact executed source revision',()=>{
   assert.equal(receipt.bochs.booted,true);
   assert.equal(receipt.bochs.panic,false);
   assert.equal(receipt.local.outputHex,'93a1b24b');
+  assert.equal(negative.revision,receipt.revision);
+  assert.deepEqual(negative.sourceHashes,receipt.sourceHashes);
+  assert.equal(negative.imageSha256,receipt.imageSha256);
+  assert.equal(negative.status,'fail');
+  assert.equal(negative.mutation,'stale-after-reload');
+  assert.equal(negative.reference.outputHex,'93a1b24b');
+  assert.equal(negative.bochs.outputHex,'93a1b24b');
+  assert.equal(negative.local.outputHex,'93a1a14b');
+  assert.deepEqual(negative.differences.map(item=>item.field),['local.output']);
   for(const [file,expected] of Object.entries(receipt.sourceHashes)){
     assert.match(file,/^(src|scripts|test)\/[a-zA-Z0-9._/-]+$/);
     const committed=execFileSync('git',['show',`${receipt.revision}:${file}`],{cwd:repo});

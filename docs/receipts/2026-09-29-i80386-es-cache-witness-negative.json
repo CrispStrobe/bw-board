@@ -30,7 +30,7 @@
   },
   "local": {
     "core": "ExperimentalI80386 protected16",
-    "outputHex": "93a1b24b",
+    "outputHex": "93a1a14b",
     "exitValue": 1,
     "accessedByte": 147,
     "modifiedBaseByte": 160,
@@ -54,7 +54,23 @@
     "output": "93 = Accessed, a1 = retained ES base after GDT edit, b2 = new base after ES reload, 4b = completion",
     "scope": "QEMU 486 and optional Bochs CPU-level-3 observe output behavior; external bus ordering is not claimed"
   },
-  "mutation": null,
-  "status": "pass",
-  "differences": []
+  "mutation": "stale-after-reload",
+  "status": "fail",
+  "differences": [
+    {
+      "field": "local.output",
+      "expected": [
+        147,
+        161,
+        178,
+        75
+      ],
+      "actual": [
+        147,
+        161,
+        161,
+        75
+      ]
+    }
+  ]
 }

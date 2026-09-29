@@ -12,14 +12,15 @@ four bytes to port `0xE9`:
 | `4B` | completion marker |
 
 The [committed receipt](receipts/2026-09-29-i80386-es-cache-witness.json)
-records the exact source revision `f3facd188b86100cc2a409e9697c73e991a6ec2f`,
+records the exact source revision `39dbc822117fa3c3af5fe08901baed0081e09964`,
 source hashes, boot-image hash, pinned tool hashes, and observed output. Pinned
 QEMU 8.2.2 with a 486 CPU, pinned Bochs 2.7 at CPU level 3, and the current
 ordinary `ExperimentalI80386` all emitted `93a1b24b`. Bochs booted without
 panic and was terminated after the marker. The comparator's negative control
 forces a stale local ES base after the second load; it emitted `93a1a14b`
 and failed solely on `local.output`, while both external witnesses still
-emitted `93a1b24b`.
+emitted `93a1b24b`. The [negative-control receipt](receipts/2026-09-29-i80386-es-cache-witness-negative.json)
+binds the same executed source revision and records that independent run.
 
 The fixture and comparator live in
 `test/fixtures/i80386-es-cache-witness.S` and
