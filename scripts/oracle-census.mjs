@@ -126,6 +126,31 @@ export const INPUTS = [
         ci: 'no — ordinary CI does not install the pinned QEMU executable; the test skips there',
     },
     {
+        id: '386-es-cache-qemu', kind: 'oracle',
+        what: 'Pinned QEMU 8.2.2 TCG 486 supplies an external output witness for '
+            + 'the owned protected16 memory-source 8E ES cache fixture. The test checks '
+            + 'the exact executable SHA-256 before running; QEMU 486 does not establish '
+            + 'original-386 bus ordering or timing.',
+        paths: ['/usr/bin/qemu-system-i386'],
+        gates: ['test/i80386-es-cache-witness.test.mjs'],
+        obtain: 'Install the pinned QEMU 8.2.2 i386 emulator at /usr/bin/qemu-system-i386 '
+            + 'and verify its SHA-256 against the test pin. See docs/I80386-ES-CACHE-ORACLE.md.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI does not install the pinned QEMU executable; the external comparison skips there',
+    },
+    {
+        id: '386-es-cache-bochs', kind: 'oracle',
+        what: 'Pinned Bochs 2.7 CPU level 3 optionally witnesses the same protected16 '
+            + 'ES cache output when BOCHS_386_ROOT names the matching build. The comparator '
+            + 'checks its revision, binary SHA-256, and CPU-level config.',
+        env: 'BOCHS_386_ROOT', paths: [],
+        gates: ['test/i80386-es-cache-witness.test.mjs'],
+        obtain: 'Build the pinned Bochs REL_2_7_FINAL CPU-level-3 revision and set '
+            + 'BOCHS_386_ROOT to its source/build root. See docs/I80386-ES-CACHE-ORACLE.md.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI does not provide the pinned Bochs CPU-level-3 build; the optional comparison is absent there',
+    },
+    {
         id: 'harris-native-wasm', kind: 'fixture',
         what: 'Locally built owned native wired-kernel prototype. Enables differential checks against our JavaScript net, memory and phase implementations; not an independent CPU oracle or full-board capacity proof.',
         env: 'HARRIS_NET_WASM', paths: [],

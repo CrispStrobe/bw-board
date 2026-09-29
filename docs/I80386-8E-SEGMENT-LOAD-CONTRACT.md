@@ -26,10 +26,11 @@ VM86 memory-read admission in the current core; the fixture also pins the
 subsequent actual ES read.
 
 These are deterministic tests against the ordinary executor with owned
-instruction, source, and descriptor bytes. The repository's available
-QEMU/Bochs comparison harness is a Win16 I/O boundary boot probe, not a
-single-instruction segment-cache oracle. It does not expose the descriptor
-Accessed write, hidden cache contents, or per-byte RAM ordering for this
-fixture, so no external hardware-equivalence claim is made here. The failed
-grouped opportunity gate remains unchanged; this work does not admit `8E`
-to the block executor or expand the observer.
+instruction, source, and descriptor bytes. The later
+[ES-cache output witness](I80386-ES-CACHE-ORACLE.md) runs a separate owned
+protected16 boot sector under pinned QEMU and Bochs. Its output indirectly
+confirms the Accessed byte, retention of the old ES base after a GDT edit,
+and use of the new base after a same-selector reload. The external output
+does not reveal per-byte RAM bus ordering or fault ordering in these
+fixtures. The failed grouped opportunity gate remains unchanged; this work
+does not admit `8E` to the block executor or expand the observer.
