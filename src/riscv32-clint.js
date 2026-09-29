@@ -76,7 +76,17 @@ export function createClint(cpu, opts = {}) {
         tick(n = 1) { t0 += n; dev.sync(); },
         /** Keep mtime continuous across a core reset (which zeroes instret). */
         rebase(prevNow) { t0 = prevNow; mark = cpu.instret; dev.sync(); },
-        get mtime() { return now(); }
+        get mtime() { return now(); },
+        /** Every register and the derived deadline, raw (riscv32-snapshot.js).
+         *  `deadline` is saved rather than re-derived: restoring must not call
+         *  sync(), which would rewrite mip — the core's saved mip is the truth. */
+        saveState() {
+            return {t0, mark, cmpLo, cmpHi, msip, deadline: dev.deadline === Infinity ? null : dev.deadline};
+        },
+        loadState(s) {
+            t0 = s.t0; mark = s.mark; cmpLo = s.cmpLo >>> 0; cmpHi = s.cmpHi >>> 0; msip = s.msip & 1;
+            dev.deadline = s.deadline === null ? Infinity : s.deadline;
+        }
     };
     return dev;
 }

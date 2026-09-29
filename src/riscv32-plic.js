@@ -91,6 +91,17 @@ export function createPlic(cpu, opts = {}) {
         setPending(src, on) {
             if (on) pending |= (1 << src); else pending &= ~(1 << src);
             update();
+        },
+        /** Every register, raw (riscv32-snapshot.js). Restoring does not call
+         *  update(): the core's saved mip already holds the lines it drove. */
+        saveState() {
+            return {priority: Array.from(priority), pending: pending >>> 0, enable: enable.map(v => v >>> 0),
+                threshold: threshold.map(v => v >>> 0)};
+        },
+        loadState(s) {
+            priority.set(s.priority);
+            pending = s.pending | 0;
+            for (let c = 0; c < NCTX; c++) { enable[c] = s.enable[c] >>> 0; threshold[c] = s.threshold[c] >>> 0; }
         }
     };
 }

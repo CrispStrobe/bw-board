@@ -11,6 +11,9 @@
  *   coremark   CoreMark, 100 iterations (scripts/riscv-bench), to completion.
  *   dhrystone  Dhrystone, 200 000 runs (scripts/riscv-bench), to completion.
  *   xv6        xv6-rv32 boot to the `$ ` prompt (needs XV6_KERNEL / XV6_FS).
+ *   linux      Linux 6.1 boot to the shell prompt (LINUX_IMAGE / LINUX_INITRD).
+ *   linux-snapshot  the lesson's snapshot opened to the prompt (also
+ *              LINUX_SNAPSHOT): seconds, not MIPS.
  *
  * The CoreMark/Dhrystone ELFs come from scripts/riscv-bench/build.sh (pinned
  * sources, fixed sizes; the *-ecall variant, RAM at 0x80000000, write/exit by
@@ -61,6 +64,13 @@ async function runLinuxBench() {
     return W.runLinux(RiscV32Machine, bootLinux, new Uint8Array(readFileSync(k)), new Uint8Array(readFileSync(i)));
 }
 
+async function runLinuxSnapshotBench() {
+    const k = process.env.LINUX_IMAGE, i = process.env.LINUX_INITRD, sn = process.env.LINUX_SNAPSHOT;
+    if (!k || !i || !sn) throw new Error('LINUX_IMAGE / LINUX_INITRD / LINUX_SNAPSHOT not set');
+    const session = await import(pathToFileURL(join(SRC, 'riscv32-linux-session.js')).href);
+    return W.runLinuxSnapshot(session, new Uint8Array(readFileSync(k)), new Uint8Array(readFileSync(i)), new Uint8Array(readFileSync(sn)));
+}
+
 let r;
 switch (workload) {
     case 'alu': r = await runAlu(true); break;
@@ -69,7 +79,12 @@ switch (workload) {
     case 'dhrystone': r = runElf('dhrystone'); break;
     case 'xv6': r = await runXv6(); break;
     case 'linux': r = await runLinuxBench(); break;
-    default: console.error('usage: bench-riscv32.mjs <alu|alu-noclint|coremark|dhrystone|xv6|linux> [--src DIR] [--json]'); process.exit(2);
+    case 'linux-snapshot': r = await runLinuxSnapshotBench(); break;
+    default: console.error('usage: bench-riscv32.mjs <alu|alu-noclint|coremark|dhrystone|xv6|linux|linux-snapshot> [--src DIR] [--json]'); process.exit(2);
+}
+if (r.open) {
+    console.log(`${workload}: open to the prompt in ${r.seconds.toFixed(3)} s (reached=${r.reached})`);
+    process.exit(r.reached ? 0 : 1);
 }
 r.mips = r.instructions / r.seconds / 1e6;
 if (JSON_OUT) console.log(JSON.stringify({workload, ...r, output: undefined}));

@@ -1,3 +1,14 @@
+2026-09-29 RV32 whole-machine snapshot: the Linux lesson opens at the shell prompt — IN PROGRESS, Claude (Lite task C2).
+Worktree `/mnt/volume1/code/wt/c2-linux-boot-board`, branch `lane/c2-rv-snapshot`,
+base `cfacdf60`. Owns this row, `src/riscv32-snapshot.js`, the `saveState` /
+`loadState` pairs on RiscV32 / RiscV32Machine / CLINT / PLIC / UART, the snapshot
+functions in `src/riscv32-linux-session.js` (openLinuxSnapshot,
+makeLinuxSnapshot, linuxSnapshotBase), the adapter's `linux.snapshot` and the
+factory's opening of it, `scripts/riscv32-linux-snapshot.mjs`, the
+`linux-snapshot` bench workload, `test/riscv32-snapshot.test.mjs`,
+`test/linux-riscv/snapshot.mjs` and the snapshot steps of `linux-riscv.yml`.
+Measurements and receipts are filled in before merge.
+
 2026-09-29 Actuator intent through the pin, servo calibration, averaged meters — DONE candidate, Claude (Lite task B5).
 Worktree `/mnt/volume1/code/wt/b5-pwm-followups-board`, branch `lane/b5-pwm-followups`,
 base `93185447`. Owns this row, `setDeviceControl`'s motor-speed/servo-angle

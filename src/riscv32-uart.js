@@ -96,7 +96,15 @@ export function createUart(opts = {}) {
             }
         },
         /** Push a byte into the receive path (a keyboard / host stdin). */
-        rxPush(byte) { rx.push(byte & 0xff); signal(); }
+        rxPush(byte) { rx.push(byte & 0xff); signal(); },
+        /** Every register and the receive FIFO, raw (riscv32-snapshot.js).
+         *  Restoring does not signal(): the PLIC's saved latch is the truth. */
+        saveState() { return {rx: rx.slice(), ier, lcr, mcr, scr, fcr, dll, dlm, threPending}; },
+        loadState(s) {
+            rx.length = 0; for (const b of s.rx) rx.push(b & 0xff);
+            ({ier, lcr, mcr, scr, fcr, dll, dlm} = s);
+            threPending = !!s.threPending;
+        }
     };
 }
 

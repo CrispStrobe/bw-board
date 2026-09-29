@@ -28,7 +28,7 @@ const inputs = {
     coremark: process.env.RV_BENCH_DIR && join(process.env.RV_BENCH_DIR, 'coremark-ecall.elf'),
     dhrystone: process.env.RV_BENCH_DIR && join(process.env.RV_BENCH_DIR, 'dhrystone-ecall.elf'),
     kernel: process.env.XV6_KERNEL, fs: process.env.XV6_FS,
-    linuxImage: process.env.LINUX_IMAGE, linuxInitrd: process.env.LINUX_INITRD,
+    linuxImage: process.env.LINUX_IMAGE, linuxInitrd: process.env.LINUX_INITRD, linuxSnapshot: process.env.LINUX_SNAPSHOT,
 };
 const TYPES = {'.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html'};
 const server = createServer((req, res) => {
@@ -51,6 +51,7 @@ await page.goto(base + '/');
 console.log(`Chromium ${browser.version()}`);
 for (const w of workloads) {
     if (w === 'linux' && !(inputs.linuxImage && inputs.linuxInitrd)) { console.log('linux: skipped (LINUX_IMAGE / LINUX_INITRD not set)'); continue; }
+    if (w === 'linux-snapshot' && !(inputs.linuxImage && inputs.linuxInitrd && inputs.linuxSnapshot)) { console.log('linux-snapshot: skipped (LINUX_SNAPSHOT not set)'); continue; }
     const r = await page.evaluate(async w => {
         const {RiscV32Machine} = await import('/src/riscv32-machine.js');
         const W = await import('/scripts/riscv-bench/workloads.mjs');
@@ -62,8 +63,13 @@ for (const w of workloads) {
             const {bootLinux} = await import('/src/riscv32-linux.js');
             return W.runLinux(RiscV32Machine, bootLinux, await bytes('linuxImage'), await bytes('linuxInitrd'));
         }
+        if (w === 'linux-snapshot') {
+            const session = await import('/src/riscv32-linux-session.js');
+            return W.runLinuxSnapshot(session, await bytes('linuxImage'), await bytes('linuxInitrd'), await bytes('linuxSnapshot'));
+        }
         throw new Error('unknown workload ' + w);
     }, w);
+    if (r.open) { console.log(`${w}: open to the prompt in ${r.seconds.toFixed(3)} s, reached=${r.reached} (chromium)`); continue; }
     console.log(`${w}: ${r.instructions} instructions in ${r.seconds.toFixed(2)} s = ${(r.instructions / r.seconds / 1e6).toFixed(2)} MIPS (chromium)`);
 }
 await browser.close();

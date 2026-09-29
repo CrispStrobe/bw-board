@@ -14,6 +14,7 @@ on:
       - 'src/riscv32*.js'
       - 'src/fdt.js'
       - 'src/debug-target-factory.js'
+      - 'scripts/riscv32-linux-snapshot.mjs'
       - 'scripts/riscv-bench/**'
       - 'scripts/bench-riscv32*.mjs'
 
@@ -35,6 +36,16 @@ jobs:
         run: node --max-old-space-size=1024 test/linux-riscv/boot.mjs linux-out/Image linux-out/initramfs.cpio 3000000000 900
       - name: The lesson path — pinned-media check, debug target + session frames, uname over the UART
         run: node --max-old-space-size=1024 test/linux-riscv/lesson.mjs linux-out/Image linux-out/initramfs.cpio
+      - name: Post-boot snapshot — build it (reproducible), prove it equals a cold boot, keep it
+        run: |
+          node scripts/riscv32-linux-snapshot.mjs linux-out/Image linux-out/initramfs.cpio linux-out/linux-shell.snap.gz | tee linux-out/linux-shell.snap.json
+          node --max-old-space-size=1536 test/linux-riscv/snapshot.mjs linux-out/Image linux-out/initramfs.cpio linux-out/linux-shell.snap.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-shell-snapshot
+          path: |
+            linux-out/linux-shell.snap.gz
+            linux-out/linux-shell.snap.json
       - name: Reset to power-off, three runs (instructions and wall time)
         run: |
           for i in 1 2 3; do
@@ -46,10 +57,12 @@ jobs:
           LINUX_INITRD: ${{ github.workspace }}/linux-out/initramfs.cpio
         run: |
           for i in 1 2 3; do node scripts/bench-riscv32.mjs linux | tail -1; done
+          export LINUX_SNAPSHOT="$GITHUB_WORKSPACE/linux-out/linux-shell.snap.gz"
+          for i in 1 2 3; do node scripts/bench-riscv32.mjs linux-snapshot | tail -1; done
           mkdir -p ext/pw && cd ext/pw && echo '{}' > package.json
           npm i --no-audit --no-fund playwright@1.62.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE"
-          PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs linux linux linux
+          PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs linux linux linux linux-snapshot linux-snapshot linux-snapshot
       - name: rv32emu source (pinned)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

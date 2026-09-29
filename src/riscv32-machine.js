@@ -272,6 +272,59 @@ export class RiscV32Machine {
         return n;
     }
 
+    /**
+     * The machine's state apart from RAM (riscv32-snapshot.js carries the RAM):
+     * the hart, the firmware's own state (SBI timer forwarding, legacy getchar
+     * queue, idle-skip total, exit code), each device, and the config a restore
+     * must match. A virtio disk is refused by name: its backing image is not
+     * part of a snapshot.
+     */
+    saveState() {
+        if (this.virtio) {
+            const e = new Error('a RiscV32Machine with a virtio disk cannot be snapshotted (the disk image is not saved)');
+            e.code = 'snapshot-unsupported-device';
+            throw e;
+        }
+        return {
+            config: this._snapshotConfig(),
+            cpu: this.cpu.saveState(),
+            machine: {exitCode: this.exitCode, rxQueue: this._rxQueue.slice(), sbiTimer: this._sbiTimer,
+                idleSkipped: this.idleSkipped},
+            clint: this.clint ? this.clint.saveState() : null,
+            plic: this.plic ? this.plic.saveState() : null,
+            uart: this.uart ? this.uart.saveState() : null
+        };
+    }
+
+    /** What must agree between the saving and the restoring machine. */
+    _snapshotConfig() {
+        const d = x => x ? x.base >>> 0 : null;
+        return {memSize: this.memSize, ramBase: this.ramBase, ecallTraps: this.cpu.ecallTraps,
+            ebreakTraps: this.cpu.ebreakTraps, clint: d(this.clint), plic: d(this.plic), uart: d(this.uart)};
+    }
+
+    /** Put back a {@link saveState} result (RAM is the caller's). A machine
+     *  built differently — other RAM size or base, a device missing or moved —
+     *  is refused by name rather than half-restored. `output` is not touched. */
+    loadState(s) {
+        const want = s.config, have = this._snapshotConfig();
+        for (const k of Object.keys(want)) {
+            if (want[k] !== have[k]) {
+                const e = new Error(`snapshot config mismatch: ${k} is ${JSON.stringify(have[k])} here, ${JSON.stringify(want[k])} in the snapshot`);
+                e.code = 'snapshot-config-mismatch';
+                throw e;
+            }
+        }
+        this.cpu.loadState(s.cpu);
+        this.exitCode = s.machine.exitCode;
+        this._rxQueue = s.machine.rxQueue.slice();
+        this._sbiTimer = !!s.machine.sbiTimer;
+        this.idleSkipped = s.machine.idleSkipped;
+        if (this.clint) this.clint.loadState(s.clint);
+        if (this.plic) this.plic.loadState(s.plic);
+        if (this.uart) this.uart.loadState(s.uart);
+    }
+
     /** True once the program exited (via the exit syscall) or trapped. */
     get halted() { return this.cpu.halted; }
 }
