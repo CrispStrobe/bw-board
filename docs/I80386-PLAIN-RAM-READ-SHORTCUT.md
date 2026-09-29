@@ -37,7 +37,7 @@ pairs for each of (1) the bounded 60-million-step Windows console path and
 (2) complete lean stock xv6 `forktest` with `XV6_RAM_HASH=1`, alternating
 order AB/BA/AB. Keep all
 other options and input bytes equal. Compare exact selected guest and device
-state, step count, completed marker, RAM hash and output/transcript hash for
+state, step count, completed marker, RAM and final disk hashes, and output/transcript hash for
 each pair. The Windows report's `inputs.plainRamReadShortcut` and the xv6
 report's `plainRamReadShortcut` are the only expected report-field differences;
 retain source/revision/media parity checks rather than normalizing those.

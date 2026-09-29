@@ -37,6 +37,8 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.equal(report.delivered.length,1);
   assert.equal(report.delivered[0].accepted,false); // guest has not enabled mouse streaming
   assert.equal(report.steps,1);
+  assert.equal(report.diskSha256,digest(hdd));
+  assert.match(report.ramSha256,/^[0-9a-f]{64}$/);
   assert.equal(report.inputs.code16Loads,false);
   assert.equal(report.code16LoadExecutions,0);
   assert.equal(report.vga.planeSha256.length,4);

@@ -443,6 +443,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   ramSha256:sha(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes)),
+  diskSha256:sha(machine.ata.mediaBytes()),
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
     cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
   nativeStats:nativeDispatcher?.stats??null,
