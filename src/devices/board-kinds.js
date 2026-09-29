@@ -1,6 +1,6 @@
 /**
  * Board-kind device models — Arduino Nano/Uno/Mega, Pi Pico, and the MakeCode
- * boards (Calliope mini, Circuit Playground Express, PyBadge).
+ * boards (micro:bit, Calliope mini, Circuit Playground Express, PyBadge).
  *
  * These represent the development board as a whole. Their power pins (5V,
  * 3V3, GND, VIN, VBUS, VSYS) are stamped as Thévenin sources / ground
@@ -322,7 +322,7 @@ const STC15_TERMINALS = [
   'p3.7', 'p3.6', 'p3.5', 'p3.4', 'p3.3', 'p3.2', 'p3.1', 'p3.0',
 ];
 
-// ─── MakeCode boards: Calliope mini, Circuit Playground Express, PyBadge ─
+// ─── MakeCode boards: micro:bit, Calliope mini, Circuit Playground Express, PyBadge
 //
 // The boards lite runs MakeCode programs on. Terminal spellings are the
 // bw-circuit-ui sidecars' (the netlist's namespace), which are MakeCode's own
@@ -337,6 +337,28 @@ const STC15_TERMINALS = [
 // sockets are not modelled as terminals.
 const CALLIOPE_MINI_TERMINALS = ['p0', 'p1', 'p2', 'p3', '3v', 'gnd'];
 const CALLIOPE_MINI_ROLES = { '3v': '3v3' };
+
+// BBC micro:bit (V2, nRF52833): the five large edge-connector pads, exactly
+// as bw-circuit-ui's `microbit` sidecar names them. `3v` is the 3.3 V rail,
+// the same misread-as-GPIO spelling as the Calliope's. The micro:bit is the
+// board this block was written for and was the one left unregistered: it
+// collapsed to the generic 'mcu' surface, where P0 -> 220 R -> LED -> the
+// micro:bit's own GND pad carried 0 mA with every node floating at 5 V
+// (test/makecode-boards.test.mjs pins that counterfactual).
+const MICROBIT_TERMINALS = ['p0', 'p1', 'p2', '3v', 'gnd'];
+const MICROBIT_ROLES = { '3v': '3v3' };
+
+// micro:bit seated in an edge-connector breakout (`microbit_breakout` sidecar):
+// a representative subset of the edge pins, with the rail brought out on BOTH
+// header sides. `3v_l`/`3v_r` and `gnd_l`/`gnd_r` match none of the shared
+// spellings, so they are named here — otherwise they would be GPIO that
+// sources nothing, the same defect as the bare board.
+const MICROBIT_BREAKOUT_TERMINALS = [
+  'p0', 'p1', 'p2', '3v_l', 'gnd_l', 'p8', 'p12', 'p16', '3v_r', 'gnd_r',
+];
+const MICROBIT_BREAKOUT_ROLES = {
+  '3v_l': '3v3', '3v_r': '3v3', gnd_l: 'gnd', gnd_r: 'gnd',
+};
 
 // Adafruit Circuit Playground Express (ATSAMD21G18): its 14 alligator pads —
 // A0-A7, two 3.3 V, three GND and VOUT. Onboard NeoPixels, buttons, slide
@@ -370,6 +392,9 @@ export function registerBoardKinds() {
   registerDevice('arduino_uno', boardModel(UNO_TERMINALS, 5.0));
   registerDevice('arduino_mega', boardModel(MEGA_TERMINALS, 5.0));
   registerDevice('pi_pico', boardModel(PICO_TERMINALS, 3.3));
+  registerDevice('microbit', boardModel(MICROBIT_TERMINALS, 3.3, MICROBIT_ROLES));
+  registerDevice('microbit_breakout',
+    boardModel(MICROBIT_BREAKOUT_TERMINALS, 3.3, MICROBIT_BREAKOUT_ROLES));
   registerDevice('calliopemini', boardModel(CALLIOPE_MINI_TERMINALS, 3.3, CALLIOPE_MINI_ROLES));
   registerDevice('circuit_playground_express', boardModel(CPX_TERMINALS, 3.3, CPX_ROLES));
   registerDevice('pybadge', boardModel(PYBADGE_TERMINALS, 3.3, PYBADGE_ROLES));

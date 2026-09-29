@@ -1,6 +1,6 @@
 /**
- * The MakeCode boards are MCU surfaces: Calliope mini, Circuit Playground
- * Express and PyBadge.
+ * The MakeCode boards are MCU surfaces: micro:bit (bare and in a breakout),
+ * Calliope mini, Circuit Playground Express and PyBadge.
  *
  * lite runs MakeCode programs "on" these boards and reaches the circuit
  * through Boundary A: `board.setPin('p0', 'pushpull', true)`,
@@ -79,6 +79,8 @@ function measure(board) {
 
 // kind, one GPIO pad per program-facing name, its 3.3 V pad, its ground pad.
 const BOARDS = [
+  { kind: 'microbit', pads: ['p0', 'p1', 'p2'], v3: '3v', gnd: 'gnd' },
+  { kind: 'microbit_breakout', pads: ['p0', 'p1', 'p2', 'p8', 'p12', 'p16'], v3: '3v_l', gnd: 'gnd_r' },
   { kind: 'calliopemini', pads: ['p0', 'p1', 'p2', 'p3'], v3: '3v', gnd: 'gnd' },
   { kind: 'circuit_playground_express',
     pads: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7'], v3: '3v3_2', gnd: 'gnd3' },
@@ -152,6 +154,31 @@ describe('setPin on a MakeCode board pad drives an LED + resistor', () => {
   });
 });
 
+describe("micro:bit: P0 -> 220 R -> LED -> the micro:bit's own GND pad (task A1)", () => {
+  // The circuit as a learner draws it in Lite, with no separate ground part.
+  // On the unregistered path this measured 0 mA with every node at 5 V (the
+  // counterfactual above); the bare board must close the loop through its own
+  // GND pad and drive the pin from its 3.3 V rail.
+  it('carries a 3.3 V-derived current and lights the LED', () => {
+    // The kind the engine receives, resolved the way bw-circuit-ui's
+    // engineKindFor does: a registered model keeps its identity, anything
+    // else collapses to 'mcu'. So without the registration this reads the
+    // Lite-observed 0 mA, not an "unknown kind" rejection.
+    const kind = getDevice('microbit') ? 'microbit' : 'mcu';
+    const board = ledOnPad(kind, 'p0', 'gnd');
+    board.setPin('P0', 'pushpull', true);
+    const { vPin, vAnode, mA } = measure(board);
+    assert.ok(Math.abs(board.nodeVoltage('n_gnd')) < 0.005,
+      `GND pad ${board.nodeVoltage('n_gnd').toFixed(4)} V is not a ground`);
+    assert.ok(mA > 4 && mA < 7, `loop current ${mA.toFixed(3)} mA (0 = GND pad floating, ~12.5 = 5 V pin)`);
+    assert.ok(Math.abs(vPin - (3.3 - 0.025 * mA)) < 0.005, `P0 ${vPin.toFixed(4)} V is not a 3.3 V pin`);
+    // Ohm's law closes against the Calliope reading on the same loop.
+    assert.ok(Math.abs(mA - (3.3 - vAnode) / 245 * 1000) < 0.01);
+    assert.ok(Math.abs(ledMilliamps(board) - mA) < 0.01);
+    assert.ok(board.ledBrightness('LED1') > 0.1, 'the LED is lit');
+  });
+});
+
 describe('readPin reads a button wired to a MakeCode board pad', () => {
   for (const { kind, pads, v3, gnd } of BOARDS) {
     const pad = pads[1];
@@ -172,6 +199,9 @@ describe('readPin reads a button wired to a MakeCode board pad', () => {
 describe('MakeCode board power pads source', () => {
   // pad → 1 k → board ground pad; the pad holds its rail (0.1 R source).
   const railCases = [
+    ['microbit', '3v', 'gnd', 3.3],
+    ['microbit_breakout', '3v_l', 'gnd_l', 3.3],
+    ['microbit_breakout', '3v_r', 'gnd_r', 3.3],
     ['calliopemini', '3v', 'gnd', 3.3],
     ['circuit_playground_express', '3v3', 'gnd', 3.3],
     ['circuit_playground_express', '3v3_2', 'gnd2', 3.3],
@@ -220,7 +250,9 @@ describe('MakeCode board power pads source', () => {
 });
 
 describe('current ratings', () => {
-  for (const { kind } of BOARDS) {
+  // The micro:bit rows are bw-parts' data (`microbit`: not yet rated), not
+  // this file's; only the LOCAL_ONLY MakeCode rows are asserted here.
+  for (const kind of ['calliopemini', 'circuit_playground_express', 'pybadge']) {
     it(`${kind} has a row: not a consumer of the chip-pin budget`, () => {
       assert.equal(getMaxCurrent(kind), 0);
     });
