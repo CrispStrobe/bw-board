@@ -21,7 +21,11 @@ try{
 const oracle=JSON.parse(readFileSync(new URL('../docs/receipts/2026-09-28-i80386-win16-io-boundary-oracle.json',import.meta.url)));
 const hash=data=>createHash('sha256').update(data).digest('hex');
 const ownedSource=readFileSync(new URL('./fixtures/i80386-win16-io-boundary.S',import.meta.url));
-const coreSource=readFileSync(new URL('../src/experimental/i80386.js',import.meta.url));
+// The oracle attests to the CPU source at its recorded revision. The current
+// CPU is exercised below and may evolve without changing that historical pin.
+const coreSource=execFileSync('git',
+  ['show',`${oracle.revision}:src/experimental/i80386.js`],
+  {cwd:new URL('../',import.meta.url)});
 assert.equal(hash(ownedSource),oracle.sourceHashes['test/fixtures/i80386-win16-io-boundary.S']);
 assert.equal(hash(coreSource),oracle.sourceHashes['src/experimental/i80386.js']);
 assert.equal(hash(image),oracle.imageSha256);

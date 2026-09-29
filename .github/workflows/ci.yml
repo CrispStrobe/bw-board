@@ -47,6 +47,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Fetch exact source revision of dated FreeDOS evidence
         run: git fetch --no-tags --depth=1 origin 46de3726abe68cb8ff106ddb4131f5d0b7bd7578
+      - name: Fetch exact source revision of Win16 I/O boundary oracle
+        run: git fetch --no-tags --depth=1 origin ccc6dcd8dab4caf7fa0010acf45ed341e6ad5389
       # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
       # needs its built WASM. Checking it out is the difference between that
       # gate RUNNING and it skipping on every CI run — the failure mode this

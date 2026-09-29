@@ -69,6 +69,7 @@ test('VM86 segment reload restores a 64KiB real-style cache', () => {
     default32: false,
     present: true,
     code: false,
+    readable: true,
     writable: true,
   });
 });
