@@ -38,8 +38,19 @@ jobs:
         run: node --max-old-space-size=1024 test/linux-riscv/lesson.mjs linux-out/Image linux-out/initramfs.cpio
       - name: Post-boot snapshot — build it (reproducible), prove it equals a cold boot, keep it
         run: |
-          node scripts/riscv32-linux-snapshot.mjs linux-out/Image linux-out/initramfs.cpio linux-out/linux-shell.snap.gz | tee linux-out/linux-shell.snap.json
+          # The raw (content) sha256 is the reproducibility contract; the gzip
+          # bytes also depend on the runner's zlib, so they are not pinned here
+          # (the published file's own sha256 is checked in the next step).
+          . test/linux-riscv/snapshot-pin.env
+          node scripts/riscv32-linux-snapshot.mjs linux-out/Image linux-out/initramfs.cpio linux-out/linux-shell.snap.gz \
+            --expect-raw "$LINUX_SNAPSHOT_RAW_SHA256" | tee linux-out/linux-shell.snap.json
           node --max-old-space-size=1536 test/linux-riscv/snapshot.mjs linux-out/Image linux-out/initramfs.cpio linux-out/linux-shell.snap.gz
+      - name: Post-boot snapshot — the published copy (brickwright-media-lab) still equals this tree's
+        run: |
+          . test/linux-riscv/snapshot-pin.env
+          curl -sSfL -o linux-out/published.snap.gz "$LINUX_SNAPSHOT_URL"
+          echo "$LINUX_SNAPSHOT_SHA256  linux-out/published.snap.gz" | sha256sum -c -
+          node --max-old-space-size=1536 test/linux-riscv/snapshot.mjs linux-out/Image linux-out/initramfs.cpio linux-out/published.snap.gz
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: linux-shell-snapshot
