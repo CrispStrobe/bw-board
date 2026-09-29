@@ -21,9 +21,9 @@
  *   spaces: ['code','sram'] `read_memory(addr, len)` is address-space-flat, so
  *                          both names read the same bus. Declaring one name
  *                          would make the front end hide a pane that works.
- *   writable: []           The wasm surface exposes no memory WRITE. Not a
- *                          limitation of this file, and not one to paper over:
- *                          a front end that offers an edit which silently does
+ *   writable: ['code','sram'] only when the engine exports `write_memory`
+ *                          (labwired-core >= d76ee833); [] on an older build.
+ *                          A front end that offers an edit which silently does
  *                          nothing is worse than one that greys it out.
  *   haltPolicy: 'freeze-timers'  Honest here for the same reason as the AVR and
  *                          RP2040 targets: engine time advances only inside

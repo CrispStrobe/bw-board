@@ -292,13 +292,35 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
             // 'block' still needs a yield set we do not have.
             assert.deepEqual(c.steps, ['insn', 'over', 'out']);
             assert.deepEqual(c.breakpoints, ['code', 'write']);   // write: per-step read-back
-            assert.deepEqual(c.writable, [],
-                'the wasm surface has no memory write — offering one would be a lie');
+            // Writable exactly when the engine exports a memory write, read
+            // off the module itself rather than off the target under test.
+            const engineWrites = Object.values(wasm).some(
+                k => typeof k === 'function' && typeof k.prototype?.write_memory === 'function');
+            assert.deepEqual(c.writable, engineWrites ? ['code', 'sram'] : [],
+                'offering a write the engine lacks would be a lie; hiding one it has, a dead pane');
             assert.equal(c.haltPolicy, 'freeze-timers');
             // And the refusals are by name, not silence.
             assert.match(target.step('block').unsupported, /yield set/);
-            assert.match(target.writeMem('sram', 0, new Uint8Array(1)).unsupported, /no memory write/);
+            if (!engineWrites) {
+                assert.match(target.writeMem('sram', 0, new Uint8Array(1)).unsupported, /no memory write/);
+            }
             assert.match(target.setBreakpoint({kind: 'yield', addr: 0}).unsupported, /no yield set/);
+        });
+
+        it('a memory and a register write land in the engine, when it has them', async (t) => {
+            const { target } = await makeTarget();
+            if (!target.capabilities().writable.length) {
+                t.skip('this labwired-wasm build has no write_memory');
+                return;
+            }
+            const addr = 0x2000_8000;                       // fixture SRAM: 0x20000000, 64 KB
+            const bytes = Uint8Array.from([0xde, 0xad, 0xbe, 0xef]);
+            assert.equal(target.writeMem('sram', addr, bytes), undefined, 'write refused');
+            assert.deepEqual([...target.readMem('sram', addr, 4)], [...bytes],
+                'the bytes read back are not the bytes written');
+            assert.equal(target.writeReg('r0', 0x1234_5678), undefined, 'register write refused');
+            assert.equal(target.regs().r0, 0x1234_5678, 'R0 did not take the written value');
+            assert.match(target.writeReg('no_such_reg', 1).unsupported, /no register named/);
         });
 
         it('single-steps, and the PC moves', async () => {
