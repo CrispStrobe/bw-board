@@ -687,6 +687,69 @@ export class RiscV32 {
     }
 
     // ── little-endian memory ────────────────────────────────────────
+    // ── Side-effect-free peeks (the retire-trace hook, src/riscv32-trace.js) ──
+    // A tracer must see the instruction and the data address a step is about
+    // to use WITHOUT changing anything the step would see: no TLB fill, no A/D
+    // update, no trap, no device read. These two are that view. They are
+    // never called by step(), so a core with no tracer attached runs exactly
+    // the code it ran before they existed.
+
+    /** The physical address `va` would translate to for `kind` (0 fetch,
+     *  1 load, 2 store/AMO) in the current context, or null where the access
+     *  would fault — the checks of _translate, read-only: a leaf whose A (or,
+     *  for a store, D) bit is still clear counts as translating only when
+     *  hardware would set it (menvcfg.ADUE). PTEs are read from plain RAM only. */
+    peekTranslate(va, kind) {
+        va >>>= 0;
+        const satp = this.csr[CSR.SATP] >>> 0;
+        if ((satp >>> 31) === 0) return va;
+        const ms = this.csr[CSR.MSTATUS];
+        const eff = (kind !== 0 && (ms & (1 << 17))) ? (ms >>> 11) & 3 : this.priv;
+        if (eff === PRIV_M) return va;
+        const isLeaf = p => (p & 0xa) !== 0;
+        const bad = p => !(p & 1) || ((p & 0x4) && !(p & 0x2));
+        let pte = this.peekRam((((satp & 0x3fffff) * 4096) + ((va >>> 22) & 0x3ff) * 4) >>> 0, 4);
+        if (pte === null) return null;
+        pte >>>= 0;
+        let phys;
+        if (bad(pte)) return null;
+        if (isLeaf(pte)) {
+            if (((pte >>> 10) & 0x3ff) !== 0) return null;
+            phys = (((pte >>> 20) & 0xfff) * 0x400000 + (va & 0x3fffff)) >>> 0;
+        } else {
+            pte = this.peekRam(((((pte >>> 10) & 0x3fffff) * 4096) + ((va >>> 12) & 0x3ff) * 4) >>> 0, 4);
+            if (pte === null) return null;
+            pte >>>= 0;
+            if (bad(pte) || !isLeaf(pte)) return null;
+            phys = (((pte >>> 10) & 0x3fffff) * 4096 + (va & 0xfff)) >>> 0;
+        }
+        const permit = kind === 0 ? (pte & 8) : kind === 2 ? (pte & 4) : ((pte & 2) || ((pte & 8) && (ms & (1 << 19))));
+        if (!permit) return null;
+        if (eff === PRIV_U && !(pte & 0x10)) return null;
+        if (eff === PRIV_S && (pte & 0x10) && !(kind !== 0 && (ms & (1 << 18)))) return null;
+        const need = 0x40 | (kind === 2 ? 0x80 : 0);
+        if ((pte & need) !== need && !(this.csr[CSR.MENVCFGH] & MENVCFGH_ADUE)) return null;
+        return phys;
+    }
+
+    /** `bytes` (1, 2 or 4) little-endian from plain RAM at physical `pa`, or
+     *  null when any of them is not RAM or sits on a device page (a device
+     *  read can have side effects; a peek never makes one). */
+    peekRam(pa, bytes) {
+        let v = 0;
+        for (let k = 0; k < bytes; k++) {
+            const u = (pa + k) >>> 0;
+            if (this._dev(this.io, u) || this._dev(this.io8, u)) return null;
+            let i = (u - this.ramBase) >>> 0;
+            if (i >= this._memLen) {
+                if (!this.ramMirror) return null;
+                i &= this._memLen - 1;
+            }
+            v |= this.mem[i] << (8 * k);
+        }
+        return bytes === 4 ? v >>> 0 : v;
+    }
+
     /** Find the MMIO device (in `list`) whose range contains address `u`, or null. */
     _dev(list, u) { for (let i = 0; i < list.length; i++) { const d = list[i]; if (u >= d.base && u < d.base + d.size) return d; } return null; }
 
