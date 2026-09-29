@@ -21,9 +21,9 @@
  *   spaces: ['code','sram'] `read_memory(addr, len)` is address-space-flat, so
  *                          both names read the same bus. Declaring one name
  *                          would make the front end hide a pane that works.
- *   writable: []           The wasm surface exposes no memory WRITE. Not a
- *                          limitation of this file, and not one to paper over:
- *                          a front end that offers an edit which silently does
+ *   writable: ['code','sram'] only when the engine exports `write_memory`
+ *                          (labwired-core >= d76ee833); [] on an older build.
+ *                          A front end that offers an edit which silently does
  *                          nothing is worse than one that greys it out.
  *   haltPolicy: 'freeze-timers'  Honest here for the same reason as the AVR and
  *                          RP2040 targets: engine time advances only inside
@@ -32,15 +32,22 @@
  *                          `skewNs` is 0n — no wall clock runs on without us.
  *
  * THUMB BIT. ARM PCs are byte addresses, but bit 0 of a code address carries
- * the Thumb execution-state flag and is never part of the address. It is masked
- * at the compare site, and an odd breakpoint address is refused rather than
- * quietly never matching.
+ * the Thumb execution-state flag and is never part of the address. On an ARM
+ * chip it is masked at the compare site, and an odd breakpoint address is
+ * refused rather than quietly never matching. ARM ONLY: Xtensa's 16/24-bit
+ * instructions sit at odd addresses, so there the PC is used as-is (the
+ * adapter reports the chip's `arch`).
  *
  * @module
  */
 
 /** Engine cycles per pump slice when nothing is armed — big enough that the
  *  wasm boundary is not the bottleneck, small enough to stay responsive. */
+import { plain } from './labwired-adapter.js';
+import { logicalTimeDomain } from './instruction-debug-events.js';
+import { readElfFunctionSymbols, symbolizer } from './elf-symbols.js';
+import { decodeDisplay } from './display-decode.js';
+
 const FREE_RUN_CHUNK = 200_000;
 const CODE_ADDRESS_MAX = 0xfffffffe;
 
@@ -69,30 +76,332 @@ export function createLabwiredDebugTarget (opts) {
   const breakpoints = new Map();
   /** Code breakpoints, Thumb bit already masked off. */
   const codeBps = new Set();
+  /**
+   * Write watchpoints: handle -> { addr, len, last }. Not native: after every
+   * instruction the watched bytes are read back and compared, which is why
+   * arming one forces the single-step path (slower, and exact).
+   */
+  const writeWatches = new Map();
 
   const sim = () => adapter.sim;
+  // Bit 0 of an ARM code address is the Thumb flag, never part of it. Xtensa
+  // has 16- and 24-bit instructions, so an odd PC is an ordinary address there,
+  // and masking it would move every breakpoint and every reported PC. AVR and
+  // RISC-V PCs are even anyway; masking is ARM's rule, so it is ARM's alone.
+  const thumb = (adapter.arch ?? 'arm') === 'arm';
+  // Function names from the user's own ELF (firmware-only), when it has a
+  // symbol table: `main+0x12` beside a PC is what makes a raw run readable.
+  const symbolAt = symbolizer(opts.elf ? readElfFunctionSymbols(opts.elf, { thumb }) : []);
+  /** The engine can write memory / registers / decode any address (newer wasm). */
+  const canWrite = () => typeof sim().write_memory === 'function';
+  const canDecodeAt = () => typeof sim().disassemble_at === 'function';
+  const byteAt = (a) => {
+    try { const b = sim().read_memory(a >>> 0, 1); return b && b.length ? b[0] : null; } catch (e) { return null; }
+  };
+  /**
+   * Bytes in the instruction at `addr`, from its first bytes and the chip's
+   * architecture: Thumb 2/4 (32-bit when bits 15:13 are 111 and 12:11 != 00),
+   * RISC-V 2/4 (compressed unless the low two bits are 11), Xtensa 2/3 (op0
+   * 8..13 is a narrow form), AVR 2/4 (CALL/JMP/LDS/STS take a second word).
+   * null when the bytes cannot be read.
+   */
+  const instrLength = (addr) => {
+    const a = codeAddr(addr);
+    const b0 = byteAt(a);
+    const b1 = byteAt(a + 1);
+    if (b0 === null) return null;
+    const arch = adapter.arch ?? 'arm';
+    if (arch.startsWith('xtensa')) { const op0 = b0 & 0x0f; return op0 >= 8 && op0 <= 13 ? 2 : 3; }
+    if (b1 === null) return null;
+    const hw = b0 | (b1 << 8);
+    if (arch === 'riscv') return (hw & 0b11) === 0b11 ? 4 : 2;
+    if (arch === 'avr') {
+      const long = (hw & 0xfe0c) === 0x940c || (hw & 0xfe0f) === 0x9000 || (hw & 0xfe0f) === 0x9200;
+      return long ? 4 : 2;
+    }
+    return (hw & 0xe000) === 0xe000 && (hw & 0x1800) !== 0 ? 4 : 2;
+  };
+  const nameOf = (a) => {
+    const hit = symbolAt(a);
+    return hit ? (hit.offset ? `${hit.name}+0x${hit.offset.toString(16)}` : hit.name) : null;
+  };
+  const codeAddr = a => (thumb ? (a & ~1) : a) >>> 0;
   const pc = () => sim().get_pc() >>> 0;
 
-  const halted = (reason, detail) => {
+  /** A register by the engine's own name ('SP', 'LR'), or null. */
+  const regNamed = (name) => {
+    try {
+      const names = sim().get_register_names();
+      const i = Array.isArray(names) ? names.indexOf(name) : -1;
+      return i < 0 ? null : sim().get_register(i) >>> 0;
+    } catch (e) {
+      return null;
+    }
+  };
+  const halfword = (addr) => {
+    try {
+      const b = sim().read_memory(addr >>> 0, 2);
+      return b && b.length === 2 ? (b[0] | (b[1] << 8)) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  /**
+   * The return address if the instruction at `at` is a Thumb call, else null.
+   * BL (32-bit: 11110… then 11x1…) returns to at+4; BLX Rm (16-bit
+   * 0100 0111 1xxx x000) to at+2. Same decode rp2040js-debug uses, plus BLX.
+   */
+  const callReturn = (at) => {
+    const hw1 = halfword(at);
+    if (hw1 === null) return null;
+    if ((hw1 & 0xff87) === 0x4780) return at + 2;
+    if ((hw1 & 0xf800) === 0xf000) {
+      const hw2 = halfword(at + 2);
+      if (hw2 !== null && (hw2 & 0xd000) === 0xd000) return at + 4;
+    }
+    return null;
+  };
+  /** Step-over / step-out in flight: { kind, returnPc, sp0 }. */
+  let depthStep = null;
+
+  /**
+   * The engine's Cortex-M fault verdict (why and where the firmware faulted,
+   * `summary` is one sentence), or null — also null on an engine or core that
+   * has none. Non-draining on the engine side, so it is safe to ask per slice.
+   */
+  const readFault = () => {
+    if (typeof sim().fault_verdict !== 'function') return null;
+    try {
+      const json = sim().fault_verdict();
+      return json ? JSON.parse(json) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  /** Latched once the first fault halts the run, so Continue does not stop again at once. */
+  let faultSeen = false;
+  /** Halt on the FIRST fault, the way a hardware debugger stops on HardFault. */
+  const haltOnNewFault = () => {
+    if (faultSeen) return false;
+    const verdict = readFault();
+    if (!verdict) return false;
+    faultSeen = true;
+    halted('fault', { summary: verdict.summary, verdict });
+    return true;
+  };
+
+  // ── Reverse (opt-in recording) ───────────────────────────────────────
+  //
+  // bw-debug's reverse step restores the nearest checkpoint and replays one
+  // instruction at a time, comparing each replayed retire event with the
+  // recorded one. That needs a retire event per instruction, which on this
+  // engine means single-stepping across the wasm boundary — far slower than
+  // batched running. So it is OPT-IN (`setRecording(true)`), and only where
+  // save points work (firmware-only): a checkpoint IS an engine snapshot.
+  //
+  // TICKS ARE RETIRED INSTRUCTIONS, and the domain says so. The engine has no
+  // per-instruction cycle count to read, and this target already treats one
+  // instruction as one cycle for program time; naming the clock
+  // `labwired-instructions` keeps anyone from reading these ticks as cycles.
+  // A restore opens a new epoch (`-rewind-<n>`): the timeline branched, and
+  // bw-debug requires ticks never to fall within one domain.
+  const DOMAIN = 'labwired-instructions';
+  let recording = false;
+  let retired = 0;
+  let epoch = 0;
+  const domain = () => (epoch ? `${DOMAIN}-rewind-${epoch}` : DOMAIN);
+  const clockHz = Number(clockHzBig);
+  let eventListeners = [];
+  let videoCache = null;
+  let videoFrames = 0;
+  let inputListeners = [];
+  /** One instruction, and — while recording — its retire event. */
+  const stepOne = () => {
+    const pcBefore = codeAddr(pc());
+    sim().step_single();
+    if (!recording) return;
+    retired += 1;
+    const ev = {
+      cpuId: 0, kind: 'instruction', phase: 'retire', fidelity: 'recorded',
+      time: { ticks: retired, domain: domain(), hz: clockHz },
+      pcBefore, pcAfter: codeAddr(pc()),
+    };
+    for (const cb of eventListeners) {
+      try { cb(ev); } catch (e) { /* a listener must not stop the run */ }
+    }
+  };
+
+  /**
+   * Tell every listener why the run stopped, in the halt shape every other
+   * target uses (avr8js/emu8051/riscv32: `cause`, `pc`, `bp`, `bpKind`, `tNs`,
+   * `skewNs`). This target used to send `{ reason, addr }` only, so bw-debug —
+   * which reads `why.cause` and maps `why.bp` back to the UI breakpoint that
+   * fired — could not tell which breakpoint hit or record the cause in its
+   * trace. `reason` stays as an alias. A user halt is `pause`, as elsewhere.
+   */
+  const halted = (reason, detail = {}) => {
     running = false;
     insnRemaining = null;
+    depthStep = null;
+    const cause = reason === 'user' ? 'pause' : reason;
+    let bp;
+    if (cause === 'breakpoint') {
+      for (const [handle, addr] of breakpoints) if (addr === detail.addr) { bp = handle; break; }
+    }
+    const why = {
+      cause, reason, pc: codeAddr(pc()),
+      bp, bpKind: bp !== undefined ? 'code' : undefined,
+      tNs: adapter.timeNs(), skewNs: 0n,
+      ...detail,
+    };
     for (const cb of listeners) {
-      try { cb({ reason, ...detail }); } catch (e) { /* a listener must not stop the halt */ }
+      try { cb(why); } catch (e) { /* a listener must not stop the halt */ }
     }
   };
 
   const target = {
     capabilities () {
       return {
-        steps: ['insn'],
-        breakpoints: ['code'],
+        // over/out on ARM only: they read the Thumb call encodings and SP/LR.
+        steps: thumb ? ['insn', 'over', 'out'] : ['insn'],
+        breakpoints: ['code', 'write'],
+        // Run-to is one temporary code breakpoint, installed synchronously —
+        // bw-debug's run-to coordinator owns it; nothing target-side to add.
+        runTo: [{ kind: 'address', space: 'code', addressMin: 0, addressMax: CODE_ADDRESS_MAX,
+          stopSides: ['before'], installation: 'sync' }],
         spaces: ['code', 'sram'],
-        writable: [],
+        // Memory write needs the engine's write_memory (labwired wasm with the
+        // debugger writes); an older engine offers none, and says so.
+        writable: canWrite() ? ['code', 'sram'] : [],
         sfrs: 'memory-mapped',
         haltPolicy: 'freeze-timers',
         timeFreezes: true,
         consumes: [],
+        // Reverse only while opted in (see setRecording): a checkpoint is an
+        // engine snapshot, and a retire event needs single-stepping.
+        recording: recording ? ['checkpoint', 'restore'] : [],
+        extensions: recording ? { eventBreakpointBoundary: 'instruction-retire' } : {},
       };
+    },
+
+    /**
+     * Opt in to reverse. Refused, by name, where save points are refused (a
+     * bench cannot rewind its circuit). While on, every instruction is
+     * single-stepped so it can be announced — the run is much slower.
+     * @returns {undefined|{unsupported:string}}
+     */
+    setRecording (on) {
+      if (on) {
+        const why = target.snapshotUnavailable();
+        if (why) return { unsupported: why };
+      }
+      recording = !!on;
+      return undefined;
+    },
+    isRecording () { return recording; },
+
+    onDebugEvent (cb) {
+      eventListeners.push(cb);
+      return () => { eventListeners = eventListeners.filter(f => f !== cb); };
+    },
+
+    debugTime () { return { ticks: retired, domain: domain(), hz: clockHz }; },
+
+    /** A checkpoint: an engine snapshot plus this target's retire count. Plain data. */
+    captureCheckpoint () {
+      if (!recording) return { refused: 'recording is off' };
+      const saved = target.saveSnapshot('checkpoint');
+      if (!saved || saved.unsupported) return { refused: saved ? saved.unsupported : 'snapshot failed' };
+      return { snapshotId: saved.id, retired, time: target.debugTime() };
+    },
+
+    /** Restore a checkpoint and open a fresh epoch. undefined on success. */
+    restoreCheckpoint (cp) {
+      if (!cp || typeof cp.snapshotId !== 'number') return { refused: 'not a labwired checkpoint' };
+      const r = target.restoreSnapshot(cp.snapshotId);
+      if (r && r.unsupported) return { refused: r.unsupported };
+      retired = cp.retired;
+      epoch += 1;
+      return undefined;
+    },
+
+    /** Retire exactly one instruction, announcing it exactly as a live run does. */
+    replayInstruction () {
+      if (!recording) return { accepted: false, code: 'not-recording', reason: 'recording is off' };
+      if (detached) return { accepted: false, code: 'detached', reason: 'the target is detached' };
+      stepOne();
+      return { accepted: true, boundary: 'instruction', cycles: 1 };
+    },
+
+    // ── Inputs: the serial console is this tier's one host input ──────────
+    //
+    // A byte typed into the console changes what the firmware does, so a
+    // replay that skipped it would diverge without anyone noticing. Every byte
+    // therefore goes through feedSerial(), which announces it as a fact on the
+    // instruction clock before the engine sees it, and applyReplayInput() puts
+    // the same byte back during a replay. With a CIRCUIT attached the board
+    // drives this chip's pins outside that log, so a replay is refused and the
+    // refusal names the board.
+
+    // `onDebugInput(` / `applyReplayInput(` are spelled without this file's
+    // usual space ON PURPOSE: test/replay-surface-conformance.test.mjs finds
+    // implementers by that exact text, and this target must be in its table.
+    onDebugInput(cb) {
+      inputListeners.push(cb);
+      return () => { inputListeners = inputListeners.filter(f => f !== cb); };
+    },
+
+    /** Type one byte into the firmware's UART, recording it as an input fact. */
+    feedSerial (byte) {
+      const b = byte & 0xff;
+      const fact = { producer: 'labwired.uart', payload: { byte: b }, time: target.debugTime() };
+      for (const cb of inputListeners) {
+        try { cb(fact); } catch (e) { /* a TELL listener cannot stop the input */ }
+      }
+      adapter.feedSerial(b);
+      return true;
+    },
+
+    /** Why this session cannot be replayed, if it cannot. See replaySupport(). */
+    replayRefusalReasons () {
+      return adapter.firmwareOnly ? []
+        : ['a circuit board drives this chip\'s inputs outside the replay log'];
+    },
+
+    /** Put a recorded input back: the same byte into the same UART. */
+    applyReplayInput(fact) {
+      if (!adapter.firmwareOnly) {
+        return { accepted: false, code: 'board-inputs-unlogged',
+          reason: 'a circuit board drives this chip\'s inputs outside the replay log' };
+      }
+      const byte = fact && fact.producer === 'labwired.uart' && fact.payload ? fact.payload.byte : undefined;
+      if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
+        return { accepted: false, code: 'invalid-input',
+          reason: `not a labwired.uart byte fact: ${fact && fact.producer}` };
+      }
+      adapter.feedSerial(byte);
+      return { accepted: true };
+    },
+
+    /**
+     * Run forward to the exact instruction count at which a recorded input was
+     * delivered. Coded refusals, nothing coerced (see m6502-debug.js for why
+     * ticks are parsed with BigInt).
+     */
+    replayToInputBoundary (boundary) {
+      let requested;
+      try { requested = BigInt(boundary?.ticks); } catch {
+        return { accepted: false, code: 'invalid-input-boundary', reason: 'recorded input boundary ticks must be an integer' };
+      }
+      if (logicalTimeDomain(boundary?.domain) !== DOMAIN || requested < 0n) {
+        return { accepted: false, code: 'invalid-input-boundary', reason: 'recorded input boundary is outside the labwired instruction clock' };
+      }
+      if (requested < BigInt(retired)) {
+        return { accepted: false, code: 'input-boundary-passed', reason: 'already past the recorded input boundary' };
+      }
+      if (!recording) return { accepted: false, code: 'not-recording', reason: 'recording is off' };
+      while (BigInt(retired) < requested) stepOne();
+      return { accepted: true, boundary: 'input', time: target.debugTime() };
     },
 
     state () {
@@ -105,8 +414,34 @@ export function createLabwiredDebugTarget (opts) {
     halt () { if (running) halted('user'); },
 
     step (kind, count = 1) {
+      if ((kind === 'over' || kind === 'out') && thumb) {
+        const here = codeAddr(pc());
+        if (kind === 'over') {
+          const ret = callReturn(here);
+          // Not a call: step over IS step into — one instruction.
+          if (ret === null) { insnRemaining = 1; depthStep = null; running = true; return undefined; }
+          depthStep = { kind: 'over', returnPc: ret };
+        } else {
+          // LR catches a leaf's BX lr; an SP rise catches a stacked return
+          // after a nested BL replaced LR. Both heuristics, as on rp2040js: an
+          // early stop is preferable to never stopping.
+          const lr = regNamed('LR');
+          const sp = regNamed('SP');
+          if (lr === null || sp === null) {
+            return { unsupported: 'step out needs the SP and LR registers, which this core does not name' };
+          }
+          depthStep = { kind: 'out', returnPc: codeAddr(lr), sp0: sp };
+        }
+        insnRemaining = null;
+        running = true;
+        return undefined;
+      }
+      if (kind === 'over' || kind === 'out') {
+        return { unsupported: `step ${kind} is implemented for ARM (Thumb) chips only; ` +
+          'this core would need its own call/return decode' };
+      }
       if (kind !== 'insn') {
-        return { unsupported: `labwired offers single-instruction stepping only; ` +
+        return { unsupported: `labwired steps by instruction (and over/out on ARM); ` +
           `'${kind}' would need a symbol-driven yield set, which this target does not have.` };
       }
       insnRemaining = count;
@@ -116,14 +451,28 @@ export function createLabwiredDebugTarget (opts) {
 
     setBreakpoint (bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
+      if (bp.kind === 'write') {
+        const len = bp.len ?? 1;
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > 0xffffffff ||
+            !Number.isInteger(len) || len < 1 || len > 8) {
+          return { unsupported: 'a write watchpoint needs an address and a length of 1..8 bytes' };
+        }
+        let last;
+        try { last = Array.from(sim().read_memory(bp.addr >>> 0, len)); } catch (e) {
+          return { unsupported: `cannot watch ${bp.addr.toString(16)}: ${e.message || e}` };
+        }
+        const handle = nextBreakpointHandle++;
+        writeWatches.set(handle, { addr: bp.addr >>> 0, len, last });
+        return handle;
+      }
       if (bp.kind !== 'code') {
-        return { unsupported: `labwired offers code breakpoints only; '${bp.kind}' is not ` +
-          'available (there is no write-watch on this bus, and no yield set).' };
+        return { unsupported: `labwired offers code and write breakpoints; '${bp.kind}' is not ` +
+          'available (there is no yield set).' };
       }
       if (!isCodeAddress(bp.addr)) {
         return { unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe' };
       }
-      if ((bp.addr & 1) !== 0) {
+      if (thumb && (bp.addr & 1) !== 0) {
         return { unsupported: `Thumb code address ${bp.addr.toString(16)} is odd. Bit 0 is the ` +
           'execution-state flag, not part of the address — a breakpoint set on it could never match.' };
       }
@@ -135,6 +484,7 @@ export function createLabwiredDebugTarget (opts) {
     },
 
     clearBreakpoint (handle) {
+      if (writeWatches.delete(handle)) return undefined;
       const addr = breakpoints.get(handle);
       if (addr === undefined) return undefined;
       breakpoints.delete(handle);
@@ -155,9 +505,50 @@ export function createLabwiredDebugTarget (opts) {
       }
     },
 
-    writeMem () {
-      return { unsupported: 'labwired-wasm exposes no memory write; this pane is read-only ' +
-        'rather than silently ineffective.' };
+    writeMem (space, addr, bytes) {
+      if (!canWrite()) {
+        return { unsupported: 'this labwired-wasm build exposes no memory write; this pane is read-only ' +
+          'rather than silently ineffective.' };
+      }
+      if (space !== 'sram' && space !== 'code') return { unsupported: `no such address space: ${space}` };
+      try {
+        sim().write_memory(addr >>> 0, Uint8Array.from(bytes));
+      } catch (e) {
+        return { unsupported: `write refused: ${e.message || e}` };
+      }
+      adapter.pump();
+      return undefined;
+    },
+
+    /**
+     * Set a register by the engine's own name ('R0', 'SP', 'x5', 'a2' --
+     * case-insensitive). Needs the engine's set_register; refused otherwise.
+     */
+    writeReg (name, value) {
+      if (typeof sim().set_register !== 'function') {
+        return { unsupported: 'this labwired-wasm build exposes no register write' };
+      }
+      let names;
+      try { names = sim().get_register_names(); } catch (e) { names = []; }
+      const i = Array.isArray(names) ? names.findIndex(n => String(n).toLowerCase() === String(name).toLowerCase()) : -1;
+      if (i < 0) return { unsupported: `this core has no register named ${name}` };
+      try { sim().set_register(i, value >>> 0); } catch (e) { return { unsupported: `write refused: ${e.message || e}` }; }
+      return undefined;
+    },
+
+    /** Bytes in the instruction at `addr` (see instrLength), or null. */
+    instructionLength (addr) { return instrLength(addr); },
+
+    /**
+     * The address after `addr`'s instruction of `length` bytes (0: `addr`
+     * itself). null -- no listing -- unless the engine decodes any address: an
+     * older one answers only the PC, and a listing of blank rows would be a
+     * listing that lies about being one.
+     */
+    nextCodeAddress (addr, length) {
+      if (!canDecodeAt()) return null;
+      if (!Number.isSafeInteger(addr) || !Number.isInteger(length) || length < 0) return null;
+      return length === 0 ? codeAddr(addr) : codeAddr(addr) + length;
     },
 
     /**
@@ -182,13 +573,46 @@ export function createLabwiredDebugTarget (opts) {
      */
     disasm (addr) {
       if (detached) return '';
-      if (((addr >>> 0) & ~1) !== (pc() & ~1)) return '';
+      const atPc = codeAddr(addr) === codeAddr(pc());
+      // A newer engine decodes any address; an older one only the PC, and
+      // then any other address answers '' rather than the PC's instruction.
+      if (!atPc && !canDecodeAt()) return '';
+      let text;
       try {
-        return sim().get_disassembly() || '';
+        text = (atPc && !canDecodeAt() ? sim().get_disassembly() : sim().disassemble_at(codeAddr(addr) >>> 0)) || '';
       } catch (e) {
         return '';
       }
+      const where = nameOf(codeAddr(addr));
+      return where && text ? `<${where}> ${text}` : text;
     },
+
+    /**
+     * The board's display, as the frame every video() here returns. Only when
+     * a labwired board with a drawable display was picked (opts.displays);
+     * re-decoded only when the engine's `generation` changes. null when there
+     * is nothing to draw, never a guessed frame.
+     */
+    video () {
+      const disp = (opts.displays || [])[0];
+      if (!disp || detached || typeof sim().get_display !== 'function') return null;
+      let meta;
+      try { meta = plain(sim().get_display(disp.id, false)); } catch (e) { return null; }
+      if (!meta) return null;
+      const gen = String(meta.meta?.generation ?? meta.generation ?? '');
+      if (videoCache && videoCache.gen === gen && gen) return videoCache.frame;
+      let full;
+      try { full = plain(sim().get_display(disp.id, true)); } catch (e) { return null; }
+      const decoded = decodeDisplay({ ...full, format: full?.format ?? full?.meta?.format });
+      if (!decoded || decoded.refused) return null;
+      videoFrames += 1;
+      const frame = { ...decoded, frame: videoFrames, signal: true };
+      videoCache = { gen, frame };
+      return frame;
+    },
+
+    /** The function containing `addr` in the user's ELF, `{name, offset}`, or null. */
+    symbolize (addr) { return symbolAt(codeAddr(addr)); },
 
     /**
      * Every register the ENGINE names, under the engine's own names.
@@ -207,7 +631,7 @@ export function createLabwiredDebugTarget (opts) {
      * run-to compare), not the core's PC register slot.
      */
     regs () {
-      const out = { pc: pc() & ~1, cycles: Number(adapter.timeNs() * clockHzBig / NS_PER_S) };
+      const out = { pc: codeAddr(pc()), cycles: Number(adapter.timeNs() * clockHzBig / NS_PER_S) };
       let names;
       try { names = sim().get_register_names(); } catch (e) { return out; }
       if (!Array.isArray(names)) return out;
@@ -228,6 +652,12 @@ export function createLabwiredDebugTarget (opts) {
       if (adapter.resetToProgram) adapter.resetToProgram();
       running = false;
       insnRemaining = null;
+      depthStep = null;
+      faultSeen = false;
+      // A reset rebuilds the engine: its snapshots (and so every checkpoint)
+      // are gone, and the timeline restarts — a new epoch, not ticks falling.
+      retired = 0;
+      epoch += 1;
     },
 
     runFor (budgetNs) {
@@ -236,38 +666,178 @@ export function createLabwiredDebugTarget (opts) {
       const budgetCycles = Number((BigInt(budgetNs) * clockHzBig) / NS_PER_S);
       if (budgetCycles <= 0) return 'running';
 
+      // PROGRAM TIME IS THE ENGINE'S. A step is an instruction, and an
+      // instruction is not always one cycle, so counting `budgetCycles` steps
+      // ran program time past the slice. Both paths now stop once the engine's
+      // own clock (read at each pump) covers the budget -- with the step count
+      // kept as a hard cap, so an adapter that reports no time can only ever
+      // do what the old loop did.
+      const endNs = adapter.timeNs() + BigInt(budgetNs);
+      const cyclesLeft = () => Number(((endNs - adapter.timeNs()) * clockHzBig) / NS_PER_S);
+
       // Single-instruction stepping, and breakpoint checking, both need the PC
       // between instructions — so they share one slow path. Everything else
       // runs in batches, which is the only way the wasm boundary stays cheap.
-      const mustWatch = insnRemaining !== null || codeBps.size > 0;
+      const mustWatch = insnRemaining !== null || codeBps.size > 0 || recording || depthStep !== null ||
+        writeWatches.size > 0;
 
-      if (!mustWatch) {
-        let left = budgetCycles;
-        while (left > 0) {
-          const chunk = Math.min(left, FREE_RUN_CHUNK);
-          sim().step_batch(chunk);
-          left -= chunk;
+      try {
+        if (!mustWatch) {
+          // Batch size from the OBSERVED cycles per instruction: a batch of
+          // "cycles left" instructions overshoots by the CPI (4x at CPI 4). The
+          // first batch is small, to measure it.
+          let stepsLeft = budgetCycles;
+          let cpi = 1;
+          let first = true;
+          while (stepsLeft > 0) {
+            const left = cyclesLeft();
+            if (left <= 0) break;
+            const chunk = Math.max(1, Math.min(stepsLeft, FREE_RUN_CHUNK,
+              first ? Math.min(left, 4096) : Math.floor(left / cpi)));
+            const before = adapter.timeNs();
+            sim().step_batch(chunk);
+            stepsLeft -= chunk;
+            adapter.pump();
+            const advanced = Number(((adapter.timeNs() - before) * clockHzBig) / NS_PER_S);
+            if (advanced > 0) cpi = Math.max(1, advanced / chunk);
+            first = false;
+          }
+          return haltOnNewFault() ? 'halted' : 'running';
         }
-        adapter.pump();
-        return 'running';
-      }
 
-      for (let i = 0; i < budgetCycles; i++) {
-        sim().step_single();
-        const here = pc() & ~1;
-        if (codeBps.has(here)) {
-          adapter.pump();
-          halted('breakpoint', { addr: here });
-          return 'halted';
+        for (let i = 0; i < budgetCycles; i++) {
+          stepOne();
+          const here = codeAddr(pc());
+          for (const [handle, w] of writeWatches) {
+            const now = Array.from(sim().read_memory(w.addr, w.len));
+            if (now.some((b, k) => b !== w.last[k])) {
+              w.last = now;
+              adapter.pump();
+              halted('watchpoint', { bp: handle, bpKind: 'write', addr: w.addr, value: now });
+              return 'halted';
+            }
+          }
+          if (codeBps.has(here)) {
+            adapter.pump();
+            halted('breakpoint', { addr: here });
+            return 'halted';
+          }
+          if (depthStep) {
+            const done = here === depthStep.returnPc ||
+              (depthStep.kind === 'out' && (regNamed('SP') ?? 0) > depthStep.sp0);
+            if (done) {
+              depthStep = null;
+              adapter.pump();
+              halted('step');
+              return 'halted';
+            }
+          }
+          if (insnRemaining !== null && --insnRemaining <= 0) {
+            adapter.pump();
+            halted('step');
+            return 'halted';
+          }
+          if ((i & 63) === 63) {
+            adapter.pump();
+            if (cyclesLeft() <= 0) break;
+          }
         }
-        if (insnRemaining !== null && --insnRemaining <= 0) {
-          adapter.pump();
-          halted('step');
-          return 'halted';
-        }
+      } catch (e) {
+        // The engine refused a step (it answers with an Err rather than a
+        // panic). That used to escape runFor and take the host's frame loop
+        // down with it; it is a halt with the engine's own sentence.
+        try { adapter.pump(); } catch (e2) { /* the report below still stands */ }
+        halted('error', { message: String((e && e.message) || e) });
+        return 'halted';
       }
       adapter.pump();
-      return 'running';
+      return haltOnNewFault() ? 'halted' : 'running';
+    },
+
+    /**
+     * Why save points are unavailable here, or null when they work.
+     *
+     * The engine's snapshots are a journal: a restore builds a fresh machine
+     * from the same inputs and replays the recorded calls, and refuses when
+     * the replay does not reproduce the saved state. With a CIRCUIT attached
+     * that is only half a rewind — the board simulation moves forward in time
+     * only, so the firmware would go back while the pins, voltages and parts
+     * stayed where they were. Offered, therefore, on a firmware-only target;
+     * on a bench it is refused by name rather than half-done.
+     * @returns {string|null}
+     */
+    snapshotUnavailable () {
+      if (detached) return 'the target is detached';
+      if (!adapter.firmwareOnly) {
+        return 'save points need the firmware-only mode: the circuit cannot be rewound with the firmware';
+      }
+      if (typeof sim().snapshot_save !== 'function') return 'this engine build has no snapshots';
+      try {
+        const why = typeof sim().snapshot_unavailable_reason === 'function'
+          ? sim().snapshot_unavailable_reason() : null;
+        return why || null;
+      } catch (e) {
+        return `snapshots unavailable: ${e.message || e}`;
+      }
+    },
+
+    /** Save the current point. @returns {{id,label,cycles}|{unsupported:string}} */
+    saveSnapshot (label) {
+      const why = target.snapshotUnavailable();
+      if (why) return { unsupported: why };
+      try {
+        return JSON.parse(sim().snapshot_save(label ?? null));
+      } catch (e) {
+        return { unsupported: `snapshot_save failed: ${e.message || e}` };
+      }
+    },
+
+    /** Saved points, oldest first. [] when unavailable. */
+    listSnapshots () {
+      if (target.snapshotUnavailable()) return [];
+      try { return JSON.parse(sim().snapshot_list()) || []; } catch (e) { return []; }
+    },
+
+    /**
+     * Return to save point `id`. Halts first (a restore mid-run would race the
+     * pump), then republishes what the engine now says — its time went back.
+     * @returns {undefined|{unsupported:string}}
+     */
+    restoreSnapshot (id) {
+      const why = target.snapshotUnavailable();
+      if (why) return { unsupported: why };
+      if (running) halted('user');
+      try {
+        sim().snapshot_restore(id >>> 0);
+      } catch (e) {
+        // The engine refuses, machine untouched, when the replay diverges.
+        return { unsupported: `restore refused: ${e.message || e}` };
+      }
+      faultSeen = false;
+      adapter.pump();
+      return undefined;
+    },
+
+    /**
+     * What the engine knows that the run itself does not show:
+     *   fault         the Cortex-M fault verdict (see readFault), or null;
+     *   fidelityGaps  instructions it could not decode and addresses nothing
+     *                 claimed — each one a silent no-op that looks exactly like
+     *                 firmware running correctly. [] when there are none.
+     * Optional on a DebugTarget; a host asks with `typeof target.diagnostics`.
+     */
+    diagnostics () {
+      let fidelityGaps = [];
+      if (typeof sim().fidelity_gaps === 'function') {
+        try { fidelityGaps = plain(sim().fidelity_gaps()) || []; } catch (e) { fidelityGaps = []; }
+      }
+      // The firmware printed to a console the host is not listening to (the
+      // engine's own sentence), e.g. UART1 when the board routes UART0.
+      let consoleMismatch = null;
+      if (typeof sim().console_mismatch === 'function') {
+        try { consoleMismatch = sim().console_mismatch() || null; } catch (e) { consoleMismatch = null; }
+      }
+      return { fault: readFault(), fidelityGaps: Array.isArray(fidelityGaps) ? fidelityGaps : [], consoleMismatch };
     },
 
     // The runner calls this UNGUARDED — board.advanceTo(target.timeNs()) on
@@ -286,8 +856,11 @@ export function createLabwiredDebugTarget (opts) {
       detached = true;
       running = false;
       listeners = [];
+      eventListeners = [];
+      inputListeners = [];
       breakpoints.clear();
       codeBps.clear();
+      writeWatches.clear();
     },
   };
 

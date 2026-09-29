@@ -37,6 +37,8 @@ import { createSerialDebugTarget } from './serial-debug.js';
 import { createAvr8jsAdapter } from './avr8js-adapter.js';
 import { createLabwiredAdapter } from './labwired-adapter.js';
 import { createLabwiredDebugTarget } from './labwired-debug.js';
+import { buildBootrom } from './rp2040-bootrom.js';
+import { s110AppRegionElf } from './hex-app-region.js';
 import { labwiredAdapterOptionsFor } from './labwired-bridge.js';
 import { parseIntelHex } from './intel-hex.js';
 // Re-exported so every existing consumer keeps working; see target-kinds.js
@@ -139,8 +141,10 @@ async function createRiscV32Target(opts = {}) {
 /**
  * @param {object} opts
  * @param {object} opts.wasm      instantiated labwired-wasm module
- * @param {object} opts.board     BoardImpl — ALSO the default source of the
- *   chip descriptor, the header map and the manifest (see below)
+ * @param {object} [opts.board]   BoardImpl — ALSO the default source of the
+ *   chip descriptor, the header map and the manifest (see below). Omit it and
+ *   pass `opts.chip` for a firmware-only target.
+ * @param {object} [opts.chip]    a labwired-catalog.js entry (firmware-only)
  * @param {Uint8Array} opts.firmware  ELF, or a raw flash image
  * @param {number} [opts.firmwareAddress] load address for a raw image
  * @param {string} [opts.chipKind] our board-part kind, default `stm32f030`
@@ -152,8 +156,47 @@ async function createRiscV32Target(opts = {}) {
 async function createLabwiredTarget(opts) {
   const { wasm, board, firmware, name } = opts;
   if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
-  if (!board) throw new Error('labwired target requires opts.board');
   if (!firmware) throw new Error('labwired target requires opts.firmware (an ELF)');
+
+  // FIRMWARE-ONLY: `opts.chip` is a labwired-catalog.js entry and there is no
+  // circuit. The user's own ELF on the engine's own chip descriptor; no header
+  // map, so no pads and no refusals to report. The bench path below is the
+  // one to use whenever there IS a board — a circuit is never silently dropped.
+  if (opts.chip && !board) {
+    const { chip } = opts;
+    // A labwired BOARD (labwired-catalog.js LABWIRED_BOARDS) brings its own
+    // manifest -- the devices it wires, a display among them -- on this chip.
+    const labBoard = opts.labwiredBoard;
+    if (labBoard && labBoard.chip !== chip.name) {
+      throw new Error(`board ${labBoard.name} is built on ${labBoard.chip}, not ${chip.name}`);
+    }
+    if (!chip.chipYaml || !chip.name) throw new Error('labwired firmware-only target needs a catalog chip');
+    // The RP2040's mask ROM is an image_env region the browser cannot fill
+    // from disk; this repo's clean-room ROM (rp2040-bootrom.js, from the
+    // datasheet) is what every pico-sdk `rom_func_lookup` needs to find there.
+    const blobs = chip.name === 'rp2040' ? { bootrom: buildBootrom() } : undefined;
+    // An S110 board (micro:bit V1 / Calliope): the image is usually a .hex
+    // carrying the Nordic SoftDevice -- keep only the APPLICATION window, and
+    // let the engine emulate the SoftDevice (never a Nordic byte loaded).
+    const s110 = labBoard && labBoard.softdevice === 's110';
+    let image = firmware;
+    if (s110 && !(image instanceof Uint8Array && image[0] === 0x7f)) {
+      const text = typeof image === 'string' ? image : new TextDecoder().decode(image);
+      image = s110AppRegionElf(text).elf;
+    }
+    const adapter = createLabwiredAdapter({
+      wasm, chipYaml: chip.chipYaml, firmware: image, firmwareOnly: true, blobs,
+      softdeviceS110: s110 ? (name ?? labBoard.name) : undefined,
+      clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
+      systemYaml: labBoard ? labBoard.systemYaml : undefined,
+    });
+    // The user's own ELF carries its symbol table (a UF2 does not): hand it to
+    // the target so a PC reads as a function name.
+    const target = createLabwiredDebugTarget({ adapter, elf: image,
+      displays: labBoard ? labBoard.displays : undefined });
+    return { target, adapter, refusals: [] };
+  }
+  if (!board) throw new Error('labwired target requires opts.board (or opts.chip for firmware-only)');
 
   // THE BOARD IS THE NETLIST, so it is where the manifest comes from unless the
   // caller insists otherwise. Requiring a host to hand over `chipYaml` and

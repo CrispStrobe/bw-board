@@ -90,7 +90,8 @@ export function plain (v) {
   return v;
 }
 
-import { toLoadableElf } from './bin-to-elf.js';
+import { toLoadableElf, isElf } from './bin-to-elf.js';
+import { isUf2, uf2ToElf } from './uf2-to-elf.js';
 
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
@@ -118,6 +119,19 @@ export function generateSystemYaml (name, chipPath, pins) {
 }
 
 /**
+ * The chip YAML's top-level `arch:` (`arm`, `avr`, `riscv`, `xtensa-lx6`,
+ * `xtensa-lx7`), or 'arm' when it names none. That default is only for THIS
+ * module's decisions (ELF wrapping, the Thumb bit); the engine itself refuses a
+ * descriptor with no architecture, so a missing field fails at construction.
+ * @param {string} chipYaml
+ * @returns {string}
+ */
+export function chipArch (chipYaml) {
+  const m = /^\s*arch:\s*["']?([a-z0-9-]+)["']?\s*$/m.exec(chipYaml ?? '');
+  return m ? m[1] : 'arm';
+}
+
+/**
  * @param {object} opts
  * @param {object} opts.wasm            the instantiated labwired-wasm module
  * @param {string} opts.chipYaml        chip descriptor YAML
@@ -126,26 +140,47 @@ export function generateSystemYaml (name, chipPath, pins) {
  * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
  * @param {number} [opts.clockHz]       engine cycle rate, for cycle→ns
  * @param {string} [opts.systemYaml]    override the generated manifest
+ * @param {Record<string,Uint8Array>} [opts.blobs] images for image_env regions, by name
  * @param {string} [opts.name]
  * @returns {object} boundary-A adapter
  */
 export function createLabwiredAdapter (opts) {
-  const { wasm, chipYaml, pins } = opts;
+  const { wasm, chipYaml } = opts;
+  // FIRMWARE-ONLY: a user's own image on a catalog chip, with no circuit. No
+  // header map (so no board_io and no pad traffic), and the image must be an
+  // ELF: a raw .bin says nothing about where it loads, and the one default
+  // binToElf knows (STM32 flash at 0x0800_0000) is wrong for an nRF (flash at
+  // 0) or an RP2040 (XIP at 0x1000_0000) — the core would fetch its reset
+  // vector from empty memory and look like broken firmware.
+  const firmwareOnly = opts.firmwareOnly === true;
+  const pins = opts.pins ?? (firmwareOnly ? {} : undefined);
+  const arch = chipArch(chipYaml);
   // Accept a raw flash image as readily as an ELF. labwired's ARM path ends in
   // `load_elf_bytes` and takes nothing else, while everything lite compiles is
   // a raw image — so without this the heavy tier could only run firmware built
   // by a toolchain lite does not have. See bin-to-elf.js for what is lost
   // (symbols; there were none in a .bin to lose).
-  const isAvr = /^\s*arch:\s*["']?avr["']?\s*$/m.test(chipYaml ?? '');
+  const isAvr = arch === 'avr';
+  // A UF2 says where every block loads, so it converts without a guess; a raw
+  // .bin does not, and is refused rather than loaded at a made-up origin.
+  const given = firmwareOnly && opts.firmware && isUf2(opts.firmware)
+    ? uf2ToElf(opts.firmware).elf
+    : opts.firmware;
+  if (firmwareOnly && given && !isElf(given)) {
+    throw new Error('labwired-adapter: firmware-only needs an ELF or UF2 image (a raw .bin carries ' +
+      'no load address, and guessing one boots the chip from the wrong memory)');
+  }
   const firmwareOpts = isAvr
     ? { architecture: 'avr', loadAddress: opts.firmwareAddress }
     : { loadAddress: opts.firmwareAddress };
-  const firmware = opts.firmware
-    ? toLoadableElf(opts.firmware, firmwareOpts)
-    : opts.firmware;
+  const firmware = given
+    ? toLoadableElf(given, firmwareOpts)
+    : given;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
   if (!chipYaml) throw new Error('labwired-adapter: opts.chipYaml is required');
-  if (!pins || Object.keys(pins).length === 0) throw new Error('labwired-adapter: opts.pins is required');
+  if (!pins || (!firmwareOnly && Object.keys(pins).length === 0)) {
+    throw new Error('labwired-adapter: opts.pins is required');
+  }
 
   const clockHz = opts.clockHz ?? 48_000_000;
   const clockHzBig = BigInt(clockHz);
@@ -158,7 +193,18 @@ export function createLabwiredAdapter (opts) {
     ?? generateSystemYaml(opts.name ?? 'bw-labwired', opts.chipPath ?? './chip.yaml', pins);
 
   const build = () => {
-    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, undefined);
+    // Named images for the chip's `image_env` ROM regions (the RP2040's
+    // `bootrom`): the browser has no filesystem to read a ROM dump from.
+    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, opts.blobs);
+    // An nRF51 S110 application (micro:bit V1 / Calliope mini) needs the
+    // emulated SoftDevice attached before it runs -- on every build, so a
+    // reset (which rebuilds) keeps it.
+    if (opts.softdeviceS110) {
+      if (typeof instance.attach_softdevice_s110 !== 'function') {
+        throw new Error('labwired-adapter: this labwired-wasm build cannot emulate the S110 SoftDevice');
+      }
+      instance.attach_softdevice_s110(String(opts.softdeviceS110));
+    }
     // LabWired knows which buses are fully event-scheduled and which still
     // require a peripheral service pass after every instruction.  Use that
     // answer instead of leaving every chip on the exact-but-slow default.
@@ -174,6 +220,7 @@ export function createLabwiredAdapter (opts) {
 
   let board = null;
   let serialListener = null;
+  let traceListener = null;
   let inInputSync = false;
   let cursor = 0;
   let cycleNow = 0n;
@@ -375,7 +422,29 @@ export function createLabwiredAdapter (opts) {
    * wherever the engine has just run, and `onSerial` behaves the same
    * everywhere.
    */
+  /**
+   * RTT, semihosting and ITM: the other ways firmware prints. The engine
+   * captures all three and nothing surfaced them, so a `SEGGER_RTT_printf` or
+   * a semihosted `printf` produced a silent console. Drained with the UART, on
+   * the same pump; a stream the firmware does not use drains empty.
+   */
+  const TRACE_CHANNELS = [
+    ['rtt', 'drain_rtt_output'],
+    ['semihosting', 'drain_semihosting_output'],
+    ['itm', 'drain_itm_output'],
+  ];
+  function drainTraces () {
+    if (!traceListener) return;
+    for (const [channel, fn] of TRACE_CHANNELS) {
+      if (typeof sim[fn] !== 'function') continue;
+      let out;
+      try { out = sim[fn](); } catch (e) { continue; }   // not attached is not an error
+      if (out && out.length) traceListener(channel, Uint8Array.from(out));
+    }
+  }
+
   function drainSerial () {
+    drainTraces();
     if (!serialListener || !sim.drain_uart_output) return;
     let out;
     try {
@@ -416,6 +485,10 @@ export function createLabwiredAdapter (opts) {
     clockHz,
     systemYaml,
     pins,
+    /** The chip's `arch:` — the debug target masks the Thumb bit only on 'arm'. */
+    arch,
+    /** True when built from a user image with no circuit (no header map). */
+    firmwareOnly,
 
     attachBoard (b) {
       board = b;
@@ -474,6 +547,9 @@ export function createLabwiredAdapter (opts) {
     },
 
     onSerial (cb) { serialListener = cb; },
+
+    /** RTT / semihosting / ITM output: cb(channel, bytes). See drainTraces. */
+    onTrace (cb) { traceListener = cb; },
 
     feedSerial (byte) {
       sim.feed_uart_input(Uint8Array.from([byte & 0xff]));

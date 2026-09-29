@@ -77,6 +77,7 @@ import { createM6502Adapter } from '../src/m6502-adapter.js';
 import { createM6502DebugTarget } from '../src/m6502-debug.js';
 import { I8086Machine, BREADBOARD8086 } from '../src/i8086-machine.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
+import { createLabwiredDebugTarget } from '../src/labwired-debug.js';
 import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 import { createZ80Adapter } from '../src/z80-adapter.js';
 import { createI8086Adapter } from '../src/i8086-adapter.js';
@@ -151,6 +152,29 @@ const rom8086 = code => {
  * through fact delivery, which every target can show.
  */
 const ROWS = {
+  // LabWired: the serial console is its one host input. A stub engine is
+  // enough — what is under test is the target's own record/apply logic, and
+  // `fed` is where the byte must land. Bench (a circuit) = the sampling case.
+  'labwired-debug.js': {
+    make: async () => {
+      const fed = [];
+      const target = createLabwiredDebugTarget({ adapter: {
+        sim: { get_pc: () => 0x100, step_single: () => {}, step_batch: () => {} },
+        clockHz: 48_000_000, timeNs: () => 0n, pump() {}, feedSerial: b => fed.push(b),
+        firmwareOnly: true,
+      } });
+      target.fed = fed;
+      return target;
+    },
+    vetoes: false,
+    drive: target => target.feedSerial(0x41),
+    fact: { producer: 'labwired.uart', payload: { byte: 0x42 } },
+    withSamplingBoard: () => createLabwiredDebugTarget({ adapter: {
+      sim: { get_pc: () => 0x100, step_single: () => {}, step_batch: () => {} },
+      clockHz: 48_000_000, timeNs: () => 0n, pump() {}, feedSerial() {},
+    } }),
+    applied: target => target.fed.length > 0,          // the driven byte reached the UART
+  },
   'z80-debug.js': {
     make: async () => createZ80DebugTarget({ machine: new Z80Machine(
       { clockHz: 3_500_000, regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }], ula: true }, {}) }),
