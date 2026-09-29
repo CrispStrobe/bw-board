@@ -2,6 +2,7 @@
 // this observer never decodes ahead or executes a guest instruction.
 import {classifyI80386BroadForm} from './i80386-broad-block-census.js';
 import {classifyI80386FormResolvedAdmission} from './i80386-form-resolved-admission.js';
+import {classifyI80386ExpandedGroupedAdmission} from './i80386-expanded-grouped-admission.js';
 import {classifyI80386FirstRefusalShape,
   createI80386FirstRefusalContextTracker} from './i80386-first-refusal-shape.js';
 
@@ -57,7 +58,8 @@ const isControlTransfer=bytes=>{
 
 export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObservedStep=null,
   formResolvedAdmission=false,firstRefusalContext=false,
-  groupedShadowAdmission=false,groupedFirstRefusalContext=false}={}) {
+  groupedShadowAdmission=false,groupedFirstRefusalContext=false,
+  expandedGroupedAdmission=false}={}) {
   if(!Number.isInteger(maxRun)||maxRun<1||maxRun>64)
     throw new RangeError('cross-mode potential trace run budget must be 1..64');
   if(onObservedStep!==null&&typeof onObservedStep!=='function')
@@ -73,6 +75,10 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
   if(typeof groupedFirstRefusalContext!=='boolean'||
       groupedFirstRefusalContext&&!groupedShadowAdmission)
     throw new TypeError('grouped first refusal requires grouped shadow admission');
+  if(typeof expandedGroupedAdmission!=='boolean'||expandedGroupedAdmission&&
+      (formResolvedAdmission||firstRefusalContext||groupedShadowAdmission||
+       groupedFirstRefusalContext))
+    throw new TypeError('expanded grouped admission is a separate observer variant');
   const modes=Object.fromEntries(MODES.map(mode=>[mode,{
     entryAttempts:0,completedStepCalls:0,eligibleRetiredOrdinals:0,
     repeatIterationCalls:0,noRetirement:0,abortedCalls:0,
@@ -88,7 +94,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
     codePageRevocations:0,translationRevocations:0,
     chipExits:0,interruptExits:0,faultExits:0,abortedExits:0,
     refusals:{}}]));
-  const formModes=formResolvedAdmission||groupedShadowAdmission?
+  const formModes=formResolvedAdmission||groupedShadowAdmission||
+    expandedGroupedAdmission?
     Object.fromEntries(MODES.map(mode=>[mode,{
     eligibleRetiredOrdinals:0,admittedOrdinals:0,refusedOrdinals:0,
     runs:0,ordinalsInRunsAtLeast8:0,runLengthHistogram:{},runEndReasons:{},
@@ -97,6 +104,8 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
     admittedAccessClasses:{},longRunAccessClasses:{},
     admittedEaClasses:{},admittedModrmShapes:{},
     optimisticIoOrdinalsInRunsAtLeast8:0,
+    ...(expandedGroupedAdmission?{typedCandidatesCutByGlobal:{},
+      typedCandidatesCutByGlobalOpcode:{}}:{}),
   }])):null;
   const contextTracker=firstRefusalContext||groupedFirstRefusalContext?
     createI80386FirstRefusalContextTracker({maxRun,
@@ -167,10 +176,17 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         lastAddress>=0x9fc00&&lastAddress<0xc0000)
       pending.unsafeCode=true;
   };
-  const recordAccess=(address,width,write)=>{
+  const recordAccess=(address,width,write,value=0)=>{
     if(!pending)return;
     pending.dataAccesses++;
     if(formModes)pending[write?'dataWrites':'dataReads']++;
+    if(expandedGroupedAdmission)
+      for(let i=0;i<width;i++){
+        if(pending.dataTrace.length<32)
+          pending.dataTrace.push({kind:write?'write':'read',
+            address:(address+i)>>>0,value:(value>>>8*i)&255});
+        else pending.dataTraceOverflow=true;
+      }
     for(let i=0;i<width;i++){
       const raw=(address+i)>>>0,decoded=machine._decode386(raw);
       const page=decoded>>>12,kind=machine._page?.[page];
@@ -233,16 +249,16 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         });
       restoreOwn(cpu,'read',original=>function(address,...args){
         const value=original.call(this,address,...args);
-        recordAccess(address,1,false);return value;
+        recordAccess(address,1,false,value);return value;
       });
       if(typeof cpu.read32==='function')
         restoreOwn(cpu,'read32',original=>function(address,...args){
           const value=original.call(this,address,...args);
-          recordAccess(address,4,false);return value;
+          recordAccess(address,4,false,value);return value;
         });
       restoreOwn(target,'_write386',original=>function(address,value,...args){
         if(pending&&this.cpu._pagingBitWrite)pending.pageWalkWrite=true;
-        recordAccess(address,1,true);
+        recordAccess(address,1,true,value);
         if(pending&&this.cpu._translationTablePages?.has(
             this._decode386(address>>>0)>>>12))pending.translationWrite=true;
         return original.call(this,address,value,...args);
@@ -302,6 +318,11 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       const cpu=target.cpu,mode=modeOf(cpu),eip=cpu.eip>>>0;
       pending={mode,cs:cpu.cs,eip,linear:((cpu.segmentCaches[1].base??0)+eip)>>>0,
         cycles:cpu.cycles,identity:identityOf(target),
+        ...(expandedGroupedAdmission?{esBefore:cpu.es,
+          espBefore:cpu.esp>>>0,stack32:!!cpu.segmentCaches[2].default32,
+          stackBase:cpu.segmentCaches[2].base>>>0,paging:!!(cpu.cr0&0x80000000),
+          registers16:[cpu.eax,cpu.ecx,cpu.edx,cpu.ebx,
+            cpu.esp,cpu.ebp,cpu.esi,cpu.edi].map(value=>value&0xffff)}:{}),
         ...(formModes?{default32:!!cpu.segmentCaches[1].default32}:{}),
         boardCycles:target.cycles,chipDebt:target._chipDebt,
         chipDeadline:target._chipDeadline,externalEpoch,
@@ -311,6 +332,7 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         codePageCrossing:false,unsafeCode:false,dataAccesses:0,unsafeData:false,
         ...(formModes?{dataPage:null,dataPageCrossing:false,
           dataReads:0,dataWrites:0}:{}),
+        ...(expandedGroupedAdmission?{dataTrace:[],dataTraceOverflow:false}:{}),
         codeOrTableWrite:false,codeWrite:false,translationWrite:false,
         pageWalkWrite:false,io:false,
         chipEvent:false,interrupt:false,fault:false};
@@ -380,14 +402,34 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
       if(formModes){
         const formBucket=formModes[before.mode];
         formBucket.eligibleRetiredOrdinals++;
-        const form=classifyI80386FormResolvedAdmission(before.bytes,{
+        const formOptions={
           default32:before.default32,startEip:before.eip,postEip,
           dataAccesses:before.dataAccesses,dataReads:before.dataReads,
           dataWrites:before.dataWrites,io:before.io,
           dataPageCrossing:before.dataPageCrossing,
-          groupedShadowAdmission});
+          groupedShadowAdmission,
+          ...(expandedGroupedAdmission?{mode:before.mode,
+            dataTrace:before.dataTrace,
+            dataTraceOverflow:before.dataTraceOverflow,
+            registers16:before.registers16,esAfter:cpu.es,
+            espBefore:before.espBefore,espAfter:cpu.esp>>>0,
+            stack32:before.stack32,stackBase:before.stackBase,
+            paging:before.paging}:{})};
+        const classified=expandedGroupedAdmission?
+          classifyI80386ExpandedGroupedAdmission(before.bytes,formOptions):
+          classifyI80386FormResolvedAdmission(before.bytes,formOptions);
+        // The existing cache identity intentionally omits non-CS visible
+        // selectors. A same-cache reload with a new ES selector still cuts.
+        const form=expandedGroupedAdmission&&classified.special&&
+          classified.opcode==='8e'&&!reason&&before.esBefore!==cpu.es?
+          {...classified,reason:'segment-selector-change',formKey:null}:
+          classified;
         bump(formBucket.observedPrefixSignatures,form.prefixSignature);
         bump(formBucket.observedOpcodeCounts,form.opcode);
+        if(expandedGroupedAdmission&&reason&&form.special&&!form.reason){
+          bump(formBucket.typedCandidatesCutByGlobal,reason);
+          bump(formBucket.typedCandidatesCutByGlobalOpcode,form.opcode);
+        }
         const formReason=reason??form.reason;
         if(formReason){
           formBucket.refusedOrdinals++;bump(formBucket.refusals,formReason);
@@ -525,10 +567,12 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         const long=formSum('ordinalsInRunsAtLeast8');
         const long16=formModes.protected16.ordinalsInRunsAtLeast8+
           formModes.vm86.ordinalsInRunsAtLeast8;
-        formResolvedPotential={schema:groupedShadowAdmission?
+        formResolvedPotential={schema:expandedGroupedAdmission?
+            'bw.i80386-expanded-grouped-admission.v1':groupedShadowAdmission?
             'bw.i80386-grouped-shadow-admission.v1':
             'bw.i80386-form-resolved-admission.v1',
-          grammar:groupedShadowAdmission?
+          grammar:expandedGroupedAdmission?
+            'typed-grouped-plus-owned-es-call-return.v1':groupedShadowAdmission?
             'typed-mov-cmp-test-group7-short-control-byte-io-plus-a8-8d-0b-31-ff0.v1':
             'typed-mov-cmp-test-group7-short-control-byte-io.v1',
           maxRun,modes:formModes,
@@ -540,6 +584,10 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
           protected16OrVm86OrdinalsInRunsAtLeast8:long16,
           optimisticIoOrdinalsInRunsAtLeast8:
             formSum('optimisticIoOrdinalsInRunsAtLeast8'),
+          ...(expandedGroupedAdmission?{
+            typedCandidatesCutByGlobal:MODES.reduce((n,mode)=>n+
+              Object.values(formModes[mode].typedCandidatesCutByGlobal)
+                .reduce((a,b)=>a+b,0),0)}:{}),
           predeclaredSubsetOpportunityPassed:long>=15_000_000&&long16>=5_000_000,
           ...(contextTracker?{firstRefusalContext:contextTracker.report(
             Object.fromEntries(MODES.map(mode=>
@@ -564,8 +612,10 @@ export function createI80386CrossModePotentialTraceObserver({maxRun=64,onObserve
         predeclaredOpportunityGatePassed:uniqueOrdinalsInRunsAtLeast8>=30_000_000&&
           protected16OrVm86OrdinalsInRunsAtLeast8>=5_000_000,
         ...(formResolvedPotential?
-          (groupedShadowAdmission?{groupedShadowPotential:formResolvedPotential}:
-            {formResolvedPotential}):{})};
+          (expandedGroupedAdmission?
+            {expandedGroupedPotential:formResolvedPotential}:
+            groupedShadowAdmission?{groupedShadowPotential:formResolvedPotential}:
+              {formResolvedPotential}):{})};
     },
   };
 }

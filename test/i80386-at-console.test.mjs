@@ -40,6 +40,12 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.equal(report.inputs.code16Loads,false);
   assert.equal(report.code16LoadExecutions,0);
   assert.equal(report.vga.planeSha256.length,4);
+  assert.match(report.ramSha256,/^[0-9a-f]{64}$/);
+  assert.equal(report.diskSha256,digest(hdd));
+  assert.equal(report.cpu.cr4,0);
+  assert.equal(report.cpu.instructionSnapshot.eip,report.cpu.eip);
+  assert.equal(report.cpu.cycles,report.steps);
+  assert.ok(report.machineCycles>=report.cpu.cycles);
   const snapshot=JSON.parse(readFileSync(paths.snapshot,'utf8'));
   assert.equal(snapshot.planeBase64.length,4);
   assert.ok(['seq','gc','crtc','attr','dac'].every(bank=>
@@ -95,4 +101,19 @@ test('console CLI binds external bytes and records input acceptance without bund
   assert.deepEqual(observed.vga.planeSha256,configured.vga.planeSha256);
   assert.equal(observed.native32Census.entryAttempts,0);
   assert.equal(observed.steps,configured.steps);
+  const expandedReport=join(dir,'expanded.json');
+  execFileSync(process.execPath,['scripts/run-i80386-at-console.mjs','--dosbox-conf',config,
+    '--steps','1'],{cwd,env:{...process.env,AT_BIOS_ROM:paths.bios,
+    AT_BIOS_SHA256:digest(bios),VGA_BIOS_ROM:paths.vga,VGA_BIOS_SHA256:digest(vga),
+    AT_HDD_SHA256:digest(hdd),AT_EXPANDED_GROUPED_SHADOW_ADMISSION:'1',
+    AT_CONSOLE_REPORT:expandedReport},encoding:'utf8'});
+  const expanded=JSON.parse(readFileSync(expandedReport,'utf8'));
+  assert.equal(expanded.inputs.expandedGroupedAdmission,true);
+  assert.equal(expanded.crossModeTraceObserver.expandedGroupedPotential.schema,
+    'bw.i80386-expanded-grouped-admission.v1');
+  delete expanded.crossModeTraceObserver;
+  delete expanded.inputs.expandedGroupedAdmission;
+  const plain=structuredClone(configured);
+  delete plain.inputs.expandedGroupedAdmission;
+  assert.deepEqual(expanded,plain);
 });

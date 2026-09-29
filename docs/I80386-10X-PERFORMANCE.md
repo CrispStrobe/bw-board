@@ -37,7 +37,8 @@ this order:
    These pin individual boundaries, but their combined branch, device,
    fault and mapping behavior remains unproved. Preserve code/page-table
    writes and chip/IRQ cuts before extending the observer grammar.
-2. Expand the execution-neutral observer's typed grammar and run a
+2. Expand the execution-neutral observer's typed grammar using the
+   [predeclared expanded diagnostic](I80386-EXPANDED-GROUPED-ADMISSION.md), then run a
    source-pinned, disjoint unique-retirement census before runtime coding.
    The [latest grouped Windows result](receipts/2026-09-29-i80386-grouped-first-refusal-result.json)
    reached only 4.64 million ordinals in runs of at least eight against its
