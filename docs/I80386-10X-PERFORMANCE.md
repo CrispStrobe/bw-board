@@ -1,5 +1,11 @@
 # Experimental 80386 speed path
 
+The [2026-09-29 plain RAM read shortcut trial](I80386-PLAIN-RAM-READ-NEGATIVE.md)
+stopped after its second 60-million-step Windows pair reversed the first
+pair's timing result. All four complete reports matched after removing only
+the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
+was run and no speed benefit is claimed.
+
 ## Current checkpoint (2026-09-28)
 
 The 10× goal is still open. On the VPS (four KVM Skylake vCPUs, Node
