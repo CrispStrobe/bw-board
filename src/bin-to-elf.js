@@ -56,6 +56,10 @@ export const DEFAULT_FLASH_ORIGIN = 0x08000000;
  * @param {number} [opts.loadAddress] where the image is mapped (default 0x08000000)
  * @param {number} [opts.entry] override the entry point; by default it is taken
  *   from the vector table, which is where the silicon takes it from too
+ * @param {Array<{address: number, bytes: Uint8Array}>} [opts.extraSegments]
+ *   more PT_LOADs after the image — records a raw image does not cover, such
+ *   as the UICR words (0x10001014 on nRF) an Intel HEX programs beside flash.
+ *   An nRF MBR reads them at reset; dropping them boots into erased values.
  * @returns {Uint8Array} an ELF32 little-endian ARM executable
  */
 export function binToElf (image, opts = {}) {
@@ -73,8 +77,19 @@ export function binToElf (image, opts = {}) {
   const view = new DataView(image.buffer, image.byteOffset, image.byteLength);
   const entry = opts.entry ?? view.getUint32(4, true);
 
-  const dataOffset = EHDR_SIZE + PHDR_SIZE;   // 84, already 4-aligned
-  const out = new Uint8Array(dataOffset + image.length);
+  const extra = opts.extraSegments ?? [];
+  for (const seg of extra) {
+    if (!(seg?.bytes instanceof Uint8Array) || !Number.isInteger(seg.address)) {
+      throw new TypeError('binToElf: extraSegments entries need {address: integer, bytes: Uint8Array}');
+    }
+  }
+  const segments = [{ address: loadAddress, bytes: image }, ...extra];
+  const dataOffset = EHDR_SIZE + PHDR_SIZE * segments.length;   // 4-aligned
+  // Pad BETWEEN segments only, so a single image stays byte-identical to what
+  // this function always emitted.
+  const total = segments.reduce((n, seg, i) =>
+    n + (i < segments.length - 1 ? (seg.bytes.length + 3) & ~3 : seg.bytes.length), 0);
+  const out = new Uint8Array(dataOffset + total);
   const dv = new DataView(out.buffer);
 
   // e_ident
@@ -94,23 +109,26 @@ export function binToElf (image, opts = {}) {
   dv.setUint32(o, EF_ARM_EABI_VER5, true); o += 4;
   dv.setUint16(o, EHDR_SIZE, true); o += 2;
   dv.setUint16(o, PHDR_SIZE, true); o += 2;
-  dv.setUint16(o, 1, true); o += 2;            // e_phnum
+  dv.setUint16(o, segments.length, true); o += 2;  // e_phnum
   dv.setUint16(o, 40, true); o += 2;           // e_shentsize (ELF32 nominal)
   dv.setUint16(o, 0, true); o += 2;            // e_shnum
   dv.setUint16(o, 0, true); o += 2;            // e_shstrndx
 
-  // the one PT_LOAD
-  o = EHDR_SIZE;
-  dv.setUint32(o, PT_LOAD, true); o += 4;
-  dv.setUint32(o, dataOffset, true); o += 4;   // p_offset
-  dv.setUint32(o, loadAddress >>> 0, true); o += 4;  // p_vaddr
-  dv.setUint32(o, loadAddress >>> 0, true); o += 4;  // p_paddr — flash is its own LMA
-  dv.setUint32(o, image.length, true); o += 4; // p_filesz
-  dv.setUint32(o, image.length, true); o += 4; // p_memsz — no .bss here; the image is what there is
-  dv.setUint32(o, PF_R | PF_X, true); o += 4;
-  dv.setUint32(o, 4, true);                    // p_align
-
-  out.set(image, dataOffset);
+  // one PT_LOAD per segment: the image first, then any extra records
+  let data = dataOffset;
+  segments.forEach((seg, i) => {
+    o = EHDR_SIZE + i * PHDR_SIZE;
+    dv.setUint32(o, PT_LOAD, true); o += 4;
+    dv.setUint32(o, data, true); o += 4;                   // p_offset
+    dv.setUint32(o, seg.address >>> 0, true); o += 4;      // p_vaddr
+    dv.setUint32(o, seg.address >>> 0, true); o += 4;      // p_paddr — its own LMA
+    dv.setUint32(o, seg.bytes.length, true); o += 4;       // p_filesz
+    dv.setUint32(o, seg.bytes.length, true); o += 4;       // p_memsz — no .bss here
+    dv.setUint32(o, PF_R | PF_X, true); o += 4;
+    dv.setUint32(o, 4, true);                              // p_align
+    out.set(seg.bytes, data);
+    data += (seg.bytes.length + 3) & ~3;
+  });
   return out;
 }
 

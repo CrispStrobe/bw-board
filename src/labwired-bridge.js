@@ -424,9 +424,15 @@ export function buildLabwiredSystem (opts = {}) {
     `chip: ${JSON.stringify(opts.chipPath ?? './chip.yaml')}`,
     `cpu_hz: ${chip.clockHz}`,
     bindings.length ? `board_io:\n${bindings.map(bindingYaml).join('\n')}` : 'board_io: []',
-    // No `external_devices`. The parts beyond the pad are our board's, and a
+    // No `external_devices` for CIRCUIT parts: those are our board's, and a
     // second model of one LED is the disagreement one-board-one-truth exists to
-    // prevent. See the module header.
+    // prevent. See the module header. The one exception is a device ON the
+    // controller module itself (`chip.onBoard`, e.g. the micro:bit's LED
+    // matrix): it sits on labwired's side of the pad, on pins no circuit part
+    // reaches, and nothing on our board models it.
+    ...(chip.onBoard?.externalDevicesYaml
+      ? ['external_devices:', chip.onBoard.externalDevicesYaml]
+      : []),
     '',
   ].join('\n');
 
@@ -484,6 +490,11 @@ export function labwiredAdapterOptionsFor (opts = {}) {
     firmware: opts.firmware,
     firmwareAddress: opts.firmwareAddress ?? built.firmwareOrigin,
     refusals: built.refusals,
+    mcuId: built.mcuId,
+    // Displays the controller module carries (see `chip.onBoard`), for the
+    // debug target's `video()` and the part's device state.
+    onBoardDisplays: LABWIRED_CHIPS[opts.chipKind ?? 'stm32f030']?.onBoard?.displays ?? [],
+    onBoardMatrix: LABWIRED_CHIPS[opts.chipKind ?? 'stm32f030']?.onBoard?.matrix ?? null,
   };
 }
 

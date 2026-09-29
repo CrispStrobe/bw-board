@@ -876,6 +876,9 @@ export class BoardImpl {
     this._pinAliases = buildPinAliasTable(parts);
 
     this._deviceStates = new Map();
+    // Displays a controller MODULE carries on itself (setPartMatrix), for parts
+    // with no registered device model — a micro:bit is an `mcu` part here.
+    this._partOverlays = null;
     for (const p of parts) {
       const st = initDeviceState(p);
       if (st) {
@@ -3851,8 +3854,31 @@ export class BoardImpl {
     // Built-in shift register
     const sr = this._shiftRegisters.get(partId);
     if (sr) return { shiftReg: sr.shiftReg, latchReg: sr.latchReg, oeActive: sr.oeActive ?? true };
-    // Registry devices
-    return this._deviceStates.get(partId) ?? null;
+    // Registry devices, then a controller module's own display (setPartMatrix)
+    return this._deviceStates.get(partId) ?? this._partOverlays?.get(partId) ?? null;
+  }
+
+  /**
+   * Publish the LED matrix a controller MODULE carries on itself (the
+   * micro:bit's 5x5, as its emulator reports it) onto that part, as
+   * `matrix: {width, height, brightness, levels}` — `brightness` 0..1 and
+   * `levels` 0..9 per LED, row-major. A part with a registered device model
+   * gets it on its own state; one without (an `mcu` part) gets an overlay that
+   * getDeviceState returns, so the part's face can read it the same way.
+   *
+   * @param {string} partId
+   * @param {{width:number,height:number,brightness:Float64Array,levels:Uint8Array}} matrix
+   */
+  setPartMatrix(partId, matrix) {
+    const st = this._deviceStates.get(partId);
+    if (st) {
+      st.matrix = matrix;
+      return;
+    }
+    if (!this._partOverlays) this._partOverlays = new Map();
+    const overlay = this._partOverlays.get(partId);
+    if (overlay) overlay.matrix = matrix;
+    else this._partOverlays.set(partId, { matrix });
   }
 
   /**

@@ -5,7 +5,10 @@
  * Formats are the engine's own names (labwired core `inspect::format`):
  *   ssd1306_page / sh1107_page / pcd8544_bank  page-packed mono: byte
  *       page*width + x, bit k is pixel (x, page*8 + k), 1 = lit;
- *   rgb565_be   two bytes per pixel, big-endian, row-major.
+ *   rgb565_be   two bytes per pixel, big-endian, row-major;
+ *   gray8       one brightness byte per LED (0 dark .. 255 full), row-major —
+ *       a multiplexed LED matrix (`led-matrix-mux`, the micro:bit display),
+ *       drawn as red LEDs.
  * Anything else (e-paper planes, 7-segment, text) is refused by returning
  * null with `refused` set, never drawn as something it is not.
  * @module
@@ -48,6 +51,19 @@ export function decodeDisplay (d) {
       rgba[o] = ((v >> 11) & 0x1f) * 255 / 31;
       rgba[o + 1] = ((v >> 5) & 0x3f) * 255 / 63;
       rgba[o + 2] = (v & 0x1f) * 255 / 31;
+      rgba[o + 3] = 255;
+    }
+    return { width: w, height: h, rgba };
+  }
+  if (format === 'gray8') {
+    // Red LEDs, as on the micro:bit. A dark LED keeps a dim red body so the
+    // grid still reads as a panel rather than as nothing.
+    for (let i = 0; i < w * h; i++) {
+      const v = bytes[i] ?? 0;
+      const o = i * 4;
+      rgba[o] = 40 + Math.round(v * 215 / 255);
+      rgba[o + 1] = Math.round(v * 40 / 255);
+      rgba[o + 2] = Math.round(v * 30 / 255);
       rgba[o + 3] = 255;
     }
     return { width: w, height: h, rgba };

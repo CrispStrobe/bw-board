@@ -140,6 +140,13 @@ export function chipArch (chipYaml) {
  * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
  * @param {number} [opts.clockHz]       engine cycle rate, for cycle→ns
  * @param {string} [opts.systemYaml]    override the generated manifest
+ * @param {Array<{address: number, bytes: Uint8Array}>} [opts.extraSegments]
+ *   records beside a raw image (an nRF .hex's UICR words), loaded with it
+ * @param {{display: string, partId: string}} [opts.boardMatrix] an LED matrix
+ *   ON the controller module (the micro:bit's): after every advance the
+ *   engine's picture of `display` is written onto the board part `partId`'s
+ *   device state as `matrix: {width, height, brightness, levels}` — the shape
+ *   bw-circuit-ui's matrix faces read (`brightness` 0..1, `levels` 0..9).
  * @param {Record<string,Uint8Array>} [opts.blobs] images for image_env regions, by name
  * @param {string} [opts.name]
  * @returns {object} boundary-A adapter
@@ -172,7 +179,7 @@ export function createLabwiredAdapter (opts) {
   }
   const firmwareOpts = isAvr
     ? { architecture: 'avr', loadAddress: opts.firmwareAddress }
-    : { loadAddress: opts.firmwareAddress };
+    : { loadAddress: opts.firmwareAddress, extraSegments: opts.extraSegments };
   const firmware = given
     ? toLoadableElf(given, firmwareOpts)
     : given;
@@ -443,6 +450,42 @@ export function createLabwiredAdapter (opts) {
     }
   }
 
+  // The module's own LED matrix onto its part (opts.boardMatrix). Metadata
+  // every call, pixels only when the engine's `generation` moved.
+  let matrixGeneration = null;
+  function publishMatrix () {
+    const bm = opts.boardMatrix;
+    if (!bm || !board || typeof sim.get_display !== 'function') return;
+    // A board that can host a module's display (setPartMatrix) takes it
+    // whatever the part's kind; otherwise a registered part's state does.
+    const state = typeof board.setPartMatrix === 'function' ? null
+      : (typeof board.getDeviceState === 'function' ? board.getDeviceState(bm.partId) : null);
+    if (typeof board.setPartMatrix !== 'function' && !state) return;
+    let meta;
+    try { meta = plain(sim.get_display(bm.display, false)); } catch (e) { return; }
+    if (!meta) return;
+    const gen = String(meta.meta?.generation ?? meta.generation ?? '');
+    if (gen && gen === matrixGeneration) return;
+    let full;
+    try { full = plain(sim.get_display(bm.display, true)); } catch (e) { return; }
+    const width = full?.width ?? full?.meta?.w;
+    const height = full?.height ?? full?.meta?.h;
+    const bytes = full?.bytes;
+    if (!Number.isInteger(width) || !Number.isInteger(height) || !bytes) return;
+    const n = width * height;
+    const brightness = new Float64Array(n);
+    const levels = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      const b = bytes[i] ?? 0;
+      brightness[i] = b / 255;
+      levels[i] = Math.round(b * 9 / 255);
+    }
+    const matrix = { width, height, brightness, levels };
+    if (typeof board.setPartMatrix === 'function') board.setPartMatrix(bm.partId, matrix);
+    else state.matrix = matrix;
+    matrixGeneration = gen;
+  }
+
   function drainSerial () {
     drainTraces();
     if (!serialListener || !sim.drain_uart_output) return;
@@ -525,6 +568,7 @@ export function createLabwiredAdapter (opts) {
       if (cycles > 0) sim.step_batch(cycles);
       drainEdges();
       drainSerial();
+      publishMatrix();
       if (board && board.advanceTo) {
         board.advanceTo(timeNs());
         stats.advanceToCount++;
@@ -570,6 +614,7 @@ export function createLabwiredAdapter (opts) {
       syncInputs();
       drainEdges();
       drainSerial();
+      publishMatrix();
       if (board && board.advanceTo) {
         board.advanceTo(timeNs());
         stats.advanceToCount++;
