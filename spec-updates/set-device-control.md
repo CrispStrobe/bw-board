@@ -49,15 +49,25 @@ setDeviceControl(partId: string, verb: string, value: number|string|Array): bool
 | | clear | [r,g,b] or 0 | gram ← colour |
 | | pixel | [x, y, r, g, b] | one pixel RGB565 |
 | | fill | [x0,y0,x1,y1,r,g,b] | filled rectangle |
-| servo | angle | number | targetAngle (0–180); slew stays the model's |
+| servo | angle | number | targetAngle (0–180); slew stays the model's. On a servo an MCU pin drives, ALSO the 50 Hz pulse this servo decodes to that angle, on that pin (setPwm) — so the horn moves by the same decode as an emulated timer's pulses (2026-09-29, Lite B5) |
+| dc_motor | speed | 0–100 | N % duty (clamped) on the MCU pin that drives the motor, via setPwm (2026-09-29, Lite B5) |
 | relay | state | 0/1 | force energized (user intent; pending timer cleared) |
 | neopixel | neopixel | [i, r, g, b] | pixels[i] ← RGB |
 | | clearNeopixels | any | all pixels off |
 
-Deliberately NOT implemented: `speed`/`direction` on `dc_motor` — the
-motor is voltage-driven through its terminals and a direct speed override
-would fake the physics the model exists to teach. Those verbs refuse with
-the warning until a motor-driver-level story exists.
+`speed` on `dc_motor` is not a speed override — that would fake the physics
+the model exists to teach — but the drive story that was missing: the board
+walks the drawn netlist from the motor's terminals (through a base resistor,
+a driver transistor, an H-bridge; at most three parts deep, stopping at supply
+and ground rails and MCU power pins) to the MCU pin that drives it, and runs
+the duty there with `setPwm`. The motor then integrates its torque over the
+real on/off intervals, exactly as under `analogWrite`. Several candidate pins
+narrow to the one on an enable (EN/ENA/PWM) net; still several, or none, is
+refused by name ("driven by several MCU pins (...)", "no MCU pin drives it").
+
+`direction` on `dc_motor` is still refused: it needs the two IN pins of an
+H-bridge and a mapping of forward/reverse/brake/coast onto them, which no
+model here carries yet.
 
 Drawing verbs set the display on: a learner who prints wants to see it;
 the register-level I2C/SPI paths are untouched and remain authoritative
