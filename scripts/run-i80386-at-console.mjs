@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import {resolve} from 'node:path';
+import {expandI80386SourceInventory} from './lib/i80386-source-inventory.mjs';
 import Machine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from
   '../src/experimental/i80386-at-machine.js';
 import {I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
@@ -92,18 +93,21 @@ const formResolvedAdmission=process.env.AT_FORM_RESOLVED_ADMISSION==='1';
 const firstRefusalContext=process.env.AT_FORM_REFUSAL_CONTEXT==='1';
 const groupedShadowAdmission=process.env.AT_GROUPED_SHADOW_ADMISSION==='1';
 const groupedFirstRefusalContext=process.env.AT_GROUPED_FIRST_REFUSAL_CONTEXT==='1';
+const expandedGroupedAdmission=
+  process.env.AT_EXPANDED_GROUPED_SHADOW_ADMISSION==='1';
 if([formResolvedAdmission,firstRefusalContext,groupedShadowAdmission,
-    groupedFirstRefusalContext,
+    groupedFirstRefusalContext,expandedGroupedAdmission,
     process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'].filter(Boolean).length>1)
   throw new Error('select one cross-mode observer variant');
 const crossModeTraceObserver=(formResolvedAdmission||firstRefusalContext||
   groupedShadowAdmission||groupedFirstRefusalContext||
+  expandedGroupedAdmission||
   process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')?
   createI80386CrossModePotentialTraceObserver({
     formResolvedAdmission:formResolvedAdmission||firstRefusalContext,
     firstRefusalContext,
     groupedShadowAdmission:groupedShadowAdmission||groupedFirstRefusalContext,
-    groupedFirstRefusalContext}):null;
+    groupedFirstRefusalContext,expandedGroupedAdmission}):null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
@@ -196,6 +200,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-broad-block-census.js',
   '../src/experimental/i80386-code16-event-run-observer.js',
   '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
+  '../src/experimental/i80386-expanded-grouped-admission.js',
   '../src/experimental/i80386-form-resolved-admission.js',
   '../src/experimental/i80386-first-refusal-shape.js',
   '../src/experimental/i80386-hot-loop-locator.js',
@@ -207,14 +212,17 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/vga-memory.js','../src/vga-card.js',
   './lib/i80386-at-console-events.mjs',
   './lib/i80386-at-dosbox-config.mjs','./lib/i80386-at-terminal.mjs',
+  './lib/i80386-source-inventory.mjs',
   './lib/i80386-windows-vga-frame.mjs','./lib/i80386-windows-vga-480-frame.mjs',
   './lib/i80386-doom-vga-frame.mjs',
   './summarize-i80386-cross-mode-potential-trace.mjs',
   './summarize-i80386-form-resolved-admission.mjs',
   './summarize-i80386-grouped-shadow-admission.mjs',
   './summarize-i80386-grouped-first-refusal-context.mjs',
+  './summarize-i80386-expanded-grouped-result.mjs',
   './run-i80386-at-console.mjs'];
-const sourceSha256=Object.fromEntries(sourcePaths.map(path=>
+const sourceSha256=Object.fromEntries(expandI80386SourceInventory(
+  sourcePaths,import.meta.url).map(path=>
   [path,sha(fs.readFileSync(new URL(path,import.meta.url)))]));
 const executionRevision=execFileSync('git',['rev-parse','HEAD'],{
   cwd:new URL('..',import.meta.url),encoding:'utf8'}).trim();
@@ -429,6 +437,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(crossModeTraceObserver?{crossModeTraceObserver:crossModeTraceObserver.report()}:{}),
   ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
+    expandedGroupedAdmission,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,
     code16Wasm:options.code16Wasm,
@@ -436,7 +445,10 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
     events:sha(eventBytes),mouseEnabled,dosboxConfig:options.conf&&{
       sha256:sha(fs.readFileSync(options.conf)),parsed:dosbox}},steps,stop,refusal,
   cpu:{cs:machine.cpu.cs,eip:machine.cpu.eip,cr0:machine.cpu.cr0>>>0,
-    cr3:machine.cpu.cr3>>>0,eflags:machine.cpu.eflags>>>0},
+    cr3:machine.cpu.cr3>>>0,cr4:machine.cpu.cr4>>>0,
+    eflags:machine.cpu.eflags>>>0,cycles:machine.cpu.cycles,
+    instructionSnapshot:machine.cpu._snapshotInstruction()},
+  machineCycles:machine.cycles,
   nativeStats:nativeDispatcher?.stats??null,
   code16WasmStats:code16WasmDispatcher?.stats??null,
   ...(code16WasmDiagnostics?
@@ -444,6 +456,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   code16LoadExecutions:machine.code16LoadExecutions??0,
   ...(modeCpuProfile?{modeCpuProfile}:{}),
   delivered,serial:{bytes:serial.length,text:Buffer.from(serial).toString('latin1')},
+  ramSha256:sha(machine.mem),diskSha256:sha(machine.ata.mediaBytes()),
   textRam:text,vga:{registers:serializableVideo,planeSha256:planes.map(sha),
     snapshotPath:vgaOutput}};
 const output=JSON.stringify(report,null,2)+'\n';

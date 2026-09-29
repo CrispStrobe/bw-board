@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {expandI80386SourceInventory} from './lib/i80386-source-inventory.mjs';
 import Machine, {PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_15M_HDD_XV6_SMP,
   PCAT80386_EXPERIMENTAL_224M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
@@ -13,6 +14,8 @@ import {createI80386BroadBlockCensus} from '../src/experimental/i80386-broad-blo
 import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
 import {createI80386NativeSuccessorCensus} from
   '../src/experimental/i80386-native-successor-census.js';
+import {createI80386CrossModePotentialTraceObserver} from
+  '../src/experimental/i80386-cross-mode-potential-trace-observer.js';
 
 const firmware = process.env.XV6_FIRMWARE ?? 'ibm';
 if (!['ibm', 'bochs'].includes(firmware)) throw new Error('XV6_FIRMWARE must be ibm or bochs');
@@ -77,6 +80,8 @@ const broadBlockCensus = process.env.XV6_BROAD_BLOCK_CENSUS === '1' ?
     selectedFormsPotential:process.env.XV6_BROAD_BLOCK_SELECTED_FORMS==='1'}) : null;
 const hotLoopLocator=process.env.XV6_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
+const expandedGroupedAdmission=
+  process.env.XV6_EXPANDED_GROUPED_SHADOW_ADMISSION==='1';
 if(process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
   throw new Error('Jcc link census requires XV6_BROAD_BLOCK_CENSUS=1');
 if(process.env.XV6_BROAD_BLOCK_REFUSAL_OPCODES==='1'&&!broadBlockCensus)
@@ -100,6 +105,11 @@ if (broadBlockCensus && (nativeByte || nativeDispatch || code16Coverage))
   throw new Error('broad-block census requires ordinary single-step execution');
 if (hotLoopLocator && (nativeByte || nativeDispatch || code16Coverage || broadBlockCensus))
   throw new Error('hot-loop locator requires ordinary single-step execution');
+if(expandedGroupedAdmission&&(nativeByte||nativeDispatch||code16Coverage||
+    broadBlockCensus||hotLoopLocator||process.env.XV6_SHARED_RAM==='1'))
+  throw new Error('expanded grouped observer requires ordinary single-step execution');
+const expandedObserver=expandedGroupedAdmission?
+  createI80386CrossModePotentialTraceObserver({expandedGroupedAdmission:true}):null;
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -160,6 +170,7 @@ machine.reset();
 const restoreCode16Interrupts = code16Coverage?.attach(machine);
 const restoreBroadBlockFetch = broadBlockCensus?.attach(machine);
 const restoreHotLoopFetch=hotLoopLocator?.attach(machine);
+const restoreExpandedObserver=expandedObserver?.attach(machine);
 if (firmware === 'bochs') machine.ata.slaveEnabled = true;
 const nativeRunner = nativeByte ? await (async () => {
   const {createI80386NativeByteRunner} = await import('../src/experimental/i80386-native-byte-block.js');
@@ -189,6 +200,7 @@ for (; steps < stepsLimit; steps++) {
     const byte = command.charCodeAt(inputSent.length);
     broadBlockCensus?.externalEvent();
     hotLoopLocator?.externalEvent();
+    expandedObserver?.externalEvent();
     machine.serialIn(byte);
     inputSent.push({step: steps, byte});
   }
@@ -207,6 +219,7 @@ for (; steps < stepsLimit; steps++) {
     recentInstructions[steps % 32] = {step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip};
   }
   try {
+    expandedObserver?.observe(machine);
     let advanced=0;
     if (nativeDispatcher) advanced=nativeDispatcher.run(Math.min(64,stepsLimit-steps));
     else if (nativeRunner) {
@@ -245,11 +258,13 @@ for (; steps < stepsLimit; steps++) {
     }
     if (advanced === 0) {machine.step();code16Coverage?.retired(machine);
       broadBlockCensus?.retired(machine);hotLoopLocator?.retired(machine);
+      expandedObserver?.retired(machine);
       advanced=1;}
     steps+=advanced-1;
   } catch (error) {
     broadBlockCensus?.aborted(machine);
     hotLoopLocator?.aborted(machine);
+    expandedObserver?.aborted(machine);
     console.error(JSON.stringify({error: String(error), steps, milestones, userModeEntries,
       serial: Buffer.from(serial).toString('latin1'), inputSent,
       recentInstructions: [...recentInstructions].sort((a, b) => a.step - b.step),
@@ -262,10 +277,54 @@ for (; steps < stepsLimit; steps++) {
 restoreCode16Interrupts?.();
 restoreBroadBlockFetch?.();
 restoreHotLoopFetch?.();
+restoreExpandedObserver?.();
 serialTee?.close();
+// Keep the board and observer inventory aligned with the Windows console.
+// The probe-specific helpers are listed below as well, so both members of a
+// measured pair bind their transitive local execution and reduction sources.
+const sourcePaths=['./probe-xv6-stock.mjs',
+  './lib/i80386-source-inventory.mjs',
+  './lib/i80386-at-hdd-image.mjs','./lib/xv6-serial-tee.mjs',
+  '../src/at-ps2-mouse.js','../src/at-8042-a20.js',
+  '../src/i8086-machine.js','../src/experimental/i80386.js',
+  '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
+  '../src/experimental/i80386-code16-load-exec.js',
+  '../src/experimental/i80386-code16-wasm-block.js',
+  '../src/experimental/i80386-code16-window.js',
+  '../src/experimental/i80386-code16-ea.js',
+  '../src/experimental/i80386-code16-data-window.js',
+  '../src/experimental/i80386-code16-form-census.js',
+  '../src/experimental/i80386-code16-coverage.js',
+  '../src/experimental/i80386-code16-wasm.c',
+  '../wasm/i80386-code16-wasm.wasm',
+  '../src/experimental/i80386-native-dispatch.js',
+  '../src/experimental/i80386-native-byte-block.js',
+  '../src/experimental/i80386-native32-census.js',
+  '../src/experimental/i80386-native-successor-census.js',
+  '../src/experimental/i80386-broad-block-census.js',
+  '../src/experimental/i80386-code16-event-run-observer.js',
+  '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
+  '../src/experimental/i80386-expanded-grouped-admission.js',
+  '../src/experimental/i80386-form-resolved-admission.js',
+  '../src/experimental/i80386-first-refusal-shape.js',
+  '../src/experimental/i80386-hot-loop-locator.js',
+  '../src/experimental/i80386-ram-bridge.js',
+  '../src/experimental/i80386-block-spike.js',
+  '../src/experimental/i80386-read-window.js',
+  '../src/experimental/i80386-write-window.js',
+  '../wasm/i80386-block-spike.wasm','../wasm/i80386-ram-bridge.wasm',
+  '../src/experimental/vga-memory.js','../src/vga-card.js',
+  './summarize-i80386-expanded-grouped-result.mjs'];
+const sourceSha256=Object.fromEntries(expandI80386SourceInventory(
+  sourcePaths,import.meta.url).map(file=>[file,
+  crypto.createHash('sha256').update(fs.readFileSync(new URL(file,import.meta.url)))
+    .digest('hex')]));
+const executionRevision=execFileSync('git',['rev-parse','HEAD'],{
+  cwd:new URL('..',import.meta.url),encoding:'utf8'}).trim();
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
+  executionRevision,sourceSha256,expandedGroupedAdmission,
   profile,
   // Board time is a configured scheduling clock, not measured 80386 silicon time.
   clockHz: machine.clockHz,
@@ -285,9 +344,13 @@ const receipt = {
     hotLoopLocatorSourceSha256:crypto.createHash('sha256').update(fs.readFileSync(
       new URL('../src/experimental/i80386-hot-loop-locator.js',import.meta.url)))
       .digest('hex')}:{}),
+  ...(expandedObserver?{crossModeTraceObserver:expandedObserver.report()}:{}),
   ...(process.env.XV6_RAM_HASH === '1' ? {ramSha256:crypto.createHash('sha256')
     .update(Buffer.from(machine.mem.buffer,machine.mem.byteOffset,machine.memoryBytes))
     .digest('hex')} : {}),
+  diskSha256:crypto.createHash('sha256').update(machine.ata.image).digest('hex'),
+  filesystemDiskSha256:crypto.createHash('sha256')
+    .update(machine.ata.slaveImage).digest('hex'),
   firmware,
   rom: {path: path.resolve(romPath), sha256: crypto.createHash('sha256').update(rom).digest('hex')},
   image: {path: path.resolve(imagePath), sha256: crypto.createHash('sha256').update(raw).digest('hex')},
@@ -297,7 +360,10 @@ const receipt = {
   lapicIdReads, milestones, userModeEntries, screen,
   lapic: {svr: machine._lapic[0xf0 / 4], timer: machine._lapic[0x320 / 4], initialCount: machine._lapic[0x380 / 4]},
   ioapic: {id: machine._ioapic[0], version: machine._ioapic[1], ideLow: machine._ioapic[0x10 + 14 * 2], ideHigh: machine._ioapic[0x10 + 14 * 2 + 1], idePending: machine._apicIrq[14]},
-  cpu: {cs: machine.cpu.cs, eip: machine.cpu.eip, eflags: machine.cpu.eflags, cr0: machine.cpu.cr0, cr3: machine.cpu.cr3, cr4: machine.cpu.cr4},
+  cpu: {cs: machine.cpu.cs, eip: machine.cpu.eip, eflags: machine.cpu.eflags,
+    cr0: machine.cpu.cr0, cr3: machine.cpu.cr3, cr4: machine.cpu.cr4,
+    cycles:machine.cpu.cycles,
+    instructionSnapshot:machine.cpu._snapshotInstruction()},
 };
 console.log(JSON.stringify(receipt, null, 2));
 if (expectedSerial && !receipt.serial.includes(expectedSerial))
