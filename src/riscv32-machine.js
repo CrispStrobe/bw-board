@@ -45,6 +45,7 @@ export class RiscV32Machine {
         this.exitCode = null;
         this._rxQueue = [];            // legacy SBI getchar input
         this._sbiTimer = false;        // SBI set_timer armed: forward MTIP to STIP
+        this._entry = null;            // loadImage's hand-off {pc, sp}: where reset() restarts
         this.idleSkipped = 0;          // mtime ticks skipped by WFI idle skips
         this.cpu = new RiscV32(this.mem, {
             resetPc: config.resetPc || 0,
@@ -234,13 +235,23 @@ export class RiscV32Machine {
      */
     loadImage(image, entrySp) {
         for (const {addr, bytes} of image.segments) this.load(bytes, addr);
-        this.cpu.pc = (image.entry >>> 0);
-        const sp = ((entrySp ?? (this.ramBase + this.memSize - 16)) >>> 0);
+        // Remembered so reset() returns to this program, not to the CPU's
+        // resetPc (0): with no boot ROM, the loader's hand-off IS the reset
+        // vector of a loaded image (rp2040-adapter's resetToProgram, likewise).
+        this._entry = {pc: image.entry >>> 0, sp: (entrySp ?? (this.ramBase + this.memSize - 16)) >>> 0};
+        this._handOff();
+        return this;
+    }
+
+    /** The loader's hand-off to the loaded image: pc = entry, sp, and the
+     *  argc/argv/envp words `_start` reads at sp. */
+    _handOff() {
+        const {pc, sp} = this._entry;
+        this.cpu.pc = pc;
         this.cpu.x[2] = sp | 0;                                   // sp
         // argc = 0, argv = NULL, envp = NULL where _start expects them.
         for (let i = 0; i < 16; i++) this.mem[(sp + i - this.ramBase) & MASK(this.memSize)] = 0;
         this.cpu.flushDecodeCache();
-        return this;
     }
 
     /** Firmware-set state a supervisor kernel expects at hand-off: hardware
@@ -248,11 +259,23 @@ export class RiscV32Machine {
      *  has Svadu, and what xv6 (which never sets A/D itself) relies on. */
     _firmwareInit() { this.cpu.csr[0x31a] |= 1 << 29; }
 
+    /**
+     * A CPU reset, the convention every bench's debug reset follows (z80,
+     * 6502, i8086, avr8js, rp2040's resetToProgram): registers, CSRs,
+     * privilege, counters, TLB and the decode cache go back to their reset
+     * values; RAM is KEPT (a reset is not a reload — a program's mutated
+     * .data/.bss stays mutated, as on hardware). With an image loaded by
+     * loadImage the core then restarts at that image's entry with the
+     * loader's stack hand-off, i.e. the architectural state of a fresh load;
+     * without one, at the CPU's resetPc.
+     */
     reset() {
         const t = this.clint ? this.clint.mtime : 0;
         this.cpu.reset();
         if (this.clint) this.clint.rebase(t);            // mtime is continuous across a reset
         this._firmwareInit(); this.output = ''; this.exitCode = null;
+        this._sbiTimer = false;                          // the firmware restarts too; devices (CLINT, UART) keep state
+        if (this._entry) this._handOff();
     }
 
     /** One instruction; returns instructions retired (0 when halted). Advances

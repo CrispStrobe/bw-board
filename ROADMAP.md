@@ -1452,8 +1452,9 @@ after the step, interrupt records dropped) each turn at least one case red.
 (squashed fetches are bubbles, they do not touch the I-cache), predictor updates
 immediate, BTB looked up only for control transfers, E8.5 warm-up checkpoints not
 started, no gem5 cross-check yet (it stays optional and offline, never a dependency).
-Found on the way (not this lane's): a program-mode `reset()` of the RISC-V debug
-target returns the core to pc 0, not the image entry, and does not restore RAM.
+A program-mode debug-target `reset()` restarts at the loaded image's entry with the
+loader's hand-off (Lite task C5; `test/riscv32-debug-reset.test.mjs`): a CPU reset,
+RAM kept, like every other bench's reset; the timing models start fresh.
 
 **Why.** Brickwright is about learning internals. Today the RISC-V core is
 *instruction-accurate*:
