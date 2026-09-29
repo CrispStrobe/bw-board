@@ -1,3 +1,33 @@
+2026-09-29 RV32 predecoded-instruction cache + fetch front — DONE candidate, Claude (Lite task C2, second increment).
+Worktree `/mnt/volume1/code/wt/c2-linux-boot-board-dc`, branch `lane/c2-rv-decode-cache`,
+base `0b281d81` + master `411982dc` merged in. Owns this row, the decode cache and fetch
+front in `src/riscv32.js` (`_dcPages`/`_dcHas`/`_dcEpoch`, `flushDecodeCache`,
+`_dcInvalidate`, the `_gen` fetch front), the flush calls in
+`riscv32-machine.js` (`load`, `loadImage`) and `riscv32-debug.js` (`writeMem`),
+`test/riscv32-decode-cache.test.mjs` and the master A/B step of
+`linux-riscv.yml`. Design: per physical page, expanded instruction + epoch|length;
+a one-entry fetch front (virtual page -> decoded page) valid while a generation
+moved by every TLB flush, trap/xret, mstatus/menvcfg write and flush is unchanged
+and the privilege matches. Core stores zero the <= 3 slots they overlap; FENCE.I
+and host writes bump the epoch (O(1): Linux runs FENCE.I every ~130 K
+instructions, and a first version that dropped the pages each time was 0.96x on
+Linux); page-crossing 32-bit instructions are never cached. Measured on CI, same
+runner, master -> this tree: Linux cold boot to the prompt, Node interleaved A/B
+17.44 -> 23.06 MIPS (1.32x, A/A 1.00x; 3.90 s -> 2.93 s), Chromium 3.61/3.53/3.60 s
+-> 2.52/2.46/2.49 s (run 36581830326); CoreMark 36.75 -> 44.49 MIPS, xv6 29.37 ->
+40.31, xv6 A/B 1.35x (A/A 1.02x), ALU 41.20 -> 45.84 (run 36581830185). Box A/B:
+Linux 1.29x, ALU 1.17x. Equivalence: the Spike lockstep gate (incl. riscv-tests
+fence_i under Sv32, arch-test Zifencei) stays green, and the cached core rebuilds
+the published Linux snapshot bit for bit (67.6 M instructions + four commands).
+`test/riscv32-decode-cache.test.mjs`, 11 cases each also run uncached; mutations
+red: no store invalidation fast (2) / slow path (1), slot range ignoring the
+instruction 2 bytes before (1), FENCE.I without flush (1), `_tlbFlush` without a
+generation bump (2), satp without TLB flush (2), no privilege in the front (1),
+caching page-crossing instructions (1), `load`/`writeMem`/`loadState` without a
+flush (1 each). Two bumps were removed as unreachable (a fetch-TLB fill cannot
+evict the front's page while the pc is on it; the restore's own flush duplicated
+`loadState`'s).
+
 2026-09-29 RV32 whole-machine snapshot: the Linux lesson opens at the shell prompt — DONE candidate, Claude (Lite task C2).
 Worktree `/mnt/volume1/code/wt/c2-linux-boot-board`, branch `lane/c2-rv-snapshot`,
 base `cfacdf60`. Owns this row, `src/riscv32-snapshot.js`, the `saveState` /

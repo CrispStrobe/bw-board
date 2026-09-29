@@ -74,6 +74,23 @@ jobs:
           npm i --no-audit --no-fund playwright@1.62.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE"
           PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs linux linux linux linux-snapshot linux-snapshot linux-snapshot
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: master
+          path: ext/master
+      - name: This tree's core against master's, same runner — Node interleaved A/B, then Chromium alternating
+        env:
+          LINUX_IMAGE: ${{ github.workspace }}/linux-out/Image
+          LINUX_INITRD: ${{ github.workspace }}/linux-out/initramfs.cpio
+          PLAYWRIGHT_DIR: ${{ github.workspace }}/ext/pw
+        run: |
+          # Runners differ by tens of percent between jobs; only a comparison
+          # inside one job is a before/after (scripts/bench-riscv32-ab.mjs).
+          node scripts/bench-riscv32-ab.mjs linux ext/master/src src 5
+          for i in 1 2 3; do
+            RV_SRC=ext/master/src node scripts/bench-riscv32-browser.mjs linux | tail -1 | sed 's/^/master  /'
+            node scripts/bench-riscv32-browser.mjs linux | tail -1 | sed 's/^/this    /'
+          done
       - name: rv32emu source (pinned)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
