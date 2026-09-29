@@ -6,7 +6,61 @@ pair's timing result. All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
-## Current checkpoint (2026-09-28)
+## Current checkpoint (2026-09-29)
+
+The 10× performance goal remains open. The
+[audited stock xv6 full usertests pass](receipts/2026-09-29-xv6-stock-224m-full-suite.json)
+completed 7,203,922,011 guest steps within its pinned 10-billion-step budget;
+it is a compatibility result, not a throughput comparison. The rejected
+[plain RAM read trial](I80386-PLAIN-RAM-READ-NEGATIVE.md) adds no retained
+speed change. Neither result calibrates speed against a physical 386DX.
+
+The [ordinary Windows profile](receipts/2026-09-27-i80386-ordinary-windows-profile-attribution.json)
+attributes 79.65% of V8 self samples to the 386 CPU core and 31.64% to
+`step` plus `_stepInstruction`. Separate entry-mode CPU sampling in the
+same receipt attributes about 70% of measured user CPU to real,
+protected16 and VM86 calls, and about 30% to protected32. These are
+different instruments and cannot be multiplied into a speed estimate. A
+route confined to 16-bit execution cannot meet the 10× goal on that
+workload. The [current packed-native xv6 profile](receipts/2026-09-28-i80386-current-packed-v8-profile.json)
+finds 46.82% of all-process samples in ordinary CPU fallback but only 5.50%
+in the direct fetch/decode functions, below the predeclared 15% screen for
+a narrow fetch/decode cache.
+
+The proposed next route is a cross-mode, event-bounded trace executor, in
+this order:
+
+1. Extend the owned contracts from the
+   [branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md), the merged
+   [`8E` ES load fixture](I80386-8E-SEGMENT-LOAD-CONTRACT.md), and the
+   [ordered CALL/RET and `FF /2` fixture in PR #149](https://github.com/CrispStrobe/bw-board/pull/149).
+   These pin individual boundaries, but their combined branch, device,
+   fault and mapping behavior remains unproved. Preserve code/page-table
+   writes and chip/IRQ cuts before extending the observer grammar.
+2. Expand the execution-neutral observer's typed grammar and run a
+   source-pinned, disjoint unique-retirement census before runtime coding.
+   The [latest grouped Windows result](receipts/2026-09-29-i80386-grouped-first-refusal-result.json)
+   reached only 4.64 million ordinals in runs of at least eight against its
+   15-million overall gate, and 4.30 million against its 5-million
+   protected16+VM86 gate. Both thresholds remain unmet; any revised grammar
+   needs a predeclared screen and separate xv6 coverage evidence.
+3. Attribute the affected path to nonoverlapping, all-process CPU samples
+   before treating step coverage as a speed opportunity. The
+   [ordinary-core audit](receipts/2026-09-28-i80386-ordinary-core-other-audit.md)
+   calls for at least 15% in an avoidable path; entire interpreter
+   functions are not savings estimates.
+4. Only if those screens pass, build an opt-in executor with dynamic
+   per-instruction translation and fault checkpoints, exact event exits, and
+   ordinary fallback. Require complete Windows and xv6 guest-state parity,
+   including RAM and disk hashes, focused mutation tests, and serial
+   alternating unprofiled CPU-time pairs before any retention or speed claim.
+
+This is a proposed measurement and implementation sequence. No expanded
+grammar gate or CPU-cost gate has passed, and no broader executor is justified
+by the current evidence. The sections below are a dated experiment ledger;
+their historical “next” recommendations describe their source revisions.
+
+## Measured checkpoint (2026-09-28)
 
 The 10× goal is still open. On the VPS (four KVM Skylake vCPUs, Node
 20.20), a complete stock-xv6 `forktest` retires 24,338,279 guest steps.
@@ -70,10 +124,8 @@ pairs, a **10.19% reduction** on the opt-in native path. Every pair favored
 the candidate; all six complete guest reports, native statistics and RAM
 hashes matched. This is one VPS/workload result, not Windows performance or
 physical 386DX RTx. A later [Windows sampled-timer probe](I80386-CODE16-WASM-COST-ATTRIBUTION.md)
-was too intrusive for absolute phase attribution, so the next 16-bit
-measurement uses low-rate V8 profiling. The measurements below are an
-experiment ledger; earlier statements about work remaining refer to their
-dated source revisions.
+was too intrusive for absolute phase attribution; a later experiment used
+low-rate V8 profiling. The measurements below continue the dated ledger.
 
 The direct stock-xv6 `forktest` A/B from `2feb23a3` to `bc539d33` took 39.655
 versus 29.575 user-CPU seconds for 24,338,279 guest steps (1.341×). The later
