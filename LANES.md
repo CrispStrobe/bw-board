@@ -1,4 +1,4 @@
-2026-09-29 RV32 whole-machine snapshot: the Linux lesson opens at the shell prompt — IN PROGRESS, Claude (Lite task C2).
+2026-09-29 RV32 whole-machine snapshot: the Linux lesson opens at the shell prompt — DONE candidate, Claude (Lite task C2).
 Worktree `/mnt/volume1/code/wt/c2-linux-boot-board`, branch `lane/c2-rv-snapshot`,
 base `cfacdf60`. Owns this row, `src/riscv32-snapshot.js`, the `saveState` /
 `loadState` pairs on RiscV32 / RiscV32Machine / CLINT / PLIC / UART, the snapshot
@@ -6,8 +6,26 @@ functions in `src/riscv32-linux-session.js` (openLinuxSnapshot,
 makeLinuxSnapshot, linuxSnapshotBase), the adapter's `linux.snapshot` and the
 factory's opening of it, `scripts/riscv32-linux-snapshot.mjs`, the
 `linux-snapshot` bench workload, `test/riscv32-snapshot.test.mjs`,
-`test/linux-riscv/snapshot.mjs` and the snapshot steps of `linux-riscv.yml`.
-Measurements and receipts are filled in before merge.
+`test/linux-riscv/snapshot.mjs` + `snapshot-pin.env` and the snapshot steps of
+`linux-riscv.yml`. Measured first (master `3f964432`, run 36533499176): cold boot
+to the prompt 68.0 M instructions, Node 3.87-4.02 s, Chromium 3.54-3.72 s; the
+Lite lesson is slower still because the adapter spends <= 10 ms per frame.
+Snapshot: RAM per 4 KiB page as zero / same-as-boot-image / literal (2089
+literal pages), 8,585,586 B raw, 2,006,204 B gzip-9, raw sha256 `1972e440…`,
+gzip `7b82fc38…` — the same bytes on the box (Node 20) and CI (Node 22, run
+36576659198); published on brickwright-media-lab `media/riscv32-linux-v1` at
+`07132874` beside the kernel (it holds kernel/BusyBox memory, so it is GPL like
+them). Opening it (gunzip, media sha256s, boot image, restore) takes Node
+0.116-0.122 s, Chromium 0.048-0.053 s on CI. Equivalence on CI with the real
+kernel: a cold boot run to the snapshot's 67,571,000 steps in one run saves
+byte-identical; save(restore(S)) == S; `ls /`, `echo`, `cat /proc/cpuinfo`,
+`uname -a` on the cold-booted and the restored machine give byte-identical output,
+instruction count (75,571,000) and final state. Mutations (box): dropping the
+CLINT, PLIC, UART, SBI-timer or TLB restore each reds that gate (PLIC also hangs
+uname); dropping the zero-page fill does NOT (no page is zero at the prompt yet
+non-zero at boot), so `test/riscv32-snapshot.test.mjs` builds that state and
+reds it. The TLB is saved rather than flushed: Linux clears PTE.A without an
+sfence, so a flushed TLB could diverge later.
 
 2026-09-29 Actuator intent through the pin, servo calibration, averaged meters — DONE candidate, Claude (Lite task B5).
 Worktree `/mnt/volume1/code/wt/b5-pwm-followups-board`, branch `lane/b5-pwm-followups`,
