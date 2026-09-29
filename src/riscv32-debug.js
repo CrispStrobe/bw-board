@@ -14,8 +14,17 @@
  * adapter builds a fresh machine), since a CPU reset into RAM the kernel has
  * already rewritten would boot nothing.
  *
+ * TIMING (E8): `setTiming(config)` attaches the pipeline/cache/predictor
+ * models (riscv32-timing.js) to the running core; `timing()` reads their
+ * named stats and the pipeline diagram of the last cycles. They follow the
+ * machine across a reset (a Linux reset builds a new one) and start fresh
+ * there. Off by default, and off means the core runs its untraced step.
+ *
  * @module
  */
+
+import {attachTiming} from './riscv32-timing.js';
+import {PipelineModel} from './uarch-pipeline.js';
 
 const ABI = ['zero', 'ra', 'sp', 'gp', 'tp', 't0', 't1', 't2', 's0', 's1', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5',
     'a6', 'a7', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 't3', 't4', 't5', 't6'];
@@ -23,6 +32,10 @@ const ABI = ['zero', 'ra', 'sp', 'gp', 'tp', 't0', 't1', 't2', 's0', 's1', 'a0',
 /** Instructions one runFor may single-step when a breakpoint or a step is
  *  pending — the slow path; a free run takes the adapter's fast path. */
 const SLOW_PATH_MAX = 200_000;
+
+/** Instructions one free-running runFor executes while the timing models are
+ *  on (they cost ~2 µs an instruction in Node): ~0.1 s. */
+const TIMING_SLICE = 50_000;
 
 /**
  * @param {ReturnType<import('./riscv32-adapter.js').createRiscV32Adapter>} adapter
@@ -36,6 +49,19 @@ export function createRiscV32DebugTarget(adapter) {
 
     const m = () => adapter.machine;
     const pc = () => m().cpu.pc >>> 0;
+
+    // Timing models, when on: the config, and the attachment to the core it
+    // was made for (re-made when the adapter's machine is a new one).
+    let timingCfg = null, timingOn = null;
+    function liveTiming() {
+        if (timingCfg === null) return null;
+        const cpu = m().cpu;
+        if (timingOn === null || timingOn.cpu !== cpu) {
+            if (timingOn !== null) timingOn.detach();
+            timingOn = attachTiming(cpu, timingCfg);
+        }
+        return timingOn;
+    }
 
     function halt(info) {
         runState = 'halted';
@@ -69,7 +95,9 @@ export function createRiscV32DebugTarget(adapter) {
                     checkpointRefusal: ['the RISC-V machine has no checkpoint support'],
                     inputReplay: [],
                     inputRefusals: ['serial input goes straight to the UART and is not recorded'],
-                    mode: adapter.mode || 'program'
+                    mode: adapter.mode || 'program',
+                    timing: {models: ['pipeline5'], predictors: ['static-nt', 'bimodal', 'gshare'],
+                        replacement: ['lru', 'fifo', 'random']}
                 }
             };
         },
@@ -89,7 +117,11 @@ export function createRiscV32DebugTarget(adapter) {
         halt() { halt({cause: 'pause'}); },
 
         /** Program: reset the CPU to the image entry. Linux: reboot the kernel. */
-        reset() { pendingStep = null; adapter.reset(); runState = 'halted'; },
+        reset() {
+            pendingStep = null; adapter.reset(); runState = 'halted';
+            if (timingOn !== null) { timingOn.detach(); timingOn = null; }
+            liveTiming();                                 // a fresh model on the (maybe new) machine
+        },
 
         step(kind, count = 1) {
             if (kind !== 'insn') return {unsupported: `step kind '${kind}' not supported on RISC-V (instruction steps only)`};
@@ -114,13 +146,17 @@ export function createRiscV32DebugTarget(adapter) {
          *  or the program's exit stopped it; else 'budget'. */
         runFor(budgetNs) {
             if (runState !== 'running') return 'halted';
+            if (timingCfg !== null) liveTiming();          // follow a machine a Linux reset rebuilt
             const machine = m();
             if (machine.halted) return exitedHalt();
             if (!pendingStep && breakpoints.size === 0) {
-                adapter.advanceNs(budgetNs);
+                // With timing on a program runs ~10x slower (every instruction
+                // goes through the pipeline model): bound one call's work so
+                // a host's frame budget stays a frame.
+                adapter.advanceNs(timingCfg !== null && adapter.mode !== 'linux' ? Math.min(budgetNs, TIMING_SLICE) : budgetNs);
                 return machine.halted ? exitedHalt() : 'budget';
             }
-            const n = Math.max(1, Math.min(SLOW_PATH_MAX, Math.round(budgetNs)));
+            const n = Math.max(1, Math.min(timingCfg !== null ? TIMING_SLICE : SLOW_PATH_MAX, Math.round(budgetNs)));
             for (let i = 0; i < n; i++) {
                 const here = pc();
                 for (const [id, bp] of breakpoints) {
@@ -175,6 +211,42 @@ export function createRiscV32DebugTarget(adapter) {
 
         /** Console input: one byte into the UART receive FIFO. */
         sendSerial(byte) { return adapter.sendSerial(byte & 0xff); },
+
+        /**
+         * Turn the timing models on with a PipelineModel config
+         * (uarch-pipeline.js PIPELINE_DEFAULTS: forwarding, branchResolve,
+         * mulLatency, divLatency, predictor, btb, icache, dcache, missPenalty,
+         * …), or off with null. A new config starts a fresh model at the next
+         * instruction. A config the model refuses is refused here, by message.
+         */
+        setTiming(cfg) {
+            if (cfg === null || cfg === undefined) {
+                if (timingOn !== null) timingOn.detach();
+                timingOn = null; timingCfg = null;
+                return undefined;
+            }
+            try { new PipelineModel(cfg); } catch (e) { return {refused: e.message}; }
+            timingCfg = {...cfg};
+            if (timingOn !== null) { timingOn.detach(); timingOn = null; }
+            liveTiming();
+            return undefined;
+        },
+
+        /** Zero the timing counters (a region of interest); caches stay warm. */
+        resetTimingStats() { const t = liveTiming(); if (t) t.resetStats(); },
+
+        /**
+         * The timing view: {config, stats (named counters), occupancy (the
+         * pipeline diagram of the last `lastCycles` cycles, rows labelled with
+         * their disassembly)}, or null when timing is off. Once the program
+         * has halted the pipeline is drained, so its last instructions count.
+         */
+        timing(lastCycles = 48) {
+            const t = liveTiming();
+            if (t === null) return null;
+            if (m().halted) t.model.finish();
+            return {config: t.config, stats: t.report(), occupancy: t.occupancy(lastCycles)};
+        },
 
         /** Linux boot progress {phase, percent, ready}, or null for a program. */
         linuxProgress() { return typeof adapter.linuxProgress === 'function' ? adapter.linuxProgress() : null; },

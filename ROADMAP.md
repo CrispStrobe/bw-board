@@ -47,7 +47,7 @@ for E2–E4 being affordable.
 - R2 The tracked demo ROMs are executed but never checked against their generators
 - R3 The `'SF'` soft-float table is empty, and it is what stops Kaluma
 - R4 The ROM stamps `BSD-3` into its own image, and this repo is MIT
-- E8 RISC-V microarchitecture — timing models over the functional core (PARKED, owner 2026-09-25)
+- E8 RISC-V microarchitecture — timing models over the functional core (UN-PARKED 2026-09-29; E8.1–E8.4 first increment landed, see the section)
 
 ## E0 — Correctness fixes in the current engine (days)
 
@@ -1348,17 +1348,112 @@ over time.
 
 ---
 
-## E8 — RISC-V microarchitecture: timing models over the functional core (PARKED)
+## E8 — RISC-V microarchitecture: timing models over the functional core
 
-**Status: PARKED by the owner on 2026-09-25 ("for some time later; atm we have enough on
-the table").** It was scoped after a survey of the reference simulators (Spike, rv32emu,
-TinyEMU, gem5). Nothing here is started. **Prerequisite:** the oracle and performance
-lane that was opened the same day must have landed:
-- Spike lockstep and riscv-arch-test as a CI gate on `src/riscv32.js`;
-- measured MIPS against rv32emu and TinyEMU;
-- the Linux-boot verdict.
+**Status: UN-PARKED by the owner on 2026-09-29 (Lite task C4). First increment
+landed: E8.1 (trace + 5-stage pipeline), E8.2 (L1 I/D caches, no L2/TLB yet), E8.3
+(predictors + BTB), E8.4 (named stats on the debug target). Open: E8.5 (warm-up
+checkpoint), the TLB, L2, and the gem5 offline cross-check.** It was parked on
+2026-09-25 after a survey of the reference simulators (Spike, rv32emu, TinyEMU,
+gem5); its prerequisites (Spike lockstep gate #46, perf #47, Linux boot #48) have
+landed, and the C2 decode cache (#141) with them.
 
-Re-measure that lane's numbers before starting this one.
+### What landed (2026-09-29): the design
+
+**The seam — a retired-instruction trace** (`src/riscv32-trace.js`). Semantics stay in
+`src/riscv32.js`, which Spike checks; timing is a separate consumer of one record per
+step: `pc`, `ppc` (physical), raw `inst` + `len` (16-bit for RVC) and the expanded
+`op`, a decoded `cls` (alu/mul/div/load/store/amo/branch/jal/jalr/csr/fence/system/
+trap), `rd`/`rs1`/`rs2` (0 = none: x0 carries no dependence), `memKind`/`memVa`/
+`memPa`/`memSize` for loads, stores and AMOs (a failed SC has none), `taken`/`target`
+for control transfers, `nextPc` (the correct path), `priv`, and `trap` ({cause,
+interrupt, tval}) when the step trapped instead of retiring. `attachRetireTrace(cpu,
+sink)` gives that one core INSTANCE a `step` that peeks the instruction and data
+address first — through two new side-effect-free core methods, `peekTranslate` (the
+Sv32 walk's checks, read-only: no TLB fill, no A/D write, no trap) and `peekRam`
+(plain RAM only, never a device read) — then runs the class's `step`. **The hook is
+zero-cost when off by construction:** those two methods are never called by `step()`,
+and an untraced core has no `step` of its own, so it runs exactly the code it ran
+before; `detach()` assigns the class's step back (no `delete`, so the instance's shape
+stays stable). The riscv-bench A/B (master's core vs this tree's, xv6, interleaved)
+measures it on CI.
+
+**The pipeline** (`src/uarch-pipeline.js`, `PipelineModel`): classic IF/ID/EX/MEM/WB,
+cycle-driven, trace-driven, streaming (records may arrive one at a time from a live
+core). Stated rules, so a hand calculation reproduces every number:
+- a stall freezes its stage and everything before it; the next stage receives a
+  bubble that keeps the reason it was born with, and bubbles are never squeezed, so
+  **cycles = instructions + 4 (fill) + Σ stall[reason]** exactly — reasons `loaduse`,
+  `raw`, `muldiv`, `icache`, `dcache`, `control`, `trap`;
+- data hazards are checked in ID against the youngest older writer in EX/MEM/WB:
+  forwarding on — an ALU result is usable by EX the cycle after the producer's EX, a
+  load's (or AMO's) after its MEM (one load-use bubble); forwarding off — read in ID
+  during the producer's WB (split-cycle register file): two bubbles back-to-back;
+  stores wait for both sources, as the textbook hazard unit does;
+- `branchResolve` `'EX'` (default; a wrong guess costs 2) or `'ID'` (costs 1, but a
+  branch/jalr then needs its operands a stage earlier: 1 bubble after an ALU producer,
+  2 after a load);
+- control: the direction predictor guesses at IF; a predicted-taken branch redirects at
+  IF when the BTB has its target, else after decode (1 bubble); jal likewise; jalr at
+  IF only on a correct BTB hit, else at resolve; traps and pc-changing system
+  instructions (mret/sret) are taken as they leave MEM;
+- EX latency: `mulLatency` (3) for MUL*, `divLatency` (16) for DIV/REM (a structural
+  hazard: the unit holds EX); MEM: 1 + D-cache miss cycles; IF: 1 + I-cache miss
+  cycles; `missPenalty` (10) per line fill, `writebackPenalty` (0) per dirty victim.
+Output: `report()` — named counters `cpu.cycles`, `cpu.insts`, `cpu.cpi`, `cpu.ipc`,
+`pipe.fill`, `pipe.stall.*`, a CPI breakdown `cpi.base`/`cpi.fill`/`cpi.<reason>`,
+`bp.*`, `btb.*`, `icache.*`, `dcache.*`; `occupancy(n)` — the per-cycle stage record of
+the last n cycles (a typed ring, `recordCycles`) as rows of {cycle, stage, hold
+reason} per instruction plus the bubbles and why they are empty: the classic diagram.
+
+**Caches** (`src/uarch-cache.js`, `CacheModel`): tags only, size/ways/line (powers of
+two), replacement `lru`/`fifo`/`random` (seeded xorshift), write-back + write-allocate
+(`writeAllocate: false` for no-allocate); stats accesses/hits/misses/read-write
+misses/evictions/write-backs/miss rate; line-straddling accesses split.
+
+**Predictors** (`src/uarch-predictor.js`): `static-nt`, `bimodal` (2-bit counters,
+start weakly not-taken, index pc>>>1 for RVC), `gshare` (pc XOR global history),
+and a direct-mapped, full-pc-tagged BTB. Updates are immediate and in trace order —
+stated as a deviation from a real pipeline, which updates at resolution.
+
+**On a live core** (`src/riscv32-timing.js`): `attachTiming(cpu, cfg)` →
+`report()`, `occupancy()` (rows labelled by a small RV32 disassembler in the
+assembler's syntax), `resetStats()` (region of interest, warm state), `reconfigure()`,
+`detach()`. The RISC-V debug target (`src/riscv32-debug.js`) exposes it:
+`setTiming(cfg|null)` (a config the model refuses is refused by message),
+`timing(lastCycles)` → {config, stats, occupancy} (drained once the program halts),
+`resetTimingStats()`, `capabilities().extensions.timing`; it follows the adapter's
+machine across a (Linux) reset, and bounds one free-running `runFor` to 50 K
+instructions while timing is on (a box ratio, FreeRTOS in Node: ~0.5 MIPS with caches +
+gshare vs ~5 off — not a CI number).
+
+**Validation** (all in ordinary CI): `test/uarch-pipeline.test.mjs` — hand-derived
+cycle tables asserted exactly: load-use chain 14 (forwarding) / 19 (off), dependent
+ALU chain 10 / 20, a 10-trip loop 44 (static-nt) / 38 (bimodal) / 30 (bimodal+BTB) /
+46 (gshare+BTB, cold history) / 45 (resolve in ID), mul+div 26, strided walk 141 (4
+line misses) / 261 (stride 16), LRU-vs-FIFO conflict 41 / 51, I-cache 32, the
+occupancy diagram row by row, streaming = batch, and the debug-target round trip;
+`test/uarch-cache.test.mjs` — every access (hit, evicted line, write-back) against a
+brute-force reference on 20 K-access random traces for 3 policies × 5 geometries ×
+allocate on/off, plus closed-form miss counts (strided walks, LRU's 2x-capacity
+pathology, row- vs column-major 32×32 matrix, 8×8 blocking); `test/uarch-
+predictor.test.mjs` — known sequences (TTTN, alternation) with hand counts;
+`test/riscv32-trace.test.mjs` — record contents, a self-overwriting store, RVC, the
+record chain (each `nextPc` = next `pc`) across FreeRTOS traps and interrupts, peeks
+leave TLB/memory/CSRs untouched under Sv32, and **FreeRTOS, RVC and the clang S-mode
+kernel end in bit-identical architectural state traced (full model) and untraced**,
+with `cycles = insts + fill + Σ stalls` and model-retired = core-retired. Fourteen
+named mutations (forwarding off, no load-use, predictor never updates ×2, gshare
+without history, BTB without tag, LRU→FIFO, no dirty bit, evict newest, mul/div
+latency ignored, D-miss free, peek walking through `_translate`, instruction read
+after the step, interrupt records dropped) each turn at least one case red.
+
+**Not yet / deviations stated:** no TLB model, no L2, no wrong-path cache effects
+(squashed fetches are bubbles, they do not touch the I-cache), predictor updates
+immediate, BTB looked up only for control transfers, E8.5 warm-up checkpoints not
+started, no gem5 cross-check yet (it stays optional and offline, never a dependency).
+Found on the way (not this lane's): a program-mode `reset()` of the RISC-V debug
+target returns the core to pc 0, not the image entry, and does not restore RAM.
 
 **Why.** Brickwright is about learning internals. Today the RISC-V core is
 *instruction-accurate*:

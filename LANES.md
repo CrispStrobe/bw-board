@@ -1,3 +1,24 @@
+2026-09-29 E8 timing models: retire trace, 5-stage pipeline, caches, predictors — DONE candidate, Claude (Lite task C4, first increment).
+Worktree `/mnt/volume1/code/wt/c4-e8-board`, branch `lane/c4-e8-timing`, base master
+`aeed114f` (C2's decode cache #141 already merged, so the core hook is on top of it).
+Session `df930874-a977-40f8-996f-8689b428942c`. Owns this row, the ROADMAP E8 section,
+`src/riscv32-trace.js`, `src/riscv32-timing.js`, `src/uarch-pipeline.js`,
+`src/uarch-cache.js`, `src/uarch-predictor.js`, the two peek methods in
+`src/riscv32.js` (`peekTranslate`, `peekRam` — never called by `step()`), the timing
+methods of `src/riscv32-debug.js` (`setTiming`, `timing`, `resetTimingStats`, the
+`extensions.timing` capability, the 50 K-instruction slice while timing is on), and
+`test/uarch-{pipeline,cache,predictor}.test.mjs` + `test/riscv32-trace.test.mjs`
+(53 cases). Design in ROADMAP E8 "What landed". Hand-derived cycle tables asserted
+exactly; the cache against a brute-force reference access by access; FreeRTOS, RVC
+and the S-mode (Sv32) kernel bit-identical traced vs untraced. Mutations red (14,
+each alone, scripted): forwarding off (9 cases), no load-use (3), bimodal never
+updates (4), gshare never updates (2), gshare without history (2), BTB without tag
+(1), LRU->FIFO (6 cache + the pipeline conflict kernel), no dirty bit (15), evict
+newest (11), mul/div latency ignored (1), free D-miss (3), peek via `_translate` (1),
+instruction read after the step (1), interrupt records dropped (2). Hook cost: the
+riscv-bench A/B on this branch's push (see the PR). Found, not fixed (not this lane's):
+a program-mode debug-target `reset()` returns to pc 0, not the image entry.
+
 2026-09-29 RV32 predecoded-instruction cache + fetch front — DONE candidate, Claude (Lite task C2, second increment).
 Worktree `/mnt/volume1/code/wt/c2-linux-boot-board-dc`, branch `lane/c2-rv-decode-cache`,
 base `0b281d81` + master `411982dc` merged in. Owns this row, the decode cache and fetch
