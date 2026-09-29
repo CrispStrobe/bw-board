@@ -20,6 +20,17 @@
  * SUM/MXR checks, A/D updates, and instruction/load/store page faults. M-mode
  * and satp=Bare are an identity map. exactstep was the one-step decode reference.
  *
+ * A PREDECODED-INSTRUCTION CACHE sits in front of fetch (see the constructor
+ * and _exec): expanded instructions per physical page, plus a one-page fetch
+ * front that skips translation while the pc stays on a page. It is invisible
+ * architecturally — the core's stores drop the words they overwrite, FENCE.I
+ * and host writes through the machine flush it, and the front follows every
+ * TLB flush and privilege change — which test/riscv32-decode-cache.test.mjs
+ * holds case by case, and the Spike lockstep gate and the Linux snapshot
+ * (bit-identical machine after 67.6 M instructions) hold as a whole. A host
+ * that writes `mem` directly, bypassing the machine, must call
+ * flushDecodeCache() (or rely on the program's FENCE.I, as hardware would).
+ *
  * Memory is a flat `Uint8Array` the caller owns; the CPU reads and writes it
  * little-endian. `ecall`/`ebreak` call an injectable hook so a test (or a later
  * machine) supplies syscalls (console, exit) without this core knowing about
@@ -166,6 +177,36 @@ export class RiscV32 {
         this._devPage = new Uint8Array(Math.ceil(mem.length / 4096) + 1);
         this._devCount = -1;
         this._scanDevices();
+        // The predecoded-instruction cache (see _exec): per 4 KiB physical RAM
+        // page, allocated on first execution, 2048 halfword slots of
+        // [expanded instruction, epoch << 3 | length]. A slot is live only while
+        // its epoch is `_dcEpoch`: a flush (FENCE.I, a host write) is one
+        // increment — Linux executes FENCE.I every ~130 K instructions, and
+        // dropping the pages each time cost more than the cache saved. A store
+        // by the core zeroes just the slots it overlaps. Keyed by PHYSICAL
+        // address; the fetch front below adds the virtual page. `_dcHas[page]`
+        // marks pages holding decoded code, so a store pays one byte test.
+        this._dcPages = new Array(this._devPage.length).fill(null);
+        this._dcHas = new Uint8Array(this._devPage.length);
+        this._dcEpoch = 1;
+        this.decodeCache = hooks.decodeCache !== false;
+        // The fetch front of it: the virtual page the pc is on, the decoded
+        // physical page it maps to, valid while `_gen` is unchanged and the
+        // privilege is the same. `_gen` moves on anything that can change a
+        // fetch translation or the cached words: a TLB flush (satp, sfence.vma,
+        // SBI remote fences, reset), a trap/xret, an mstatus or menvcfg write
+        // (they select the TLB context), a state restore and a decode-cache
+        // flush. The privilege is compared as well, for hosts that set it
+        // directly (a boot hand-off). A fetch-TLB fill needs no bump: the front
+        // is re-established whenever the pc leaves its page, and while it is on
+        // page P the only fetch fills are for P itself (which re-arms the front)
+        // or P+1 (another TLB index). So a hit is exactly a fetch-TLB hit plus a
+        // predecoded word — the same instruction the full path would fetch.
+        this._gen = 0;
+        this._fVpn = -1;
+        this._fPriv = -1;
+        this._fGen = -1;
+        this._fPage = null;
         // A software TLB for Sv32: direct-mapped, 256 entries per access type
         // (fetch 0 / load 1 / store 2). An entry maps a 4 KiB virtual page to its
         // physical page for one context — effective privilege | SUM<<2 | MXR<<3 —
@@ -181,7 +222,31 @@ export class RiscV32 {
         this._resetCounters();
     }
 
-    _tlbFlush() { this._tlbTag.fill(0); }
+    _tlbFlush() { this._tlbTag.fill(0); this._gen++; }
+
+    /** Forget every predecoded instruction. For writes the core did not make
+     *  (a host loading RAM, a debugger poke, a snapshot restore) and FENCE.I —
+     *  the architectural point at which such writes must become visible. */
+    flushDecodeCache() {
+        this._dcEpoch = (this._dcEpoch + 1) & 0x0fffffff;
+        if (this._dcEpoch === 0) {                        // wrapped: really forget (once per 2^28 flushes)
+            for (let p = 0; p < this._dcHas.length; p++) if (this._dcHas[p]) { this._dcPages[p] = null; this._dcHas[p] = 0; }
+            this._dcEpoch = 1;
+        }
+        this._fPage = null; this._fVpn = -1; this._gen++;
+    }
+
+    /** A store of `width` bytes at RAM index `i` on a page holding decoded
+     *  code: drop the (at most three) slots whose instruction overlaps it — one
+     *  starting 2 bytes before (a 32-bit instruction) up to the last byte
+     *  written. A 32-bit instruction that crosses a page is never cached, so
+     *  no slot on the previous page can overlap. */
+    _dcInvalidate(i, width) {
+        const pg = this._dcPages[i >>> 12];
+        const off = i & 0xfff;
+        const lo = off >= 2 ? (off - 2) >>> 1 : 0, hi = Math.min(2047, (off + width - 1) >>> 1);
+        for (let s = lo; s <= hi; s++) pg[(s << 1) | 1] = 0;
+    }
 
     /**
      * The hart's complete state as plain data (riscv32-snapshot.js): registers,
@@ -225,6 +290,9 @@ export class RiscV32 {
             this._tlbTag[k] = s.tlb[i + 1]; this._tlbCtx[k] = s.tlb[i + 2]; this._tlbPpn[k] = s.tlb[i + 3];
         }
         if (s.trap) this.trap = {...s.trap}; else delete this.trap;
+        // A restore rewrites RAM under the core (riscv32-snapshot.js writes it
+        // right after this): forget every predecoded word and the fetch front.
+        this.flushDecodeCache();
     }
 
     _resetCounters() {
@@ -250,6 +318,7 @@ export class RiscV32 {
         this.waiting = false;
         this._resetCounters();
         this._tlbFlush();
+        this.flushDecodeCache();
     }
 
     /** Raise (level-set) a machine interrupt line in mip — called by a device
@@ -331,10 +400,12 @@ export class RiscV32 {
             case CSR.MSTATUS: {
                 if (((v >>> 11) & 3) === 2) v &= ~MSTATUS_MPP;          // reserved MPP legalises to U
                 this.csr[n] = v & MSTATUS_WMASK;
+                this._gen++;
                 return;
             }
             case CSR.SSTATUS:                                         // S-view: only the S bits of mstatus
                 this.csr[CSR.MSTATUS] = ((this.csr[CSR.MSTATUS] & ~SSTATUS_MASK) | (v & SSTATUS_MASK)) >>> 0;
+                this._gen++;
                 return;
             case CSR.MIP: {
                 // M-mode may write the supervisor lines (SSIP/STIP/SEIP) — how
@@ -368,7 +439,7 @@ export class RiscV32 {
             case CSR.MINSTRET: this._instretOff = this._counterWrite(this._instretOff, v, false); return;
             case CSR.MINSTRETH: this._instretOff = this._counterWrite(this._instretOff, v, true); return;
             case CSR.MENVCFG: this.csr[n] = v & ((1 << 0) /*FIOM*/); return;
-            case CSR.MENVCFGH: this.csr[n] = v & MENVCFGH_ADUE; return;
+            case CSR.MENVCFGH: this.csr[n] = v & MENVCFGH_ADUE; this._gen++; return;
             case CSR.SENVCFG: this.csr[n] = v & 1; return;
             case CSR.SATP: this.csr[n] = v; this._tlbFlush(); return;
             case CSR.MSCRATCH: case CSR.MCAUSE: case CSR.MTVAL: case CSR.SSCRATCH: case CSR.SCAUSE:
@@ -386,6 +457,7 @@ export class RiscV32 {
      *  the interrupt-enable, sets the previous privilege, and jumps to the vector. */
     _trap(cause, isInterrupt, tval) {
         this._traps++;                                   // the trapping step retires nothing
+        this._gen++;                                     // privilege and mstatus change
         const deleg = isInterrupt ? this.csr[CSR.MIDELEG] : this.csr[CSR.MEDELEG];
         const toS = this.priv <= PRIV_S && (deleg & (1 << cause)) !== 0;
         const causeWord = ((isInterrupt ? 0x80000000 : 0) | cause) >>> 0;
@@ -666,19 +738,33 @@ export class RiscV32 {
     }
     st8(a, v) {
         const u = a >>> 0, i = (u - this.ramBase) >>> 0;
-        if (i < this._memLen && this._devPage[i >>> 12] === 0) { this.mem[i] = v; return; }
+        if (i < this._memLen && this._devPage[i >>> 12] === 0) {
+            if (this._dcHas[i >>> 12] !== 0) this._dcInvalidate(i, 1);
+            this.mem[i] = v;
+            return;
+        }
         const d = this.io8.length && this._dev(this.io8, u);
         if (d) { d.store8((u - d.base) >>> 0, v & 0xff); return; }
-        this.mem[this._ram(u)] = v & 0xff;
+        const r = this._ram(u);
+        if (this._dcHas[r >>> 12] !== 0) this._dcInvalidate(r, 1);
+        this.mem[r] = v & 0xff;
     }
     st16(a, v) {
         const u = a >>> 0, i = (u - this.ramBase) >>> 0;
-        if ((i & 1) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) { this._m16[i >>> 1] = v; return; }
+        if ((i & 1) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) {
+            if (this._dcHas[i >>> 12] !== 0) this._dcInvalidate(i, 2);
+            this._m16[i >>> 1] = v;
+            return;
+        }
         this.st8(u, v); this.st8(u + 1, v >>> 8);
     }
     st32(a, v) {
         const u = a >>> 0, i = (u - this.ramBase) >>> 0;
-        if ((i & 3) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) { this._m32[i >>> 2] = v; return; }
+        if ((i & 3) === 0 && i < this._memLen && this._devPage[i >>> 12] === 0) {
+            if (this._dcHas[i >>> 12] !== 0) this._dcInvalidate(i, 4);
+            this._m32[i >>> 2] = v;
+            return;
+        }
         const d = this.io.length && this._dev(this.io, u);
         if (d) { d.store32((u - d.base) >>> 0, v >>> 0); return; }
         this.st16(u, v); this.st16(u + 2, v >>> 16);
@@ -721,6 +807,14 @@ export class RiscV32 {
     _exec() {
         if (this.io.length + this.io8.length !== this._devCount) this._scanDevices();
         const pc = this.pc >>> 0;
+        let inst, ilen;
+        const fp = this._fPage;
+        let e;
+        if ((pc >>> 12) === this._fVpn && this._fGen === this._gen && this.priv === this._fPriv &&
+            ((e = fp[(pc & 0xffe) | 1]) >>> 3) === this._dcEpoch) {
+            inst = fp[pc & 0xffe] >>> 0;               // fetch-front hit: no translation, no fetch
+            ilen = e & 7;
+        } else {
         this._acc = CAUSE_FETCH_ACCESS; this._va = pc;
         // Translate then fetch. A halfword first: low two bits != 11 → a 16-bit
         // compressed (C) instruction, expanded and pc += 2; else the full 32-bit
@@ -729,26 +823,50 @@ export class RiscV32 {
         // Translate (identity when paging is off or in M-mode; a TLB hit inline).
         const pcPhys = this._tx(pc, 0);
         if (pcPhys === null) { this.instret++; return 1; }   // instruction page fault taken
-        const lo = this.ld16(pcPhys);
-        let inst, ilen;
-        if ((lo & 3) !== 3) {
-            // RVC expansion is a pure function of the 16 bits: memoised in a
-            // 64 K table shared by every core (0 = not yet expanded; an illegal
-            // encoding is stored as 1, which no expansion can produce).
-            inst = RVC_CACHE[lo];
-            if (inst === 0) { const e = this._decompress(lo); inst = RVC_CACHE[lo] = e === null ? 1 : e; }
-            if (inst === 1) return this._bad(lo);
-            ilen = 2;
+        // Predecoded? Only RAM on a page no device overlaps is cached, and
+        // never a 32-bit instruction whose high half is on the next page (a
+        // store there is another page's, so it could not invalidate it).
+        const ri = (pcPhys - this.ramBase) >>> 0;
+        const cacheable = this.decodeCache && ri < this._memLen && this._devPage[ri >>> 12] === 0;
+        const slot = ri & 0xffe;
+        let pg = cacheable ? this._dcPages[ri >>> 12] : null;
+        if (pg !== null && ((e = pg[slot | 1]) >>> 3) === this._dcEpoch) {
+            inst = pg[slot] >>> 0;
+            ilen = e & 7;
         } else {
-            let hiPhys;
-            if ((pc & 0xfff) === 0xffe) {                     // high half crosses into the next page
-                hiPhys = this._tx((pc + 2) >>> 0, 0);
-                if (hiPhys === null) { this.instret++; return 1; }
+            const lo = this.ld16(pcPhys);
+            if ((lo & 3) !== 3) {
+                // RVC expansion is a pure function of the 16 bits: memoised in a
+                // 64 K table shared by every core (0 = not yet expanded; an illegal
+                // encoding is stored as 1, which no expansion can produce).
+                inst = RVC_CACHE[lo];
+                if (inst === 0) { const x = this._decompress(lo); inst = RVC_CACHE[lo] = x === null ? 1 : x; }
+                if (inst === 1) return this._bad(lo);
+                ilen = 2;
             } else {
-                hiPhys = (pcPhys + 2) >>> 0;
+                let hiPhys;
+                if ((pc & 0xfff) === 0xffe) {                     // high half crosses into the next page
+                    hiPhys = this._tx((pc + 2) >>> 0, 0);
+                    if (hiPhys === null) { this.instret++; return 1; }
+                } else {
+                    hiPhys = (pcPhys + 2) >>> 0;
+                }
+                inst = (lo | (this.ld16(hiPhys) << 16)) >>> 0;
+                ilen = 4;
             }
-            inst = (lo | (this.ld16(hiPhys) << 16)) >>> 0;
-            ilen = 4;
+            if (cacheable && !(ilen === 4 && (ri & 0xfff) === 0xffe)) {
+                if (pg === null) { pg = this._dcPages[ri >>> 12] = new Int32Array(4096); this._dcHas[ri >>> 12] = 1; }
+                pg[slot] = inst | 0; pg[slot | 1] = (this._dcEpoch << 3) | ilen;
+            }
+        }
+        // Point the fetch front at this page — at the generation AFTER this
+        // fetch's own translation (a TLB fill it made counts as seen), so any
+        // later change invalidates it.
+        if (pg !== null) {
+            this._fVpn = pc >>> 12; this._fPriv = this.priv; this._fGen = this._gen; this._fPage = pg;
+        } else {
+            this._fVpn = -1;
+        }
         }
         const opcode = inst & 0x7f;
         const rd = (inst >>> 7) & 0x1f;
@@ -901,8 +1019,12 @@ export class RiscV32 {
                 this.set(rd, t);
                 break;                                         // an AMO leaves the reservation (as Spike)
             }
-            case OPC.MISCMEM:          // FENCE / FENCE.I — a nop for this model (no caches)
+            case OPC.MISCMEM:          // FENCE / FENCE.I
                 if (funct3 > 1) return this._bad(inst);
+                // FENCE.I: the core's own stores already dropped what they
+                // overwrote; this makes every OTHER write (host, debugger)
+                // visible to fetch, as the spec's instruction-fetch fence does.
+                if (funct3 === 1) this.flushDecodeCache();
                 break;
             case OPC.SYSTEM: {
                 const imm = (inst >>> 20) & 0xfff;
@@ -964,6 +1086,7 @@ export class RiscV32 {
                     if (mpp !== PRIV_M) ns &= ~(1 << 17);        // MPRV cleared returning below M
                     this.csr[CSR.MSTATUS] = ns >>> 0;
                     this.priv = mpp;
+                    this._gen++;
                     this.pc = this.csr[CSR.MEPC] >>> 0;
                     this.instret++;
                     return 1;
@@ -979,6 +1102,7 @@ export class RiscV32 {
                     ns |= MSTATUS_SPIE;
                     this.csr[CSR.MSTATUS] = ns >>> 0;
                     this.priv = spp;
+                    this._gen++;
                     this.pc = this.csr[CSR.SEPC] >>> 0;
                     this.instret++;
                     return 1;

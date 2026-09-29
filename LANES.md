@@ -1,3 +1,12 @@
+2026-09-29 RV32 predecoded-instruction cache + fetch front — IN PROGRESS, Claude (Lite task C2, second increment).
+Worktree `/mnt/volume1/code/wt/c2-linux-boot-board-dc`, branch `lane/c2-rv-decode-cache`
+(stacked on `lane/c2-rv-snapshot`). Owns this row, the decode cache and fetch
+front in `src/riscv32.js` (`_dcPages`/`_dcHas`/`_dcEpoch`, `flushDecodeCache`,
+`_dcInvalidate`, the `_gen` fetch front), the flush calls in
+`riscv32-machine.js` (`load`, `loadImage`) and `riscv32-debug.js` (`writeMem`),
+`test/riscv32-decode-cache.test.mjs` and the master A/B step of
+`linux-riscv.yml`. Receipts are filled in before merge.
+
 2026-09-29 RV32 whole-machine snapshot: the Linux lesson opens at the shell prompt — IN PROGRESS, Claude (Lite task C2).
 Worktree `/mnt/volume1/code/wt/c2-linux-boot-board`, branch `lane/c2-rv-snapshot`,
 base `cfacdf60`. Owns this row, `src/riscv32-snapshot.js`, the `saveState` /

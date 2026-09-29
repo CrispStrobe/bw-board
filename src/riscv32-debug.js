@@ -165,6 +165,7 @@ export function createRiscV32DebugTarget(adapter) {
                 const idx = ((addr + i) >>> 0) - machine.ramBase;
                 if (idx >= 0 && idx < machine.memSize) machine.mem[idx] = data[i];
             }
+            machine.cpu.flushDecodeCache();              // a poke may overwrite code
             return undefined;
         },
 

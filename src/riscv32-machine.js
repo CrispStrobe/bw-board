@@ -54,6 +54,9 @@ export class RiscV32Machine {
             // Linux write/exit ABI. Default off — bare ecall programs are unchanged.
             ecallTraps: config.ecallTraps === true,
             ramBase: this.ramBase,
+            // The predecoded-instruction cache (riscv32.js _exec) is on unless
+            // the config says decodeCache: false (a reference run, an A/B).
+            decodeCache: config.decodeCache,
             // The machine also acts as the M-mode SBI firmware (an OpenSBI-lite)
             // for a supervisor kernel: an S-mode ecall is serviced here (console,
             // timer, shutdown) instead of trapping. Inert for M-mode programs,
@@ -214,7 +217,10 @@ export class RiscV32Machine {
 
     /** Load bytes into RAM at physical address `base` (default the RAM base):
      *  translated to a flat index by subtracting `ramBase`. */
-    load(bytes, base = this.ramBase) { this.mem.set(bytes, ((base >>> 0) - this.ramBase) >>> 0); }
+    load(bytes, base = this.ramBase) {
+        this.mem.set(bytes, ((base >>> 0) - this.ramBase) >>> 0);
+        this.cpu.flushDecodeCache();                     // a write the core did not make
+    }
 
     /**
      * Boot a linked `{entry, segments}` image the way an OS would hand a program
@@ -233,6 +239,7 @@ export class RiscV32Machine {
         this.cpu.x[2] = sp | 0;                                   // sp
         // argc = 0, argv = NULL, envp = NULL where _start expects them.
         for (let i = 0; i < 16; i++) this.mem[(sp + i - this.ramBase) & MASK(this.memSize)] = 0;
+        this.cpu.flushDecodeCache();
         return this;
     }
 
