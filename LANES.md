@@ -1,3 +1,22 @@
+2026-09-29 RISC-V program-mode reset returns to the image entry — DONE candidate, Claude (Lite task C5, first item).
+Worktree `/mnt/volume1/code/wt/c5-followups-board`, branch `lane/c5-riscv-reset`, base master
+`5eeb4922`. Session `df930874-a977-40f8-996f-8689b428942c`. Owns this row, the ROADMAP E8
+note it replaces, `RiscV32Machine.loadImage`/`_handOff`/`reset` in `src/riscv32-machine.js`
+and `test/riscv32-debug-reset.test.mjs` (3 cases). Found by C4: `reset()` restarted at the
+CPU's resetPc 0 with sp 0; an assembler image (textBase 0x1000) has no code there. Now
+`loadImage` records the hand-off {entry, sp} and `reset()` re-applies it (pc, sp, the
+argc/argv words) after the CPU reset. Convention, matched to z80/6502/i8086/avr8js and
+rp2040's `resetToProgram`: a CPU reset, not a reload — registers, CSRs, privilege,
+counters, TLB and decode cache to reset values, RAM kept (a mutated `.data` stays), devices
+(CLINT, UART) keep state, mtime continuous; the SBI firmware's armed-timer flag clears.
+Asserted: state after reset deep-equals a fresh load (pc, x, all 4096 CSRs, priv, halted,
+retired, exitCode); `.data` kept across it; code rewritten behind the core runs after reset
+(decode cache flushed); timing stats zero after reset and a rerun equals the first run with
+caches + bimodal on (fresh, cold model — C4's stance). Red before the fix (3/3). Mutations
+red, each alone: no hand-off on reset (3), hand-off without sp (2), without argv zeroing (2),
+CSRs not cleared (1), `_firmwareInit` skipped (1), both decode-cache flushes removed (1),
+timing model carried across reset (1).
+
 2026-09-29 E8 timing models: retire trace, 5-stage pipeline, caches, predictors — DONE candidate, Claude (Lite task C4, first increment).
 Worktree `/mnt/volume1/code/wt/c4-e8-board`, branch `lane/c4-e8-timing`, base master
 `aeed114f` (C2's decode cache #141 already merged, so the core hook is on top of it).
