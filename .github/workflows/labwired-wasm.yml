@@ -170,7 +170,8 @@ jobs:
           node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
                       test/labwired-roundtrip.test.mjs \
                       test/pad-drive-parity.test.mjs \
-                      test/labwired-firmware-only.test.mjs 2>&1 | tee out.txt
+                      test/labwired-firmware-only.test.mjs \
+                      test/labwired-microbit-matrix.test.mjs 2>&1 | tee out.txt
           # A suite that does not RUN is not a suite that passes, and these skip
           # themselves whenever LABWIRED_WASM or the ARM toolchain is missing —
           # which in this job would mean the wiring broke, not that there is
@@ -181,12 +182,14 @@ jobs:
           # `# tests 0 / # skipped 0` — so the old guard passed cleanly on a run
           # where the engine never loaded and not one assertion executed. A gate
           # that cannot fail is not a gate. The floor below is the count the
-          # three suites produce together; raise it when they grow.
+          # three suites produce together; raise it when they grow. 60 -> 88
+          # when labwired-microbit-matrix joined (83 + its 7, less a margin
+          # for no suite: a skipped micro:bit half now drops below it).
           tests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' out.txt | tail -1)
           fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)
           skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)
           echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
-          [ "${tests:-0}" -ge 60 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          [ "${tests:-0}" -ge 88 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
           [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
           [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 
