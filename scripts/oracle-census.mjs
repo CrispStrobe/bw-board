@@ -254,7 +254,8 @@ export const INPUTS = [
         env: 'NGSPICE',
         bin: 'ngspice',   // resolved by walking $PATH; see `resolve` below
         paths: [],
-        gates: ['test/ngspice-neutral-oracle.test.mjs', 'test/nonuic-transient.test.mjs'],
+        gates: ['test/ngspice-neutral-oracle.test.mjs', 'test/nonuic-transient.test.mjs',
+            'test/pwm-duty-ngspice.test.mjs'],
         obtain: 'apt install ngspice   (44 here; decks need `.options temp=X tnom=X` '
             + 'to match VT_25C, and `.model D` silently clamps IS at 1e-28 -- use a '
             + 'behavioural source above ~2.86 V, see test/measurements/repro/bsource-oracle.mjs)',
