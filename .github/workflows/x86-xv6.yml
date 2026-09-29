@@ -24,6 +24,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Fetch exact source revision of dated FreeDOS evidence
         run: git fetch --no-tags --depth=1 origin 46de3726abe68cb8ff106ddb4131f5d0b7bd7578
+      - name: Fetch exact source revision of Win16 I/O boundary oracle
+        run: git fetch --no-tags --depth=1 origin ccc6dcd8dab4caf7fa0010acf45ed341e6ad5389
       - name: Install 32-bit build toolchain
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
