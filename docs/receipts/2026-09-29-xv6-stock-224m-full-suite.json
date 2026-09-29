@@ -1,0 +1,59 @@
+{
+  "schema": "bw.xv6-stock-usertests-224m-full-suite-public.v1",
+  "runId": 36500947429,
+  "boardRevision": "53253a49d98a684e9eec07b945c29c282fb9fbf1",
+  "xv6SourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "sourceSha256": {
+    "scripts/probe-xv6-stock.mjs": "c156e03cbfaf7112fb9448cfd6bfdd4fdd390e1e0c254a7c947e252e75cc69d6",
+    "scripts/lib/xv6-serial-tee.mjs": "99a6a0bbddd6aa1c6a0315554d7bac21c0158f32bf1a600e1cf72f02072d35cc",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "src/experimental/i80386-at-machine.js": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0",
+    "src/i8086-machine.js": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+  },
+  "probeWrapperSha256": "5e556b1905aa01c6b88b6ed57857eaa4f57bf35c83057ff7e644afda99e6e70b",
+  "mediaSha256": {
+    "rom": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaRom": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "bootImage": "de7f0e4aab39c0fc6d21aa283943e8dfe6420ef0806df87efb21bf336e1a353a",
+    "filesystemImage": "0b86e83c68d45d34fd0cecddd627b2d71893ab9df7d77d5372941c701d4eae22",
+    "kernel": "10bf65351fe69951a42673bc314049c15a1432cd5cdab004df5e7268cff8eafb"
+  },
+  "stepBudget": 10000000000,
+  "completedSteps": 7203922011,
+  "elapsedWallSeconds": 3554.602,
+  "sourceHashesVerified": true,
+  "markerSerialPositions": {
+    "createdelete ok\n": 193,
+    "linkunlink ok\n": 225,
+    "concreate ok\n": 254,
+    "sbrk test OK\n": 3813,
+    "mem ok\n": 4208,
+    "fork test OK\n": 4492,
+    "bigdir ok\n": 4517,
+    "uio test done\n": 4616,
+    "exec test\n": 4630,
+    "ALL TESTS PASSED\n$ ": 4640
+  },
+  "stop": "full-suite-marker",
+  "fullUsertestsPassed": true,
+  "serialComparison": {
+    "serialTeeEqualsRawReport": true,
+    "serialByteLength": 4659,
+    "serialSha256": "6ce1f31d1c7f4596f5cd71fecfa04e7df7cf16b8051f6f7dae4a7f7de7ada1a8",
+    "sixBSerialIsExactPrefix": true,
+    "leadingBoardByte": "0x0c",
+    "qemuOraclePrivateCommit": "88f242401ac01e96e579f971228dd06d89841ae0",
+    "qemuOracleSerialByteLength": 4658,
+    "qemuOracleSerialSha256": "a60b4272f7e6ec98bf10fb598c1976021354bb9af3fce19f792602175928efc8",
+    "boardAfterLeadingByteEqualsCompleteQemuSerial": true,
+    "completeLineCount": 127
+  },
+  "privateEvidence": {
+    "commit": "74898868d980aec6827f02a34921b3f4482c85ed",
+    "rawReportSha256": "13d5408edecf5192b28d1bd27119bbc249776e7a6c7a0140c385680cfcd9869e"
+  },
+  "workflowConclusion": "success",
+  "probeExitStatus": 0,
+  "hostDescription": "GitHub Actions Ubuntu 24.04 x64 runner; exact CPU model was not captured",
+  "limitations": "Single-core stock xv6 usertests completion on pinned media; not exhaustive 386DX compatibility or a physical realtime-factor calibration."
+}

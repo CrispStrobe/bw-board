@@ -1,5 +1,7 @@
 # Stock xv6 x86 on the experimental 386 AT
 
+The original stock 224 MiB `usertests` suite now completes on one emulated CPU with free Bochs firmware. The [full-suite result](I80386-XV6-HIGH-MEMORY.md) records the final pass at 7,203,922,011 guest steps and complete serial agreement with an independent QEMU run. Smaller profiles and earlier bounded probes below remain historical coverage, rather than full-suite runs.
+
 The stock SMP MIT xv6-public kernel at `eeb7b415dbcb12cc362d0783e41c3d1f44066b17`
 boots on the experimental 386 AT with either 4 MiB installed RAM or the IBM
 BIOS-compatible 15 MiB profile. The pinned builder changes only `PHYSTOP` from
