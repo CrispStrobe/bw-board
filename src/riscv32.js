@@ -183,6 +183,50 @@ export class RiscV32 {
 
     _tlbFlush() { this._tlbTag.fill(0); }
 
+    /**
+     * The hart's complete state as plain data (riscv32-snapshot.js): registers,
+     * pc, privilege, the CSR file (non-zero entries), the counters and their
+     * 64-bit offsets, the LR/SC reservation, WFI and halt, and the software
+     * TLB. The TLB is not architectural, but it is SAVED, not flushed: Linux
+     * clears PTE.A without an sfence (riscv ptep_clear_flush_young), so a
+     * warm TLB and a cold one can write different A bits later — a restored
+     * machine must carry the same TLB to stay instruction-for-instruction
+     * identical to the one that was saved. Memory and devices are the
+     * machine's; hooks and config (ecallTraps, ramBase) are not state.
+     */
+    saveState() {
+        const csr = [];
+        for (let n = 0; n < 4096; n++) if (this.csr[n] !== 0) csr.push(n, this.csr[n]);
+        const tlb = [];
+        for (let i = 0; i < this._tlbTag.length; i++) {
+            if (this._tlbTag[i] !== 0) tlb.push(i, this._tlbTag[i], this._tlbCtx[i], this._tlbPpn[i]);
+        }
+        return {
+            x: Array.from(this.x), pc: this.pc >>> 0, priv: this.priv, halted: this.halted,
+            instret: this.instret, traps: this._traps,
+            cycleOff: this._cycleOff.toString(), instretOff: this._instretOff.toString(),
+            resvAddr: this.resvAddr, waiting: this.waiting, csr, tlb,
+            trap: this.trap ? {...this.trap} : null
+        };
+    }
+
+    /** Put back a {@link saveState} result. The TLB is replaced wholesale. */
+    loadState(s) {
+        this.x.set(s.x); this.x[0] = 0;
+        this.pc = s.pc >>> 0; this.priv = s.priv; this.halted = !!s.halted;
+        this.instret = s.instret; this._traps = s.traps;
+        this._cycleOff = BigInt(s.cycleOff); this._instretOff = BigInt(s.instretOff);
+        this.resvAddr = s.resvAddr; this.waiting = !!s.waiting;
+        this.csr.fill(0);
+        for (let i = 0; i < s.csr.length; i += 2) this.csr[s.csr[i]] = s.csr[i + 1];
+        this._tlbTag.fill(0); this._tlbCtx.fill(0); this._tlbPpn.fill(0);
+        for (let i = 0; i < s.tlb.length; i += 4) {
+            const k = s.tlb[i];
+            this._tlbTag[k] = s.tlb[i + 1]; this._tlbCtx[k] = s.tlb[i + 2]; this._tlbPpn[k] = s.tlb[i + 3];
+        }
+        if (s.trap) this.trap = {...s.trap}; else delete this.trap;
+    }
+
     _resetCounters() {
         // Architectural retired-instruction count = steps retired minus traps
         // taken (a trapping step bumps `instret` but retires nothing). mcycle and

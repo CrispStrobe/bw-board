@@ -20,6 +20,7 @@
  */
 import {RiscV32Machine} from './riscv32-machine.js';
 import {bootLinux} from './riscv32-linux.js';
+import {saveRiscvSnapshot, restoreRiscvSnapshot, readRiscvSnapshot, gunzipBytes} from './riscv32-snapshot.js';
 
 /** The machine a stock rv32 Linux (Sv32, SBI, PLIC, 16550A) boots on: 64 MiB
  *  of RAM at the `virt` base, the UART on PLIC source 10 (the device tree
@@ -115,18 +116,96 @@ export async function verifyLinuxMedia(manifest, files) {
     return {kernel: bytes.kernel, initrd: bytes.initrd, verified};
 }
 
+/** The kernel command line bootLinux writes when none is given. */
+export const LINUX_DEFAULT_BOOTARGS = 'earlycon=sbi console=ttyS0';
+
+/** What a Linux snapshot's RAM is a delta against: the RAM bootLinux() leaves
+ *  for exactly these media and this command line on LINUX_MACHINE_CONFIG. */
+export async function linuxSnapshotBase({kernel, initrd, bootargs}) {
+    return {
+        kind: 'riscv32-linux-boot',
+        kernelSha256: await sha256Hex(kernel),
+        initrdSha256: initrd ? await sha256Hex(initrd) : null,
+        bootargs: bootargs ?? LINUX_DEFAULT_BOOTARGS,
+        memSize: LINUX_MACHINE_CONFIG.memSize,
+        ramBase: LINUX_MACHINE_CONFIG.ramBase
+    };
+}
+
 /**
  * Build the machine and hand off to the kernel. Synchronous: the bytes must
  * already be verified (verifyLinuxMedia) — this never hashes.
  *
- * @param {{kernel: Uint8Array, initrd?: Uint8Array, bootargs?: string, onSerial?: (b:number)=>void}} opts
- * @returns {{machine: RiscV32Machine, layout: object}}
+ * With `snapshot` (an {@link openLinuxSnapshot} result for these same media)
+ * the machine is then restored to where the snapshot was taken — the shell
+ * prompt, for the lesson's snapshot — instead of starting at the kernel entry.
+ * bootLinux runs either way: it lays down the base the snapshot's RAM is a
+ * delta against.
+ *
+ * @param {{kernel: Uint8Array, initrd?: Uint8Array, bootargs?: string, onSerial?: (b:number)=>void,
+ *          snapshot?: {raw: Uint8Array, baseInfo: object}}} opts
+ * @returns {{machine: RiscV32Machine, layout: object, snapshot?: object}}
  */
 export function createRiscvLinuxMachine(opts) {
     if (!(opts && opts.kernel instanceof Uint8Array)) throw new Error('createRiscvLinuxMachine needs the kernel Image bytes');
     const machine = new RiscV32Machine({...LINUX_MACHINE_CONFIG}, {onSerial: opts.onSerial});
     const layout = bootLinux(machine, {kernel: opts.kernel, initrd: opts.initrd, bootargs: opts.bootargs});
-    return {machine, layout};
+    if (!opts.snapshot) return {machine, layout};
+    const header = restoreRiscvSnapshot(machine, opts.snapshot.raw, {baseInfo: opts.snapshot.baseInfo});
+    return {machine, layout, snapshot: header};
+}
+
+/**
+ * Check snapshot bytes (gzip or raw) against the media they claim to extend:
+ * the snapshot's base must name these kernel and initramfs hashes and this
+ * command line, or it is refused BY NAME (`snapshot-base-mismatch`) — a
+ * snapshot of another kernel would restore into RAM that is not its base.
+ * The snapshot's own bytes are the caller's to pin (the app checks their
+ * sha256 like any media slot).
+ * @returns {Promise<{raw: Uint8Array, header: object, baseInfo: object}>}
+ */
+export async function openLinuxSnapshot(bytes, {kernel, initrd, bootargs} = {}) {
+    const raw = await gunzipBytes(bytes);
+    const {header} = readRiscvSnapshot(raw);
+    const baseInfo = await linuxSnapshotBase({kernel, initrd, bootargs});
+    if (!header.base) {
+        const e = new Error('this snapshot has no Linux boot base; it was not made by makeLinuxSnapshot'); e.code = 'snapshot-base-mismatch'; throw e;
+    }
+    for (const k of Object.keys(header.base)) {
+        if (header.base[k] !== baseInfo[k]) {
+            const e = new Error(`the Linux snapshot was made from ${k} ${JSON.stringify(header.base[k])}, these media have ${JSON.stringify(baseInfo[k])} — refusing to restore`);
+            e.code = 'snapshot-base-mismatch';
+            throw e;
+        }
+    }
+    return {raw, header, baseInfo};
+}
+
+/**
+ * Boot to the shell prompt and snapshot there — how the lesson's snapshot is
+ * made (scripts/riscv32-linux-snapshot.mjs), reproducibly: the machine is
+ * deterministic and the run stops at the first `chunk` boundary at which the
+ * prompt is up, so the same media, chunk and code give the same bytes.
+ * @param {{kernel: Uint8Array, initrd?: Uint8Array, bootargs?: string, chunk?: number,
+ *          maxInstructions?: number, meta?: object}} opts
+ * @returns {Promise<{raw: Uint8Array, instret: number, retired: number, console: string, baseInfo: object,
+ *          machine: RiscV32Machine}>} `machine` is the booted machine, left at the prompt (a caller may run on)
+ */
+export async function makeLinuxSnapshot(opts) {
+    const {kernel, initrd, bootargs} = opts;
+    const chunk = opts.chunk ?? 1000;
+    const max = opts.maxInstructions ?? 400_000_000;
+    const progress = createLinuxBootProgress();
+    let log = '';
+    const {machine} = createRiscvLinuxMachine({kernel, initrd, bootargs,
+        onSerial: b => { log += String.fromCharCode(b); progress.feed(b); }});
+    const base = machine.mem.slice();
+    while (!progress.ready && !machine.halted && machine.cpu.instret < max) machine.run(chunk);
+    if (!progress.ready) throw new Error(`no shell prompt within ${max} instructions`);
+    const baseInfo = await linuxSnapshotBase({kernel, initrd, bootargs});
+    const raw = saveRiscvSnapshot(machine, {base, baseInfo, console: log,
+        meta: {at: 'shell-prompt', chunk, instret: machine.cpu.instret, retired: machine.cpu.retired, ...(opts.meta || {})}});
+    return {raw, instret: machine.cpu.instret, retired: machine.cpu.retired, console: log, baseInfo, machine};
 }
 
 /**

@@ -42,7 +42,9 @@ const wallNow = () => (typeof performance !== 'undefined' && performance.now ? p
  *   `linux`: boot a Linux kernel (+ initramfs) instead of a program image —
  *   the bytes must already be sha256-verified (riscv32-linux-session.js
  *   verifyLinuxMedia). The machine is the 64 MiB `virt`-style one the kernel
- *   expects; console input goes to the 16550A's receive FIFO.
+ *   expects; console input goes to the 16550A's receive FIFO. `linux.snapshot`
+ *   (an openLinuxSnapshot result for the same media) starts the machine where
+ *   the snapshot was taken — the shell prompt — instead of the kernel entry.
  */
 export function createRiscV32Adapter(opts = {}) {
     let serialListener = null;
@@ -54,9 +56,25 @@ export function createRiscV32Adapter(opts = {}) {
         if (progress) progress.feed(b);
         if (serialListener) serialListener(b & 0xff);
     };
+    // A restored Linux machine's past console output (the boot log up to the
+    // prompt), handed once to the first serial listener so a terminal shows
+    // what a cold boot would have printed.
+    let replay = '';
     const buildLinux = () => {
         progress = createLinuxBootProgress();
-        return createRiscvLinuxMachine({kernel: linux.kernel, initrd: linux.initrd, bootargs: linux.bootargs, onSerial}).machine;
+        const built = createRiscvLinuxMachine({kernel: linux.kernel, initrd: linux.initrd, bootargs: linux.bootargs,
+            onSerial, snapshot: linux.snapshot || undefined});
+        if (built.snapshot) {
+            replay = built.snapshot.console || '';
+            for (let i = 0; i < replay.length; i++) progress.feed(replay.charCodeAt(i));
+            if (serialListener) flushReplay();
+        }
+        return built.machine;
+    };
+    const flushReplay = () => {
+        const text = replay;
+        replay = '';
+        for (let i = 0; i < text.length; i++) serialListener(text.charCodeAt(i) & 0xff);
     };
     let machine = linux ? buildLinux()
         : new RiscV32Machine({memSize: DEFAULT_RISCV_MEM, ...(opts.config || {})}, {onSerial});
@@ -95,6 +113,10 @@ export function createRiscV32Adapter(opts = {}) {
         kind: 'riscv32',
         /** 'linux' when booted with the linux option, else 'program'. */
         mode: linux ? 'linux' : 'program',
+        /** How a Linux machine starts: 'snapshot' (restored at the shell
+         *  prompt, linux.snapshot) or 'boot' (from the kernel entry); null for
+         *  a program. */
+        linuxStart: linux ? (linux.snapshot ? 'snapshot' : 'boot') : null,
 
         load(bytes, at) { machine.load(bytes, at); },
 
@@ -102,7 +124,7 @@ export function createRiscV32Adapter(opts = {}) {
         attachBoard() { /* console-only bench: nothing to wire */ },
 
         /** The serial console face: listen for the ecall ABI's output bytes. */
-        onSerial(cb) { serialListener = cb; },
+        onSerial(cb) { serialListener = cb; if (cb && replay) flushReplay(); },
 
         /**
          * Console input: a byte into the NS16550A's receive FIFO, which raises
@@ -137,6 +159,8 @@ export function createRiscV32Adapter(opts = {}) {
 
         timeNs() { return BigInt(Math.round(tNs)); },
 
+        /** A Linux reset rebuilds the machine: back to the snapshot (the
+         *  prompt) when there is one, else back to the kernel entry. */
         reset() {
             if (linux) machine = buildLinux();
             else machine.reset();

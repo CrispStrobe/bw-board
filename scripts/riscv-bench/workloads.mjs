@@ -82,3 +82,17 @@ export function runLinux(RiscV32Machine, bootLinux, kernel, initrd) {
     while (!cpu.halted && !/BWB-LINUX-USERSPACE-UP[\s\S]*# $/.test(out) && cpu.retired < 1e9) m.run(1_000_000);
     return {instructions: cpu.retired, seconds: now() - t0, reached: /# $/.test(out)};
 }
+
+/** The Linux lesson's snapshot open: from the fetched bytes (snapshot gzip,
+ *  kernel, initramfs) to a machine at the shell prompt — gunzip, the two media
+ *  sha256s the base check needs, the boot image, the restore. What a learner
+ *  waits once the files are in hand (fetching is the network's). */
+export async function runLinuxSnapshot(session, kernel, initrd, snapshot) {
+    const t0 = now();
+    const opened = await session.openLinuxSnapshot(snapshot, {kernel, initrd});
+    const progress = session.createLinuxBootProgress();
+    const {machine, snapshot: header} = session.createRiscvLinuxMachine({kernel, initrd, snapshot: opened});
+    for (let i = 0; i < header.console.length; i++) progress.feed(header.console.charCodeAt(i));
+    const seconds = now() - t0;
+    return {instructions: 0, seconds, reached: progress.ready && machine.cpu.instret === header.meta.instret, open: true};
+}

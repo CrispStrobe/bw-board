@@ -124,13 +124,23 @@ export async function createDebugTarget(kind, opts) {
  * ({segments, entry}, e.g. from scripts/riscv-elf.mjs) whose ecall/UART output
  * reaches the adapter's onSerial; `opts.linux` ({kernel, initrd?, bootargs?},
  * sha256-verified by the caller — riscv32-linux-session.js verifyLinuxMedia)
- * boots a Linux kernel instead, with console input into the 16550A. The target
+ * boots a Linux kernel instead, with console input into the 16550A — or, with
+ * `linux.snapshot` (riscv32-snapshot.js bytes, gzip or raw, made from the same
+ * media), opens it at the shell prompt the snapshot was taken at. The target
  * is riscv32-debug.js: run/pause/instruction step/code breakpoints/registers.
  */
 async function createRiscV32Target(opts = {}) {
   const [{ createRiscV32Adapter }, { createRiscV32DebugTarget }] = await Promise.all([
     import('./riscv32-adapter.js'), import('./riscv32-debug.js')
   ]);
+  // `linux.snapshot` as bytes (gzip or raw): open it here, where awaiting is
+  // allowed — its base must be these very media (openLinuxSnapshot refuses by
+  // name otherwise) — and hand the adapter the opened snapshot.
+  if (opts.linux && opts.linux.snapshot instanceof Uint8Array) {
+    const { openLinuxSnapshot } = await import('./riscv32-linux-session.js');
+    const snapshot = await openLinuxSnapshot(opts.linux.snapshot, opts.linux);
+    opts = { ...opts, linux: { ...opts.linux, snapshot } };
+  }
   const adapter = createRiscV32Adapter(opts);
   adapter.attachBoard(opts.board || { advanceTo() {}, setPin() {} });
   return { target: createRiscV32DebugTarget(adapter), adapter };
