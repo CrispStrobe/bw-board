@@ -157,6 +157,11 @@
  * @property {(part: string) => number} ledBrightness
  *   0…1, current × PWM duty integrated over ~20 ms.
  *
+ * @property {(pin: PinId, percent: number, opts?: {hz?: number, pulseUs?: number}) => boolean} setPwm
+ *   A PWM the host DRIVES on a pin (a timer the host cannot emulate): the board
+ *   switches the pin itself at real edge times inside advanceTo, so every
+ *   consumer sees true switching. See spec-updates/set-pwm.md.
+ *
  * @property {(part: string) => {hz: number, on: boolean}} buzzerTone
  *   Frequency derived from toggle period. The UI feeds this to Web Audio.
  *

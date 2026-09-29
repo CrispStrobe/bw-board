@@ -172,6 +172,27 @@ function currentsIntoTerminals(branchCurrents) {
 const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
 
 /**
+ * Carrier of a driven PWM (setPwm) when the caller names none: 500 Hz.
+ *
+ * Its 2 ms period divides BRIGHTNESS_WINDOW_NS exactly, so an LED's window
+ * always holds whole periods and ledBrightness() reads the duty-cycle average
+ * with no window-phase error (see setPwm for the bound at other carriers).
+ * It is also within 2 % of the Arduino Uno's 490 Hz analogWrite carrier.
+ */
+const DEFAULT_PWM_HZ = 500;
+
+/**
+ * The next edge time of a driven PWM (BoardImpl.drivenPwm entry), or null for
+ * a steady 0 % / 100 % level, which has none.
+ * @param {{periodNs: bigint, highNs: bigint, riseNs: bigint, high: boolean}} e
+ * @returns {bigint|null}
+ */
+function pwmNextEdgeNs(e) {
+  if (e.highNs <= 0n || e.highNs >= e.periodNs) return null;
+  return e.high ? e.riseNs + e.highNs : e.riseNs + e.periodNs;
+}
+
+/**
  * Combine multiple Thévenin sources into one via Norton equivalents.
  * @param {Array<{vTh: number, rTh: number}>} sources
  * @returns {{ vTh: number, rTh: number } | null}
@@ -240,6 +261,15 @@ export class BoardImpl {
     this.buzzerEdges = new Map();
     /** partId -> {hz, sinceNs}: a tone the MCU is DRIVING, as a hardware timer would. */
     this.drivenTones = new Map();
+    /**
+     * pin (lowercase) -> a PWM the program is DRIVING, as a hardware timer
+     * would (setPwm). The board switches the pin itself, at real edge times,
+     * inside advanceTo. A pin state, not a part state: it survives
+     * setNetlist like pinStates does.
+     * @type {Map<string, {as: string, mode: string, duty: number, hz: number,
+     *   periodNs: bigint, highNs: bigint, riseNs: bigint, high: boolean}>}
+     */
+    this.drivenPwm = new Map();
 
     /**
      * Cached node voltages from last solve.
@@ -863,6 +893,11 @@ export class BoardImpl {
     // solver joins case-blind, the UI shows what the caller wrote.
     const asGiven = String(pin);
     pin = asGiven.toLowerCase();
+    // A DIRECT WRITE TAKES THE PIN BACK FROM A DRIVEN PWM, exactly as it does
+    // from a driven tone below: `digitalWrite(9, LOW)` after `analogWrite(9,
+    // 64)` stops the timer on silicon. The board's own PWM edges come through
+    // here too, flagged, and must not cancel themselves.
+    if (!this._pwmEdge && this.drivenPwm.size > 0) this.drivenPwm.delete(pin);
     const prev = this.pinStates.get(pin);
     this.pinStates.set(pin, { mode, driveHigh, as: asGiven });
     if (!this._hasQualifiedPin && this._resolveQualified(pin)) this._hasQualifiedPin = true;
@@ -1130,6 +1165,129 @@ export class BoardImpl {
    * @param {bigint} tNs
    */
   advanceTo(tNs) {
+    // A DRIVEN PWM IS REAL SWITCHING. With none (every emulator route, which
+    // publishes its own timer edges), this is the plain advance. With one, the
+    // advance is split at each of its edges, and each edge is a real setPin at
+    // its exact time — so every consumer (the LED integrator, a motor's
+    // mechanical state, a servo's pulse decoder, a buzzer, a scope) reads the
+    // same waveform an emulated timer would have produced, and none of them
+    // needs a PWM-specific path. See setPwm.
+    if (this.drivenPwm.size === 0 || tNs <= this.timeNs) {
+      this._advanceTime(tNs);
+      return;
+    }
+    for (;;) {
+      let next = null;
+      for (const e of this.drivenPwm.values()) {
+        const t = pwmNextEdgeNs(e);
+        if (t !== null && (next === null || t < next)) next = t;
+      }
+      if (next === null || next > tNs) break;
+      if (next > this.timeNs) this._advanceTime(next);
+      for (const e of [...this.drivenPwm.values()]) {
+        if (pwmNextEdgeNs(e) !== next) continue;
+        if (e.high) {
+          e.high = false;
+        } else {
+          e.riseNs += e.periodNs;
+          e.high = true;
+        }
+        this._drivePwmLevel(e);
+      }
+    }
+    this._advanceTime(tNs);
+  }
+
+  /** One level of a driven PWM onto its pin, without cancelling the PWM. */
+  _drivePwmLevel(e) {
+    this._pwmEdge = true;
+    try {
+      this.setPin(e.as, e.mode, e.high);
+    } finally {
+      this._pwmEdge = false;
+    }
+  }
+
+  /**
+   * Drive a PWM on a pin, the way an MCU's timer does: a standing square wave
+   * at `percent` duty (the fraction of each period the pin is driven HIGH),
+   * until it is changed or the pin is written directly with setPin.
+   *
+   * This is the method the generated stc12 drivers have always called
+   * (`_board().setPwm(pin, percent)`, guarded on it existing) and that no
+   * board implemented, so a `set <pin> to 25 percent` was a silent no-op —
+   * the same defect setTone had. It is also what a host without a cycle-level
+   * timer uses (the Scratch VM, the MakeCode simulator bridge, the micro:bit+
+   * extension): those can only say "this pin is at 25 %", never emit edges.
+   *
+   * THE MODEL IS TRUE SWITCHING, NOT AN AVERAGE. The board itself switches
+   * the pin at real edge times inside advanceTo, so a PWM driven here reaches
+   * the circuit exactly as an emulated timer's does (avr8js OCR, rp2040js PWM
+   * slices already publish their edges through setPin): LED brightness is the
+   * windowed average current, a motor integrates its torque over the real
+   * on/off intervals, a servo decodes the real pulse width. An averaged
+   * (duty × V) drive was rejected because it is wrong for the load this
+   * matters most for: a red LED at 25 % of 5 V (1.25 V) sits below its knee
+   * and would read DARK, where the switched average is 25 % of full-on.
+   *
+   * ERROR BOUND. ledBrightness() averages a 20 ms window. It holds whole
+   * periods when 20 ms is a multiple of the period (the 500 Hz default and
+   * 50 Hz servo frames), and the result is then the exact duty average. At
+   * any other carrier the partial period at the window's edge shifts one
+   * reading by at most (period / 20 ms) of full-on, depending on the phase:
+   * up to 10.2 % at Arduino's 490.196 Hz, the same bound its emulated
+   * timer has. Averaging readings over time removes that phase term. Between
+   * the edges the solve is the ordinary per-instant solve, so reactive parts
+   * (capacitors, the motor winding) see the real ripple.
+   *
+   * @param {PinId} pin
+   * @param {number} percent 0..100, clamped; 0 and 100 are steady levels
+   * @param {{hz?: number, pulseUs?: number}} [opts] carrier frequency (default
+   *   500 Hz); `pulseUs` gives the HIGH time directly and overrides `percent`
+   *   (a servo frame: `{hz: 50, pulseUs: 1500}`)
+   * @returns {boolean} false (with a warning) when the value is not a number
+   */
+  setPwm(pin, percent, opts = {}) {
+    const asGiven = String(pin);
+    const key = asGiven.toLowerCase();
+    const hz = opts.hz === undefined ? DEFAULT_PWM_HZ : Number(opts.hz);
+    const duty = opts.pulseUs === undefined
+      ? Number(percent) / 100
+      : Number(opts.pulseUs) * hz / 1e6;
+    if (!Number.isFinite(duty) || !Number.isFinite(hz) || hz <= 0) {
+      this._recordRefusedControl(asGiven, 'pwm',
+        `duty ${percent}${opts.pulseUs === undefined ? '' : ` / pulse ${opts.pulseUs} us`} at ${opts.hz ?? DEFAULT_PWM_HZ} Hz is not a PWM`);
+      return false;
+    }
+    const d = Math.min(1, Math.max(0, duty));
+    const periodNs = BigInt(Math.max(2, Math.round(1e9 / hz)));
+    const highNs = BigInt(Math.round(d * Number(periodNs)));
+    const cur = this.drivenPwm.get(key);
+    // The same PWM written again (a loop re-issuing analogWrite, a host that
+    // re-reports every pin) keeps its phase: restarting it would stretch a
+    // period on every write and bias the duty.
+    if (cur && cur.periodNs === periodNs && cur.highNs === highNs) return true;
+    const prevMode = this.pinStates.get(key)?.mode;
+    const mode = prevMode === 'quasi' || prevMode === 'opendrain' ? prevMode : 'pushpull';
+    const e = { as: asGiven, mode, duty: d, hz, periodNs, highNs, riseNs: this.timeNs, high: highNs > 0n };
+    this.drivenPwm.set(key, e);
+    this._drivePwmLevel(e);
+    return true;
+  }
+
+  /**
+   * The PWM the board is driving on a pin, or null (none, or taken back by
+   * a direct setPin).
+   * @param {PinId} pin
+   * @returns {{duty: number, hz: number}|null}
+   */
+  getPwm(pin) {
+    const e = this.drivenPwm.get(String(pin).toLowerCase());
+    return e ? { duty: e.duty, hz: e.hz } : null;
+  }
+
+  /** The plain time advance (no driven-PWM edges); see advanceTo. */
+  _advanceTime(tNs) {
     // No flush here, deliberately: the rp2040js adapter calls advanceTo
     // before EVERY published edge ("time first, edge second"), so a flush
     // would resurrect the per-edge solve the fast path exists to remove.
@@ -3777,6 +3935,7 @@ export class BoardImpl {
    */
   reset() {
     this.pinStates.clear();
+    this.drivenPwm.clear();
     this.timeNs = 0n;
     this.capVoltages.clear();
     this.ledHistory.clear();
@@ -3809,6 +3968,7 @@ export class BoardImpl {
       timeNs: this.timeNs,
       powered: this.powered,
       pinStates: new Map(this.pinStates),
+      drivenPwm: new Map([...this.drivenPwm].map(([k, e]) => [k, { ...e }])),
       controls: new Map(this.controls),
       capVoltages: new Map(this.capVoltages),
       inductorCurrents: new Map(this.inductorCurrents),
@@ -3823,6 +3983,10 @@ export class BoardImpl {
     this.timeNs = snap.timeNs;
     this.powered = snap.powered;
     this.pinStates = new Map(snap.pinStates);
+    // A driven PWM is a pin state and comes back with the pins: the designer
+    // snapshots and restores around every edit (see below), and a program's
+    // analogWrite must not stop because a wire was moved.
+    this.drivenPwm = new Map([...(snap.drivenPwm ?? [])].map(([k, e]) => [k, { ...e }]));
     this.controls = new Map(snap.controls);
     this.capVoltages = new Map(snap.capVoltages);
     this.inductorCurrents = new Map(snap.inductorCurrents ?? []);

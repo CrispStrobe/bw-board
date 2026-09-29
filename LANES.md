@@ -1,3 +1,24 @@
+2026-09-29 Driven PWM: setPwm switches the pin, so analog outputs follow duty — DONE candidate, Claude (Lite task B1).
+Worktree `/mnt/volume1/code/wt/b1-pwm-duty-board`, branch `lane/b1-pwm-duty`,
+base `d29c3482`. Owns this row, `setPwm`/`getPwm` and the advanceTo edge split in
+`src/board.js`, the typedef in `src/types.js`, `spec-updates/set-pwm.md`, the
+ngspice census gate entry, `test/pwm-duty.test.mjs` and
+`test/pwm-duty-ngspice.test.mjs`. Measured first: the emulated-timer routes
+already carried duty as edges (avr8js `analogWrite(9, 64)` into 220 R + red LED
+= 25.1 % of full-on; motor speed and servo angle followed too). The hosts with
+no timer could not: the stc12 drivers' guarded `b.setPwm` hit no method (silent),
+and the MakeCode bridge / micro:bit+ drove `pct >= 50` (25 % = 0.000 mA dark,
+75 % = 12.549 mA full). `setPwm(pin, percent, {hz, pulseUs})` now makes the board
+switch the pin itself at real edge times inside advanceTo (true switching, not a
+duty x V average, which reads a 25 % red LED dark): 25 % = 3.137 mA = 25.00 % of
+full-on. LED, motor and servo are held from real AVR (Timer1) and Pico (PWM
+slice) programs and from setPwm, 41 tests; ngspice PULSE transient agrees on
+duty linearity to < 0.002 % of full-on (absolute -0.66 % = the DC LED model, same
+at 100 %). Mutations: duty forced to 1.0 reds 14 (+ the ngspice gate), ignoring the
+PWM in advanceTo reds 12, an instantaneous ledBrightness reds 13, dropping avr8js's / rp2040js's
+advance-before-edge reds 9 each. No solver, device-model, CUI, Parts, 386 or
+workflow edit.
+
 2026-09-29 micro:bit board model: GND/3V pads are real supply pads — DONE candidate, Claude (Lite task A1).
 Worktree `/mnt/volume1/code/wt/a1-microbit-gnd-board`, branch `lane/a1-microbit-gnd`,
 base `3f964432`. Owns this row, `src/devices/board-kinds.js` (registration of
