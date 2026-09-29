@@ -19,8 +19,9 @@ without a stack write. A bad return target reads the committed call frame
 and rolls back only the return step. A VM86 bitmap denial occurs after the
 load/read/call/return span and consumes no port input. The AT board fixture
 uses `runBlock` to stop at a chip deadline immediately before `IN`, then
-resumes through one ordinary board step; a separate `MOV SS` case confirms
-the machine defers a pending PIC IRQ while the interrupt shadow is active.
+resumes through one ordinary board step; a separate `MOV SS` case raises a
+real PIC IRQ, confirms the following NOP retires while the shadow is active,
+and then observes exactly one IRQ delivery on the next board step.
 
 These fixtures exercise only owned bytes in the ordinary core and bounded AT
 machine. They are an ordered-state correctness cut for future admission

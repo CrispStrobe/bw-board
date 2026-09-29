@@ -170,15 +170,28 @@ test('AT board chip deadline stops at the combined I/O boundary; MOV SS shadow d
   assert.equal(machine.runBlock(1).instructions,1);
   assert.deepEqual(accesses.filter(event=>event.dir==='in').map(event=>event.port),[0x21]);
 
-  const shadow=new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M);
+  const interrupts=[];
+  const shadow=new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M,
+    {onInterrupt:event=>interrupts.push(event)});
+  const master=shadow.chips.pic1,slave=shadow.chips.pic2;
+  master.write(0,0x11);master.write(1,0x20);master.write(1,4);master.write(1,1);
+  slave.write(0,0x11);slave.write(1,0x28);slave.write(1,2);slave.write(1,1);
+  shadow.cpu.reset();shadow.cpu.ss=0;shadow.cpu.sp=0x800;
   shadow.mem.set([0x8e,0xd0,0x90],0); // MOV SS,AX; NOP.
+  shadow.mem.set([0x00,0x03,0x00,0x00],0x80); // IRQ0 vector 20h -> 0000:0300.
+  shadow.mem[0x300]=0x90; // Owned one-instruction handler.
   shadow.cpu.ax=0x100;
-  shadow.cpu.step();
-  assert.equal(shadow.cpu._interruptShadow,1);
-  shadow.cpu.eflags|=0x200;
-  shadow._pic._intActive=true;
-  assert.equal(shadow._serviceInterrupts(),false);
-  shadow._pic._intActive=false;
+  shadow.cpu.eflags=0x202;
   shadow.step();
+  assert.equal(shadow.cpu._interruptShadow,1);
+  master.setIRQ(0,1);
+  assert.equal(master.intActive,true);
+  shadow.step();
+  assert.equal(shadow.cpu.eip,3,'the instruction following MOV SS retires first');
   assert.equal(shadow.cpu._interruptShadow,0);
+  assert.equal(master.intActive,true,'IRQ remains pending through the shadow');
+  assert.deepEqual(interrupts,[]);
+  shadow.step();
+  assert.deepEqual(interrupts,[{vector:0x20,source:'irq'}]);
+  assert.equal(shadow.cpu.eip,0x301);
 });
