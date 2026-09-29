@@ -1,7 +1,7 @@
 /** Owned protected16 ES-cache witness. QEMU 486 checks output, not bus order. */
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync, spawn, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -52,6 +52,60 @@ try{
     '-no-reboot'],{timeout:30000,encoding:'utf8'});
   if(run.error)throw run.error;
   const referenceOutput=readFileSync(debug);
+  let bochsReference=null;
+  if(process.env.BOCHS_386_ROOT){
+    const root=process.env.BOCHS_386_ROOT;
+    const bochs=resolve(root,'bochs/bochs');
+    const configHeader=readFileSync(resolve(root,'bochs/config.h'));
+    const bochsRevision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+    const bochsSha256=sha(readFileSync(bochs));
+    if(bochsRevision!=='0e45b736ef9792eb9b752b0a35db49eaf2faea47'||
+       !configHeader.includes(Buffer.from('#define BX_CPU_LEVEL 3'))||
+       bochsSha256!=='2282de6986025228b177e648f3ca41957aad4bf276438fa2501afda0af802ff9')
+      throw new Error('unexpected Bochs CPU-level-3 build');
+    const bochsBios=resolve(repo,'roms/free-at-bios/BIOS-bochs-legacy');
+    const bochsVgaBios=resolve(repo,'roms/free-at-bios/vgabios-lgpl.bin');
+    const floppy=Buffer.alloc(1474560);
+    binary.copy(floppy);
+    const floppyPath=join(dir,'floppy.img');
+    writeFileSync(floppyPath,floppy);
+    const bochsLog=join(dir,'bochs.log'),bochsRc=join(dir,'bochsrc');
+    writeFileSync(bochsRc,[
+      'display_library: nogui','memory: guest=16, host=16',
+      `romimage: file=${bochsBios}`,`vgaromimage: file=${bochsVgaBios}`,
+      'cpu: count=1, ips=10000000',
+      `floppya: 1_44=${floppyPath}, status=inserted`,
+      'boot: floppy','port_e9_hack: enabled=1',`log: ${bochsLog}`,
+      'panic: action=fatal','error: action=report','info: action=report',
+      'debug: action=ignore','mouse: enabled=0',
+    ].join('\n')+'\n');
+    const marker=Buffer.from([0x93,0xa1,0xb2,0x4b]);
+    const bochsRun=await new Promise((resolveRun,reject)=>{
+      const child=spawn('stdbuf',['-o0','-e0',bochs,'-q','-f',bochsRc],
+        {stdio:['ignore','pipe','pipe']});
+      let stdout=Buffer.alloc(0),stderr=Buffer.alloc(0),sawMarker=false;
+      const timer=setTimeout(()=>child.kill('SIGTERM'),30000);
+      child.stdout.on('data',chunk=>{
+        stdout=Buffer.concat([stdout,chunk]);
+        if(!sawMarker&&stdout.indexOf(marker)>=0){sawMarker=true;child.kill('SIGTERM');}
+      });
+      child.stderr.on('data',chunk=>{stderr=Buffer.concat([stderr,chunk]);});
+      child.once('error',error=>{clearTimeout(timer);reject(error);});
+      child.once('close',(code,signal)=>{
+        clearTimeout(timer);resolveRun({stdout,stderr,code,signal,sawMarker});
+      });
+    });
+    const bochsLogText=readFileSync(bochsLog,'utf8');
+    bochsReference={name:'Bochs REL_2_7_FINAL CPU level 3 output witness',
+      bochsRevision,bochsSha256,configHeaderSha256:sha(configHeader),
+      biosSha256:sha(readFileSync(bochsBios)),
+      vgaBiosSha256:sha(readFileSync(bochsVgaBios)),
+      floppySha256:sha(floppy),
+      outputHex:bochsRun.sawMarker?'93a1b24b':null,
+      booted:bochsLogText.includes('Booting from 0000:7c00'),
+      panic:bochsLogText.includes('>>PANIC<<'),
+      stop:'process terminated immediately after owned output marker'};
+  }
 
   const memory=new Uint8Array(0x10000);
   memory.set(binary,0x7c00);
@@ -93,6 +147,11 @@ try{
   };
   check('reference.output',[...referenceOutput],expected);
   check('reference.exitStatus',run.status,3);
+  if(bochsReference){
+    check('bochs.output',bochsReference.outputHex,'93a1b24b');
+    check('bochs.booted',bochsReference.booted,true);
+    check('bochs.panic',bochsReference.panic,false);
+  }
   check('local.output',localOutput,expected);
   check('local.exitValue',exitValue,1);
   check('local.accessedByte',memory[symbols.gdt+29],0x93);
@@ -102,11 +161,12 @@ try{
     reference:{name:'QEMU TCG 8.2.2, 486 CPU output witness',qemuVersion,
       qemuSha256,biosSha256,exitStatus:run.status,
       outputHex:referenceOutput.toString('hex')},
+    ...(bochsReference?{bochs:bochsReference}:{}),
     local:{core:'ExperimentalI80386 protected16',outputHex:Buffer.from(localOutput).toString('hex'),
       exitValue,accessedByte:memory[symbols.gdt+29],
       modifiedBaseByte:memory[symbols.gdt+27],trail},
     contract:{output:'93 = Accessed, a1 = retained ES base after GDT edit, b2 = new base after ES reload, 4b = completion',
-      scope:'QEMU 486 observes output behavior; neither external bus ordering nor exact 80386 timing is claimed'},
+      scope:'QEMU 486 and optional Bochs CPU-level-3 observe output behavior; external bus ordering is not claimed'},
     mutation,status:differences.length?'fail':'pass',differences};
   console.log(JSON.stringify(report,null,2));
   if(differences.length)process.exitCode=1;
