@@ -80,9 +80,17 @@ loaded setup entry; these runs do not establish a matching initial-state
 contract. In addition, pinned Bochs [`init.cc`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/init.cc)
 and [`crregs.cc`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/crregs.cc)
 explicitly force CPU3 CR0 bits `0x7ffffff0`, and reset DR6/DR7 to the values
-above. The raw gap therefore includes strict-model register behavior, not
-only BIOS versus direct entry. CR0.ET differs even within the defined 386
-bits and must not be masked away as a reserved-bit difference. Bochs represents VM86 CS
+above. The raw gap therefore includes Bochs CPU3 register policy, not
+only BIOS versus direct entry. The earlier direct-entry JavaScript fixture
+used a none-NPX reset with ET=0, while this Bochs CPU3 reference fixes ET=1.
+The [Intel manual's reset and coprocessor sections](https://www.read.seas.harvard.edu/~kohler/class/aosref/i386.pdf)
+allow ET=0 without an 80387 and permit software to write ET, so the observed
+ET gap is not by itself an Intel-386 defect. ET is a defined bit and must
+not be masked away as reserved. The new [scoped comparator](I80386-STRICT-PROFILE.md)
+chooses an explicit 80387 setup to align ET and reports the remaining raw
+Bochs-specific CR0/debug differences in its
+[receipt](receipts/2026-09-30-i80386-bochs-cpu3-owned-integer-compare.json).
+Bochs represents VM86 CS
 with cache type `3`, while the JavaScript cache has `code: true`; compare the
 VM86 architectural selector, base, limit, presence and address size rather
 than treating these internal type encodings as equal. A future fixture must
