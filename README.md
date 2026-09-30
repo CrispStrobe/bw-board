@@ -450,6 +450,13 @@ write/port records; seven fail-closed guard probes aborted at their exact
 fallback sites. This is native self-parity for one free fixture, with no
 WebAssembly, JavaScript board-event parity, or speed result.
 
+The separate [native CPU3 host-event gate](docs/I80386-NATIVE-CPU-EVENT-SELF-PARITY.md)
+now matches continuous and 1/2/257-tick arms through a REP event deadline,
+STI-shadow IRQ delivery, HLT wakeup, and masked HLT idle. All four arms match
+2,195 ordered host tick/event records; an independent capture reproduced the
+result. This remains a native functional prototype, with board integration,
+WebAssembly, and performance measurement still unfinished.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
