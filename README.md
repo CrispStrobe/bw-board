@@ -373,6 +373,12 @@ matches selected integer/system fields and three final plain-RAM words at
 the `BHPG004` boundary. Its scope excludes cross-engine hook/bus order and
 all other RAM; the older unaligned comparison retains its IDTR mismatch.
 
+A separate [owned recoverable page-fault capture](docs/I80386-BOCHS-CPU3-PAGEFAULT-RETRY-ORACLE.md)
+records one CPU3 `#PF` on a not-present 4 KiB page, the guest-written exception
+frame, a guest handler that maps the page and reloads CR3, and successful
+`IRETD` retry. It reuses the same pinned native probe and remains a native-only
+callback and selected-RAM proof; no JavaScript comparison or speed claim is made.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
