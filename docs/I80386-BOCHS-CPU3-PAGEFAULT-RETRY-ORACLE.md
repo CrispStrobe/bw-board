@@ -11,8 +11,11 @@ separate [fixture](../test/fixtures/i80386-bochs-cpu3-pagefault-retry.S),
 The runner pins those source bytes, the original v2 receipt, binary, probe,
 configuration, ROMs, and image. The report retains `comparison: "not-run"`.
 
-The fixture installs a 32-bit interrupt gate for vector 14, sets IDTR limit
-`0x03ff`, then attempts a supervisor write to linear `0x5000` through a
+After BIOS handoff with interrupts disabled, the fixture installs a protected-
+mode 32-bit interrupt gate for vector 14 at IDT bytes `0x70`–`0x77` and sets
+IDTR limit `0x03ff`. The frozen fixture comment calls this an “IVT slot”;
+the real-mode four-byte IVT slot would instead be at `0x38`–`0x3b`. It then
+attempts a supervisor write to linear `0x5000` through a
 not-present PTE. The receipt records exactly one `#PF` with error code `2`
 and CR2 `0x5000`. Four ordered linear prewrite callbacks at `0x6ffc` through
 `0x6ff0` carry the saved EFLAGS `0x00010046`, CS low 16 bits `0x0008`, the
