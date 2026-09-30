@@ -143,7 +143,8 @@ test('power-off is a discrete edge and netlist replacement discards old meter hi
   b.setNetlist(b.parts,b.nets);
   assert.equal(b._meterWatches.size,0);
 });
-const ngspice=spawnSync('ngspice',['--version'],{encoding:'utf8'}).status===0;
+const NGSPICE=process.env.NGSPICE || 'ngspice';
+const ngspice=spawnSync(NGSPICE,['--version'],{encoding:'utf8'}).status===0;
 for(const [name,card,params,expected] of [
   ['sine','SINE(2 1 250)',sine,expectedSine(0,.007)],
   ['pulse','PULSE(0 5 1m 1m 1m 2m 10m)',pulse,15/7],
@@ -153,7 +154,7 @@ for(const [name,card,params,expected] of [
     writeFileSync(join(dir,'reference.cir'),`* Independent source/resistor\nV1 signal 0 ${card}\nR1 signal 0 1k\n`
       +'.options reltol=1e-10 abstol=1e-14 vntol=1e-10\n.control\nset wr_vecnames\nset wr_singlescale\n'
       +'tran 1u 7m 0 100n\nlinearize v(signal)\nwrdata reference.csv time v(signal)\n.endc\n.end\n');
-    const result=spawnSync('ngspice',['-b','reference.cir'],{cwd:dir,encoding:'utf8',timeout:30000});
+    const result=spawnSync(NGSPICE,['-b','reference.cir'],{cwd:dir,encoding:'utf8',timeout:30000});
     assert.equal(result.status,0,result.stderr);
     const rows=readFileSync(join(dir,'reference.csv'),'utf8').trim().split('\n').slice(1)
       .map(row=>row.trim().split(/\s+/).map(Number));
