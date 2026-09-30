@@ -36,7 +36,8 @@ function sourceInventory(){
   const sourceHashes={};
   for(const path of sourcePaths){
     execFileSync('git',['ls-files','--error-unmatch','--',path],{cwd:repo,stdio:'ignore'});
-    const committed=execFileSync('git',['show',`HEAD:${path}`],{cwd:repo});
+    const committed=execFileSync('git',['show',`HEAD:${path}`],
+      {cwd:repo,maxBuffer:16*1024*1024});
     const current=readFileSync(resolve(repo,path));
     assert(sha(committed)===sha(current),`source differs from HEAD: ${path}`);
     sourceHashes[path]=sha(current);
