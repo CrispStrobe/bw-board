@@ -558,6 +558,10 @@ const transportCases={
 /** Final proof additionally demands seven actual native transport aborts. */
 export function assertNativeDeviceEventsProof(report){
   const result=assertNativeDeviceEventsCoreProof(report);
+  for(const path of ['test/i80386-native-device-events-report.test.mjs',
+    'test/fixtures/i80386-bochs-cpu3-native-device-events-initial-capture.json.gz'])
+    if(!Object.hasOwn(report.source.sourceHashes,path))
+      fail('final source',`missing actual-report regression input ${path}`);
   fields(report,['transportProbes'],'final report');
   equal(Object.keys(obj(report.transportProbes,'transport probes')).sort(),
     Object.keys(transportCases).sort(),'seven native transport guards');
