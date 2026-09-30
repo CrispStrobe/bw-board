@@ -74,3 +74,8 @@ The focused tests cover default retention, CR4/PSE and BSWAP refusal, ET
 writability, the bit-16 supervisor-write hazard, unmodeled debug controls,
 and adversarial defined-state comparator mutations. The existing owned
 assembly fixture and native v1 probe remain unchanged.
+
+The separate [owned paging-v2 comparison](I80386-BOCHS-CPU3-PAGING-COMPARISON-V2.md)
+checks strict-mode 4 KiB paging and three final plain-RAM words against a
+native CPU3 capture. Its selected state has one defined IDTR reset-limit
+difference; the recorded result preserves that mismatch.
