@@ -78,7 +78,10 @@ export function compareOwnedPageFault(nativeProof,js,symbols){
   check('fault.pte5BeforeRepair','02500000',js.pte5BeforeRepair);
   check('fault.failedStoreWriteCount',0,js.failedStoreWriteCount);
   check('fault.scratchCr2','00500000',js.scratchCr2);
-  const points=js.executionPoints;
+  const points=js.executionPoints??{};
+  for(const name of ['firstStore','delivery','handler','cr3Reload','iret','retryStore'])
+    check(`fault.executionPoint.${name}`,true,
+      Number.isSafeInteger(points[name]) && points[name]>0);
   check('fault.deliveryAtFirstAttempt',points.firstStore,points.delivery);
   check('fault.handlerAfterDelivery',true,points.handler>points.delivery);
   check('fault.reloadAfterHandler',true,points.cr3Reload>points.handler);

@@ -54,6 +54,9 @@ test('fault proof rejects changed error, restart, RF, retry, and repair evidence
     [js=>{js.failedStoreWriteCount=1;},'fault.failedStoreWriteCount'],
     [js=>{js.scratchCr2='00000000';},'fault.scratchCr2'],
     [js=>{js.executionPoints.iret=js.executionPoints.cr3Reload-1;},'fault.iretAfterReload'],
+    [js=>{js.executionPoints.firstStore=null;js.executionPoints.delivery=null;},
+      'fault.executionPoint.firstStore'],
+    [js=>{js.executionPoints.handler=Number.NaN;},'fault.executionPoint.handler'],
   ];
   for(const [mutate,field] of mutations){
     const js=jsProof();mutate(js);
