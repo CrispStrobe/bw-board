@@ -333,7 +333,7 @@ export function createLabwiredDebugTarget (opts) {
       return { accepted: true, boundary: 'instruction', cycles: 1 };
     },
 
-    // ── Inputs: the serial console is this tier's one host input ──────────
+    // ── Inputs: serial bytes and scoped engineering-unit transactions ─────
     //
     // A byte typed into the console changes what the firmware does, so a
     // replay that skipped it would diverge without anyone noticing. Every byte
@@ -362,6 +362,37 @@ export function createLabwiredDebugTarget (opts) {
       return true;
     },
 
+    discoverInputs () {
+      if (detached) return { unsupported: 'the target is detached' };
+      if (typeof adapter.discoverInputs !== 'function') {
+        return { unsupported: 'this adapter has no input discovery' };
+      }
+      try { return adapter.discoverInputs(); } catch (e) {
+        return { unsupported: String(e?.message || e) };
+      }
+    },
+
+    /** A successful atomic pose is one replay fact, not several channel writes. */
+    setInputs (sets) {
+      if (detached) return { accepted: false, code: 'detached', reason: 'the target is detached' };
+      if (typeof adapter.setInputs !== 'function') {
+        return { accepted: false, code: 'inputs-unavailable', reason: 'this adapter has no atomic inputs' };
+      }
+      let applied;
+      try { applied = adapter.setInputs(sets); } catch (e) {
+        return { accepted: false, code: 'input-rejected', reason: String(e?.message || e) };
+      }
+      const fact = { producer: 'labwired.inputs', payload: { sets: applied }, time: target.debugTime() };
+      for (const cb of inputListeners) {
+        // Give each listener its own rows: it cannot rewrite a later listener's receipt.
+        try { cb({ ...fact, time: { ...fact.time },
+          payload: { sets: applied.map(row => ({ ...row })) } }); } catch (e) {
+          /* a TELL listener cannot stop an already applied input */
+        }
+      }
+      return { accepted: true };
+    },
+
     /** Why this session cannot be replayed, if it cannot. See replaySupport(). */
     replayRefusalReasons () {
       return adapter.firmwareOnly ? []
@@ -373,6 +404,16 @@ export function createLabwiredDebugTarget (opts) {
       if (!adapter.firmwareOnly) {
         return { accepted: false, code: 'board-inputs-unlogged',
           reason: 'a circuit board drives this chip\'s inputs outside the replay log' };
+      }
+      if (fact?.producer === 'labwired.inputs') {
+        if (detached) return { accepted: false, code: 'detached', reason: 'the target is detached' };
+        if (typeof adapter.setInputs !== 'function') {
+          return { accepted: false, code: 'inputs-unavailable', reason: 'this adapter has no atomic inputs' };
+        }
+        try { adapter.setInputs(fact.payload?.sets); } catch (e) {
+          return { accepted: false, code: 'input-rejected', reason: String(e?.message || e) };
+        }
+        return { accepted: true };
       }
       const byte = fact && fact.producer === 'labwired.uart' && fact.payload ? fact.payload.byte : undefined;
       if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
