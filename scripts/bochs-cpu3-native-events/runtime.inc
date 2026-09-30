@@ -277,9 +277,12 @@ void bw_slice_tick(unsigned count)
   if (!count || count > bw_budget - bw_slice_ticks) bw_slice_fail("tick-budget");
   if (!bw_callbacks.tick || !bw_callbacks.tick(bw_callbacks.context, count))
     bw_slice_fail("host-tick");
+  const uint64_t before=bw_ticks;
   ++bw_tick_callbacks;
   bw_slice_ticks += count;
   bw_ticks += count;
+  fprintf(stderr,"BWS4\tTICK\t%u\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\n",
+    count,before,bw_ticks,++bw_ordinal);
 }
 
 void bw_slice_note_attempt(void)
@@ -592,12 +595,12 @@ void bw_slice_driver(void)
       if (!bw_cpu3_events_set_irq_line(0,0x20)) bw_slice_fail("masked-irq-clear");
       fprintf(stderr,"BWS4\tFINAL\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64
         "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64
-        "\t%" PRIu64 "\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x"
+        "\t%" PRIu64 "\t%08x\t%08x\t%02x\t%02x\t%08x\t%08x"
         "\t%08x\t%08x\t%08x\t%08x\n",
         bw_ticks,bw_attempts,bw_completed,bw_rep_iterations,bw_faults,
         bw_ports,bw_irq_deliveries,bw_halt_idle_cuts,
         bw_read_le32(0x9000),bw_read_le32(0x9ffc),
-        bw_read_le32(0x0530),bw_read_le32(0x0534),
+        (unsigned)bw_ram[0x0530],(unsigned)bw_ram[0x0534],
         bw_read_le32(0x0540),bw_read_le32(0x0544),bw_read_le32(0x0548),
         bw_read_le32(0x0550),bw_read_le32(0x0554),bw_read_le32(0x0558));
       bw_emit_state("STATE",BX_CPU(0));
