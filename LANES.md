@@ -326,7 +326,8 @@ Worktree `/mnt/volume1/code/lego/wt-board-scope-fractional-20260930`, branch
 `fable/scope-fractional-sample-times`, exact base
 `8543de2965f8deb98d61dd1b724eaa46eddcd4fe`. Own this paragraph,
 only scope sample-time publication/interpolation/history in `src/board.js`,
-`test/scope-fractional-time.test.mjs`, and `docs/SCOPE-SAMPLING.md`.
+`test/scope-fractional-time.test.mjs`, `docs/SCOPE-SAMPLING.md`, and only the
+ngspice gate list in `scripts/oracle-census.mjs` (register the new live check).
 Measured on the pinned consumer: 1x/10x high-impedance RC pulse captures fail
 unchanged microvolt comparison; precision still has isolated 7.58/16.45 uV
 sample errors. Publication rounds a fractional-nanosecond solver instant and
