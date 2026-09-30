@@ -63,6 +63,13 @@ encodings as equal. It does not compare TSS RAM, FPU or device state, Bochs
 hook order against board byte transactions, or instruction timing. A scoped
 field match is therefore only that, not an overall CPU or bus qualification.
 
+At committed source `485b72af12a115d9a6d6c9da33ab04c47c3456d5`, the
+[comparison receipt](receipts/2026-09-30-i80386-bochs-cpu3-owned-integer-compare.json)
+records `BHVK003` after 37 JavaScript steps and a match on every selected
+integer/system field. It still reports raw CR0 `0x19` versus native
+`0x7ffffff9`, DR6/DR7 reset differences and the internal VM86 CS cache type
+difference. No native guest was rerun for this comparison.
+
 The focused tests cover default retention, CR4/PSE and BSWAP refusal, ET
 writability, the bit-16 supervisor-write hazard, unmodeled debug controls,
 and adversarial defined-state comparator mutations. The existing owned
