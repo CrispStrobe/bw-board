@@ -1,11 +1,12 @@
 2026-09-30 Meter waveform integration — CLAIM, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-audit-20260930`, branch
 `lane/meter-waveform-integration-20260930`, exact base
-`f10f96fd9e18f6cd85e5d7042ee3c4a916c728dd`. Four-path envelope: this row,
+`f10f96fd9e18f6cd85e5d7042ee3c4a916c728dd`. Five-path envelope: this row,
 only meter history/read/accepted-solution publication and the meter-aware
 algebraic-direct eligibility condition in `src/board.js`, new
 `test/meter-waveform-integration.test.mjs`, and new
-`spec-updates/meter-waveform-integration.md`. B5 is already merged by PR139;
+`spec-updates/meter-waveform-integration.md`, plus the live-ngspice gate entry
+in `scripts/oracle-census.mjs`. B5 is already merged by PR139;
 this is its measured time-integral follow-up, not a duplicate actuator lane.
 Nine read-only public-API checks show caller scheduling changes a 7 ms pulse
 mean from the correct 2.142857 V to 0 V, while DC stays exact. Fix actual
@@ -14,6 +15,8 @@ continuous integration with left/right discrete edges, and meter-observable
 algebraic source stepping. Preserve first read, 100 ms clipping, 2 s expiry,
 PWM/DC/sign/reset/power semantics and unwatched endpoint efficiency. Existing
 attempt limits stay fixed; failed transient work must refuse a meter mean.
+Meter history is capped at 100,000 retained points; overflow refuses rather
+than allocating unbounded storage or presenting a partial integral as valid.
 No MNA equations, tolerances, scope/LED history, actuator routes, analytic
 source-constrained-inductor shortcut, device/CPU, workflow, dependency/pin,
 CUI/Lite, private corpus or deployment changes. The analytic inductor shortcut
