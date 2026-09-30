@@ -196,7 +196,7 @@ URLs are in
 the reproduced browser/Node artifact is release
 [`labwired-wasm-313252d4`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-313252d4).
 
-**Latest current-main native motion result fails real time:** exact LabWired
+**Historical predecessor-main motion result failed real time:** exact LabWired
 `3456c048` [run 36694881019](https://github.com/CrispStrobe/labwired-core/actions/runs/36694881019)
 passed functional checks but measured **0.889815× median / 0.887107× minimum**;
 all five matrix/button/LSM303AGR samples were below 1.0×. The
@@ -204,10 +204,42 @@ all five matrix/button/LSM303AGR samples were below 1.0×. The
 preserves source/executable hashes and all observations. GPIO-only reached
 **2.545959× median** in the same job; its
 [full receipt](docs/receipts/2026-09-30-microbit-active-hosted-main-motion-failed.json)
-does not rescue the sensor-workload gate. Current main has **not met >=1.0×**
-for this native motion workload; earlier passing observations below remain
-history, not a universal real-time guarantee or controlled runner A/B.
-Further CPU work is unqualified; browser pin and CP13 status are unchanged.
+does not rescue the sensor-workload gate. This failed receipt remains evidence
+for that exact predecessor, not a verdict on the successors below.
+
+**New native successors landed:** [LabWired PR 134](https://github.com/CrispStrobe/labwired-core/pull/134)
+(`96b739c2`) adds generation-scoped structural-discovery miss caching and cached
+Nordic pull masks; [PR 135](https://github.com/CrispStrobe/labwired-core/pull/135)
+(`ede33fb4`) completes START-latched, cumulative SAADC scan DMA. The controlled
+[EPYC 7763 B/C/C/B run](https://github.com/CrispStrobe/labwired-core/actions/runs/36719325375)
+measured candidate medians **1.036825× / 1.023289×**, versus predecessor main
+**0.879752× / 0.882749×**, using the identical motion guest. The
+[combined native ADC qualification](https://github.com/CrispStrobe/labwired-core/actions/runs/36720954929)
+passed 314 selected executions, including the actual ARM sparse-channel scan
+guest; its **1.996539× motion median** is a separate EPYC 9V45 observation,
+not a controlled ADC speedup. Exact remote-main `ede33fb4`
+[run 36725594408](https://github.com/CrispStrobe/labwired-core/actions/runs/36725594408)
+now passed native board qualification on EPYC 9V74: motion **1.290097× median /
+1.261066× minimum**, all five samples above 1×. The
+[complete original motion receipt](docs/receipts/2026-09-30-microbit-exact-main-ede33/microbit-motion-throughput.json)
+and [source/runner/retained-ELF provenance](docs/receipts/2026-09-30-microbit-exact-main-ede33/qualification-context.json)
+preserve the exact-main result, including the actual ADC scan and measured
+motion ELF hashes. GPIO-only measured **3.555766× median** in that run. This
+is native held-input qualification, not a controlled cross-runner gain or a
+new exact-main all-chip performance result.
+All 40 synthetic chip RTx fixtures passed for the optimization candidate, but six pre-existing Nordic
+single-step instruction-cost gates remain open in
+[issue 120](https://github.com/CrispStrobe/labwired-core/issues/120); thresholds
+and baselines are unchanged. The isolated no-pull GPIO probe reduces these to
+three; [PR 137](https://github.com/CrispStrobe/labwired-core/pull/137) is not yet qualified.
+
+The separate [countdown candidate](https://github.com/CrispStrobe/labwired-core/pull/136)
+passed nine whole-engine regressions and an
+[isolated EPYC 7763 A/B](https://github.com/CrispStrobe/labwired-core/actions/runs/36723407331):
+**7.79%** over the optimized base, candidate medians **1.092× / 1.124×**, with
+all ten candidate windows above 1×. Its composition with the landed ADC change
+is undergoing fresh qualification. These are native results, not a browser
+pin upgrade or CP13 completion.
 
 Separate **native Rust** micro:bit v2 PR qualification on 2026-09-30 measured
 **1.758214× median / 1.733954× minimum** while the source-built ARM guest
@@ -228,7 +260,7 @@ at main commit `ce60a499`.
 [the retained receipt](docs/receipts/2026-09-30-labwired-microbit-native-motion.json)
 binds its source, guest hash and complete samples. It does **not** qualify this
 repository's browser-WASM artifact or update its `a7c7cbdf` engine pin.
-CP13 remains open: shared sensor IRQ, ADC/microphone/audio and browser workload
+CP13 remains open: shared sensor IRQ, timed microphone/audio and browser workload
 qualification are incomplete.
 
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
