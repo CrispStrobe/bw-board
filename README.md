@@ -304,7 +304,7 @@ xv6's CR4.PSE bootstrap needs a separately labeled later CPU mode.
 
 The separate [owned Bochs CPU3 paging-byte capture](docs/I80386-BOCHS-CPU3-OWNED-MEMORY-ORACLE-V2.md)
 has a [source-pinned receipt](docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-v2.json)
-from board `19c48649`: 807 instructions, 2,112 callback events, and seven
+from board `19c48649`: 807 instruction hooks, 2,112 callback events, and seven
 physical page-walk callbacks with direct PDE/PTE A/D bytes. The record states
 `comparison: "not-run"`; it does not establish full physical bus or cycle
 equivalence, a JavaScript comparison, or a native backend speed result.
