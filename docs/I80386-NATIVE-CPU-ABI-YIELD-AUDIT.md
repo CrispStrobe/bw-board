@@ -10,6 +10,11 @@ The existing [owned paging and page-fault oracle receipts](I80386-BOCHS-CPU3-PAG
 remain unchanged. This is a functional CPU-boundary investigation separate
 from the failed register-stack trace opportunity gate.
 
+**Subsequent result:** the [source-bound native slice self-parity gate](I80386-NATIVE-CPU-SLICE-SELF-PARITY.md)
+passed on the owned fixture with continuous and 1/2/257-tick budgets. This
+source audit remains the design record; the newer receipt gives the observed
+scope and limitations.
+
 ## What the source currently exposes
 
 The CPU class declares [`cpu_loop()` and an SMP-only `cpu_run_trace()`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/cpu.h#L4295-L4304).

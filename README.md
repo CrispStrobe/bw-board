@@ -397,6 +397,14 @@ integer/system fields and three plain-RAM words against the JavaScript
 `strict386` run. Native callback order versus JavaScript bus order, full CPU
 behavior and performance remain unqualified.
 
+The [owned native CPU3 slice gate](docs/I80386-NATIVE-CPU-SLICE-SELF-PARITY.md)
+then compared continuous execution with 1/2/257-native-tick resume budgets
+across REP, a recoverable page fault, guest retry, and port output. The four
+fresh runs matched selected final CPU/RAM state and their ordered host
+write/port records; seven fail-closed guard probes aborted at their exact
+fallback sites. This is native self-parity for one free fixture, with no
+WebAssembly, JavaScript board-event parity, or speed result.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
