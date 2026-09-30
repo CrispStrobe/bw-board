@@ -14,13 +14,17 @@ const native={vector:14,errorCode:2,cr2:0x5000,
     cs:{address:0x6ff8,value:8,bytes:'08000000'},
     eflags:{address:0x6ffc,value:0x10046,bytes:'46000100'}}};
 function jsProof(){
-  return {vector:14,cr2:0x5000,faultingCs:8,
+  return {vector:14,deliveredErrorCode:2,
+    deliveredReturnEip:symbols.faulting_store,deliveryCallCount:1,
+    cr2:0x5000,faultingCs:8,
     attemptedStoreEip:symbols.faulting_store,handlerEip:symbols.pf_handler,
     zeroReturnCount:1,storeAttemptCount:2,handlerEntryCount:1,
     cr3ReloadCount:1,iretRetryCount:1,stackPointer:0x6ff0,
     frame:{errorCode:2,eip:symbols.faulting_store,cs:8,eflags:0x10046},
     pte5BeforeRepair:'02500000',failedStoreWriteCount:0,
-    scratchCr2:'00500000'};
+    scratchCr2:'00500000',
+    executionPoints:{firstStore:800,delivery:800,handler:801,
+      cr3Reload:829,iret:831,retryStore:832}};
 }
 
 test('bounded delivered page fault matches native frame, CR2, and guest retry',()=>{
@@ -34,6 +38,9 @@ test('bounded delivered page fault matches native frame, CR2, and guest retry',(
 test('fault proof rejects changed error, restart, RF, retry, and repair evidence',()=>{
   const mutations=[
     [js=>{js.frame.errorCode=0;},'fault.errorCode'],
+    [js=>{js.deliveredErrorCode=0;},'fault.deliveredErrorCode'],
+    [js=>{js.deliveredReturnEip++;},'fault.deliveredReturnEip'],
+    [js=>{js.deliveryCallCount=2;},'fault.deliveryCallCount'],
     [js=>{js.cr2=0x4000;},'fault.cr2'],
     [js=>{js.faultingCs=0;},'fault.faultingCs'],
     [js=>{js.frame.eip++;},'fault.savedEip'],
@@ -46,6 +53,7 @@ test('fault proof rejects changed error, restart, RF, retry, and repair evidence
     [js=>{js.pte5BeforeRepair='03500000';},'fault.pte5BeforeRepair'],
     [js=>{js.failedStoreWriteCount=1;},'fault.failedStoreWriteCount'],
     [js=>{js.scratchCr2='00000000';},'fault.scratchCr2'],
+    [js=>{js.executionPoints.iret=js.executionPoints.cr3Reload-1;},'fault.iretAfterReload'],
   ];
   for(const [mutate,field] of mutations){
     const js=jsProof();mutate(js);
@@ -63,6 +71,9 @@ test('source-bound CLI runs one real guest #PF, handler, IRETD, and store retry'
   assert.equal(report.faultComparison.status,'scoped-fault-match');
   assert.deepEqual(report.faultComparison.mismatches,[]);
   assert.equal(report.faultComparison.js.zeroReturnCount,1);
+  assert.equal(report.faultComparison.js.deliveryCallCount,1);
+  assert.equal(report.faultComparison.js.vector,14);
+  assert.equal(report.faultComparison.js.deliveredErrorCode,2);
   assert.equal(report.faultComparison.js.storeAttemptCount,2);
   assert.equal(report.faultComparison.js.iretRetryCount,1);
   assert.equal(report.stateComparison.status,'scoped-fields-match');

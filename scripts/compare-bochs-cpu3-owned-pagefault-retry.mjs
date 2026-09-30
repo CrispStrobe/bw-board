@@ -56,6 +56,9 @@ export function compareOwnedPageFault(nativeProof,js,symbols){
     if(reference!==actual)mismatches.push({field,reference,actual});
   };
   check('fault.vector',nativeProof.vector,js.vector);
+  check('fault.deliveredErrorCode',nativeProof.errorCode,js.deliveredErrorCode);
+  check('fault.deliveredReturnEip',symbols.faulting_store,js.deliveredReturnEip);
+  check('fault.deliveryCallCount',1,js.deliveryCallCount);
   check('fault.errorCode',nativeProof.errorCode,js.frame.errorCode);
   check('fault.cr2',nativeProof.cr2,js.cr2);
   check('fault.faultingCs',8,js.faultingCs);
@@ -75,6 +78,12 @@ export function compareOwnedPageFault(nativeProof,js,symbols){
   check('fault.pte5BeforeRepair','02500000',js.pte5BeforeRepair);
   check('fault.failedStoreWriteCount',0,js.failedStoreWriteCount);
   check('fault.scratchCr2','00500000',js.scratchCr2);
+  const points=js.executionPoints;
+  check('fault.deliveryAtFirstAttempt',points.firstStore,points.delivery);
+  check('fault.handlerAfterDelivery',true,points.handler>points.delivery);
+  check('fault.reloadAfterHandler',true,points.cr3Reload>points.handler);
+  check('fault.iretAfterReload',true,points.iret>points.cr3Reload);
+  check('fault.retryAfterIret',true,points.retryStore>points.iret);
   return {status:mismatches.length?'scoped-fault-mismatch':'scoped-fault-match',
     mismatches,frameDefinedEflagsMask:0x00037fd7,
     native:{vector:nativeProof.vector,errorCode:nativeProof.errorCode,cr2:nativeProof.cr2,
@@ -151,20 +160,48 @@ async function main(){
     cpu.cs=0;cpu.eip=entry;
     cpu.segmentCaches[1]={base:0,limit:0xffff,default32:false,present:true,
       code:true,readable:true,writable:false};
+    const deliveredFaults=[];
+    const originalDeliverFault=cpu._deliverFault;
+    cpu._deliverFault=function(fault,returnEip,options){
+      deliveredFaults.push({vector:fault.vector,errorCode:fault.errorCode,
+        returnEip:returnEip>>>0});
+      return originalDeliverFault.call(this,fault,returnEip,options);
+    };
     let steps=0,zeroReturnCount=0,storeAttemptCount=0,handlerEntryCount=0;
     let cr3ReloadCount=0,iretRetryCount=0;
+    const executionPoints={firstStore:null,delivery:null,handler:null,
+      cr3Reload:null,iret:null,retryStore:null};
     let faultProof=null;
     while(steps<2200 && marker.length<7){
       const beforeCs=cpu.cs,beforeEip=cpu.eip;
-      if(cpu.cs===8 && cpu.eip===symbols.faulting_store)storeAttemptCount++;
-      if(cpu.cs===8 && cpu.eip===symbols.pf_handler)handlerEntryCount++;
-      if(cpu.cs===8 && cpu.eip===symbols.cr3_reload)cr3ReloadCount++;
-      if(cpu.cs===8 && cpu.eip===symbols.iret_retry)iretRetryCount++;
+      const point=steps+1;
+      if(cpu.cs===8 && cpu.eip===symbols.faulting_store){
+        storeAttemptCount++;
+        if(storeAttemptCount===1)executionPoints.firstStore=point;
+        if(storeAttemptCount===2)executionPoints.retryStore=point;
+      }
+      if(cpu.cs===8 && cpu.eip===symbols.pf_handler){
+        handlerEntryCount++;
+        if(handlerEntryCount===1)executionPoints.handler=point;
+      }
+      if(cpu.cs===8 && cpu.eip===symbols.cr3_reload){
+        cr3ReloadCount++;
+        if(cr3ReloadCount===1)executionPoints.cr3Reload=point;
+      }
+      if(cpu.cs===8 && cpu.eip===symbols.iret_retry){
+        iretRetryCount++;
+        if(iretRetryCount===1)executionPoints.iret=point;
+      }
       const completed=cpu.step();steps++;
       if(completed===0){
         zeroReturnCount++;
         if(faultProof)throw new Error('multiple JavaScript fault-delivery steps');
-        faultProof={vector:14,vectorProvenance:'configured #PF gate reached on zero-return step',
+        executionPoints.delivery=point;
+        const delivered=deliveredFaults.at(-1);
+        faultProof={vector:delivered?.vector,
+          vectorProvenance:'read-only instance wrapper around architectural _deliverFault',
+          deliveredErrorCode:delivered?.errorCode,
+          deliveredReturnEip:delivered?.returnEip,
           cr2:cpu.cr2>>>0,faultingCs:beforeCs,attemptedStoreEip:beforeEip,
           handlerEip:cpu.eip>>>0,stackPointer:cpu.sp,
           frame:{errorCode:dword(memory,0x6ff0),eip:dword(memory,0x6ff4),
@@ -180,6 +217,8 @@ async function main(){
     faultProof.handlerEntryCount=handlerEntryCount;
     faultProof.cr3ReloadCount=cr3ReloadCount;
     faultProof.iretRetryCount=iretRetryCount;
+    faultProof.deliveryCallCount=deliveredFaults.length;
+    faultProof.executionPoints=executionPoints;
     faultProof.scratchCr2=hex4(memory,0x0520);
     const faultComparison=compareOwnedPageFault(derivedNativeProof,faultProof,symbols);
     const stateComparison=compareOwnedPagingState(nativeReceipt.checkpoint,snapshotJs(cpu,memory));
