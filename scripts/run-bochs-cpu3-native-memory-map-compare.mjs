@@ -213,6 +213,9 @@ export function parseArm(stderr,mode,budget){
   };
   for(const [index,record] of records.entries()){
     const [tag,...p]=record,where=`${mode}: BWS6 line ${index+1} ${tag}`;
+    assert(!deactivated,`${where}: records after proof deactivation`);
+    assert(!finalRecord||['STATE','CALLBACKS','FALLBACK','DEACTIVATE'].includes(tag),
+      `${where}: record after final snapshot`);
     if(tag==='PROBE'){
       assert(p.length===2&&!Object.hasOwn(apiProbes,p[0]),`${where}: repeated/malformed API probe`);
       apiProbes[p[0]]=p[1];
