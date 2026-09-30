@@ -512,6 +512,15 @@ events and eleven abort guards were independently reproduced. The next
 [device gate](docs/I80386-NATIVE-DEVICE-NEXT-GATE.md) is PIT/PIC timer wake;
 real AT devices, a shipped WASM backend and speed measurements remain open.
 
+The [native PIT/PIC device gate](docs/I80386-NATIVE-DEVICE-SELF-PARITY.md)
+now wakes a halted protected-mode guest through the existing I8254/I8259
+models, actual PIC acknowledgment, guest EOI and IRETD. All four budgets
+match CPU/RAM/device evidence; independent reproduction, nine API probes,
+eleven native guards and seven malformed transport guards passed. Its pipe
+transport is a test apparatus. Successful-quantum accounting through REP and
+faults, full AT/WASM integration, and real workload speed measurements remain
+unfinished.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
