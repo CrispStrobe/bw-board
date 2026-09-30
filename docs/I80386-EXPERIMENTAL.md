@@ -38,13 +38,16 @@ creates OWNED.TXT through the Windows UI, saves its exact 17 bytes to the cloned
 HDD, then reboots and opens it in Notepad. The writer and reader use separately
 bound source revisions and linked media hashes. See also the [VGA scope](VGA-MEMORY-EXPERIMENT.md).
 
-The pinned stock SMP-capable xv6 x86 kernel, built for 4 MiB or 14 MiB and the
-original i386 instruction set, boots to `init: starting sh` on the matching
+The pinned stock SMP-capable xv6 x86 kernel, built for 4 MiB or 14 MiB with
+`-march=i386` for compiler output, boots to `init: starting sh` on the matching
 4 MiB or ROM-safe 15 MiB AT profile. COM1 input executes `echo`
 and a file create/read/delete sequence; both return to the shell prompt. The
 [xv6 receipt](XV6-STOCK.md) records the BIOS and image hashes, user-mode and
-system-call milestones, and APIC-routed IDE and UART interrupts. This is a
-single-CPU guest acceptance, not a complete 386DX or multi-CPU qualification.
+system-call milestones, and APIC-routed IDE and UART interrupts. Its stock
+assembly enables CR4.PSE and 4 MiB bootstrap pages, which the functional CPU
+implements as a later compatibility extension; the APIC surface is a board
+extension. This is a single-CPU guest acceptance for that configured profile,
+not an unextended 386DX or multi-CPU qualification.
 
 The shared-RAM WebAssembly byte-block executor can now be selected by the
 regular 386 GUI target with `await createDebugTarget('i80386',
@@ -150,9 +153,12 @@ operand read, including zero-count shifts. The pinned PCjs group decoder also
 executes its memory writeback path when the shift helper returns the unchanged
 operand for count zero.
 
-PSE, CR0.WP behavior from later processors, VM86 TSS task entry, and
-TLB timing are outside this stage. The bounded 32-bit TSS contract is below. Reloading CR3 takes effect immediately
-because this functional executor does not cache translations.
+The original-386 paging contract above covers 4 KiB pages. The current CPU
+also accepts MOV CR4 with PSE bit 4 and a present PDE with PS bit 7 to map a
+4 MiB page for stock xv6. That later compatibility path is distinct from the
+original-386 claim. VM86 TSS task entry and translation caching are described
+in later sections; no physical TLB timing is claimed. The bounded 32-bit TSS
+contract is below.
 
 The bounded I/O profile provides explicit `inPort(port, width)` and
 `outPort(port, value, width)` bus callbacks for 8-, 16-, and 32-bit IN/OUT.
