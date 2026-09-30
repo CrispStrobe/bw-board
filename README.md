@@ -218,7 +218,7 @@ measured candidate medians **1.036825× / 1.023289×**, versus predecessor main
 passed 314 selected executions, including the actual ARM sparse-channel scan
 guest; its **1.996539× motion median** is a separate EPYC 9V45 observation,
 not a controlled ADC speedup. Exact successor-main remeasurement is pending.
-All 40 synthetic chip RTx fixtures passed, but six pre-existing Nordic
+All 40 synthetic chip RTx fixtures passed for the optimization candidate, but six pre-existing Nordic
 single-step instruction-cost gates remain open in
 [issue 120](https://github.com/CrispStrobe/labwired-core/issues/120); thresholds
 and baselines are unchanged. The isolated no-pull GPIO probe reduces these to
