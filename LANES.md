@@ -321,6 +321,27 @@ Landed: sevenseg8 now emits `common: 'anode'|'cathode'` and the new
 what is emitted rather than asserting a spelling. Reverting the emission reddens
 both cases. The seven infer and validate suites pass 101/101.
 
+2026-09-30 CLAIM — `/root` (Codex bwcx), fractional solver-time scope samples.
+Worktree `/mnt/volume1/code/lego/wt-board-scope-fractional-20260930`, branch
+`fable/scope-fractional-sample-times`, exact base
+`8543de2965f8deb98d61dd1b724eaa46eddcd4fe`. Own this paragraph,
+only scope sample-time publication/interpolation/history in `src/board.js`,
+`test/scope-fractional-time.test.mjs`, `docs/SCOPE-SAMPLING.md`, and only the
+ngspice gate list in `scripts/oracle-census.mjs` (register the new live check).
+Measured on the pinned consumer: 1x/10x high-impedance RC pulse captures fail
+unchanged microvolt comparison; precision still has isolated 7.58/16.45 uV
+sample errors. Publication rounds a fractional-nanosecond solver instant and
+can flush a sample before its authored time. Preserve the actual solve timestamp
+for sample readiness/interpolation. Early flush also skipped the existing sample
+barrier: the measured precision fixtures restore 4/14 attempts, so work equality
+is not claimed for corrected samples. Preserve integration algorithms, LTE,
+profiles, source functions, envelope/digital and integer-only sampling behavior.
+Prove an early-rounded synthetic point refuses to flush, interpolation between
+two fractional instants, both real probe RC analytical waveforms, local work and
+named defect-restoring mutations. No MNA/solver, devices, emulator, dependency
+pin, CUI/Lite, corpus, workflow or unrelated source changes. The canonical
+Board checkout's existing merge conflict remains untouched.
+
 # Who is doing what in bw-board — claim before you start, release when you finish
 
 2026-09-28 DONE candidate — root Codex: exact source-constrained inductor endpoint path,

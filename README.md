@@ -196,6 +196,19 @@ URLs are in
 the reproduced browser/Node artifact is release
 [`labwired-wasm-313252d4`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-313252d4).
 
+**Latest current-main native motion result fails real time:** exact LabWired
+`3456c048` [run 36694881019](https://github.com/CrispStrobe/labwired-core/actions/runs/36694881019)
+passed functional checks but measured **0.889815× median / 0.887107× minimum**;
+all five matrix/button/LSM303AGR samples were below 1.0×. The
+[full failed motion receipt](docs/receipts/2026-09-30-microbit-motion-hosted-main-failed.json)
+preserves source/executable hashes and all observations. GPIO-only reached
+**2.545959× median** in the same job; its
+[full receipt](docs/receipts/2026-09-30-microbit-active-hosted-main-motion-failed.json)
+does not rescue the sensor-workload gate. Current main has **not met >=1.0×**
+for this native motion workload; earlier passing observations below remain
+history, not a universal real-time guarantee or controlled runner A/B.
+Further CPU work is unqualified; browser pin and CP13 status are unchanged.
+
 Separate **native Rust** micro:bit v2 PR qualification on 2026-09-30 measured
 **1.758214× median / 1.733954× minimum** while the source-built ARM guest
 polled the selected LSM303AGR accelerometer and magnetometer through TWIM
@@ -241,7 +254,7 @@ and [GPIO-only receipt](docs/receipts/2026-09-30-microbit-active-hosted-lazy.jso
 preserve tested merge-ref `9e4e5f83`, qualified head `143402d6`, CPU source
 `ab501cdf`, and landing `3456c048` as distinct provenance. Qualified CPU,
 11 CPU regression tests and all three guest sources are byte-identical to
-landed main; the exact-new-main benchmark was still queued, not claimed passed.
+landed main; the later exact-main benchmark failed as recorded above.
 Full functional/model/DMA/input-routing gates passed in the PR run. These
 hosted observations are not a controlled wall-time A/B against the first
 optimization's runs, nor a browser pin upgrade or CP13 completion.
