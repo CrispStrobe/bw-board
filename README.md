@@ -361,6 +361,14 @@ physical page-walk callbacks with direct PDE/PTE A/D bytes. The record states
 `comparison: "not-run"`; it does not establish full physical bus or cycle
 equivalence, a JavaScript comparison, or a native backend speed result.
 
+The separate [IDTR-aligned owned receipt](docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-idtr-03ff.json)
+uses fixture source `3889b374` and the exact same Bochs CPU3 build and probe.
+It executes `LIDT` with base 0 and limit `03ff` before paging; the final state
+has that IDTR, 808 instruction hooks, 2,115 events, and the same seven direct
+physical page-walk callbacks. The earlier v2 receipt retains its `ffff` IDTR
+limit as a negative case. The aligned receipt still says `comparison: "not-run"`
+and makes no full-bus, cycle, JavaScript-parity, or speed claim.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
