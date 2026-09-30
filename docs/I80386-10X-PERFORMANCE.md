@@ -27,8 +27,16 @@ finds 46.82% of all-process samples in ordinary CPU fallback but only 5.50%
 in the direct fetch/decode functions, below the predeclared 15% screen for
 a narrow fetch/decode cache.
 
-The proposed next route is a cross-mode, event-bounded trace executor, in
-this order:
+The later [register-stack observer result](I80386-REGISTER-STACK-ADMISSION-RESULT.md)
+reached 9,616,345 disjoint Windows ordinals in runs of at least eight and
+8,514,517 in protected16+VM86. It **failed** the unchanged 15M overall / 5M
+mode gate. The ordinary stock xv6 `forktest` pair reached 967,663 long-run
+ordinals, all protected32, with no xv6 pass threshold. The Windows parent
+exited after both reports but before its historical host manifest; a separate
+read-only recovery audit verified the source and full report parity. No
+comparative host timing follows from that recovery.
+
+The bounded event-aware trace route was evaluated in this order:
 
 1. Build on the completed owned contracts from the
    [branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md), the merged
@@ -45,16 +53,15 @@ this order:
 2. The [expanded Windows result](I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
    reached 6.10 million disjoint ordinals in runs of at least eight overall,
    below its 15-million gate, although protected16+VM86 reached 5.59 million
-   and passed its 5-million threshold. The separate stock xv6 census found
-   only 317,206 such ordinals, all protected32, with no xv6 pass threshold.
-   The current bounded next experiment is a source-pinned, execution-neutral
-   grammar diagnostic for the now-owned register `50–5F` stack forms under
-   every existing page, event, identity, translation, and write cut. Its
-   Windows coverage must independently pass the same disjoint 15M/5M screen;
-   opcode frequency and local bridges are not coverage. The unchanged
-   `unsafe-code` and other large refusal classes may still prevent passage.
+   and passed its 5-million threshold. The selected `50–5F` register-stack
+   extension then reached 9.62 million overall and 8.51 million in those
+   modes at a later revision, still failing the overall gate. The separate
+   stock xv6 census rose from 317,206 to 967,663 long-run ordinals, all
+   protected32, with no xv6 pass threshold. Opcode frequency and local
+   bridges cannot close the measured disjoint Windows gap by assumption.
 3. Attribute the affected path to nonoverlapping, all-process CPU samples
-   before treating step coverage as a speed opportunity. The
+   before treating step coverage as a speed opportunity. That follow-on
+   profile screen has no completed result for this grammar. The
    [ordinary-core audit](receipts/2026-09-28-i80386-ordinary-core-other-audit.md)
    calls for at least 15% in an avoidable path; entire interpreter
    functions are not savings estimates.
@@ -64,9 +71,14 @@ this order:
    including RAM and disk hashes, focused mutation tests, and serial
    alternating unprofiled CPU-time pairs before any retention or speed claim.
 
-This is a proposed measurement and implementation sequence. The expanded
-grammar's overall gate failed, no CPU-cost gate has passed, and no broader
-executor is justified by the current evidence. The sections below are a dated experiment ledger;
+The register-stack grammar also failed the overall gate. No CPU-cost gate has
+passed and no broader trace executor is justified by this evidence. A separate
+[full functional 386 core feasibility note](I80386-FULL-CORE-WASM-FEASIBILITY.md)
+is currently a source audit, not a backend or performance result. Its next
+necessary proof is a pinned native full-CPU checkpoint plus ordered bus-event
+oracle on an owned strict-386 fixture. Stock xv6 uses later CR4.PSE/4 MiB
+paging and would need a separately labeled later CPU mode; its current board
+result cannot qualify a strict 386 backend. The sections below are a dated experiment ledger;
 their historical “next” recommendations describe their source revisions.
 
 ## Measured checkpoint (2026-09-28)
