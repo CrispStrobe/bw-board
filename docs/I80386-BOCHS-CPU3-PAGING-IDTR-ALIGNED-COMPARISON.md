@@ -40,7 +40,7 @@ with JavaScript byte-bus event order, and the three RAM words are not a
 full page hash. FPU/device state, instruction counts, timing, and full
 physical bus cycles also remain outside the scope.
 
-The [Intel 80386 Programmer's Reference Manual, §10.1](https://pdos.lcs.mit.edu/6.828/2018/readings/i386/s10_01.htm)
+The [Intel 80386 Programmer's Reference Manual, §10.1](https://pdos.csail.mit.edu/6.828/2018/readings/i386/s10_01.htm)
 specifies IDTR limit `0x03ff` after reset, while the pinned Bochs CPU3
 [`cpu/init.cc` reset](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/init.cc#L802-L803)
 uses `0xffff`. The explicit guest `LIDT` aligns this one defined input
