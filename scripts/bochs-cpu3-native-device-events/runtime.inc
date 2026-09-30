@@ -865,6 +865,23 @@ void bw_slice_driver(void)
           BX_CPU(0)->get_eip()!=0x7ec1 ||
           bw_rpc_request_count!=bw_rpc_reply_count)
         bw_slice_fail("rpc-stop-contract");
+      const uint32_t frame_eip=bw_read_le32(0x0540);
+      const uint32_t frame_cs=bw_read_le32(0x0544);
+      const uint32_t frame_flags=bw_read_le32(0x0548);
+      const uint32_t stack_eip=bw_read_le32(0x6ff4);
+      const uint32_t stack_cs=bw_read_le32(0x6ff8);
+      const uint32_t stack_flags=bw_read_le32(0x6ffc);
+      if (bw_ram[0x0530]!=1 || bw_ram[0x0534]!=1 ||
+          frame_eip!=0x7e9c || stack_eip!=frame_eip ||
+          (frame_cs & 0xffff)!=8 || stack_cs!=frame_cs ||
+          (frame_flags & 0x00037fd7)!=0x246 ||
+          stack_flags!=frame_flags)
+        bw_slice_fail("final-device-frame-contract");
+      fprintf(stderr,"BWS7\tRAM_FINAL\t%02x\t%02x\t%08x\t%08x\t%08x"
+        "\t%08x\t%08x\t%08x\t%u\n",
+        (unsigned)bw_ram[0x0530],(unsigned)bw_ram[0x0534],
+        frame_eip,frame_cs,frame_flags,stack_eip,stack_cs,stack_flags,
+        bw_port_bytes_seen);
       bw_emit_state("STATE",BX_CPU(0));
       fprintf(stderr,"BWS7\tFINAL\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64
         "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64
