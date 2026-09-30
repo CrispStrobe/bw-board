@@ -24,6 +24,7 @@ const sourcePaths=[
   'scripts/bochs-cpu3-native-memory-map-compare.mjs',
   'scripts/run-bochs-cpu3-native-memory-map-compare.mjs',
   'test/i80386-native-memory-map.test.mjs',fixture,
+  'test/fixtures/i80386-bochs-cpu3-native-memory-map-initial-capture.json.gz',
   'roms/free-at-bios/BIOS-bochs-legacy',
   'roms/free-at-bios/vgabios-lgpl.bin',receipt];
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');

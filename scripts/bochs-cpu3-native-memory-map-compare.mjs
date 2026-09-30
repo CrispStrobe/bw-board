@@ -33,6 +33,7 @@ const requiredSources=['scripts/bochs-cpu3-native-slice/patch.mjs',
   'scripts/run-bochs-cpu3-native-memory-map-compare.mjs',
   'test/i80386-native-memory-map.test.mjs',
   'test/fixtures/i80386-bochs-cpu3-native-memory-map.S',
+  'test/fixtures/i80386-bochs-cpu3-native-memory-map-initial-capture.json.gz',
   'roms/free-at-bios/BIOS-bochs-legacy',
   'roms/free-at-bios/vgabios-lgpl.bin',
   'docs/receipts/2026-09-30-i80386-bochs-cpu3-native-slice-capture.json'];
@@ -75,7 +76,7 @@ function sourceAndActivation(report){
       sha(digest,`source.${key}.${path}`);
     }
   }
-  if(s.mapId!==mapId||s.romProbeOffset!==0xfff0||uint(s.romProbeByte,'source.romProbeByte')>255)
+  if(s.mapId!==mapId||s.romProbeOffset!==0xfff0||s.romProbeByte!==0xea)
     fail('source','map or ROM probe identity changed');
   if(s.sourceHashes['roms/free-at-bios/BIOS-bochs-legacy']!==s.biosSha256||
       s.sourceHashes['roms/free-at-bios/vgabios-lgpl.bin']!==s.vgaBiosSha256)
@@ -224,9 +225,13 @@ function journalProof(arm,at,activation){
     fail(at,'tick or PIO callback count differs');
   fields(arm.hostCallbacks,['physicalReads','physicalWrites','executePages','tickCallbacks'],
     at+'.hostCallbacks');
+  for(const key of ['physicalReads','physicalWrites','executePages','tickCallbacks'])
+    uint(arm.hostCallbacks[key],at+'.hostCallbacks.'+key);
+  // These are native callback counts, not byte counts. Their fixed values are
+  // independently observed for this exact fixture and bound to its source.
+  equal(arm.hostCallbacks,{physicalReads:32,physicalWrites:1302,
+    executePages:20,tickCallbacks:1927},at+'.hostCallbacks fixed fixture');
   if(!reads||!writes||!execs||
-      !uint(arm.hostCallbacks.physicalReads,at+'.hostCallbacks.physicalReads')||
-      !uint(arm.hostCallbacks.physicalWrites,at+'.hostCallbacks.physicalWrites')||
       arm.hostCallbacks.physicalReads>reads||arm.hostCallbacks.physicalWrites>writes||
       arm.hostCallbacks.executePages!==execs||arm.hostCallbacks.tickCallbacks!==ticks)
     fail(at,'host callback totals do not substantiate byte journal');
@@ -438,6 +443,8 @@ export function assertNativeMemoryMapSelfParity(report){
   for(const name of ['budget1','budget2','budget257']){
     equal(proved[name].final,first.final,name+'.final');
     equal(proved[name].pagewalkProof,first.pagewalkProof,name+'.pagewalkProof');
+    equal(report.arms[name].hostCallbacks,report.arms.continuous.hostCallbacks,
+      name+'.native host callback parity');
     equal(proved[name].journal,first.journal,
       name+'.full ordered host memory/PIO/execute/tick journal');
     for(const key of ['ticks','completed','repIterations','faults','portCommits'])
