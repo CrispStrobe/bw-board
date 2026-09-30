@@ -8,6 +8,18 @@ BIOS-compatible 15 MiB profile. The pinned builder changes only `PHYSTOP` from
 224 MiB to 4 MiB or 14 MiB, compiles for `-march=i386`, and produces both the
 boot disk and xv6 filesystem disk.
 
+`-march=i386` constrains compiler-generated instructions; it does not remove
+the stock assembly bootstrap's later paging requirement. At the pinned xv6
+revision, [`entry.S`](https://github.com/mit-pdos/xv6-public/blob/eeb7b415dbcb12cc362d0783e41c3d1f44066b17/entry.S)
+and [`entryother.S`](https://github.com/mit-pdos/xv6-public/blob/eeb7b415dbcb12cc362d0783e41c3d1f44066b17/entryother.S)
+both set `CR4.PSE`, and [`main.c`](https://github.com/mit-pdos/xv6-public/blob/eeb7b415dbcb12cc362d0783e41c3d1f44066b17/main.c)
+marks the bootstrap page-directory entries with `PTE_PS` for 4 MiB pages. The board
+accepts this with its explicit CR4/PSE compatibility extension and its
+functional single-CPU APIC/IOAPIC surface. These stock xv6 results therefore
+qualify that configured board and guest combination, not an unextended
+original 80386DX. A strict 386 CPU-level oracle can grade selected 386
+fixtures, but cannot be expected to boot this unmodified xv6 image.
+
 The guest reaches `init: starting sh`, accepts input through COM1, executes an
 external `echo` program, prints its result, and returns to the `$` prompt.
 It also completes `echo BW_XV6_FS_OK > bwfile; cat bwfile; rm bwfile`, reads
