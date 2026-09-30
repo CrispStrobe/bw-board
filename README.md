@@ -196,10 +196,34 @@ URLs are in
 the reproduced browser/Node artifact is release
 [`labwired-wasm-313252d4`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-313252d4).
 
+Separate **native Rust** micro:bit v2 qualification on 2026-09-30 measured
+**1.758214× median / 1.733954× minimum** while the source-built ARM guest
+polled the selected LSM303AGR accelerometer and magnetometer through TWIM
+EasyDMA, scanned the 5×5 diagonal and read physical button inputs. The same
+hosted job's display/button-only workload measured **5.531284× median**.
+Each workload used five 64-million-cycle windows at 64 MHz. These are bounded,
+held-input sensor fixtures, not full micro:bit applications or the ALU-loop
+table above. The [pre-optimization hosted motion run](https://github.com/CrispStrobe/labwired-core/actions/runs/36683869753)
+failed real time (0.326908× median); the optimized shared VPS also remained
+below the target (0.312439× median / 0.288592× minimum). Its process used about
+81% CPU over the complete invocation, including setup—not a measurement of
+CPU availability during the timed windows; see the [native qualification notes](https://github.com/CrispStrobe/labwired-core/blob/ce60a49941f9fa94d83aca6859bc27ae1c5b9e0b/docs/engineering/microbit-lsm303agr.md).
+The passing hosted [run 36687935898](https://github.com/CrispStrobe/labwired-core/actions/runs/36687935898)
+tested merge ref `199af713`, with runtime optimization source `e32b4a35`;
+the native slice landed in [LabWired PR #129](https://github.com/CrispStrobe/labwired-core/pull/129)
+at main commit `ce60a499`.
+[the retained receipt](docs/receipts/2026-09-30-labwired-microbit-native-motion.json)
+binds its source, guest hash and complete samples. It does **not** qualify this
+repository's browser-WASM artifact or update its `a7c7cbdf` engine pin.
+CP13 remains open: shared sensor IRQ, ADC/microphone/audio and browser workload
+qualification are incomplete.
+
 That target support is intentionally narrower than a whole-board simulation.
 micro:bit v2's standalone manifest exposes buttons A/B, and the BW bridge maps
-its edge-connector GPIO; neither models the 5×5 matrix, motion sensor,
-microphone, speaker, touch logo or BLE stack. The BW bridge maps PyBadge header
+its edge-connector GPIO and on-module 5×5 matrix; the matrix already reaches
+the bench and part through the pinned engine. The native motion slice above is
+not yet integrated into that browser pin; microphone, speaker, touch logo and
+BLE remain unqualified here. The BW bridge maps PyBadge header
 GPIO, D13/PA23 and Feather UART on SERCOM1 (PA16/PA17); LabWired's standalone
 PyBadge manifest additionally attaches the five PA15 NeoPixels. The ST7735
 display/SERCOM4, seven-button shift-register mux, QSPI and native USB are not
