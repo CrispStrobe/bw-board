@@ -95,19 +95,21 @@ const groupedShadowAdmission=process.env.AT_GROUPED_SHADOW_ADMISSION==='1';
 const groupedFirstRefusalContext=process.env.AT_GROUPED_FIRST_REFUSAL_CONTEXT==='1';
 const expandedGroupedAdmission=
   process.env.AT_EXPANDED_GROUPED_SHADOW_ADMISSION==='1';
+const registerStackAdmission=process.env.AT_REGISTER_STACK_ADMISSION==='1';
 if([formResolvedAdmission,firstRefusalContext,groupedShadowAdmission,
-    groupedFirstRefusalContext,expandedGroupedAdmission,
+    groupedFirstRefusalContext,expandedGroupedAdmission,registerStackAdmission,
     process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1'].filter(Boolean).length>1)
   throw new Error('select one cross-mode observer variant');
 const crossModeTraceObserver=(formResolvedAdmission||firstRefusalContext||
   groupedShadowAdmission||groupedFirstRefusalContext||
-  expandedGroupedAdmission||
+  expandedGroupedAdmission||registerStackAdmission||
   process.env.AT_CROSS_MODE_TRACE_OBSERVER==='1')?
   createI80386CrossModePotentialTraceObserver({
     formResolvedAdmission:formResolvedAdmission||firstRefusalContext,
     firstRefusalContext,
     groupedShadowAdmission:groupedShadowAdmission||groupedFirstRefusalContext,
-    groupedFirstRefusalContext,expandedGroupedAdmission}):null;
+    groupedFirstRefusalContext,expandedGroupedAdmission,
+    registerStackAdmission}):null;
 const hotLoopLocator=process.env.AT_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 if(process.env.AT_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
@@ -201,6 +203,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/experimental/i80386-code16-event-run-observer.js',
   '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
   '../src/experimental/i80386-expanded-grouped-admission.js',
+  '../src/experimental/i80386-register-stack-admission.js',
   '../src/experimental/i80386-form-resolved-admission.js',
   '../src/experimental/i80386-first-refusal-shape.js',
   '../src/experimental/i80386-hot-loop-locator.js',
@@ -220,6 +223,7 @@ const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   './summarize-i80386-grouped-shadow-admission.mjs',
   './summarize-i80386-grouped-first-refusal-context.mjs',
   './summarize-i80386-expanded-grouped-result.mjs',
+  './summarize-i80386-register-stack-result.mjs',
   './run-i80386-at-console.mjs'];
 const sourceSha256=Object.fromEntries(expandI80386SourceInventory(
   sourcePaths,import.meta.url).map(path=>
@@ -437,7 +441,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(crossModeTraceObserver?{crossModeTraceObserver:crossModeTraceObserver.report()}:{}),
   ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
-    expandedGroupedAdmission,
+    expandedGroupedAdmission,registerStackAdmission,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,
     code16Wasm:options.code16Wasm,
