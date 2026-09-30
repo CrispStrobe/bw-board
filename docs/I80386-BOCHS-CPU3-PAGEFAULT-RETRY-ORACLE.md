@@ -11,7 +11,7 @@ separate [fixture](../test/fixtures/i80386-bochs-cpu3-pagefault-retry.S),
 The runner pins those source bytes, the original v2 receipt, binary, probe,
 configuration, ROMs, and image. The report retains `comparison: "not-run"`.
 
-After BIOS handoff with interrupts disabled, the fixture installs a protected-
+After BIOS handoff with interrupts disabled, the fixture installs a protected
 mode 32-bit interrupt gate for vector 14 at IDT bytes `0x70`–`0x77` and sets
 IDTR limit `0x03ff`. The frozen fixture comment calls this an “IVT slot”;
 the real-mode four-byte IVT slot would instead be at `0x38`–`0x3b`. It then
@@ -22,10 +22,15 @@ and CR2 `0x5000`. Four ordered linear prewrite callbacks at `0x6ffc` through
 faulting-store EIP `0x7ebe`, and error code `2`; their instruction attribution
 matches the first store attempt. The guest handler checks the frame and CR2,
 stores and reads CR2 in mapped scratch RAM, maps PTE5, reloads CR3, drops the
-error word, and executes `IRETD`. A second hook at EIP `0x7ebe` precedes the
+error code (four bytes), and executes `IRETD`. A second hook at EIP `0x7ebe` precedes the
 repaired PTE read and successful `0x11223344` store. The first attempt has no
 linear data-store callback. The final plain-RAM snapshots contain PDE0
 `23a00000`, PTE5 `63500000`, and data5 `44332211`.
+
+The fault address, error code and restart checks follow the
+[Intel 80386 PRM, §9.8.14](https://pdos.csail.mit.edu/6.828/2018/readings/i386/s09_08.htm);
+the guest reloads CR3 using the original-386 cache flush described in
+[§5.2.5](https://pdos.csail.mit.edu/6.828/2018/readings/i386/s05_02.htm).
 
 From a clean checkout at the frozen source commit, with the existing pinned
 instrumented Bochs build prepared as described in the v2 capture, reproduce
