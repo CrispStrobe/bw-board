@@ -548,7 +548,9 @@ void bw_slice_activate(BX_CPU_C *cpu)
   bw_slice_active = true;
   cpu->TLB_flush(); // Also invalidates the prefetch queue.
   cpu->iCache.flushICacheEntries();
-  fprintf(stderr, "BWS6\tACTIVATE\t0000\t00007e00\t1572864\t%u\n",
+  // Exactly 160 low + 128 extended RAM pages were copied. The 0x180000
+  // backing capacity also contains holes and is not a copied-byte count.
+  fprintf(stderr, "BWS6\tACTIVATE\t0000\t00007e00\t1179648\t%u\n",
     inherited_a20);
 }
 
