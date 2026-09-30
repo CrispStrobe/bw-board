@@ -259,26 +259,36 @@ on EPYC 7763: motion **1.116135× median / 1.051434× minimum**, all five sample
 earlier EPYC 9V74 1.396342× observation are separate runner results, not a
 cross-runner gain. The [fresh rebase paired A/B](https://github.com/CrispStrobe/labwired-core/actions/runs/36772744288)
 passed too; the earlier 8.396746% figure belongs to its original run above.
-Current PR137 head `bd05656f` changes CI only; its production engine is identical
+Final PR137 head `bd05656f` changes CI only; its production engine is identical
 to qualified `8c745a68`. All three workspace shards and their aggregate passed
 for `8c745a68`; its original PR gate timed out after twenty minutes compiling
 feature-off core, after Clippy/default-member checks passed. The
 [fresh CI run 36778919591](https://github.com/CrispStrobe/labwired-core/actions/runs/36778919591)
 splits those jobs without dropping commands or extending their twenty-minute
-budgets, retaining a fail-closed aggregate. It remains in progress, not an
-all-green claim. No landing or exact post-merge main measurement is claimed, and
-issue 120 is not declared closed here. Browser CI passing does not promote
+budgets, retaining a fail-closed aggregate. That run **passed the full Core CI**,
+including all three workspace shards and aggregate. [PR137](https://github.com/CrispStrobe/labwired-core/pull/137)
+now **landed at main `5fb3d7d44cc1487fdab757906ae62222e8798e93`**.
+Its final-head [native run 36778919418](https://github.com/CrispStrobe/labwired-core/actions/runs/36778919418)
+passed on EPYC 7763: motion **1.126718× median / 1.117467× minimum**, all five
+samples >=1× with zero transport errors; GPIO-only **5.278345× median /
+4.983699× minimum**. All 349 overlapping functional executions and both
+benchmarks passed; [final paired A/B 36778919437](https://github.com/CrispStrobe/labwired-core/actions/runs/36778919437)
+also passed. The same qualified runtime's strict all-chip result above remains
+evidence; [additional final-head CorePerf 36779028846](https://github.com/CrispStrobe/labwired-core/actions/runs/36779028846)
+is still measuring. Exact post-merge main `5fb3d7d4` measurement is pending,
+and issue 120 is not declared closed here. Browser CI passing does not promote
 the app's browser pin or establish an active-browser performance result.
 
 The [countdown change](https://github.com/CrispStrobe/labwired-core/pull/136)
-landed at `8736e1ff`. Current main `8b1cd3f5` contains that countdown change
-but not PR137's GPIO runtime. Its earlier isolated qualification
+landed at `8736e1ff`; current main `5fb3d7d4` includes both countdown and PR137's
+GPIO runtime. The earlier main `8b1cd3f5` lacked the GPIO changes. Countdown's
+earlier isolated qualification
 passed nine whole-engine regressions and an
 [isolated EPYC 7763 A/B](https://github.com/CrispStrobe/labwired-core/actions/runs/36723407331):
 **7.79%** over the optimized base, candidate medians **1.092× / 1.124×**, with
 all ten candidate windows above 1×. The earlier exact-main `ede33fb4`
 1.290097× / 1.261066× observation remains historical source-bound evidence,
-not a measurement of current main `8b1cd3f5`. These are native results, not a browser
+not a measurement of current main `5fb3d7d4`. These are native results, not a browser
 pin upgrade or CP13 completion.
 
 Separate **native Rust** micro:bit v2 PR qualification on 2026-09-30 measured
