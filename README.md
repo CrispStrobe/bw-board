@@ -287,6 +287,13 @@ on the same complete xv6 task (10.19%); all three pairs favored the change and
 the complete guest reports matched. That result is specific to the VPS and
 xv6. The 10× target and physical 386DX RTx measurement remain open.
 
+The [expanded grouped 386 diagnostic result](docs/I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
+verified whole-report parity across paired 60-million-step Windows and
+24,338,279-step stock xv6 runs. Windows reached 6.10 million unique ordinals
+in disjoint runs of at least eight, below its 15-million overall gate;
+protected16+VM86 reached 5.59 million, above its 5-million mode threshold.
+The overall opportunity gate fails, and the observer result is no speed claim.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our

@@ -1,5 +1,12 @@
 # Expanded cross-mode grouped shadow admission: predeclared diagnostic
 
+The [source-pinned Windows and stock xv6 results](I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
+are complete. Windows passed whole-report parity but failed the 15M overall
+disjoint-run opportunity gate; xv6 is a separate coverage census. The
+combined [owned state-ordering fixture](I80386-COMBINED-ORDERED-STATE-CONTRACT.md)
+and [selected register-stack fixture](I80386-REGISTER-STACK-ORDERED-CONTRACT.md)
+do not establish an executor or CPU-cost gate.
+
 `AT_EXPANDED_GROUPED_SHADOW_ADMISSION=1` selects a separate, default-off
 Windows 386 AT observer. `XV6_EXPANDED_GROUPED_SHADOW_ADMISSION=1` selects the
 same observer for the ordinary stock xv6 probe. Neither flag changes guest
