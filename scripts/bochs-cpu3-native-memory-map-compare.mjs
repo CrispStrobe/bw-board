@@ -280,6 +280,9 @@ function sequence(events,at,source){
   const pteRead=four('R',0x111014,0x11014,[3,0x50,0,0],'pte-read');
   const pdeWrite=four('W',0x110000,0x10000,[0x23,0x10,0x11,0],'pde-ad-write');
   const pteWrite=four('W',0x111014,0x11014,[0x63,0x50,0,0],'pte-ad-write');
+  if(mem.some(e=>e.rw==='W'&&e.effective>=0x100000&&
+      e.ordinal>port92[3].ordinal))
+    fail(at,'high backing changed after A20 gate-off');
   const data=mem.filter(e=>e.rw==='W'&&e.raw>=0x5000&&e.raw<0x5004&&
     e.effective===e.raw&&e.why==='ordinary');
   equal(data.map(e=>e.value),[0x44,0x33,0x22,0x11],at+'.data5 commit');
@@ -359,8 +362,17 @@ export function assertNativeMemoryMapArm(name,arm,activation,source){
   const events=journalProof(arm,at,activation);
   fields(arm.pagewalkProof,['aliasedPdeReads','aliasedPte5Reads',
     'aliasedPdeAdWrites','aliasedPte5AdWrites'],at+'.pagewalkProof');
-  for(const [key,value] of Object.entries(arm.pagewalkProof))
-    if(!uint(value,at+'.pagewalkProof.'+key))fail(at,'source-tagged aliased page walk absent');
+  for(const [key,rw,raw,effective,why] of [
+    ['aliasedPdeReads','R',0x110000,0x10000,'pde-read'],
+    ['aliasedPte5Reads','R',0x111014,0x11014,'pte-read'],
+    ['aliasedPdeAdWrites','W',0x110000,0x10000,'pde-ad-write'],
+    ['aliasedPte5AdWrites','W',0x111014,0x11014,'pte-ad-write']]){
+    const count=events.filter(e=>e.kind==='mem'&&e.rw===rw&&e.why===why&&
+      e.raw===raw&&e.effective===effective).length;
+    if(!uint(arm.pagewalkProof[key],at+'.pagewalkProof.'+key)||
+        arm.pagewalkProof[key]!==count)
+      fail(at,`${key} counter lacks source-tagged host callback`);
+  }
   const evidence=sequence(events,at,source);
   fields(arm.final,['selectedState','ramWords'],at+'.final');
   fields(arm.final.selectedState,selected,at+'.selectedState');
