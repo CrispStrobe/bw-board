@@ -13,6 +13,7 @@ export const upstreamHashes={
   'bochs/memory/misc_mem.cc':'80eb352a65fdc940ce54894efe045e024416159c77f1cb6037bb1731a7e451cd',
   'bochs/pc_system.h':'52e5f687cba0a5b5c23adbf2ae7817290cfb5ca4d155ae95949f294473a8dc68',
   'bochs/pc_system.cc':'d96b802b79a8093b0e1b8fde7798384b70a7abea0bd4021d5664774ef5732c9c',
+  'bochs/iodev/devices.cc':'b64a1a65a3e3d51ba9224dde4c86d70ac8fc82846f9ba962f38ef89e65aa215b',
 };
 export const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
 const once=(s,a,b)=>{
@@ -40,7 +41,7 @@ export function patchPinnedSource(path,bytes){
     s=once(s,'    BX_SYNC_TIME_IF_SINGLE_PROCESSOR(0);\n#if BX_DEBUGGER || BX_GDBSTUB',
       '    BX_SYNC_TIME_IF_SINGLE_PROCESSOR(0);\n    if (bw_slice_active && bw_slice_fault_pending) {\n      BX_CPU_THIS_PTR prev_rip = RIP;\n      BX_CPU_THIS_PTR speculative_rsp = 0;\n      return; // delivery complete; handler has not executed\n    }\n#if BX_DEBUGGER || BX_GDBSTUB');
     s=once(s,'    bxICacheEntry_c *entry = getICacheEntry();',
-      '    if (!bw_slice_active && BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].selector.value == 0 && RIP == 0x7e00) {\n      bw_slice_activate(this);\n      return; // caller switches from BIOS loop to external ABI before fetch\n    }\n    if (bw_slice_active && bw_slice_ticks_reached()) return;\n    bxICacheEntry_c *entry = getICacheEntry();');
+      '    if (!bw_slice_active && BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].selector.value == 0 && RIP == 0x7e00) {\n      bw_slice_activate(BX_CPU(0));\n      return; // caller switches from BIOS loop to external ABI before fetch\n    }\n    if (bw_slice_active && bw_slice_ticks_reached()) return;\n    bxICacheEntry_c *entry = getICacheEntry();');
     s=once(s,'      BX_INSTR_BEFORE_EXECUTION(BX_CPU_ID, i);\n      RIP += i->ilen();\n      BX_CPU_CALL_METHOD(i->execute1, (i)); // might iterate repeat instruction\n      BX_CPU_THIS_PTR prev_rip = RIP; // commit new RIP\n      BX_INSTR_AFTER_EXECUTION(BX_CPU_ID, i);',
       '      bw_slice_note_attempt();\n      BX_INSTR_BEFORE_EXECUTION(BX_CPU_ID, i);\n      RIP += i->ilen();\n      BX_CPU_CALL_METHOD(i->execute1, (i)); // might iterate repeat instruction\n      BX_CPU_THIS_PTR prev_rip = RIP; // commit new RIP\n      BX_INSTR_AFTER_EXECUTION(BX_CPU_ID, i);\n      bw_slice_note_completed();');
     s=once(s,'      BX_SYNC_TIME_IF_SINGLE_PROCESSOR(0);\n\n      // note instructions generating exceptions never reach this point',
@@ -91,6 +92,8 @@ export function patchPinnedSource(path,bytes){
     s=once(s,'Bit8u *BX_MEM_C::getHostMemAddr(BX_CPU_C *cpu, bx_phy_address addr, unsigned rw)\n{',
       'Bit8u *BX_MEM_C::getHostMemAddr(BX_CPU_C *cpu, bx_phy_address addr, unsigned rw)\n{\n  if (bw_slice_active) bw_slice_fail("Bochs-direct-pointer-fallback");');
   }else if(path==='bochs/pc_system.h'){
+    s=once(s,'  static BX_CPP_INLINE void tick1(void) {',
+      '  void bw_probe_countdown_fallback(void) { countdownEvent(); }\n  static BX_CPP_INLINE void tick1(void) {');
     s=once(s,'  static BX_CPP_INLINE void tick1(void) {\n    if (--bx_pc_system.currCountdown == 0)',
       '  static BX_CPP_INLINE void tick1(void) {\n    if (bw_slice_active) { bw_slice_tick(1); return; }\n    if (--bx_pc_system.currCountdown == 0)');
     s=once(s,'  static BX_CPP_INLINE void tickn(Bit32u n) {\n    while (n >= bx_pc_system.currCountdown)',
@@ -98,6 +101,11 @@ export function patchPinnedSource(path,bytes){
   }else if(path==='bochs/pc_system.cc'){
     s=once(s,'void bx_pc_system_c::countdownEvent(void)\n{',
       'void bx_pc_system_c::countdownEvent(void)\n{\n  if (bw_slice_active) bw_slice_fail("Bochs-timer-fallback");');
+  }else if(path==='bochs/iodev/devices.cc'){
+    s=once(s,'bx_devices_c::inp(Bit16u addr, unsigned io_len)\n{',
+      'bx_devices_c::inp(Bit16u addr, unsigned io_len)\n{\n  if (bw_slice_active) bw_slice_fail("Bochs-PIO-fallback");');
+    s=once(s,'bx_devices_c::outp(Bit16u addr, Bit32u value, unsigned io_len)\n{',
+      'bx_devices_c::outp(Bit16u addr, Bit32u value, unsigned io_len)\n{\n  if (bw_slice_active) bw_slice_fail("Bochs-PIO-fallback");');
   }else throw new Error(`not an allowed patch path: ${path}`);
   return Buffer.from(s);
 }

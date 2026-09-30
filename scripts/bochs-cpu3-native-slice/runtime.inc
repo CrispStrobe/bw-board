@@ -1,4 +1,5 @@
 /* Included once at the end of cpu.cc in the separately prepared CPU3 tree. */
+#include "iodev/iodev.h"
 #include <inttypes.h>
 #include <limits.h>
 
@@ -23,6 +24,8 @@ static unsigned bw_fault_vector;
 static unsigned bw_fault_error;
 static uint64_t bw_fault_ordinal;
 static uint64_t bw_fault_tick;
+static unsigned bw_faulting_cs;
+static unsigned bw_faulting_eip;
 static unsigned bw_last_port;
 static unsigned bw_last_value;
 static unsigned bw_last_width;
@@ -32,9 +35,42 @@ static uint64_t bw_physical_reads;
 static uint64_t bw_physical_writes;
 static uint64_t bw_execute_pages;
 static uint64_t bw_tick_callbacks;
+static uint64_t bw_fallback_ram_reads;
+static uint64_t bw_fallback_ram_writes;
+static uint64_t bw_fallback_direct_pointers;
+static uint64_t bw_fallback_pio;
+static uint64_t bw_fallback_timer;
+static unsigned bw_port_bytes_seen;
+
+static void bw_emit_state(const char *tag, BX_CPU_C *cpu)
+{
+  fprintf(stderr,"BWS3\t%s\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x"
+    "\t%08x\t%08x\t%08x\t%08x\t%08x\t%04x\t%04x\t%04x"
+    "\t%08x\t%04x\t%08x\t%04x\n",tag,
+    cpu->gen_reg[BX_32BIT_REG_EAX].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_ECX].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_EDX].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_EBX].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_ESP].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_EBP].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_ESI].dword.erx,
+    cpu->gen_reg[BX_32BIT_REG_EDI].dword.erx,
+    cpu->get_eip(),cpu->read_eflags(),cpu->cr0.get32(),
+    (unsigned)cpu->cr2,(unsigned)cpu->cr3,
+    cpu->sregs[BX_SEG_REG_CS].selector.value,
+    cpu->sregs[BX_SEG_REG_DS].selector.value,
+    cpu->sregs[BX_SEG_REG_SS].selector.value,
+    (unsigned)cpu->gdtr.base,cpu->gdtr.limit,
+    (unsigned)cpu->idtr.base,cpu->idtr.limit);
+}
 
 void bw_slice_fail(const char *kind)
 {
+  if (!strcmp(kind,"Bochs-RAM-read-fallback")) ++bw_fallback_ram_reads;
+  if (!strcmp(kind,"Bochs-RAM-write-fallback")) ++bw_fallback_ram_writes;
+  if (!strcmp(kind,"Bochs-direct-pointer-fallback")) ++bw_fallback_direct_pointers;
+  if (!strcmp(kind,"Bochs-PIO-fallback")) ++bw_fallback_pio;
+  if (!strcmp(kind,"Bochs-timer-fallback")) ++bw_fallback_timer;
   fprintf(stderr, "BWS3\tFAIL\t%s\n", kind);
   fflush(stderr);
   abort();
@@ -45,6 +81,15 @@ static bool bw_range_ok(unsigned long long address, unsigned length)
   return length && address < sizeof(bw_ram) &&
     length <= sizeof(bw_ram) - address &&
     ((address & 4095) + length <= 4096);
+}
+
+static uint32_t bw_read_le32(unsigned address)
+{
+  if (address > sizeof(bw_ram)-4) bw_slice_fail("snapshot-range");
+  return (uint32_t)bw_ram[address] |
+    ((uint32_t)bw_ram[address+1] << 8) |
+    ((uint32_t)bw_ram[address+2] << 16) |
+    ((uint32_t)bw_ram[address+3] << 24);
 }
 
 static int bw_host_read(void *, uint32_t address, uint8_t *data, uint32_t length)
@@ -81,6 +126,10 @@ static int bw_host_in(void *, uint16_t, uint32_t, uint32_t *)
 static int bw_host_out(void *, uint16_t port, uint32_t width, uint32_t value)
 {
   if (port != 0xe9 || width != 1) return 0;
+  static const char expected[] = "BHPG004";
+  if (bw_port_bytes_seen >= 7 || value != (unsigned char)expected[bw_port_bytes_seen])
+    return 0;
+  ++bw_port_bytes_seen;
   fprintf(stderr, "BWS3\tPORT\t%04x\t%u\t%08x\t%" PRIu64
     "\t%" PRIu64 "\n", port, width, value, bw_ticks, ++bw_ordinal);
   bw_last_port = port;
@@ -200,6 +249,8 @@ void bw_slice_note_fault(unsigned vector, unsigned error_code)
   bw_fault_error = error_code;
   bw_fault_tick = bw_ticks;
   bw_fault_ordinal = ++bw_ordinal;
+  bw_faulting_cs = BX_CPU(0)->sregs[BX_SEG_REG_CS].selector.value;
+  bw_faulting_eip = BX_CPU(0)->prev_rip;
   bw_slice_fault_pending = true;
 }
 
@@ -217,6 +268,18 @@ void bw_slice_activate(BX_CPU_C *cpu)
   bw_callbacks.port_in = bw_host_in;
   bw_callbacks.port_out = bw_host_out;
   bw_callbacks.tick = bw_host_tick;
+  bw_cpu3_slice_result before_activation;
+  if (bw_cpu3_resume(1, &bw_callbacks, &before_activation) ||
+      before_activation.reason || before_activation.charged_ticks)
+    bw_slice_fail("resume-before-activation-accepted");
+  fprintf(stderr,"BWS3\tPROBE\tresume-before-activation\trejected\n");
+  bw_emit_state("SEEDSTATE",cpu);
+  for (unsigned page = 0; page < 256; ++page) {
+    fprintf(stderr,"BWS3\tSEEDPAGE\t%u\t",page);
+    for (unsigned j = 0; j < 4096; ++j)
+      fprintf(stderr,"%02x",bw_ram[page*4096+j]);
+    fputc('\n',stderr);
+  }
   bw_slice_active = true;
   cpu->TLB_flush(); // Also invalidates the prefetch queue.
   cpu->iCache.flushICacheEntries();
@@ -270,6 +333,31 @@ void bw_slice_driver(void)
     (uint32_t) strtoul(raw, 0, 10);
   if (budget != 1 && budget != 2 && budget != 257 && budget != UINT32_MAX)
     bw_slice_fail("driver-budget");
+  const char *probe=getenv("BW_CPU3_SLICE_PROBE");
+  if (probe) {
+    unsigned char byte=0;
+    if (!strcmp(probe,"out-of-range-physical")) bw_slice_read(sizeof(bw_ram),1,&byte);
+    else if (!strcmp(probe,"unexpected-pio")) bw_slice_port_out(0x80,0,1);
+    else if (!strcmp(probe,"bochs-ram-read")) BX_MEM(0)->readPhysicalPage(BX_CPU(0),0,1,&byte);
+    else if (!strcmp(probe,"bochs-ram-write")) BX_MEM(0)->writePhysicalPage(BX_CPU(0),0,1,&byte);
+    else if (!strcmp(probe,"bochs-direct-pointer")) BX_MEM(0)->getHostMemAddr(BX_CPU(0),0,BX_READ);
+    else if (!strcmp(probe,"bochs-pio")) bx_devices.outp(0x80,0,1);
+    else if (!strcmp(probe,"bochs-timer")) bx_pc_system.bw_probe_countdown_fallback();
+    else bw_slice_fail("unknown-probe");
+    bw_slice_fail("probe-was-not-rejected");
+  }
+  bw_cpu3_slice_result invalid;
+  if (bw_cpu3_resume(0,&bw_callbacks,&invalid) || invalid.reason || invalid.charged_ticks)
+    bw_slice_fail("zero-budget-accepted");
+  fprintf(stderr,"BWS3\tPROBE\tzero-budget\trejected\n");
+  if (bw_cpu3_resume(1,0,&invalid) || invalid.reason || invalid.charged_ticks)
+    bw_slice_fail("null-callbacks-accepted");
+  fprintf(stderr,"BWS3\tPROBE\tnull-callbacks\trejected\n");
+  bw_cpu3_host_callbacks incomplete=bw_callbacks;
+  incomplete.read_physical=0;
+  if (bw_cpu3_resume(1,&incomplete,&invalid) || invalid.reason || invalid.charged_ticks)
+    bw_slice_fail("incomplete-callbacks-accepted");
+  fprintf(stderr,"BWS3\tPROBE\tincomplete-callbacks\trejected\n");
   for (unsigned slice = 0; slice < 100000; ++slice) {
     const unsigned entry_cs = BX_CPU(0)->sregs[BX_SEG_REG_CS].selector.value;
     const unsigned entry_eip = BX_CPU(0)->get_eip();
@@ -283,41 +371,30 @@ void bw_slice_driver(void)
       result.rep_iterations,result.rep_partial,result.faults,
       result.port_commits,result.pending_fault,result.port_committed);
     if (result.reason == BW_CPU3_SLICE_FAULT) {
-      const uint32_t *frame = (const uint32_t *)(bw_ram + 0x6ff0);
       fprintf(stderr,"BWS3\tFAULT\t%u\t%u\t%08x\t%08x\t%08x\t%08x\t%08x"
-        "\t%08x\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\n", bw_fault_vector,bw_fault_error,
-        (unsigned) BX_CPU(0)->cr2,frame[0],frame[1],frame[2],frame[3],
-        result.eip,bw_fault_tick,bw_ticks,bw_fault_ordinal);
+        "\t%04x\t%08x\t%04x\t%08x\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\n", bw_fault_vector,bw_fault_error,
+        (unsigned) BX_CPU(0)->cr2,bw_read_le32(0x6ff0),bw_read_le32(0x6ff4),
+        bw_read_le32(0x6ff8),bw_read_le32(0x6ffc),
+        bw_faulting_cs,bw_faulting_eip,result.cs,result.eip,
+        bw_fault_tick,bw_ticks,bw_fault_ordinal);
     }
     if (bw_ports == 7) {
       fprintf(stderr,"BWS3\tFINAL\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64
         "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%08x\t%08x\t%08x\t%08x\n",
         bw_ticks,bw_attempts,bw_completed,bw_rep_iterations,bw_faults,
-        bw_ports,*(uint32_t *)(bw_ram+0x9000),*(uint32_t *)(bw_ram+0xa014),
-        *(uint32_t *)(bw_ram+0x5000),*(uint32_t *)(bw_ram+0x0520));
-      BX_CPU_C *cpu = BX_CPU(0);
-      fprintf(stderr,"BWS3\tSTATE\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x\t%08x"
-        "\t%08x\t%08x\t%08x\t%08x\t%08x\t%04x\t%04x\t%04x"
-        "\t%08x\t%04x\t%08x\t%04x\n",
-        cpu->gen_reg[BX_32BIT_REG_EAX].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_ECX].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_EDX].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_EBX].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_ESP].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_EBP].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_ESI].dword.erx,
-        cpu->gen_reg[BX_32BIT_REG_EDI].dword.erx,
-        cpu->get_eip(),cpu->read_eflags(),cpu->cr0.get32(),
-        (unsigned)cpu->cr2,(unsigned)cpu->cr3,
-        cpu->sregs[BX_SEG_REG_CS].selector.value,
-        cpu->sregs[BX_SEG_REG_DS].selector.value,
-        cpu->sregs[BX_SEG_REG_SS].selector.value,
-        (unsigned)cpu->gdtr.base,cpu->gdtr.limit,
-        (unsigned)cpu->idtr.base,cpu->idtr.limit);
+        bw_ports,bw_read_le32(0x9000),bw_read_le32(0xa014),
+        bw_read_le32(0x5000),bw_read_le32(0x0520));
+      bw_emit_state("STATE",BX_CPU(0));
       fprintf(stderr,"BWS3\tCALLBACKS\t%" PRIu64 "\t%" PRIu64
         "\t%" PRIu64 "\t%" PRIu64 "\n",bw_physical_reads,
         bw_physical_writes,bw_execute_pages,bw_tick_callbacks);
+      fprintf(stderr,"BWS3\tFALLBACK\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64
+        "\t%" PRIu64 "\t%" PRIu64 "\n",bw_fallback_ram_reads,
+        bw_fallback_ram_writes,bw_fallback_direct_pointers,
+        bw_fallback_pio,bw_fallback_timer);
       fflush(stderr);
+      bw_slice_active=false;
+      fprintf(stderr,"BWS3\tDEACTIVATE\tproof-complete\n");
       return;
     }
     if (result.reason == BW_CPU3_SLICE_HALT) bw_slice_fail("unexpected-halt");
