@@ -38,7 +38,11 @@ successful short advance cannot certify the failed watch's earlier history.
 Failed watches must be recreated by idle expiry, reset or netlist replacement.
 Each watch retains at most 100,000 points. Reaching that limit refuses by name,
 not by dropping unintegrated data or allocating unbounded memory. The capacity
-regression seeds its boundary explicitly without doing 100,000 MNA solves.
+regressions seed strictly ordered, physically consistent boundary samples
+without doing 100,000 MNA solves. Expired points are retired before capacity
+is judged, retaining the one support point needed for a clipped segment.
+Floating-point boundary ties use only two machine-epsilon units of clock
+roundoff; waveform tolerances and work limits are unchanged.
 
 The exact source-constrained-inductor analytic shortcut stays untouched. Its
 first instantaneous meter read remains available, but later averaging refuses

@@ -91,12 +91,33 @@ test('budget exhaustion refuses a mean instead of returning a partial passing in
 });
 test('history capacity refuses instead of silently dropping unintegrated observations',()=>{
   const b=bench(sine); b.meterVoltage('signal','zero');
+  b.advanceTo(99_999n);
   const w=[...b._meterWatches.values()][0];
   // Boundary fixture seeds capacity without performing 100,000 MNA solves.
-  w.hist=Array.from({length:100000},()=>({tSec:0,before:2,v:2}));
-  b.advanceTo(1n);
+  w.hist=Array.from({length:100000},(_,i)=>{
+    const tSec=i/1e9,v=2+Math.sin(omega*tSec);
+    return {tSec,before:v,v};
+  });
+  b.advanceTo(100_000n);
   assert.equal(w.hist.length,100000);
   assert.throws(()=>b.meterVoltage('signal','zero'),/meter-history-limit-exceeded/);
+});
+test('a full rolling window prunes expired points before judging the next sample capacity',()=>{
+  const b=bench(sine); b.meterVoltage('signal','zero');
+  b.advanceTo(99_999_000n);
+  const w=[...b._meterWatches.values()][0];
+  // Strictly ordered, physically consistent window boundary fixture.
+  w.hist=Array.from({length:100000},(_,i)=>{
+    const tSec=i/1e6,v=2+Math.sin(omega*tSec);
+    return {tSec,before:v,v};
+  });
+  // Isolate publication's capacity policy at one exact next observation;
+  // do not assume the adaptive solver chooses a particular first substep.
+  b.timeNs=100_001_000n;
+  const v=2+Math.sin(omega*.100001);
+  b._recordMeterSamples(.100001,{nodeVoltages:new Map([['signal',v],['zero',0]]),branchCurrents:new Map()});
+  assert.ok(w.hist.length<=100000);
+  assert.ok(Math.abs(b.meterVoltage('signal','zero')-2)<=1e-6);
 });
 test('the analytic source-constrained inductor keeps its solver but refuses an unqualified mean',()=>{
   const b=new BoardImpl(5);

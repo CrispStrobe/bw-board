@@ -1652,12 +1652,19 @@ export class BoardImpl {
     // ulp. Never let this numerical artifact publish a future meter point.
     atSec=Math.min(atSec,Number(this.timeNs)/1e9);
     const windowStart = Math.max(0,atSec-Number(METER_WINDOW_NS)/1e9);
+    const boundarySlack=2*Number.EPSILON*Math.max(Math.abs(atSec),Number(METER_WINDOW_NS)/1e9);
     for (const [key, w] of this._meterWatches) {
       if (atSec-Number(w.readNs)/1e9 > Number(METER_IDLE_NS)/1e9) { this._meterWatches.delete(key); continue; }
       if (this._transientAccuracyUnmet) w.failure=this._transientAccuracyUnmet.code;
       if (w.failure) continue;
       const v = this._meterValue(w,solution);
       const h = w.hist;
+      // Retire out-of-window observations before enforcing capacity. A full
+      // rolling window may have room for this sample after its oldest point
+      // expires; checking capacity first would falsely refuse that case.
+      let keep = 0;
+      while (keep + 1 < h.length && h[keep + 1].tSec <= windowStart+boundarySlack) keep++;
+      if (keep > 0) h.splice(0, keep);
       const last = h[h.length - 1];
       if (last && atSec<last.tSec) { w.failure='nonmonotonic-meter-time'; continue; }
       if (last && last.tSec === atSec) { last.v = v; }
@@ -1668,10 +1675,6 @@ export class BoardImpl {
         if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
         h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v });
       }
-      // Keep the one sample at or before the window start, drop the rest.
-      let keep = 0;
-      while (keep + 1 < h.length && h[keep + 1].tSec <= windowStart) keep++;
-      if (keep > 0) h.splice(0, keep);
     }
   }
 

@@ -22,14 +22,21 @@ source-constrained-inductor shortcut, device/CPU, workflow, dependency/pin,
 CUI/Lite, private corpus or deployment changes. The analytic inductor shortcut
 remains an explicit separate meter follow-up, not a general accuracy claim;
 its unchanged endpoint solver now gives a named unqualified-mean refusal.
-Restored expanded regressions: 91/91, zero skips, including both live ngspice
+Restored expanded regressions: 103/103, zero skips, including oracle census,
+both live ngspice
 integral comparisons, RC signed-current/charge checks, PWM, scope sampling,
 profile limits and unwatched one-solve efficiency. Five isolated production
 mutants red by named consequences: endpoint-only routing, outer-clock history,
 stale branch-current cache, missing discrete left limit, and overwritten
 same-time edge. An initially surviving same-time mutant prompted a new real
 source-control regression; it now reds, with all mutations restored.
-Candidate must include current remote ancestry and one exact-head hosted
+Forward final boundary repair retires expired samples before capacity checks;
+strictly ordered capacity fixtures distinguish genuine overflow from a full
+rolling window with space available after retirement. Removing retirement
+reds the boundary test, and restored source hash is `16f0228619aa69c7e8790f782929f31daf424216`.
+The earlier `b66a6835` CI/Harris/xv6 receipts were green but do not qualify this
+source-changing successor. Candidate includes remote `1c1d81bc` ancestry and
+must pass one fresh exact-head hosted
 qualification before guarded landing; no downstream adoption claim yet.
 
 2026-09-29 RISC-V program-mode reset returns to the image entry — DONE candidate, Claude (Lite task C5, first item).
