@@ -44,7 +44,9 @@ setup:
   movw %ax,%fs
   movw %ax,%gs
   movw %ax,%ss
-  movl $0x7000,%esp
+  // Page 6 is intentionally nonpresent. Keep all fault/IRQ frames on mapped
+  // page 8, below the page directory at 9000h.
+  movl $0x9000,%esp
   movb $0,0x0524            # delivered #PF count
   movb $0,0x0530            # STI successor marker
   movb $0,0x0534            # delivered IRQ count
@@ -85,7 +87,7 @@ protected_entry:
   movw %ax,%ds
   movw %ax,%es
   movw %ax,%ss
-  movw $0x7000,%sp
+  movw $0x9000,%sp
   movl $0x9000,%eax
   movl %eax,%cr3
   movl %cr0,%eax
