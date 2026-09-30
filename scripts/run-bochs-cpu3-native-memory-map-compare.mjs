@@ -255,8 +255,10 @@ export function parseArm(stderr,mode,budget){
       assert(!activation&&mapId&&p.length===4,`${where}: activation missing seed/map`);
       activation={cs:hexNumber(p[0],where,4),eip:hexNumber(p[1],where,8),
         copiedBytes:decimal(p[2],where),inheritedA20:bit(p[3],where),
+        hostBackingBytes:0x180000,decodedRamPages:ramPageNumbers.length,
+        seedDomain:'decoded-ram-physical-pages:0-159,256-383;packed-in-page-order',
         mapId,romId,handoff,a20Handoff,tlbFlushed:true,prefetchInvalidated:true,
-        icacheFlushed:true,ramSha256:sha(Buffer.concat(pages)),
+        icacheFlushed:true,decodedRamSeedSha256:sha(Buffer.concat(pages)),
         cpuSeedSha256:sha(Buffer.from(JSON.stringify(seedState)))};
       assert(activation.inheritedA20===a20Handoff.enabled,
         `${where}: activation A20 differs from handoff`);
@@ -516,7 +518,9 @@ async function runCapture(tree,outdir){
       apiProbes=parsed.apiProbes;}
     else assert(JSON.stringify(parsed.apiProbes)===JSON.stringify(apiProbes),
       `${name}: C ABI argument probe inventory changed`);
-    armSeeds[name]={ramSha256:parsed.activation.ramSha256,
+    armSeeds[name]={decodedRamSeedSha256:parsed.activation.decodedRamSeedSha256,
+      decodedRamPages:parsed.activation.decodedRamPages,
+      seedDomain:parsed.activation.seedDomain,
       cpuSeedSha256:parsed.activation.cpuSeedSha256,
       inheritedA20:parsed.activation.inheritedA20,
       mapId:parsed.activation.mapId,romId:parsed.activation.romId,

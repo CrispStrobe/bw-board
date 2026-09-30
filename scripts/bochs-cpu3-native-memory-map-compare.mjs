@@ -21,6 +21,7 @@ const guards={outOfRangePhysical:['out-of-range-physical','host-physical-read'],
   bochsTimer:['bochs-timer','Bochs-timer-fallback']};
 const fallback=['bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'];
 const mapId='ram00000-9ffff,mmio-a0000,rom-f0000-fffff,ram-100000-17ffff,openbus-rest';
+const seedDomain='decoded-ram-physical-pages:0-159,256-383;packed-in-page-order';
 const requiredSources=['scripts/bochs-cpu3-native-slice/patch.mjs',
   'scripts/bochs-cpu3-native-events/patch.mjs',
   'scripts/bochs-cpu3-native-memory-map/abi.h',
@@ -80,15 +81,19 @@ function sourceAndActivation(report){
       s.sourceHashes['roms/free-at-bios/vgabios-lgpl.bin']!==s.vgaBiosSha256)
     fail('source','ROM inventory and configured media differ');
   const a=report.activation;
-  fields(a,['cs','eip','copiedBytes','inheritedA20','mapId','romId','ramSha256',
+  fields(a,['cs','eip','copiedBytes','hostBackingBytes','decodedRamPages',
+    'seedDomain','inheritedA20','mapId','romId','decodedRamSeedSha256',
     'cpuSeedSha256','tlbFlushed','prefetchInvalidated','icacheFlushed'],'activation');
-  if(a.cs!==0||a.eip!==0x7e00||a.copiedBytes!==0x180000||a.mapId!==mapId||
+  if(a.cs!==0||a.eip!==0x7e00||a.copiedBytes!==0x120000||
+      a.hostBackingBytes!==0x180000||a.decodedRamPages!==288||
+      a.seedDomain!==seedDomain||a.mapId!==mapId||
       !bool(a.tlbFlushed,'activation.tlbFlushed')||
       !bool(a.prefetchInvalidated,'activation.prefetchInvalidated')||
       !bool(a.icacheFlushed,'activation.icacheFlushed'))
     fail('activation','post-BIOS host boundary changed');
   bool(a.inheritedA20,'activation.inheritedA20');
-  sha(a.ramSha256,'activation.ramSha256');sha(a.cpuSeedSha256,'activation.cpuSeedSha256');
+  sha(a.decodedRamSeedSha256,'activation.decodedRamSeedSha256');
+  sha(a.cpuSeedSha256,'activation.cpuSeedSha256');
   equal(a.romId,{sha256:s.biosSha256,bytes:65536},'activation.ROM_ID');
   fields(a,['handoff','a20Handoff'],'activation');
   fields(a.handoff,['inheritedPending','inheritedMask','inheritedIF','ownedPending'],
@@ -101,7 +106,9 @@ function sourceAndActivation(report){
   equal(Object.keys(obj(report.armSeeds,'armSeeds')).sort(),Object.keys(budgets).sort(),
     'armSeeds keys');
   for(const name of Object.keys(budgets))equal(report.armSeeds[name],
-    {ramSha256:a.ramSha256,cpuSeedSha256:a.cpuSeedSha256,
+    {decodedRamSeedSha256:a.decodedRamSeedSha256,
+      decodedRamPages:a.decodedRamPages,seedDomain:a.seedDomain,
+      cpuSeedSha256:a.cpuSeedSha256,
       inheritedA20:a.inheritedA20,mapId,romId:a.romId,
       handoff:a.handoff,a20Handoff:a.a20Handoff},'armSeeds.'+name);
   equal(Object.keys(obj(report.apiProbes,'apiProbes')).sort(),api.slice().sort(),
@@ -129,9 +136,9 @@ export function assertMemoryMapByte(event,a20){
   fields(event,['rw','raw','effective','class','value','effect','why'],'MEM');
   if(!['R','W'].includes(event.rw))fail('MEM','read/write direction changed');
   uint(event.raw,'MEM.raw');uint(event.effective,'MEM.effective');
-  if(event.raw>0xffffffff||event.effective>0xffffffff||
+  if(event.effective>=0x180000||
       event.effective!==((a20?event.raw:(event.raw&~0x100000))>>>0))
-    fail('MEM','A20 raw/effective address differs');
+    fail('MEM','A20 raw/effective address or effective mapped domain differs');
   const kind=mapClass(event.effective);
   if(event.class!==kind||event.effect!==effectFor(event.rw,kind))
     fail('MEM','host map class or effect differs');
@@ -143,6 +150,31 @@ export function assertMemoryMapByte(event,a20){
   if(event.class==='unmapped'&&event.rw==='R'&&event.value!==0xff)
     fail('MEM','open bus did not read FF');
   return event;
+}
+
+// Pinned paging.cc gates translated data addresses before this callback. The
+// guest's FFFF:0510 instruction therefore arrives as raw 0x500 while A20=0.
+// The intended high operand is proved by the frozen guest bytes and symbols,
+// not by inventing an address the host callback did not receive.
+export function assertA20AliasWindow(events,offOrdinal,restoreOrdinal){
+  const window=arr(events,'A20 alias events').filter(e=>
+    e.ordinal>offOrdinal&&e.ordinal<restoreOrdinal);
+  const off=window.filter(e=>e.kind==='a20'&&!e.enabled&&e.latch===0);
+  if(off.length!==1)fail('A20 alias','one gate-off action required in guest phase');
+  if(window.some(e=>e.kind==='mem'&&e.raw===0x100500&&
+      e.ordinal>off[0].ordinal))
+    fail('A20 alias','fabricated pre-mask data callback address');
+  const one=(rw,value,after)=>{
+    const matching=window.filter(e=>e.kind==='mem'&&e.rw===rw&&
+      e.raw===0x500&&e.effective===0x500&&e.value===value&&
+      e.why==='ordinary'&&e.ordinal>after);
+    if(matching.length!==1)fail('A20 alias','phase-bounded low callback missing or duplicated');
+    return matching[0];
+  };
+  const read31=one('R',0x31,off[0].ordinal);
+  const write52=one('W',0x52,read31.ordinal);
+  const lowRead52=one('R',0x52,write52.ordinal);
+  return {off:off[0],read31,write52,lowRead52};
 }
 
 function journalProof(arm,at,activation){
@@ -226,12 +258,12 @@ function sequence(events,at,source){
     fail(where,'transaction order changed');};
   const lowSeed=one(by('W',0x500,0x500,0x31),'low seed');
   const highSeed=one(by('W',0x100500,0x100500,0xa7),'high seed');
-  const aliasRead=one(by('R',0x100500,0x500,0x31),'off alias read');
-  const aliasWrite=one(by('W',0x100500,0x500,0x52),'off alias write');
+  const alias=assertA20AliasWindow(events,selected[2].ordinal,selected[3].ordinal);
   const highRestored=mem.find(e=>e.rw==='R'&&e.raw===0x100500&&
-    e.effective===0x100500&&e.value===0xa7&&e.ordinal>aliasWrite.ordinal);
+    e.effective===0x100500&&e.value===0xa7&&e.ordinal>alias.lowRead52.ordinal);
   if(!highRestored)fail(at,'high sentinel not restored after A20 gate');
-  ordered([lowSeed,highSeed,aliasRead,aliasWrite,highRestored],'A20 sentinel sequence');
+  ordered([lowSeed,highSeed,alias.read31,alias.write52,alias.lowRead52,
+    highRestored],'A20 sentinel sequence');
   const mmioWrite=one(by('W',0xa0000,0xa0000,0x5a),'MMIO write');
   const mmioRead=one(by('R',0xa0000,0xa0000,0x5a),'MMIO read');
   const openWrite=one(by('W',0xd0000,0xd0000,0x33),'unmapped discard');
@@ -248,7 +280,8 @@ function sequence(events,at,source){
   equal(in92.map(e=>e.value),[2,0],at+'.port92 readback');
   const marker=port.filter(e=>e.port===0xe9&&e.direction==='out');
   equal(Buffer.from(marker.map(e=>e.value)).toString('ascii'),'BMAP001',at+'.marker');
-  ordered([port92[0],lowSeed,port92[1],aliasRead,aliasWrite,port92[2],
+  ordered([port92[0],lowSeed,port92[1],alias.read31,alias.write52,
+    alias.lowRead52,port92[2],
     highRestored,mmioWrite,romRead[0],port92[3],port92[4],marker[0]],
   at+'.guest phases');
   const a20=events.filter(e=>e.kind==='a20');
@@ -402,12 +435,11 @@ export function assertNativeMemoryMapSelfParity(report){
   const proved=Object.fromEntries(Object.keys(budgets).map(name=>
     [name,assertNativeMemoryMapArm(name,report.arms[name],activation,source)]));
   const first=proved.continuous;
-  const comparable=events=>events.filter(e=>e.kind!=='exec'&&e.kind!=='attempt');
   for(const name of ['budget1','budget2','budget257']){
     equal(proved[name].final,first.final,name+'.final');
     equal(proved[name].pagewalkProof,first.pagewalkProof,name+'.pagewalkProof');
-    equal(comparable(proved[name].journal),comparable(first.journal),
-      name+'.ordered host memory/PIO/tick journal');
+    equal(proved[name].journal,first.journal,
+      name+'.full ordered host memory/PIO/execute/tick journal');
     for(const key of ['ticks','completed','repIterations','faults','portCommits'])
       if(proved[name].totals[key]!==first.totals[key])fail(name+'.totals',key+' differs');
   }
