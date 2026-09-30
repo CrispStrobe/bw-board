@@ -436,7 +436,8 @@ function boundedOutput(stream,maxBytes,label){
     if(bytes>maxBytes){error=Error(`${label} raw output bound exceeded`);stream.destroy(error);}
     else chunks.push(chunk);});
   stream.on('error',cause=>{error=cause;});
-  return {get text(){if(error)throw error;return Buffer.concat(chunks).toString('utf8');}};
+  return {get text(){return Buffer.concat(chunks).toString('utf8');},
+    get error(){return error;}};
 }
 
 async function sendRpc(stream,line){
@@ -452,7 +453,7 @@ function stopProcessGroup(child){
   timer.unref();
 }
 
-async function runArm(binary,rc,budget){
+async function runArm(binary,rc,budget,failureDir){
   const child=spawn(binary,['-q','-f',rc],{cwd:dirname(rc),
     stdio:['ignore','pipe','pipe','pipe','pipe'],detached:true});
   const stdout=boundedOutput(child.stdout,1024*1024,'stdout');
@@ -547,6 +548,7 @@ async function runArm(binary,rc,budget){
       exitTimer=setTimeout(()=>reject(Error('native child exit timed out')),10000);
     })]).finally(()=>clearTimeout(exitTimer));
     assert(exit.code===0&&exit.signal===null,'normal native child did not exit zero');
+    assert(!stdout.error&&!stderr.error,'native raw output exceeded its bound');
     const raw={stdout:stdout.text,stderr:stderr.text,
       rpcToNative:toNative.join('\n')+'\n',rpcFromNative:fromNative.join('\n')+'\n'};
     const native=parseNativeLog(raw.stderr);
@@ -556,7 +558,23 @@ async function runArm(binary,rc,budget){
     'native final RPC/clock ledger differs');
     return {exit,host:{seed:hostSeed,journal:host.journal,final:host.state()},
       native,rpc:{commands,requests,replies},raw};
-  }catch(error){stopProcessGroup(child);throw error;}
+  }catch(error){
+    stopProcessGroup(child);
+    let settleTimer;
+    await Promise.race([closed.catch(()=>null),new Promise(resolve=>{
+      settleTimer=setTimeout(resolve,2500);
+    })]).finally(()=>clearTimeout(settleTimer));
+    if(failureDir){
+      for(const [name,get] of Object.entries({
+        stdout:()=>stdout.text,stderr:()=>stderr.text,
+        rpcToNative:()=>toNative.join('\n')+'\n',
+        rpcFromNative:()=>fromNative.join('\n')+'\n',
+        exception:()=>String(error.stack??error)+'\n'})){
+        try{writeFileSync(join(failureDir,`failure.${name}.txt`),get());}catch{}
+      }
+    }
+    throw error;
+  }
   finally{clearTimeout(wall);child.stdio[3].end();}
 }
 
@@ -612,7 +630,7 @@ async function runSingle(tree,outdir){
   assert(!existsSync(outdir),'output directory must be new');
   mkdirSync(outdir,{recursive:true});
   const {source,binary,hostConfig,floppyPath}=preparedInputs(tree,outdir);
-  const arm=await runArm(binary,hostConfig.rc,budgets.continuous);
+  const arm=await runArm(binary,hostConfig.rc,budgets.continuous,outdir);
   const artifacts={bochsrc:{path:'bochsrc',sha256:fileSha(hostConfig.rc)},
     floppy:{path:'owned-floppy.img',sha256:fileSha(floppyPath)},
     continuous:retainArm(outdir,'continuous',arm,hostConfig.log)};
