@@ -406,6 +406,9 @@ class BoundedLines {
       if(newline<0)break;
       if(newline>=255){this._end(Error('RPC line bound exceeded'));return;}
       const bytes=data.subarray(0,newline),line=bytes.toString('ascii');
+      if(!bytes.every(byte=>byte===9||(byte>=32&&byte<=126))){
+        this._end(Error('RPC line contains non-ASCII or control bytes'));return;
+      }
       try{parseRpcLine(line);}catch(error){this._end(error);return;}
       if(this.waiter){const {resolve,timer}=this.waiter;
         clearTimeout(timer);this.waiter=null;resolve(line);}
@@ -539,8 +542,10 @@ async function runArm(binary,rc,budget){
       if(runs===9999)throw Error('native resume call bound exceeded');
     }
     assert(idleWitness&&terminalWitness,'zero-tick HLT boundaries missing');
-    const exit=await Promise.race([closed,new Promise((_,reject)=>
-      setTimeout(()=>reject(Error('native child exit timed out')),10000))]);
+    let exitTimer;
+    const exit=await Promise.race([closed,new Promise((_,reject)=>{
+      exitTimer=setTimeout(()=>reject(Error('native child exit timed out')),10000);
+    })]).finally(()=>clearTimeout(exitTimer));
     assert(exit.code===0&&exit.signal===null,'normal native child did not exit zero');
     const raw={stdout:stdout.text,stderr:stderr.text,
       rpcToNative:toNative.join('\n')+'\n',rpcFromNative:fromNative.join('\n')+'\n'};
