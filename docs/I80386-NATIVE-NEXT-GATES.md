@@ -44,6 +44,11 @@ Suggested split: one agent owns the typed map/A20 API and native adapter; one ow
 The [PIT/PIC timer-wake audit](I80386-NATIVE-DEVICE-NEXT-GATE.md)
 defines the next implementation slice and its separate clock domains.
 
+The [successful-work clock contract](I80386-NATIVE-DEVICE-QUANTA-NEXT-GATE.md)
+defines the next bounded slice: an actual timer edge during REP, recovered REP
+and ordinary page faults, and separate functional-work/native-tick accounting.
+It is a design record; no execution or speed result is claimed for that slice.
+
 Board PIO settles chip debt before relevant accesses; `_serviceInterrupts` arbitrates actual PIC/APIC events. During HLT, the JavaScript machine settles debt and advances chips to `_wakeHorizon` while completing no CPU instruction. Native idle returns charge zero instruction ticks. A host scheduler must advance device time separately and demonstrate timer/device wakeup; it must not equate these clock domains. The earlier native event fixture controls a line/vector directly. The separate [PIT/PIC device proof](I80386-NATIVE-DEVICE-SELF-PARITY.md) now uses the actual I8254/I8259 models for ordinary-instruction timer wake, with fresh post-BIOS ownership and explicit clock domains. REP/fault successful quanta and timer transitions during active CPU work remain next.
 
 Strict CPU3 has no CR4/PSE. Stock xv6's current bootstrap therefore remains outside this strict route, even though the existing JavaScript compatibility profile runs it. A strict 386 target needs a 4 KiB bootstrap port, or a separately identified later-ISA compatibility core; do not silently relax strict386 semantics.
