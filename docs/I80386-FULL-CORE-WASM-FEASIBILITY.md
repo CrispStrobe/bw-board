@@ -16,10 +16,13 @@ matches the stated JavaScript fields and RAM words. These remain bounded
 results, not a full CPU-state or complete physical-bus oracle. The pinned
 [`cpu.cc`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/cpu.cc)
 uses Bochs memory and PC-system services, event ticks, and exception control
-flow; its CPU source is not a standalone board-neutral module. The current
-board directly constructs the JavaScript CPU with physical memory and port
-callbacks in `src/experimental/i80386-at-machine.js`. A WASM adapter would
-need a bounded instruction entry point and matching fetch, read, write, port,
+flow; its CPU source is not a standalone board-neutral module. A separate
+[`native CPU ABI and yield audit`](I80386-NATIVE-CPU-ABI-YIELD-AUDIT.md)
+identifies a bounded continuous-versus-sliced native gate across REP, a
+recoverable page fault, and port I/O; this remains a proposed experiment.
+The current board directly constructs the JavaScript CPU with physical memory
+and port callbacks in `src/experimental/i80386-at-machine.js`. A WASM adapter
+would need a bounded instruction entry point and matching fetch, read, write, port,
 reset, interrupt, NMI, halt, exception, A20, and device-event boundaries.
 Visible and hidden segment state, control and task registers, flags, CPU
 cycles, page translation effects, and ordered I/O must be exposed for
