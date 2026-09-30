@@ -27,6 +27,8 @@ test('rejects a page walk that bypasses A20 or borrows a data access',()=>{
   assertMemoryMapByte(byte({raw:0x111014,effective:0x11014,
     why:'pte-read'}),false);
   assertMemoryMapByte(byte({raw:0x180000,effective:0x80000}),false);
+  assert.throws(()=>assertMemoryMapByte(byte({raw:0x100080000,effective:0x80000}),false),
+    /effective mapped domain/);
   assert.throws(()=>assertMemoryMapByte(byte({raw:0x200000,effective:0x200000}),false),
     /effective mapped domain/);
 });

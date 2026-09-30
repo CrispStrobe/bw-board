@@ -136,7 +136,7 @@ export function assertMemoryMapByte(event,a20){
   fields(event,['rw','raw','effective','class','value','effect','why'],'MEM');
   if(!['R','W'].includes(event.rw))fail('MEM','read/write direction changed');
   uint(event.raw,'MEM.raw');uint(event.effective,'MEM.effective');
-  if(event.effective>=0x180000||
+  if(event.raw>0xffffffff||event.effective>=0x180000||
       event.effective!==((a20?event.raw:(event.raw&~0x100000))>>>0))
     fail('MEM','A20 raw/effective address or effective mapped domain differs');
   const kind=mapClass(event.effective);
