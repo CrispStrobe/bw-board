@@ -1,0 +1,62 @@
+{
+  "schema": "bw.bochs-cpu3-native-memory-map-self-parity.v1",
+  "status": "native-memory-map-self-parity",
+  "sourceRevision": "753a5e0aa184f2c87b4041068fa8e700cafcf7db",
+  "activation": {
+    "cs": 0,
+    "eip": 32256,
+    "copiedBytes": 1179648,
+    "inheritedA20": true,
+    "hostBackingBytes": 1572864,
+    "decodedRamPages": 288,
+    "seedDomain": "decoded-ram-physical-pages:0-159,256-383;packed-in-page-order",
+    "mapId": "ram00000-9ffff,mmio-a0000,rom-f0000-fffff,ram-100000-17ffff,openbus-rest",
+    "romId": {
+      "sha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+      "bytes": 65536
+    },
+    "handoff": {
+      "inheritedPending": 0,
+      "inheritedMask": 3904,
+      "inheritedIF": 0,
+      "ownedPending": 0
+    },
+    "a20Handoff": {
+      "enabled": true,
+      "latch": 2,
+      "source": "8042-low"
+    },
+    "tlbFlushed": true,
+    "prefetchInvalidated": true,
+    "icacheFlushed": true,
+    "decodedRamSeedSha256": "45e7890eb0e0e768618fee234ce3ca48feba011e3ce7fbdef66d970b4ecd2825",
+    "cpuSeedSha256": "61cb9e1fce52fda00241b80d70e6cf88f69c83559bc6521f7e4f39bae43904d7"
+  },
+  "nativeTicks": 1927,
+  "completed": 904,
+  "repIterations": 1024,
+  "portCommits": 12,
+  "evidence": {
+    "a20Transitions": 5,
+    "romByte": 234,
+    "pageWalkRaw": [
+      1114112,
+      1118228
+    ],
+    "pageWalkEffective": [
+      65536,
+      69652
+    ]
+  },
+  "slices": {
+    "continuous": 12,
+    "budget1": 1927,
+    "budget2": 965,
+    "budget257": 19
+  },
+  "limitations": [
+    "one freely authored CPU3 memory-map fixture and decoded RAM seed only",
+    "ROM and MMIO are fixture-specific; no AT device, IRQ-time, DMA or full reset equivalence",
+    "no JavaScript board parity, WASM build, physical-cycle equivalence or speed measurement"
+  ]
+}

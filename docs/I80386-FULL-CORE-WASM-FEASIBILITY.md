@@ -31,6 +31,10 @@ MMIO, real device IRQ arbitration, and board integration remain open.
 The [combined paging/host-event gate](I80386-NATIVE-PAGED-EVENT-SELF-PARITY.md)
 now reproduces a pending host IRQ through a recoverable page fault and guest
 repair/retry across all four budgets. This remains a native fixture result.
+The [typed-memory/A20 gate](I80386-NATIVE-MEMORY-MAP-SELF-PARITY.md)
+also passed and was independently reproduced, with actual aliased legacy
+page-walk callbacks and a source-pinned ROM provider. The synthetic map does
+not qualify real VGA/AT devices; [PIT/PIC scheduling](I80386-NATIVE-DEVICE-NEXT-GATE.md) is next.
 
 The current board directly constructs the JavaScript CPU with physical memory
 and port callbacks in `src/experimental/i80386-at-machine.js`. A WASM adapter

@@ -505,6 +505,13 @@ arms match 6,388 ordered recorded events; independent reproduction and all
 seven fallback guards passed. Mapped memory/A20, board devices, WebAssembly,
 and the 10× speed objective remain unfinished.
 
+The [native typed-memory/A20 gate](docs/I80386-NATIVE-MEMORY-MAP-SELF-PARITY.md)
+now matches all four budgets through ROM write protection, synthetic MMIO,
+open-bus accesses, and aliased page-table reads/A-D writes. Its 7,259 recorded
+events and eleven abort guards were independently reproduced. The next
+[device gate](docs/I80386-NATIVE-DEVICE-NEXT-GATE.md) is PIT/PIC timer wake;
+real AT devices, a shipped WASM backend and speed measurements remain open.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our

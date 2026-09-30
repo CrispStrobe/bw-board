@@ -23,6 +23,10 @@ The [combined paging and host-event gate](I80386-NATIVE-PAGED-EVENT-SELF-PARITY.
 also passed: the original fault cut and pending host line coexist through
 guest page-table repair/retry, STI-shadow delivery, and HLT wakeup.
 
+The [typed-memory/A20 gate](I80386-NATIVE-MEMORY-MAP-SELF-PARITY.md)
+now also qualifies the bounded host map, source-pinned ROM and raw page-walk
+gating. Actual device clock arbitration remains a later gate.
+
 ## What the source currently exposes
 
 The CPU class declares [`cpu_loop()` and an SMP-only `cpu_run_trace()`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/cpu.h#L4295-L4304).

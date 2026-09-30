@@ -1,12 +1,12 @@
 # Next native 386 gates after host-event self-parity
 
-**Status (2026-09-30): read-only implementation audit, not a new execution result.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following gate design records are in order; gate 1 has since completed, and gate 2 is the next unfinished item. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
+**Status (2026-09-30): read-only implementation audit, not a new execution result.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following gate design records are in order; gates 1 and 2 have now passed their bounded proofs. Actual device integration in gate 3 is next. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
 
 ## 1. Combine paging, fault retry, and a pending IRQ
 
 **Completed bounded gate:** the [combined native proof](I80386-NATIVE-PAGED-EVENT-SELF-PARITY.md)
 now passes and has been independently reproduced. The following design record
-remains useful; gate 2 is the next unfinished item.
+remains useful; gates 1 and 2 have now passed their bounded proofs. Actual device integration in gate 3 is next.
 
 Start from the free event fixture: keep the tick-256 deadline inside REP, consume it, and assert IRQ under CLI. After REP, install identity 4 KiB paging, the page-fault gate at IDT entry 14, and IRQ gate 0x20. Leave page 5 nonpresent and execute a supervisor write to `0x5000` before STI. Reuse the owned page-fault handler's PTE repair, CR3 reload, error-dword removal, and IRETD retry. Enable interrupts only after the retried store succeeds, then retain the STI successor, second IRQ/HLT wake, and terminal masked HLT.
 
@@ -17,6 +17,10 @@ Capture the four-dword `#PF` frame at its delivery cut (`0x6ff0` error, `0x6ff4`
 Suggested two-agent split: one owns the separate runtime driver/ABI/preparer; one owns the free fixture, runner/parser, validator, and mutation tests. Root audits source/budget/interrupt ordering, reproduces independently, then publishes exact receipts. This gate still uses plain 1 MiB RAM; it is not MMIO, AT device arbitration, or board parity.
 
 ## 2. Qualify decoded host memory and A20
+
+**Completed bounded gate:** the [typed-memory/A20 proof](I80386-NATIVE-MEMORY-MAP-SELF-PARITY.md)
+now passes and has been independently reproduced, including the raw page-walk
+alias probe. The remaining scope is actual board memory/device integration.
 
 The current native runtime copies raw `BX_MEM::get_vector` pages into one writable RAM domain. This is not an authority for mapped ROM or MMIO. The actual board classifies RAM, ROM, slow device regions, and unmapped pages in [`_buildPageTable`, `_read`, and `_write`](../src/i8086-machine.js). Its [`_read386`/`_write386`](../src/experimental/i80386-at-machine.js) additionally route A20, reset aliases, MP/APIC, and VGA. A board adapter needs that decode, including byte order across region/device boundaries, before granting direct executable-page pointers.
 
@@ -36,6 +40,9 @@ The actual AT gate is the OR of the 8042 output and port-92 latch (`_out386`), s
 Suggested split: one agent owns the typed map/A20 API and native adapter; one owns the free fixture and independent validator. Freeze map/ROM/source/binary identities and compare continuous/sliced journals before attempting a selected-state comparison with the real JavaScript board. This gate does not yet prove real VGA, ATA, PIC, DMA, or IRQ/device scheduling.
 
 ## 3. Attach devices, then build and measure the backend
+
+The [PIT/PIC timer-wake audit](I80386-NATIVE-DEVICE-NEXT-GATE.md)
+defines the next implementation slice and its separate clock domains.
 
 Board PIO settles chip debt before relevant accesses; `_serviceInterrupts` arbitrates actual PIC/APIC events. During HLT, the JavaScript machine settles debt and advances chips to `_wakeHorizon` while completing no CPU instruction. Native idle returns charge zero instruction ticks. A host scheduler must advance device time separately and demonstrate timer/device wakeup; it must not equate these clock domains. The native event fixture currently controls a line/vector directly, not an AT PIC model.
 
