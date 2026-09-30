@@ -77,6 +77,11 @@ reload. Reset CR0 clears PE, MP, EM, TS, and PG. Its ET value is selected by
 the explicit `none`, `80287`, or `80387` reset profile; original-386 undefined
 CR0 bits are deterministically zero rather than assigned later-processor cache
 semantics. EDX reports device ID 3 and a caller-selected byte-sized stepping.
+An opt-in [strict 80386 feature profile](I80386-STRICT-PROFILE.md) refuses
+CR4/PSE and BSWAP and explicitly limits unmodeled debug controls. It retains
+the coprocessor-selected, writable ET bit and does not treat reserved CR0 bit
+16 as later supervisor write protection. The default AT/xv6 compatibility
+path is unchanged.
 The current profile also implements 16- and 32-bit register aliases, independent
 operand- and address-size prefixes, 16-bit ModR/M and 32-bit ModR/M plus SIB
 addressing, bounded arithmetic and moves, near branches/calls, and 16/32-bit

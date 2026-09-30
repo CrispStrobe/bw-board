@@ -41,6 +41,11 @@ function maskFor(width) {
 
 export class ExperimentalI80386 {
   constructor(bus = {}, options = {}) {
+    this.cpuProfile = options.cpuProfile ?? "compatibility";
+    if (this.cpuProfile !== "compatibility" && this.cpuProfile !== "strict386")
+      throw new TypeError("cpuProfile must be compatibility or strict386");
+    this._strict386 = this.cpuProfile === "strict386";
+    if (this._strict386) this._translate = this._translateStrict386;
     this.read = bus.read ?? (() => 0);
     this.read32 = bus.read32 ?? null;
     this.fetch = bus.fetch ?? this.read;
@@ -385,6 +390,11 @@ export class ExperimentalI80386 {
       (protection ? 1 : 0) | (write ? 2 : 0) | (user ? 4 : 0),
       protection ? "page protection fault" : "page not present",
     );
+  }
+  _translateStrict386(linear, options) {
+    if (this.cr4 !== 0)
+      throw new UnsupportedI80386("CR4/PSE state is outside strict 80386");
+    return ExperimentalI80386.prototype._translate.call(this, linear, options);
   }
   _translate(linear, options) {
     linear >>>= 0;
@@ -3315,6 +3325,8 @@ export class ExperimentalI80386 {
       return;
     }
     if (op >= 0xc8 && op <= 0xcf) {
+      if (this._strict386)
+        throw new I80386Fault(6, null, "BSWAP requires a later CPU");
       // BSWAP r32 (486+). A pure byte-reversal of a 32-bit register: no flags,
       // no memory, no mode dependence. The covered IBM-BIOS/FreeDOS/Doom/Win3.0
       // workloads never emit it (it threw at the bounded guard), so accepting it
@@ -3591,7 +3603,9 @@ export class ExperimentalI80386 {
       const debug = (m >>> 3) & 7,
         register = m & 7;
       if (debug === 4 || debug === 5)
-        throw new I80386Fault(6, null, "reserved 80386 debug register");
+        throw this._strict386
+          ? new UnsupportedI80386("reserved 80386 debug-register behavior")
+          : new I80386Fault(6, null, "reserved 80386 debug register");
       if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "MOV DR requires CPL0");
       if (op === 0x21) this._setReg(register, 32, this._debugRegisters[debug]);
@@ -3599,6 +3613,8 @@ export class ExperimentalI80386 {
         const value = this._reg(register, 32);
         if (debug === 7 && (value & 0xff))
           throw new UnsupportedI80386("enabled 80386 hardware breakpoints");
+        if (this._strict386 && debug === 7 && (value & 0x2000))
+          throw new UnsupportedI80386("DR7.GD debug-register trap is not modeled");
         const next = this._debugRegisters.slice();
         next[debug] = value;
         this._debugRegisters = next;
@@ -3613,6 +3629,8 @@ export class ExperimentalI80386 {
         register = m & 7;
       if (![0, 2, 3, 4].includes(control))
         throw new I80386Fault(6, null, "invalid control register");
+      if (this._strict386 && control === 4)
+        throw new I80386Fault(6, null, "CR4 is not an 80386 register");
       if (this.protectedMode && this.currentPrivilegeLevel !== 0)
         throw new I80386Fault(13, 0, "MOV CR requires CPL0");
       if (op === 0x20) this._setReg(register, 32, this[`cr${control}`]);
