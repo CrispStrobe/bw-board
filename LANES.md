@@ -1,4 +1,4 @@
-2026-09-30 Meter waveform integration — DONE candidate, Codex bwcx `/root`.
+2026-09-30 Meter waveform integration — DONE, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-audit-20260930`, branch
 `lane/meter-waveform-integration-20260930`, exact base
 `f10f96fd9e18f6cd85e5d7042ee3c4a916c728dd`. Five-path envelope: this row,
@@ -34,10 +34,14 @@ Forward final boundary repair retires expired samples before capacity checks;
 strictly ordered capacity fixtures distinguish genuine overflow from a full
 rolling window with space available after retirement. Removing retirement
 reds the boundary test, and restored source hash is `16f0228619aa69c7e8790f782929f31daf424216`.
-The earlier `b66a6835` CI/Harris/xv6 receipts were green but do not qualify this
-source-changing successor. Candidate includes remote `1c1d81bc` ancestry and
-must pass one fresh exact-head hosted
-qualification before guarded landing; no downstream adoption claim yet.
+The earlier `b66a6835` CI/Harris/xv6 receipts were superseded. Final source
+candidate `6af9ed90191d2eefc48d55c3158a84878f955d6a` passed exact CI
+`36777084674` (7,150 total / 6,866 pass / 0 fail / 284 environment skips;
+both new live meter oracles ran) and Harris `36777084785`. The successor
+incorporates remote `3ee9f830`'s disjoint README-only update and this ledger
+closeout; executable/source/test/provenance bytes are unchanged from the
+qualified candidate. Guarded normal FF only, no repeated qualification for
+identical code and no downstream adoption/deployment claim yet.
 
 2026-09-29 RISC-V program-mode reset returns to the image entry — DONE candidate, Claude (Lite task C5, first item).
 Worktree `/mnt/volume1/code/wt/c5-followups-board`, branch `lane/c5-riscv-reset`, base master
