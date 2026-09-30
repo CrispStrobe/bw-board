@@ -1,12 +1,12 @@
 # Next native 386 gates after host-event self-parity
 
-**Status (2026-09-30): read-only implementation audit, not a new execution result.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following gate design records are in order; gates 1 and 2 have now passed their bounded proofs. Actual device integration in gate 3 is next. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
+**Status (2026-09-30): read-only implementation audit, not a new execution result.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following gate design records are in order; gates 1 and 2 have now passed their bounded proofs. The first PIT/PIC slice of gate 3 now passes; broader device/clock integration remains next. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
 
 ## 1. Combine paging, fault retry, and a pending IRQ
 
 **Completed bounded gate:** the [combined native proof](I80386-NATIVE-PAGED-EVENT-SELF-PARITY.md)
 now passes and has been independently reproduced. The following design record
-remains useful; gates 1 and 2 have now passed their bounded proofs. Actual device integration in gate 3 is next.
+remains useful; gates 1 and 2 have now passed their bounded proofs. The first PIT/PIC slice of gate 3 now passes; broader device/clock integration remains next.
 
 Start from the free event fixture: keep the tick-256 deadline inside REP, consume it, and assert IRQ under CLI. After REP, install identity 4 KiB paging, the page-fault gate at IDT entry 14, and IRQ gate 0x20. Leave page 5 nonpresent and execute a supervisor write to `0x5000` before STI. Reuse the owned page-fault handler's PTE repair, CR3 reload, error-dword removal, and IRETD retry. Enable interrupts only after the retried store succeeds, then retain the STI successor, second IRQ/HLT wake, and terminal masked HLT.
 
@@ -44,7 +44,7 @@ Suggested split: one agent owns the typed map/A20 API and native adapter; one ow
 The [PIT/PIC timer-wake audit](I80386-NATIVE-DEVICE-NEXT-GATE.md)
 defines the next implementation slice and its separate clock domains.
 
-Board PIO settles chip debt before relevant accesses; `_serviceInterrupts` arbitrates actual PIC/APIC events. During HLT, the JavaScript machine settles debt and advances chips to `_wakeHorizon` while completing no CPU instruction. Native idle returns charge zero instruction ticks. A host scheduler must advance device time separately and demonstrate timer/device wakeup; it must not equate these clock domains. The native event fixture currently controls a line/vector directly, not an AT PIC model.
+Board PIO settles chip debt before relevant accesses; `_serviceInterrupts` arbitrates actual PIC/APIC events. During HLT, the JavaScript machine settles debt and advances chips to `_wakeHorizon` while completing no CPU instruction. Native idle returns charge zero instruction ticks. A host scheduler must advance device time separately and demonstrate timer/device wakeup; it must not equate these clock domains. The earlier native event fixture controls a line/vector directly. The separate [PIT/PIC device proof](I80386-NATIVE-DEVICE-SELF-PARITY.md) now uses the actual I8254/I8259 models for ordinary-instruction timer wake, with fresh post-BIOS ownership and explicit clock domains. REP/fault successful quanta and timer transitions during active CPU work remain next.
 
 Strict CPU3 has no CR4/PSE. Stock xv6's current bootstrap therefore remains outside this strict route, even though the existing JavaScript compatibility profile runs it. A strict 386 target needs a 4 KiB bootstrap port, or a separately identified later-ISA compatibility core; do not silently relax strict386 semantics.
 

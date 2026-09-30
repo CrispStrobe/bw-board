@@ -92,3 +92,11 @@ adds direct native callback bytes and three RAM words; its
 now matches the selected fields. TSS RAM and a complete physical bus remain
 unproved. It is a prerequisite result, not the full differential
 gate described above.
+
+The separate [native PIT/PIC device proof](I80386-NATIVE-DEVICE-SELF-PARITY.md)
+now qualifies guest-programmed PIT0 timer wake through the existing JS PIC
+model, protected IRQ entry, EOI and IRETD across four budgets. Nine ABI,
+eleven native and seven malformed transport probes passed; root independently
+reproduced the result. This ordinary-instruction test transport is not a
+WASM backend or speed result. REP/fault successful-quanta clock accounting
+and broader AT integration remain next.

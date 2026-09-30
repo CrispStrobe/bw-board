@@ -1,6 +1,6 @@
 # Next native device gate: PIT/PIC timer wake
 
-**Status: source audit and implementation contract, not a new execution result.** After the owned typed-memory/A20 gate, the smallest device slice is one guest-programmed PIT channel 0 wired to master PIC IRQ0. This precedes full AT devices and the native/WASM board integration.
+**Original status: source audit and implementation contract.** The [subsequent bounded PIT/PIC proof](I80386-NATIVE-DEVICE-SELF-PARITY.md) now passes and has been independently reproduced. This design record remains the clock/ownership contract; broader AT/WASM integration and REP/fault quanta remain unfinished. After the owned typed-memory/A20 gate, the smallest device slice is one guest-programmed PIT channel 0 wired to master PIC IRQ0. This precedes full AT devices and the native/WASM board integration.
 
 The guest should initialize a master 8259 at ports `0x20`/`0x21`, program one 8254 counter at `0x40`/`0x43`, install a protected interrupt gate, execute STI and its successor, then HLT. Host device time advances to the timer edge while native CPU ticks stay fixed. The PIC owns IRR/ISR/INT and supplies the actual vector only when Bochs accepts INTA. The handler sends EOI and returns with IRETD before a distinct fixture marker.
 

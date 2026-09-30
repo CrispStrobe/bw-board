@@ -127,3 +127,11 @@ complete bus events. It would not prove a WebAssembly build or any speed gain.
 board comparison needs explicit chip/IRQ/fault-cut and invalidation tests,
 then a separate WASM build and measurement. Strict CPU3 also remains unable
 to run the unmodified stock xv6 CR4/PSE bootstrap.
+
+The separate [native PIT/PIC device proof](I80386-NATIVE-DEVICE-SELF-PARITY.md)
+now qualifies guest-programmed PIT0 timer wake through the existing JS PIC
+model, protected IRQ entry, EOI and IRETD across four budgets. Nine ABI,
+eleven native and seven malformed transport probes passed; root independently
+reproduced the result. This ordinary-instruction test transport is not a
+WASM backend or speed result. REP/fault successful-quanta clock accounting
+and broader AT integration remain next.
