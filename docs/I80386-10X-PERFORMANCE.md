@@ -78,7 +78,11 @@ is currently a source audit, not a backend or performance result. Its next
 necessary proof is a pinned native full-CPU checkpoint plus ordered bus-event
 oracle on an owned strict-386 fixture. Stock xv6 uses later CR4.PSE/4 MiB
 paging and would need a separately labeled later CPU mode; its current board
-result cannot qualify a strict 386 backend. The sections below are a dated experiment ledger;
+result cannot qualify a strict 386 backend. The new
+[aligned native/JavaScript paging comparison](I80386-BOCHS-CPU3-PAGING-IDTR-ALIGNED-COMPARISON.md)
+now matches selected integer/system fields and three RAM words using an
+explicit guest IDTR load. It adds no backend or speed result; broader fault,
+task-memory and bus-boundary proofs remain unfinished. The sections below are a dated experiment ledger;
 their historical “next” recommendations describe their source revisions.
 
 ## Measured checkpoint (2026-09-28)
