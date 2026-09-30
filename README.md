@@ -207,9 +207,11 @@ table above. The [pre-optimization hosted motion run](https://github.com/CrispSt
 failed real time (0.326908× median); the optimized shared VPS also remained
 below the target (0.312439× median / 0.288592× minimum). Its process used about
 81% CPU over the complete invocation, including setup—not a measurement of
-CPU availability during the timed windows; see the [native qualification notes](https://github.com/CrispStrobe/labwired-core/blob/3c83104330be943d8a2f22e6012d1ae9daba2b05/docs/engineering/microbit-lsm303agr.md).
+CPU availability during the timed windows; see the [native qualification notes](https://github.com/CrispStrobe/labwired-core/blob/ce60a49941f9fa94d83aca6859bc27ae1c5b9e0b/docs/engineering/microbit-lsm303agr.md).
 The passing hosted [run 36687935898](https://github.com/CrispStrobe/labwired-core/actions/runs/36687935898)
 tested merge ref `199af713`, with runtime optimization source `e32b4a35`;
+the native slice landed in [LabWired PR #129](https://github.com/CrispStrobe/labwired-core/pull/129)
+at main commit `ce60a499`.
 [the retained receipt](docs/receipts/2026-09-30-labwired-microbit-native-motion.json)
 binds its source, guest hash and complete samples. It does **not** qualify this
 repository's browser-WASM artifact or update its `a7c7cbdf` engine pin.

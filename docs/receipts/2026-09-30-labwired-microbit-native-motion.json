@@ -8,6 +8,7 @@
     "testedMergeRef": "199af713794f9b2135f931bced3835203882bd76",
     "runtimeSourceCommit": "e32b4a3557da3a1ac5c1391c3eff11ad544e655a",
     "pullRequestHead": "3c83104330be943d8a2f22e6012d1ae9daba2b05",
+    "landedMainCommit": "ce60a49941f9fa94d83aca6859bc27ae1c5b9e0b",
     "scope": "Native Rust event-scheduler only; not bw-board browser-WASM artifact qualification",
     "checkpointStatus": "CP13 remains open: sensor IRQ, ADC/audio and browser qualification are incomplete"
   },
