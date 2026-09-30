@@ -331,8 +331,10 @@ Measured on the pinned consumer: 1x/10x high-impedance RC pulse captures fail
 unchanged microvolt comparison; precision still has isolated 7.58/16.45 uV
 sample errors. Publication rounds a fractional-nanosecond solver instant and
 can flush a sample before its authored time. Preserve the actual solve timestamp
-for sample readiness/interpolation without changing integrator steps, LTE,
-profiles, source functions, envelope/digital or integer-only sampling behavior.
+for sample readiness/interpolation. Early flush also skipped the existing sample
+barrier: the measured precision fixtures restore 4/14 attempts, so work equality
+is not claimed for corrected samples. Preserve integration algorithms, LTE,
+profiles, source functions, envelope/digital and integer-only sampling behavior.
 Prove an early-rounded synthetic point refuses to flush, interpolation between
 two fractional instants, both real probe RC analytical waveforms, local work and
 named defect-restoring mutations. No MNA/solver, devices, emulator, dependency
