@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import test from 'node:test';
 import {gunzipSync} from 'node:zlib';
 import {assertNativePagedEventsArm,assertNativePagedEventsSelfParity} from
@@ -18,6 +19,26 @@ const rejects=(edit,pattern)=>{
   assert.throws(()=>check(arm),pattern);
 };
 const first=(arm,kind)=>arm.journal.find(event=>event.kind===kind);
+
+// The first source-bound four-arm capture is retained as a free mutation input.
+// Only its new fixture inventory entry below is synthetic: the original 99f1
+// capture predates this test file and its own compressed regression input.
+const actualInputPath=new URL(
+  './fixtures/i80386-native-paged-events-qualified-99f1f660.json.gz',import.meta.url);
+const actualInputBytes=readFileSync(actualInputPath);
+const actualInput=JSON.parse(gunzipSync(actualInputBytes).toString());
+assert.equal(actualInput.scope,
+  'initial-99f1-four-arm-actual-capture-mutation-input-not-final-qualification-receipt');
+assert.equal(actualInput.initialCaptureSha256,
+  'e6c3b8c1faf3917932755aef98c1462ab8a2590ffda87518d1d2ce990c627dca');
+const actualReport=structuredClone(actualInput.report);
+actualReport.source.sourceHashes[
+  'test/fixtures/i80386-native-paged-events-qualified-99f1f660.json.gz']=
+  createHash('sha256').update(actualInputBytes).digest('hex');
+const rejectsReport=(edit,pattern)=>{
+  const report=structuredClone(actualReport);edit(report);
+  assert.throws(()=>assertNativePagedEventsSelfParity(report),pattern);
+};
 
 test('accepts the owned combined exploratory arm as a mutation input',()=>{
   const result=check(smoke.arm);
@@ -117,4 +138,39 @@ test('exact fail-closed probe requires SIGABRT and its named guard',()=>{
 
 test('full proof refuses missing source and activation evidence',()=>{
   assert.throws(()=>assertNativePagedEventsSelfParity({}),/missing schema/);
+});
+
+test('accepts the initial actual four-arm report as a mutation input',()=>{
+  const result=assertNativePagedEventsSelfParity(actualReport);
+  assert.equal(result.nativeTicks,4004);
+  assert.equal(result.faults,1);
+  assert.equal(result.irqDeliveries,2);
+  assert.equal(result.haltIdleCuts,5);
+  assert.deepEqual(result.slices,{continuous:16,budget1:4011,budget2:2008,budget257:30});
+});
+
+test('full report rejects missing or substituted source and media pins',()=>{
+  rejectsReport(report=>{delete report.source.sourceHashes[
+    'scripts/bochs-cpu3-native-paged-events/runtime.inc'];},/sourceHashes inventory/);
+  rejectsReport(report=>{report.source.bochsRevision='0'.repeat(40);},/pinned Bochs/);
+  rejectsReport(report=>{report.source.imageSha256='0'.repeat(64);},/pinned Bochs/);
+});
+
+test('full report rejects unequal arm seeds and missing API or guard evidence',()=>{
+  rejectsReport(report=>{report.armSeeds.budget1.ramSha256='0'.repeat(64);},
+    /armSeeds.budget1/);
+  rejectsReport(report=>{delete report.apiProbes['due-now'];},/apiProbes keys/);
+  rejectsReport(report=>{report.apiProbes['callback-reentry']='accepted';},
+    /callback-reentry/);
+  rejectsReport(report=>{delete report.probes.bochsTimer;},/probes keys/);
+  rejectsReport(report=>{report.probes.bochsTimer.observedFailure='host-port-out';},
+    /probes.bochsTimer/);
+});
+
+test('full report rejects missing arms and cross-arm final or journal drift',()=>{
+  rejectsReport(report=>{delete report.arms.budget2;},/arms keys/);
+  rejectsReport(report=>{report.arms.budget1.final.selectedState.edx++;},
+    /budget1.final/);
+  rejectsReport(report=>{report.arms.budget257.journal.find(e=>
+    e.kind==='port').value++;},/marker changed/);
 });

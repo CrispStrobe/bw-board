@@ -28,6 +28,7 @@ const requiredSources=['scripts/bochs-cpu3-native-slice/patch.mjs',
   'scripts/run-bochs-cpu3-native-paged-events-compare.mjs',
   'test/i80386-native-paged-events.test.mjs',
   'test/fixtures/i80386-native-paged-events-smoke-arm.json.gz',
+  'test/fixtures/i80386-native-paged-events-qualified-99f1f660.json.gz',
   'test/fixtures/i80386-bochs-cpu3-native-paged-events.S',
   'docs/receipts/2026-09-30-i80386-bochs-cpu3-native-slice-capture.json'];
 const requiredPatches=['bochs/bochs.h','bochs/cpu/cpu.cc','bochs/cpu/event.cc',

@@ -23,7 +23,8 @@ const sourcePaths=[
   'scripts/bochs-cpu3-native-paged-events-compare.mjs',
   'scripts/run-bochs-cpu3-native-paged-events-compare.mjs',
   'test/i80386-native-paged-events.test.mjs',
-  'test/fixtures/i80386-native-paged-events-smoke-arm.json.gz',fixture,receipt];
+  'test/fixtures/i80386-native-paged-events-smoke-arm.json.gz',
+  'test/fixtures/i80386-native-paged-events-qualified-99f1f660.json.gz',fixture,receipt];
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fileSha=path=>sha(readFileSync(path));
 const git=(cwd,...args)=>execFileSync('git',args,{cwd,encoding:'utf8'}).trim();
