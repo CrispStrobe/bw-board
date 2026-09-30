@@ -32,6 +32,8 @@ const requiredSources=['scripts/bochs-cpu3-native-slice/patch.mjs',
   'scripts/run-bochs-cpu3-native-memory-map-compare.mjs',
   'test/i80386-native-memory-map.test.mjs',
   'test/fixtures/i80386-bochs-cpu3-native-memory-map.S',
+  'roms/free-at-bios/BIOS-bochs-legacy',
+  'roms/free-at-bios/vgabios-lgpl.bin',
   'docs/receipts/2026-09-30-i80386-bochs-cpu3-native-slice-capture.json'];
 const requiredPatches=['bochs/bochs.h','bochs/cpu/cpu.cc','bochs/cpu/event.cc',
   'bochs/cpu/exception.cc','bochs/cpu/paging.cc','bochs/iodev/devices.cc',
@@ -53,13 +55,17 @@ function sourceAndActivation(report){
   const s=report.source;
   fields(s,['boardRevision','sourceHashes','bochsRevision','patchHashes','configSha256',
     'binarySha256','imageSha256','floppySha256','bochsrcSha256','biosSha256',
-    'vgaBiosSha256','mapId','romProbeOffset','romProbeByte'],'source');
+    'vgaBiosSha256','romIncludeSha256','mapId','romProbeOffset','romProbeByte'],'source');
   sha(s.boardRevision,'source.boardRevision',40);
   if(s.bochsRevision!=='0e45b736ef9792eb9b752b0a35db49eaf2faea47'||
       s.imageSha256!=='e4b4a6412357dae0167e16024a3d24776c568430d98cbea50e853b1701ab0f9f')
     fail('source','pinned Bochs or free fixture changed');
+  if(s.biosSha256!=='6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac'||
+      s.vgaBiosSha256!=='76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1')
+    fail('source','pinned free BIOS media changed');
   for(const key of ['configSha256','binarySha256','imageSha256','floppySha256',
-    'bochsrcSha256','biosSha256','vgaBiosSha256'])sha(s[key],'source.'+key);
+    'bochsrcSha256','biosSha256','vgaBiosSha256','romIncludeSha256'])
+    sha(s[key],'source.'+key);
   for(const [key,required] of [['sourceHashes',requiredSources],['patchHashes',requiredPatches]]){
     const inventory=obj(s[key],'source.'+key);
     equal(Object.keys(inventory).sort(),required.slice().sort(),'source.'+key+' inventory');
@@ -70,6 +76,9 @@ function sourceAndActivation(report){
   }
   if(s.mapId!==mapId||s.romProbeOffset!==0xfff0||uint(s.romProbeByte,'source.romProbeByte')>255)
     fail('source','map or ROM probe identity changed');
+  if(s.sourceHashes['roms/free-at-bios/BIOS-bochs-legacy']!==s.biosSha256||
+      s.sourceHashes['roms/free-at-bios/vgabios-lgpl.bin']!==s.vgaBiosSha256)
+    fail('source','ROM inventory and configured media differ');
   const a=report.activation;
   fields(a,['cs','eip','copiedBytes','inheritedA20','mapId','romId','ramSha256',
     'cpuSeedSha256','tlbFlushed','prefetchInvalidated','icacheFlushed'],'activation');
@@ -291,23 +300,43 @@ function sliceProof(name,arm,activation,events){
   for(const [i,s] of slices.entries()){
     const where=`${at}.slices[${i}]`;
     fields(s,['requestedTicks','effectiveTicks','chargedTicks','reason','entry','exit',
-      'before','after','journalEndOrdinal'],where);
+      'before','after','journalEndOrdinal','entryIf','entryActivity',
+      'entryPendingEvent'],where);
     if(s.requestedTicks!==budget||!Number.isSafeInteger(s.effectiveTicks)||
         s.effectiveTicks<1||(budget!==null&&s.effectiveTicks>budget)||
         !Number.isSafeInteger(s.chargedTicks)||s.chargedTicks<0||
         s.chargedTicks>s.effectiveTicks)
       fail(where,'bounded native budget invalid');
     equal(point(s.entry,where+'.entry'),cursor,where+'.entry');
+    if(bool(s.entryIf,where+'.entryIf')||uint(s.entryActivity,where+'.entryActivity')!==0)
+      fail(where,'unowned IF or activity state at resume');
+    uint(s.entryPendingEvent,where+'.entryPendingEvent');
     tally(s.before,where+'.before');tally(s.after,where+'.after');
+    for(const key of ['eventDue','pendingIrq','irqDelivered','ifFlag',
+      'pendingFault','portCommitted'])bool(s.after[key],where+'.after.'+key);
+    for(const key of ['irqVector','activity','pendingEvent'])
+      uint(s.after[key],where+'.after.'+key);
     for(const key of counts)if(s.before[key]!==prior[key]||s.after[key]<s.before[key])
       fail(where,key+' count discontinuity');
     if(s.after.ticks-s.before.ticks!==s.chargedTicks)fail(where,'native tick charge differs');
+    if(s.after.eventDue||s.after.pendingIrq||s.after.irqDelivered||s.after.ifFlag||
+        s.after.pendingFault||s.after.activity!==0||s.after.faults||
+        s.after.irqDeliveries||s.after.haltIdleCuts)
+      fail(where,'unowned event, fault or halt entered memory fixture');
     if(!['budget','port'].includes(s.reason)||
         (s.reason==='budget'&&s.chargedTicks!==s.effectiveTicks)||
         (s.reason==='port'&&!s.after.portCommitted))
       fail(where,'unsupported memory-map yield');
     const next=uint(s.journalEndOrdinal,where+'.journalEndOrdinal');
     if(next<end)fail(where,'journal boundary regressed');
+    const owned=events.filter(e=>e.ordinal>end&&e.ordinal<=next);
+    const output=owned.filter(e=>e.kind==='port'&&e.direction==='out');
+    if(output.length>1||s.after.portCommitted!==(output.length===1)||
+        s.after.portCommits-s.before.portCommits!==output.length)
+      fail(where,'port commit/cut lacks typed host output');
+    if(s.chargedTicks===0&&(!output.length||
+        s.after.attempts!==s.before.attempts||s.after.completed!==s.before.completed))
+      fail(where,'zero-tick cut lacks committed output');
     prior=s.after;cursor=point(s.exit,where+'.exit');end=next;
   }
   for(const key of counts)if(prior[key]!==arm.totals[key])fail(at,key+' total differs');

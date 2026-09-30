@@ -23,12 +23,25 @@ const sourcePaths=[
   'scripts/prepare-bochs-cpu3-native-memory-map.mjs',
   'scripts/bochs-cpu3-native-memory-map-compare.mjs',
   'scripts/run-bochs-cpu3-native-memory-map-compare.mjs',
-  'test/i80386-native-memory-map.test.mjs',fixture,receipt];
+  'test/i80386-native-memory-map.test.mjs',fixture,
+  'roms/free-at-bios/BIOS-bochs-legacy',
+  'roms/free-at-bios/vgabios-lgpl.bin',receipt];
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fileSha=path=>sha(readFileSync(path));
 const git=(cwd,...args)=>execFileSync('git',args,{cwd,encoding:'utf8'}).trim();
 const assert=(condition,message)=>{if(!condition)throw new Error(message);};
 const pinnedReceiptSha='34f87620eb4f12aba403f11ee83ef6cbc360e511e91b2c3fc06c9c1db8d7d7c2';
+function ownedRomInclude(){
+  const rom=readFileSync(resolve(repo,'roms/free-at-bios/BIOS-bochs-legacy'));
+  assert(rom.length===65536,'owned free BIOS ROM length changed');
+  const lines=[];
+  for(let at=0;at<rom.length;at+=16)
+    lines.push('  '+[...rom.subarray(at,at+16)].map(byte=>
+      `0x${byte.toString(16).padStart(2,'0')}`).join(',')+',');
+  return Buffer.from('// Generated from source-pinned roms/free-at-bios/BIOS-bochs-legacy.\n'
+    +`static const unsigned char bw_owned_rom[65536] = {\n${lines.join('\n')}\n};\n`
+    +`static const char *const bw_owned_rom_sha256 = "${sha(rom)}";\n`);
+}
 
 function sourceInventory(){
   assert(endianness()==='LE','native CPU3 callback bytes require a little-endian host');
@@ -71,6 +84,8 @@ function patchedTree(root){
     ['scripts/bochs-cpu3-native-memory-map/runtime.inc','bochs/cpu/bw_slice_runtime.inc']])
     assert(fileSha(resolve(repo,source))===fileSha(resolve(root,target)),
       `copied owned CPU3 bytes differ: ${target}`);
+  assert(sha(ownedRomInclude())===fileSha(resolve(root,'bochs/cpu/bw_owned_rom.inc')),
+    'compiled owned ROM include differs from exact source-pinned bytes');
   const config=resolve(root,'bochs/config.h'),configText=readFileSync(config,'utf8');
   for(const option of ['#define BX_CPU_LEVEL 3','#define BX_DEBUGGER 0',
     '#define BX_SUPPORT_SMP 0','#define BX_SUPPORT_REPEAT_SPEEDUPS 0',
@@ -346,13 +361,15 @@ export function parseArm(stderr,mode,budget){
       slices.push(slice);
       prior=Object.fromEntries(['ticks',...names].map(name=>[name,after[name]]));
     }else if(tag==='PAGEWALK_PROOF'){
-      assert(!pagewalkProof&&p.length===4,`${where}: page-walk counter fields`);
+      assert(!pagewalkProof&&!finalRecord&&p.length===4,
+        `${where}: page-walk counter fields`);
       pagewalkProof={aliasedPdeReads:decimal(p[0],where),
         aliasedPte5Reads:decimal(p[1],where),
         aliasedPdeAdWrites:decimal(p[2],where),
         aliasedPte5AdWrites:decimal(p[3],where)};
     }else if(tag==='FINAL'){
-      assert(!finalRecord&&p.length===23,`${where}: duplicate/malformed final`);
+      assert(pagewalkProof&&!finalRecord&&p.length===23,
+        `${where}: duplicate/malformed final`);
       finalRecord={ticks:decimal(p[0],where),attempts:decimal(p[1],where),
         completed:decimal(p[2],where),portCommits:decimal(p[3],where),
         ramWords:{low500:hexNumber(p[4],where,2),
@@ -460,6 +477,7 @@ function preparedInputs(tree,directory){
     imageSha256:fixtureImage.imageSha256,
     floppySha256:fileSha(floppyPath),bochsrcSha256:fileSha(hostConfig.rc),
     biosSha256:hostConfig.biosSha256,vgaBiosSha256:hostConfig.vgaBiosSha256,
+    romIncludeSha256:sha(ownedRomInclude()),
     mapId,romProbeOffset:0xfff0,romProbeByte:biosBytes[0xfff0]};
   return {source,binary:built.binary,hostConfig,floppyPath};
 }
