@@ -1,4 +1,4 @@
-2026-09-30 Meter waveform integration — CLAIM, Codex bwcx `/root`.
+2026-09-30 Meter waveform integration — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-audit-20260930`, branch
 `lane/meter-waveform-integration-20260930`, exact base
 `f10f96fd9e18f6cd85e5d7042ee3c4a916c728dd`. Five-path envelope: this row,
@@ -20,7 +20,17 @@ than allocating unbounded storage or presenting a partial integral as valid.
 No MNA equations, tolerances, scope/LED history, actuator routes, analytic
 source-constrained-inductor shortcut, device/CPU, workflow, dependency/pin,
 CUI/Lite, private corpus or deployment changes. The analytic inductor shortcut
-remains an explicit separate meter follow-up, not a general accuracy claim.
+remains an explicit separate meter follow-up, not a general accuracy claim;
+its unchanged endpoint solver now gives a named unqualified-mean refusal.
+Restored expanded regressions: 91/91, zero skips, including both live ngspice
+integral comparisons, RC signed-current/charge checks, PWM, scope sampling,
+profile limits and unwatched one-solve efficiency. Five isolated production
+mutants red by named consequences: endpoint-only routing, outer-clock history,
+stale branch-current cache, missing discrete left limit, and overwritten
+same-time edge. An initially surviving same-time mutant prompted a new real
+source-control regression; it now reds, with all mutations restored.
+Candidate must include current remote ancestry and one exact-head hosted
+qualification before guarded landing; no downstream adoption claim yet.
 
 2026-09-29 RISC-V program-mode reset returns to the image entry — DONE candidate, Claude (Lite task C5, first item).
 Worktree `/mnt/volume1/code/wt/c5-followups-board`, branch `lane/c5-riscv-reset`, base master

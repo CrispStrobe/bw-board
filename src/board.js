@@ -265,7 +265,8 @@ export class BoardImpl {
 
     /**
      * What the meters are watching: key → {kind, a, b, part, terminal,
-     * hist: [{tNs, v}], readNs}. Only watched quantities are recorded, and
+     * hist: [{tSec, before, v}], readNs}. `before`/`v` retain both sides of
+     * discrete edges; accepted continuous solves use the same value for both.
      * a watch is created by its first meterVoltage/meterCurrent read.
      * @type {Map<string, object>}
      */
@@ -1558,7 +1559,9 @@ export class BoardImpl {
    *
    * The first read of a pair starts watching it and returns the instantaneous
    * value (there is no history yet); later reads average what the board
-   * recorded at every solve since, over at most the window. A watch that is
+   * recorded at accepted solve instants since, over at most the window.
+   * Continuous segments use linear quadrature; discrete edges remain steps.
+   * This is a DC mean, not a true-RMS or bandwidth/noise model. A watch that is
    * not read for 2 s of sim time is dropped.
    *
    * @param {string} netA
@@ -1582,62 +1585,92 @@ export class BoardImpl {
   }
 
   /** @private */
-  _meterValue(w) {
+  _meterValue(w, solution = null) {
     if (w.kind === 'v') {
       const at = (net) => {
         if (net == null || net === '') return 0;
-        const ov = this._digitalOverlay.get(net);
-        const v = ov !== undefined ? ov : (this.nodeVoltages.get(net) ?? 0);
+        const ov = solution ? undefined : this._digitalOverlay.get(net);
+        const v = ov !== undefined ? ov : ((solution?.nodeVoltages ?? this.nodeVoltages).get(net) ?? 0);
         return Number.isFinite(v) ? v : 0;
       };
       return at(w.a) - at(w.b);
     }
     if (!this.powered) return 0;
-    if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
-    const i = this._mnaCache.branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
+    if (!solution && !this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const i = (solution ?? this._mnaCache).branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
   }
 
   /** @private */
   _meterRead(key, spec) {
     this._flushSolve();
+    if (this._transientAccuracyUnmet) {
+      throw new Error(`meter mean refused: ${this._transientAccuracyUnmet.code}`);
+    }
     let w = this._meterWatches.get(key);
     if (!w) {
       w = { ...spec, hist: [], readNs: this.timeNs };
       this._meterWatches.set(key, w);
-      w.hist.push({ tNs: this.timeNs, v: this._meterValue(w) });
+      const v = this._meterValue(w);
+      w.hist.push({ tSec: Number(this.timeNs)/1e9, before:v, v });
       return w.hist[0].v;
     }
     w.readNs = this.timeNs;
-    const now = this.timeNs;
+    const now = Number(this.timeNs)/1e9;
     const h = w.hist;
-    const windowStart = now > METER_WINDOW_NS ? now - METER_WINDOW_NS : 0n;
-    const from = h[0].tNs > windowStart ? h[0].tNs : windowStart;
-    if (now <= from) return h[h.length - 1].v;
-    // Step function: each sample holds from its instant to the next one's.
-    let sum = 0;
-    for (let k = 0; k < h.length; k++) {
-      const t0 = h[k].tNs > from ? h[k].tNs : from;
-      const t1 = k + 1 < h.length ? h[k + 1].tNs : now;
-      if (t1 > t0) sum += h[k].v * Number(t1 - t0);
+    // This separately qualified analytic endpoint shortcut publishes no
+    // intermediate integral. Keep its fast solver intact, but do not call
+    // held endpoint history an independently observed meter mean.
+    if (now>h[0].tSec && this._transientIntegrationMode()==='source-constrained-inductor-direct') {
+      w.failure='source-constrained-inductor-meter-integral-unqualified';
     }
-    return sum / Number(now - from);
+    if (w.failure) throw new Error(`meter mean refused: ${w.failure}`);
+    const windowStart = Number(this.timeNs>METER_WINDOW_NS
+      ? this.timeNs-METER_WINDOW_NS : 0n)/1e9;
+    const from = Math.max(h[0].tSec,windowStart);
+    if (now <= from) return h[h.length - 1].v;
+    // Clip each linear segment to the actual window; same-time edge updates
+    // replace only the right-hand value, preserving the preceding integral.
+    let sum = 0;
+    let constant, flat=true;
+    for (let k = 0; k < h.length; k++) {
+      const a=h[k], b=h[k+1], end=b?.tSec ?? now;
+      const t0=Math.max(a.tSec,from), t1=Math.min(end,now);
+      if (t1<=t0) continue;
+      const slope=b && end>a.tSec ? (b.before-a.v)/(end-a.tSec) : 0;
+      const v0=a.v+slope*(t0-a.tSec), v1=a.v+slope*(t1-a.tSec);
+      if (constant===undefined) constant=v0;
+      if (v0!==constant || v1!==constant) flat=false;
+      sum+=(v0+v1)/2*(t1-t0);
+    }
+    return flat && constant!==undefined ? constant : sum/(now-from);
   }
 
-  /** Called at every solve point (from _recordLedSamples). @private */
-  _recordMeterSamples() {
-    const now = this.timeNs;
-    const windowStart = now > METER_WINDOW_NS ? now - METER_WINDOW_NS : 0n;
+  /** Accepted continuous solves pass their exact instant and matching maps. */
+  _recordMeterSamples(atSec = Number(this.timeNs)/1e9, solution = null) {
+    // A final floating-point substep can overshoot the integer clock by an
+    // ulp. Never let this numerical artifact publish a future meter point.
+    atSec=Math.min(atSec,Number(this.timeNs)/1e9);
+    const windowStart = Math.max(0,atSec-Number(METER_WINDOW_NS)/1e9);
     for (const [key, w] of this._meterWatches) {
-      if (now - w.readNs > METER_IDLE_NS) { this._meterWatches.delete(key); continue; }
-      const v = this._meterValue(w);
+      if (atSec-Number(w.readNs)/1e9 > Number(METER_IDLE_NS)/1e9) { this._meterWatches.delete(key); continue; }
+      if (this._transientAccuracyUnmet) w.failure=this._transientAccuracyUnmet.code;
+      if (w.failure) continue;
+      const v = this._meterValue(w,solution);
       const h = w.hist;
       const last = h[h.length - 1];
-      if (last && last.tNs === now) { last.v = v; }
-      else if (!last || last.v !== v) h.push({ tNs: now, v });
+      if (last && atSec<last.tSec) { w.failure='nonmonotonic-meter-time'; continue; }
+      if (last && last.tSec === atSec) { last.v = v; }
+      else if (solution || !last || last.v !== v) {
+        // Remove only a redundant middle point on an unchanged flat segment.
+        if (last && h.length>1 && h[h.length-2].v===last.v
+            && last.before===last.v && last.v===v) h.pop();
+        if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
+        h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v });
+      }
       // Keep the one sample at or before the window start, drop the rest.
       let keep = 0;
-      while (keep + 1 < h.length && h[keep + 1].tNs <= windowStart) keep++;
+      while (keep + 1 < h.length && h[keep + 1].tSec <= windowStart) keep++;
       if (keep > 0) h.splice(0, keep);
     }
   }
@@ -4792,6 +4825,7 @@ export class BoardImpl {
       && this._deviceStates.size === 0
       && this._shiftRegisters.size === 0
       && this._scopeChannels.size === 0
+      && this._meterWatches.size === 0
       ? 'algebraic-direct' : 'adaptive';
   }
 
@@ -4971,6 +5005,7 @@ export class BoardImpl {
     // Returning the last iterate as if it were an answer is the numerical
     // form of the silent-degradation bug.
     this._lastSolveConverged = res.converged !== false;
+    if (this._meterWatches.size > 0) this._recordMeterSamples();
   }
 
   /**
@@ -5268,6 +5303,7 @@ export class BoardImpl {
 
     const publish = (r, atSec) => {
       this.nodeVoltages = new Map(r.nodeVoltages);
+      if (this._meterWatches.size > 0) this._recordMeterSamples(atSec,r);
       if (this._scopeChannels.size > 0) {
         const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
         this._updateScopeChannels(this.timeNs - remNs, atSec);
