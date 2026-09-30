@@ -12,6 +12,7 @@ test('measurement source inventory includes transitive board chips and observer 
   for(const file of ['../src/i8086-machine.js','../src/i8259.js',
     '../src/ns16c550.js','../src/experimental/i80386-broad-block-census.js',
     '../src/experimental/i80386-expanded-grouped-admission.js',
+    '../src/experimental/i80386-register-stack-admission.js',
     './lib/i80386-source-inventory.mjs'])
     assert.ok(paths.includes(file),file);
   assert.equal(new Set(paths).size,paths.length);

@@ -82,6 +82,9 @@ const hotLoopLocator=process.env.XV6_HOT_LOOP_LOCATOR==='1'?
   createI80386HotLoopLocator():null;
 const expandedGroupedAdmission=
   process.env.XV6_EXPANDED_GROUPED_SHADOW_ADMISSION==='1';
+const registerStackAdmission=process.env.XV6_REGISTER_STACK_ADMISSION==='1';
+if(expandedGroupedAdmission&&registerStackAdmission)
+  throw new Error('select one cross-mode observer variant');
 if(process.env.XV6_BROAD_BLOCK_JCC_LINKS==='1'&&!broadBlockCensus)
   throw new Error('Jcc link census requires XV6_BROAD_BLOCK_CENSUS=1');
 if(process.env.XV6_BROAD_BLOCK_REFUSAL_OPCODES==='1'&&!broadBlockCensus)
@@ -105,11 +108,13 @@ if (broadBlockCensus && (nativeByte || nativeDispatch || code16Coverage))
   throw new Error('broad-block census requires ordinary single-step execution');
 if (hotLoopLocator && (nativeByte || nativeDispatch || code16Coverage || broadBlockCensus))
   throw new Error('hot-loop locator requires ordinary single-step execution');
-if(expandedGroupedAdmission&&(nativeByte||nativeDispatch||code16Coverage||
+if((expandedGroupedAdmission||registerStackAdmission)&&
+    (nativeByte||nativeDispatch||code16Coverage||
     broadBlockCensus||hotLoopLocator||process.env.XV6_SHARED_RAM==='1'))
-  throw new Error('expanded grouped observer requires ordinary single-step execution');
-const expandedObserver=expandedGroupedAdmission?
-  createI80386CrossModePotentialTraceObserver({expandedGroupedAdmission:true}):null;
+  throw new Error('cross-mode admission observer requires ordinary single-step execution');
+const expandedObserver=expandedGroupedAdmission||registerStackAdmission?
+  createI80386CrossModePotentialTraceObserver({expandedGroupedAdmission,
+    registerStackAdmission}):null;
 const rom = fs.readFileSync(romPath);
 const vgaRom = firmware === 'bochs' ? fs.readFileSync('roms/free-at-bios/vgabios-lgpl.bin') : null;
 if (firmware === 'bochs' && (crypto.createHash('sha256').update(rom).digest('hex') !==
@@ -305,6 +310,7 @@ const sourcePaths=['./probe-xv6-stock.mjs',
   '../src/experimental/i80386-code16-event-run-observer.js',
   '../src/experimental/i80386-cross-mode-potential-trace-observer.js',
   '../src/experimental/i80386-expanded-grouped-admission.js',
+  '../src/experimental/i80386-register-stack-admission.js',
   '../src/experimental/i80386-form-resolved-admission.js',
   '../src/experimental/i80386-first-refusal-shape.js',
   '../src/experimental/i80386-hot-loop-locator.js',
@@ -314,7 +320,8 @@ const sourcePaths=['./probe-xv6-stock.mjs',
   '../src/experimental/i80386-write-window.js',
   '../wasm/i80386-block-spike.wasm','../wasm/i80386-ram-bridge.wasm',
   '../src/experimental/vga-memory.js','../src/vga-card.js',
-  './summarize-i80386-expanded-grouped-result.mjs'];
+  './summarize-i80386-expanded-grouped-result.mjs',
+  './summarize-i80386-register-stack-result.mjs'];
 const sourceSha256=Object.fromEntries(expandI80386SourceInventory(
   sourcePaths,import.meta.url).map(file=>[file,
   crypto.createHash('sha256').update(fs.readFileSync(new URL(file,import.meta.url)))
@@ -324,7 +331,7 @@ const executionRevision=execFileSync('git',['rev-parse','HEAD'],{
 const screen = Array.from({length: 25}, (_, row) => Array.from({length: 80}, (_, column) =>
   String.fromCharCode(machine._read386(0xb8000 + (row * 80 + column) * 2) || 32)).join('').replace(/\s+$/, ''));
 const receipt = {
-  executionRevision,sourceSha256,expandedGroupedAdmission,
+  executionRevision,sourceSha256,expandedGroupedAdmission,registerStackAdmission,
   profile,
   // Board time is a configured scheduling clock, not measured 80386 silicon time.
   clockHz: machine.clockHz,
