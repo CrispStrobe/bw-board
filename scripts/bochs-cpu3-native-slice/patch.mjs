@@ -46,6 +46,8 @@ export function patchPinnedSource(path,bytes){
       '      bw_slice_note_attempt();\n      BX_INSTR_BEFORE_EXECUTION(BX_CPU_ID, i);\n      RIP += i->ilen();\n      BX_CPU_CALL_METHOD(i->execute1, (i)); // might iterate repeat instruction\n      BX_CPU_THIS_PTR prev_rip = RIP; // commit new RIP\n      BX_INSTR_AFTER_EXECUTION(BX_CPU_ID, i);\n      bw_slice_note_completed();');
     s=once(s,'      BX_SYNC_TIME_IF_SINGLE_PROCESSOR(0);\n\n      // note instructions generating exceptions never reach this point',
       '      BX_SYNC_TIME_IF_SINGLE_PROCESSOR(0);\n      if (bw_slice_active && bw_slice_should_yield()) {\n        BX_CPU_THIS_PTR async_event &= ~BX_ASYNC_EVENT_STOP_TRACE;\n        return; // after architectural commit and native tick\n      }\n\n      // note instructions generating exceptions never reach this point');
+    s=once(s,'      if (++i == last) {\n        entry = getICacheEntry();',
+      '      if (++i == last) {\n        if (!bw_slice_active && BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].selector.value == 0 && RIP == 0x7e00) {\n          bw_slice_activate(BX_CPU(0));\n          return; // no setup fetch/decode from Bochs RAM\n        }\n        entry = getICacheEntry();');
     const marker='void BX_CPP_AttrRegparmN(2) BX_CPU_C::repeat(bxInstruction_c *i, BxRepIterationPtr_tR execute)';
     const index=s.indexOf(marker);
     const end=s.indexOf('\n// boundaries of consideration:',index);
@@ -82,7 +84,7 @@ export function patchPinnedSource(path,bytes){
       '    if (bw_slice_active) bw_slice_fail("Bochs-DMA-fallback");\n    DEV_dma_raise_hlda();');
   }else if(path==='bochs/main.cc'){
     s=once(s,'        BX_CPU(0)->cpu_loop();\n        if (bx_pc_system.kill_bochs_request)',
-      '        BX_CPU(0)->cpu_loop();\n        if (bw_slice_active) { bw_slice_driver(); break; }\n        if (bx_pc_system.kill_bochs_request)');
+      '        BX_CPU(0)->cpu_loop();\n        if (bw_slice_active) {\n          bw_slice_driver(); // emits proof and deactivates the host bus\n          fflush(stderr);\n          exit(0); // bounded owned proof; no Bochs teardown after host-RAM swap\n        }\n        if (bx_pc_system.kill_bochs_request)');
   }else if(path==='bochs/memory/memory.cc'){
     s=once(s,'void BX_MEM_C::writePhysicalPage(BX_CPU_C *cpu, bx_phy_address addr, unsigned len, void *data)\n{',
       'void BX_MEM_C::writePhysicalPage(BX_CPU_C *cpu, bx_phy_address addr, unsigned len, void *data)\n{\n  if (bw_slice_active) bw_slice_fail("Bochs-RAM-write-fallback");');
