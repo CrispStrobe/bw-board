@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
+import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {compareOwnedPagingState} from '../scripts/compare-bochs-cpu3-owned-paging-v2.mjs';
@@ -55,13 +55,19 @@ test('defined flag, control, segment, register, and RAM differences are not norm
   }
 });
 
-test('source-bound CLI runs the committed owned fixture in strict386 mode',()=>{
+test('source-bound CLI exposes the defined Bochs IDTR reset discrepancy',()=>{
   const repo=fileURLToPath(new URL('../',import.meta.url));
-  const report=JSON.parse(execFileSync(process.execPath,
-    ['scripts/compare-bochs-cpu3-owned-paging-v2.mjs'],{cwd:repo,encoding:'utf8'}));
+  const run=spawnSync(process.execPath,['scripts/compare-bochs-cpu3-owned-paging-v2.mjs'],
+    {cwd:repo,encoding:'utf8'});
+  assert.equal(run.status,1,run.stderr);
+  const report=JSON.parse(run.stdout);
   assert.equal(report.marker,'BHPG004');
-  assert.equal(report.comparison.status,'scoped-fields-match');
-  assert.deepEqual(report.comparison.mismatches,[]);
+  assert.equal(report.comparison.status,'scoped-field-mismatch');
+  assert.deepEqual(report.comparison.mismatches,[
+    {field:'idtr.limit',reference:0xffff,actual:0x03ff}]);
   assert.equal(report.comparison.raw.cr0.native,0xfffffff1);
   assert.equal(report.comparison.raw.cr0.js&0x8000001f,0x80000011);
+  for(const word of ['pde0','pte5','data5'])
+    assert.equal(report.comparison.ramSnapshots.native[word].bytes,
+      report.comparison.ramSnapshots.js[word].bytes);
 });
