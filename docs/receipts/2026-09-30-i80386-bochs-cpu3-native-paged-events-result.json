@@ -1,0 +1,56 @@
+{
+  "schema": "bw.bochs-cpu3-native-paged-events-self-parity.v1",
+  "status": "native-paged-host-event-self-parity",
+  "sourceRevision": "6f9c400c9c313c03fd526fb22589294f6302e9d7",
+  "activation": {
+    "cs": 0,
+    "eip": 32256,
+    "copiedBytes": 1048576,
+    "tlbFlushed": true,
+    "prefetchInvalidated": true,
+    "icacheFlushed": true,
+    "ramSha256": "49c706b2291b5569a926418c4a35714356a2c93ab4603d7b5b2fd9e37b44e45e",
+    "cpuSeedSha256": "61cb9e1fce52fda00241b80d70e6cf88f69c83559bc6521f7e4f39bae43904d7",
+    "handoff": {
+      "inheritedPending": 0,
+      "inheritedMask": 3904,
+      "inheritedIF": 0,
+      "ownedPending": 0
+    }
+  },
+  "nativeTicks": 4004,
+  "completed": 2980,
+  "repIterations": 1024,
+  "faults": 1,
+  "irqDeliveries": 2,
+  "haltIdleCuts": 5,
+  "fault": {
+    "vector": 14,
+    "errorCode": 2,
+    "cr2": 20480,
+    "attemptedStoreEip": 32488,
+    "handlerEip": 32600,
+    "preTick": 3893,
+    "postTick": 3894,
+    "savedFrame": {
+      "errorCode": 2,
+      "eip": 32488,
+      "cs": 8,
+      "eflags": 65606
+    },
+    "retryEip": 32488,
+    "dataWrite": "44332211"
+  },
+  "portBytes": "BPEV001",
+  "slices": {
+    "continuous": 16,
+    "budget1": 4011,
+    "budget2": 2008,
+    "budget257": 30
+  },
+  "limitations": [
+    "one owned strict-386 native combined fixture and selected seed state only",
+    "no AT chip, external-device IRQ arbitration, MMIO, A20 or DMA equivalence",
+    "no complete reset/hidden state, JavaScript board parity, WASM build or speed measurement"
+  ]
+}

@@ -27,7 +27,10 @@ The subsequent [native host-event gate](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md)
 also passed and was independently reproduced: an absolute REP deadline,
 original STI-shadow eligibility, two host IRQ deliveries, and five HLT idle
 observations share the same ordered journal across budgets. A20, DMA,
-MMIO, combined paging/device IRQ behavior, and board integration remain open.
+MMIO, real device IRQ arbitration, and board integration remain open.
+The [combined paging/host-event gate](I80386-NATIVE-PAGED-EVENT-SELF-PARITY.md)
+now reproduces a pending host IRQ through a recoverable page fault and guest
+repair/retry across all four budgets. This remains a native fixture result.
 
 The current board directly constructs the JavaScript CPU with physical memory
 and port callbacks in `src/experimental/i80386-at-machine.js`. A WASM adapter
