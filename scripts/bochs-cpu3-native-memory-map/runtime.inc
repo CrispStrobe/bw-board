@@ -94,8 +94,8 @@ void bw_slice_fail(const char *kind)
 
 static bool bw_raw_span_ok(unsigned long long address, unsigned length)
 {
-  return length && length <= 16 && address <= UINT32_MAX &&
-    length <= UINT32_MAX - address + 1ULL &&
+  return length && length <= 16 && address < sizeof(bw_ram) &&
+    length <= sizeof(bw_ram) - address &&
     ((address & 4095) + length <= 4096);
 }
 
@@ -254,6 +254,7 @@ static const uint8_t *bw_host_execute(void *, uint32_t raw_page,
                                       uint32_t effective_page, uint8_t *kind)
 {
   if (!kind || (raw_page & 4095) || (effective_page & 4095) ||
+      raw_page > sizeof(bw_ram)-4096 ||
       effective_page > sizeof(bw_ram)-4096 ||
       A20ADDR(raw_page)!=effective_page ||
       A20ADDR((bx_phy_address)raw_page+4095)!=
@@ -383,7 +384,7 @@ const unsigned char *bw_slice_execute_page(unsigned long long address)
   const uint32_t effective=(uint32_t)A20ADDR(address);
   uint8_t kind=0;
   if (!bw_slice_active || !bw_callbacks.execute_page ||
-      address > UINT32_MAX || (address & 4095))
+      address > sizeof(bw_ram)-4096 || (address & 4095))
     bw_slice_fail("unsafe-execute-page");
   const uint8_t *page = bw_callbacks.execute_page(bw_callbacks.context,
                                                   (uint32_t)address,effective,
@@ -626,6 +627,12 @@ void bw_slice_driver(void)
   if (probe) {
     unsigned char byte=0;
     if (!strcmp(probe,"out-of-range-physical")) bw_slice_read(sizeof(bw_ram),1,&byte);
+    else if (!strcmp(probe,"out-of-range-aliased")) {
+      // Exercise the raw-domain guard even when A20 would fold this address
+      // into declared low RAM. This is a probe-only host action, not guest PIO.
+      if (!bw_host_out(0,0x92,1,0)) bw_slice_fail("probe-a20-off");
+      bw_slice_read(sizeof(bw_ram),1,&byte);
+    }
     else if (!strcmp(probe,"unsupported-span-width")) bw_slice_read(0,17,&byte);
     else if (!strcmp(probe,"unexpected-pio")) bw_slice_port_out(0x80,0,1);
     else if (!strcmp(probe,"unsafe-execute-rom")) bw_slice_execute_page(0xf0000);
