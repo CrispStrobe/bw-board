@@ -1,0 +1,35 @@
+{
+  "schema": "labwired.microbit.exact-main-native-archive-context.v1",
+  "hostedRun": "https://github.com/CrispStrobe/labwired-core/actions/runs/36725594408",
+  "sourceCommit": "ede33fb4a4778f35cc3398190aaa3d2cf9beb4db",
+  "sourceRef": "refs/heads/main",
+  "artifactId": 11102648177,
+  "githubArtifactDigest": "sha256:7ff0d5a790a5a1de3f68dd23fc6821f1baf7b96798df520ebc8ec49d2b39dd6e",
+  "nativeQualificationPassed": true,
+  "motionMedianRtx": 1.2900968120384135,
+  "motionMinimumRtx": 1.2610661709163336,
+  "allFiveMotionSamplesAboveRealtime": true,
+  "gpioOnlyMedianRtx": 3.5557664867842327,
+  "runnerCpu": "AMD EPYC 9V74 80-Core Processor",
+  "motionGuestSourceBundleSha256": "e6b8c239dc7ee1aca736671350cda8101f4bf8d6c89d91e2a9e787c85b553939",
+  "verifiedRetainedElfs": [
+    {
+      "role": "actual source-built ADC scan guest",
+      "artifactPath": "adc-guest-artifacts/adc-scan-98c174cd151e677dec614956a974538172f6958df158ad39ad70822857ed2e0b.elf",
+      "sha256": "98c174cd151e677dec614956a974538172f6958df158ad39ad70822857ed2e0b"
+    },
+    {
+      "role": "measured motion guest",
+      "artifactPath": "motion-guest-artifacts/motion-975822cc7f30d6e0ed21b2e01074b6971f1ffb4d78a82b1016a0d6fc88ca10f0.elf",
+      "sha256": "975822cc7f30d6e0ed21b2e01074b6971f1ffb4d78a82b1016a0d6fc88ca10f0"
+    },
+    {
+      "role": "functional motion guest retained during board tests",
+      "artifactPath": "adc-guest-artifacts/motion-a4e589d392adb32a772c1816104a299a8ca37a382a1a75fbe24a3dc5739ff4b7.elf",
+      "sha256": "a4e589d392adb32a772c1816104a299a8ca37a382a1a75fbe24a3dc5739ff4b7"
+    }
+  ],
+  "elfRetention": "Hashes independently verified against actual artifact files; binaries remain in the GitHub artifact, not these documentation repositories.",
+  "qualificationScope": "Exact remote-main native board tests and selected held-input polled motion workload; native ADC scan guest included. Original five JSON/log/context files are unnormalized byte-identical copies.",
+  "notQualified": "No controlled cross-runner gain claim; historical failures remain. No post-main all-forty-chip performance claim; six previously tracked Nordic relative step-cost gates remain open. No app WASM pin/browser, shared sensor IRQ, timed microphone/audio or CP13 completion promotion."
+}

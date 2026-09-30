@@ -217,7 +217,16 @@ measured candidate medians **1.036825× / 1.023289×**, versus predecessor main
 [combined native ADC qualification](https://github.com/CrispStrobe/labwired-core/actions/runs/36720954929)
 passed 314 selected executions, including the actual ARM sparse-channel scan
 guest; its **1.996539× motion median** is a separate EPYC 9V45 observation,
-not a controlled ADC speedup. Exact successor-main remeasurement is pending.
+not a controlled ADC speedup. Exact remote-main `ede33fb4`
+[run 36725594408](https://github.com/CrispStrobe/labwired-core/actions/runs/36725594408)
+now passed native board qualification on EPYC 9V74: motion **1.290097× median /
+1.261066× minimum**, all five samples above 1×. The
+[complete original motion receipt](docs/receipts/2026-09-30-microbit-exact-main-ede33/microbit-motion-throughput.json)
+and [source/runner/retained-ELF provenance](docs/receipts/2026-09-30-microbit-exact-main-ede33/qualification-context.json)
+preserve the exact-main result, including the actual ADC scan and measured
+motion ELF hashes. GPIO-only measured **3.555766× median** in that run. This
+is native held-input qualification, not a controlled cross-runner gain or a
+new exact-main all-chip performance result.
 All 40 synthetic chip RTx fixtures passed for the optimization candidate, but six pre-existing Nordic
 single-step instruction-cost gates remain open in
 [issue 120](https://github.com/CrispStrobe/labwired-core/issues/120); thresholds
