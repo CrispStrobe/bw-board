@@ -29,7 +29,7 @@ Unloaded TR/LDTR selectors are checked as null, while their hidden cache
 fields are excluded. Raw CR0, debug-register seeds, and native cache flags
 remain visible in the receipt without being silently equated.
 
-The [Intel 80386 Programmer's Reference Manual, §10.1](https://pdos.lcs.mit.edu/6.828/2018/readings/i386/s10_01.htm)
+The [Intel 80386 Programmer's Reference Manual, §10.1](https://pdos.csail.mit.edu/6.828/2018/readings/i386/s10_01.htm)
 specifies reset IDTR base zero and limit `0x03ff`. The pinned Bochs CPU3
 source [`cpu/init.cc` lines 802–803](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/init.cc#L802-L803)
 instead seeds a zero base and `0xffff` limit. The v2 fixture has no `LIDT`,
