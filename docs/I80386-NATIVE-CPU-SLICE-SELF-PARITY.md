@@ -22,7 +22,7 @@ committed source bytes, the patched upstream tree and copied runtime files,
 binary, config, old fixture receipt, assembled image, floppy, free ROMs,
 host configuration, and input stability after the serial run.
 
-| Arm | Resume calls | Native ticks | Attempted fetches | Completed instructions | Partial REP cuts |
+| Arm | Resume calls | Native ticks | Instruction attempts | Completed instructions | Partial REP cuts |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Continuous | 8 | 1,881 | 858 | 857 | 0 |
 | Budget 1 | 1,881 | 1,881 | 1,881 | 857 | 1,023 |
