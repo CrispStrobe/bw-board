@@ -1864,6 +1864,7 @@ export class BoardImpl {
       // sample instant can be interpolated rather than held from whichever
       // solve happened to land next. See _updateScopeChannels.
       _prevTNs: this.timeNs,
+      _prevExactTimeSec: null,
       _prevVal: null,
     };
 
@@ -1981,7 +1982,9 @@ export class BoardImpl {
       // ramp towards it: a sample channel's interpolation must start from the
       // post-edge value, or the next sample would be drawn part-way up a step
       // that took no time at all.
-      if (ch.capture === 'sample') { ch._prevTNs = this.timeNs; ch._prevVal = val; }
+      if (ch.capture === 'sample') {
+        ch._prevTNs = this.timeNs; ch._prevExactTimeSec = null; ch._prevVal = val;
+      }
     }
   }
 
@@ -2000,11 +2003,12 @@ export class BoardImpl {
   }
 
   /**
-   * Feed the current voltage into scope voltage channels.
+   * Feed the current voltage into scope voltage channels. MNA may supply its
+   * actual fractional solve time; the integer label alone is not sample readiness.
    * Called from advanceTo when time crosses sample boundaries.
    * @private
    */
-  _updateScopeChannels(tNs) {
+  _updateScopeChannels(tNs, exactTimeSec = null) {
     for (const [, ch] of this._scopeChannels) {
       if (ch.type === 'digital') { this._feedDigital(ch, tNs); continue; }
       if (ch.type !== 'voltage') continue;
@@ -2017,7 +2021,9 @@ export class BoardImpl {
       if (val > ch._bucketMax) ch._bucketMax = val;
 
       // Flush completed buckets
-      while (tNs >= ch._nextSampleNs) {
+      while (tNs >= ch._nextSampleNs
+          && !(ch.capture === 'sample' && exactTimeSec !== null
+            && exactTimeSec < Number(ch._nextSampleNs) / 1e9)) {
         const idx = ch.writeIndex * 2;
         // A 'sample' channel stores the value AT the sample instant, linearly
         // interpolated between the two solve points that bracket it. Holding
@@ -2025,8 +2031,9 @@ export class BoardImpl {
         // zero-order hold whose time error is a whole solve step: measured on
         // a 1 kHz sine at 100 kHz capture, 618 mV of a 2 V amplitude, because
         // the transient controller was taking 50 µs steps. Interpolation
-        // brings the same bench to under 1 mV, and it costs no extra solves.
-        const s = ch.capture === 'sample' ? sampleAtInstant(ch, tNs, val) : 0;
+        // brings the same bench to under 1 mV. Fractional readiness also keeps
+        // the existing sample-grid barrier from being skipped prematurely.
+        const s = ch.capture === 'sample' ? sampleAtInstant(ch, tNs, val, exactTimeSec) : 0;
         ch.samples[idx] = ch.capture === 'sample' ? s : ch._bucketMin;
         ch.samples[idx + 1] = ch.capture === 'sample' ? s : ch._bucketMax;
         ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
@@ -2053,7 +2060,9 @@ export class BoardImpl {
         ch._bucketMin = val;
         ch._bucketMax = val;
       }
-      if (ch.capture === 'sample') { ch._prevTNs = tNs; ch._prevVal = val; }
+      if (ch.capture === 'sample') {
+        ch._prevTNs = tNs; ch._prevExactTimeSec = exactTimeSec; ch._prevVal = val;
+      }
     }
   }
 
@@ -5261,7 +5270,7 @@ export class BoardImpl {
       this.nodeVoltages = new Map(r.nodeVoltages);
       if (this._scopeChannels.size > 0) {
         const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
-        this._updateScopeChannels(this.timeNs - remNs);
+        this._updateScopeChannels(this.timeNs - remNs, atSec);
       }
     };
     const accept = (r, atSec) => {
@@ -6484,14 +6493,26 @@ export class BoardImpl {
  * from (the first sample of a channel), which is the only case where a hold
  * is all the information that exists.
  *
- * @param {{_nextSampleNs: bigint, _prevTNs: bigint|null, _prevVal: number|null}} ch
+ * @param {{_nextSampleNs: bigint, _prevTNs: bigint|null, _prevVal: number|null, _prevExactTimeSec?: number|null}} ch
  * @param {bigint} tNs
  * @param {number} val
+ * @param {number|null} exactTimeSec
  * @returns {number}
  */
-function sampleAtInstant(ch, tNs, val) {
+function sampleAtInstant(ch, tNs, val, exactTimeSec = null) {
   const tPrev = ch._prevTNs;
   const vPrev = ch._prevVal;
+  // Precision solves can be between integer nanoseconds. Their voltage belongs
+  // to that actual instant, not its rounded label; preserve the bracketing times.
+  if (exactTimeSec !== null || ch._prevExactTimeSec != null) {
+    if (tPrev === null || vPrev === null) return val;
+    const now = exactTimeSec ?? Number(tNs) / 1e9;
+    const previous = ch._prevExactTimeSec ?? Number(tPrev) / 1e9;
+    const sample = Number(ch._nextSampleNs) / 1e9;
+    if (now <= previous || sample >= now) return val;
+    if (sample <= previous) return vPrev;
+    return vPrev + (val - vPrev) * ((sample - previous) / (now - previous));
+  }
   if (tPrev === null || vPrev === null || tNs <= tPrev) return val;
   const ts = ch._nextSampleNs;
   if (ts <= tPrev) return vPrev;

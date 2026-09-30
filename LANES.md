@@ -321,7 +321,7 @@ Landed: sevenseg8 now emits `common: 'anode'|'cathode'` and the new
 what is emitted rather than asserting a spelling. Reverting the emission reddens
 both cases. The seven infer and validate suites pass 101/101.
 
-2026-09-30 CLAIM — `/root` (Codex bwcx), fractional solver-time scope samples.
+2026-09-30 DONE candidate — `/root` (Codex bwcx), fractional solver-time scope samples.
 Worktree `/mnt/volume1/code/lego/wt-board-scope-fractional-20260930`, branch
 `fable/scope-fractional-sample-times`, exact base
 `8543de2965f8deb98d61dd1b724eaa46eddcd4fe`. Own this paragraph,
@@ -341,6 +341,12 @@ two fractional instants, both real probe RC analytical waveforms, local work and
 named defect-restoring mutations. No MNA/solver, devices, emulator, dependency
 pin, CUI/Lite, corpus, workflow or unrelated source changes. The canonical
 Board checkout's existing merge conflict remains untouched.
+Restored expanded verification: 76/76, zero skips, including 800 live ngspice
+observations and their independent analytical controls. Four isolated mutations
+red by the intended assertion: dropped publication timestamp (both probe
+waveforms), premature readiness, rounded interpolation, and stale control-edge
+history. All restored before final verification. Hosted qualification pending;
+no pinned CUI/Lite consumer adoption is claimed.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
