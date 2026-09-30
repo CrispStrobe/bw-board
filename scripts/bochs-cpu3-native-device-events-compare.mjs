@@ -1,6 +1,7 @@
 /** Fail-closed proof for one free CPU3 PIT0→single-PIC timer wake. */
 import {isDeepStrictEqual} from 'node:util';
 import {createHash} from 'node:crypto';
+import {NativeDeviceHost} from './bochs-cpu3-native-device-events-host.mjs';
 
 const budgets={continuous:1000000,budget1:1,budget2:2,budget257:257};
 const mapId='ram00000-9ffff,mmio-a0000,rom-f0000-fffff,ram-100000-17ffff,openbus-rest';
@@ -367,6 +368,27 @@ function rpcProof(arm,at){
         ne.tick!==req.nativeTick||nr.seq!==rep.seq||nr.value!==rep.value||
         nr.tick!==req.nativeTick||!(ne.ordinal<nr.ordinal))
       fail(at,'native/host RPC request/reply transcript mismatch');
+    const nextReqOrdinal=reqEvents[i+1]?.ordinal??Number.POSITIVE_INFINITY;
+    const completionTag=req.operation==='TICK'?'TICK':
+      req.operation==='ACK'?'IRQ_ACK':'PORT';
+    const completions=events.filter(e=>e.tag===completionTag&&
+      e.ordinal>nr.ordinal&&e.ordinal<nextReqOrdinal);
+    if(!(ne.ordinal<nr.ordinal&&completions.length===1))
+      fail(at,'RPC reply did not precede exactly one typed native completion');
+    const completion=completions[0];
+    if(req.operation==='TICK'&&
+        (completion.preTick!==req.nativeTick||completion.tick!==req.nativeTick+1))
+      fail(at,'native quantum charged before host TICK reply');
+    if(req.operation==='PIO_OUT'&&
+        (completion.direction!=='out'||completion.port!==req.arg0||
+          completion.width!==req.arg1||completion.value!==req.arg2||
+          completion.tick!==req.nativeTick))
+      fail(at,'native port commit preceded or differs from host reply');
+    if(req.operation==='ACK'&&
+        (completion.vector!==rep.value||completion.tick!==req.nativeTick||
+          !events.some(e=>e.tag==='IRQ_DELIVERED'&&
+            e.ordinal>completion.ordinal&&e.tick===completion.tick)))
+      fail(at,'IRQ delivery preceded or differs from PIC ACK reply');
   }
   const kinds=requests.reduce((counts,r)=>{
     counts[r.operation]=(counts[r.operation]??0)+1;return counts;},{});
@@ -380,6 +402,35 @@ function rpcProof(arm,at){
   equal(ports.map(e=>[e.direction,e.port,e.width,e.value,e.tick]),
     pio.map(r=>['out',r.arg0,r.arg1,r.arg2,r.nativeTick]),
   at+'.post-commit native/host PIO journal');
+  // Replay the actual source-pinned JS PIT/PIC from the retained native RPC
+  // chronology. This checks fractional crystal carry and every model state,
+  // instead of accepting four arms that share the same false model snapshot.
+  const model=new NativeDeviceHost();
+  equal(model.state(),arm.host.seed,at+'.fresh host-model seed');
+  const nativeCommands=events.filter(e=>e.tag==='CMD');
+  let sliceIndex=0;
+  for(let i=0;i<nativeCommands.length;i++){
+    const cmd=nativeCommands[i],next=nativeCommands[i+1]?.ordinal??Infinity;
+    for(const req of events.filter(e=>e.tag==='RPC_REQ'&&
+      e.ordinal>cmd.ordinal&&e.ordinal<next)){
+      const value=model.handleRequest(req.kind,req.arg0,req.arg1,req.arg2,req.tick);
+      const reply=replies[req.seq-1];
+      if(!reply||reply.value!==value)
+        fail(at,'actual PIT/PIC replay differs at synchronous host callback');
+    }
+    if(cmd.verb==='RUN'){
+      const slice=arm.native.slices[sliceIndex++];
+      if(slice.reason===4&&slice.chargedTicks===0&&slice.exit.eip===0x7e9c){
+        model.advanceHaltedToFirstEdge();
+        if(model.stageLine()!==true)fail(at,'replayed idle timer did not assert PIC');
+      }else if(slice.reason===6){
+        if(model.stageLine()!==false)fail(at,'replayed PIC ACK did not deassert line');
+      }
+    }else if(cmd.verb==='LINE'&&model.lineAsserted!==Boolean(cmd.argument))
+      fail(at,'staged native INTR differs from replayed PIC line');
+  }
+  equal(model.journal,arm.host.journal,at+'.source-model exact event/fraction journal');
+  equal(model.state(),arm.host.final,at+'.source-model final fractional state');
 }
 
 function artifactProof(report){
@@ -442,7 +493,8 @@ export function assertNativeDeviceEventsArm(arm){
     nativeEvents:native.events.length,slices:arm.native.slices.length};
 }
 
-export function assertNativeDeviceEventsProof(report){
+/** Historical four-arm CPU/device proof, before transport malformation tests. */
+export function assertNativeDeviceEventsCoreProof(report){
   fields(report,['schema','source','arms','probes','artifacts'],'report');
   if(report.schema!=='bw.bochs-cpu3-native-device-events.v1')fail('report','schema changed');
   sourceProof(report.source);
@@ -484,4 +536,58 @@ export function assertNativeDeviceEventsProof(report){
       'fresh host model ownership begins after BIOS at 7e00',
       'six board clocks per ordinary successful quantum are functional, not physical timings',
       'no REP, fault, dual PIC, APIC, DMA, full AT, WASM, or speed qualification']};
+}
+
+const transportCases={
+  'command-bad-sequence':{stage:'command',failure:'rpc-command-sequence',
+    payload:`BWR7\tCMD\t2\tRUN\t1\t18446744073709551615\n`},
+  'command-negative-budget':{stage:'command',failure:'rpc-decimal',
+    payload:`BWR7\tCMD\t1\tRUN\t-1\t18446744073709551615\n`},
+  'command-overflow-budget':{stage:'command',failure:'rpc-overflow',
+    payload:`BWR7\tCMD\t1\tRUN\t18446744073709551616\t18446744073709551615\n`},
+  'command-overlong-line':{stage:'command',failure:'rpc-line-bound',
+    payload:`BWR7\tCMD\t1\tRUN\t1\t${'9'.repeat(256)}\n`},
+  'reply-wrong-sequence':{stage:'reply',failure:'rpc-reply',
+    payload:'BWR7\tREP\t2\tOK\t0\n'},
+  'reply-negative-value':{stage:'reply',failure:'rpc-decimal',
+    payload:'BWR7\tREP\t1\tOK\t-1\n'},
+  'reply-out-of-range':{stage:'reply',failure:'rpc-reply-range',
+    payload:'BWR7\tREP\t1\tOK\t4294967296\n'},
+};
+
+/** Final proof additionally demands seven actual native transport aborts. */
+export function assertNativeDeviceEventsProof(report){
+  const result=assertNativeDeviceEventsCoreProof(report);
+  fields(report,['transportProbes'],'final report');
+  equal(Object.keys(obj(report.transportProbes,'transport probes')).sort(),
+    Object.keys(transportCases).sort(),'seven native transport guards');
+  for(const [name,spec] of Object.entries(transportCases)){
+    const at=`transportProbes.${name}`,probe=report.transportProbes[name];
+    fields(probe,['name','stage','expected','exit','observedFailure','request','files'],at);
+    if(probe.name!==name||probe.stage!==spec.stage||
+        probe.expected!==spec.failure||probe.observedFailure!==spec.failure||
+        probe.exit.code!==null||probe.exit.signal!=='SIGABRT')
+      fail(at,'actual named SIGABRT transport guard changed');
+    if(spec.stage==='command'&&probe.request!==null)fail(at,'command guard ran past READY');
+    if(spec.stage==='reply'&&
+        (probe.request?.kind!=='REQ'||probe.request.seq!==1||
+          probe.request.operation!=='TICK'||probe.request.nativeTick!==0))
+      fail(at,'reply guard did not intercept first native TICK');
+    equal(probe.files,report.artifacts[`transport-${name}`],at+'.artifact index');
+    equal(Object.keys(probe.files).sort(),
+      ['stdout','stderr','rpcToNative','rpcFromNative','bochsLog'].sort(),
+      at+'.raw file inventory');
+    for(const [key,file] of Object.entries(probe.files)){
+      fields(file,['path','sha256'],`${at}.${key}`);
+      sha(file.sha256,`${at}.${key}.sha256`);
+    }
+    const command=spec.stage==='reply'?
+      'BWR7\tCMD\t1\tRUN\t1\t18446744073709551615\n':'';
+    const ready='BWR7\tREADY\t0000\t00007e00\t0\n';
+    const request=spec.stage==='reply'?'BWR7\tREQ\t1\tTICK\t1\t0\t0\t0\n':'';
+    if(probe.files.rpcToNative.sha256!==shaBytes(Buffer.from(command+spec.payload))||
+        probe.files.rpcFromNative.sha256!==shaBytes(Buffer.from(ready+request)))
+      fail(at,'raw command/request bytes differ from bounded malformation case');
+  }
+  return {...result,transportGuards:Object.keys(transportCases).length};
 }

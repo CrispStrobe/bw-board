@@ -65,6 +65,22 @@ const guardReasons={
   'bochs-pio':'Bochs-PIO-fallback',
   'bochs-timer':'Bochs-timer-fallback',
 };
+const transportCases={
+  'command-bad-sequence':{stage:'command',failure:'rpc-command-sequence',
+    payload:`BWR7\tCMD\t2\tRUN\t1\t18446744073709551615\n`},
+  'command-negative-budget':{stage:'command',failure:'rpc-decimal',
+    payload:`BWR7\tCMD\t1\tRUN\t-1\t18446744073709551615\n`},
+  'command-overflow-budget':{stage:'command',failure:'rpc-overflow',
+    payload:`BWR7\tCMD\t1\tRUN\t18446744073709551616\t18446744073709551615\n`},
+  'command-overlong-line':{stage:'command',failure:'rpc-line-bound',
+    payload:`BWR7\tCMD\t1\tRUN\t1\t${'9'.repeat(256)}\n`},
+  'reply-wrong-sequence':{stage:'reply',failure:'rpc-reply',
+    payload:'BWR7\tREP\t2\tOK\t0\n'},
+  'reply-negative-value':{stage:'reply',failure:'rpc-decimal',
+    payload:'BWR7\tREP\t1\tOK\t-1\n'},
+  'reply-out-of-range':{stage:'reply',failure:'rpc-reply-range',
+    payload:'BWR7\tREP\t1\tOK\t4294967296\n'},
+};
 const u64max='18446744073709551615';
 const canonicalU64=(value,at)=>{
   assert(typeof value==='string'&&/^(0|[1-9][0-9]*)$/.test(value)&&
@@ -631,6 +647,25 @@ function recheckInputs(tree,source,hostConfig,floppyPath){
   'source, native binary, config, ROM or fixture medium changed during capture');
 }
 
+function verifyRetainedArtifacts(directory,artifacts){
+  const seen=new Set();
+  const check=entry=>{
+    assert(entry&&typeof entry.path==='string'&&
+      /^[a-zA-Z0-9.-]+$/.test(entry.path)&&
+      typeof entry.sha256==='string'&&/^[0-9a-f]{64}$/.test(entry.sha256),
+    'unsafe retained artifact entry');
+    assert(!seen.has(entry.path),`duplicate retained artifact ${entry.path}`);
+    seen.add(entry.path);
+    assert(fileSha(join(directory,entry.path))===entry.sha256,
+      `retained artifact changed: ${entry.path}`);
+  };
+  check(artifacts.bochsrc);check(artifacts.floppy);
+  for(const [name,group] of Object.entries(artifacts)){
+    if(name==='bochsrc'||name==='floppy')continue;
+    for(const entry of Object.values(group.files??group))check(entry);
+  }
+}
+
 function retainArm(directory,label,arm,bochsLog){
   const files={};
   for(const [name,contents] of Object.entries(arm.raw)){
@@ -679,6 +714,62 @@ async function runGuard(binary,rc,name,expected,directory,bochsLog){
   return {name,expected,exit,observedFailure:expected,files};
 }
 
+async function runTransportGuard(binary,rc,name,spec,directory,bochsLog){
+  const child=spawn(binary,['-q','-f',rc],{cwd:dirname(rc),detached:true,
+    stdio:['ignore','pipe','pipe','pipe','pipe']});
+  const stdout=boundedOutput(child.stdout,1024*1024,'transport stdout');
+  const stderr=boundedOutput(child.stderr,16*1024*1024,'transport stderr');
+  const fromNative=boundedOutput(child.stdio[4],1024*1024,'transport fd4');
+  const inbound=new BoundedLines(child.stdio[4]);
+  let commandPipeError=null,toNative='';
+  child.stdio[3].on('error',error=>{commandPipeError=error;});
+  const closed=new Promise((resolve,reject)=>{
+    child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));
+  });
+  const wall=setTimeout(()=>stopProcessGroup(child),15000);
+  let exit,request=null,error=null;
+  try{
+    const ready=parseRpcLine(await inbound.next());
+    assert(ready.kind==='READY'&&ready.cs===0&&ready.eip===0x7e00&&ready.tick===0,
+      `${name}: native READY boundary changed`);
+    if(spec.stage==='reply'){
+      const command=`BWR7\tCMD\t1\tRUN\t1\t${u64max}\n`;
+      toNative+=command;
+      await new Promise((resolve,reject)=>child.stdio[3].write(command,
+        cause=>cause?reject(cause):resolve()));
+      request=parseRpcLine(await inbound.next());
+      assert(request.kind==='REQ'&&request.seq===1&&request.operation==='TICK'&&
+        request.nativeTick===0,`${name}: first native callback changed`);
+    }
+    toNative+=spec.payload;
+    await new Promise((resolve,reject)=>child.stdio[3].write(spec.payload,
+      cause=>cause?reject(cause):resolve()));
+    exit=await closed;
+  }catch(cause){error=cause;stopProcessGroup(child);
+    try{exit=await closed;}catch{}
+  }finally{clearTimeout(wall);child.stdio[3].end();}
+  const label=`transport-${name}`,files={};
+  for(const [key,contents] of Object.entries({stdout:stdout.text,stderr:stderr.text,
+    rpcToNative:toNative,rpcFromNative:fromNative.text})){
+    const path=`${label}.${key}.txt`;
+    writeFileSync(join(directory,path),contents);
+    files[key]={path,sha256:fileSha(join(directory,path))};
+  }
+  if(existsSync(bochsLog)){
+    const path=`${label}.bochs.log`;
+    copyFileSync(bochsLog,join(directory,path));
+    files.bochsLog={path,sha256:fileSha(join(directory,path))};
+  }
+  const failures=stderr.text.split('\n').filter(line=>line.startsWith('BWS7\tFAIL\t'));
+  assert(!error&&exit?.signal==='SIGABRT'&&exit.code===null&&
+    failures.length===1&&failures[0]===`BWS7\tFAIL\t${spec.failure}`&&
+    !stdout.error&&!stderr.error&&!fromNative.error&&!commandPipeError&&
+    Object.hasOwn(files,'bochsLog'),
+  `${name}: native transport guard did not fail with exact SIGABRT/reason`);
+  return {name,stage:spec.stage,expected:spec.failure,exit,
+    observedFailure:spec.failure,request,files};
+}
+
 async function runFull(tree,outdir){
   assert(!existsSync(outdir),'output directory must be new');
   mkdirSync(outdir,{recursive:true});
@@ -700,8 +791,16 @@ async function runFull(tree,outdir){
     probes[name]=guard;artifacts[`guard-${name}`]=guard.files;
     recheckInputs(tree,source,hostConfig,floppyPath);
   }
-  const report={schema:'bw.bochs-cpu3-native-device-events.v1',source,arms,probes,artifacts};
+  const transportProbes={};
+  for(const [name,spec] of Object.entries(transportCases)){
+    const probe=await runTransportGuard(binary,hostConfig.rc,name,spec,outdir,hostConfig.log);
+    transportProbes[name]=probe;artifacts[`transport-${name}`]=probe.files;
+    recheckInputs(tree,source,hostConfig,floppyPath);
+  }
+  const report={schema:'bw.bochs-cpu3-native-device-events.v1',source,arms,probes,
+    transportProbes,artifacts};
   const result=assertNativeDeviceEventsProof(report);
+  verifyRetainedArtifacts(outdir,artifacts);
   recheckInputs(tree,source,hostConfig,floppyPath);
   const reportPath=join(outdir,'capture.json'),resultPath=join(outdir,'result.json');
   writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
