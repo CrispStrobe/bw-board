@@ -230,8 +230,21 @@ new exact-main all-chip performance result.
 All 40 synthetic chip RTx fixtures passed for the optimization candidate, but six pre-existing Nordic
 single-step instruction-cost gates remain open in
 [issue 120](https://github.com/CrispStrobe/labwired-core/issues/120); thresholds
-and baselines are unchanged. The isolated no-pull GPIO probe reduces these to
-three; [PR 137](https://github.com/CrispStrobe/labwired-core/pull/137) is not yet qualified.
+and baselines are unchanged. The GPIO-only
+[PR 137](https://github.com/CrispStrobe/labwired-core/pull/137) head `72f8b4cf`
+[CorePerf run 36726333551](https://github.com/CrispStrobe/labwired-core/actions/runs/36726333551)
+passed all 40 absolute RTx targets and all unchanged relative instruction-cost
+gates. Nordic step deltas were +1.3% (nRF52832), +0.1% (nRF52833/nRF52840),
++0.2% (nRF5340), −1.7% (nRF54L15) and −3.0% (nRF54LM20A). However,
+[native run 36726335356](https://github.com/CrispStrobe/labwired-core/actions/runs/36726335356)
+passed 331 functional executions but **failed motion real time: 0.995903× median
+on EPYC 7763**. This split candidate result is not a landing, exact-main/browser
+promotion or closure of issue 120. New combined head `464bd0ed` includes the
+countdown optimization and landed ADC source; its
+[native qualification](https://github.com/CrispStrobe/labwired-core/actions/runs/36731897613),
+[CorePerf](https://github.com/CrispStrobe/labwired-core/actions/runs/36731888763)
+and [controlled A/B against actual main `ede33fb4`](https://github.com/CrispStrobe/labwired-core/actions/runs/36731892881)
+were queued when this note was prepared; no combined result is claimed.
 
 The separate [countdown candidate](https://github.com/CrispStrobe/labwired-core/pull/136)
 passed nine whole-engine regressions and an
