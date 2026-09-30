@@ -18,8 +18,11 @@ results, not a full CPU-state or complete physical-bus oracle. The pinned
 uses Bochs memory and PC-system services, event ticks, and exception control
 flow; its CPU source is not a standalone board-neutral module. A separate
 [`native CPU ABI and yield audit`](I80386-NATIVE-CPU-ABI-YIELD-AUDIT.md)
-identifies a bounded continuous-versus-sliced native gate across REP, a
-recoverable page fault, and port I/O; this remains a proposed experiment.
+identified a bounded continuous-versus-sliced native gate across REP, a
+recoverable page fault, and port I/O. That [owned native self-parity gate](I80386-NATIVE-CPU-SLICE-SELF-PARITY.md)
+has now passed on one free fixture with host callbacks and budgets 1/2/257.
+It does not establish the separate WASM backend, JavaScript board parity, or
+speed.
 The current board directly constructs the JavaScript CPU with physical memory
 and port callbacks in `src/experimental/i80386-at-machine.js`. A WASM adapter
 would need a bounded instruction entry point and matching fetch, read, write, port,

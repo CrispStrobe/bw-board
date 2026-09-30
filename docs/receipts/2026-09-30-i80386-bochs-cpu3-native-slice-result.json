@@ -1,0 +1,38 @@
+{
+  "schema": "bw.bochs-cpu3-native-slice-self-parity.v1",
+  "status": "native-self-parity",
+  "sourceRevision": "8b9fc8fb064b7397a8dcda083ca3175ef68d428b",
+  "activation": {
+    "cs": 0,
+    "eip": 32256,
+    "copiedBytes": 1048576,
+    "tlbFlushed": true,
+    "prefetchInvalidated": true,
+    "icacheFlushed": true,
+    "ramSha256": "85cf87aa78ffec6bb981124a442820c6533c447616df341f0739516bd6cc9151",
+    "cpuSeedSha256": "61cb9e1fce52fda00241b80d70e6cf88f69c83559bc6521f7e4f39bae43904d7"
+  },
+  "comparedArms": [
+    "continuous",
+    "budget1",
+    "budget2",
+    "budget257"
+  ],
+  "nativeTicks": 1881,
+  "completed": 857,
+  "repIterations": 1024,
+  "faultCount": 1,
+  "portBytes": "BHPG004",
+  "slices": {
+    "continuous": 8,
+    "budget1": 1881,
+    "budget2": 942,
+    "budget257": 15
+  },
+  "limitations": [
+    "native continuous-versus-sliced owned self-parity only",
+    "slice-dependent fetch/instruction hooks excluded",
+    "no injected hardware event or JavaScript AT chip, IRQ, fault-charge or machine-cycle parity",
+    "no WebAssembly build or speed measurement"
+  ]
+}
