@@ -1,7 +1,9 @@
 # Full functional 386 core in WebAssembly: bounded feasibility note
 
-**Status:** source audit only. No backend, guest run, or speed measurement is
-claimed. This is a separate possible opt-in functional 386 backend alongside
+**Status:** the proposed WebAssembly backend remains a source audit only. No
+WASM backend, backend guest run, or backend speed measurement is claimed. A
+separate [owned native Bochs checkpoint](I80386-BOCHS-CPU3-OWNED-ORACLE.md)
+has now run. This is a possible opt-in functional 386 backend alongside
 the current JavaScript 386. The existing wired 8086 and 286 are different,
 lower CPU models; there is no wired 386 backend. A trace opportunity gate does
 not measure the proposed backend's cost or correctness.
@@ -59,3 +61,10 @@ copies, serial stop, final CPU state, RAM/disk hashes, and configured board
 cycles. After parity, serial same-host user-CPU pairs could test speed. A
 failure to preserve board event/fault order or to reach the first owned
 checkpoint would reject this adapter before a full guest benchmark.
+
+The first [owned native CPU3 instrumentation checkpoint](I80386-BOCHS-CPU3-OWNED-ORACLE.md)
+now exists. It captures integer/system CPU state and an ordered Bochs hook
+stream, but exposes raw CR0/debug-register setup differences from the current
+JavaScript fixture and does not yet capture memory values, TSS RAM or a
+complete physical bus. It is a prerequisite result, not the full differential
+gate described above.

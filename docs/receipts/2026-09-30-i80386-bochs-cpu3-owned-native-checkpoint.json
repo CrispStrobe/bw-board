@@ -1,0 +1,2056 @@
+{
+  "schema": "bw.bochs-cpu3-owned-native-capture.v1",
+  "status": "native-capture-complete",
+  "comparison": "not-run",
+  "boardRevision": "2342e52fcbc5ab65640b8b0f27df60366b20d2e9",
+  "sourceHashes": {
+    "test/fixtures/i80386-vm-task.S": "4c7d5e77fcc8b5f9d97c0325e03dbb3732402b8d855a5fd553446c850a690972",
+    "scripts/bochs-cpu3-owned-oracle/instrument.cc": "2230742952823036160e8522cd767f6bf5e1702b14b244ab4451f8e887966b43",
+    "scripts/bochs-cpu3-owned-oracle/parse.mjs": "e2b54294bbbf64b561a67adae565f26d0852c8a0152b25a16480a35b5695f27f",
+    "scripts/prepare-bochs-cpu3-owned-oracle.mjs": "b0c3f5ae16fc5086bdb7622a92014625ad86a7b21687a46acff7ee10e0d7997a",
+    "scripts/run-bochs-cpu3-owned-oracle.mjs": "1d7e66bfd36f3be22cdbc3f9c887fd2b9416bceec41344257be4549b9e730e13"
+  },
+  "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+  "bochsConfigSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c",
+  "bochsExecutableSha256": "209ec4ef28fa0f0e1f458d0515aeb916bc87ffbdae8d50b4cf4be8d60f43be19",
+  "bochsStubHeaderSha256": "81cfbc14167dd8ac6465d9f2aacde8fc5cf353778d0911ade9a410993306cdf0",
+  "bochsProbeSha256": "2230742952823036160e8522cd767f6bf5e1702b14b244ab4451f8e887966b43",
+  "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+  "vgaBiosSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+  "imageSha256": "3f52637b99e7dac85e052e212ce4f520c64ad9116b83c4e67a648cb18ed513ae",
+  "floppySha256": "8749207d9c4fd9cd56532d122d6daa1865b637cd1d7c3bb52e90f3cf14bf9035",
+  "marker": "BHVK003",
+  "bochsExit": {
+    "code": null,
+    "signal": "SIGTERM"
+  },
+  "checkpoint": {
+    "schema": "bw.bochs-cpu3-owned-hook-checkpoint.v1",
+    "boundary": "after final E9 marker OUT, before next fixture instruction",
+    "events": [
+      {
+        "ordinal": 1,
+        "instruction": 0,
+        "kind": "port-write",
+        "a": 233,
+        "b": 66,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 2,
+        "instruction": 1,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32260,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 3,
+        "instruction": 1,
+        "kind": "linear-access",
+        "a": 32408,
+        "b": 32408,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 4,
+        "instruction": 1,
+        "kind": "linear-access",
+        "a": 32410,
+        "b": 32410,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 5,
+        "instruction": 2,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32265,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 6,
+        "instruction": 2,
+        "kind": "linear-access",
+        "a": 32414,
+        "b": 32414,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 7,
+        "instruction": 2,
+        "kind": "linear-access",
+        "a": 32416,
+        "b": 32416,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 8,
+        "instruction": 3,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32270,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 9,
+        "instruction": 4,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32273,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 10,
+        "instruction": 5,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32277,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 11,
+        "instruction": 6,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32280,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 12,
+        "instruction": 6,
+        "kind": "linear-access",
+        "a": 32368,
+        "b": 32368,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 13,
+        "instruction": 6,
+        "kind": "linear-access",
+        "a": 32373,
+        "b": 32373,
+        "c": 1,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 14,
+        "instruction": 7,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32285,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 15,
+        "instruction": 8,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32288,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 16,
+        "instruction": 8,
+        "kind": "linear-access",
+        "a": 32376,
+        "b": 32376,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 17,
+        "instruction": 8,
+        "kind": "linear-access",
+        "a": 32381,
+        "b": 32381,
+        "c": 1,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 18,
+        "instruction": 9,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32290,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 19,
+        "instruction": 9,
+        "kind": "linear-access",
+        "a": 32376,
+        "b": 32376,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 20,
+        "instruction": 10,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32292,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 21,
+        "instruction": 10,
+        "kind": "linear-access",
+        "a": 32376,
+        "b": 32376,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 22,
+        "instruction": 11,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32294,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 23,
+        "instruction": 12,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32297,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 24,
+        "instruction": 13,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32300,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 25,
+        "instruction": 13,
+        "kind": "linear-access",
+        "a": 32384,
+        "b": 32384,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 26,
+        "instruction": 13,
+        "kind": "linear-access",
+        "a": 32388,
+        "b": 32388,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 27,
+        "instruction": 14,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32303,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 28,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32392,
+        "b": 32392,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 29,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32388,
+        "b": 32388,
+        "c": 4,
+        "d": 0,
+        "e": 3
+      },
+      {
+        "ordinal": 30,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32388,
+        "b": 32388,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 31,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32464,
+        "b": 32464,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 32,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32468,
+        "b": 32468,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 33,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32472,
+        "b": 32472,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 34,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32476,
+        "b": 32476,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 35,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32480,
+        "b": 32480,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 36,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32484,
+        "b": 32484,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 37,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32488,
+        "b": 32488,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 38,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32492,
+        "b": 32492,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 39,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32496,
+        "b": 32496,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 40,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32500,
+        "b": 32500,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 41,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32504,
+        "b": 32504,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 42,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32508,
+        "b": 32508,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 43,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32512,
+        "b": 32512,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 44,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32516,
+        "b": 32516,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 45,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32520,
+        "b": 32520,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 46,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32524,
+        "b": 32524,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 47,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32568,
+        "b": 32568,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 48,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32572,
+        "b": 32572,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 49,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32576,
+        "b": 32576,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 50,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32580,
+        "b": 32580,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 51,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32584,
+        "b": 32584,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 52,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32588,
+        "b": 32588,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 53,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32592,
+        "b": 32592,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 54,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32596,
+        "b": 32596,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 55,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32600,
+        "b": 32600,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 56,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32604,
+        "b": 32604,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 57,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32608,
+        "b": 32608,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 58,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32612,
+        "b": 32612,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 59,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32616,
+        "b": 32616,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 60,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32620,
+        "b": 32620,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 61,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32624,
+        "b": 32624,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 62,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32628,
+        "b": 32628,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 63,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32632,
+        "b": 32632,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 64,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32636,
+        "b": 32636,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 65,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32396,
+        "b": 32396,
+        "c": 4,
+        "d": 0,
+        "e": 3
+      },
+      {
+        "ordinal": 66,
+        "instruction": 14,
+        "kind": "linear-access",
+        "a": 32396,
+        "b": 32396,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 67,
+        "instruction": 15,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32320,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 68,
+        "instruction": 15,
+        "kind": "interrupt",
+        "a": 32,
+        "b": 0,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 69,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 33000,
+        "b": 33000,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 70,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32400,
+        "b": 32400,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 71,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32568,
+        "b": 32568,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 72,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32572,
+        "b": 32572,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 73,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32576,
+        "b": 32576,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 74,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32580,
+        "b": 32580,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 75,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32584,
+        "b": 32584,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 76,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32588,
+        "b": 32588,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 77,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32592,
+        "b": 32592,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 78,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32596,
+        "b": 32596,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 79,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32600,
+        "b": 32600,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 80,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32604,
+        "b": 32604,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 81,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32608,
+        "b": 32608,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 82,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32612,
+        "b": 32612,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 83,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32616,
+        "b": 32616,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 84,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32620,
+        "b": 32620,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 85,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32624,
+        "b": 32624,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 86,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32628,
+        "b": 32628,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 87,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32640,
+        "b": 32640,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 88,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32672,
+        "b": 32672,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 89,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32676,
+        "b": 32676,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 90,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32680,
+        "b": 32680,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 91,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32684,
+        "b": 32684,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 92,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32688,
+        "b": 32688,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 93,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32692,
+        "b": 32692,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 94,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32696,
+        "b": 32696,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 95,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32700,
+        "b": 32700,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 96,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32704,
+        "b": 32704,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 97,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32708,
+        "b": 32708,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 98,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32712,
+        "b": 32712,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 99,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32716,
+        "b": 32716,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 100,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32720,
+        "b": 32720,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 101,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32724,
+        "b": 32724,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 102,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32728,
+        "b": 32728,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 103,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32732,
+        "b": 32732,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 104,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32736,
+        "b": 32736,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 105,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32740,
+        "b": 32740,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 106,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32404,
+        "b": 32404,
+        "c": 4,
+        "d": 0,
+        "e": 3
+      },
+      {
+        "ordinal": 107,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32404,
+        "b": 32404,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 108,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32376,
+        "b": 32376,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 109,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32376,
+        "b": 32376,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 110,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32376,
+        "b": 32376,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 111,
+        "instruction": 15,
+        "kind": "linear-access",
+        "a": 32368,
+        "b": 32368,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 112,
+        "instruction": 16,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32310,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 113,
+        "instruction": 16,
+        "kind": "linear-access",
+        "a": 1280,
+        "b": 1280,
+        "c": 1,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 114,
+        "instruction": 17,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32315,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 115,
+        "instruction": 18,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32317,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 116,
+        "instruction": 18,
+        "kind": "port-write",
+        "a": 233,
+        "b": 72,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 117,
+        "instruction": 19,
+        "kind": "instruction",
+        "a": 8,
+        "b": 32319,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 118,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32640,
+        "b": 32640,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 119,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32392,
+        "b": 32392,
+        "c": 8,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 120,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32404,
+        "b": 32404,
+        "c": 4,
+        "d": 0,
+        "e": 3
+      },
+      {
+        "ordinal": 121,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32404,
+        "b": 32404,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 122,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32672,
+        "b": 32672,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 123,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32676,
+        "b": 32676,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 124,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32680,
+        "b": 32680,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 125,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32684,
+        "b": 32684,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 126,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32688,
+        "b": 32688,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 127,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32692,
+        "b": 32692,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 128,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32696,
+        "b": 32696,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 129,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32700,
+        "b": 32700,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 130,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32704,
+        "b": 32704,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 131,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32708,
+        "b": 32708,
+        "c": 4,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 132,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32712,
+        "b": 32712,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 133,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32716,
+        "b": 32716,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 134,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32720,
+        "b": 32720,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 135,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32724,
+        "b": 32724,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 136,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32728,
+        "b": 32728,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 137,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32732,
+        "b": 32732,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 138,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32568,
+        "b": 32568,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 139,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32572,
+        "b": 32572,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 140,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32576,
+        "b": 32576,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 141,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32580,
+        "b": 32580,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 142,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32584,
+        "b": 32584,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 143,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32588,
+        "b": 32588,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 144,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32592,
+        "b": 32592,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 145,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32596,
+        "b": 32596,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 146,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32600,
+        "b": 32600,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 147,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32604,
+        "b": 32604,
+        "c": 4,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 148,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32608,
+        "b": 32608,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 149,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32612,
+        "b": 32612,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 150,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32616,
+        "b": 32616,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 151,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32620,
+        "b": 32620,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 152,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32624,
+        "b": 32624,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 153,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32628,
+        "b": 32628,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 154,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32632,
+        "b": 32632,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 155,
+        "instruction": 19,
+        "kind": "linear-access",
+        "a": 32636,
+        "b": 32636,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 156,
+        "instruction": 20,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32322,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 157,
+        "instruction": 21,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32324,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 158,
+        "instruction": 21,
+        "kind": "linear-access",
+        "a": 32638,
+        "b": 32638,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 159,
+        "instruction": 21,
+        "kind": "linear-access",
+        "a": 32565,
+        "b": 32565,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 160,
+        "instruction": 21,
+        "kind": "port-write",
+        "a": 233,
+        "b": 86,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 161,
+        "instruction": 22,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32326,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 162,
+        "instruction": 22,
+        "kind": "linear-access",
+        "a": 1280,
+        "b": 1280,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 163,
+        "instruction": 23,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32329,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 164,
+        "instruction": 23,
+        "kind": "linear-access",
+        "a": 32638,
+        "b": 32638,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 165,
+        "instruction": 23,
+        "kind": "linear-access",
+        "a": 32565,
+        "b": 32565,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 166,
+        "instruction": 23,
+        "kind": "port-write",
+        "a": 233,
+        "b": 75,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 167,
+        "instruction": 24,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32331,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 168,
+        "instruction": 25,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32333,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 169,
+        "instruction": 26,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32335,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 170,
+        "instruction": 26,
+        "kind": "linear-access",
+        "a": 32638,
+        "b": 32638,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 171,
+        "instruction": 26,
+        "kind": "linear-access",
+        "a": 32565,
+        "b": 32565,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 172,
+        "instruction": 26,
+        "kind": "port-write",
+        "a": 233,
+        "b": 48,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 173,
+        "instruction": 27,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32337,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 174,
+        "instruction": 28,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32339,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 175,
+        "instruction": 29,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32341,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 176,
+        "instruction": 29,
+        "kind": "linear-access",
+        "a": 32638,
+        "b": 32638,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 177,
+        "instruction": 29,
+        "kind": "linear-access",
+        "a": 32565,
+        "b": 32565,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 178,
+        "instruction": 29,
+        "kind": "port-write",
+        "a": 233,
+        "b": 48,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 179,
+        "instruction": 30,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32343,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 180,
+        "instruction": 30,
+        "kind": "linear-access",
+        "a": 26622,
+        "b": 26622,
+        "c": 2,
+        "d": 0,
+        "e": 1
+      },
+      {
+        "ordinal": 181,
+        "instruction": 31,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32344,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 182,
+        "instruction": 31,
+        "kind": "linear-access",
+        "a": 26622,
+        "b": 26622,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 183,
+        "instruction": 32,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32345,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 184,
+        "instruction": 33,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32348,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 185,
+        "instruction": 34,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32350,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 186,
+        "instruction": 35,
+        "kind": "instruction",
+        "a": 0,
+        "b": 32352,
+        "c": 0,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 187,
+        "instruction": 35,
+        "kind": "linear-access",
+        "a": 32638,
+        "b": 32638,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 188,
+        "instruction": 35,
+        "kind": "linear-access",
+        "a": 32565,
+        "b": 32565,
+        "c": 2,
+        "d": 0,
+        "e": 0
+      },
+      {
+        "ordinal": 189,
+        "instruction": 35,
+        "kind": "port-write",
+        "a": 233,
+        "b": 51,
+        "c": 1,
+        "d": 0,
+        "e": 0
+      }
+    ],
+    "segments": {
+      "es": {
+        "selector": 0,
+        "valid": 1,
+        "base": 0,
+        "limitScaled": 65535,
+        "present": 1,
+        "dpl": 3,
+        "segment": 1,
+        "type": 3,
+        "granularity": 0,
+        "default32": 0
+      },
+      "cs": {
+        "selector": 0,
+        "valid": 1,
+        "base": 0,
+        "limitScaled": 65535,
+        "present": 1,
+        "dpl": 3,
+        "segment": 1,
+        "type": 3,
+        "granularity": 0,
+        "default32": 0
+      },
+      "ss": {
+        "selector": 0,
+        "valid": 7,
+        "base": 0,
+        "limitScaled": 65535,
+        "present": 1,
+        "dpl": 3,
+        "segment": 1,
+        "type": 3,
+        "granularity": 0,
+        "default32": 0
+      },
+      "ds": {
+        "selector": 0,
+        "valid": 3,
+        "base": 0,
+        "limitScaled": 65535,
+        "present": 1,
+        "dpl": 3,
+        "segment": 1,
+        "type": 3,
+        "granularity": 0,
+        "default32": 0
+      },
+      "fs": {
+        "selector": 0,
+        "valid": 1,
+        "base": 0,
+        "limitScaled": 65535,
+        "present": 1,
+        "dpl": 3,
+        "segment": 1,
+        "type": 3,
+        "granularity": 0,
+        "default32": 0
+      },
+      "gs": {
+        "selector": 0,
+        "valid": 1,
+        "base": 0,
+        "limitScaled": 65535,
+        "present": 1,
+        "dpl": 3,
+        "segment": 1,
+        "type": 3,
+        "granularity": 0,
+        "default32": 0
+      },
+      "ldtr": {
+        "selector": 0,
+        "valid": 0,
+        "base": null,
+        "limitScaled": null,
+        "present": null,
+        "dpl": null,
+        "segment": null,
+        "type": null,
+        "granularity": null,
+        "default32": null
+      },
+      "tr": {
+        "selector": 32,
+        "valid": 1,
+        "base": 32536,
+        "limitScaled": 103,
+        "present": 1,
+        "dpl": 0,
+        "segment": 0,
+        "type": 11,
+        "granularity": 0,
+        "default32": 0
+      }
+    },
+    "state": {
+      "eax": 51,
+      "ecx": 0,
+      "edx": 0,
+      "ebx": 0,
+      "esp": 26624,
+      "ebp": 0,
+      "esi": 0,
+      "edi": 0,
+      "eip": 32354,
+      "eflags": 143878,
+      "cr0": 2147483641,
+      "cr2": 0,
+      "cr3": 0
+    },
+    "debug": {
+      "dr0": 0,
+      "dr1": 0,
+      "dr2": 0,
+      "dr3": 0,
+      "dr6": 4294909936,
+      "dr7": 1024
+    },
+    "tables": {
+      "gdtrBase": 32360,
+      "gdtrLimit": 47,
+      "idtrBase": 32744,
+      "idtrLimit": 263
+    },
+    "schedule": {
+      "inhibitMask": 0,
+      "inhibitIcount": 1588437,
+      "icount": 1588462
+    },
+    "instructionCount": 35
+  }
+}
