@@ -11,8 +11,10 @@ The result is not a full CPU, paging-bus, or performance qualification.
 The JavaScript side uses `cpuProfile: "strict386"`, an explicit `80387`
 hardware reset to align the defined CR0.ET input, and direct entry at the
 owned post-disk-load `0000:7e00` setup label. The comparator requires exact
-committed bytes for itself, the CPU, the native v2 receipt, and every source
-hash named by that receipt. It assembles the same fixture image, checks its
+committed bytes for itself, the CPU, the native v2 receipt, and the executable source
+hashes named by that receipt. The one named narrative document may change:
+its historical hash remains checked, its current bytes must be committed,
+and both hashes are reported as narrative provenance. It assembles the same fixture image, checks its
 SHA-256 against the native image, and runs only the JavaScript CPU. It does
 not rebuild or rerun Bochs. Run `node
 scripts/compare-bochs-cpu3-owned-paging-v2.mjs` from a clean checkout; its
