@@ -23,6 +23,12 @@ recoverable page fault, and port I/O. That [owned native self-parity gate](I8038
 has now passed on one free fixture with host callbacks and budgets 1/2/257.
 It does not establish the separate WASM backend, JavaScript board parity, or
 speed.
+The subsequent [native host-event gate](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md)
+also passed and was independently reproduced: an absolute REP deadline,
+original STI-shadow eligibility, two host IRQ deliveries, and five HLT idle
+observations share the same ordered journal across budgets. A20, DMA,
+MMIO, combined paging/device IRQ behavior, and board integration remain open.
+
 The current board directly constructs the JavaScript CPU with physical memory
 and port callbacks in `src/experimental/i80386-at-machine.js`. A WASM adapter
 would need a bounded instruction entry point and matching fetch, read, write, port,

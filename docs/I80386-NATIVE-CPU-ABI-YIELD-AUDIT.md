@@ -15,6 +15,10 @@ passed on the owned fixture with continuous and 1/2/257-tick budgets. This
 source audit remains the design record; the newer receipt gives the observed
 scope and limitations.
 
+The later [native host-event gate](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md)
+qualifies host deadlines, original maskable-IRQ delivery, and HLT idle/wakeup
+for a second free fixture. It retains the earlier source and receipts.
+
 ## What the source currently exposes
 
 The CPU class declares [`cpu_loop()` and an SMP-only `cpu_run_trace()`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/cpu.h#L4295-L4304).
