@@ -52,6 +52,19 @@ const fixedImageSha='ce06e9c8ebb8e014f548cf03ba2fd11b16b13e1eaed1ea58fd056da3bbc
 const fixedBiosSha='6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac';
 const fixedVgaSha='76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1';
 const budgets={continuous:1000000,budget1:1,budget2:2,budget257:257};
+const guardReasons={
+  'out-of-range-physical':'host-physical-read',
+  'unsupported-span-width':'host-physical-read',
+  'unexpected-pio':'host-port-out',
+  'unsafe-execute-rom':'unsafe-execute-page',
+  'unsafe-execute-mmio':'unsafe-execute-page',
+  'unsafe-execute-unmapped':'unsafe-execute-page',
+  'bochs-ram-read':'Bochs-RAM-read-fallback',
+  'bochs-ram-write':'Bochs-RAM-write-fallback',
+  'bochs-direct-pointer':'Bochs-direct-pointer-fallback',
+  'bochs-pio':'Bochs-PIO-fallback',
+  'bochs-timer':'Bochs-timer-fallback',
+};
 const u64max='18446744073709551615';
 const canonicalU64=(value,at)=>{
   assert(typeof value==='string'&&/^(0|[1-9][0-9]*)$/.test(value)&&
@@ -458,9 +471,13 @@ async function runArm(binary,rc,budget,failureDir){
     stdio:['ignore','pipe','pipe','pipe','pipe'],detached:true});
   const stdout=boundedOutput(child.stdout,1024*1024,'stdout');
   const stderr=boundedOutput(child.stderr,16*1024*1024,'stderr');
+  // An intentional native SIGABRT can close the command pipe while a reply
+  // is queued. A write callback alone does not consume its stream error.
+  let commandPipeError=null;
+  child.stdio[3].on('error',error=>{commandPipeError=error;});
   const inbound=new BoundedLines(child.stdio[4]);
   const host=new NativeDeviceHost(),hostSeed=host.state();
-  const toNative=[],fromNative=[],commands=[],requests=[],replies=[];
+  const toNative=[],fromNative=[],commands=[],requests=[],replies=[],dones=[];
   let commandSeq=0,requestSeq=0,phase='first-halt',idleWitness=false,
     terminalWitness=false;
   const closed=new Promise((resolve,reject)=>{
@@ -489,6 +506,7 @@ async function runArm(binary,rc,budget,failureDir){
       }else{
         assert(message.kind==='DONE'&&message.seq===seq&&message.verb===verb,
           'DONE did not close its command');
+        dones.push(message);
         if(verb==='RUN'){
           assert(message.totalTicks===host.nativeTicks&&
             message.attempts===message.completed&&
@@ -548,6 +566,7 @@ async function runArm(binary,rc,budget,failureDir){
       exitTimer=setTimeout(()=>reject(Error('native child exit timed out')),10000);
     })]).finally(()=>clearTimeout(exitTimer));
     assert(exit.code===0&&exit.signal===null,'normal native child did not exit zero');
+    assert(!commandPipeError,'native command pipe failed');
     assert(!stdout.error&&!stderr.error,'native raw output exceeded its bound');
     const raw={stdout:stdout.text,stderr:stderr.text,
       rpcToNative:toNative.join('\n')+'\n',rpcFromNative:fromNative.join('\n')+'\n'};
@@ -557,7 +576,7 @@ async function runArm(binary,rc,budget,failureDir){
       native.finalCounters.rpcReplies===replies.length,
     'native final RPC/clock ledger differs');
     return {exit,host:{seed:hostSeed,journal:host.journal,final:host.state()},
-      native,rpc:{commands,requests,replies},raw};
+      native,rpc:{commands,requests,replies,dones},raw};
   }catch(error){
     stopProcessGroup(child);
     let settleTimer;
@@ -626,6 +645,73 @@ function retainArm(directory,label,arm,bochsLog){
   return {exitCode:arm.exit.code,signal:arm.exit.signal,files};
 }
 
+async function runGuard(binary,rc,name,expected,directory,bochsLog){
+  const child=spawn(binary,['-q','-f',rc],{cwd:dirname(rc),detached:true,
+    env:{...process.env,BW_CPU3_DEVICE_EVENTS_PROBE:name},
+    stdio:['ignore','pipe','pipe','pipe','pipe']});
+  const stdout=boundedOutput(child.stdout,1024*1024,'guard stdout');
+  const stderr=boundedOutput(child.stderr,16*1024*1024,'guard stderr');
+  let commandPipeError=null;
+  child.stdio[3].on('error',error=>{commandPipeError=error;});
+  child.stdio[3].end();
+  const closed=new Promise((resolve,reject)=>{
+    child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));
+  });
+  const wall=setTimeout(()=>stopProcessGroup(child),15000);
+  let exit;
+  try{exit=await closed;}finally{clearTimeout(wall);}
+  const label=`guard-${name}`;
+  const files={};
+  for(const [key,value] of Object.entries({stdout:stdout.text,stderr:stderr.text})){
+    const path=`${label}.${key}.txt`;
+    writeFileSync(join(directory,path),value);
+    files[key]={path,sha256:fileSha(join(directory,path))};
+  }
+  assert(existsSync(bochsLog),`${label}: host log absent`);
+  const logPath=`${label}.bochs.log`;
+  copyFileSync(bochsLog,join(directory,logPath));
+  files.bochsLog={path:logPath,sha256:fileSha(join(directory,logPath))};
+  const failure=stderr.text.split('\n').filter(line=>line.startsWith('BWS7\tFAIL\t'));
+  assert(exit.signal==='SIGABRT'&&exit.code===null&&
+    failure.length===1&&failure[0]===`BWS7\tFAIL\t${expected}`&&
+    !stdout.error&&!stderr.error&&!commandPipeError,
+  `${label}: wrong native fail-closed guard or exit`);
+  return {name,expected,exit,observedFailure:expected,files};
+}
+
+async function runFull(tree,outdir){
+  assert(!existsSync(outdir),'output directory must be new');
+  mkdirSync(outdir,{recursive:true});
+  const {source,binary,hostConfig,floppyPath}=preparedInputs(tree,outdir);
+  const artifacts={bochsrc:{path:'bochsrc',sha256:fileSha(hostConfig.rc)},
+    floppy:{path:'owned-floppy.img',sha256:fileSha(floppyPath)}};
+  const arms={};
+  for(const [name,budget] of Object.entries(budgets)){
+    const arm=await runArm(binary,hostConfig.rc,budget,outdir);
+    const files=retainArm(outdir,name,arm,hostConfig.log);
+    arms[name]={mode:name,requestedBudget:budget,host:arm.host,native:arm.native,
+      rpc:arm.rpc,artifacts:files};
+    artifacts[name]=files;
+    recheckInputs(tree,source,hostConfig,floppyPath);
+  }
+  const probes={};
+  for(const [name,reason] of Object.entries(guardReasons)){
+    const guard=await runGuard(binary,hostConfig.rc,name,reason,outdir,hostConfig.log);
+    probes[name]=guard;artifacts[`guard-${name}`]=guard.files;
+    recheckInputs(tree,source,hostConfig,floppyPath);
+  }
+  const report={schema:'bw.bochs-cpu3-native-device-events.v1',source,arms,probes,artifacts};
+  const result=assertNativeDeviceEventsProof(report);
+  recheckInputs(tree,source,hostConfig,floppyPath);
+  const reportPath=join(outdir,'capture.json'),resultPath=join(outdir,'result.json');
+  writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
+  writeFileSync(resultPath,JSON.stringify(result,null,2)+'\n');
+  console.log(JSON.stringify({status:'native-device-events-proof-pass',sourceRevision:source.boardRevision,
+    report:reportPath,reportSha256:fileSha(reportPath),result:resultPath,
+    resultSha256:fileSha(resultPath),nativeTicks:result.nativeTicks,
+    boardCycles:result.boardCycles,slices:result.slices},null,2));
+}
+
 async function runSingle(tree,outdir){
   assert(!existsSync(outdir),'output directory must be new');
   mkdirSync(outdir,{recursive:true});
@@ -655,11 +741,12 @@ async function runSingle(tree,outdir){
 
 async function main(){
   const [mode,treeArg,outdirArg,...extra]=process.argv.slice(2);
-  assert(!extra.length&&['--preflight','--single'].includes(mode)&&treeArg&&
+  assert(!extra.length&&['--preflight','--single','--capture'].includes(mode)&&treeArg&&
     (mode==='--preflight'?!outdirArg:!!outdirArg),
-  'usage: node scripts/run-bochs-cpu3-native-device-events-compare.mjs --preflight BOCHS_TREE | --single BOCHS_TREE NEW_OUTPUT_DIRECTORY');
+  'usage: node scripts/run-bochs-cpu3-native-device-events-compare.mjs --preflight BOCHS_TREE | --single|--capture BOCHS_TREE NEW_OUTPUT_DIRECTORY');
   const tree=resolve(treeArg);
   if(mode==='--single')return runSingle(tree,resolve(outdirArg));
+  if(mode==='--capture')return runFull(tree,resolve(outdirArg));
   const scratch=mkdtempSync(join(tmpdir(),'bw-native-device-events-preflight-'));
   try{const {source}=preparedInputs(tree,scratch);
     console.log(JSON.stringify({status:'preflight-only',source},null,2));}
