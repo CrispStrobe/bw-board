@@ -11,8 +11,10 @@ The result is not a full CPU, paging-bus, or performance qualification.
 The JavaScript side uses `cpuProfile: "strict386"`, an explicit `80387`
 hardware reset to align the defined CR0.ET input, and direct entry at the
 owned post-disk-load `0000:7e00` setup label. The comparator requires exact
-committed bytes for itself, the CPU, the native v2 receipt, and every source
-hash named by that receipt. It assembles the same fixture image, checks its
+committed bytes for itself, the CPU, the native v2 receipt, and the executable source
+hashes named by that receipt. The one named narrative document may change:
+its historical hash remains checked, its current bytes must be committed,
+and both hashes are reported as narrative provenance. It assembles the same fixture image, checks its
 SHA-256 against the native image, and runs only the JavaScript CPU. It does
 not rebuild or rerun Bochs. Run `node
 scripts/compare-bochs-cpu3-owned-paging-v2.mjs` from a clean checkout; its
@@ -29,7 +31,7 @@ Unloaded TR/LDTR selectors are checked as null, while their hidden cache
 fields are excluded. Raw CR0, debug-register seeds, and native cache flags
 remain visible in the receipt without being silently equated.
 
-The [Intel 80386 Programmer's Reference Manual, §10.1](https://pdos.lcs.mit.edu/6.828/2018/readings/i386/s10_01.htm)
+The [Intel 80386 Programmer's Reference Manual, §10.1](https://pdos.csail.mit.edu/6.828/2018/readings/i386/s10_01.htm)
 specifies reset IDTR base zero and limit `0x03ff`. The pinned Bochs CPU3
 source [`cpu/init.cc` lines 802–803](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/init.cc#L802-L803)
 instead seeds a zero base and `0xffff` limit. The v2 fixture has no `LIDT`,
