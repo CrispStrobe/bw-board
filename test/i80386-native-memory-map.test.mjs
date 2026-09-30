@@ -30,6 +30,8 @@ test('rejects a page walk that bypasses A20 or borrows a data access',()=>{
 test('rejects ROM/RAM/MMIO/open-bus class or effect substitutions',()=>{
   assert.throws(()=>assertMemoryMapByte(byte({class:'rom'}),false),/map class or effect/);
   assert.throws(()=>assertMemoryMapByte(byte({effect:'ram-commit'}),false),/map class or effect/);
+  assert.throws(()=>assertMemoryMapByte(byte({rw:'W',raw:0xffff0,effective:0xffff0,
+    class:'rom',value:0x12,effect:'ram-commit'}),true),/map class or effect/);
   assert.throws(()=>assertMemoryMapByte(byte({raw:0xa0000,effective:0xa0000,
     class:'ram',effect:'ram-read'}),true),/map class or effect/);
   assert.throws(()=>assertMemoryMapByte(byte({raw:0xd0000,effective:0xd0000,
