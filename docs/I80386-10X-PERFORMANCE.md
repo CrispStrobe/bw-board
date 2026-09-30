@@ -6,7 +6,7 @@ pair's timing result. All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
-## Current checkpoint (2026-09-29)
+## Current checkpoint (2026-09-30)
 
 The 10× performance goal remains open. The
 [audited stock xv6 full usertests pass](receipts/2026-09-29-xv6-stock-224m-full-suite.json)
@@ -30,21 +30,29 @@ a narrow fetch/decode cache.
 The proposed next route is a cross-mode, event-bounded trace executor, in
 this order:
 
-1. Extend the owned contracts from the
+1. Build on the completed owned contracts from the
    [branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md), the merged
    [`8E` ES load fixture](I80386-8E-SEGMENT-LOAD-CONTRACT.md), and the
-   [ordered CALL/RET and `FF /2` fixture in PR #149](https://github.com/CrispStrobe/bw-board/pull/149).
-   These pin individual boundaries, but their combined branch, device,
-   fault and mapping behavior remains unproved. Preserve code/page-table
-   writes and chip/IRQ cuts before extending the observer grammar.
-2. Expand the execution-neutral observer's typed grammar using the
-   [predeclared expanded diagnostic](I80386-EXPANDED-GROUPED-ADMISSION.md), then run a
-   source-pinned, disjoint unique-retirement census before runtime coding.
-   The [latest grouped Windows result](receipts/2026-09-29-i80386-grouped-first-refusal-result.json)
-   reached only 4.64 million ordinals in runs of at least eight against its
-   15-million overall gate, and 4.30 million against its 5-million
-   protected16+VM86 gate. Both thresholds remain unmet; any revised grammar
-   needs a predeclared screen and separate xv6 coverage evidence.
+   [ordered CALL/RET and `FF /2` fixture](I80386-CALL-RETURN-ORDERED-CONTRACT.md).
+   The [combined ES, CALL/RET, and I/O contract](I80386-COMBINED-ORDERED-STATE-CONTRACT.md)
+   from [PR #151](https://github.com/CrispStrobe/bw-board/pull/151) also
+   pins owned commit, fault, and chip/IRQ ordering. The
+   [selected register-stack contract](I80386-REGISTER-STACK-ORDERED-CONTRACT.md)
+   from [PR #153](https://github.com/CrispStrobe/bw-board/pull/153) pins
+   additional `50–5F` stack effects across modes. Broader branch, device,
+   fault, and mapping combinations remain unproved. Preserve code/page-table
+   writes and chip/IRQ cuts in any revised grammar.
+2. The [expanded Windows result](I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
+   reached 6.10 million disjoint ordinals in runs of at least eight overall,
+   below its 15-million gate, although protected16+VM86 reached 5.59 million
+   and passed its 5-million threshold. The separate stock xv6 census found
+   only 317,206 such ordinals, all protected32, with no xv6 pass threshold.
+   The current bounded next experiment is a source-pinned, execution-neutral
+   grammar diagnostic for the now-owned register `50–5F` stack forms under
+   every existing page, event, identity, translation, and write cut. Its
+   Windows coverage must independently pass the same disjoint 15M/5M screen;
+   opcode frequency and local bridges are not coverage. The unchanged
+   `unsafe-code` and other large refusal classes may still prevent passage.
 3. Attribute the affected path to nonoverlapping, all-process CPU samples
    before treating step coverage as a speed opportunity. The
    [ordinary-core audit](receipts/2026-09-28-i80386-ordinary-core-other-audit.md)
@@ -56,9 +64,9 @@ this order:
    including RAM and disk hashes, focused mutation tests, and serial
    alternating unprofiled CPU-time pairs before any retention or speed claim.
 
-This is a proposed measurement and implementation sequence. No expanded
-grammar gate or CPU-cost gate has passed, and no broader executor is justified
-by the current evidence. The sections below are a dated experiment ledger;
+This is a proposed measurement and implementation sequence. The expanded
+grammar's overall gate failed, no CPU-cost gate has passed, and no broader
+executor is justified by the current evidence. The sections below are a dated experiment ledger;
 their historical “next” recommendations describe their source revisions.
 
 ## Measured checkpoint (2026-09-28)
