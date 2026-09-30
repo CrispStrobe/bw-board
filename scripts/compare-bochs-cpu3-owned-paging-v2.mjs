@@ -10,6 +10,8 @@ import I80386 from '../src/experimental/i80386.js';
 const repo=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const fixturePath='test/fixtures/i80386-bochs-cpu3-paging-v2.S';
 const receiptPath='docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-v2.json';
+const narrativePath='docs/I80386-BOCHS-CPU3-OWNED-MEMORY-ORACLE-V2.md';
+const originalNarrativeSha256='d3186acbe52bb14a095bfd617cf42880b83a95321dc8b4682965f6bfaa3a9a4e';
 const thisPath='scripts/compare-bochs-cpu3-owned-paging-v2.mjs';
 const registers=['eax','ecx','edx','ebx','esp','ebp','esi','edi'];
 const segments=['es','cs','ss','ds','fs','gs'];
@@ -125,7 +127,9 @@ async function main(){
       nativeReceipt.status!=='native-capture-complete' || nativeReceipt.comparison!=='not-run' ||
       nativeReceipt.bochsRevision!=='0e45b736ef9792eb9b752b0a35db49eaf2faea47' ||
       nativeReceipt.cpuLevel!==3 || nativeReceipt.marker!=='BHPG004' ||
-      Object.entries(nativeReceipt.sourceHashes).some(([path,hash])=>sourceHashes[path]!==hash))
+      nativeReceipt.sourceHashes[narrativePath]!==originalNarrativeSha256 ||
+      Object.entries(nativeReceipt.sourceHashes).some(([path,hash])=>
+        path!==narrativePath && sourceHashes[path]!==hash))
     throw new Error('native receipt does not bind the committed owned paging fixture and CPU3 source');
   const build=mkdtempSync(join(tmpdir(),'bw-bochs-cpu3-js-paging-'));
   try{
@@ -157,6 +161,9 @@ async function main(){
       boardRevision:execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim(),
       sourceHashes,nativeReceipt:receiptPath,nativeBochsRevision:nativeReceipt.bochsRevision,
       nativeBinarySha256:nativeReceipt.bochsExecutableSha256,imageSha256:sha256(binary),
+      historicalNarrativeDocument:{path:narrativePath,
+        nativeSourceSha256:originalNarrativeSha256,currentCommittedSha256:sourceHashes[narrativePath],
+        role:'narrative-not-executed'},
       jsSetup:'strict386, explicit 80387 reset, direct owned post-load entry at 0000:7e00',
       jsSteps:steps,marker,comparison},null,2));
     if(comparison.mismatches.length)process.exitCode=1;
