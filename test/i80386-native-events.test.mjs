@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
-import {assertNativeEventsArm} from '../scripts/bochs-cpu3-native-events-compare.mjs';
+import {gunzipSync} from 'node:zlib';
+import {assertNativeEventsArm,assertNativeEventsSelfParity} from
+  '../scripts/bochs-cpu3-native-events-compare.mjs';
 import {failureProbe,parseArm} from '../scripts/run-bochs-cpu3-native-events-compare.mjs';
 
 // A normalized, freely authored exploratory arm tests the evidence contract.
@@ -15,6 +18,53 @@ const rejects=(edit,pattern)=>{
   assert.throws(()=>check(arm),pattern);
 };
 const first=(arm,kind)=>arm.journal.find(e=>e.kind===kind);
+
+// The compressed free-owned four-arm capture predates this test and has its
+// path-bearing artifact index removed. It is a mutation input, not the final
+// source-bound receipt. Add its own committed hash at test time to exercise the
+// current exact source inventory without a self-referential fixture file.
+const previousPath='test/fixtures/i80386-native-events-qualified-3e3b58cd.json.gz';
+const previousBytes=readFileSync(new URL('./fixtures/i80386-native-events-qualified-3e3b58cd.json.gz',
+  import.meta.url));
+const previous=JSON.parse(gunzipSync(previousBytes).toString('utf8'));
+assert.equal(previous.source.boardRevision,
+  '3e3b58cdbffb578e09ecf12cce527a541a36e13a');
+assert.equal(previous.artifacts,undefined);
+previous.source.sourceHashes[previousPath]=createHash('sha256').update(previousBytes).digest('hex');
+const checkReport=()=>assertNativeEventsSelfParity(previous);
+const rejectsReport=(edit,pattern)=>{
+  const report=structuredClone(previous);edit(report);
+  assert.throws(()=>assertNativeEventsSelfParity(report),pattern);
+};
+
+test('accepts the prior free-owned four-arm capture as a mutation input',()=>{
+  const result=checkReport();
+  assert.equal(result.status,'native-host-event-self-parity');
+  assert.equal(result.nativeTicks,1126);
+  assert.deepEqual(result.slices,
+    {continuous:15,budget1:1133,budget2:569,budget257:18});
+});
+
+test('full report rejects missing or changed source identity and seed parity',()=>{
+  rejectsReport(r=>{delete r.source.sourceHashes[previousPath];},/source.sourceHashes inventory/);
+  rejectsReport(r=>{delete r.source.configSha256;},/source: missing configSha256/);
+  rejectsReport(r=>{r.source.bochsRevision='0'.repeat(40);},/pinned Bochs/);
+  rejectsReport(r=>{r.armSeeds.budget1.ramSha256='0'.repeat(64);},/armSeeds.budget1/);
+});
+
+test('full report rejects missing API, fail-closed probe, or arm evidence',()=>{
+  rejectsReport(r=>{delete r.apiProbes['due-now'];},/apiProbes keys/);
+  rejectsReport(r=>{r.apiProbes['due-now']='rejected';},/due-now/);
+  rejectsReport(r=>{delete r.probes.bochsPio;},/probes keys/);
+  rejectsReport(r=>{r.probes.bochsPio.observedFailure='unrelated crash';},/probes.bochsPio/);
+  rejectsReport(r=>{delete r.arms.budget257;},/arms keys/);
+});
+
+test('full report rejects cross-arm drift and shared false final checkpoint',()=>{
+  rejectsReport(r=>{r.arms.budget2.final.selectedState.edx++;},/budget2.final/);
+  rejectsReport(r=>{for(const arm of Object.values(r.arms))arm.final.selectedState.eip=0x7eb4;},
+    /terminal selected CPU state/);
+});
 
 test('accepts the owned exploratory native event arm as a test input',()=>{
   const result=check(input.arm);
