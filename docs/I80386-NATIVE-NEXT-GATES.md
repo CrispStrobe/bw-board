@@ -1,8 +1,12 @@
 # Next native 386 gates after host-event self-parity
 
-**Status (2026-09-30): read-only implementation audit, not a new execution result.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following are concrete unfinished gates, in order. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
+**Status (2026-09-30): read-only implementation audit, not a new execution result.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following gate design records are in order; gate 1 has since completed, and gate 2 is the next unfinished item. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
 
 ## 1. Combine paging, fault retry, and a pending IRQ
+
+**Completed bounded gate:** the [combined native proof](I80386-NATIVE-PAGED-EVENT-SELF-PARITY.md)
+now passes and has been independently reproduced. The following design record
+remains useful; gate 2 is the next unfinished item.
 
 Start from the free event fixture: keep the tick-256 deadline inside REP, consume it, and assert IRQ under CLI. After REP, install identity 4 KiB paging, the page-fault gate at IDT entry 14, and IRQ gate 0x20. Leave page 5 nonpresent and execute a supervisor write to `0x5000` before STI. Reuse the owned page-fault handler's PTE repair, CR3 reload, error-dword removal, and IRETD retry. Enable interrupts only after the retried store succeeds, then retain the STI successor, second IRQ/HLT wake, and terminal masked HLT.
 
@@ -16,7 +20,7 @@ Suggested two-agent split: one owns the separate runtime driver/ABI/preparer; on
 
 The current native runtime copies raw `BX_MEM::get_vector` pages into one writable RAM domain. This is not an authority for mapped ROM or MMIO. The actual board classifies RAM, ROM, slow device regions, and unmapped pages in [`_buildPageTable`, `_read`, and `_write`](../src/i8086-machine.js). Its [`_read386`/`_write386`](../src/experimental/i80386-at-machine.js) additionally route A20, reset aliases, MP/APIC, and VGA. A board adapter needs that decode, including byte order across region/device boundaries, before granting direct executable-page pointers.
 
-In pinned Bochs `0e45b736ef9792eb9b752b0a35db49eaf2faea47`, `paging.cc` applies `A20ADDR` before the physical callback. `pc_system.cc::set_enable_a20` calls `MemoryMappingChanged`, which flushes CPU TLBs on transitions. Drive this transition once; do not independently mask callback addresses again. `cpu.cc::prefetch` requires an executable host pointer and panics when it is vetoed. The adapter must explicitly fail closed on unsupported executable mappings instead of assuming NULL invokes a slow fetch path.
+In pinned Bochs `0e45b736ef9792eb9b752b0a35db49eaf2faea47`, `paging.cc:1390` applies `A20ADDR` to translated data/fetch addresses. Legacy page walks and A/D updates (`paging.cc:1159,1262,1270`) also call the physical seam with raw PDE/PTE addresses. Original `memory.cc:42,246` masks those again; the native patch bypasses that layer. The new adapter must apply the idempotent effective A20 mask to **every** physical callback, including page walks, and journal raw and effective addresses. This corrects the earlier incomplete instruction against masking callback addresses. `pc_system.cc::set_enable_a20` calls `MemoryMappingChanged`, which flushes CPU TLBs on transitions. Drive each effective gate transition once. `cpu.cc::prefetch` requires an executable host pointer and panics when it is vetoed. The adapter must explicitly fail closed on unsupported executable mappings instead of assuming NULL invokes a slow fetch path.
 
 The smallest free memory fixture keeps code in RAM and tests:
 
@@ -25,6 +29,7 @@ The smallest free memory fixture keeps code in RAM and tests:
 - An owned fake MMIO register at `0xa0000`, with counted reads/writes and behavior distinct from backing RAM.
 - An intentionally unmapped window with `0xff` open-bus reads and discarded writes.
 - `OUT 0x92` transitions with the 8042 A20 source explicitly fixed low: disabled high access aliases low RAM, and reenabling restores the untouched high sentinel. Check for stale data/fetch mappings.
+- A separate paged probe with CR3/PDE/PTE addresses above 1 MiB while A20 is disabled, proving page-walk reads and A/D writes use their low aliases. The real-mode sentinel alone cannot detect the bypassed page-walk masking layer.
 
 The actual AT gate is the OR of the 8042 output and port-92 latch (`_out386`), so both sources need a later board-level test. The first fixture must state its fixed-source assumption. Define RAM commits, ignored ROM/unmapped writes, and MMIO side effects separately in the event journal. RAM writes must maintain Bochs write stamps for decoded code. Map/A20 transitions must invalidate relevant translations; ordinary guest PTE writes retain hardware CR3/INVLPG rules and must not cause an invented automatic TLB flush. Reject unknown regions, unsupported widths/ports, unmodeled boundary spans, unsafe direct pointers, and unqualified DMA/device mutations. A byte-decoded path is the correctness baseline; direct pointers require a stable executable region.
 
