@@ -196,7 +196,7 @@ URLs are in
 the reproduced browser/Node artifact is release
 [`labwired-wasm-313252d4`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-313252d4).
 
-Separate **native Rust** micro:bit v2 qualification on 2026-09-30 measured
+Separate **native Rust** micro:bit v2 PR qualification on 2026-09-30 measured
 **1.758214× median / 1.733954× minimum** while the source-built ARM guest
 polled the selected LSM303AGR accelerometer and magnetometer through TWIM
 EasyDMA, scanned the 5×5 diagonal and read physical button inputs. The same
@@ -217,6 +217,19 @@ binds its source, guest hash and complete samples. It does **not** qualify this
 repository's browser-WASM artifact or update its `a7c7cbdf` engine pin.
 CP13 remains open: shared sensor IRQ, ADC/microphone/audio and browser workload
 qualification are incomplete.
+
+The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
+at `ce60a499` also passed native board/model, input-routing and RTx gates.
+Its selected motion workload measured **1.030645× median / 1.027010× minimum**;
+all five samples exceeded 1.0×, but the margin is thin. The separate GPIO-only
+guest measured **3.355510× median**. Both the
+[complete main motion receipt](docs/receipts/2026-09-30-microbit-motion-hosted-main.json)
+and [GPIO-only receipt](docs/receipts/2026-09-30-microbit-active-hosted-main.json)
+retain the original source, guest hashes and observations. Runtime code and
+motion guest source bundle are unchanged from the earlier passing PR run;
+these are different runner observations, not a code-regression or controlled
+speedup measurement. Neither result upgrades the browser pin or belongs in
+the ALU-loop table above.
 
 That target support is intentionally narrower than a whole-board simulation.
 micro:bit v2's standalone manifest exposes buttons A/B, and the BW bridge maps
