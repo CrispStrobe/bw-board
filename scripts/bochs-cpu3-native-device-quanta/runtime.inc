@@ -67,6 +67,8 @@ static bool bw_reentry_probed;
 static uint8_t bw_last_irq_vector;
 static uint16_t bw_irq_entry_cs;
 static uint32_t bw_irq_entry_eip;
+static uint64_t bw_irq_ack_ticks;
+static uint64_t bw_irq_ack_quanta;
 static FILE *bw_rpc_input;
 static FILE *bw_rpc_output;
 static uint64_t bw_rpc_next_seq;
@@ -470,16 +472,20 @@ unsigned bw_slice_ack_irq(void)
   bw_last_irq_vector=vector;
   bw_irq_entry_cs=BX_CPU(0)->sregs[BX_SEG_REG_CS].selector.value;
   bw_irq_entry_eip=BX_CPU(0)->get_eip();
+  bw_irq_ack_ticks=bw_ticks;
+  bw_irq_ack_quanta=bw_successful_quanta;
   fprintf(stderr,"BWS8\tIRQ_ACK\t%02x\t%04x\t%08x\t%" PRIu64
     "\t%" PRIu64 "\n",vector,
-    bw_irq_entry_cs,bw_irq_entry_eip,bw_ticks,++bw_ordinal);
+    bw_irq_entry_cs,bw_irq_entry_eip,bw_irq_ack_ticks,++bw_ordinal);
   return vector;
 }
 
 void bw_slice_note_irq(unsigned vector)
 {
   if (!bw_host_irq_line || vector!=bw_last_irq_vector ||
-      bw_irq_deliveries!=0 || bw_faults!=2)
+      bw_irq_deliveries!=0 || bw_faults!=2 ||
+      bw_ticks!=bw_irq_ack_ticks ||
+      bw_successful_quanta!=bw_irq_ack_quanta)
     bw_slice_fail("host-irq-delivery");
   const unsigned sp=BX_CPU(0)->gen_reg[BX_32BIT_REG_ESP].dword.erx & 0xffff;
   if (sp!=0x8ff4 || BX_CPU(0)->sregs[BX_SEG_REG_CS].selector.value!=8 ||
@@ -490,7 +496,8 @@ void bw_slice_note_irq(unsigned vector)
   ++bw_irq_deliveries;
   bw_slice_irq_pending=true;
   fprintf(stderr,"BWS8\tIRQ_DELIVERED\t%02x\t%04x\t%08x\t%04x"
-    "\t%08x\t%04x\t%08x\t%08x\t%08x\t%" PRIu64 "\t%" PRIu64 "\n",
+    "\t%08x\t%04x\t%08x\t%08x\t%08x\t%" PRIu64 "\t%" PRIu64
+    "\n",
     vector,bw_irq_entry_cs,bw_irq_entry_eip,
     BX_CPU(0)->sregs[BX_SEG_REG_CS].selector.value,
     BX_CPU(0)->get_eip(),sp,bw_read_le32(sp),bw_read_le32(sp+4),
@@ -1039,7 +1046,6 @@ void bw_slice_driver(void)
           bw_slice_fail("owned-fault-cut-contract");
       } else if (result.reason==BW_CPU3_DEVICE_QUANTA_SLICE_IRQ_DELIVERED) {
         if (fault_cuts!=2 || irq_delivery_cut || !result.irq_delivered ||
-            result.charged_native_ticks || result.charged_quanta ||
             result.cs!=8 || result.eip!=0x809f)
           bw_slice_fail("owned-irq-cut-contract");
         irq_delivery_cut=true;
