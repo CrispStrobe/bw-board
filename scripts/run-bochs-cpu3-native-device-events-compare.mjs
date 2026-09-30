@@ -724,8 +724,11 @@ async function runTransportGuard(binary,rc,name,spec,directory,bochsLog){
   const stderr=boundedOutput(child.stderr,16*1024*1024,'transport stderr');
   const fromNative=boundedOutput(child.stdio[4],1024*1024,'transport fd4');
   const inbound=new BoundedLines(child.stdio[4]);
-  let commandPipeError=null,toNative='';
-  child.stdio[3].on('error',error=>{commandPipeError=error;});
+  // Intentional SIGABRT can close fd3 after the malformed request is accepted.
+  // Consume that stream error; the named native failure and signal prove the
+  // negative case, not whether fd3 accepted a later close notification.
+  let toNative='';
+  child.stdio[3].on('error',()=>{});
   const closed=new Promise((resolve,reject)=>{
     child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));
   });
@@ -766,7 +769,7 @@ async function runTransportGuard(binary,rc,name,spec,directory,bochsLog){
   const failures=stderr.text.split('\n').filter(line=>line.startsWith('BWS7\tFAIL\t'));
   assert(!error&&exit?.signal==='SIGABRT'&&exit.code===null&&
     failures.length===1&&failures[0]===`BWS7\tFAIL\t${spec.failure}`&&
-    !stdout.error&&!stderr.error&&!fromNative.error&&!commandPipeError&&
+    !stdout.error&&!stderr.error&&!fromNative.error&&
     Object.hasOwn(files,'bochsLog'),
   `${name}: native transport guard did not fail with exact SIGABRT/reason`);
   return {name,stage:spec.stage,expected:spec.failure,exit,
