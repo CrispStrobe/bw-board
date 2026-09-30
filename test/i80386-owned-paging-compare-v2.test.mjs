@@ -66,7 +66,7 @@ test('source-bound CLI exposes the defined Bochs IDTR reset discrepancy',()=>{
   assert.deepEqual(report.comparison.mismatches,[
     {field:'idtr.limit',reference:0xffff,actual:0x03ff}]);
   assert.equal(report.comparison.raw.cr0.native,0xfffffff1);
-  assert.equal(report.comparison.raw.cr0.js&0x8000001f,0x80000011);
+  assert.equal((report.comparison.raw.cr0.js&0x8000001f)>>>0,0x80000011);
   for(const word of ['pde0','pte5','data5'])
     assert.equal(report.comparison.ramSnapshots.native[word].bytes,
       report.comparison.ramSnapshots.js[word].bytes);
