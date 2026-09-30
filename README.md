@@ -293,6 +293,14 @@ verified whole-report parity across paired 60-million-step Windows and
 in disjoint runs of at least eight, below its 15-million overall gate;
 protected16+VM86 reached 5.59 million, above its 5-million mode threshold.
 The overall opportunity gate fails, and the observer result is no speed claim.
+The later [register-stack observer result](docs/I80386-REGISTER-STACK-ADMISSION-RESULT.md)
+reached 9.62 million disjoint Windows ordinals in runs of at least eight,
+with 8.51 million in protected16+VM86. The 15-million overall gate still
+fails; the separate stock xv6 `forktest` count is 967,663, all protected32.
+This is ordinary-step coverage evidence, not an executable trace or a measured
+CPU-time gain. A separate [full-core feasibility note](docs/I80386-FULL-CORE-WASM-FEASIBILITY.md)
+requires a native full-CPU and ordered bus oracle before a backend claim; stock
+xv6's CR4.PSE bootstrap needs a separately labeled later CPU mode.
 
 ## Windows 3.1 reference comparison
 

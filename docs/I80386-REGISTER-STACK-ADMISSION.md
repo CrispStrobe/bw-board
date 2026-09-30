@@ -34,3 +34,10 @@ whole reported state parity outside the diagnostic flag and observer, and
 run partitions. Guest media and raw serial evidence remain private. A passing
 opportunity gate would describe observed trace coverage, not speed or an
 executable trace.
+
+The completed [Windows and xv6 result](I80386-REGISTER-STACK-ADMISSION-RESULT.md)
+shows 9,616,345 unique Windows ordinals in runs of at least eight overall and
+8,514,517 in protected16+VM86. The **overall 15M gate fails**. The separate
+stock xv6 pair found 967,663 such ordinals, all protected32, with no xv6 pass
+threshold. These are source-bound ordinary-step observations, not execution or
+speed results.
