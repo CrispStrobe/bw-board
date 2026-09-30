@@ -533,6 +533,47 @@ export function createLabwiredAdapter (opts) {
     /** True when built from a user image with no circuit (no header map). */
     firmwareOnly,
 
+    /** Discover engineering-unit channels; absence is not an empty device list. */
+    discoverInputs () {
+      if (typeof sim.list_inputs !== 'function') {
+        throw new Error('labwired-adapter: this backend has no input discovery (list_inputs)');
+      }
+      const channels = plain(sim.list_inputs());
+      if (!Array.isArray(channels)) {
+        throw new Error('labwired-adapter: list_inputs returned an invalid channel list');
+      }
+      return channels;
+    },
+
+    /**
+     * Apply ONE atomic engineering-unit transaction, without retiring a step.
+     * component is the discovered external-device id, not a channel prefix.
+     * The engine validates device identity/ranges before applying any row.
+     * Never fall back to sequential set_input calls on an older backend.
+     * Returns the copied applied rows, useful for a debugger's input receipt.
+     */
+    setInputs (sets) {
+      if (typeof sim.set_inputs !== 'function') {
+        throw new Error('labwired-adapter: this backend has no atomic inputs (set_inputs)');
+      }
+      if (!Array.isArray(sets)) throw new TypeError('labwired-adapter: inputs must be an array');
+      // Array.from visits holes too: a sparse request is not a smaller pose.
+      const rows = Array.from(sets, (set) => {
+        if (!set || typeof set !== 'object' || Array.isArray(set) ||
+            Object.keys(set).some(k => !['channel', 'component', 'value'].includes(k)) ||
+            typeof set.channel !== 'string' || set.channel.trim().length === 0 ||
+            typeof set.value !== 'number' || !Number.isFinite(set.value) ||
+            (set.component !== undefined &&
+              (typeof set.component !== 'string' || set.component.trim().length === 0))) {
+          throw new TypeError('labwired-adapter: each input needs channel, finite value and optional component id');
+        }
+        return { channel: set.channel, value: set.value,
+          ...(set.component === undefined ? {} : { component: set.component }) };
+      });
+      sim.set_inputs(rows);
+      return rows;
+    },
+
     attachBoard (b) {
       board = b;
       published.clear();

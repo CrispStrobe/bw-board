@@ -171,7 +171,8 @@ jobs:
                       test/labwired-roundtrip.test.mjs \
                       test/pad-drive-parity.test.mjs \
                       test/labwired-firmware-only.test.mjs \
-                      test/labwired-microbit-matrix.test.mjs 2>&1 | tee out.txt
+                      test/labwired-microbit-matrix.test.mjs \
+                      test/labwired-input-boundary.test.mjs 2>&1 | tee out.txt
           # A suite that does not RUN is not a suite that passes, and these skip
           # themselves whenever LABWIRED_WASM or the ARM toolchain is missing —
           # which in this job would mean the wiring broke, not that there is
