@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {NativeDeviceHost,boardHz,clocksPerQuantum,pitHz} from
   '../scripts/bochs-cpu3-native-device-events-host.mjs';
+import {parseNativeLog,parseRpcLine} from
+  '../scripts/run-bochs-cpu3-native-device-events-compare.mjs';
 
 function programmedHost(){
   const host=new NativeDeviceHost();
@@ -63,4 +65,20 @@ test('device host refuses scripted vector, wrong clocks, and foreign ports',()=>
   assert.throws(()=>host.handleRequest('PIO_IN',0x21,2,0,0),/byte PIO/);
   assert.throws(()=>host.handleRequest('PIO_IN',0x21,1,1,0),/reserved argument/);
   assert.throws(()=>host.handleRequest('LINE',1,0,0,0),/unknown callback/);
+});
+
+test('dedicated RPC parser rejects malformed or noncanonical transport',()=>{
+  assert.deepEqual(parseRpcLine('BWR7\tREADY\t0000\t00007e00\t0'),
+    {kind:'READY',cs:0,eip:0x7e00,tick:0});
+  assert.deepEqual(parseRpcLine('BWR7\tREQ\t1\tTICK\t1\t0\t0\t7'),
+    {kind:'REQ',seq:1,operation:'TICK',arg0:1,arg1:0,arg2:0,nativeTick:7});
+  for(const bad of ['BWR7\tREQ\t01\tTICK\t1\t0\t0\t7',
+    'BWR7\tREQ\t-1\tTICK\t1\t0\t0\t7',
+    'BWR7\tREQ\t1\tTICK\t1\t0\t0\t7\textra',
+    'BWR7\tREQ\t1\tACK\t0\t0\t0\t7\r',
+    'BWR7\tREQ\t1\tBAD\t0\t0\t0\t7',
+    'BWR7\tREQ\t1\tTICK\t1\t0\t0\t7'.padEnd(256,'x')])
+    assert.throws(()=>parseRpcLine(bad));
+  assert.throws(()=>parseNativeLog('BWS7\tDEACTIVATE\tproof-complete\n'),
+    /evidence absent/);
 });
