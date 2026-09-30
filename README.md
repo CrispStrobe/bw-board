@@ -368,6 +368,10 @@ has that IDTR, 808 instruction hooks, 2,115 events, and the same seven direct
 physical page-walk callbacks. The earlier v2 receipt retains its `ffff` IDTR
 limit as a negative case. The aligned receipt still says `comparison: "not-run"`
 and makes no full-bus, cycle, JavaScript-parity, or speed claim.
+The subsequent [source-bound aligned comparison](docs/I80386-BOCHS-CPU3-PAGING-IDTR-ALIGNED-COMPARISON.md)
+matches selected integer/system fields and three final plain-RAM words at
+the `BHPG004` boundary. Its scope excludes cross-engine hook/bus order and
+all other RAM; the older unaligned comparison retains its IDTR mismatch.
 
 ## Windows 3.1 reference comparison
 
