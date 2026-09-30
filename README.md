@@ -231,6 +231,21 @@ these are different runner observations, not a code-regression or controlled
 speedup measurement. Neither result upgrades the browser pin or belongs in
 the ALU-loop table above.
 
+A second CPU optimization, lazy successful-candidate construction, landed in
+[LabWired PR #131](https://github.com/CrispStrobe/labwired-core/pull/131) at
+main `3456c048`. Its [qualified PR run 36691941435](https://github.com/CrispStrobe/labwired-core/actions/runs/36691941435)
+measured native motion **1.126555× median / 1.123001× minimum**, with all five
+samples above 1.0×, and separate GPIO-only **3.783684× median**. The
+[full motion receipt](docs/receipts/2026-09-30-microbit-motion-hosted-lazy.json)
+and [GPIO-only receipt](docs/receipts/2026-09-30-microbit-active-hosted-lazy.json)
+preserve tested merge-ref `9e4e5f83`, qualified head `143402d6`, CPU source
+`ab501cdf`, and landing `3456c048` as distinct provenance. Qualified CPU,
+11 CPU regression tests and all three guest sources are byte-identical to
+landed main; the exact-new-main benchmark was still queued, not claimed passed.
+Full functional/model/DMA/input-routing gates passed in the PR run. These
+hosted observations are not a controlled wall-time A/B against the first
+optimization's runs, nor a browser pin upgrade or CP13 completion.
+
 That target support is intentionally narrower than a whole-board simulation.
 micro:bit v2's standalone manifest exposes buttons A/B, and the BW bridge maps
 its edge-connector GPIO and on-module 5×5 matrix; the matrix already reaches
