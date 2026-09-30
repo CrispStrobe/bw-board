@@ -457,6 +457,13 @@ STI-shadow IRQ delivery, HLT wakeup, and masked HLT idle. All four arms match
 result. This remains a native functional prototype, with board integration,
 WebAssembly, and performance measurement still unfinished.
 
+The [combined native paging and host-event gate](docs/I80386-NATIVE-PAGED-EVENT-SELF-PARITY.md)
+now keeps an IRQ pending through a recoverable page fault, guest page-table
+repair, CR3 reload, IRETD and the retried write. Continuous and 1/2/257-tick
+arms match 6,388 ordered recorded events; independent reproduction and all
+seven fallback guards passed. Mapped memory/A20, board devices, WebAssembly,
+and the 10× speed objective remain unfinished.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
