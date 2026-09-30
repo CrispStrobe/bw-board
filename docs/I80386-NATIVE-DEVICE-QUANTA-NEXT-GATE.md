@@ -16,7 +16,7 @@ the same charge. A zero-count REP completes once without accessing its data
 operand. A delivered fault gets no successful-step charge. These are
 functional scheduling units, not measured physical 386DX instruction cycles.
 See [`_repeatString`](../src/experimental/i80386.js) and
-[`ExperimentalPCAT80386.step`](../src/experimental/i80386-at-machine.js).
+[`ExperimentalI80386ATMachine.step`](../src/experimental/i80386-at-machine.js).
 
 Pinned Bochs CPU3, with handler chaining and REP speedups disabled, ticks for
 each intermediate REP element, the final outer completion, and a delivered
