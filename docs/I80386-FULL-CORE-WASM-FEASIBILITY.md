@@ -10,8 +10,10 @@ not measure the proposed backend's cost or correctness.
 
 The locally pinned [Bochs `REL_2_7_FINAL` CPU-level-3 build](I80386-REFERENCE-EMULATORS.md#first-bochs-386-mode-witness)
 is a concrete strict-386 source candidate. The published native Bochs
-receipts establish selected output markers, not a full CPU-state checkpoint
-or ordered bus oracle. The pinned
+receipts now include selected integer/system checkpoints, native callback
+bytes, and three RAM snapshots. The [aligned paging comparison](I80386-BOCHS-CPU3-PAGING-IDTR-ALIGNED-COMPARISON.md)
+matches the stated JavaScript fields and RAM words. These remain bounded
+results, not a full CPU-state or complete physical-bus oracle. The pinned
 [`cpu.cc`](https://github.com/bochs-emu/Bochs/blob/0e45b736ef9792eb9b752b0a35db49eaf2faea47/bochs/cpu/cpu.cc)
 uses Bochs memory and PC-system services, event ticks, and exception control
 flow; its CPU source is not a standalone board-neutral module. The current
@@ -65,6 +67,9 @@ checkpoint would reject this adapter before a full guest benchmark.
 The first [owned native CPU3 instrumentation checkpoint](I80386-BOCHS-CPU3-OWNED-ORACLE.md)
 now exists. It captures integer/system CPU state and an ordered Bochs hook
 stream, but exposes raw CR0/debug-register setup differences from the current
-JavaScript fixture and does not yet capture memory values, TSS RAM or a
-complete physical bus. It is a prerequisite result, not the full differential
+JavaScript fixture. The separate [v2 paging capture](I80386-BOCHS-CPU3-OWNED-MEMORY-ORACLE-V2.md)
+adds direct native callback bytes and three RAM words; its
+[explicit-IDTR comparison](I80386-BOCHS-CPU3-PAGING-IDTR-ALIGNED-COMPARISON.md)
+now matches the selected fields. TSS RAM and a complete physical bus remain
+unproved. It is a prerequisite result, not the full differential
 gate described above.
