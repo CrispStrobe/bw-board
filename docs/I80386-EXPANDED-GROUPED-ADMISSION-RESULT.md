@@ -1,8 +1,8 @@
 # Expanded grouped 386 shadow admission: Windows opportunity gate fails
 
 The [predeclared execution-neutral diagnostic](I80386-EXPANDED-GROUPED-ADMISSION.md)
-completed an ordinary observer-off / expanded-observer Windows pair, begun
-September 29 and completed September 30, at pinned
+completed an ordinary observer-off / expanded-observer Windows pair on
+September 29 at pinned
 board revision `9cdec8cf10ccee264b1719c34c7948d5ddb7542b`, 60,000,000
 steps in each arm. Its [source-bound compact receipt](receipts/2026-09-30-i80386-expanded-grouped-windows-result.json)
 verifies committed source bytes and exact whole-report equality after
