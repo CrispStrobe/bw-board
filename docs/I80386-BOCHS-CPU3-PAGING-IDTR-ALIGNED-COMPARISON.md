@@ -21,6 +21,13 @@ scripts/compare-bochs-cpu3-owned-paging-idtr-03ff.mjs` from a clean
 checkout. This command runs only the JavaScript CPU; it does not rebuild or
 rerun Bochs.
 
+To capture the aligned native fixture, first prepare and build the pinned
+v2 CPU3 probe using the [native oracle instructions](I80386-BOCHS-CPU3-OWNED-MEMORY-ORACLE-V2.md).
+Then run `BOCHS_386_INSTRUMENTED_ROOT=/path/to/prepared/tree node
+scripts/run-bochs-cpu3-owned-oracle-v2-idtr-03ff.mjs`. The aligned runner
+requires the exact build, configuration and probe hashes recorded in the
+published v2 receipt; it does not modify the original fixture or receipt.
+
 At comparator source `435f1cdd12ea74e64a5e050d5b120ab5c8076ae6`, the
 [recorded comparison](receipts/2026-09-30-i80386-bochs-cpu3-owned-paging-idtr-03ff-compare.json)
 reached the marker after 1,848 JavaScript steps and has zero selected
