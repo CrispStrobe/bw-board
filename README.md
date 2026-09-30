@@ -275,7 +275,11 @@ samples >=1× with zero transport errors; GPIO-only **5.278345× median /
 benchmarks passed; [final paired A/B 36778919437](https://github.com/CrispStrobe/labwired-core/actions/runs/36778919437)
 also passed. The same qualified runtime's strict all-chip result above remains
 evidence; [additional final-head CorePerf 36779028846](https://github.com/CrispStrobe/labwired-core/actions/runs/36779028846)
-is still measuring. Exact post-merge main `5fb3d7d4` measurement is pending,
+passed on exact final head `bd05656f`: all forty chip medians and minima >=1×,
+all 78 board-modes over eleven memory maps passed unchanged strict relative-
+cost gates, with zero regressions, waivers, skips or contract failures. The
+faster-than-baseline nRF51 advisory remains; no baselines changed. Exact
+post-merge main `5fb3d7d4` measurement is pending,
 and issue 120 is not declared closed here. Browser CI passing does not promote
 the app's browser pin or establish an active-browser performance result.
 
