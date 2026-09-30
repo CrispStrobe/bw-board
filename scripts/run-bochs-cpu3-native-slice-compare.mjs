@@ -301,7 +301,7 @@ const failureProbes={
 export function failureProbe(result,name){
   const [kind,observedFailure]=failureProbes[name];
   const records=tags(result.stderr);
-  assert(result.code!==0 && result.signal!==null,
+  assert(result.code===null && result.signal==='SIGABRT',
     `${name}: fail-closed probe did not abort`);
   assert(records.length>0 && records.at(-1)?.[0]==='FAIL' &&
     records.at(-1)?.length===2 && records.at(-1)?.[1]===observedFailure &&
@@ -349,6 +349,20 @@ function preparedInputs(tree,directory){
   return {source,binary:built.binary,hostConfig,floppyPath};
 }
 
+function recheckInputs(tree,source,hostConfig,floppyPath){
+  const board=sourceInventory(),built=patchedTree(tree);
+  assert(board.boardRevision===source.boardRevision &&
+    JSON.stringify(board.sourceHashes)===JSON.stringify(source.sourceHashes) &&
+    JSON.stringify(built.patchHashes)===JSON.stringify(source.patchHashes) &&
+    built.configSha256===source.configSha256 &&
+    built.binarySha256===source.binarySha256 &&
+    fileSha(hostConfig.rc)===source.bochsrcSha256 &&
+    fileSha(floppyPath)===source.floppySha256 &&
+    fileSha(resolve(repo,'roms/free-at-bios/BIOS-bochs-legacy'))===source.biosSha256 &&
+    fileSha(resolve(repo,'roms/free-at-bios/vgabios-lgpl.bin'))===source.vgaBiosSha256,
+  'source, binary, config, ROM, medium or host configuration changed during capture');
+}
+
 async function runCapture(tree,outdir){
   assert(!existsSync(outdir),'output directory must be new');
   mkdirSync(outdir,{recursive:true});
@@ -380,6 +394,7 @@ async function runCapture(tree,outdir){
     assert(fileSha(floppyPath)===source.floppySha256,
       `${name}: owned fixture medium was modified`);
   }
+  recheckInputs(tree,source,hostConfig,floppyPath);
   const report={schema:'bw.bochs-cpu3-native-slice.v1',source,activation,
     armSeeds,apiProbes,arms,probes,artifacts};
   const result=assertNativeSliceSelfParity(report);

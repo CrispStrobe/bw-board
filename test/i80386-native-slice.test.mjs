@@ -192,6 +192,8 @@ test('negative probe requires exact aborting guard, not an unrelated failure',()
     {rejected:true,kind:'bochs-ram-read',observedFailure:'Bochs-RAM-read-fallback'});
   assert.throws(()=>failureProbe({code:1,signal:null,stderr:guard},'bochsRamRead'),
     /did not abort/);
+  assert.throws(()=>failureProbe({code:null,signal:'SIGTERM',stderr:guard},'bochsRamRead'),
+    /did not abort/);
   assert.throws(()=>failureProbe({code:null,signal:'SIGABRT',stderr:
     'BWS3\tFAIL\tBochs-timer-fallback\n'},'bochsRamRead'),
   /exact active guard/);
