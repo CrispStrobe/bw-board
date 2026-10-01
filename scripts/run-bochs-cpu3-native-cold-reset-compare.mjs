@@ -16,7 +16,8 @@ const check=(ok,message)=>assert(ok,`cold reset runner: ${message}`);
 const sourceSeeds=['./run-bochs-cpu3-native-cold-reset-compare.mjs','./prepare-bochs-cpu3-native-cold-reset.mjs',
   './bochs-cpu3-native-cold-reset/abi.h','./bochs-cpu3-native-cold-reset/runtime.h','./bochs-cpu3-native-cold-reset/runtime.inc',
   './bochs-cpu3-native-cold-reset/wire-contract.md','../test/fixtures/i80386-free-cold-reset.S',
-  '../test/i80386-native-cold-reset-host.test.mjs','../docs/receipts/2026-10-01-i80386-js-cold-reset-oracle-capture.json',
+  '../test/i80386-native-cold-reset-host.test.mjs','../test/i80386-native-cold-reset-report.test.mjs',
+  '../test/fixtures/i80386-native-cold-reset-capture.json.gz','../docs/receipts/2026-10-01-i80386-js-cold-reset-oracle-capture.json',
   '../roms/free-at-bios/BIOS-bochs-legacy','../roms/free-at-bios/vgabios-lgpl.bin'];
 function inventory(){
   return Object.fromEntries(expandI80386SourceInventory(sourceSeeds,import.meta.url).map(f=>{
