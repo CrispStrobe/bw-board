@@ -317,7 +317,7 @@ static int bw_host_memory(uint32_t raw,uint8_t *data,unsigned length,uint32_t *d
   if(bw_split_tabs(line,f,11)!=11||strcmp(f[0],"BWR12")||strcmp(f[1],"MEM")||bw_decimal(f[2])!=seq||strcmp(f[3],"OK"))bw_slice_fail("rpc-memory-reply");
   *decoded=bw_hex32(f[4],8);
   uint64_t receivedKind=bw_decimal(f[5]),effect=bw_decimal(f[6]);
-  if(*decoded!=want||receivedKind!=kind||effect!=bw_expected_effect(kind,write))bw_slice_fail("host-memory-classification");
+  if(*decoded!=want||receivedKind!=kind||effect!=(write?(kind==1?1:kind==2?2:3):0))bw_slice_fail("host-memory-classification");
   uint8_t returned[16];bw_hex_bytes(f[7],returned,length);
   if(write&&kind==1&&memcmp(returned,data,length))bw_slice_fail("host-write-commit");
   if(kind==4)for(unsigned i=0;i<length;++i)if(returned[i]!=0xff)bw_slice_fail("host-open-bus-value");
@@ -335,7 +335,7 @@ static int bw_host_memory(uint32_t raw,uint8_t *data,unsigned length,uint32_t *d
   if(!write)memcpy(data,returned,length);
   ++bw_rpc_reply_count;
   fprintf(stderr,"BWS12\tRPC_MEM\t%" PRIu64 "\t%08x\t%u\t%u\t%s\t%u\t%u\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%u\n",seq,*decoded,(unsigned)kind,(unsigned)effect,f[7],(unsigned)generation,bw_mapping_epoch,bw_ticks,bw_successful_quanta,++bw_ordinal,bw_board_a20);
-  for(unsigned i=0;i<length;++i){tags[i].kind=kind;tags[i].effect=(uint8_t)effect;}
+  for(unsigned i=0;i<length;++i){tags[i].kind=kind;tags[i].effect=bw_expected_effect(kind,write);}
   return 1;
 }
 static int bw_host_read(void *,uint32_t raw,uint8_t *data,uint32_t length,uint32_t *decoded,bw_cpu3_combined_paging_ram_byte_result *tags){return bw_host_memory(raw,data,length,decoded,tags,false);}
