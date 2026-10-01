@@ -40,7 +40,7 @@ export function assertDirectCallbackParity(direct,fifo){
 }
 export function assertCaptureModeParity(captured,uncaptured){
  assert.equal(captured.capture,true);assert.equal(uncaptured.capture,false);
- for(const field of ['reset','final','checkpoints','settled','ramSha256','backingSlices','callbackCounts','resumes','quanta'])assert.deepEqual(captured[field],uncaptured[field],`capture mode parity: ${field}`);
+ for(const field of ['reset','final','checkpoints','settled','ramSha256','backingSlices','callbackCounts','resumes','closed','quanta'])assert.deepEqual(captured[field],uncaptured[field],`capture mode parity: ${field}`);
  assert.equal(uncaptured.callbacks.length,0,'capture disabled callback census');
 }
 
@@ -90,7 +90,7 @@ export async function collectDirectControls({addon,sha256,configuration,director
  for(const control of ['bad-page-sha','callback-throw','callback-reentry','shared-page-buffer','detached-page-buffer','second-create','detaching-page-metadata','detaching-memory-metadata']){
   const stem=join(resolve(directory),control),input=stem+'.input.json',config=ownedChildConfiguration(configuration,stem);writeFileSync(config.path,config.text,{flag:'wx'});writeFileSync(input,JSON.stringify({addon,sha256,configuration:config.path,configurationArtifact:config,control,capture:false,quanta:300,output:stem+'.json'}));
   const child=spawnSync(process.execPath,[entry,input],{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});const witness={status:child.status,signal:child.signal,error:child.error?.message??null,stderr:child.stderr??'',stdout:child.stdout??''};writeFileSync(stem+'.witness.json',JSON.stringify(witness));
-  if(['second-create','detaching-page-metadata','detaching-memory-metadata'].includes(control)){assert.equal(witness.error,null);assert.equal(witness.signal,null);assert.equal(witness.status,0);if(control!=='second-create'){assert.ok(reference,'adversarial successful controls require actual baseline reference');const expected=JSON.parse(readFileSync(reference,'utf8')),actual=JSON.parse(readFileSync(stem+'.json','utf8'));for(const field of ['reset','final','settled','ramSha256','backingSlices','callbackCounts','resumes'])assert.deepEqual(actual[field],expected[field],`detachment control actual ${field}`);}}else assertFatalControlWitness(control,witness);
+  if(['second-create','detaching-page-metadata','detaching-memory-metadata'].includes(control)){assert.equal(witness.error,null);assert.equal(witness.signal,null);assert.equal(witness.status,0);if(control!=='second-create'){assert.ok(reference,'adversarial successful controls require actual baseline reference');const expected=JSON.parse(readFileSync(reference,'utf8')),actual=JSON.parse(readFileSync(stem+'.json','utf8'));for(const field of ['reset','final','settled','ramSha256','backingSlices','callbackCounts','resumes','closed'])assert.deepEqual(actual[field],expected[field],`detachment control actual ${field}`);}}else assertFatalControlWitness(control,witness);
   results[control]=witness;
  }
  return results;
@@ -110,12 +110,45 @@ export function nativeSemanticRows(raw,prefix){
  }
  assert.ok(result.length,'native semantic trace missing');return result;
 }
+const stateNames=['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags','cr0','cr2','cr3','cs','ds','ss','gdtrBase','gdtrLimit','idtrBase','idtrLimit'];
+const extraNames=['dr6','dr7','es','fs','gs','csIndex','csTi','csRpl','csValid','csPresent','csDpl','csSegment','csType','csBase','csLimit','csGranular','csDefault32','csAvailable','pendingEvent','eventMask'];
+const segmentNames=['index','selector','selectorIndex','ti','rpl','valid','present','dpl','segment','type','base','limit','granular','default32','available'];
+const values=(object,names)=>names.map(name=>object[name]);
+const counterNames={callbacks:['physicalReads','physicalWrites','executePages','nativeTickCallbacks','quantumCallbacks'],fallback:['bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'],execution:['attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts']};
+export function assertDirectNativeBindings(direct,fifo){
+ const native=fifo.native,reset=direct.reset,final=direct.final;
+ assert.deepEqual(reset.state,values(native.resetState,stateNames),'full native create reset state');
+ assert.deepEqual(reset.extra,values(native.resetExtra,extraNames),'full native create reset attributes');
+ assert.deepEqual(reset.segments,native.resetSegments.flatMap(segment=>values(segment,segmentNames)),'all native reset segment caches');
+ assert.deepEqual(reset.system,native.resetSystem.flatMap(segment=>values(segment,segmentNames)),'native reset LDTR/TR caches');
+ assert.deepEqual(reset.debug,native.resetDebug,'all raw native reset debug registers');
+ assert.equal(reset.nativeTicks,'0');assert.equal(reset.successfulQuanta,'0');
+ for(const [group,names] of Object.entries(counterNames)){assert.deepEqual(reset[group],Object.fromEntries(names.map(name=>[name,'0'])),`exact native create zero ${group}`);assert.deepEqual(Object.keys(final[group]).sort(),[...names].sort(),`exact terminal ${group} fields`);}
+ assert.deepEqual(native.ready,{cs:reset.state[13],eip:reset.state[8],nativeTicks:0,successfulQuanta:0},'FIFO READY bound to complete direct create reset');
+ assert.deepEqual(final.state,values(native.finalState,stateNames),'full native final state');
+ const posts=tag=>native.events.filter(event=>event.tag===tag);
+ assert.deepEqual(final.extra,values(posts('POST_EXTRA').at(-1).extra,extraNames),'all terminal raw CPU attributes');
+ assert.deepEqual(final.segments,posts('POST_SEG').slice(-6).flatMap(event=>values(event.segment,segmentNames)),'all terminal raw segment caches');
+ assert.deepEqual(final.system,posts('POST_SYS').slice(-2).flatMap(event=>values(event.segment,segmentNames)),'terminal raw LDTR/TR caches');
+ assert.deepEqual(final.debug,posts('POST_DR').at(-1).debug,'all terminal raw debug registers');
+ const asStrings=object=>Object.fromEntries(Object.entries(object).map(([key,value])=>[key,String(value)]));
+ assert.deepEqual(final.callbacks,asStrings(native.callbacks),'actual native callback summary including cached execute pointers');
+ assert.deepEqual(final.fallback,asStrings(native.fallback),'every actual native fallback counter');
+ const execution=Object.fromEntries(counterNames.execution.map(key=>[key,String(native.finalCounters[key])]));
+ assert.deepEqual(final.execution,execution,'actual native terminal execution counters');
+ assert.equal(final.nativeTicks,String(native.finalCounters.nativeTicks));assert.equal(final.successfulQuanta,String(native.finalCounters.successfulQuanta));
+ assert.deepEqual(direct.closed,{native:true,board:true},'successful native and facade close witness');
+}
 export function assertNativeTraceParity(directRaw,fifoRaw,{direct,fifo}){
- // PAGE_CHUNK exists only in FIFO's transport. Admit its removal only after
- // complete callback PAGE bytes and SHA have matched in ordered host records.
- assertDirectCallbackParity(direct,fifo);
- const fifoRows=nativeSemanticRows(fifoRaw,'BWS12').filter(row=>row.tag!=='PAGE_CHUNK');
- assert.deepEqual(nativeSemanticRows(directRaw,'BWSD1'),fifoRows,'all raw native CPU/cache/bus/fault/IRQ fields and ordering by identical mode');
+ assertDirectCallbackParity(direct,fifo);assertDirectNativeBindings(direct,fifo);
+ const old=nativeSemanticRows(fifoRaw,'BWS12'),current=nativeSemanticRows(directRaw,'BWSD1');
+ assert.deepEqual(old.filter(row=>row.tag==='READY'),[{tag:'READY',fields:[direct.reset.state[13].toString(16).padStart(4,'0'),direct.reset.state[8].toString(16).padStart(8,'0'),'0','0']}],'exact FIFO READY transport record');
+ assert.deepEqual(old.filter(row=>row.tag==='DEACTIVATE'),[{tag:'DEACTIVATE',fields:['proof-complete']}],'qualified FIFO close witness');
+ assert.deepEqual(current.filter(row=>row.tag==='DEACTIVATE'),[{tag:'DEACTIVATE',fields:['direct-close']}],'actual direct native close witness');
+ const cleanOld=old.filter(row=>!['PAGE_CHUNK','READY','DEACTIVATE'].includes(row.tag));
+ const cleanCurrent=current.filter(row=>row.tag!=='DEACTIVATE');
+ // CALLBACKS/FALLBACK and full terminal STATE remain exact raw semantic rows.
+ assert.deepEqual(cleanCurrent,cleanOld,'all raw native CPU/cache/bus/fault/IRQ fields and ordering by identical mode');
 }
 export function summarizeFreshProcessSamples(samples){
  assert.ok(samples.length>=3,'at least three measured samples');
@@ -135,7 +168,7 @@ export async function collectDirectMeasurements({addon,sha256,configuration,dire
   const stdout=openSync(stem+'.stdout','wx'),stderr=openSync(stem+'.stderr','wx'),start=process.hrtime.bigint();let child;
   try{child=spawnSync(process.execPath,['--max-old-space-size=1024',entry,input],{timeout:120000,stdio:['ignore',stdout,stderr]});}finally{closeSync(stdout);closeSync(stderr);}
   const wallNs=Number(process.hrtime.bigint()-start);writeFileSync(stem+'.exit.json',JSON.stringify({status:child.status,signal:child.signal,error:child.error?.message??null,wallNs}));assert.equal(child.error,undefined);assert.equal(child.signal,null);assert.equal(child.status,0);
-  const actual=JSON.parse(readFileSync(output,'utf8'));for(const field of ['reset','final','settled','ramSha256','backingSlices','callbackCounts','resumes','quanta'])assert.deepEqual(actual[field],expected[field],`measured sample retains paired actual ${field}`);
+  const actual=JSON.parse(readFileSync(output,'utf8'));for(const field of ['reset','final','settled','ramSha256','backingSlices','callbackCounts','resumes','closed','quanta'])assert.deepEqual(actual[field],expected[field],`measured sample retains paired actual ${field}`);
   const timing=JSON.parse(readFileSync(output+'.timing.json','utf8'));results.push({index:i,discardedWarmup:i<warmups,wallNs,...timing.stages,output});
  }
  const summary={status:'SHORT_GUEST_TIMING_ONLY',reference,warmups,samples:results,execution:summarizeFreshProcessSamples(results.filter(r=>!r.discardedWarmup)),scope:'fresh-process 194-native-tick free guest; execution includes resume snapshots and actual board callbacks; discarded warmups may warm OS caches only; no physical-386, representative-long-workload or speedup claim'};
