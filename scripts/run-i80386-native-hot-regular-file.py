@@ -21,8 +21,10 @@ def run_child(node,entry,input_path,stem,*,heap_mib=512,timeout_seconds=120,max_
             timed_out=True;error='child wall timeout; subprocess killed and waited'
         except OSError as exc:error=str(exc)
     raw=pathlib.Path(str(stem)+'.stderr')
+    file_limit_reached=any(pathlib.Path(str(stem)+suffix).stat().st_size>=max_file_mib*1024*1024 for suffix in ['.stdout','.stderr'])
+    if file_limit_reached:error='file-size bound reached; evidence may be truncated'
     with open(raw,'rb') as file:digest=hashlib.file_digest(file,'sha256').hexdigest()
-    result={'returncode':status,'signal':-status if status is not None and status<0 else None,'timedOut':timed_out,'error':error,'stderrBytes':raw.stat().st_size,'stderrSha256':digest,'wallNs':time.monotonic_ns()-start,'transport':'regular file descriptors, no nonblocking pipe','RLIMIT_FSIZE':max_file_mib*1024*1024,'heapMiB':heap_mib,'command':[str(node),str(entry),str(input_path)],'status':'CHILD_EXIT_PASS_NOT_QUALIFICATION' if status==0 and not error else 'ACTUAL_CHILD_FAILURE_PRESERVED'}
+    result={'returncode':status,'signal':-status if status is not None and status<0 else None,'timedOut':timed_out,'fileLimitReached':file_limit_reached,'error':error,'stderrBytes':raw.stat().st_size,'stderrSha256':digest,'wallNs':time.monotonic_ns()-start,'transport':'regular file descriptors, no nonblocking pipe','RLIMIT_FSIZE':max_file_mib*1024*1024,'heapMiB':heap_mib,'command':[str(node),str(entry),str(input_path)],'status':'CHILD_EXIT_PASS_NOT_QUALIFICATION' if status==0 and not error else 'ACTUAL_CHILD_FAILURE_PRESERVED'}
     with open(str(stem)+'.exit.json','x') as file:json.dump(result,file,indent=2)
     return result
 
