@@ -1,0 +1,8 @@
+{
+  "successfulQuantums": 135,
+  "failedAttempts": 2,
+  "boardClocks": 814,
+  "faults": 2,
+  "irq": 32,
+  "checkpointVerification": "same-engine-reexecution-not-independent-architectural-oracle"
+}

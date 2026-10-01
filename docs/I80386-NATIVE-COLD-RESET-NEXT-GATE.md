@@ -20,7 +20,7 @@ Keep the prior post-BIOS adapters unchanged. The new cold bridge is active befor
 
 The board currently constructs its JavaScript CPU directly. First define an optional backend factory with the CPU operations the board actually uses; preserve the existing default. A native bridge must service board-owned chip debt, pending IRQ arbitration and HLT wake horizons at safe committed boundaries. Its native ticks remain separate from successful board quanta, including faults and REP. Reset epoch clocks and CPU-instruction clocks must remain distinct.
 
-Continuous and successful-work budgets 1/2/257 passed the ROM checkpoint with matched reset/fetch order, effects, PIO, named CPU-state differences, RAM, device/debt state and guards. Executable RAM and cache/mapping coherence are now separately qualified. Next run the existing free REP/two-page-fault/PIT fixture through the same actual-board bridge. Broader traps, REP I/O and other address sizes need their own named cases.
+Continuous and successful-work budgets 1/2/257 passed the ROM checkpoint with matched reset/fetch order, effects, PIO, named CPU-state differences, RAM, device/debt state and guards. Executable RAM and cache/mapping coherence are now separately qualified. The [compact actual-board JS REP/two-page-fault/PIT baseline](I80386-JS-REP-PF-PIT-ORACLE.md) is now qualified from cold reset with 135 successful quanta and a real pending timer edge inside REP. Next run this fixture through a separate native extension with per-element and zero-work delivery cache commits. Broader traps, REP I/O and other address sizes need their own named cases.
 
 ## Build and measurement boundary
 
