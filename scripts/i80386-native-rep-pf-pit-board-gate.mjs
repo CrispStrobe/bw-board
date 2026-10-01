@@ -195,15 +195,23 @@ export function assertNativeRepPfPitArmProof(arm,rom){
  equal(native.fallback,{bochsRamReads:0,bochsRamWrites:0,bochsDirectPointers:0,bochsPio:0,bochsTimer:0},'zero fallback exact shape');
  const quanta=native.events.filter(e=>e.tag==='QUANTUM'),faults=native.events.filter(e=>e.tag==='FAULT_DELIVERED'),irqs=native.events.filter(e=>e.tag==='IRQ_DELIVERED');
  equal(quanta.length,135,'bounded successful work census');equal(faults.length,2,'two PF');equal(irqs.length,1,'one IRQ');equal(host.machine.cycles,814,'reset plus actual Q clocks');equal(host.machine.cpu.cycles,0,'no JS CPU execution');
- let q=0,n=0,pending=[],boundary=null,postCount=0,checkpoint=js.reset.cpu,postSegments=[],postSystem=[],postExtra=null,published=false,pages=new Map(),currentAttempt=null,activeRpc=null,workWrites=new Map(),workOperations=new Map(),checkpointBoard=js.reset.board,latestHost={board:host.reset};
+ let q=0,n=0,nativeLine=0,pending=[],boundary=null,postCount=0,checkpoint=js.reset.cpu,postSegments=[],postSystem=[],postExtra=null,published=false,pages=new Map(),currentAttempt=null,activeRpc=null,workWrites=new Map(),workOperations=new Map(),checkpointBoard=js.reset.board,latestHost={board:host.reset};
  for(const e of native.events){
   if(activeRpc)check(e.tag===({MEM:'RPC_MEM',PAGE:'RPC_PAGE',REP:'RPC_REP'})[activeRpc.reply.kind],'reply must immediately complete owned synchronous RPC');
   if(e.tag==='RPC_REQ'){check(!activeRpc,'RPC request reentry');activeRpc=host.journal.find(x=>x.kind==='request'&&x.request.seq===e.seq);check(activeRpc,'extra raw RPC request');}
   else if(['RPC_REP','RPC_MEM','RPC_PAGE'].includes(e.tag)){check(activeRpc&&activeRpc.request.seq===e.seq,'reply order/sequence');latestHost=activeRpc.after;activeRpc=null;}
   if(boundary)check(['COMMIT','COHERENCE','POST_STATE','POST_EXTRA','POST_SEG','POST_SYS','POST_DR'].includes(e.tag),'boundary publication/checkpoint must finish before CPU or clock advance');
-  if(e.tag==='QUANTUM'){equal(e.nativeTicks,n,'Q independent N tuple');equal([e.preQ,e.successfulQuanta],[q,q+1],'Q ledger');q++;}
+  if(e.tag==='QUANTUM'){
+   equal(e.nativeTicks,n,'Q independent N tuple');equal([e.preQ,e.successfulQuanta],[q,q+1],'Q ledger');
+   const step=js.steps.find(s=>s.completed&&s.quantum===q+1);check(step,'successful quantum qualified step');
+   check(currentAttempt,'quantum lacks actual instruction attempt');
+   const opcode=currentAttempt.hex;
+   const kind=opcode==='66f3ab'&&(step.before.ecx&0xffff)!==0?1:0;
+   equal([e.kind,e.cs,e.eip,e.postECX,e.postCX,e.postEDI],[kind,currentAttempt.cs,currentAttempt.eip,step.after.ecx,step.after.ecx&0xffff,step.after.edi],'quantum kind/site and committed REP progress');q++;
+  }
   else if(e.tag==='NATIVE_TICK'){equal([e.count,e.preTick,e.nativeTicks,e.successfulQuanta],[1,n,n+1,q],'independent native tick ledger');n++;}
   else if(Object.hasOwn(e,'nativeTicks'))equal([e.nativeTicks,e.successfulQuanta??q],[n,q],'raw event clock chronology');
+  if(e.tag==='IRQ_LINE')nativeLine=e.level;
   if(e.tag==='MEM'&&e.why==='data'){if(!workOperations.has(q+1))workOperations.set(q+1,[]);workOperations.get(q+1).push({rw:e.rw,raw:e.raw,decoded:e.decoded,value:e.value});}
   if(e.tag==='MEM'&&e.rw==='W'&&e.why==='data'){if(!workWrites.has(q+1))workWrites.set(q+1,[]);workWrites.get(q+1).push({raw:e.raw,decoded:e.decoded,value:e.value});}
   if(e.tag==='RPC_PAGE'){const r=host.journal.find(x=>x.kind==='request'&&x.request.seq===e.seq);check(r&&r.request.operation==='PAGE','page request mirror');equal([e.decoded,e.generation,e.class,e.sha256,e.mappingEpoch],[r.reply.decoded,0,2,r.reply.sha256,0],'immutable ROM page mirror');check(!pages.has(r.request.arg0)&&pages.size<32,'persistent ROM page slots');pages.set(r.request.arg0,r.reply);}
@@ -214,7 +222,11 @@ export function assertNativeRepPfPitArmProof(arm,rom){
    const r=host.journal.find(x=>x.kind==='request'&&x.request.seq===e.seq);check(r,'memory actual RPC');
    equal([e.decoded,e.class,e.effect,e.hex,e.generation,e.mappingEpoch],[r.reply.decoded,r.reply.class,r.reply.effect,r.reply.hex,r.reply.generation,0],'memory reply mirror');
    if(r.request.operation==='WRITE'&&r.reply.class===1)pending.push(r);
-  }else if(e.tag==='BOUNDARY'){check(!boundary,'nested boundary');if(e.kind==='prefetch-pagewalk')for(const p of pending){const mem=native.events.filter(x=>x.tag==='MEM'&&x.rw==='W'&&x.raw>=p.request.arg0&&x.raw<p.request.arg0+p.request.arg1&&x.ordinal<e.ordinal).slice(-p.request.arg1);check(mem.length===p.request.arg1&&mem.every(x=>['pde-ad-write','pte-ad-write'].includes(x.why)),'prefetch drains only pagewalk A/D effects');}boundary=e;postCount=0;postSegments=[];postSystem=[];postExtra=null;published=false;}
+  }else if(e.tag==='BOUNDARY'){check(!boundary,'nested boundary');if(e.kind==='prefetch-pagewalk')for(const p of pending){const mem=native.events.filter(x=>x.tag==='MEM'&&x.rw==='W'&&x.raw>=p.request.arg0&&x.raw<p.request.arg0+p.request.arg1&&x.ordinal<e.ordinal).slice(-p.request.arg1);check(mem.length===p.request.arg1&&mem.every(x=>['pde-ad-write','pte-ad-write'].includes(x.why)),'prefetch drains only pagewalk A/D effects');}if(['ordinary','rep-element'].includes(e.kind)){
+    const quantum=quanta.find(x=>x.successfulQuanta===q);check(quantum,'work boundary without successful quantum');
+    equal(e.kind,quantum.kind===1?'rep-element':'ordinary','work boundary exact quantum kind');
+    equal([e.attemptCS,e.attemptEIP],[quantum.cs,quantum.eip],'work boundary exact quantum attempt');
+   }boundary=e;postCount=0;postSegments=[];postSystem=[];postExtra=null;published=false;}
   else if(e.tag==='COMMIT'){
    check(boundary&&!published,'commit lacks uncompleted owning boundary');equal([e.nativeTicks,e.successfulQuanta],[boundary.nativeTicks,boundary.successfulQuanta],'commit exact owning boundary tuple');const p=pending.shift();check(p,'extra cache commit');
    equal([e.raw,e.decoded,e.length,e.hex,e.generation,e.mappingEpoch,e.boundaryKind],[p.request.arg0,p.reply.decoded,p.request.arg1,p.request.payload,p.reply.generation,0,boundary.kind],'exact acknowledged RAM commit');
@@ -232,6 +244,8 @@ export function assertNativeRepPfPitArmProof(arm,rom){
    postCount++;
   }else if(e.tag==='POST_EXTRA'){
    check(boundary&&postCount===1&&!postExtra,'full extra checkpoint order');postExtra=e.extra;
+   // CPU3 signal_INTR/clear_INTR owns bit10; set_IF owns the fixed-profile event mask.
+   equal([e.extra.pendingEvent,e.extra.eventMask],[nativeLine?0x400:0,(checkpoint.eflags&0x200)?0x100:0xf40],'raw native pending interrupt and IF event mask');
    equal([e.extra.dr6,e.extra.dr7,e.extra.es,e.extra.fs,e.extra.gs],[0xffff1ff0,0x400,checkpoint.es,checkpoint.fs,checkpoint.gs],'raw debug/extra selectors');
   }else if(e.tag==='POST_SEG'){
    check(boundary&&postExtra,'segment outside full checkpoint');equal(e.segment.index,postSegments.length,'full six segment order');assertSegment(e.segment,checkpoint,native.resetSegments);postSegments.push(e.segment);
@@ -323,6 +337,7 @@ export function assertNativeRepPfPitArmProof(arm,rom){
  equal(arm.host.final.memorySha256,repSha(host.machine.mem),'actual final backing digest');
  const edges=host.journal.filter(e=>e.kind==='pit-output');equal(edges.map(e=>[e.channel,e.level,e.successfulQuanta,e.boardCycles]),[[0,1,72,436]],'actual active edge after one REP success');
  const requestJournal=host.journal.filter(e=>e.kind==='request');
+ equal(requestJournal.filter(e=>e.request.operation==='QUANTUM').map(e=>[e.request.arg0,e.request.arg1,e.request.arg2]),quanta.map(e=>[e.kind,0,0]),'raw quantum kind matches actual host RPC');
  for(const e of requestJournal.filter(e=>e.request.operation==='QUANTUM')){const step=js.steps.find(s=>s.completed&&s.quantum===e.after.successfulQuanta);equal(e.after.board,step.boardAfter,'every successful quantum whole configured board/debt');}
  const final=arm.host.final;equal(final.after.board,js.final.board,'complete terminal board/chips/debt');equal(final.destination,js.final.destination,'four REP destination words');equal(final.page6,js.final.page6,'ordinary/one REP words');equal(final.pte5,js.final.pte5,'first repaired PTE');equal(final.pte6,js.final.pte6,'second repaired PTE');
  equal(final.resetWitness,repResetDifferences.rawGuestWitness.native,'raw native reset witness');equal(host.marker,Array.from(Buffer.from('RPPT001')),'actual PIO marker');
