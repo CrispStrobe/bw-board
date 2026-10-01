@@ -63,6 +63,10 @@ jobs:
         run: git fetch --no-tags --depth=1 origin 7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247
       - name: Fetch exact source revision of native REP PF PIT test capture
         run: git fetch --no-tags --depth=1 origin 59b528bf0a0dbc5dc7bbc0416c9ade035fca78d5
+      - name: Fetch exact source revision of published JavaScript combined paging RAM oracle
+        run: git fetch --no-tags --depth=1 origin 15f010c92b5227622b76da815bd47000e28a988c
+      - name: Fetch exact source revision of native combined paging RAM test capture
+        run: git fetch --no-tags --depth=1 origin 57548693306523025b43787b50337451cd0c6079
       # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
       # needs its built WASM. Checking it out is the difference between that
       # gate RUNNING and it skipping on every CI run — the failure mode this
@@ -201,7 +205,11 @@ jobs:
           # Prevent an old/partial emulator pin from making checkpoint tests
           # pass through their intentional unsupported-build branch.
           EMU8051_CHECKPOINT_REQUIRED: '1'
-        run: npm test
+        # Serialize test files: the compressed native receipts expand to large
+        # reports in separate Node processes. Recent runner shutdowns lacked
+        # memory telemetry; limiting overlap avoids multiplying their live heaps.
+        # The runner derives every pattern and explicit file from scripts.test.
+        run: node scripts/run-ci-tests-serial.mjs
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in
       # that list "a CPU core's hardware-generated vectors did not run" looks

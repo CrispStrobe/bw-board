@@ -1,0 +1,102 @@
+name: 386 combined native diagnostic build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [lane/386-native-combined-paging-ram-20261001]
+    paths:
+      - '.github/workflows/i80386-native-combined-build.yml'
+      - 'scripts/bochs-cpu3-native-*/**'
+      - 'scripts/prepare-bochs-cpu3-native-combined-paging-ram.mjs'
+      - 'test/fixtures/i80386-free-combined-paging-ram.S'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: i80386-combined-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Record diagnostic context and build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/combined-evidence"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev
+          {
+            git rev-parse HEAD
+            uname -a
+            lscpu
+            g++ --version
+            node --version
+            dpkg-query -W build-essential g++ libc6-dev libltdl-dev
+            df -h "$RUNNER_TEMP"
+          } > "$RUNNER_TEMP/combined-evidence/context.txt"
+      - name: Verify pinned upstream and prepare separate native tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          upstream="$RUNNER_TEMP/combined-upstream"
+          git init "$upstream"
+          git -C "$upstream" remote add origin https://github.com/bochs-emu/Bochs.git
+          git -C "$upstream" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          git -C "$upstream" checkout --detach FETCH_HEAD
+          export BOCHS_386_ROOT="$upstream"
+          node scripts/prepare-bochs-cpu3-native-combined-paging-ram.mjs --check \
+            > "$RUNNER_TEMP/combined-evidence/prepare-check.json"
+          node scripts/prepare-bochs-cpu3-native-combined-paging-ram.mjs \
+            --prepare "$RUNNER_TEMP/combined-prepared" \
+            > "$RUNNER_TEMP/combined-evidence/prepare.json"
+          git -C "$RUNNER_TEMP/combined-prepared" diff --binary \
+            > "$RUNNER_TEMP/combined-evidence/prepared-source.patch"
+          cp "$RUNNER_TEMP/combined-prepared/bochs/cpu/"bw_slice_* \
+            "$RUNNER_TEMP/combined-evidence/"
+      - name: Compile the diagnostic CPU3 bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/combined-prepared/bochs"
+          ./configure --enable-cpu-level=3 --with-nogui --disable-plugins \
+            --disable-debugger --disable-repeat-speedups --disable-handlers-chaining \
+            --enable-instrumentation=instrument/stubs \
+            2>&1 | tee "$RUNNER_TEMP/combined-evidence/configure.log"
+          python3 - <<'PYCONFIG'
+          import re
+          text = open('config.h').read()
+          expected = {'BX_CPU_LEVEL': 3, 'BX_USE_IDLE_HACK': 0,
+              'BX_DEBUGGER': 0, 'BX_SUPPORT_SMP': 0,
+              'BX_SUPPORT_REPEAT_SPEEDUPS': 0,
+              'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS': 0}
+          for name, value in expected.items():
+              assert re.search(r'^#define\s+' + name + r'\s+' + str(value) + r'\s*$', text, re.M), name
+          PYCONFIG
+          make -j2 2>&1 | tee "$RUNNER_TEMP/combined-evidence/make.log"
+          test -x bochs
+          sha256sum bochs config.h cpu/bw_slice_abi.h cpu/bw_slice_runtime.h \
+            cpu/bw_slice_runtime.inc > "$RUNNER_TEMP/combined-evidence/build-sha256.txt"
+          cp config.h "$RUNNER_TEMP/combined-evidence/config.h"
+          git -C .. diff --binary > "$RUNNER_TEMP/combined-evidence/prepared-source.patch"
+          printf '%s\n' 'Diagnostic compiled artifact only: no guest execution, correctness qualification, production backend or RTx result.' \
+            > "$RUNNER_TEMP/combined-evidence/claim.txt"
+          # Retain the built tree, copied bridge sources and upstream LGPL
+          # notices together. This is a runner-specific binary, not a release.
+          tar --exclude=.git -czf "$RUNNER_TEMP/combined-evidence/prepared-tree.tar.gz" \
+            -C "$RUNNER_TEMP" combined-prepared
+      - name: Retain build provenance and failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-combined-diagnostic-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/combined-evidence
+          if-no-files-found: error
+          retention-days: 14

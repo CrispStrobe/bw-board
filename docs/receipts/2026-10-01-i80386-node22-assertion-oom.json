@@ -1,0 +1,105 @@
+{
+  "status": "CONFIRMED_CI_OOM",
+  "headRevision": "9b6d760b709cf7d572a6e1ff816c3789624ff5ec",
+  "node": "22.23.3",
+  "heapLimitMiB": 1024,
+  "jobs": [
+    {
+      "run": 36892383708,
+      "job": 110470925106,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36892383708/job/110470925106",
+      "rawLogSha256": "1ad87c7395a11d4b37d3ea8542764a7beedda289dc1b634722e912c090a24b9b",
+      "samples": [
+        {
+          "time": "2026-10-01T16:35:30.587Z",
+          "workers": [
+            {
+              "pid": 9605,
+              "rssPages": 158454,
+              "rssBytesAt4KiBPage": 649027584
+            }
+          ],
+          "cgroupMemoryPeak": "2161332224",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+        },
+        {
+          "time": "2026-10-01T16:36:01.074Z",
+          "workers": [
+            {
+              "pid": 9605,
+              "rssPages": 3817886,
+              "rssBytesAt4KiBPage": 15638061056
+            }
+          ],
+          "cgroupMemoryPeak": "16017358848",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+        },
+        {
+          "time": "2026-10-01T16:36:24.804Z",
+          "workers": [],
+          "cgroupMemoryPeak": "16288395264",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 1\noom_group_kill 0"
+        },
+        {
+          "time": "2026-10-01T16:36:24.937Z",
+          "workers": [],
+          "cgroupMemoryPeak": "16288395264",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 1\noom_group_kill 0"
+        }
+      ]
+    },
+    {
+      "run": 36892392755,
+      "job": 110470952409,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36892392755/job/110470952409",
+      "rawLogSha256": "be246c26e3a77ddf485d98b97f552fa0ef39d33cdbaf9c949c979c109e5d940a",
+      "samples": [
+        {
+          "time": "2026-10-01T16:36:13.656Z",
+          "workers": [
+            {
+              "pid": 9862,
+              "rssPages": 117949,
+              "rssBytesAt4KiBPage": 483119104
+            }
+          ],
+          "cgroupMemoryPeak": "2051309568",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+        },
+        {
+          "time": "2026-10-01T16:36:43.914Z",
+          "workers": [
+            {
+              "pid": 9862,
+              "rssPages": 3837435,
+              "rssBytesAt4KiBPage": 15718133760
+            }
+          ],
+          "cgroupMemoryPeak": "15976734720",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+        },
+        {
+          "time": "2026-10-01T16:37:03.444Z",
+          "workers": [],
+          "cgroupMemoryPeak": "16282681344",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 1\noom_group_kill 0"
+        },
+        {
+          "time": "2026-10-01T16:37:03.486Z",
+          "workers": [],
+          "cgroupMemoryPeak": "16282681344",
+          "cgroupMemoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 1\noom_group_kill 0"
+        }
+      ]
+    }
+  ],
+  "causeScope": "OOM confirmed; allocation cause under investigation; previous shutdown-only logs did not establish OOM",
+  "localComparison": {
+    "node": "20.20.2",
+    "tests": 62,
+    "passed": 62,
+    "skipped": 0,
+    "peakRssKiB": 697868,
+    "wallSeconds": 233.78
+  }
+}
