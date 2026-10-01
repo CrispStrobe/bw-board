@@ -332,6 +332,15 @@ The [selected-motion boundary](docs/LABWIRED-SELECTED-MOTION.md) now provides
 an explicit `lsm303agr` board variant and an opt-in fresh-WASM guest/RTx CI gate.
 Default board hardware and deployed engine pins are unchanged; this slice has
 not yet produced a passing selected-motion WASM or browser measurement.
+The corrected fresh-WASM [hosted run 36817423180](https://github.com/CrispStrobe/bw-board/actions/runs/36817423180)
+at LabWired `4d944d2d` passed the guest's sensor/DMA/matrix/button assertions,
+but failed real time on EPYC 7763: **0.686913× median / 0.653157× minimum**;
+all five windows were below 1×. Both builds, determinism and existing integration
+passed; publication remained blocked. [All five samples and provenance](docs/receipts/2026-10-01-microbit-motion-wasm-hosted/qualification-context.json)
+are retained alongside the raw output. These are NODEJS results, not browser RTx.
+The [shared-VPS diagnostics](docs/receipts/2026-10-01-microbit-motion-wasm-vps.json)
+also failed; a JIT-request probe did not justify enabling JIT. Native qualification
+above therefore does not qualify the deployed WASM artifact.
 
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
 at `ce60a499` also passed native board/model, input-routing and RTx gates.

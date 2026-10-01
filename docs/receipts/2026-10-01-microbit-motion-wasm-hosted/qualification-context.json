@@ -1,0 +1,127 @@
+{
+  "sourceCommit": "4d944d2d9ec320f7acd25b54cc41a50b850d6788",
+  "boundaryCommit": "1cec7b390b1cc329ea30fafebdd352d081da1bc2",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/36817423180",
+  "runConclusion": "failure",
+  "artifactId": 11142336611,
+  "githubReportedArtifactDigest": "sha256:c7faa80c1248593588dbcea373392c57e78f57745b70b1e92c2bbe6378845cf0",
+  "cpuModel": "AMD EPYC 7763 64-Core Processor",
+  "engine": "NODEJS WASM under Node 22",
+  "tests": 2,
+  "passed": 1,
+  "failed": 1,
+  "skipped": 0,
+  "functionalPassed": true,
+  "requiredMinimumRtx": 1,
+  "realtimeTargetMet": false,
+  "medianRtx": 0.6869133412316005,
+  "minimumRtx": 0.6531566512630534,
+  "guestElfSha256": "8cecb67d36cda0e94a5ebf1cd93764b7a8a402988688d89a5eaaf4b0615f1688",
+  "samples": [
+    {
+      "index": 0,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 1.4518795359999999,
+      "rtx": 0.6887623767706305,
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "accelSamples": 112,
+      "magSamples": 112,
+      "scans": 2145
+    },
+    {
+      "index": 1,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 1.4374582889999996,
+      "rtx": 0.6956723597842082,
+      "accelRaw": [
+        -4096,
+        2048,
+        -12288
+      ],
+      "magRaw": [
+        -200,
+        0,
+        400
+      ],
+      "accelSamples": 212,
+      "magSamples": 212,
+      "scans": 4053
+    },
+    {
+      "index": 2,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 1.4570842640000001,
+      "rtx": 0.6863021066844764,
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "accelSamples": 312,
+      "magSamples": 312,
+      "scans": 5960
+    },
+    {
+      "index": 3,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 1.531026283,
+      "rtx": 0.6531566512630534,
+      "accelRaw": [
+        -4096,
+        2048,
+        -12288
+      ],
+      "magRaw": [
+        -200,
+        0,
+        400
+      ],
+      "accelSamples": 412,
+      "magSamples": 412,
+      "scans": 7867
+    },
+    {
+      "index": 4,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 1.4557877099999996,
+      "rtx": 0.6869133412316005,
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "accelSamples": 512,
+      "magSamples": 512,
+      "scans": 9774
+    }
+  ],
+  "limitations": [
+    "held polled LSM303AGR inputs; no shared IRQ/timed audio",
+    "NODEJS engine workload, not browser/UI or circuit solver performance",
+    "no artifact/pin promotion; CP13 remains incomplete"
+  ]
+}

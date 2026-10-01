@@ -67,8 +67,21 @@ passing WASM performance qualification is claimed yet. A subsequent VPS run
 executed both tests with zero skips: functional passed, but all five RTx
 windows failed the unchanged floor (0.266108× median / 0.256228× minimum).
 This is a failed shared-VPS observation, not a hosted result; it does not
-justify artifact promotion. Existing real-WASM
-generic input proof uses the historical published WEB module under Node.
+justify artifact promotion. The [complete VPS diagnostics](receipts/2026-10-01-microbit-motion-wasm-vps.json)
+also retain a separate JIT-request probe (0.126523× median / 0.125133× minimum).
+These sequential diagnostics are not a controlled alternating A/B experiment;
+compiled-block/fallback counters were not captured. JIT remains unpromoted.
+
+The corrected [hosted run 36817423180](https://github.com/CrispStrobe/bw-board/actions/runs/36817423180)
+used source `4d944d2d` and boundary `1cec7b39` on EPYC 7763 / Node 22.
+Both fresh builds, determinism and existing integration passed. Motion executed
+two tests with zero skips: functional passed, but **all five** performance
+windows failed (0.686913× median / 0.653157× minimum). Publication was blocked.
+[Provenance and all samples](receipts/2026-10-01-microbit-motion-wasm-hosted/qualification-context.json),
+[raw output](receipts/2026-10-01-microbit-motion-wasm-hosted/motion-results.txt),
+runner context and BUILD-INFO are retained. This is NODEJS workload evidence,
+not browser, UI or circuit-solver throughput. Generic real-WASM input tests also
+pass using the fresh WEB build under Node, separately from motion performance.
 
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
