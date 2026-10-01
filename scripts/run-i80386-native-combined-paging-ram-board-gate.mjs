@@ -10,11 +10,11 @@ import {patchPinnedSource,upstreamHashes} from './bochs-cpu3-native-combined-pag
 import {assembleCombinedPagingRamRom} from './i80386-combined-paging-ram-oracle.mjs';
 import {expandI80386SourceInventory} from './lib/i80386-source-inventory.mjs';
 import {NativeCombinedPagingRamHost,combinedBudgets,combinedSha,parseCombinedRpcLine,encodeCombinedCommand,encodeCombinedReply,combinedBoardConfig} from './bochs-cpu3-native-combined-paging-ram/host.mjs';
-import {parseCombinedNativeLog,assertNativeCombinedPagingRamProof,combinedResetDifferences,combinedBusDifferences,combinedBuildPins,combinedGuards,combinedTransports} from './i80386-native-combined-paging-ram-board-gate.mjs';
+import {parseCombinedNativeLog,assertNativeCombinedPagingRamProof,combinedResetDifferences,combinedBusDifferences,combinedBuildPins,combinedManifestSha256,combinedGuards,combinedTransports} from './i80386-native-combined-paging-ram-board-gate.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const shaFile=file=>combinedSha(readFileSync(file));
 const check=(ok,message)=>assert(ok,`combined paging/RAM/REP runner: ${message}`);
-const sourceSeeds=['./run-i80386-native-combined-paging-ram-board-gate.mjs','./prepare-bochs-cpu3-native-combined-paging-ram.mjs',
+const sourceSeeds=['../package.json','../test/i80386-native-combined-paging-ram-host.test.mjs','./run-i80386-native-combined-paging-ram-board-gate.mjs','./prepare-bochs-cpu3-native-combined-paging-ram.mjs',
  './bochs-cpu3-native-combined-paging-ram/abi.h','./bochs-cpu3-native-combined-paging-ram/runtime.h','./bochs-cpu3-native-combined-paging-ram/runtime.inc',
  './bochs-cpu3-native-combined-paging-ram/wire-contract.md','../test/fixtures/i80386-free-combined-paging-ram.S',
  '../docs/receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-capture.json.gz',
@@ -43,6 +43,11 @@ function preflight(build,manifest,manifestBytes){
     return [file,hash];
   }));
   assert.deepEqual(manifest.patchedHashes,patchedHashes,'manifest derived source pins');
+  check(combinedSha(manifestBytes)===combinedManifestSha256,'independently audited prepared manifest bytes');
+  const comparisonSourceHashes=Object.fromEntries(Object.entries(combinedBusDifferences.sources).map(([file,expected])=>{
+    const upstream=execFileSync('git',['show',`${combinedBuildPins.bochsRevision}:${file}`],{cwd:build,maxBuffer:4<<20});
+    check(combinedSha(upstream)===expected&&shaFile(path.join(build,file))===expected,`actual untouched comparison source differs: ${file}`);return [file,expected];
+  }));
   const changed=execFileSync('git',['diff','--name-only'],{cwd:build,encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
   assert.deepEqual(changed,Object.keys(upstreamHashes).filter(f=>f!=='bochs/cpu/init.cc').sort(),'exact changed native source inventory');
   const runtime=shaFile(path.join(build,'bochs/cpu/bw_slice_runtime.inc')),
@@ -53,7 +58,7 @@ function preflight(build,manifest,manifestBytes){
   const header=readFileSync(path.join(build,'bochs/config.h'),'utf8');
   for(const [name,value] of Object.entries({BX_CPU_LEVEL:3,BX_SUPPORT_SMP:0,BX_DEBUGGER:0,BX_DEBUGGER_GUI:0,BX_SUPPORT_REPEAT_SPEEDUPS:0,BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS:0,BX_USE_IDLE_HACK:0}))
     check(new RegExp(`^#define\\s+${name}\\s+${value}\\s*$`,'m').test(header),`required compiled feature ${name}`);
-  return {boardRevision,sourceHashes,...combinedBuildPins,patchedHashes,
+  return {boardRevision,sourceHashes,...combinedBuildPins,patchedHashes,comparisonSourceHashes,
     manifestSha256:combinedSha(manifestBytes),manifestCanonicalSha256:combinedSha(JSON.stringify(manifest)),boardConfigurationSha256:combinedSha(JSON.stringify(combinedBoardConfig))};
 }
 class Lines{
@@ -214,8 +219,8 @@ export async function runNativeCombinedPagingRamCompare({build,manifestFile,dire
     'cpu: count=1, ips=10000000','clock: sync=none, time0=946684800','boot: disk','port_e9_hack: enabled=1',
     `log: ${bochsLog}`,'panic: action=fatal','error: action=report','info: action=report','debug: action=ignore','mouse: enabled=0'].join('\n')+'\n';
   writeFileSync(rc,config,{flag:'wx'});writeFileSync(path.join(directory,'free-rom.bin'),rom,{flag:'wx'});
-  const source={...before,bochsrcSha256:combinedSha(config),romSha256:combinedSha(rom),fixtureSha256:shaFile(path.join(root,'test/fixtures/i80386-free-combined-paging-ram.S'))};
-  const report={schema:'bw.bochs-cpu3-native-combined-paging-ram.diagnostic.v1',qualificationStatus:'UNQUALIFIED',claim:'UNQUALIFIED-native-combined-execution-diagnostic-only',source,
+  const source={...before,bochsrcSha256:combinedSha(config),bochsrcText:config,romSha256:combinedSha(rom),fixtureSha256:shaFile(path.join(root,'test/fixtures/i80386-free-combined-paging-ram.S'))};
+  const report={schema:'bw.bochs-cpu3-native-combined-paging-ram.v1',qualificationStatus:'CANDIDATE',claim:'native-actual-board-bounded-combined-paging-ram-rep-pf-pit-only',source,
     javascriptOracle:{path:'docs/receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-capture.json.gz',
       sha256:'bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2',
       boardRevision:'15f010c92b5227622b76da815bd47000e28a988c',cpuProfile:'compatibility',strict386:false},
