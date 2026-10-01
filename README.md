@@ -109,7 +109,7 @@ Interpreter outlining was rejected after two negative paired runs (−7.68% and
 [rejected outlining evidence](docs/receipts/2026-10-01-wasm-outline/README.md) and
 [profiling/tier-validation guide](docs/LABWIRED-WASM-PROFILING.md).
 
-The next, still-experimental bounded cached-run candidate (core PR 146) measured
+The bounded cached-run optimization ([core PR 146](https://github.com/CrispStrobe/labwired-core/pull/146), app artifact unpromoted) measured
 **+8.24%, +7.15% and +9.65%** in three exact-artifact paired comparisons against
 the landed scalar baseline, with identical cycle-indexed guest observations.
 The latest exact fixed-artifact fresh qualification was

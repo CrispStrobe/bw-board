@@ -1,4 +1,4 @@
-# WASM bounded cached runs: experimental, unpromoted
+# WASM bounded cached runs: measured, app artifact unpromoted
 
 [Core PR 146](https://github.com/CrispStrobe/labwired-core/pull/146) extends the
 landed scalar executor to at most 16 retirements, also bounded by the machine's
@@ -45,6 +45,26 @@ ordinary qualification or automatically removable overhead.
 [Fixed-artifact raw A/B](fixed-abba.json), [runner](fixed-runner.txt) and
 [build provenance](fixed-build-info.json) preserve the third comparison.
 
+## Additional ordinary VPS comparisons
+
+Node v20.20.2, Intel Xeon Skylake (IBRS, no TSX), four visible vCPUs;
+shared-host CPU availability is uncontrolled. These are not hosted Node 22
+qualification or browser/UI tests. Both use the exact fixed candidate module.
+The retained VPS baseline artifact was built from `273e683e`; its actual WASM
+SHA256 `9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258`
+matches the landed scalar baseline used above. Original paired glue is preserved.
+
+| VPS comparison | Scalar median / min | Bounded-run median / min | Median change |
+| --- | --- | --- | --- |
+| First | 0.418424 / 0.358754 | 0.456904 / 0.424472 | +9.20% |
+| Repeat | 0.421845 / 0.393812 | 0.464289 / 0.427517 | +10.06% |
+
+All cycle-indexed guest observations matched within each A/B/B/A; all forty
+windows failed 1×. [First raw receipt](vps-abba.json),
+[repeat raw receipt](vps-repeat-abba.json), [baseline build provenance](vps-baseline-build-info.json)
+and [runner/tool fingerprints](vps-runner.txt) preserve their distinct provenance.
+Do not compare absolute RTx across hosts or Node/compiler versions.
+
 ## Fresh qualification and correctness
 
 [Candidate build 36883581882](https://github.com/CrispStrobe/bw-board/actions/runs/36883581882)
@@ -88,5 +108,28 @@ The user explicitly approved re-stamping the same seven content-bound hardware
 drift acknowledgements after verification. Existing 2026-10-01 dates,
 2026-10-31 expiry and all physical capture evidence remain unchanged; live
 re-capture remains owed. The update changes only those seven digest fields and
-review comments, not unrelated stale acknowledgements. Final acknowledgement-head
-CI/core merge remains pending. No app pin promotion or completion of CP13 is claimed.
+review comments, not unrelated stale acknowledgements. The
+[core PR](https://github.com/CrispStrobe/labwired-core/pull/146) records the
+authoritative current head, final CI verdicts and merge status. Core landing
+requires all 19 enabled final-head checks to pass, not just the required subset.
+No app pin promotion or completion of CP13 is claimed.
+
+## CI queue incident and landing safeguard
+
+After the approved acknowledgement update, the final-head local suite again
+passed 4,234 tests / zero failures / three existing ignored tests, and the
+drift/staleness check passed. The
+[GitHub Actions incident](https://www.githubstatus.com/incidents/2dpbcq5j165n)
+coincided with prolonged unassigned runner queues. Final review head
+`d10aa88255fd1e093cc1f424c26260341c9322fa` pins PR/control CI lanes to
+`ubuntu-24.04`, the same OS verified in completed job 110487130156; this is a
+queue-workaround attempt, not a proven fix. Nightly/full/image lanes, test
+commands, floors, features and cache policy are unchanged. Its strict workflow
+regression suite passed 42 local tests and actionlint passed. Runtime source
+and the seven acknowledged model digests did not change.
+
+The guarded landing command waits for every enabled check, refuses changed
+head/base references and stops on failures or timeout. Its local guard tests
+are not GitHub CI evidence. It publishes no WASM release or app pins. Use the
+core PR's actual verdict/merge record, not this queued-run description, to
+determine whether landing has completed.
