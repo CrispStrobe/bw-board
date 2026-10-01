@@ -413,6 +413,7 @@ export function assertNativeColdResetProof(report,rom){
   equal(report.schema,'bw.bochs-cpu3-native-cold-reset.v1','schema');
   equal(report.claim,'native-cold-entry-actual-board-bus-ownership-only','bounded claim');
   equal(report.resetDifferences,coldResetDifferences,'predeclared named raw reset differences');
+  equal(Object.keys(report.arms??{}).sort(),Object.keys(coldBudgets).sort(),'four actual native arms');
   sourceProof(report.source);artifactProof(report);
   equal(report.javascriptOracle,{path:'docs/receipts/2026-10-01-i80386-js-cold-reset-oracle-capture.json',
     sha256:'e35fdc788ed3d27020563b4c7dbb2c7ecbf6c91959e0abe2ebd043f0490d6703',
