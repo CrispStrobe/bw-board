@@ -1,0 +1,49 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {summarizeCpuProfile, parseWasmCompilations} from '../scripts/lib/wasm-motion-profile.mjs';
+
+const profile = () => ({nodes: [
+    {id: 1, callFrame: {functionName: '(root)', url: ''}},
+    {id: 2, callFrame: {functionName: 'wasm-function[73]', url: 'wasm://wasm/module', lineNumber: 0}},
+    {id: 3, callFrame: {functionName: 'runCycles', url: 'file:///test.mjs', lineNumber: 1}}
+], samples: [2, 2, 3], timeDeltas: [100, 200, 100]});
+
+test('sampling uses actual sample IDs and time deltas, not unsampled hit counts', () => {
+    const result = summarizeCpuProfile(profile());
+    assert.equal(result.samples, 3);
+    assert.equal(result.wasmSamples, 2);
+    assert.equal(result.wasmSelfShare, .75);
+    assert.equal(result.topWasmFrames[0].selfMicros, 300);
+    assert.equal(result.topFrames[1].functionName, 'runCycles');
+});
+test('incomplete, unknown and inconsistent samples fail closed', () => {
+    for (const mutate of [p => { p.samples = []; }, p => { p.timeDeltas.pop(); },
+        p => { p.samples[0] = 999; }, p => { p.timeDeltas[0] = -1; },
+        p => { p.nodes.push(p.nodes[0]); }, p => { p.nodes[0].callFrame = null; }]) {
+        const p = profile(); mutate(p); assert.throws(() => summarizeCpuProfile(p));
+    }
+});
+test('compiler traces preserve each tier, body size, module and function', () => {
+    const result = parseWasmCompilations([
+        'Compiled function 0xabc#73 using Liftoff, took 1 ms and 12 / 20 max/total bytes; bodysize 77465 codesize 100 name CortexM::step_batch',
+        'Compiled function 0xabc#73 using TurboFan, took 2.5 ms and 32 / 40 max/total bytes; bodysize 77465 codesize 80 name CortexM::step_batch'
+    ].join('\n'));
+    assert.deepEqual(result.tiers, {Liftoff: 1, TurboFan: 1});
+    assert.equal(result.cortexM.length, 2);
+    assert.equal(result.compilations[1].compileMs, 2.5);
+    assert.equal(result.largestBodies[0].bodyBytes, 77465);
+    assert.throws(() => parseWasmCompilations('no actual trace'));
+});
+test('hosted profiling is opt-in and follows the unchanged ordinary A/B', () => {
+    const workflow = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
+    assert.match(workflow, /profile:\n[\s\S]*?type: boolean\n        default: false/);
+    assert.ok(workflow.indexOf('node scripts/probe-labwired-motion-ab.mjs') <
+        workflow.indexOf('node scripts/profile-labwired-motion.mjs'));
+    assert.match(workflow, /for mode in trace-default sampled-default turbofan liftoff/);
+    assert.match(workflow, /Retain raw results even if the diagnostic itself fails\n        if: always\(\)/);
+    const script = readFileSync(new URL('../scripts/profile-labwired-motion.mjs', import.meta.url), 'utf8');
+    assert.match(script, /LABWIRED_MOTION_REQUIRED: '1', LABWIRED_REQUIRE_MOTION_RTX: '1'/);
+    assert.match(script, /diagnosticOnly: true/);
+    assert.ok(script.indexOf("writeFileSync(join(out, 'stdout.txt')") < script.indexOf('Object.assign(receipt, motionProbeResult'));
+});
