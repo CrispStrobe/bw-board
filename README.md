@@ -359,7 +359,7 @@ are retained. The shared CPU change also triggers seven silicon-capture drift
 checks; neither those checks nor the WASM floor have been waived. The candidate
 is not merged or promoted; deployed pins are unchanged and CP13 remains open.
 
-The independent [opcode-dispatch candidate](https://github.com/CrispStrobe/labwired-core/pull/143)
+The independent [opcode-dispatch optimization](https://github.com/CrispStrobe/labwired-core/pull/143)
 `13ace46f` selects relevant T16 probes from a borrowed cached opcode; it does
 not include PR 142. Exact-base native A/B/B/A on one Xeon Platinum 8370C observed
 **+13.03%** (1.326734× / 1.499638× median-of-medians); all ten candidate windows
@@ -372,8 +372,15 @@ Absolute speeds vary with host conditions and are not compared across runs.
 Fresh qualification separately failed (0.738987× median / 0.716393× minimum on
 EPYC 7763), despite passing functional, determinism and existing integration
 checks. [All raw receipts and test context](docs/receipts/2026-10-01-cortex-m-dispatch/README.md)
-are retained. This is an unmerged intermediate optimization, not real-time WASM
-qualification or a pin upgrade; seven silicon-drift checks remain unresolved.
+are retained. This intermediate optimization landed in core `main` as
+`4deee6f0` after final-head CI passed. The user approved seven exact-content-bound
+drift acknowledgements, expiring **2026-10-31**; physical capture dates/results
+remain unchanged and hardware re-capture is still owed. Final-head exact-base
+native A/B/B/A on one EPYC 9V74 observed **+14.74%** (1.410521× / 1.618482×);
+all ten candidate windows passed 1×, minimum **1.596440×**. This does not change
+the below-1× WASM results or deployed pins; CP13 remains open.
+[Landing, final-head qualification and raw receipts](docs/receipts/2026-10-01-cortex-m-dispatch-landing/README.md)
+are separate from the earlier measurements above.
 Its native CorePerf gate passed all 40 spin targets with no reported instruction
 regressions or waivers. Board/model qualification passed, including all 156
 Cortex-M tests with zero failures/ignored tests; other board suites retain
