@@ -1,3 +1,13 @@
+2026-10-01 Public capability wording — CLAIM, Codex bwcx `/root`.
+Isolated worktree `/mnt/volume1/code/lego/wt-board-public-docs-20261001`,
+branch `docs/public-capability-wording-20261001`, exact base
+`1d64a30257fd43e0e937cf9e8575a9106a357e3b`. Docs-only three-path envelope:
+this row, README.md user-facing capabilities/guest descriptions, ROADMAP.md
+public boot milestone wording. Remove internal next-lane commentary and
+promotion of guest media outside the distributable product. Preserve engine
+source, tests, workflows, private artifacts, raw receipts and their historical
+qualification limits. No package/pin or executable change.
+
 2026-10-01 Constant analytic meter interval compaction — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-compaction-20261001`,
 branch `lane/analytic-meter-compaction-20261001`, exact base
