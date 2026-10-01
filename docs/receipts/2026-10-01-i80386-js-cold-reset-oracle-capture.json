@@ -2,7 +2,7 @@
   "schema": "bw.i80386-js-cold-reset-oracle.v1",
   "claim": "actual-javascript-board-cold-reset-only",
   "source": {
-    "boardRevision": "a12549a66783a05a159692d5e2794d0271c3ef70",
+    "boardRevision": "9896ba218102330a4990a2c6c8f0401880a0e920",
     "sourceHashes": {
       "src/adc0809.js": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af",
       "src/at-8042-a20.js": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8",
@@ -41,7 +41,7 @@
       "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
       "src/ym3812.js": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04",
       "test/fixtures/i80386-free-cold-reset.S": "aedf3c0262046d6aa219c11db97ccdb9eab1868a6a56d79413c621ec3c4c740f",
-      "test/i80386-cold-reset-oracle.test.mjs": "958d191d63802975d00c66d9ad61383d3e5989b9e5613f2e3eb83d941a730cde",
+      "test/i80386-cold-reset-oracle.test.mjs": "823a7f8a21d8577863c88bdb71c2a8cb85c04ba0c35dead521b8f3d1e00cd1f4",
       "scripts/i80386-cold-reset-oracle.mjs": "8d331fd0d487974f6b6a1acb6054d4a619ad0c36995fc3de12322c1e55ddd9d3",
       "scripts/lib/i80386-source-inventory.mjs": "96188430556fb724fbea8197e0fdfd280e7f52d9f63632c3371779fb3f740604",
       "scripts/run-i80386-cold-reset-oracle.mjs": "45d55510965421c566fa958ec0f444ca96447c6e0dd52a4e50373b292987b9a1"

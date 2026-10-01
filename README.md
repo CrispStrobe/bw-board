@@ -531,7 +531,7 @@ establish a shipped native/WASM backend, Windows enhanced mode, or new RTx.
 
 The [actual-board cold-reset oracle](docs/I80386-JS-COLD-RESET-ORACLE.md) now
 executes a free MIT reset ROM from `FFFFFFF0`, preserving guest reset-state
-witnesses, RAM/ROM/open-bus effects and terminal chip debt. Its 22 tests pass
+witnesses, RAM/ROM/open-bus effects and terminal chip debt. Its 23 tests pass
 and an independent capture is byte-identical. This is the current JavaScript
 compatibility profile; native cold-reset/board ownership remains next.
 

@@ -1,6 +1,6 @@
 # Actual JavaScript 386 board cold-reset oracle
 
-**Status (2026-10-01): source-bound JavaScript board checkpoint passed and independently reproduced.** Source is frozen at `a12549a66783a05a159692d5e2794d0271c3ef70`. This is the existing board's compatibility-profile JavaScript CPU, not native reset parity or a new shipped backend.
+**Status (2026-10-01): source-bound JavaScript board checkpoint passed and independently reproduced.** Source is frozen at `9896ba218102330a4990a2c6c8f0401880a0e920`. This is the existing board's compatibility-profile JavaScript CPU, not native reset parity or a new shipped backend.
 
 The new MIT-licensed 64 KiB ROM begins with a hardware-reset fetch at physical `0xfffffff0`, decoded to the configured alias at `0xfffff0`. Its far jump reloads CS and continues at `F000:0100` / physical `0xf0100`. It sets segments and stack, stores raw reset EDX/CR0 before initializing working registers, writes and reads a RAM signature, attempts a ROM write, reads/writes open bus, emits `CRST001` through port `0xe9`, and enters CLI/HLT at `F000:018a`.
 
@@ -14,9 +14,11 @@ Full selected RTC/DMA/A20/system-control state is recorded and agrees between th
 
 - Free ROM: 65,536 bytes, SHA-256 `ea3d123a6fc9bfaee7258e98f44bc5b0d91b34aea9a01fcc5e5606339422e49b`.
 - Assembly source: `aedf3c0262046d6aa219c11db97ccdb9eab1868a6a56d79413c621ec3c4c740f`.
-- [Exact capture](receipts/2026-10-01-i80386-js-cold-reset-oracle-capture.json): SHA-256 `3adf9b44bb5eb6f86ffd8e24e702732dd9e21e15fb8dcedc0eeb8380d26dc66b`.
+- [Exact capture](receipts/2026-10-01-i80386-js-cold-reset-oracle-capture.json): SHA-256 `e35fdc788ed3d27020563b4c7dbb2c7ecbf6c91959e0abe2ebd043f0490d6703`.
 
-Root's independent capture is byte-identical. Root separately assembled and disassembled the ROM, checked every executable byte/address against the independently built image, verified the reset/far-jump fetch sequence, calculated the PIT fractional carry with rational clocks, and checked that settling debt leaves CPU state unchanged. The focused tests pass 22/22: an actual baseline plus 21 rejected mutations of reset/fetch/source/clock/memory/profile/witness evidence. The capture CLI refuses to overwrite a prior output and persists measured evidence before validation.
+Root's independent capture is byte-identical. Root separately assembled and disassembled the ROM, checked every executable byte/address against the independently built image, verified the reset/far-jump fetch sequence, calculated the PIT fractional carry with rational clocks, and checked that settling debt leaves CPU state unchanged. The focused tests pass 23/23: an actual baseline, a CI-setup regression, and 21 rejected mutations of reset/fetch/source/clock/memory/profile/witness evidence. The capture CLI refuses to overwrite a prior output and persists measured evidence before validation. Unit tests permit unrelated CI preparation files while still authenticating every measured source blob; standalone qualification keeps its clean-checkout default. The regression proves that distinction and removes only its own temporary probe.
+
+The [initial a12549a6 capture](receipts/2026-10-01-i80386-js-cold-reset-oracle-a12549a6-capture.json.gz) is preserved losslessly. Its decompressed SHA is `3adf9b44bb5eb6f86ffd8e24e702732dd9e21e15fb8dcedc0eeb8380d26dc66b`; compressed SHA is `4c56812e4acdefffbd94a6cfe8d7eeed10253a4bb41204f1c44baede2a0569e0`. After the CI test-harness change, both fresh final-source captures reproduced the same complete guest evidence; only the source revision and measured test-file hash changed.
 
 Reproduce from a clean checkout of the frozen source with a new output path; GNU `as`, `objcopy` and `nm` are required:
 
