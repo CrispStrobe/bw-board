@@ -1,0 +1,28 @@
+## Workspace tests on PR — aggregate
+
+- targets run: 398
+- tests passed: 7117
+- tests failed: 0 (known red: 0, new red: 0)
+- ignored: 77
+- lib pseudo-targets with no unit tests (heuristic overmatch, not vacuous): 14
+- release-only targets (empty in debug by construction; run in the core-integrity --release lane): 3
+- skip notices printed: 0 (a skip is not a pass; the cross-build suites are excluded from PR shards and run in core-full instead)
+
+### Slowest 15 targets
+-   43.34s  labwired-cli/asset_import (pass)
+-   29.59s  labwired-wasm/labwired_wasm (pass)
+-   21.03s  labwired-core/nrf54l15_embassy_realtime (pass)
+-   12.46s  labwired-cli/e2e_leo_airquality (pass)
+-   11.70s  labwired-core/world_esp32c3_pingpong (pass)
+-   11.08s  labwired-cli/capacitive_touch_lab (pass)
+-   10.84s  labwired-core/unknown_peripheral_type (pass)
+-   10.63s  labwired-core/e2e_nrf52840_obd2_scanner (pass)
+-   10.46s  labwired-core/bus_visibility (pass)
+-    9.85s  labwired-core/firmware_survival (pass)
+-    8.46s  labwired-core/world_uart_network (pass)
+-    5.86s  labwired-core/display_one_door (pass)
+-    5.39s  labwired-cli/e2e_h563_can_bridge (pass)
+-    4.83s  labwired-core/ina219_migration_parity (pass)
+-    4.73s  labwired-core/labwired_core (pass)
+
+AGGREGATE: GREEN (any known red above is allow-listed with an issue)
