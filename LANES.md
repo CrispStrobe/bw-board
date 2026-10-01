@@ -1,3 +1,21 @@
+2026-10-01 Constant analytic meter interval compaction — CLAIM, Codex bwcx `/root`.
+Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-compaction-20261001`,
+branch `lane/analytic-meter-compaction-20261001`, exact base
+`66723aa09ce47765c453a929a427a7cbf5e0eaf2`. Four-path envelope: this row;
+only meter publication/compaction in `src/board.js`; existing
+`test/inductor-meter-integral.test.mjs`; and existing
+`spec-updates/inductor-meter-integral.md`. Fresh ownership/range review finds
+no competing meter block claim. CUI integral adoption is closed at 4abb34f.
+Measured 700 watch ticks: 701 retained points, 493,500 actual numeric history
+reads, versus two batch points; no wall-time speedup claimed. Coalesce only
+identical analytic functions with unchanged left/right limit at the removed
+point. Preserve clipped windows, physical/static power boundaries, frozen
+parameters, first read, expiry/reset, sticky failures and hard capacity;
+prove actual bounded history/read work and load-bearing mutations.
+No adaptive-history compaction, MNA/solver/topology/tolerance/work-budget,
+scope, source-waveform, CPU, workflow/census, package/pin, CUI/Lite, corpus or
+deployment changes. Upstream exact qualification precedes normal guarded FF.
+
 2026-10-01 Analytic inductor meter integrals — DONE candidate, Codex bwcx `/root`.
 Worktree `/mnt/volume1/code/lego/wt-board-inductor-meter-20261001`, branch
 `lane/analytic-inductor-meter-20261001`, exact base
