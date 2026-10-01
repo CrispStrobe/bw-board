@@ -385,7 +385,7 @@ export function assertNativeRamCoherenceArmProof(arm,rom,name=arm.mode){
 // source-bound proof. These pins do not themselves claim an execution result.
 export const ramBuildPins=Object.freeze({
   bochsRevision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',
-  binarySha256:'PENDING_ROOT_AUDITED_RAM_BUILD',
+  binarySha256:'7921ba0624c906c9a957870261618964f8a78a691a22ad4fb9c652ffc641b74e',
   configSha256:'d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c',
   runtimeSha256:'e041c7e6e62144bdd6dfc03de4cccab3e1019b6a7769e340c52228c880aad55c',
 });
