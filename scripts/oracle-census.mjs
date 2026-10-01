@@ -113,6 +113,19 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const INPUTS = [
     {
+        id: '386-native-ram-coherence-report', kind: 'fixture',
+        what: 'Committed actual four-budget native RAM, SMC and A20 coherence capture '
+            + 'used by mandatory baseline and mutation checks. Preserves native raw bus '
+            + 'order and the explicit eight far-CALL frame-order differences; full byte-bus-order '
+            + 'parity, architectural reset parity and whole AT boot remain unfinished.',
+        paths: ['test/fixtures/i80386-native-ram-coherence-capture.json.gz'],
+        gates: ['test/i80386-native-ram-coherence-report.test.mjs'],
+        obtain: 'Included in the repository. The test authenticates the decompressed '
+            + 'actual ef2a7359 capture by its full SHA-256 and historical source revision.',
+        ciAvailable: true,
+        ci: 'yes — the committed fixture runs in ordinary CI without a native Bochs build.',
+    },
+    {
         id: '386-native-cold-reset-report', kind: 'fixture',
         what: 'Committed actual four-budget native cold-reset capture used by mandatory '
             + 'baseline and mutation checks. Proves the bounded actual-board bus gate; '
