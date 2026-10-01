@@ -151,7 +151,7 @@ export function assertRepPfPitOracle(r){
  eq([pf1.before.cpu.eip,pf1.before.cpu.ecx,pf1.before.cpu.edi,pf1.after.cpu.cr2],[symbols.rep_fill,2,0x5000,0x5000],'REP fault partial progress');
  eq([pf2.before.cpu.eip,pf2.after.cpu.cr2],[symbols.ordinary_fault_store,0x6000],'ordinary fault restart');
  const words=bytes=>[0,4,8,12].filter(i=>i<bytes.length).map(i=>Buffer.from(bytes).readUInt32LE(i));
- eq(words(pf1.frame),[2,symbols.rep_fill,8,pf1.before.cpu.eflags],'first precise fault frame');eq(words(pf2.frame),[2,symbols.ordinary_fault_store,8,pf2.before.cpu.eflags],'second precise frame');
+ eq(words(pf1.frame),[2,symbols.rep_fill,8,(pf1.before.cpu.eflags|0x10000)],'first precise fault frame');eq(words(pf2.frame),[2,symbols.ordinary_fault_store,8,(pf2.before.cpu.eflags|0x10000)],'second precise frame');
  eq(words(irq.frame),[symbols.after_shadow,8,irq.before.cpu.eflags],'STI successor IRQ frame');eq(dword(0x540),symbols.after_shadow,'guest IRQ frame copy');
  const rep=r.steps.filter(s=>s.before.eip===symbols.rep_fill&&s.before.cs===8);eq(rep.map(s=>[s.before.ecx,s.before.edi,s.completed]),[[4,0x4ff8,1],[3,0x4ffc,1],[2,0x5000,0],[2,0x5000,1],[1,0x5004,1]],'REP element/fault/resume ledger');
  const zero=r.steps.find(s=>s.before.eip===symbols.zero_rep);eq([zero.before.ecx,zero.completed,zero.charged],[0,1,6],'zero REP ordinary charge');check(!r.events.slice(zero.firstOrdinal-1,zero.lastOrdinal).some(e=>e.address>=0x6000&&e.address<0x7000),'zero REP no destination touch');
