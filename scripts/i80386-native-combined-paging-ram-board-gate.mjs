@@ -479,6 +479,15 @@ export function assertNativeCombinedPagingRamArmProof(arm,rom){
  equal([arm.artifacts.exitCode,arm.artifacts.signal],[0,null],'actual native exit');
  const native=parseCombinedNativeLog(arm.raw.stderr);equal(native,arm.native,'raw parser binding');
  equal(native.apiProbes,{'resume-before-activation':'rejected','irq-before-activation':'rejected','zero-native-budget':'rejected','zero-quantum-budget':'rejected','null-callbacks':'rejected','incomplete-native-tick':'rejected','incomplete-quantum':'rejected','due-now':'zero-work','invalid-irq-line':'rejected','callback-reentry':'rejected','line-reentry':'rejected'},'all exact actual API rejection witnesses');
+ const records=native.records,apiRow=name=>records.findIndex(r=>r.tag==='PROBE'&&r.fields[0]===name);
+ equal(records.slice(0,2).map(r=>[r.tag,...r.fields]),[['PROBE','resume-before-activation','rejected'],['PROBE','irq-before-activation','rejected']],'API preactivation phases');
+ const activate=records.findIndex(r=>r.tag==='ACTIVATE'),ready=records.findIndex(r=>r.tag==='READY');
+ equal(records.slice(activate+1,ready).map(r=>[r.tag,...r.fields]),['zero-native-budget','zero-quantum-budget','null-callbacks','incomplete-native-tick','incomplete-quantum','due-now','invalid-irq-line'].map(n=>['PROBE',n,n==='due-now'?'zero-work':'rejected']),'API activated zero-work phases');
+ const callback=apiRow('callback-reentry');equal(records.slice(callback,callback+3).map(r=>r.tag),['PROBE','PROBE','RPC_REQ'],'API callback reentry phase');
+ equal(records[callback+1].fields,['line-reentry','rejected'],'API line reentry phase');
+ equal(records[callback+2].fields.slice(0,8),['3','NATIVE_TICK','1','0','0','-','0','1'],'API reentry first native tick ownership');
+ equal(records[callback-1].tag,'POST_DR','API reentry follows first full charged checkpoint');
+
  equal(native.activation,{cs:0xf000,eip:0xfff0,copiedBytes:0,a20:1},'cold activation without RAM seed');
  equal(native.ready,{cs:0xf000,eip:0xfff0,nativeTicks:0,successfulQuanta:0},'actual native READY');
  const host=hostReplay(arm,rom);assertCombinedCacheLedger(arm);assertCombinedCheckpointLedger(arm,rom);assertCombinedOrdinaryBus(arm,rom);assertCombinedPagewalkLedger(arm);assertCombinedDeliveryBus(arm);assertCombinedCounterLedger(arm);
@@ -521,6 +530,69 @@ function historicalInventory(revision){
   }
   const paths=[...found].sort();inventoryCache.set(revision,paths);return paths;
 }
+function rejectionTransportReply(name,request,wire){
+  const lines=[...wire];
+  const scalar=lines[0].split('\t');let injected=false;
+  if(name.startsWith('page-')&&request.operation==='PAGE'){
+    injected=true;
+    if(name==='page-generation'){scalar[4]='1';lines[0]=scalar.join('\t');}
+    if(name==='page-classification'){scalar[5]='4';lines[0]=scalar.join('\t');}
+    if(name==='page-decoded'){scalar[3]='000f0000';lines[0]=scalar.join('\t');}
+    if(name==='page-chunk-order')[lines[1],lines[2]]=[lines[2],lines[1]];
+    if(name==='page-chunk-width')lines[1]=lines[1].slice(0,-2);
+    if(name==='page-end-sequence')lines[65]='BWR12\tEND\t999';
+    if(name==='page-a20'){scalar[8]=scalar[8]==='1'?'0':'1';lines[0]=scalar.join('\t');}
+    if(name==='page-epoch'){scalar[7]=String(Number(scalar[7])+1);lines[0]=scalar.join('\t');}
+    if(name==='page-digest'){scalar[6]='0'.repeat(64);lines[0]=scalar.join('\t');}
+  }else if(name.startsWith('scalar-')&&wire.length===1&&scalar[1]==='REP'){
+    injected=true;scalar[name==='scalar-sequence'?2:4]=name==='scalar-sequence'?'999':'4294967296';lines[0]=scalar.join('\t');
+  }else if(name==='pio-epoch'&&request.operation==='PIO_OUT'){injected=true;scalar[6]=String(Number(scalar[6])+1);lines[0]=scalar.join('\t');
+  }else if(name==='pio-a20'&&request.operation==='PIO_OUT'&&request.arg0!==0x60){injected=true;scalar[5]=scalar[5]==='1'?'0':'1';lines[0]=scalar.join('\t');
+  }else if(name==='memory-a20'&&['READ','WRITE'].includes(request.operation)){injected=true;scalar[10]=scalar[10]==='1'?'0':'1';lines[0]=scalar.join('\t');
+  }else if(['memory-generation','memory-epoch'].includes(name)&&['READ','WRITE'].includes(request.operation)){injected=true;const at=name==='memory-generation'?8:9;scalar[at]=String(Number(scalar[at])+1);lines[0]=scalar.join('\t');
+  }else if(name==='memory-classification'&&['READ','WRITE'].includes(request.operation)){
+    injected=true;scalar[5]=scalar[5]==='1'?'2':'1';lines[0]=scalar.join('\t');
+  }else if(name==='memory-write-commit'&&request.operation==='WRITE'&&scalar[5]==='1'){
+    injected=true;scalar[7]=(parseInt(scalar[7].slice(0,2),16)^1).toString(16).padStart(2,'0')+scalar[7].slice(2);lines[0]=scalar.join('\t');
+  }else if(name==='memory-rom-observed'&&['READ','WRITE'].includes(request.operation)&&scalar[5]==='2'){
+    injected=true;scalar[7]='00'.repeat(scalar[7].length/2);lines[0]=scalar.join('\t');
+  }
+  return {lines,injected};
+}
+const rawLines=text=>text.trimEnd()?text.trimEnd().split('\n'):[];
+const nativeRows=text=>rawLines(text).filter(line=>line.startsWith('BWS'));
+function rejectionPhaseProof(report,probe,prefix){
+ const positive=report.arms.continuous.raw, rows=nativeRows(probe.raw.stderr), good=nativeRows(positive.stderr);
+ equal(rows.at(-1),'BWS12\tFAIL\t'+probe.expected,'rejection FAIL is final native record');
+ if(prefix==='guard'){
+  equal([probe.raw.rpcToNative,probe.raw.rpcFromNative],['',''],'guard before-effect RPC streams empty');
+  const activation=good.findIndex(r=>r.startsWith('BWS12\tACTIVATE\t'));
+  const expected=good.slice(0,activation+1);
+  if(probe.name==='native-a20-off')expected.push('BWS12\tTLB_OBSERVED\tcpu\timplicit\t0\t1\t1\t0\t0\t2\t-');
+  if(probe.name==='mapping-boundary-kind')expected.push('BWS12\tBOUNDARY\trep-element\t0000\t00000000\t0\t0\t2');
+  equal(rows.slice(0,-1),expected,'guard before-effect native startup only');return;
+ }
+ const outgoing=rawLines(probe.raw.rpcToNative), incoming=rawLines(probe.raw.rpcFromNative), positiveOut=rawLines(positive.rpcToNative), positiveIn=rawLines(positive.rpcFromNative);
+ if(probe.name.startsWith('command-')){
+  const fields=positiveOut[0].split('\t');
+  if(probe.name==='command-sequence')fields[2]='999';if(probe.name==='command-prefix')fields[0]='BWR8';if(probe.name==='command-zero-budget')fields[5]='0';
+  equal(outgoing,[probe.name==='command-overlong-line'?'BWR12\tCMD\t'+'0'.repeat(300):fields.join('\t')],'actual malformed command witness');
+  equal(incoming,[positiveIn[0]],'command rejection before native requests');
+  const ready=good.findIndex(r=>r.startsWith('BWS12\tREADY\t'));const expected=good.slice(0,ready+1);
+  if(probe.name==='command-zero-budget')expected.push('BWS12\tCMD\t1\tRUN\t600\t0\t18446744073709551615\t2');
+  equal(rows.slice(0,-1),expected,'command rejection before native effects');return;
+ }
+ equal(incoming,positiveIn.slice(0,incoming.length),'transport unchanged incoming prefix');
+ const last=incoming.at(-1),request=parseCombinedRpcLine(last);check(request.kind==='REQ','transport final actual request');
+ const at=positiveOut.findIndex(line=>{const p=line.split('\t');return ['PAGE','MEM','REP','PIO'].includes(p[1])&&p[2]===String(request.seq);});check(at>=0,'transport reply ownership');
+ const wire=positiveOut.slice(at,at+(request.operation==='PAGE'?66:1)),changed=rejectionTransportReply(probe.name,request,wire);
+ check(changed.injected,'actual transport injection operation');equal(outgoing,[...positiveOut.slice(0,at),...changed.lines],'actual malformed transport reply witness');
+ const reqAt=good.findIndex(r=>r.startsWith('BWS12\tRPC_REQ\t'+request.seq+'\t'));check(reqAt>=0,'transport native request mirror');
+ const accepted=rows.slice(0,reqAt+1);equal(accepted,good.slice(0,reqAt+1),'transport native prefix before injection');
+ const tail=rows.slice(reqAt+1,-1);const chunks=good.slice(reqAt+1).filter(r=>r.startsWith('BWS12\tPAGE_CHUNK\t'+request.seq+'\t'));
+ check(request.operation==='PAGE'||tail.length===0,'transport rejection before native publication');
+ equal(tail,['page-digest','page-end-sequence'].includes(probe.name)?chunks:[],'transport rejection allows incomplete page chunks only');
+}
 function artifactProof(report){
   const seen=new Set();
   const file=(entry)=>{
@@ -554,6 +626,7 @@ function artifactProof(report){
       for(const [kind,text] of Object.entries(probe.raw))equal(combinedSha(text),probe.files[kind].sha256,'rejection actual raw artifact digest');
       equal([...probe.raw.stderr.matchAll(/^BWS12\tFAIL\t([^\n]+)$/gm)].map(m=>m[1]),[reason],'raw named FAIL witness');
       if(prefix==='transport')equal(probe.injected,true,'actual transport injection reached');
+      rejectionPhaseProof(report,probe,prefix);
     }
   }
 }
