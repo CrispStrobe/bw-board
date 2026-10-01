@@ -118,7 +118,7 @@ int bw_cpu3_combined_paging_ram_set_irq_line(int asserted);
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define BW_DIRECT_ABI_VERSION 1
+#define BW_DIRECT_ABI_VERSION 2
 #define BW_DIRECT_ROM_BYTES 65536
 #define BW_DIRECT_PAGE_BYTES 4096
 enum bw_direct_scalar_operation { BW_DIRECT_TICK=1, BW_DIRECT_QUANTUM=2, BW_DIRECT_PIO_OUT=3, BW_DIRECT_ACK=4 };
@@ -137,7 +137,7 @@ typedef struct bw_direct_snapshot {
  uint64_t callback_counts[5],fallback_counts[5],execution_counts[8];
  uint32_t mapping_epoch,board_a20,active;
 } bw_direct_snapshot;
-/* Synchronous initializing-thread calls; one initialization lifetime/process. */
+/* Synchronous initializing-thread calls; one initialization lifetime/loaded image. */
 int bw_direct_initialize(const char *configuration,const uint8_t *rom,uint32_t length,const bw_direct_callbacks *,int capture);
 int bw_direct_resume(uint32_t max_native_ticks,uint32_t max_quanta,uint64_t deadline,bw_cpu3_combined_paging_ram_slice_result *);
 int bw_direct_set_irq_line(int asserted);

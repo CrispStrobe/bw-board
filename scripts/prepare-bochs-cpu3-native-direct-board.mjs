@@ -63,7 +63,9 @@ if(mode==='--prepare'){
     '--disable-handlers-chaining','--enable-instrumentation=instrument/stubs','CFLAGS=-O2 -fPIC','CXXFLAGS=-O2 -fPIC'];
   result.build=['nice','make','-j1','-f','Makefile','-f','bw_direct_addon.mk','bw_direct.node'];
   result.status='SOURCE_PREPARED_ONLY_NOT_NATIVE_QUALIFICATION';
-  result.embedding={abiVersion:1,oneLifetimePerProcess:true,synchronousCallingThread:true,fatalFailuresAbort:true,executeBuffers:'persistent-native-slots'};
+  const abiVersionMatch=readFileSync(resolve(repo,'scripts/bochs-cpu3-native-direct-board/abi.h'),'utf8').match(/^#define BW_DIRECT_ABI_VERSION ([1-9][0-9]*)$/m);
+  if(!abiVersionMatch)throw new Error('direct ABI version declaration missing');
+  result.embedding={abiVersion:Number(abiVersionMatch[1]),oneLifetimePerLoadedImage:true,loaderAdmission:'one canonical DSO per main-thread JS realm',synchronousCallingThread:true,fatalFailuresAbort:true,executeBuffers:'persistent-native-slots'};
   result.requiredConfig={'BX_CPU_LEVEL':3,'BX_USE_IDLE_HACK':0,
     'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS':0,'BX_SUPPORT_SMP':0,'BX_DEBUGGER':0,'BX_SUPPORT_REPEAT_SPEEDUPS':0,'BX_SUPPORT_FPU':1};
 }
