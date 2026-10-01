@@ -391,7 +391,30 @@ export function assertNativeRamCoherenceArmProof(arm,rom,name=arm.mode){
       [b.kind==='write'?'W':'R',b.raw,b.decoded,kindNames[b.class],b.value,effectNames[b.effect],b.nativeTicks,'ordinary'],'native typed per-byte effect mirror');
   }
   equal(type('PORT').map(e=>[e.direction,e.port,e.width,e.value]),js.events.filter(e=>e.kind==='pio').map(e=>[e.dir,e.port,e.width/8,e.value]),'actual native PIO bytes');
-  const idle=type('HALT_IDLE');check(idle.length>=1&&idle.length<=2,'bounded raw terminal idle cuts');equal(idle.length,native.slices.reduce((n,s)=>n+s.haltIdleCuts,0),'actual raw idle/slice mirror');
+  const idle=type('HALT_IDLE');equal(idle.length,{continuous:2,budget1:1,budget2:1,budget257:2}[name],'fixed fixture physical terminal idle census');
+  // bw_fill_result exports cumulative instruction/cut counters, while chargedN/Q
+  // are per resume. Authenticate every boundary against the untouched raw rows.
+  let rawN=0,rawQ=0,rawAttempts=0,rawCompleted=0,rawPorts=0,rawIdle=0,sliceIndex=0;
+  let priorN=0,priorQ=0,priorIdle=0,priorPorts=0;
+  for(const row of native.records){
+    if(row.tag==='ATTEMPT')rawAttempts++;
+    else if(row.tag==='QUANTUM'){equal(Number(row.fields[0]),0,'ordinary completed instruction counter');rawQ++;rawCompleted++;}
+    else if(row.tag==='NATIVE_TICK')rawN+=Number(row.fields[0]);
+    else if(row.tag==='PORT')rawPorts++;
+    else if(row.tag==='HALT_IDLE')rawIdle++;
+    else if(row.tag==='SLICE'){
+      const slice=native.slices[sliceIndex++];
+      equal([slice.afterNativeTicks,slice.afterQuanta,slice.attempts,slice.completed,slice.repIterations,slice.repPartial,slice.faults,slice.portCommits,slice.irqDeliveries,slice.haltIdleCuts],
+        [rawN,rawQ,rawAttempts,rawCompleted,0,0,0,rawPorts,0,rawIdle],'each cumulative slice counter matches preceding raw chronology');
+      equal([slice.beforeNativeTicks,slice.beforeQuanta,slice.chargedNativeTicks,slice.chargedQuanta],
+        [priorN,priorQ,rawN-priorN,rawQ-priorQ],'per-resume charges are separate from cumulative counters');
+      check(slice.haltIdleCuts>=priorIdle,'cumulative idle cuts never decrease');
+      equal(slice.portCommitted,Number(rawPorts>priorPorts),'per-resume port commit mirror');
+      priorN=rawN;priorQ=rawQ;priorIdle=rawIdle;priorPorts=rawPorts;
+    }
+  }
+  equal(sliceIndex,native.slices.length,'all raw slice boundaries authenticated');
+  equal(native.slices.at(-1).haltIdleCuts,idle.length,'terminal cumulative idle equals physical idle census');
   for(const e of idle)equal([e.cs,e.eip,e.nativeTicks,e.ifFlag,e.activity,e.pending],[0xf000,js.rom.symbols.ram_halt_end,js.steps.length,false,1,0],'terminal native zero-work halt state');
   const c=native.finalCounters;
   equal(c,{nativeTicks:js.steps.length,successfulQuanta:js.steps.length,attempts:js.steps.length,completed:js.steps.length,repIterations:0,repPartial:0,faults:0,
