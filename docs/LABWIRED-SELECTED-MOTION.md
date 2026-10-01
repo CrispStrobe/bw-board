@@ -106,6 +106,17 @@ tests only, not engine evidence. Candidate bytes were produced with
 `npm exec --yes --package=binaryen@132.0.0 -- wasm-opt <original.wasm> -O3 -o <candidate.wasm>`;
 the receipt binds both binary hashes, tool integrity, CPU, Node and complete logs.
 
+The manual `labwired-motion-ab.yml` workflow compares build-B artifacts from two
+existing `labwired-wasm.yml` runs on one Ubuntu 24.04 / Node 22 runner, without
+rebuilding either engine. Supply each run ID and exact source commit. Both
+BUILD-INFO source declarations and original glue/WASM hashes are checked before
+execution; runner, toolchains, BUILD-INFO files and complete A/B/B/A results are
+retained even on failure. It has read-only repository permissions and no publish
+step. A successful *diagnostic* run does not mean its RTx windows passed: inspect
+`allWindowsMeet1x`. The independent determinism, integration and all-five >=1x
+qualification workflow remains unchanged. The probe currently requires identical
+glue; a candidate changing the glue/ABI must not be substituted silently.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is
