@@ -124,7 +124,7 @@ export function runRamCoherenceOracle({requireClean=true}={}){
     rom:{bytes:rom.length,sha256:sha(rom),sourceSha256:sha(readFileSync(path.join(root,fixture))),symbols},
     seed:{domain:'entire-configured-physical-backing-after-two-ROM-loads',sha256:loadedSeedSha256},
     reset,initialBoard,events,steps,providers,beforeSettle,final:{cpu:cpuState(m.cpu),board:boardState(m),
-      witnesses:[...m.mem.subarray(0x520,0x52e)],resetWitness:[...m.mem.subarray(0x510,0x518)],
+      witnesses:[...m.mem.subarray(0x520,0x530)],resetWitness:[...m.mem.subarray(0x510,0x518)],
       lowCode:[...m.mem.subarray(0x7000,0x7004)],highCode:[...m.mem.subarray(0x107000,0x107004)],
       mappingEpoch,memorySha256:sha(m.mem)},knownNativeResetDifferences};
   assert.deepEqual(sourceIdentity(),source,'source changed during execution');
@@ -161,7 +161,7 @@ export function assertRamCoherenceOracle(r){
     [0,4,0,true,0],'single reset epoch and initial A20 sources');
   equal([r.reset.cpu.pc,r.reset.cpu.edx,r.reset.cpu.cr0,r.reset.cpu.cpuProfile,r.reset.cpu.strict386],
     [0xfffffff0,0x300,0,'compatibility',false],'raw actual CPU reset profile');
-  equal(r.steps.length,71,'bounded successful instructions');
+  equal(r.steps.length,75,'bounded successful instructions');
   equal(r.events[0],{ordinal:1,quantum:0,boardCycles:4,mappingEpoch:0,a20Enabled:true,kind:'fetch',
     address:0xfffffff0,decoded:0xfffff0,value:0xea,provider:'byte'},'true reset physical fetch');
   equal([r.steps[0].after.cs,r.steps[0].after.eip,r.steps[0].after.pc],[0xf000,0x100,0xf0100],'first far transfer reload');
@@ -210,12 +210,12 @@ export function assertRamCoherenceOracle(r){
   }
   equal(ordinal-1,r.events.length,'no detached byte events');check(!pending,'no pending8042command');equal(epoch,2,'two effective A20 transitions');
   const fetches=r.events.filter(e=>e.kind==='fetch'),reads=r.events.filter(e=>e.kind==='read'),writes=r.events.filter(e=>e.kind==='write');
-  equal([fetches.length,reads.length,writes.length],[222,28,64],'actual byte bus totals');
-  const entries=[18,23,31,36,40,48,53];
-  const raw=[0x7000,0x7000,0x107000,0x7000,0x107000,0x107000,0x107000];
-  const decoded=[0x7000,0x7000,0x7000,0x7000,0x7000,0x107000,0x107000];
-  const values=[0x1111,0x2222,0x2222,0x5555,0x5555,0x3333,0x4444];
-  equal(fetches.filter(e=>e.address===0x7000||e.address===0x107000).map(e=>e.quantum+1),entries,'seven real executable RAM entries');
+  equal([fetches.length,reads.length,writes.length],[235,32,70],'actual byte bus totals');
+  const entries=[18,23,31,35,40,44,52,57];
+  const raw=[0x7000,0x7000,0x107000,0x7000,0x7000,0x107000,0x107000,0x107000];
+  const decoded=[0x7000,0x7000,0x7000,0x7000,0x7000,0x7000,0x107000,0x107000];
+  const values=[0x1111,0x2222,0x2222,0x2222,0x5555,0x5555,0x3333,0x4444];
+  equal(fetches.filter(e=>e.address===0x7000||e.address===0x107000).map(e=>e.quantum+1),entries,'eight real executable RAM entries');
   for(let j=0;j<entries.length;j++){
     const s=r.steps[entries[j]-1],bytes=r.events.slice(s.firstOrdinal-1,s.lastOrdinal).filter(e=>e.kind==='fetch');
     equal(bytes.map(e=>[e.address,e.decoded,e.value]),[0,1,2].map((k)=>[raw[j]+k,decoded[j]+k,[0xbb,values[j]&255,values[j]>>>8][k]]),'guest-created current RAM instruction bytes');
@@ -229,7 +229,7 @@ export function assertRamCoherenceOracle(r){
     [0x7001,0x7001,0x22],[0x7002,0x7002,0x22],
     [0x107001,0x7001,0x55],[0x107002,0x7002,0x55],
     [0x107001,0x107001,0x44],[0x107002,0x107002,0x44]],'owned code creation and ordered SMC alias effects');
-  equal(r.final.witnesses,values.flatMap(v=>[v&255,v>>>8]),'seven hard guest witnesses');
+  equal(r.final.witnesses,values.flatMap(v=>[v&255,v>>>8]),'eight hard guest witnesses');
   equal(r.final.resetWitness,[0,3,0,0,0,0,0,0],'guest captures raw JS reset EDX/CR0');
   equal([r.final.lowCode,r.final.highCode],[[0xbb,0x55,0x55,0xcb],[0xbb,0x44,0x44,0xcb]],'high backing survived A20OFF alias write');
   equal(marker,[...Buffer.from('RAMA001')],'guest E9 marker');
@@ -238,7 +238,7 @@ export function assertRamCoherenceOracle(r){
   equal(r.final.cpu,previousCpu,'settlement executes no CPU instruction');
   equal([r.final.cpu.pc,r.final.cpu.eip,r.final.cpu.halted,r.final.cpu.shutdown,r.final.cpu.esp],
     [0xf0000+symbols.ram_halt_end,symbols.ram_halt_end,true,false,0x9000],'CLI HLT and balanced far-call stack');
-  equal([r.final.board.cycles,r.final.board.debt,r.final.mappingEpoch],[430,0,2],'terminal clocks/debt/mapping epoch');
+  equal([r.final.board.cycles,r.final.board.debt,r.final.mappingEpoch],[454,0,2],'terminal clocks/debt/mapping epoch');
   equal(r.final.memorySha256,sha(ram),'complete physical backing write replay');
   for(const board of [r.initialBoard,r.reset.board,...r.steps.flatMap(s=>[s.boardBefore,s.boardAfter]),r.final.board]){
     const settled=board.cycles-board.debt,frac=(settled*1_193_182%6_000_000)/6_000_000;
@@ -252,6 +252,6 @@ export function assertRamCoherenceOracle(r){
   if(!checkpointCache.has(checkpointKey))checkpointCache.set(checkpointKey,runRamCoherenceOracle({requireClean:false}));
   const reference=checkpointCache.get(checkpointKey);
   for(const key of ['reset','initialBoard','events','steps','providers','beforeSettle','final'])equal(r[key],reference[key],`fresh same-engine actual-board ${key}`);
-  return {status:'javascript-board-ram-coherence-oracle-pass',successfulQuanta:71,boardCycles:430,
-    ramEntries:7,a20Transitions:2,marker:'RAMA001',nativeParity:false,checkpointValidation:'source-bound-fresh-same-engine-reexecution'};
+  return {status:'javascript-board-ram-coherence-oracle-pass',successfulQuanta:75,boardCycles:454,
+    ramEntries:8,a20Transitions:2,marker:'RAMA001',nativeParity:false,checkpointValidation:'source-bound-fresh-same-engine-reexecution'};
 }
