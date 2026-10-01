@@ -70,6 +70,16 @@ jobs:
             --disable-debugger --disable-repeat-speedups --disable-handlers-chaining \
             --enable-instrumentation=instrument/stubs \
             2>&1 | tee "$RUNNER_TEMP/combined-evidence/configure.log"
+          python3 - <<'PYCONFIG'
+          import re
+          text = open('config.h').read()
+          expected = {'BX_CPU_LEVEL': 3, 'BX_USE_IDLE_HACK': 0,
+              'BX_DEBUGGER': 0, 'BX_SUPPORT_SMP': 0,
+              'BX_SUPPORT_REPEAT_SPEEDUPS': 0,
+              'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS': 0}
+          for name, value in expected.items():
+              assert re.search(r'^#define\s+' + name + r'\s+' + str(value) + r'\s*$', text, re.M), name
+          PYCONFIG
           make -j2 2>&1 | tee "$RUNNER_TEMP/combined-evidence/make.log"
           test -x bochs
           sha256sum bochs config.h cpu/bw_slice_abi.h cpu/bw_slice_runtime.h \
