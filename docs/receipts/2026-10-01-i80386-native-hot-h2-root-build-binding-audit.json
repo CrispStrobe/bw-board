@@ -1,0 +1,12 @@
+{
+  "status": "ROOT_H2_SOURCE_GENERATED_GLUE_AND_ACTUAL_BINARY_BINDING_PASS",
+  "sourceRevision": "d074466f7b077cbe6c8ad57a80d309761a958ee1",
+  "sourceInputs": 30,
+  "originalHotInputs": 25,
+  "patchedInputs": 12,
+  "checks": 79,
+  "addonSha256": "791774c572e0b170b66f1eaa26145da2cf9505060939631ac4395ee760f5fb65",
+  "generatedNapiSha256": "eed8d0692f6158562a0ab2dc4cd64f52f08045ad45c45cf607b797a3d5cf1896",
+  "nativeRuntimeUnchanged": true,
+  "scope": "source and build bindings only, no guest or timing qualification"
+}

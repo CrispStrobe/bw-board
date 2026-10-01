@@ -1,0 +1,28 @@
+{
+  "status": "INDEPENDENT_H2_ACTUAL_EVIDENCE_PASS",
+  "checks": 916,
+  "summarySha256": "c92389079071ba684bbc7ba4f9fb56196e524b55085645ad8ad947e5635d6bdc",
+  "compiledSourceInputs": 30,
+  "patchedInputs": 12,
+  "profiles": [
+    {
+      "index": 0,
+      "residualNs": 61206023,
+      "mappingCallNs": 102193357,
+      "mappingFieldsNs": 105522256
+    },
+    {
+      "index": 1,
+      "residualNs": 48184298,
+      "mappingCallNs": 94289371,
+      "mappingFieldsNs": 94728159
+    },
+    {
+      "index": 2,
+      "residualNs": 52460954,
+      "mappingCallNs": 104696892,
+      "mappingFieldsNs": 100106435
+    }
+  ],
+  "limits": "No guest/build executed; checks read retained actual artifacts. Residual includes unclassified bridge/instrumentation, not pure native core."
+}
