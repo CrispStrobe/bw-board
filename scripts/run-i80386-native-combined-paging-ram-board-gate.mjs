@@ -14,7 +14,7 @@ import {parseCombinedNativeLog,assertNativeCombinedPagingRamProof,combinedResetD
 const root=fileURLToPath(new URL('../',import.meta.url));
 const shaFile=file=>combinedSha(readFileSync(file));
 const check=(ok,message)=>assert(ok,`combined paging/RAM/REP runner: ${message}`);
-const sourceSeeds=['../package.json','../test/i80386-native-combined-paging-ram-board-gate.test.mjs','../test/fixtures/i80386-native-combined-paging-ram-board-gate-capture.json.gz','../test/i80386-native-combined-paging-ram-host.test.mjs','./run-i80386-native-combined-paging-ram-board-gate.mjs','./prepare-bochs-cpu3-native-combined-paging-ram.mjs',
+const sourceSeeds=['../package.json','../test/i80386-native-combined-bounded-assertion.test.mjs','../test/i80386-native-combined-paging-ram-board-gate.test.mjs','../test/fixtures/i80386-native-combined-paging-ram-board-gate-capture.json.gz','../test/i80386-native-combined-paging-ram-host.test.mjs','./run-i80386-native-combined-paging-ram-board-gate.mjs','./prepare-bochs-cpu3-native-combined-paging-ram.mjs',
  './bochs-cpu3-native-combined-paging-ram/abi.h','./bochs-cpu3-native-combined-paging-ram/runtime.h','./bochs-cpu3-native-combined-paging-ram/runtime.inc',
  './bochs-cpu3-native-combined-paging-ram/wire-contract.md','../test/fixtures/i80386-free-combined-paging-ram.S',
  '../docs/receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-capture.json.gz',
