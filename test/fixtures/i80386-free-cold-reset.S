@@ -13,6 +13,11 @@ cold_start:
  mov es, ax
  mov ss, ax
  mov sp, 0x9000
+ /* Preserve raw reset differences as guest-produced RAM, before normalization. */
+ mov dword ptr [0x510], edx
+ mov eax, cr0
+ mov dword ptr [0x514], eax
+ mov eax, 0
  mov edx, 0x12345678
  mov word ptr [0x500], 0x5aa5
  mov ax, word ptr [0x500]

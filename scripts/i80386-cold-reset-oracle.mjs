@@ -103,7 +103,7 @@ export function runColdResetOracle({requireClean=true}={}){
     rom:{bytes:rom.length,sha256:sha(rom),sourceSha256:sha(readFileSync(path.join(root,fixture))),symbols},
     seed:{domain:'entire-configured-physical-backing-after-two-ROM-loads',sha256:loadedSeedSha256},
     reset,initialBoard,events,steps,beforeSettle,final:{cpu:cpuState(m.cpu),board:boardState(m),
-      ram:[...m.mem.subarray(0x500,0x505)],romByte:m._read386(0xf0200),aliasRomByte:m._read386(0xffff0200),
+      ram:[...m.mem.subarray(0x500,0x505)],resetWitness:[...m.mem.subarray(0x510,0x518)],romByte:m._read386(0xf0200),aliasRomByte:m._read386(0xffff0200),
       openbusByte:m._read386(0xc0000),memorySha256:sha(m.mem)},knownNativeResetDifferences};
   assert.deepEqual(sourceIdentity(),source,'source changed during execution');
   return report;
@@ -159,7 +159,7 @@ export function assertColdResetOracle(r){
   equal([r.reset.board.cycles,r.reset.board.debt,r.reset.board.a20Enabled],[4,0,true],'one reset clock and A20');
   check(r.reset.board.a20.outputPort&2,'8042 A20 source');
   equal(r.events[0],{ordinal:1,quantum:0,boardCycles:4,kind:'fetch',address:0xfffffff0,decoded:0xfffff0,value:0xea},'first actual executable fetch');
-  equal(r.steps.length,45,'bounded successful instruction count');
+  equal(r.steps.length,49,'bounded successful instruction count');
   equal(r.steps[0].after.cs,0xf000,'far jump selector');
   equal([r.steps[0].after.eip,r.steps[0].after.pc,r.steps[0].after.segmentCaches[1].base],
     [0x100,0xf0100,0xf0000],'far jump CS reload');
@@ -204,6 +204,8 @@ export function assertColdResetOracle(r){
   equal(ordinal-1,r.events.length,'no events outside steps');
   const writes=r.events.filter(e=>e.kind==='write');
   equal(writes.map(e=>[e.address,e.value,e.effect]),[
+    [0x510,0,'ram-commit'],[0x511,3,'ram-commit'],[0x512,0,'ram-commit'],[0x513,0,'ram-commit'],
+    [0x514,0,'ram-commit'],[0x515,0,'ram-commit'],[0x516,0,'ram-commit'],[0x517,0,'ram-commit'],
     [0x500,0xa5,'ram-commit'],[0x501,0x5a,'ram-commit'],[0xf0200,0,'rom-ignored'],
     [0x502,0xa7,'ram-commit'],[0x503,0xff,'ram-commit'],[0xc0000,0x12,'openbus-ignored'],
     [0x504,0xff,'ram-commit']],'owned RAM/ROM/openbus witnesses');
@@ -216,7 +218,8 @@ export function assertColdResetOracle(r){
   equal(registers.map(k=>c[k]),[0x31,0x2468,0x12345678,0x1357,0x9000,0x5678,0x369c,0x4567,
     symbols.cold_halt_end,0x46,0,0,0,0,0xf000,0,0,0,0,0],'final selected CPU');
   check(c.halted&&!c.shutdown,'CLI HLT terminal state');
-  equal([c.cycles,r.final.board.cycles,r.final.board.debt],[45,274,0],'settled successful-work clocks');
+  equal([c.cycles,r.final.board.cycles,r.final.board.debt],[49,298,0],'settled successful-work clocks');
+  equal(r.final.resetWitness,[0,3,0,0,0,0,0,0],'guest-produced raw EDX/CR0 reset witness');
   equal(r.final.ram,[0xa5,0x5a,0xa7,0xff,0xff],'final signature and readback');
   equal([r.final.romByte,r.final.aliasRomByte,r.final.openbusByte],[0xa7,0xa7,0xff],'final decode effects');
   equal(r.final.memorySha256,sha(ram),'full backing RAM effect digest');
@@ -228,6 +231,6 @@ export function assertColdResetOracle(r){
     equal(board.pit.clockHz,1_193_182,'PIT oscillator');
     equal([board.pic1.irr,board.pic1.isr,board.pic2.irr,board.pic2.isr],[0,0,0,0],'no synthetic IRQ');
   }
-  return {status:'javascript-board-cold-reset-oracle-pass',successfulQuanta:45,boardCycles:274,
+  return {status:'javascript-board-cold-reset-oracle-pass',successfulQuanta:49,boardCycles:298,
     marker:'CRST001',nativeParity:false};
 }

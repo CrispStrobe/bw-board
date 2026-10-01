@@ -5,7 +5,7 @@ let capture;
 test('actual fresh JS board executes bounded free ROM from physical reset vector',()=>{
   capture=runColdResetOracle();
   assert.deepEqual(assertColdResetOracle(capture),{status:'javascript-board-cold-reset-oracle-pass',
-    successfulQuanta:45,boardCycles:274,marker:'CRST001',nativeParity:false});
+    successfulQuanta:49,boardCycles:298,marker:'CRST001',nativeParity:false});
 });
 const mutations=[
   ['reset fetch aliases low instead of high',r=>{r.events[0].address=0xffff0;}],
@@ -16,6 +16,7 @@ const mutations=[
   ['openbus write took effect',r=>{r.events.find(e=>e.effect==='openbus-ignored').after=0x12;}],
   ['read byte changed',r=>{r.events.find(e=>e.kind==='read').value^=1;}],
   ['RAM signature changed',r=>{r.final.ram[0]^=1;}],
+  ['guest-produced raw reset witness changed',r=>{r.final.resetWitness[1]=0;}],
   ['marker precedes instruction clock',r=>{r.events.find(e=>e.kind==='pio').boardCycles+=6;}],
   ['successful work charged twice',r=>{r.steps[0].charged=12;}],
   ['reset clocks omitted',r=>{r.reset.board.cycles=0;}],
