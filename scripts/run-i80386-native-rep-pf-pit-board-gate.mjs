@@ -19,6 +19,7 @@ const sourceSeeds=['./run-i80386-native-rep-pf-pit-board-gate.mjs','./prepare-bo
  './bochs-cpu3-native-rep-pf-pit/wire-contract.md','../test/fixtures/i80386-free-rep-pf-pit.S','../test/i80386-native-rep-pf-pit-host.test.mjs',
  '../test/i80386-native-rep-pf-pit-board-gate.test.mjs','../test/fixtures/i80386-native-rep-pf-pit-board-gate-capture.json.gz',
  '../docs/receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-capture.json.gz',
+ './run-i80386-rep-pf-pit-oracle.mjs','../test/i80386-rep-pf-pit-oracle.test.mjs',
  '../roms/free-at-bios/BIOS-bochs-legacy','../roms/free-at-bios/vgabios-lgpl.bin'];
 function inventory(){
   return Object.fromEntries(expandI80386SourceInventory(sourceSeeds,import.meta.url).map(f=>{
