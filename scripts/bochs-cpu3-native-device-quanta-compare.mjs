@@ -280,6 +280,13 @@ function protocolProof(arm,at){
   equal(rpc.dones.length,commands.length,at+'.completion count');
   let requestIndex=0,sliceIndex=0,n=0,q=0,active=null,attempt=null;
   let previousReply=null;
+  const repSeen=new Map();
+  const finishAttempt=()=>{if(attempt){
+    equal(attempt.ticks,attempt.quanta+(attempt.fault?1:0),at+'.attempt clock classification');
+    if(!attempt.fault&&![0x7f0c,0x7fcf].includes(attempt.eip))
+      equal(attempt.quanta,1,at+'.ordinary or zero-count attempt');
+    attempt=null;
+  }};
   for(const e of native.events){
     if(e.tag==='CMD'){
       check(active===null,at,'overlapping commands');
@@ -312,6 +319,7 @@ function protocolProof(arm,at){
     }else if(e.tag==='ATTEMPT'){
       check(active&&previousReply===null,at,'attempt outside settled RUN');
       equal([e.nativeTicks,e.successfulQuanta],[n,q],at+'.attempt ledger');
+      finishAttempt();
       attempt={...e,quanta:0,ticks:0,fault:false};
     }else if(e.tag==='QUANTUM'){
       check(attempt&&!attempt.fault,at,'quantum without successful attempt');
@@ -319,7 +327,8 @@ function protocolProof(arm,at){
       equal([e.preQ,e.successfulQuanta,e.nativeTicks],[q,q+1,n],at+'.ordered quantum ledger');
       if(e.kind===1){
         const limit=e.eip===0x7f0c?1028:1;
-        const seen=native.events.slice(0,e.ordinal).filter(x=>x.tag==='QUANTUM'&&x.kind===1&&x.eip===e.eip).length;
+        const seen=(repSeen.get(e.eip)??0)+1;
+        repSeen.set(e.eip,seen);
         equal(e.postCX,limit-seen,at+'.committed REP CX');
         equal(e.postEDI&0xffff,(e.eip===0x7f0c?0x4000:0x6004)+4*seen,at+'.committed REP DI');
       }else check(attempt.quanta===0,at,'ordinary attempt charged twice');
@@ -351,6 +360,7 @@ function protocolProof(arm,at){
       const slice=native.slices[sliceIndex-1];
       equal([slice.afterNativeTicks,slice.afterQuanta],[n,q],at+'.slice event ledger');
       check(previousReply===null,at,'RUN closes with outstanding callback');
+      finishAttempt();
       active=null;
     }
   }
