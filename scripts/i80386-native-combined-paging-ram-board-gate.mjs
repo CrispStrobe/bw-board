@@ -626,7 +626,6 @@ function artifactProof(report){
       for(const [kind,text] of Object.entries(probe.raw))equal(combinedSha(text),probe.files[kind].sha256,'rejection actual raw artifact digest');
       equal([...probe.raw.stderr.matchAll(/^BWS12\tFAIL\t([^\n]+)$/gm)].map(m=>m[1]),[reason],'raw named FAIL witness');
       if(prefix==='transport')equal(probe.injected,true,'actual transport injection reached');
-      rejectionPhaseProof(report,probe,prefix);
     }
   }
 }
@@ -675,7 +674,9 @@ export function assertNativeCombinedPagingRamProof(report,rom){
   equal(arm.mode,mode,'arm name');results[mode]=assertNativeCombinedPagingRamArmProof(arm,rom);
 
  }
- const budgetProof=assertNativeCombinedPagingRamBudgetProof(report.arms);return {qualificationStatus:'QUALIFIED',claim:report.claim,budgetProof,arms:results,fullResetParity:false,fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true};
+ const budgetProof=assertNativeCombinedPagingRamBudgetProof(report.arms);
+ for(const [group,prefix] of [[report.probes,'guard'],[report.transportProbes,'transport']])for(const probe of Object.values(group))rejectionPhaseProof(report,probe,prefix);
+ return {qualificationStatus:'QUALIFIED',claim:report.claim,budgetProof,arms:results,fullResetParity:false,fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true};
 }
 
 export function assertNativeCombinedPagingRamDiagnosticArmEvidence(arm,rom){return {qualificationStatus:'UNQUALIFIED',...assertNativeCombinedPagingRamArmProof(arm,rom)};}
