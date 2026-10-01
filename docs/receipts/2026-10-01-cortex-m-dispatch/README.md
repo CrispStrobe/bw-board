@@ -80,3 +80,13 @@ explicit expiring acknowledgement versus physical re-capture remains separate
 from the performance results. No floor waiver, engine merge, publication or
 deployed pin change; CP13 remains open. All-five >=1× NODEJS qualification and
 browser/worker/debugger acceptance are still required for artifact promotion.
+
+## Subsequent landing update
+
+The status above records the pre-acknowledgement measurement revision, not the
+later landing decision. Core PR 143 subsequently merged as `4deee6f0` after
+final-head CI passed. Seven user-approved, content-bound acknowledgements expire
+2026-10-31; physical capture dates/results/digests remain unchanged and re-capture
+is still owed. [Final-head qualification, native A/B and landing receipts](../2026-10-01-cortex-m-dispatch-landing/README.md)
+are retained separately. Earlier raw measurements are unchanged. No WASM floor
+waiver, artifact publication or deployed pin change; CP13 remains open.
