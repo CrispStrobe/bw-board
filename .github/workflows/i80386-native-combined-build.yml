@@ -57,6 +57,10 @@ jobs:
           node scripts/prepare-bochs-cpu3-native-combined-paging-ram.mjs \
             --prepare "$RUNNER_TEMP/combined-prepared" \
             > "$RUNNER_TEMP/combined-evidence/prepare.json"
+          git -C "$RUNNER_TEMP/combined-prepared" diff --binary \
+            > "$RUNNER_TEMP/combined-evidence/prepared-source.patch"
+          cp "$RUNNER_TEMP/combined-prepared/bochs/cpu/"bw_slice_* \
+            "$RUNNER_TEMP/combined-evidence/"
       - name: Compile the diagnostic CPU3 bridge
         shell: bash
         run: |
