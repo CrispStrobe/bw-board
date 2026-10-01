@@ -85,3 +85,31 @@ profiler overhead between pairs, so there is no speedup estimate. The first
 optimization candidate is copying validated contiguous RAM/ROM pages from
 actual backing instead of performing 32,768 scalar byte reads. It remains
 unimplemented in this receipt and requires fresh parity checks.
+
+The page-copy optimization is now implemented at
+`9a38479c24ac3200405f18913124d691b6c959d9`. It preserves every existing span
+check, then copies an owned 4 KiB snapshot from actual RAM/ROM backing. MP and
+VGA overlays are explicitly outside this bounded admission. Nine facade
+tests compare scalar reads across RAM, ROM, reset aliases and A20 transitions,
+including unsafe-span rejection and snapshot independence from later writes.
+A [fresh r4 build audit](receipts/2026-10-01-i80386-native-direct-r4-root-build-binding-audit.json)
+binds all 17 inputs and 12 native source pins. The addon bytes remain identical
+to r3 because compiled native code did not change.
+
+All four r4 capture pairs and eight controls pass again. The
+[independent r4 audit](receipts/2026-10-01-i80386-native-direct-r4-root-pair-audit.json)
+adds 20,256 checks against actual CPU, ordered effects, A20 and whole RAM.
+Six subsequent [profile samples](receipts/2026-10-01-i80386-native-direct-r4-profile.json)
+retain exactly the reference report. Eight page admissions total
+11.55–20.99 ms, versus 17.34–30.79 ms in r3. Three samples per revision, cold
+processes, overlapping ranges and host scheduling noise do not establish an
+overall speedup. This removes 32,768 scalar reads while retaining the full
+32,768 bytewise span checks.
+
+Node 22 assertion formatting caused a separate CI OOM when deliberate mutants
+compared large journals. The combined validator and direct audit helper now
+use strict deep equality with bounded failure messages, preserving original
+operands and rejection checks. Official Node 22.23.3 passes all 14 focused
+direct parity/assertion tests, zero skips. Historical r3/r4 capture metadata
+remains unchanged; these validator changes still need final source-bound
+qualification before a production backend claim.
