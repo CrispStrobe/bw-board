@@ -13,6 +13,7 @@ bool bw_slice_rep_incomplete = false;
 bool bw_slice_fault_pending = false;
 bool bw_slice_irq_pending = false;
 
+static uint8_t bw_pagewalk_kind = 0;
 static bw_cpu3_cold_reset_host_callbacks bw_callbacks;
 static uint32_t bw_native_budget;
 static uint32_t bw_requested_native_budget;
