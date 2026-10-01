@@ -1,0 +1,912 @@
+{
+  "schema": 1,
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-01T13:49:57.520Z",
+  "node": "v22.23.3",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "logicalCpus": 4,
+  "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+  "artifacts": {
+    "baseline": {
+      "directory": "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "wasmSha256": "268406711426f8d0b5ee4fd778f173bcd8ce05cb980528bc0c089c81c9dde269"
+    },
+    "candidate": {
+      "directory": "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "wasmSha256": "9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258"
+    }
+  },
+  "gluePolicy": "identical original glue",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "runs": [
+    {
+      "label": "baseline",
+      "loadBefore": [
+        0.74,
+        0.21,
+        0.07
+      ],
+      "loadAfter": [
+        0.84,
+        0.24,
+        0.08
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "stdout": "MICROBIT_WASM_GUEST_SHA256=22ee2502dbf4f39f9a42b7819aad21927e2741b993fa54dfcadd9b8d1356aded\nMICROBIT_WASM_SAMPLE {\"index\":0,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.125805206,\"rtx\":0.8882531317766886,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":112,\"magSamples\":112,\"scans\":2145}\nMICROBIT_WASM_SAMPLE {\"index\":1,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.143488079,\"rtx\":0.8745172060512579,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":212,\"magSamples\":212,\"scans\":4053}\nMICROBIT_WASM_SAMPLE {\"index\":2,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1330151800000003,\"rtx\":0.8826007079622709,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":312,\"magSamples\":312,\"scans\":5960}\nMICROBIT_WASM_SAMPLE {\"index\":3,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1424001469999998,\"rtx\":0.8753500274190705,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":412,\"magSamples\":412,\"scans\":7867}\nMICROBIT_WASM_SAMPLE {\"index\":4,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1336815159999996,\"rtx\":0.8820819479604185,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":512,\"magSamples\":512,\"scans\":9774}\nTAP version 13\n# Subtest: selected micro:bit motion guest on actual WASM\n    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons\n    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons\n      ---\n      duration_ms: 256.879208\n      type: 'test'\n      ...\n    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor\n    not ok 2 - all five 64M-cycle windows meet the unchanged 1x floor\n      ---\n      duration_ms: 5856.077921\n      type: 'test'\n      location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:108:5'\n      failureType: 'testCodeFailure'\n      error: 'all windows must meet 1x: [0.8882531317766886,0.8745172060512579,0.8826007079622709,0.8753500274190705,0.8820819479604185]'\n      code: 'ERR_ASSERTION'\n      name: 'AssertionError'\n      expected: true\n      actual: false\n      operator: '=='\n      stack: |-\n        TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:131:20)\n        Test.runInAsyncScope (node:async_hooks:214:14)\n        Test.run (node:internal/test_runner/test:1047:25)\n        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)\n        Test.postRun (node:internal/test_runner/test:1173:19)\n        Test.run (node:internal/test_runner/test:1101:12)\n        async Promise.all (index 0)\n        async Suite.run (node:internal/test_runner/test:1442:7)\n        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n      ...\n    1..2\nnot ok 1 - selected micro:bit motion guest on actual WASM\n  ---\n  duration_ms: 6113.745259\n  type: 'suite'\n  location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:93:1'\n  failureType: 'subtestsFailed'\n  error: '1 subtest failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..1\n# tests 2\n# suites 1\n# pass 1\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 6120.740786\n",
+      "stderr": "",
+      "samples": [
+        {
+          "index": 0,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.125805206,
+          "rtx": 0.8882531317766886,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 112,
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "index": 1,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.143488079,
+          "rtx": 0.8745172060512579,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 212,
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "index": 2,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1330151800000003,
+          "rtx": 0.8826007079622709,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 312,
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "index": 3,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1424001469999998,
+          "rtx": 0.8753500274190705,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 412,
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "index": 4,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1336815159999996,
+          "rtx": 0.8820819479604185,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 512,
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "guestSha256": "22ee2502dbf4f39f9a42b7819aad21927e2741b993fa54dfcadd9b8d1356aded",
+      "guestObservations": [
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 112,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 0,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 212,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 1,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 312,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 2,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 412,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 3,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 512,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 4,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "allWindowsMeet1x": false,
+      "medianRtx": 0.8820819479604185,
+      "minimumRtx": 0.8745172060512579
+    },
+    {
+      "label": "candidate",
+      "loadBefore": [
+        0.84,
+        0.24,
+        0.08
+      ],
+      "loadAfter": [
+        0.85,
+        0.26,
+        0.09
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "stdout": "MICROBIT_WASM_GUEST_SHA256=184a1e9a9e6d791b1ee549a4e39b46e60d58f39090e60c2e94c8ec8751d3eb53\nMICROBIT_WASM_SAMPLE {\"index\":0,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.08480244,\"rtx\":0.9218268351240065,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":112,\"magSamples\":112,\"scans\":2145}\nMICROBIT_WASM_SAMPLE {\"index\":1,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.0785117320000002,\"rtx\":0.9272036365757399,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":212,\"magSamples\":212,\"scans\":4053}\nMICROBIT_WASM_SAMPLE {\"index\":2,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.080672736,\"rtx\":0.9253495222812765,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":312,\"magSamples\":312,\"scans\":5960}\nMICROBIT_WASM_SAMPLE {\"index\":3,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.0753665999999997,\"rtx\":0.9299154353501403,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":412,\"magSamples\":412,\"scans\":7867}\nMICROBIT_WASM_SAMPLE {\"index\":4,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.0749891390000001,\"rtx\":0.9302419566119913,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":512,\"magSamples\":512,\"scans\":9774}\nTAP version 13\n# Subtest: selected micro:bit motion guest on actual WASM\n    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons\n    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons\n      ---\n      duration_ms: 231.852939\n      type: 'test'\n      ...\n    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor\n    not ok 2 - all five 64M-cycle windows meet the unchanged 1x floor\n      ---\n      duration_ms: 5560.977803\n      type: 'test'\n      location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:108:5'\n      failureType: 'testCodeFailure'\n      error: 'all windows must meet 1x: [0.9218268351240065,0.9272036365757399,0.9253495222812765,0.9299154353501403,0.9302419566119913]'\n      code: 'ERR_ASSERTION'\n      name: 'AssertionError'\n      expected: true\n      actual: false\n      operator: '=='\n      stack: |-\n        TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:131:20)\n        Test.runInAsyncScope (node:async_hooks:214:14)\n        Test.run (node:internal/test_runner/test:1047:25)\n        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)\n        Test.postRun (node:internal/test_runner/test:1173:19)\n        Test.run (node:internal/test_runner/test:1101:12)\n        async Promise.all (index 0)\n        async Suite.run (node:internal/test_runner/test:1442:7)\n        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n      ...\n    1..2\nnot ok 1 - selected micro:bit motion guest on actual WASM\n  ---\n  duration_ms: 5793.595627\n  type: 'suite'\n  location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:93:1'\n  failureType: 'subtestsFailed'\n  error: '1 subtest failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..1\n# tests 2\n# suites 1\n# pass 1\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 5800.943345\n",
+      "stderr": "",
+      "samples": [
+        {
+          "index": 0,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.08480244,
+          "rtx": 0.9218268351240065,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 112,
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "index": 1,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.0785117320000002,
+          "rtx": 0.9272036365757399,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 212,
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "index": 2,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.080672736,
+          "rtx": 0.9253495222812765,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 312,
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "index": 3,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.0753665999999997,
+          "rtx": 0.9299154353501403,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 412,
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "index": 4,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.0749891390000001,
+          "rtx": 0.9302419566119913,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 512,
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "guestSha256": "184a1e9a9e6d791b1ee549a4e39b46e60d58f39090e60c2e94c8ec8751d3eb53",
+      "guestObservations": [
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 112,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 0,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 212,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 1,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 312,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 2,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 412,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 3,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 512,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 4,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "allWindowsMeet1x": false,
+      "medianRtx": 0.9272036365757399,
+      "minimumRtx": 0.9218268351240065
+    },
+    {
+      "label": "candidate",
+      "loadBefore": [
+        0.85,
+        0.26,
+        0.09
+      ],
+      "loadAfter": [
+        1.09,
+        0.33,
+        0.12
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "stdout": "MICROBIT_WASM_GUEST_SHA256=e4dc587be3fc9fda6611fb00d2ddb043849b26e9f2270945d11b36c514a93b33\nMICROBIT_WASM_SAMPLE {\"index\":0,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.075863129,\"rtx\":0.9294862636750887,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":112,\"magSamples\":112,\"scans\":2145}\nMICROBIT_WASM_SAMPLE {\"index\":1,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.0795895120000003,\"rtx\":0.9262779870355018,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":212,\"magSamples\":212,\"scans\":4053}\nMICROBIT_WASM_SAMPLE {\"index\":2,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.0812920400000003,\"rtx\":0.9248195334906929,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":312,\"magSamples\":312,\"scans\":5960}\nMICROBIT_WASM_SAMPLE {\"index\":3,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.075251415,\"rtx\":0.9300150514100927,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":412,\"magSamples\":412,\"scans\":7867}\nMICROBIT_WASM_SAMPLE {\"index\":4,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.0682325960000008,\"rtx\":0.9361257124567273,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":512,\"magSamples\":512,\"scans\":9774}\nTAP version 13\n# Subtest: selected micro:bit motion guest on actual WASM\n    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons\n    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons\n      ---\n      duration_ms: 230.238697\n      type: 'test'\n      ...\n    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor\n    not ok 2 - all five 64M-cycle windows meet the unchanged 1x floor\n      ---\n      duration_ms: 5546.641971\n      type: 'test'\n      location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:108:5'\n      failureType: 'testCodeFailure'\n      error: 'all windows must meet 1x: [0.9294862636750887,0.9262779870355018,0.9248195334906929,0.9300150514100927,0.9361257124567273]'\n      code: 'ERR_ASSERTION'\n      name: 'AssertionError'\n      expected: true\n      actual: false\n      operator: '=='\n      stack: |-\n        TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:131:20)\n        Test.runInAsyncScope (node:async_hooks:214:14)\n        Test.run (node:internal/test_runner/test:1047:25)\n        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)\n        Test.postRun (node:internal/test_runner/test:1173:19)\n        Test.run (node:internal/test_runner/test:1101:12)\n        async Promise.all (index 0)\n        async Suite.run (node:internal/test_runner/test:1442:7)\n        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n      ...\n    1..2\nnot ok 1 - selected micro:bit motion guest on actual WASM\n  ---\n  duration_ms: 5777.73045\n  type: 'suite'\n  location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:93:1'\n  failureType: 'subtestsFailed'\n  error: '1 subtest failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..1\n# tests 2\n# suites 1\n# pass 1\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 5785.00888\n",
+      "stderr": "",
+      "samples": [
+        {
+          "index": 0,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.075863129,
+          "rtx": 0.9294862636750887,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 112,
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "index": 1,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.0795895120000003,
+          "rtx": 0.9262779870355018,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 212,
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "index": 2,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.0812920400000003,
+          "rtx": 0.9248195334906929,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 312,
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "index": 3,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.075251415,
+          "rtx": 0.9300150514100927,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 412,
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "index": 4,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.0682325960000008,
+          "rtx": 0.9361257124567273,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 512,
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "guestSha256": "e4dc587be3fc9fda6611fb00d2ddb043849b26e9f2270945d11b36c514a93b33",
+      "guestObservations": [
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 112,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 0,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 212,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 1,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 312,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 2,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 412,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 3,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 512,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 4,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "allWindowsMeet1x": false,
+      "medianRtx": 0.9294862636750887,
+      "minimumRtx": 0.9248195334906929
+    },
+    {
+      "label": "baseline",
+      "loadBefore": [
+        1.09,
+        0.33,
+        0.12
+      ],
+      "loadAfter": [
+        1.09,
+        0.34,
+        0.12
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "stdout": "MICROBIT_WASM_GUEST_SHA256=93c14c47baf098f3dc3be66edac7bae5bd4cd7ffc209eda8fe4927a2d1a4245f\nMICROBIT_WASM_SAMPLE {\"index\":0,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1391952099999998,\"rtx\":0.8778126797074578,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":112,\"magSamples\":112,\"scans\":2145}\nMICROBIT_WASM_SAMPLE {\"index\":1,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1248835830000004,\"rtx\":0.8889808822109903,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":212,\"magSamples\":212,\"scans\":4053}\nMICROBIT_WASM_SAMPLE {\"index\":2,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.124305852,\"rtx\":0.8894376901277572,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":312,\"magSamples\":312,\"scans\":5960}\nMICROBIT_WASM_SAMPLE {\"index\":3,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1258567710000003,\"rtx\":0.8882124491837335,\"accelRaw\":[-4096,2048,-12288],\"magRaw\":[-200,0,400],\"accelSamples\":412,\"magSamples\":412,\"scans\":7867}\nMICROBIT_WASM_SAMPLE {\"index\":4,\"cycles\":64000000,\"cpuHz\":64000000,\"wallSeconds\":1.1208098919999994,\"rtx\":0.8922119684504003,\"accelRaw\":[16384,-8192,4096],\"magRaw\":[200,-100,50],\"accelSamples\":512,\"magSamples\":512,\"scans\":9774}\nTAP version 13\n# Subtest: selected micro:bit motion guest on actual WASM\n    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons\n    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons\n      ---\n      duration_ms: 240.245206\n      type: 'test'\n      ...\n    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor\n    not ok 2 - all five 64M-cycle windows meet the unchanged 1x floor\n      ---\n      duration_ms: 5812.502691\n      type: 'test'\n      location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:108:5'\n      failureType: 'testCodeFailure'\n      error: 'all windows must meet 1x: [0.8778126797074578,0.8889808822109903,0.8894376901277572,0.8882124491837335,0.8922119684504003]'\n      code: 'ERR_ASSERTION'\n      name: 'AssertionError'\n      expected: true\n      actual: false\n      operator: '=='\n      stack: |-\n        TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:131:20)\n        Test.runInAsyncScope (node:async_hooks:214:14)\n        Test.run (node:internal/test_runner/test:1047:25)\n        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)\n        Test.postRun (node:internal/test_runner/test:1173:19)\n        Test.run (node:internal/test_runner/test:1101:12)\n        async Promise.all (index 0)\n        async Suite.run (node:internal/test_runner/test:1442:7)\n        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n      ...\n    1..2\nnot ok 1 - selected micro:bit motion guest on actual WASM\n  ---\n  duration_ms: 6053.531368\n  type: 'suite'\n  location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:93:1'\n  failureType: 'subtestsFailed'\n  error: '1 subtest failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..1\n# tests 2\n# suites 1\n# pass 1\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 6060.751329\n",
+      "stderr": "",
+      "samples": [
+        {
+          "index": 0,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1391952099999998,
+          "rtx": 0.8778126797074578,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 112,
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "index": 1,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1248835830000004,
+          "rtx": 0.8889808822109903,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 212,
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "index": 2,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.124305852,
+          "rtx": 0.8894376901277572,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 312,
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "index": 3,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1258567710000003,
+          "rtx": 0.8882124491837335,
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "accelSamples": 412,
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "index": 4,
+          "cycles": 64000000,
+          "cpuHz": 64000000,
+          "wallSeconds": 1.1208098919999994,
+          "rtx": 0.8922119684504003,
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "accelSamples": 512,
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "guestSha256": "93c14c47baf098f3dc3be66edac7bae5bd4cd7ffc209eda8fe4927a2d1a4245f",
+      "guestObservations": [
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 112,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 0,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 112,
+          "scans": 2145
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 212,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 1,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 212,
+          "scans": 4053
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 312,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 2,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 312,
+          "scans": 5960
+        },
+        {
+          "accelRaw": [
+            -4096,
+            2048,
+            -12288
+          ],
+          "accelSamples": 412,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 3,
+          "magRaw": [
+            -200,
+            0,
+            400
+          ],
+          "magSamples": 412,
+          "scans": 7867
+        },
+        {
+          "accelRaw": [
+            16384,
+            -8192,
+            4096
+          ],
+          "accelSamples": 512,
+          "cpuHz": 64000000,
+          "cycles": 64000000,
+          "index": 4,
+          "magRaw": [
+            200,
+            -100,
+            50
+          ],
+          "magSamples": 512,
+          "scans": 9774
+        }
+      ],
+      "allWindowsMeet1x": false,
+      "medianRtx": 0.8889808822109903,
+      "minimumRtx": 0.8778126797074578
+    }
+  ],
+  "limitations": [
+    "shared VPS; CPU availability is uncontrolled",
+    "NODEJS held motion workload, not browser/UI/circuit qualification",
+    "no artifact publication or engine-pin promotion"
+  ],
+  "completedAt": "2026-10-01T13:50:21.881Z",
+  "guestObservationsMatch": true,
+  "summary": {
+    "baseline": {
+      "samples": 10,
+      "medianRtx": 0.8854065785730022,
+      "minimumRtx": 0.8745172060512579,
+      "allWindowsMeet1x": false
+    },
+    "candidate": {
+      "samples": 10,
+      "medianRtx": 0.9283449501254143,
+      "minimumRtx": 0.9218268351240065,
+      "allWindowsMeet1x": false
+    },
+    "candidateMedianRatio": 1.0484956545292619
+  }
+}

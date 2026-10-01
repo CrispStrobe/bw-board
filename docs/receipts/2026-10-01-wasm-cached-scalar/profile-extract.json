@@ -1,0 +1,814 @@
+{
+  "schema": "labwired.motion-cached-scalar-profile-extract.v1",
+  "sourceRun": 36869551919,
+  "diagnosticOnly": true,
+  "limitations": [
+    "Selected receipt fields only; complete traces and raw CPU profiles remain in run artifact.",
+    "Whole-process self sampling includes initialization, warmup and measurement.",
+    "Sampled and forced-tier timings do not qualify ordinary execution."
+  ],
+  "rows": [
+    {
+      "directory": "baseline-liftoff",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--liftoff-only",
+        "--no-wasm-tier-up",
+        "--no-wasm-dynamic-tiering",
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "268406711426f8d0b5ee4fd778f173bcd8ce05cb980528bc0c089c81c9dde269",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.6198200353519069,
+      "minimumRtx": 0.6141603775676702,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "Liftoff": 2465
+      },
+      "hot": [
+        {
+          "module": "0x45879e80",
+          "index": 73,
+          "tier": "Liftoff",
+          "compileMs": 3,
+          "bodyBytes": 77465,
+          "codeBytes": 210044,
+          "name": null,
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0x45879e80",
+          "index": 9633,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 616,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x45879e80",
+          "index": 77,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 32735,
+          "codeBytes": 78648,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        }
+      ]
+    },
+    {
+      "directory": "baseline-sampled-default",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--cpu-prof",
+        "--cpu-prof-dir=/home/runner/work/bw-board/bw-board/evidence/profiles/baseline-sampled-default",
+        "--cpu-prof-name=motion.cpuprofile",
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "268406711426f8d0b5ee4fd778f173bcd8ce05cb980528bc0c089c81c9dde269",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.8861004041679392,
+      "minimumRtx": 0.8791422096227195,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "Liftoff": 2436,
+        "TurboFan": 178
+      },
+      "hot": [
+        {
+          "module": "0x7eb7bb0",
+          "index": 73,
+          "tier": "Liftoff",
+          "compileMs": 3,
+          "bodyBytes": 77465,
+          "codeBytes": 210848,
+          "name": null,
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0x7eb7bb0",
+          "index": 9633,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 1376,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x7eb7bb0",
+          "index": 77,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 32735,
+          "codeBytes": 78800,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x7eb7bb0",
+          "index": 9633,
+          "tier": "TurboFan",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 392,
+          "name": "wasm-function#9633",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x7eb7bb0",
+          "index": 77,
+          "tier": "TurboFan",
+          "compileMs": 18,
+          "bodyBytes": 32735,
+          "codeBytes": 63672,
+          "name": "wasm-function#77",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x7eb7bb0",
+          "index": 73,
+          "tier": "TurboFan",
+          "compileMs": 109,
+          "bodyBytes": 77465,
+          "codeBytes": 158372,
+          "name": "wasm-function#73",
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        }
+      ],
+      "profileSha256": "ea5acda774f13882cf65fb2403e87367b95db0a2aa3c5a197139e465a993bfc0",
+      "topWasmFrames": [
+        {
+          "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 2688,
+          "selfMicros": 2864857,
+          "processSelfShare": 0.45788106996404376
+        },
+        {
+          "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 477,
+          "selfMicros": 508591,
+          "processSelfShare": 0.08128649746011161
+        },
+        {
+          "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 439,
+          "selfMicros": 467712,
+          "processSelfShare": 0.07475293565962379
+        },
+        {
+          "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 250,
+          "selfMicros": 265987,
+          "processSelfShare": 0.04251186434664142
+        },
+        {
+          "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 207,
+          "selfMicros": 219984,
+          "processSelfShare": 0.0351593497668366
+        },
+        {
+          "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 146,
+          "selfMicros": 158261,
+          "processSelfShare": 0.02529435710528642
+        },
+        {
+          "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 138,
+          "selfMicros": 147238,
+          "processSelfShare": 0.023532585737914974
+        },
+        {
+          "functionName": "<labwired_core::peripherals::nrf52::serial_instance::Nrf52SerialInstance as labwired_core::Peripheral>::read_u32::ha35bde82e7fd5003",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 137,
+          "selfMicros": 145711,
+          "processSelfShare": 0.023288530137989708
+        },
+        {
+          "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 128,
+          "selfMicros": 136106,
+          "processSelfShare": 0.021753393243895292
+        },
+        {
+          "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690409a",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 91,
+          "selfMicros": 96937,
+          "processSelfShare": 0.01549313535687977
+        }
+      ]
+    },
+    {
+      "directory": "baseline-trace-default",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "268406711426f8d0b5ee4fd778f173bcd8ce05cb980528bc0c089c81c9dde269",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.8872669688133071,
+      "minimumRtx": 0.8711833692899892,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "Liftoff": 2325,
+        "TurboFan": 175
+      },
+      "hot": [
+        {
+          "module": "0x406c3aa0",
+          "index": 73,
+          "tier": "Liftoff",
+          "compileMs": 3,
+          "bodyBytes": 77465,
+          "codeBytes": 210848,
+          "name": null,
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0x406c3aa0",
+          "index": 9633,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 1376,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x406c3aa0",
+          "index": 77,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 32735,
+          "codeBytes": 78800,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x406c3aa0",
+          "index": 9633,
+          "tier": "TurboFan",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 392,
+          "name": "wasm-function#9633",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x406c3aa0",
+          "index": 77,
+          "tier": "TurboFan",
+          "compileMs": 17,
+          "bodyBytes": 32735,
+          "codeBytes": 63672,
+          "name": "wasm-function#77",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x406c3aa0",
+          "index": 73,
+          "tier": "TurboFan",
+          "compileMs": 114,
+          "bodyBytes": 77465,
+          "codeBytes": 158372,
+          "name": "wasm-function#73",
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        }
+      ]
+    },
+    {
+      "directory": "baseline-turbofan",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--no-liftoff",
+        "--no-wasm-tier-up",
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "268406711426f8d0b5ee4fd778f173bcd8ce05cb980528bc0c089c81c9dde269",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.8894844568457315,
+      "minimumRtx": 0.8861883193920964,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "TurboFan": 2465
+      },
+      "hot": [
+        {
+          "module": "0x18910d90",
+          "index": 73,
+          "tier": "TurboFan",
+          "compileMs": 87,
+          "bodyBytes": 77465,
+          "codeBytes": 158372,
+          "name": "wasm-function#73",
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0x18910d90",
+          "index": 9633,
+          "tier": "TurboFan",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 392,
+          "name": "wasm-function#9633",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x18910d90",
+          "index": 77,
+          "tier": "TurboFan",
+          "compileMs": 10,
+          "bodyBytes": 32735,
+          "codeBytes": 63672,
+          "name": "wasm-function#77",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        }
+      ]
+    },
+    {
+      "directory": "candidate-liftoff",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--liftoff-only",
+        "--no-wasm-tier-up",
+        "--no-wasm-dynamic-tiering",
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.6003921999605456,
+      "minimumRtx": 0.5915927461621158,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "Liftoff": 2466
+      },
+      "hot": [
+        {
+          "module": "0x3e5d0e80",
+          "index": 73,
+          "tier": "Liftoff",
+          "compileMs": 3,
+          "bodyBytes": 77389,
+          "codeBytes": 213756,
+          "name": null,
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0x3e5d0e80",
+          "index": 9635,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 616,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x3e5d0e80",
+          "index": 77,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 32735,
+          "codeBytes": 78648,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x3e5d0e80",
+          "index": 214,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 5118,
+          "codeBytes": 15144,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab"
+        }
+      ]
+    },
+    {
+      "directory": "candidate-sampled-default",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--cpu-prof",
+        "--cpu-prof-dir=/home/runner/work/bw-board/bw-board/evidence/profiles/candidate-sampled-default",
+        "--cpu-prof-name=motion.cpuprofile",
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.9239964246143152,
+      "minimumRtx": 0.9222104586798067,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "Liftoff": 2365,
+        "TurboFan": 176
+      },
+      "hot": [
+        {
+          "module": "0xf4c1a00",
+          "index": 73,
+          "tier": "Liftoff",
+          "compileMs": 3,
+          "bodyBytes": 77389,
+          "codeBytes": 214568,
+          "name": null,
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 9635,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 1376,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 77,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 32735,
+          "codeBytes": 78800,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 214,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 5118,
+          "codeBytes": 15180,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 9635,
+          "tier": "TurboFan",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 392,
+          "name": "wasm-function#9635",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 214,
+          "tier": "TurboFan",
+          "compileMs": 7,
+          "bodyBytes": 5118,
+          "codeBytes": 9996,
+          "name": "wasm-function#214",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 77,
+          "tier": "TurboFan",
+          "compileMs": 17,
+          "bodyBytes": 32735,
+          "codeBytes": 63672,
+          "name": "wasm-function#77",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0xf4c1a00",
+          "index": 73,
+          "tier": "TurboFan",
+          "compileMs": 114,
+          "bodyBytes": 77389,
+          "codeBytes": 158132,
+          "name": "wasm-function#73",
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        }
+      ],
+      "profileSha256": "7cbe30f7bfad0bffe12de18abc2ff9de818799c429d4e4adc1bbaacf1f335283",
+      "topWasmFrames": [
+        {
+          "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 2047,
+          "selfMicros": 2179563,
+          "processSelfShare": 0.36268980758776065
+        },
+        {
+          "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 608,
+          "selfMicros": 650711,
+          "processSelfShare": 0.10828145246787513
+        },
+        {
+          "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 489,
+          "selfMicros": 520940,
+          "processSelfShare": 0.08668693144670195
+        },
+        {
+          "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 420,
+          "selfMicros": 453334,
+          "processSelfShare": 0.075436966599722
+        },
+        {
+          "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 229,
+          "selfMicros": 243830,
+          "processSelfShare": 0.040574489374302865
+        },
+        {
+          "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 180,
+          "selfMicros": 191821,
+          "processSelfShare": 0.03191994064006952
+        },
+        {
+          "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 161,
+          "selfMicros": 171293,
+          "processSelfShare": 0.028503982317157287
+        },
+        {
+          "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 143,
+          "selfMicros": 152292,
+          "processSelfShare": 0.025342124167622247
+        },
+        {
+          "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 107,
+          "selfMicros": 113983,
+          "processSelfShare": 0.01896732158615086
+        },
+        {
+          "functionName": "<labwired_core::peripherals::nrf52::serial_instance::Nrf52SerialInstance as labwired_core::Peripheral>::read_u32::ha35bde82e7fd5003",
+          "url": "wasm://wasm/labwired_wasm.wasm-0690aef2",
+          "lineNumber": 0,
+          "wasm": true,
+          "samples": 102,
+          "selfMicros": 108858,
+          "processSelfShare": 0.018114496839223483
+        }
+      ]
+    },
+    {
+      "directory": "candidate-trace-default",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.931334843608889,
+      "minimumRtx": 0.9287094582136648,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "Liftoff": 2344,
+        "TurboFan": 176
+      },
+      "hot": [
+        {
+          "module": "0x3eb35aa0",
+          "index": 73,
+          "tier": "Liftoff",
+          "compileMs": 3,
+          "bodyBytes": 77389,
+          "codeBytes": 214568,
+          "name": null,
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 9635,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 1376,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 77,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 32735,
+          "codeBytes": 78800,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 214,
+          "tier": "Liftoff",
+          "compileMs": 0,
+          "bodyBytes": 5118,
+          "codeBytes": 15180,
+          "name": null,
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 214,
+          "tier": "TurboFan",
+          "compileMs": 6,
+          "bodyBytes": 5118,
+          "codeBytes": 9996,
+          "name": "wasm-function#214",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 9635,
+          "tier": "TurboFan",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 392,
+          "name": "wasm-function#9635",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 77,
+          "tier": "TurboFan",
+          "compileMs": 16,
+          "bodyBytes": 32735,
+          "codeBytes": 63672,
+          "name": "wasm-function#77",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0x3eb35aa0",
+          "index": 73,
+          "tier": "TurboFan",
+          "compileMs": 101,
+          "bodyBytes": 77389,
+          "codeBytes": 158132,
+          "name": "wasm-function#73",
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        }
+      ]
+    },
+    {
+      "directory": "candidate-turbofan",
+      "node": "v22.23.3",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "flags": [
+        "--no-liftoff",
+        "--no-wasm-tier-up",
+        "--trace-wasm-compilation-times"
+      ],
+      "wasmSha256": "9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258",
+      "glueSha256": "44e9e34c6cb43f14b3037523bda1174c8c52560c485f31e7f043f0b1e4d89813",
+      "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+      "toolSha256": "6c985f45f2c5563bc5e3bd2ea2f3c931f6bf870f65d00f8dfcdbf77d4328e4ab",
+      "profileParserSha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+      "motionParserSha256": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+      "medianRtx": 0.9363582021747608,
+      "minimumRtx": 0.9112483450511257,
+      "allWindowsMeet1x": false,
+      "tiers": {
+        "TurboFan": 2466
+      },
+      "hot": [
+        {
+          "module": "0xd56ad90",
+          "index": 73,
+          "tier": "TurboFan",
+          "compileMs": 81,
+          "bodyBytes": 77389,
+          "codeBytes": 158132,
+          "name": "wasm-function#73",
+          "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "module": "0xd56ad90",
+          "index": 9635,
+          "tier": "TurboFan",
+          "compileMs": 0,
+          "bodyBytes": 210,
+          "codeBytes": 392,
+          "name": "wasm-function#9635",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        },
+        {
+          "module": "0xd56ad90",
+          "index": 77,
+          "tier": "TurboFan",
+          "compileMs": 9,
+          "bodyBytes": 32735,
+          "codeBytes": 63672,
+          "name": "wasm-function#77",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "module": "0xd56ad90",
+          "index": 214,
+          "tier": "TurboFan",
+          "compileMs": 2,
+          "bodyBytes": 5118,
+          "codeBytes": 9996,
+          "name": "wasm-function#214",
+          "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_scalar::heb99165173fecbab"
+        }
+      ]
+    }
+  ]
+}
