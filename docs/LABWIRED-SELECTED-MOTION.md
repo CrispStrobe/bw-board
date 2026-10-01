@@ -237,7 +237,9 @@ unchanged physical evidence; live re-capture remains owed.
 The [bounded-run receipts](receipts/2026-10-01-wasm-cached-runs/README.md) retain
 the distinct module hashes, original paired glue, raw windows, CPU fingerprints
 and exact provenance. The core PR records the authoritative final CI and merge
-status; landing requires all 19 enabled final-head checks to pass. Neither a
+status. PR 146 landed as `43b2d62f` after all 19 enabled final-head checks passed;
+the [landing receipt](receipts/2026-10-01-wasm-cached-runs/landing.json) records
+the exact head and verdicts. Neither a
 green diagnostic comparison nor core landing overrides the failed fresh floor.
 
 After successful NODEJS qualification, run browser/worker guest and debugger

@@ -114,6 +114,27 @@ authoritative current head, final CI verdicts and merge status. Core landing
 requires all 19 enabled final-head checks to pass, not just the required subset.
 No app pin promotion or completion of CP13 is claimed.
 
+## Verified core landing
+
+PR 146 merged to core `main` at **2026-10-01 19:19:44 UTC** as
+[`43b2d62f5a0fa24ae0b38a645069f5aaa78af685`](https://github.com/CrispStrobe/labwired-core/commit/43b2d62f5a0fa24ae0b38a645069f5aaa78af685).
+All **19 enabled checks passed** on exact review head
+`d10aa88255fd1e093cc1f424c26260341c9322fa`; the guard verified unchanged base
+`c05e8de37f8837148c3066c5e5f1d715a6dbd0f8` immediately before merging.
+[The landing receipt](landing.json) retains every check's verdict and job link,
+including the four intentionally disabled lanes. The
+[final Rust CI run](https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540)
+passed the source-drift gate and the unchanged source audit. Workspace shards
+reported 694 / 1,237 / 5,190 passed tests, with 22 / 35 / 20 existing ignored
+tests respectively and no new-red, known-red or hard errors. The default-member
+core library run passed 4,234 tests with three existing ignored tests.
+
+The measured fixed WASM module still comes from `2f5d9355`, not the later merge
+commit. Runtime source is unchanged between that fixed source and the landed
+tree; later changes are documentation, approved acknowledgement metadata and
+CI configuration. Core landing does not override the failed fresh qualification:
+no WASM release, app pin promotion, physical re-capture or floor waiver occurred.
+
 ## CI queue incident and landing safeguard
 
 After the approved acknowledgement update, the final-head local suite again
