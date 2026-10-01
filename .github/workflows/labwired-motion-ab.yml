@@ -18,6 +18,10 @@ on:
         description: Exact 40-hex LabWired candidate source commit
         required: true
         type: string
+      allow_paired_glue:
+        description: Compare each original build with its own glue when glue hashes differ
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -83,7 +87,12 @@ jobs:
             sha256sum test/fixtures/labwired/microbit-motion/*
           } > evidence/runner.txt
       - name: Complete diagnostic without relabelling failed qualification windows
-        run: node scripts/probe-labwired-motion-ab.mjs --baseline baseline/nodejs --candidate candidate/nodejs --out evidence/abba.json
+        env:
+          ALLOW_PAIRED_GLUE: ${{ inputs.allow_paired_glue }}
+        run: |
+          args=()
+          if [ "$ALLOW_PAIRED_GLUE" = true ]; then args+=(--paired-glue); fi
+          node scripts/probe-labwired-motion-ab.mjs --baseline baseline/nodejs --candidate candidate/nodejs --out evidence/abba.json "${args[@]}"
       - name: Retain raw results even if the diagnostic itself fails
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

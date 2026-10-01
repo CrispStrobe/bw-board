@@ -6,7 +6,7 @@ import {resolve, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {cpus, loadavg} from 'node:os';
-import {median, motionProbeResult} from './lib/motion-ab-receipt.mjs';
+import {median, motionProbeResult, gluePolicy} from './lib/motion-ab-receipt.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => {
@@ -23,16 +23,16 @@ const artifact = directory => ({directory,
     glueSha256: hash(join(directory, 'labwired_wasm.js')),
     wasmSha256: hash(join(directory, 'labwired_wasm_bg.wasm'))});
 const artifacts = {baseline: artifact(baseline), candidate: artifact(candidate)};
-if (artifacts.baseline.glueSha256 !== artifacts.candidate.glueSha256) {
-    throw Error('This binary-only probe requires identical original glue');
-}
+const selectedGluePolicy = gluePolicy(artifacts.baseline.glueSha256,
+    artifacts.candidate.glueSha256, process.argv.includes('--paired-glue'));
 if (artifacts.baseline.wasmSha256 === artifacts.candidate.wasmSha256) {
     throw Error('Baseline and candidate WASM bytes are identical');
 }
 const receipt = {schema: 1, diagnosticOnly: true, startedAt: new Date().toISOString(),
     node: process.version, cpu: cpus()[0]?.model, logicalCpus: cpus().length,
     harnessSha256: hash(join(root, 'test/labwired-microbit-motion.test.mjs')),
-    artifacts, order: ['baseline', 'candidate', 'candidate', 'baseline'], runs: [],
+    artifacts, gluePolicy: selectedGluePolicy,
+    order: ['baseline', 'candidate', 'candidate', 'baseline'], runs: [],
     limitations: ['shared VPS; CPU availability is uncontrolled',
         'NODEJS held motion workload, not browser/UI/circuit qualification',
         'no artifact publication or engine-pin promotion']};
