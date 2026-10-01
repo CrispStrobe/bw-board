@@ -1,3 +1,22 @@
+2026-10-01 Resistive-source self-constraint — CLAIM, Codex bwcx `/root`.
+Reuse clean closed worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
+new branch `lane/resistive-source-self-constraint`, exact base
+`28dcfee95906f113899910d12a7a1704668e5759`. Five-path envelope: this row;
+only finite-positive-internal-resistance same-node independent-source
+allocation/stamp/zero-node handling in `src/mna.js`; existing
+`test/vsource-ground-reference.test.mjs` and `test/operating-point.test.mjs`;
+new `spec-updates/resistive-source-self-constraint.md`. Measured 5 V/10 ohm
+short reports no ground current or 0.6 A on a 1 V node instead of 0.5 A,
+and corrupts the unrelated supply current from 1 mA to 601 mA. Both old and
+ideal-repaired engines reproduce; equivalent explicit-source/resistor ngspice
+controls prove 0.5 A and 1 mA in both placements. Allocate the solvable
+resistive row on ground and cancel same-node incidences without grounding
+the live node; preserve ordinary distinct-node stamps and ideal-source guards.
+Prove signed currents, KCL, all-ground, merged grounds, OP/live conventions,
+power-off and current-limit compatibility; no invented ideal-short CC model,
+generic cycles, source semantics, tolerance/budget, Board/CPU/workflow,
+CUI/Lite package/pin or corpus changes. One exact hosted qualification.
+
 2026-10-01 Independent ideal-source self-constraint — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
 branch `lane/ideal-source-self-constraint`, exact base
