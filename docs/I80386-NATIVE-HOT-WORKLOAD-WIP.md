@@ -72,3 +72,7 @@ On Linux, launch the native child with `python3 scripts/run-i80386-native-hot-re
 - Integrate a qualified backend into CLI/GUI only after these gates, then test real protected-mode software and Windows enhanced mode.
 
 The diagnostic execution time includes synchronous callback journaling and snapshots. Six board clocks per successful quantum are functional scheduler accounting, not measured 386DX instruction timing. No physical 16 MHz 386DX RTx, 10× speedup, Windows/Doom compatibility, browser-native backend, or GH/Kaggle throughput is established here.
+
+## Follow-up bridge cost measurement
+
+[H2 C++ cost profiling](I80386-NATIVE-HOT-NAPI-COST-WIP.md) records three authenticated OFF/ON pairs and identifies dynamic scalar calls and mapping-field extraction as the next optimization targets. These diagnostic runs preserve H1 state; they do not establish a performance improvement.
