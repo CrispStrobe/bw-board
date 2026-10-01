@@ -194,8 +194,17 @@ Native CorePerf also passed all 40 spin targets, with no reported instruction
 regressions or waivers. This is not all-chip sensor-heavy WASM qualification.
 
 [Receipts, source hashes and remaining qualifications](receipts/2026-10-01-cortex-m-dispatch/README.md)
-are retained. Core PR 143 remains a draft. No hardware capture date or drift
-acknowledgement was changed, no all-five floor relaxed and no artifact promoted.
+are retained as measurements of the original `13ace46f` revision. Core PR 143
+subsequently landed as `4deee6f0` after final-head CI passed. Seven user-approved,
+exact-content-bound drift acknowledgements expire **2026-10-31**; physical
+capture dates/results/digests are unchanged and hardware re-capture is owed.
+Final-head native exact-base A/B/B/A on one EPYC 9V74 observed **+14.74%**
+(1.410521× baseline / 1.618482× candidate); all ten candidate windows passed
+1×, minimum 1.596440×. Board motion passed all five windows (1.511610× median,
+1.507249× minimum), and all 40 native CorePerf spin targets passed without
+instruction-cost regressions or waivers. [Final-head landing receipts](receipts/2026-10-01-cortex-m-dispatch-landing/README.md)
+are separate from the earlier WASM evidence. No WASM floor relaxed, artifact
+promoted or deployed pin changed; CP13 remains open.
 
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
