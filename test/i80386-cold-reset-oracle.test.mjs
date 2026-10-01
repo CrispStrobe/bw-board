@@ -25,6 +25,9 @@ const mutations=[
   ['ROM identity changed',r=>{r.rom.sha256='0'.repeat(64);}],
   ['seed identity changed',r=>{r.seed.sha256='0'.repeat(64);}],
   ['source identity changed',r=>{r.source.boardRevision='0'.repeat(40);}],
+  ['measured executable source hash changed',r=>{
+    r.source.sourceHashes['src/experimental/i80386.js']='0'.repeat(64);
+  }],
   ['native parity falsely claimed',r=>{r.claim='native-reset-parity';}],
 ];
 for(const [name,change] of mutations)test(`rejects ${name}`,()=>{

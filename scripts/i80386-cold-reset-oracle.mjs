@@ -61,9 +61,9 @@ function sourceIdentity(){
 export function runColdResetOracle({requireClean=true}={}){
   if(requireClean)assert.equal(execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}),'','qualification requires a clean source tree');
   const source=sourceIdentity(),{rom,symbols}=assembleColdResetRom();
-  const events=[],steps=[];let quantum=0,m;
+  const events=[],steps=[];let quantum=0,m,pioWidth=null;
   const record=e=>events.push({ordinal:events.length+1,quantum,boardCycles:m.cycles,...e});
-  m=new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL,{onPortAccess:e=>record({kind:'pio',...e})});
+  m=new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL,{onPortAccess:e=>record({kind:'pio',...e,width:pioWidth})});
   const initialBoard=boardState(m);
   m.loadRom(rom,0xf0000);m.loadRom(rom);
   const loadedSeedSha256=sha(m.mem);
@@ -75,6 +75,13 @@ export function runColdResetOracle({requireClean=true}={}){
       const value=original(address);record({kind,address:address>>>0,decoded:m._decode386(address),value});return value;
     };
   }
+  // The board hook supplies dir/port/value; capture width from the actual
+  // CPU I/O callback while that hook executes, rather than assuming its units.
+  const outPort=m.cpu.outPort;
+  m.cpu.outPort=(port,value,width)=>{
+    pioWidth=width;
+    try{return outPort(port,value,width);}finally{pioWidth=null;}
+  };
   const write=m.cpu.write;
   m.cpu.write=(address,value)=>{
     const decoded=m._decode386(address),before=m._read386(address);
@@ -102,12 +109,31 @@ export function runColdResetOracle({requireClean=true}={}){
   return report;
 }
 
+const historicalHashes=new Map();
+function historicalSourceHashes(revision,files){
+  const key=revision+JSON.stringify(files);
+  if(!historicalHashes.has(key)){
+    let hashes;
+    try{hashes=Object.fromEntries(files.map(file=>[file,sha(execFileSync('git',
+      ['show',`${revision}:${file}`],{cwd:root,maxBuffer:4<<20,stdio:['ignore','pipe','pipe']}))]));}
+    catch{throw new Error('cold reset oracle: historical measured source unavailable');}
+    historicalHashes.set(key,hashes);
+  }
+  return historicalHashes.get(key);
+}
+
 export function assertColdResetOracle(r){
   const check=(condition,message)=>assert(condition,`cold reset oracle: ${message}`);
   const equal=(actual,expected,message)=>assert.deepEqual(actual,expected,`cold reset oracle: ${message}`);
   equal(r.schema,'bw.i80386-js-cold-reset-oracle.v1','schema');
   equal(r.claim,'actual-javascript-board-cold-reset-only','claim scope');
-  equal(r.source,sourceIdentity(),'source identity');
+  check(/^[0-9a-f]{40}$/.test(r.source.boardRevision),'historical source commit syntax');
+  // A docs-only successor may replay this report. Authenticate every measured
+  // blob at its captured commit, and require the current checker/runtime bytes
+  // to match those captured executable inputs; HEAD equality is unnecessary.
+  equal(r.source.sourceHashes,sourceIdentity().sourceHashes,'measured executable source hashes');
+  equal(r.source.sourceHashes,historicalSourceHashes(r.source.boardRevision,Object.keys(r.source.sourceHashes)),
+    'historical committed source blobs');
   equal(r.configuration,clone(PCAT80386_EXPERIMENTAL),'actual board config');
   equal(r.configurationSha256,sha(JSON.stringify(PCAT80386_EXPERIMENTAL)),'config digest');
   equal(r.knownNativeResetDifferences,knownNativeResetDifferences,'raw native differences declaration');
