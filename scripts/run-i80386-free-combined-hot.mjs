@@ -12,7 +12,7 @@ import {assembleCombinedHotRom,hotWorkload} from './i80386-free-combined-hot.mjs
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim(),sha=b=>createHash('sha256').update(b).digest('hex');
 function identity(){
  const revision=git(['rev-parse','HEAD']),paths=new Set();
- function visit(p){if(paths.has(p))return;paths.add(p);const bytes=readFileSync(resolve(root,p));assert.equal(sha(bytes),sha(execFileSync('git',['show',revision+':'+p],{cwd:root})),'committed measured source '+p);for(const match of bytes.toString().matchAll(/(?:from\s+|import\s*)['"](\.[^'"]+)['"]/g))visit(resolve(root,dirname(p),match[1]).slice(root.length+1));}
+ function visit(p){if(paths.has(p))return;paths.add(p);const bytes=readFileSync(resolve(root,p));assert.equal(sha(bytes),sha(execFileSync('git',['show',revision+':'+p],{cwd:root,maxBuffer:32<<20})),'committed measured source '+p);if(/\.(?:mjs|js)$/.test(p))for(const match of bytes.toString().matchAll(/(?:from\s+|import\s*)['"](\.[^'"]+)['"]/g))visit(resolve(root,dirname(p),match[1]).slice(root.length+1));}
  for(const p of ['package.json','scripts/run-i80386-free-combined-hot.mjs','scripts/i80386-free-combined-hot.mjs','test/i80386-free-combined-hot.test.mjs','test/i80386-free-combined-hot-proof.test.mjs','test/fixtures/i80386-free-combined-hot.S','test/fixtures/i80386-free-combined-hot-initial-capture.json.gz','test/fixtures/i80386-free-combined-hot-initial-events.jsonl.gz','test/fixtures/i80386-free-combined-paging-ram.S'])visit(p);
  return {revision,hashes:Object.fromEntries([...paths].sort().map(p=>[p,sha(readFileSync(resolve(root,p)))]))};
 }
