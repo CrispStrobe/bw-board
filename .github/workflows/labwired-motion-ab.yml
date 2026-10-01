@@ -22,6 +22,10 @@ on:
         description: Compare each original build with its own glue when glue hashes differ
         type: boolean
         default: false
+      profile:
+        description: Collect separate sampling and forced-tier diagnostics after ordinary A/B (never qualification)
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -93,6 +97,19 @@ jobs:
           args=()
           if [ "$ALLOW_PAIRED_GLUE" = true ]; then args+=(--paired-glue); fi
           node scripts/probe-labwired-motion-ab.mjs --baseline baseline/nodejs --candidate candidate/nodejs --out evidence/abba.json "${args[@]}"
+      - name: Test sampling and tier-trace parsing
+        if: inputs.profile
+        run: node --test test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs
+      - name: Collect independent sampling and forced-tier evidence
+        if: inputs.profile
+        run: |
+          for engine in baseline candidate; do
+            for mode in trace-default sampled-default turbofan liftoff; do
+              node scripts/profile-labwired-motion.mjs \
+                --wasm "$engine/nodejs" \
+                --out "evidence/profiles/$engine-$mode" --mode "$mode"
+            done
+          done
       - name: Retain raw results even if the diagnostic itself fails
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
