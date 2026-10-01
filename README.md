@@ -106,6 +106,16 @@ Interpreter outlining was rejected after two negative paired runs (−7.68% and
 [rejected outlining evidence](docs/receipts/2026-10-01-wasm-outline/README.md) and
 [profiling/tier-validation guide](docs/LABWIRED-WASM-PROFILING.md).
 
+The next, still-experimental bounded cached-run candidate (core PR 146) measured
+**+8.24% and +7.15%** in two exact-artifact paired comparisons against the landed
+scalar baseline, with identical cycle-indexed guest observations. Its fresh
+qualification was **0.979751× median / 0.951531× minimum**: still below the
+unchanged every-window 1× floor. Both builds, determinism and 101 actual WASM
+integration tests passed; the fixed-head local core suite passed 4,234 tests
+with three existing ignored tests. Host rates are not interchangeable. App pins
+remain unchanged. See [bounded-run results and raw receipts](docs/receipts/2026-10-01-wasm-cached-runs/README.md)
+for exact source references, pending checks and hardware-drift approval status.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
