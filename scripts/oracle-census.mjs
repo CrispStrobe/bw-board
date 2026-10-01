@@ -113,6 +113,18 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const INPUTS = [
     {
+        id: '386-native-cold-reset-report', kind: 'fixture',
+        what: 'Committed actual four-budget native cold-reset capture used by mandatory '
+            + 'baseline and mutation checks. Proves the bounded actual-board bus gate; '
+            + 'architectural reset parity and whole AT boot remain unfinished.',
+        paths: ['test/fixtures/i80386-native-cold-reset-capture.json.gz'],
+        gates: ['test/i80386-native-cold-reset-report.test.mjs'],
+        obtain: 'Included in the repository. The test authenticates the decompressed '
+            + 'actual dbc63803 capture by its full SHA-256 and historical source revision.',
+        ciAvailable: true,
+        ci: 'yes — the committed fixture runs in ordinary CI without a native Bochs build.',
+    },
+    {
         id: '386-native-device-quanta-pilot', kind: 'fixture',
         what: 'Retained actual ef157ce7 continuous native device-quanta pilot report. '
             + 'Enables the optional one-arm core-proof check against its exact SHA-256; '
