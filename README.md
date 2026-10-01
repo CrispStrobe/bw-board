@@ -576,15 +576,20 @@ now passes all four budgets and a fresh reproduction with actual board ownership
 updates to both live aliases, and committed cache flushes. All 79 mandatory
 report tests pass; sixteen native guards and twenty transport rejections pass.
 Raw reset differences and eight exact far-call stack word-order differences
-remain visible. Next is actual-board REP/page-fault/PIT integration; no new
-speed measurement or broad guest compatibility claim follows from these fixtures.
+remain visible. The separate native protected REP/PF/PIT gate below extends
+this proof; no new speed measurement or broad guest compatibility claim follows.
 
 The new [actual-board protected-mode REP/PF/PIT baseline](docs/I80386-JS-REP-PF-PIT-ORACLE.md)
 now boots a free cold-reset ROM into protected mode and 4 KiB paging, recovers
 from two page faults, and services the actual PIT/PIC interrupt after the STI
 successor. It passes 135 successful work quanta with 814 functional clocks;
-48 tests pass and a fresh capture is byte-identical. Native delivery/cache
-integration remains incomplete. No broader guest acceptance or new RTx is claimed.
+48 tests pass and a fresh capture is byte-identical. Its separate
+[native actual-board REP/two-PF/PIT gate](docs/I80386-NATIVE-REP-PF-PIT-ACTUAL-BOARD.md)
+now passes all four work budgets and a fresh reproduction, with 54 report tests
+and five host tests passing without skips. Nineteen native guards and eighteen
+transport rejections pass. Raw reset and named bus/pagewalk differences remain
+visible. Next combine these boundaries with executable RAM/SMC/A20. No broader
+guest acceptance or new RTx is claimed.
 
 **DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
 chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,
