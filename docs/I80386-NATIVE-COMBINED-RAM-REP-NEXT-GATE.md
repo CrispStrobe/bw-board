@@ -1,6 +1,6 @@
 # Next bounded actual-board gate: protected paging, REP/PF/PIT/IRQ, RAM SMC and A20
 
-The [actual JavaScript combined baseline](I80386-JS-COMBINED-PAGING-RAM-ORACLE.md) is now qualified at 192 work quanta. This remains the native implementation proposal, not combined native execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. The next implementation is a separate native ABI/runtime/host gate using that frozen JS reference. No compatibility or speed claim. The new JS guest/oracle and source-bound captures now exist; no combined native build/capture has been performed.
+The [actual JavaScript combined baseline](I80386-JS-COMBINED-PAGING-RAM-ORACLE.md) is now qualified at 192 work quanta. This remains the native implementation proposal, not combined native execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. The next implementation is a separate native ABI/runtime/host gate using that frozen JS reference. No compatibility or speed claim. The new JS guest/oracle and source-bound captures now exist. The separate native bridge compiles locally and on GitHub Actions; combined native guest execution and semantic qualification remain unfinished.
 
 ## Smallest fixture candidate
 
@@ -77,3 +77,9 @@ The VPS is close to its disk reserve. Preserve existing builds and raw captures.
 The qualified JS profile explicitly enables the specialized 8042 cache hook and records other existing source-owned invalidations: tracked-table writes and every ordinary OFF byte write. Native policy above is a separate proposed target, not a statement that the JS implementation preserves architectural stale PTEs. Additional native/JS pagewalk differences need exact site/source audits.
 
 The separate `i80386-native-combined-build.yml` workflow builds the new CPU3 bridge on a hosted runner and retains the prepared LGPL source tree, binary, configuration, transform manifest, compiler/hardware context and failure logs. Its output is diagnostic: successful compilation alone does not qualify a guest, prove native/JS parity, provide a production backend or measure RTx. Guest captures and source/binary pin audits remain separate required steps.
+
+## Diagnostic build evidence, 2026-10-01
+
+The new six bridge inputs were frozen at `197e3054376d6b32e3db2a40f30d7b3e7635761c`; the hosted workflow was integrated at `0d9db019bcd824422ac8a970ff86c21d4e70d14f`. [Hosted diagnostic build 36866821207](https://github.com/CrispStrobe/bw-board/actions/runs/36866821207) succeeded, as did a separate local build. The root audit checked all 13 preparation inputs, 12 pinned upstream files, 11 changed tracked files and three copied bridge sources against both the local build and the hosted artifact archive; hardware reset `cpu/init.cc` remains unchanged. [Build audit](receipts/2026-10-01-i80386-native-combined-build-audit.json) retains their actual hashes.
+
+The two toolchains produce different binary and configuration digests. Their bridge runtime sources match exactly. These are compiled diagnostic artifacts, with no guest qualification or RTx measurement. The new host runner must first bind the actual selected binary, save authentic diagnostic executions, and finish the strict combined cache/bus/budget comparison and rejection tests. Successful compilation does not provide a CLI/GUI production backend or establish Windows/Doom compatibility.
