@@ -46,3 +46,19 @@ test('unauthorized A20 hooks and reset-request PIO reject before actual board ch
 test('ignored ROM write capture retains copied attempted operand separately from observed bytes',()=>{
  const events=[],d=new DirectBoardFacade(rom(),{capture:e=>events.push(e)});d.beginRun();const operand=Buffer.from([0x12]);const observed=d.writePhysical(0xf0000,operand);operand[0]=0x34;assert.equal(observed.bytes[0],0xea);assert.equal(events[0].args[2][0],0x12);assert.equal(events[0].result.bytes[0],0xea);assert.equal(events[0].result.effect,2);d.endRun();
 });
+
+test('bulk execute snapshots match scalar board reads for RAM, ROM and A20 aliases',()=>{
+ const board=new DirectBoardFacade(rom());board.beginRun();
+ for(const [raw,value] of [[0x7000,0x12],[0x107000,0x34]])board.writePhysical(raw,Uint8Array.of(value,0x56));
+ const compare=raw=>{const expected=Uint8Array.from({length:4096},(_,i)=>board.machine._read386(raw+i));const before=board.inspect();const page=board.admitExecutePage(raw);assert.deepEqual(page.bytes,expected);assert.deepEqual(board.inspect(),before);return page;};
+ for(const raw of [0x7000,0x107000,0xf0000,0xfffff000])compare(raw);
+ board.outPort(0x64,1,0xd1);board.outPort(0x60,1,1);const alias=compare(0x107000);assert.equal(alias.decoded,0x7000);assert.equal(alias.bytes[0],0x12);
+ board.writePhysical(0x107000,Uint8Array.of(0x99));assert.equal(alias.bytes[0],0x12,'owned admission remains independent of later RAM writes');
+ board.outPort(0x64,1,0xd1);board.outPort(0x60,1,3);assert.equal(compare(0x107000).bytes[0],0x34);board.endRun();board.close();
+});
+test('bulk execute admission denies unsafe spans and alternate overlays before publication',()=>{
+ const board=new DirectBoardFacade(rom());board.beginRun();
+ for(const raw of [0x7001,0xa0000,0xc0000,0xffffffff]){const count=board.pages.length,before=board.inspect();assert.throws(()=>board.admitExecutePage(raw));assert.equal(board.pages.length,count);assert.deepEqual(board.inspect(),before);}
+ board.machine.vgaMemory={read(){throw Error('overlay must not be read');}};assert.throws(()=>board.admitExecutePage(0xf0000),/overlay/);assert.equal(board.pages.length,0);delete board.machine.vgaMemory;
+ board.machine._xv6Mp={};assert.throws(()=>board.admitExecutePage(0xf0000),/overlay/);assert.equal(board.pages.length,0);board.machine._xv6Mp=null;board.endRun();board.close();
+});
