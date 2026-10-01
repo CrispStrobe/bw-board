@@ -257,6 +257,19 @@ export function assertNativeRamCoherenceArmProof(arm,rom,name=arm.mode){
   equal(final.resetWitness,ramResetDifferences.guestWitness.native,'guest-produced native reset witness');
   equal(final.after.marker,'RAMA001','actual E9 marker');
   const events=native.events,type=tag=>events.filter(e=>e.tag===tag);
+  let ledgerN=0,ledgerQ=0;
+  for(const e of events){
+    if(e.tag==='QUANTUM'){equal([e.preQ,e.successfulQuanta],[ledgerQ,ledgerQ+1],'global successful-work ledger');ledgerQ++;}
+    if(e.tag==='NATIVE_TICK'){equal([e.preTick,e.count,e.nativeTicks],[ledgerN,1,ledgerN+1],'global native tick ledger');ledgerN++;}
+    if(Object.hasOwn(e,'nativeTicks'))equal(e.nativeTicks,ledgerN,'every raw native event owns current native clock');
+    if(Object.hasOwn(e,'successfulQuanta'))equal(e.successfulQuanta,ledgerQ,'every raw native event owns current successful clock');
+    if(e.tag==='PREFETCH'){
+      check(ledgerN===ledgerQ&&js.steps[ledgerN],'prefetch only at next instruction entry');
+      equal(e.physicalPC,js.steps[ledgerN].before.pc,'prefetch witnesses CURRENT instruction physical address');
+    }
+    if(e.tag==='EXEC')equal(e.rawPage,(js.steps[ledgerN].before.pc&0xfffff000)>>>0,'execute admission owns CURRENT physical instruction page');
+  }
+  equal([ledgerN,ledgerQ],[js.steps.length,js.steps.length],'complete global N/Q ledger');
   equal(type('ATTEMPT').length,js.steps.length,'raw native instruction attempt count');
   equal(type('QUANTUM').length,js.steps.length,'successful-work event count');equal(type('NATIVE_TICK').length,js.steps.length,'native tick count');
   const pref=type('PREFETCH');check(pref.length>0,'actual native prefetch witness required');
