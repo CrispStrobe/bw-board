@@ -321,9 +321,16 @@ export function assertNativeRepPfPitArmProof(arm,rom){
   adWrites.push([r.request.successfulQuanta,r.request.arg0,next,bytes[0].why]);
  }
  equal(adWrites,[[44,0x9000,0xa023,'pde-ad-write'],[44,0xa3c0,0xf0023,'pte-ad-write'],[71,0xa010,0x4063,'pte-ad-write'],[73,0xa000,0x23,'pte-ad-write'],[73,0xa020,0x8063,'pte-ad-write'],[77,0xa000,0x63,'pte-ad-write'],[78,0xa028,0xa063,'pte-ad-write'],[85,0xa014,0x5063,'pte-ad-write'],[101,0xa018,0x6063,'pte-ad-write']],'source-backed retained native pagewalk bit-transition ledger');
+ equal(native.events.filter(e=>e.tag==='FAULT_BEGIN').length,2,'exact failed attempt begin count');
+ equal(native.events.filter(e=>e.tag==='IRQ_ACK').length,1,'exact eligible interrupt ACK count');
  for(const [index,rule] of repBusDifferences.deliveries.entries()){
   const delivered=index<2?faults[index]:irqs[0];equal([delivered.successfulQuanta,delivered.sp,delivered.vector,delivered.cs,delivered.eip],[rule.Q,rule.sp,index<2?14:32,8,index<2?js.rom.symbols.pf_handler:js.rom.symbols.irq_handler],'exact declared delivery site');
   const begin=native.events.filter(e=>e.ordinal<delivered.ordinal&&e.tag===(index<2?'FAULT_BEGIN':'IRQ_ACK')).at(-1);check(begin,'delivery begin absent');
+  if(index<2){
+   equal([begin.vector,begin.error,begin.cr2,begin.cs,begin.eip,begin.nativeTicks,begin.successfulQuanta],[14,2,index===0?0x5000:0x6000,8,rule.eip,index===0?73:91,rule.Q],'exact failed attempt page-fault begin');
+   equal([delivered.error,delivered.cr2,delivered.nativeTicks],[2,begin.cr2,begin.nativeTicks+1],'fault delivery retains cause and charges only independent native tick');
+  }else equal([begin.vector,begin.cs,begin.eip,begin.nativeTicks,begin.successfulQuanta,delivered.nativeTicks],[32,8,js.rom.symbols.after_shadow,110,108,110],'IRQ ACK exact STI successor eligibility and zero-work delivery');
+
   const writes=memEvents.filter(e=>e.ordinal>begin.ordinal&&e.ordinal<delivered.ordinal&&e.rw==='W'&&e.raw>=rule.sp&&e.raw<0x9000);
   const words=index<2?[[0x8ffc,rule.flags],[0x8ff8,8],[0x8ff4,rule.eip],[0x8ff0,2]]:[[0x8ffc,rule.flags],[0x8ff8,8],[0x8ff4,rule.eip]];
   const expected=words.flatMap(([address,value])=>Array.from({length:4},(_,i)=>({raw:address+i,value:(value>>>(8*i))&255})));
