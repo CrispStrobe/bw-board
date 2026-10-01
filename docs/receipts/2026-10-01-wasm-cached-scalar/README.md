@@ -71,6 +71,13 @@ only those seven digests; dates/expiry remain 2026-10-01 / 2026-10-31 and all
 physical capture dates/results/digests remain unchanged. Live re-capture remains
 owed; final-head checks are required before core merge. This is not a floor waiver.
 
+Final-head `faa39978` subsequently passed **all 19 enabled checks**, including
+the aggregate gate, default members, all three workspace shards, browser,
+scheduler-observable, native board and motion comparisons. Core PR 145 landed
+on `main` as **`c05e8de37f8837148c3066c5e5f1d715a6dbd0f8`**. The merge tree
+matches the verified final-head tree. Failed manual WASM realtime qualification
+is not one of those passing checks and has not been waived or reclassified.
+
 ## Profiling and next experiments
 
 [Selected profile fields and hashes](profile-extract.json) come from the primary
@@ -102,4 +109,5 @@ Priorities for further measured, individually isolated experiments:
    target firmware workloads; this selected micro:bit proof is not a universal
    chip-speed result.
 
-No core merge, app pin promotion or completion of CP13 is claimed in this report.
+Only the intermediate core optimization is merged. No app pin promotion or
+completion of CP13 is claimed; fresh WASM realtime qualification remains failed.

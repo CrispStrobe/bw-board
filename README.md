@@ -387,7 +387,7 @@ changes; all forty windows remained below 1×. Default V8 traces show the origin
 large interpreter already reaches TurboFan, so this is not simply a baseline-tier
 stall. [Results, raw A/B receipts and profiling caveats](docs/receipts/2026-10-01-wasm-outline/README.md)
 are retained. Profiling tooling landed separately; deployed pins remain unchanged.
-The subsequent guarded [WASM cached-scalar candidate](https://github.com/CrispStrobe/labwired-core/pull/145)
+The subsequent guarded [WASM cached-scalar optimization](https://github.com/CrispStrobe/labwired-core/pull/145)
 reuses the existing T16 executor without changing native production dispatch.
 Three independent exact-artifact hosted comparisons observed **+6.94%, +1.23%
 and +4.85%** median gains, with candidate medians **0.924740×, 1.099840× and
@@ -401,9 +401,10 @@ tests, but again failed fresh qualification (**0.704710× median / 0.690863×
 minimum**, EPYC 7763). Absolute speeds vary with host conditions; these separate
 qualification runs are not controlled code comparisons.
 [Raw receipts and verification boundaries](docs/receipts/2026-10-01-wasm-cached-scalar/README.md)
-are retained. User-approved content acknowledgements preserve their existing
-expiry and hardware capture evidence; final-head checks remain required before
-core merge. This does not promote app pins or complete CP13.
+are retained. It landed on core `main` as **`c05e8de3`**, after all 19 enabled
+checks passed on exact final head `faa39978`. User-approved content
+acknowledgements preserve their existing expiry and hardware capture evidence;
+live re-capture remains owed. This does not promote app pins or complete CP13.
 The landed opcode-dispatch change's native CorePerf gate passed all 40 spin targets with no reported instruction
 regressions or waivers. Board/model qualification passed, including all 156
 Cortex-M tests with zero failures/ignored tests; other board suites retain
