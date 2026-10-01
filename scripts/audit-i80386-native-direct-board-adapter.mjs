@@ -34,27 +34,36 @@ export function assertCaptureModeParity(captured,uncaptured){
 }
 
 /** Each mode gets a fresh process because native initialization is terminal. */
-export async function collectDirectMatrix({addon,sha256,configuration,directory}){
- const {mkdirSync,writeFileSync,readFileSync}=await import('node:fs');
+export async function collectDirectMatrix({addon,sha256,configuration,directory,fifoCapture=null}){
+ const {mkdirSync,writeFileSync,readFileSync,openSync,closeSync}=await import('node:fs');
  const {resolve,join}=await import('node:path');
  const {spawnSync}=await import('node:child_process');
  const {fileURLToPath}=await import('node:url');
  mkdirSync(directory,{recursive:false});
- const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),matrix={};
+ const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url));
+ const audit=fileURLToPath(new URL('./audit-i80386-native-direct-board-mode.mjs',import.meta.url)),receipts={};
  for(const [mode,quanta] of Object.entries({continuous:300,budget1:1,budget2:2,budget257:257})){
-  matrix[mode]={};
+  const paths={};
   for(const capture of [true,false]){
    const stem=join(resolve(directory),`${mode}-capture-${capture}`),input=stem+'.input.json',output=stem+'.json';
    writeFileSync(input,JSON.stringify({addon,sha256,configuration,capture,quanta,control:'run',output}));
-   const child=spawnSync(process.execPath,[entry,input],{encoding:'utf8',timeout:120000,maxBuffer:64*1024*1024});
-   writeFileSync(stem+'.stdout',child.stdout??'');writeFileSync(stem+'.stderr',child.stderr??'');
+   // Send logs directly to immutable files; do not buffer them in the parent.
+   const stdout=openSync(stem+'.stdout','wx'),stderr=openSync(stem+'.stderr','wx');let child;
+   try{child=spawnSync(process.execPath,['--max-old-space-size=1024',entry,input],{timeout:120000,stdio:['ignore',stdout,stderr]});}finally{closeSync(stdout);closeSync(stderr);}
    writeFileSync(stem+'.exit.json',JSON.stringify({status:child.status,signal:child.signal,error:child.error?.message??null}));
    assert.equal(child.error,undefined,'child timeout/spawn failure');assert.equal(child.signal,null,'direct child signal');assert.equal(child.status,0,'direct child exit');
-   matrix[mode][String(capture)]=JSON.parse(readFileSync(output,'utf8'));
+   paths[String(capture)]={report:output,stderr:stem+'.stderr'};
   }
-  assertCaptureModeParity(matrix[mode].true,matrix[mode].false);
+  const input=join(resolve(directory),mode+'.audit-input.json'),receipt=join(resolve(directory),mode+'.audit.json');
+  writeFileSync(input,JSON.stringify({mode,paths,fifoCapture,receipt}));
+  // Each audit child parses exactly one mode pair and (optionally) one FIFO
+  // receipt. Its exit releases all report memory before the next mode starts.
+  const child=spawnSync(process.execPath,['--max-old-space-size=1024',audit,input],{encoding:'utf8',timeout:120000,maxBuffer:1024*1024});
+  writeFileSync(join(directory,mode+'.audit.stdout'),child.stdout??'');writeFileSync(join(directory,mode+'.audit.stderr'),child.stderr??'');
+  assert.equal(child.error,undefined,'mode audit timeout/spawn failure');assert.equal(child.signal,null,'mode audit signal');assert.equal(child.status,0,'mode audit exit');
+  receipts[mode]=JSON.parse(readFileSync(receipt,'utf8'));
  }
- return matrix;
+ return receipts; // Small digest/census receipts only, never captured reports.
 }
 export function assertFatalControlWitness(control,witness){
  const causes={'bad-page-sha':'direct-page-sha256','callback-throw':'direct-page-callback','callback-reentry':'direct-page-callback'};
