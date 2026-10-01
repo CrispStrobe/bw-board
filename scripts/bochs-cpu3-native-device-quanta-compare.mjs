@@ -40,7 +40,9 @@ const requiredSourcePaths=[
   'scripts/bochs-cpu3-native-events/patch.mjs',
   'scripts/bochs-cpu3-native-memory-map/patch.mjs',
   'scripts/bochs-cpu3-native-slice/patch.mjs',
-  'src/i8254.js','src/i8259.js','src/experimental/i80386-at-machine.js',
+  'src/i8254.js','src/i8259.js','src/i8086-machine.js',
+  'src/experimental/i80386.js','src/experimental/i80386-at-machine.js',
+  'scripts/lib/i80386-source-inventory.mjs',
   'roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin',
   'docs/receipts/2026-09-30-i80386-bochs-cpu3-native-memory-map-capture.json',
 ];
@@ -253,7 +255,7 @@ function armProof(arm,name){
   equal(requestKinds.filter(x=>x==='QUANTUM').length,4041,at+'.RPC quanta');
   equal(requestKinds.filter(x=>x==='NATIVE_TICK').length,4043,at+'.RPC native ticks');
   equal(requestKinds.filter(x=>x==='ACK').length,1,at+'.RPC PIC ACK');
-  return {hostJournal:host.journal,finalHost:host.final,
+  return {activation:native.activation,seed:native.seed,hostJournal:host.journal,finalHost:host.final,
     selectedState:native.finalState,ramFinal:native.ramFinal,
     logicalEvents:events.filter(e=>!['ATTEMPT','CMD','RPC_REQ','RPC_REP','EXEC'].includes(e.tag))
       .map(({ordinal,causeOrdinal,...e})=>e),
@@ -440,7 +442,7 @@ export function assertNativeDeviceQuantaProof(report){
   const reference=evidence.continuous;
   for(const name of ['budget1','budget2','budget257']){
     const observed=evidence[name];
-    for(const field of ['hostJournal','finalHost','selectedState','ramFinal',
+    for(const field of ['activation','seed','hostJournal','finalHost','selectedState','ramFinal',
       'logicalEvents','writes','quantumJournal','nativeTickJournal'])
       equal(observed[field],reference[field],`arms.${name}.${field}`);
   }
