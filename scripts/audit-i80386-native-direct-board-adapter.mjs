@@ -1,0 +1,94 @@
+/** Explicit direct/FIFO callback projection; raw input records remain retained. */
+import assert from 'node:assert/strict';
+const plain=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
+const hex=bytes=>Buffer.from(bytes).toString('hex');
+export function fifoCallback(record){
+ const {request:r,reply:p,before,after}=record;
+ const operation={READ:'read',WRITE:'write',PAGE:'page',QUANTUM:'quantum',NATIVE_TICK:'nativeTick',PIO_OUT:'outPort',ACK:'ack'}[r.operation];
+ assert.ok(operation,'unsupported FIFO callback operation');
+ const args=r.operation==='READ'?[r.arg0,r.arg1,null]:r.operation==='WRITE'?[r.arg0,r.arg1,[...Buffer.from(r.payload,'hex')]]:r.operation==='PAGE'?[r.arg0]:r.operation==='QUANTUM'?[r.arg0]:r.operation==='PIO_OUT'?[r.arg0,r.arg1,r.arg2]:[];
+ let result=p.value;
+ if(['READ','WRITE'].includes(r.operation))result={hex:p.hex,decoded:p.decoded,kind:p.class,effect:p.effect,generation:p.generation,mappingEpoch:p.mappingEpoch,boardA20:p.boardA20};
+ if(r.operation==='PAGE')result={hex:p.chunks.map(c=>c.hex).join(''),raw:r.arg0,decoded:p.decoded,kind:p.class,generation:p.generation,mappingEpoch:p.mappingEpoch,boardA20:p.boardA20,sha256:p.sha256};
+ if(r.operation==='PIO_OUT')result={value:p.value,boardA20:p.boardA20,mappingEpoch:p.mappingEpoch};
+ return {operation,args,result,before,after};
+}
+export function directCallback(event){
+ const value=plain(event),r=event.result;
+ if(event.operation==='write')value.args=[event.args[0],event.args[1],[...event.args[2]]];
+ if(['read','write','page'].includes(event.operation)){value.result={...r,hex:hex(r.bytes)};delete value.result.bytes;}
+ return value;
+}
+export function assertDirectCallbackParity(direct,fifo){
+ assert.equal(direct.status,'UNQUALIFIED_DIRECT_DIAGNOSTIC');
+ assert.ok(direct.capture,'ordered callback parity requires actual capture');
+ const requests=fifo.host.journal.filter(event=>event.kind==='request').map(fifoCallback);
+ assert.deepEqual(direct.callbacks.map(directCallback),plain(requests),'full ordered callback arguments/results and CPU-independent whole board checkpoints');
+ assert.deepEqual(direct.settled,plain(fifo.host.final.after),'settled whole board, mapping, generations and ledger');
+ return {callbacks:requests.length,fullOrderedCallbackParity:true,nativeCpuParity:false,scope:'callback and board comparison only; CPU snapshots require separately authenticated native trace comparison'};
+}
+export function assertCaptureModeParity(captured,uncaptured){
+ assert.equal(captured.capture,true);assert.equal(uncaptured.capture,false);
+ for(const field of ['reset','final','checkpoints','settled','ramSha256','quanta'])assert.deepEqual(captured[field],uncaptured[field],`capture mode parity: ${field}`);
+ assert.equal(uncaptured.callbacks.length,0,'capture disabled callback census');
+}
+
+/** Each mode gets a fresh process because native initialization is terminal. */
+export async function collectDirectMatrix({addon,sha256,configuration,directory}){
+ const {mkdirSync,writeFileSync,readFileSync}=await import('node:fs');
+ const {resolve,join}=await import('node:path');
+ const {spawnSync}=await import('node:child_process');
+ const {fileURLToPath}=await import('node:url');
+ mkdirSync(directory,{recursive:false});
+ const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),matrix={};
+ for(const [mode,quanta] of Object.entries({continuous:300,budget1:1,budget2:2,budget257:257})){
+  matrix[mode]={};
+  for(const capture of [true,false]){
+   const stem=join(resolve(directory),`${mode}-capture-${capture}`),input=stem+'.input.json',output=stem+'.json';
+   writeFileSync(input,JSON.stringify({addon,sha256,configuration,capture,quanta,control:'run',output}));
+   const child=spawnSync(process.execPath,[entry,input],{encoding:'utf8',timeout:120000,maxBuffer:64*1024*1024});
+   writeFileSync(stem+'.stdout',child.stdout??'');writeFileSync(stem+'.stderr',child.stderr??'');
+   writeFileSync(stem+'.exit.json',JSON.stringify({status:child.status,signal:child.signal,error:child.error?.message??null}));
+   assert.equal(child.error,undefined,'child timeout/spawn failure');assert.equal(child.signal,null,'direct child signal');assert.equal(child.status,0,'direct child exit');
+   matrix[mode][String(capture)]=JSON.parse(readFileSync(output,'utf8'));
+  }
+  assertCaptureModeParity(matrix[mode].true,matrix[mode].false);
+ }
+ return matrix;
+}
+export function assertFatalControlWitness(control,witness){
+ const causes={'bad-page-sha':'direct-page-sha256','callback-throw':'direct-page-callback','callback-reentry':'direct-page-callback'};
+ assert.ok(Object.hasOwn(causes,control),'unknown fatal control');
+ assert.equal(witness.error,null,'fatal control timeout/spawn is not native rejection');
+ assert.equal(witness.signal,'SIGABRT','native fatal control must abort its child');
+ assert.match(witness.stderr,new RegExp(`(?:^|\\n)BWSD1\\tFAIL\\t${causes[control]}(?:\\n|$)`),'exact source-owned native fatal cause');
+}
+export async function collectDirectControls({addon,sha256,configuration,directory}){
+ const {mkdirSync,writeFileSync}=await import('node:fs');const {join,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
+ mkdirSync(directory,{recursive:false});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results={};
+ for(const control of ['bad-page-sha','callback-throw','callback-reentry','second-create']){
+  const stem=join(resolve(directory),control),input=stem+'.input.json';writeFileSync(input,JSON.stringify({addon,sha256,configuration,control,capture:false,quanta:300,output:stem+'.json'}));
+  const child=spawnSync(process.execPath,[entry,input],{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});const witness={status:child.status,signal:child.signal,error:child.error?.message??null,stderr:child.stderr??'',stdout:child.stdout??''};writeFileSync(stem+'.witness.json',JSON.stringify(witness));
+  if(control==='second-create'){assert.equal(witness.error,null);assert.equal(witness.signal,null);assert.equal(witness.status,0);}else assertFatalControlWitness(control,witness);
+  results[control]=witness;
+ }
+ return results;
+}
+// Field offsets copied from the frozen qualified gate's combinedOrdinalIndex.
+// They remove journal bookkeeping only; all remaining semantic fields stay exact.
+const ordinalIndex=Object.freeze({CMD:5,ATTEMPT:4,PREFETCH:3,RPC_REQ:8,RPC_REP:4,RPC_MEM:9,RPC_PAGE:8,RPC_PIO:6,COMMIT:8,ALIAS_UPDATE:9,STAMP:6,PREFETCH_INVALIDATE:7,TLB_INVALIDATE:4,TLB_OBSERVED:7,MAP_COMMIT:6,COHERENCE:6,BOUNDARY:5,FAULT_BEGIN:7,FAULT_DELIVERED:8,IRQ_ACK:5,IRQ_DELIVERED:6,IRQ_LINE:3,QUANTUM:9,NATIVE_TICK:4,MEM:7,EXEC:4,PORT:5,HALT_IDLE:6,POST_STATE:22,POST_EXTRA:22,POST_SEG:17,POST_SYS:17,POST_DR:8});
+export function nativeSemanticRows(raw,prefix){
+ assert.ok(['BWSD1','BWS12'].includes(prefix));
+ const result=[];
+ for(const line of raw.split('\n')){
+  if(!line.startsWith(prefix+'\t'))continue;
+  const [,tag,...fields]=line.split('\t');
+  if(['CMD','SLICE','FINAL','PROBE'].includes(tag)||tag.startsWith('RPC_'))continue;
+  const index=ordinalIndex[tag];if(index!==undefined){assert.ok(fields.length>index,`missing ${tag} ordinal`);fields.splice(index,1);}
+  result.push({tag,fields});
+ }
+ assert.ok(result.length,'native semantic trace missing');return result;
+}
+export function assertNativeTraceParity(directRaw,fifoRaw){
+ assert.deepEqual(nativeSemanticRows(directRaw,'BWSD1'),nativeSemanticRows(fifoRaw,'BWS12'),'all raw native CPU/cache/bus/fault/IRQ fields and ordering by identical mode');
+}
