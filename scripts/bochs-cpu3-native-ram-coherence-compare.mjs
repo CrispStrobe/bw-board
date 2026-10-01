@@ -136,6 +136,8 @@ function coherenceProof(native,requests,replies){
   const cache=new Map(),snapshots=new Map(),pending=[];let expectedAliases=[],aliasCount=0,epoch=0,a20=1,mapping=null,commits=0,writeClock=null;
   const key=(raw,e)=>`${raw}:${e}`;
   for(const e of native.events){
+    if(writeClock)check(['COMMIT','ALIAS_UPDATE','COHERENCE'].includes(e.tag),'explicit flush must complete before any next CPU/bus event');
+    if(['POST_STATE','NATIVE_TICK'].includes(e.tag))check(!pending.length&&!mapping&&!expectedAliases.length&&!writeClock,'committed instruction requires completed coherence flush');
     if(e.tag==='RPC_PAGE'){
       const {request,reply}=bySeq.get(e.seq);equal(reply.mappingEpoch,epoch,'page belongs to active mapping');
       const k=key(request.arg0,epoch);check(!cache.has(k),'persistent page slot admitted once per epoch');
@@ -176,17 +178,17 @@ function coherenceProof(native,requests,replies){
       const post=native.events.find(x=>x.tag==='POST_STATE'&&x.successfulQuanta===e.successfulQuanta);
       check(post&&e.ordinal<post.ordinal,'coherence completes before post-state and next fetch');
     }else if(e.tag==='EXEC'){
-      check(!pending.length&&!mapping&&!expectedAliases.length,'execute pointer never published while coherence pending');
+      check(!pending.length&&!mapping&&!expectedAliases.length&&!writeClock,'execute pointer never published while coherence pending');
       const page=cache.get(key(e.rawPage,epoch));check(page,'execute pointer requires current verified page');
       equal([e.decodedPage,e.class,e.generation,e.sha256,e.mappingEpoch],
         [page.decoded,kindNames[page.kind],page.generation,page.sha,epoch],'generation-bound execute admission');
     }else if(e.tag==='ATTEMPT'){
-      check(!pending.length&&!mapping&&!expectedAliases.length,'instruction begins only after committed coherence');
+      check(!pending.length&&!mapping&&!expectedAliases.length&&!writeClock,'instruction begins only after committed coherence');
       const page=cache.get(key((e.physicalPC&0xfffff000)>>>0,epoch));check(page,'instruction uses current epoch page');
       snapshots.set(e.ordinal,{bytes:Buffer.from(page.bytes)});
     }
   }
-  check(!pending.length&&!mapping&&!expectedAliases.length&&aliasCount===0,'terminal coherence clean');
+  check(!pending.length&&!mapping&&!expectedAliases.length&&aliasCount===0&&!writeClock,'terminal coherence clean');
   equal(epoch,2,'actual OFF then ON mapping transitions');equal(a20,1,'terminal actual board A20 ON');
   equal(commits,requests.filter((r,i)=>r.operation==='WRITE'&&replies[i].class===1).length,'every actual RAM acknowledgement committed');
   check([...cache.values()].some(p=>p.kind===1&&p.raw===0x7000)&&[...cache.values()].some(p=>p.kind===1&&p.raw===0x107000),'actual low and high executable admissions');
