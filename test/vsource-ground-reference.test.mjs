@@ -183,3 +183,66 @@ describe('independent ideal-source self-constraint consistency', () => {
     assert.throws(() => changing.advanceTo(250_000_000n), /constraint VBAD/);
   });
 });
+
+describe('finite-resistance source self-short currents', () => {
+  it('preserves signed short current, unrelated load current and live voltage on ground/live/merged nodes', () => {
+    for (const volts of [5, -5, 0]) for (const placement of [{}, { live: true }, { merged: true }]) {
+      const fixture = selfShort(volts, { ...placement, params: { rInternal: 10 } });
+      const before = structuredClone(fixture);
+      const result = solveShort(fixture);
+      assert.equal(result.converged, true);
+      assert.ok(Math.abs(result.nodeVoltages.get('live') - 1) < 1e-12);
+      assert.equal(current(result, 'VBAD', 'pos'), volts / 10);
+      assert.equal(current(result, 'VBAD', 'neg'), -volts / 10);
+      assert.equal(current(result, 'VBAD', 'pos') + current(result, 'VBAD', 'neg'), 0);
+      assert.ok(Math.abs(current(result, 'VGOOD', 'pos') - 0.001) < 1e-12,
+        'same-node circulation cannot load the unrelated 1 V supply');
+      assert.ok(Math.abs(current(result, 'VGOOD', 'pos') + current(result, 'R1', 'a')) < 1e-12);
+      assert.deepEqual(fixture, before);
+    }
+  });
+
+  it('solves an all-ground resistive row and preserves the power-off zero-node path', () => {
+    for (const merged of [false, true]) {
+      const fixture = selfShort(5, { alone: true, merged, params: { rInternal: 10 } });
+      const result = solveShort(fixture);
+      assert.equal(result.converged, true);
+      assert.equal(current(result, 'VBAD', 'pos'), 0.5);
+      const off = solveShort(fixture, { powerOff: true });
+      assert.equal(off.branchCurrents.size, 0);
+    }
+  });
+
+  it('retains controls and existing current-limit selection with finite internal resistance', () => {
+    for (const placement of [{}, { live: true }, { alone: true }]) {
+      const fixture = selfShort(5, { ...placement, params: { rInternal: 10 } });
+      const adjusted = solveShort(fixture, {}, new Map([['VBAD', -2]]));
+      assert.equal(current(adjusted, 'VBAD', 'pos'), -0.2);
+      const limited = selfShort(5, { ...placement, params: { rInternal: 10, iLimit: 0.1 } });
+      const result = solveShort(limited);
+      assert.equal(result.converged, true);
+      assert.ok(Math.abs(current(result, 'VBAD', 'pos') - 0.1) < 1e-12);
+      if (!placement.alone) assert.ok(Math.abs(current(result, 'VGOOD', 'pos') - 0.001) < 1e-12);
+    }
+  });
+
+  it('publishes the actual current through public Board observers and meter means', () => {
+    for (const live of [false, true]) {
+      const fixture = selfShort(5, { live, params: { rInternal: 10 } });
+      const board = new BoardImpl(5);
+      board.setNetlist(fixture.parts, fixture.nets);
+      assert.equal(board.branchCurrent('VBAD', 'pos'), 0.5);
+      assert.ok(Math.abs(board.branchCurrent('VGOOD', 'pos') - 0.001) < 1e-12);
+      assert.equal(board.biasPointVoltages().converged, true);
+      board.meterCurrent('VBAD', 'pos');
+      board.meterCurrent('VBAD', 'neg');
+      board.meterCurrent('VGOOD', 'pos');
+      for (const at of [100_000n, 700_000n, 1_000_000n]) {
+        board.advanceTo(at);
+        assert.ok(Math.abs(board.meterCurrent('VBAD', 'pos') - 0.5) < 1e-12);
+        assert.ok(Math.abs(board.meterCurrent('VBAD', 'neg') + 0.5) < 1e-12);
+        assert.ok(Math.abs(board.meterCurrent('VGOOD', 'pos') - 0.001) < 1e-12);
+      }
+    }
+  });
+});

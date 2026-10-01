@@ -1,4 +1,4 @@
-2026-10-01 Resistive-source self-constraint — CLAIM, Codex bwcx `/root`.
+2026-10-01 Resistive-source self-constraint — DONE candidate, Codex bwcx `/root`.
 Reuse clean closed worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
 new branch `lane/resistive-source-self-constraint`, exact base
 `28dcfee95906f113899910d12a7a1704668e5759`. Five-path envelope: this row;
@@ -16,6 +16,15 @@ Prove signed currents, KCL, all-ground, merged grounds, OP/live conventions,
 power-off and current-limit compatibility; no invented ideal-short CC model,
 generic cycles, source semantics, tolerance/budget, Board/CPU/workflow,
 CUI/Lite package/pin or corpus changes. One exact hosted qualification.
+Final focused/adjacent proof: 95/95 with zero skips, including four signed
+ground/live Thevenin equivalent ngspice controls inside the existing OP gate.
+Actual public meter means retain 0.5 A circulation and 1 mA unrelated load
+across three advances; strict OP is observational and uses its documented
+opposite terminal-current convention. Three isolated buildable mutants red:
+lost resistive allocation (5), lost incidence cancellation (4), premature
+zero-node return (2). Restoration syntax/hash/diff and focused 25/25 green;
+MNA blob `6a75099a782bce11f412820a1cc5ee59d949c616`. No heating or ideal
+zero-resistance current-limit short claim. Hosted qualification precedes FF.
 
 2026-10-01 Independent ideal-source self-constraint — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
