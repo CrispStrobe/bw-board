@@ -1,0 +1,12 @@
+{
+  "status": "native-device-quanta-proof-pass",
+  "nativeTicks": 4043,
+  "successfulQuanta": 4041,
+  "boardCycles": 24246,
+  "slices": {
+    "continuous": 21,
+    "budget1": 4045,
+    "budget2": 2026,
+    "budget257": 35
+  }
+}

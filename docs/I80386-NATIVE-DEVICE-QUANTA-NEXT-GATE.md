@@ -1,6 +1,6 @@
 # Native 386 successful-work clock gate
 
-**Status: implementation contract, not an execution or performance result.**
+**Original status: implementation contract.** The [subsequent successful-work proof](I80386-NATIVE-DEVICE-QUANTA-SELF-PARITY.md) now passes and has been independently reproduced. This remains the design record; full board/WASM integration and performance qualification are unfinished.
 The [ordinary-instruction PIT/PIC proof](I80386-NATIVE-DEVICE-SELF-PARITY.md)
 landed in PR #181, merge `bad619572be8c8ac9488696ce825383284f01f30`.
 It explicitly rejects REP and faults. The next separate prototype must connect
