@@ -19,6 +19,8 @@ const equal=(a,b,at)=>check(isDeepStrictEqual(a,b),at,'fixed expectation or pari
 const digest=(x,at)=>check(typeof x==='string'&&shaPattern.test(x),at,'SHA-256 required');
 
 const fixedInput={
+  binarySha256:'66d2b24b00afa9bf2614799b0f8fd37b32788f5b6885bcc1ce9f536810ffd702',
+  romIncludeSha256:'1e1d8f080834396ed15e1344f39ad2a8bde937260d3289eb91a3862c4687acb4',
   bochsRevision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',
   imageSha256:'57f0247a8c198cd3aa0aa33b35e80d303eb3ae9ca50483cd22917e1d6d6b1d3c',
   biosSha256:'6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac',
@@ -76,6 +78,12 @@ function sourceProof(source){
     'docs/receipts/2026-09-30-i80386-bochs-cpu3-native-memory-map-capture.json'],
     '7f5edc6639491b49b015784dda968e4786a271f71551e50a24b3350b30f5591a',
     'source.predecessor receipt');
+  equal(source.sourceHashes['scripts/bochs-cpu3-native-device-quanta/runtime.inc'],
+    '506980b4a62f11e0f5c5d841d0a75e9d0bf6b9d208f95d8a9342b3f283c16b31',
+    'source.qualified compiled runtime');
+  // Other source and artifact bytes are authenticated by the runner's actual
+  // file hashing before and after capture; this pure checker validates metadata
+  // relationships and the explicitly qualified native build identities.
   equal(source.timing,{boardHz:6_000_000,clocksPerQuantum:6,pitHz:1_193_182,
     biosIps:10_000_000,hostEpoch:'fresh-zero-at-owned-setup'},'source.clock ownership');
 }
