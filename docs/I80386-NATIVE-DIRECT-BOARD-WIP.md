@@ -23,7 +23,13 @@ Source `9b3ce7bc561e42125d2afe6c390c95213ff21ebe` fixes that check. Pending
 mapping permits only an ordinary quantum, checked before the host callback;
 its reply must report the staged next A20 state and epoch. Native publication
 still occurs at the original instruction boundary. A separate second build
-is underway. Original first-build and failed-run artifacts are retained.
+passes its capture-disabled smoke run. Its addon SHA-256 is
+`f2aff576397a8b3cc6544a93fc8551403fc66efc1184146b857cba5295a871cb`.
+The run completes 194 native ticks, 192 successful quanta and 1,156 board clocks,
+with marker `RPGC001`, two mapping epochs and zero JavaScript CPU cycles.
+Independent root checks match its complete RAM hash and callback counts to
+the qualified FIFO receipt. Detailed ordered parity remains pending. Original
+first-build and failed-run artifacts are retained.
 
 The adapter uses persistent native execution buffers, synchronous calls on the
 initializing thread, and one terminal initialization lifetime per loaded image.
