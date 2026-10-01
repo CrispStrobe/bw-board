@@ -123,6 +123,41 @@ functional guest assertions must still pass for both engines. For candidate
 wasm-bindgen cast-intrinsic comments, but the probe does not normalize or rewrite
 either module or silently reuse one engine's glue for the other.
 
+## Source-level block-payload experiment
+
+Candidate `08ad74b78f2dfbd353f6b82b038415d9f55cd780` keeps the cached Cortex-M
+block in place and copies only the instruction being executed. It leaves guest,
+observer/debugger/IRQ/scheduler guards and the reference fallback intact.
+Local Cortex-M tests passed 154/154 with zero skips (including the 19 discovery
+tests and a full-capacity, rotated-entry reference-step regression).
+
+[Native exact-base A/B/B/A](https://github.com/CrispStrobe/labwired-core/actions/runs/36828554051)
+observed +5.23% on one Xeon Platinum 8573C. All ten candidate windows exceeded
+1×. [Native CorePerf](https://github.com/CrispStrobe/labwired-core/actions/runs/36828556801)
+passed all 40 spin targets and reported no regressions, without waivers.
+These native results do not qualify WASM or realistic workloads on all boards.
+
+[Hosted WASM A/B/B/A](https://github.com/CrispStrobe/bw-board/actions/runs/36830478908)
+used the exact base `4d944d2d9ec320f7acd25b54cc41a50b850d6788` and candidate
+on one EPYC 7763 / Node 22 runner, explicitly selecting each original build's
+paired glue. The completed diagnostic is green, **not** its performance gate:
+baseline pooled median 0.680217×, candidate 0.683885× (+0.54%), all twenty
+windows below 1×. All four functional invocations passed with zero skips.
+There is no demonstrated meaningful WASM speedup.
+
+[Fresh candidate qualification](https://github.com/CrispStrobe/bw-board/actions/runs/36828563070)
+separately passed both builds, determinism, existing integration and functional
+motion assertions, but all five RTx windows failed (median 0.824684×, minimum
+0.818189× on EPYC 9V74). Publication was skipped. Do not compare that CPU's
+absolute throughput against earlier EPYC 7763 measurements as a gain estimate.
+
+[Retained raw receipts](receipts/2026-10-01-cortex-m-block-payload/README.md)
+bind the source commits, original artifacts and unchanged guest. A noisy local
+VPS diagnostic is retained separately with its concurrent-test limitation; it
+is not the headline comparison. Core PR 142 stays a draft: WASM remains below
+1×, and seven silicon captures predate the shared CPU change. No new physical
+capture was obtained, no drift acknowledgement refreshed and no pin promoted.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is

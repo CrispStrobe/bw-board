@@ -346,6 +346,21 @@ with Binaryen `-O3` reduced WASM size by about 11.2%, but showed no clear
 throughput gain on the shared VPS (0.365510× baseline / 0.367560× candidate
 pooled medians). All twenty windows failed 1×; no optimization was promoted.
 
+The unmerged [Cortex-M block-payload candidate](https://github.com/CrispStrobe/labwired-core/pull/142)
+`08ad74b7` avoids copying a complete cached instruction block on each call.
+Exact-base native A/B/B/A on one Xeon Platinum 8573C observed **+5.23%**
+(1.237437× baseline / 1.302110× candidate median-of-medians); all ten candidate
+windows passed 1×. Its native CorePerf spin gate also passed all 40 targets,
+with no reported performance regressions. These are not browser measurements.
+The controlled NODEJS WASM A/B/B/A on one EPYC 7763 showed **no meaningful gain**:
+0.680217× baseline / 0.683885× candidate pooled medians (+0.54%); **all twenty
+windows failed 1×**. A separate fresh candidate qualification on EPYC 9V74
+also failed (0.824684× median / 0.818189× minimum). Different runner CPUs must
+not be compared as evidence of a speedup. [Raw results and context](docs/receipts/2026-10-01-cortex-m-block-payload/README.md)
+are retained. The shared CPU change also triggers seven silicon-capture drift
+checks; neither those checks nor the WASM floor have been waived. The candidate
+is not merged or promoted; deployed pins are unchanged and CP13 remains open.
+
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
 at `ce60a499` also passed native board/model, input-routing and RTx gates.
 Its selected motion workload measured **1.030645× median / 1.027010× minimum**;
