@@ -2836,3 +2836,24 @@ current-limit inference each red a named numerical consequence independently.
 The last mutation is exercised against a 10-ohm load referred to 2 V, proving
 the limiter does not silently assume that every load returns to ground.
 Exact-head CI and Harris qualification are the landing gate.
+
+2026-10-01 DONE (qualified, awaiting exact-head CI/landing) — Astra/Sol native
+CPU3 cold entry on the actual AT board. Two Sol agents owned the new native
+shim/transform/preparer and host/protocol/comparator/runner; the first later
+owned actual report mutation tests. Root audited, built serially, reproduced
+and checked all external artifacts. Qualification source c49d5731 binds 58
+inputs; the native hardware-reset source is unchanged. Four budgets pass 49
+instructions/49 N/49 Q/298 board clocks, with 958 ordered logical native events,
+5 data-read/15 attempted-write/7 E9 bytes, two verified ROM page fills, zero
+fallbacks and no JS CPU steps. Eleven API contracts, 12 native abort guards and
+16 transport abort cases pass; 79 focused tests pass with zero skips. Final/root
+captures differ only in log-directory provenance and agree in complete
+native/board/RPC/rejection semantics. A failed first compilation was retained;
+the corrected native candidate was freshly prepared and built as r2.
+Receipts/limits: docs/I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md. The initial
+actual dbc63803 report is retained separately for 40 mandatory baseline/mutation
+tests. Archived source hashes remain immutable as this WIP evolves. Scope
+excludes analog/FPGA/schematics and licensed media. Architectural reset parity,
+RAM execution/self-modification/A20 transitions, actual-board REP/PF/PIT,
+production CLI/GUI/WASM native backend, Windows enhanced/full AT/10×/RTx remain
+unfinished. Next owned item is a free executable-RAM/A20/cache-coherence gate.

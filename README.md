@@ -554,15 +554,23 @@ now separates REP/ordinary completion charges from native fault ticks. All
 four budgets agree through an active PIT edge, two repaired page faults,
 zero-count/final REP charging and actual PIC acknowledgment. Independent
 reproduction, twelve API probes and eighteen abort guards passed; 817 local
-386 tests passed with six optional skips. Next is [cold reset and actual board
-ownership](docs/I80386-NATIVE-COLD-RESET-NEXT-GATE.md). This does not yet
+386 tests passed with six optional skips. Its next checkpoint is now qualified
+by the [native cold entry on the actual board](docs/I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md). This does not yet
 establish a shipped native/WASM backend, Windows enhanced mode, or new RTx.
 
 The [actual-board cold-reset oracle](docs/I80386-JS-COLD-RESET-ORACLE.md) now
 executes a free MIT reset ROM from `FFFFFFF0`, preserving guest reset-state
 witnesses, RAM/ROM/open-bus effects and terminal chip debt. Its 23 tests pass
 and an independent capture is byte-identical. This is the current JavaScript
-compatibility profile; native cold-reset/board ownership remains next.
+compatibility profile; its recorded architectural reset differences remain visible.
+
+The [native actual-board cold-reset gate](docs/I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md)
+now executes that ROM before any Bochs BIOS instruction, with board-owned RAM,
+ROM/open bus, ports and device clocks. All four budgets and an independent
+reproduction agree through 49 instructions and 298 functional board clocks;
+12 native guards and 16 transport rejections pass. The 79 focused tests have
+zero skips. Architectural reset parity remains false. Next are executable RAM,
+self-modifying code and A20 cache invalidation; this is not a new speed/RTx result.
 
 ## Windows 3.1 reference comparison
 
