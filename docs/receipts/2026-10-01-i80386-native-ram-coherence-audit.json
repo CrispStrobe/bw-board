@@ -1,0 +1,473 @@
+{
+  "status": "qualified-bounded-actual-board-ram-smc-a20",
+  "measuredSourceRevision": "93020e30a16fe6327ab5edc99a55c7688d897bae",
+  "measuredSourceInputs": 58,
+  "capture": {
+    "bytes": 60269199,
+    "sha256": "55f3330db564f86a265a478b106ffdbfddb921d35234480a8502cf8aa817127c",
+    "gzipBytes": 1035203,
+    "gzipSha256": "66ffbfd2d38ec33aacfa17310ec986e4ad47d8ad60060a707c3fd0db6fe5151a"
+  },
+  "independentRawBackingAliasAudit": {
+    "status": "root-independent-artifact-source-raw-clock-backing-alias-and-budget-audit-pass",
+    "captureSha256": "55f3330db564f86a265a478b106ffdbfddb921d35234480a8502cf8aa817127c",
+    "sourceRevision": "93020e30a16fe6327ab5edc99a55c7688d897bae",
+    "sourceInputs": 58,
+    "artifactFiles": 201,
+    "arms": {
+      "continuous": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1776,
+        "logicalEvents": 1761,
+        "rawIdle": 2,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      },
+      "budget1": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1838,
+        "logicalEvents": 1761,
+        "rawIdle": 1,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      },
+      "budget2": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1802,
+        "logicalEvents": 1761,
+        "rawIdle": 1,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      },
+      "budget257": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1776,
+        "logicalEvents": 1761,
+        "rawIdle": 2,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      }
+    }
+  },
+  "independentRepeatAudit": {
+    "status": "root-independent-artifact-source-raw-clock-backing-alias-and-budget-audit-pass",
+    "captureSha256": "c80acbd55a7e459924fbfc46864f8903eee59c1994bbb0f6d89e96d4673aac7f",
+    "sourceRevision": "93020e30a16fe6327ab5edc99a55c7688d897bae",
+    "sourceInputs": 58,
+    "artifactFiles": 201,
+    "arms": {
+      "continuous": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1776,
+        "logicalEvents": 1761,
+        "rawIdle": 2,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      },
+      "budget1": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1838,
+        "logicalEvents": 1761,
+        "rawIdle": 1,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      },
+      "budget2": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1802,
+        "logicalEvents": 1761,
+        "rawIdle": 1,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      },
+      "budget257": {
+        "nativeTicks": 75,
+        "successfulQuanta": 75,
+        "boardCycles": 454,
+        "rawEvents": 1776,
+        "logicalEvents": 1761,
+        "rawIdle": 2,
+        "cacheCommits": 31,
+        "aliasUpdates": 4,
+        "coherenceFlushes": 25,
+        "canonicalSha256": "08f5a81c7f381c6ccff4f08c7aa488a11cad6fc28d2f800cf5773202899d3105"
+      }
+    }
+  },
+  "independentCpuBoardBusComparison": {
+    "status": "root-independent-named-cpu-whole-board-and-exact-call-bus-comparison-pass",
+    "captureSha256": "55f3330db564f86a265a478b106ffdbfddb921d35234480a8502cf8aa817127c",
+    "arms": {
+      "continuous": {
+        "cpuCheckpoints": 75,
+        "fullBoardCheckpoints": 75,
+        "orderedDataBytes": 102,
+        "onlyPredeclaredCallOrders": [
+          17,
+          22,
+          30,
+          34,
+          39,
+          43,
+          51,
+          56
+        ],
+        "genericSortingOrPermutation": false
+      },
+      "budget1": {
+        "cpuCheckpoints": 75,
+        "fullBoardCheckpoints": 75,
+        "orderedDataBytes": 102,
+        "onlyPredeclaredCallOrders": [
+          17,
+          22,
+          30,
+          34,
+          39,
+          43,
+          51,
+          56
+        ],
+        "genericSortingOrPermutation": false
+      },
+      "budget2": {
+        "cpuCheckpoints": 75,
+        "fullBoardCheckpoints": 75,
+        "orderedDataBytes": 102,
+        "onlyPredeclaredCallOrders": [
+          17,
+          22,
+          30,
+          34,
+          39,
+          43,
+          51,
+          56
+        ],
+        "genericSortingOrPermutation": false
+      },
+      "budget257": {
+        "cpuCheckpoints": 75,
+        "fullBoardCheckpoints": 75,
+        "orderedDataBytes": 102,
+        "onlyPredeclaredCallOrders": [
+          17,
+          22,
+          30,
+          34,
+          39,
+          43,
+          51,
+          56
+        ],
+        "genericSortingOrPermutation": false
+      }
+    },
+    "scope": "Compares actual Bochs CPU3 against actual published JavaScript baseline with named reset and eight call-order differences; not a third independent CPU implementation."
+  },
+  "freshCaptureComparison": {
+    "status": "two-fresh-actual-captures-native-host-rpc-and-rejection-parity-pass",
+    "armExactMatches": {
+      "continuous": {
+        "native": true,
+        "host": true,
+        "rpc": true
+      },
+      "budget1": {
+        "native": true,
+        "host": true,
+        "rpc": true
+      },
+      "budget2": {
+        "native": true,
+        "host": true,
+        "rpc": true
+      },
+      "budget257": {
+        "native": true,
+        "host": true,
+        "rpc": true
+      }
+    },
+    "guards": 16,
+    "transportRejections": 20,
+    "resultByteIdentical": true,
+    "wholeCaptureByteIdentical": false,
+    "reason": "Different retained capture directory changes bochsrc log path, diagnostics and artifact hashes; native state, actual board journals and dedicated RPC transcripts compare exactly."
+  },
+  "buildAudit": {
+    "status": "root-measured-native-r3-build-audit-pass",
+    "binarySha256": "7921ba0624c906c9a957870261618964f8a78a691a22ad4fb9c652ffc641b74e",
+    "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c",
+    "runtimeSha256": "e041c7e6e62144bdd6dfc03de4cccab3e1019b6a7769e340c52228c880aad55c",
+    "requiredFlags": {
+      "BX_CPU_LEVEL": 3,
+      "BX_SUPPORT_SMP": 0,
+      "BX_DEBUGGER": 0,
+      "BX_DEBUGGER_GUI": 0,
+      "BX_SUPPORT_REPEAT_SPEEDUPS": 0,
+      "BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS": 0,
+      "BX_USE_IDLE_HACK": 0
+    },
+    "patchedFiles": 12,
+    "build": "/mnt/volume1/tmp-astra/bochs-cpu3-native-ram-coherence-r3-20261001"
+  },
+  "host": {
+    "hostname": "ubuntu-2gb-fsn1-1",
+    "kernel": "6.8.0-124-generic",
+    "architecture": "x86_64",
+    "node": "v20.20.2",
+    "cpu": {
+      "lscpu": [
+        {
+          "field": "Architecture:",
+          "data": "x86_64"
+        },
+        {
+          "field": "CPU op-mode(s):",
+          "data": "32-bit, 64-bit"
+        },
+        {
+          "field": "Address sizes:",
+          "data": "40 bits physical, 48 bits virtual"
+        },
+        {
+          "field": "Byte Order:",
+          "data": "Little Endian"
+        },
+        {
+          "field": "CPU(s):",
+          "data": "4"
+        },
+        {
+          "field": "On-line CPU(s) list:",
+          "data": "0-3"
+        },
+        {
+          "field": "Vendor ID:",
+          "data": "GenuineIntel"
+        },
+        {
+          "field": "Model name:",
+          "data": "Intel Xeon Processor (Skylake, IBRS, no TSX)"
+        },
+        {
+          "field": "CPU family:",
+          "data": "6"
+        },
+        {
+          "field": "Model:",
+          "data": "85"
+        },
+        {
+          "field": "Thread(s) per core:",
+          "data": "1"
+        },
+        {
+          "field": "Core(s) per socket:",
+          "data": "4"
+        },
+        {
+          "field": "Socket(s):",
+          "data": "1"
+        },
+        {
+          "field": "Stepping:",
+          "data": "4"
+        },
+        {
+          "field": "BogoMIPS:",
+          "data": "4589.20"
+        },
+        {
+          "field": "Flags:",
+          "data": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault pti ssbd ibrs ibpb fsgsbase bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves arat pku ospke md_clear"
+        },
+        {
+          "field": "Hypervisor vendor:",
+          "data": "KVM"
+        },
+        {
+          "field": "Virtualization type:",
+          "data": "full"
+        },
+        {
+          "field": "L1d cache:",
+          "data": "128 KiB (4 instances)"
+        },
+        {
+          "field": "L1i cache:",
+          "data": "128 KiB (4 instances)"
+        },
+        {
+          "field": "L2 cache:",
+          "data": "16 MiB (4 instances)"
+        },
+        {
+          "field": "L3 cache:",
+          "data": "16 MiB (1 instance)"
+        },
+        {
+          "field": "NUMA node(s):",
+          "data": "1"
+        },
+        {
+          "field": "NUMA node0 CPU(s):",
+          "data": "0-3"
+        },
+        {
+          "field": "Vulnerability Gather data sampling:",
+          "data": "Unknown: Dependent on hypervisor status"
+        },
+        {
+          "field": "Vulnerability Indirect target selection:",
+          "data": "Mitigation; Aligned branch/return thunks"
+        },
+        {
+          "field": "Vulnerability Itlb multihit:",
+          "data": "KVM: Mitigation: VMX unsupported"
+        },
+        {
+          "field": "Vulnerability L1tf:",
+          "data": "Mitigation; PTE Inversion"
+        },
+        {
+          "field": "Vulnerability Mds:",
+          "data": "Mitigation; Clear CPU buffers; SMT Host state unknown"
+        },
+        {
+          "field": "Vulnerability Meltdown:",
+          "data": "Mitigation; PTI"
+        },
+        {
+          "field": "Vulnerability Mmio stale data:",
+          "data": "Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown"
+        },
+        {
+          "field": "Vulnerability Reg file data sampling:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Retbleed:",
+          "data": "Mitigation; IBRS"
+        },
+        {
+          "field": "Vulnerability Spec rstack overflow:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Spec store bypass:",
+          "data": "Mitigation; Speculative Store Bypass disabled via prctl"
+        },
+        {
+          "field": "Vulnerability Spectre v1:",
+          "data": "Mitigation; usercopy/swapgs barriers and __user pointer sanitization"
+        },
+        {
+          "field": "Vulnerability Spectre v2:",
+          "data": "Mitigation; IBRS; IBPB conditional; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI SW loop, KVM SW loop"
+        },
+        {
+          "field": "Vulnerability Srbds:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Tsa:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Tsx async abort:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Vmscape:",
+          "data": "Not affected"
+        }
+      ]
+    },
+    "role": "correctness qualification only; no calibrated speed or RTx measurement"
+  },
+  "tests": {
+    "report": {
+      "pass": 79,
+      "fail": 0,
+      "skip": 0,
+      "actualBaseline": 1,
+      "semanticMutations": 78
+    },
+    "host": {
+      "pass": 5,
+      "fail": 0,
+      "skip": 0
+    },
+    "census": {
+      "pass": 12,
+      "fail": 0,
+      "skip": 0
+    },
+    "combinedFocused": {
+      "pass": 170,
+      "fail": 0,
+      "skip": 0,
+      "concurrency": 1,
+      "durationMs": 141989.401506,
+      "files": [
+        "test/i80386-native-ram-coherence-host.test.mjs",
+        "test/i80386-native-ram-coherence-report.test.mjs",
+        "test/i80386-ram-coherence-oracle.test.mjs",
+        "test/i80386-native-cold-reset-report.test.mjs",
+        "test/oracle-census.test.mjs"
+      ]
+    }
+  },
+  "failedHistory": [
+    {
+      "source": "7567ebb4837ee723e6dece8baf5df76d80fccb10",
+      "qualified": false,
+      "reason": "Native PUSH CS then IP differs from JS ascending transactional stack commit. Exact eight-site rule declared in later source; original capture retained unqualified."
+    },
+    {
+      "source": "fd2084898134da9346431e68194eb3ab742a1a1d",
+      "qualified": false,
+      "reason": "Checker incorrectly summed cumulative SLICE haltIdleCuts; corrected by binding every cumulative field to preceding raw chronology. Original capture retained unqualified."
+    }
+  ],
+  "claimLimits": {
+    "strictArchitecturalResetParity": false,
+    "fullJavaScriptNativeByteBusOrderParity": false,
+    "nativeBudgetByteBusOrderParity": true,
+    "speedOrRTxMeasured": false,
+    "fullATBoot": false,
+    "protectedModePagingREPOrIRQQualifiedByThisFixture": false,
+    "productionNativeOrWasmBackend": false,
+    "windowsEnhancedModeOrDoom": false
+  }
+}

@@ -12,7 +12,7 @@ The JavaScript oracle must use the actual board with `hardwareReset=true` and th
 
 Both paths must identify coprocessor/stepping profiles and preserve defined hardware-reset state. The current JavaScript reset deliberately zeroes undefined CR0 bits 5..30; Bochs may retain different reserved values. Define any excluded undefined fields in advance, preserve full raw state, and compare all defined fields and the post-instruction behavior. Do not mask an unexpected divergence after observing it. The read-only audit also found genuine initial-state differences: EDX (`0x300` versus native zero), GDTR/IDTR limits, DR6/DR7 and cached CS attributes. These require named compatibility decisions or fixes before claiming architectural reset parity; guest initialization of a field can establish a later checkpoint but does not erase the recorded reset mismatch. Coprocessor ET also differs and must use an explicitly aligned profile.
 
-The [next free executable-RAM/SMC/A20 JavaScript baseline](I80386-JS-RAM-COHERENCE-ORACLE.md) now passes 75 instructions with eight RAM entries and whole configured-chip checkpoints. Both raw aliases are executed in the same OFF mapping epoch before the alias write. Native execution of this fixture remains the current qualification gate.
+The [next free executable-RAM/SMC/A20 JavaScript baseline](I80386-JS-RAM-COHERENCE-ORACLE.md) now passes 75 instructions with eight RAM entries and whole configured-chip checkpoints. Both raw aliases are executed in the same OFF mapping epoch before the alias write. [Native execution and committed cache coherence](I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md) now pass the bounded four-budget gate and independent reproduction. Reset parity and full JS/native byte bus order remain false; eight exact far-call word-order differences are preserved.
 
 ## Native seam
 
@@ -20,7 +20,7 @@ Keep the prior post-BIOS adapters unchanged. The new cold bridge is active befor
 
 The board currently constructs its JavaScript CPU directly. First define an optional backend factory with the CPU operations the board actually uses; preserve the existing default. A native bridge must service board-owned chip debt, pending IRQ arbitration and HLT wake horizons at safe committed boundaries. Its native ticks remain separate from successful board quanta, including faults and REP. Reset epoch clocks and CPU-instruction clocks must remain distinct.
 
-Continuous and successful-work budgets 1/2/257 passed the ROM checkpoint with matched reset/fetch order, effects, PIO, named CPU-state differences, RAM, device/debt state and guards. Next qualify executable RAM and cache/mapping coherence, then run the existing free REP/two-page-fault/PIT fixture through the same actual-board bridge. Broader traps, REP I/O and other address sizes need their own named cases.
+Continuous and successful-work budgets 1/2/257 passed the ROM checkpoint with matched reset/fetch order, effects, PIO, named CPU-state differences, RAM, device/debt state and guards. Executable RAM and cache/mapping coherence are now separately qualified. Next run the existing free REP/two-page-fault/PIT fixture through the same actual-board bridge. Broader traps, REP I/O and other address sizes need their own named cases.
 
 ## Build and measurement boundary
 

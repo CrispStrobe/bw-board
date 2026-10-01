@@ -1,6 +1,6 @@
 # Actual JavaScript AT board: executable RAM, SMC and A20
 
-**Qualified JavaScript baseline, 2026-10-01. Native cache coherence remains WIP.** A freely authored MIT 64 KiB ROM starts at physical `FFFFFFF0`, creates executable RAM through guest writes, changes instruction operands, and switches the actual 8042 A20 gate. It reaches CLI/HLT after 75 successful instructions and 454 functional board clocks (four reset clocks plus 75 × six). These clock counts are not physical 386 timing or an RTx measurement.
+**Qualified JavaScript baseline, 2026-10-01. The separate native cache-coherence checkpoint is also qualified.** A freely authored MIT 64 KiB ROM starts at physical `FFFFFFF0`, creates executable RAM through guest writes, changes instruction operands, and switches the actual 8042 A20 gate. It reaches CLI/HLT after 75 successful instructions and 454 functional board clocks (four reset clocks plus 75 × six). These clock counts are not physical 386 timing or an RTx measurement.
 
 The [actual capture](receipts/2026-10-01-i80386-js-ram-coherence-oracle-capture.json.gz), [result](receipts/2026-10-01-i80386-js-ram-coherence-oracle-result.json) and [independent audit](receipts/2026-10-01-i80386-js-ram-coherence-oracle-audit.json) are public. Root independently reassembled the ROM and replayed every byte against physical backing and A20 mapping with Python. A separate actual-board capture was byte-identical. All 34 focused tests pass without skips.
 
@@ -42,6 +42,6 @@ The CLI writes actual bounded measurement before semantic validation, so failure
 
 ## Next gate
 
-The separate native adapter must prove persistent executable RAM pages, updates to every live decoded alias, write generations, and instruction-cache/TLB/prefetch invalidation at committed boundaries. Its internal A20 mask must preserve raw addresses while the actual board owns effective A20 mapping. Require continuous and 1/2/257 budgets, complete board parity, native guards and transport rejection captures before qualification. The [native integration roadmap](I80386-NATIVE-COLD-RESET-NEXT-GATE.md) then calls for actual-board REP/page-fault/PIT integration and a production backend.
+The [separate native adapter](I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md) now qualifies persistent executable RAM pages, updates to every live decoded alias, write generations, and instruction-cache/TLB/prefetch invalidation at committed boundaries. Its internal A20 mask preserves raw addresses while the actual board owns effective A20 mapping. Continuous and 1/2/257 budgets, complete board checkpoints, native guards and transport rejection captures pass; the native note preserves the exact reset and far-call bus-order differences. The [native integration roadmap](I80386-NATIVE-COLD-RESET-NEXT-GATE.md) then calls for actual-board REP/page-fault/PIT integration and a production backend.
 
 This remains the JavaScript compatibility profile. Raw reset differences from Bochs CPU3 are preserved, and strict 386 architectural reset parity, Windows enhanced mode, Doom, a shipped native/WASM backend and the 10× speed target remain unfinished.

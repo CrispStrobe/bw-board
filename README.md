@@ -604,14 +604,19 @@ now executes that ROM before any Bochs BIOS instruction, with board-owned RAM,
 ROM/open bus, ports and device clocks. All four budgets and an independent
 reproduction agree through 49 instructions and 298 functional board clocks;
 12 native guards and 16 transport rejections pass. The 79 focused tests have
-zero skips. Architectural reset parity remains false. Next are executable RAM,
-self-modifying code and A20 cache invalidation; this is not a new speed/RTx result.
+zero skips. Architectural reset parity remains false. The separate RAM/SMC/A20
+gate below extends this bounded proof; neither is a new speed/RTx result.
 
 The new [actual-board RAM/SMC/A20 oracle](docs/I80386-JS-RAM-COHERENCE-ORACLE.md)
 now creates RAM code through guest writes and verifies both live A20 aliases
 with eight executable entries. Its independent capture is byte-identical and
-34 tests pass. Native cache coherence is the current WIP gate; no new speed
-measurement or Windows compatibility claim follows from this JS baseline.
+34 tests pass. Its separate [native RAM/SMC/A20 gate](docs/I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md)
+now passes all four budgets and a fresh reproduction with actual board ownership,
+updates to both live aliases, and committed cache flushes. All 79 mandatory
+report tests pass; sixteen native guards and twenty transport rejections pass.
+Raw reset differences and eight exact far-call stack word-order differences
+remain visible. Next is actual-board REP/page-fault/PIT integration; no new
+speed measurement or Windows compatibility claim follows from these fixtures.
 
 ## Windows 3.1 reference comparison
 

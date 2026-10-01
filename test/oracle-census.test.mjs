@@ -23,6 +23,18 @@ import { createHash } from 'node:crypto';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+test('native RAM coherence report fixture has a mandatory ordinary-CI census row', () => {
+    const row = INPUTS.find(input => input.id === '386-native-ram-coherence-report');
+    assert.ok(row);
+    assert.equal(row.kind, 'fixture');
+    assert.equal(row.ciAvailable, true);
+    assert.equal(row.env, undefined);
+    assert.deepEqual(row.paths, ['test/fixtures/i80386-native-ram-coherence-capture.json.gz']);
+    assert.deepEqual(row.gates, ['test/i80386-native-ram-coherence-report.test.mjs']);
+    assert.match(row.what, /eight far-CALL frame-order differences/);
+    assert.match(row.ci, /ordinary CI without a native Bochs build/);
+});
+
 test('environment-selected files carry the same identity as default-path files', () => {
     const key = 'BW_CENSUS_DIGEST_TEST_PATH', previous = process.env[key];
     const path = fileURLToPath(import.meta.url);

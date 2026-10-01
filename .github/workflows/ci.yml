@@ -55,6 +55,10 @@ jobs:
         run: git fetch --no-tags --depth=1 origin dbc638038482c47c0b1924b43e24ea49adddc447
       - name: Fetch exact source revision of published JavaScript cold-reset oracle
         run: git fetch --no-tags --depth=1 origin 9896ba218102330a4990a2c6c8f0401880a0e920
+      - name: Fetch exact source revision of native RAM coherence test capture
+        run: git fetch --no-tags --depth=1 origin ef2a73594948dffde48df000f5c6a6bf70662755
+      - name: Fetch exact source revision of published JavaScript RAM coherence oracle
+        run: git fetch --no-tags --depth=1 origin a36c3687ebba1bfe541e7d33dfa63fbba399c5b2
       # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
       # needs its built WASM. Checking it out is the difference between that
       # gate RUNNING and it skipping on every CI run — the failure mode this
