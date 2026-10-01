@@ -250,10 +250,20 @@ export function assertNativeDeviceQuantaArmProof(arm,name=arm.mode){
     ((native.finalState.cr0&0x80000001)>>>0)===0x80000001&&
     (native.finalState.eflags&0x200)===0,
     at,'selected final CPU state');
-  check(native.callbacks.nativeTickCallbacks===4043&&
-    native.callbacks.quantumCallbacks===4041&&
-    Object.values(native.fallback).every(value=>value===0),
-    at,'callback/fallback counts changed');
+  equal(native.fallback,{bochsRamReads:0,bochsRamWrites:0,
+    bochsDirectPointers:0,bochsPio:0,bochsTimer:0},at+'.exact fallback counters');
+  equal(native.callbacks,{physicalReads:110,physicalWrites:2356,executePages:18,
+    nativeTickCallbacks:4043,quantumCallbacks:4041},at+'.exact callback counters');
+  equal([type('EXEC').length,type('MEM').filter(e=>e.rw==='R').length,
+    type('MEM').filter(e=>e.rw==='W').length],[18,449,9389],at+'.raw bus callback witnesses');
+  equal(Object.keys(c).sort(),['nativeTicks','successfulQuanta','attempts','completed',
+    'repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts',
+    'rpcRequests','rpcReplies','nativeTickCallbacks','quantumCallbacks'].sort(),at+'.final counter shape');
+  equal(c.attempts,type('ATTEMPT').length,at+'.raw attempt count');
+  equal(c.completed,3014,at+'.completed instruction count');
+  equal(c.repPartial,c.attempts-c.completed-c.faults,at+'.partial attempt classification');
+  check(Number.isSafeInteger(c.repPartial)&&c.repPartial>=0,at,'invalid partial attempt count');
+  equal([c.portCommits,c.rpcReplies],[type('PORT').length,rpc.replies.length],at+'.commit/reply counter witnesses');
   check(array(native.slices,at+'.slices').length>0,at,'no bounded resumes');
   const idles=type('HALT_IDLE');
   equal(idles.length,c.haltIdleCuts,at+'.raw halt callback count');
@@ -279,6 +289,8 @@ export function assertNativeDeviceQuantaArmProof(arm,name=arm.mode){
     previousN=slice.afterNativeTicks;previousQ=slice.afterQuanta;
   }
   equal([previousN,previousQ],[4043,4041],at+'.slice totals');
+  for(const key of ['attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'])
+    equal(native.slices.at(-1)[key],c[key],at+'.last slice final '+key);
   const dueSlices=native.slices.filter(s=>s.eventDue);
   check(dueSlices.length===1,at,'one actual active timer cut required');
   equal([dueSlices[0].afterQuanta,dueSlices[0].exit.cs,dueSlices[0].exit.eip],[2985,8,0x7f0c],at+'.timer cut boundary');
