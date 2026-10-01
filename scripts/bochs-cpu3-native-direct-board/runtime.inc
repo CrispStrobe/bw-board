@@ -230,9 +230,14 @@ static bool bw_raw_span_ok(unsigned long long raw,unsigned length) {
 }
 static unsigned bw_direct_scalar(uint32_t operation,unsigned a,unsigned b,unsigned c) {
   if(!bw_in_resume||!bw_direct_host.scalar)bw_slice_fail("direct-outside-resume");
+  // Actual PIO mapping has changed on the board; native publication waits for
+  // this completed ordinary instruction. Reject any other work before effects.
+  if(bw_mapping_pending&&(operation!=BW_DIRECT_QUANTUM||a!=0||b||c))bw_slice_fail("direct-scalar-pending-mapping");
+  const uint32_t expectedA20=bw_mapping_pending?bw_next_a20:bw_board_a20;
+  const uint32_t expectedEpoch=bw_mapping_pending?bw_next_epoch:bw_mapping_epoch;
   uint32_t value=0,a20=0,epoch=0;
   if(!bw_direct_host.scalar(bw_direct_host.context,operation,a,b,c,&value,&a20,&epoch))bw_slice_fail("direct-scalar-callback");
-  if(a20!=bw_board_a20||epoch!=bw_mapping_epoch)bw_slice_fail("direct-scalar-mapping");
+  if(a20!=expectedA20||epoch!=expectedEpoch)bw_slice_fail("direct-scalar-mapping");
   return value;
 }
 static bool bw_rom_observed(uint32_t address,const uint8_t *bytes,unsigned length);

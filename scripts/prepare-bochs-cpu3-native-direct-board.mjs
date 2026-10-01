@@ -65,6 +65,6 @@ if(mode==='--prepare'){
   result.status='SOURCE_PREPARED_ONLY_NOT_NATIVE_QUALIFICATION';
   result.embedding={abiVersion:1,oneLifetimePerProcess:true,synchronousCallingThread:true,fatalFailuresAbort:true,executeBuffers:'persistent-native-slots'};
   result.requiredConfig={'BX_CPU_LEVEL':3,'BX_USE_IDLE_HACK':0,
-    'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS':0,'BX_SUPPORT_SMP':0,'BX_DEBUGGER':0,'BX_REPEAT_SPEEDUPS':0,'BX_SUPPORT_FPU':1};
+    'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS':0,'BX_SUPPORT_SMP':0,'BX_DEBUGGER':0,'BX_SUPPORT_REPEAT_SPEEDUPS':0,'BX_SUPPORT_FPU':1};
 }
 console.log(JSON.stringify(result,null,2));
