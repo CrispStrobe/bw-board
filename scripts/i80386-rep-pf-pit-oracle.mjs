@@ -132,9 +132,10 @@ export function assertRepPfPitOracle(r){
   eq(e.ordinal,++ordinal,'raw ordinal');
   if(['fetch','read','write'].includes(e.kind)){
    check(Number.isInteger(e.address)&&e.address>=0&&e.address<=0xffffffff,'raw uint32 address');
-   const decoded=e.address&0xffffff;eq(e.decoded,decoded,'actual fixed-ON AT decode');
+   const decoded=e.address>=0xffff0000?0xff0000+(e.address-0xffff0000):e.address;eq(e.decoded,decoded,'actual fixed-ON AT decode');
    check(decoded<memory.length,'bounded mapped physical backing');
-   if(e.kind==='write'){eq(e.before,memory[decoded],'write before byte');eq(e.after,e.value,'ordinary RAM and paging write commit');check(decoded<0xf0000,'no ROM/MMIO writes');memory[decoded]=e.value;}
+   check(Number.isInteger(e.value)&&e.value>=0&&e.value<=255,'canonical uint8 bus value');
+   if(e.kind==='write'){eq(e.before,memory[decoded],'write before byte');eq(e.after,e.value,'ordinary RAM and paging write commit');check(PCAT80386_EXPERIMENTAL.regions.some(region=>region.kind==='ram'&&decoded>=region.start&&decoded<=region.end)&&!(decoded>=0xa0000&&decoded<=0xbffff),'ordinary configured RAM write excludes video/MMIO');memory[decoded]=e.value;}
    else eq(e.value,memory[decoded],'full ordered physical read byte');
   }
  }
