@@ -17,6 +17,7 @@ const check=(ok,message)=>assert(ok,`REP/PF/PIT runner: ${message}`);
 const sourceSeeds=['./run-i80386-native-rep-pf-pit-board-gate.mjs','./prepare-bochs-cpu3-native-rep-pf-pit.mjs',
  './bochs-cpu3-native-rep-pf-pit/abi.h','./bochs-cpu3-native-rep-pf-pit/runtime.h','./bochs-cpu3-native-rep-pf-pit/runtime.inc',
  './bochs-cpu3-native-rep-pf-pit/wire-contract.md','../test/fixtures/i80386-free-rep-pf-pit.S','../test/i80386-native-rep-pf-pit-host.test.mjs',
+ '../test/i80386-native-rep-pf-pit-board-gate.test.mjs','../test/fixtures/i80386-native-rep-pf-pit-board-gate-capture.json.gz',
  '../docs/receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-capture.json.gz',
  '../roms/free-at-bios/BIOS-bochs-legacy','../roms/free-at-bios/vgabios-lgpl.bin'];
 function inventory(){
