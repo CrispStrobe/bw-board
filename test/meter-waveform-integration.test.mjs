@@ -119,7 +119,7 @@ test('a full rolling window prunes expired points before judging the next sample
   assert.ok(w.hist.length<=100000);
   assert.ok(Math.abs(b.meterVoltage('signal','zero')-2)<=1e-6);
 });
-test('the analytic source-constrained inductor keeps its solver but refuses an unqualified mean',()=>{
+test('the analytic source-constrained inductor keeps its solver and integrates its meter mean',()=>{
   const b=new BoardImpl(5);
   b.configureTransientAnalysis('precision-v1');
   b.setNetlist([
@@ -136,8 +136,10 @@ test('the analytic source-constrained inductor keeps its solver but refuses an u
   b.meterCurrent('L1','a');
   b.advanceTo(2_000n);
   assert.equal(b.transientAnalysisStatus().integrationMode,'source-constrained-inductor-direct');
-  assert.throws(()=>b.meterVoltage('signal','zero'),/inductor-meter-integral-unqualified/);
-  assert.throws(()=>b.meterCurrent('L1','a'),/inductor-meter-integral-unqualified/);
+  const expectedV=1e-6*(Math.sin(omega*2e-6)-Math.sin(omega*1e-6))/1e-6;
+  const expectedI=-.001*(Math.cos(omega*1e-6)-Math.cos(omega*2e-6))/(omega*1e-6);
+  assert.ok(Math.abs(b.meterVoltage('signal','zero')-expectedV)<1e-12);
+  assert.ok(Math.abs(b.meterCurrent('L1','a')-expectedI)<1e-12);
 });
 test('idle expiry and reset discard the old watch without fabricating prior history',()=>{
   const b=bench({volts:2}); b.meterVoltage('signal','zero');

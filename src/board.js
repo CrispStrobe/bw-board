@@ -34,7 +34,7 @@ import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
 import {
   nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
-  spiceSineDerivative,
+  spiceSineDerivative, spiceSineIntegral,
 } from './source-waveforms.js';
 
 /**
@@ -1618,10 +1618,9 @@ export class BoardImpl {
     w.readNs = this.timeNs;
     const now = Number(this.timeNs)/1e9;
     const h = w.hist;
-    // This separately qualified analytic endpoint shortcut publishes no
-    // intermediate integral. Keep its fast solver intact, but do not call
-    // held endpoint history an independently observed meter mean.
-    if (now>h[0].tSec && this._transientIntegrationMode()==='source-constrained-inductor-direct') {
+    // An analytic interval must publish its descriptor through the current
+    // clock. A missing interval cannot be replaced with a held endpoint.
+    if (!w.failure && now>h[h.length-1].tSec && this._transientIntegrationMode()==='source-constrained-inductor-direct') {
       w.failure='source-constrained-inductor-meter-integral-unqualified';
     }
     if (w.failure) throw new Error(`meter mean refused: ${w.failure}`);
@@ -1637,6 +1636,16 @@ export class BoardImpl {
       const a=h[k], b=h[k+1], end=b?.tSec ?? now;
       const t0=Math.max(a.tSec,from), t1=Math.min(end,now);
       if (t1<=t0) continue;
+      if (b?.analytic) {
+        const area=b.analytic.factor * spiceSineIntegral(b.analytic.params,t0,t1,b.analytic.derivative);
+        if (!Number.isFinite(area) || !Number.isFinite(sum+area)) {
+          w.failure='non-finite-analytic-meter-integral';
+          throw new Error(`meter mean refused: ${w.failure}`);
+        }
+        sum += area;
+        flat=false;
+        continue;
+      }
       const slope=b && end>a.tSec ? (b.before-a.v)/(end-a.tSec) : 0;
       const v0=a.v+slope*(t0-a.tSec), v1=a.v+slope*(t1-a.tSec);
       if (constant===undefined) constant=v0;
@@ -1647,7 +1656,7 @@ export class BoardImpl {
   }
 
   /** Accepted continuous solves pass their exact instant and matching maps. */
-  _recordMeterSamples(atSec = Number(this.timeNs)/1e9, solution = null) {
+  _recordMeterSamples(atSec = Number(this.timeNs)/1e9, solution = null, analytic = null) {
     // A final floating-point substep can overshoot the integer clock by an
     // ulp. Never let this numerical artifact publish a future meter point.
     atSec=Math.min(atSec,Number(this.timeNs)/1e9);
@@ -1670,10 +1679,19 @@ export class BoardImpl {
       if (last && last.tSec === atSec) { last.v = v; }
       else if (solution || !last || last.v !== v) {
         // Remove only a redundant middle point on an unchanged flat segment.
-        if (last && h.length>1 && h[h.length-2].v===last.v
+        if (!analytic && !last?.analytic && last && h.length>1 && h[h.length-2].v===last.v
             && last.before===last.v && last.v===v) h.pop();
         if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
-        h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v });
+        let segment;
+        if (analytic) {
+          const {a,b,reference,source,inductor,currentSign,henrys} = analytic;
+          const netFactor = net => net===reference ? 0 : net===a ? 1 : net===b ? -1 : 0;
+          const factor = w.kind==='v' ? henrys*currentSign*(netFactor(w.a)-netFactor(w.b))
+            : !this.powered ? 0 : w.part===source.id ? (w.terminal==='pos' ? 1 : w.terminal==='neg' ? -1 : 0)
+            : w.part===inductor.id ? currentSign*(w.terminal==='a' ? -1 : w.terminal==='b' ? 1 : 0) : 0;
+          segment={params:{...source.params},factor,derivative:w.kind==='v'};
+        }
+        h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v, ...(segment ? {analytic:segment} : {}) });
       }
     }
   }
@@ -2702,6 +2720,12 @@ export class BoardImpl {
   setPartParam(partId, param, value) {
     const part = this.parts.find(p => p.id === partId);
     if (!part) return;
+    const constrained = this._meterWatches.size ? this._sourceConstrainedInductorDirect() : null;
+    if (constrained && (partId===constrained.source.id || partId===constrained.inductor.id)) {
+      // Parameter jumps can imply ideal-inductor impulses; do not invent an
+      // integral for them or rewrite already observed intervals retroactively.
+      for (const w of this._meterWatches.values()) w.failure='source-constrained-inductor-parameter-edit-unqualified';
+    }
     if (!part.params) part.params = {};
     part.params[param] = value;
     this._solve();
@@ -5258,6 +5282,7 @@ export class BoardImpl {
         solves: this._transientAnalysisWork.solves,
         advances: this._transientAnalysisWork.advances + 1,
       };
+      if (this._meterWatches.size) this._recordMeterSamples(tEnd,this._mnaCache,constrained);
       return;
     }
 

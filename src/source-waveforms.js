@@ -206,6 +206,39 @@ export function spiceSineDerivative(params, tSeconds) {
     * (2 * Math.PI * p.freq * Math.cos(angle) - p.theta * Math.sin(angle));
 }
 
+/** Exact integral on an ordered interval, including delay, phase and damping.
+ * expm1/half-angle differences avoid subtracting nearly equal primitives.
+ */
+export function spiceSineIntegral(params, from, to, derivative = false) {
+  if (!finite(from) || !finite(to) || from < 0 || to < from) {
+    throw new Error('spice-sine integral: finite ordered non-negative times required');
+  }
+  const p = spiceSineParams(params);
+  const phase = p.phase * Math.PI / 180;
+  const pre = Math.max(0, Math.min(to, p.td) - from);
+  let area = derivative ? 0 : pre * (p.offset + p.amplitude * Math.sin(phase));
+  const start = Math.max(from, p.td), d = Math.max(0, to - start);
+  if (d > 0) {
+    const u = start - p.td, omega = 2 * Math.PI * p.freq;
+    const angle = omega * u + phase, decay = Math.exp(-p.theta * u);
+    const e = Math.exp(-p.theta * d), s = e * Math.sin(omega * d);
+    const oneMinusCos = -Math.expm1(-p.theta * d)
+      + e * 2 * Math.sin(omega * d / 2) ** 2;
+    if (derivative) {
+      area += p.amplitude * decay * (-Math.sin(angle) * oneMinusCos + Math.cos(angle) * s);
+    } else {
+      // Normalize before squaring to avoid needless overflow at high frequency.
+      const scale = Math.max(p.theta, omega), a = p.theta / scale, b = omega / scale;
+      const den = (a * a + b * b) * scale;
+      area += p.offset * d + p.amplitude * decay * (
+        Math.sin(angle) * (a * oneMinusCos + b * s)
+        + Math.cos(angle) * (b * oneMinusCos - a * s)) / den;
+    }
+  }
+  if (!finite(area)) throw new Error('spice-sine integral: non-finite result');
+  return area;
+}
+
 /** Delay is the sole derivative corner of a SPICE sine. */
 export function nextSpiceSineCorner(params, tSeconds) {
   const p = spiceSineParams(params);

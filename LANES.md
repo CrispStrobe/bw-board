@@ -1,4 +1,4 @@
-2026-10-01 Analytic inductor meter integrals — CLAIM, Codex bwcx `/root`.
+2026-10-01 Analytic inductor meter integrals — DONE candidate, Codex bwcx `/root`.
 Worktree `/mnt/volume1/code/lego/wt-board-inductor-meter-20261001`, branch
 `lane/analytic-inductor-meter-20261001`, exact base
 `dfc5d4b731f94355c320418ae4e1a2527778e07a`. Seven-path envelope: this row;
