@@ -9,7 +9,7 @@ import {patchPinnedSource,upstreamHashes} from './bochs-cpu3-native-ram-coherenc
 import {assembleRamCoherenceRom} from './i80386-ram-coherence-oracle.mjs';
 import {expandI80386SourceInventory} from './lib/i80386-source-inventory.mjs';
 import {NativeRamCoherenceHost,ramBudgets,ramSha,parseRamRpcLine,encodeRamCommand,encodeRamReply,ramBoardConfig} from './bochs-cpu3-native-ram-coherence-host.mjs';
-import {parseRamNativeLog,assertNativeRamCoherenceProof,ramResetDifferences,ramBuildPins,ramGuards,ramTransports} from './bochs-cpu3-native-ram-coherence-compare.mjs';
+import {parseRamNativeLog,assertNativeRamCoherenceProof,ramResetDifferences,ramBusDifferences,ramBuildPins,ramGuards,ramTransports} from './bochs-cpu3-native-ram-coherence-compare.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const shaFile=file=>ramSha(readFileSync(file));
 const check=(ok,message)=>assert(ok,`ram reset runner: ${message}`);
@@ -34,6 +34,8 @@ function preflight(build,manifest,manifestBytes){
   for(const [file,hash] of Object.entries(manifest.sourceHashes))check(sourceHashes[file]===hash,`compiled native source differs: ${file}`);
   check(execFileSync('git',['rev-parse','HEAD'],{cwd:build,encoding:'utf8'}).trim()===ramBuildPins.bochsRevision,'build checkout revision');
   assert.deepEqual(manifest.upstreamHashes,upstreamHashes,'manifest upstream source pins');
+  for(const [file,digest] of [[ramBusDifferences.nativeSource.callPath,ramBusDifferences.nativeSource.callSha256],[ramBusDifferences.nativeSource.stackPath,ramBusDifferences.nativeSource.stackSha256]])
+    check(shaFile(path.join(build,file))===digest,`pinned unchanged far-call semantics ${file}`);
   const patchedHashes=Object.fromEntries(Object.keys(upstreamHashes).map(file=>{
     const upstream=execFileSync('git',['show',`${ramBuildPins.bochsRevision}:${file}`],{cwd:build,maxBuffer:4<<20});
     const expected=patchPinnedSource(file,upstream),hash=ramSha(expected);
@@ -211,7 +213,7 @@ export async function runNativeRamCoherenceCompare({build,manifestFile,directory
     javascriptOracle:{path:'docs/receipts/2026-10-01-i80386-js-ram-coherence-oracle-capture.json.gz',
       sha256:'aa48612c132bcdfea4ca031644100f45afed29b769b72eed706b03e706783c91',
       boardRevision:'a36c3687ebba1bfe541e7d33dfa63fbba399c5b2',cpuProfile:'compatibility',strict386:false},
-    resetDifferences:ramResetDifferences,arms:{},probes:{},transportProbes:{},artifacts:{bochsrc:{path:'bochsrc',sha256:ramSha(config)}}};
+    resetDifferences:ramResetDifferences,busDifferences:ramBusDifferences,arms:{},probes:{},transportProbes:{},artifacts:{bochsrc:{path:'bochsrc',sha256:ramSha(config)}}};
   const binary=path.join(build,'bochs/bochs');
   for(const name of Object.keys(ramBudgets)){report.arms[name]=await runArm(binary,rc,directory,rom,name);report.artifacts[name]=report.arms[name].artifacts;}
   for(const name of Object.keys(ramGuards)){report.probes[name]=await runGuard(binary,rc,directory,name);report.artifacts['guard-'+name]=report.probes[name].files;}

@@ -34,6 +34,23 @@ export const ramResetDifferences=Object.freeze({
     segmentType:'native real-mode data/read-write/accessed caches retained as raw state'},
   undefinedCr0Bits:0x7fffffe0,comparisonMasks:null,
 });
+// Predeclared for NEW captures after source audit of the failed 7567 capture.
+// Preserve both real chronologies. This is not byte-bus-order parity or sorting.
+export const ramBusDifferences=Object.freeze({
+  fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true,
+  rule:'eight-successful-16bit-immediate-far-call-ordinary-ram-stack-frames',
+  instructionQuanta:[17,22,30,34,39,43,51,56],
+  physicalPCs:[0xf013c,0xf014b,0xf015c,0xf0165,0xf0175,0xf017e,0xf018f,0xf019f],
+  before:{cs:0xf000,ss:0,sp:0x9000},frame:{ipAddress:0x8ffc,csAddress:0x8ffe,bytes:4,class:'ram'},
+  javascriptOrder:['IP-low','IP-high','CS-low','CS-high'],nativeOrder:['CS-low','CS-high','IP-low','IP-high'],
+  javascriptSource:{path:'src/experimental/i80386.js',farTransferLine:1346,stackCommitLine:2110,
+    sha256:'6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed'},
+  nativeSource:{revision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',
+    callPath:'bochs/cpu/ctrl_xfer16.cc',callLine:46,pushCsLine:68,pushIpLine:69,
+    callSha256:'935f2289c380b63a22e6fffebfc49ecff4aee1e8709ea6a5a0fe7d52cb24079e',
+    stackPath:'bochs/cpu/stack.h',stackLine:28,stackSha256:'20140afcd9d295bd066be64616d20b569fc8da6e0c95d5b5374162992f5ac119'},
+  scope:'mapped ordinary RAM only; no faults, MMIO, overlapping effects, generic permutation or shared CPU normalization',
+});
 let oracle;
 export function qualifiedRamJsOracle(){
   if(!oracle){
@@ -340,10 +357,33 @@ export function assertNativeRamCoherenceArmProof(arm,rom,name=arm.mode){
     equal(charge.after.board,step.boardAfter,'each successful instruction actual board clock/debt/devices');
   }
   const data=host.bus,jsData=js.events.filter(e=>['read','write'].includes(e.kind));equal(data.length,jsData.length,'architectural data byte count excludes page fills');
+  const expectedNativeData=[];
+  const tuple=e=>[e.kind,e.address,e.decoded,e.value,e.quantum,e.boardCycles];
+  for(let i=0;i<js.steps.length;i++){
+    const step=js.steps[i],bytes=jsData.filter(e=>e.quantum===i),site=ramBusDifferences.instructionQuanta.indexOf(i+1);
+    if(site>=0){
+      equal([step.before.pc,step.before.cs,step.before.ss,step.before.esp,step.after.esp],
+        [ramBusDifferences.physicalPCs[site],0xf000,0,0x9000,0x8ffc],'named far CALL ordinary RAM stack boundary');
+      const fetched=js.events.slice(step.firstOrdinal-1,step.lastOrdinal).filter(e=>e.kind==='fetch');
+      equal([fetched.length,fetched[0]?.value],[5,0x9a],'only immediate 16-bit far CALL exception');
+      const returnIp=(step.before.eip+5)&0xffff,cs=step.before.cs;
+      const byte=(address,value)=>({kind:'write',address,decoded:address,value,quantum:i,boardCycles:4+6*i});
+      const ipLow=byte(0x8ffc,returnIp&255),ipHigh=byte(0x8ffd,returnIp>>>8),csLow=byte(0x8ffe,cs&255),csHigh=byte(0x8fff,cs>>>8);
+      equal(bytes.map(tuple),[ipLow,ipHigh,csLow,csHigh].map(tuple),'actual JS transactional ascending frame chronology retained');
+      expectedNativeData.push(csLow,csHigh,ipLow,ipHigh); // exact pinned Bochs PUSH CS then PUSH IP, not a generic projection
+      const writes=requests.filter(r=>r.successfulQuanta===i&&['READ','WRITE'].includes(r.operation));
+      equal(writes.map(r=>[r.operation,r.arg0,r.arg1,r.payload]),
+        [['WRITE',0x8ffe,2,Buffer.from([cs&255,cs>>>8]).toString('hex')],['WRITE',0x8ffc,2,Buffer.from([returnIp&255,returnIp>>>8]).toString('hex')]],
+        'native far CALL retains exact two ordered word callbacks');
+      for(const e of data.filter(e=>e.successfulQuanta===i))equal([e.class,e.effect],[1,2],'far CALL exception admits ordinary RAM commit only');
+    }else{
+      for(const e of bytes)expectedNativeData.push({...e,value:e.address>=0x510&&e.address<0x518?ramResetDifferences.guestWitness.native[e.address-0x510]:e.value});
+    }
+  }
+  equal(expectedNativeData.length,data.length,'no unowned call-site memory effects');
   for(let i=0;i<data.length;i++){
-    const e=data[i],j=jsData[i],nativeWitness=e.raw>=0x510&&e.raw<0x518;
-    const value=nativeWitness?ramResetDifferences.guestWitness.native[e.raw-0x510]:j.value;
-    equal([e.kind,e.raw,e.decoded,e.value,e.successfulQuanta,e.boardCycles],[j.kind,j.address,j.decoded,value,j.quantum,j.boardCycles],'actual JS/native byte bus with named reset witness differences');
+    const e=data[i],j=expectedNativeData[i];
+    equal([e.kind,e.raw,e.decoded,e.value,e.successfulQuanta,e.boardCycles],tuple(j),'ordered bus effects with ONLY predeclared native far CALL word order and raw reset witnesses');
   }
   const mem=type('MEM');equal(mem.length,data.length,'native architectural data callbacks');
   for(let i=0;i<mem.length;i++){
@@ -516,9 +556,10 @@ function artifactProof(report){
   }
 }
 export function assertNativeRamCoherenceProof(report,rom){
-  equal(Object.keys(report).sort(),['arms','artifacts','claim','javascriptOracle','probes','resetDifferences','schema','source','transportProbes'],'report shape');
+  equal(Object.keys(report).sort(),['arms','artifacts','busDifferences','claim','javascriptOracle','probes','resetDifferences','schema','source','transportProbes'],'report shape');
   equal(report.schema,'bw.bochs-cpu3-native-ram-coherence.v1','schema');
   equal(report.claim,'native-ram-smc-a20-coherence-only','bounded claim');
+  equal(report.busDifferences,ramBusDifferences,'predeclared exact eight-site bus order differences');
   equal(report.resetDifferences,ramResetDifferences,'predeclared named raw reset differences');
   equal(Object.keys(report.arms??{}).sort(),Object.keys(ramBudgets).sort(),'four actual native arms');
   sourceProof(report.source);artifactProof(report);
@@ -530,6 +571,6 @@ export function assertNativeRamCoherenceProof(report,rom){
   const proof={};for(const name of Object.keys(ramBudgets))proof[name]=assertNativeRamCoherenceArmProof(report.arms[name],rom,name);
   for(const name of ['budget1','budget2','budget257'])equal(proof[name],proof.continuous,'complete native/board logical parity across budgets');
   return {status:'native-ram-smc-a20-proof-pass',nativeTicks:qualifiedRamJsOracle().steps.length,successfulQuanta:qualifiedRamJsOracle().steps.length,boardCycles:qualifiedRamJsOracle().final.board.cycles,
-    instructionBytes:qualifiedRamJsOracle().events.filter(e=>e.kind==='fetch').length,dataReadBytes:qualifiedRamJsOracle().events.filter(e=>e.kind==='read').length,dataWriteBytes:qualifiedRamJsOracle().events.filter(e=>e.kind==='write').length,pioBytes:11,architecturalResetParity:false,nativeInternalA20:'fixed-on',actualBoardA20Transitions:2,ramCacheCoherence:true,
+    instructionBytes:qualifiedRamJsOracle().events.filter(e=>e.kind==='fetch').length,dataReadBytes:qualifiedRamJsOracle().events.filter(e=>e.kind==='read').length,dataWriteBytes:qualifiedRamJsOracle().events.filter(e=>e.kind==='write').length,pioBytes:11,architecturalResetParity:false,nativeInternalA20:'fixed-on',actualBoardA20Transitions:2,ramCacheCoherence:true,fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true,farCallWordOrderDifferences:8,
     slices:Object.fromEntries(Object.entries(report.arms).map(([name,arm])=>[name,arm.native.slices.length]))};
 }
