@@ -1,0 +1,41 @@
+{
+  "claim": "native-actual-board-compact-rep-two-pf-pit-only",
+  "budgetProof": {
+    "logicalEvents": 3747,
+    "rawPreserved": true,
+    "onlyScopedResumeDecodes": true
+  },
+  "arms": {
+    "continuous": {
+      "successfulQuanta": 135,
+      "nativeTicks": 137,
+      "faults": 2,
+      "irq": 32,
+      "boardClocks": 814
+    },
+    "budget1": {
+      "successfulQuanta": 135,
+      "nativeTicks": 137,
+      "faults": 2,
+      "irq": 32,
+      "boardClocks": 814
+    },
+    "budget2": {
+      "successfulQuanta": 135,
+      "nativeTicks": 137,
+      "faults": 2,
+      "irq": 32,
+      "boardClocks": 814
+    },
+    "budget257": {
+      "successfulQuanta": 135,
+      "nativeTicks": 137,
+      "faults": 2,
+      "irq": 32,
+      "boardClocks": 814
+    }
+  },
+  "fullResetParity": false,
+  "fullByteBusOrderParity": false,
+  "nativeBudgetByteBusOrderParity": true
+}
