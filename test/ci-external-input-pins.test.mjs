@@ -92,25 +92,27 @@ const scriptCloneSites = (file, source) => {
 // Only this preparer's authenticated local clone is admitted. Resolve the revision
 // through its actual patch imports without executing build code.
 const localBochsPreparer = 'scripts/prepare-bochs-cpu3-native-combined-paging-ram.mjs';
+const directBochsPreparer = 'scripts/prepare-bochs-cpu3-native-direct-board.mjs';
 const bochsRevision = '0e45b736ef9792eb9b752b0a35db49eaf2faea47';
 const bochsChain = ['combined-paging-ram', 'rep-pf-pit', 'ram-coherence',
     'device-quanta', 'memory-map', 'events', 'slice'];
-const auditedLocalBochsClone = (source, scripts, clones) => {
+const auditedLocalBochsClone = (source, scripts, clones, direct = false) => {
     const code = stripJsComments(source);
     if (clones.length !== 1 || clones[0].kind !== 'script-clone') return false;
     const clone = "execFileSync('git',['clone','--local','--no-hardlinks','--quiet',source,target]);";
     const before = "if(git(source,['rev-parse','HEAD'])!==revision ||\n   git(source,['status','--porcelain','--untracked-files=no']))\n  throw new Error('input Bochs source is not the clean pinned revision');";
     const after = "if(git(target,['rev-parse','HEAD'])!==revision)throw new Error('clone changed revision');";
     if (!code.includes("const source=process.env.BOCHS_386_ROOT && resolve(process.env.BOCHS_386_ROOT);")
-        || !code.includes("from './bochs-cpu3-native-combined-paging-ram/patch.mjs'")
+        || !code.includes(`from './bochs-cpu3-native-${direct?'direct-board':'combined-paging-ram'}/patch.mjs'`)
         || !code.includes(before) || !code.includes(clone) || !code.includes(after)
         || code.indexOf(before) >= code.indexOf(clone) || code.indexOf(after) <= code.indexOf(clone)) return false;
-    for (const [i, lane] of bochsChain.entries()) {
+    const chain=direct?['direct-board',...bochsChain]:bochsChain;
+    for (const [i, lane] of chain.entries()) {
         const patch = stripJsComments(scripts.get(`scripts/bochs-cpu3-native-${lane}/patch.mjs`) || '');
-        if (i === bochsChain.length - 1) {
+        if (i === chain.length - 1) {
             if (!patch.includes(`export const revision='${bochsRevision}';`)) return false;
         } else {
-            const next = bochsChain[i + 1];
+            const next = chain[i + 1];
             if (!new RegExp(`import\\s*\\{[^}]*\\brevision\\b[^}]*\\}\\s*from\\s*['"]\\.\\./bochs-cpu3-native-${next}/patch\\.mjs['"]`).test(patch)
                 || !/export\s*\{[^}]*\brevision\b[^}]*\}/.test(patch)
                 || /(?:const|let|var)\s+revision\b/.test(patch)) return false;
@@ -149,7 +151,7 @@ export const auditExternalInputs = ({workflows, scripts}) => {
         sites.push(...clones);
         for (const site of clones) {
             if ((file !== 'scripts/build-labwired-wasm.mjs' || site.kind !== 'script-clone')
-                && !(file === localBochsPreparer && auditedLocalBochsClone(source, scripts, clones))) {
+                && !([localBochsPreparer,directBochsPreparer].includes(file) && auditedLocalBochsClone(source, scripts, clones, file===directBochsPreparer))) {
                 errors.push(`${site.file}:${site.line} ${site.repository || 'git clone'}: executable script clone is not pinned by an audited contract`);
             }
         }
@@ -204,7 +206,7 @@ const liveCorpus = () => {
         .map(file => [`.github/workflows/${file}`, readFileSync(join(workflowDir, file), 'utf8')]));
     const invoked = new Set([...workflows.values()].flatMap(workflowScripts));
     const scripts = new Map([...invoked].map(file => [file, readFileSync(join(ROOT, file), 'utf8')]));
-    for (const lane of bochsChain) {
+    for (const lane of ['direct-board',...bochsChain]) {
         const file = `scripts/bochs-cpu3-native-${lane}/patch.mjs`;
         scripts.set(file, readFileSync(join(ROOT, file), 'utf8'));
     }
@@ -298,4 +300,12 @@ test('local Bochs clone requires its exact imported pin and both revision checks
         const file = 'scripts/bochs-cpu3-native-memory-map/patch.mjs';
         corpus.set(file, corpus.get(file).replace('../bochs-cpu3-native-events/patch.mjs', '../unreviewed.mjs'));
     }).join('\n'), /not pinned by an audited contract/);
+});
+
+test('direct Bochs preparer authenticates the extra direct derivation before its local clone',()=>{
+ const {scripts}=liveCorpus(),source=readFileSync(join(ROOT,directBochsPreparer),'utf8');
+ const check=(edit,patchEdit=s=>s)=>{const corpus=new Map(scripts);corpus.set(directBochsPreparer,edit(source));const path='scripts/bochs-cpu3-native-direct-board/patch.mjs';corpus.set(path,patchEdit(corpus.get(path)));return auditExternalInputs({workflows:new Map([['direct.yml',`run: node ${directBochsPreparer}`]]),scripts:corpus}).errors.join('\n');};
+ assert.equal(check(s=>s),'');
+ for(const edit of [s=>s.replace("git(source,['rev-parse','HEAD'])!==revision",'false'),s=>s.replace("git(target,['rev-parse','HEAD'])!==revision",'false'),s=>s.replace("'--local',",''),s=>s.replace("'--no-hardlinks',",''),s=>s.replace("'--quiet',source,target","'--quiet','https://github.com/bochs-emu/Bochs',target"),s=>s+"\nexecFileSync('git',['clone','--local',source,target]);"] )assert.match(check(edit),/not pinned by an audited contract/);
+ assert.match(check(s=>s,s=>s.replace('../bochs-cpu3-native-combined-paging-ram/patch.mjs','../unreviewed.mjs')),/not pinned by an audited contract/);
 });
