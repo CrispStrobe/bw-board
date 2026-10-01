@@ -1,0 +1,29 @@
+2026-10-01T08:29:17.4917866Z test cpu::cortex_m::t16_discovery_tests::admitted_load_falls_back_for_mmio_without_side_effects_then_accepts_ram ... ok
+2026-10-01T08:29:17.4921347Z test cpu::cortex_m::t16_discovery_tests::backward_search_at_zero_does_not_underflow_or_poison_future_discovery ... ok
+2026-10-01T08:29:17.4930994Z test cpu::cortex_m::t16_discovery_tests::borrowed_cached_opcode_preserves_every_halfword_and_width_filter ... ok
+2026-10-01T08:29:17.4936570Z test cpu::cortex_m::t16_discovery_tests::cached_block_before_barrier_cannot_execute_unrelated_tail ... ok
+2026-10-01T08:29:17.4958361Z test cpu::cortex_m::t16_discovery_tests::cbnz_is_rejected_at_current_entry_and_cannot_be_spanned ... ok
+2026-10-01T08:29:17.4988619Z test cpu::cortex_m::t16_discovery_tests::cold_miss_is_not_a_permanent_negative_cache ... ok
+2026-10-01T08:29:17.5018792Z test cpu::cortex_m::t16_discovery_tests::decoding_disabled_then_enabled_warms_cache_and_invalidates_old_miss ... ok
+2026-10-01T08:29:17.5023820Z test cpu::cortex_m::t16_discovery_tests::discovery_memo_is_stable_until_real_decoder_warms_the_window ... ok
+2026-10-01T08:29:17.5029003Z test cpu::cortex_m::t16_discovery_tests::dispatch_declines_cold_collided_and_wide_entries_without_side_effects ... ok
+2026-10-01T08:29:17.5048494Z test cpu::cortex_m::t16_discovery_tests::fast_fetch_insertion_and_decode_tag_collision_invalidate_discovery_misses ... ok
+2026-10-01T08:29:17.5054551Z test cpu::cortex_m::t16_discovery_tests::forward_and_wrong_target_terminal_branches_reject_without_retiring ... ok
+2026-10-01T08:29:17.5057458Z test cpu::cortex_m::t16_discovery_tests::generation_wrap_clears_old_misses_before_reusing_generation_one ... ok
+2026-10-01T08:29:17.5079532Z test cpu::cortex_m::t16_discovery_tests::invalid_decode_tag_does_not_admit_aliasing_slot ... ok
+2026-10-01T08:29:17.5082619Z test cpu::cortex_m::t16_discovery_tests::invalid_tag_inside_candidate_rejects_then_repaired_window_matches_interpreter ... ok
+2026-10-01T08:29:17.5111894Z test cpu::cortex_m::t16_discovery_tests::invalidate_reset_and_snapshot_restore_drop_positive_and_negative_state ... ok
+2026-10-01T08:29:17.5127075Z test cpu::cortex_m::t16_discovery_tests::memo_slot_aliases_require_exact_pc_and_generation ... ok
+2026-10-01T08:29:17.5200317Z test cpu::cortex_m::t16_discovery_tests::positive_cache_is_considered_before_negative_memo_and_zero_budget_retires_nothing ... ok
+2026-10-01T08:29:17.5258591Z test cpu::cortex_m::t16_discovery_tests::rotated_entry_and_branch_entry_match_reference_for_every_budget ... ok
+2026-10-01T08:29:17.5277760Z test cpu::cortex_m::t16_discovery_tests::supported_window_longer_than_capacity_rejects_from_start_and_terminal ... ok
+2026-10-01T08:29:17.5279514Z test cpu::cortex_m::t16_discovery_tests::thumb32_width_is_a_barrier_even_if_instruction_is_supported ... ok
+2026-10-01T08:29:17.6257485Z test cpu::cortex_m::t16_discovery_tests::opcode_dispatch_matches_original_paths_at_rotated_entries_and_budgets ... ok
+2026-10-01T08:29:28.8619824Z test result: ok. 4056 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 11.77s
+2026-10-01T08:29:29.9084407Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-01T08:29:30.9629461Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+2026-10-01T08:30:43.5814261Z test result: ok. 86 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 70.38s
+2026-10-01T08:30:43.9785409Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-01T08:30:49.4612800Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-01T08:30:49.4628080Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-01T08:30:49.4990642Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
