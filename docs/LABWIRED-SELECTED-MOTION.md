@@ -158,6 +158,45 @@ is not the headline comparison. Core PR 142 stays a draft: WASM remains below
 1×, and seven silicon captures predate the shared CPU change. No new physical
 capture was obtained, no drift acknowledgement refreshed and no pin promoted.
 
+## Opcode-directed dispatch experiment
+
+Independent candidate `13ace46fe9ea26ae489a07bae57d67aac95fe166` starts from the
+same exact `4d944d2d` base, without PR 142's payload change. A borrowed tagged,
+width-checked opcode selects relevant existing T16 probes in their original
+order. Selected executors keep their complete validation; cold/collided/wide
+entries fall back to the interpreter. Observer/debug/IRQ/IT/tap/trace guards,
+scheduler clamps, cycle advancement and access accounting remain unchanged.
+There is no stable-MMIO coalescer or guest edit.
+
+Native exact-base A/B/B/A observed +13.03% on one Xeon Platinum 8370C, with all
+ten candidate windows >=1×. Two hosted WASM A/B/B/A runs on separate EPYC 9V74
+runners observed +6.60% and +7.38% pooled median gains. All forty windows were
+below 1×; the repeat's candidate minimum was worse than its baseline minimum.
+All eight functional invocations passed. These are observed sequential paired
+comparisons, not contention-isolated statistics or browser measurements.
+
+Fresh candidate builds were deterministic; existing integration passed. The
+selected-motion gate executed two tests, zero skips: functional passed but all
+five RTx windows failed (0.738987× median / 0.716393× minimum, EPYC 7763).
+The candidate WEB build also passed all four Lite actual-WASM input-routing
+tests with zero skips. These do not establish full debugger/browser RTx.
+
+The feature-off unit suite passed 4,056 tests with zero failures and three
+existing ignored tests; all three new dispatch regressions passed. They compare
+against the original probe order over rotated entries/budgets and RAM/MMIO
+addresses, CPU snapshots, RAM and counters; test cold/tag/width rejection; and
+exercise lookup/filtering for all 65,536 halfwords. The original single-step
+differential tests remain required. Scheduler-observable CI passed separately.
+Native board/model qualification subsequently passed, including **156 Cortex-M
+tests, zero failures/ignored tests**. This is not a zero-skip claim for the
+whole board job: its integration suites retain physical-hardware-only ignores.
+Native CorePerf also passed all 40 spin targets, with no reported instruction
+regressions or waivers. This is not all-chip sensor-heavy WASM qualification.
+
+[Receipts, source hashes and remaining qualifications](receipts/2026-10-01-cortex-m-dispatch/README.md)
+are retained. Core PR 143 remains a draft. No hardware capture date or drift
+acknowledgement was changed, no all-five floor relaxed and no artifact promoted.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is

@@ -1,0 +1,35 @@
+(node:3577528) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///mnt/volume1/code/lego/wt-lite-scoped-input-route-20261001/overlay/scratch-gui/src/lib/bw-debug/engineering-input-route.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /mnt/volume1/code/lego/wt-lite-scoped-input-route-20261001/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[bw gate] upstream packages explicitly read from /tmp/cp13-input-proof.VumFoS (BW_PACKAGE_ROOT).
+TAP version 13
+# Subtest: actual WASM: Lite route discovers component IDs and applies one recorded transaction
+ok 1 - actual WASM: Lite route discovers component IDs and applies one recorded transaction
+  ---
+  duration_ms: 235.184463
+  ...
+# Subtest: actual WASM: a bad later channel range changes neither component and emits no fact
+ok 2 - actual WASM: a bad later channel range changes neither component and emits no fact
+  ---
+  duration_ms: 3.794042
+  ...
+# Subtest: actual WASM: recorded input replays through the target without duplicate live facts
+ok 3 - actual WASM: recorded input replays through the target without duplicate live facts
+  ---
+  duration_ms: 2.348029
+  ...
+# Subtest: actual WASM: production recording subscription records only accepted inputs while active
+ok 4 - actual WASM: production recording subscription records only accepted inputs while active
+  ---
+  duration_ms: 1.904116
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 269.329457

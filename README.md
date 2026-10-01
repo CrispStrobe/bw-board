@@ -361,6 +361,26 @@ are retained. The shared CPU change also triggers seven silicon-capture drift
 checks; neither those checks nor the WASM floor have been waived. The candidate
 is not merged or promoted; deployed pins are unchanged and CP13 remains open.
 
+The independent [opcode-dispatch candidate](https://github.com/CrispStrobe/labwired-core/pull/143)
+`13ace46f` selects relevant T16 probes from a borrowed cached opcode; it does
+not include PR 142. Exact-base native A/B/B/A on one Xeon Platinum 8370C observed
+**+13.03%** (1.326734× / 1.499638× median-of-medians); all ten candidate windows
+passed 1×. Two independent hosted NODEJS WASM A/B/B/A runs, each comparing both
+engines on one EPYC 9V74 runner, observed **+6.60%** and **+7.38%** pooled median
+gains. Candidate medians were **0.889071×** and **0.687602×**, respectively;
+**all forty windows remained below 1×**. The repeat's candidate minimum was
+also below its baseline minimum, so a median gain is not an every-window gain.
+Absolute speeds vary with host conditions and are not compared across runs.
+Fresh qualification separately failed (0.738987× median / 0.716393× minimum on
+EPYC 7763), despite passing functional, determinism and existing integration
+checks. [All raw receipts and test context](docs/receipts/2026-10-01-cortex-m-dispatch/README.md)
+are retained. This is an unmerged intermediate optimization, not real-time WASM
+qualification or a pin upgrade; seven silicon-drift checks remain unresolved.
+Its native CorePerf gate passed all 40 spin targets with no reported instruction
+regressions or waivers. Board/model qualification passed, including all 156
+Cortex-M tests with zero failures/ignored tests; other board suites retain
+physical-hardware ignores, so the whole job is not described as zero-skip.
+
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
 at `ce60a499` also passed native board/model, input-routing and RTx gates.
 Its selected motion workload measured **1.030645× median / 1.027010× minimum**;

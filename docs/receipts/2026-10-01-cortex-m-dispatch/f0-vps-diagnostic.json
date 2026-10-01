@@ -1,0 +1,45 @@
+{
+  "schema": "bw-board.labwired.f0-existing-bench-diagnostic.v1",
+  "diagnosticOnly": true,
+  "date": "2026-10-01",
+  "baselineCommit": "4d944d2d9ec320f7acd25b54cc41a50b850d6788",
+  "candidateCommit": "13ace46fe9ea26ae489a07bae57d67aac95fe166",
+  "harnessSha256": "97a68ebe7a614fbfb5ebe13d566b50017c93d883a15aff5d1cb5a04a096fe65c",
+  "host": {
+    "node": "v20.20.2",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4
+  },
+  "limitations": [
+    "Shared VPS, not contention isolated.",
+    "Existing harness: 50000-step warmup, 8000000 measured requested steps; rates printed rounded.",
+    "This is a short F0 ALU/RAM loop diagnostic, not motion, all-chip firmware qualification, browser performance, or artifact promotion.",
+    "No speedup estimate is made from these coarse rates; original guest and harness unchanged."
+  ],
+  "runs": [
+    {
+      "label": "baseline",
+      "command": "LABWIRED_WASM=/mnt/volume1/code/lego/cp13-wasm-36816537489-b/nodejs node scripts/bench-chips.mjs --only-labwired --instructions 8000000",
+      "exitCode": 0,
+      "stdout": "core                             emulated cycles/s     x real time   STEPS=8000000\nlabwired STM32F0 (48 MHz)             1233389519      25.7x\n\nBox timing is noisy — read as order-of-magnitude; the off-box CI run is the figure.\n"
+    },
+    {
+      "label": "candidate",
+      "command": "LABWIRED_WASM=/mnt/volume1/code/lego/cp13-wasm-36835546181-b/nodejs node scripts/bench-chips.mjs --only-labwired --instructions 8000000",
+      "exitCode": 0,
+      "stdout": "core                             emulated cycles/s     x real time   STEPS=8000000\nlabwired STM32F0 (48 MHz)              294945685      6.14x\n\nBox timing is noisy — read as order-of-magnitude; the off-box CI run is the figure.\n"
+    },
+    {
+      "label": "candidate",
+      "command": "LABWIRED_WASM=/mnt/volume1/code/lego/cp13-wasm-36835546181-b/nodejs node scripts/bench-chips.mjs --only-labwired --instructions 8000000",
+      "exitCode": 0,
+      "stdout": "core                             emulated cycles/s     x real time   STEPS=8000000\nlabwired STM32F0 (48 MHz)             1206437611      25.1x\n\nBox timing is noisy — read as order-of-magnitude; the off-box CI run is the figure.\n"
+    },
+    {
+      "label": "baseline",
+      "command": "LABWIRED_WASM=/mnt/volume1/code/lego/cp13-wasm-36816537489-b/nodejs node scripts/bench-chips.mjs --only-labwired --instructions 8000000",
+      "exitCode": 0,
+      "stdout": "core                             emulated cycles/s     x real time   STEPS=8000000\nlabwired STM32F0 (48 MHz)             1329090654      27.7x\n\nBox timing is noisy — read as order-of-magnitude; the off-box CI run is the figure.\n"
+    }
+  ]
+}
