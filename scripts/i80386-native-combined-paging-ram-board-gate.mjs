@@ -1,5 +1,6 @@
 /** Source-bound bounded combined paging/RAM/REP actual-board proof. Raw reset and bus differences remain explicit. */
 import assert from 'node:assert/strict';
+import {isDeepStrictEqual} from 'node:util';
 import {gunzipSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
@@ -10,7 +11,16 @@ import {NativeCombinedPagingRamHost,combinedSha,combinedBudgets,parseCombinedRpc
 const root=fileURLToPath(new URL('../',import.meta.url));
 const fail=m=>{throw Error(`native combined paging/RAM/REP proof: ${m}`);};
 const check=(v,m)=>{if(!v)fail(m);};
-const equal=(a,b,m)=>assert.deepEqual(a,b,`native combined paging/RAM/REP proof: ${m}`);
+// Node 22 formats even custom deepStrictEqual messages with a quadratic Myers
+// diff. Intentional whole-journal mutants must retain strict equality and full
+// evidence without allocating that unbounded diagnostic trace.
+export function assertCombinedDeepEqual(a,b,message){
+ if(isDeepStrictEqual(a,b))return;
+ const error=new assert.AssertionError({actual:a,expected:b,operator:'boundedDeepStrictEqual',message});
+ error.operator='deepStrictEqual';
+ throw error;
+}
+const equal=(a,b,m)=>assertCombinedDeepEqual(a,b,`native combined paging/RAM/REP proof: ${m}`);
 const boundaryKinds=['ordinary','rep-element','fault-delivery','irq-delivery','prefetch-pagewalk'];
 const stateNames=['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags','cr0','cr2','cr3','cs','ds','ss','gdtrBase','gdtrLimit','idtrBase','idtrLimit'];
 const extraNames=['dr6','dr7','es','fs','gs','csIndex','csTi','csRpl','csValid','csPresent','csDpl','csSegment','csType','csBase','csLimit','csGranular','csDefault32','csAvailable','pendingEvent','eventMask'];
