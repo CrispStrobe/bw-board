@@ -1,5 +1,6 @@
 /** Actual bounded compatibility-board baseline; no native or speed claim. */
 import assert from 'node:assert/strict';
+import {assertHotBaseline} from './i80386-free-combined-hot-proof.mjs';
 import {readFileSync,writeFileSync,mkdirSync,openSync,writeSync,closeSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
@@ -12,7 +13,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),git=args=>execF
 function identity(){
  const revision=git(['rev-parse','HEAD']),paths=new Set();
  function visit(p){if(paths.has(p))return;paths.add(p);const bytes=readFileSync(resolve(root,p));assert.equal(sha(bytes),sha(execFileSync('git',['show',revision+':'+p],{cwd:root})),'committed measured source '+p);for(const match of bytes.toString().matchAll(/(?:from\s+|import\s*)['"](\.[^'"]+)['"]/g))visit(resolve(root,dirname(p),match[1]).slice(root.length+1));}
- for(const p of ['package.json','scripts/run-i80386-free-combined-hot.mjs','scripts/i80386-free-combined-hot.mjs','test/i80386-free-combined-hot.test.mjs','test/fixtures/i80386-free-combined-hot.S','test/fixtures/i80386-free-combined-paging-ram.S'])visit(p);
+ for(const p of ['package.json','scripts/run-i80386-free-combined-hot.mjs','scripts/i80386-free-combined-hot.mjs','test/i80386-free-combined-hot.test.mjs','test/i80386-free-combined-hot-proof.test.mjs','test/fixtures/i80386-free-combined-hot.S','test/fixtures/i80386-free-combined-paging-ram.S'])visit(p);
  return {revision,hashes:Object.fromEntries([...paths].sort().map(p=>[p,sha(readFileSync(resolve(root,p)))]))};
 }
 const output=process.argv[2];assert.ok(output?.startsWith('/'),'new absolute output directory');assert.equal(git(['status','--porcelain']),'','clean source required');const source=identity();mkdirSync(output,{recursive:false});
@@ -34,5 +35,6 @@ try{
  closeSync(fd);const report={schema:'bw.js-combined-hot.baseline.v1',scope:'actual JS board compatibility-profile baseline only; no native/throughput claim',source,rom:{sha256,sourceSha256,symbols},configuration:combinedBoardConfig,seedSha256,reset,q,attempts,halted:m.cpu.halted,boundaries,ports,deliveries,beforeSettle,final,journal:{path:'events.jsonl',sha256:digest.digest('hex'),rows,bytes}};
  assert.deepEqual(identity(),source,'before/after measured source');writeFileSync(output+'/capture.json',JSON.stringify(report,null,2),{flag:'wx'});
  assert.equal(report.halted,true);assert.deepEqual(final.checksums,[hotWorkload.registerChecksum,hotWorkload.registerNext,hotWorkload.memoryChecksum]);assert.deepEqual(final.witnesses,[0x11,0x11,0x22,0x22,0x22,0x22,0x22,0x22,0x55,0x55,0x55,0x55,0x33,0x33,0x44,0x44]);assert.equal(deliveries.filter(e=>e.kind==='fault'&&e.vector===14).length,2);assert.equal(deliveries.filter(e=>e.kind==='irq'&&e.vector===32).length,1);assert.equal(deliveries.length,3);assert.equal(final.board.cycles,4+6*q);assert.equal(final.board.debt,0);assert.ok(ports.some(e=>e.dir==='out'&&e.port===0x21&&e.value===255));assert.equal(Buffer.from(ports.filter(e=>e.dir==='out'&&e.port===0xe9).map(e=>e.value)).toString(),'RPGH001');assert.equal(Object.keys(boundaries).length,names.length);
+ assertHotBaseline(report,readFileSync(output+'/events.jsonl'));
  writeFileSync(output+'/result.json',JSON.stringify({status:'ACTUAL_JS_HOT_BASELINE_PASS',q,attempts,journal:report.journal,sourceInputs:Object.keys(source.hashes).length}),{flag:'wx'});
 }catch(error){try{closeSync(fd);}catch{}throw error;}
