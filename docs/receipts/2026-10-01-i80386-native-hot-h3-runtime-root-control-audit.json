@@ -1,0 +1,9 @@
+{
+  "status": "ROOT_ACTUAL_H3_RUNTIME_CONTROLS_PASS",
+  "checks": 103,
+  "actualChildren": 9,
+  "acceptedFullH1Parity": 4,
+  "fatalDenials": 5,
+  "summarySha256": "22daa039c56f5eda690b9785fe1b557638dbfe34c65bbd87c50e09fcda9ad803",
+  "scope": "Rejected metadata may follow host effects. Denials mean no accepted guest completion, not zero effects. Performance is not established."
+}

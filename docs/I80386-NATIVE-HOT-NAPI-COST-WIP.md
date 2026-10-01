@@ -54,3 +54,7 @@ Test reuse of immutable property-key handles within each resume's callback inter
 Node 22's [NAPI implementation](https://github.com/nodejs/node/blob/v22.23.3/src/js_native_api_v8.cc) constructs a UTF-8 property key in `napi_get_named_property`; `napi_get_property` accepts an existing key. Avoiding repeated key construction is a hypothesis, not a measured gain. The candidate requires a fresh authenticated build, hostile callback tests, full guest parity and alternating profiler-disabled H2/H3 timings before adoption.
 
 Full AT boot, Windows 3.1 enhanced mode, Doom, arbitrary DOSBox media and production native CLI/GUI integration remain unfinished. This bounded free-ROM profile does not expand the adapter's admitted guest policy.
+
+## Measured candidate
+
+[H3 scalar property-key reuse](I80386-NATIVE-HOT-PROPERTY-KEYS-WIP.md) passed full trace/journal parity and reduced median execution time by 7.83% in seven unprofiled pairs on the shared VPS. Scope and timing variation remain explicit in those notes.

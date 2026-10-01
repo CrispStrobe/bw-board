@@ -1,0 +1,12 @@
+{
+  "status": "H3_NINE_ACTUAL_CONTROLS_AFTER_BINDING_PASS",
+  "checks": 112,
+  "summarySha256": "22daa039c56f5eda690b9785fe1b557638dbfe34c65bbd87c50e09fcda9ad803",
+  "helperSha256": "2eb7b0ba8b1786ec9373cb9d01991513ee06f21fa98eaff87fda8febc0921390",
+  "childSha256": "86574daf54bbe9323bb536d22155f5c24c3e4caef8bfdc38092042acd5c48ae0",
+  "addonSha256": "47cbd33c1856d585208221d28aa614345723a42ea302eff83128671e6fe030de",
+  "sourceRevision": "a645480594a9bc20a4046619745bb85e57abacd0",
+  "compiledInputs": 34,
+  "patchedInputs": 12,
+  "scope": "Full exposed snapshots at selected boundaries/final plus counters/wholeboard/RAM; no every-intermediate raw trace claim. Metadata denials may follow host scalar effects; no native acceptance."
+}
