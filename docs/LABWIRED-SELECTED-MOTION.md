@@ -206,6 +206,40 @@ instruction-cost regressions or waivers. [Final-head landing receipts](receipts/
 are separate from the earlier WASM evidence. No WASM floor relaxed, artifact
 promoted or deployed pin changed; CP13 remains open.
 
+## Latest scalar and bounded-run WASM evidence
+
+The cached T16 scalar executor landed as core `c05e8de3` after all 19 enabled
+final-head checks passed. Three exact-artifact paired comparisons measured
+**+6.94%, +1.23% and +4.85%** median gains; one repeat's candidate minimum
+worsened. Fresh qualification still failed every 1× window:
+**0.704710× median / 0.690863× minimum**, EPYC 7763. See the
+[scalar receipts](receipts/2026-10-01-wasm-cached-scalar/README.md).
+
+The bounded cached-run optimization in
+[core PR 146](https://github.com/CrispStrobe/labwired-core/pull/146) reuses the
+checked executor for at most 16 tagged T16 retirements within the existing
+scheduler budget. Native production dispatch and debugger/observer/IRQ/IT
+guards remain unchanged. Three hosted exact-artifact paired comparisons
+measured **+8.24%, +7.15% and +9.65%** against the landed scalar baseline.
+The last comparison measures the fixed runtime source `2f5d9355`; two ordinary
+VPS repeats of that exact module measured **+9.20% and +10.06%**. Within each
+comparison all cycle-indexed guest observations match. These are same-runner
+comparisons, not interchangeable absolute host rates or all-chip qualification.
+
+The fresh fixed-source build passed independent builds, determinism and all
+101 actual WASM integration tests with zero skips, but failed every timed
+window: **0.834235× median / 0.808772× minimum**. Publication was skipped;
+app pins remain unchanged and CP13 remains open. The full local core suite
+passed 4,234 tests with three existing ignored tests. Seven explicitly approved
+content-bound hardware acknowledgements retain their **2026-10-31** expiry and
+unchanged physical evidence; live re-capture remains owed.
+
+The [bounded-run receipts](receipts/2026-10-01-wasm-cached-runs/README.md) retain
+the distinct module hashes, original paired glue, raw windows, CPU fingerprints
+and exact provenance. The core PR records the authoritative final CI and merge
+status; landing requires all 19 enabled final-head checks to pass. Neither a
+green diagnostic comparison nor core landing overrides the failed fresh floor.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is
