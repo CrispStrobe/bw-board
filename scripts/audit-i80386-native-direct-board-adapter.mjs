@@ -34,7 +34,8 @@ export function assertDirectCallbackParity(direct,fifo){
  assert.equal(direct.status,'UNQUALIFIED_DIRECT_DIAGNOSTIC');
  assert.ok(direct.capture,'ordered callback parity requires actual capture');
  const requests=fifo.host.journal.filter(event=>event.kind==='request').map(fifoCallback);
- assert.deepEqual(direct.callbacks.map(directCallback),plain(requests),'full ordered callback arguments/results and CPU-independent whole board checkpoints');
+ assert.equal(direct.callbacks.length,requests.length,'full ordered actual callback count');
+ for(let i=0;i<requests.length;i++){const actual=directCallback(direct.callbacks[i]),expected=plain(requests[i]);assert.deepEqual([actual.operation,actual.args],[expected.operation,expected.args],'ordered callback operation and arguments');const label=['read','write'].includes(actual.operation)?'typed physical observed bytes and decode/effect/generation':actual.operation==='page'?'typed executable page bytes and SHA':actual.operation==='outPort'?'authoritative PIO mapping phase before quantum':'actual scalar callback result';assert.deepEqual(actual.result,expected.result,label);assert.deepEqual([actual.before,actual.after],[expected.before,expected.after],'callback full board and clock state');}
  assert.deepEqual(direct.settled,plain(fifo.host.final.after),'settled whole board, mapping, generations and ledger');
  return {callbacks:requests.length,fullOrderedCallbackParity:true,nativeCpuParity:false,scope:'callback and board comparison only; CPU snapshots require separately authenticated native trace comparison'};
 }
@@ -144,6 +145,8 @@ export function assertNativeTraceParity(directRaw,fifoRaw,{direct,fifo}){
  const old=nativeSemanticRows(fifoRaw,'BWS12'),current=nativeSemanticRows(directRaw,'BWSD1');
  assert.deepEqual(old.filter(row=>row.tag==='READY'),[{tag:'READY',fields:[direct.reset.state[13].toString(16).padStart(4,'0'),direct.reset.state[8].toString(16).padStart(8,'0'),'0','0']}],'exact FIFO READY transport record');
  assert.deepEqual(old.filter(row=>row.tag==='DEACTIVATE'),[{tag:'DEACTIVATE',fields:['proof-complete']}],'qualified FIFO close witness');
+ assert.deepEqual(current.filter(row=>row.tag==='CALLBACKS'),[{tag:'CALLBACKS',fields:counterNames.callbacks.map(key=>direct.final.callbacks[key])}],'raw native callback summary binds exported counters');
+ assert.deepEqual(current.filter(row=>row.tag==='FALLBACK'),[{tag:'FALLBACK',fields:counterNames.fallback.map(key=>direct.final.fallback[key])}],'raw native fallback summary binds exported counters');
  assert.deepEqual(current.filter(row=>row.tag==='DEACTIVATE'),[{tag:'DEACTIVATE',fields:['direct-close']}],'actual direct native close witness');
  const cleanOld=old.filter(row=>!['PAGE_CHUNK','READY','DEACTIVATE'].includes(row.tag));
  const cleanCurrent=current.filter(row=>row.tag!=='DEACTIVATE');
