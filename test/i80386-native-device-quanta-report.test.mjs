@@ -86,6 +86,13 @@ const mutations=[
   ['all-arm RAM write commit removed',r=>each(r,a=>{
     event(a,'MEM',e=>e.rw==='W').effect='ignored';
   })],
+  ['all-arm fallback counters missing',r=>each(r,a=>{
+    a.native.fallback={};
+  })],
+  ['all-arm physical callback count changed',r=>each(r,a=>{
+    assert.equal(typeof a.native.callbacks.physicalReads,'number');
+    a.native.callbacks.physicalReads++;
+  })],
   ['all-arm RAM seed identity changed',r=>each(r,a=>{
     a.native.seed.ramSha256='0'.repeat(64);
   })],
