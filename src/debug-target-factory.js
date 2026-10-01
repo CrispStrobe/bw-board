@@ -158,6 +158,7 @@ async function createRiscV32Target(opts = {}) {
  * @param {Uint8Array} opts.firmware  ELF, or a raw flash image
  * @param {number} [opts.firmwareAddress] load address for a raw image
  * @param {string} [opts.chipKind] our board-part kind, default `stm32f030`
+ * @param {string} [opts.boardVariant] explicit on-module hardware variant
  * @param {string} [opts.chipYaml]  chip descriptor, if not derived from the board
  * @param {Record<string,{peripheral:string,pin:number}>} [opts.pins] header map
  * @param {number} [opts.clockHz]
@@ -167,6 +168,9 @@ async function createLabwiredTarget(opts) {
   const { wasm, board, firmware, name } = opts;
   if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
   if (!firmware) throw new Error('labwired target requires opts.firmware (an ELF)');
+  if (opts.boardVariant != null && (!board || opts.systemYaml != null || opts.chipYaml != null || opts.pins != null)) {
+    throw new Error('labwired boardVariant requires a board-derived manifest, not a firmware-only or explicit manifest override');
+  }
 
   // FIRMWARE-ONLY: `opts.chip` is a labwired-catalog.js entry and there is no
   // circuit. The user's own ELF on the engine's own chip descriptor; no header
@@ -222,6 +226,7 @@ async function createLabwiredTarget(opts) {
   if (!chipYaml || !pins) {
     const derived = labwiredAdapterOptionsFor({
       netlist: board, chipKind: opts.chipKind ?? 'stm32f030', mcuId: opts.mcuId, name,
+      boardVariant: opts.boardVariant,
     });
     chipYaml = chipYaml ?? derived.chipYaml;
     pins = pins ?? derived.pins;

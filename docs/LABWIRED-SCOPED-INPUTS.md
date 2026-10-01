@@ -67,6 +67,8 @@ Absent an artifact the four tests skip explicitly; those skips are not passes.
 The existing two-runner WASM publication workflow selects this file against its
 fresh NODEJS build and retains its zero-skips gate.
 
-Next separate work remains selected-board device attachment, actual Lite
-worker/UI routing and browser guest/performance qualification, then verified
-artifact promotion. Shared sensor IRQ and timed microphone/audio are untouched.
+The next slice adds an explicit selected-board attachment and Lite's direct
+debugger-runner route; see [selected motion qualification](LABWIRED-SELECTED-MOTION.md).
+UI controls and browser guest/performance qualification remain separate work,
+followed by verified artifact promotion. Shared sensor IRQ and timed
+microphone/audio are untouched.

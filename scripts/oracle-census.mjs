@@ -367,7 +367,11 @@ export const INPUTS = [
         paths: [],
         gates: ['test/labwired-adapter.test.mjs', 'test/labwired-roundtrip.test.mjs',
             'test/pad-drive-parity.test.mjs', 'test/labwired-firmware-only.test.mjs',
-            'test/labwired-microbit-matrix.test.mjs'],
+            'test/labwired-microbit-matrix.test.mjs', 'test/labwired-microbit-motion.test.mjs'],
+        // Motion additionally requires arm-none-eabi-gcc and an engine with
+        // LSM303AGR. labwired-wasm.yml's opt-in motion job installs the compiler
+        // and makes absent artifacts/tools, skipped tests and sub-1x windows fail.
+        // This is not availability in ci.yml's ordinary `test` job.
         obtain: 'point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node)',
         ciAvailable: false,
         ci: 'no',

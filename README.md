@@ -295,6 +295,17 @@ all ten candidate windows above 1×. The earlier exact-main `ede33fb4`
 not a measurement of current main `5fb3d7d4`. These are native results, not a browser
 pin upgrade or CP13 completion.
 
+The subsequently completed **exact landed-main** qualification at `5fb3d7d4`
+passed on EPYC 7763: native motion **1.110217× median / 1.107712× minimum**,
+with all five windows above 1×, and GPIO-only **5.532553× median**.
+[Native run 36781277925](https://github.com/CrispStrobe/labwired-core/actions/runs/36781277925)
+and [CorePerf run 36781277968](https://github.com/CrispStrobe/labwired-core/actions/runs/36781277968)
+both succeeded. CorePerf measured all 40 chips above 1× in both medians and
+minima, with no regression or contract failure; regression issue #120 is now
+closed. The [raw exact-main receipts](docs/receipts/2026-10-01-microbit-exact-landed-main/qualification-context.json)
+retain source, runner and artifact provenance. These native observations do
+not qualify the app's WASM artifact, update its pins or complete CP13.
+
 Separate **native Rust** micro:bit v2 PR qualification on 2026-09-30 measured
 **1.758214× median / 1.733954× minimum** while the source-built ARM guest
 polled the selected LSM303AGR accelerometer and magnetometer through TWIM
@@ -316,6 +327,11 @@ binds its source, guest hash and complete samples. It does **not** qualify this
 repository's browser-WASM artifact or update its `a7c7cbdf` engine pin.
 CP13 remains open: shared sensor IRQ, timed microphone/audio and browser workload
 qualification are incomplete.
+
+The [selected-motion boundary](docs/LABWIRED-SELECTED-MOTION.md) now provides
+an explicit `lsm303agr` board variant and an opt-in fresh-WASM guest/RTx CI gate.
+Default board hardware and deployed engine pins are unchanged; this slice has
+not yet produced a passing selected-motion WASM or browser measurement.
 
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
 at `ce60a499` also passed native board/model, input-routing and RTx gates.

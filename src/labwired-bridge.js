@@ -248,6 +248,7 @@ function bindingYaml (b) {
  * @param {object} opts
  * @param {object} opts.netlist   `{parts, nets}` or a `BoardImpl`
  * @param {string} [opts.chipKind] our board-part kind (default `stm32f030`)
+ * @param {string} [opts.boardVariant] explicitly selected on-module hardware
  * @param {string} [opts.mcuId]   which part is the controller, when ambiguous
  * @param {string} [opts.name]    manifest name
  * @param {string} [opts.chipPath] value for the manifest's `chip:` key
@@ -276,6 +277,18 @@ export function buildLabwiredSystem (opts = {}) {
     });
     return fail();
   }
+
+  const boardVariant = opts.boardVariant ?? null;
+  if (boardVariant !== null && (typeof boardVariant !== 'string' ||
+      !Object.hasOwn(chip.onBoardVariants ?? {}, boardVariant))) {
+    refusals.push({
+      code: 'board-variant-unmapped', subject: String(boardVariant),
+      reason: `no on-module variant '${String(boardVariant)}' for '${chipKind}'; `
+        + 'the requested hardware must not silently fall back to a different board',
+    });
+    return fail();
+  }
+  const onBoard = boardVariant === null ? chip.onBoard : chip.onBoardVariants[boardVariant];
 
   const nl = asNetlist(opts.netlist ?? opts.board ?? opts);
 
@@ -430,8 +443,8 @@ export function buildLabwiredSystem (opts = {}) {
     // controller module itself (`chip.onBoard`, e.g. the micro:bit's LED
     // matrix): it sits on labwired's side of the pad, on pins no circuit part
     // reaches, and nothing on our board models it.
-    ...(chip.onBoard?.externalDevicesYaml
-      ? ['external_devices:', chip.onBoard.externalDevicesYaml]
+    ...(onBoard?.externalDevicesYaml
+      ? ['external_devices:', onBoard.externalDevicesYaml]
       : []),
     '',
   ].join('\n');
@@ -439,7 +452,7 @@ export function buildLabwiredSystem (opts = {}) {
   return {
     ok: true,
     systemYaml: yaml,
-    chipYaml: chip.chipYaml,
+    chipYaml: onBoard?.chipYaml ?? chip.chipYaml,
     pins: chip.pins,
     clockHz: chip.clockHz,
     flashOrigin: chip.flashOrigin ?? 0x08000000,
@@ -449,6 +462,9 @@ export function buildLabwiredSystem (opts = {}) {
     attachments,
     refusals,
     mcuId: mcu.id,
+    boardVariant,
+    onBoardDisplays: onBoard?.displays ?? [],
+    onBoardMatrix: onBoard?.matrix ?? null,
   };
 }
 
@@ -493,8 +509,9 @@ export function labwiredAdapterOptionsFor (opts = {}) {
     mcuId: built.mcuId,
     // Displays the controller module carries (see `chip.onBoard`), for the
     // debug target's `video()` and the part's device state.
-    onBoardDisplays: LABWIRED_CHIPS[opts.chipKind ?? 'stm32f030']?.onBoard?.displays ?? [],
-    onBoardMatrix: LABWIRED_CHIPS[opts.chipKind ?? 'stm32f030']?.onBoard?.matrix ?? null,
+    onBoardDisplays: built.onBoardDisplays,
+    onBoardMatrix: built.onBoardMatrix,
+    boardVariant: built.boardVariant,
   };
 }
 
