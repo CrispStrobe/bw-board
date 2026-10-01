@@ -588,8 +588,10 @@ successor. It passes 135 successful work quanta with 814 functional clocks;
 now passes all four work budgets and a fresh reproduction, with 54 report tests
 and five host tests passing without skips. Nineteen native guards and eighteen
 transport rejections pass. Raw reset and named bus/pagewalk differences remain
-visible. Next combine these boundaries with executable RAM/SMC/A20. No broader
-guest acceptance or new RTx is claimed.
+visible. The new [combined protected paging/RAM/SMC/A20 JS baseline](docs/I80386-JS-COMBINED-PAGING-RAM-ORACLE.md)
+now passes 192 work quanta, eight protected RAM entries and 37 tests without
+skips, with byte-identical fresh captures and independent audits. Combined
+native qualification is next. No broader guest acceptance or new RTx is claimed.
 
 **DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
 chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,

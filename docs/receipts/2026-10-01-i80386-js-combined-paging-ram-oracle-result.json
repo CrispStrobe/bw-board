@@ -1,0 +1,12 @@
+{
+  "status": "qualified-bounded-js-actual-board-protected-paging-ram-smc-a20",
+  "successfulQuanta": 192,
+  "attempts": 194,
+  "functionalBoardClocks": 1156,
+  "faults": 2,
+  "irqVector": 32,
+  "protectedRamEntries": 8,
+  "mappingEpochs": 2,
+  "architecturalStalePteParity": false,
+  "checkpointVerification": "same-engine-reexecution-not-independent-architectural-oracle"
+}
