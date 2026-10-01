@@ -27,3 +27,33 @@ The [lossless actual capture](receipts/2026-10-01-i80386-native-combined-paging-
 The mandatory tests run with `node --test --test-concurrency=1 test/i80386-native-combined-paging-ram-board-gate.test.mjs test/i80386-native-combined-paging-ram-host.test.mjs`. The source-bound capture tool is `scripts/run-i80386-native-combined-paging-ram-board-gate.mjs`; its `--build`, `--manifest` and `--out` arguments select an audited prepared build, the original preparation manifest and a new output directory. A different toolchain binary must be audited and pinned separately. This tool is a qualification harness; ordinary CLI/GUI 386 use still selects the existing JavaScript adapter.
 
 The next concrete performance step is a synchronous native Node adapter for this same bounded guest, replacing FIFO round trips and mandatory JSON snapshots with direct callbacks and an optional audit sink. Keep board-owned RAM/PIO/A20/clocks and persistent execute buffers. The initial Bochs SMP=0 embedding must allow only one live native instance per process. Compare audit-enabled effects with the FIFO reference before benchmarking capture-disabled execution. Browser/WASM, GUI integration and broader guest admission follow separate gates. No measured RTx gain follows from this proposal.
+
+## Node 22 diagnostic correction and fresh qualification
+
+Both hosted runs at `9b6d760b` exhausted memory in the native report-test
+worker. [Process and cgroup evidence](receipts/2026-10-01-i80386-node22-assertion-oom.json)
+records about 14.6 GiB RSS and `oom_kill 1`, despite the 1 GiB JavaScript heap
+limit. Official Node 22.23.3 reproduces quadratic external allocation when
+formatting intentional whole-journal assertion failures. The comparator now
+uses the same strict deep-equality predicate and a bounded failure message,
+preserving actual/expected references, error identity and every rejection
+check. There is no global assertion patch or skipped mutation.
+
+The complete suite passes 64 tests on Node 22.23.3: the actual baseline, all
+61 semantic mutants and two new diagnostic/strict-equality regression tests,
+zero skips. Peak RSS is 769,452 KiB. Clean source
+`6af0969e611910265364448e0819086768ed4f02` includes 64 measured inputs. The
+13 compiled native inputs, original prepared manifest and r2 binary remain
+unchanged. A fresh actual capture and independent repetition both qualify
+all four budgets, 24 native denials, 22 transport controls and eleven API
+probes. Root authenticates all 64 current/historical source inputs, 251 actual
+files and complete backing per capture, with 4,242 checks each; full native,
+CPU, device and bus streams agree between captures. Path differences remain.
+
+The new [lossless actual capture](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-capture.json.gz),
+[result](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-result.json),
+[source qualification](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-qualification.json)
+and [independent audits](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-root-audit.json)
+are separate receipts. The earlier 809c3fba qualified capture and original
+57548693 test fixture remain intact. This correction does not broaden native
+guest admission or establish a new RTx measurement.
