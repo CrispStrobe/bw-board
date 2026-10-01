@@ -57,3 +57,10 @@ function erasePhysicalEvent(r,index){
 attack('coherent renumbered missing REP data reaches backing replay',r=>erasePhysicalEvent(r,r.events.findIndex(e=>e.kind==='write'&&e.address===0x5004)),/full backing replay/);
 attack('coherent full chip mutation reaches same-engine checkpoint comparison',r=>{r.steps[80].boardAfter.chipStates.rtc1.seconds=123;r.steps[81].boardBefore.chipStates.rtc1.seconds=123;},/cached same-engine checkpoint reexecution steps/);
 attack('coherent full CPU cache mutation reaches same-engine checkpoint comparison',r=>{r.steps[80].after.segmentCaches[1].limit--;r.steps[81].before.segmentCaches[1].limit--;},/cached same-engine checkpoint reexecution steps/);
+
+attack('coherent active mode-0 CE mutation reaches independent counter arithmetic',r=>{
+ const a=r.chipAdvances.find(a=>a.before.pit.counters[0].armed&&a.before.pit.counters[0].ce>0);a.after.pit.counters[0].ce++;
+},/independent mode-0 counter transition/);
+attack('coherent terminal mode-0 OUT mutation reaches independent output arithmetic',r=>{
+ const a=r.chipAdvances.find(a=>a.before.pit.counters[0].ce>0&&a.after.pit.counters[0].ce===0);a.after.pit.counters[0].out=0;
+},/independent mode-0 output transition/);

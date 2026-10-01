@@ -116,8 +116,7 @@ export function assertRepPfPitOracle(r){
  eq(r.claim,'actual-javascript-board-rep-two-pf-pit-pic-only','claim');
  const identity=sourceIdentity();eq(r.source.sourceHashes,identity.sourceHashes,'complete source inventory');
  check(/^[a-f0-9]{40}$/.test(r.source.boardRevision),'source revision');
- // Committed qualification authenticates historical blobs. Prototype reports
- // deliberately remain diagnostic until their measured inputs are committed.
+ // Every accepted report authenticates its committed historical source blobs.
  for(const [file,hash] of Object.entries(r.source.sourceHashes)){
   const bytes=execFileSync('git',['show',`${r.source.boardRevision}:${file}`],{cwd:root,maxBuffer:4<<20,stdio:['ignore','pipe','pipe']});
   eq(sha(bytes),hash,`historical source ${file}`);
@@ -170,7 +169,32 @@ export function assertRepPfPitOracle(r){
  const one=r.steps.find(s=>s.before.eip===symbols.rep_one);eq([one.before.ecx,one.after.ecx,one.after.edi,one.charged],[1,0,0x6008,6],'final REP charge once');
  const edge=r.steps.filter(s=>s.boardBefore.pic1.irr===0&&s.boardAfter.pic1.irr===1);eq(edge.length,1,'single real PIT PIC edge');eq([edge[0].quantum,edge[0].before.eip,edge[0].before.ecx],[73,symbols.rep_fill,3],'edge inside REP');check(!(edge[0].before.eflags&0x200),'CLI pending edge');
  const rises=r.events.filter(e=>e.kind==='pit-output'&&e.channel===0&&e.level===1);eq(rises.length,1,'single actual PIT callback rise');eq([rises[0].quantum,rises[0].cpu.eip,rises[0].cpu.ecx,rises[0].cpu.edi],[72,symbols.rep_fill,3,0x4ffc],'actual edge precedes second REP fetch');
- let advanced=4;for(const a of r.chipAdvances){check(Number.isInteger(a.n)&&a.n>0,'positive actual chip advancement');const initial=Number((BigInt(advanced)*1193182n)%6000000n)/6000000;check(Math.abs(a.before.pit.fraction-initial)<1e-11,'advance prior rational phase');advanced+=a.n;const final=Number((BigInt(advanced)*1193182n)%6000000n)/6000000;check(Math.abs(a.after.pit.fraction-final)<1e-11,'advance resulting rational phase');eq(a.before.cycles,a.after.cycles,'chip advance does not charge CPU');}eq(advanced,814,'actual chip advance total');
+ let advanced=4;
+ for(const a of r.chipAdvances){
+  check(Number.isInteger(a.n)&&a.n>0,'positive actual chip advancement');
+  const beforeTicks=BigInt(advanced)*1193182n/6000000n;
+  const initial=Number((BigInt(advanced)*1193182n)%6000000n)/6000000;
+  check(Math.abs(a.before.pit.fraction-initial)<1e-11,'advance prior rational phase');
+  advanced+=a.n;
+  const afterTicks=BigInt(advanced)*1193182n/6000000n;
+  const final=Number((BigInt(advanced)*1193182n)%6000000n)/6000000;
+  check(Math.abs(a.after.pit.fraction-final)<1e-11,'advance resulting rational phase');
+  const counter=a.before.pit.counters[0],after=a.after.pit.counters[0];
+  // This independent arithmetic admits only this fixture's binary mode-0
+  // countdown. It does not claim an independent general 8254 model.
+  if(counter.mode===0&&counter.gate===1&&!counter.nullCount&&counter.armed){
+   eq(counter.bcd,0,'bounded binary mode-0 timer');
+   const ce=Math.max(0,counter.ce-Number(afterTicks-beforeTicks));
+   eq(after.ce,ce,'independent mode-0 counter transition');
+   eq(after.out,counter.ce>0&&ce===0?1:counter.out,'independent mode-0 output transition');
+  }
+  eq(a.before.cycles,a.after.cycles,'chip advance does not charge CPU');
+ }
+ eq(advanced,814,'actual chip advance total');
+ for(const s of r.steps.filter(s=>!s.completed)){
+  const target=s.after.cr2;
+  check(!r.events.slice(s.firstOrdinal-1,s.lastOrdinal).some(e=>e.kind==='write'&&!e.paging&&e.address>=target&&e.address<target+4),'failed attempt has no user destination write');
+ }
  eq(r.events.filter(e=>e.kind==='ack').map(e=>[e.vector,e.quantum]),[[32,108]],'actual master ACK');
  eq(r.events.filter(e=>e.kind==='pio'&&e.port===0xe9).map(e=>String.fromCharCode(e.value)).join(''),'RPPT001','guest marker');
  eq(r.events.filter(e=>e.kind==='pio'&&e.port===0x20&&e.value===0x20).length,1,'actual EOI');
