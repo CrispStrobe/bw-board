@@ -13,8 +13,9 @@ this path, whose caller requires at least eight remaining instructions.
 The baseline build is `faa39978923f96abe65706407f04d4af63e33857`, whose tree
 matches landed scalar main `c05e8de37f8837148c3066c5e5f1d715a6dbd0f8`.
 Measured candidate build is `8562db36f1598dff93653b96d627de4e0d12eb0c`.
-Both use original, identical glue; the harness, guest/compiler invocation and
-every-window floor are unchanged.
+Each engine uses its own unmodified original glue, under the harness's explicit
+paired-glue policy; the two glue hashes differ. The harness, guest/compiler
+invocation and every-window floor are unchanged.
 
 | Hosted run | CPU | Scalar median / min | Bounded-run median / min | Median change |
 | --- | --- | --- | --- | --- |
@@ -56,8 +57,14 @@ Head `2f5d9355` removes that wrapper and invokes the same run primitive directly
 with budget one. The source audit then passed against the fixed file, without
 changing the audit/allowlist. The rebuilt full suite at `2f5d9355` then passed
 **4,234 tests / zero failures / three existing ignored tests**, including the
-unchanged audit. Fresh fixed-head WASM byte verification is pending. Removing
-the test-only wrapper changes no production execution logic.
+unchanged audit. The first fresh fixed-head build has identical executable WASM
+sections and original candidate glue, but is **not byte-identical**: 26 data
+bytes differ, consistent with shifted logging/source locations after removing
+the wrapper. Independent determinism, final-head integration/qualification and
+an ordinary A/B of that exact new artifact remain pending. Do not silently
+transfer the old artifact's qualification to the new module hash. The
+[section hashes and every differing byte](fixed-module-comparison.json) retain
+that comparison against build leg A of run 36888339538.
 
 No core merge, hardware acknowledgement/capture update, app pin promotion or
 completion of CP13 is claimed. The old acknowledgements do not cover this new
