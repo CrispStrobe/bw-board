@@ -447,6 +447,7 @@ static int bw_host_out(void *,uint16_t port,uint32_t width,uint32_t value){
   fprintf(stderr,"BWS10\tPORT\tout\t%04x\t%u\t%08x\t%" PRIu64 "\t%" PRIu64 "\n",port,width,value,bw_ticks,++bw_ordinal);return 1;
 }
 
+extern "C" int bw_cpu3_ram_coherence_set_irq_line(int){return 0;}
 unsigned bw_slice_ack_irq(void){bw_slice_fail("unsupported-irq");return 0;}
 void bw_slice_note_irq(unsigned){bw_slice_fail("unsupported-irq");}
 void bw_slice_note_fault(unsigned,unsigned){bw_slice_fail("unexpected-fault");}
