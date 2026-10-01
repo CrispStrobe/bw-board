@@ -39,6 +39,8 @@ const mutations=[
   ['plausible PIT fraction uses different oscillator',r=>{r.steps[20].boardAfter.pit.fraction+=0.001;r.steps[21].boardBefore.pit.fraction+=0.001;}],
   ['coherent full CPU interior checkpoint mutation',r=>{r.steps[42].after.eax^=0x10000;r.steps[43].before.eax^=0x10000;}],
   ['coherent DMA checkpoint mutation',r=>{r.steps[42].boardAfter.dma1.channels[0].curAddr=1;r.steps[43].boardBefore.dma1.channels[0].curAddr=1;}],
+  ['coherent configured CGA checkpoint mutation',r=>{r.steps[42].boardAfter.chipStates.cga1.color=1;r.steps[43].boardBefore.chipStates.cga1.color=1;}],
+  ['missing configured UART checkpoint',r=>{delete r.reset.board.chipStates.uart1;}],
   ['unobserved RAM32 fetch callback invented',r=>{r.providers.fetchRam32Used++;}],
   ['seven witness parity counterexample',r=>{r.final.witnesses[8]=0x22;}],
   ['high backing overwritten during OFF alias patch',r=>{r.final.highCode=[0xbb,0x55,0x55,0xcb];}],

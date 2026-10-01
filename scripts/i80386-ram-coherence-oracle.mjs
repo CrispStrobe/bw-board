@@ -44,7 +44,11 @@ function cpuState(cpu){
 }
 function boardState(m){
   return clone({cycles:m.cycles,debt:m._chipDebt,deadline:m._chipDeadline,
-    a20Enabled:m._a20Enabled,a20:m._a20Controller.getState(),fastA20Latch:m._fastA20Latch,cpuResetPending:m._cpuResetPending,
+    a20Enabled:m._a20Enabled,a20:m._a20Controller.getState(),fastA20Latch:m._fastA20Latch,cpuResetPending:!!m._cpuResetPending,
+    interruptSignals:{nmiPending:!!m._nmiPending,nmiMasked:!!m._nmiMasked,kbdStrobe:!!m._kbdStrobe,pinLevels:{...m._pinLevels}},
+    chipStates:Object.fromEntries(Object.entries(m.chips).map(([name,chip])=>{
+      assert.equal(typeof chip.getState,'function',`configured chip lacks state snapshot: ${name}`);return [name,chip.getState()];
+    })),
     pit:{...m.chips.pit1.getState(),fraction:m.chips.pit1._frac,clockHz:m.chips.pit1.clockHz},
     pic1:m.chips.pic1.getState(),pic2:m.chips.pic2.getState(),rtc:m.chips.rtc1.getState(),
     dma1:m.chips.dma1.getState(),dma2:m.chips.dma2.getState(),systemControl:m.chips.sysctl.getState()});
