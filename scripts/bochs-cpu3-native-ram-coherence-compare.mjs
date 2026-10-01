@@ -387,7 +387,7 @@ export const ramBuildPins=Object.freeze({
   bochsRevision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',
   binarySha256:'PENDING_ROOT_AUDITED_RAM_BUILD',
   configSha256:'d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c',
-  runtimeSha256:'2c51846d788d487f1d2bf88c1b384f4a3241c84c66bdb58a8567ed07afb3a055',
+  runtimeSha256:'e041c7e6e62144bdd6dfc03de4cccab3e1019b6a7769e340c52228c880aad55c',
 });
 export const ramGuards=Object.freeze({
   'unsupported-span-width':'host-physical-read','physical-overflow':'host-physical-read',

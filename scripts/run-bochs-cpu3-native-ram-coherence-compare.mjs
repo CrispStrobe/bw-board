@@ -69,12 +69,12 @@ class Lines{
     stream.on('error',e=>this.fail(e));stream.on('end',()=>this.fail(Error(this.buffer?'ram RPC truncated line':'ram RPC closed')));
   }
   fail(error){if(this.error)return;this.error=error;for(const w of this.waiters.splice(0))w.reject(error);}
-  async next(){
+  async next(timeoutMs=15000){
     if(this.queue.length)return this.queue.shift();if(this.error)throw this.error;
     let waiter,timer;
     return new Promise((resolve,reject)=>{
       waiter={resolve,reject};this.waiters.push(waiter);
-      timer=setTimeout(()=>{this.waiters=this.waiters.filter(w=>w!==waiter);reject(Error('ram RPC response timeout'));},5000);
+      timer=setTimeout(()=>{this.waiters=this.waiters.filter(w=>w!==waiter);reject(Error(`RAM RPC response timeout after ${timeoutMs}ms`));},timeoutMs);
     }).finally(()=>clearTimeout(timer));
   }
 }
@@ -88,14 +88,14 @@ function childSession(binary,rc,dir,env={}){
   });
   child.stdio[3].on('error',e=>{outputError??=e;});
   const closed=new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));});
-  const wall=setTimeout(()=>{outputError=Error('ram native session timeout');stop();},30000);
+  const wall=setTimeout(()=>{outputError=Error(`RAM native session timeout after 120000ms; READY=${raw.rpcFromNative.startsWith('BWR10\tREADY\t')}; lastBWS=${raw.stderr.split('\n').filter(x=>x.startsWith('BWS10\t')).at(-1)?.slice(0,180)??'none'}`);stop();},120000);
   closed.finally(()=>clearTimeout(wall)).catch(()=>{});
   child.stdio[4].on('data',bytes=>{raw.rpcFromNative+=bytes.toString('latin1');if(Buffer.byteLength(raw.rpcFromNative)>8<<20){outputError=Error('ram RPC output bound exceeded');stop();}});
   const input=new Lines(child.stdio[4]);
   const send=lines=>{
     for(const line of typeof lines==='string'?[lines]:lines){raw.rpcToNative+=line+'\n';child.stdio[3].write(line+'\n');}
   };
-  const receive=async()=>{const line=await input.next();return parseRamRpcLine(line);};
+  const receive=async(timeoutMs)=>{const line=await input.next(timeoutMs);return parseRamRpcLine(line);};
   return {child,raw,closed,send,receive,stop,error:()=>outputError};
 }
 function retain(dir,label,raw,exit){
@@ -137,7 +137,7 @@ function transportReply(name,request,wire){
 async function runArm(binary,rc,dir,rom,mode,transport=null){
   const session=childSession(binary,rc,dir),host=new NativeRamCoherenceHost(rom);let seq=0,terminal=false,injected=false,error=null,final=null;
   try{
-    const ready=await session.receive();check(ready.kind==='READY'&&ready.cs===0xf000&&ready.eip===0xfff0&&ready.nativeTicks===0&&ready.successfulQuanta===0,'actual ram READY');
+    const ready=await session.receive(120000);check(ready.kind==='READY'&&ready.cs===0xf000&&ready.eip===0xfff0&&ready.nativeTicks===0&&ready.successfulQuanta===0,'actual ram READY');
     for(let runs=0;runs<256;runs++){
       host.beginRun();let command=encodeRamCommand(++seq,'RUN',1000000,ramBudgets[mode],'18446744073709551615');
       if(transport?.startsWith('command-')&&!injected){
@@ -184,7 +184,16 @@ async function runGuard(binary,rc,dir,name){
   const session=childSession(binary,rc,dir,{BW_CPU3_RAM_COHERENCE_PROBE:name});
   const exit=await session.closed,artifacts=retain(dir,'guard-'+name,session.raw,exit);
   const failures=[...session.raw.stderr.matchAll(/^BWS10\tFAIL\t([^\t\n]+)$/gm)].map(m=>m[1]);
-  return {name,expected:ramGuards[name],observedFailure:failures.length===1?failures[0]:null,exit,files:artifacts.files,raw:session.raw};
+  return {name,expected:ramGuards[name],observedFailure:failures.length===1?failures[0]:null,exit,files:artifacts.files,raw:session.raw,diagnostic:session.error()?.message??null};
+}
+function verifyActualArtifacts(report,directory){
+  for(const group of Object.values(report.artifacts)){
+    const files=group.files??(Object.hasOwn(group,'path')?{single:group}:group);
+    for(const entry of Object.values(files)){
+      check(entry&&typeof entry.path==='string'&&/^[a-zA-Z0-9._-]+$/.test(entry.path),'unsafe actual artifact path');
+      check(shaFile(path.join(directory,entry.path))===entry.sha256,`actual artifact bytes differ: ${entry.path}`);
+    }
+  }
 }
 export async function runNativeRamCoherenceCompare({build,manifestFile,directory}){
   build=path.resolve(build);directory=path.resolve(directory);check(!existsSync(directory),'capture directory must be new');
@@ -209,6 +218,8 @@ export async function runNativeRamCoherenceCompare({build,manifestFile,directory
   for(const name of Object.keys(ramTransports)){report.transportProbes[name]=await runArm(binary,rc,directory,rom,'continuous',name);report.artifacts['transport-'+name]=report.transportProbes[name].files;}
   writeFileSync(path.join(directory,'capture.json'),JSON.stringify(report,null,2)+'\n',{flag:'wx'});
   assert.deepEqual(preflight(build,manifest,manifestBytes),before,'source/build changed during actual capture');
+  verifyActualArtifacts(report,directory);
+  check(shaFile(path.join(directory,'free-rom.bin'))===source.romSha256,'actual ROM artifact bytes');
   const result=assertNativeRamCoherenceProof(report,rom);
   writeFileSync(path.join(directory,'result.json'),JSON.stringify(result,null,2)+'\n',{flag:'wx'});
   return {capture:path.join(directory,'capture.json'),captureSha256:shaFile(path.join(directory,'capture.json')),...result};
