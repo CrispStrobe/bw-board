@@ -12,7 +12,7 @@ const source=process.env.BOCHS_386_ROOT && resolve(process.env.BOCHS_386_ROOT);
 const [mode,destination,...extra]=process.argv.slice(2);
 if(!source || extra.length || !['--check','--prepare'].includes(mode) ||
   (mode==='--check' && destination) || (mode==='--prepare' && !destination))
-  throw new Error('BOCHS_386_ROOT=/clean/pinned/Bochs node scripts/prepare-bochs-cpu3-native-direct-board.mjs --check | --prepare /new/tree');
+  throw new Error('BOCHS_386_ROOT=/clean/pinned/Bochs node scripts/prepare-bochs-cpu3-native-hot-direct.mjs --check | --prepare /new/tree');
 const git=(cwd,args)=>execFileSync('git',args,{cwd,encoding:'utf8'}).trim();
 if(git(source,['rev-parse','HEAD'])!==revision ||
    git(source,['status','--porcelain','--untracked-files=no']))
