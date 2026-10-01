@@ -84,7 +84,7 @@ function receipt (adapter, pose, index) {
     assert.equal(frame.bytes.length, 25);
     for (let pixel = 0; pixel < 25; pixel++) {
         if (pixel % 6 === 0) assert.ok(frame.bytes[pixel] >= 155 && frame.bytes[pixel] <= 255);
-        else assert.equal(frame.bytes[pixel], 0);
+        else assert.equal(frame.bytes[pixel], 0, `pixel ${pixel}: ${JSON.stringify(frame.bytes)}`);
     }
     return {accelRaw: accel, magRaw: mag, accelSamples: memory.getUint32(0x104, true),
         magSamples: memory.getUint32(0x108, true), scans: memory.getUint32(4, true)};

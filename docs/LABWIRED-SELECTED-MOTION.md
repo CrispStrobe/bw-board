@@ -1,8 +1,9 @@
 # Selected micro:bit motion boundary — 2026-10-01
 
-This slice is based on cached BW `7ca77580`. GitHub was unreachable in the
-implementation session; it does not establish the latest remote state or a
-passing fresh WASM run. CP13 remains incomplete and the engine pin is unchanged.
+This slice is based on BW `7ca77580`, confirmed unchanged when networking
+returned. The initial implementation session could not reach GitHub. The
+follow-up pushed PR #184 and built current LabWired source `4d944d2d` in
+workflow run `36816537489`. CP13 remains incomplete and the engine pin is unchanged.
 
 `buildLabwiredSystem`, `labwiredAdapterOptionsFor` and the LabWired debug-target
 factory accept `boardVariant: 'lsm303agr'` with `chipKind: 'microbit_v2'` (also
@@ -23,6 +24,14 @@ await createDebugTarget('labwired', {
 An engine containing these sensor models is required. Discovery and atomic
 engineering inputs use the existing [scoped input contract](LABWIRED-SCOPED-INPUTS.md).
 The app's deployed engine has not been upgraded by this change.
+
+The selected variant also uses the qualified engine's compact silicon GPIO
+windows: P0 occupies `0x50000000..0x500007ff`, P1's implemented registers start
+at `0x50000800` with `reg_offset: 0x500`. This preserves P0 PIN_CNF while allowing
+the guest's real P1 stores. The first actual guest exposed the legacy descriptor's
+synthetic `0x50001000` remap: column 4 stayed lit. Correcting the selected
+descriptor makes the unchanged guest's exact diagonal assertions pass. The
+legacy default descriptor is intentionally unchanged until artifact promotion.
 
 ## Qualification boundary
 
@@ -49,11 +58,17 @@ with requested motion qualification requires that job to succeed, as well as
 the existing determinism and integration gates. Non-motion builds retain their
 original gates. The workflow is actionlint/shellcheck-clean locally.
 
-Ten new local non-engine assertions passed (five manifest tests, two factory
-constructor-double tests and three workflow/source tests). The real selected
-motion suite has **not run** here: no fresh engine artifact was available.
-Existing real-WASM generic input proof uses the historical published WEB
-module under Node, not these new sensors.
+The new local non-engine tests cover manifests, factory constructor doubles,
+workflow/source invariants and the oracle census. The actual selected-motion
+functional test now passes on the fresh run's build-B NODEJS artifact after
+the descriptor correction (both identities/poses, DMA, matrix and buttons).
+The RTx test was explicitly skipped in that functional-only local run; no
+passing WASM performance qualification is claimed yet. A subsequent VPS run
+executed both tests with zero skips: functional passed, but all five RTx
+windows failed the unchanged floor (0.266108× median / 0.256228× minimum).
+This is a failed shared-VPS observation, not a hosted result; it does not
+justify artifact promotion. Existing real-WASM
+generic input proof uses the historical published WEB module under Node.
 
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI

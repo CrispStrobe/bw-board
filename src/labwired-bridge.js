@@ -452,7 +452,7 @@ export function buildLabwiredSystem (opts = {}) {
   return {
     ok: true,
     systemYaml: yaml,
-    chipYaml: chip.chipYaml,
+    chipYaml: onBoard?.chipYaml ?? chip.chipYaml,
     pins: chip.pins,
     clockHz: chip.clockHz,
     flashOrigin: chip.flashOrigin ?? 0x08000000,

@@ -11,9 +11,10 @@ const firmware = binToElf(raw, {loadAddress: 0});
 
 // These constructor doubles qualify option forwarding, NOT sensor fidelity.
 test('factory forwards the selected variant into the constructor instead of dropping it', async () => {
-    let system;
-    const wasm = {WasmSimulator: {new_from_config: (manifest) => {
+    let system, chip;
+    const wasm = {WasmSimulator: {new_from_config: (manifest, descriptor) => {
         system = manifest;
+        chip = descriptor;
         throw Error('constructor boundary reached');
     }}};
     await assert.rejects(createDebugTarget('labwired', {
@@ -22,6 +23,8 @@ test('factory forwards the selected variant into the constructor instead of drop
     assert.match(system, /lsm303agr_accel/);
     assert.match(system, /lsm303agr_mag/);
     assert.match(system, /led-matrix-mux/);
+    assert.match(chip, /base_address: 0x50000800/);
+    assert.match(chip, /reg_offset: 0x500/);
 });
 
 test('manual overrides cannot silently discard the selected variant', async () => {

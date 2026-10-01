@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "5fb3d7d44cc1487fdab757906ae62222e8798e93",
+  "nativeRun": {
+    "id": 36781277925,
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/36781277925",
+    "conclusion": "success",
+    "artifactId": 11128039448,
+    "githubReportedArtifactDigest": "sha256:386763bc392069f2eceb60665f7f4aac190a6beb0c32438374ff54ab59504c5d",
+    "runnerCpu": "AMD EPYC 7763 64-Core Processor",
+    "motionMedianRtx": 1.1102174304882653,
+    "motionMinimumRtx": 1.107711633954227,
+    "allFiveMotionWindowsAtLeast1x": true,
+    "gpioMedianRtx": 5.532553472710232,
+    "retainedGuestElfHashesVerified": [
+      "8968e1160521d3982452d16d7335f900d213836b1d18deb8c510777b336f55c8",
+      "5134aad6b48e75513fa4f56605116ac3f792d0cf7b8936d8af9deb500f2ece3d",
+      "c3e0cb328f0a34088a96ae2a2bd61dc89e1ea09b1335b2fe712fda056f3edeba"
+    ]
+  },
+  "corePerfRun": {
+    "id": 36781277968,
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/36781277968",
+    "conclusion": "success",
+    "artifactId": 11128950350,
+    "githubReportedArtifactDigest": "sha256:0a758e1a94b02c8e7381d76ec3b60c3f844af8a3e8e88e30173387f7b5e5cde6",
+    "measuredChipCount": 40,
+    "allChipMediansAndMinimaAtLeast1x": true,
+    "lowestChip": "stm32h735",
+    "lowestMedianRtx": 12.14792917227528,
+    "lowestMinimumRtx": 12.087805383133887,
+    "runnerCpu": null,
+    "regressionIssue120StateObserved": "CLOSED"
+  },
+  "limitations": [
+    "native Rust measurements, not browser or NODEJS WASM",
+    "held selected LSM303AGR inputs; no shared sensor IRQ or timed audio",
+    "ALU-loop chip table is not a board application workload",
+    "no cross-runner performance improvement attribution",
+    "app engine/package pins unchanged; CP13 remains incomplete",
+    "artifact archive digests are GitHub metadata, not independently recomputed here"
+  ]
+}

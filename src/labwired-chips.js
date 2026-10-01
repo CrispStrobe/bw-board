@@ -757,6 +757,30 @@ export const MICROBIT_V2_LABWIRED_PINS = {
   p20: { peripheral: 'gpio1', pin: 0 },
 };
 
+// The selected variant requires the newer engine's compact silicon P1 window.
+// Keep the legacy default descriptor/pin compatible until artifact promotion;
+// do not remap the guest's real P1 stores to the old synthetic 0x50001000 block.
+export const NRF52833_MOTION_CHIP_YAML = NRF52833_CHIP_YAML.replace(
+  /  - id: "gpio0"[\s\S]*?(?=  - id: "uart1")/,
+  `  - id: "gpio0"
+    type: "gpio"
+    base_address: 0x50000000
+    size: "2048B"
+    config:
+      debug_schema: "../peripherals/nrf52840/p0.yaml"
+      profile: "nrf52"
+  # P1 registers at block 0x50000300 + 0x500; no overlap with P0 PIN_CNF.
+  - id: "gpio1"
+    type: "gpio"
+    base_address: 0x50000800
+    size: "768B"
+    config:
+      debug_schema: "../peripherals/nrf52833/p1.yaml"
+      profile: "nrf52"
+      num_pins: 10
+      reg_offset: 0x500
+`);
+
 const MICROBIT_V2_MATRIX = {
   externalDevicesYaml: [
     '  - id: "led_matrix"',
@@ -796,6 +820,7 @@ export const MICROBIT_V2 = {
   onBoardVariants: {
     lsm303agr: {
       ...MICROBIT_V2_MATRIX,
+      chipYaml: NRF52833_MOTION_CHIP_YAML,
       externalDevicesYaml: [
         '  - id: "accelerometer"',
         '    type: "lsm303agr_accel"',
