@@ -257,7 +257,7 @@ function armProof(arm,name){
   equal(requestKinds.filter(x=>x==='ACK').length,1,at+'.RPC PIC ACK');
   return {activation:native.activation,seed:native.seed,hostJournal:host.journal,finalHost:host.final,
     selectedState:native.finalState,ramFinal:native.ramFinal,
-    logicalEvents:events.filter(e=>!['ATTEMPT','CMD','RPC_REQ','RPC_REP','EXEC'].includes(e.tag))
+    logicalEvents:events.filter(e=>!['ATTEMPT','CMD','RPC_REQ','RPC_REP'].includes(e.tag))
       .map(({ordinal,causeOrdinal,...e})=>e),
     writes:events.filter(e=>e.tag==='MEM'&&e.rw==='W')
       .map(({raw,effective,class:kind,value,effect,tick,why})=>
@@ -281,7 +281,7 @@ function protocolProof(arm,at){
   equal(commands.length,rpc.commands.length,at+'.command count');
   equal(rpc.dones.length,commands.length,at+'.completion count');
   let requestIndex=0,sliceIndex=0,n=0,q=0,active=null,attempt=null;
-  let previousReply=null;
+  let previousReply=null,completion=null,requestOperation=null;
   const repSeen=new Map();
   const finishAttempt=()=>{if(attempt){
     equal(attempt.ticks,attempt.quanta+(attempt.fault?1:0),at+'.attempt clock classification');
@@ -290,6 +290,20 @@ function protocolProof(arm,at){
     attempt=null;
   }};
   for(const e of native.events){
+    if(['QUANTUM','NATIVE_TICK','IRQ_ACK','PORT'].includes(e.tag))
+      check(completion!==null&&previousReply===null,at,'typed completion without settled RPC');
+    if(completion){
+      const tag={QUANTUM:'QUANTUM',NATIVE_TICK:'NATIVE_TICK',
+        ACK:'IRQ_ACK',PIO_IN:'PORT',PIO_OUT:'PORT'}[completion.kind];
+      equal(e.tag,tag,at+'.REQ REP completion order');
+      if(tag==='QUANTUM')equal(e.kind,completion.arg0,at+'.quantum RPC kind');
+      if(tag==='NATIVE_TICK')equal(e.count,completion.arg0,at+'.native RPC count');
+      if(tag==='IRQ_ACK')equal([e.vector,e.tick],[completion.value,n],at+'.ACK completion');
+      if(tag==='PORT')equal([e.direction,e.port,e.width,e.value,e.tick],
+        [completion.kind==='PIO_IN'?'in':'out',completion.arg0,completion.arg1,
+          completion.kind==='PIO_IN'?completion.value:completion.arg2,n],at+'.PIO completion');
+      completion=null;
+    }
     if(e.tag==='CMD'){
       check(active===null,at,'overlapping commands');
       const c=rpc.commands[e.seq-1];
@@ -312,19 +326,20 @@ function protocolProof(arm,at){
       equal(rpc.requests[requestIndex],{kind:'REQ',seq:e.seq,operation:e.kind,arg0:e.arg0,arg1:e.arg1,arg2:e.arg2,nativeTicks:n,successfulQuanta:q},at+'.request mirror');
       const value=replay.handleRequest(e.kind,e.arg0,e.arg1,e.arg2,n,q);
       previousReply={seq:e.seq,value,nativeTicks:n,successfulQuanta:q};
+      requestOperation={kind:e.kind,arg0:e.arg0,arg1:e.arg1,arg2:e.arg2,value};
       requestIndex++;
     }else if(e.tag==='RPC_REP'){
       check(previousReply!==null,at,'unsolicited reply');
       equal({seq:e.seq,value:e.value,nativeTicks:e.nativeTicks,successfulQuanta:e.successfulQuanta},previousReply,at+'.reply mirror');
       equal(rpc.replies[e.seq-1],{seq:e.seq,value:e.value},at+'.wire reply');
-      previousReply=null;
+      previousReply=null;completion=requestOperation;requestOperation=null;
     }else if(e.tag==='ATTEMPT'){
       check(active&&previousReply===null,at,'attempt outside settled RUN');
       equal([e.nativeTicks,e.successfulQuanta],[n,q],at+'.attempt ledger');
       finishAttempt();
       attempt={...e,quanta:0,ticks:0,fault:false};
     }else if(e.tag==='QUANTUM'){
-      check(attempt&&!attempt.fault,at,'quantum without successful attempt');
+      check(previousReply===null&&attempt&&!attempt.fault,at,'quantum without settled successful attempt');
       equal([e.cs,e.eip],[attempt.cs,attempt.eip],at+'.attempt identity');
       equal([e.preQ,e.successfulQuanta,e.nativeTicks],[q,q+1,n],at+'.ordered quantum ledger');
       if(e.kind===1){
@@ -337,6 +352,7 @@ function protocolProof(arm,at){
       attempt.quanta++;q++;
       equal([replay.nativeTicks,replay.successfulQuanta],[n,q],at+'.quantum callback settlement');
     }else if(e.tag==='NATIVE_TICK'){
+      check(previousReply===null,at,'native tick before RPC reply');
       equal([e.preTick,e.nativeTicks,e.successfulQuanta],[n,n+1,q],at+'.ordered native ledger');
       if(attempt)attempt.ticks++;
       n++;
@@ -361,7 +377,7 @@ function protocolProof(arm,at){
     if(active&&(!next||next.tag==='CMD')){
       const slice=native.slices[sliceIndex-1];
       equal([slice.afterNativeTicks,slice.afterQuanta],[n,q],at+'.slice event ledger');
-      check(previousReply===null,at,'RUN closes with outstanding callback');
+      check(previousReply===null&&completion===null,at,'RUN closes with outstanding callback or completion');
       finishAttempt();
       active=null;
     }
