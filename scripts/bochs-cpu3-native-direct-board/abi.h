@@ -133,6 +133,8 @@ typedef struct bw_direct_callbacks {
 typedef struct bw_direct_snapshot {
  uint32_t state[20],extra[20],segments[6][15],system[2][15],debug[6];
  uint64_t native_ticks,successful_quanta;
+ /* Direct snapshot v2: source-maintained counters, never host-derived. */
+ uint64_t callback_counts[5],fallback_counts[5],execution_counts[8];
  uint32_t mapping_epoch,board_a20,active;
 } bw_direct_snapshot;
 /* Synchronous initializing-thread calls; one initialization lifetime/process. */

@@ -734,9 +734,17 @@ extern "C" int bw_direct_inspect(bw_direct_snapshot *out) {
   const uint32_t extra[20]={cpu->dr6.val32,cpu->dr7.val32,cpu->sregs[BX_SEG_REG_ES].selector.value,cpu->sregs[BX_SEG_REG_FS].selector.value,cpu->sregs[BX_SEG_REG_GS].selector.value,cs.selector.index,cs.selector.ti,cs.selector.rpl,cs.cache.valid,cs.cache.p,cs.cache.dpl,cs.cache.segment,cs.cache.type,(uint32_t)cs.cache.u.segment.base,cs.cache.u.segment.limit_scaled,cs.cache.u.segment.g,cs.cache.u.segment.d_b,cs.cache.u.segment.avl,cpu->pending_event,cpu->event_mask};memcpy(out->extra,extra,sizeof(extra));
   for(unsigned i=0;i<6;i++)bw_direct_segment(out->segments[i],i,cpu->sregs[i]);bw_direct_segment(out->system[0],6,cpu->ldtr);bw_direct_segment(out->system[1],7,cpu->tr);
   for(unsigned i=0;i<4;i++)out->debug[i]=(uint32_t)cpu->dr[i];out->debug[4]=cpu->dr6.val32;out->debug[5]=cpu->dr7.val32;
+  const uint64_t callbacks[5]={bw_physical_reads,bw_physical_writes,bw_execute_pages,bw_tick_callbacks,bw_quantum_callbacks};
+  const uint64_t fallbacks[5]={bw_fallback_ram_reads,bw_fallback_ram_writes,bw_fallback_direct_pointers,bw_fallback_pio,bw_fallback_timer};
+  const uint64_t execution[8]={bw_attempts,bw_completed,bw_rep_iterations,bw_rep_partial,bw_faults,bw_ports,bw_irq_deliveries,bw_halt_idle_cuts};
+  memcpy(out->callback_counts,callbacks,sizeof(callbacks));memcpy(out->fallback_counts,fallbacks,sizeof(fallbacks));memcpy(out->execution_counts,execution,sizeof(execution));
   out->native_ticks=bw_ticks;out->successful_quanta=bw_successful_quanta;out->mapping_epoch=bw_mapping_epoch;out->board_a20=bw_board_a20;out->active=bw_slice_active;return 1;
 }
 extern "C" int bw_direct_close(void) {
   if(!bw_direct_paused_thread()||bw_in_resume)return 0;
+  bw_emit_state("STATE",BX_CPU(0));
+  BW_TRACE("BWSD1\tCALLBACKS\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\n",bw_physical_reads,bw_physical_writes,bw_execute_pages,bw_tick_callbacks,bw_quantum_callbacks);
+  BW_TRACE("BWSD1\tFALLBACK\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\n",bw_fallback_ram_reads,bw_fallback_ram_writes,bw_fallback_direct_pointers,bw_fallback_pio,bw_fallback_timer);
+  BW_TRACE("BWSD1\tDEACTIVATE\tdirect-close\n");
   bw_slice_active=false;bw_host_irq_line=false;BX_CPU(0)->clear_INTR();memset(&bw_callbacks,0,sizeof(bw_callbacks));memset(&bw_direct_host,0,sizeof(bw_direct_host));bw_direct_lifetime.store(4);return 1;
 }
