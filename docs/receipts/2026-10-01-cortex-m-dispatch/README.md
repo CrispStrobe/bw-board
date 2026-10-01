@@ -67,7 +67,10 @@ and [unit/result log excerpt](native-board-log-excerpt.txt) are retained; the
 excerpt is selected from the official job log, not a full log or a new test run.
 The [feature-off excerpt](feature-off-log-excerpt.txt) similarly selects dispatch
 test names and result lines. Native CorePerf passed all forty targets without
-regressions/waivers; two remaining workspace shards are still pending.
+regressions/waivers; all three workspace shards and their aggregator subsequently
+passed. Browser-layer, scheduler-observable, feature-off, board, Python SDK,
+Renode comparison and release-runner checks also passed. The remaining red
+default-member/pr-gate results are the seven-board silicon drift described below.
 
 Seven shared-Cortex board captures predate the changed CPU content; the
 default-member gate is red: nrf52840, seeed-xiao-nrf52840-sense, stm32h563,
