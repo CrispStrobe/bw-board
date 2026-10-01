@@ -122,7 +122,8 @@ test('analytic segments obey the same hard history capacity refusal',()=>{
   assert.equal(watch.hist.length,100000);
   assert.throws(()=>b.meterCurrent('L','a'),/meter-history-limit-exceeded/);
 });
-const probe=spawnSync('ngspice',['--version'],{encoding:'utf8'});
+const NGSPICE=process.env.NGSPICE || 'ngspice';
+const probe=spawnSync(NGSPICE,['--version'],{encoding:'utf8'});
 test('analytic inductor voltage/current means match live ngspice, not just local formulas',{
   skip:probe.error || probe.status!==0 ? 'ngspice unavailable' : false,
 },()=>{
@@ -142,7 +143,7 @@ quit
 .endc
 .end
 `);
-    const result=spawnSync('ngspice',['-b','reference.cir'],{cwd:dir,encoding:'utf8',timeout:30000});
+    const result=spawnSync(NGSPICE,['-b','reference.cir'],{cwd:dir,encoding:'utf8',timeout:30000});
     assert.ifError(result.error); assert.equal(result.status,0,result.stderr);
     const rows=readFileSync(join(dir,'reference.csv'),'utf8').trim().split('\n').slice(1)
       .map(line=>line.trim().split(/\s+/).map(Number)).filter(row=>row[0]>=.001-1e-12);

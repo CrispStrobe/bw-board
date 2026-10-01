@@ -23,6 +23,9 @@ than frozen parameter descriptor (1). Board/source-waveforms restored blobs
 `c884822bf33accabe1786006b4f9252b4f069bb8` /
 `a6ef0993e95c6b16fc569c63d8e71728c4455d96`. Candidate contains this closeout;
 one exact hosted CI/Harris qualification precedes guarded normal FF.
+Initial source candidate `3d8545da` is superseded: census validation exposed
+the new oracle test's missing `NGSPICE` override. Both initial automatic
+runs were cancelled; the forward test-only repair honors that actual input.
 
 2026-09-30 Meter waveform integration — DONE, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-audit-20260930`, branch
