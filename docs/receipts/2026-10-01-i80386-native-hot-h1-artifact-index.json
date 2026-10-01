@@ -1,0 +1,37 @@
+{
+  "scope": "actual source46cb repeat; nativecompiledc626 separately bound; WIP comparisons, not production qualification or throughput",
+  "receipts": {
+    "2026-10-01-i80386-native-hot-h1-build.json": {
+      "bytes": 1175,
+      "sha256": "96e821b962b0be231f0a957f960f23406a88e6ad29c9a3ffb84b90e00d02f038"
+    },
+    "2026-10-01-i80386-native-hot-h1-failed-pipe-trace.json": {
+      "bytes": 2537,
+      "sha256": "efc14802a960bccaaf8cb92ed455639ba6ad569a4514bdaa6eda854010d3f6f9"
+    },
+    "2026-10-01-i80386-native-hot-h1-initial-binding.json": {
+      "bytes": 2822,
+      "sha256": "27782892b009f8fa17cd117eecbcfa79e99a6e0118e40576c27ff7fb0d5618ac"
+    },
+    "2026-10-01-i80386-native-hot-h1-initial-root-ram.json": {
+      "bytes": 1251,
+      "sha256": "292666f5e3811e393031a0515f833540c830f588a51084621060591ddd05aefc"
+    },
+    "2026-10-01-i80386-native-hot-h1-off-capture.json.gz": {
+      "bytes": 8311,
+      "sha256": "f7b44906f4e401e571097ff30a1dc536cf42f325ab74557c43aeeb5cb0c25ee8"
+    },
+    "2026-10-01-i80386-native-hot-h1-on-capture.json.gz": {
+      "bytes": 8304,
+      "sha256": "aa69a34396a31919cf45aaf27f60a0f5ab57c8ec650ff60be7b06ec48087a28f"
+    },
+    "2026-10-01-i80386-native-hot-h1-regular-trace.json": {
+      "bytes": 1678,
+      "sha256": "52bb8106d771793211dd9b3afa85306af98dac2efeecdaa6f219bd9ab215443f"
+    },
+    "2026-10-01-i80386-native-hot-h1-root-trace-semantic.json": {
+      "bytes": 874,
+      "sha256": "3ea24f731fecd925ce8a0351d162fa21bcc32e0c2083bf6e965c226bfc8f719b"
+    }
+  }
+}
