@@ -268,7 +268,7 @@ export function assertNativeRamCoherenceArmProof(arm,rom,name=arm.mode){
   equal(arm.host.bus,host.bus,'authoritative typed byte bus');equal(arm.host.final,final,'actual terminal settlement/RAM digest');
   equal(final.after.board,js.final.board,'selected actual board device/debt state matches JS checkpoint');
   equal(final.before.board,js.beforeSettle.board,'no invented idle horizon before settlement');
-  equal(final.coherenceWitness,js.final.witnesses,'seven guest-produced coherence witnesses');
+  equal(final.coherenceWitness,js.final.witnesses,'eight guest-produced coherence witnesses');
   equal(final.lowCode,js.final.lowCode,'final low executable backing');equal(final.highCode,js.final.highCode,'independent high executable backing');
   equal(final.after.mappingEpoch,js.final.mappingEpoch,'terminal board mapping epoch');
   equal(final.resetWitness,ramResetDifferences.guestWitness.native,'guest-produced native reset witness');
@@ -444,8 +444,9 @@ export function assertNativeRamCoherenceArmProof(arm,rom,name=arm.mode){
     resetDebug:native.resetDebug,logical,host:arm.host,finalState:native.finalState,callbacks:native.callbacks};
 }
 
-// Independently built r2 candidate, authenticated by root before any formal
-// source-bound proof. These pins do not themselves claim an execution result.
+// Independently built r3 binary, authenticated by root and exercised in the
+// actual initial ef2a capture. These pins identify the measured build;
+// source-bound captures separately verify execution.
 export const ramBuildPins=Object.freeze({
   bochsRevision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',
   binarySha256:'7921ba0624c906c9a957870261618964f8a78a691a22ad4fb9c652ffc641b74e',

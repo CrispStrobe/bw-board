@@ -1,4 +1,4 @@
-/** Actual AT board authority for the bounded ROM-only native ram-reset lane. */
+/** Actual AT board authority for bounded guest-created RAM, SMC and A20 coherence. */
 import {createHash} from 'node:crypto';
 import {ExperimentalI80386ATMachine,PCAT80386_EXPERIMENTAL} from '../src/experimental/i80386-at-machine.js';
 export const ramBoardConfig=PCAT80386_EXPERIMENTAL;
