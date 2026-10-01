@@ -587,6 +587,12 @@ reproduction agree through 49 instructions and 298 functional board clocks;
 zero skips. Architectural reset parity remains false. Next are executable RAM,
 self-modifying code and A20 cache invalidation; this is not a new speed/RTx result.
 
+The new [actual-board RAM/SMC/A20 oracle](docs/I80386-JS-RAM-COHERENCE-ORACLE.md)
+now creates RAM code through guest writes and verifies both live A20 aliases
+with eight executable entries. Its independent capture is byte-identical and
+34 tests pass. Native cache coherence is the current WIP gate; no new speed
+measurement or Windows compatibility claim follows from this JS baseline.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our

@@ -1,0 +1,30 @@
+{
+  "status": "independent-root-byte-identical-reproduction-and-bus-ledger-pass",
+  "sourceRevision": "a36c3687ebba1bfe541e7d33dfa63fbba399c5b2",
+  "measuredInputs": 41,
+  "captureSha256": "aa48612c132bcdfea4ca031644100f45afed29b769b72eed706b03e706783c91",
+  "gzipSha256": "b315d2b5a0fe1a8059bb7bd01a6e1575613b203b0a1510b2a505ccbf87c8bda6",
+  "romSha256": "c65ff0ecd3cb13c3f306f402973ea44e341b93c604a8a844f2654705c0c903cc",
+  "fixtureSha256": "638b09f289f015ec8bc3cd7b7a196fee3f7c7fe20ced441f06a57024d041cd79",
+  "events": 348,
+  "configuredChips": [
+    "dma1",
+    "pic1",
+    "pit1",
+    "sysctl",
+    "pic2",
+    "dma2",
+    "rtc1",
+    "cga1",
+    "uart1",
+    "fdc1",
+    "dmapg"
+  ],
+  "tests": {
+    "pass": 34,
+    "fail": 0,
+    "skip": 0
+  },
+  "nativeParity": false,
+  "speedMeasured": false
+}
