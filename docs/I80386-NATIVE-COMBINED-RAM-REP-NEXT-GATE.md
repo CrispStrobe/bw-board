@@ -1,6 +1,6 @@
 # Next bounded actual-board gate: protected paging, REP/PF/PIT/IRQ, RAM SMC and A20
 
-The [actual JavaScript combined baseline](I80386-JS-COMBINED-PAGING-RAM-ORACLE.md) is now qualified at 192 work quanta. This remains the native implementation proposal, not combined native execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. Create a new actual JS baseline first, then a separate native ABI/runtime/host gate. No compatibility or speed claim. The new JS guest/oracle and source-bound captures now exist; no combined native build/capture has been performed.
+The [actual JavaScript combined baseline](I80386-JS-COMBINED-PAGING-RAM-ORACLE.md) is now qualified at 192 work quanta. This remains the native implementation proposal, not combined native execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. The next implementation is a separate native ABI/runtime/host gate using that frozen JS reference. No compatibility or speed claim. The new JS guest/oracle and source-bound captures now exist; no combined native build/capture has been performed.
 
 ## Smallest fixture candidate
 
@@ -28,7 +28,7 @@ After actual IRQ return, relocate the existing final CLI to this point (no added
 
 Witness words560..56F avoid existing reset510/514, PF520/524/528, successor530, IRQ534 and frame-copy540..548. Return-stack top remains9000; each same-ring16 far CALL creates only a four-byte return frame, and RETF restores it. Use a new distinct E9 marker/receipt schema.
 
-Instruction estimate: existing135Q plus six GDT dword stores, two PTE stores, two code stores, two real-mode high-ES setup instructions, two protected high-ES setup instructions,24 CALL/body/RETF instructions, eight witness stores, three patches and eight8042 MOV/OUT instructions = approximately192 successful Q, two fault-only attempts. This is an estimate only: actual JS pilot determines counts, symbols and timer reload. Timer absolute phase shifts when setup expands; preserve the required edge after one successful REP element by measuring actual PIT advancement and tuning the free fixture before freeze, never synthesizing an edge. Bound the new JS pilot at200Q initially; if genuinely more work is required, report the measured cause before expanding the limit.
+Instruction estimate: existing135Q plus six GDT dword stores, two PTE stores, two code stores, two real-mode high-ES setup instructions, two protected high-ES setup instructions,24 CALL/body/RETF instructions, eight witness stores, three patches and eight8042 MOV/OUT instructions = approximately192 successful Q, two fault-only attempts. The qualified JS baseline confirms exactly 192 successful Q and two fault-only attempts; its actual timer reload remains 6. The preceding accounting describes the fixture design. Timer absolute phase shifts when setup expands; preserve the required edge after one successful REP element by measuring actual PIT advancement and tuning the free fixture before freeze, never synthesizing an edge. Bound the new JS pilot at200Q initially; if genuinely more work is required, report the measured cause before expanding the limit.
 
 ## Exact cache/publication policy
 
@@ -60,7 +60,7 @@ Upstream is Bochs2.7 revision0e45b736ef9792eb9b752b0a35db49eaf2faea47; readonly 
 
 ## Qualification and rejection tests
 
-First new actual JS oracle: exact raw physical read/write/fetch/pagewalk effects; every configured chip; actual PIT edge/fractions/advances; CPU caches/system/debug; source-bound free ROM and historical import inventory. Preserve initial failed pilots as diagnostics. Guest creates all RAM code/tables and actual8042 state. Freeze meaningful same-engine replay/mutation tests before final JS source capture and independent bus/timer audit.
+The qualified actual JS oracle records exact raw physical read/write/fetch/pagewalk effects; every configured chip; actual PIT edge/fractions/advances; CPU caches/system/debug; source-bound free ROM and historical import inventory. Preserve initial failed pilots as diagnostics. Guest creates all RAM code/tables and actual8042 state. Freeze meaningful same-engine replay/mutation tests before final JS source capture and independent bus/timer audit.
 
 New native protocol/ABI (candidate BWS12/BWR12) must explicitly report publication reason, boundary owner N/Q, alias raw/decoded keys, epoch/generation/SHA, whether stamp/prefetch/TLB invalidation occurred, and actual A20 transition. Required exact phase invariants: REP data publication has zero executable aliases/invalidation; pre-REP low SMC invalidates only admitted low code; OFF alias write updates BOTH previously admitted aliases; ON high SMC does not change low backing. Keep full native bus chronology and budget comparison, plus narrowly source-backed JS/native descriptor/frame-order differences.
 
@@ -75,3 +75,5 @@ Resources: reserve512MiB filesystem space, <200 successfulQ target, <=300 diagno
 The VPS is close to its disk reserve. Preserve existing builds and raw captures. Before implementation, select a working directory and capture budget that retain at least 512 MiB free; use GitHub CI for sustained native builds/captures if local space is insufficient. Kaggle CPU runs are not authorized by the current usage notes. No execution or speed claim follows from this resource plan.
 
 The qualified JS profile explicitly enables the specialized 8042 cache hook and records other existing source-owned invalidations: tracked-table writes and every ordinary OFF byte write. Native policy above is a separate proposed target, not a statement that the JS implementation preserves architectural stale PTEs. Additional native/JS pagewalk differences need exact site/source audits.
+
+The separate `i80386-native-combined-build.yml` workflow builds the new CPU3 bridge on a hosted runner and retains the prepared LGPL source tree, binary, configuration, transform manifest, compiler/hardware context and failure logs. Its output is diagnostic: successful compilation alone does not qualify a guest, prove native/JS parity, provide a production backend or measure RTx. Guest captures and source/binary pin audits remain separate required steps.
