@@ -29,8 +29,7 @@ Ten mandatory tests use hash-pinned, lossless historical actual fixtures with
 no external environment requirement. They cover assembly boundaries and six
 mutants of the parsed baseline. The test fixtures retain their original f05b156e
 capture identity; the final 47-input capture is a separate source-bound run.
-Run `node --test --test-concurrency=1 test/i80386-free-combined-hot.test.mjs
- test/i80386-free-combined-hot-proof.test.mjs` as one command. From a clean
+Run `node --test --test-concurrency=1 test/i80386-free-combined-hot.test.mjs test/i80386-free-combined-hot-proof.test.mjs` as one command. From a clean
 checkout, `node scripts/run-i80386-free-combined-hot.mjs /absolute/new-output`
 creates a new actual baseline; the directory must not already exist.
 
