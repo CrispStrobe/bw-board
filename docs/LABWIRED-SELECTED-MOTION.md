@@ -97,7 +97,7 @@ generic real-WASM input tests with zero skips. No artifact/default/pin promotion
 
 `scripts/probe-labwired-motion-ab.mjs --baseline <original-nodejs-dir>
 --candidate <candidate-nodejs-dir> --out <new-receipt.json>` repeats the diagnostic.
-It requires identical glue, distinct binaries, five correctly timed samples per
+By default it requires identical original glue, distinct binaries, five correctly timed samples per
 run, actual functional success, two tests, zero skips and consistent exit status.
 Failed RTx samples are preserved rather than removed or relabelled as green.
 The probe returns success for a *completed diagnostic*, not for qualification;
@@ -105,6 +105,23 @@ consult each run's `allWindowsMeet1x`. Parser mutation tests are synthetic log
 tests only, not engine evidence. Candidate bytes were produced with
 `npm exec --yes --package=binaryen@132.0.0 -- wasm-opt <original.wasm> -O3 -o <candidate.wasm>`;
 the receipt binds both binary hashes, tool integrity, CPU, Node and complete logs.
+
+The manual `labwired-motion-ab.yml` workflow compares build-B artifacts from two
+existing `labwired-wasm.yml` runs on one Ubuntu 24.04 / Node 22 runner, without
+rebuilding either engine. Supply each run ID and exact source commit. Both
+BUILD-INFO source declarations and original glue/WASM hashes are checked before
+execution; runner, toolchains, BUILD-INFO files and complete A/B/B/A results are
+retained even on failure. It has read-only repository permissions and no publish
+step. A successful *diagnostic* run does not mean its RTx windows passed: inspect
+`allWindowsMeet1x`. The independent determinism, integration and all-five >=1x
+qualification workflow remains unchanged. Differing glue fails by default.
+An explicit `--paired-glue` probe option (`allow_paired_glue: true` in CI) instead
+compares each original build with its own unmodified glue, recording that policy
+and both original hashes. This does not certify JS/ABI equivalence: the actual
+functional guest assertions must still pass for both engines. For candidate
+`08ad74b7`, the inspected diff contains only five `shim_idx` numbers inside
+wasm-bindgen cast-intrinsic comments, but the probe does not normalize or rewrite
+either module or silently reuse one engine's glue for the other.
 
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI

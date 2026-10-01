@@ -1,4 +1,9 @@
 /** Strict diagnostic parsing; synthetic parser tests are not engine evidence. */
+export const gluePolicy = (baselineHash, candidateHash, allowPairedGlue = false) => {
+    if (baselineHash === candidateHash) return 'identical original glue';
+    if (!allowPairedGlue) throw Error('Different glue requires explicit --paired-glue');
+    return 'explicit paired-glue comparison; each engine loads its own unmodified original build glue';
+};
 export const median = values => {
     if (!values.length || values.some(value => !Number.isFinite(value))) throw Error('Invalid median input');
     const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
