@@ -206,6 +206,7 @@ export function assertNativeCombinedPagingRamArmProof(arm,rom){
  return {qualificationStatus:'UNQUALIFIED',successfulQuanta:host.successfulQuanta,nativeTicks:host.nativeTicks,boardClocks:host.machine.cycles};
 }
 
+const historyCache=new Map(),inventoryCache=new Map();
 function historicalBlob(revision,file){
   const key=revision+':'+file;
   // Commit-qualified blobs are immutable. Internal callers only hash or decode these bytes.
