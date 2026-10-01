@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {cpus, loadavg} from 'node:os';
 import {motionProbeResult} from './lib/motion-ab-receipt.mjs';
-import {summarizeCpuProfile, parseWasmCompilations} from './lib/wasm-motion-profile.mjs';
+import {summarizeCpuProfile, parseWasmCompilations, wasmFunctionNames} from './lib/wasm-motion-profile.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => {
@@ -26,6 +26,7 @@ const flagsByMode = {
     liftoff: ['--liftoff', '--no-wasm-tier-up', '--trace-wasm-compilation-times']
 };
 if (!Object.hasOwn(flagsByMode, mode)) throw Error('Unsupported diagnostic mode');
+if (process.env.NODE_OPTIONS) throw Error('Unset NODE_OPTIONS to keep diagnostic flags explicit');
 if (existsSync(out)) throw Error('Refusing to overwrite existing diagnostics');
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const harness = join(root, 'test/labwired-microbit-motion.test.mjs');
@@ -51,7 +52,13 @@ Object.assign(receipt, {exitCode: result.status, signal: result.signal, error: r
     loadAfter: loadavg(), completedAt: new Date().toISOString()});
 save(); // Preserve raw evidence even when functional assertions or parsing fail.
 Object.assign(receipt, motionProbeResult(result.stdout || '', result.status));
-if (mode !== 'default') receipt.compilation = parseWasmCompilations((result.stdout || '') + '\n' + (result.stderr || ''));
+if (mode !== 'default') {
+    receipt.compilation = parseWasmCompilations((result.stdout || '') + '\n' + (result.stderr || ''));
+    const names = wasmFunctionNames(readFileSync(join(directory, 'labwired_wasm_bg.wasm')));
+    for (const row of receipt.compilation.compilations) row.wasmName = names.get(row.index) || null;
+    receipt.compilation.cortexM = receipt.compilation.compilations.filter(c =>
+        /CortexM|cortex_m|step_internal|step_execute|step_batch/.test(c.wasmName || c.name || ''));
+}
 if (mode === 'sampled-default') {
     receipt.profileSha256 = hash(join(out, 'motion.cpuprofile'));
     receipt.profile = summarizeCpuProfile(JSON.parse(readFileSync(join(out, 'motion.cpuprofile'))));

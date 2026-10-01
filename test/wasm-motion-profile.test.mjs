@@ -1,7 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {summarizeCpuProfile, parseWasmCompilations} from '../scripts/lib/wasm-motion-profile.mjs';
+import {summarizeCpuProfile, parseWasmCompilations, wasmFunctionNames} from '../scripts/lib/wasm-motion-profile.mjs';
+
+test('WASM names map trace function indices without compiling the module', () => {
+    const header = [0, 97, 115, 109, 1, 0, 0, 0];
+    const bytes = Uint8Array.from([...header, 0, 11, 4, 110, 97, 109, 101, 1, 4, 1, 73, 1, 120]);
+    assert.equal(wasmFunctionNames(bytes).get(73), 'x');
+    assert.equal(wasmFunctionNames(Uint8Array.from(header)).size, 0);
+    assert.throws(() => wasmFunctionNames(bytes.subarray(0, bytes.length - 1)));
+    assert.throws(() => wasmFunctionNames(Uint8Array.from([1, 2, 3])));
+});
 
 const profile = () => ({nodes: [
     {id: 1, callFrame: {functionName: '(root)', url: ''}},
@@ -26,14 +35,16 @@ test('incomplete, unknown and inconsistent samples fail closed', () => {
 });
 test('compiler traces preserve each tier, body size, module and function', () => {
     const result = parseWasmCompilations([
-        'Compiled function 0xabc#73 using Liftoff, took 1 ms and 12 / 20 max/total bytes; bodysize 77465 codesize 100 name CortexM::step_batch',
+        'Compiled function 0xabc#73 using Liftoff, took 1 ms and 12 bytes; bodysize 77465 codesize 100',
         'Compiled function 0xabc#73 using TurboFan, took 2.5 ms and 32 / 40 max/total bytes; bodysize 77465 codesize 80 name CortexM::step_batch'
     ].join('\n'));
     assert.deepEqual(result.tiers, {Liftoff: 1, TurboFan: 1});
-    assert.equal(result.cortexM.length, 2);
+    assert.equal(result.cortexM.length, 1);
+    assert.equal(result.compilations[0].name, null);
     assert.equal(result.compilations[1].compileMs, 2.5);
     assert.equal(result.largestBodies[0].bodyBytes, 77465);
     assert.throws(() => parseWasmCompilations('no actual trace'));
+    assert.throws(() => parseWasmCompilations('Compiled function NEW FORMAT'));
 });
 test('hosted profiling is opt-in and follows the unchanged ordinary A/B', () => {
     const workflow = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
