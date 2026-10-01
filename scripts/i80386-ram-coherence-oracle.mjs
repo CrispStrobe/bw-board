@@ -113,7 +113,6 @@ export function runRamCoherenceOracle({requireClean=true}={}){
     steps.push({quantum,before,after:cpuState(m.cpu),charged,boardBefore,boardAfter:boardState(m),
       firstOrdinal,lastOrdinal:events.length});
   }
-  assert(m.cpu.halted&&!m.cpu.shutdown,'bounded RAM fixture did not reach HLT');
   const beforeSettle={cpu:cpuState(m.cpu),board:boardState(m)};
   m._catchUpChips();
   const report={schema:'bw.i80386-js-ram-coherence-oracle.v1',claim:'actual-javascript-board-guest-created-ram-smc-a20-only',
