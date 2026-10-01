@@ -29,3 +29,14 @@ test('fresh-process duration summary preserves the measured distribution',async(
  assert.deepEqual(summarizeFreshProcessSamples([{executionNs:30},{executionNs:10},{executionNs:20}]),{unit:'nanoseconds',samples:3,min:10,median:20,max:30,sorted:[10,20,30]});
  assert.throws(()=>summarizeFreshProcessSamples([{executionNs:0},{executionNs:1},{executionNs:2}]),/positive canonical/);
 });
+
+test('child Bochs configuration preserves every setting except its owned log path',async()=>{
+ const {ownedChildConfiguration}=await import('../scripts/audit-i80386-native-direct-board-adapter.mjs');
+ const configuration='megs: 16\nlog: /preserved/smoke.log\ncpu: count=1,ips=6000000\n';
+ const first=ownedChildConfiguration(configuration,'/new/continuous-true'),second=ownedChildConfiguration(configuration,'/new/budget1-false');
+ assert.equal(first.text,'megs: 16\nlog: "/new/continuous-true.bochs.log"\ncpu: count=1,ips=6000000\n');
+ assert.equal(first.sourceSha256,second.sourceSha256);assert.notEqual(first.sha256,second.sha256);assert.notEqual(first.logPath,second.logPath);
+ assert.match(configuration,/log: \/preserved\/smoke.log/);
+ assert.throws(()=>ownedChildConfiguration('megs: 16\n','/new/child'),/exactly one/);
+ assert.throws(()=>ownedChildConfiguration(configuration+'log: another\n','/new/child'),/exactly one/);
+});

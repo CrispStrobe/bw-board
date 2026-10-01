@@ -1,5 +1,16 @@
 /** Explicit direct/FIFO callback projection; raw input records remain retained. */
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+export function ownedChildConfiguration(configuration,stem){
+ assert.equal(typeof configuration,'string','canonical configuration text required');
+ const directives=[...configuration.matchAll(/^([ \t]*log:[ \t]*)([^\r\n]*)(\r?)$/gm)];
+ assert.equal(directives.length,1,'exactly one Bochs log directive required');
+ assert.ok(typeof stem==='string'&&stem.startsWith('/')&&!/[\r\n\0]/.test(stem),'absolute child artifact stem');
+ const logPath=stem+'.bochs.log',path=stem+'.bochsrc',match=directives[0];
+ const text=configuration.slice(0,match.index)+match[1]+JSON.stringify(logPath)+match[3]+configuration.slice(match.index+match[0].length);
+ const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+ return {text,path,logPath,sha256:sha(text),sourceSha256:sha(configuration)};
+}
 const plain=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
 const hex=bytes=>Buffer.from(bytes).toString('hex');
 export function fifoCallback(record){
@@ -29,7 +40,7 @@ export function assertDirectCallbackParity(direct,fifo){
 }
 export function assertCaptureModeParity(captured,uncaptured){
  assert.equal(captured.capture,true);assert.equal(uncaptured.capture,false);
- for(const field of ['reset','final','checkpoints','settled','ramSha256','quanta'])assert.deepEqual(captured[field],uncaptured[field],`capture mode parity: ${field}`);
+ for(const field of ['reset','final','checkpoints','settled','ramSha256','backingSlices','quanta'])assert.deepEqual(captured[field],uncaptured[field],`capture mode parity: ${field}`);
  assert.equal(uncaptured.callbacks.length,0,'capture disabled callback census');
 }
 
@@ -39,14 +50,15 @@ export async function collectDirectMatrix({addon,sha256,configuration,directory,
  const {resolve,join}=await import('node:path');
  const {spawnSync}=await import('node:child_process');
  const {fileURLToPath}=await import('node:url');
- mkdirSync(directory,{recursive:false});
+ mkdirSync(directory,{recursive:false});writeFileSync(join(directory,'source.bochsrc'),configuration,{flag:'wx'});
  const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url));
  const audit=fileURLToPath(new URL('./audit-i80386-native-direct-board-mode.mjs',import.meta.url)),receipts={};
  for(const [mode,quanta] of Object.entries({continuous:300,budget1:1,budget2:2,budget257:257})){
   const paths={};
   for(const capture of [true,false]){
    const stem=join(resolve(directory),`${mode}-capture-${capture}`),input=stem+'.input.json',output=stem+'.json';
-   writeFileSync(input,JSON.stringify({addon,sha256,configuration,capture,quanta,control:'run',output}));
+   const config=ownedChildConfiguration(configuration,stem);writeFileSync(config.path,config.text,{flag:'wx'});
+   writeFileSync(input,JSON.stringify({addon,sha256,configuration:config.text,configurationArtifact:config,capture,quanta,control:'run',output}));
    // Send logs directly to immutable files; do not buffer them in the parent.
    const stdout=openSync(stem+'.stdout','wx'),stderr=openSync(stem+'.stderr','wx');let child;
    try{child=spawnSync(process.execPath,['--max-old-space-size=1024',entry,input],{timeout:120000,stdio:['ignore',stdout,stderr]});}finally{closeSync(stdout);closeSync(stderr);}
@@ -74,9 +86,9 @@ export function assertFatalControlWitness(control,witness){
 }
 export async function collectDirectControls({addon,sha256,configuration,directory}){
  const {mkdirSync,writeFileSync}=await import('node:fs');const {join,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
- mkdirSync(directory,{recursive:false});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results={};
+ mkdirSync(directory,{recursive:false});writeFileSync(join(directory,'source.bochsrc'),configuration,{flag:'wx'});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results={};
  for(const control of ['bad-page-sha','callback-throw','callback-reentry','second-create']){
-  const stem=join(resolve(directory),control),input=stem+'.input.json';writeFileSync(input,JSON.stringify({addon,sha256,configuration,control,capture:false,quanta:300,output:stem+'.json'}));
+  const stem=join(resolve(directory),control),input=stem+'.input.json',config=ownedChildConfiguration(configuration,stem);writeFileSync(config.path,config.text,{flag:'wx'});writeFileSync(input,JSON.stringify({addon,sha256,configuration:config.text,configurationArtifact:config,control,capture:false,quanta:300,output:stem+'.json'}));
   const child=spawnSync(process.execPath,[entry,input],{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});const witness={status:child.status,signal:child.signal,error:child.error?.message??null,stderr:child.stderr??'',stdout:child.stdout??''};writeFileSync(stem+'.witness.json',JSON.stringify(witness));
   if(control==='second-create'){assert.equal(witness.error,null);assert.equal(witness.signal,null);assert.equal(witness.status,0);}else assertFatalControlWitness(control,witness);
   results[control]=witness;
@@ -117,13 +129,13 @@ export async function collectDirectMeasurements({addon,sha256,configuration,dire
  const {mkdirSync,writeFileSync,readFileSync,openSync,closeSync}=await import('node:fs');const {join,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
  assert.ok(Number.isInteger(warmups)&&warmups>=0&&warmups<=5);assert.ok(Number.isInteger(samples)&&samples>=3&&samples<=21);
  const expected=JSON.parse(readFileSync(reference,'utf8'));assert.equal(expected.capture,false);assert.equal(expected.measurement,false);
- mkdirSync(directory,{recursive:false});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results=[];
+ mkdirSync(directory,{recursive:false});writeFileSync(join(directory,'source.bochsrc'),configuration,{flag:'wx'});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results=[];
  for(let i=0;i<warmups+samples;i++){
-  const stem=join(resolve(directory),`sample-${i}`),input=stem+'.input.json',output=stem+'.json';writeFileSync(input,JSON.stringify({addon,sha256,configuration,control:'run',capture:false,measurement:true,quanta:expected.quanta,output}));
+  const stem=join(resolve(directory),`sample-${i}`),input=stem+'.input.json',output=stem+'.json',config=ownedChildConfiguration(configuration,stem);writeFileSync(config.path,config.text,{flag:'wx'});writeFileSync(input,JSON.stringify({addon,sha256,configuration:config.text,configurationArtifact:config,control:'run',capture:false,measurement:true,quanta:expected.quanta,output}));
   const stdout=openSync(stem+'.stdout','wx'),stderr=openSync(stem+'.stderr','wx'),start=process.hrtime.bigint();let child;
   try{child=spawnSync(process.execPath,['--max-old-space-size=1024',entry,input],{timeout:120000,stdio:['ignore',stdout,stderr]});}finally{closeSync(stdout);closeSync(stderr);}
   const wallNs=Number(process.hrtime.bigint()-start);writeFileSync(stem+'.exit.json',JSON.stringify({status:child.status,signal:child.signal,error:child.error?.message??null,wallNs}));assert.equal(child.error,undefined);assert.equal(child.signal,null);assert.equal(child.status,0);
-  const actual=JSON.parse(readFileSync(output,'utf8'));for(const field of ['reset','final','settled','ramSha256','callbackCounts','resumes','quanta'])assert.deepEqual(actual[field],expected[field],`measured sample retains paired actual ${field}`);
+  const actual=JSON.parse(readFileSync(output,'utf8'));for(const field of ['reset','final','settled','ramSha256','backingSlices','callbackCounts','resumes','quanta'])assert.deepEqual(actual[field],expected[field],`measured sample retains paired actual ${field}`);
   const timing=JSON.parse(readFileSync(output+'.timing.json','utf8'));results.push({index:i,discardedWarmup:i<warmups,wallNs,...timing.stages,output});
  }
  const summary={status:'SHORT_GUEST_TIMING_ONLY',reference,warmups,samples:results,execution:summarizeFreshProcessSamples(results.filter(r=>!r.discardedWarmup)),scope:'fresh-process 194-native-tick free guest; execution includes resume snapshots and actual board callbacks; discarded warmups may warm OS caches only; no physical-386, representative-long-workload or speedup claim'};

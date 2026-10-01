@@ -27,7 +27,8 @@ else{
  stages.executionNs=elapsed(started);
  check(terminal,'direct child bound exhausted');check(options.control==='run','fatal control unexpectedly returned');
  started=clock();const settled=board.settleTerminal(),ramSha256=createHash('sha256').update(board.machine.mem).digest('hex');
+ const backingSlices=Object.fromEntries([[0x510,8],[0x560,16],[0x7000,4],[0x107000,4],[0x4ff8,16],[0x6000,8],[0x8ff0,16],[0xa014,4],[0xa018,4],[0xa01c,4],[0xa41c,4]].map(([address,length])=>[address.toString(16),[...board.machine.mem.subarray(address,address+length)]]));
  stages.settlementAndRamHashNs=elapsed(started);native.close();board.close();
- started=clock();writeFileSync(options.output,JSON.stringify({status:'UNQUALIFIED_DIRECT_DIAGNOSTIC',capture:options.capture,quanta:options.quanta,reset,final,checkpoints,settled,ramSha256,callbacks,callbackCounts,resumes,measurement:!!options.measurement},(_,v)=>typeof v==='bigint'?v.toString():v instanceof Uint8Array?[...v]:v));stages.serializationAndWriteNs=elapsed(started);
+ started=clock();writeFileSync(options.output,JSON.stringify({status:'UNQUALIFIED_DIRECT_DIAGNOSTIC',capture:options.capture,quanta:options.quanta,reset,final,checkpoints,settled,ramSha256,backingSlices,callbacks,callbackCounts,resumes,measurement:!!options.measurement},(_,v)=>typeof v==='bigint'?v.toString():v instanceof Uint8Array?[...v]:v));stages.serializationAndWriteNs=elapsed(started);
  writeFileSync(options.output+'.timing.json',JSON.stringify({unit:'nanoseconds',stages,executionScope:'bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization',warmupScope:'fresh process, never warmed native lifetime'}));
 }
