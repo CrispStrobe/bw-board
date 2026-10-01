@@ -395,7 +395,12 @@ and +4.85%** median gains, with candidate medians **0.924740×, 1.099840× and
 candidate minimum was worse. Fresh qualification still failed (**0.768439×
 median / 0.752785× minimum**, EPYC 7763), despite passing determinism and all
 101 existing integration tests with zero skips. Every cycle-indexed guest
-observation matched across A/B runs. [Raw receipts and verification boundaries](docs/receipts/2026-10-01-wasm-cached-scalar/README.md)
+observation matched across A/B runs. The exact final-head rebuild at `faa39978`
+produced byte-identical runtime bytes, passed determinism and all 101 integration
+tests, but again failed fresh qualification (**0.704710× median / 0.690863×
+minimum**, EPYC 7763). Absolute speeds vary with host conditions; these separate
+qualification runs are not controlled code comparisons.
+[Raw receipts and verification boundaries](docs/receipts/2026-10-01-wasm-cached-scalar/README.md)
 are retained. User-approved content acknowledgements preserve their existing
 expiry and hardware capture evidence; final-head checks remain required before
 core merge. This does not promote app pins or complete CP13.

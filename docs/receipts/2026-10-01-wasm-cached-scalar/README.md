@@ -45,6 +45,19 @@ This separate host is not a paired speedup measurement. Publication was skipped.
 [Raw motion output](qualification-stdout.txt), [runner](qualification-runner.txt),
 [declared build provenance](qualification-build-info.json) are retained.
 
+The exact final core head `faa39978923f96abe65706407f04d4af63e33857`
+(approved acknowledgement/documentation changes only) was rebuilt in
+[run 36872103827](https://github.com/CrispStrobe/bw-board/actions/runs/36872103827).
+Both builds, determinism and all 101 actual WASM integration tests passed,
+zero skipped. Its module SHA256 is byte-identical to the measured candidate:
+`9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258`.
+This fresh qualification again failed every window: **0.704710× median /
+0.690863× minimum** on EPYC 7763. The lower wall rate with identical runtime
+bytes is another host observation, not evidence of a code regression.
+Publication remained skipped. [Raw final-head output](final-qualification-stdout.txt),
+[runner](final-qualification-runner.txt), [build provenance](final-qualification-build-info.json)
+are retained. Passing paired runs cannot override this failure.
+
 The core feature-off suite passed the new primitive tests, including all 65,536
 halfwords under each of three flag states against the interpreter, comparing
 architectural snapshots, RAM and bus access counts. Decline cases verify no
@@ -75,13 +88,17 @@ targets, not automatically removable costs or steady-window-only fractions.
 
 Priorities for further measured, individually isolated experiments:
 
-1. Measure failed-block discovery and negative-cache collisions before changing
+1. Extend the verified scalar executor to short scheduler-bounded cached T16
+   runs, comparing each retirement and all budgets to the interpreter. Preserve
+   debugger/observer/IRQ/IT guards and immediate fallback at MMIO/unsupported
+   instructions. This targets repeated outer dispatch, not just instruction work.
+2. Measure failed-block discovery and negative-cache collisions before changing
    admission policy or cache capacity. Do not discard eligible loops.
-2. Test WASM-only register-helper inlining; preserve register-15/PC+4 semantics
+3. Test WASM-only register-helper inlining; preserve register-15/PC+4 semantics
    and reject code-size/throughput regressions.
-3. Profile MMIO dispatch/bookkeeping with strict read-to-clear, IRQ reconciliation,
+4. Profile MMIO dispatch/bookkeeping with strict read-to-clear, IRQ reconciliation,
    observer and device-clock differential coverage. Never cache MMIO values.
-4. Repeat improvements on browser V8 and another WASM engine, then other real
+5. Repeat improvements on browser V8 and another WASM engine, then other real
    target firmware workloads; this selected micro:bit proof is not a universal
    chip-speed result.
 
