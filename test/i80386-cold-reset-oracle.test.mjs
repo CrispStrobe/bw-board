@@ -1,11 +1,26 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import {runColdResetOracle,assertColdResetOracle} from '../scripts/i80386-cold-reset-oracle.mjs';
 let capture;
 test('actual fresh JS board executes bounded free ROM from physical reset vector',()=>{
-  capture=runColdResetOracle();
+  // CI may prepare unrelated dependencies or firmware. Every measured source
+  // blob still must match its committed revision and remain stable throughout
+  // execution; standalone CLI qualification retains its clean-tree default.
+  capture=runColdResetOracle({requireClean:false});
   assert.deepEqual(assertColdResetOracle(capture),{status:'javascript-board-cold-reset-oracle-pass',
     successfulQuanta:49,boardCycles:298,marker:'CRST001',nativeParity:false});
+});
+test('unrelated CI files preserve unit evidence while qualification requires clean source',()=>{
+  const probe=mkdtempSync(fileURLToPath(new URL('../cold-reset-ci-untracked-',import.meta.url)));
+  try{
+    writeFileSync(probe+'/probe.txt','unrelated CI preparation\n',{flag:'wx'});
+    assert.throws(()=>runColdResetOracle(),/qualification requires a clean source tree/);
+    const report=runColdResetOracle({requireClean:false});
+    assert.equal(assertColdResetOracle(report).status,'javascript-board-cold-reset-oracle-pass');
+    assert.deepEqual(report.source,capture.source);
+  }finally{rmSync(probe,{recursive:true,force:true});}
 });
 const mutations=[
   ['reset fetch aliases low instead of high',r=>{r.events[0].address=0xffff0;}],
