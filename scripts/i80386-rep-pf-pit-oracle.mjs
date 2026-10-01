@@ -1,4 +1,4 @@
-/** Guest-created RAM code/SMC/A20 actual JavaScript board oracle only. */
+/** Actual cold-reset JavaScript board REP/two-PF/PIT/PIC oracle only. */
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync, mkdtempSync, rmSync} from 'node:fs';
@@ -12,6 +12,12 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const fixture='test/fixtures/i80386-free-rep-pf-pit.S';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const clone=x=>JSON.parse(JSON.stringify(x));
+export const nativeCr0SourceDifference=Object.freeze({
+ status:'pinned-source-expectation-not-native-execution-evidence',
+ source:{revision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',path:'bochs/cpu/crregs.cc',line:1083,sha256:'f39cb6b7b1f7b030690104dcd31e839651a6d343784d8a072e5b337d17fcd374'},
+ reason:'CPU_LEVEL=3 SetCR0 ORs 0x7ffffff0 on every write; guest values align defined intent without raw CR0 parity',
+ writes:[{operand:0x11,javascript:0x11,bochsCpu3Expected:0x7ffffff1},{operand:0x80000011,javascript:0x80000011,bochsCpu3Expected:0xfffffff1}],comparisonMasks:null,
+});
 export const knownNativeResetDifferences=Object.freeze({
   status:'documented-source-differences-not-native-execution-evidence',
   javascript:{cr0:0,edx:0x300,gdtrLimit:0,idtrLimit:0x3ff,dr6:0,dr7:0,csType:'code-read-only'},
@@ -54,7 +60,7 @@ function boardState(m){
     pic1:m.chips.pic1.getState(),pic2:m.chips.pic2.getState(),rtc:m.chips.rtc1.getState(),
     dma1:m.chips.dma1.getState(),dma2:m.chips.dma2.getState(),systemControl:m.chips.sysctl.getState()});
 }
-function sourceIdentity(requireCommitted=true){
+function sourceIdentity(){
   const files=expandI80386SourceInventory(['./i80386-rep-pf-pit-oracle.mjs',
     './run-i80386-rep-pf-pit-oracle.mjs','../'+fixture,
     '../test/i80386-rep-pf-pit-oracle.test.mjs'],import.meta.url);
@@ -62,12 +68,12 @@ function sourceIdentity(requireCommitted=true){
     const absolute=path.resolve(root,'scripts',f);return [path.relative(root,absolute),sha(readFileSync(absolute))];
   }));
   const boardRevision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
-  if(requireCommitted)for(const [file,hash] of Object.entries(hashes))assert.equal(sha(execFileSync('git',['show',`${boardRevision}:${file}`],{cwd:root,maxBuffer:4<<20})),hash,`measured input differs from committed source: ${file}`);
+  for(const [file,hash] of Object.entries(hashes))assert.equal(sha(execFileSync('git',['show',`${boardRevision}:${file}`],{cwd:root,maxBuffer:4<<20})),hash,`measured input differs from committed source: ${file}`);
   return {boardRevision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),sourceHashes:hashes};
 }
 export function runRepPfPitOracle({requireClean=true}={}){
  if(requireClean)assert.equal(execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}),'');
- const source=sourceIdentity(requireClean),{rom,symbols}=assembleRepPfPitRom();
+ const source=sourceIdentity(),{rom,symbols}=assembleRepPfPitRom();
  const events=[],steps=[],deliveries=[],chipAdvances=[];let quantum=0,attempt=0,m,pioWidth=null;
  const record=e=>events.push({ordinal:events.length+1,attempt,quantum,boardCycles:m.cycles,...e});
  m=new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL,{onPortAccess:e=>record({kind:'pio',...e,width:pioWidth})});
@@ -97,15 +103,18 @@ export function runRepPfPitOracle({requireClean=true}={}){
   steps.push({attempt,quantum,completed,charged,before,after:cpuState(m.cpu),boardBefore,boardAfter:boardState(m),firstOrdinal,lastOrdinal:events.length});
  }
  const beforeSettle={cpu:cpuState(m.cpu),board:boardState(m)};m._catchUpChips();
- return {schema:'bw.i80386-js-rep-pf-pit-oracle.v1',claim:'actual-javascript-board-rep-two-pf-pit-pic-only',source,rom:{sha256:sha(rom),sourceSha256:sha(readFileSync(path.join(root,fixture))),symbols},seed:{sha256:loadedSeedSha256},configuration:clone(PCAT80386_EXPERIMENTAL),initialBoard,reset,events,steps,deliveries,chipAdvances,beforeSettle,final:{cpu:cpuState(m.cpu),board:boardState(m),memorySha256:sha(m.mem),witnesses:[...m.mem.subarray(0x510,0x54c)],destination:[...m.mem.subarray(0x4ff8,0x5008)],page6:[...m.mem.subarray(0x6000,0x6008)],pte5:[...m.mem.subarray(0xa014,0xa018)],pte6:[...m.mem.subarray(0xa018,0xa01c)]}};
+ assert.deepEqual(sourceIdentity(),source,'measured source changed during actual execution');
+ return {schema:'bw.i80386-js-rep-pf-pit-oracle.v1',claim:'actual-javascript-board-rep-two-pf-pit-pic-only',source,nativeCr0SourceDifference,knownNativeResetDifferences,rom:{sha256:sha(rom),sourceSha256:sha(readFileSync(path.join(root,fixture))),symbols},seed:{sha256:loadedSeedSha256},configuration:clone(PCAT80386_EXPERIMENTAL),initialBoard,reset,events,steps,deliveries,chipAdvances,beforeSettle,final:{cpu:cpuState(m.cpu),board:boardState(m),memorySha256:sha(m.mem),witnesses:[...m.mem.subarray(0x510,0x54c)],destination:[...m.mem.subarray(0x4ff8,0x5008)],page6:[...m.mem.subarray(0x6000,0x6008)],pte5:[...m.mem.subarray(0xa014,0xa018)],pte6:[...m.mem.subarray(0xa018,0xa01c)]}};
 }
 const checkpointCache=new Map();
 export function assertRepPfPitOracle(r){
  const eq=(a,b,label)=>assert.deepEqual(a,b,`REP/PF/PIT oracle: ${label}`);
  const check=(v,label)=>assert(v,`REP/PF/PIT oracle: ${label}`);
+ eq(Object.keys(r).sort(),['schema','claim','source','nativeCr0SourceDifference','knownNativeResetDifferences','rom','seed','configuration','initialBoard','reset','events','steps','deliveries','chipAdvances','beforeSettle','final'].sort(),'exact report shape');
+ eq(r.nativeCr0SourceDifference,nativeCr0SourceDifference,'source-backed CR0 difference without parity masks');eq(r.knownNativeResetDifferences,knownNativeResetDifferences,'raw native reset differences');
  eq(r.schema,'bw.i80386-js-rep-pf-pit-oracle.v1','schema');
  eq(r.claim,'actual-javascript-board-rep-two-pf-pit-pic-only','claim');
- const identity=sourceIdentity(false);eq(r.source.sourceHashes,identity.sourceHashes,'complete source inventory');
+ const identity=sourceIdentity();eq(r.source.sourceHashes,identity.sourceHashes,'complete source inventory');
  check(/^[a-f0-9]{40}$/.test(r.source.boardRevision),'source revision');
  // Committed qualification authenticates historical blobs. Prototype reports
  // deliberately remain diagnostic until their measured inputs are committed.
@@ -143,6 +152,7 @@ export function assertRepPfPitOracle(r){
   eq(s.before,previous,'CPU checkpoint continuity');eq(s.boardBefore,board,'board continuity');eq(s.firstOrdinal,nextOrdinal,'attempt journal start');nextOrdinal=s.lastOrdinal+1;
   eq(s.completed,s.after.cycles-s.before.cycles,'actual completion counter');check(s.completed===0||s.completed===1,'single element work');q+=s.completed;eq(s.quantum,q,'Q ledger');eq(s.charged,s.completed*6,'failed attempts charge zero');eq(s.boardAfter.cycles-s.boardBefore.cycles,s.charged,'board clocks');pitCheck(s.boardBefore);pitCheck(s.boardAfter);previous=s.after;board=s.boardAfter;
  }
+ eq(r.steps.filter(s=>s.after.cr0!==s.before.cr0).map(s=>[s.before.cr0,s.after.cr0]),[[0,0x11],[0x11,0x80000011]],'actual guest CR0 transitions');
  eq([q,r.steps.length,r.final.board.cycles],[135,137,814],'compact fixed work census');eq(nextOrdinal,r.events.length+1,'attempt journal exhaustion');
  eq(r.beforeSettle,{cpu:previous,board},'pre-settle mirror');eq(r.final.cpu,previous,'no idle execution after HLT');eq(r.final.board.debt,0,'settled chip debt');pitCheck(r.final.board);
  eq(r.deliveries.map(d=>[d.kind,d.vector,d.errorCode,d.quantum]),[['fault',14,2,73],['fault',14,2,90],['irq',32,null,108]],'actual fault/IRQ chronology');
@@ -152,6 +162,7 @@ export function assertRepPfPitOracle(r){
  eq([pf2.before.cpu.eip,pf2.after.cpu.cr2],[symbols.ordinary_fault_store,0x6000],'ordinary fault restart');
  const words=bytes=>[0,4,8,12].filter(i=>i<bytes.length).map(i=>Buffer.from(bytes).readUInt32LE(i));
  eq(words(pf1.frame),[2,symbols.rep_fill,8,(pf1.before.cpu.eflags|0x10000)],'first precise fault frame');eq(words(pf2.frame),[2,symbols.ordinary_fault_store,8,(pf2.before.cpu.eflags|0x10000)],'second precise frame');
+ check(r.events.filter(e=>e.kind==='write'&&e.paging).length>0,'paging physical writes retained');
  eq(words(irq.frame),[symbols.after_shadow,8,irq.before.cpu.eflags],'STI successor IRQ frame');eq(dword(0x540),symbols.after_shadow,'guest IRQ frame copy');
  const rep=r.steps.filter(s=>s.before.eip===symbols.rep_fill&&s.before.cs===8);eq(rep.map(s=>[s.before.ecx,s.before.edi,s.completed]),[[4,0x4ff8,1],[3,0x4ffc,1],[2,0x5000,0],[2,0x5000,1],[1,0x5004,1]],'REP element/fault/resume ledger');
  const zero=r.steps.find(s=>s.before.eip===symbols.zero_rep);eq([zero.before.ecx,zero.completed,zero.charged],[0,1,6],'zero REP ordinary charge');check(!r.events.slice(zero.firstOrdinal-1,zero.lastOrdinal).some(e=>e.address>=0x6000&&e.address<0x7000),'zero REP no destination touch');
