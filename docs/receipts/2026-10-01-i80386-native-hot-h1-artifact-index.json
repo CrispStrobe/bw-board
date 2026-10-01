@@ -5,6 +5,30 @@
       "bytes": 1175,
       "sha256": "96e821b962b0be231f0a957f960f23406a88e6ad29c9a3ffb84b90e00d02f038"
     },
+    "2026-10-01-i80386-native-hot-h1-execution-0.cpuprofile.gz": {
+      "bytes": 4638,
+      "sha256": "7c4437d529e7e2268fe71866650104e8d01a5cee17862a00293fae5e5837c6ef"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-1.cpuprofile.gz": {
+      "bytes": 4362,
+      "sha256": "0ee66ae6b74d738796b9d48becfb264f4ee8932d77f13a67429691b5c10c9224"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-2.cpuprofile.gz": {
+      "bytes": 4292,
+      "sha256": "17d1b0ddd16c11f29c055a523e1e31b5179d1e7699c81025541620e5b2976f69"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-profile-environment.json": {
+      "bytes": 4974,
+      "sha256": "e0cab1e7fb7314e44a91e3fb7d53fade417358fae5347c9373c924029738faa1"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-profile-root-profile-audit.json": {
+      "bytes": 1720,
+      "sha256": "265ebb1c3f42dd9ed11c4b474cc7d3ac09009bfbd8f5d119c2224414c8e483a0"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-profile-summary.json": {
+      "bytes": 62501,
+      "sha256": "7f7dcdc7baafb098c63ebd4c9952535d773b21a20f05299a02dca94f0121ddab"
+    },
     "2026-10-01-i80386-native-hot-h1-failed-pipe-trace.json": {
       "bytes": 2537,
       "sha256": "efc14802a960bccaaf8cb92ed455639ba6ad569a4514bdaa6eda854010d3f6f9"

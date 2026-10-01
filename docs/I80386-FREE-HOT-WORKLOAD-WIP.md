@@ -47,3 +47,5 @@ parity, native budget/capture parity, bounded streamed evidence and timer/PIC
 checks precede comparable capture-disabled measurements. Windows, Doom,
 unrestricted native execution and production GUI integration remain separate
 unfinished work.
+
+The separately admitted [native hot-workload follow-up](I80386-NATIVE-HOT-WORKLOAD-WIP.md) now records actual long-guest parity, trace transport failures and fixes, and equivalent capture-disabled timing. The original short native profile remains unchanged.
