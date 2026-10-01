@@ -1,6 +1,6 @@
 # Next bounded actual-board gate: protected paging, REP/PF/PIT/IRQ, RAM SMC and A20
 
-This is a source-audited implementation proposal, not execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. Create a new actual JS baseline first, then a separate native ABI/runtime/host gate. No compatibility or speed claim. No new code/build/capture has been performed for this proposal.
+The [actual JavaScript combined baseline](I80386-JS-COMBINED-PAGING-RAM-ORACLE.md) is now qualified at 192 work quanta. This remains the native implementation proposal, not combined native execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. Create a new actual JS baseline first, then a separate native ABI/runtime/host gate. No compatibility or speed claim. The new JS guest/oracle and source-bound captures now exist; no combined native build/capture has been performed.
 
 ## Smallest fixture candidate
 
@@ -73,3 +73,5 @@ Resources: reserve512MiB filesystem space, <200 successfulQ target, <=300 diagno
 ## Execution resources
 
 The VPS is close to its disk reserve. Preserve existing builds and raw captures. Before implementation, select a working directory and capture budget that retain at least 512 MiB free; use GitHub CI for sustained native builds/captures if local space is insufficient. Kaggle CPU runs are not authorized by the current usage notes. No execution or speed claim follows from this resource plan.
+
+The qualified JS profile explicitly enables the specialized 8042 cache hook and records other existing source-owned invalidations: tracked-table writes and every ordinary OFF byte write. Native policy above is a separate proposed target, not a statement that the JS implementation preserves architectural stale PTEs. Additional native/JS pagewalk differences need exact site/source audits.
