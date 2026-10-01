@@ -826,7 +826,7 @@ intact because its dependency ORDER turned out to be the load-bearing part.**
 | 6 display widget on `video()` | wired; **blocked on BIOS graphics** — nothing can draw a pixel yet |
 | 7 keyboard widget | scancodes reach the 8255 through IRQ1; exercised by the FDC boot test |
 | 8 GUI binary loading | in flight (program-list lane) |
-| 9 boot from disk | DONE — MS-DOS 2.0 boots two independent ways, byte-identical |
+| 9 boot from disk | Board-owned disk I/O and boot harness implemented; a distributable guest image is a separate artifact, not an included product feature |
 
 **THE ORDER MATTERED AND IS WORTH KEEPING.** Step 3 before step 4 was not
 bookkeeping: lite's `no-dead-overlay-modules` gate refuses modules nothing
@@ -960,10 +960,11 @@ lands it.
    `i8086` loader branch (`romAt: 0xF0000` load address) and an example ROM under
    `static/roms/` (the BIOS ROM, or a small serial monitor). bw-circuit-ui.
 
-9. **Boot from disk.** The 8237+µPD765 machine integration (this lane's queued
-   one-green-commit — aux windows, transfer pump, TC wire, page-wrap tests) plus
-   a bootable MS-DOS 2.0 image (DOS lane). The "run a real OS" milestone; it
-   sits last because a serial-shell example needs neither.
+9. **Boot from disk.** Board-owned 8237+µPD765 transfers, terminal-count
+   wiring and page-wrap behavior need boot-sector and filesystem regression
+   tests using redistributable fixtures. An included guest image requires its
+   own reproducible build and license artifacts; it is not needed for the
+   serial-shell example.
 
 Ownership: bw-board + bw-parts = this lane (done). bw-circuit-ui = this lane now
 (no separate agent). brickwright-lite host + vendor = DOS/host lane, on our

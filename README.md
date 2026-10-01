@@ -80,12 +80,10 @@ compiler symbols.
   `grind-i8088-cycles.mjs`.
 - `src/experimental/i80386.js` and `src/experimental/i80386-at-machine.js` —
   an opt-in 386 protected-mode/AT path. It has real-mode, paging, descriptor,
-  VM86, task, VGA, ATA, FreeDOS, Windows 3.0 standard-mode, a bounded Windows
-  3.11 enhanced-mode run, and Doom evidence. It is not a claim of complete
-  386DX, x87, general Windows compatibility, or hardware-timing compatibility.
+  VM86, task, VGA, ATA and source-built guest evidence. It is not a claim of
+  complete 386DX, x87, general software compatibility or hardware timing.
   The [interactive AT console](docs/I80386-AT-CONSOLE.md) accepts pinned raw
-  disk images and DOSBox `imgmount` geometry. See `docs/I80386-EXPERIMENTAL.md` and the
-  [Windows 3.1x enhanced-mode probe](docs/I80386-WINDOWS-ENHANCED-PROBE.md).
+  disk images and explicit disk geometry. See `docs/I80386-EXPERIMENTAL.md`.
   The [reference-emulator audit](docs/I80386-REFERENCE-EMULATORS.md) compares
   its speed architecture and oracle roles with QEMU, Bochs, MAME and others.
 
@@ -103,12 +101,12 @@ extractors):
   contention).
 - `src/i8086-machine.js` — regions + PORT-mapped chips (8259 PIC, 8254 PIT,
   8255 PPI, 8237 DMA, 8251 USART, CGA/EGA/Hercules, uPD765 FDC). Presets from
-  a minimal-GPIO breadboard (`BLINK8086`) up to a PC/XT that boots real MS-DOS.
+  a minimal-GPIO breadboard (`BLINK8086`) up to a PC/XT with board-owned disk I/O.
   Chip advance is deadline-batched, so the machine layer stays thin over the
   core. On the pinned 2026-09-28 VPS, five runs of the functional benchmark
-  had medians of **24× XT** for the bare core, **15.9×** for a synthetic PC/XT
-  machine, and **2.3×** for an MS-DOS workload with DOS service hooks. These
-  are three different workloads, not full-PC boot or wired-board rates; see
+  had medians of **24× XT** for the bare core and **15.9×** for a synthetic
+  PC/XT machine. These are different workloads, not full-PC boot or
+  wired-board rates; see
   the [VPS receipt](docs/receipts/2026-09-28-x86-vps-throughput.json) and
   [cross-platform benchmark](docs/X86-RTX-PLATFORMS.md). The actual-net Harris
   wired board has separate, much lower capacity and its own
@@ -423,50 +421,23 @@ at `0x4000`; full-flash images may explicitly request address zero.
 
 `LABWIRED_EXACT_TICK=1` keeps the benchmark's exact-policy A/B available.
 
-**Whole-system smokes** (each skips loudly without its local artifact):
-BBC BASIC 4 boots interactively on the 6502 machine with LCD state
-asserted (`scripts/beebeater-smoke.mjs`); R.T. Russell's BBC BASIC
-(Z80) boots over a CP/M shim (`scripts/bbcz80-smoke.mjs`); CP/M 2.2
-with our own BIOS boots to A> and runs BBCBASIC.COM
-(`scripts/cpm-smoke.mjs`); Microsoft BASIC 1.1 boots via the
-basic-m6502-bw port. Twin-run CPU differential:
-`scripts/twinrun-6502.mjs`.
+## Source-built guest validation
 
-## Operating-system and application matrix
+Guest validation is distinct from an included, ready-to-run product image.
+The table lists source-available systems with a distributable build path;
+it does not advertise software supplied outside this repository.
 
-The x86 work keeps guest software separate from the MIT source tree. A receipt
-records the exact external bytes, hashes, harness revision, and the boundary of
-the claim; a source-built or freely redistributable guest may be checked into a
-fixture, while proprietary media stays a user-supplied input.
+| System | Current validation | Package availability |
+|---|---|---|
+| [FreeDOS 1.4](https://github.com/FDOS) | Bounded 386 AT shell, HDD directory access and persistence checks | Test image is not included; redistribution requires its GPL notices and corresponding source |
+| [ELKS](https://github.com/jbruchon/elks) | 8086 PC/XT kernel banner, floppy probe, root mount and timer/FDC IRQ checks | Test image is not included; source and license are maintained upstream |
+| [xv6 x86](https://github.com/mit-pdos/xv6-public) | Pinned kernel boots to a COM1 shell; its 224 MiB usertests run completes on one emulated CPU in 7,203,922,011 guest steps with serial agreement against QEMU ([result](docs/I80386-XV6-HIGH-MEMORY.md)) | MIT source; generated images and BIOS artifacts are not included |
 
-| Guest | Current evidence | Bundling policy | Next useful test |
-|---|---|---|---|
-| MS-DOS 2.00 / PC DOS 3.2 | 8086/286 DOS shell, compiler tools, and the Windows 3.0 disk path | Keep external; Microsoft DOS and Windows media are not MIT assets | More DOS utilities and filesystem stress from user-supplied images |
-| [FreeDOS 1.4](https://github.com/FDOS) | 386 AT shell, HDD directory access, persistence, and Doom launch path | **Bundleable in principle** under its GPL terms, with its notices and source offer; current receipts use an external image | Build a reproducible minimal FreeDOS image and pin its upstream revision/license files |
-| Windows 3.0 standard mode | Program Manager, File Manager, and Notepad save/reopen on the external image | Do not bundle Microsoft binaries or fonts | Broader application and persistence regression coverage |
-| Windows 3.11 enhanced mode | External image reaches Program Manager, File Manager, a VM86 DOS box that saves and reads a file across a fresh boot, Solitaire, and Minesweeper; one controlled CLI PS/2 stock click changes Solitaire's waste pile ([receipt](docs/receipts/2026-09-28-i80386-windows311-solitaire-pointer.json)) | Keep all Microsoft media and detailed provenance in the private fixture repository | Browser-to-Windows pointer interaction, 32-bit disk access, and broader reboot stress |
-| Doom 1.9 shareware | VGA title/menu, E1M1 movement/fire, and a short owned demo returning to DOS | Keep the original executable/WAD external; publish only hashes and test scripts | Full demo timing, save/load, sound, additional levels |
-| CP/M 2.2 + BBC BASIC | Z80 CP/M BIOS boots to `A>` and runs `BBCBASIC.COM` | Use the existing source/fixture notices; do not assume Digital Research binaries are redistributable | More BDOS/file and console programs |
-| [ELKS](https://github.com/jbruchon/elks) | **Accepted:** real 8086 PC/XT boot, kernel banner, floppy probe, root mount, timer/FDC IRQs | Keep the GPL image external; the acceptance test skips loudly and records the expected external hash | Extend from root mount to userland and shell behavior |
-| [xv6 x86](https://github.com/mit-pdos/xv6-public) | Stock SMP-capable kernel at pinned revision `eeb7b415` boots to a COM1 shell; the original 224 MiB `usertests` suite passes on one emulated CPU in 7,203,922,011 guest steps, with complete serial agreement against QEMU ([verified result](docs/I80386-XV6-HIGH-MEMORY.md)) | Generated images can be bundled with the MIT notice; this repo keeps the BIOS ROM and build products external | Expand guest regression coverage; the 16 MiB map stops at BIOS error 164, and multiple CPUs remain unaccepted |
-| [386BSD](https://www.386bsd.org/) / [NetBSD](https://www.netbsd.org/) i386 | Not yet booted here | BSD-licensed source is generally redistributable, but release images and third-party userlands need their own audit | Later 386 protected-mode stress test; much larger than xv6/ELKS |
+These are bounded harness results, not general operating-system compatibility
+or calibrated hardware-timing claims. Tests requiring absent build artifacts
+skip explicitly. Self-authored ROM and instruction fixtures provide the
+redistributable baseline for CPU, bus, interrupt and storage regression tests.
 
-Small Unix-like systems are the sensible next OS lane. ELKS exercises 16-bit
-real mode, BIOS/DOS-style devices, and a compact kernel. xv6 exercises the
-386 protected-mode contract with a small, inspectable codebase. A full BSD or
-Linux distribution is a later systems test: it needs reliable paging, IDE/FDC,
-PIC/PIT, serial, filesystem, and a legally redistributable userland before a
-boot banner means anything.
-
-The current 386 receipts are deliberately bounded. Windows 3.11 enhanced mode
-has verified desktop, DOS-box persistence, Solitaire, Minesweeper, and one
-CLI-hosted Solitaire stock-click milestone, while
-general Windows compatibility remains unaccepted. Doom's short demo is accepted
-in CLI and one strict Lite Widgets browser replay; the full `demo1` timedemo
-still reaches its diagnostic ceiling without a completion/FPS
-result. The old 8086/8088 and Z80 sweeps remain the architectural ground truth;
-the 286/386 work adds focused ISA/protection/AT receipts rather than silently
-turning partial OS boots into compatibility claims.
 Profiling the stock xv6 `forktest` path identified per-instruction snapshots
 as a major host cost; retaining immutable cache entries reduced one same-host
 run from 68.20 to 48.28 seconds for the same 24,338,279 guest instructions.
@@ -484,10 +455,8 @@ silicon timing or a general real-time claim. The measured bottlenecks and
 next architectural experiment are in [Experimental 80386 speed path](docs/I80386-10X-PERFORMANCE.md).
 Later guarded RAM dword fetch and direct register-field access each preserved
 the complete 24,338,279-step stock xv6 `forktest` report and improved paired
-user CPU by 5–11% and 5–8%, respectively. Both changes passed a 60-million-step
-Windows checkpoint, fresh 45.8-million-step ordinary and browser-target FreeDOS
-qualifications, and the full 386 test suite. Their detailed paired timings and
-raw reports are retained in `brickwright-firmware-private/performance/2026-09-28`.
+user CPU by 5–11% and 5–8%, respectively. Both changes passed fresh 45.8-million-step ordinary and browser-target
+FreeDOS qualifications and the full 386 test suite.
 The guarded mappages trace experiment instead regressed by 16–20% and was not
 merged. None of these measurements establishes 10× or a calibrated 386DX RTx.
 At source revision `8261e891`, a [VPS xv6 forktest receipt](docs/receipts/2026-09-28-x86-vps-throughput.json)
@@ -501,21 +470,6 @@ cut the opt-in native path's paired mean from 18.26 to 16.40 user-CPU seconds
 on the same complete xv6 task (10.19%); all three pairs favored the change and
 the complete guest reports matched. That result is specific to the VPS and
 xv6. The 10× target and physical 386DX RTx measurement remain open.
-
-The [expanded grouped 386 diagnostic result](docs/I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
-verified whole-report parity across paired 60-million-step Windows and
-24,338,279-step stock xv6 runs. Windows reached 6.10 million unique ordinals
-in disjoint runs of at least eight, below its 15-million overall gate;
-protected16+VM86 reached 5.59 million, above its 5-million mode threshold.
-The overall opportunity gate fails, and the observer result is no speed claim.
-The later [register-stack observer result](docs/I80386-REGISTER-STACK-ADMISSION-RESULT.md)
-reached 9.62 million disjoint Windows ordinals in runs of at least eight,
-with 8.51 million in protected16+VM86. The 15-million overall gate still
-fails; the separate stock xv6 `forktest` count is 967,663, all protected32.
-This is ordinary-step coverage evidence, not an executable trace or a measured
-CPU-time gain. A separate [full-core feasibility note](docs/I80386-FULL-CORE-WASM-FEASIBILITY.md)
-requires a native full-CPU and ordered bus oracle before a backend claim; stock
-xv6's CR4.PSE bootstrap needs a separately labeled later CPU mode.
 
 The separate [owned Bochs CPU3 paging-byte capture](docs/I80386-BOCHS-CPU3-OWNED-MEMORY-ORACLE-V2.md)
 has a [source-pinned receipt](docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-v2.json)
@@ -591,7 +545,7 @@ zero-count/final REP charging and actual PIC acknowledgment. Independent
 reproduction, twelve API probes and eighteen abort guards passed; 817 local
 386 tests passed with six optional skips. Its next checkpoint is now qualified
 by the [native cold entry on the actual board](docs/I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md). This does not yet
-establish a shipped native/WASM backend, Windows enhanced mode, or new RTx.
+establish a shipped native/WASM backend, broad guest compatibility or new RTx.
 
 The [actual-board cold-reset oracle](docs/I80386-JS-COLD-RESET-ORACLE.md) now
 executes a free MIT reset ROM from `FFFFFFF0`, preserving guest reset-state
@@ -616,57 +570,14 @@ updates to both live aliases, and committed cache flushes. All 79 mandatory
 report tests pass; sixteen native guards and twenty transport rejections pass.
 Raw reset differences and eight exact far-call stack word-order differences
 remain visible. Next is actual-board REP/page-fault/PIT integration; no new
-speed measurement or Windows compatibility claim follows from these fixtures.
+speed measurement or broad guest compatibility claim follows from these fixtures.
 
 The new [actual-board protected-mode REP/PF/PIT baseline](docs/I80386-JS-REP-PF-PIT-ORACLE.md)
 now boots a free cold-reset ROM into protected mode and 4 KiB paging, recovers
 from two page faults, and services the actual PIT/PIC interrupt after the STI
 successor. It passes 135 successful work quanta with 814 functional clocks;
 48 tests pass and a fresh capture is byte-identical. Native delivery/cache
-integration is the next WIP gate. This is not Windows/Doom acceptance or new RTx.
-
-## Windows 3.1 reference comparison
-
-The external Windows references agree on the constraints that matter for our
-next run. Windows 3.1 drops 8086/8088 real-mode support; Windows for Workgroups
-3.11 requires a 386; and 386 Enhanced Mode is a separate execution path from
-the standard 286 mode. DOSBox-X documents that 32-bit disk access uses the
-`WDCTRL` driver inside `WIN386.EXE`, depends on a real DOS, one IDE hard disk,
-specific INT 13h configuration, and a suitable disk geometry. Its installation
-guide also recommends supplying floppy/CD devices before Windows starts and
-warns that folder mounts cannot be boot drives.
-
-The FreeDOS report adds a sharper compatibility condition: its JEMM memory
-manager does not provide the required GEMMIS behavior for Windows enhanced
-mode; the tested route uses a FreeDOS kernel built with the Windows 3.1 support
-option, avoids JEMM, loads `SHARE`, and sets `InDOSPolling=TRUE` in
-`SYSTEM.INI`. That is a guest/kernel configuration dependency, not merely a
-missing 386 opcode.
-
-PCjs is useful as a reference-machine catalogue and demonstrates Windows/386,
-Windows 3.0, Windows 3.1, and Windows 95 on distinct AT/386 configurations.
-The `win3_stock` Archive item is a historical Windows 3.11 stock archive, not a
-redistributable project fixture; keep it external and record only its item/file
-hashes. The Win3x forum page and Xtof's Windows internals notes are valuable
-operator references, but their hosts are not stable machine-readable sources,
-so claims derived from them need a pinned local capture or a second source.
-
-The current external Windows 3.11 image contains `WIN386.EXE` and boots with
-a FreeDOS kernel, JEMM disabled, `SHARE`, and `InDOSPolling`. The emulator has
-observed protected mode, paging, VM86, Program Manager, a live DOS box with a
-saved file surviving a fresh boot, Solitaire, Minesweeper, and one controlled
-CLI-hosted PS/2 stock click that changed Solitaire's waste pile. The next Windows
-checks are browser-to-Windows pointer delivery, more applications, and 32-bit disk access. A Program
-Manager screenshot alone would not establish those paths.
-
-The Brickwright Lite generated language/device matrix exposes related gaps:
-8086 is currently represented as an ASM/C simulation route, while 80286/80386,
-Windows enhanced mode, DOSBox image/config loading, and the new browser VGA
-adapter are not yet represented as matrix cells. The matrix also records the
-standing missing native-language cells (for example BASIC on 8086 and C on
-Z80) and the distinction between simulator reach and silicon deployment. Keep
-the generated matrix as the UI capability source; update its schema before
-claiming that the 386 target is available in the Lite language picker.
+integration remains incomplete. No broader guest acceptance or new RTx is claimed.
 
 **DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
 chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,
