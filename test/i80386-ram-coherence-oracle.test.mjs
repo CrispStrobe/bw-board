@@ -9,7 +9,7 @@ const find=(r,predicate)=>r.events.find(predicate);
 const byte=(address,quantum)=>e=>e.kind==='fetch'&&e.address===address&&e.quantum===quantum;
 test('actual guest creates executable RAM, updates both A20 aliases, and reaches CLI HLT',()=>{
   const result=assertRamCoherenceOracle(actual);
-  assert.deepEqual([result.successfulQuanta,result.boardCycles,result.ramEntries,result.a20Transitions],[71,430,7,2]);
+  assert.deepEqual([result.successfulQuanta,result.boardCycles,result.ramEntries,result.a20Transitions],[75,454,8,2]);
   assert.equal(result.nativeParity,false);
   assert.equal(result.checkpointValidation,'source-bound-fresh-same-engine-reexecution');
 });
@@ -24,11 +24,11 @@ const mutations=[
   ['stale low instruction operand after first patch',r=>{find(r,byte(0x7001,22)).value=0x11;}],
   ['A20OFF high fetch decodes to high backing',r=>{find(r,byte(0x107001,30)).decoded=0x107001;}],
   ['raw high alias patch commits high backing while OFF',r=>{const e=find(r,e=>e.kind==='write'&&e.address===0x107001&&!e.a20Enabled);e.decoded=0x107001;}],
-  ['low cached alias misses raw high patch',r=>{find(r,byte(0x7001,35)).value=0x22;}],
-  ['high cached alias misses same decoded patch',r=>{find(r,byte(0x107001,39)).value=0x22;}],
-  ['A20ON high fetch reuses low bytes',r=>{find(r,byte(0x107001,47)).value=0x55;}],
-  ['high SMC fetch reuses old high operand',r=>{find(r,byte(0x107001,52)).value=0x33;}],
-  ['actual function result loses alias progress',r=>{r.steps[35].after.ebx=0x2222;r.steps[36].before.ebx=0x2222;}],
+  ['low cached alias misses raw high patch',r=>{find(r,byte(0x7001,39)).value=0x22;}],
+  ['high cached alias misses same decoded patch',r=>{find(r,byte(0x107001,43)).value=0x22;}],
+  ['A20ON high fetch reuses low bytes',r=>{find(r,byte(0x107001,51)).value=0x55;}],
+  ['high SMC fetch reuses old high operand',r=>{find(r,byte(0x107001,56)).value=0x33;}],
+  ['actual function result loses alias progress',r=>{r.steps[39].after.ebx=0x2222;r.steps[40].before.ebx=0x2222;}],
   ['missing effective mapping epoch transition',r=>{find(r,e=>e.kind==='pio'&&e.port===0x60&&e.value===1).mappingEpoch=0;}],
   ['8042 reset request replaces valid OFF command',r=>{find(r,e=>e.kind==='pio'&&e.port===0x60&&e.value===1).value=0;}],
   ['fabricated fast A20 OR source',r=>{r.steps[28].boardAfter.fastA20Latch=2;r.steps[29].boardBefore.fastA20Latch=2;}],
@@ -42,7 +42,7 @@ const mutations=[
   ['coherent configured CGA checkpoint mutation',r=>{r.steps[42].boardAfter.chipStates.cga1.color=1;r.steps[43].boardBefore.chipStates.cga1.color=1;}],
   ['missing configured UART checkpoint',r=>{delete r.reset.board.chipStates.uart1;}],
   ['unobserved RAM32 fetch callback invented',r=>{r.providers.fetchRam32Used++;}],
-  ['seven witness parity counterexample',r=>{r.final.witnesses[8]=0x22;}],
+  ['eight witness parity counterexample',r=>{r.final.witnesses[8]=0x22;}],
   ['high backing overwritten during OFF alias patch',r=>{r.final.highCode=[0xbb,0x55,0x55,0xcb];}],
   ['terminal CPU idle hidden after settle',r=>{r.final.cpu.cycles++;}],
   ['marker byte changed',r=>{find(r,e=>e.kind==='pio'&&e.port===0xe9).value=0x58;}],
