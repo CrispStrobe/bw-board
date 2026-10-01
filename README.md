@@ -341,6 +341,10 @@ are retained alongside the raw output. These are NODEJS results, not browser RTx
 The [shared-VPS diagnostics](docs/receipts/2026-10-01-microbit-motion-wasm-vps.json)
 also failed; a JIT-request probe did not justify enabling JIT. Native qualification
 above therefore does not qualify the deployed WASM artifact.
+An additional [binary-only A/B/B/A probe](docs/receipts/2026-10-01-microbit-motion-wasm-opt-abba.json)
+with Binaryen `-O3` reduced WASM size by about 11.2%, but showed no clear
+throughput gain on the shared VPS (0.365510× baseline / 0.367560× candidate
+pooled medians). All twenty windows failed 1×; no optimization was promoted.
 
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
 at `ce60a499` also passed native board/model, input-routing and RTx gates.
