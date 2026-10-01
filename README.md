@@ -618,6 +618,13 @@ Raw reset differences and eight exact far-call stack word-order differences
 remain visible. Next is actual-board REP/page-fault/PIT integration; no new
 speed measurement or Windows compatibility claim follows from these fixtures.
 
+The new [actual-board protected-mode REP/PF/PIT baseline](docs/I80386-JS-REP-PF-PIT-ORACLE.md)
+now boots a free cold-reset ROM into protected mode and 4 KiB paging, recovers
+from two page faults, and services the actual PIT/PIC interrupt after the STI
+successor. It passes 135 successful work quanta with 814 functional clocks;
+48 tests pass and a fresh capture is byte-identical. Native delivery/cache
+integration is the next WIP gate. This is not Windows/Doom acceptance or new RTx.
+
 ## Windows 3.1 reference comparison
 
 The external Windows references agree on the constraints that matter for our
