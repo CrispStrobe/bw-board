@@ -4,6 +4,27 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 
 const workflow = readFileSync(new URL('../.github/workflows/labwired-wasm.yml', import.meta.url), 'utf8');
+const abWorkflow = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
+
+test('artifact A/B is manual, read-only and explicitly not publication qualification', () => {
+    assert.match(abWorkflow, /workflow_dispatch:/);
+    assert.doesNotMatch(abWorkflow, /\n  (push|pull_request|schedule):/);
+    assert.match(abWorkflow, /contents: read/);
+    assert.match(abWorkflow, /actions: read/);
+    assert.doesNotMatch(abWorkflow, /contents: write|gh release|gh pr merge/);
+    assert.match(abWorkflow, /diagnostic \(not qualification\)/);
+    assert.match(abWorkflow, /if: always\(\)/);
+    assert.match(abWorkflow, /probe-labwired-motion-ab\.mjs/);
+});
+
+test('artifact A/B verifies both source commits and original glue/WASM hashes before execution', () => {
+    assert.match(abWorkflow, /info\.ref !== expected/);
+    assert.match(abWorkflow, /bytes\.length !== declared\.bytes/);
+    assert.match(abWorkflow, /digest\('hex'\) !== declared\.sha256/);
+    assert.match(abWorkflow, /run-id: \$\{\{ inputs\.baseline_run \}\}/);
+    assert.match(abWorkflow, /run-id: \$\{\{ inputs\.candidate_run \}\}/);
+    assert.ok(abWorkflow.indexOf('Verify declared sources') < abWorkflow.indexOf('Complete diagnostic'));
+});
 
 test('motion publication is fail-closed for all 250 prerequisite result combinations', () => {
     const expression = workflow.match(/\n    if: \$\{\{ (always\(\) && inputs.publish.*?) \}\}/)?.[1];

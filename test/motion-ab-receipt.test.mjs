@@ -1,6 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {median, motionProbeResult} from '../scripts/lib/motion-ab-receipt.mjs';
+import {median, motionProbeResult, gluePolicy} from '../scripts/lib/motion-ab-receipt.mjs';
+
+test('different original glue requires an explicit paired-build comparison', () => {
+    assert.equal(gluePolicy('same', 'same'), 'identical original glue');
+    assert.throws(() => gluePolicy('baseline', 'candidate'), /explicit --paired-glue/);
+    assert.match(gluePolicy('baseline', 'candidate', true), /each engine loads its own unmodified/);
+});
 // Synthetic log fixtures validate parsing only, never emulator functionality.
 const fixture = values => [
     'ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons',
