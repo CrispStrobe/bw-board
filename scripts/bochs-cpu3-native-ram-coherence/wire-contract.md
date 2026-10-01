@@ -1,0 +1,35 @@
+# RAM execution/SMC/A20 coherence proof wire contract v1
+
+BWS10 stderr evidence and BWR10 dedicated fd3(host->native)/fd4(native->host) pipes. Canonical ASCII tabs; lines including newline at most255 bytes. Unsigned decimal has no leading zeros and is checked for overflow; hex is lowercase fixed width. Bounded first gate: native internal A20 mask remains ON permanently; actual board A20 is host-owned and initially ON. Mapping epoch starts0 and increases exactly1 on each effective board A20 change. Execute permits homogeneous RAM1/ROM2 pages, 32 persistent aligned4096-byte slots keyed raw page and mapping epoch, no eviction. Old-epoch buffers remain allocated and immutable. No MMIO execution, IRQ, traps, REP, page-crossing instructions, DMA or asynchronous host RAM mutation. All old cold-reset/v6 files are unchanged.
+
+BWR10 forms (prefix included):
+- READY cs(hex4) eip(hex8) N Q (6 fields), initially f000/0000fff0/0/0.
+- CMD seq verb arg0 arg1 deadline (7). RUN nativeCap quantumBudget UINT64_MAX; STOP 0 0 0. LINE rejected in this bounded gate.
+- REQ seq operation arg0 arg1 arg2 payload N Q (10). Scalars QUANTUM(kind0,0,0), NATIVE_TICK(1,0,0), PIO_OUT(port233/100/96,width1,value) use payload '-'. READ(raw,width,0,'-'), WRITE(raw,width,0,hex2width), PAGE(rawPage,4096,0,'-'). Physical addresses are raw uint32, spans1..16 must not overflow/straddle/mix classification.
+- REP seq OK value (5) for QUANTUM/NATIVE_TICK. PIO_OUT uses REP seq OK value effectiveBoardA20 mappingEpoch (7), value0 success. E9 accepts RAMA001 marker;64 only D1;60 only01/03, actual8042 validates pending command. Other ports rejected.
+- MEM seq OK decoded(hex8) kind effect hex2width pageGeneration mappingEpoch (10). WRITE returns observed after-effect bytes (RAM commit equals operand, ROM ignored equals cached immutable ROM, open bus ignored reads ff); MEM evidence retains attempted operand bytes. Whole span is prevalidated before effects.
+- PAGE seq decoded(hex8) generation kind sha256 mappingEpoch (8), then64 DATA seq index hex128 (5), then END seq (3). Complete native SHA-256 verification precedes publishing a pointer. kind1 RAM or2 ROM, decoded page aligned. RAM generation starts0, increases exactly1 per acknowledged WRITE callback to that decoded page, never wraps; reads/PAGE require current generation. ROM/openbus generation0. Page fills are not architectural byte-fetch callbacks.
+- DONE seq RUN reason chargedN chargedQ cs(hex4) eip(hex8) totalN totalQ attempts completed repIterations faults IF(0/512) activity irqDelivered(0/1) (18); DONE seq STOP 0 totalN totalQ (7).
+
+Kind enum RAM1 ROM2 MMIO3 UNMAPPED4. Effects RAM_READ1 RAM_COMMIT2 ROM_READ3 ROM_IGNORED4 MMIO_READ5 MMIO_WRITE6 OPEN_BUS7 UNMAPPED_IGNORED8. Scalars REQ<REP<typedcompletion strictly synchronous. Memory/page reply evidence reflects actual returned bytes and classifications, never fabricated guest captures.
+
+BWS10 schemas inherited v6 unchanged except explicit extensions below:
+STATE/RESET20: eax ecx edx ebx esp ebp esi edi eip eflags cr0 cr2 cr3 (hex8), cs ds ss(hex4),gdtrBase(hex8),gdtrLimit(hex4),idtrBase(hex8),idtrLimit(hex4).
+RESET_EXTRA20: dr6/dr7(hex8),es/fs/gs(hex4), CS selector index/TI/RPL(dec),valid(hex8),p/dpl/segment/type(dec),base/limit(hex8),g/d_b/avl(dec),pending/eventMask(hex8).
+RESET_SEG15 per ES0 CS1 SS2 DS3 FS4 GS5: segIndex(dec),selector(hex4),index/TI/RPL(dec),valid(hex8),p/dpl/segment/type(dec),base/limit(hex8),g/d_b/avl(dec).
+RESET_SYS15 uses RESET_SEG15 layout with segIndex6 LDTR/7 TR. POST_SYS18 appends N/Q/ordinal.
+RESET_DR6: DR0/1/2/3/6/7(hex8). Raw reset is emitted before first prefetch/attempt; no native register normalization or private RAM seed copy.
+POST_STATE23/POST_EXTRA23/POST_SEG18/POST_DR9 append N/Q/ordinal to corresponding20/20/15/6 field record after successful charge before native tick.
+ATTEMPT8: cs(hex4),eip(hex8),N,Q,ordinal,rawPC(hex8),decodedInstructionLength(dec1..15),hex2length cached executable instruction bytes. Length comes from actual Bochs decoder; bytes are cached immutable executable-page evidence, not a byte-fetch bus journal. First gate rejects instruction page crossings.
+PREFETCH4: rawPhysicalPC(hex8),N,Q,ordinal, at actual native prefetch translation before pointer admission. First rawPCfffffff0; this plus page SHA and instruction entries is narrower evidence than JS's byte-fetch journal.
+RPC_REQ9: seq,operation,arg0,arg1,arg2,payload,N,Q,ordinal. RPC_REP5: seq,value,N,Q,ordinal. RPC_MEM10: seq,decoded(hex8),kind,effect,hex,generation,epoch,N,Q,ordinal. RPC_PAGE9: seq,decoded(hex8),generation,kind,sha,epoch,N,Q,ordinal. RPC_PIO7: seq,value,effectiveBoardA20,epoch,N,Q,ordinal. PAGE_CHUNK3: seq,index,hex128 (raw record, noordinal).
+EXEC8: rawPage(hex8),decodedPage(hex8),class,N,ordinal,generation,sha256,epoch. MEM9 unchangedv6: rw,raw(hex8),decoded(hex8),class,value(hex2),effect,N,ordinal,why.
+ACTIVATE4: f000,0000fff0,0(copiedBytes),1(A20). READY4 mirrors BWR10. CMD6/SLICE38/QUANTUM10/NATIVE_TICK5/PORT6/HALT_IDLE7/FINAL14/CALLBACKS5/FALLBACK5/PROBE2/FAIL1/DEACTIVATE1 retain v6 field order.
+
+Host owns reset epoch4 board clocks with N/Q0. Native QUANTUM charges6 successful clocks, NATIVE_TICK charges0. Actual board debt/PIO catch-up and terminal stop are host-owned; no Bochs devices/timers/RAM fallback active. First free ROM records raw EDX/CR0 witnesses; known JS/native reset differences remain explicit.
+
+Native guard env BW_CPU3_RAM_COHERENCE_PROBE: unsupported-span-width,physical-overflow,execute-pending-write,native-a20-off,stale-cache-generation,write-stage-bound,write-generation-overflow,unsafe-execute-mmio,unsafe-execute-unmapped,unexpected-pio,bochs-ram-read,bochs-ram-write,bochs-direct-pointer,bochs-pio,bochs-timer,unknown-trap. Native CABI/API and transport rejection evidence are separate from host metadata checks.
+
+COMMIT9: raw(hex8),decoded(hex8),length,hexOperand,generation,epoch,N,Q,ordinal. ALIAS_UPDATE8: rawPage(hex8),decodedPage(hex8),generation,epoch,sha256,N,Q,ordinal. COHERENCE7: reason(write/mapping),epoch,effectiveBoardA20,aliasUpdateCount,N,Q,ordinal.
+
+Host WRITE acknowledgment commits actual board RAM immediately; native stages at most32 patches/instruction. Data READ in the same instruction observes committed host bytes/current generation. Execute admission is denied while dirty writes or a mapping transition are pending. After successful instruction charge and before POST_STATE/native tick, COMMIT applies every patch to all current-epoch decoded cache aliases, updates generation and SHA, then decWriteStamp on each alias raw page. The completed hook calls explicit flushICaches AND TLB_flush (prefetch/stack/TLB/trace links). Only then does COHERENCE publish completion and clear pending state. Mapping PIO acknowledgments are staged until the same hook; old-epoch admissions are invalid thereafter. No persistent page bytes are overwritten during instruction execution. Resume/end require no pending writes/transition and native internal A20 ON. Bounded generation table64 decoded pages and32 cache slots fail closed on exhaustion.
