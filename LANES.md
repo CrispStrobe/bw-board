@@ -1,3 +1,19 @@
+2026-10-01 Analytic inductor meter integrals — CLAIM, Codex bwcx `/root`.
+Worktree `/mnt/volume1/code/lego/wt-board-inductor-meter-20261001`, branch
+`lane/analytic-inductor-meter-20261001`, exact base
+`dfc5d4b731f94355c320418ae4e1a2527778e07a`. Six-path envelope: this row;
+`src/source-waveforms.js` exact delayed/damped sine integrals; `src/board.js`
+meter segment publication/read and a parameter-edit refusal only; existing
+`test/meter-waveform-integration.test.mjs` protective refusal replacement;
+new `test/inductor-meter-integral.test.mjs`; and new
+`spec-updates/inductor-meter-integral.md`. Preserve the direct topology,
+endpoint solver, unwatched work counters, signed currents, window/expiry,
+reset/power and bounded storage. Freeze interval parameters, refuse parameter
+edits during an active analytic watch until reset, and prove clipped windows,
+delay/damping/phase, polarity, caller schedules and negative mutations.
+No MNA equations, topology expansion, tolerance/budget, scope, CPU, workflow,
+package/pin, CUI/Lite, corpus or deployment changes.
+
 2026-09-30 Meter waveform integration — DONE, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-audit-20260930`, branch
 `lane/meter-waveform-integration-20260930`, exact base
