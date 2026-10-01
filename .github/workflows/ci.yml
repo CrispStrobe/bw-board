@@ -205,7 +205,11 @@ jobs:
           # Prevent an old/partial emulator pin from making checkpoint tests
           # pass through their intentional unsupported-build branch.
           EMU8051_CHECKPOINT_REQUIRED: '1'
-        run: npm test
+        # Serialize test files: the compressed native receipts expand to large
+        # reports in separate Node processes. Recent runner shutdowns lacked
+        # memory telemetry; limiting overlap avoids multiplying their live heaps.
+        # The runner derives every pattern and explicit file from scripts.test.
+        run: node scripts/run-ci-tests-serial.mjs
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in
       # that list "a CPU core's hardware-generated vectors did not run" looks
