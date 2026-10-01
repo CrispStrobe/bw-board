@@ -1,3 +1,21 @@
+2026-10-01 Independent ideal-source self-constraint — CLAIM, Codex bwcx `/root`.
+Isolated worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
+branch `lane/ideal-source-self-constraint`, exact base
+`fef791758182377cf7714d344d29f46d480d1d11`. Five-path envelope: this row;
+only independent-source consistency/allocation in `src/mna.js`; existing
+`test/vsource-ground-reference.test.mjs` and `test/operating-point.test.mjs`;
+new `spec-updates/ideal-source-self-constraint.md`. Refuse nonzero ideal
+voltage across the same solver-local net, including merged ground symbols
+and zero-node circuits; omit valid zero redundant rows without grounding
+a live node. Use existing waveform/DC/control voltage authority. Preserve
+power-off, detached terminals, positive internal resistance/current limits,
+ordinary source polarity/currents, caller netlists and strict OP state.
+Require exported solver/public Board regressions and isolated guard,
+allocation and early-return mutants. No general cycle solver, board.js,
+waveform/parser, tolerance/work budget, CPU, workflow, package/pin, CUI/Lite
+or corpus changes. User explicitly released this separate upstream task
+while CUI scope-summary candidate bc98cd1 remains frozen for hosted CI.
+
 2026-10-01 README refresh — DONE, Codex bwcx `/root`.
 Clean reused worktree `wt-board-public-docs-20261001`, branch
 `docs/readme-current-20261001`, base `fbadc8fc40c5fcba52573194e2b34fe13784bbb0`.
