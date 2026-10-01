@@ -83,6 +83,29 @@ runner context and BUILD-INFO are retained. This is NODEJS workload evidence,
 not browser, UI or circuit-solver throughput. Generic real-WASM input tests also
 pass using the fresh WEB build under Node, separately from motion performance.
 
+## Binary-only optimization experiment
+
+The [2026-10-01 A/B/B/A receipt](receipts/2026-10-01-microbit-motion-wasm-opt-abba.json)
+compares that exact engine with a separate Binaryen 132.0.0 `wasm-opt -O3` copy,
+using identical glue and the unchanged guest/qualification test. Four complete
+runs retain twenty windows: baseline pooled median **0.365510×**, candidate
+**0.367560×** (ratio **1.005611**). Every window failed 1×. On this shared VPS,
+that small difference is not evidence of a significant speedup. The binary
+shrunk from 27,475,605 to 24,405,115 bytes; this does not qualify performance.
+All four functional motion tests passed; the candidate also passed Lite's four
+generic real-WASM input tests with zero skips. No artifact/default/pin promotion.
+
+`scripts/probe-labwired-motion-ab.mjs --baseline <original-nodejs-dir>
+--candidate <candidate-nodejs-dir> --out <new-receipt.json>` repeats the diagnostic.
+It requires identical glue, distinct binaries, five correctly timed samples per
+run, actual functional success, two tests, zero skips and consistent exit status.
+Failed RTx samples are preserved rather than removed or relabelled as green.
+The probe returns success for a *completed diagnostic*, not for qualification;
+consult each run's `allWindowsMeet1x`. Parser mutation tests are synthetic log
+tests only, not engine evidence. Candidate bytes were produced with
+`npm exec --yes --package=binaryen@132.0.0 -- wasm-opt <original.wasm> -O3 -o <candidate.wasm>`;
+the receipt binds both binary hashes, tool integrity, CPU, Node and complete logs.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is

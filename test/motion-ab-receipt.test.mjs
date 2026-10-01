@@ -1,0 +1,39 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {median, motionProbeResult} from '../scripts/lib/motion-ab-receipt.mjs';
+// Synthetic log fixtures validate parsing only, never emulator functionality.
+const fixture = values => [
+    'ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons',
+    ...values.map((rtx, index) => 'MICROBIT_WASM_SAMPLE ' + JSON.stringify({index,
+        cycles: 64_000_000, cpuHz: 64_000_000, wallSeconds: 1 / rtx, rtx})),
+    '# tests 2', '# skipped 0', `# pass ${values.every(v => v >= 1) ? 2 : 1}`,
+    `# fail ${values.every(v => v >= 1) ? 0 : 1}`].join('\n');
+test('median handles both five windows and ten pooled windows', () => {
+    assert.equal(median([1, 5, 2, 4, 3]), 3);
+    assert.equal(median([1, 2, 3, 4]), 2.5);
+    assert.throws(() => median([]));
+});
+test('failed RTx samples are retained as failures, not passing qualification', () => {
+    const result = motionProbeResult(fixture([.6, .7, .8, .9, .5]), 1);
+    assert.equal(result.samples.length, 5);
+    assert.equal(result.allWindowsMeet1x, false);
+    assert.equal(result.medianRtx, .7);
+    assert.equal(result.minimumRtx, .5);
+});
+test('every window must pass; a passing median cannot hide a failed minimum', () => {
+    assert.equal(motionProbeResult(fixture([2, 2, .99, 2, 2]), 1).allWindowsMeet1x, false);
+    assert.equal(motionProbeResult(fixture([1, 1, 1, 1, 1]), 0).allWindowsMeet1x, true);
+});
+test('missing samples, skips, functional failure and unexpected exits fail closed', () => {
+    const log = fixture([.5, .5, .5, .5, .5]);
+    for (const mutated of [log.replace(/MICROBIT_WASM_SAMPLE .*\n/, ''),
+        log.replace('# skipped 0', '# skipped 1'), log.replace('ok 1 - reads', 'not ok 1 - reads'),
+        log.replace('# tests 2', '# tests 1')]) assert.throws(() => motionProbeResult(mutated, 1));
+    assert.throws(() => motionProbeResult(log, 0));
+    assert.throws(() => motionProbeResult(log, null));
+});
+test('wrong cycle counts and inconsistent timing cannot be reported as RTx', () => {
+    const log = fixture([.5, .5, .5, .5, .5]);
+    assert.throws(() => motionProbeResult(log.replace('"cycles":64000000', '"cycles":64000'), 1));
+    assert.throws(() => motionProbeResult(log.replace('"wallSeconds":2', '"wallSeconds":1'), 1));
+});
