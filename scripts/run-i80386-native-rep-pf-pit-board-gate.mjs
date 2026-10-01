@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Source-bound serial actual-native captures. No fallback or synthetic arms. */
 import assert from 'node:assert/strict';
+import {gzipSync} from 'node:zlib';
 import {spawn,execFileSync} from 'node:child_process';
 import {readFileSync,writeFileSync,mkdirSync,existsSync,renameSync,statfsSync} from 'node:fs';
 import path from 'node:path';
@@ -180,7 +181,8 @@ async function runArm(binary,rc,dir,rom,mode,transport=null){
   const arm={mode,requestedBudget:repBudgets[mode],host:{initial:host.initial,reset:host.reset,seed:host.seed,journal:host.journal,bus:host.bus,chipAdvances:host.chipAdvances,final},
     native,rpc:{toNative:session.raw.rpcToNative.trimEnd().split('\n'),fromNative:session.raw.rpcFromNative.trimEnd().split('\n')},raw:session.raw,artifacts};
   if(error||parseError||session.error())arm.diagnostic=error?.message??parseError??session.error().message;
-  writeFileSync(path.join(dir,mode+'.unvalidated.json'),JSON.stringify(arm,null,2)+'\n',{flag:'wx'});return arm;
+  const actualArmBytes=Buffer.from(JSON.stringify(arm,null,2)+'\n');
+  writeFileSync(path.join(dir,mode+'.unvalidated.json.gz'),gzipSync(actualArmBytes,{mtime:0}),{flag:'wx'});return arm;
 }
 async function runGuard(binary,rc,dir,name){
   const session=childSession(binary,rc,dir,{BW_CPU3_REP_PF_PIT_PROBE:name});

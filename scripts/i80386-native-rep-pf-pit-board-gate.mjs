@@ -89,16 +89,21 @@ export function parseRepNativeLog(stderr){
 
 export const repBuildPins=Object.freeze({bochsRevision:'0e45b736ef9792eb9b752b0a35db49eaf2faea47',
  binarySha256:'a00e4cd0232cbcb3ef28ab4ba26a508da36d16052e8ab6a1516d0599f7c30a3e',configSha256:'d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c',runtimeSha256:'474010ee15c83f2e21edd7478077b3c3adf7f2d61a3cc6d27b727cb3589374ac'});
+export const repCensus=Object.freeze({nativeTicks:137,successfulQuanta:135,completed:132,repIterations:5,faults:2,irqDeliveries:1,physicalReads:76,physicalWrites:60,executePages:14,rpcRequests:432,
+ attempts:{continuous:135,budget1:137,budget2:135,budget257:135},repPartial:{continuous:1,budget1:3,budget2:1,budget257:1},haltIdleCuts:{continuous:2,budget1:1,budget2:1,budget257:2}});
 export const repResetDifferences=Object.freeze({fullResetParity:false,comparisonMasks:null,
  rawReset:{edx:{javascript:0x300,native:0},cr0:{javascript:0,native:0x7ffffff0},gdtrLimit:{javascript:0,native:0xffff},idtrLimit:{javascript:0x3ff,native:0xffff},dr6:{javascript:0,native:0xffff1ff0},dr7:{javascript:0,native:0x400}},
  cr0Writes:{javascript:[0x11,0x80000011],native:[0x7ffffff1,0xfffffff1],source:'bochs/cpu/crregs.cc:1082'},
  guestRegisterProvenance:{rawCr0ReadPC:0x112,witnessStorePC:0x115,firstOverwritePC:0x1c4,gdtLoadPC:0x1b8,idtLoadPC:0x1be,edx:'guest never overwrites reset EDX'},
+ budgetResumeDecodes:{mode:'budget1',sites:[{Q:73,N:73,CX:2,DI:0x5000},{Q:86,N:87,CX:1,DI:0x5004}],scope:'two exact effect-free REP redecodes after one-quantum budget cut; all raw entries retained'},
  repCheckpoint:{scope:'successful nonfinal protected16/address16/data32 REP STOSL element hook',javascript:'restart EIP',native:'decoded end RIP',nativeSource:'bochs/cpu/cpu.cc RIP increment before repeat callback'},
  rawGuestWitness:{javascript:[0,3,0,0,0,0,0,0],native:[0,0,0,0,0xf0,0xff,0xff,0x7f]}});
 export const repBusDifferences=Object.freeze({fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true,
  rule:'three-same-privilege-32bit-protected-delivery-ordinary-RAM-stack-frames',
  nativeSource:{path:'bochs/cpu/exception.cc',sha256:'c56022d1ce3a50ec9266e77f5b5cfcab29a8b6a84ceea3f4e25853e5c7460f2d',lines:[680,681,682,683,684,685]},
  javascriptOrder:'ascending byte addresses at completed frame',nativeOrder:'flags then CS then EIP then optional error, each word little-endian',
+ pagewalkDifferences:{fullCallbackParity:false,rule:'native combined accessed/dirty versus JS separate A then D on five first-write translations',writeByteCounts:{javascript:56,native:36},nativeSource:{path:'bochs/cpu/paging.cc',sha256:'3ab63124df3b393624bcd2bf0f8878d56ec638bc0ebdfd1e23cf70d154a122b1',lines:[1262,1270]},scope:'exact sparse fixture code/data/delivery linear-address roles and PDE/PTE A/D transitions; native read/write TLB walk callbacks are retained separately from JS; all raw callbacks retained'},
+ ordinaryReadRules:{farJump:{pc:0x1cd,Q:35,descriptor:0x608,bytes:8,javascriptReads:2,nativeReads:1},iret:[{pc:0x2ac,Q:85},{pc:0x2ac,Q:101},{pc:0x2d3,Q:119}],iretNativeOrder:[0x8ffc,0x8ff8,0x8ff4],iretJavascriptOrder:[0x8ff4,0x8ff8,0x8ffc],nativeSource:{path:'bochs/cpu/iret.cc',sha256:'afd03e8eef2e9e90470314c807161ebb2ad44397b29c3f775dec7a866b2dbdae',lines:[126,127,128]}},
  deliveries:[{kind:'fault',Q:73,sp:0x8ff0,eip:0x22c,error:2,flags:0x10046},{kind:'fault',Q:90,sp:0x8ff0,eip:0x237,error:2,flags:0x10046},{kind:'irq',Q:108,sp:0x8ff4,eip:0x255,flags:0x246}],
  scope:'exact fixture delivery sites; mapped RAM SS=10/base0/SP9000; no generic permutation, fault-partial frame, MMIO or other stack operation'});
 // Guards/transport census is finalized against the new native adapter before source freeze.
@@ -181,24 +186,26 @@ function assertSegment(s,js,resetSegments){
  check([1,3,5,7].includes(s.valid),'native cache valid flags');
 }
 export function assertNativeRepPfPitArmProof(arm,rom){
- const js=qualifiedRepJsOracle(),provenance=guestProvenance(rom);equal(repSha(rom),js.rom.sha256,'owned immutable ROM');equal(arm.requestedBudget,repBudgets[arm.mode],'actual arm requested Q budget');equal(arm.exit,{code:0,signal:null},'actual native exit');
+ const js=qualifiedRepJsOracle(),provenance=guestProvenance(rom);equal(repSha(rom),js.rom.sha256,'owned immutable ROM');equal(arm.requestedBudget,repBudgets[arm.mode],'actual arm requested Q budget');equal([arm.artifacts.exitCode,arm.artifacts.signal],[0,null],'actual native exit');
  const native=parseRepNativeLog(arm.raw.stderr);equal(native.activation,{cs:0xf000,eip:0xfff0,copiedBytes:0,a20:1},'cold activation no RAM seed');equal(native.ready,{cs:0xf000,eip:0xfff0,nativeTicks:0,successfulQuanta:0},'native ready/reset clock');equal(native,arm.native,'raw parser binding');const host=hostReplay(arm,rom);
  equal(arm.host.initial,host.initial,'initial actual board');equal(arm.host.reset,host.reset,'single reset epoch');equal(arm.host.seed,host.seed,'actual initial backing');
  equal(native.resetState,expectedState(js.reset.cpu,{reset:true,provenance}),'named raw reset fields');
- equal(native.resetDebug,[0,0,0,0,0xffff1ff0,0x400],'raw native reset debug');assertResetCaches(native,js);equal(native.apiProbes,{'zero-native-budget':'rejected','zero-quantum-budget':'rejected','null-callbacks':'rejected','incomplete-native-tick':'rejected','incomplete-quantum':'rejected','due-now':'zero-work','invalid-irq-line':'rejected','callback-reentry':'rejected','line-reentry':'rejected'},'all actual API probes');
+ equal(native.resetDebug,[0,0,0,0,0xffff1ff0,0x400],'raw native reset debug');assertResetCaches(native,js);equal(native.apiProbes,{'resume-before-activation':'rejected','irq-before-activation':'rejected','zero-native-budget':'rejected','zero-quantum-budget':'rejected','null-callbacks':'rejected','incomplete-native-tick':'rejected','incomplete-quantum':'rejected','due-now':'zero-work','invalid-irq-line':'rejected','callback-reentry':'rejected','line-reentry':'rejected'},'all actual API probes');
  equal(native.resetSegments.map(s=>s.index),[0,1,2,3,4,5],'reset segment inventory');equal(native.resetSystem.map(s=>s.index),[6,7],'reset system inventory');
  equal(native.fallback,{bochsRamReads:0,bochsRamWrites:0,bochsDirectPointers:0,bochsPio:0,bochsTimer:0},'zero fallback exact shape');
  const quanta=native.events.filter(e=>e.tag==='QUANTUM'),faults=native.events.filter(e=>e.tag==='FAULT_DELIVERED'),irqs=native.events.filter(e=>e.tag==='IRQ_DELIVERED');
  equal(quanta.length,135,'bounded successful work census');equal(faults.length,2,'two PF');equal(irqs.length,1,'one IRQ');equal(host.machine.cycles,814,'reset plus actual Q clocks');equal(host.machine.cpu.cycles,0,'no JS CPU execution');
- let q=0,n=0,pending=[],boundary=null,postCount=0,checkpoint=js.reset.cpu,postSegments=[],postSystem=[],postExtra=null,published=false,pages=new Map(),currentAttempt=null,activeRpc=null;
+ let q=0,n=0,pending=[],boundary=null,postCount=0,checkpoint=js.reset.cpu,postSegments=[],postSystem=[],postExtra=null,published=false,pages=new Map(),currentAttempt=null,activeRpc=null,workWrites=new Map(),workOperations=new Map(),checkpointBoard=js.reset.board,latestHost={board:host.reset};
  for(const e of native.events){
   if(activeRpc)check(e.tag===({MEM:'RPC_MEM',PAGE:'RPC_PAGE',REP:'RPC_REP'})[activeRpc.reply.kind],'reply must immediately complete owned synchronous RPC');
   if(e.tag==='RPC_REQ'){check(!activeRpc,'RPC request reentry');activeRpc=host.journal.find(x=>x.kind==='request'&&x.request.seq===e.seq);check(activeRpc,'extra raw RPC request');}
-  else if(['RPC_REP','RPC_MEM','RPC_PAGE'].includes(e.tag)){check(activeRpc&&activeRpc.request.seq===e.seq,'reply order/sequence');activeRpc=null;}
+  else if(['RPC_REP','RPC_MEM','RPC_PAGE'].includes(e.tag)){check(activeRpc&&activeRpc.request.seq===e.seq,'reply order/sequence');latestHost=activeRpc.after;activeRpc=null;}
   if(boundary)check(['COMMIT','COHERENCE','POST_STATE','POST_EXTRA','POST_SEG','POST_SYS','POST_DR'].includes(e.tag),'boundary publication/checkpoint must finish before CPU or clock advance');
   if(e.tag==='QUANTUM'){equal(e.nativeTicks,n,'Q independent N tuple');equal([e.preQ,e.successfulQuanta],[q,q+1],'Q ledger');q++;}
   else if(e.tag==='NATIVE_TICK'){equal([e.count,e.preTick,e.nativeTicks,e.successfulQuanta],[1,n,n+1,q],'independent native tick ledger');n++;}
   else if(Object.hasOwn(e,'nativeTicks'))equal([e.nativeTicks,e.successfulQuanta??q],[n,q],'raw event clock chronology');
+  if(e.tag==='MEM'&&e.why==='data'){if(!workOperations.has(q+1))workOperations.set(q+1,[]);workOperations.get(q+1).push({rw:e.rw,raw:e.raw,decoded:e.decoded,value:e.value});}
+  if(e.tag==='MEM'&&e.rw==='W'&&e.why==='data'){if(!workWrites.has(q+1))workWrites.set(q+1,[]);workWrites.get(q+1).push({raw:e.raw,decoded:e.decoded,value:e.value});}
   if(e.tag==='RPC_PAGE'){const r=host.journal.find(x=>x.kind==='request'&&x.request.seq===e.seq);check(r&&r.request.operation==='PAGE','page request mirror');equal([e.decoded,e.generation,e.class,e.sha256,e.mappingEpoch],[r.reply.decoded,0,2,r.reply.sha256,0],'immutable ROM page mirror');check(!pages.has(r.request.arg0)&&pages.size<32,'persistent ROM page slots');pages.set(r.request.arg0,r.reply);}
   else if(e.tag==='EXEC'){check(!pending.length&&!boundary,'execute before complete publication');equal(e.rawPage,(checkpoint.pc&0xfffff000)>>>0,'execute admission current architectural page');const page=pages.get(e.rawPage);check(page,'execute before page admission');equal([e.decodedPage,e.class,e.generation,e.sha256,e.mappingEpoch],[page.decoded,'rom',0,page.sha256,0],'execute ROM pointer SHA/generation');}
   else if(e.tag==='ATTEMPT'){check(!pending.length&&!boundary,'attempt before complete publication');equal([e.cs,e.eip,e.physicalPC],[checkpoint.cs,checkpoint.eip,checkpoint.pc],'attempt current architectural PC');currentAttempt=e;const page=pages.get((e.physicalPC&0xfffff000)>>>0);check(page,'instruction cache page absent');const bytes=Buffer.concat(page.chunks.map(c=>Buffer.from(c.hex,'hex')));equal(e.hex,bytes.subarray(e.physicalPC&4095,(e.physicalPC&4095)+e.ilen).toString('hex'),'actual decoded instruction bytes from immutable page');}
@@ -217,10 +224,11 @@ export function assertNativeRepPfPitArmProof(arm,rom){
    check(boundary&&published,'post state without completed boundary publication');
    if(['ordinary','rep-element'].includes(boundary.kind)){
     const step=js.steps.find(s=>s.completed&&s.quantum===q);check(step,'JS work checkpoint');const expected=expectedState(step.after,{rep:boundary.kind==='rep-element',q,provenance});
-    checkpoint=step.after;equal(e.state,expected,'successful raw CPU checkpoint and named differences');
+    checkpoint=step.after;checkpointBoard=step.boardAfter;equal(e.state,expected,'successful raw CPU checkpoint and named differences');
    }else if(['fault-delivery','irq-delivery'].includes(boundary.kind)){
-    const d=js.deliveries.find(d=>d.quantum===q&&d.kind===(boundary.kind==='fault-delivery'?'fault':'irq'));check(d,'JS delivery boundary');checkpoint=d.after.cpu;equal(e.state,expectedState(d.after.cpu,{q,provenance}),'zero-work delivery CPU');
+    const d=js.deliveries.find(d=>d.quantum===q&&d.kind===(boundary.kind==='fault-delivery'?'fault':'irq'));check(d,'JS delivery boundary');checkpoint=d.after.cpu;checkpointBoard=d.after.board;equal(e.state,expectedState(d.after.cpu,{q,provenance}),'zero-work delivery CPU');
    }else equal(e.state,expectedState(checkpoint,{q,provenance}),'pagewalk publication retains current raw CPU state');
+   equal(latestHost.board,checkpointBoard,'every work/delivery/pagewalk boundary complete actual board state');
    postCount++;
   }else if(e.tag==='POST_EXTRA'){
    check(boundary&&postCount===1&&!postExtra,'full extra checkpoint order');postExtra=e.extra;
@@ -249,15 +257,56 @@ export function assertNativeRepPfPitArmProof(arm,rom){
  equal(native.callbacks,{physicalReads:requestRows.filter(e=>e.request.operation==='READ').length,physicalWrites:requestRows.filter(e=>e.request.operation==='WRITE').length,executePages:native.events.filter(e=>e.tag==='EXEC').length,nativeTickCallbacks:n,quantumCallbacks:q},'actual callback summary');
  equal([counts.rpcRequests,counts.rpcReplies],[requestRows.length,requestRows.length],'all synchronous RPC completed');
  equal(counts.attempts,native.events.filter(e=>e.tag==='ATTEMPT').length,'actual attempt rows');
- equal(counts.completed+counts.repPartial+counts.faults,counts.attempts,'attempt/completion/partial/fault covariance');
+ equal(counts.completed+counts.repPartial+counts.faults,counts.attempts,'attempt/completion/partial/fault covariance');equal([counts.completed,counts.attempts,counts.repPartial,counts.haltIdleCuts],[repCensus.completed,repCensus.attempts[arm.mode],repCensus.repPartial[arm.mode],repCensus.haltIdleCuts[arm.mode]],'measured bounded completion/resume/physical-idle census');equal(native.callbacks,{physicalReads:76,physicalWrites:60,executePages:14,nativeTickCallbacks:137,quantumCallbacks:135},'measured fixed native callback census');
  equal(counts.portCommits,native.events.filter(e=>e.tag==='PORT').length,'PIO commit census');
  const records=native.records;let attemptCount=0,idleCount=0,portCount=0,sliceAt=0;
  for(const record of records){if(record.tag==='ATTEMPT')attemptCount++;if(record.tag==='HALT_IDLE')idleCount++;if(record.tag==='PORT')portCount++;
   if(record.tag==='SLICE'){const slice=native.slices[sliceAt++];equal([slice.attempts,slice.portCommits,slice.haltIdleCuts],[attemptCount,portCount,idleCount],'raw cumulative slice witness');equal([slice.requestedQuanta,slice.requestedNativeTicks],[repBudgets[arm.mode],600],'each raw slice requested caps');check(slice.chargedQuanta<=repBudgets[arm.mode]&&slice.chargedNativeTicks<=slice.effectiveNativeTicks,'native cap overrun');}}
  equal(counts.haltIdleCuts,idleCount,'physical HALT count retained');check(idleCount>=1&&idleCount<=2,'bounded terminal idle observations');
+ for(const step of js.steps.filter(s=>s.completed)){
+  const expected=js.events.filter(e=>e.kind==='write'&&!e.paging&&e.ordinal>=step.firstOrdinal&&e.ordinal<=step.lastOrdinal&&!js.deliveries.some(d=>e.ordinal>=d.firstOrdinal&&e.ordinal<=d.lastOrdinal)).map(e=>({raw:e.address,decoded:e.decoded,value:e.decoded>=0x510&&e.decoded<0x518?repResetDifferences.rawGuestWitness.native[e.decoded-0x510]:e.value}));
+  equal(workWrites.get(step.quantum)??[],expected,'ordered ordinary/REP per-Q data writes with only raw reset witnesses');
+  let operations=js.events.filter(e=>['read','write'].includes(e.kind)&&!e.paging&&!(e.kind==='read'&&e.decoded>=0x9000&&e.decoded<0xb000)&&e.ordinal>=step.firstOrdinal&&e.ordinal<=step.lastOrdinal&&!js.deliveries.some(d=>e.ordinal>=d.firstOrdinal&&e.ordinal<=d.lastOrdinal)).map(e=>({rw:e.kind==='write'?'W':'R',raw:e.address,decoded:e.decoded,value:e.kind==='write'&&e.decoded>=0x510&&e.decoded<0x518?repResetDifferences.rawGuestWitness.native[e.decoded-0x510]:e.value}));
+  const rules=repBusDifferences.ordinaryReadRules;
+  if(step.quantum===rules.farJump.Q){equal(step.before.eip,rules.farJump.pc,'exact far jump read site');const first=operations.slice(0,8),second=operations.slice(8,16);equal(first,second,'JS two descriptor reads retained');equal(first.map(e=>[e.rw,e.raw]),Array.from({length:8},(_,i)=>['R',0x608+i]),'descriptor exact eight-byte read');operations=[...first,...operations.slice(16)];}
+  if(rules.iret.some(r=>r.Q===step.quantum)){equal(step.before.eip,rules.iret.find(r=>r.Q===step.quantum).pc,'exact IRET read site');equal(operations.slice(0,12).map(e=>[e.rw,e.raw]),Array.from({length:12},(_,i)=>['R',0x8ff4+i]),'JS exact ascending IRET frame reads');operations=[...operations.slice(8,12),...operations.slice(4,8),...operations.slice(0,4),...operations.slice(12)];}
+  equal(workOperations.get(step.quantum)??[],operations,'strict per-Q ordered data bus with only four declared read rules');
+ }
  const actualBytes=host.bus;let byteAt=0;const memEvents=native.events.filter(e=>e.tag==='MEM');
  for(const e of memEvents){const b=actualBytes[byteAt++];check(b,'extra native byte callback');equal([e.rw,e.raw,e.decoded,e.class,e.value,e.effect,e.nativeTicks],[b.kind==='write'?'W':'R',b.raw,b.decoded,({1:'ram',2:'rom',4:'unmapped'})[b.class],b.value,({1:'ram-read',2:'ram-commit',3:'rom-read',4:'rom-ignored',7:'open-bus',8:'unmapped-ignored'})[b.effect],b.nativeTicks],'every native physical byte is actual board callback');}
  equal(byteAt,actualBytes.length,'all actual board bytes retained');
+ const walkSites=[
+  {Q:44,linear:js.steps.find(s=>s.completed&&s.quantum===44).after.pc,role:'code-after-PG'},
+  {Q:71,linear:0x4ff8,role:'REP-first-write'},
+  {Q:73,linear:0x5000,role:'failed-REP-write'},{Q:73,linear:14*8,role:'PF-IDT-read'},{Q:73,linear:0x9000-4,role:'PF-frame-write'},
+  {Q:77,linear:0x520,role:'first-CR2-witness-write'},{Q:78,linear:0xa000+5*4,role:'PTE5-repair-write'},
+  {Q:83,linear:js.steps.find(s=>s.completed&&s.quantum===83).after.pc,role:'code-after-first-CR3-reload'},
+  {Q:84,linear:0x9000-4,role:'first-IRET-stack-read'},{Q:84,linear:0x600+8,role:'first-IRET-code-descriptor-read'},
+  {Q:85,linear:0x5000,role:'REP-retry-write'},{Q:90,linear:0x6000,role:'failed-ordinary-write'},{Q:90,linear:0x9000-4,role:'second-PF-frame-write'},
+  {Q:94,linear:0x528,role:'second-CR2-witness-write'},{Q:95,linear:0xa000+6*4,role:'PTE6-repair-write'},
+  {Q:99,linear:js.steps.find(s=>s.completed&&s.quantum===99).after.pc,role:'code-after-second-CR3-reload'},
+  {Q:100,linear:0x9000-4,role:'second-IRET-stack-read'},{Q:100,linear:0x600+8,role:'second-IRET-code-descriptor-read'},
+  {Q:101,linear:0x6000,role:'ordinary-retry-write'},{Q:107,linear:0x530,role:'STI-successor-write'},{Q:108,linear:0x9000-4,role:'IRQ-frame-write'}];
+ const tableReads=[];
+ for(const r of requestRows.filter(e=>e.request.operation==='READ')){
+  const bytes=actualBytes.map((b,i)=>({...b,why:memEvents[i].why})).filter(b=>b.seq===r.request.seq);
+  if(!bytes.some(b=>['pde-read','pte-read'].includes(b.why)))continue;
+  check(bytes.length===4&&bytes.every(b=>b.why===bytes[0].why)&&r.request.arg1===4,'whole typed PDE/PTE read');
+  tableReads.push([r.request.successfulQuanta,r.request.arg0,bytes[0].why]);
+ }
+ equal(tableReads,walkSites.flatMap(site=>[[site.Q,0x9000+((site.linear>>>22)&1023)*4,'pde-read'],[site.Q,0xa000+((site.linear>>>12)&1023)*4,'pte-read']]),'PDE/PTE reads derive exact fixture code/data/delivery linear-address roles');
+ const adWrites=[];
+ for(const r of requestRows.filter(e=>e.request.operation==='WRITE')){
+  const bytes=actualBytes.map((b,i)=>({...b,why:memEvents[i].why})).filter(b=>b.seq===r.request.seq);
+  if(!bytes.some(b=>['pde-ad-write','pte-ad-write'].includes(b.why)))continue;
+  check(bytes.length===4&&bytes.every(b=>b.why===bytes[0].why)&&r.request.arg1===4&&(r.request.arg0&3)===0,'whole typed table A/D update');
+  const old=bytes.reduce((v,b,i)=>v+b.before*2**(8*i),0)>>>0,next=Buffer.from(r.request.payload,'hex').readUInt32LE(0);
+  check((old&1)!==0&&next!==old&&((next^old)&~0x60)===0&&(next|old)===next,'A/D update preserves base/present/permission and only sets accessed/dirty');
+  if(bytes[0].why==='pde-ad-write')equal([r.request.arg0,next^old],[0x9000,0x20],'PDE accessed-only write');
+  else check([0xa000,0xa010,0xa014,0xa018,0xa020,0xa028,0xa3c0].includes(r.request.arg0),'PTE A/D targets exact sparse mapping');
+  adWrites.push([r.request.successfulQuanta,r.request.arg0,next,bytes[0].why]);
+ }
+ equal(adWrites,[[44,0x9000,0xa023,'pde-ad-write'],[44,0xa3c0,0xf0023,'pte-ad-write'],[71,0xa010,0x4063,'pte-ad-write'],[73,0xa000,0x23,'pte-ad-write'],[73,0xa020,0x8063,'pte-ad-write'],[77,0xa000,0x63,'pte-ad-write'],[78,0xa028,0xa063,'pte-ad-write'],[85,0xa014,0x5063,'pte-ad-write'],[101,0xa018,0x6063,'pte-ad-write']],'source-backed retained native pagewalk bit-transition ledger');
  for(const [index,rule] of repBusDifferences.deliveries.entries()){
   const delivered=index<2?faults[index]:irqs[0];equal([delivered.successfulQuanta,delivered.sp,delivered.vector,delivered.cs,delivered.eip],[rule.Q,rule.sp,index<2?14:32,8,index<2?js.rom.symbols.pf_handler:js.rom.symbols.irq_handler],'exact declared delivery site');
   const begin=native.events.filter(e=>e.ordinal<delivered.ordinal&&e.tag===(index<2?'FAULT_BEGIN':'IRQ_ACK')).at(-1);check(begin,'delivery begin absent');
@@ -369,15 +418,30 @@ function sourceProof(s){
  equal(s.romSha256,qualifiedRepJsOracle().rom.sha256,'free ROM bytes');equal(s.fixtureSha256,qualifiedRepJsOracle().rom.sourceSha256,'free source fixture');
  equal(s.fixtureSha256,s.sourceHashes['test/fixtures/i80386-free-rep-pf-pit.S'],'fixture committed mirror');
 }
-function logicalEvents(native){
- const result=[];
- for(const e of native.events){
-  if(e.tag==='CMD')continue;
-  const copy={...e};delete copy.ordinal;
-  if(e.tag==='HALT_IDLE'&&JSON.stringify(result.at(-1))===JSON.stringify(copy))continue;
-  result.push(copy);
+const repResumeSites=Object.freeze([{Q:73,N:73,CX:2,DI:0x5000},{Q:86,N:87,CX:1,DI:0x5004}]);
+function logicalEvents(native,mode){
+ const remove=new Set();let lastSlice=null,sliceAt=0,lastPost=null;
+ const byOrdinal=new Map(native.events.map(e=>[e.ordinal,e]));
+ for(const r of native.records){
+  if(r.tag==='SLICE')lastSlice=native.slices[sliceAt++];
+  if(r.tag==='POST_STATE')lastPost=byOrdinal.get(Number(r.fields[22]));
+  if(r.tag==='ATTEMPT'&&mode==='budget1'){
+   const e=byOrdinal.get(Number(r.fields[4])),site=repResumeSites.find(s=>s.Q===e.successfulQuanta&&e.eip===0x22c);if(!site)continue;
+   equal([e.cs,e.eip,e.physicalPC,e.ilen,e.hex,e.nativeTicks,e.successfulQuanta],[8,0x22c,0xf022c,3,'66f3ab',site.N,site.Q],'exact two budget1 REP resume decode entries');
+   check(lastSlice&&lastPost,'REP resume prior owned slice/progress');equal([lastSlice.reason,lastSlice.requestedQuanta,lastSlice.chargedQuanta,lastSlice.chargedNativeTicks,lastSlice.afterQuanta,lastSlice.afterNativeTicks,lastSlice.exitCs,lastSlice.exitEip],[1,1,1,1,site.Q,site.N,8,0x22c],'resume caused by prior exact one-quantum budget slice');
+   equal([lastPost.state.ecx,lastPost.state.edi,lastPost.state.eip],[site.CX,site.DI,0x22f],'committed REP progress before resume');remove.add(e.ordinal);
+  }
  }
+ equal(remove.size,mode==='budget1'?2:0,'only two scoped budget-induced resume entries');
+ const result=[];
+ for(const e of native.events){if(e.tag==='CMD'||remove.has(e.ordinal))continue;const copy={...e};delete copy.ordinal;
+  if(e.tag==='HALT_IDLE'&&JSON.stringify(result.at(-1))===JSON.stringify(copy))continue;result.push(copy);}
  return result;
+}
+export function assertNativeRepPfPitBudgetProof(arms){
+ equal(Object.keys(arms).sort(),Object.keys(repBudgets).sort(),'four budget evidence sets');let baseline;
+ for(const [mode,arm] of Object.entries(arms)){const now=logicalEvents(arm.native,mode);if(baseline)equal(now,baseline,'native budgets exact work/byte/commit chronology with two scoped REP resume decodes');else baseline=now;}
+ return {logicalEvents:baseline.length,rawPreserved:true,onlyScopedResumeDecodes:true};
 }
 export function assertNativeRepPfPitProof(report,rom){
  equal(Object.keys(report).sort(),['arms','artifacts','busDifferences','claim','javascriptOracle','probes','resetDifferences','schema','source','transportProbes'],'report exact shape');
@@ -386,10 +450,10 @@ export function assertNativeRepPfPitProof(report,rom){
  sourceProof(report.source);artifactProof(report);
  equal(report.javascriptOracle,{path:'docs/receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-capture.json.gz',sha256:'f2c3187c40173f64b0acb51cd86d0ca9ce8a250b5d634fc4e9a2c3d95c56fe1e',boardRevision:'7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247',cpuProfile:'compatibility',strict386:false},'historical actual JS baseline');
  check(Object.keys(repGuards).length>0&&Object.keys(repTransports).length>0,'native rejection census unqualified');
- const results={};let logical;
+ const results={};
  for(const [mode,arm] of Object.entries(report.arms)){
   equal(arm.mode,mode,'arm name');results[mode]=assertNativeRepPfPitArmProof(arm,rom);
-  const now=logicalEvents(arm.native);if(logical)equal(now,logical,'all native budgets exact logical CPU/byte/commit chronology');else logical=now;
+
  }
- return {claim:report.claim,arms:results,fullResetParity:false,fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true};
+ const budgetProof=assertNativeRepPfPitBudgetProof(report.arms);return {claim:report.claim,budgetProof,arms:results,fullResetParity:false,fullByteBusOrderParity:false,nativeBudgetByteBusOrderParity:true};
 }
