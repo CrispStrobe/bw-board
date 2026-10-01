@@ -109,7 +109,9 @@ Interpreter outlining was rejected after two negative paired runs (−7.68% and
 [rejected outlining evidence](docs/receipts/2026-10-01-wasm-outline/README.md) and
 [profiling/tier-validation guide](docs/LABWIRED-WASM-PROFILING.md).
 
-The bounded cached-run optimization ([core PR 146](https://github.com/CrispStrobe/labwired-core/pull/146), app artifact unpromoted) measured
+The bounded cached-run optimization landed on core `main` as
+[`43b2d62f`](https://github.com/CrispStrobe/labwired-core/pull/146) after all 19
+enabled final-head checks passed; the app artifact remains unpromoted. It measured
 **+8.24%, +7.15% and +9.65%** in three exact-artifact paired comparisons against
 the landed scalar baseline, with identical cycle-indexed guest observations.
 The latest exact fixed-artifact fresh qualification was
@@ -117,8 +119,10 @@ The latest exact fixed-artifact fresh qualification was
 unchanged every-window 1× floor. Both builds, determinism and 101 actual WASM
 integration tests passed; the fixed-head local core suite passed 4,234 tests
 with three existing ignored tests. Host rates are not interchangeable. App pins
-remain unchanged. See [bounded-run results and raw receipts](docs/receipts/2026-10-01-wasm-cached-runs/README.md)
-for exact source references, pending checks and hardware-drift approval status.
+remain unchanged. Two ordinary VPS repeats measured +9.20% and +10.06%, also
+below 1× in every window. See
+[bounded-run results and raw receipts](docs/receipts/2026-10-01-wasm-cached-runs/README.md)
+for exact source references, final CI and hardware-drift approval status.
 
 ## Limits
 
