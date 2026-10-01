@@ -113,6 +113,22 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const INPUTS = [
     {
+        id: '386-native-device-quanta-pilot', kind: 'fixture',
+        what: 'Retained actual ef157ce7 continuous native device-quanta pilot report. '
+            + 'Enables the optional one-arm core-proof check against its exact SHA-256; '
+            + 'this historical diagnostic is not an independent CPU oracle or a final qualification receipt.',
+        env: 'BW_DEVICE_QUANTA_ACTUAL_PILOT', paths: [],
+        gates: ['test/i80386-native-device-quanta.test.mjs'],
+        obtain: 'Provide the retained single-diagnostic.json from the ef157ce7 continuous '
+            + 'pilot and set BW_DEVICE_QUANTA_ACTUAL_PILOT to that file. Its SHA-256 must be '
+            + '6a5071f8feb9859f64da09386f0f2245ea7de1f9346466881eed7a561571e6f5. '
+            + 'The published final proof and the separately committed four-arm mutation fixture '
+            + 'are different inputs; see docs/I80386-NATIVE-DEVICE-QUANTA-SELF-PARITY.md.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI does not provide this retained historical single-arm pilot; '
+            + 'only that optional pilot check skips, while the committed four-arm report tests run.',
+    },
+    {
         id: 'i80386-win16-qemu', kind: 'oracle',
         what: 'Pinned QEMU 8.2.2 TCG 486 supplies protected-16 CPU-state checkpoints '
             + 'for the owned branch-to-I/O fixture. The test requires the exact executable '

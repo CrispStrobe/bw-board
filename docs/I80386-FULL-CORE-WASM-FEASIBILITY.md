@@ -98,5 +98,4 @@ now qualifies guest-programmed PIT0 timer wake through the existing JS PIC
 model, protected IRQ entry, EOI and IRETD across four budgets. Nine ABI,
 eleven native and seven malformed transport probes passed; root independently
 reproduced the result. This ordinary-instruction test transport is not a
-WASM backend or speed result. REP/fault successful-quanta clock accounting
-and broader AT integration remain next.
+WASM backend or speed result. The [successful-work clock proof](I80386-NATIVE-DEVICE-QUANTA-SELF-PARITY.md) now qualifies REP/two-fault accounting and an active timer edge with independent reproduction. [Cold-reset and actual board ownership](I80386-NATIVE-COLD-RESET-NEXT-GATE.md), broader AT integration, WASM and speed measurement remain next.
