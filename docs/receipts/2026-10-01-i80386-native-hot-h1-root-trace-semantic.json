@@ -3,13 +3,14 @@
   "sourceRevision": "46cbacb0b9866ae784dbffe060703c532d161d76",
   "traceSha256": "21ea17d068097696c3bf3c991cfdead2f236a833319a563747cabc66f7488308",
   "traceBytes": 149865640,
-  "checks": 1207470,
+  "checks": 1509516,
   "nativeTicks": 100684,
   "quanta": 100682,
   "hotPostStatesCompared": 100506,
   "rawMemoryRecords": 33732,
+  "executedInstructionByteRecords": 100682,
   "wholeNativeRamSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
   "wholeBoardSettledExact": true,
   "fullNativeSnapshotsAndJournalsTraceToggleExact": true,
-  "scope": "all raw physical byte reads/writes replayed; every hot-tail post-state compares JS exposed CS/EIP/EAX/EBX/ECX and instruction/quantum indices. Full native cache/opcode semantics and total-cap negative controls remain separate; no throughput claim."
+  "scope": "all raw physical byte reads/writes and actual instruction bytes replayed; every hot-tail post-state compares JS exposed CS/EIP/EAX/EBX/ECX and instruction/quantum indices. Full native cache/opcode semantics and total-cap negative controls remain separate; no throughput claim."
 }

@@ -1,6 +1,10 @@
 {
   "scope": "actual source46cb repeat; nativecompiledc626 separately bound; WIP comparisons, not production qualification or throughput",
   "receipts": {
+    "2026-10-01-i80386-native-hot-h1-artifact-index.json": {
+      "bytes": 1535,
+      "sha256": "0bb9eb6f791ba57d013c3760de69f8c42bc10fb52ebf40c61714788fd75a2c9d"
+    },
     "2026-10-01-i80386-native-hot-h1-build.json": {
       "bytes": 1175,
       "sha256": "96e821b962b0be231f0a957f960f23406a88e6ad29c9a3ffb84b90e00d02f038"
@@ -30,8 +34,8 @@
       "sha256": "52bb8106d771793211dd9b3afa85306af98dac2efeecdaa6f219bd9ab215443f"
     },
     "2026-10-01-i80386-native-hot-h1-root-trace-semantic.json": {
-      "bytes": 874,
-      "sha256": "3ea24f731fecd925ce8a0351d162fa21bcc32e0c2083bf6e965c226bfc8f719b"
+      "bytes": 947,
+      "sha256": "e12a84e8659b905ed473925920894821040d17a9ae4019aff7c07e2e5ecacdfd"
     }
   }
 }
