@@ -114,10 +114,17 @@ function replayRam(native,at){
       .map(name=>native.ramFinal[name]),at+'.final RAM replay');
 }
 
-function armProof(arm,name){
+export function assertNativeDeviceQuantaArmProof(arm,name=arm.mode){
   const at=`arms.${name}`;
   keys(arm,['mode','requestedBudget','host','native','rpc','artifacts'],at);
   equal(arm.mode,name,at+'.mode');equal(arm.requestedBudget,budgets[name],at+'.budget');
+  keys(arm.artifacts,['exitCode','signal','files'],at+'.artifacts');
+  equal([arm.artifacts.exitCode,arm.artifacts.signal],[0,null],at+'.exit witness');
+  equal(Object.keys(arm.artifacts.files).sort(),['stdout','stderr','rpcToNative','rpcFromNative','bochsLog'].sort(),at+'.artifact files');
+  for(const entry of Object.values(arm.artifacts.files)){
+    check(typeof entry.path==='string'&&/^[a-zA-Z0-9.-]+$/.test(entry.path),at,'unsafe arm artifact');
+    digest(entry.sha256,at+'.artifact digest');
+  }
   const {host,native,rpc}=arm;
   keys(host,['seed','journal','final'],at+'.host');
   keys(native,['activation','records','events','slices','finalState','ramFinal',
@@ -436,13 +443,20 @@ function rejectionProof(report){
   equal(Object.keys(report.artifacts).sort(),expectedGroups.sort(),'artifact group set');
   for(const [name,group] of Object.entries(report.artifacts)){
     if(['bochsrc','floppy'].includes(name))artifact(group,name);
-    else for(const [kind,entry] of Object.entries(group))artifact(entry,`${name}.${kind}`);
+    else {
+      const files=Object.hasOwn(budgets,name)?group.files:group;
+      if(Object.hasOwn(budgets,name)){
+        equal(Object.keys(group).sort(),['exitCode','signal','files'].sort(),name+'.exit artifact shape');
+        equal([group.exitCode,group.signal],[0,null],name+'.native exit');
+      }
+      for(const [kind,entry] of Object.entries(files))artifact(entry,`${name}.${kind}`);
+    }
   }
   equal(report.artifacts.bochsrc.sha256,report.source.bochsrcSha256,'bochsrc artifact digest');
   equal(report.artifacts.floppy.sha256,report.source.floppySha256,'floppy artifact digest');
   for(const name of Object.keys(budgets)){
     equal(report.arms[name].artifacts,report.artifacts[name],name+'.artifact mirror');
-    equal(Object.keys(report.artifacts[name]).sort(),
+    equal(Object.keys(report.artifacts[name].files).sort(),
       ['stdout','stderr','rpcToNative','rpcFromNative','bochsLog'].sort(),name+'.artifact set');
   }
 }
@@ -454,7 +468,7 @@ export function assertNativeDeviceQuantaProof(report){
   rejectionProof(report);
   equal(Object.keys(report.arms).sort(),Object.keys(budgets).sort(),'arm set');
   const evidence=Object.fromEntries(Object.keys(budgets).map(name=>
-    [name,armProof(report.arms[name],name)]));
+    [name,assertNativeDeviceQuantaArmProof(report.arms[name],name)]));
   const reference=evidence.continuous;
   for(const name of ['budget1','budget2','budget257']){
     const observed=evidence[name];

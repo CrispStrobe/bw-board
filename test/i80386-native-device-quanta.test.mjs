@@ -75,3 +75,21 @@ test('proof and native parser reject absent execution evidence',()=>{
   assert.throws(()=>assertNativeDeviceQuantaProof({}),/missing schema/);
   assert.throws(()=>parseNativeLog(''),/evidence absent/);
 });
+
+
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {assertNativeDeviceQuantaArmProof} from
+  '../scripts/bochs-cpu3-native-device-quanta-compare.mjs';
+const pilotPath=process.env.BW_DEVICE_QUANTA_ACTUAL_PILOT;
+test('actual ef157 continuous pilot satisfies the one-arm core proof',
+  {skip:!pilotPath},()=>{
+    const bytes=readFileSync(pilotPath);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'),
+      '6a5071f8feb9859f64da09386f0f2245ea7de1f9346466881eed7a561571e6f5');
+    const pilot=JSON.parse(bytes);
+    assert.equal(pilot.schema,'bw.bochs-cpu3-native-device-quanta-single-diagnostic.v1');
+    const checked=assertNativeDeviceQuantaArmProof(pilot.arm);
+    assert.equal(checked.finalHost.successfulQuanta,4041);
+    assert.equal(checked.finalHost.nativeTicks,4043);
+  });

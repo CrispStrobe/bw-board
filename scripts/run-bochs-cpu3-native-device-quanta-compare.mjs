@@ -839,11 +839,11 @@ async function runFull(tree,outdir){
   }
   const report={schema:'bw.bochs-cpu3-native-device-quanta.v1',source,arms,probes,
     transportProbes,artifacts};
+  const reportPath=join(outdir,'capture.json'),resultPath=join(outdir,'result.json');
+  writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
   const result=assertNativeDeviceQuantaProof(report);
   verifyRetainedArtifacts(outdir,artifacts);
   recheckInputs(tree,source,hostConfig,floppyPath);
-  const reportPath=join(outdir,'capture.json'),resultPath=join(outdir,'result.json');
-  writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
   writeFileSync(resultPath,JSON.stringify(result,null,2)+'\n');
   console.log(JSON.stringify({status:'native-device-quanta-proof-pass',sourceRevision:source.boardRevision,
     report:reportPath,reportSha256:fileSha(reportPath),result:resultPath,
