@@ -114,6 +114,22 @@ function replayRam(native,at){
       .map(name=>native.ramFinal[name]),at+'.final RAM replay');
 }
 
+function logicalProjection(events,at){
+  const logical=events.filter(e=>!['ATTEMPT','CMD','RPC_REQ','RPC_REP'].includes(e.tag))
+    .map(({ordinal,causeOrdinal,...e})=>e);
+  const projected=[];
+  for(const e of logical){
+    const previous=projected.at(-1);
+    if(e.tag==='HALT_IDLE'&&previous?.tag==='HALT_IDLE'&&isDeepStrictEqual(e,previous)){
+      check(e.tick===4043&&e.cs===8&&e.eip===0x801e&&e.ifFlag===false,
+        at,'only terminal masked zero-work idle may stutter');
+      continue;
+    }
+    projected.push(e);
+  }
+  return projected;
+}
+
 export function assertNativeDeviceQuantaArmProof(arm,name=arm.mode){
   const at=`arms.${name}`;
   keys(arm,['mode','requestedBudget','host','native','rpc','artifacts'],at);
@@ -231,6 +247,17 @@ export function assertNativeDeviceQuantaArmProof(arm,name=arm.mode){
     Object.values(native.fallback).every(value=>value===0),
     at,'callback/fallback counts changed');
   check(array(native.slices,at+'.slices').length>0,at,'no bounded resumes');
+  const idles=type('HALT_IDLE');
+  equal(idles.length,c.haltIdleCuts,at+'.raw halt callback count');
+  equal(idles.length,(name==='continuous'||name==='budget257')?2:1,at+'.bounded terminal idle count');
+  for(const idle of idles)check(idle.tick===4043&&idle.cs===8&&idle.eip===0x801e&&idle.ifFlag===false,at,'unowned idle callback');
+  const terminalSlices=native.slices.filter(s=>s.reason===4);
+  equal(terminalSlices.at(-1)?.chargedNativeTicks,0,at+'.final zero-work halt N');
+  equal(terminalSlices.at(-1)?.chargedQuanta,0,at+'.final zero-work halt Q');
+  check(terminalSlices.every(s=>s.exit.cs===8&&s.exit.eip===0x801e&&s.exitIf===false&&!s.pendingIrq),at,'unowned halt slice');
+  const zeroSlices=native.slices.filter(s=>s.chargedNativeTicks===0&&s.chargedQuanta===0);
+  equal(zeroSlices.filter(s=>s.reason===4).length,1,at+'.terminal zero-work resume');
+  check(zeroSlices.every(s=>s.reason===4||(s.reason===6&&s.irqDelivered&&s.exit.cs===8&&s.exit.eip===0x809f)),at,'unexpected zero-work resume');
   let previousN=0,previousQ=0;
   for(const slice of native.slices){
     equal([slice.requestedNativeTicks,slice.effectiveNativeTicks,slice.requestedQuanta],[1000000,1000000,budgets[name]],at+'.fixed slice limits');
@@ -264,8 +291,7 @@ export function assertNativeDeviceQuantaArmProof(arm,name=arm.mode){
   equal(requestKinds.filter(x=>x==='ACK').length,1,at+'.RPC PIC ACK');
   return {activation:native.activation,seed:native.seed,hostJournal:host.journal,finalHost:host.final,
     selectedState:native.finalState,ramFinal:native.ramFinal,
-    logicalEvents:events.filter(e=>!['ATTEMPT','CMD','RPC_REQ','RPC_REP'].includes(e.tag))
-      .map(({ordinal,causeOrdinal,...e})=>e),
+    logicalEvents:logicalProjection(events,at),
     writes:events.filter(e=>e.tag==='MEM'&&e.rw==='W')
       .map(({raw,effective,class:kind,value,effect,tick,why})=>
         ({raw,effective,kind,value,effect,tick,why})),
