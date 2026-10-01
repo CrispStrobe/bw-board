@@ -324,6 +324,20 @@ export const coldTransports=Object.freeze({
   'memory-classification':'host-memory-classification','memory-write-commit':'host-write-commit','memory-rom-observed':'host-rom-observed-value',
 });
 const historyCache=new Map();
+const qualifiedPatchedHashes=Object.freeze({
+  "bochs/bochs.h": "7c18c551557eb269b52d6a5f804d38ead45c4f268528fc7ea46429b32508c501",
+  "bochs/cpu/cpu.cc": "16a7b2a3640f2fb3d8df92f8916f8d5bc628e6ed8a7658c07b8db1c101ec80d9",
+  "bochs/cpu/paging.cc": "b919658b9f7b726efe3796cab3a5c05bbd4a64e047a771be36394ff9d01bd4b2",
+  "bochs/cpu/exception.cc": "5701d81b89fda61a6c357e63fff653718f6eb6115e3a23d7b23ade15e5d9eb08",
+  "bochs/cpu/event.cc": "3f1603ed7e9b668cda9264821af0e03439577a617ba63cea69e95122b6cd2b12",
+  "bochs/main.cc": "2c6dcb4cf0091ba980c66c3b9c173c3db95e9a1845ef52d4ad1758e280ad0833",
+  "bochs/memory/memory.cc": "d6ff0d3353336995aa2fdd8326dc25d197a975ea8139827f4c8ab06f7b083e78",
+  "bochs/memory/misc_mem.cc": "8647410bd71e6345426052b02d04a0effa9e39a85fb7e50320f9d3f22d4c8ee0",
+  "bochs/pc_system.h": "e528b869dc57d85bce7d5e421ca2a4cd26ca2277cd39b27dc6039c311d46d67f",
+  "bochs/pc_system.cc": "9831c51c0fc177766ebe1b43862eb4aaf112155aa754b2681648d57959853c73",
+  "bochs/iodev/devices.cc": "2a9fb204a658691e4410908ebdd5b9f58d8f982948ede2cd15c3f4d957ea5a44",
+  "bochs/cpu/init.cc": "4bdf4a39a2a3ceecafdd070836a055b5dec8696acf59652e2150a12fdfa7a9f3"
+});
 function sourceProof(source){
   check(/^[0-9a-f]{40}$/.test(source.boardRevision),'source commit');
   for(const [key,value] of Object.entries(coldBuildPins))equal(source[key],value,`audited native ${key}`);
@@ -354,6 +368,7 @@ function sourceProof(source){
   const patchPaths=['bochs/bochs.h','bochs/cpu/cpu.cc','bochs/cpu/paging.cc','bochs/cpu/exception.cc','bochs/cpu/event.cc',
     'bochs/main.cc','bochs/memory/memory.cc','bochs/memory/misc_mem.cc','bochs/pc_system.h','bochs/pc_system.cc','bochs/iodev/devices.cc','bochs/cpu/init.cc'];
   equal(Object.keys(source.patchedHashes).sort(),patchPaths.sort(),'complete native source pins');
+  equal(source.patchedHashes,qualifiedPatchedHashes,'independently derived qualified native source pins');
   for(const digest of Object.values(source.patchedHashes))check(/^[0-9a-f]{64}$/.test(digest),'patched digest');
   equal(source.patchedHashes['bochs/cpu/init.cc'],'4bdf4a39a2a3ceecafdd070836a055b5dec8696acf59652e2150a12fdfa7a9f3','unchanged CPU reset source');
 }
