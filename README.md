@@ -83,6 +83,9 @@ coverage vary by target. See the [target factory](src/debug-target-factory.js),
 [replay surface](docs/DEBUG-TARGET-REPLAY-SURFACE.md).
 The [experimental 80386 guide](docs/I80386-EXPERIMENTAL.md) documents that
 target's boundaries.
+The [bounded native 386 gate](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md)
+now combines paging, executable RAM updates, A20 aliases, REP retries and actual
+PIT/PIC delivery. Its receipts qualify this free fixture; a general native backend remains WIP.
 
 ## Limits
 

@@ -1,5 +1,7 @@
 # Next bounded actual-board gate: protected paging, REP/PF/PIT/IRQ, RAM SMC and A20
 
+The bounded combined gate below is now qualified at `809c3fba86a81501a08b0d1e81d4e1d23e241d41` with two fresh captures and all62 report/eight host tests passing. [Actual results and scope](I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) retain the original failed diagnostic separately. The next concrete step is a direct synchronous native callback adapter for the same free guest, with optional capture, one native instance per process, and unchanged board ownership/cache boundaries; broader executable-memory/interrupt admission and CLI/GUI integration remain open.
+
 The [actual JavaScript combined baseline](I80386-JS-COMBINED-PAGING-RAM-ORACLE.md) is now qualified at 192 work quanta. This remains the native implementation proposal, not combined native execution evidence. Preserve all qualified JS/native REP and RAM lanes, builds and receipts. The next implementation is a separate native ABI/runtime/host gate using that frozen JS reference. No compatibility or speed claim. The new JS guest/oracle and source-bound captures now exist. The separate native bridge compiles locally and on GitHub Actions; a first combined native diagnostic has run, while semantic qualification remains unfinished.
 
 ## Smallest fixture candidate
