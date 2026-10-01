@@ -40,3 +40,11 @@ test('child Bochs configuration preserves every setting except its owned log pat
  assert.throws(()=>ownedChildConfiguration('megs: 16\n','/new/child'),/exactly one/);
  assert.throws(()=>ownedChildConfiguration(configuration+'log: another\n','/new/child'),/exactly one/);
 });
+
+test('adversarial metadata fixture detaches its bytes exactly on decoded lookup',async()=>{
+ const {detachBytesOnDecodedLookup}=await import('../scripts/audit-i80386-native-direct-board-adapter.mjs');
+ const result=detachBytesOnDecodedLookup({decoded:0x7000,bytes:Uint8Array.from([0xbb,0x11,0x11,0xcb])});
+ const copied=Uint8Array.from(result.bytes);assert.equal(result.bytes.byteLength,4);
+ assert.equal(result.decoded,0x7000);assert.equal(result.bytes.byteLength,0);assert.deepEqual([...copied],[0xbb,0x11,0x11,0xcb]);
+ // This verifies the attack fixture; only actual child controls test the N-API fix.
+});

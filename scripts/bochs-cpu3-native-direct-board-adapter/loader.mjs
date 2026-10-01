@@ -16,8 +16,9 @@ export function loadDirectNative(path,expectedSha256){
  if(sha!==expectedSha256)throw Error('direct native artifact SHA mismatch');
  const previous=globalThis[imageKey];
  if(previous&&(previous.path!==absolute||previous.sha256!==sha))throw Error('direct native duplicate addon image rejected');
- if(previous)return previous.api;
+ if(previous){if(previous.api.abiVersion!==2)throw Error('direct native ABI version mismatch');return previous.api;}
  const api=require(absolute);
+ if(api.abiVersion!==2)throw Error('direct native ABI version mismatch');
  for(const name of ['create','resume','setIRQ','inspect','close'])if(typeof api[name]!=='function')throw Error('direct native export missing: '+name);
  Object.defineProperty(globalThis,imageKey,{value:Object.freeze({path:absolute,sha256:sha,api}),configurable:false,writable:false});
  return api;

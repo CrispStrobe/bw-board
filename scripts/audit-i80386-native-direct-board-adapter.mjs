@@ -78,19 +78,19 @@ export async function collectDirectMatrix({addon,sha256,configuration,directory,
  return receipts; // Small digest/census receipts only, never captured reports.
 }
 export function assertFatalControlWitness(control,witness){
- const causes={'bad-page-sha':'direct-page-sha256','callback-throw':'direct-page-callback','callback-reentry':'direct-page-callback'};
+ const causes={'bad-page-sha':'direct-page-sha256','callback-throw':'direct-page-callback','callback-reentry':'direct-page-callback','shared-page-buffer':'direct-page-callback','detached-page-buffer':'direct-page-callback'};
  assert.ok(Object.hasOwn(causes,control),'unknown fatal control');
  assert.equal(witness.error,null,'fatal control timeout/spawn is not native rejection');
  assert.equal(witness.signal,'SIGABRT','native fatal control must abort its child');
  assert.match(witness.stderr,new RegExp(`(?:^|\\n)BWSD1\\tFAIL\\t${causes[control]}(?:\\n|$)`),'exact source-owned native fatal cause');
 }
-export async function collectDirectControls({addon,sha256,configuration,directory}){
- const {mkdirSync,writeFileSync}=await import('node:fs');const {join,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
+export async function collectDirectControls({addon,sha256,configuration,directory,reference=null}){
+ const {mkdirSync,writeFileSync,readFileSync}=await import('node:fs');const {join,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
  mkdirSync(directory,{recursive:false});writeFileSync(join(directory,'source.bochsrc'),configuration,{flag:'wx'});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results={};
- for(const control of ['bad-page-sha','callback-throw','callback-reentry','second-create']){
+ for(const control of ['bad-page-sha','callback-throw','callback-reentry','shared-page-buffer','detached-page-buffer','second-create','detaching-page-metadata','detaching-memory-metadata']){
   const stem=join(resolve(directory),control),input=stem+'.input.json',config=ownedChildConfiguration(configuration,stem);writeFileSync(config.path,config.text,{flag:'wx'});writeFileSync(input,JSON.stringify({addon,sha256,configuration:config.path,configurationArtifact:config,control,capture:false,quanta:300,output:stem+'.json'}));
   const child=spawnSync(process.execPath,[entry,input],{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});const witness={status:child.status,signal:child.signal,error:child.error?.message??null,stderr:child.stderr??'',stdout:child.stdout??''};writeFileSync(stem+'.witness.json',JSON.stringify(witness));
-  if(control==='second-create'){assert.equal(witness.error,null);assert.equal(witness.signal,null);assert.equal(witness.status,0);}else assertFatalControlWitness(control,witness);
+  if(['second-create','detaching-page-metadata','detaching-memory-metadata'].includes(control)){assert.equal(witness.error,null);assert.equal(witness.signal,null);assert.equal(witness.status,0);if(control!=='second-create'){assert.ok(reference,'adversarial successful controls require actual baseline reference');const expected=JSON.parse(readFileSync(reference,'utf8')),actual=JSON.parse(readFileSync(stem+'.json','utf8'));for(const field of ['reset','final','settled','ramSha256','backingSlices','callbackCounts','resumes'])assert.deepEqual(actual[field],expected[field],`detachment control actual ${field}`);}}else assertFatalControlWitness(control,witness);
   results[control]=witness;
  }
  return results;
@@ -140,4 +140,13 @@ export async function collectDirectMeasurements({addon,sha256,configuration,dire
  }
  const summary={status:'SHORT_GUEST_TIMING_ONLY',reference,warmups,samples:results,execution:summarizeFreshProcessSamples(results.filter(r=>!r.discardedWarmup)),scope:'fresh-process 194-native-tick free guest; execution includes resume snapshots and actual board callbacks; discarded warmups may warm OS caches only; no physical-386, representative-long-workload or speedup claim'};
  writeFileSync(join(directory,'summary.json'),JSON.stringify(summary,null,2));return summary;
+}
+/** Adversarial callback fixture: metadata lookup detaches the borrowed byte array. */
+export function detachBytesOnDecodedLookup(result){
+ const decoded=result.decoded,bytes=result.bytes;
+ Object.defineProperty(result,'decoded',{enumerable:true,get(){
+  if(bytes.buffer.byteLength)structuredClone(bytes.buffer,{transfer:[bytes.buffer]});
+  return decoded;
+ }});
+ return result;
 }
