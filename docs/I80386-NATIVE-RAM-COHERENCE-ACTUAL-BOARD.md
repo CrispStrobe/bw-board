@@ -20,7 +20,7 @@ Architectural reset parity is **false**. Full raw reset caches/registers and gue
 
 Full JavaScript/native byte-bus-order parity is also **false**. Exactly eight successful immediate 16-bit far calls write their ordinary RAM stack frame in different word order. Pinned Bochs `ctrl_xfer16.cc` pushes CS then return IP; the JavaScript transactional stack commit writes ascending frame addresses, IP then CS. The checker independently derives both exact sequences at the eight declared sites and requires two native word callbacks. It does not sort bus events or allow a generic permutation. RETF reads and every other data access retain exact order. Both raw chronologies and source hashes remain in the capture.
 
-Native order across all four budgets is exact after removing only RUN commands/ordinal numbering and collapsing adjacent identical, effect-free terminal HALT observations. Raw HALT counts remain checked as 2/1/1/2, with 13/76/40/13 slices. Every cumulative slice counter is bound to preceding raw chronology; counters are not summed as per-resume deltas.
+Native order across all four budgets is exact after removing only command wrappers (RUN and STOP) and ordinal numbering and collapsing adjacent identical, effect-free terminal HALT observations. Raw HALT counts remain checked as 2/1/1/2, with 13/76/40/13 slices. Every cumulative slice counter is bound to preceding raw chronology; counters are not summed as per-resume deltas.
 
 ## Qualification and replay
 
