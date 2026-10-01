@@ -28,13 +28,17 @@ Modes:
 - `liftoff`: baseline compiler only; diagnostic flags, not production settings.
 
 The script refuses to overwrite an output directory. It records module/glue and
-harness SHA256, Node flags/version, CPU model, host load, all five RTx samples
+harness/tool/parser SHA256, Node flags/version, CPU model, host load, all five RTx samples
 and actual exit/failure counts. A failed floor remains a failure in the receipt;
 a functional failure, missing sample, skip or malformed result stops the probe.
 Raw stdout/stderr and the partial receipt are preserved before parsing. The
 sampling mode retains the raw `.cpuprofile` plus its digest and self-sample
 summary. Compiler traces retain function name/index, tier, body/code size and
-compile time for every parsed record. They do not prove instruction semantics.
+compile time for every parsed record. Function indices are bound to the
+artifact's name section only when one module appears in the trace; ambiguous
+multi-module traces retain raw indices without guessing names. They do not
+prove instruction semantics. Inherited NODE_OPTIONS must be unset so that the
+recorded diagnostic flags are explicit.
 
 Self samples cover initialization, warmup and measurement, not isolated guest
 windows; shares are attribution, not automatically removable overhead.

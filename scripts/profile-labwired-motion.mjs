@@ -34,6 +34,9 @@ const receipt = {schema: 'labwired.motion-wasm-profile.v1', diagnosticOnly: true
     node: process.version, cpu: cpus()[0]?.model, loadBefore: loadavg(), startedAt: new Date().toISOString(),
     directory, wasmSha256: hash(join(directory, 'labwired_wasm_bg.wasm')),
     glueSha256: hash(join(directory, 'labwired_wasm.js')), harnessSha256: hash(harness),
+    toolSha256: hash(fileURLToPath(import.meta.url)),
+    profileParserSha256: hash(join(root, 'scripts/lib/wasm-motion-profile.mjs')),
+    motionParserSha256: hash(join(root, 'scripts/lib/motion-ab-receipt.mjs')),
     flags: flagsByMode[mode], limitations: ['NODEJS held motion workload; not browser/debugger qualification',
         'sampled/forced-tier timings are diagnostic and must not replace ordinary qualification',
         'CPU profiling may alter compiler tiering; trace-default is collected separately without sampling',
@@ -55,7 +58,10 @@ Object.assign(receipt, motionProbeResult(result.stdout || '', result.status));
 if (mode !== 'default') {
     receipt.compilation = parseWasmCompilations((result.stdout || '') + '\n' + (result.stderr || ''));
     const names = wasmFunctionNames(readFileSync(join(directory, 'labwired_wasm_bg.wasm')));
-    for (const row of receipt.compilation.compilations) row.wasmName = names.get(row.index) || null;
+    receipt.compilation.moduleNamesBound = new Set(receipt.compilation.compilations.map(c => c.module)).size === 1;
+    for (const row of receipt.compilation.compilations) {
+        row.wasmName = receipt.compilation.moduleNamesBound ? names.get(row.index) || null : null;
+    }
     receipt.compilation.cortexM = receipt.compilation.compilations.filter(c =>
         /CortexM|cortex_m|step_internal|step_execute|step_batch/.test(c.wasmName || c.name || ''));
 }
