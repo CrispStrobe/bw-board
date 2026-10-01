@@ -1,0 +1,175 @@
+{
+  "status": "ACTUAL_DIRECT_NATIVE_NODE22_BOUNDED_PARITY_PASS",
+  "sourceRevision": "44ade021c92c2cb70ea2405c3dea523f201f4f0b",
+  "node": "22.23.3",
+  "compiledManifestRevision": "9a38479c24ac3200405f18913124d691b6c959d9",
+  "compiledSourceInputs": 17,
+  "nativeSourcePins": 12,
+  "addonSha256": "13e3dfaa0fc45e2bc5eb5de6da010f7264e150205c87ae103b35f16176cc9e9e",
+  "matrix": {
+    "continuous": {
+      "mode": "continuous",
+      "captureModeParity": true,
+      "directVsFifoParity": true,
+      "scope": "raw native trace and full callback board comparison",
+      "callbackCount": 663,
+      "artifacts": {
+        "true:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/continuous-capture-true.json",
+          "sha256": "eddf98771c3730a89ec6fdd5369296573e41a2f0bac6c670f9f56ebb98f5a866"
+        },
+        "true:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/continuous-capture-true.stderr",
+          "sha256": "3d399f71f108ea51b3f60090366cff023f2ab86e5ba3c6598451250a271637ed"
+        },
+        "false:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/continuous-capture-false.json",
+          "sha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+        },
+        "false:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/continuous-capture-false.stderr",
+          "sha256": "20df213f4a31c5d595b4a86b13ff2db8a79f12332e186fb7a04070b0d2ba64a1"
+        }
+      }
+    },
+    "budget1": {
+      "mode": "budget1",
+      "captureModeParity": true,
+      "directVsFifoParity": true,
+      "scope": "raw native trace and full callback board comparison",
+      "callbackCount": 663,
+      "artifacts": {
+        "true:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget1-capture-true.json",
+          "sha256": "0f4dde504228ec5b7cf714476dee23490ba0c5d4d5fe289ab86f8224703b7e30"
+        },
+        "true:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget1-capture-true.stderr",
+          "sha256": "e5a9a36719a2c1ffcb1af589a24fd441f262c122d88b8a1583bff0e601b36fb8"
+        },
+        "false:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget1-capture-false.json",
+          "sha256": "65c757c68d1777f392de63e900ccd9df760aa7912daa2ac3d6431b389db6d919"
+        },
+        "false:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget1-capture-false.stderr",
+          "sha256": "d5cacc864529c4f9efd8941dfc07bc4f41aea240c24da8e1a628f607ba2b3648"
+        }
+      }
+    },
+    "budget2": {
+      "mode": "budget2",
+      "captureModeParity": true,
+      "directVsFifoParity": true,
+      "scope": "raw native trace and full callback board comparison",
+      "callbackCount": 663,
+      "artifacts": {
+        "true:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget2-capture-true.json",
+          "sha256": "6180b467a5a726f12d4904bc02c48078eba61a93be6994771437d9fc86871da2"
+        },
+        "true:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget2-capture-true.stderr",
+          "sha256": "213de745ef8975967881a9a34c1b9b92c053f4c8954538d4174194845e829582"
+        },
+        "false:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget2-capture-false.json",
+          "sha256": "095ffb3b1ff84a1169a90ea736e59b4508f17bc7bc844137caec82fbed76fbdf"
+        },
+        "false:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget2-capture-false.stderr",
+          "sha256": "e0cb07a5aba9058d3e7e95dfa801bd06da1712ca86cfd1a15b20c3fc9c0d428a"
+        }
+      }
+    },
+    "budget257": {
+      "mode": "budget257",
+      "captureModeParity": true,
+      "directVsFifoParity": true,
+      "scope": "raw native trace and full callback board comparison",
+      "callbackCount": 663,
+      "artifacts": {
+        "true:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget257-capture-true.json",
+          "sha256": "b6e6a3b36fad4abc445506d1e92475ca5048bf11afda58d118df9fd7bdcfadd3"
+        },
+        "true:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget257-capture-true.stderr",
+          "sha256": "cc1d60935a6cd9ba4977a9dc6b3ca3d8b4aae0a7c5d690bd90f7b0290511d469"
+        },
+        "false:report": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget257-capture-false.json",
+          "sha256": "78008ccfe8f0f1135905fbe3c5ec50e4072e958676f25c2b5571de96a5d90bdc"
+        },
+        "false:stderr": {
+          "path": "/mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/matrix/budget257-capture-false.stderr",
+          "sha256": "763f1e3ae17701f0df494ddba2ff5b21e2efb5043326485cfc712ee8a12c6ef5"
+        }
+      }
+    }
+  },
+  "controls": {
+    "bad-page-sha": {
+      "status": null,
+      "signal": "SIGABRT",
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/bad-page-sha.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/bad-page-sha.bochs.log\nBWSD1\tFAIL\tdirect-page-sha256\n",
+      "stdout": ""
+    },
+    "callback-throw": {
+      "status": null,
+      "signal": "SIGABRT",
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/callback-throw.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/callback-throw.bochs.log\nBWSD1\tFAIL\tdirect-page-callback\n",
+      "stdout": ""
+    },
+    "callback-reentry": {
+      "status": null,
+      "signal": "SIGABRT",
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/callback-reentry.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/callback-reentry.bochs.log\nBWSD1\tFAIL\tdirect-page-callback\n",
+      "stdout": ""
+    },
+    "shared-page-buffer": {
+      "status": null,
+      "signal": "SIGABRT",
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/shared-page-buffer.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/shared-page-buffer.bochs.log\nBWSD1\tFAIL\tdirect-page-callback\n",
+      "stdout": ""
+    },
+    "detached-page-buffer": {
+      "status": null,
+      "signal": "SIGABRT",
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/detached-page-buffer.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/detached-page-buffer.bochs.log\nBWSD1\tFAIL\tdirect-page-callback\n",
+      "stdout": ""
+    },
+    "second-create": {
+      "status": 0,
+      "signal": null,
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/second-create.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/second-create.bochs.log\n",
+      "stdout": ""
+    },
+    "detaching-page-metadata": {
+      "status": 0,
+      "signal": null,
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/detaching-page-metadata.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/detaching-page-metadata.bochs.log\n",
+      "stdout": ""
+    },
+    "detaching-memory-metadata": {
+      "status": 0,
+      "signal": null,
+      "error": null,
+      "stderr": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/detaching-memory-metadata.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-direct-paired-r4-node22-final-20261001/controls/detaching-memory-metadata.bochs.log\n",
+      "stdout": ""
+    }
+  },
+  "sourceBeforeSha256": "e595f7294f05c22ed7642fbc578b91ebf9bad91486f6ebb1a70256837e44e12d",
+  "sourceAfterSha256": "e595f7294f05c22ed7642fbc578b91ebf9bad91486f6ebb1a70256837e44e12d",
+  "materializedTrackedFiles": 2331,
+  "sourceUnchanged": true,
+  "newRtxMeasured": false,
+  "productionBackend": false
+}

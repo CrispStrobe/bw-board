@@ -113,3 +113,14 @@ operands and rejection checks. Official Node 22.23.3 passes all 14 focused
 direct parity/assertion tests, zero skips. Historical r3/r4 capture metadata
 remains unchanged; these validator changes still need final source-bound
 qualification before a production backend claim.
+
+A final actual Node 22.23.3 run at clean source
+`44ade021c92c2cb70ea2405c3dea523f201f4f0b` repeats all four capture pairs and
+eight controls using the source-bound r4 addon. The
+[matrix and controls](receipts/2026-10-01-i80386-native-direct-node22-final-matrix-controls.json),
+[independent 20,256-check audit](receipts/2026-10-01-i80386-native-direct-node22-final-root-audit.json)
+and [unchanged 2,331-file source census](receipts/2026-10-01-i80386-native-direct-node22-final-source-census.json.gz)
+retain that result. Its reference is the freshly qualified Node 22 combined
+FIFO capture at 6af0969e. This validates the bounded direct experiment under
+both Node 20 and Node 22; unrestricted guest admission and production
+CLI/GUI integration remain future gates.
