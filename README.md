@@ -517,9 +517,17 @@ now wakes a halted protected-mode guest through the existing I8254/I8259
 models, actual PIC acknowledgment, guest EOI and IRETD. All four budgets
 match CPU/RAM/device evidence; independent reproduction, nine API probes,
 eleven native guards and seven malformed transport guards passed. Its pipe
-transport is a test apparatus. Successful-quantum accounting through REP and
-faults, full AT/WASM integration, and real workload speed measurements remain
-unfinished.
+transport is a test apparatus. Full AT/WASM integration and real workload
+speed measurements remain unfinished.
+
+The [native successful-work clock gate](docs/I80386-NATIVE-DEVICE-QUANTA-SELF-PARITY.md)
+now separates REP/ordinary completion charges from native fault ticks. All
+four budgets agree through an active PIT edge, two repaired page faults,
+zero-count/final REP charging and actual PIC acknowledgment. Independent
+reproduction, twelve API probes and eighteen abort guards passed; 817 local
+386 tests passed with six optional skips. Next is [cold reset and actual board
+ownership](docs/I80386-NATIVE-COLD-RESET-NEXT-GATE.md). This does not yet
+establish a shipped native/WASM backend, Windows enhanced mode, or new RTx.
 
 ## Windows 3.1 reference comparison
 
