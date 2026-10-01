@@ -17,6 +17,10 @@ harness, guest and all-window floor were unchanged. Both original glue hashes
 matched. Each receipt contains all four raw process outputs and twenty samples:
 [primary](primary-abba.json), [repeat](repeat-abba.json). Runner metadata:
 [primary](primary-runner.txt), [repeat](repeat-runner.txt).
+Re-parsing both receipts with the stronger comparison confirmed that all
+cycle-indexed guest observations match across their four runs. Full ELF hashes
+vary because GCC embeds random temporary-object names in non-loaded symbol
+metadata; those hashes remain provenance, not a byte-equality claim.
 
 Fresh independent builds [baseline 36862730233](https://github.com/CrispStrobe/bw-board/actions/runs/36862730233)
 and [candidate 36863052371](https://github.com/CrispStrobe/bw-board/actions/runs/36863052371)
