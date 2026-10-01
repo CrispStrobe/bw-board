@@ -2,6 +2,8 @@
 
 **Status (2026-10-01): implementation contract, not an execution or speed result.** The successful-work proof qualifies a post-BIOS CPU handoff with fresh standalone PIT/PIC models. A native backend still needs to execute from hardware reset and route memory, ports and scheduling through the actual `ExperimentalI80386ATMachine` before a WASM port or production speed comparison.
 
+The [actual JavaScript board oracle](I80386-JS-COLD-RESET-ORACLE.md) now supplies this free checkpoint with source-bound receipts and independent reproduction. Native execution of that checkpoint remains unfinished.
+
 ## First free checkpoint
 
 Use a newly assembled, freely distributable 64 KiB ROM. Its reset vector far-jumps from the architectural hidden CS base at physical `0xfffffff0` into the low BIOS mapping. The guest executes CLI, sets a valid stack and data segments, writes a low-RAM signature, attempts a ROM write and verifies unchanged data, reads open bus, emits an owned marker through port `0xe9`, and enters CLI/HLT. Declare every instruction, mapped region and expected witness. No BIOS disk or licensed software is needed.
