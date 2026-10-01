@@ -1,10 +1,6 @@
 {
   "scope": "actual source46cb repeat; nativecompiledc626 separately bound; WIP comparisons, not production qualification or throughput",
   "receipts": {
-    "2026-10-01-i80386-native-hot-h1-artifact-index.json": {
-      "bytes": 1535,
-      "sha256": "0bb9eb6f791ba57d013c3760de69f8c42bc10fb52ebf40c61714788fd75a2c9d"
-    },
     "2026-10-01-i80386-native-hot-h1-build.json": {
       "bytes": 1175,
       "sha256": "96e821b962b0be231f0a957f960f23406a88e6ad29c9a3ffb84b90e00d02f038"
@@ -36,6 +32,26 @@
     "2026-10-01-i80386-native-hot-h1-root-trace-semantic.json": {
       "bytes": 947,
       "sha256": "e12a84e8659b905ed473925920894821040d17a9ae4019aff7c07e2e5ecacdfd"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-annotated-summary.json": {
+      "bytes": 7767,
+      "sha256": "6142b1e4a67cd50b5b5ba25dfdcc6c4697851d7e58ed8a2111dac5595ff7e2be"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-artifact-sha256.json": {
+      "bytes": 13100,
+      "sha256": "1c49e73132cdd88096fb78b0408ddc03e30be0918dde896668f709557c935b7f"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-environment-after.json": {
+      "bytes": 1651,
+      "sha256": "e150a71a0e4c40a7ce3394b00c2257aa6951b15b4d5556f60c2d6ef6a863e8f3"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-environment-before.json": {
+      "bytes": 5185,
+      "sha256": "b2751b6535f57ce8ee7b4815abaa309d21af51f090ee1ed25774a957efad5e4f"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-root-timing-audit.json": {
+      "bytes": 1271,
+      "sha256": "c1ab5f1524f08aa4e322e7179bca8197a72d54dfccf3b487ea49d9c5f9033dc0"
     }
   }
 }

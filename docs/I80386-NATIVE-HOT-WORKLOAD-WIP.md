@@ -26,6 +26,21 @@ Repeating the same source and native build with a regular-file stderr descriptor
 
 An independent semantic audit replayed all 33,732 raw memory read/write records against the actual ROM and backing memory, including A20 decoding, and verified the actual instruction bytes for all 100,682 attempted instruction records. Every one of the 100,506 hot-tail post-states matches the JavaScript baseline's CS, EIP, EAX, EBX, ECX, instruction index and quantum index. Full native snapshots at all six boundaries, the complete callback journals, settled board state and raw RAM hashes also match between trace ON and OFF. This establishes these specific comparisons; broader opcode/cache semantics and actual total-cap exhaustion remain unfinished.
 
+## First equivalent timing
+
+Eighteen fresh Node 22.23.3 children ran the same guest with native tracing and host journals disabled: two discarded warm-up pairs followed by seven alternating JavaScript/native sample pairs. Every child passed its accepted CPU, board, RAM and counter checks. Execution timing excludes assembly, source authentication, reset/startup, settlement, hashing and report writing; it includes scheduler work, delivery counters, six acceptance snapshots and the native adapter's resume snapshots.
+
+| Engine | Minimum | Median | Maximum |
+| --- | ---: | ---: | ---: |
+| Compatibility JavaScript board | 339 ms | 513 ms | 1,665 ms |
+| Experimental native whole adapter | 795 ms | 1,345 ms | 3,103 ms |
+
+This run used the shared VPS: four Intel Xeon Skylake vCPUs under KVM, approximately 8 GiB RAM. Initial load averages were 5.27 / 3.74 / 4.52, and other work, including independent audits, continued during sampling. The native median was 2.62 times the JavaScript median; the wide spread limits an isolated performance conclusion. These are measurements of the complete adapter on this register-heavy fixture, not the isolated Bochs core or representative DOS/Windows applications. There is no demonstrated native speedup or 10× improvement.
+
+Measured source was `5e31ea058e16746c6bf3a540a3325ed201576719`; all 41 JavaScript and 54 native-runner source inputs were authenticated against that historical revision. The compiled H1 inputs were independently bound as above. Actual no-journal native files have zero rows and bytes. Historical native reports contained a generic timing description mentioning journaling; the accompanying annotation records the actual disabled modes rather than rewriting the original reports.
+
+Profiling the bridge is the next performance gate. Each scalar quantum/tick callback currently makes a second JavaScript call to obtain mapping state. Its cost must be measured before caching or batching changes that could affect device, A20, exception or interrupt ordering.
+
 ## Remaining gates
 
 - Authenticate exact-boundary snapshots and every retained exception/reset difference.
