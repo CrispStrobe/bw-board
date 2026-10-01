@@ -19,11 +19,14 @@ Focused and adjacent proof: 47/47, zero skips, including live ngspice.
 Five isolated mutations red: disabled compaction (2), ignored power factor
 (1 numerical mean failure), dropped static-limit guard (1), ignored frozen
 parameters (1), lost first support point (11). Restored Board blob
-`9deb3952512f3fa0ee2a42e273daa1b29f253cfc`; diff check clean.
+`a0af069cf35713cd386ac757619578db923c160c`; diff check clean.
 Paired identical 700-tick workload: 701 -> 2 points and 493,500 -> 4,200
 indexed history reads; means -0.0000909456817667973 ->
 -0.00009094568176679739 A. This is not a wall-time speedup certificate.
 One automatic exact-head CI/Harris qualification remains the landing gate.
+Initial 27b1d68f qualification was cancelled/disowned before completion:
+mutation restoration left two new lines unindented; forward formatting-only
+repair restores the intended style without changing the tested behavior.
 
 2026-10-01 Analytic inductor meter integrals — DONE candidate, Codex bwcx `/root`.
 Worktree `/mnt/volume1/code/lego/wt-board-inductor-meter-20261001`, branch

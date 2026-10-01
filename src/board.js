@@ -1693,8 +1693,8 @@ export class BoardImpl {
         // An exact analytic function integrates any clipped subinterval; its
         // caller endpoints are redundant, unlike adaptive solve observations.
         // Keep visible static edges and every change in the function itself.
-if (segment && last?.analytic && h.length>1 && last.before===last.v
-&& segment.factor===last.analytic.factor
+        if (segment && last?.analytic && h.length>1 && last.before===last.v
+            && segment.factor===last.analytic.factor
             && segment.derivative===last.analytic.derivative
             && ['offset','amplitude','freq','td','theta','phase'].every(
               key => segment.params[key]===last.analytic.params[key])) {
