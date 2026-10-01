@@ -1,0 +1,141 @@
+{
+  "status": "SHORT_GUEST_TIMING_ONLY",
+  "reference": "/mnt/volume1/tmp-astra/native-direct-paired-r3-20261001/matrix/continuous-capture-false.json",
+  "warmups": 2,
+  "samples": [
+    {
+      "index": 0,
+      "discardedWarmup": true,
+      "wallNs": 499426531,
+      "assemblyNs": 101466630,
+      "addonLoadNs": 23578699,
+      "boardConstructionNs": 18393574,
+      "nativeStartupNs": 33195800,
+      "executionNs": 55177197,
+      "settlementAndRamHashNs": 57342573,
+      "serializationAndWriteNs": 884739,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-0.json"
+    },
+    {
+      "index": 1,
+      "discardedWarmup": true,
+      "wallNs": 503144874,
+      "assemblyNs": 66450869,
+      "addonLoadNs": 28626240,
+      "boardConstructionNs": 16571948,
+      "nativeStartupNs": 22328457,
+      "executionNs": 44445149,
+      "settlementAndRamHashNs": 87367830,
+      "serializationAndWriteNs": 1488698,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-1.json"
+    },
+    {
+      "index": 2,
+      "discardedWarmup": false,
+      "wallNs": 418271837,
+      "assemblyNs": 69711034,
+      "addonLoadNs": 28071842,
+      "boardConstructionNs": 14781624,
+      "nativeStartupNs": 23737861,
+      "executionNs": 58706177,
+      "settlementAndRamHashNs": 60560063,
+      "serializationAndWriteNs": 1152803,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-2.json"
+    },
+    {
+      "index": 3,
+      "discardedWarmup": false,
+      "wallNs": 490008902,
+      "assemblyNs": 93229645,
+      "addonLoadNs": 20615366,
+      "boardConstructionNs": 24226834,
+      "nativeStartupNs": 26418103,
+      "executionNs": 56064691,
+      "settlementAndRamHashNs": 67054451,
+      "serializationAndWriteNs": 1041815,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-3.json"
+    },
+    {
+      "index": 4,
+      "discardedWarmup": false,
+      "wallNs": 565151444,
+      "assemblyNs": 88260756,
+      "addonLoadNs": 29988914,
+      "boardConstructionNs": 24678482,
+      "nativeStartupNs": 25283387,
+      "executionNs": 76543846,
+      "settlementAndRamHashNs": 92866680,
+      "serializationAndWriteNs": 1048300,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-4.json"
+    },
+    {
+      "index": 5,
+      "discardedWarmup": false,
+      "wallNs": 496063534,
+      "assemblyNs": 67171821,
+      "addonLoadNs": 21461414,
+      "boardConstructionNs": 27961843,
+      "nativeStartupNs": 30865315,
+      "executionNs": 38173349,
+      "settlementAndRamHashNs": 63299989,
+      "serializationAndWriteNs": 1282714,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-5.json"
+    },
+    {
+      "index": 6,
+      "discardedWarmup": false,
+      "wallNs": 464588562,
+      "assemblyNs": 83361282,
+      "addonLoadNs": 21451655,
+      "boardConstructionNs": 22142659,
+      "nativeStartupNs": 27024962,
+      "executionNs": 53091113,
+      "settlementAndRamHashNs": 61289568,
+      "serializationAndWriteNs": 831604,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-6.json"
+    },
+    {
+      "index": 7,
+      "discardedWarmup": false,
+      "wallNs": 429318306,
+      "assemblyNs": 63738790,
+      "addonLoadNs": 20664027,
+      "boardConstructionNs": 14787931,
+      "nativeStartupNs": 25929680,
+      "executionNs": 48224521,
+      "settlementAndRamHashNs": 63222435,
+      "serializationAndWriteNs": 851263,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-7.json"
+    },
+    {
+      "index": 8,
+      "discardedWarmup": false,
+      "wallNs": 496389552,
+      "assemblyNs": 67400718,
+      "addonLoadNs": 19030390,
+      "boardConstructionNs": 15637141,
+      "nativeStartupNs": 31820848,
+      "executionNs": 58799950,
+      "settlementAndRamHashNs": 59309152,
+      "serializationAndWriteNs": 894265,
+      "output": "/mnt/volume1/tmp-astra/native-direct-measurement-r3-20261001/samples/sample-8.json"
+    }
+  ],
+  "execution": {
+    "unit": "nanoseconds",
+    "samples": 7,
+    "min": 38173349,
+    "median": 56064691,
+    "max": 76543846,
+    "sorted": [
+      38173349,
+      48224521,
+      53091113,
+      56064691,
+      58706177,
+      58799950,
+      76543846
+    ]
+  },
+  "scope": "fresh-process 194-native-tick free guest; execution includes resume snapshots and actual board callbacks; discarded warmups may warm OS caches only; no physical-386, representative-long-workload or speedup claim"
+}

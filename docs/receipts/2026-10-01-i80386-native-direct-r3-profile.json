@@ -1,0 +1,540 @@
+{
+  "status": "PROFILED_UNPROFILED_FULL_INVARIANTS_PASS",
+  "scope": "three fresh pairs; full checkpoint capture retained in both modes; inclusive profiling buckets overlap; not a throughput benchmark",
+  "receipts": [
+    {
+      "i": 0,
+      "profile": false,
+      "exit": {
+        "status": 0,
+        "signal": null,
+        "error": null,
+        "wallNs": 702870303
+      },
+      "timing": {
+        "unit": "nanoseconds",
+        "stages": {
+          "assemblyNs": 187347182,
+          "addonLoadNs": 60214147,
+          "boardConstructionNs": 16962900,
+          "nativeStartupNs": 25183665,
+          "executionNs": 90454564,
+          "settlementAndRamHashNs": 63211281,
+          "serializationAndWriteNs": 8487944
+        },
+        "executionScope": "bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization",
+        "warmupScope": "fresh process, never warmed native lifetime"
+      },
+      "profileResult": null,
+      "reportSha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+    },
+    {
+      "i": 0,
+      "profile": true,
+      "exit": {
+        "status": 0,
+        "signal": null,
+        "error": null,
+        "wallNs": 513090162
+      },
+      "timing": {
+        "unit": "nanoseconds",
+        "stages": {
+          "assemblyNs": 74921942,
+          "addonLoadNs": 28862737,
+          "boardConstructionNs": 18857660,
+          "nativeStartupNs": 24190810,
+          "executionNs": 109810045,
+          "settlementAndRamHashNs": 65299473,
+          "serializationAndWriteNs": 9743663
+        },
+        "executionScope": "bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization",
+        "warmupScope": "fresh process, never warmed native lifetime"
+      },
+      "profileResult": {
+        "clockOverhead": {
+          "samples": 1000,
+          "unit": "nanoseconds",
+          "min": 206,
+          "median": 305,
+          "max": 18968,
+          "scope": "back-to-back clock reads only; do not subtract from profiled calls or claim total wrapper overhead"
+        },
+        "scope": "inclusive wall time with two hrtime reads and bookkeeping per timed call; nested buckets overlap, never sum them as exclusive CPU time",
+        "buckets": {
+          "native.create": {
+            "calls": 1,
+            "nanoseconds": "24030294",
+            "maxNanoseconds": "24030294",
+            "nestedCalls": 0
+          },
+          "board.stageLine": {
+            "calls": 31,
+            "nanoseconds": "658235",
+            "maxNanoseconds": "393948",
+            "nestedCalls": 0
+          },
+          "board.beginRun": {
+            "calls": 31,
+            "nanoseconds": "70749",
+            "maxNanoseconds": "36667",
+            "nestedCalls": 0
+          },
+          "callback.page": {
+            "calls": 8,
+            "nanoseconds": "30792173",
+            "maxNanoseconds": "9727639",
+            "nestedCalls": 8
+          },
+          "callback.quantum": {
+            "calls": 192,
+            "nanoseconds": "3752682",
+            "maxNanoseconds": "2050307",
+            "nestedCalls": 192
+          },
+          "board.mappingState": {
+            "calls": 387,
+            "nanoseconds": "351875",
+            "maxNanoseconds": "72583",
+            "nestedCalls": 387
+          },
+          "callback.nativeTick": {
+            "calls": 194,
+            "nanoseconds": "1469464",
+            "maxNanoseconds": "1210504",
+            "nestedCalls": 194
+          },
+          "callback.write": {
+            "calls": 104,
+            "nanoseconds": "12664770",
+            "maxNanoseconds": "8133256",
+            "nestedCalls": 104
+          },
+          "callback.read": {
+            "calls": 139,
+            "nanoseconds": "965116",
+            "maxNanoseconds": "117426",
+            "nestedCalls": 139
+          },
+          "machine._catchUpChips": {
+            "calls": 27,
+            "nanoseconds": "17007713",
+            "maxNanoseconds": "15555286",
+            "nestedCalls": 27
+          },
+          "callback.outPort": {
+            "calls": 25,
+            "nanoseconds": "19610127",
+            "maxNanoseconds": "15788860",
+            "nestedCalls": 25
+          },
+          "native.resume": {
+            "calls": 31,
+            "nanoseconds": "92126426",
+            "maxNanoseconds": "31509788",
+            "nestedCalls": 0
+          },
+          "board.endRun": {
+            "calls": 31,
+            "nanoseconds": "106901",
+            "maxNanoseconds": "68142",
+            "nestedCalls": 0
+          },
+          "board.inspect": {
+            "calls": 32,
+            "nanoseconds": "16139987",
+            "maxNanoseconds": "1540136",
+            "nestedCalls": 1
+          },
+          "machine._flushChips": {
+            "calls": 1,
+            "nanoseconds": "385747",
+            "maxNanoseconds": "385747",
+            "nestedCalls": 1
+          },
+          "native.setIRQ": {
+            "calls": 2,
+            "nanoseconds": "107381",
+            "maxNanoseconds": "61274",
+            "nestedCalls": 0
+          },
+          "callback.ack": {
+            "calls": 1,
+            "nanoseconds": "106877",
+            "maxNanoseconds": "106877",
+            "nestedCalls": 1
+          },
+          "board.settleTerminal": {
+            "calls": 1,
+            "nanoseconds": "458278",
+            "maxNanoseconds": "458278",
+            "nestedCalls": 0
+          },
+          "native.close": {
+            "calls": 1,
+            "nanoseconds": "24383",
+            "maxNanoseconds": "24383",
+            "nestedCalls": 0
+          }
+        }
+      },
+      "reportSha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+    },
+    {
+      "i": 1,
+      "profile": false,
+      "exit": {
+        "status": 0,
+        "signal": null,
+        "error": null,
+        "wallNs": 544096404
+      },
+      "timing": {
+        "unit": "nanoseconds",
+        "stages": {
+          "assemblyNs": 107390750,
+          "addonLoadNs": 17454677,
+          "boardConstructionNs": 22786800,
+          "nativeStartupNs": 39762830,
+          "executionNs": 103391593,
+          "settlementAndRamHashNs": 64870628,
+          "serializationAndWriteNs": 9886297
+        },
+        "executionScope": "bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization",
+        "warmupScope": "fresh process, never warmed native lifetime"
+      },
+      "profileResult": null,
+      "reportSha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+    },
+    {
+      "i": 1,
+      "profile": true,
+      "exit": {
+        "status": 0,
+        "signal": null,
+        "error": null,
+        "wallNs": 505948617
+      },
+      "timing": {
+        "unit": "nanoseconds",
+        "stages": {
+          "assemblyNs": 87292038,
+          "addonLoadNs": 18004336,
+          "boardConstructionNs": 17393631,
+          "nativeStartupNs": 22959542,
+          "executionNs": 76277184,
+          "settlementAndRamHashNs": 62581026,
+          "serializationAndWriteNs": 9519145
+        },
+        "executionScope": "bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization",
+        "warmupScope": "fresh process, never warmed native lifetime"
+      },
+      "profileResult": {
+        "clockOverhead": {
+          "samples": 1000,
+          "unit": "nanoseconds",
+          "min": 248,
+          "median": 387,
+          "max": 22956,
+          "scope": "back-to-back clock reads only; do not subtract from profiled calls or claim total wrapper overhead"
+        },
+        "scope": "inclusive wall time with two hrtime reads and bookkeeping per timed call; nested buckets overlap, never sum them as exclusive CPU time",
+        "buckets": {
+          "native.create": {
+            "calls": 1,
+            "nanoseconds": "22841234",
+            "maxNanoseconds": "22841234",
+            "nestedCalls": 0
+          },
+          "board.stageLine": {
+            "calls": 31,
+            "nanoseconds": "620283",
+            "maxNanoseconds": "424392",
+            "nestedCalls": 0
+          },
+          "board.beginRun": {
+            "calls": 31,
+            "nanoseconds": "51494",
+            "maxNanoseconds": "24253",
+            "nestedCalls": 0
+          },
+          "callback.page": {
+            "calls": 8,
+            "nanoseconds": "28637440",
+            "maxNanoseconds": "14991604",
+            "nestedCalls": 8
+          },
+          "callback.quantum": {
+            "calls": 192,
+            "nanoseconds": "706699",
+            "maxNanoseconds": "118196",
+            "nestedCalls": 192
+          },
+          "board.mappingState": {
+            "calls": 387,
+            "nanoseconds": "509701",
+            "maxNanoseconds": "184327",
+            "nestedCalls": 387
+          },
+          "callback.nativeTick": {
+            "calls": 194,
+            "nanoseconds": "467374",
+            "maxNanoseconds": "238508",
+            "nestedCalls": 194
+          },
+          "callback.write": {
+            "calls": 104,
+            "nanoseconds": "2618910",
+            "maxNanoseconds": "636832",
+            "nestedCalls": 104
+          },
+          "callback.read": {
+            "calls": 139,
+            "nanoseconds": "928729",
+            "maxNanoseconds": "90010",
+            "nestedCalls": 139
+          },
+          "machine._catchUpChips": {
+            "calls": 27,
+            "nanoseconds": "1351260",
+            "maxNanoseconds": "296382",
+            "nestedCalls": 27
+          },
+          "callback.outPort": {
+            "calls": 25,
+            "nanoseconds": "3776377",
+            "maxNanoseconds": "621838",
+            "nestedCalls": 25
+          },
+          "native.resume": {
+            "calls": 31,
+            "nanoseconds": "52716868",
+            "maxNanoseconds": "31629179",
+            "nestedCalls": 0
+          },
+          "board.endRun": {
+            "calls": 31,
+            "nanoseconds": "48535",
+            "maxNanoseconds": "21439",
+            "nestedCalls": 0
+          },
+          "board.inspect": {
+            "calls": 32,
+            "nanoseconds": "22269952",
+            "maxNanoseconds": "11179777",
+            "nestedCalls": 1
+          },
+          "machine._flushChips": {
+            "calls": 1,
+            "nanoseconds": "415518",
+            "maxNanoseconds": "415518",
+            "nestedCalls": 1
+          },
+          "native.setIRQ": {
+            "calls": 2,
+            "nanoseconds": "132740",
+            "maxNanoseconds": "72406",
+            "nestedCalls": 0
+          },
+          "callback.ack": {
+            "calls": 1,
+            "nanoseconds": "94172",
+            "maxNanoseconds": "94172",
+            "nestedCalls": 1
+          },
+          "board.settleTerminal": {
+            "calls": 1,
+            "nanoseconds": "294751",
+            "maxNanoseconds": "294751",
+            "nestedCalls": 0
+          },
+          "native.close": {
+            "calls": 1,
+            "nanoseconds": "24482",
+            "maxNanoseconds": "24482",
+            "nestedCalls": 0
+          }
+        }
+      },
+      "reportSha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+    },
+    {
+      "i": 2,
+      "profile": false,
+      "exit": {
+        "status": 0,
+        "signal": null,
+        "error": null,
+        "wallNs": 545997917
+      },
+      "timing": {
+        "unit": "nanoseconds",
+        "stages": {
+          "assemblyNs": 91785770,
+          "addonLoadNs": 24580467,
+          "boardConstructionNs": 12944892,
+          "nativeStartupNs": 25317457,
+          "executionNs": 107592411,
+          "settlementAndRamHashNs": 61457634,
+          "serializationAndWriteNs": 9326734
+        },
+        "executionScope": "bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization",
+        "warmupScope": "fresh process, never warmed native lifetime"
+      },
+      "profileResult": null,
+      "reportSha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+    },
+    {
+      "i": 2,
+      "profile": true,
+      "exit": {
+        "status": 0,
+        "signal": null,
+        "error": null,
+        "wallNs": 504414816
+      },
+      "timing": {
+        "unit": "nanoseconds",
+        "stages": {
+          "assemblyNs": 79171053,
+          "addonLoadNs": 17644196,
+          "boardConstructionNs": 14296706,
+          "nativeStartupNs": 27525278,
+          "executionNs": 58259727,
+          "settlementAndRamHashNs": 60478264,
+          "serializationAndWriteNs": 10850178
+        },
+        "executionScope": "bounded guest with actual board callbacks, scheduler, Node-to-native calls and native snapshot conversion on resume; excludes startup, terminal settlement, RAM hash and serialization",
+        "warmupScope": "fresh process, never warmed native lifetime"
+      },
+      "profileResult": {
+        "clockOverhead": {
+          "samples": 1000,
+          "unit": "nanoseconds",
+          "min": 193,
+          "median": 262,
+          "max": 18179,
+          "scope": "back-to-back clock reads only; do not subtract from profiled calls or claim total wrapper overhead"
+        },
+        "scope": "inclusive wall time with two hrtime reads and bookkeeping per timed call; nested buckets overlap, never sum them as exclusive CPU time",
+        "buckets": {
+          "native.create": {
+            "calls": 1,
+            "nanoseconds": "27384754",
+            "maxNanoseconds": "27384754",
+            "nestedCalls": 0
+          },
+          "board.stageLine": {
+            "calls": 31,
+            "nanoseconds": "622566",
+            "maxNanoseconds": "429934",
+            "nestedCalls": 0
+          },
+          "board.beginRun": {
+            "calls": 31,
+            "nanoseconds": "54322",
+            "maxNanoseconds": "26902",
+            "nestedCalls": 0
+          },
+          "callback.page": {
+            "calls": 8,
+            "nanoseconds": "17341539",
+            "maxNanoseconds": "4203751",
+            "nestedCalls": 8
+          },
+          "callback.quantum": {
+            "calls": 192,
+            "nanoseconds": "1048957",
+            "maxNanoseconds": "559278",
+            "nestedCalls": 192
+          },
+          "board.mappingState": {
+            "calls": 387,
+            "nanoseconds": "220665",
+            "maxNanoseconds": "32342",
+            "nestedCalls": 387
+          },
+          "callback.nativeTick": {
+            "calls": 194,
+            "nanoseconds": "209698",
+            "maxNanoseconds": "21116",
+            "nestedCalls": 194
+          },
+          "callback.write": {
+            "calls": 104,
+            "nanoseconds": "1753549",
+            "maxNanoseconds": "599412",
+            "nestedCalls": 104
+          },
+          "callback.read": {
+            "calls": 139,
+            "nanoseconds": "803241",
+            "maxNanoseconds": "89469",
+            "nestedCalls": 139
+          },
+          "machine._catchUpChips": {
+            "calls": 27,
+            "nanoseconds": "1312962",
+            "maxNanoseconds": "298466",
+            "nestedCalls": 27
+          },
+          "callback.outPort": {
+            "calls": 25,
+            "nanoseconds": "4402563",
+            "maxNanoseconds": "1134642",
+            "nestedCalls": 25
+          },
+          "native.resume": {
+            "calls": 31,
+            "nanoseconds": "36967818",
+            "maxNanoseconds": "14920634",
+            "nestedCalls": 0
+          },
+          "board.endRun": {
+            "calls": 31,
+            "nanoseconds": "52627",
+            "maxNanoseconds": "24890",
+            "nestedCalls": 0
+          },
+          "board.inspect": {
+            "calls": 32,
+            "nanoseconds": "20118096",
+            "maxNanoseconds": "10453132",
+            "nestedCalls": 1
+          },
+          "machine._flushChips": {
+            "calls": 1,
+            "nanoseconds": "423326",
+            "maxNanoseconds": "423326",
+            "nestedCalls": 1
+          },
+          "native.setIRQ": {
+            "calls": 2,
+            "nanoseconds": "105074",
+            "maxNanoseconds": "58476",
+            "nestedCalls": 0
+          },
+          "callback.ack": {
+            "calls": 1,
+            "nanoseconds": "98147",
+            "maxNanoseconds": "98147",
+            "nestedCalls": 1
+          },
+          "board.settleTerminal": {
+            "calls": 1,
+            "nanoseconds": "331271",
+            "maxNanoseconds": "331271",
+            "nestedCalls": 0
+          },
+          "native.close": {
+            "calls": 1,
+            "nanoseconds": "30200",
+            "maxNanoseconds": "30200",
+            "nestedCalls": 0
+          }
+        }
+      },
+      "reportSha256": "5a6a1aab4a622c6f606c8e4874877ce07697d6091f32860344a1d46ecfbfce3b"
+    }
+  ]
+}

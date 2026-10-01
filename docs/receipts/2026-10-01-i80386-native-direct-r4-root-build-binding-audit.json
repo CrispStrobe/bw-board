@@ -1,0 +1,10 @@
+{
+  "status": "ROOT_ACTUAL_R4_SOURCE_AND_BUILD_BINDING_PASS",
+  "source": "9a38479c24ac3200405f18913124d691b6c959d9",
+  "sourceInputs": 17,
+  "nativeSourcePins": 12,
+  "assertions": 59,
+  "prepareSha256": "292baae6675f110ebabbec535d5e64def0b1653dbc54fd2cde8ca22239793732",
+  "addonSha256": "13e3dfaa0fc45e2bc5eb5de6da010f7264e150205c87ae103b35f16176cc9e9e",
+  "compiledCodeUnchangedFromR3": true
+}
