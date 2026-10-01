@@ -1,0 +1,19 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 149865640,
+  "stderrSha256": "1df0b89f1b99a25729adbf193bf86f0fb2b8618ab22b13915d2f050e7e668a51",
+  "wallNs": 18863673248,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/run-i80386-native-hot-packed-scalar.mjs",
+    "/mnt/volume1/tmp-astra/native-hot-h4-fulltrace-20261001/fulltrace.input.json"
+  ],
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}

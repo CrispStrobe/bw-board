@@ -1,0 +1,9 @@
+{
+  "status": "ROOT_H4_ACTUAL_RUNTIME_CONTROLS_PASS",
+  "checks": 202,
+  "children": 16,
+  "acceptedFullH1Parity": 7,
+  "containedFatalDenials": 9,
+  "summarySha256": "4a07c7e83310d3eb1fd17886691d912b72b9feaf19d676a8630032ff6f417eb6",
+  "scope": "Metadata/tuple rejection can follow host effects; rejects completion and later getter reads, not prior effects. Full trace comparison remains separate."
+}

@@ -67,3 +67,7 @@ Mapping calls and field extraction remain a larger target than argument construc
 Actual captures, process provenance, audits and build manifests are indexed in [the H3 artifact index](receipts/2026-10-01-i80386-native-hot-h3-artifact-index.json). Bundled process provenance preserves original bytes as base64 with their hashes. Large raw traces and build binaries remain local; audit hashes bind them. Receipt scripts intentionally identify original local inputs and require path adaptation for replay elsewhere.
 
 Full AT boot, Windows 3.1 enhanced mode, Doom and native CLI/GUI integration remain unfinished. Original JavaScript execution paths and the native backend's bounded guest admission are unchanged.
+
+## Follow-up packed protocol
+
+[H4 packed scalar results](I80386-NATIVE-HOT-PACKED-SCALAR-WIP.md) preserve complete trace/journal parity and meet a predeclared process CPU-cost criterion in seven pairs. The original wall-only comparison remains inconclusive.
