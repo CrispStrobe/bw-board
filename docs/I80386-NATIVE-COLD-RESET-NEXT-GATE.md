@@ -1,8 +1,8 @@
 # Next native 386 gate: cold reset and actual board ownership
 
-**Status (2026-10-01): implementation contract, not an execution or speed result.** The successful-work proof qualifies a post-BIOS CPU handoff with fresh standalone PIT/PIC models. A native backend still needs to execute from hardware reset and route memory, ports and scheduling through the actual `ExperimentalI80386ATMachine` before a WASM port or production speed comparison.
+**Status (2026-10-01): the bounded native ROM checkpoint now passed; architectural reset parity and broader integration remain unfinished.** The [native actual-board qualification](I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md) executes before the first Bochs BIOS instruction and routes RAM, ROM/open bus, ports and clocks through `ExperimentalI80386ATMachine`. The prior successful-work proof remains a separate post-BIOS handoff with standalone PIT/PIC models. Neither is a speed result.
 
-The [actual JavaScript board oracle](I80386-JS-COLD-RESET-ORACLE.md) now supplies this free checkpoint with source-bound receipts and independent reproduction. Native execution of that checkpoint remains unfinished.
+The [actual JavaScript board oracle](I80386-JS-COLD-RESET-ORACLE.md) supplies the free baseline. The native checkpoint and independent reproduction agree with its instruction bytes, bus effects and board state while explicitly retaining reset-profile differences.
 
 ## First free checkpoint
 
@@ -14,11 +14,11 @@ Both paths must identify coprocessor/stepping profiles and preserve defined hard
 
 ## Native seam
 
-Keep the prior post-BIOS adapters unchanged. The new adapter must become active before the first reset fetch, accept externally owned physical read/write/execute providers and PIO, and never silently fall back to Bochs RAM/devices/timers. Current executable admission permits only RAM; a reset bridge must admit stable read-only ROM pages with correct aliases. Apply the actual board's A20 and reset-ROM decode to every physical path, including page walks. Preserve raw addresses and decoded effects. ROM writes must remain ignored, executable RAM writes must maintain native decode stamps, and unsupported spans or mappings must fail closed.
+Keep the prior post-BIOS adapters unchanged. The new cold bridge is active before the first reset fetch and uses externally owned physical read/write/execute providers and PIO with no native fallback. Its first checkpoint admits only stable read-only ROM pages, fixed A20 ON and generation zero. Executable RAM/self-modification and A20 transitions need the next independent fixture: maintain every cached alias and write stamp, invalidate TLB/icache/prefetch safely, preserve raw/decoded addresses and reject unsupported spans or mappings before effects.
 
 The board currently constructs its JavaScript CPU directly. First define an optional backend factory with the CPU operations the board actually uses; preserve the existing default. A native bridge must service board-owned chip debt, pending IRQ arbitration and HLT wake horizons at safe committed boundaries. Its native ticks remain separate from successful board quanta, including faults and REP. Reset epoch clocks and CPU-instruction clocks must remain distinct.
 
-Compare continuous and successful-work budgets 1/2/257 using identical configuration, ROM/RAM seeds, source/build pins and terminal stop. Require reset/fetch order, write effects, PIO, defined CPU state, RAM, device/debt state and guards to agree. Qualify the initial ROM checkpoint first, then run the existing free REP/two-page-fault/PIT fixture through the same actual-board bridge. Broader traps, REP I/O and other address sizes need their own named cases.
+Continuous and successful-work budgets 1/2/257 passed the ROM checkpoint with matched reset/fetch order, effects, PIO, named CPU-state differences, RAM, device/debt state and guards. Next qualify executable RAM and cache/mapping coherence, then run the existing free REP/two-page-fault/PIT fixture through the same actual-board bridge. Broader traps, REP I/O and other address sizes need their own named cases.
 
 ## Build and measurement boundary
 
