@@ -1,4 +1,4 @@
-2026-10-01 Independent ideal-source self-constraint — CLAIM, Codex bwcx `/root`.
+2026-10-01 Independent ideal-source self-constraint — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
 branch `lane/ideal-source-self-constraint`, exact base
 `fef791758182377cf7714d344d29f46d480d1d11`. Five-path envelope: this row;
@@ -15,6 +15,17 @@ allocation and early-return mutants. No general cycle solver, board.js,
 waveform/parser, tolerance/work budget, CPU, workflow, package/pin, CUI/Lite
 or corpus changes. User explicitly released this separate upstream task
 while CUI scope-summary candidate bc98cd1 remains frozen for hosted CI.
+That CUI candidate subsequently passed all four jobs of CI 36897790381 and
+landed unchanged on master; no engine pin moved there. This upstream repair
+passes 91/91 focused/adjacent tests with zero skips, including live ngspice
+controls, current-limit, source polarity/KCL, waveform, OP, transient and meter
+regressions. Three isolated buildable mutations genuinely red: removed
+conflict guard (6), restored redundant live row (3), validation after the
+zero-node return (1). A mutation-restoration duplicate declaration was caught
+by the restored run, removed, and the final syntax/full focused surface rerun;
+it is not a valid mutant result. Invalid public setNetlist now refuses during
+its actual solve; valid zero-source OP remains observational and preserves 1 V.
+One exact hosted CI/Harris qualification remains required before guarded FF.
 
 2026-10-01 README refresh — DONE, Codex bwcx `/root`.
 Clean reused worktree `wt-board-public-docs-20261001`, branch

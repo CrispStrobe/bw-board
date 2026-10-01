@@ -1456,6 +1456,26 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     nodeIndex.set(net.id, nodeCount++);
   }
 
+  // A same-node ideal source says 0 = volts, even when that node is the
+  // reference and therefore has no matrix index. Check before the zero-node
+  // return; zero constraints are redundant, not a row that grounds a live net.
+  const redundantIdealSources = new Set();
+  if (!powerOff) {
+    for (const part of parts) {
+      if (part.kind !== 'vsource' || Number(part.params?.rInternal) > 0
+          || Number(part.params?.iLimit) > 0) continue;
+      const posNet = findNet(nets, part.id, 'pos');
+      const negNet = findNet(nets, part.id, 'neg');
+      if (posNet === undefined || negNet === undefined || posNet !== negNet) continue;
+      const volts = independentSourceVoltage(part, vcc, tSeconds, controls, dcSources);
+      if (volts !== 0) {
+        throw new Error(`solveMNA: inconsistent ideal voltage constraint ${part.id}; ` +
+          `${volts} V cannot be imposed across the same net ${posNet}`);
+      }
+      redundantIdealSources.add(part.id);
+    }
+  }
+
   if (nodeCount === 0) {
     return { nodeVoltages: new Map(), branchCurrents: new Map() };
   }
@@ -1528,7 +1548,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
       }
       // Independent voltage source (may have current limit for CC mode)
-      if (part.kind === 'vsource') {
+      if (part.kind === 'vsource' && !redundantIdealSources.has(part.id)) {
         const posNet = findNet(nets, part.id, 'pos');
         const negNet = findNet(nets, part.id, 'neg');
         // Ground is implicit and therefore absent from nodeIndex. The source
@@ -5117,7 +5137,7 @@ export function sourceDcValue(part, fallback) {
  * Params: {volts} — DC value; plus the waveform params of `sourceVoltage`
  * for time-varying operation (sine/square/triangle/pulse).
  */
-function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1, dcSources = false) {
+function independentSourceVoltage(part, vcc, tSeconds, controls, dcSources) {
   // Control value overrides params.volts for interactive adjustment (bench supply knob)
   let volts;
   if (part._ccClampedVolts !== undefined) {
@@ -5127,7 +5147,11 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
   } else {
     volts = dcSources ? sourceDcValue(part, vcc) : sourceVoltage(part, tSeconds, vcc);
   }
-  volts *= srcScale;
+  return volts;
+}
+
+function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1, dcSources = false) {
+  const volts = independentSourceVoltage(part, vcc, tSeconds, controls, dcSources) * srcScale;
   const posNet = findNet(nets, part.id, 'pos');
   const negNet = findNet(nets, part.id, 'neg');
 

@@ -361,7 +361,11 @@ describe('BoardImpl.operatingPoint', () => {
   });
 
   it('rejects a nonzero source shorted onto one net and preserves a zero-volt control', () => {
-    const invalid = sameNetSourceBench(5);
+    assert.throws(() => sameNetSourceBench(5), /solveMNA: inconsistent ideal voltage constraint V1/);
+    // A valid loaded board can acquire a contradictory authored control.
+    // Exercise the independent observational OP guard without another live solve.
+    const invalid = sameNetSourceBench(0);
+    invalid.controls.set('V1', 5);
     const invalidBefore = stateWitness(invalid);
     assert.throws(() => invalid.operatingPoint(),
       /inconsistent ideal voltage constraint V1; 5 V cannot be imposed across the same net gnd/);
@@ -373,6 +377,33 @@ describe('BoardImpl.operatingPoint', () => {
     assert.equal(op.converged, true);
     assert.equal(op.nodeVoltages.get('n'), 0);
     assertUnchanged(zero, zeroBefore);
+  });
+
+  it('preserves a driven live node with a zero redundant source and validates merged grounds observationally', () => {
+    const zero = rcBench(1);
+    zero.setNetlist([...zero.parts,
+      { id: 'VZERO', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] },
+    ], zero.nets.map(net => net.id === 'in' ? { ...net, terminals: [...net.terminals,
+      { part: 'VZERO', terminal: 'pos' }, { part: 'VZERO', terminal: 'neg' },
+    ] } : net));
+    const before = stateWitness(zero);
+    const point = zero.operatingPoint();
+    assert.equal(point.converged, true);
+    assert.ok(Math.abs(point.nodeVoltages.get('in') - 1) < 1e-12);
+    assert.equal(point.branchCurrents.get('VZERO').size, 0);
+    assertUnchanged(zero, before);
+
+    const merged = sameNetSourceBench(0);
+    merged.setNetlist([...merged.parts,
+      { id: 'G2', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ], [
+      ...merged.nets.map(net => ({ ...net, terminals: net.terminals.filter(t => !(t.part === 'V1' && t.terminal === 'neg')) })),
+      { id: 'gnd2', terminals: [{ part: 'V1', terminal: 'neg' }, { part: 'G2', terminal: 'gnd' }] },
+    ]);
+    merged.controls.set('V1', -5);
+    const mergedBefore = stateWitness(merged);
+    assert.throws(() => merged.operatingPoint(), /solveMNA: inconsistent ideal voltage constraint V1; -5 V/);
+    assertUnchanged(merged, mergedBefore);
   });
 
   it('refuses unsupported and DC-floating semantics without touching live state', () => {
