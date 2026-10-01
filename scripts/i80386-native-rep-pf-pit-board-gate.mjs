@@ -354,10 +354,16 @@ export function assertNativeRepPfPitArmProof(arm,rom){
 const historyCache=new Map(),inventoryCache=new Map();
 function historicalBlob(revision,file){
   const key=revision+':'+file;
+  // Commit-qualified blobs are immutable. Internal callers only hash or decode these bytes.
+  if(historyCache.has(key))return historyCache.get(key);
   try{
     const bytes=execFileSync('git',['show',key],{cwd:root,maxBuffer:4<<20,stdio:['ignore','pipe','pipe']});
-    historyCache.set(key,repSha(bytes));return bytes;
-  }catch{fail(`historical source blob unavailable ${file}`);}
+    historyCache.set(key,bytes);return bytes;
+  }catch(error){
+    const detail={revision,status:error.status??null,signal:error.signal??null,code:error.code??null,
+      stderr:Buffer.isBuffer(error.stderr)?error.stderr.toString('utf8'):String(error.stderr??''),message:error.message};
+    fail(`historical source blob unavailable ${file}; git show failure ${JSON.stringify(detail)}`);
+  }
 }
 function historicalInventory(revision){
   if(inventoryCache.has(revision))return inventoryCache.get(revision);
