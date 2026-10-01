@@ -317,6 +317,11 @@ repository's browser-WASM artifact or update its `a7c7cbdf` engine pin.
 CP13 remains open: shared sensor IRQ, timed microphone/audio and browser workload
 qualification are incomplete.
 
+The [selected-motion boundary](docs/LABWIRED-SELECTED-MOTION.md) now provides
+an explicit `lsm303agr` board variant and an opt-in fresh-WASM guest/RTx CI gate.
+Default board hardware and deployed engine pins are unchanged; this slice has
+not yet produced a passing selected-motion WASM or browser measurement.
+
 The later exact-main [run 36690708740](https://github.com/CrispStrobe/labwired-core/actions/runs/36690708740)
 at `ce60a499` also passed native board/model, input-routing and RTx gates.
 Its selected motion workload measured **1.030645× median / 1.027010× minimum**;

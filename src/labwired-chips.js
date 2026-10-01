@@ -757,6 +757,22 @@ export const MICROBIT_V2_LABWIRED_PINS = {
   p20: { peripheral: 'gpio1', pin: 0 },
 };
 
+const MICROBIT_V2_MATRIX = {
+  externalDevicesYaml: [
+    '  - id: "led_matrix"',
+    '    type: "led-matrix-mux"',
+    '    connection: "gpio0"',
+    '    config:',
+    '      row_pins: ["P0.21", "P0.22", "P0.15", "P0.24", "P0.19"]',
+    '      col_pins: ["P0.28", "P0.11", "P0.31", "P1.05", "P0.30"]',
+    '      row_active_high: true',
+    '      col_active_high: false',
+    '      cpu_hz: 64000000',
+  ].join('\n'),
+  displays: [{ id: 'led_matrix', type: 'led-matrix-mux' }],
+  matrix: 'led_matrix',
+};
+
 export const MICROBIT_V2 = {
   chipYaml: NRF52833_CHIP_YAML,
   pins: MICROBIT_V2_LABWIRED_PINS,
@@ -773,20 +789,24 @@ export const MICROBIT_V2 = {
   // configs/systems/microbit-v2.yaml, wiring from codal-microbit-v2
   // MicroBitIO.cpp) integrates it from the pads, including the GPIOTE-driven
   // columns, so the bench reads the engine's picture rather than a second model.
-  onBoard: {
-    externalDevicesYaml: [
-      '  - id: "led_matrix"',
-      '    type: "led-matrix-mux"',
-      '    connection: "gpio0"',
-      '    config:',
-      '      row_pins: ["P0.21", "P0.22", "P0.15", "P0.24", "P0.19"]',
-      '      col_pins: ["P0.28", "P0.11", "P0.31", "P1.05", "P0.30"]',
-      '      row_active_high: true',
-      '      col_active_high: false',
-      '      cpu_hz: 64000000',
-    ].join('\n'),
-    displays: [{ id: 'led_matrix', type: 'led-matrix-mux' }],
-    matrix: 'led_matrix',
+  onBoard: MICROBIT_V2_MATRIX,
+  // Explicit selected hardware, never implied for the FXOS8700 variant.
+  // Native engine source qualifies this polled subset; a WASM artifact must
+  // separately pass the motion guest test before app pins are promoted.
+  onBoardVariants: {
+    lsm303agr: {
+      ...MICROBIT_V2_MATRIX,
+      externalDevicesYaml: [
+        '  - id: "accelerometer"',
+        '    type: "lsm303agr_accel"',
+        '    connection: "i2c0"',
+        '  - id: "magnetometer"',
+        '    type: "lsm303agr_mag"',
+        '    connection: "i2c0"',
+        MICROBIT_V2_MATRIX.externalDevicesYaml,
+      ].join('\n'),
+      // The shared open-drain P0.25 IRQ and timed audio are not modeled here.
+    },
   },
 };
 
