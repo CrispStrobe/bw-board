@@ -26,6 +26,8 @@ Repeating the same source and native build with a regular-file stderr descriptor
 
 An independent semantic audit replayed all 33,732 raw memory read/write records against the actual ROM and backing memory, including A20 decoding, and verified the actual instruction bytes for all 100,682 attempted instruction records. Every one of the 100,506 hot-tail post-states matches the JavaScript baseline's CS, EIP, EAX, EBX, ECX, instruction index and quantum index. Full native snapshots at all six boundaries, the complete callback journals, settled board state and raw RAM hashes also match between trace ON and OFF. This establishes these specific comparisons; broader opcode/cache semantics and actual total-cap exhaustion remain unfinished.
 
+A second independent audit also verifies all 100,688 native post-state groups, their selector/control/debug mirrors, terminal N-API snapshot and close/callback/fallback witnesses. All successful checkpoints align with JavaScript's recorded CS/EIP/EAX/EBX/ECX after separately identifying 35 initial CR0-to-EAX carry states and three nonfinal REP decoded-end EIP states. These exact, source-bound differences remain visible in the evidence; they are not broad register masks.
+
 ## First equivalent timing
 
 Eighteen fresh Node 22.23.3 children ran the same guest with native tracing and host journals disabled: two discarded warm-up pairs followed by seven alternating JavaScript/native sample pairs. Every child passed its accepted CPU, board, RAM and counter checks. Execution timing excludes assembly, source authentication, reset/startup, settlement, hashing and report writing; it includes scheduler work, delivery counters, six acceptance snapshots and the native adapter's resume snapshots.

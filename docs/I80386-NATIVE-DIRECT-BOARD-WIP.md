@@ -124,3 +124,5 @@ retain that result. Its reference is the freshly qualified Node 22 combined
 FIFO capture at 6af0969e. This validates the bounded direct experiment under
 both Node 20 and Node 22; unrestricted guest admission and production
 CLI/GUI integration remain future gates.
+
+The separate [longer native hot-workload experiment](I80386-NATIVE-HOT-WORKLOAD-WIP.md) now includes an authenticated 100,682-quantum run, independent trace/memory/CPU comparisons, and equivalent capture-disabled timing. Its first whole-adapter measurement is slower than the compatibility JavaScript baseline on the busy VPS. It retains its own ROM policy and budgets; it is not production integration or a demonstrated speedup.

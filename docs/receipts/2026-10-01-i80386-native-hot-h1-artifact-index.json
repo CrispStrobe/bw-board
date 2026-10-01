@@ -9,6 +9,10 @@
       "bytes": 2537,
       "sha256": "efc14802a960bccaaf8cb92ed455639ba6ad569a4514bdaa6eda854010d3f6f9"
     },
+    "2026-10-01-i80386-native-hot-h1-independent-regular-trace.json": {
+      "bytes": 6391,
+      "sha256": "caf5fde0ac800187da726549b560608304a3c91080609e9bfa20040145cdeebf"
+    },
     "2026-10-01-i80386-native-hot-h1-initial-binding.json": {
       "bytes": 2822,
       "sha256": "27782892b009f8fa17cd117eecbcfa79e99a6e0118e40576c27ff7fb0d5618ac"
