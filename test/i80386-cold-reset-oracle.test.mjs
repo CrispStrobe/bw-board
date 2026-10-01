@@ -28,6 +28,7 @@ const mutations=[
   ['measured executable source hash changed',r=>{
     r.source.sourceHashes['src/experimental/i80386.js']='0'.repeat(64);
   }],
+  ['strict386 semantics falsely claimed',r=>{r.reset.cpu.cpuProfile='strict386';r.reset.cpu.strict386=true;}],
   ['native parity falsely claimed',r=>{r.claim='native-reset-parity';}],
 ];
 for(const [name,change] of mutations)test(`rejects ${name}`,()=>{

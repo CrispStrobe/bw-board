@@ -38,7 +38,7 @@ const registers=['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags',
 function cpuState(cpu){
   return clone({...Object.fromEntries(registers.map(k=>[k,cpu[k]>>>0])),pc:cpu.pc>>>0,
     gdtr:cpu.gdtr,idtr:cpu.idtr,ldtr:cpu.ldtr,tr:cpu.tr,segmentCaches:cpu.segmentCaches,
-    debugRegisters:[...cpu._debugRegisters],cycles:cpu.cycles,halted:cpu.halted,shutdown:cpu.shutdown,
+    debugRegisters:[...cpu._debugRegisters],cpuProfile:cpu.cpuProfile,strict386:cpu._strict386,cycles:cpu.cycles,halted:cpu.halted,shutdown:cpu.shutdown,
     interruptShadow:cpu._interruptShadow,nmiShadow:cpu._nmiShadow,debugShadow:cpu._debugShadow,
     coprocessorProfile:cpu._coprocessorProfile});
 }
@@ -143,6 +143,7 @@ export function assertColdResetOracle(r){
   rom.copy(ram,0xf0000);rom.copy(ram,0xff0000);
   equal(r.seed,{domain:'entire-configured-physical-backing-after-two-ROM-loads',sha256:sha(ram)},'seed identity');
   const reset=r.reset.cpu;
+  equal([reset.cpuProfile,reset.strict386],['compatibility',false],'actual board CPU semantics');
   equal(registers.map(k=>reset[k]),[0,0,0x300,0,0,0,0,0,0xfff0,2,0,0,0,0,0xf000,0,0,0,0,0],'raw reset registers');
   equal([reset.pc,reset.cycles,reset.halted,reset.shutdown,reset.coprocessorProfile],
     [0xfffffff0,0,false,false,'none'],'reset hidden cache entry');
@@ -167,6 +168,7 @@ export function assertColdResetOracle(r){
     const s=r.steps[i];equal(s.quantum,i+1,'quantum sequence');
     equal(s.before,previousCpu,'CPU step continuity');equal(s.boardBefore,previousBoard,'board step continuity');
     equal(s.charged,6,'one successful-work charge');
+    equal([s.after.cpuProfile,s.after.strict386],['compatibility',false],'CPU semantics remain actual board profile');
     equal([s.before.cycles,s.after.cycles,s.boardBefore.cycles,s.boardAfter.cycles],
       [i,i+1,4+6*i,4+6*(i+1)],'instruction and functional clocks');
     equal(s.firstOrdinal,ordinal,'step event start');
