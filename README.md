@@ -107,9 +107,10 @@ Interpreter outlining was rejected after two negative paired runs (−7.68% and
 [profiling/tier-validation guide](docs/LABWIRED-WASM-PROFILING.md).
 
 The next, still-experimental bounded cached-run candidate (core PR 146) measured
-**+8.24% and +7.15%** in two exact-artifact paired comparisons against the landed
-scalar baseline, with identical cycle-indexed guest observations. Its fresh
-qualification was **0.979751× median / 0.951531× minimum**: still below the
+**+8.24%, +7.15% and +9.65%** in three exact-artifact paired comparisons against
+the landed scalar baseline, with identical cycle-indexed guest observations.
+The latest exact fixed-artifact fresh qualification was
+**0.834235× median / 0.808772× minimum**: still below the
 unchanged every-window 1× floor. Both builds, determinism and 101 actual WASM
 integration tests passed; the fixed-head local core suite passed 4,234 tests
 with three existing ignored tests. Host rates are not interchangeable. App pins
