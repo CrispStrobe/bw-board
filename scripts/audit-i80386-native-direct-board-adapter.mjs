@@ -105,3 +105,27 @@ export function assertNativeTraceParity(directRaw,fifoRaw,{direct,fifo}){
  const fifoRows=nativeSemanticRows(fifoRaw,'BWS12').filter(row=>row.tag!=='PAGE_CHUNK');
  assert.deepEqual(nativeSemanticRows(directRaw,'BWSD1'),fifoRows,'all raw native CPU/cache/bus/fault/IRQ fields and ordering by identical mode');
 }
+export function summarizeFreshProcessSamples(samples){
+ assert.ok(samples.length>=3,'at least three measured samples');
+ const sorted=samples.map(sample=>sample.executionNs).sort((a,b)=>a-b);
+ assert.ok(sorted.every(n=>Number.isSafeInteger(n)&&n>0),'positive canonical execution durations');
+ const middle=Math.floor(sorted.length/2),median=sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+ return {unit:'nanoseconds',samples:sorted.length,min:sorted[0],median,max:sorted.at(-1),sorted};
+}
+/** Source-stage measurement harness; requires an actual paired capture-off reference. */
+export async function collectDirectMeasurements({addon,sha256,configuration,directory,reference,warmups=2,samples=7}){
+ const {mkdirSync,writeFileSync,readFileSync,openSync,closeSync}=await import('node:fs');const {join,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
+ assert.ok(Number.isInteger(warmups)&&warmups>=0&&warmups<=5);assert.ok(Number.isInteger(samples)&&samples>=3&&samples<=21);
+ const expected=JSON.parse(readFileSync(reference,'utf8'));assert.equal(expected.capture,false);assert.equal(expected.measurement,false);
+ mkdirSync(directory,{recursive:false});const entry=fileURLToPath(new URL('./probe-i80386-native-direct-board-adapter.mjs',import.meta.url)),results=[];
+ for(let i=0;i<warmups+samples;i++){
+  const stem=join(resolve(directory),`sample-${i}`),input=stem+'.input.json',output=stem+'.json';writeFileSync(input,JSON.stringify({addon,sha256,configuration,control:'run',capture:false,measurement:true,quanta:expected.quanta,output}));
+  const stdout=openSync(stem+'.stdout','wx'),stderr=openSync(stem+'.stderr','wx'),start=process.hrtime.bigint();let child;
+  try{child=spawnSync(process.execPath,['--max-old-space-size=1024',entry,input],{timeout:120000,stdio:['ignore',stdout,stderr]});}finally{closeSync(stdout);closeSync(stderr);}
+  const wallNs=Number(process.hrtime.bigint()-start);writeFileSync(stem+'.exit.json',JSON.stringify({status:child.status,signal:child.signal,error:child.error?.message??null,wallNs}));assert.equal(child.error,undefined);assert.equal(child.signal,null);assert.equal(child.status,0);
+  const actual=JSON.parse(readFileSync(output,'utf8'));for(const field of ['reset','final','settled','ramSha256','callbackCounts','resumes','quanta'])assert.deepEqual(actual[field],expected[field],`measured sample retains paired actual ${field}`);
+  const timing=JSON.parse(readFileSync(output+'.timing.json','utf8'));results.push({index:i,discardedWarmup:i<warmups,wallNs,...timing.stages,output});
+ }
+ const summary={status:'SHORT_GUEST_TIMING_ONLY',reference,warmups,samples:results,execution:summarizeFreshProcessSamples(results.filter(r=>!r.discardedWarmup)),scope:'fresh-process 194-native-tick free guest; execution includes resume snapshots and actual board callbacks; discarded warmups may warm OS caches only; no physical-386, representative-long-workload or speedup claim'};
+ writeFileSync(join(directory,'summary.json'),JSON.stringify(summary,null,2));return summary;
+}

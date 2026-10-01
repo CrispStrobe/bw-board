@@ -23,3 +23,9 @@ test('actual 8042 mapping metadata changes before the following successful quant
   assert.deepEqual(board.mappingState(),{boardA20:1,mappingEpoch:2});assert.equal(board.inspect().nativeTicks,0);
  }finally{board.endRun();board.close();}
 });
+
+test('fresh-process duration summary preserves the measured distribution',async()=>{
+ const {summarizeFreshProcessSamples}=await import('../scripts/audit-i80386-native-direct-board-adapter.mjs');
+ assert.deepEqual(summarizeFreshProcessSamples([{executionNs:30},{executionNs:10},{executionNs:20}]),{unit:'nanoseconds',samples:3,min:10,median:20,max:30,sorted:[10,20,30]});
+ assert.throws(()=>summarizeFreshProcessSamples([{executionNs:0},{executionNs:1},{executionNs:2}]),/positive canonical/);
+});
