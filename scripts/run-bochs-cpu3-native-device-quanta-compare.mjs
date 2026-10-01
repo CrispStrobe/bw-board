@@ -56,6 +56,11 @@ const fixedBiosSha='6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552
 const fixedVgaSha='76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1';
 const budgets={continuous:1000000,budget1:1,budget2:2,budget257:257};
 const nativeSafetyCap=1000000;
+// BIOS bootstrap and the complete RAM seed can exceed 15s on a loaded VPS.
+// Every native session keeps the existing bounded 120s arm allowance; only
+// post-READY RPC progress uses the shorter 15s response timeout.
+const sessionTimeoutMs=120000;
+const rpcResponseTimeoutMs=15000;
 const guardReasons={
   'out-of-range-physical':'host-physical-read',
   'unsupported-span-width':'host-physical-read',
@@ -494,13 +499,13 @@ class BoundedLines {
     if(data.length>=256){this._end(Error('RPC partial line bound exceeded'));return;}
     this.partial=Buffer.from(data);
   }
-  next(timeoutMs=15000){
+  next(timeoutMs=rpcResponseTimeoutMs,phase='post-READY RPC response'){
     if(this.queue.length)return Promise.resolve(this.queue.shift());
     if(this.ended)return Promise.reject(this.error);
     assert(!this.waiter,'two concurrent RPC reads');
     return new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>{this.waiter=null;
-        reject(Error('device quantum proof runner: RPC response timed out'));},timeoutMs);
+        reject(Error(`device quantum proof runner: ${phase} timed out after ${timeoutMs}ms`));},timeoutMs);
       this.waiter={resolve,reject,timer};
     });
   }
@@ -545,9 +550,10 @@ async function runArm(binary,rc,budget,failureDir){
   const closed=new Promise((resolve,reject)=>{
     child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));
   });
-  const wall=setTimeout(()=>stopProcessGroup(child),120000);
+  let sessionTimedOut=false;
+  const wall=setTimeout(()=>{sessionTimedOut=true;stopProcessGroup(child);},sessionTimeoutMs);
   const send=async line=>{toNative.push(line);await sendRpc(child.stdio[3],line);};
-  const receive=async()=>{const line=await inbound.next();fromNative.push(line);return parseRpcLine(line);};
+  const receive=async(timeoutMs=rpcResponseTimeoutMs,phase)=>{const line=await inbound.next(timeoutMs,phase);fromNative.push(line);return parseRpcLine(line);};
   const command=async(verb,arg0,arg1=0,deadline='0')=>{
     const seq=++commandSeq;
     const wireDeadline=canonicalU64(String(deadline),'CMD.deadline');
@@ -581,7 +587,7 @@ async function runArm(binary,rc,budget,failureDir){
     }
   };
   try{
-    const ready=await receive();
+    const ready=await receive(sessionTimeoutMs,'native READY/bootstrap');
     assert(ready.kind==='READY'&&ready.cs===0&&ready.eip===0x7e00&&
       ready.nativeTicks===0&&ready.successfulQuanta===0,
       'native READY not at owned setup');
@@ -631,6 +637,7 @@ async function runArm(binary,rc,budget,failureDir){
     return {exit,host:{seed:hostSeed,journal:host.journal,final:host.state()},
       native,rpc:{commands,requests,replies,dones},raw};
   }catch(error){
+    if(sessionTimedOut)error=Error(`native session timed out after ${sessionTimeoutMs}ms`,{cause:error});
     stopProcessGroup(child);
     let settleTimer;
     await Promise.race([closed.catch(()=>null),new Promise(resolve=>{
@@ -729,7 +736,8 @@ async function runGuard(binary,rc,name,expected,directory,bochsLog){
   const closed=new Promise((resolve,reject)=>{
     child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));
   });
-  const wall=setTimeout(()=>stopProcessGroup(child),15000);
+  let sessionTimedOut=false;
+  const wall=setTimeout(()=>{sessionTimedOut=true;stopProcessGroup(child);},sessionTimeoutMs);
   let exit;
   try{exit=await closed;}finally{clearTimeout(wall);}
   const label=`guard-${name}`;
@@ -743,6 +751,12 @@ async function runGuard(binary,rc,name,expected,directory,bochsLog){
   const logPath=`${label}.bochs.log`;
   copyFileSync(bochsLog,join(directory,logPath));
   files.bochsLog={path:logPath,sha256:fileSha(join(directory,logPath))};
+  if(sessionTimedOut){
+    const evidence={name,phase:'BIOS/bootstrap/seed or guard rejection',timeoutMs:sessionTimeoutMs,exit,
+      lastProofTag:stderr.text.split('\n').filter(line=>line.startsWith('BWS8\t')).at(-1)?.split('\t')[1]??null};
+    writeFileSync(join(directory,`${label}.timeout.json`),JSON.stringify(evidence,null,2)+'\n');
+    throw Error(`${label}: session timed out after ${sessionTimeoutMs}ms; raw output and ${label}.timeout.json retained`);
+  }
   const failure=stderr.text.split('\n').filter(line=>line.startsWith('BWS8\tFAIL\t'));
   assert(exit.signal==='SIGABRT'&&exit.code===null&&
     failure.length===1&&failure[0]===`BWS8\tFAIL\t${expected}`&&
@@ -766,14 +780,17 @@ async function runTransportGuard(binary,rc,name,spec,directory,bochsLog){
   const closed=new Promise((resolve,reject)=>{
     child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));
   });
-  const wall=setTimeout(()=>stopProcessGroup(child),15000);
-  let exit,request=null,error=null;
+  let sessionTimedOut=false;
+  const wall=setTimeout(()=>{sessionTimedOut=true;stopProcessGroup(child);},sessionTimeoutMs);
+  let exit,request=null,error=null,phase='READY/bootstrap';
   try{
-    const ready=parseRpcLine(await inbound.next());
+    const ready=parseRpcLine(await inbound.next(sessionTimeoutMs,'transport READY/bootstrap'));
     assert(ready.kind==='READY'&&ready.cs===0&&ready.eip===0x7e00&&
       ready.nativeTicks===0&&ready.successfulQuanta===0,
       `${name}: native READY boundary changed`);
+    phase='malformed command rejection';
     if(spec.stage==='reply'){
+      phase='first post-READY callback';
       const command=`BWR8\tCMD\t1\tRUN\t1\t1\t${u64max}\n`;
       toNative+=command;
       await new Promise((resolve,reject)=>child.stdio[3].write(command,
@@ -783,6 +800,8 @@ async function runTransportGuard(binary,rc,name,spec,directory,bochsLog){
         request.nativeTicks===0&&request.successfulQuanta===0,
       `${name}: first native callback changed`);
     }
+    phase='malformed reply rejection';
+    if(spec.stage==='command')phase='malformed command rejection';
     toNative+=spec.payload;
     await new Promise((resolve,reject)=>child.stdio[3].write(spec.payload,
       cause=>cause?reject(cause):resolve()));
@@ -801,6 +820,13 @@ async function runTransportGuard(binary,rc,name,spec,directory,bochsLog){
     const path=`${label}.bochs.log`;
     copyFileSync(bochsLog,join(directory,path));
     files.bochsLog={path,sha256:fileSha(join(directory,path))};
+  }
+  if(sessionTimedOut||/timed out/.test(error?.message??'')){
+    const evidence={name,phase,timeoutMs:sessionTimedOut?sessionTimeoutMs:
+      (phase==='READY/bootstrap'?sessionTimeoutMs:rpcResponseTimeoutMs),exit,error:error?.message??null,
+      lastProofTag:stderr.text.split('\n').filter(line=>line.startsWith('BWS8\t')).at(-1)?.split('\t')[1]??null};
+    writeFileSync(join(directory,`${label}.timeout.json`),JSON.stringify(evidence,null,2)+'\n');
+    throw Error(`${label}: ${phase} timed out; raw output and ${label}.timeout.json retained`);
   }
   const failures=stderr.text.split('\n').filter(line=>line.startsWith('BWS8\tFAIL\t'));
   assert(!error&&exit?.signal==='SIGABRT'&&exit.code===null&&
