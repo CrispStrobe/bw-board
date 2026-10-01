@@ -16,13 +16,20 @@ export function patchPinnedSource(path,bytes){
  text+=`
 // Called only by the synchronous one-lifetime embedding API. Never call bxmain:
 // its quit context would point into a stack frame that has already returned.
+#include <string>
+static std::string bw_direct_configuration;
+static char bw_direct_name[]="bw-direct",bw_direct_quiet[]="-q",bw_direct_flag[]="-f";
+static char *bw_direct_argv[5];
 extern "C" int bw_direct_bootstrap(const char *configuration) {
   bx_init_siminterface();
   SIM->set_quit_context(NULL);
   BX_INSTR_INIT_ENV();
-  char name[]="bw-direct",quiet[]="-q",flag[]="-f";
-  char *args[]={name,quiet,flag,const_cast<char *>(configuration)};
-  if(bx_init_main(4,args)<0)return 0;
+  // bx_init_main stores bochsrc_filename=argv[arg]; all pointers stay owned.
+  bw_direct_configuration=configuration;
+  bw_direct_argv[0]=bw_direct_name;bw_direct_argv[1]=bw_direct_quiet;
+  bw_direct_argv[2]=bw_direct_flag;bw_direct_argv[3]=const_cast<char *>(bw_direct_configuration.c_str());bw_direct_argv[4]=NULL;
+  bx_startup_flags.argc=4;bx_startup_flags.argv=bw_direct_argv;bx_user_quit=0;
+  if(bx_init_main(bx_startup_flags.argc,bx_startup_flags.argv)<0)return 0;
   SIM->opt_plugin_ctrl("*",1);
   if(!load_and_init_display_lib())return 0;
   bx_cpu_count=1;

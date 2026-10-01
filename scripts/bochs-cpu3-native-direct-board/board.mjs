@@ -14,6 +14,7 @@ export class DirectBoardFacade {
  }
  _class(decoded){return NativeCombinedPagingRamHost.prototype._class.call(this,decoded);}
  span(raw,width,options){return NativeCombinedPagingRamHost.prototype.span.call(this,raw,width,options);}
+ mappingState(){return {boardA20:Number(this.machine._a20Enabled),mappingEpoch:this.mappingEpoch};}
  inspect(){return {nativeTicks:this.nativeTicks,successfulQuanta:this.successfulQuanta,mappingEpoch:this.mappingEpoch,lineAsserted:this.lineAsserted,generations:[...this.generations].sort((a,b)=>a[0]-b[0]),board:combinedBoardState(this.machine),javascriptCpuCycles:this.machine.cpu.cycles,marker:Buffer.from(this.marker).toString('ascii')};}
  beginRun(){check(!this.closed&&!this.running&&!this.active,'begin lifecycle');if(this.machine._chipDebt>=this.machine._chipDeadline)this.machine._flushChips();this.running=true;}
  endRun(){check(this.running&&!this.active,'end lifecycle');this.running=false;}

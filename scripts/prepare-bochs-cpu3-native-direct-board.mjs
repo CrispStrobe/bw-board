@@ -1,6 +1,6 @@
 /** Prepare a separate pinned Bochs tree. This does not build or run guests. */
 import {execFileSync} from 'node:child_process';
-import {copyFileSync,existsSync,readFileSync,writeFileSync} from 'node:fs';
+import {copyFileSync,existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {patchPinnedSource,revision,sha256,upstreamHashes} from './bochs-cpu3-native-direct-board/patch.mjs';
@@ -31,7 +31,9 @@ const owned=['scripts/bochs-cpu3-native-direct-board/abi.h',
   'scripts/bochs-cpu3-native-rep-pf-pit/patch.mjs',
   'test/fixtures/i80386-free-combined-paging-ram.S',
   'scripts/bochs-cpu3-native-direct-board/board.mjs',
-  'test/i80386-native-direct-board.test.mjs'];
+  'test/i80386-native-direct-board.test.mjs',
+  'scripts/bochs-cpu3-native-direct-board/addon.mk',
+  'scripts/bochs-cpu3-native-direct-board-adapter/napi.cc'];
 for(const path of owned){
   execFileSync('git',['ls-files','--error-unmatch','--',path],{cwd:repo,stdio:'ignore'});
   const committed=execFileSync('git',['show',`HEAD:${path}`],{cwd:repo});
@@ -53,14 +55,16 @@ if(mode==='--prepare'){
     [owned[1],'bochs/cpu/bw_slice_runtime.h'],
     [owned[2],'bochs/cpu/bw_slice_runtime.inc']])
     copyFileSync(resolve(repo,path),resolve(target,dst));
+  for(const name of ['bochs-cpu3-native-direct-board','bochs-cpu3-native-direct-board-adapter'])mkdirSync(resolve(target,'bochs',name));
+  for(const [src,dst] of [['scripts/bochs-cpu3-native-direct-board/addon.mk','bochs/bw_direct_addon.mk'],['scripts/bochs-cpu3-native-direct-board/abi.h','bochs/bochs-cpu3-native-direct-board/abi.h'],['scripts/bochs-cpu3-native-direct-board-adapter/napi.cc','bochs/bochs-cpu3-native-direct-board-adapter/napi.cc']])copyFileSync(resolve(repo,src),resolve(target,dst));
   result.preparedTree=target;
   result.configure=['./configure','--enable-cpu-level=3','--with-nogui',
     '--disable-plugins','--disable-debugger','--disable-repeat-speedups',
     '--disable-handlers-chaining','--enable-instrumentation=instrument/stubs','CFLAGS=-O2 -fPIC','CXXFLAGS=-O2 -fPIC'];
-  result.build=['nice','make','-j1'];
+  result.build=['nice','make','-j1','-f','Makefile','-f','bw_direct_addon.mk','bw_direct.node'];
   result.status='SOURCE_PREPARED_ONLY_NOT_NATIVE_QUALIFICATION';
   result.embedding={abiVersion:1,oneLifetimePerProcess:true,synchronousCallingThread:true,fatalFailuresAbort:true,executeBuffers:'persistent-native-slots'};
   result.requiredConfig={'BX_CPU_LEVEL':3,'BX_USE_IDLE_HACK':0,
-    'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS':0};
+    'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS':0,'BX_SUPPORT_SMP':0,'BX_DEBUGGER':0,'BX_REPEAT_SPEEDUPS':0,'BX_SUPPORT_FPU':1};
 }
 console.log(JSON.stringify(result,null,2));
