@@ -774,7 +774,7 @@ void bw_slice_driver(void){
     else if(!strcmp(probe,"physical-overflow"))bw_slice_read(0x100000000ULL,1,&byte);
     else if(!strcmp(probe,"admitted-unexecuted-code-write")){bw_pages[0].kind=1;bw_pages[0].decoded=0x7000;bw_pages[0].epoch=0;bw_pages[0].executed=false;bw_page_count=1;bw_slice_write(0x7000,1,&byte);}
     else if(!strcmp(probe,"current-code-write")){bw_current_code_page=0x7000;bw_slice_write(0x7000,1,&byte);}
-    else if(!strcmp(probe,"executable-table-ad-write")){bw_pages[0].kind=1;bw_pages[0].decoded=0x7000;bw_page_count=1;bw_pagewalk_kind=4;bw_slice_write(0x7000,1,&byte);}
+    else if(!strcmp(probe,"executable-table-ad-write")){bw_pages[0].kind=1;bw_pages[0].decoded=0x7000;bw_pages[0].executed=true;bw_page_count=1;bw_pagewalk_kind=4;bw_slice_write(0x7000,1,&byte);}
     else if(!strcmp(probe,"pio-port92")){bw_slice_port_out(0x92,2,1);}
     else if(!strcmp(probe,"mapping-boundary-kind")){bw_mapping_pending=true;bw_emit_boundary("rep-element");}
     else if(!strcmp(probe,"execute-pending-write")){bw_pending_write_count=1;bw_slice_execute_page(0);}

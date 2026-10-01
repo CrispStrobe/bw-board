@@ -30,7 +30,7 @@ Q ordinary0 includes zero-count REP; element1 includes EVERY successful nonzero 
 |DONE RUN|18|commandSeq, RUN, reason, chargedN, chargedQ, CS h4, EIP h8, totalN, totalQ, attempts, completed, successfulREP, faults, IF d0/512, activity, IRQdelivered|
 |DONE LINE/STOP|7|commandSeq, verb, value, N, Q|
 
-RUN uses independent native/Q caps and absolute deadline. LINE only stages actual paused host PIC line. STOP is zero-budget/zero-deadline. Requests READ/WRITE carry raw address/width/0 and dash/read or attempted WRITE bytes; MEM WRITE bytes are the OBSERVED committed/ignored bytes, not universally operand echo. PAGE args rawPage/4096/0/dash. NATIVE_TICK count/0/0 returns REP0; QUANTUM kind/0/0 returns REP due0/1; IRQ_ACK0/0/0 returns actual master vector20. PIO_OUT port/width1/value returns PIO, including unchanged effective gate/epoch. Replies must complete their exact synchronous request before typed callback completion. No reentry, unsolicited replies or incomplete commands.
+RUN uses independent native/Q caps and absolute deadline. LINE only stages actual paused host PIC line. STOP is zero-budget/zero-deadline. Requests READ/WRITE carry raw address/width/0 and dash/read or attempted WRITE bytes; MEM WRITE bytes are the OBSERVED committed/ignored bytes, not universally operand echo. PAGE args rawPage/4096/0/dash. NATIVE_TICK count/0/0 returns REP0; QUANTUM kind/0/0 returns REP due0/1; ACK0/0/0 returns actual master vector20. PIO_OUT port/width1/value returns PIO, including unchanged effective gate/epoch. Replies must complete their exact synchronous request before typed callback completion. No reentry, unsolicited replies or incomplete commands.
 
 ## BWS12 native rows
 
