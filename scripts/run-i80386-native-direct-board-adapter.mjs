@@ -8,7 +8,7 @@ export function runDirectBoard({addon,sha256,configuration,capture=false,maxResu
  const board=new DirectBoardFacade(rom),native=loadDirectNative(addon,sha256);
  const reset=native.create(configuration,rom,board,capture);
  let last=reset,resumes=0;
- while(resumes++<maxResumes){const line=board.stageLine();native.setIRQ(line.asserted);board.beginRun();try{last=native.resume(600,300,0xffffffffffffffffn);}finally{board.endRun();}
+ while(resumes++<maxResumes){const line=board.stageLine();if(line.changed)native.setIRQ(line.asserted);board.beginRun();try{last=native.resume(600,300,0xffffffffffffffffn);}finally{board.endRun();}
   // Terminal observation uses the actual native slice reason and activity state.
   if(last.reason===4&&last.chargedNativeTicks===0&&last.chargedQuanta===0)break;
  }

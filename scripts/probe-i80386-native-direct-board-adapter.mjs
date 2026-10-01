@@ -17,7 +17,7 @@ const reset=native.create(options.configuration,rom,board,options.capture);
 if(options.control==='second-create'){let rejected=false;try{native.create(options.configuration,rom,board,false);}catch(error){rejected=/one create lifetime/.test(error.message);}check(rejected,'second create did not reject');native.close();board.close();writeFileSync(options.output,JSON.stringify({control:options.control,rejected}));}
 else{
  const checkpoints=[];let final,terminal=false;
- for(let i=0;i<600;i++){const line=board.stageLine();native.setIRQ(line.asserted);board.beginRun();try{final=native.resume(600,options.quanta,0xffffffffffffffffn);}finally{board.endRun();}checkpoints.push({native:final,board:board.inspect()});if(final.reason===4&&final.chargedNativeTicks===0&&final.chargedQuanta===0){terminal=true;break;}}
+ for(let i=0;i<600;i++){const line=board.stageLine();if(line.changed)native.setIRQ(line.asserted);board.beginRun();try{final=native.resume(600,options.quanta,0xffffffffffffffffn);}finally{board.endRun();}checkpoints.push({native:final,board:board.inspect()});if(final.reason===4&&final.chargedNativeTicks===0&&final.chargedQuanta===0){terminal=true;break;}}
  check(terminal,'direct child bound exhausted');check(options.control==='run','fatal control unexpectedly returned');
  const settled=board.settleTerminal(),ramSha256=createHash('sha256').update(board.machine.mem).digest('hex');
  native.close();board.close();

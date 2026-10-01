@@ -89,6 +89,10 @@ export function nativeSemanticRows(raw,prefix){
  }
  assert.ok(result.length,'native semantic trace missing');return result;
 }
-export function assertNativeTraceParity(directRaw,fifoRaw){
- assert.deepEqual(nativeSemanticRows(directRaw,'BWSD1'),nativeSemanticRows(fifoRaw,'BWS12'),'all raw native CPU/cache/bus/fault/IRQ fields and ordering by identical mode');
+export function assertNativeTraceParity(directRaw,fifoRaw,{direct,fifo}){
+ // PAGE_CHUNK exists only in FIFO's transport. Admit its removal only after
+ // complete callback PAGE bytes and SHA have matched in ordered host records.
+ assertDirectCallbackParity(direct,fifo);
+ const fifoRows=nativeSemanticRows(fifoRaw,'BWS12').filter(row=>row.tag!=='PAGE_CHUNK');
+ assert.deepEqual(nativeSemanticRows(directRaw,'BWSD1'),fifoRows,'all raw native CPU/cache/bus/fault/IRQ fields and ordering by identical mode');
 }
