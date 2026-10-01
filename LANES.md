@@ -1,3 +1,10 @@
+2026-10-01 README refresh — CLAIM, Codex bwcx `/root`.
+Clean reused worktree `wt-board-public-docs-20261001`, branch
+`docs/readme-current-20261001`, base `fbadc8fc40c5fcba52573194e2b34fe13784bbb0`.
+Envelope: README.md and this claim only. Current installation, public API,
+capabilities and limits replace stale counts, benchmarks and campaign prose.
+Preserve detailed historical evidence, source/tests, workflows, pins and packages.
+
 2026-10-01 Public capability wording — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-public-docs-20261001`,
 branch `docs/public-capability-wording-20261001`, exact base
