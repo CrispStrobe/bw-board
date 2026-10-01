@@ -94,6 +94,15 @@ export function summarizeCpuProfile (profile) {
             'sampling shares are attribution, not removable cost or an unprofiled timing A/B']};
 }
 
+export function assertCompilerMode (mode, compilation) {
+    if (!['liftoff', 'turbofan'].includes(mode)) return;
+    const expected = mode === 'liftoff' ? 'Liftoff' : 'TurboFan';
+    if (!compilation?.compilations?.length ||
+        compilation.compilations.some(row => row.tier !== expected)) {
+        throw Error(`Requested ${mode}-only mode did not produce exclusively ${expected} compilation`);
+    }
+}
+
 export function parseWasmCompilations (text) {
     const compilations = [];
     const pattern = /Compiled function (\S+)#(\d+) using (\S+), took ([\d.]+) ms and .*?; bodysize (\d+) codesize (\d+)(?: name (.+))?$/;

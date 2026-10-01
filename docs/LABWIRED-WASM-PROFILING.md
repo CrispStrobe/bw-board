@@ -27,6 +27,14 @@ Modes:
 - `turbofan`: optimizing compiler only; diagnostic flags, not production settings.
 - `liftoff`: baseline compiler only; diagnostic flags, not production settings.
 
+Forced modes are validated against every observed compilation record. Liftoff
+uses `--liftoff-only` and disables dynamic tiering as well as tier-up. Earlier
+tool revision `c0e6e369` used only `--liftoff --no-wasm-tier-up`; the hosted
+trace in run 36864571206 nevertheless contains TurboFan compilations. Those
+old `liftoff` receipts are **mixed-tier diagnostics, not baseline-only evidence**.
+Their ordinary A/B and default traces remain independent valid measurements.
+Contradictory tier traces are retained before the corrected tool fails.
+
 The script refuses to overwrite an output directory. It records module/glue and
 harness/tool/parser SHA256, Node flags/version, CPU model, host load, all five RTx samples
 and actual exit/failure counts. A failed floor remains a failure in the receipt;

@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {summarizeCpuProfile, parseWasmCompilations, wasmFunctionNames} from '../scripts/lib/wasm-motion-profile.mjs';
+import {summarizeCpuProfile, parseWasmCompilations, wasmFunctionNames, assertCompilerMode} from '../scripts/lib/wasm-motion-profile.mjs';
 
 test('WASM names map trace function indices without compiling the module', () => {
     const header = [0, 97, 115, 109, 1, 0, 0, 0];
@@ -46,6 +46,20 @@ test('compiler traces preserve each tier, body size, module and function', () =>
     assert.throws(() => parseWasmCompilations('no actual trace'));
     assert.throws(() => parseWasmCompilations('Compiled function NEW FORMAT'));
 });
+test('forced compiler modes reject mixed, missing or opposite-tier evidence', () => {
+    const rows = (...tiers) => ({compilations: tiers.map(tier => ({tier}))});
+    assert.doesNotThrow(() => assertCompilerMode('liftoff', rows('Liftoff')));
+    assert.doesNotThrow(() => assertCompilerMode('turbofan', rows('TurboFan')));
+    for (const mode of ['liftoff', 'turbofan']) {
+        assert.throws(() => assertCompilerMode(mode, rows()));
+        assert.throws(() => assertCompilerMode(mode, rows('Liftoff', 'TurboFan')));
+        assert.throws(() => assertCompilerMode(mode, rows('unknown')));
+    }
+    assert.throws(() => assertCompilerMode('liftoff', rows('TurboFan')));
+    assert.throws(() => assertCompilerMode('turbofan', rows('Liftoff')));
+    assert.doesNotThrow(() => assertCompilerMode('trace-default', rows('Liftoff', 'TurboFan')));
+});
+
 test('hosted profiling is opt-in and follows the unchanged ordinary A/B', () => {
     const workflow = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
     assert.match(workflow, /profile:\n[\s\S]*?type: boolean\n        default: false/);
@@ -56,5 +70,7 @@ test('hosted profiling is opt-in and follows the unchanged ordinary A/B', () => 
     const script = readFileSync(new URL('../scripts/profile-labwired-motion.mjs', import.meta.url), 'utf8');
     assert.match(script, /LABWIRED_MOTION_REQUIRED: '1', LABWIRED_REQUIRE_MOTION_RTX: '1'/);
     assert.match(script, /diagnosticOnly: true/);
+    assert.match(script, /liftoff: \['--liftoff-only', '--no-wasm-tier-up', '--no-wasm-dynamic-tiering'/);
+    assert.ok(script.indexOf('save(); // Retain contradictory traces') < script.indexOf('assertCompilerMode(mode,'));
     assert.ok(script.indexOf("writeFileSync(join(out, 'stdout.txt')") < script.indexOf('Object.assign(receipt, motionProbeResult'));
 });

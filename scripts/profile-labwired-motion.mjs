@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {cpus, loadavg} from 'node:os';
 import {motionProbeResult} from './lib/motion-ab-receipt.mjs';
-import {summarizeCpuProfile, parseWasmCompilations, wasmFunctionNames} from './lib/wasm-motion-profile.mjs';
+import {summarizeCpuProfile, parseWasmCompilations, wasmFunctionNames, assertCompilerMode} from './lib/wasm-motion-profile.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => {
@@ -23,7 +23,7 @@ const flagsByMode = {
         '--trace-wasm-compilation-times'],
     default: [],
     turbofan: ['--no-liftoff', '--no-wasm-tier-up', '--trace-wasm-compilation-times'],
-    liftoff: ['--liftoff', '--no-wasm-tier-up', '--trace-wasm-compilation-times']
+    liftoff: ['--liftoff-only', '--no-wasm-tier-up', '--no-wasm-dynamic-tiering', '--trace-wasm-compilation-times']
 };
 if (!Object.hasOwn(flagsByMode, mode)) throw Error('Unsupported diagnostic mode');
 if (process.env.NODE_OPTIONS) throw Error('Unset NODE_OPTIONS to keep diagnostic flags explicit');
@@ -64,6 +64,8 @@ if (mode !== 'default') {
     }
     receipt.compilation.cortexM = receipt.compilation.compilations.filter(c =>
         /CortexM|cortex_m|step_internal|step_execute|step_batch/.test(c.wasmName || c.name || ''));
+    save(); // Retain contradictory traces before failing the requested-tier check.
+    assertCompilerMode(mode, receipt.compilation);
 }
 if (mode === 'sampled-default') {
     receipt.profileSha256 = hash(join(out, 'motion.cpuprofile'));
