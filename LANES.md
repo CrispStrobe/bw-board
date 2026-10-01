@@ -2860,3 +2860,8 @@ excludes analog/FPGA/schematics and licensed media. Architectural reset parity,
 RAM execution/self-modification/A20 transitions, actual-board REP/PF/PIT,
 production CLI/GUI/WASM native backend, Windows enhanced/full AT/10×/RTx remain
 unfinished. Next owned item is a free executable-RAM/A20/cache-coherence gate.
+
+
+### 2026-10-01: 386 actual-board executable-RAM baseline
+
+Astra coordinated two Sol agents after PR189 landed at `19df0798b556c65af154137b50e35e863bf3d683` with every enabled check green. The new JS-only oracle/guest is qualified at measured source `a36c3687ebba1bfe541e7d33dfa63fbba399c5b2`: 75 successful instructions, 454 functional clocks, eight RAM entries, actual 8042 A20 OFF/ON, and both live aliases before the aliased operand write. All 34 focused checks pass. Root's separate actual capture is byte-identical; independent assembly/backing/A20 byte replay and all 41 historical inputs pass. Public notes and receipts are in `docs/I80386-JS-RAM-COHERENCE-ORACLE.md`. Initial invalid segment-offset pilot and the seven-entry draft remain retained diagnostic/history artifacts. A separate native adapter is WIP, awaiting fresh build, four-budget source-bound captures and independent reproduction. No RTx or broader guest qualification is claimed.

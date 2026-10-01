@@ -1,0 +1,10 @@
+{
+  "status": "javascript-board-ram-coherence-oracle-pass",
+  "successfulQuanta": 75,
+  "boardCycles": 454,
+  "ramEntries": 8,
+  "a20Transitions": 2,
+  "marker": "RAMA001",
+  "nativeParity": false,
+  "checkpointValidation": "source-bound-fresh-same-engine-reexecution"
+}
