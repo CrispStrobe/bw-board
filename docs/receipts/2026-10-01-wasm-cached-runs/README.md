@@ -45,6 +45,26 @@ ordinary qualification or automatically removable overhead.
 [Fixed-artifact raw A/B](fixed-abba.json), [runner](fixed-runner.txt) and
 [build provenance](fixed-build-info.json) preserve the third comparison.
 
+## Additional ordinary VPS comparisons
+
+Node v20.20.2, Intel Xeon Skylake (IBRS, no TSX), four visible vCPUs;
+shared-host CPU availability is uncontrolled. These are not hosted Node 22
+qualification or browser/UI tests. Both use the exact fixed candidate module.
+The retained VPS baseline artifact was built from `273e683e`; its actual WASM
+SHA256 `9f0720afcbae2074e7a372bf332bdacd00d258fffa4bfb8b72caaace346d0258`
+matches the landed scalar baseline used above. Original paired glue is preserved.
+
+| VPS comparison | Scalar median / min | Bounded-run median / min | Median change |
+| --- | --- | --- | --- |
+| First | 0.418424 / 0.358754 | 0.456904 / 0.424472 | +9.20% |
+| Repeat | 0.421845 / 0.393812 | 0.464289 / 0.427517 | +10.06% |
+
+All cycle-indexed guest observations matched within each A/B/B/A; all forty
+windows failed 1×. [First raw receipt](vps-abba.json),
+[repeat raw receipt](vps-repeat-abba.json), [baseline build provenance](vps-baseline-build-info.json)
+and [runner/tool fingerprints](vps-runner.txt) preserve their distinct provenance.
+Do not compare absolute RTx across hosts or Node/compiler versions.
+
 ## Fresh qualification and correctness
 
 [Candidate build 36883581882](https://github.com/CrispStrobe/bw-board/actions/runs/36883581882)
