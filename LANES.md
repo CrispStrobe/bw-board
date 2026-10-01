@@ -1,4 +1,4 @@
-2026-10-01 Constant analytic meter interval compaction — CLAIM, Codex bwcx `/root`.
+2026-10-01 Constant analytic meter interval compaction — DONE candidate, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-compaction-20261001`,
 branch `lane/analytic-meter-compaction-20261001`, exact base
 `66723aa09ce47765c453a929a427a7cbf5e0eaf2`. Four-path envelope: this row;
@@ -15,6 +15,15 @@ prove actual bounded history/read work and load-bearing mutations.
 No adaptive-history compaction, MNA/solver/topology/tolerance/work-budget,
 scope, source-waveform, CPU, workflow/census, package/pin, CUI/Lite, corpus or
 deployment changes. Upstream exact qualification precedes normal guarded FF.
+Focused and adjacent proof: 47/47, zero skips, including live ngspice.
+Five isolated mutations red: disabled compaction (2), ignored power factor
+(1 numerical mean failure), dropped static-limit guard (1), ignored frozen
+parameters (1), lost first support point (11). Restored Board blob
+`9deb3952512f3fa0ee2a42e273daa1b29f253cfc`; diff check clean.
+Paired identical 700-tick workload: 701 -> 2 points and 493,500 -> 4,200
+indexed history reads; means -0.0000909456817667973 ->
+-0.00009094568176679739 A. This is not a wall-time speedup certificate.
+One automatic exact-head CI/Harris qualification remains the landing gate.
 
 2026-10-01 Analytic inductor meter integrals — DONE candidate, Codex bwcx `/root`.
 Worktree `/mnt/volume1/code/lego/wt-board-inductor-meter-20261001`, branch

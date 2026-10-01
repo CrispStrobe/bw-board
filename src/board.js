@@ -1681,7 +1681,6 @@ export class BoardImpl {
         // Remove only a redundant middle point on an unchanged flat segment.
         if (!analytic && !last?.analytic && last && h.length>1 && h[h.length-2].v===last.v
             && last.before===last.v && last.v===v) h.pop();
-        if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
         let segment;
         if (analytic) {
           const {a,b,reference,source,inductor,currentSign,henrys} = analytic;
@@ -1691,6 +1690,17 @@ export class BoardImpl {
             : w.part===inductor.id ? currentSign*(w.terminal==='a' ? -1 : w.terminal==='b' ? 1 : 0) : 0;
           segment={params:{...source.params},factor,derivative:w.kind==='v'};
         }
+        // An exact analytic function integrates any clipped subinterval; its
+        // caller endpoints are redundant, unlike adaptive solve observations.
+        // Keep visible static edges and every change in the function itself.
+if (segment && last?.analytic && h.length>1 && last.before===last.v
+&& segment.factor===last.analytic.factor
+            && segment.derivative===last.analytic.derivative
+            && ['offset','amplitude','freq','td','theta','phase'].every(
+              key => segment.params[key]===last.analytic.params[key])) {
+          h.pop();
+        }
+        if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
         h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v, ...(segment ? {analytic:segment} : {}) });
       }
     }

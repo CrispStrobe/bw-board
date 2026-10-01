@@ -113,14 +113,82 @@ test('power-off combines the prior analytic area with the subsequent zero curren
   b.setPower(false); b.advanceTo(7_000_000n);
   near(b.meterCurrent('L','a'),-area(basic,0,.003)/.007);
 });
-test('analytic segments obey the same hard history capacity refusal',()=>{
+test('unmergeable analytic boundaries obey the same hard history capacity refusal',()=>{
   const b=bench(); b.meterCurrent('L','a'); b.advanceTo(99_999n);
   const watch=[...b._meterWatches.values()][0];
   const analytic=watch.hist.at(-1).analytic;
   watch.hist=Array.from({length:100000},(_,k)=>({tSec:k/1e9,v:-value(basic,k/1e9),before:-value(basic,k/1e9),analytic}));
+  // The final boundary is a power-on edge: its incoming interval was off,
+  // while its right value starts the current on interval. It is not redundant.
+  watch.hist.at(-1).analytic={...analytic,factor:0};
+  watch.hist.at(-1).before=0;
   b.advanceTo(100_000n);
   assert.equal(watch.hist.length,100000);
   assert.throws(()=>b.meterCurrent('L','a'),/meter-history-limit-exceeded/);
+});
+test('700 real watch ticks keep two points and bounded actual history-read work',()=>{
+  const b=bench(); b.meterVoltage('a','b'); b.meterCurrent('L','a');
+  let numericReads=0;
+  for(let k=1;k<=700;k++) {
+    b.advanceTo(BigInt(k)*10000n);
+    for(const w of b._meterWatches.values()) {
+      assert.equal(w.hist.length,2,'unchanged analytic function needs only its start and current endpoint');
+      const hist=w.hist;
+      w.hist=new Proxy(hist,{get(target,key,receiver){
+        if(typeof key==='string' && /^\d+$/.test(key)) numericReads++;
+        return Reflect.get(target,key,receiver);
+      }});
+      try {
+        if(w.kind==='v') b.meterVoltage('a','b'); else b.meterCurrent('L','a');
+      } finally {w.hist=hist;}
+    }
+    near(b.meterVoltage('a','b'),.003*(value(basic,k*1e-5)-value(basic,0))/(k*1e-5));
+  }
+  assert.ok(numericReads<=700*2*8,`${numericReads} actual indexed reads: bound is per tick, not per retained history length`);
+  near(b.meterCurrent('L','a'),-area(basic,0,.007)/.007);
+});
+test('dense long watches clip an exact function without retaining caller endpoints',()=>{
+  const p={...basic,freq:7,td:.015,theta:3,phase:71},b=bench(p);
+  b.meterVoltage('a','b'); b.meterCurrent('L','a');
+  for(let k=1;k<=1350;k++) {
+    b.advanceTo(BigInt(k)*100000n); b.meterCurrent('L','a');
+    assert.ok([...b._meterWatches.values()].every(w=>w.hist.length===2));
+  }
+  near(b.meterVoltage('a','b'),.003*(value(p,.135)-value(p,.035))/.1);
+  near(b.meterCurrent('L','a'),-area(p,.035,.135)/.1);
+});
+test('power-on at an exact zero still preserves a different prior analytic function',()=>{
+  const p={...basic,offset:.001,amplitude:.001,phase:270},b=bench(p);
+  b.meterCurrent('L','a'); b.setPower(false); b.advanceTo(4000000n);
+  const w=[...b._meterWatches.values()][0];
+  assert.equal(w.hist.at(-1).analytic.factor,0);
+  b.setPower(true);
+  assert.ok(w.hist.at(-1).before===0); assert.ok(w.hist.at(-1).v===0,
+    'no visible endpoint jump: factor identity, not left/right values, protects the off interval');
+  b.advanceTo(5000000n);
+  near(b.meterCurrent('L','a'),-area(p,.004,.005)/.005);
+  assert.equal(w.hist.length,3);
+});
+test('same-time static limits and nonanalytic observations are never coalesced as an analytic function',()=>{
+  const b=bench(); b.meterCurrent('L','a'); b.advanceTo(1000000n);
+  const w=[...b._meterWatches.values()][0];
+  // Publication-boundary fixtures isolate the two independent protections;
+  // they do not claim a new public parameter-jump or adaptive topology.
+  w.hist.at(-1).v+=.0001;
+  b.advanceTo(2000000n); assert.equal(w.hist.length,3,'retain a changed right limit');
+  delete w.hist.at(-1).analytic;
+  b.advanceTo(3000000n); assert.equal(w.hist.length,4,'retain nonanalytic predecessor');
+});
+test('each frozen sine parameter and integral kind must match before coalescing',()=>{
+  for(const key of ['offset','amplitude','freq','td','theta','phase','derivative']) {
+    const b=bench(); b.meterCurrent('L','a'); b.advanceTo(1000000n);
+    const w=[...b._meterWatches.values()][0];
+    // Defensive descriptor-boundary fixture: public edits remain refused.
+    if(key==='derivative') w.hist.at(-1).analytic.derivative=true;
+    else w.hist.at(-1).analytic.params[key]+=1;
+    b.advanceTo(2000000n);
+    assert.equal(w.hist.length,3,`different ${key} cannot lose its interval`);
+  }
 });
 const NGSPICE=process.env.NGSPICE || 'ngspice';
 const probe=spawnSync(NGSPICE,['--version'],{encoding:'utf8'});
