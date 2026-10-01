@@ -1,5 +1,6 @@
 /** Source-bound actual-board compact REP/two-PF/PIT proof. No full reset parity. */
 import assert from 'node:assert/strict';
+import {isDeepStrictEqual} from 'node:util';
 import {gunzipSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
@@ -10,7 +11,16 @@ import {NativeRepPfPitHost,repSha,repBudgets,parseRepRpcLine,encodeRepReply,repB
 const root=fileURLToPath(new URL('../',import.meta.url));
 const fail=m=>{throw Error(`native REP/PF/PIT proof: ${m}`);};
 const check=(v,m)=>{if(!v)fail(m);};
-const equal=(a,b,m)=>assert.deepEqual(a,b,`native REP/PF/PIT proof: ${m}`);
+// Node 22's automatic deepStrictEqual diff allocates a quadratic external
+// trace for deliberate whole-journal mismatches, even with a custom message.
+// Keep exact strict comparison and original evidence; bound diagnostics only.
+export function assertRepDeepEqual(a,b,message){
+ if(isDeepStrictEqual(a,b))return;
+ const error=new assert.AssertionError({actual:a,expected:b,operator:'boundedDeepStrictEqual',message});
+ error.operator='deepStrictEqual';
+ throw error;
+}
+const equal=(a,b,m)=>assertRepDeepEqual(a,b,`native REP/PF/PIT proof: ${m}`);
 const boundaryKinds=['ordinary','rep-element','fault-delivery','irq-delivery','prefetch-pagewalk'];
 const stateNames=['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags','cr0','cr2','cr3','cs','ds','ss','gdtrBase','gdtrLimit','idtrBase','idtrLimit'];
 const extraNames=['dr6','dr7','es','fs','gs','csIndex','csTi','csRpl','csValid','csPresent','csDpl','csSegment','csType','csBase','csLimit','csGranular','csDefault32','csAvailable','pendingEvent','eventMask'];

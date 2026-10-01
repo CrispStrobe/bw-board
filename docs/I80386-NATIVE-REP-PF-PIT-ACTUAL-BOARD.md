@@ -70,3 +70,29 @@ Historical source objects `7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247` and `59b528
 The [next combined gate proposal](I80386-NATIVE-COMBINED-RAM-REP-NEXT-GATE.md) combines protected paging/REP/fault/IRQ boundaries with guest-created executable RAM, self-modification and actual A20 mapping transitions. Flushes must follow executed aliases/mapping changes without introducing per-element REP cuts. Only after that combined qualification should the production in-process/WASM backend and paired guest-workload speed measurements proceed.
 
 The earlier 59-input publication candidate is retained in repository history and local captures. Shallow verification exposed two dynamically read JS oracle seed files outside the native inventory; both now join the 61-input freeze. A hosted general test run also lost details from repeated Git history reads after a passing baseline. The checker now caches immutable commit-qualified bytes and preserves actual Git failure diagnostics; the underlying earlier Git failure cause was not established. The corrected checker passes all 59 focused tests, and both final captures were produced anew.
+
+## Node 22 bounded diagnostics and fresh source capture
+
+A full hosted CI run passed but recorded roughly 14.75 GiB maximum RSS;
+a heartbeat identified this REP report-test worker at 11.13 GiB. Like the
+combined validator, its deliberate whole-journal mutant invoked Node 22's
+quadratic external-memory assertion diff. This validator now retains strict
+deep equality and original evidence while emitting a bounded failure message.
+Two regression tests verify equality semantics and suppression of inspection.
+No native CPU, device or guest policy changed.
+
+Official Node 22.23.3 passes 61 focused tests, zero skips, at 503,988 KiB peak
+RSS (about 492 MiB). Fresh actual formal and repeat captures at clean source
+`aca754b32b56829ecd943aaddb91370cd3ccf441` bind 62 inputs and both qualify
+the complete existing bounded gate. The original r2 native build, manifest
+and 13 compiled inputs remain unchanged. Root authenticates all current and
+historical inputs, 206 actual files per capture, full native/host/RPC streams
+and both complete backing replays. Output-directory diagnostic differences
+remain visible. Earlier 61-input captures and test fixtures are retained.
+
+Separate new receipts: [actual capture](receipts/2026-10-01-i80386-native-rep-pf-pit-node22-62-capture.json.gz),
+[result](receipts/2026-10-01-i80386-native-rep-pf-pit-node22-62-result.json),
+[source and pair audit](receipts/2026-10-01-i80386-native-rep-pf-pit-node22-62-source-pair-audit.json),
+[formal backing replay](receipts/2026-10-01-i80386-native-rep-pf-pit-node22-62-formal-backing-audit.json)
+and [repeat backing replay](receipts/2026-10-01-i80386-native-rep-pf-pit-node22-62-repeat-backing-audit.json).
+This hardens diagnostics; it does not broaden execution or measure RTx.
