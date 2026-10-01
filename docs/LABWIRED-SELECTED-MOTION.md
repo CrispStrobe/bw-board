@@ -67,8 +67,44 @@ passing WASM performance qualification is claimed yet. A subsequent VPS run
 executed both tests with zero skips: functional passed, but all five RTx
 windows failed the unchanged floor (0.266108× median / 0.256228× minimum).
 This is a failed shared-VPS observation, not a hosted result; it does not
-justify artifact promotion. Existing real-WASM
-generic input proof uses the historical published WEB module under Node.
+justify artifact promotion. The [complete VPS diagnostics](receipts/2026-10-01-microbit-motion-wasm-vps.json)
+also retain a separate JIT-request probe (0.126523× median / 0.125133× minimum).
+These sequential diagnostics are not a controlled alternating A/B experiment;
+compiled-block/fallback counters were not captured. JIT remains unpromoted.
+
+The corrected [hosted run 36817423180](https://github.com/CrispStrobe/bw-board/actions/runs/36817423180)
+used source `4d944d2d` and boundary `1cec7b39` on EPYC 7763 / Node 22.
+Both fresh builds, determinism and existing integration passed. Motion executed
+two tests with zero skips: functional passed, but **all five** performance
+windows failed (0.686913× median / 0.653157× minimum). Publication was blocked.
+[Provenance and all samples](receipts/2026-10-01-microbit-motion-wasm-hosted/qualification-context.json),
+[raw output](receipts/2026-10-01-microbit-motion-wasm-hosted/motion-results.txt),
+runner context and BUILD-INFO are retained. This is NODEJS workload evidence,
+not browser, UI or circuit-solver throughput. Generic real-WASM input tests also
+pass using the fresh WEB build under Node, separately from motion performance.
+
+## Binary-only optimization experiment
+
+The [2026-10-01 A/B/B/A receipt](receipts/2026-10-01-microbit-motion-wasm-opt-abba.json)
+compares that exact engine with a separate Binaryen 132.0.0 `wasm-opt -O3` copy,
+using identical glue and the unchanged guest/qualification test. Four complete
+runs retain twenty windows: baseline pooled median **0.365510×**, candidate
+**0.367560×** (ratio **1.005611**). Every window failed 1×. On this shared VPS,
+that small difference is not evidence of a significant speedup. The binary
+shrunk from 27,475,605 to 24,405,115 bytes; this does not qualify performance.
+All four functional motion tests passed; the candidate also passed Lite's four
+generic real-WASM input tests with zero skips. No artifact/default/pin promotion.
+
+`scripts/probe-labwired-motion-ab.mjs --baseline <original-nodejs-dir>
+--candidate <candidate-nodejs-dir> --out <new-receipt.json>` repeats the diagnostic.
+It requires identical glue, distinct binaries, five correctly timed samples per
+run, actual functional success, two tests, zero skips and consistent exit status.
+Failed RTx samples are preserved rather than removed or relabelled as green.
+The probe returns success for a *completed diagnostic*, not for qualification;
+consult each run's `allWindowsMeet1x`. Parser mutation tests are synthetic log
+tests only, not engine evidence. Candidate bytes were produced with
+`npm exec --yes --package=binaryen@132.0.0 -- wasm-opt <original.wasm> -O3 -o <candidate.wasm>`;
+the receipt binds both binary hashes, tool integrity, CPU, Node and complete logs.
 
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI

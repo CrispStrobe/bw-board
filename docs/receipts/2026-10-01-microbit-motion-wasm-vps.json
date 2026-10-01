@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-01",
+  "engineSourceCommit": "4d944d2d9ec320f7acd25b54cc41a50b850d6788",
+  "buildRun": "https://github.com/CrispStrobe/bw-board/actions/runs/36816537489",
+  "buildLeg": "b",
+  "artifactId": 11142160866,
+  "nodeGlueSha256": "f574a39a77c233ab267f8b062e842c11f3c3c31a0c2286850f4c2a29bd542eb3",
+  "wasmSha256": "105966355233d96e813b745874730894d992ce4f0b8e6522ce189707e41cf9c9",
+  "runtime": "Node v20.20.2 on shared VPS",
+  "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+  "compiler": "arm-none-eabi-gcc 13.2.1 20231009",
+  "testedBoundary": "c0010a5a plus compact silicon GPIO correction subsequently committed in 1cec7b39",
+  "testedFileHashes": {
+    "src/labwired-chips.js": "cd511c13cb1a3f088ff53fab52fcbd7559caa2553aee21a86e369e2958f54afa",
+    "src/labwired-bridge.js": "4c5f2a39c2f94d4dfbc042fac9b69a1ce54e11deec2d085fb364239732cbfa64",
+    "test/labwired-microbit-motion.test.mjs": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5"
+  },
+  "guestSourceBundleSha256": "e6b8c239dc7ee1aca736671350cda8101f4bf8d6c89d91e2a9e787c85b553939",
+  "cpuHz": 64000000,
+  "cyclesPerWindow": 64000000,
+  "warmupCycles": 8000000,
+  "requiredMinimumRtx": 1,
+  "interpreter": {
+    "guestElfSha256": "afffaf3417dee2b98755dbc545ce3506aeea4b8601a0ac131987da8bda9b7237",
+    "tests": 2, "passed": 1, "failed": 1, "skipped": 0,
+    "functionalPassed": true,
+    "realtimeTargetMet": false,
+    "samples": [
+      {"index":0,"cycles":64000000,"cpuHz":64000000,"wallSeconds":3.257069823,"rtx":0.3070244281956862,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":112,"magSamples":112,"scans":2145},
+      {"index":1,"cycles":64000000,"cpuHz":64000000,"wallSeconds":3.403369788,"rtx":0.2938264315343919,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":212,"magSamples":212,"scans":4053},
+      {"index":2,"cycles":64000000,"cpuHz":64000000,"wallSeconds":3.9027809480000015,"rtx":0.2562275498737521,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":312,"magSamples":312,"scans":5960},
+      {"index":3,"cycles":64000000,"cpuHz":64000000,"wallSeconds":3.7903377010000003,"rtx":0.2638287347684538,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":412,"magSamples":412,"scans":7867},
+      {"index":4,"cycles":64000000,"cpuHz":64000000,"wallSeconds":3.7578718100000006,"rtx":0.26610806609712423,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":512,"magSamples":512,"scans":9774}
+    ]
+  },
+  "jitRequestedDiagnostic": {
+    "method": "temporary preload calls existing set_jit_enabled(true); unchanged guest/assertions",
+    "guestElfSha256": "8fbba712632bc20158ab995748096181c32bea416dcbf4a1108aacab44d837cc",
+    "tests": 2, "passed": 1, "failed": 1, "skipped": 0,
+    "functionalPassed": true,
+    "realtimeTargetMet": false,
+    "samples": [
+      {"index":0,"cycles":64000000,"cpuHz":64000000,"wallSeconds":7.991519984000001,"rtx":0.1251326408495658,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":112,"magSamples":112,"scans":2145},
+      {"index":1,"cycles":64000000,"cpuHz":64000000,"wallSeconds":7.717644080000002,"rtx":0.12957322074381017,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":212,"magSamples":212,"scans":4053},
+      {"index":2,"cycles":64000000,"cpuHz":64000000,"wallSeconds":7.903683168,"rtx":0.12652329031213516,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":312,"magSamples":312,"scans":5960},
+      {"index":3,"cycles":64000000,"cpuHz":64000000,"wallSeconds":7.985770070999999,"rtx":0.1252227388353516,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":412,"magSamples":412,"scans":7867},
+      {"index":4,"cycles":64000000,"cpuHz":64000000,"wallSeconds":7.698834935999999,"rtx":0.12988978310522906,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":512,"magSamples":512,"scans":9774}
+    ]
+  },
+  "limitations": [
+    "two sequential diagnostic runs, not a controlled alternating A/B",
+    "JIT enabled request recorded; compiled-block/fallback counters were not captured",
+    "CPU availability during windows not measured",
+    "NODEJS engine proof, not browser rendering or whole app throughput",
+    "held polled sensors; shared IRQ and timed audio not qualified",
+    "no artifact/pin promotion and no CP13 closure"
+  ]
+}

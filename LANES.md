@@ -1,3 +1,29 @@
+2026-10-01 Analytic inductor meter integrals — CLAIM, Codex bwcx `/root`.
+Worktree `/mnt/volume1/code/lego/wt-board-inductor-meter-20261001`, branch
+`lane/analytic-inductor-meter-20261001`, exact base
+`dfc5d4b731f94355c320418ae4e1a2527778e07a`. Seven-path envelope: this row;
+`src/source-waveforms.js` exact delayed/damped sine integrals; `src/board.js`
+meter segment publication/read and a parameter-edit refusal only; existing
+`test/meter-waveform-integration.test.mjs` protective refusal replacement;
+new `test/inductor-meter-integral.test.mjs`; and new
+`spec-updates/inductor-meter-integral.md`; plus only the new live-ngspice test
+entry in `scripts/oracle-census.mjs` (scope expansion recorded before editing).
+Preserve the direct topology,
+endpoint solver, unwatched work counters, signed currents, window/expiry,
+reset/power and bounded storage. Freeze interval parameters, refuse parameter
+edits during an active analytic watch until reset, and prove clipped windows,
+delay/damping/phase, polarity, caller schedules and negative mutations.
+No MNA equations, topology expansion, tolerance/budget, scope, CPU, workflow,
+package/pin, CUI/Lite, corpus or deployment changes.
+Restored focused and adjacent tests: 42/42, zero skips; the new live ngspice
+inductor mean comparison and both existing meter oracles actually ran.
+Four isolated mutants red: wrong voltage integral kind (10), full rather than
+clipped interval (1), reversed signed inductor current (12), and live rather
+than frozen parameter descriptor (1). Board/source-waveforms restored blobs
+`c884822bf33accabe1786006b4f9252b4f069bb8` /
+`a6ef0993e95c6b16fc569c63d8e71728c4455d96`. Candidate contains this closeout;
+one exact hosted CI/Harris qualification precedes guarded normal FF.
+
 2026-09-30 Meter waveform integration — DONE, Codex bwcx `/root`.
 Isolated worktree `/mnt/volume1/code/lego/wt-board-meter-audit-20260930`, branch
 `lane/meter-waveform-integration-20260930`, exact base
