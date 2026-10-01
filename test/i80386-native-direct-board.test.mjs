@@ -36,3 +36,13 @@ test('reentry, unsupported PIO, JavaScript stepping and use after close remain d
 test('overlapping input views preserve the complete attempted operand',()=>{
  const d=new DirectBoardFacade(rom());d.beginRun();d.writePhysical(0x7000,Uint8Array.of(1,2,3,4));d.writePhysical(0x7001,d.machine.mem.subarray(0x7000,0x7003));assert.deepEqual([...d.machine.mem.slice(0x7000,0x7004)],[1,1,2,3]);assert.equal(d.generations.get(0x7000),2);d.endRun();
 });
+
+test('unauthorized A20 hooks and reset-request PIO reject before actual board changes',()=>{
+ const d=new DirectBoardFacade(rom());const initial=d.inspect();assert.throws(()=>d.machine._a20Controller.onA20Change(false),/before effect/);assert.deepEqual(d.inspect(),initial);d.beginRun();
+ for(const value of [0xfe,0xff,0x60]){const before=d.inspect();assert.throws(()=>d.outPort(0x64,1,value),/before effect/);assert.deepEqual(d.inspect(),before);}
+ d.outPort(0x64,1,0xd1);for(const value of [0,2,0xff]){const before=d.inspect();assert.throws(()=>d.outPort(0x60,1,value),/before effect/);assert.deepEqual(d.inspect(),before);}
+ d.mappingEpoch=0xffffffff;const before=d.inspect();assert.throws(()=>d.outPort(0x60,1,1),/before effect/);assert.deepEqual(d.inspect(),before);d.endRun();
+});
+test('ignored ROM write capture retains copied attempted operand separately from observed bytes',()=>{
+ const events=[],d=new DirectBoardFacade(rom(),{capture:e=>events.push(e)});d.beginRun();const operand=Buffer.from([0x12]);const observed=d.writePhysical(0xf0000,operand);operand[0]=0x34;assert.equal(observed.bytes[0],0xea);assert.equal(events[0].args[2][0],0x12);assert.equal(events[0].result.bytes[0],0xea);assert.equal(events[0].result.effect,2);d.endRun();
+});
