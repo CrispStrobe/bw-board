@@ -53,3 +53,25 @@ test('quantum host rejects clock tuple, foreign ports and invented IRQ vectors',
   assert.throws(()=>request('PIO_IN',0x21,2),/byte PIO/);
   assert.throws(()=>request('ACK'),/without serviceable/);
 });
+
+import {parseRpcLine,parseNativeLog} from
+  '../scripts/run-bochs-cpu3-native-device-quanta-compare.mjs';
+import {assertNativeDeviceQuantaProof} from
+  '../scripts/bochs-cpu3-native-device-quanta-compare.mjs';
+
+test('BWR8 parser rejects malformed and ambiguous wire values',()=>{
+  for(const line of ['', 'BWR7\tREADY\t0000\t00007e00\t0\t0',
+    'BWR8\tREQ\t01\tQUANTUM\t1\t0\t0\t0\t0',
+    'BWR8\tREQ\t1\tQUANTUM\t-1\t0\t0\t0\t0',
+    'BWR8\tREQ\t1\tUNKNOWN\t1\t0\t0\t0\t0',
+    'BWR8\tDONE\t1\tRUN\t1', 'BWR8\tREADY\t0000\t00007e00\t0\t0\r'])
+    assert.throws(()=>parseRpcLine(line));
+  assert.deepEqual(parseRpcLine('BWR8\tREQ\t1\tQUANTUM\t1\t0\t0\t0\t0'),
+    {kind:'REQ',seq:1,operation:'QUANTUM',arg0:1,arg1:0,arg2:0,
+      nativeTicks:0,successfulQuanta:0});
+});
+
+test('proof and native parser reject absent execution evidence',()=>{
+  assert.throws(()=>assertNativeDeviceQuantaProof({}),/missing schema/);
+  assert.throws(()=>parseNativeLog(''),/evidence absent/);
+});
