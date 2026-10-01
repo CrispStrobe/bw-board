@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {assertColdResetOracle} from './i80386-cold-reset-oracle.mjs';
 import {NativeColdResetHost,coldSha,coldBudgets,parseColdRpcLine,encodeColdReply,assembleColdPageReply,coldBoardConfig} from './bochs-cpu3-native-cold-reset-host.mjs';
@@ -323,7 +324,34 @@ export const coldTransports=Object.freeze({
   'page-chunk-order':'rpc-page-chunk','page-chunk-width':'rpc-byte-length','page-end-sequence':'rpc-page-end','page-digest':'rpc-page-sha256',
   'memory-classification':'host-memory-classification','memory-write-commit':'host-write-commit','memory-rom-observed':'host-rom-observed-value',
 });
-const historyCache=new Map();
+const historyCache=new Map(),inventoryCache=new Map();
+function historicalBlob(revision,file){
+  const key=revision+':'+file;
+  try{
+    const bytes=execFileSync('git',['show',key],{cwd:root,maxBuffer:4<<20,stdio:['ignore','pipe','pipe']});
+    historyCache.set(key,coldSha(bytes));return bytes;
+  }catch{fail(`historical source blob unavailable ${file}`);}
+}
+function historicalInventory(revision){
+  if(inventoryCache.has(revision))return inventoryCache.get(revision);
+  const runner='scripts/run-bochs-cpu3-native-cold-reset-compare.mjs';
+  const text=historicalBlob(revision,runner).toString('utf8');
+  const literal=text.match(/const sourceSeeds=\[([\s\S]*?)\];/);
+  check(literal,'captured runner literal source inventory');
+  const seeds=[...literal[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
+  check(seeds.length>0&&literal[1].replace(/'[^']+'/g,'').replace(/[\s,]/g,'')==='','captured source seeds must be literal strings');
+  const queue=seeds.map(f=>path.posix.normalize(path.posix.join('scripts',f))),found=new Set();
+  const patterns=[/\b(?:import|export)\s+(?:[^;]*?\sfrom\s*)?['"](\.[^'"]+)['"]/g,/\bimport\s*\(\s*['"](\.[^'"]+)['"]\s*\)/g];
+  while(queue.length){
+    const file=queue.pop();if(found.has(file))continue;
+    check(!file.startsWith('/')&&!file.split('/').includes('..'),'historical inventory path escapes repository');
+    const bytes=historicalBlob(revision,file);found.add(file);
+    if(!/\.(?:mjs|js)$/.test(file))continue;
+    const module=bytes.toString('utf8');
+    for(const pattern of patterns){pattern.lastIndex=0;let m;while((m=pattern.exec(module)))queue.push(path.posix.normalize(path.posix.join(path.posix.dirname(file),m[1])));}
+  }
+  const paths=[...found].sort();inventoryCache.set(revision,paths);return paths;
+}
 const qualifiedPatchedHashes=Object.freeze({
   "bochs/bochs.h": "7c18c551557eb269b52d6a5f804d38ead45c4f268528fc7ea46429b32508c501",
   "bochs/cpu/cpu.cc": "16a7b2a3640f2fb3d8df92f8916f8d5bc628e6ed8a7658c07b8db1c101ec80d9",
@@ -342,6 +370,7 @@ function sourceProof(source){
   check(/^[0-9a-f]{40}$/.test(source.boardRevision),'source commit');
   for(const [key,value] of Object.entries(coldBuildPins))equal(source[key],value,`audited native ${key}`);
   check(source.sourceHashes&&typeof source.sourceHashes==='object','measured source inventory');
+  equal(Object.keys(source.sourceHashes).sort(),historicalInventory(source.boardRevision),'complete captured transitive source inventory');
   for(const path of ['scripts/bochs-cpu3-native-cold-reset-host.mjs','scripts/bochs-cpu3-native-cold-reset-compare.mjs',
     'scripts/run-bochs-cpu3-native-cold-reset-compare.mjs','scripts/bochs-cpu3-native-cold-reset/runtime.inc',
     'scripts/bochs-cpu3-native-cold-reset/abi.h','scripts/bochs-cpu3-native-cold-reset/runtime.h',
