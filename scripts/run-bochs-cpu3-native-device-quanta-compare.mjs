@@ -31,6 +31,8 @@ const staticSourcePaths=[
   'scripts/bochs-cpu3-native-device-quanta-compare.mjs',
   'scripts/run-bochs-cpu3-native-device-quanta-compare.mjs',
   'test/i80386-native-device-quanta.test.mjs',
+  'test/i80386-native-device-quanta-report.test.mjs',
+  'test/fixtures/i80386-bochs-cpu3-native-device-quanta-initial-capture.json.gz',
   fixture,
   'src/i8254.js','src/i8259.js','src/i8086-machine.js',
   'src/experimental/i80386-at-machine.js',
