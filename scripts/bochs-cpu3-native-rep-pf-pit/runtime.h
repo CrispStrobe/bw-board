@@ -12,7 +12,6 @@ extern bool bw_slice_rep_incomplete;
 extern bool bw_slice_fault_pending;
 extern bool bw_slice_irq_pending;
 
-void bw_slice_before_fetch(BX_CPU_C *cpu);
 void bw_slice_activate(BX_CPU_C *cpu);
 void bw_slice_note_attempt(unsigned length);
 void bw_slice_note_prefetch(unsigned long long address);
