@@ -27,6 +27,21 @@ Modes:
 - `turbofan`: optimizing compiler only; diagnostic flags, not production settings.
 - `liftoff`: baseline compiler only; diagnostic flags, not production settings.
 
+Forced modes are validated against every observed compilation record. Liftoff
+uses `--liftoff-only` and disables dynamic tiering as well as tier-up. Earlier
+tool revision `c0e6e369` used only `--liftoff --no-wasm-tier-up`; the hosted
+trace in run 36864571206 nevertheless contains TurboFan compilations. Those
+old `liftoff` receipts are **mixed-tier diagnostics, not baseline-only evidence**.
+Their ordinary A/B and default traces remain independent valid measurements.
+Contradictory tier traces are retained before the corrected tool fails.
+
+Ordinary A/B additionally requires every cycle-indexed guest observation to
+match across all four runs (sensor data, sampling counts and matrix scans),
+excluding only wall time and RTx. Raw results are saved before comparison.
+Full ELF SHA256 is retained as provenance, but is not an equality assertion:
+the unchanged GCC invocation embeds a random temporary object filename in
+non-loaded symbol metadata. Equal observations are not full-state equivalence.
+
 The script refuses to overwrite an output directory. It records module/glue and
 harness/tool/parser SHA256, Node flags/version, CPU model, host load, all five RTx samples
 and actual exit/failure counts. A failed floor remains a failure in the receipt;

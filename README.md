@@ -381,7 +381,13 @@ all ten candidate windows passed 1×, minimum **1.596440×**. This does not chan
 the below-1× WASM results or deployed pins; CP13 remains open.
 [Landing, final-head qualification and raw receipts](docs/receipts/2026-10-01-cortex-m-dispatch-landing/README.md)
 are separate from the earlier measurements above.
-Its native CorePerf gate passed all 40 spin targets with no reported instruction
+The subsequent WASM-only interpreter-outlining experiment was **rejected**:
+two exact-artifact hosted A/B/B/A runs measured **−7.68%** and **−4.37%** median
+changes; all forty windows remained below 1×. Default V8 traces show the original
+large interpreter already reaches TurboFan, so this is not simply a baseline-tier
+stall. [Results, raw A/B receipts and profiling caveats](docs/receipts/2026-10-01-wasm-outline/README.md)
+are retained. Profiling tooling landed separately; deployed pins remain unchanged.
+The landed opcode-dispatch change's native CorePerf gate passed all 40 spin targets with no reported instruction
 regressions or waivers. Board/model qualification passed, including all 156
 Cortex-M tests with zero failures/ignored tests; other board suites retain
 physical-hardware ignores, so the whole job is not described as zero-skip.

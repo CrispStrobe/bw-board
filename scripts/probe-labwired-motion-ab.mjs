@@ -6,7 +6,7 @@ import {resolve, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {cpus, loadavg} from 'node:os';
-import {median, motionProbeResult, gluePolicy} from './lib/motion-ab-receipt.mjs';
+import {median, motionProbeResult, gluePolicy, assertSameMotionGuest} from './lib/motion-ab-receipt.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => {
@@ -52,9 +52,11 @@ for (const label of receipt.order) {
     save(); // Preserve failures and raw output before checking the probe itself.
     Object.assign(run, motionProbeResult(stdout, result.status));
     save();
+    assertSameMotionGuest(receipt.runs[0], run);
     console.log(`${label}: median ${run.medianRtx.toFixed(6)}x, minimum ${run.minimumRtx.toFixed(6)}x`);
 }
 receipt.completedAt = new Date().toISOString();
+receipt.guestObservationsMatch = true;
 receipt.summary = Object.fromEntries(['baseline', 'candidate'].map(label => {
     const samples = receipt.runs.filter(run => run.label === label).flatMap(run => run.samples);
     return [label, {samples: samples.length, medianRtx: median(samples.map(s => s.rtx)),
