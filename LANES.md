@@ -1,4 +1,4 @@
-2026-10-02 Indeterminate ideal-source current observers — CLAIM, Codex bwcx `/root`.
+2026-10-02 Indeterminate ideal-source current observers — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-indeterminate-current-20261002, branch
 lane/indeterminate-source-current, exact base
 6f693b077f1b712e4a484c3d789f21a152c866a4. Five-path envelope: this row;
@@ -18,6 +18,18 @@ observers plus finite-resistance controls and load-bearing mutations.
 No current convention/tolerance, generic source cycles, parser/GUI, CPU,
 workflow/package/pin, CUI/Lite/corpus or deployment changes. Prior source
 adoption closed at qualified CUI 4eb8bc0 before this implementation claim.
+Focused 17/17 and adjacent source/OP/non-UIC/current/meter surface 84/84,
+zero failures/skips, retaining existing live ngspice controls. Five isolated
+buildable mutants genuinely red and restored: suppressed public refusal (3),
+lost all-ground metadata (2), lost initial-cache metadata (1), lost sticky
+interval failure (1), premature failed-prime watch registration (1).
+Power-on, determinate-zero restoration and netlist-reset recovery are covered;
+unrelated recorder errors still propagate. Board/MNA restored blobs
+10b40cb1a9d33869661c64c78a44bb14358ba635 /
+5b522f288b7440ca1b9d387910174f4ae959f9ac. Diagnostic CUI BW_BOARD override
+now exits 2 with Cannot read current and zero JSON bytes for the actual
+precision self-short fixture; this is not package adoption or deployment.
+One frozen automatic CI/Harris qualification precedes guarded normal FF.
 
 2026-10-01 Resistive-source self-constraint — DONE candidate, Codex bwcx `/root`.
 Reuse clean closed worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
