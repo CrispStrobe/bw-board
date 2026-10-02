@@ -1,0 +1,23 @@
+{
+  "status": "PASS_SOURCE_ONLY_CONTEXT_V1_V2_ABSENT_CONTROLS",
+  "workflowSha256": "26718974fd5260dcd0410778a86fe4b2d0dde2f2f56a35b97546d02fb1879009",
+  "baseRevision": "8ba56d993ecf01c2d7a9b2c1358692bab3b08f9d",
+  "cases": [
+    {
+      "case": "v2",
+      "returncode": 0,
+      "stdoutSha256": "308edefd3a2c62f6df3a9a74aed1052f7122f99168d3e34ab5ecc35b6dc77d34"
+    },
+    {
+      "case": "v1",
+      "returncode": 0,
+      "stdoutSha256": "8c34a404272dcdf84c66334bc0b215bc10c04efc7d1de4468ac6872937206159"
+    },
+    {
+      "case": "absent",
+      "returncode": 0,
+      "stdoutSha256": "d1818730b222fcf7d629bf6a297093f8906087908d25454039aaea4b24b6f49a"
+    }
+  ],
+  "scope": "Extracted exact workflow function; actual lscpu retained; optional file absence explicit. No artifact download/helper/native/guest/dispatch."
+}

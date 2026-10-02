@@ -50,11 +50,24 @@ jobs:
           {
             sha256sum publication/scripts/ci-benchmark-i80386-owned-clock-bulk.py
             cat /proc/loadavg
-            cat /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io
-            cat /sys/fs/cgroup/cpu.max
+            # CPU identity is required; optional kernel context reports absence explicitly.
+            lscpu
+            optional_context_file() {
+              if [ -r "$1" ]; then
+                printf 'CONTEXT_FILE %s\n' "$1"
+                cat "$1" || printf 'CONTEXT_READ_FAILED %s\n' "$1"
+              else
+                printf 'CONTEXT_MISSING_OR_UNREADABLE %s\n' "$1"
+              fi
+            }
+            for context_file in /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io \
+              /sys/fs/cgroup/cpu.max \
+              /sys/fs/cgroup/cpu/cpu.cfs_quota_us /sys/fs/cgroup/cpu/cpu.cfs_period_us \
+              /sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us /sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us; do
+              optional_context_file "$context_file"
+            done
             node --version
             uname -a
-            lscpu
             uptime
             free -h
             git -C publication rev-parse HEAD
