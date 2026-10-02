@@ -641,7 +641,7 @@ ground-current curve; shutdown current; and eight-terminal KCL. Focused old/new
 power and source-once coverage is 18/18; dropout, threshold, limit and
 ground-current mutations each fail their independent consequence assertion.
 
-2026-10-02 ADP7118 internal soft-start envelope — replacement candidate, Codex bwcx `/root`.
+2026-10-02 ADP7118 internal soft-start envelope — DONE candidate (hosted pending), Codex bwcx `/root`.
 Isolated wt-board-adp7118-soft-start-20261002, branch
 lane/adp7118-soft-start-20261002; exact base
 6ba28adc1450a7553450ae09992b6b3f9eb01749. A concurrent evidence-only
