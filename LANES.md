@@ -1,3 +1,22 @@
+2026-10-02 Duplicate supply-symbol current attribution — CLAIM, Codex bwcx `/root`.
+Isolated worktree wt-board-duplicate-rail-current-20261002, branch
+lane/duplicate-rail-current, exact base
+dfeaadbdc2a3921d3b7a838079201455dff87685. Six-path envelope: this row;
+src/mna.js duplicate-symbol availability and aggregate rail-current metadata;
+src/board.js scoped refusal, railCurrent(netId) API and OP/cache propagation;
+src/types.js those API contracts; existing test/rail-duplicate-symbols.test.mjs;
+new spec-updates/duplicate-rail-current.md. Measured [A,B] 5 V aliases feed
+1 kohm at 5 mA/0, reversed ordering gives 0/5 mA, with no availability warning.
+Preserve one-row-per-rail solving and total delivery; refuse per-symbol current
+for ALL duplicate participants, including allocated owner. Expose finite total
+rail current explicitly rather than assigning it to an arbitrary label.
+Prove 1/2/3/8 symbols and permutations, distinct rails, signs, zero load,
+power-off, conflict refusal, OP/non-UIC cache, meter histories and mutations.
+Keep known single-symbol readings and unrelated absent-current fallbacks.
+No current-sharing physical model, source stamp/NR/tolerance changes, generic
+rail-conflict solver rewrite, CPU/workflow, package/pin, CUI/Lite/corpus or
+deployment edits. Prior source-current consumer closed at qualified f28050d.
+
 2026-10-02 Indeterminate ideal-source current observers — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-indeterminate-current-20261002, branch
 lane/indeterminate-source-current, exact base
