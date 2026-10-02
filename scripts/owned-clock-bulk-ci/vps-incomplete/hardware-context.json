@@ -1,0 +1,31 @@
+{
+  "recordedAtUtc": "2026-10-02T12:55:59.600444+00:00",
+  "scope": "Shared VPS context before one gate; not a physical 386 or GH/Kaggle execution measurement",
+  "commands": {
+    "cpu": {
+      "argv": [
+        "lscpu"
+      ],
+      "stdout": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           40 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  4\nOn-line CPU(s) list:                     0-3\nVendor ID:                               GenuineIntel\nModel name:                              Intel Xeon Processor (Skylake, IBRS, no TSX)\nCPU family:                              6\nModel:                                   85\nThread(s) per core:                      1\nCore(s) per socket:                      4\nSocket(s):                               1\nStepping:                                4\nBogoMIPS:                                4589.20\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault pti ssbd ibrs ibpb fsgsbase bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves arat pku ospke md_clear\nHypervisor vendor:                       KVM\nVirtualization type:                     full\nL1d cache:                               128 KiB (4 instances)\nL1i cache:                               128 KiB (4 instances)\nL2 cache:                                16 MiB (4 instances)\nL3 cache:                                16 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-3\nVulnerability Gather data sampling:      Unknown: Dependent on hypervisor status\nVulnerability Indirect target selection: Mitigation; Aligned branch/return thunks\nVulnerability Itlb multihit:             KVM: Mitigation: VMX unsupported\nVulnerability L1tf:                      Mitigation; PTE Inversion\nVulnerability Mds:                       Mitigation; Clear CPU buffers; SMT Host state unknown\nVulnerability Meltdown:                  Mitigation; PTI\nVulnerability Mmio stale data:           Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Mitigation; IBRS\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; IBRS; IBPB conditional; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI SW loop, KVM SW loop\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Not affected\n"
+    },
+    "kernel": {
+      "argv": [
+        "uname",
+        "-a"
+      ],
+      "stdout": "Linux ubuntu-2gb-fsn1-1 6.8.0-124-generic #124-Ubuntu SMP PREEMPT_DYNAMIC Tue May 26 13:00:45 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux\n"
+    },
+    "node": {
+      "argv": [
+        "/tmp/node-v22.23.3-linux-x64/bin/node",
+        "--version"
+      ],
+      "stdout": "v22.23.3\n"
+    }
+  },
+  "loadavg": "8.15 8.84 7.12 13/1627 1043211\n",
+  "meminfo": "MemTotal:        7937240 kB\nMemFree:          482044 kB\nMemAvailable:    2061016 kB\nBuffers:           34416 kB\nCached:          1546424 kB\nSwapCached:        22420 kB\nActive:          4479224 kB\nInactive:        1805160 kB\nActive(anon):    3612656 kB\nInactive(anon):  1137764 kB\nActive(file):     866568 kB\nInactive(file):   667396 kB\nUnevictable:       27496 kB\nMlocked:           27496 kB\nSwapTotal:      12582908 kB\nSwapFree:        2337400 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:             25796 kB\nWriteback:           240 kB\nAnonPages:       4709308 kB\nMapped:           765460 kB\nShmem:             38780 kB\nKReclaimable:     407020 kB\nSlab:             821160 kB\nSReclaimable:     407020 kB\nSUnreclaim:       414140 kB\nKernelStack:       25944 kB\nPageTables:       119316 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    16551528 kB\nCommitted_AS:   19236076 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       67988 kB\nVmallocChunk:          0 kB\nPercpu:             3904 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      397168 kB\nDirectMap2M:     6746112 kB\nDirectMap1G:     1048576 kB\n",
+  "pressure/cpu": "some avg10=51.30 avg60=54.62 avg300=49.07 total=1181445440216\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+  "pressure/memory": "some avg10=3.45 avg60=2.10 avg300=1.96 total=103750906953\nfull avg10=0.71 avg60=0.40 avg300=0.55 total=47250350703\n",
+  "pressure/io": "some avg10=9.05 avg60=8.14 avg300=10.84 total=323930797855\nfull avg10=0.60 avg60=0.72 avg300=1.83 total=110970571438\n"
+}
