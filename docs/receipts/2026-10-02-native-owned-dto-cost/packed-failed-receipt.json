@@ -1,0 +1,6 @@
+{
+  "exitCode": 1,
+  "reason": "post-trial serialized property order only; no performance result emitted",
+  "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrSha256": "1c73696725ece0a9d5cc45226295ef31928e138908902c54388f8ce127d724fd"
+}
