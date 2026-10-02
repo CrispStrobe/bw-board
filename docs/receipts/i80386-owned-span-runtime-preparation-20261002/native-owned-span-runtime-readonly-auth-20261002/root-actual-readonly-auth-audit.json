@@ -1,0 +1,8 @@
+{
+  "status": "ROOT_ACTUAL_READ_ONLY_RUNTIME116_COMPILED103_ORIGINAL_PROVENANCE_AUTH_PASS",
+  "runtimeInputs": 116,
+  "compiledInputs": 103,
+  "artifactCount": 179,
+  "resultSha256": "79a0717246c41f9d7eff32c649b4709af029a055401f4c7f67f17e28133948e8",
+  "scope": "Read-only complete returned compiled provenance equals genuine approved original; runtime/source/helpers/artifacts unchanged. No addon, guest, build, benchmark or native qualification."
+}

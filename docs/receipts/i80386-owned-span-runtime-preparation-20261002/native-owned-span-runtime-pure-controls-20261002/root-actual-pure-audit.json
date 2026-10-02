@@ -1,0 +1,11 @@
+{
+  "status": "ROOT_ACTUAL_ONE_PURE24_CONTROL_CAPTURE_PASS",
+  "tests": 24,
+  "pass": 24,
+  "fail": 0,
+  "runtimeInputCount": 116,
+  "compiledInputCount": 103,
+  "runtimeHead": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledHead": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "scope": "One bounded source-only test; no factory, ROM, build authentication, addon, guest or performance execution."
+}
