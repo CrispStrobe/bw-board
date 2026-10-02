@@ -1,0 +1,20 @@
+{
+  "id": 11237781906,
+  "node_id": "MDg6QXJ0aWZhY3QxMTIzNzc4MTkwNg==",
+  "name": "owned-baseline-profile-37031895458-1",
+  "size_in_bytes": 14262761,
+  "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11237781906",
+  "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11237781906/zip",
+  "expired": false,
+  "digest": "sha256:09ceafcd30f8deae85df8cf96ac10fca9e98fc4362ed8ab12049ee1ad4c0c544",
+  "created_at": "2026-10-02T16:12:30Z",
+  "updated_at": "2026-10-02T16:12:30Z",
+  "expires_at": "2026-10-16T16:12:27Z",
+  "workflow_run": {
+    "id": 37031895458,
+    "repository_id": 1327885818,
+    "head_repository_id": 1327885818,
+    "head_branch": "lane/386-baseline-profile-publication-20261002",
+    "head_sha": "6ccb89042c601bdd9c6598adf642a8b06a1cfcd1"
+  }
+}

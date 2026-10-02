@@ -1,0 +1,32 @@
+{
+  "scope": "Build and static preflight only; no native addon load/guest/performance claim. Paths in receipts describe this CI host and need explicit future admission.",
+  "files": {
+    "addon-ldd.txt": "c394692e00f854d0c0b26305196a1270315721139199c736e020385159550c3f",
+    "addon-nm-defined.txt": "0c5943c5d2e1e2808ee86c182e17f6ae5dbd3f7ec2913d89dba0a5b47370bb56",
+    "build-static-preflight.json": "7b798173e3326c64f855d12c98bdda91f984bd49eade9717672d88f87e54a4ba",
+    "bw_direct.node": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+    "config.h": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+    "configure.exit.json": "0f66cb1509295bd3453d7cfb369af0163eefbdfdc74139f23f3f45aa6cb59a06",
+    "configure.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "configure.stdout": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da",
+    "free-assets.json": "20e9b85ab30da79de3c6761440d434de1498f99d4ac4b8cf88cadcbd11780072",
+    "frozen-source103.tar.gz": "ea67eff31f56d98b8e1aaf611d3de1eff502c25821deff0d32502d1bb3a4cdfb",
+    "identity-before.exit.json": "6a3eecd209dcc0c88896b001aa0c4df8300b3adf5a6a8ab81bb8a461cc825a43",
+    "identity-before.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "identity-before.stdout": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9",
+    "identity.exit.json": "8ed14ecf9310011283cd2a5741fc1a433118e1b7717166de1150e56baa59c5f1",
+    "identity.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "identity.stdout": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9",
+    "make.exit.json": "d228c614f15f4f1c30975538e6f9e6018f9d381496cb59faeec7d1d2f8704d7f",
+    "make.stderr": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e",
+    "make.stdout": "9de8a9690fa6fcec055072404c4af8eacb1de68024e93883d843d819380f7a3a",
+    "prepare.exit.json": "e3fab706469807a3a7a48ab74c16c982726040ad2f1cd500572ca40dd1bdb6e0",
+    "prepare.json": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd",
+    "prepare.stderr": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4",
+    "prepare.stdout": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd",
+    "prepared-source.tar.gz": "40dcddcd190a836aa89f164b3db0023fb193c6980965d0a6431e45156043711e",
+    "source-before.json": "3b02c9fec32b3f89aabc1282d298452ad46d9461ee25a594805f72cd5ec7c6c0",
+    "upstream-COPYING": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2",
+    "upstream-LICENSE": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+  }
+}
