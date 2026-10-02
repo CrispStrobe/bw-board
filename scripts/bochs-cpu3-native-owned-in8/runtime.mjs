@@ -15,6 +15,7 @@ export function deriveOwnedIn8Runtime(){
   BW_TRACE("BWSD1\tPORT\tin\t%04x\t%u\t%08x\t%" PRIu64 "\t%" PRIu64 "\n",port,width,byte,bw_ticks,++bw_ordinal);
   *value=byte;return 1;
 }`,'IN8 local observer');
+ once('  if (!bw_slice_active) return bx_devices.inp(port, width);','  if (!bw_slice_active) return bx_devices.inp(port, width);\n  if(port>UINT16_MAX)bw_slice_fail("owned-IN8-port-overflow");','raw port before callback narrowing');
  let inverse=s;for(const e of [...edits].reverse())inverse=replacement(inverse,e.next,e.old,'inverse '+e.label);
  if(sha256(inverse)!==sha256(base.bytes))throw Error('IN8 runtime inverse');
  return {bytes:Buffer.from(s),baseSha256:sha256(base.bytes),edits};
