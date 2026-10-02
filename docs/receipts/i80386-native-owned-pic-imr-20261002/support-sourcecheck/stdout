@@ -1,0 +1,107 @@
+TAP version 13
+# fatal: path 'scripts/prepare-bochs-cpu3-native-owned-pic-imr.mjs' exists on disk, but not in '0000000000000000000000000000000000000000'
+# Subtest: authentic actual JS reference admits new PIC profile, measured six cuts and source111
+ok 1 - authentic actual JS reference admits new PIC profile, measured six cuts and source111
+  ---
+  duration_ms: 6.143029
+  type: 'test'
+  ...
+# Subtest: PIC reference rejects ROM before addon admission
+ok 2 - PIC reference rejects ROM before addon admission
+  ---
+  duration_ms: 9.067888
+  type: 'test'
+  ...
+# Subtest: PIC reference rejects PIC witness before addon admission
+ok 3 - PIC reference rejects PIC witness before addon admission
+  ---
+  duration_ms: 8.736971
+  type: 'test'
+  ...
+# Subtest: PIC reference rejects PIC port before addon admission
+ok 4 - PIC reference rejects PIC port before addon admission
+  ---
+  duration_ms: 4.389854
+  type: 'test'
+  ...
+# Subtest: PIC reference rejects poll before addon admission
+ok 5 - PIC reference rejects poll before addon admission
+  ---
+  duration_ms: 4.240359
+  type: 'test'
+  ...
+# Subtest: PIC reference rejects read ACK effect before addon admission
+ok 6 - PIC reference rejects read ACK effect before addon admission
+  ---
+  duration_ms: 3.880266
+  type: 'test'
+  ...
+# Subtest: input refuses historical PIT baseline hash
+ok 7 - input refuses historical PIT baseline hash
+  ---
+  duration_ms: 1.229289
+  type: 'test'
+  ...
+# Subtest: new canonical anchor is authentic own-reset evidence; wrong raw profile or old anchor denied
+ok 8 - new canonical anchor is authentic own-reset evidence; wrong raw profile or old anchor denied
+  ---
+  duration_ms: 1.528318
+  type: 'test'
+  ...
+# Subtest: full runner inverse keeps original scheduler, caps, chronology and CPU window
+ok 9 - full runner inverse keeps original scheduler, caps, chronology and CPU window
+  ---
+  duration_ms: 4.190641
+  type: 'test'
+  ...
+# Subtest: build metadata rejects old103 manifest before reading nonexistent prepared tree/addon
+ok 10 - build metadata rejects old103 manifest before reading nonexistent prepared tree/addon
+  ---
+  duration_ms: 8711.898291
+  type: 'test'
+  ...
+# Subtest: build metadata rejects wrong ROM before reading nonexistent prepared tree/addon
+ok 11 - build metadata rejects wrong ROM before reading nonexistent prepared tree/addon
+  ---
+  duration_ms: 5618.975285
+  type: 'test'
+  ...
+# Subtest: build metadata rejects wrong witness before reading nonexistent prepared tree/addon
+ok 12 - build metadata rejects wrong witness before reading nonexistent prepared tree/addon
+  ---
+  duration_ms: 5523.320159
+  type: 'test'
+  ...
+# Subtest: build metadata rejects wrong tooling hash before reading nonexistent prepared tree/addon
+ok 13 - build metadata rejects wrong tooling hash before reading nonexistent prepared tree/addon
+  ---
+  duration_ms: 5828.187219
+  type: 'test'
+  ...
+# Subtest: build metadata rejects wrong tooling revision before reading nonexistent prepared tree/addon
+ok 14 - build metadata rejects wrong tooling revision before reading nonexistent prepared tree/addon
+  ---
+  duration_ms: 5785.093441
+  type: 'test'
+  ...
+# Subtest: build metadata rejects old initializer before reading nonexistent prepared tree/addon
+ok 15 - build metadata rejects old initializer before reading nonexistent prepared tree/addon
+  ---
+  duration_ms: 5967.281957
+  type: 'test'
+  ...
+# Subtest: known old PIT addon denied before any manifest/prepared/addon read
+ok 16 - known old PIT addon denied before any manifest/prepared/addon read
+  ---
+  duration_ms: 5635.889043
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43473.164755

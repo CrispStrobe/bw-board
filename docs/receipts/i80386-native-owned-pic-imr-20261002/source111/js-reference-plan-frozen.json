@@ -1,0 +1,47 @@
+{
+  "status": "PREPARED_ONLY_NO_GUEST_RUN",
+  "sourceWorktree": "/tmp/bw-board-386-owned-pic-imr-source-20261002",
+  "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "sourceCount": 111,
+  "romSha256": "8a7380f01bbc40985d377fe9764667749c36b05d45ee602b28c7e68556bd509f",
+  "romBytes": 65536,
+  "expectedPorts": [
+    64,
+    64,
+    33,
+    161
+  ],
+  "expectedPitBytes": [
+    50,
+    18
+  ],
+  "expectedPicImrBytes": [
+    255,
+    255
+  ],
+  "picWitnessAddresses": [
+    1426,
+    1427
+  ],
+  "proof": "Immediately around PIC.read(1), complete actual getState before/after exact; noACK/poll, bothmasksff. Clockcatchup may have prior effects.",
+  "retainedProfile": "RPGH001/twoPF14/oneIRQ32/hotchecksums/sixnamedcuts; unknownnewNQ/cuts/RAM need actualreference",
+  "bounds": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "blankEnvironment": [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "LD_PRELOAD",
+      "LD_AUDIT",
+      "BW_HOT_NAPI_PROFILE"
+    ]
+  },
+  "nativeAdmission": "No actual build/load. Old PIT addon cannot initialize newROM. Future new compiledmanifest must bind111source +newruntime initializer8a7380; ABI4/NAPI/clockcode unchanged.",
+  "prerequisites": "Clean frozen111 git/current admission +sourcepeerPASS +root explicit guestgrant. Source-onlycontrols are not actualfixtureexecution.",
+  "sourceFreezeSha256": "578863a4b51ad2d7d0e16df37dc5050f1d36fcb6bb08195e50c3a038002930f9",
+  "physicalCounterPolicy": "No invented clockTransfer total. Future native mode proof retains complete physical counters; source insertion adds two INs and one OUT, so expected fixture PIO32+3=35 is a static prediction pending JS evidence. PIC.read no ACK; existingIRQACK profile remains separately asserted."
+}

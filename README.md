@@ -88,12 +88,14 @@ now combines paging, executable RAM updates, A20 aliases, REP retries and actual
 PIT/PIC delivery. Its receipts qualify this free fixture; a general native backend remains WIP.
 The [separate native clock-batching candidate](docs/I80386-NATIVE-OWNED-CLOCK-WIP.md)
 preserves the full CPU/device chronology with fewer clock crossings, but measured
-9.3% more process CPU cost than H4. H4 remains the baseline; broader guest/backend
+9.3% more process CPU cost than H4 and failed its adoption gate. Broader guest/backend
 integration and the 10× goal remain WIP.
 [Source-only snapshot transport comparisons](docs/I80386-NATIVE-OWNED-DTO-COST-WIP.md)
 also rejected object and packed replies before native integration.
 The [closed fresh-child main-thread diagnostic](docs/I80386-NATIVE-OWNED-MAIN-WIP.md) matches full fixture chronology and passes 13 lifecycle controls;
 its fixed-fixture paired CPU gate used 26.33% less process CPU than H4, with all seven measured pairs favorable. Broader guest qualification remains WIP.
+
+The [fixed PIC IMR prototype](docs/I80386-NATIVE-OWNED-PIC-IMR-WIP.md) has authenticated source and a JavaScript reference. Native PIC build and guest qualification remain pending.
 
 ## LabWired WASM performance (2026-10-01)
 

@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-owned-pic-imr-native-profile-20261002/scripts/prepare-bochs-cpu3-native-owned-pic-imr.mjs",
+    "/tmp/bw-board-386-owned-pic-imr-source-20261002",
+    "--check"
+  ],
+  "returncode": 0,
+  "timeout": false,
+  "wallSeconds": 13.732744099572301,
+  "noAddonLoadOrCompiledBuildOrGuest": true
+}
