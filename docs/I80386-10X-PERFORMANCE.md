@@ -10,6 +10,8 @@
 
 [Baseline profiling preparation](I80386-OWNED-BASELINE-PROFILE-WIP.md) records the source-only preparation stage after the failed bulk gate. The subsequent [actual baseline profiling results](I80386-OWNED-BASELINE-PROFILE-RESULTS.md) retain one phase-bounded fixture diagnostic; it is not a speed gate or a new speed result.
 
+The separate [fixed 8042 self-test source proposal](../scripts/bochs-cpu3-native-owned-8042/README.md) passes 106 device/provider controls and a 28-step JavaScript ROM probe. C/native initializer and ROM admission remain pending; this establishes no native qualification, broader AT admission or speed result.
+
 The [private uniform-page span preparation](receipts/2026-10-02-owned-span-source-preparation/README.md) records the stage before differential controls ran against unchanged fe1. The subsequent [hosted source controls passed](I80386-OWNED-SPAN-SOURCE-RESULTS.md); this source-only evidence establishes no adoption, speed result or broader AT admission.
 
 
