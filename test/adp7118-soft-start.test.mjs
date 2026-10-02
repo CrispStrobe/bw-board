@@ -45,6 +45,8 @@ test('opt-in ADP7118 startup meets independent 80us/380us data-sheet timing anch
   assert.ok(Math.abs(b.nodeVoltage('out') - 4.5) < .015, '380 us reaches typical 90%');
   b.advanceTo(1_200_000n);
   assert.ok(Math.abs(b.nodeVoltage('out') - 5) < .003);
+  assert.equal(b.transientAnalysisStatus().accuracyMet, true,
+    `startup must satisfy the real integrator, not only endpoint voltage: ${JSON.stringify(b.transientAnalysisStatus())}`);
   assert.equal(b.getDeviceState('U').startupModel, 'datasheet-envelope');
 });
 
@@ -111,6 +113,8 @@ test('startup scope captures monotonic finite history and complete device KCL', 
     b.sampleCurrentChannels();
   }
   const data = b.getScopeData(channel);
+  assert.equal(b.transientAnalysisStatus().accuracyMet, true,
+    `scope startup must satisfy the real integrator: ${JSON.stringify(b.transientAnalysisStatus())}`);
   const values = Array.from(data.samples).filter(Number.isFinite);
   assert.ok(values.length >= 100);
   assert.ok(values.every(v => v >= -1e-5 && v <= 5.001));

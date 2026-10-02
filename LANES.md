@@ -641,7 +641,7 @@ ground-current curve; shutdown current; and eight-terminal KCL. Focused old/new
 power and source-once coverage is 18/18; dropout, threshold, limit and
 ground-current mutations each fail their independent consequence assertion.
 
-2026-10-02 ADP7118 internal soft-start envelope — DONE candidate, Codex bwcx `/root`.
+2026-10-02 ADP7118 internal soft-start envelope — HOLD, Codex bwcx `/root`.
 Isolated wt-board-adp7118-soft-start-20261002, branch
 lane/adp7118-soft-start-20261002; exact base
 6ba28adc1450a7553450ae09992b6b3f9eb01749. A concurrent evidence-only
@@ -658,7 +658,7 @@ scope capture and caller-consequence mutants. No Board scheduler/integrator,
 global tolerance, other regulator, CPU, workflow/dependency/pin, CUI/Lite or
 corpus edits. External CSS, adjustable/noise-reduction networks, noise/PSRR,
 temperature and overshoot/loop-stability qualification remain excluded.
-Focused final surface passes 32/32, zero skips: eight new startup/mutation
+Initial focused surface passed 32/32, zero skips: eight new startup/mutation
 tests and existing ADP7118/LT1763/ADP151/scope controls. Four executable
 in-memory production mutants each red their real caller consequence; registry
 restoration and unchanged source bytes asserted. Default path independently
@@ -667,8 +667,19 @@ over three loads, EN hysteresis/shutdown/restart and VIN dropout/UVLO changes.
 New-mode regressions exposed DC-controller preload and current-limit windup;
 opt-in initial command reset, forward-current actuator bound and anti-windup
 close both without altering the default branch. External/prebiased startup
-remains explicitly refused, not an accuracy success. Full hosted qualification
-and guarded upstream landing precede any package/CLI consumer adoption.
+remains explicitly refused, not an accuracy success. Subsequent actual CLI
+capture exposed minimum-step-accuracy-unmet at about 70.011 us: the apparently
+correct ramp is NOT transient-qualified and the voltage meter refuses it.
+Two new mandatory accuracyMet assertions reproduce this red in the direct
+timing and scope tests (0/2 pass). The old 32/32 checked endpoints/history but
+omitted this authority; it is not sufficient evidence for landing. A matching
+legacy-DC capacitor CLI control also refuses its meter, so startup is not
+claimed as the sole cause. Harris 37027443304 passed on initial 7a1e96d5;
+queued CI 37027443204 was cancelled after discovery, not treated as green.
+No unchanged rerun, tolerance relaxation, main landing or consumer adoption.
+Repair the device/transient boundary and prove actual CLI scope plus voltage
+meter accuracy before requalification. Global solver changes remain outside
+this envelope and require a separately measured scope/ownership decision.
 
 2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.

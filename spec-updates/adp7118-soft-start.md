@@ -1,5 +1,16 @@
 # ADP7118 internal startup envelope
 
+Status: **held candidate, not released**. Actual CLI capture reports
+`minimum-step-accuracy-unmet` near 70.011 µs even though endpoint voltage and
+scope shape look plausible; its voltage meter refuses the capture. Mandatory
+`transientAnalysisStatus().accuracyMet === true` assertions now expose this
+in the direct timing and scope regressions. Earlier endpoint-only checks did
+not qualify the integrator. A legacy-DC capacitor CLI control also refuses its
+meter; this is not evidence that startup alone introduced the problem.
+No package adoption or physical accuracy claim is authorized by this candidate.
+The repair must preserve the existing solver tolerances and genuinely qualify
+scope and meter captures, not suppress the failure or skip its assertion.
+
 The default ADP7118 model remains its existing DC regulation contract. Select
 the following explicit model on a fixed-output part to capture internal startup:
 
