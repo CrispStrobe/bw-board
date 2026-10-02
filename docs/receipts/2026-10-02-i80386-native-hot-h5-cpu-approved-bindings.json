@@ -1,0 +1,24 @@
+{
+  "helperSha256": "0102cb052cd0a3d64c5a54c88bef9fd8d90240a49ca85ad8c0a5b723907b9220",
+  "bindingHelperSha256": "d14f04ccdea81bf3c9e61d9114396a62a1550999f4b697fa6b67505a72299c6a",
+  "externalBindings": {
+    "derive.py": "c301135a6e8fc9449645b00775633590004fb27b3542273f3f35c44a7274d394",
+    "derivation.json": "1785768563204a7dbcb1a6004eccfc5b3d073767dcc2a16dd40c4339ce5b4356",
+    "H4-cpu-child.mjs": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+    "H5-cpu-child.mjs": "73cf3a822f5f5c4fc32853fdb1c240c7e53cf46b976ab9e9ee16e41cfd5f663e",
+    "H4-diff.txt": "73c29639ee19af73af275b5e7f51e6c9c95d2483b3fcc71266e49b79a3681317",
+    "H5-diff.txt": "ec20feb05120b540c19e267f6c8b616a1db147f425872966147da29cea73aee3"
+  },
+  "H4": {
+    "manifestPath": "/mnt/volume1/tmp-astra/native-hot-build-h4-20261001/prepare.json",
+    "manifestSha256": "3877bd9102cd000e86e29f13e60a95c935b66162280198d5cb7485737ef0105f",
+    "binarySha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+    "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+  },
+  "H5": {
+    "manifestPath": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/prepare.json",
+    "manifestSha256": "48d432eea6dded26395957ce49ae250bcdd4e37e9ee101a4ba34b64709f6f4b9",
+    "binarySha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+    "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "status": "H5_EXACT_TWO_REPLACEMENT_DIFFERENTIAL_PASS_NO_RUNTIME_CLAIM",
+  "checks": 5,
+  "h4GeneratedNapiSha256": "b57a3cea1f5f5eea2092401f8dba3041eb0bc0d19551bf4273e66ad7372c60cb",
+  "h5GeneratedNapiSha256": "f83992b411bb0756c4a0744fdd8f9ae70be6d1b3a7e23d65db199ef2fbec58b5",
+  "delta": "conditional scalar numeric handles and internal argc only, plus provenance comment",
+  "preserved": "all other generated NAPI bytes including lifecycle, dynamic lookup, typed ownership, native outputs, memory/PAGE",
+  "sourceDerivedFixedGuestExpectedNumericHandles": {
+    "H4": 805572,
+    "H5": 302153,
+    "omitted": 503419,
+    "scope": "arithmetic from earlier H4 observed operation counts, not measured H5 execution or speed"
+  }
+}
