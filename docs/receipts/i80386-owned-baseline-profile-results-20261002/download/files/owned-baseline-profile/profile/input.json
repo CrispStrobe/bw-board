@@ -1,0 +1,14 @@
+{
+  "preparedManifest": "/home/runner/work/_temp/owned-baseline-profile/restored/derived-prepare.json",
+  "preparedManifestSha256": "a7bf26133a0594779b54589c91d0348c8c26768ce912851312673c99561832bb",
+  "buildReceipt": "/home/runner/work/_temp/owned-baseline-profile/restored/derived-build-receipt.json",
+  "buildReceiptSha256": "3f5d8de6e432edd362e1854ff7e579ecf33f9946a2bb4f868379047c09686920",
+  "addon": "/home/runner/work/_temp/owned-baseline-profile/restored/prepared/bochs/bw_direct.node",
+  "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "configuration": "/home/runner/work/_temp/owned-baseline-profile/profile/guest.bochsrc",
+  "baseline": "/home/runner/work/bw-board/bw-board/publication/scripts/owned-clock-bulk-ci/js-reference.json",
+  "baselineSha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+  "output": "/home/runner/work/_temp/owned-baseline-profile/profile/guest",
+  "nativeTrace": false,
+  "hostJournal": false
+}

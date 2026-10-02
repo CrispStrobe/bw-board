@@ -1,0 +1,107 @@
+{
+  "seams": [
+    {
+      "before": "from './bochs-cpu3-native-owned-in8/reset-witness.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs\""
+    },
+    {
+      "before": "from './bochs-cpu3-native-owned-in8/provider.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-owned-in8/provider.mjs\""
+    },
+    {
+      "before": "from './bochs-cpu3-native-hot-direct/journal.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-hot-direct/journal.mjs\""
+    },
+    {
+      "before": "from './bochs-cpu3-native-owned-in8/admission.mjs'",
+      "after": "from \"/home/runner/work/_temp/owned-baseline-profile/profile/profile-admission.mjs\""
+    },
+    {
+      "before": "from './bochs-cpu3-native-owned-in8/bootstrap.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs\""
+    },
+    {
+      "before": "from './bochs-cpu3-native-owned-clock/derive.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-owned-clock/derive.mjs\""
+    },
+    {
+      "before": "from './audit-i80386-native-direct-board-adapter.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/audit-i80386-native-direct-board-adapter.mjs\""
+    },
+    {
+      "before": "from './bochs-cpu3-native-owned-in8/identity.mjs'",
+      "after": "from \"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-owned-in8/identity.mjs\""
+    },
+    {
+      "before": "import assert from 'node:assert/strict';",
+      "after": "import assert from 'node:assert/strict';\nimport {Session} from 'node:inspector';"
+    },
+    {
+      "before": "const checkpoints=[];let target=0,final,resumes=0,terminal=false;",
+      "after": "const profileSession=new Session();profileSession.connect();\nconst profilerPost=(method,params={})=>new Promise((ok,fail)=>profileSession.post(method,params,(e,r)=>e?fail(e):ok(r)));\nconst profilePhases={unit:'monotonic microseconds',setupBeginUs:Number(process.hrtime.bigint()/1000n)};\nawait profilerPost('Profiler.enable');await profilerPost('Profiler.setSamplingInterval',{interval:1000});\nprofilePhases.startCallBeginUs=Number(process.hrtime.bigint()/1000n);await profilerPost('Profiler.start');profilePhases.startCallEndUs=Number(process.hrtime.bigint()/1000n);\nconst checkpoints=[];let target=0,final,resumes=0,terminal=false;"
+    },
+    {
+      "before": "const executionCPUStart=process.cpuUsage();const executionStart=process.hrtime.bigint();",
+      "after": "const executionCPUStart=process.cpuUsage();const executionStart=process.hrtime.bigint();profilePhases.executionBeginUs=Number(executionStart/1000n);"
+    },
+    {
+      "before": "assert.ok(terminal&&target===6);",
+      "after": "profilePhases.executionEndUs=Number((executionStart+BigInt(executionNs))/1000n);\n profilePhases.stopCallBeginUs=Number(process.hrtime.bigint()/1000n);const {profile}=await profilerPost('Profiler.stop');profilePhases.stopCallEndUs=Number(process.hrtime.bigint()/1000n);profileSession.disconnect();\n writeFileSync(input.output+'/profile.cpuprofile',JSON.stringify(profile),{flag:'wx'});writeFileSync(input.output+'/profile-phases.json',JSON.stringify(profilePhases,null,2),{flag:'wx'});\n assert.ok(terminal&&target===6);"
+    },
+    {
+      "before": "const report={status:",
+      "after": "const report={profiling:{kind:'INSPECTOR_EXECUTION_SCOPED_DIAGNOSTIC',samplingIntervalUs:1000,derivative:{\"diagnosticManifest\":{\"kind\":\"SOURCE_OWNED_BASELINE_INSPECTOR_DIAGNOSTIC\",\"publicationRevision\":\"6ccb89042c601bdd9c6598adf642a8b06a1cfcd1\",\"files\":{\"/home/runner/work/bw-board/bw-board/publication/scripts/ci-profile-i80386-owned-baseline.py\":\"3a390779e73c80669bded8b3e6ac6ea88b12e2a54e13e0f2b2e1a4fcc9280d57\",\"/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/derive.mjs\":\"f8fc837d24b3633ff0e471a28694dc0997b230fb49fe1e67e00df01f4cb26fa7\",\"/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/alignment.mjs\":\"8a27b87b475caebb0b520a45b761b2fa5952ad878a1bc2c0d89ea6a83a58b4d7\",\"/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/plan.json\":\"40fffc8104466ec3ac3c403ce6b1a60618862ffac14178d4e5e561ec03e5d6dd\",\"/home/runner/work/bw-board/bw-board/publication/.github/workflows/i80386-owned-baseline-profile.yml\":\"d0e8000751105a34191491536aebf2756bfc4264edfb064a87bd36a4360d6ffc\",\"/home/runner/work/bw-board/bw-board/publication/test/i80386-owned-baseline-profile.test.mjs\":\"5b4a3aabbd4dac7b0c5a72099a775206055af2d081d1fcc78b525e9fb49f8b9b\"},\"alignmentSha256\":\"7feb6ac4e4443d92d2065c199c6c12b6ef5880b44b04ff654b58abd300d77afc\"},\"diagnosticManifestSha256\":\"064b17c7619ada94e82ee0dac08bc3960330b7efd63d20239aeff4deea446cee\",\"sourceRevision\":\"fe1eff2039520536350922a2164c8bbe29404c68\",\"originalRunnerSha256\":\"68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b\",\"generatorSha256\":\"f8fc837d24b3633ff0e471a28694dc0997b230fb49fe1e67e00df01f4cb26fa7\",\"admissionSha256\":\"7349530ffe58726025499698bb6cd8ee9d0d939738a0283901a1855fce249968\",\"kind\":\"EXACT_INVERSE_INSPECTOR_DERIVATIVE_NOT_FROZEN_RUNTIME\"},phases:profilePhases,limitations:'Isolate samples and overlapping native.resume inclusive stacks; not all-thread CPU or a C-core/NAPI split'},status:"
+    },
+    {
+      "before": "}catch(e){await handle.abort();throw e;}",
+      "after": "}catch(e){try{const failed=await profilerPost('Profiler.stop');writeFileSync(input.output+'/failed-profile.cpuprofile',JSON.stringify(failed.profile),{flag:'wx'});}catch{}finally{profileSession.disconnect();}await handle.abort();throw e;}"
+    }
+  ],
+  "originalSha256": "68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b",
+  "derivedSha256": "37f0498212ac106128de22aed9d9ea5d2da51c7ec0eb0d62a6e9594639b06af5",
+  "inverseExact": true,
+  "admission": {
+    "originalSha256": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb",
+    "derivedSha256": "7349530ffe58726025499698bb6cd8ee9d0d939738a0283901a1855fce249968",
+    "seams": [
+      [
+        "'../bochs-cpu3-native-owned-clock/derive.mjs'",
+        "\"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-owned-clock/derive.mjs\""
+      ],
+      [
+        "'../bochs-cpu3-native-combined-paging-ram/host.mjs'",
+        "\"/home/runner/work/bw-board/bw-board/baseline/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs\""
+      ],
+      [
+        "fileURLToPath(new URL('../../',import.meta.url))",
+        "\"/home/runner/work/bw-board/bw-board/baseline/\""
+      ],
+      [
+        "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+        "ebe2ac392c4f122cbd083aa979ed49923da7c25898cb1ad103911a30baff533f"
+      ]
+    ],
+    "inverseExact": true
+  },
+  "identity": {
+    "diagnosticManifest": {
+      "kind": "SOURCE_OWNED_BASELINE_INSPECTOR_DIAGNOSTIC",
+      "publicationRevision": "6ccb89042c601bdd9c6598adf642a8b06a1cfcd1",
+      "files": {
+        "/home/runner/work/bw-board/bw-board/publication/scripts/ci-profile-i80386-owned-baseline.py": "3a390779e73c80669bded8b3e6ac6ea88b12e2a54e13e0f2b2e1a4fcc9280d57",
+        "/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/derive.mjs": "f8fc837d24b3633ff0e471a28694dc0997b230fb49fe1e67e00df01f4cb26fa7",
+        "/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/alignment.mjs": "8a27b87b475caebb0b520a45b761b2fa5952ad878a1bc2c0d89ea6a83a58b4d7",
+        "/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/plan.json": "40fffc8104466ec3ac3c403ce6b1a60618862ffac14178d4e5e561ec03e5d6dd",
+        "/home/runner/work/bw-board/bw-board/publication/.github/workflows/i80386-owned-baseline-profile.yml": "d0e8000751105a34191491536aebf2756bfc4264edfb064a87bd36a4360d6ffc",
+        "/home/runner/work/bw-board/bw-board/publication/test/i80386-owned-baseline-profile.test.mjs": "5b4a3aabbd4dac7b0c5a72099a775206055af2d081d1fcc78b525e9fb49f8b9b"
+      },
+      "alignmentSha256": "7feb6ac4e4443d92d2065c199c6c12b6ef5880b44b04ff654b58abd300d77afc"
+    },
+    "diagnosticManifestSha256": "064b17c7619ada94e82ee0dac08bc3960330b7efd63d20239aeff4deea446cee",
+    "sourceRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+    "originalRunnerSha256": "68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b",
+    "generatorSha256": "f8fc837d24b3633ff0e471a28694dc0997b230fb49fe1e67e00df01f4cb26fa7",
+    "admissionSha256": "7349530ffe58726025499698bb6cd8ee9d0d939738a0283901a1855fce249968",
+    "kind": "EXACT_INVERSE_INSPECTOR_DERIVATIVE_NOT_FROZEN_RUNTIME"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "unit": "monotonic microseconds",
+  "setupBeginUs": 235535206,
+  "startCallBeginUs": 235535490,
+  "startCallEndUs": 235555488,
+  "executionBeginUs": 235555512,
+  "executionEndUs": 235679517,
+  "stopCallBeginUs": 235679546,
+  "stopCallEndUs": 235681548
+}

@@ -1,0 +1,11 @@
+{
+  "status": "OFFICIAL_PROFILE_ZIP_DIGEST_AND_SAFE_EXTRACTION_PASS_NOT_PROFILE_QUALIFICATION",
+  "runId": 37031895458,
+  "headSha": "6ccb89042c601bdd9c6598adf642a8b06a1cfcd1",
+  "conclusion": "success",
+  "artifactId": 11237781906,
+  "zipSha256": "09ceafcd30f8deae85df8cf96ac10fca9e98fc4362ed8ab12049ee1ad4c0c544",
+  "zipBytes": 14262761,
+  "entries": 986,
+  "uncompressedBytes": 34419446
+}

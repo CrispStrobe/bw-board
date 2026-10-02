@@ -1,0 +1,11 @@
+{
+  "status": "PASS_READONLY_PROFILE_ANALYZER_SOURCE_AND_SYNTHETIC_CONTROLS",
+  "helperHashes": {
+    "analyze.py": "9e5e8dc5a91aa98205effbf7f3acc61bd68e49a79532223e865bc0069918232b",
+    "source-controls.py": "d9c5122480d7a6c6c90579ca6922af85a895a6d64cc241e3febf6c340a3086f9",
+    "plan.json": "38a616f69d953948751b51916645ed5590aac9d05a59be5e21e6de8f679184c0",
+    "helper-pins.json": "7c413353c96ec35046c5d6fab3733562468c9dd6421bc22d71789387eacb966c",
+    "binding-template.json": "63b41d0e2f8d24f95848a703b02d92919153a3247eb6817b77aaf52d8e72cb08"
+  },
+  "scope": "Strict unique connected bounded profile tree and sample/time domains, monotonic phase window, mutually exclusive leaf partition and recursion-deduplicated overlapping inclusive function rows inspected. Exact source inverse recovers hosted resume URL; empty native close alias only classified with that resume ancestor, JS close remains ordinary JS. Original zero-based locations/unattributed/program/GC/idle remain explicit; interval intersections not CPU attribution. Source-control receipt authenticated; no actual analysis or profile/guest executed. Ready root populated read-only binding review."
+}

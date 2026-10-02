@@ -261,3 +261,5 @@ historical totals are not a statement of current coverage.
 ## License
 
 MIT. See [LICENSE](LICENSE) and [third-party notices](THIRD-PARTY.md).
+
+The fixed native baseline has [qualitative Inspector results](docs/I80386-OWNED-BASELINE-PROFILE-RESULTS.md), with full parity evidence and explicit attribution limits.

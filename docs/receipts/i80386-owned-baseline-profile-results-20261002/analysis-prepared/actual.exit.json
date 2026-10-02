@@ -1,0 +1,17 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "/mnt/volume1/tmp-astra/native-owned-baseline-profile-analysis-prepared-20261002/analyze.py",
+    "/mnt/volume1/tmp-astra/native-owned-baseline-profile-analysis-prepared-20261002/approved-bindings.json"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 0.47172534465789795,
+  "allPinsUnchanged": true,
+  "bindingSha256": "fb38167b447165802f8782dc88b6ebfeed98f7a3419d8753fdbe2d9ca16605cc",
+  "streams": {
+    "stdout": "62e49ef99d75d349114a0268c1d4a65514646413ff03de5a3d8afee61f4f822b",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

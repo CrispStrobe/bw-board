@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "/mnt/volume1/tmp-astra/native-owned-baseline-profile-analysis-prepared-20261002/source-controls.py"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 0.4732387028634548,
+  "beforeAfterIdentical": true,
+  "stdoutSha256": "16224aa7a43cbe88649fc11f57b8372b9df57925ca9c9b00cfa44b31f4d4d72b",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

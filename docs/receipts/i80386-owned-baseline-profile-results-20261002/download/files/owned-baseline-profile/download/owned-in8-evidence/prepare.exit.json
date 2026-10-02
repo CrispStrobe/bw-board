@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=512",
+    "scripts/prepare-bochs-cpu3-native-owned-in8.mjs",
+    "--prepare",
+    "/home/runner/work/_temp/owned-in8-prepared"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 1.067826910000008,
+  "streams": {
+    "stdout": {
+      "bytes": 27392,
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    }
+  }
+}
