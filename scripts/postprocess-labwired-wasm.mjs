@@ -17,6 +17,17 @@ export const BINARYEN = Object.freeze({
 export const FLAGS = Object.freeze(['-O3', '--strip-debug', '--strip-producers',
     '--enable-bulk-memory', '--enable-simd', '--enable-nontrapping-float-to-int',
     '--enable-sign-ext', '--enable-reference-types', '--enable-multivalue']);
+// Closed, ordered recipes: never accept caller-supplied optimizer flags.
+export const MODES = Object.freeze({
+    o3: FLAGS,
+    instructions: Object.freeze(['--optimize-instructions', '--dce', '--vacuum', ...FLAGS.slice(1)]),
+    locals: Object.freeze(['--simplify-locals', '--coalesce-locals',
+        '--optimize-instructions', '--dce', '--vacuum', ...FLAGS.slice(1)])
+});
+export function modeFlags (mode) {
+    assert(typeof mode === 'string' && Object.hasOwn(MODES, mode), 'Unknown optimizer mode');
+    return MODES[mode];
+}
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const inside = (parent, child) => {
     const suffix = relative(parent, child);
@@ -76,7 +87,8 @@ export function verifyInterfaces (beforeBytes, afterBytes) {
     // Descriptor equality is an ABI guard, NOT proof of instruction semantics.
 }
 
-export function postprocess ({source, out, optimizer, expectedRef, expectedWasmSha256, expectedInfoSha256}) {
+export function postprocess ({source, out, optimizer, expectedRef, expectedWasmSha256, expectedInfoSha256, mode = 'o3'}) {
+    const flags = modeFlags(mode); // Reject invalid modes before any I/O or execution.
     assert(!process.env.NODE_OPTIONS, 'Unset injected Node options');
     out = resolve(out);
     assert(!existsSync(out), 'Refusing to overwrite any output tree');
@@ -92,7 +104,7 @@ export function postprocess ({source, out, optimizer, expectedRef, expectedWasmS
             if (file !== 'labwired_wasm_bg.wasm') writeFileSync(join(out, target, file), regular(join(verified.source, target, file)), {flag: 'wx'});
         }
     }
-    const result = spawnSync(resolve(optimizer), [join(verified.source, 'nodejs/labwired_wasm_bg.wasm'), ...FLAGS,
+    const result = spawnSync(resolve(optimizer), [join(verified.source, 'nodejs/labwired_wasm_bg.wasm'), ...flags,
         '-o', join(out, 'nodejs/labwired_wasm_bg.wasm')], {encoding: 'utf8', timeout: 600000, maxBuffer: 4000000});
     writeFileSync(join(out, 'optimizer-stdout.txt'), result.stdout || '', {flag: 'wx'});
     writeFileSync(join(out, 'optimizer-stderr.txt'), result.stderr || '', {flag: 'wx'});
@@ -112,7 +124,7 @@ export function postprocess ({source, out, optimizer, expectedRef, expectedWasmS
     // builtAt/rawBytes describe the original Rust/bindgen build, not new compilation.
     info.postprocess = {schema: 'labwired.binaryen-pilot.v1', diagnosticOnly: true,
         processedAt: new Date().toISOString(), optimizer: 'binaryen', version: '123.0.0', versionOutput,
-        flags: [...FLAGS], toolSha256: BINARYEN.toolSha256, releaseArchiveSha256: BINARYEN.archiveSha256,
+        mode, flags: [...flags], toolSha256: BINARYEN.toolSha256, releaseArchiveSha256: BINARYEN.archiveSha256,
         releaseUrl: BINARYEN.url, sourceBuildInfoSha256: sha256(verified.metadata),
         sourceTargets: verified.info.targets, reusedIdenticalTargetModule: true,
         publication: false, appPinChanges: false};
@@ -123,14 +135,16 @@ export function postprocess ({source, out, optimizer, expectedRef, expectedWasmS
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
     const args = process.argv.slice(2), keys = ['source', 'out', 'optimizer', 'source-ref', 'source-wasm-sha256', 'source-info-sha256'];
-    assert.equal(args.length, keys.length * 2, 'Exactly six explicit options required');
+    assert(args.length === keys.length * 2 || args.length === (keys.length + 1) * 2, 'Six explicit options plus optional mode required');
     const options = {};
     for (let i = 0; i < args.length; i += 2) {
-        assert(keys.includes(args[i].slice(2)) && args[i].startsWith('--') && args[i + 1] && !args[i + 1].startsWith('--'), 'Unknown/missing option');
+        assert([...keys, 'mode'].includes(args[i].slice(2)) && args[i].startsWith('--') && args[i + 1] && !args[i + 1].startsWith('--'), 'Unknown/missing option');
         assert(!Object.hasOwn(options, args[i]), 'Duplicate option');
         options[args[i]] = args[i + 1];
     }
+    for (const key of keys) assert(Object.hasOwn(options, '--' + key), 'Missing explicit option: ' + key);
     const info = postprocess({source: options['--source'], out: options['--out'], optimizer: options['--optimizer'],
-        expectedRef: options['--source-ref'], expectedWasmSha256: options['--source-wasm-sha256'], expectedInfoSha256: options['--source-info-sha256']});
+        expectedRef: options['--source-ref'], expectedWasmSha256: options['--source-wasm-sha256'], expectedInfoSha256: options['--source-info-sha256'],
+        mode: options['--mode'] ?? 'o3'});
     console.log(JSON.stringify(info, null, 2));
 }

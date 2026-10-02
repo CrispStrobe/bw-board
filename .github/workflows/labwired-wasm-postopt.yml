@@ -2,6 +2,11 @@ name: LabWired pinned post-link optimizer experiment (unpublished)
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Closed optimizer recipe; diagnostic only, never production
+        type: choice
+        options: [o3, instructions, locals]
+        default: o3
       source_run:
         description: Original independently built artifact run (labwired-wasm-b)
         type: string
@@ -88,11 +93,12 @@ jobs:
           SOURCE_REF: ${{ inputs.source_ref }}
           SOURCE_WASM_SHA: ${{ inputs.source_wasm_sha256 }}
           SOURCE_INFO_SHA: ${{ inputs.source_info_sha256 }}
+          OPTIMIZER_MODE: ${{ inputs.mode }}
         run: |
           node scripts/postprocess-labwired-wasm.mjs --source original --out optimized \
             --optimizer "$RUNNER_TEMP/binaryen-version_123/bin/wasm-opt" \
             --source-ref "$SOURCE_REF" --source-wasm-sha256 "$SOURCE_WASM_SHA" \
-            --source-info-sha256 "$SOURCE_INFO_SHA"
+            --source-info-sha256 "$SOURCE_INFO_SHA" --mode "$OPTIMIZER_MODE"
       - name: Retain exact source-run provenance
         run: |
           cp "$RUNNER_TEMP/source-run.json" optimized/source-run.json

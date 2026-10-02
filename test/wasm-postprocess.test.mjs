@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {BINARYEN, FLAGS, sha256, verifySource, optimizerIdentity, verifyInterfaces, postprocess} from '../scripts/postprocess-labwired-wasm.mjs';
+import {BINARYEN, FLAGS, MODES, modeFlags, sha256, verifySource, optimizerIdentity, verifyInterfaces, postprocess} from '../scripts/postprocess-labwired-wasm.mjs';
 const ref = 'a'.repeat(40);
 const minimal = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
 function fixture (callback) {
@@ -83,6 +83,21 @@ test('optimizer mode is pinned and excludes unsafe semantic relaxations', () => 
     assert.match(BINARYEN.toolSha256, /^[a-f0-9]{64}$/);
     assert.match(BINARYEN.archiveSha256, /^[a-f0-9]{64}$/);
     assert.match(BINARYEN.url, /WebAssembly\/binaryen\/releases\/download\/version_123/);
+});
+test('targeted modes are closed, ordered, immutable and never relax semantics', () => {
+    assert.equal(modeFlags('o3'), FLAGS);
+    assert.deepEqual(modeFlags('instructions').slice(0, 3), ['--optimize-instructions', '--dce', '--vacuum']);
+    assert.deepEqual(modeFlags('locals').slice(0, 5), ['--simplify-locals', '--coalesce-locals', '--optimize-instructions', '--dce', '--vacuum']);
+    assert(Object.isFrozen(MODES));
+    for (const flags of Object.values(MODES)) {
+        assert(Object.isFrozen(flags));
+        assert(!flags.includes('--fast-math') && !flags.includes('--ignore-implicit-traps'));
+        assert.deepEqual(flags.slice(-FLAGS.length + 1), FLAGS.slice(1));
+    }
+    for (const mode of ['__proto__', 'constructor', '--fast-math', 'Oz', '', null]) {
+        assert.throws(() => modeFlags(mode), /Unknown optimizer mode/);
+        assert.throws(() => postprocess({mode}), /Unknown optimizer mode/);
+    }
 });
 test('hosted experiment is manual, independently reproduced, strictly tested and cannot publish', () => {
     const workflow = readFileSync(new URL('../.github/workflows/labwired-wasm-postopt.yml', import.meta.url), 'utf8');
