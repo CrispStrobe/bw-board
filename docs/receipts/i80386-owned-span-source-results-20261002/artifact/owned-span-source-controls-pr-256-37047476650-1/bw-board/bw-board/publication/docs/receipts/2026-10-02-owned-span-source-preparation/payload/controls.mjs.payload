@@ -1,0 +1,193 @@
+/** One bounded SOURCE-ONLY differential control run; never loads an addon or steps a CPU. */
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {resolve} from 'node:path';
+import {deriveOwnedSpanProvider} from './derive.mjs';
+const root=fileURLToPath(new URL('../../',import.meta.url));
+const folder=fileURLToPath(new URL('./',import.meta.url));
+const sha=x=>createHash('sha256').update(x).digest('hex');
+const manifest=JSON.parse(readFileSync(new URL('./baseline-source.json',import.meta.url)));
+const added=['baseline-source.json','span-method.txt','derive.mjs','provider.mjs','derivation.json','controls.mjs','plan.md'];
+const pins=()=>Object.fromEntries([...Object.keys(manifest.hashes).map(p=>[p,resolve(root,p)]),...added.map(p=>['scripts/bochs-cpu3-native-owned-span/'+p,resolve(folder,p)])].map(([p,f])=>[p,sha(readFileSync(f))]));
+const before=pins();
+for(const [p,h] of Object.entries(manifest.hashes))assert.equal(before[p],h,'original source '+p);
+const derived=deriveOwnedSpanProvider(),meta=JSON.parse(readFileSync(new URL('./derivation.json',import.meta.url)));
+assert.equal(derived.baseSha256,meta.baseSha256);assert.equal(derived.providerSha256,meta.providerSha256);
+assert.equal(derived.methodSha256,meta.methodSha256);assert.deepEqual(derived.edits,meta.edits);
+assert.equal(sha(readFileSync(new URL('./provider.mjs',import.meta.url))),derived.providerSha256);
+let checks=0;const cases=[];
+function equal(a,b,label){checks++;assert.ok(JSON.stringify(a,(_,v)=>typeof v==='bigint'?v.toString():v)===JSON.stringify(b,(_,v)=>typeof v==='bigint'?v.toString():v),label);}
+function truth(x,label){checks++;assert.ok(x,label);}
+function outcome(fn){try{return {ok:true,value:fn()};}catch(e){return {ok:false,name:e.name,message:e.message,code:e.code};}}
+function same(a,b,label){const x=outcome(a),y=outcome(b);equal(x,y,label);return x;}
+function record(name,fn){const start=checks;fn();cases.push({name,checks:checks-start});}
+const empty=()=>new Uint32Array();
+function init(p){p.callbacks.clockTransfer(empty(),1);p.begin();p.callbacks.clockTransfer(empty(),2);return p;}
+function out(p,port,value){p.callbacks.packedScalar(3,port,1,value);p.callbacks.clockTransfer(empty(),6);}
+function gate(p,on){out(p,0x64,0xd1);out(p,0x60,on?3:1);p.callbacks.clockTransfer(Uint32Array.of(2),5);}
+function pause(p){p.end();const s=p.checkpoint();p.begin();p.callbacks.clockTransfer(empty(),2);return s;}
+function memoryDigest(board){return sha(board.machine.mem);}
+function boardState(board){return {state:board.inspect(),pages:board.pages.map(p=>({raw:p.raw,decoded:p.decoded,kind:p.kind,generation:p.generation,mappingEpoch:p.mappingEpoch,boardA20:p.boardA20,sha256:p.sha256})),ram:memoryDigest(board)};}
+const seamFiles=[];const seamPins={};
+function seam(text,name){
+ const old=' const board=new In8Board(rom,{compactSink});';const next=old+'\n controlBoards.push(board);';
+ assert.equal(text.split(old).length,2);const prefix='export const controlBoards=[];\n';
+ const generated=prefix+text.replace(old,next);assert.equal(generated.slice(prefix.length).replace(next,old),text,'test seam inverse');
+ const path=resolve(folder,name);writeFileSync(path,generated,{flag:'wx'});seamFiles.push(path);seamPins[name]={sourceSha256:sha(text),generatedSha256:sha(generated),scope:'Test-only private board capture; exact inverse, absent from production provider.'};return new URL(name,import.meta.url);
+}
+try{
+ const originalText=readFileSync(new URL('../bochs-cpu3-native-owned-in8/provider.mjs',import.meta.url),'utf8');
+ const relocated=originalText.replace("from './reset-witness.mjs'","from '../bochs-cpu3-native-owned-in8/reset-witness.mjs'");
+ assert.equal(relocated.replace("from '../bochs-cpu3-native-owned-in8/reset-witness.mjs'","from './reset-witness.mjs'"),originalText);
+ const baselineSeam=await import(seam(relocated,'baseline-control-seam.mjs'));
+ const candidateSeam=await import(seam(derived.bytes.toString(),'candidate-control-seam.mjs'));
+ const baseline=await import('../bochs-cpu3-native-owned-in8/provider.mjs');
+ const candidate=await import('./provider.mjs');
+ const host=await import('../bochs-cpu3-native-combined-paging-ram/host.mjs');
+ const events=[[],[]],providers=[init(baselineSeam.createOwnedIn8Provider({compactSink:e=>events[0].push(structuredClone(e))})),init(candidateSeam.createOwnedSpanProvider({compactSink:e=>events[1].push(structuredClone(e))}))];
+ const [a,b]=providers,[ba,bb]=[baselineSeam.controlBoards[0],candidateSeam.controlBoards[0]];
+ const call=(name,...args)=>same(()=>a.callbacks[name](...args),()=>b.callbacks[name](...args),'callback '+name);
+ const span=(raw,width,options)=>same(()=>host.NativeCombinedPagingRamHost.prototype.span.call(ba,raw,width,options),()=>bb.span(raw,width,options),'span '+raw+'/'+width);
+ function identical(label){equal(boardState(ba),boardState(bb),label);equal(events[0],events[1],label+' journal');}
+ record('private factory API and original method preservation',()=>{
+  equal(Object.keys(a),Object.keys(b),'same private API');equal(Object.keys(a.callbacks),Object.keys(b.callbacks),'same callbacks');
+  for(const name of ['readPhysical','writePhysical','admitExecutePage','_memory','_call','quantum','nativeTick','outPort','acknowledgeIrq','inspect','stageLine','beginRun','endRun','close'])truth(ba[name]===bb[name],'original '+name);
+  truth(ba.span!==bb.span,'only span is specialized');identical('initial actual board');
+ });
+ record('every actual page certificate and bounded edge spans in both A20 states',()=>{
+  for(const on of [true,false]){
+   if(!on){gate(a,false);gate(b,false);}
+   for(let page=0;page<ba.machine._page.length;page++){
+    const raw=page*4096,decoded=ba.machine._decode386(raw);
+    equal(ba._class(decoded),bb._class(bb.machine._decode386(raw)),'actual page classification');
+    span(raw,16);span(raw+4080,16);
+   }
+   for(const raw of [0,0x7000,0x107000,0xf0000,0xff0000,0xffff0000,0xfffff000]){
+    const decoded=ba.machine._decode386(raw),kind=ba._class(decoded);
+    for(let i=0;i<4096;i++){
+     equal(ba.machine._decode386(raw+i),bb.machine._decode386(raw+i),'full-page decode');
+     equal(ba._class(ba.machine._decode386(raw+i)),bb._class(bb.machine._decode386(raw+i)),'full-page class');
+     if(kind===1||kind===2){equal(ba.machine._decode386(raw+i),decoded+i,'affine full page');equal(ba._class(decoded+i),kind,'uniform full page');}
+    }
+    for(let width=1;width<=16;width++)for(const offset of [0,1,13,2048,4096-width])span(raw+offset,width);
+   }
+   if(!on){const r=span(0xfffff000,16);truth(r.ok&&r.value.decoded===0xffeff000&&r.value.kind===4,'A20 OFF high reset is unmapped');}
+  }
+  gate(a,true);gate(b,true);identical('post mapping certificate checks');
+ });
+ record('seeded bounded span cross-check and exact invalid argument errors',()=>{
+  let seed=0x386a20;
+  for(let i=0;i<1024;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const raw=seed;seed=(Math.imul(seed,1664525)+1013904223)>>>0;span(raw,1+(seed%16));}
+  for(const raw of [undefined,NaN,-1,0.5,0x100000000,0xfff,0x7fff,0x9ffff,0xa0000,0xbffff,0xc0000,0xffff0000,0xfffff000,0xffffffff])
+   for(const width of [0,-1,0.5,NaN,1,2,16,17,4095,4096,4097]){span(raw,width);span(raw,width,{execute:true});}
+  for(const raw of [0x7000,0x107000,0x8000,0xf0000,0xff0000,0xfffff000,0x7001])for(const width of [1,16,4095,4096])span(raw,width,{execute:true});
+  identical('invalid span effects unchanged');
+ });
+ record('actual read/write replies, complete operands and immutable PAGE bytes',()=>{
+  call('writePhysical',0x7000,Uint8Array.of(0x12,0x34,0x56,0x78));call('writePhysical',0x107000,Uint8Array.of(0x90,0xab));
+  const overlapA=ba.machine.mem.subarray(0x7000,0x7003),overlapB=bb.machine.mem.subarray(0x7000,0x7003);
+  same(()=>a.callbacks.writePhysical(0x7001,overlapA),()=>b.callbacks.writePhysical(0x7001,overlapB),'overlap copied operand');
+  call('writePhysical',0xf0000,Uint8Array.of(0x55));call('writePhysical',0xc0000,Uint8Array.of(0x55));
+  for(const raw of [0x7000,0x107000,0xf0000,0xc0000,0xfffff000])call('readPhysical',raw,16);
+  const retained=[];
+  for(const on of [true,false]){
+   if(!on){gate(a,false);gate(b,false);}
+   for(const raw of [0x7000,0x107000,0xf0000,0xff0000,0xffff0000,0xfffff000]){
+    const r=call('admitExecutePage',raw);
+    if(r.ok){const expected=Uint8Array.from({length:4096},(_,i)=>ba.machine._read386(raw+i));equal(r.value.bytes,expected,'all 4096 actual board bytes');retained.push({a:ba.pages.at(-1),b:bb.pages.at(-1),hash:r.value.sha256});}
+   }
+   if(!on){call('writePhysical',0x107000,Uint8Array.of(0x99));}
+  }
+  for(const p of retained){equal(sha(p.a.bytes),p.hash,'baseline PAGE detached');equal(sha(p.b.bytes),p.hash,'candidate PAGE detached');}
+  gate(a,true);gate(b,true);identical('physical effects and page metadata');
+ });
+ record('slow/mixed/MMIO/overlay and nonaffine decoders use original fallback',()=>{
+  for(const board of [ba,bb]){board.machine._mmio.push({start:0x8005,end:0x8006});board.machine._buildPageTable();}
+  span(0x8000,16);span(0x8005,1);
+  for(const board of [ba,bb]){board.machine._mmio.pop();board.machine._buildPageTable();}
+  for(const [field,value] of [['_xv6Mp',{}],['vgaMemory',{}],['_resetRomAliasBase',0xff0001]]){
+   const old=[ba.machine[field],bb.machine[field]];ba.machine[field]=bb.machine[field]=value;
+   span(0x7000,16);span(0xfffff000,4096,{execute:true});
+   if(field!=='_resetRomAliasBase'){const r=call('admitExecutePage',0xf0000);truth(!r.ok&&r.message.includes('overlay'),'actual PAGE overlay denial');}
+   ba.machine[field]=old[0];bb.machine[field]=old[1];
+  }
+  const decodeA=ba.machine._decode386,decodeB=bb.machine._decode386;
+  ba.machine._decode386=function(raw){return raw===0x7007?0x8007:decodeA.call(this,raw);};
+  bb.machine._decode386=function(raw){return raw===0x7007?0x8007:decodeB.call(this,raw);};
+  const r=span(0x7000,16);truth(!r.ok&&r.message.includes('noncontiguous'),'interior nonaffine denial');
+  delete ba.machine._decode386;delete bb.machine._decode386;
+  const rawInvalid=0xffffffff;call('readPhysical',rawInvalid,2);call('writePhysical',0x7fff,Uint8Array.of(1,2));
+  for(const width of [0,17,NaN,-1,0.5])call('readPhysical',0x7000,width);
+  for(const bytes of [new Uint8Array(),new Uint8Array(17),[1],null])call('writePhysical',0x7000,bytes);
+  identical('fallback controls retain board');
+ });
+ record('all 64 PAGE slots, generation slots and first failing guards',()=>{
+  while(ba.pages.length<64){const r=call('admitExecutePage',0xf0000);truth(r.ok,'PAGE capacity slot');equal(r.value.bytes,ba.machine.mem.subarray(0xf0000,0xf1000),'complete slot bytes');}
+  const beforeDenied=[boardState(ba),boardState(bb)];
+  for(const raw of [0xf0000,undefined,0xa0000,0xffffffff]){const r=call('admitExecutePage',raw);truth(!r.ok&&r.message.includes('persistent page capacity'),'PAGE cap first');}
+  equal(boardState(ba),beforeDenied[0],'PAGE denial before baseline effect');equal(boardState(bb),beforeDenied[1],'PAGE denial before candidate effect');
+  let page=0x20000;
+  while(ba.generations.size<64){if(!ba.generations.has(page)){const r=call('writePhysical',page,Uint8Array.of(page>>>12));truth(r.ok,'generation entry');}page+=4096;}
+  const beforeNew=[memoryDigest(ba),memoryDigest(bb)];const r=call('writePhysical',0x6e000,Uint8Array.of(42));truth(!r.ok&&r.message.includes('generation capacity'),'generation 65 denied');equal(memoryDigest(ba),beforeNew[0],'baseline generation deny RAM');equal(memoryDigest(bb),beforeNew[1],'candidate generation deny RAM');
+  const prior=[ba.generations.get(0x7000),bb.generations.get(0x7000)];ba.generations.set(0x7000,0xffffffff);bb.generations.set(0x7000,0xffffffff);
+  const overflow=call('writePhysical',0x7000,Uint8Array.of(5));truth(!overflow.ok&&overflow.message.includes('generation overflow'),'generation overflow before effect');
+  call('writePhysical',0x7000,new Uint8Array(17));ba.generations.set(0x7000,prior[0]);bb.generations.set(0x7000,prior[1]);identical('capacity and error chronology');
+ });
+ record('lease, mapping, complete tape preflight and independent caps',()=>{
+  out(a,0x64,0xd1);out(b,0x64,0xd1);out(a,0x60,1);out(b,0x60,1);
+  const blocked=call('readPhysical',0x7000,1);truth(!blocked.ok&&blocked.message.includes('lease'),'mapping callback denied');
+  call('clockTransfer',Uint32Array.of(3),5);call('clockTransfer',Uint32Array.of(2),5);
+  const beforeMalformed=[boardState(ba),boardState(bb)];call('clockTransfer',Uint32Array.of(1,99),5);equal(boardState(ba),beforeMalformed[0],'whole tape baseline preflight');equal(boardState(bb),beforeMalformed[1],'whole tape candidate preflight');
+  equal(pause(a),pause(b),'reset per-resume caps');
+  a.end();b.end();call('readPhysical',0x7000,1);call('admitExecutePage',0xf0000);equal(a.checkpoint(),b.checkpoint(),'paused board');a.close();b.close();call('readPhysical',0x7000,1);equal(events[0],events[1],'complete callback journal');
+ });
+ record('fresh actual factory independent slice/total caps and due guard',()=>{
+  const pa=init(baselineSeam.createOwnedIn8Provider()),pb=init(candidateSeam.createOwnedSpanProvider());
+  const ca=baselineSeam.controlBoards[1],cb=candidateSeam.controlBoards[1];
+  const clock=words=>same(()=>pa.callbacks.clockTransfer(words,5),()=>pb.callbacks.clockTransfer(words,5),'fresh cap clock');
+  truth(ca.machine._chipDeadline===6000&&cb.machine._chipDeadline===6000,'unchanged initial horizon');
+  truth(clock(new Uint32Array(600).fill(1)).ok,'exactly 600 N admitted');
+  let r=clock(Uint32Array.of(1));truth(!r.ok&&r.message.includes('independent N cap'),'slice N 601 before effects');
+  truth(clock(new Uint32Array(300).fill(2)).ok,'exactly 300 Q admitted');
+  r=clock(Uint32Array.of(2));truth(!r.ok&&r.message.includes('independent Q cap'),'slice Q 301 before effects');
+  const beforeDenied=[boardState(ca),boardState(cb)];clock(Uint32Array.of(1));clock(Uint32Array.of(2));equal(boardState(ca),beforeDenied[0],'slice caps baseline no effects');equal(boardState(cb),beforeDenied[1],'slice caps candidate no effects');
+  const debt=[ca.machine._chipDebt,cb.machine._chipDebt];ca.machine._chipDebt=ca.machine._chipDeadline;cb.machine._chipDebt=cb.machine._chipDeadline;
+  r=clock(Uint32Array.of(2));truth(!r.ok&&r.message.includes('Q after due'),'due guard precedes Q cap');ca.machine._chipDebt=debt[0];cb.machine._chipDebt=debt[1];
+  const n=[ca.nativeTicks,cb.nativeTicks];ca.nativeTicks=cb.nativeTicks=160000;
+  r=clock(Uint32Array.of(1));truth(!r.ok&&r.message.includes('independent N cap'),'total N 160001 denied');ca.nativeTicks=n[0];cb.nativeTicks=n[1];
+  const q=[ca.successfulQuanta,cb.successfulQuanta];ca.successfulQuanta=cb.successfulQuanta=150000;
+  r=clock(Uint32Array.of(2));truth(!r.ok&&r.message.includes('independent Q cap'),'total Q 150001 denied');ca.successfulQuanta=q[0];cb.successfulQuanta=q[1];
+  equal(boardState(ca),beforeDenied[0],'total/due baseline no effects after test seam restored');equal(boardState(cb),beforeDenied[1],'total/due candidate no effects after test seam restored');
+  pa.end();pb.end();equal(pa.checkpoint(),pb.checkpoint(),'fresh cap complete board');pa.close();pb.close();
+ });
+ record('unmodified production factories: sink reentry and exception effects',()=>{
+  const streams=[[],[]],ps=[];
+  for(const [i,factory] of [baseline.createOwnedIn8Provider,candidate.createOwnedSpanProvider].entries()){
+   let p;let armed=false;
+   p=init(factory({compactSink:e=>{streams[i].push(structuredClone(e));const denied=outcome(()=>p.callbacks.readPhysical(0x580,1));truth(!denied.ok&&denied.message.includes('lease'),'sink reentry');if(armed&&e.operation==='write')throw Error('source-control sink');}}));
+   armed=true;const r=outcome(()=>p.callbacks.writePhysical(0x580,Uint8Array.of(77)));truth(!r.ok&&r.message==='source-control sink','sink exception');
+   p.end();const state=p.checkpoint();p.begin();p.callbacks.clockTransfer(empty(),2);armed=false;
+   const read=p.callbacks.readPhysical(0x580,1);truth(read.bytes[0]===77&&read.generation===1,'write precedes sink failure');p.end();ps.push({state,read,terminal:p.terminal()});p.close();
+  }
+  equal(ps[0],ps[1],'production factory full state/whole RAM digest');equal(streams[0],streams[1],'production journal');
+ });
+ record('unmodified production CAPOFF factories retain actual callback results',()=>{
+  const pa=init(baseline.createOwnedIn8Provider()),pb=init(candidate.createOwnedSpanProvider());
+  for(const raw of [0x7000,0x107000,0xf0000])same(()=>pa.callbacks.writePhysical(raw,Uint8Array.of(0x12,0x34)),()=>pb.callbacks.writePhysical(raw,Uint8Array.of(0x12,0x34)),'CAPOFF write');
+  for(const on of [true,false]){
+   if(!on){gate(pa,false);gate(pb,false);}
+   for(const raw of [0x7000,0x107000,0xf0000,0xfffff000]){
+    same(()=>pa.callbacks.readPhysical(raw,16),()=>pb.callbacks.readPhysical(raw,16),'CAPOFF read');
+    same(()=>pa.callbacks.admitExecutePage(raw),()=>pb.callbacks.admitExecutePage(raw),'CAPOFF complete PAGE');
+   }
+  }
+  const clocks=same(()=>pa.callbacks.clockTransfer(Uint32Array.of(1,2),5),()=>pb.callbacks.clockTransfer(Uint32Array.of(1,2),5),'CAPOFF clocks');truth(clocks.ok,'CAPOFF actual ordered clock effects');
+  pa.end();pb.end();equal(pa.checkpoint(),pb.checkpoint(),'CAPOFF whole board');equal(pa.terminal(),pb.terminal(),'CAPOFF whole RAM');pa.close();pb.close();
+ });
+ const after=pins();equal(after,before,'all source before/after pins');
+ console.log(JSON.stringify({status:'SOURCE_ONLY_PRIVATE_UNIFORM_SPAN_DIFFERENTIAL_CONTROLS_PASS',checks,cases,originalRevision:manifest.revision,originalSourceCount:Object.keys(manifest.hashes).length,providerSha256:derived.providerSha256,sourceInputs:before,sourceAfter:after,testSeams:seamPins,scope:'One bounded source control run of actual board callbacks; no addon, native build, CPU guest execution, profile or speed result.'},null,2));
+}finally{
+ for(const path of seamFiles)unlinkSync(path);
+}

@@ -1,0 +1,70 @@
+{
+  "status": "WORKFLOW_CONTEXT_FAILURE_CORRECTED_LOCALLY_PENDING_EXACT_HEAD_GRANT",
+  "recordedUtc": "2026-10-02T18:26:16.052549+00:00",
+  "prNumber": 256,
+  "previousPublishedHead": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+  "correctionHead": "6422a7824a1143f99d8ad206a41fb10146933840",
+  "workflowSha256": "8bc5369afcb1a50d84e0bfc5a60b77429d87dd8a95f06a370e6bf7e70ba89b70",
+  "failedValidationRunId": 37047175179,
+  "failedRunJobs": 0,
+  "sourceControlChildLaunched": false,
+  "correctedHeadPushed": true,
+  "change": "Move runner.temp values from forbidden job env into allowed step env. Seven payloads/wrapper/binding/materializer unchanged.",
+  "contextReference": "https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability",
+  "rootPushGrantRecordedUtc": "2026-10-02T18:26:40.173398+00:00",
+  "prePushHead": "6422a7824a1143f99d8ad206a41fb10146933840",
+  "prePushClean": true,
+  "authorization": "Parent root reviewed workflow-only SHA8bc5369 correction and authorized corrected-head push / first actual automatic PR source child, same fixed bounds; no manual/local/native execution.",
+  "runsAfterCorrection": [
+    {
+      "id": 37047476695,
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_sha": "6422a7824a1143f99d8ad206a41fb10146933840",
+      "status": "queued",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047476695"
+    },
+    {
+      "id": 37047476718,
+      "name": "Harris native qualification",
+      "path": ".github/workflows/harris-native.yml",
+      "event": "pull_request",
+      "head_sha": "6422a7824a1143f99d8ad206a41fb10146933840",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047476718"
+    },
+    {
+      "id": 37047476650,
+      "name": "Owned 386 private span source controls",
+      "path": ".github/workflows/i80386-owned-span-source-controls.yml",
+      "event": "pull_request",
+      "head_sha": "6422a7824a1143f99d8ad206a41fb10146933840",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047476650"
+    },
+    {
+      "id": 37047468731,
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "event": "push",
+      "head_sha": "6422a7824a1143f99d8ad206a41fb10146933840",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047468731"
+    },
+    {
+      "id": 37047468603,
+      "name": "Harris native qualification",
+      "path": ".github/workflows/harris-native.yml",
+      "event": "push",
+      "head_sha": "6422a7824a1143f99d8ad206a41fb10146933840",
+      "status": "queued",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047468603"
+    }
+  ]
+}
