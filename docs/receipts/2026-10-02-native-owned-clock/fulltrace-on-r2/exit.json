@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-native-owned-clock-20261002/scripts/run-i80386-native-owned-clock.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-clock-fulltrace-on-r2-20261002/input.json"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 20.936210418120027,
+  "streams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 149865654,
+      "sha256": "96e51063d64759a208d8376580d97c6171c9851b5a38c8eeb1aa8c0fe11dd96f"
+    }
+  },
+  "scope": "diagnostic actual fixed-ROM candidate; no throughput or broader guest qualification"
+}

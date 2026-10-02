@@ -1,0 +1,6 @@
+{"reason":1,"ordinal":1,"name":"query"}
+{"n":"0","q":"0","ordinal":2,"name":"initialized"}
+{"reason":2,"ordinal":3,"name":"query"}
+{"reason":4,"count":2,"logicalBefore":1,"ordinal":4,"name":"commit-enter"}
+{"reply":[1,1,10,6,6000,0,1],"logicalAfter":3,"ordinal":5,"name":"commit-applied"}
+{"control":"field-q","scope":"actual logical effects precede native denial","ordinal":6,"name":"malformed-reply"}

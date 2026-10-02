@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/5-H4.input.json"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 3.358107455074787,
+  "streams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 406,
+      "sha256": "91d6e251787d8e00d711b2b1eede6f9065f878ab1a93673ef2bd5333e9c64038"
+    }
+  }
+}

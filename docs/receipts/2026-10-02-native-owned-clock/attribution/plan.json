@@ -1,0 +1,14 @@
+{
+  "status":"PREPARED_NOT_EXECUTED",
+  "revision":"7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "cells":["timing-only","timing-worker-profile"],
+  "reference":"Existing authenticated measured ABI3 CAPOFF capture; no new reference or variance repeat",
+  "execution":"Production private worker, same whole-resume IPC, same 439 resumes and six selected Q cuts, native resume snapshots preserved",
+  "windows":{"profileStart":"After native creation, during startup before parent ready/executionCPU","profileStop":"Diagnostic finish message after executionCPU captured, before terminal settlement","cpu":"Original process.cpuUsage execution window across parent and worker threads; diagnostic profile setup/stop outside it"},
+  "buckets":["provider clock inclusive/preflight/ordered replay/state reply","worker native resume inclusive","worker request parse/stage/end/serialize/post enqueue","factory request roundtrip","parent JSON request/response/checkpoint"],
+  "overlap":"Inclusive and nested buckets overlap; instrumentation and profile overhead affect execution. Not another performance gate.",
+  "ipcResidual":"Factory resume roundtrip minus worker resume processing-to-ready includes queue/transport/enqueue/parent delivery; never claim pure transport.",
+  "guardEffects":"Exact inverse derivations retain original guards/effects and original callback loops. Diagnostic finalize performs no board/native callbacks.",
+  "limits":{"heapMiB":512,"seconds":120,"fileMiB":256,"core":0,"regularFiles":true},
+  "stopOnFailure":true
+}

@@ -1,0 +1,7 @@
+{
+  "status": "INITIAL_OFFLINE_COMPARISON_REJECTED_SERIALIZATION_SHAPE",
+  "field": "final.sliceBytes",
+  "candidate": "array160",
+  "H4": "contiguous indexed object160",
+  "followup": "strict bijective160byte conversion in offline comparator; no CPU/state bytes masked; no guest rerun"
+}

@@ -1,0 +1,9 @@
+{"reason":1,"ordinal":1,"name":"query"}
+{"n":"0","q":"0","ordinal":2,"name":"initialized"}
+{"reason":2,"ordinal":3,"name":"query"}
+{"reason":4,"count":2,"logicalBefore":1,"ordinal":4,"name":"commit-enter"}
+{"reply":[1,1,10,6,6000,0,1],"logicalAfter":3,"ordinal":5,"name":"commit-applied"}
+{"reason":11,"count":2,"logicalBefore":4,"ordinal":6,"name":"commit-enter"}
+{"reply":[2,2,16,12,6000,0,1],"logicalAfter":6,"ordinal":7,"name":"commit-applied"}
+{"n":"2","q":"2","reason":1,"chargedN":2,"chargedQ":2,"clockTransfers":{"transfers":"4","commits":"2","words":"4"},"ordinal":8,"name":"returned"}
+{"ordinal":9,"name":"done"}

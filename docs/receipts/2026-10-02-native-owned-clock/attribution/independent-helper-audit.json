@@ -1,0 +1,23 @@
+{
+  "status": "PASS_SOURCE_ONLY_ATTRIBUTION_HELPER_AUDIT_NOT_EXECUTED",
+  "checks": 235,
+  "derivatives": 4,
+  "exactInverseEdits": 38,
+  "sourceInputs": 86,
+  "sourceRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "helperHashes": {
+    "generate.py": "f0350e214d7ddbc6b783d404da757c2f2b89a68372e6c222a4b3a284e3e99215",
+    "timing.mjs": "67a90bff00b3c4ec9129262c93452558da96b0d2d15e5879dd0efb48a8031a33",
+    "provider.mjs": "f27ba8c78417ed33d8d108263282114a41be29f2615740132dcfa612e4224ce3",
+    "worker.mjs": "ac258bcabd42c09ad9fe7d06791141194ab2a8926097b15d3a8da01c70e497b8",
+    "factory.mjs": "bcdb71ed115f00704b75ed3a425decc9ddcdf3f069d92148bb8e686e4ac54224",
+    "driver.mjs": "d0abed74efc246547f024aeefc3eb9c1ff1276d38851ee8e4f61ce33656fb1cd",
+    "derivation.json": "cd503a095ad4b051a38f3de5528ed547cf6ca3b273c0fd4479e4598a308733f9",
+    "attribution-identity.json": "f354a4d8a37ae385604691378e3fbf581624218116dd68faf83d45557e3753f7",
+    "plan.json": "50329e40577e7ac5887b4331fcc4fbf0e3ee0b501284bc34a1ef86531e6796db",
+    "run.py": "a25ab8f8946480988669ca1586f3469c91a28a501191d941dd31ff0f66aaff52"
+  },
+  "profileWindow": "setup/start aftercreate before ready; stop message afterexecutionCPU before settlement",
+  "executionCounts": "439 original resumes and6checkpoints; workerclock9203 excluding startup INIT; finalize excluded from execution sums",
+  "scope": "timing buckets overlap and perturbcost; IPC residual not puretransport; distinct diagnostic derivative identity; priorCPUgateFAIL remains"
+}
