@@ -1,0 +1,199 @@
+name: LabWired pinned post-link optimizer experiment (unpublished)
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Original independently built artifact run (labwired-wasm-b)
+        type: string
+        default: '36915940413'
+      source_ref:
+        description: Exact original core source commit
+        type: string
+        default: '43b2d62f5a0fa24ae0b38a645069f5aaa78af685'
+      source_wasm_sha256:
+        description: Exact original module SHA-256
+        type: string
+        default: '7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d'
+      source_info_sha256:
+        description: Exact original build-B BUILD-INFO SHA-256
+        type: string
+        default: 'd3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16'
+      source_tool_head:
+        description: Exact original Rust/bindgen build workflow commit
+        type: string
+        default: '1cac10ba28ddd5e71c5a7e32437a3b0080d47f14'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: [a, b]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.23.3'
+      - name: Verify original source-run correctness and independent build gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run }}
+          SOURCE_TOOL_HEAD: ${{ inputs.source_tool_head }}
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          [[ "$SOURCE_TOOL_HEAD" =~ ^[a-f0-9]{40}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs?per_page=100" > "$RUNNER_TEMP/source-jobs.json"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const run = JSON.parse(readFileSync(process.env.RUNNER_TEMP + '/source-run.json'));
+          const jobs = JSON.parse(readFileSync(process.env.RUNNER_TEMP + '/source-jobs.json')).jobs;
+          assert.equal(run.status, 'completed');
+          assert.equal(run.head_sha, process.env.SOURCE_TOOL_HEAD);
+          for (const name of ['build (a)', 'build (b)', 'determinism', 'test']) {
+            const matches = jobs.filter(j => j.name === name);
+            assert.equal(matches.length, 1);
+            assert.equal(matches[0].conclusion, 'success');
+          }
+          // A failed motion floor is preserved, not interpreted as failed integration.
+          assert.equal(jobs.find(j => j.name === 'publish')?.conclusion, 'skipped');
+          NODE
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: labwired-wasm-b
+          path: original
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+      - name: Validate build guards before transforming actual engine bytes
+        run: node --test test/wasm-postprocess.test.mjs
+      - name: Download hash-pinned optimizer archive and extract only the pinned binary
+        run: |
+          node --input-type=module <<'NODE'
+          import {BINARYEN, sha256} from './scripts/postprocess-labwired-wasm.mjs';
+          import {writeFileSync} from 'node:fs';
+          const response = await fetch(BINARYEN.url);
+          if (!response.ok) throw Error('Optimizer download failed: ' + response.status);
+          const bytes = Buffer.from(await response.arrayBuffer());
+          if (sha256(bytes) !== BINARYEN.archiveSha256) throw Error('Optimizer archive hash mismatch');
+          writeFileSync(process.env.RUNNER_TEMP + '/binaryen.tgz', bytes, {flag: 'wx'});
+          NODE
+          tar -xzf "$RUNNER_TEMP/binaryen.tgz" -C "$RUNNER_TEMP" binaryen-version_123/bin/wasm-opt
+      - name: Generate distinct artifact with explicit transformation metadata
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          SOURCE_WASM_SHA: ${{ inputs.source_wasm_sha256 }}
+          SOURCE_INFO_SHA: ${{ inputs.source_info_sha256 }}
+        run: |
+          node scripts/postprocess-labwired-wasm.mjs --source original --out optimized \
+            --optimizer "$RUNNER_TEMP/binaryen-version_123/bin/wasm-opt" \
+            --source-ref "$SOURCE_REF" --source-wasm-sha256 "$SOURCE_WASM_SHA" \
+            --source-info-sha256 "$SOURCE_INFO_SHA"
+      - name: Retain exact source-run provenance
+        run: |
+          cp "$RUNNER_TEMP/source-run.json" optimized/source-run.json
+          cp "$RUNNER_TEMP/source-jobs.json" optimized/source-jobs.json
+          lscpu > optimized/optimizer-runner.txt
+          node --version >> optimized/optimizer-runner.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: labwired-wasm-${{ matrix.leg }}
+          path: optimized/
+          if-no-files-found: error
+          retention-days: 7
+  determinism:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: labwired-wasm-a, path: a}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: labwired-wasm-b, path: b}
+      - name: Two independent runners must reproduce every module and glue byte
+        run: |
+          for target in nodejs web; do
+            for file in labwired_wasm.js labwired_wasm_bg.wasm; do
+              cmp "a/$target/$file" "b/$target/$file"
+              sha256sum "a/$target/$file"
+            done
+          done
+          cmp a/SOURCE-BUILD-INFO.json b/SOURCE-BUILD-INFO.json
+  test:
+    needs: [build, determinism]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.23.3'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: labwired-wasm-b, path: optimized}
+      - name: Install unchanged locked adapters and actual ARM guest compiler
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+      - name: Mark original glue as CommonJS
+        run: node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("optimized/nodejs/package.json", JSON.stringify({type:"commonjs"}));'
+      - name: All actual integration tests must execute without failure or skips
+        env:
+          LABWIRED_WASM: ${{ github.workspace }}/optimized/nodejs
+        run: |
+          set -euo pipefail
+          node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
+            test/labwired-roundtrip.test.mjs test/pad-drive-parity.test.mjs \
+            test/labwired-firmware-only.test.mjs test/labwired-microbit-matrix.test.mjs \
+            test/labwired-input-boundary.test.mjs 2>&1 | tee integration.txt
+          tests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' integration.txt | tail -1)
+          fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' integration.txt | tail -1)
+          skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' integration.txt | tail -1)
+          echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
+          [ "${tests:-0}" -ge 101 ] && [ "${fails:-1}" = 0 ] && [ "${skips:-1}" = 0 ]
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: postopt-integration
+          path: integration.txt
+          if-no-files-found: warn
+          retention-days: 7
+  motion:
+    needs: [build, determinism]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.23.3'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: labwired-wasm-b, path: optimized}
+      - name: Install unchanged guest compiler
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+      - name: Mark original glue and retain runner provenance
+        run: |
+          node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("optimized/nodejs/package.json", JSON.stringify({type:"commonjs"}));'
+          lscpu > motion-runner.txt
+          node --version >> motion-runner.txt
+          arm-none-eabi-gcc --version >> motion-runner.txt
+      - name: Actual motion guest and unchanged every-window realtime floor
+        env:
+          LABWIRED_WASM: ${{ github.workspace }}/optimized/nodejs
+          LABWIRED_MOTION_REQUIRED: '1'
+          LABWIRED_REQUIRE_MOTION_RTX: '1'
+        run: |
+          set -euo pipefail
+          node test/labwired-microbit-motion.test.mjs 2>&1 | tee motion.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: postopt-motion
+          path: |
+            motion.txt
+            motion-runner.txt
+          if-no-files-found: warn
+          retention-days: 7
