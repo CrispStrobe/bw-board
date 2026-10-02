@@ -1,0 +1,36 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN.input.json"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 22.07803756929934,
+  "limits": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0
+  },
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "streams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 420,
+      "sha256": "db8e6a159fb43dbe73c2c1b5d3f95de3daf2a7b1cba8ab6b3023e6448619af2a"
+    }
+  }
+}

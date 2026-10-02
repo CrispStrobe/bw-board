@@ -1,0 +1,12 @@
+{
+  "status": "ROOT_CONFIGURATION_REBIND_AFTER_STALE_BIOS_PATH_LAUNCH_FAILURE",
+  "priorConfigPath": "/mnt/volume1/tmp-astra/native-direct-smoke-r3-20261001/bochsrc",
+  "priorConfigSha256": "b8df8cc735cd3f71d97229d6ad32cda854057d4f668ed4a6a991e4cc24744abc",
+  "newConfigPath": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-source.bochsrc",
+  "newConfigSha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+  "freeBiosHashes": {
+    "/tmp/bw-board-386-native-owned-clock-20261002/roms/free-at-bios/BIOS-bochs-legacy": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "/tmp/bw-board-386-native-owned-clock-20261002/roms/free-at-bios/vgabios-lgpl.bin": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"
+  },
+  "scope": "paths only; actual failure preserved; no compiled source change; no guest execution in initial failed launch"
+}

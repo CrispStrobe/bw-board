@@ -1,0 +1,13 @@
+{
+  "status": "PASS_ACTUAL18_AUDIT_FIXED_GATE_PASS",
+  "checks": 318736,
+  "summarySha256": "ff140a4fbb30ea016beb7d1796ec82e1a60e6db0aedfa8f07a536707c1b9621c",
+  "scriptSha256": "f16c11c54a3526555bc7133bdfe5d7e875dc443a5bf8073422df90ea910ee657",
+  "h4MeanUs": 503081.5714285714,
+  "mainMeanUs": 370625.71428571426,
+  "meanReductionPercent": 26.32890264032729,
+  "favorablePairs": 7,
+  "sampleCount": 18,
+  "warmupChildrenDiscarded": 4,
+  "scope": "Matched whole-process all-thread execution CPU; startup/settlement/final serialization excluded; synthetic fixed-ROM only, shared-load/JIT variability; no physical RTx or broader guest claim. Attempt1 pre-child binding failure preserved separately, zero samples."
+}
