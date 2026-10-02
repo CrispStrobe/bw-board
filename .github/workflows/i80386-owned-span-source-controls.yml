@@ -1,0 +1,74 @@
+name: Owned 386 private span source controls
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '.github/workflows/i80386-owned-span-source-controls.yml'
+      - 'docs/receipts/2026-10-02-owned-span-source-preparation/payload/**'
+      - 'docs/receipts/2026-10-02-owned-span-source-preparation/prepare-hosted.py'
+      - 'docs/receipts/2026-10-02-owned-span-source-preparation/run-controls.py'
+      - 'docs/receipts/2026-10-02-owned-span-source-preparation/source-binding.json'
+permissions:
+  contents: read
+concurrency:
+  group: owned-span-source-controls-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  source-controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      BW_SPAN_ROOT: ${{ github.workspace }}/baseline
+      BW_SPAN_OUT: ${{ runner.temp }}/owned-span-source-controls/result
+      BW_SPAN_CONTEXT: ${{ runner.temp }}/owned-span-source-controls/context
+      BW_SPAN_BINDING: ${{ github.workspace }}/publication/docs/receipts/2026-10-02-owned-span-source-preparation/source-binding.json
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: publication
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: fe1eff2039520536350922a2164c8bbe29404c68
+          path: baseline
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Materialize exact seven-file source payload and retain context
+        id: materialize
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BW_SPAN_CONTEXT"
+          export BW_SPAN_NODE="$(command -v node || true)"
+          python3 publication/docs/receipts/2026-10-02-owned-span-source-preparation/prepare-hosted.py > "$BW_SPAN_CONTEXT/preparation.stdout" 2> "$BW_SPAN_CONTEXT/preparation.stderr"
+      - name: Authenticate 110 files and run one bounded source-control child
+        if: ${{ steps.materialize.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BW_SPAN_CONTEXT"
+          export BW_SPAN_NODE="$(command -v node || true)"
+          python3 publication/docs/receipts/2026-10-02-owned-span-source-preparation/run-controls.py > "$BW_SPAN_CONTEXT/wrapper.stdout" 2> "$BW_SPAN_CONTEXT/wrapper.stderr"
+      - name: Retain complete source-only success or failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: owned-span-source-controls-pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/owned-span-source-controls
+            publication/docs/receipts/2026-10-02-owned-span-source-preparation
+            publication/.github/workflows/i80386-owned-span-source-controls.yml
+          retention-days: 14
+          if-no-files-found: error
