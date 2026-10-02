@@ -1,0 +1,14 @@
+{
+  "status": "SOURCE_ONLY_NOT_EXECUTED",
+  "originalH4ControlChildSha256": "ad5a371fc2a8fad45f1c1850b610bf5d1de012177c88be1508010325bac8de75",
+  "heldH5DriverSha256": "434d7c9d49f610b6955c53b0da39c556410b48aa909c4ddd3772a51a404c3946",
+  "childSha256": "e76c5264b269f09d10b582fe1131cd90c48cf9c247fd52e15c722ba9dafe6662",
+  "changes": [
+    "absolute import roots",
+    "H5 original identity function",
+    "unchanged H4 source wrapper import",
+    "raw loader for new packed-argc control",
+    "one new internal argc control"
+  ],
+  "pending": "Freeze and bind exact H5 revision/build/compiled manifest before execution"
+}

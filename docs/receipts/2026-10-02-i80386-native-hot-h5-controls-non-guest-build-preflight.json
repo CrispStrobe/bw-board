@@ -1,0 +1,17 @@
+{
+  "status": "PASS_NO_ADDON_LOAD",
+  "builds": {
+    "h4": {
+      "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "b57a3cea1f5f5eea2092401f8dba3041eb0bc0d19551bf4273e66ad7372c60cb",
+      "bochs/cpu/bw_slice_runtime.inc": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+      "bochs/bochs-cpu3-native-direct-board/abi.h": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d",
+      "bochs/config.h": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+    },
+    "h5": {
+      "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "f83992b411bb0756c4a0744fdd8f9ae70be6d1b3a7e23d65db199ef2fbec58b5",
+      "bochs/cpu/bw_slice_runtime.inc": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+      "bochs/bochs-cpu3-native-direct-board/abi.h": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d",
+      "bochs/config.h": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+    }
+  }
+}

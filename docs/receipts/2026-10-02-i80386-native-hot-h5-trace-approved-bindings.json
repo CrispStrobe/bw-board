@@ -1,0 +1,11 @@
+{
+  "revision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+  "tree": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h5-20261001",
+  "manifestPath": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/prepare.json",
+  "manifestSha256": "48d432eea6dded26395957ce49ae250bcdd4e37e9ee101a4ba34b64709f6f4b9",
+  "addonPath": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h5-20261001/bochs/bw_direct.node",
+  "addonSha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+  "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c",
+  "bindingHelperSha256": "d14f04ccdea81bf3c9e61d9114396a62a1550999f4b697fa6b67505a72299c6a",
+  "helperSha256": "d1e3075967785dc0cc7a8842bf84c16545d9964090923e294448d490d4841ea9"
+}

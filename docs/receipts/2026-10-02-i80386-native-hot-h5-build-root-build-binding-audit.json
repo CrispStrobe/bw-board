@@ -1,0 +1,14 @@
+{
+  "status": "ROOT_H5_FRESH_BUILD_BINDING_PASS",
+  "checks": 130,
+  "sourceRevision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+  "sourceInputs": 37,
+  "transformInputs": 12,
+  "manifestSha256": "48d432eea6dded26395957ce49ae250bcdd4e37e9ee101a4ba34b64709f6f4b9",
+  "addonSha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+  "addonBytes": 2060728,
+  "generatedNapiSha256": "f83992b411bb0756c4a0744fdd8f9ae70be6d1b3a7e23d65db199ef2fbec58b5",
+  "runtimeConfigAbiIdenticalH4": true,
+  "auditScriptSha256": "06019c8801aedaf31b28880d44b150005ff3f0ef8dff8bb1560245a9085149fc",
+  "guestExecuted": false
+}
