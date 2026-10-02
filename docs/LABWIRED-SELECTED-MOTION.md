@@ -269,3 +269,20 @@ Selected motion remains mixed (−3.07%, −0.07%, +1.18%, +3.43%); the second
 EPYC 7763 run does not reproduce the first slowdown. It is not a motion speedup
 claim. Slower hosts still fail every motion window and the faster host passes
 both artifacts. Nothing here overrides the unchanged fresh qualification floor.
+
+The final lint-fixed module has a different hash and was tested separately:
+three ordinary pairs measured GPIO **+10.20%, +33.28%, +30.57%**, with motion
+**+0.40%, +1.09%, +0.02%** and identical observations. First two pairs pass all
+candidate GPIO windows; the third fails them all. The latest source rebuild is
+byte-identical to that measured module and passes determinism and 101 actual
+WASM integration tests. Its own fresh motion still fails all five windows:
+**0.817207× median / 0.811487× minimum** on EPYC 7763. Publication and app pins
+remain unchanged; see the report for final CI and landing status.
+
+The cache-wrapper experiment is now **rejected for landing**, despite all 18
+final core correctness checks passing. Five ordinary VPS Node 20 motion pairs
+were negative (−0.90%, −4.33%, −19.05%, −5.06%, −1.09%). Separate traced runs
+reaching TurboFan do not explain or waive those results. Its code is preserved
+on the closed, unmerged PR 147 branch; core main is unchanged. The independent
+scalar-preflight PR 148 keeps the original Vec and live metadata queries, and
+is an unmeasured hypothesis, not an accepted speedup.

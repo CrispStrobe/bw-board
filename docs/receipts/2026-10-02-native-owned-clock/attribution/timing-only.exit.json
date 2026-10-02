@@ -1,0 +1,19 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 426,
+  "stderrSha256": "f63ae12959c18f83ea28a21e0068eb79e69ddbb9b3291d273030f23cf5fab75e",
+  "wallNs": 9630116033,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/driver.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only.input.json"
+  ],
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}

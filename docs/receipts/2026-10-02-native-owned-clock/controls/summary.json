@@ -1,0 +1,4306 @@
+{
+  "status": "ACTUAL_ABI3_CONTROLS_PASS_NOT_FULL_QUALIFICATION",
+  "records": [
+    {
+      "control": "positive-n1",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 426,
+        "stderrSha256": "79c8672e76037a8353be36cb8debacfae670ac5521d976d7f36210f37005dcad",
+        "wallNs": 6725104360,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/positive-n1.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 11,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "n": "1",
+          "q": "1",
+          "reason": 1,
+          "chargedN": 1,
+          "chargedQ": 1,
+          "clockTransfers": {
+            "transfers": "3",
+            "commits": "1",
+            "words": "2"
+          },
+          "ordinal": 6,
+          "name": "returned"
+        },
+        {
+          "ordinal": 7,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "79c8672e76037a8353be36cb8debacfae670ac5521d976d7f36210f37005dcad"
+    },
+    {
+      "control": "positive-n2",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 426,
+        "stderrSha256": "6f89009e30fcefdf1036b2a76a81222e97862f4348c86cea8ebe186b8c8e5463",
+        "wallNs": 6272507552,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/positive-n2.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 11,
+          "count": 2,
+          "logicalBefore": 4,
+          "ordinal": 6,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            2,
+            2,
+            16,
+            12,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 6,
+          "ordinal": 7,
+          "name": "commit-applied"
+        },
+        {
+          "n": "2",
+          "q": "2",
+          "reason": 1,
+          "chargedN": 2,
+          "chargedQ": 2,
+          "clockTransfers": {
+            "transfers": "4",
+            "commits": "2",
+            "words": "4"
+          },
+          "ordinal": 8,
+          "name": "returned"
+        },
+        {
+          "ordinal": 9,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "6f89009e30fcefdf1036b2a76a81222e97862f4348c86cea8ebe186b8c8e5463"
+    },
+    {
+      "control": "positive-q1",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 426,
+        "stderrSha256": "83081e8b09ce46b8adeb527ca99e1ecaee483eaabd7edb853c954f9dc0820bc7",
+        "wallNs": 6024862023,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/positive-q1.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 11,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "n": "1",
+          "q": "1",
+          "reason": 1,
+          "chargedN": 1,
+          "chargedQ": 1,
+          "clockTransfers": {
+            "transfers": "3",
+            "commits": "1",
+            "words": "2"
+          },
+          "ordinal": 6,
+          "name": "returned"
+        },
+        {
+          "ordinal": 7,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "83081e8b09ce46b8adeb527ca99e1ecaee483eaabd7edb853c954f9dc0820bc7"
+    },
+    {
+      "control": "positive-q2",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 426,
+        "stderrSha256": "fd59efe2769c6a71dbf2ff191fcbab524b57f66e4520ff86550867a139e68ce5",
+        "wallNs": 7907906926,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/positive-q2.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 11,
+          "count": 2,
+          "logicalBefore": 4,
+          "ordinal": 6,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            2,
+            2,
+            16,
+            12,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 6,
+          "ordinal": 7,
+          "name": "commit-applied"
+        },
+        {
+          "n": "2",
+          "q": "2",
+          "reason": 1,
+          "chargedN": 2,
+          "chargedQ": 2,
+          "clockTransfers": {
+            "transfers": "4",
+            "commits": "2",
+            "words": "4"
+          },
+          "ordinal": 8,
+          "name": "returned"
+        },
+        {
+          "ordinal": 9,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "fd59efe2769c6a71dbf2ff191fcbab524b57f66e4520ff86550867a139e68ce5"
+    },
+    {
+      "control": "positive-deadline0",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 440,
+        "stderrSha256": "260c6ec38d50a65043f2370c60083448e81725d9a9eb055b6154f0c48a0b8444",
+        "wallNs": 8258669168,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/positive-deadline0.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "reason": 7,
+          "chargedN": 0,
+          "chargedQ": 0,
+          "clockTransfers": {
+            "transfers": "2",
+            "commits": "0",
+            "words": "0"
+          },
+          "ordinal": 4,
+          "name": "returned"
+        },
+        {
+          "ordinal": 5,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "260c6ec38d50a65043f2370c60083448e81725d9a9eb055b6154f0c48a0b8444"
+    },
+    {
+      "control": "positive-bounded",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 436,
+        "stderrSha256": "db1947c5bf3896e300c0a116303e23cad85fc03f65f45e813919e807ae9d7f38",
+        "wallNs": 9579926166,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/positive-bounded.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 14,
+          "logicalBefore": 4,
+          "ordinal": 6,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            8,
+            8,
+            52,
+            48,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 18,
+          "ordinal": 7,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 4,
+          "logicalBefore": 19,
+          "ordinal": 8,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            10,
+            10,
+            64,
+            60,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 23,
+          "ordinal": 9,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 24,
+          "ordinal": 10,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            11,
+            11,
+            70,
+            66,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 26,
+          "ordinal": 11,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 6,
+          "logicalBefore": 27,
+          "ordinal": 12,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            14,
+            14,
+            88,
+            84,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 33,
+          "ordinal": 13,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 34,
+          "ordinal": 14,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            15,
+            15,
+            94,
+            90,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 36,
+          "ordinal": 15,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 37,
+          "ordinal": 16,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            16,
+            16,
+            100,
+            96,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 39,
+          "ordinal": 17,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 40,
+          "ordinal": 18,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            17,
+            17,
+            106,
+            102,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 42,
+          "ordinal": 19,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 43,
+          "ordinal": 20,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            18,
+            18,
+            112,
+            108,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 45,
+          "ordinal": 21,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 46,
+          "ordinal": 22,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            19,
+            19,
+            118,
+            114,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 48,
+          "ordinal": 23,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 49,
+          "ordinal": 24,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            20,
+            20,
+            124,
+            120,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 51,
+          "ordinal": 25,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 52,
+          "ordinal": 26,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            21,
+            21,
+            130,
+            126,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 54,
+          "ordinal": 27,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 55,
+          "ordinal": 28,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            22,
+            22,
+            136,
+            132,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 57,
+          "ordinal": 29,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 58,
+          "ordinal": 30,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            23,
+            23,
+            142,
+            138,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 60,
+          "ordinal": 31,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 61,
+          "ordinal": 32,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            24,
+            24,
+            148,
+            144,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 63,
+          "ordinal": 33,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 64,
+          "ordinal": 34,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            25,
+            25,
+            154,
+            150,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 66,
+          "ordinal": 35,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 67,
+          "ordinal": 36,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            26,
+            26,
+            160,
+            156,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 69,
+          "ordinal": 37,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 70,
+          "ordinal": 38,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            27,
+            27,
+            166,
+            162,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 72,
+          "ordinal": 39,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 73,
+          "ordinal": 40,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            28,
+            28,
+            172,
+            168,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 75,
+          "ordinal": 41,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 76,
+          "ordinal": 42,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            29,
+            29,
+            178,
+            174,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 78,
+          "ordinal": 43,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 79,
+          "ordinal": 44,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            30,
+            30,
+            184,
+            180,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 81,
+          "ordinal": 45,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 82,
+          "ordinal": 46,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            31,
+            31,
+            190,
+            186,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 84,
+          "ordinal": 47,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 85,
+          "ordinal": 48,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            32,
+            32,
+            196,
+            192,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 87,
+          "ordinal": 49,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 88,
+          "ordinal": 50,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            33,
+            33,
+            202,
+            198,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 90,
+          "ordinal": 51,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 91,
+          "ordinal": 52,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            34,
+            34,
+            208,
+            204,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 93,
+          "ordinal": 53,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 94,
+          "ordinal": 54,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            35,
+            35,
+            214,
+            210,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 96,
+          "ordinal": 55,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 97,
+          "ordinal": 56,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            36,
+            36,
+            220,
+            216,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 99,
+          "ordinal": 57,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 100,
+          "ordinal": 58,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            37,
+            37,
+            226,
+            222,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 102,
+          "ordinal": 59,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 103,
+          "ordinal": 60,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            38,
+            38,
+            232,
+            228,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 105,
+          "ordinal": 61,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 106,
+          "ordinal": 62,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            39,
+            39,
+            238,
+            234,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 108,
+          "ordinal": 63,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 109,
+          "ordinal": 64,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            40,
+            40,
+            244,
+            240,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 111,
+          "ordinal": 65,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 112,
+          "ordinal": 66,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            41,
+            41,
+            250,
+            246,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 114,
+          "ordinal": 67,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 115,
+          "ordinal": 68,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            42,
+            42,
+            256,
+            252,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 117,
+          "ordinal": 69,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 119,
+          "ordinal": 70,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            43,
+            43,
+            262,
+            258,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 121,
+          "ordinal": 71,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 6,
+          "logicalBefore": 123,
+          "ordinal": 72,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            46,
+            46,
+            280,
+            276,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 129,
+          "ordinal": 73,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 4,
+          "logicalBefore": 131,
+          "ordinal": 74,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            48,
+            48,
+            292,
+            288,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 135,
+          "ordinal": 75,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 137,
+          "ordinal": 76,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            49,
+            49,
+            298,
+            294,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 139,
+          "ordinal": 77,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 140,
+          "ordinal": 78,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            50,
+            50,
+            304,
+            300,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 142,
+          "ordinal": 79,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 12,
+          "logicalBefore": 143,
+          "ordinal": 80,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            56,
+            56,
+            340,
+            336,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 155,
+          "ordinal": 81,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 172,
+          "ordinal": 82,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            57,
+            57,
+            346,
+            342,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 174,
+          "ordinal": 83,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 178,
+          "ordinal": 84,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            58,
+            58,
+            352,
+            348,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 180,
+          "ordinal": 85,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 183,
+          "ordinal": 86,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            59,
+            59,
+            358,
+            354,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 185,
+          "ordinal": 87,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 186,
+          "ordinal": 88,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            60,
+            60,
+            364,
+            360,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 188,
+          "ordinal": 89,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 192,
+          "ordinal": 90,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            61,
+            61,
+            370,
+            366,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 194,
+          "ordinal": 91,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 4,
+          "logicalBefore": 197,
+          "ordinal": 92,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            63,
+            63,
+            382,
+            378,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 201,
+          "ordinal": 93,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 204,
+          "ordinal": 94,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            64,
+            64,
+            388,
+            384,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 206,
+          "ordinal": 95,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 5,
+          "count": 4,
+          "logicalBefore": 207,
+          "ordinal": 96,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            66,
+            66,
+            400,
+            396,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 211,
+          "ordinal": 97,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 6,
+          "ordinal": 98,
+          "name": "query"
+        },
+        {
+          "reason": 11,
+          "count": 2,
+          "logicalBefore": 212,
+          "ordinal": 99,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            67,
+            67,
+            406,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 214,
+          "ordinal": 100,
+          "name": "commit-applied"
+        },
+        {
+          "n": "67",
+          "q": "67",
+          "reason": 3,
+          "chargedN": 67,
+          "chargedQ": 67,
+          "clockTransfers": {
+            "transfers": "51",
+            "commits": "48",
+            "words": "134"
+          },
+          "ordinal": 101,
+          "name": "returned"
+        },
+        {
+          "ordinal": 102,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "db1947c5bf3896e300c0a116303e23cad85fc03f65f45e813919e807ae9d7f38"
+    },
+    {
+      "control": "invalid-n0",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 424,
+        "stderrSha256": "98f85f689a14e46d62d91b8f6b428a6c555e6980754f8d895d162897ddfbde0a",
+        "wallNs": 8691112649,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/invalid-n0.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "before": {
+            "query": 1,
+            "logical": 0,
+            "transfers": 0
+          },
+          "ordinal": 3,
+          "name": "invalid-before-query-denied"
+        },
+        {
+          "ordinal": 4,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "98f85f689a14e46d62d91b8f6b428a6c555e6980754f8d895d162897ddfbde0a"
+    },
+    {
+      "control": "invalid-n601",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 428,
+        "stderrSha256": "ceb7b753a7f4030b49f468a78cbe5215d55d83adb8d0c70bf80873419cdcd114",
+        "wallNs": 8008659611,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/invalid-n601.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "before": {
+            "query": 1,
+            "logical": 0,
+            "transfers": 0
+          },
+          "ordinal": 3,
+          "name": "invalid-before-query-denied"
+        },
+        {
+          "ordinal": 4,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "ceb7b753a7f4030b49f468a78cbe5215d55d83adb8d0c70bf80873419cdcd114"
+    },
+    {
+      "control": "invalid-q0",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 424,
+        "stderrSha256": "5e479aec5e45db93539cc079631b2b074c1f96ea8d6954f77ccd2abe32fe198c",
+        "wallNs": 6548664021,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/invalid-q0.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "before": {
+            "query": 1,
+            "logical": 0,
+            "transfers": 0
+          },
+          "ordinal": 3,
+          "name": "invalid-before-query-denied"
+        },
+        {
+          "ordinal": 4,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "5e479aec5e45db93539cc079631b2b074c1f96ea8d6954f77ccd2abe32fe198c"
+    },
+    {
+      "control": "invalid-q301",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 428,
+        "stderrSha256": "986a88bdc6b6b7a21dafcce7765c9982b4cddfe3db517469a202648983647bbe",
+        "wallNs": 7370310192,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/invalid-q301.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "before": {
+            "query": 1,
+            "logical": 0,
+            "transfers": 0
+          },
+          "ordinal": 3,
+          "name": "invalid-before-query-denied"
+        },
+        {
+          "ordinal": 4,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "986a88bdc6b6b7a21dafcce7765c9982b4cddfe3db517469a202648983647bbe"
+    },
+    {
+      "control": "invalid-deadline",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 436,
+        "stderrSha256": "2a88da6a5a5ea1081c44b09ebe59435b2a12d05a93baa9a530c6f93c6405ca47",
+        "wallNs": 6458072816,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/invalid-deadline.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "before": {
+            "query": 1,
+            "logical": 0,
+            "transfers": 0
+          },
+          "ordinal": 3,
+          "name": "invalid-before-query-denied"
+        },
+        {
+          "ordinal": 4,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "2a88da6a5a5ea1081c44b09ebe59435b2a12d05a93baa9a530c6f93c6405ca47"
+    },
+    {
+      "control": "reentry",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 418,
+        "stderrSha256": "dc41b0dcd9d79835ff75098db9cc810b228004b65673a06fb769697d57bb24b2",
+        "wallNs": 6674795154,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/reentry.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "op": "resume",
+          "ordinal": 5,
+          "name": "reentry-denied"
+        },
+        {
+          "op": "setIRQ",
+          "ordinal": 6,
+          "name": "reentry-denied"
+        },
+        {
+          "op": "inspect",
+          "ordinal": 7,
+          "name": "reentry-denied"
+        },
+        {
+          "op": "close",
+          "ordinal": 8,
+          "name": "reentry-denied"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 9,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 14,
+          "logicalBefore": 4,
+          "ordinal": 10,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            8,
+            8,
+            52,
+            48,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 18,
+          "ordinal": 11,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 4,
+          "logicalBefore": 19,
+          "ordinal": 12,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            10,
+            10,
+            64,
+            60,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 23,
+          "ordinal": 13,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 24,
+          "ordinal": 14,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            11,
+            11,
+            70,
+            66,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 26,
+          "ordinal": 15,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 6,
+          "logicalBefore": 27,
+          "ordinal": 16,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            14,
+            14,
+            88,
+            84,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 33,
+          "ordinal": 17,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 34,
+          "ordinal": 18,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            15,
+            15,
+            94,
+            90,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 36,
+          "ordinal": 19,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 37,
+          "ordinal": 20,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            16,
+            16,
+            100,
+            96,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 39,
+          "ordinal": 21,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 40,
+          "ordinal": 22,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            17,
+            17,
+            106,
+            102,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 42,
+          "ordinal": 23,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 43,
+          "ordinal": 24,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            18,
+            18,
+            112,
+            108,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 45,
+          "ordinal": 25,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 46,
+          "ordinal": 26,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            19,
+            19,
+            118,
+            114,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 48,
+          "ordinal": 27,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 49,
+          "ordinal": 28,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            20,
+            20,
+            124,
+            120,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 51,
+          "ordinal": 29,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 52,
+          "ordinal": 30,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            21,
+            21,
+            130,
+            126,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 54,
+          "ordinal": 31,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 55,
+          "ordinal": 32,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            22,
+            22,
+            136,
+            132,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 57,
+          "ordinal": 33,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 58,
+          "ordinal": 34,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            23,
+            23,
+            142,
+            138,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 60,
+          "ordinal": 35,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 61,
+          "ordinal": 36,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            24,
+            24,
+            148,
+            144,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 63,
+          "ordinal": 37,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 64,
+          "ordinal": 38,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            25,
+            25,
+            154,
+            150,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 66,
+          "ordinal": 39,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 67,
+          "ordinal": 40,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            26,
+            26,
+            160,
+            156,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 69,
+          "ordinal": 41,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 70,
+          "ordinal": 42,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            27,
+            27,
+            166,
+            162,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 72,
+          "ordinal": 43,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 73,
+          "ordinal": 44,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            28,
+            28,
+            172,
+            168,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 75,
+          "ordinal": 45,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 76,
+          "ordinal": 46,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            29,
+            29,
+            178,
+            174,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 78,
+          "ordinal": 47,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 79,
+          "ordinal": 48,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            30,
+            30,
+            184,
+            180,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 81,
+          "ordinal": 49,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 82,
+          "ordinal": 50,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            31,
+            31,
+            190,
+            186,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 84,
+          "ordinal": 51,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 85,
+          "ordinal": 52,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            32,
+            32,
+            196,
+            192,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 87,
+          "ordinal": 53,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 88,
+          "ordinal": 54,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            33,
+            33,
+            202,
+            198,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 90,
+          "ordinal": 55,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 91,
+          "ordinal": 56,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            34,
+            34,
+            208,
+            204,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 93,
+          "ordinal": 57,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 94,
+          "ordinal": 58,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            35,
+            35,
+            214,
+            210,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 96,
+          "ordinal": 59,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 97,
+          "ordinal": 60,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            36,
+            36,
+            220,
+            216,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 99,
+          "ordinal": 61,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 100,
+          "ordinal": 62,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            37,
+            37,
+            226,
+            222,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 102,
+          "ordinal": 63,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 103,
+          "ordinal": 64,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            38,
+            38,
+            232,
+            228,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 105,
+          "ordinal": 65,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 106,
+          "ordinal": 66,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            39,
+            39,
+            238,
+            234,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 108,
+          "ordinal": 67,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 109,
+          "ordinal": 68,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            40,
+            40,
+            244,
+            240,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 111,
+          "ordinal": 69,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 112,
+          "ordinal": 70,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            41,
+            41,
+            250,
+            246,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 114,
+          "ordinal": 71,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 115,
+          "ordinal": 72,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            42,
+            42,
+            256,
+            252,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 117,
+          "ordinal": 73,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 119,
+          "ordinal": 74,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            43,
+            43,
+            262,
+            258,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 121,
+          "ordinal": 75,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 6,
+          "logicalBefore": 123,
+          "ordinal": 76,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            46,
+            46,
+            280,
+            276,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 129,
+          "ordinal": 77,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 4,
+          "logicalBefore": 131,
+          "ordinal": 78,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            48,
+            48,
+            292,
+            288,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 135,
+          "ordinal": 79,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 137,
+          "ordinal": 80,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            49,
+            49,
+            298,
+            294,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 139,
+          "ordinal": 81,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 140,
+          "ordinal": 82,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            50,
+            50,
+            304,
+            300,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 142,
+          "ordinal": 83,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 12,
+          "logicalBefore": 143,
+          "ordinal": 84,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            56,
+            56,
+            340,
+            336,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 155,
+          "ordinal": 85,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 172,
+          "ordinal": 86,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            57,
+            57,
+            346,
+            342,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 174,
+          "ordinal": 87,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 178,
+          "ordinal": 88,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            58,
+            58,
+            352,
+            348,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 180,
+          "ordinal": 89,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 183,
+          "ordinal": 90,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            59,
+            59,
+            358,
+            354,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 185,
+          "ordinal": 91,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 186,
+          "ordinal": 92,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            60,
+            60,
+            364,
+            360,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 188,
+          "ordinal": 93,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 192,
+          "ordinal": 94,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            61,
+            61,
+            370,
+            366,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 194,
+          "ordinal": 95,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 4,
+          "logicalBefore": 197,
+          "ordinal": 96,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            63,
+            63,
+            382,
+            378,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 201,
+          "ordinal": 97,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 3,
+          "count": 2,
+          "logicalBefore": 204,
+          "ordinal": 98,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            64,
+            64,
+            388,
+            384,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 206,
+          "ordinal": 99,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 5,
+          "count": 4,
+          "logicalBefore": 207,
+          "ordinal": 100,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            66,
+            66,
+            400,
+            396,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 211,
+          "ordinal": 101,
+          "name": "commit-applied"
+        },
+        {
+          "reason": 6,
+          "ordinal": 102,
+          "name": "query"
+        },
+        {
+          "reason": 11,
+          "count": 2,
+          "logicalBefore": 212,
+          "ordinal": 103,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            67,
+            67,
+            406,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 214,
+          "ordinal": 104,
+          "name": "commit-applied"
+        },
+        {
+          "n": "67",
+          "q": "67",
+          "reason": 3,
+          "chargedN": 67,
+          "chargedQ": 67,
+          "clockTransfers": {
+            "transfers": "51",
+            "commits": "48",
+            "words": "134"
+          },
+          "ordinal": 105,
+          "name": "returned"
+        },
+        {
+          "ordinal": 106,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "dc41b0dcd9d79835ff75098db9cc810b228004b65673a06fb769697d57bb24b2"
+    },
+    {
+      "control": "thread-owner",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 428,
+        "stderrSha256": "3625c6c1fd4c4bbc0c909859fd3f82892ce266c983d4912cfc3348f58d105dc5",
+        "wallNs": 10582246273,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/thread-owner.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "ordinal": 3,
+          "name": "owner-closed"
+        }
+      ],
+      "parentEvents": [
+        {
+          "operation": "inspect",
+          "name": "wrong-thread-denied"
+        },
+        {
+          "operation": "setIRQ",
+          "name": "wrong-thread-denied"
+        },
+        {
+          "operation": "resume",
+          "name": "wrong-thread-denied"
+        },
+        {
+          "operation": "close",
+          "name": "wrong-thread-denied"
+        },
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "3625c6c1fd4c4bbc0c909859fd3f82892ce266c983d4912cfc3348f58d105dc5"
+    },
+    {
+      "control": "second-worker",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 430,
+        "stderrSha256": "2f088f0dd971577b27ca6dc0dbaa8a42560891db92a07112059ee63614aeabe2",
+        "wallNs": 9978275378,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/second-worker.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "ordinal": 3,
+          "name": "owner-closed"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "second-worker-denied"
+        },
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "2f088f0dd971577b27ca6dc0dbaa8a42560891db92a07112059ee63614aeabe2"
+    },
+    {
+      "control": "same-worker-reinit",
+      "negative": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 440,
+        "stderrSha256": "fa6ff7f945462f19d609b05cfdd0f473d90ae73c9288189d9c7fbb96d9fa1ff4",
+        "wallNs": 9843116948,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/same-worker-reinit.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "ordinal": 3,
+          "name": "reinit-before-callback-denied"
+        },
+        {
+          "ordinal": 4,
+          "name": "done"
+        }
+      ],
+      "parentEvents": [
+        {
+          "name": "authenticated-done"
+        }
+      ],
+      "stderrSha256": "fa6ff7f945462f19d609b05cfdd0f473d90ae73c9288189d9c7fbb96d9fa1ff4"
+    },
+    {
+      "control": "phase-entry-as-postpio",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 483,
+        "stderrSha256": "f64bd47e7877e421948edaf012eecdb27918904779efe3c4b1816b1a3bf2cfaa",
+        "wallNs": 4981096525,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/phase-entry-as-postpio.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 2,
+          "ordinal": 4,
+          "name": "phase-denial-attempt"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "f64bd47e7877e421948edaf012eecdb27918904779efe3c4b1816b1a3bf2cfaa"
+    },
+    {
+      "control": "field-n",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 447,
+        "stderrSha256": "8dc2996fa4b8a66dab298432fef615aa4f76c60933be8dcffe2363ad383c55f0",
+        "wallNs": 4117687458,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-n.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-n",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "8dc2996fa4b8a66dab298432fef615aa4f76c60933be8dcffe2363ad383c55f0"
+    },
+    {
+      "control": "field-q",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 447,
+        "stderrSha256": "2854564503bd7d0368fefe32be3357f87eaf85453fddc1dd2bea819178b194ca",
+        "wallNs": 3996661475,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-q.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-q",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "2854564503bd7d0368fefe32be3357f87eaf85453fddc1dd2bea819178b194ca"
+    },
+    {
+      "control": "field-cycles",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 457,
+        "stderrSha256": "6fd5bce3d12adbc2c540e5fec632bfaeadade0574ca35b839a75557a6f41219c",
+        "wallNs": 4793810932,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-cycles.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-cycles",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "6fd5bce3d12adbc2c540e5fec632bfaeadade0574ca35b839a75557a6f41219c"
+    },
+    {
+      "control": "field-debt",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 453,
+        "stderrSha256": "327f96b8b41a0ef24bef7a3bc70554ad3c70f1d26079f1352828696dc1230cdf",
+        "wallNs": 4618981453,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-debt.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-debt",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "327f96b8b41a0ef24bef7a3bc70554ad3c70f1d26079f1352828696dc1230cdf"
+    },
+    {
+      "control": "field-deadline",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 461,
+        "stderrSha256": "0b19e8e99b4dbc596a2a43e14cab543c8b0bd07abba20ba0c29c2db0f0b69951",
+        "wallNs": 4232334395,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-deadline.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-deadline",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "0b19e8e99b4dbc596a2a43e14cab543c8b0bd07abba20ba0c29c2db0f0b69951"
+    },
+    {
+      "control": "field-epoch",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 455,
+        "stderrSha256": "69767be1b9e7f8d1491c3e32051d9294b14d7fdcd02fc96a3b8280a0f9c09e9b",
+        "wallNs": 4108536602,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-epoch.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-epoch",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "69767be1b9e7f8d1491c3e32051d9294b14d7fdcd02fc96a3b8280a0f9c09e9b"
+    },
+    {
+      "control": "field-a20",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 451,
+        "stderrSha256": "209b84d7f0b00c8b04a3206e7d5db54be11a42385b7c04380b650a1e0dd79482",
+        "wallNs": 3851044359,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/field-a20.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "field-a20",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "209b84d7f0b00c8b04a3206e7d5db54be11a42385b7c04380b650a1e0dd79482"
+    },
+    {
+      "control": "tuple-number",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 463,
+        "stderrSha256": "db315f7995c081d37ee7a433fcedadfb01b3e31773ca5500d9a404fafaabf0d9",
+        "wallNs": 5524607547,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-number.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-number",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "db315f7995c081d37ee7a433fcedadfb01b3e31773ca5500d9a404fafaabf0d9"
+    },
+    {
+      "control": "tuple-array",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 461,
+        "stderrSha256": "927bf3f9de5af4f2372ba3adeb1031e0b0f32b772f6e52eb04556f34962a7cd8",
+        "wallNs": 3843700375,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-array.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-array",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "927bf3f9de5af4f2372ba3adeb1031e0b0f32b772f6e52eb04556f34962a7cd8"
+    },
+    {
+      "control": "tuple-float",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 461,
+        "stderrSha256": "3b0cb2db21c70a345ef1b67647c19d36625a9889f95d2d8af016c4a8c8d4cf5b",
+        "wallNs": 4546084807,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-float.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-float",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "3b0cb2db21c70a345ef1b67647c19d36625a9889f95d2d8af016c4a8c8d4cf5b"
+    },
+    {
+      "control": "tuple-short",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 461,
+        "stderrSha256": "4293de0073c3c47627318aa30344261a3fa3e20ea31d0f1c512e9f5f7a2c63b2",
+        "wallNs": 3940594598,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-short.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-short",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "4293de0073c3c47627318aa30344261a3fa3e20ea31d0f1c512e9f5f7a2c63b2"
+    },
+    {
+      "control": "tuple-long",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 459,
+        "stderrSha256": "b399f65983bd7a4b0ca1e8f661a76d6ecf0f7ab5fe12f9ad51dc2237d2b7b054",
+        "wallNs": 4376385816,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-long.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-long",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "b399f65983bd7a4b0ca1e8f661a76d6ecf0f7ab5fe12f9ad51dc2237d2b7b054"
+    },
+    {
+      "control": "tuple-offset",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 463,
+        "stderrSha256": "971d4257af738d65b85920791d571439e0d8b4dc2865d1c826ed256d81d0c7e2",
+        "wallNs": 4298802597,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-offset.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-offset",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "971d4257af738d65b85920791d571439e0d8b4dc2865d1c826ed256d81d0c7e2"
+    },
+    {
+      "control": "tuple-backing",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 465,
+        "stderrSha256": "cf38394b2afc4b3cbd2e1a154d09d3123cdc69ee8d71ac74760492736ede7a4f",
+        "wallNs": 4808950919,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-backing.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-backing",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "cf38394b2afc4b3cbd2e1a154d09d3123cdc69ee8d71ac74760492736ede7a4f"
+    },
+    {
+      "control": "tuple-shared",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 463,
+        "stderrSha256": "b4895bd35fb884722953d75133cd8e3ee340ac946af282515533127307fe6af6",
+        "wallNs": 3650891728,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-shared.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-shared",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "b4895bd35fb884722953d75133cd8e3ee340ac946af282515533127307fe6af6"
+    },
+    {
+      "control": "tuple-detached",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 467,
+        "stderrSha256": "fb5d626a4e871663706a54748ee45f25251e58f57f645993ab5d206c33896284",
+        "wallNs": 3999651147,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-detached.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-detached",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "fb5d626a4e871663706a54748ee45f25251e58f57f645993ab5d206c33896284"
+    },
+    {
+      "control": "tuple-throw",
+      "negative": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 461,
+        "stderrSha256": "f94d9f4a384f131d4ba77efdf61a5d630fa913b0296b03b5af824ddb1112aa97",
+        "wallNs": 3695682023,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-throw.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "reason": 1,
+          "ordinal": 1,
+          "name": "query"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "reason": 2,
+          "ordinal": 3,
+          "name": "query"
+        },
+        {
+          "reason": 4,
+          "count": 2,
+          "logicalBefore": 1,
+          "ordinal": 4,
+          "name": "commit-enter"
+        },
+        {
+          "reply": [
+            1,
+            1,
+            10,
+            6,
+            6000,
+            0,
+            1
+          ],
+          "logicalAfter": 3,
+          "ordinal": 5,
+          "name": "commit-applied"
+        },
+        {
+          "control": "tuple-throw",
+          "scope": "actual logical effects precede native denial",
+          "ordinal": 6,
+          "name": "malformed-reply"
+        }
+      ],
+      "parentEvents": [],
+      "stderrSha256": "f94d9f4a384f131d4ba77efdf61a5d630fa913b0296b03b5af824ddb1112aa97"
+    }
+  ]
+}

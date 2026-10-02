@@ -1,0 +1,10 @@
+{
+  "status": "SYNTAX_ONLY_PREPARED_NO_ADDON_LOAD_OR_CONTROL_EXECUTION",
+  "helperHashes": {
+    "run.py": "12cae36040879837c6a529a7772e45ebaf81d2c2f6716b577f04506c37998e86",
+    "child.mjs": "f481c3ea94641536e830f3a923c24c8b4d17e6d3e0b5cfd29359435493e4f4a1",
+    "worker.mjs": "19f3711cc76d9cb5cd7aad2fefa97fcf9b3e637dfc33b5df8d15e9add6c17c62",
+    "second-worker.mjs": "c16ec5951649c94357b6c006629dd9ffb1fd411602a1eed065dc6b15ca27cb0b",
+    "plan.json": "6a7cda23a34f83bbe042f9428f5e991a956a96c27ab1dc1d0b551fc2c96a030a"
+  }
+}

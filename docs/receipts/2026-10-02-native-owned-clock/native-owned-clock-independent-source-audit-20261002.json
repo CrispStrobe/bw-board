@@ -1,0 +1,70 @@
+{
+  "status": "PASS_SOURCE_AUDIT_NOT_ADDON_RUNTIME_QUALIFICATION",
+  "scope": "Read-only source audit plus authorized source-only helper tests; no Bochs/addon build or guest execution by auditor",
+  "hashes": {
+    "scripts/bochs-cpu3-native-owned-clock/abi.h": "8cb93c00c24ca088184f4201fcf97a97a9cf508b7c3a2048ca532848dba7a9bc",
+    "scripts/bochs-cpu3-native-owned-clock/clock.inc": "861080333e8e656005d1919bc55191710f98d9af6ef375642ec50efebc0ff0ab",
+    "scripts/bochs-cpu3-native-owned-clock/contract.md": "cc844b41da68e3a2a9f3a7ae731dfba77eb6616cd072ff30666968c6604f62df",
+    "scripts/bochs-cpu3-native-owned-clock/derive.mjs": "14413e740b13d0fb0b78aea26054578a652c59237aca4ecf807937f7e78459f6",
+    "scripts/bochs-cpu3-native-owned-clock/factory.mjs": "2afd7b6434d037d7b568a4af6aeba410f68030ee024220f05ba5d3d68323a0e2",
+    "scripts/bochs-cpu3-native-owned-clock/identity.mjs": "8d867c0c3d05c72b6e3b89d7349a99ee2575008c8706d08ecb04db65b9523c71",
+    "scripts/bochs-cpu3-native-owned-clock/loader.mjs": "d0b8fa7790a6038150f82c3f932638156164005f08d1b4f4bfc37e9bd7dd7b59",
+    "scripts/bochs-cpu3-native-owned-clock/napi.mjs": "a415282d123066a896297388c1f44ee9fcec0d567d721b6ec5878883afa4b292",
+    "scripts/bochs-cpu3-native-owned-clock/provider.mjs": "635e6c9f27fb6a86018af987c50d7f958d85134f4475ab6b5ca5806b85b499f5",
+    "scripts/bochs-cpu3-native-owned-clock/runtime.mjs": "2a7865f992199397a16fc0989e1c6fb620f1e02c41b66b5e758095302f11af9f",
+    "scripts/bochs-cpu3-native-owned-clock/worker.mjs": "b088b4557fb0540b61da29030a137916d61d4fe02152a0a3e65547ed15b66066",
+    "scripts/prepare-bochs-cpu3-native-owned-clock.mjs": "84dfb43c82fcbe10d3f8f32dda8b3da210bcdbe04d7b5bcb62b361b8f1c99dc4",
+    "scripts/run-i80386-native-owned-clock.mjs": "d9a24d9ac044ae41117bd47bd02768a0b07abe549daf575977e1e58b8dbff0ff",
+    "test/fixtures/i80386-owned-clock-harness.cc": "88c06dbda169a87f929f02e57657fc020a8948ce04af8c46cb167d3b6a58825f",
+    "test/i80386-native-owned-clock-c-harness.test.mjs": "50d484bc15339ea70d9fbc6f2b7db54836cc8991f3a064d162266e16639e4ba2",
+    "test/i80386-native-owned-clock.test.mjs": "5cdec5172b567eb47a7fe5db29881f88efe6cd23352a1984c32bc43dea153af3"
+  },
+  "inverses": {
+    "runtime": {
+      "seams": 22,
+      "sha256": "5af7f24e98248af5263d082205256f089716206af9d0ce1671a528e537b1089c",
+      "held": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a"
+    },
+    "napi": {
+      "seams": 7,
+      "sha256": "2f66ae075d5cbcbbe56dc133a8bf8fda2e77c0bdbbe8d0ed1df6c8be6495667d",
+      "held": "b57a3cea1f5f5eea2092401f8dba3041eb0bc0d19551bf4273e66ad7372c60cb"
+    }
+  },
+  "controls": {
+    "actual_clock_inc_mock_cpp": 27,
+    "provider_inverse": 24,
+    "skipped": 0,
+    "final_combined_focused": 81,
+    "final_log_sha256": "2c98a009fe5630d3a3d04df1c954d08a760d6fe362f65aa933f292fa513306f6",
+    "final_log_path": "/mnt/volume1/tmp-astra/native-owned-clock-source-20261002/frozen-focused.stdout"
+  },
+  "reviewed": [
+    "pristine private worker actual board ownership and local callbacks",
+    "parent busy lease/startup/error/exit/request cleanup",
+    "static900 ordered tape; independent N/Q requested and total caps",
+    "flush after native ledgers before host observers and fault/IRQ/HLT/return",
+    "pending mapping observer and N/QREP guards; Q0 publication",
+    "phase/domain/cumulative7 reply validation",
+    "actual source/header/derivative/inherited transformed output/config/build-receipt binding",
+    "separate physical transfer counters and unchanged original logical trace ordering",
+    "actual frozen identity regression test authenticates abi/runtime/NAPI hidden assets"
+  ],
+  "remaining_runtime_gates": [
+    "authenticate clean frozen source and compiled artifact receipt externally",
+    "real NAPI tuple/backing/reentry/thread/process singleton denial controls",
+    "full canonical CPU/host journal/six board checkpoints/RAM/PIT/PIC parity",
+    "separately authorized predeclared process CPU measurement"
+  ],
+  "frozenRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "executedFrozenIdentity": {
+    "status": "PASS",
+    "paths": 86,
+    "receipt": "/mnt/volume1/tmp-astra/native-owned-clock-peer-frozen-identity-20261002.json"
+  },
+  "finalCorrectionsReviewed": [
+    "normalized absolute root removes trailing slash before relative slicing",
+    "provider end denies unpublished pending mapping"
+  ],
+  "declaredOwnedPaths": 16
+}
