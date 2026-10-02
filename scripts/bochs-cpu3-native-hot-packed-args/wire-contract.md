@@ -1,0 +1,7 @@
+# H5 conditional scalar arguments candidate
+
+This isolated source derivative authenticates exact H4 generator and generated NAPI b57a bytes. It changes only internal scalar argument construction and the call's argc: nativeTick/ACK pass (op) argc1, quantum passes (op,a) argc2, PIO passes (op,a,b,c) argc4. It creates only those numeric handles, in the existing left-to-right order. Unsupported operation values still deny before invoking the host callback.
+
+H4 wrapper/loader, metadata getter/primitive boxing order, u32 validation, private reusable tuple, reentry/self/collision guards, immediate native12Bcopy, CABI, runtime, memory/PAGE, exports and lifecycle remain unchanged. Host methods still receive original tick0/quantum1/PIO3/ACK0 argument counts and original receiver. Missing internal parameters are undefined only on unused tick/ACK paths; quantum retains both ordinary0 and REP1 kind. No op/key caching, batching, extra profiler schema, or guest capability is introduced.
+
+The new preparer authenticates H4 first then replaces only copied NAPI; the new bounded driver source-authenticates its own input inventory and uses the original fixed hot ROM/profile and H4 opt-in loader. This source-only candidate is not compiled/native-qualified until separately audited. Actual hostile callback controls, full native-row/journal equality and paired measurements remain required before any cost claim.

@@ -133,6 +133,14 @@ The compile-time-specialized variant was also rejected (**−2.23%, −3.09%**).
 See [literal-load evidence and compiler-policy follow-up](docs/receipts/2026-10-01-wasm-literal-loads/README.md).
 App pins remain unchanged; the all-host/all-target goal is not yet met.
 
+The new active **STM32F0 48 MHz** fixture separates RAM/ALU from GPIO polling.
+On two hosted main-artifact runs, RAM cleared every window (**3.01× / 2.87×
+medians**), but GPIO failed every window (**0.594× / 0.659× medians**).
+These are distinct workloads/hosts, not an optimization A/B or universal F0
+rating. See [raw F0 results and main profiling](docs/receipts/2026-10-02-f0-main/README.md)
+and the [timing guide](docs/LABWIRED-F0-TIMING.md). Runtime and app pins are
+unchanged; bus/admission and GPIO write hooks are the next investigation targets.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

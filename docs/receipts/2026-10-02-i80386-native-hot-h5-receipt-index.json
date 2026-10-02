@@ -1,0 +1,1215 @@
+{
+  "schema": "bw.h5.publication-receipt-index.v1",
+  "measuredSourceRevision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+  "h4MeasuredSourceRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "addonSha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+  "files": {
+    "2026-10-02-i80386-native-hot-h5-source-audit.py": {
+      "bytes": 1863,
+      "sha256": "dfac16970c969ea715ea5b8acbea6e4e21713b27eac0d36cd67b3dd782957b42",
+      "uncompressedBytes": 1863,
+      "uncompressedSha256": "dfac16970c969ea715ea5b8acbea6e4e21713b27eac0d36cd67b3dd782957b42",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-source-differential-20261001/audit.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-source-generated.diff": {
+      "bytes": 2345,
+      "sha256": "df3bbdcec7aba0804e1824c3770fb91d3193c9f81e27687058cb1457f416b915",
+      "uncompressedBytes": 2345,
+      "uncompressedSha256": "df3bbdcec7aba0804e1824c3770fb91d3193c9f81e27687058cb1457f416b915",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-source-differential-20261001/generated.diff"
+    },
+    "2026-10-02-i80386-native-hot-h5-source-source-differential-audit.json": {
+      "bytes": 732,
+      "sha256": "ffc117a430cd53f12b785390143e1ff8d3f12a43e5bd7d013ab6f0324ba5cbe6",
+      "uncompressedBytes": 732,
+      "uncompressedSha256": "ffc117a430cd53f12b785390143e1ff8d3f12a43e5bd7d013ab6f0324ba5cbe6",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-source-differential-20261001/source-differential-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-addon-ldd.txt": {
+      "bytes": 374,
+      "sha256": "79bec3306e4c06b7f60effd863a5437354700cc69be6324457ef147fbd05b142",
+      "uncompressedBytes": 374,
+      "uncompressedSha256": "79bec3306e4c06b7f60effd863a5437354700cc69be6324457ef147fbd05b142",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/addon-ldd.txt"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-addon-nm-defined.txt": {
+      "bytes": 188038,
+      "sha256": "f635abcabac6f1bc4b0565eca49fcc834b876605ac412cc9a92252f90a6846bb",
+      "uncompressedBytes": 188038,
+      "uncompressedSha256": "f635abcabac6f1bc4b0565eca49fcc834b876605ac412cc9a92252f90a6846bb",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/addon-nm-defined.txt"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-audit-build.py": {
+      "bytes": 3259,
+      "sha256": "cbfdcfaadc2d409a4a6615faff44d45f458bf10e9ae418d35d1c809034f2411c",
+      "uncompressedBytes": 3259,
+      "uncompressedSha256": "cbfdcfaadc2d409a4a6615faff44d45f458bf10e9ae418d35d1c809034f2411c",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/audit-build.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-build-static-preflight.json": {
+      "bytes": 1236,
+      "sha256": "06694116a865ff6f636f759df2618fd67b6cb792e3e118e2e6a2ae811b040bc4",
+      "uncompressedBytes": 1236,
+      "uncompressedSha256": "06694116a865ff6f636f759df2618fd67b6cb792e3e118e2e6a2ae811b040bc4",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/build-static-preflight.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-prepare.json": {
+      "bytes": 16626,
+      "sha256": "48d432eea6dded26395957ce49ae250bcdd4e37e9ee101a4ba34b64709f6f4b9",
+      "uncompressedBytes": 16626,
+      "uncompressedSha256": "48d432eea6dded26395957ce49ae250bcdd4e37e9ee101a4ba34b64709f6f4b9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/prepare.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-root-audit-build.py": {
+      "bytes": 3908,
+      "sha256": "06019c8801aedaf31b28880d44b150005ff3f0ef8dff8bb1560245a9085149fc",
+      "uncompressedBytes": 3908,
+      "uncompressedSha256": "06019c8801aedaf31b28880d44b150005ff3f0ef8dff8bb1560245a9085149fc",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/root-audit-build.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-root-build-binding-audit.json": {
+      "bytes": 626,
+      "sha256": "f4c0b06796131eff0e59d53dc389f9fea179ca34444a97f10fb6b7d4f918d4f4",
+      "uncompressedBytes": 626,
+      "uncompressedSha256": "f4c0b06796131eff0e59d53dc389f9fea179ca34444a97f10fb6b7d4f918d4f4",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/root-build-binding-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-approved-bindings.json": {
+      "bytes": 1217,
+      "sha256": "66821c83ac27cf350956f98dbeece71b19c5100cba2ff59150852947181824eb",
+      "uncompressedBytes": 1217,
+      "uncompressedSha256": "66821c83ac27cf350956f98dbeece71b19c5100cba2ff59150852947181824eb",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/approved-bindings.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-auth-after.json": {
+      "bytes": 7334,
+      "sha256": "ffe42a43cd8b2f405c28ba122cf8da4aec1c46b17e17620e5357b9d342452c50",
+      "uncompressedBytes": 7334,
+      "uncompressedSha256": "ffe42a43cd8b2f405c28ba122cf8da4aec1c46b17e17620e5357b9d342452c50",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/auth-after.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-auth-before.json": {
+      "bytes": 7334,
+      "sha256": "ffe42a43cd8b2f405c28ba122cf8da4aec1c46b17e17620e5357b9d342452c50",
+      "uncompressedBytes": 7334,
+      "uncompressedSha256": "ffe42a43cd8b2f405c28ba122cf8da4aec1c46b17e17620e5357b9d342452c50",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/auth-before.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-build-bindings.py": {
+      "bytes": 585,
+      "sha256": "d14f04ccdea81bf3c9e61d9114396a62a1550999f4b697fa6b67505a72299c6a",
+      "uncompressedBytes": 585,
+      "uncompressedSha256": "d14f04ccdea81bf3c9e61d9114396a62a1550999f4b697fa6b67505a72299c6a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/build-bindings.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-child.mjs": {
+      "bytes": 16104,
+      "sha256": "e76c5264b269f09d10b582fe1131cd90c48cf9c247fd52e15c722ba9dafe6662",
+      "uncompressedBytes": 16104,
+      "uncompressedSha256": "e76c5264b269f09d10b582fe1131cd90c48cf9c247fd52e15c722ba9dafe6662",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/child.mjs"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-non-guest-build-preflight.json": {
+      "bytes": 990,
+      "sha256": "2dfdf0f7be8b24815124b012b509f28663e0decb5e81fb075bfaa5e8dd2ab394",
+      "uncompressedBytes": 990,
+      "uncompressedSha256": "2dfdf0f7be8b24815124b012b509f28663e0decb5e81fb075bfaa5e8dd2ab394",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/non-guest-build-preflight.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-plan.json": {
+      "bytes": 1749,
+      "sha256": "18cd5f5d28fbe8cd1b95f1f2a3bedcea579bc5e781cf2ad813b3f8377e5fdb48",
+      "uncompressedBytes": 1749,
+      "uncompressedSha256": "18cd5f5d28fbe8cd1b95f1f2a3bedcea579bc5e781cf2ad813b3f8377e5fdb48",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/plan.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-preparation.json": {
+      "bytes": 622,
+      "sha256": "8e893fd63a5865e094f7b399563263c533c7ea922c0d263c9d1b01bfe1deaab9",
+      "uncompressedBytes": 622,
+      "uncompressedSha256": "8e893fd63a5865e094f7b399563263c533c7ea922c0d263c9d1b01bfe1deaab9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/preparation.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-prepare.py": {
+      "bytes": 2878,
+      "sha256": "5ac493f8bace53312640f15ddc34cbeff7814b965923ce70d2856f46a53f914b",
+      "uncompressedBytes": 2878,
+      "uncompressedSha256": "5ac493f8bace53312640f15ddc34cbeff7814b965923ce70d2856f46a53f914b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/prepare.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-root-audit.py": {
+      "bytes": 4976,
+      "sha256": "857e98d6d68525255d121cbef5c8585230cfb342f3f91efbe3d73d482c46218d",
+      "uncompressedBytes": 4976,
+      "uncompressedSha256": "857e98d6d68525255d121cbef5c8585230cfb342f3f91efbe3d73d482c46218d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/root-audit.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-root-control-audit.json": {
+      "bytes": 579,
+      "sha256": "f2d21511441da086cca5097a2cd9fb265e6259a27234a25edfc7deadc10bda5d",
+      "uncompressedBytes": 579,
+      "uncompressedSha256": "f2d21511441da086cca5097a2cd9fb265e6259a27234a25edfc7deadc10bda5d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/root-control-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-run.py": {
+      "bytes": 6742,
+      "sha256": "f31d1a0f36070fa4a2af196aa9cfc1fbf03301deeac82ad95c3d1111ea46a4ac",
+      "uncompressedBytes": 6742,
+      "uncompressedSha256": "f31d1a0f36070fa4a2af196aa9cfc1fbf03301deeac82ad95c3d1111ea46a4ac",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/run.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-summary.json": {
+      "bytes": 22089,
+      "sha256": "7e2e92e7b6222bcf609dc7abe71e528e2a95feb69ad1573234a9ba94112a9db5",
+      "uncompressedBytes": 22089,
+      "uncompressedSha256": "7e2e92e7b6222bcf609dc7abe71e528e2a95feb69ad1573234a9ba94112a9db5",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/summary.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-baseline-capture.json.gz": {
+      "bytes": 8893,
+      "sha256": "f1d4e2dd21461662c97fd432e3b0422bd5f0a594675f69b57a5d8a716a6b4765",
+      "uncompressedBytes": 83688,
+      "uncompressedSha256": "0f73171d4f7e2e6886e8f06c533870c221601b9ee67659db1583c4c8c6d4ab3a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/baseline/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-getter-order-capture.json.gz": {
+      "bytes": 8897,
+      "sha256": "af853594c48de398bbdf59be1f289540b57c0857132b001eef732b91a6a68494",
+      "uncompressedBytes": 83700,
+      "uncompressedSha256": "6fc9db1aee7fd0d471faab581eedfddcfb252083c1e37c48e72f541b30db416f",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/getter-order/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-intrinsics-capture.json.gz": {
+      "bytes": 8896,
+      "sha256": "226119f0ff889590d4d5568eba5409d874d4a18d88f2158bd7df677c91976321",
+      "uncompressedBytes": 83694,
+      "uncompressedSha256": "3046e92d9612d3b2c1ad96d11fa3be017014d5a35893873396a11ef97c865382",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/intrinsics/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-method-swap-capture.json.gz": {
+      "bytes": 8898,
+      "sha256": "74eae87b16e607afa9a02d22d0a9fe8cdc314aef40e9b9fa11c9dcb1f0d88efd",
+      "uncompressedBytes": 83697,
+      "uncompressedSha256": "049eed0ab69bdf4b0f2216623d56ebd425267c8d71d09e53cbb378b1ffe16375",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/method-swap/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-packed-argc-capture.json.gz": {
+      "bytes": 8892,
+      "sha256": "7b83c4041ea50ed473de561e12dcda23e2ff8eee55927aa47eb7142505017f97",
+      "uncompressedBytes": 83697,
+      "uncompressedSha256": "432ee953e8f7b2ff4f22635486da77468af7fc96790983c9d0249799093d6867",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/packed-argc/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-map-capture.json.gz": {
+      "bytes": 8897,
+      "sha256": "0eaa6189bb6f6622776d55fbdd270884b16ef6b14a1c8ce57e9e7ff3241eb6b9",
+      "uncompressedBytes": 83703,
+      "uncompressedSha256": "0743720a8829e5978f10ecc7d3a67fd7fee480a06b7469de54d7d93a5ee646c9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-map/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-pio-capture.json.gz": {
+      "bytes": 8900,
+      "sha256": "0d74e1b6081d6865cebd711d7718f0946b61587bb544714d88f0e9abdd47b65c",
+      "uncompressedBytes": 83703,
+      "uncompressedSha256": "4e6dd8f7cafde16d365b2c39e6650808a4a4b9fd095a472d4f54c03adf4bc34b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-pio/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-reentry-capture.json.gz": {
+      "bytes": 8893,
+      "sha256": "c4e5e019307d7c67ccd1087689ce2f513c8b02920b9850e5fa1b116b78a2063e",
+      "uncompressedBytes": 83685,
+      "uncompressedSha256": "3e27a111103cce36b77db53d01cf9d1b34cfc95b110edae6b9e402f36c19c320",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/reentry/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-baseline-control.jsonl.gz": {
+      "bytes": 20,
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedBytes": 0,
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/baseline/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-baseline-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/baseline/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-baseline-timing.json.gz": {
+      "bytes": 213,
+      "sha256": "ab899536cd0fde92707fe4ca1df80f57aa4f2572e1ac837a59ecd16afd1ce34b",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "55ba5abdb6c4a21a7c64d67c2007d0e717d5e19a19dba7b2ef5eaee708b3e819",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/baseline/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-getter-order-control.jsonl.gz": {
+      "bytes": 74,
+      "sha256": "0f9c015037adab5f5fcd92ca1dd24c23bfd70b0f5ef1f90147e5896a3f4ee6e3",
+      "uncompressedBytes": 80,
+      "uncompressedSha256": "a5bbebc80d87675f6d0ccbabfb545e783a61b08a03cc9eab7288d4089e358943",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/getter-order/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-getter-order-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/getter-order/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-getter-order-timing.json.gz": {
+      "bytes": 216,
+      "sha256": "9d105d4dabf777c5cfb76688e5f41617e1ccf14a197be07f3de7b23af5faf471",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "a9fddc5fb7b189a3072e7bbfafd0e97a7db08ba7b370c90ec78db7dc36f4b8e2",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/getter-order/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-intrinsics-control.jsonl.gz": {
+      "bytes": 89,
+      "sha256": "5cbf391ab35dfdfc3787b8e13152631776dca82842998fc5e01ce681a334eb87",
+      "uncompressedBytes": 97,
+      "uncompressedSha256": "f26eecad9b8b03c2a4b7829ca699e88864f9cac29a600fb9dc1c89407006e0c1",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/intrinsics/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-intrinsics-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/intrinsics/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-intrinsics-timing.json.gz": {
+      "bytes": 215,
+      "sha256": "ec544cc3579bedc8ff4cc85cd7e41a01c971f996c141c721b97f6668ddb80375",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "89e7fb9a243ee040545f662e8b712b6e66c6756d18633a114a195a147b539339",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/intrinsics/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-invalid-epoch-control.jsonl.gz": {
+      "bytes": 44,
+      "sha256": "2e33284f03d550641e893fb3642a9fb84a5d94b2cae1342d99ed6e85cab66089",
+      "uncompressedBytes": 24,
+      "uncompressedSha256": "418c571ac71830d4e4d2cc3df104fc2cae60f4d312273d84088ffdf4e584cd72",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/invalid-epoch/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-invalid-operation-value-control.jsonl.gz": {
+      "bytes": 53,
+      "sha256": "8242e21ed032370ab2579df3a91bc8d9718a4a56cb7e559aee61237a2005c88e",
+      "uncompressedBytes": 35,
+      "uncompressedSha256": "4665ef0ba63c86f80617c7da3c1bde3e8c5ede0ad9f35c0d7a3ac21d1e53b76b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/invalid-operation-value/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-method-swap-control.jsonl.gz": {
+      "bytes": 78,
+      "sha256": "067df32ee86f63427fdbda2143a10bc54b88e18f982e8f3565670c0ae10b872a",
+      "uncompressedBytes": 87,
+      "uncompressedSha256": "155b29842b5febee4c33323948695de7a0eabc7f24a255d2e8c22a2f70bc254a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/method-swap/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-method-swap-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/method-swap/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-method-swap-timing.json.gz": {
+      "bytes": 215,
+      "sha256": "0ff57e89c231d8c5c54a2851e51fcffe41d5846ed97921b8c20bd758e6ae3914",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "1e22f70ade30b3d650cdece1cbc12bddde7f5bc0985aa22c7856cda059fec30c",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/method-swap/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-packed-argc-control.jsonl.gz": {
+      "bytes": 74,
+      "sha256": "5d4694ac2ed35ce019300d19a3dbfae786751ba19378e231d597831f2d9fb5cb",
+      "uncompressedBytes": 156,
+      "uncompressedSha256": "6b4d80666c23667257029b6d920d522c72b263478546ab03e170d1b60c586bfd",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/packed-argc/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-packed-argc-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/packed-argc/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-packed-argc-timing.json.gz": {
+      "bytes": 214,
+      "sha256": "6f7e64997c5bd9cf41f7f7fd09f9e8a298e095f8cfed8fc76fda21967949be6a",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "b058599dc5f1373de02dd9cf8ded82ff9a9fef3821c0c8823f11c4c174d4cb1c",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/packed-argc/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-map-control.jsonl.gz": {
+      "bytes": 56,
+      "sha256": "cc197944f950215084b87f0bb723cd54c1dafa325820e17b646d9018a04257ca",
+      "uncompressedBytes": 44,
+      "uncompressedSha256": "eef2f248a9009c2cb4accfce5a4e5e28822dcb4ef43620bd59e236d3a0a992e7",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-map/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-map-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-map/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-map-timing.json.gz": {
+      "bytes": 215,
+      "sha256": "d62087bea440331df6da2779406f4997ec0e691e04e32df512c328f3f7176bd1",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "bb0c36829b3ab5c384f7478018332d96be87f7662d2420c1d958ba7666b5c96b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-map/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-pio-control.jsonl.gz": {
+      "bytes": 63,
+      "sha256": "d200689df5982a6e0355f1a4edcfa370853d0b3336dc86fe8713523ecf78e6aa",
+      "uncompressedBytes": 61,
+      "uncompressedSha256": "7d28746544d8f2eb748806d61db05f1a9ee0f2c2e599fa00949a96c1a6cc4efc",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-pio/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-pio-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-pio/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-primitive-pio-timing.json.gz": {
+      "bytes": 213,
+      "sha256": "4d8ff993c7222c5ac0c130c2cd3db74eabfdd252272f533adfe259a7eac7d0a5",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "bcd77455271cb3821a8f192750777146c093d6a3398d2d58a85cb08e714cb158",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/primitive-pio/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-reentry-control.jsonl.gz": {
+      "bytes": 65,
+      "sha256": "4507e4b68273f9f36d1050ba212714264c2c2d4ecb9e5f3d94346952c8dd34dc",
+      "uncompressedBytes": 54,
+      "uncompressedSha256": "46fe66361f299997c490753d9b65551be37ee8c1ad8b863ef379a16e778dcb0f",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/reentry/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-reentry-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/reentry/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-reentry-timing.json.gz": {
+      "bytes": 216,
+      "sha256": "21649d57a4d6113409568cc8f6f7b2fc19e90ba176b91114d76f94b1f6a5b29a",
+      "uncompressedBytes": 267,
+      "uncompressedSha256": "2ca854d2f2de2608d114eb154c3b87fed9bd771b214a16116b3633c5958be085",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/reentry/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-throw-epoch-control.jsonl.gz": {
+      "bytes": 44,
+      "sha256": "2e33284f03d550641e893fb3642a9fb84a5d94b2cae1342d99ed6e85cab66089",
+      "uncompressedBytes": 24,
+      "uncompressedSha256": "418c571ac71830d4e4d2cc3df104fc2cae60f4d312273d84088ffdf4e584cd72",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/throw-epoch/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-tuple-backing-control.jsonl.gz": {
+      "bytes": 70,
+      "sha256": "634f2673f80bca0ff0831bb13f6cc45d1510902b0a787be83bace0fdc760f689",
+      "uncompressedBytes": 57,
+      "uncompressedSha256": "ce65f89d7bbfd81ea4a41f85518bb62fd5a52fdc8d8e0a3b64db9afab7c8e740",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/tuple-backing/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-tuple-detached-control.jsonl.gz": {
+      "bytes": 72,
+      "sha256": "f5c3d19fa60daceca9caf72b71fcd3f0499de9d451cf8ea95663659f13e3c452",
+      "uncompressedBytes": 58,
+      "uncompressedSha256": "b16d770e4e509401d85c51fa9b81a90f79008a0b40ebe1ad03f266dfe19aaa26",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/tuple-detached/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-tuple-float-control.jsonl.gz": {
+      "bytes": 69,
+      "sha256": "4271a3876b5d40bd01d1aa8901e1f15e509672f86489f1326463c67e4793d4a5",
+      "uncompressedBytes": 55,
+      "uncompressedSha256": "302a4637bea77fce54abba314b8f46db6c431857b1cc5a2a9dd56e01eaf5656e",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/tuple-float/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-tuple-length-control.jsonl.gz": {
+      "bytes": 70,
+      "sha256": "8076ef2c5110b2713e7b57172b52ed2c78d3235be4554010edab3f7234ce4d53",
+      "uncompressedBytes": 56,
+      "uncompressedSha256": "df76ac6c933eeab2d261cdef80fbc56407f672c4e4d4534d49ad2d9d818c000c",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/tuple-length/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-tuple-offset-control.jsonl.gz": {
+      "bytes": 70,
+      "sha256": "3722c78eb00be3650b43ee7543743b3632392364438ab1837555bc9f1e05b0e3",
+      "uncompressedBytes": 56,
+      "uncompressedSha256": "8640a0649602d43fafef0c19f591a63e3366eb101d3b34c4b280bcfd774a6874",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/tuple-offset/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-tuple-shared-control.jsonl.gz": {
+      "bytes": 70,
+      "sha256": "c23128a3d4e48c676cad4ebf651501c4e9186b0e3787e60e905eb5f36424ed21",
+      "uncompressedBytes": 56,
+      "uncompressedSha256": "9b7e0819e45a1d199d90d00ad9d50ec0dcb3bbc24ace6c8edb966d10912363ca",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-runtime-controls-20261001/tuple-shared/control.jsonl"
+    },
+    "2026-10-02-i80386-native-hot-h5-controls-process-provenance.json.gz": {
+      "bytes": 7310,
+      "sha256": "890bdfe9e3555264e355674cf4d978a4ff177a286d0bb73890e12a8087607919",
+      "uncompressedBytes": 47265,
+      "uncompressedSha256": "41073c6641f7c9b5f6fece89c66eb20ab5a1a3e6f3a6409fe6de50f9a5ffac2b",
+      "source": "publication generated"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-approved-bindings.json": {
+      "bytes": 756,
+      "sha256": "4e1e4c5aa3f507936f877683cbdd4c2c8dfd329b2cf5c37f039e579cb2b82640",
+      "uncompressedBytes": 756,
+      "uncompressedSha256": "4e1e4c5aa3f507936f877683cbdd4c2c8dfd329b2cf5c37f039e579cb2b82640",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/approved-bindings.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace-auth-after.json": {
+      "bytes": 6600,
+      "sha256": "07e86f32db3ce0fdc0b37a5abf5c08a0103188b29e88d6d760d40b31c0d50ac7",
+      "uncompressedBytes": 6600,
+      "uncompressedSha256": "07e86f32db3ce0fdc0b37a5abf5c08a0103188b29e88d6d760d40b31c0d50ac7",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace-auth-after.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace-auth-before.json": {
+      "bytes": 6600,
+      "sha256": "07e86f32db3ce0fdc0b37a5abf5c08a0103188b29e88d6d760d40b31c0d50ac7",
+      "uncompressedBytes": 6600,
+      "uncompressedSha256": "07e86f32db3ce0fdc0b37a5abf5c08a0103188b29e88d6d760d40b31c0d50ac7",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace-auth-before.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace-comparison.json": {
+      "bytes": 449,
+      "sha256": "024f834fb7dc518ff3161da9a31a08f5ee05f16680b1e84d9f5e5cd4ad982fa9",
+      "uncompressedBytes": 449,
+      "uncompressedSha256": "024f834fb7dc518ff3161da9a31a08f5ee05f16680b1e84d9f5e5cd4ad982fa9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace-comparison.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace.py": {
+      "bytes": 5020,
+      "sha256": "d1e3075967785dc0cc7a8842bf84c16545d9964090923e294448d490d4841ea9",
+      "uncompressedBytes": 5020,
+      "uncompressedSha256": "d1e3075967785dc0cc7a8842bf84c16545d9964090923e294448d490d4841ea9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-root-compare.py": {
+      "bytes": 2383,
+      "sha256": "40dba4f2aa3c3abbc181d9781d86a73d5566aa90d8ffea31a054e6e9ad59fd50",
+      "uncompressedBytes": 2383,
+      "uncompressedSha256": "40dba4f2aa3c3abbc181d9781d86a73d5566aa90d8ffea31a054e6e9ad59fd50",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/root-compare.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-root-trace-audit.json": {
+      "bytes": 661,
+      "sha256": "00da60461119578b36ebf3722a49237114876567805ff5e6eebd85390160d34b",
+      "uncompressedBytes": 661,
+      "uncompressedSha256": "00da60461119578b36ebf3722a49237114876567805ff5e6eebd85390160d34b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/root-trace-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace-capture.json.gz": {
+      "bytes": 8886,
+      "sha256": "17ffb1fa83a616592e0cbeeb2910c303124d4a75efe3cf86cea9f23fc21aa53e",
+      "uncompressedBytes": 83666,
+      "uncompressedSha256": "980abe236fba92d6b627d1538cf6da9932bd95f7d751d87dadb3e7ef9daacc4d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace-result.json.gz": {
+      "bytes": 206,
+      "sha256": "88dec7eb9e85b069b6457f38f6806d06926a061a2326f21be3b2083efdb7bbf6",
+      "uncompressedBytes": 226,
+      "uncompressedSha256": "94fe9c7faadf4ee599b45463bb0ba39a2677d8e44cc0a13f3e979a9aaee4a3b5",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-fulltrace-timing.json.gz": {
+      "bytes": 199,
+      "sha256": "e03f169fedeb4978f74ab18fea31af34e269971eda07a62907947524bd205102",
+      "uncompressedBytes": 236,
+      "uncompressedSha256": "d838701ca84ac728ef8539575a726c39b37662cc2e8d13bbb9f109624b80e8a6",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-trace-process-provenance.json.gz": {
+      "bytes": 1243,
+      "sha256": "46433065f6033cfd86c8f809464befa661318e1b1a733822e1973ed2ec3b06c3",
+      "uncompressedBytes": 2396,
+      "uncompressedSha256": "1673f7b4bd943c06cf85f63c07485edd4c2bc73f90730a170d8fcdd2cbeef210",
+      "source": "publication generated"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "6a2f55aee650b2c8f7588140a1ff2ccfa3c953c9630bbe94a879513c69620b4b",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "6a2f55aee650b2c8f7588140a1ff2ccfa3c953c9630bbe94a879513c69620b4b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "bda4e3a15e98bcba6a8cb934834ce306eeb9999a0e784f35df0e86d8944a9819",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "bda4e3a15e98bcba6a8cb934834ce306eeb9999a0e784f35df0e86d8944a9819",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "59e842be6420e1bbf6c0ba31495327cdad978304d0847535c77075e44fbc6cb1",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "59e842be6420e1bbf6c0ba31495327cdad978304d0847535c77075e44fbc6cb1",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "043553f94055b6d7eb2289c826602b8f825c9a14ecb4d8810e4c48383ccc42e9",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "043553f94055b6d7eb2289c826602b8f825c9a14ecb4d8810e4c48383ccc42e9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "3e78fda323f7e53ac713496ca1516e52ba362ec89daabfa659baa9c8b3dbc27f",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "3e78fda323f7e53ac713496ca1516e52ba362ec89daabfa659baa9c8b3dbc27f",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "c72a83f4fd041d4dd025e9b407619af38af7e76dabfd36a507d62c27a5d7431d",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "c72a83f4fd041d4dd025e9b407619af38af7e76dabfd36a507d62c27a5d7431d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "409fdbbc60cbfb47435feb0e067f13c4596e29e314bb214c075ea88d2c30fc3c",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "409fdbbc60cbfb47435feb0e067f13c4596e29e314bb214c075ea88d2c30fc3c",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "9b444e8c79e3dabf6b1ce676e6105165f5825712e208d70362af59885867af30",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "9b444e8c79e3dabf6b1ce676e6105165f5825712e208d70362af59885867af30",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "9c46c5687017536627da21402d7927aa759b370bfa16adf851024b1f7550558e",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "9c46c5687017536627da21402d7927aa759b370bfa16adf851024b1f7550558e",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "a4b5d74a2db1897ee58605120ee08f589d4fd7197c6b8c75791b8c8a9cc518d2",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "a4b5d74a2db1897ee58605120ee08f589d4fd7197c6b8c75791b8c8a9cc518d2",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "36dd227d0a19549aa74679b0f3913a1db024b76642018f928f07e7324e61d851",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "36dd227d0a19549aa74679b0f3913a1db024b76642018f928f07e7324e61d851",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "cf61454c16df949248eb81a9ad0322668aef0043efa804512234b4b80960fef3",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "cf61454c16df949248eb81a9ad0322668aef0043efa804512234b4b80960fef3",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "683e5af7d64c129863958a153c83517f54223e99b46b551a3cc93a9c00d9f9e9",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "683e5af7d64c129863958a153c83517f54223e99b46b551a3cc93a9c00d9f9e9",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "9c329610005725a9b0a9088986bf170f120cec3a783bbe201af9faa6b578dc70",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "9c329610005725a9b0a9088986bf170f120cec3a783bbe201af9faa6b578dc70",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "9f747f91113bb0571721efc31ca6f91dba5645bc062e086684223f47f02b3a61",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "9f747f91113bb0571721efc31ca6f91dba5645bc062e086684223f47f02b3a61",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "c004ac13e263aaabf08496458d65177aef0c4c4f70fa73429ba21168e0d530ea",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "c004ac13e263aaabf08496458d65177aef0c4c4f70fa73429ba21168e0d530ea",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H4.artifacts.json": {
+      "bytes": 238,
+      "sha256": "0daa07e408e7be2d82079c1d7ffe8bb1b31ce13da4b5e8a74de2a8fffc2e73c4",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "0daa07e408e7be2d82079c1d7ffe8bb1b31ce13da4b5e8a74de2a8fffc2e73c4",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H4.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H5.artifacts.json": {
+      "bytes": 238,
+      "sha256": "c5cda950c812f1850e3ec71845234a192fbbfa15e5265d1944e6db0744b8057c",
+      "uncompressedBytes": 238,
+      "uncompressedSha256": "c5cda950c812f1850e3ec71845234a192fbbfa15e5265d1944e6db0744b8057c",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H5.artifacts.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-H4-cpu-child.mjs": {
+      "bytes": 9939,
+      "sha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+      "uncompressedBytes": 9939,
+      "uncompressedSha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/H4-cpu-child.mjs"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-H4-diff.txt": {
+      "bytes": 10734,
+      "sha256": "73c29639ee19af73af275b5e7f51e6c9c95d2483b3fcc71266e49b79a3681317",
+      "uncompressedBytes": 10734,
+      "uncompressedSha256": "73c29639ee19af73af275b5e7f51e6c9c95d2483b3fcc71266e49b79a3681317",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/H4-diff.txt"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-H5-cpu-child.mjs": {
+      "bytes": 10154,
+      "sha256": "73cf3a822f5f5c4fc32853fdb1c240c7e53cf46b976ab9e9ee16e41cfd5f663e",
+      "uncompressedBytes": 10154,
+      "uncompressedSha256": "73cf3a822f5f5c4fc32853fdb1c240c7e53cf46b976ab9e9ee16e41cfd5f663e",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/H5-cpu-child.mjs"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-H5-diff.txt": {
+      "bytes": 10964,
+      "sha256": "ec20feb05120b540c19e267f6c8b616a1db147f425872966147da29cea73aee3",
+      "uncompressedBytes": 10964,
+      "uncompressedSha256": "ec20feb05120b540c19e267f6c8b616a1db147f425872966147da29cea73aee3",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/H5-diff.txt"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-approved-bindings.json": {
+      "bytes": 1479,
+      "sha256": "cb9b6bfab15fcfa264e59d369c8b8183c3b6314fd92049352eeb91439c8f634b",
+      "uncompressedBytes": 1479,
+      "uncompressedSha256": "cb9b6bfab15fcfa264e59d369c8b8183c3b6314fd92049352eeb91439c8f634b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/approved-bindings.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-auth-after.json": {
+      "bytes": 22031,
+      "sha256": "61482d577cad6b4e86b08bea97d89ad74833fbb09728b607736ab1f1fbf0fb4f",
+      "uncompressedBytes": 22031,
+      "uncompressedSha256": "61482d577cad6b4e86b08bea97d89ad74833fbb09728b607736ab1f1fbf0fb4f",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/auth-after.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-auth-before.json": {
+      "bytes": 22031,
+      "sha256": "61482d577cad6b4e86b08bea97d89ad74833fbb09728b607736ab1f1fbf0fb4f",
+      "uncompressedBytes": 22031,
+      "uncompressedSha256": "61482d577cad6b4e86b08bea97d89ad74833fbb09728b607736ab1f1fbf0fb4f",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/auth-before.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-derivation.json": {
+      "bytes": 8047,
+      "sha256": "1785768563204a7dbcb1a6004eccfc5b3d073767dcc2a16dd40c4339ce5b4356",
+      "uncompressedBytes": 8047,
+      "uncompressedSha256": "1785768563204a7dbcb1a6004eccfc5b3d073767dcc2a16dd40c4339ce5b4356",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/derivation.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-derive.py": {
+      "bytes": 3171,
+      "sha256": "c301135a6e8fc9449645b00775633590004fb27b3542273f3f35c44a7274d394",
+      "uncompressedBytes": 3171,
+      "uncompressedSha256": "c301135a6e8fc9449645b00775633590004fb27b3542273f3f35c44a7274d394",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/derive.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-environment-after.json": {
+      "bytes": 4973,
+      "sha256": "4697668b008abcf97311c0650168d487e02202acff5e060eb3ec417afe51eecc",
+      "uncompressedBytes": 4973,
+      "uncompressedSha256": "4697668b008abcf97311c0650168d487e02202acff5e060eb3ec417afe51eecc",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/environment-after.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-environment-before.json": {
+      "bytes": 4974,
+      "sha256": "088b7aaa75bdf935f851722d5a8eaa58f8275d1d33777fffc9940c412343fe1b",
+      "uncompressedBytes": 4974,
+      "uncompressedSha256": "088b7aaa75bdf935f851722d5a8eaa58f8275d1d33777fffc9940c412343fe1b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/environment-before.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-independent-artifact-audit.json": {
+      "bytes": 2103,
+      "sha256": "a0b8659532cd81a56fcb38338947a1e0107ff26aa15bfe259379650255d5ce4a",
+      "uncompressedBytes": 2103,
+      "uncompressedSha256": "a0b8659532cd81a56fcb38338947a1e0107ff26aa15bfe259379650255d5ce4a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/independent-artifact-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-independent-artifact-audit.py": {
+      "bytes": 6232,
+      "sha256": "ecdf9e5239a389a8a209f7b6110ef641538e1c135cabedcd62a803099f9b5c4d",
+      "uncompressedBytes": 6232,
+      "uncompressedSha256": "ecdf9e5239a389a8a209f7b6110ef641538e1c135cabedcd62a803099f9b5c4d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/independent-artifact-audit.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-independent-helper-audit.json": {
+      "bytes": 2913,
+      "sha256": "337518bf9f71b905c58dacaa3e61e593b1aabec8c53f0abb4c3f381931e05e93",
+      "uncompressedBytes": 2913,
+      "uncompressedSha256": "337518bf9f71b905c58dacaa3e61e593b1aabec8c53f0abb4c3f381931e05e93",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/independent-helper-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-root-audit.json": {
+      "bytes": 2004,
+      "sha256": "c18edec1d25b7d65808e7f111f6b3505f4279c738d9d8bcf9af3b1b72b5498bd",
+      "uncompressedBytes": 2004,
+      "uncompressedSha256": "c18edec1d25b7d65808e7f111f6b3505f4279c738d9d8bcf9af3b1b72b5498bd",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/root-audit.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-root-audit.py": {
+      "bytes": 5681,
+      "sha256": "27dfad53c6d6f5f7fb90564f8196bd6edc849efa7532879e12c98d99a9605ee6",
+      "uncompressedBytes": 5681,
+      "uncompressedSha256": "27dfad53c6d6f5f7fb90564f8196bd6edc849efa7532879e12c98d99a9605ee6",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/root-audit.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-run.py": {
+      "bytes": 9442,
+      "sha256": "0102cb052cd0a3d64c5a54c88bef9fd8d90240a49ca85ad8c0a5b723907b9220",
+      "uncompressedBytes": 9442,
+      "uncompressedSha256": "0102cb052cd0a3d64c5a54c88bef9fd8d90240a49ca85ad8c0a5b723907b9220",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/run.py"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-summary.json": {
+      "bytes": 145134,
+      "sha256": "20d25925a85cbd97d5dd28a5295d0b31d822866753ae26142b9af062f930519b",
+      "uncompressedBytes": 145134,
+      "uncompressedSha256": "20d25925a85cbd97d5dd28a5295d0b31d822866753ae26142b9af062f930519b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/summary.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H4-capture.json.gz": {
+      "bytes": 8840,
+      "sha256": "e13d8eb97e9e66f08ac781dc60218e398256df346d3c5c571e9ee565db99720f",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "d8066b3dbf6a9e36fd4fe1d503dfc133a05cf8ee88b44a30238495d3ed239baf",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H5-capture.json.gz": {
+      "bytes": 9042,
+      "sha256": "a23f1e10f3275b1f68fe7a5e9c3e4f1d04e73338b8086e61dbe29fd3d019c574",
+      "uncompressedBytes": 83968,
+      "uncompressedSha256": "8d13406706906b7f68cba2d12a2a308715ee11e5b79305e40af8dfd332bf2497",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H4-capture.json.gz": {
+      "bytes": 8844,
+      "sha256": "05d17f26f3c139ccf8a076489374c69a7766dc9146fd1d68b03a9e884c2c3d18",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "317acf3b0fb58806ef1d0956f39f57c8d303829e3b459ee4fe834b0a9996b3ac",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H5-capture.json.gz": {
+      "bytes": 9038,
+      "sha256": "fdce7d20e627f43ca81563c201bdb19501bb666efb475c993655d9f9f6474caf",
+      "uncompressedBytes": 83967,
+      "uncompressedSha256": "e67aa7038e5db235330c8c8ffc10c751c9f678b7c6c6042dc436d590f58f73dd",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H4-capture.json.gz": {
+      "bytes": 8841,
+      "sha256": "bb9a82da41892f2af1a3d4cfd956ed819e83742655d691e76922138a9572da90",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "d67cb95d36c0052f7579aea68c9980168b6ac837b9a7f67f666116bb6c4370ba",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H5-capture.json.gz": {
+      "bytes": 9036,
+      "sha256": "e40e2c85b99cd2355f3a6f74ebf60952b54d1335cdab104242a302f8fbd1509b",
+      "uncompressedBytes": 83967,
+      "uncompressedSha256": "eb644be6f9610fc12ddeb6053d7d048e8b6a7d4cf5556c0757e6254679792e18",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H4-capture.json.gz": {
+      "bytes": 8839,
+      "sha256": "dd7e365a281801cc80a6941c4efcf8af8c6dad2a0960fc6a576f2b4256687cbe",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "599515637abe4371715e2a8457757b7a4eda77688d69653a15fac441293c1a08",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H5-capture.json.gz": {
+      "bytes": 9034,
+      "sha256": "2f255969f78474987a056bf32b13b8543dbdeab3fc4db06e027e1f921e31c446",
+      "uncompressedBytes": 83967,
+      "uncompressedSha256": "106ae92f88f7b26a5f54d74c1b8342182c940f62c76c85bcf382a0a126860ddb",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H4-capture.json.gz": {
+      "bytes": 8843,
+      "sha256": "b4164857c360e55e3f5bdcbc2d5855d2f75693eade3b2e9f3e400b59bdc2b965",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "d7062ddcc4de96891873ca642654437c2ee28ce0f3aec48c53aeb674a09d1fad",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H5-capture.json.gz": {
+      "bytes": 9039,
+      "sha256": "8d5863bdaa9ced289c31bfe62156962718ff896a22cb211c838579750a38c9df",
+      "uncompressedBytes": 83967,
+      "uncompressedSha256": "f416430d7225dbfb60d92339de0979ae6162b7de5ad8a194585d80cf6e3d10fa",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H4-capture.json.gz": {
+      "bytes": 8843,
+      "sha256": "cda2eb47b7f6cfc26096f884a17b402121c73de3f6e7e3b9aaa2c97ed5d86eda",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "5052864e3375492d69b8f57e0c6b9d24e5969dadb25c3a91e71369327c8fc074",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H5-capture.json.gz": {
+      "bytes": 9032,
+      "sha256": "18009d8c242754b658dac2fe278901f705046dde27ed104ca8439d6b3265d403",
+      "uncompressedBytes": 83966,
+      "uncompressedSha256": "8c39824ac6125920d58b21910103ca866d918c0f1525fa0b3fddf0461faaa84a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H4-capture.json.gz": {
+      "bytes": 8840,
+      "sha256": "a158d9c90d7f3acc20d4c391e74724295e40e0e286256ad31cdb07f7571b662e",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "a88ec7b08e9a664e1905148fb165405d0261d997b5788a7e946c63ab5d301afb",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H5-capture.json.gz": {
+      "bytes": 9037,
+      "sha256": "77fe405b971ca60d726295c60107ed13041cbc0bdf8976373bfd2dc30fb7c8e4",
+      "uncompressedBytes": 83967,
+      "uncompressedSha256": "3b7cb49a324858b35b5223d492df2d83583fe9fd5a177b33d828a5a9845c3c7a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H4-capture.json.gz": {
+      "bytes": 8840,
+      "sha256": "796972528d0ce0c0afde168e614a382a281b3aada8640a2c1aacfb7071e149f4",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "27b9946ddd91b9dbbce62f9b7062923a92f3f7018dbf41e63f5b279337b46275",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H5-capture.json.gz": {
+      "bytes": 9036,
+      "sha256": "b0742419e24ed2061508eae3b974b82f40388d6652da7a604baac9f37bb1a5a9",
+      "uncompressedBytes": 83966,
+      "uncompressedSha256": "11cb70c858d0c0e88d2e0d6cd737920b1c439acb533cd69d7a93a3631319cf53",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H4-capture.json.gz": {
+      "bytes": 8840,
+      "sha256": "126f1c5655b7e6f9f942033912b83c8721b958e5d3652f4a033e1a94188129bc",
+      "uncompressedBytes": 83468,
+      "uncompressedSha256": "1adbb257d07ef8416ca3293ece32cc67e6a77fc8cca75ae89dd721974db3f357",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H4/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H5-capture.json.gz": {
+      "bytes": 9040,
+      "sha256": "1680f6ab876e7e1e21246d7aa1d2e725c33983d321dd3d0f068cb37b214bad8d",
+      "uncompressedBytes": 83966,
+      "uncompressedSha256": "c66f51a80a868f0edc67c5e0e121b0770bdeed6348f6eb1aefeb1233cedc62a7",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H5/capture.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "89903ecc3c17a7c807d8553c00b2f8d5ee9445a2891801f50f09dadda6da5842",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "febf6a2c3ff90c70e6370c6a9fd859f41d0cb8ec86dc76785cdadceffc01ccca",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-0-H5-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "abd7efe13961b4699c3d0e5ec7c9f08d419f3bfe5f9ba3a71b2cc691823e767a",
+      "uncompressedBytes": 533,
+      "uncompressedSha256": "967f1021f7004d7ef45868d26d60b3f6f32689ca7e66795123874cf917db6685",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/0-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "36b167623aa3556fad4e721d47ef2c99712db22e63bf797b523301176d9543ad",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "9990ae125d4daf41de882fd7b31e9215b96e2f1619212082f077daa5a9d735dd",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-1-H5-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "603ab7bbb7801ed92468d71650523bd84a3691cc7c81456a3fd60a9896011e2d",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "d5beacfebceb6797689bd5a1286ec7c39aba1b1210cb56e7ab17595ff6d0c571",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/1-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "542394f44b3f3d9d1d4e37596d5db6c824ccb944a1ca38429195cd5cc750bb6a",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "57f9c19054ee9efaf4b61ea8b1851d357d904deec8b21b26886cef9dc851a1bb",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-2-H5-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "f820845c34cb15228d63395b0adf9a4c2fc252537a2c62bd8d54bd9eb3dc5771",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "2da201e681b613e8c1c82ef36d0df671cdf1cbc15d7d7c4524cfebbea7c311dc",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/2-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H4-timing.json.gz": {
+      "bytes": 338,
+      "sha256": "1056bb0ef9f68bc86934baf82b5a3e454cd1922fb04b6a19b3576f430f8f3d3e",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "4d0ec88750ca19c6aaec358619879f0389cbc63f8d274e3372b308db4ff537c6",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-3-H5-timing.json.gz": {
+      "bytes": 337,
+      "sha256": "4c3e93aa7d1727ddc5d71f80867f4ba9bef79a06cda2ec9f820f43ea33edd30d",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "cf80878f44fef71142308ca1903ac14b1382ddc352e41d49860949dcaa6342ba",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/3-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "ef14c25dadbc38de12dc4a8733fdeea108b6edf8d05eb4263eae16270b03fb2d",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "61a61fae3393ece6d64f7319bf5896fd66b23f913bbb97623eeb045c1b64c741",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-4-H5-timing.json.gz": {
+      "bytes": 338,
+      "sha256": "191a9221946fba2bb787c9bd386227f2f77f576f6d19c9abd817d35c1191508c",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "f6ea40e5c9e2bdc31740ce36dce6850ef9ddbdb6c04e3b08a2fbcc4fb6170ed2",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/4-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "e1e7ee1342c7250ae25ca8e032bfe2b4ae2b7d8663179eb6abb28814187c0b23",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "8606a63454a0906f07903450acf40bd198f28fc040afb5e818c6d7d5c5627b85",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-5-H5-timing.json.gz": {
+      "bytes": 336,
+      "sha256": "7b16434ced2e3ef5289779bb78d752a27a766e7323e4238cde4da614ace232c5",
+      "uncompressedBytes": 531,
+      "uncompressedSha256": "60e4474a5a23e288fa9b62e86f6b976f3a50da32bdd6fe0dfb562f376fbfcd76",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/5-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "49fa4d6436bd84b44269459d0b6e927ab89363a3bde7ede6985b7597c49cb6f1",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "103582137775100d1b00491e5f57821626f0fe7fb886f8efc31c388f43cd2d72",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-6-H5-timing.json.gz": {
+      "bytes": 335,
+      "sha256": "60ed9558b5d7f33f43adc3ae002047cf773406005231a8d5dea2f2eb541df7c7",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "a03f81535e63ea1dfea0c657bcbfbaea5ebf3d67af3ba42369a4d47163daa088",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/6-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H4-timing.json.gz": {
+      "bytes": 339,
+      "sha256": "2dfd61ab7787d7082a4b87c84014dac663dbdc8ab6f8dee369150668e6d0c98c",
+      "uncompressedBytes": 532,
+      "uncompressedSha256": "2bd607de78a4f291f8216c8a3c5ac5b36183391eb0bbdf9833c339e32201c908",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-7-H5-timing.json.gz": {
+      "bytes": 338,
+      "sha256": "059750448ee08e62df8d2def3f133a8e53a5f6d802d10a648629e2a7e9d25074",
+      "uncompressedBytes": 531,
+      "uncompressedSha256": "3885a3ae5784b37e7c9ec3359780506aaa975cb7720f09d6fa2265858b085481",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/7-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H4-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H4/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H4-timing.json.gz": {
+      "bytes": 338,
+      "sha256": "c40233b4ccc267ba5b541bc985ccf57fce8b77a80108f3df28971798a0a5d69e",
+      "uncompressedBytes": 533,
+      "uncompressedSha256": "5b0a070e0d133451245d8754abf01904f120fd2b950f85b7dcd4b6809dfbca7a",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H4/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H5-result.json.gz": {
+      "bytes": 197,
+      "sha256": "faa46e2a4e305fc4cb0625bc53c474fc95b3c925f23984efa352a9d94aae4b0f",
+      "uncompressedBytes": 214,
+      "uncompressedSha256": "0dfb0e04a583ac30440f71c2c951b184a3ee1d56d871f91de85f4f822d78d33b",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H5/result.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-8-H5-timing.json.gz": {
+      "bytes": 338,
+      "sha256": "31cb824244c0e4d805bd9f6ddb4ae85f6a1bd0c0fbd8623490123b62295be35c",
+      "uncompressedBytes": 531,
+      "uncompressedSha256": "c683f7f9690e1f30d49c31f34b7c6b5432e3a3fb5ca76af7fc67dcc257114e60",
+      "source": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/8-H5/timing.json"
+    },
+    "2026-10-02-i80386-native-hot-h5-cpu-process-provenance.json.gz": {
+      "bytes": 5899,
+      "sha256": "e858be147bcfac9344d6f38d0e8701d7c5f96c8fe5d970eab83ffaeb7a767407",
+      "uncompressedBytes": 48114,
+      "uncompressedSha256": "95263fd53279128362c758024dd2957f474f3a3cb88fa123dacbc39c4f4770d2",
+      "source": "publication generated"
+    },
+    "2026-10-02-i80386-native-hot-h5-interpretation.json": {
+      "bytes": 614,
+      "sha256": "43bb9a1fbd73a35e2a0e0f080f13dbf2ef1fe722b18935b9275fd32ca2fa1e52",
+      "uncompressedBytes": 614,
+      "uncompressedSha256": "43bb9a1fbd73a35e2a0e0f080f13dbf2ef1fe722b18935b9275fd32ca2fa1e52",
+      "source": "publication generated"
+    },
+    "2026-10-02-i80386-native-hot-h5-focused-process-provenance.json.gz": {
+      "bytes": 9748,
+      "sha256": "f04626dc0835e67691f69ed466ad3a8ac1e08f638769f27585042fb2b9fb36ea",
+      "uncompressedBytes": 30962,
+      "uncompressedSha256": "fa0fdc6cf45db5977d0b3e496d3154e4b64566497f1063850ba6f1efaccdb1c8",
+      "source": "focused tests/syntax/preparercheck exact original logs"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-addon-readelf.txt.gz": {
+      "bytes": 365,
+      "sha256": "1370ac8a437516d1ada52a26068be4fd26651d7d2f5e9a2aa9de66025e58e75f",
+      "uncompressedBytes": 960,
+      "uncompressedSha256": "6b52c1bd26be88933ca4a87fec03ecb7d0cffb0a250793c0fd90f5ff4c88d02d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/addon-readelf.txt"
+    }
+  },
+  "localOnly": {
+    "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace.stderr": {
+      "bytes": 149865640,
+      "sha256": "2f8385dbe5fa8b0445f2fd4855452c0ba5c353e1c230b8a27fd60a9dfd994603",
+      "reason": "large trace kept local"
+    },
+    "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h5-20261001/bochs/bw_direct.node": {
+      "bytes": 2060728,
+      "sha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+      "reason": "binary/large journal kept local; public receipts authenticate bytes"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/callbacks.jsonl": {
+      "bytes": 11728896,
+      "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+      "reason": "binary/large journal kept local; public receipts authenticate bytes"
+    }
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "schema": "bw.clock-fenced.publication-receipt-index.v1",
+  "diagnosticSourceRevision": "2d1cf651d7d7d0dfda55b9df482cf0ec70d9187c",
+  "heldCompiledH4Revision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "noNativeBatchImplemented": true,
+  "files": {
+    "2026-10-02-i80386-clock-fenced-approved-bindings.json": {
+      "bytes": 2012,
+      "sha256": "938b88d6727417746af238a0a8904c74e47b191e60fec9696f9392f92bb4710c",
+      "originalBytes": 2012,
+      "originalSha256": "938b88d6727417746af238a0a8904c74e47b191e60fec9696f9392f92bb4710c",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/approved-bindings.json"
+    },
+    "2026-10-02-i80386-clock-fenced-auth-after.json": {
+      "bytes": 7039,
+      "sha256": "8e38ccef44cce65fa288d545d3bb1ced22bd9c9fd18f6db29bb77a1e3c008fe6",
+      "originalBytes": 7039,
+      "originalSha256": "8e38ccef44cce65fa288d545d3bb1ced22bd9c9fd18f6db29bb77a1e3c008fe6",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/auth-after.json"
+    },
+    "2026-10-02-i80386-clock-fenced-auth-before.json": {
+      "bytes": 7039,
+      "sha256": "8e38ccef44cce65fa288d545d3bb1ced22bd9c9fd18f6db29bb77a1e3c008fe6",
+      "originalBytes": 7039,
+      "originalSha256": "8e38ccef44cce65fa288d545d3bb1ced22bd9c9fd18f6db29bb77a1e3c008fe6",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/auth-before.json"
+    },
+    "2026-10-02-i80386-clock-fenced-comparison.json": {
+      "bytes": 1524,
+      "sha256": "23b99dac075164b7627dd7d5bf216602bea97ac50070189c8c5967fe2bb996fd",
+      "originalBytes": 1524,
+      "originalSha256": "23b99dac075164b7627dd7d5bf216602bea97ac50070189c8c5967fe2bb996fd",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/comparison.json"
+    },
+    "2026-10-02-i80386-clock-fenced-independent-audit.json": {
+      "bytes": 818,
+      "sha256": "e610a8bb7e1daed19f33e7cda4873a32d04e9081e87a5a34118ab1acb22f7a71",
+      "originalBytes": 818,
+      "originalSha256": "e610a8bb7e1daed19f33e7cda4873a32d04e9081e87a5a34118ab1acb22f7a71",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/independent-audit.json"
+    },
+    "2026-10-02-i80386-clock-fenced-independent-audit.py": {
+      "bytes": 7340,
+      "sha256": "370fe0883280f4011e5d229d6a18acc837fa23f98ec867c7889572eb89f939df",
+      "originalBytes": 7340,
+      "originalSha256": "370fe0883280f4011e5d229d6a18acc837fa23f98ec867c7889572eb89f939df",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/independent-audit.py"
+    },
+    "2026-10-02-i80386-clock-fenced-offline-inputs.json": {
+      "bytes": 797,
+      "sha256": "7bbf9d61df3597bc0432bb61968286a9b045a17a1adfc7b0450ddc708f1813c2",
+      "originalBytes": 797,
+      "originalSha256": "7bbf9d61df3597bc0432bb61968286a9b045a17a1adfc7b0450ddc708f1813c2",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/offline-inputs.json"
+    },
+    "2026-10-02-i80386-clock-fenced-root-audit.json": {
+      "bytes": 939,
+      "sha256": "f30bcca354b61a30ecfd1d51c9bffed583c06e5953bfaf46bbec32c95381c3e5",
+      "originalBytes": 939,
+      "originalSha256": "f30bcca354b61a30ecfd1d51c9bffed583c06e5953bfaf46bbec32c95381c3e5",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/root-audit.json"
+    },
+    "2026-10-02-i80386-clock-fenced-root-audit.py": {
+      "bytes": 6094,
+      "sha256": "89e61ce8cc3a5731392962840bfe3a094f5862fc53e5b6314a4d948ba23d66dd",
+      "originalBytes": 6094,
+      "originalSha256": "89e61ce8cc3a5731392962840bfe3a094f5862fc53e5b6314a4d948ba23d66dd",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/root-audit.py"
+    },
+    "2026-10-02-i80386-clock-fenced-run.py": {
+      "bytes": 6243,
+      "sha256": "06758ea835e80b7085756930fa43937062f7cc329425603f65b7b15aec3ad3bd",
+      "originalBytes": 6243,
+      "originalSha256": "06758ea835e80b7085756930fa43937062f7cc329425603f65b7b15aec3ad3bd",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/run.py"
+    },
+    "2026-10-02-i80386-clock-fenced-actual-capture.json.gz": {
+      "bytes": 9155,
+      "sha256": "fcf47ff0e488e0de66030cb666eece00336c6fbb4d2006e9fa120c4cb6c36157",
+      "originalBytes": 84216,
+      "originalSha256": "fef68e50495e97ff03df0a3ce8a22a92dfb12b202eef28f3dfbbfd3d7a0befbb",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/capture.json"
+    },
+    "2026-10-02-i80386-clock-fenced-actual-fences.jsonl.gz": {
+      "bytes": 18763,
+      "sha256": "d6dbd7d20b8e27ca8deaaafdd197909a0752bc584dc4c049604fa3f897d3ef64",
+      "originalBytes": 276122,
+      "originalSha256": "3e0610e5507b612ba15a6323428149d15ecdc02933c273bd4efdd92103d3c30a",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/fences.jsonl"
+    },
+    "2026-10-02-i80386-clock-fenced-actual-result.json.gz": {
+      "bytes": 206,
+      "sha256": "88dec7eb9e85b069b6457f38f6806d06926a061a2326f21be3b2083efdb7bbf6",
+      "originalBytes": 226,
+      "originalSha256": "94fe9c7faadf4ee599b45463bb0ba39a2677d8e44cc0a13f3e979a9aaee4a3b5",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/result.json"
+    },
+    "2026-10-02-i80386-clock-fenced-actual-timing.json.gz": {
+      "bytes": 199,
+      "sha256": "18a87cb8ac86ec2e9316cd74469bfda3ec1a3a69069c06b908ada994c5c501e5",
+      "originalBytes": 238,
+      "originalSha256": "e76011e61fb89a35b2a419dc1fbbd402b7696e9165ce717f2504e40b52632333",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/timing.json"
+    },
+    "2026-10-02-i80386-clock-fenced-clock-witness-independent-driver-inverse-20261002.py": {
+      "bytes": 3093,
+      "sha256": "aa4ff9bbdbcd7aca55ad55a72f7d837d81380495918bd96302870976e6ec7c8d",
+      "originalBytes": 3093,
+      "originalSha256": "aa4ff9bbdbcd7aca55ad55a72f7d837d81380495918bd96302870976e6ec7c8d",
+      "origin": "/mnt/volume1/tmp-astra/clock-witness-independent-driver-inverse-20261002.py"
+    },
+    "2026-10-02-i80386-clock-fenced-clock-witness-independent-driver-inverse-20261002.json": {
+      "bytes": 9051,
+      "sha256": "7d87f8229c81433e4738160786a8fc18109ed7702afd1cf84f12067f0e11eac2",
+      "originalBytes": 9051,
+      "originalSha256": "7d87f8229c81433e4738160786a8fc18109ed7702afd1cf84f12067f0e11eac2",
+      "origin": "/mnt/volume1/tmp-astra/clock-witness-independent-driver-inverse-20261002.json"
+    },
+    "2026-10-02-i80386-clock-fenced-source-source-freeze.json": {
+      "bytes": 8772,
+      "sha256": "a8529033591bd90a3ef1655d5fea76d2118167fdad9a021b8d3e179ebeefc551",
+      "originalBytes": 8772,
+      "originalSha256": "a8529033591bd90a3ef1655d5fea76d2118167fdad9a021b8d3e179ebeefc551",
+      "origin": "/mnt/volume1/tmp-astra/clock-batch-witness-source-20261002/source-freeze.json"
+    },
+    "2026-10-02-i80386-clock-fenced-source-inputs.json": {
+      "bytes": 583,
+      "sha256": "cce43f3ff9549e0b4d31735d2a9eefa885eb698d5503cf631832fbafecebb26c",
+      "originalBytes": 583,
+      "originalSha256": "cce43f3ff9549e0b4d31735d2a9eefa885eb698d5503cf631832fbafecebb26c",
+      "origin": "/mnt/volume1/tmp-astra/clock-batch-witness-source-20261002/inputs.json"
+    },
+    "2026-10-02-i80386-clock-fenced-source-offline-audit-r3.json": {
+      "bytes": 2246,
+      "sha256": "ac576673f90d81bb2a3f48635a075a88e7579ba40e779ef07aade97eeadcc8f5",
+      "originalBytes": 2246,
+      "originalSha256": "ac576673f90d81bb2a3f48635a075a88e7579ba40e779ef07aade97eeadcc8f5",
+      "origin": "/mnt/volume1/tmp-astra/clock-batch-witness-source-20261002/offline-audit-r3.json"
+    },
+    "2026-10-02-i80386-clock-fenced-held-h4-prepare.json": {
+      "bytes": 11551,
+      "sha256": "3877bd9102cd000e86e29f13e60a95c935b66162280198d5cb7485737ef0105f",
+      "originalBytes": 11551,
+      "originalSha256": "3877bd9102cd000e86e29f13e60a95c935b66162280198d5cb7485737ef0105f",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-build-h4-20261001/prepare.json"
+    },
+    "2026-10-02-i80386-clock-fenced-held-h4-root-build-binding-audit.json": {
+      "bytes": 369,
+      "sha256": "620010c84954925fb38b3fd865176727ad74ecaa106d76f93dec31c6795c0f9f",
+      "originalBytes": 369,
+      "originalSha256": "620010c84954925fb38b3fd865176727ad74ecaa106d76f93dec31c6795c0f9f",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-build-h4-20261001/root-build-binding-audit.json"
+    },
+    "2026-10-02-i80386-clock-fenced-source-audit-i80386-native-clock-batch-witness.mjs": {
+      "bytes": 3853,
+      "sha256": "085c028f1781631b01e5ade9399be17ccbf290a1ad4c4ac5f9f2316d0c66d6de",
+      "originalBytes": 3853,
+      "originalSha256": "085c028f1781631b01e5ade9399be17ccbf290a1ad4c4ac5f9f2316d0c66d6de",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/scripts/audit-i80386-native-clock-batch-witness.mjs"
+    },
+    "2026-10-02-i80386-clock-fenced-source-capture.mjs": {
+      "bytes": 7270,
+      "sha256": "34589f96957ddc9c3e5d6249de476c5139e18f18d5e89de5d8c78eba0f6fd877",
+      "originalBytes": 7270,
+      "originalSha256": "34589f96957ddc9c3e5d6249de476c5139e18f18d5e89de5d8c78eba0f6fd877",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/scripts/bochs-cpu3-native-clock-batch-witness/capture.mjs"
+    },
+    "2026-10-02-i80386-clock-fenced-source-contract.md": {
+      "bytes": 4986,
+      "sha256": "312994f17ba416b7da1e92a5d5f0b0821f2353442c6ca9a8d84284e0f0be1296",
+      "originalBytes": 4986,
+      "originalSha256": "312994f17ba416b7da1e92a5d5f0b0821f2353442c6ca9a8d84284e0f0be1296",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/scripts/bochs-cpu3-native-clock-batch-witness/contract.md"
+    },
+    "2026-10-02-i80386-clock-fenced-source-fences.mjs": {
+      "bytes": 2088,
+      "sha256": "225ab26e73d3fe9078640247611c24a5bf35162a760ca3b565cdb4b507a4361a",
+      "originalBytes": 2088,
+      "originalSha256": "225ab26e73d3fe9078640247611c24a5bf35162a760ca3b565cdb4b507a4361a",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/scripts/bochs-cpu3-native-clock-batch-witness/fences.mjs"
+    },
+    "2026-10-02-i80386-clock-fenced-source-model.mjs": {
+      "bytes": 5358,
+      "sha256": "67c7557d4af75cd4386a59034f0e3e575bd1446e8e6a452c0c7793259896f63b",
+      "originalBytes": 5358,
+      "originalSha256": "67c7557d4af75cd4386a59034f0e3e575bd1446e8e6a452c0c7793259896f63b",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/scripts/bochs-cpu3-native-clock-batch-witness/model.mjs"
+    },
+    "2026-10-02-i80386-clock-fenced-source-run-i80386-native-hot-clock-fenced.mjs": {
+      "bytes": 10124,
+      "sha256": "26671c381fcbdfb9acad2b4c4105e661061bc92c72af0acda0f0c63152cd24e1",
+      "originalBytes": 10124,
+      "originalSha256": "26671c381fcbdfb9acad2b4c4105e661061bc92c72af0acda0f0c63152cd24e1",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/scripts/run-i80386-native-hot-clock-fenced.mjs"
+    },
+    "2026-10-02-i80386-clock-fenced-source-i80386-native-clock-batch-witness.test.mjs": {
+      "bytes": 11347,
+      "sha256": "f054003755a832ed803b82ceb2141f738d92e25a91dafc090422e0231cb93b5c",
+      "originalBytes": 11347,
+      "originalSha256": "f054003755a832ed803b82ceb2141f738d92e25a91dafc090422e0231cb93b5c",
+      "origin": "/tmp/bw-board-386-clock-witness-publication-20261002/test/i80386-native-clock-batch-witness.test.mjs"
+    },
+    "2026-10-02-i80386-clock-fenced-process-provenance.json.gz": {
+      "bytes": 11225,
+      "sha256": "84d6f0e9f218dea5a874688f7552a5259beba857a2c2a975872af45f9c7e0079",
+      "originalBytes": 47203,
+      "originalSha256": "798822d7a8ae046502072746d384c47ce00ba8f645538cad44290e4704b50d2a",
+      "origin": "original regular-file process artifacts"
+    }
+  },
+  "localOnly": {
+    "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced.stderr": {
+      "bytes": 149865650,
+      "sha256": "fbdcd8ae90edc1282a0725443db4942ab9d0fafb614f91dcd1d3039540312d3d",
+      "reason": "large raw trace retained locally"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/callbacks.jsonl": {
+      "bytes": 11728896,
+      "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+      "reason": "large journal/native binary retained locally"
+    },
+    "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h4-20261001/bochs/bw_direct.node": {
+      "bytes": 2060728,
+      "sha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+      "reason": "large journal/native binary retained locally"
+    }
+  }
+}

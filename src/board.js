@@ -1584,6 +1584,16 @@ export class BoardImpl {
     return this._meterRead(`i\0${partId}\0${terminal}`, { kind: 'i', part: partId, terminal });
   }
 
+  /** Refuse only currents the solver explicitly identifies as non-unique. */
+  _assertDeterminateCurrent(solution, partId, terminal) {
+    if ((terminal === 'pos' || terminal === 'neg')
+        && solution?.indeterminateBranchCurrents?.has(partId)) {
+      const error = new Error(`indeterminate source current ${partId}.${terminal}: redundant ideal voltage source`);
+      error.code = 'INDETERMINATE_BRANCH_CURRENT';
+      throw error;
+    }
+  }
+
   /** @private */
   _meterValue(w, solution = null) {
     if (w.kind === 'v') {
@@ -1597,7 +1607,9 @@ export class BoardImpl {
     }
     if (!this.powered) return 0;
     if (!solution && !this._mnaCache) this._mnaCache = this._solveMNA(false);
-    const i = (solution ?? this._mnaCache).branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
+    const result = solution ?? this._mnaCache;
+    this._assertDeterminateCurrent(result, w.part, w.terminal);
+    const i = result.branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
   }
 
@@ -1610,9 +1622,9 @@ export class BoardImpl {
     let w = this._meterWatches.get(key);
     if (!w) {
       w = { ...spec, hist: [], readNs: this.timeNs };
-      this._meterWatches.set(key, w);
       const v = this._meterValue(w);
       w.hist.push({ tSec: Number(this.timeNs)/1e9, before:v, v });
+      this._meterWatches.set(key, w);
       return w.hist[0].v;
     }
     w.readNs = this.timeNs;
@@ -1666,7 +1678,13 @@ export class BoardImpl {
       if (atSec-Number(w.readNs)/1e9 > Number(METER_IDLE_NS)/1e9) { this._meterWatches.delete(key); continue; }
       if (this._transientAccuracyUnmet) w.failure=this._transientAccuracyUnmet.code;
       if (w.failure) continue;
-      const v = this._meterValue(w,solution);
+      let v;
+      try { v = this._meterValue(w,solution); }
+      catch (error) {
+        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT') throw error;
+        w.failure = error.message;
+        continue;
+      }
       const h = w.hist;
       // Retire out-of-window observations before enforcing capacity. A full
       // rolling window may have room for this sample after its oldest point
@@ -2146,6 +2164,7 @@ export class BoardImpl {
     if (!this._mnaCache) {
       this._mnaCache = this._solveMNA(false);
     }
+    this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
     const i = partCurrents.get(terminal) ?? 0;
@@ -3010,6 +3029,7 @@ export class BoardImpl {
     // both conventions and names the remedy -- but it stops the inconsistency
     // leaking into the public reader.
     this._mnaCache = { nodeVoltages: new Map(point.nodeVoltages),
+      indeterminateBranchCurrents: new Set(point.indeterminateBranchCurrents),
       branchCurrents: new Map([...point.branchCurrents].map(([id, values]) =>
         [id, new Map([...values].map(([terminal, i]) => [terminal, -i]))])),
       converged: true, deviceStamps: new Map() };
@@ -3630,6 +3650,10 @@ export class BoardImpl {
       },
       converged: op.converged === true,
       nodeVoltages: new Map(op.nodeVoltages),
+      // OP represents inductors internally as zero-volt sources. Keep this
+      // narrowly scoped observation contract on actual independent sources.
+      indeterminateBranchCurrents: new Set([...(op.indeterminateBranchCurrents ?? [])]
+        .filter(id => this._solveParts.some(part => part.id === id && part.kind === 'vsource'))),
       branchCurrents: (() => {
         const currents = currentsIntoTerminals(op.branchCurrents);
         for (const id of inductorIds) {

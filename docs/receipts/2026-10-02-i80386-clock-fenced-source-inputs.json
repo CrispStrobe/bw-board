@@ -1,0 +1,14 @@
+{
+  "journal": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/callbacks.jsonl",
+    "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1"
+  },
+  "trace": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace.stderr",
+    "sha256": "2f8385dbe5fa8b0445f2fd4855452c0ba5c353e1c230b8a27fd60a9dfd994603"
+  },
+  "capture": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/capture.json",
+    "sha256": "980abe236fba92d6b627d1538cf6da9932bd95f7d751d87dadb3e7ef9daacc4d"
+  }
+}

@@ -65,4 +65,8 @@ The new opt-in driver is `scripts/run-i80386-native-hot-packed-scalar.mjs`; the 
 
 Next concrete work is to measure and reduce remaining bridge costs under the packed protocol, then widen admission using separately proved free guests and real disk/device paths. Conditional argument construction and reuse of immutable scalar keys/values are narrow candidates; reducing original board operations requires a new device/event proof. Arbitrary AT boot, Windows enhanced mode, Doom and production native UI integration are still unqualified.
 
+The [H5 conditional argument follow-up](I80386-NATIVE-HOT-CONDITIONAL-ARGS-WIP.md) preserved bounded semantics but failed its predeclared CPU gate: mean CPU increased 0.20115%, with only three of seven pairs favorable. H5 remains experimental and H4 remains the baseline.
+
+The [fenced H4 diagnostic and offline clock witness](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md) now authenticate all 439 actual resume pairs and complete trace/journal/state parity. This supplies missing diagnostic boundaries; it implements no native batch ABI or performance change.
+
 The [private factory-owned replay proof](I80386-NATIVE-OWNED-CLOCK-REPLAY-WIP.md) reproduced the complete historical host journal, board checkpoints and RAM in an isolated worker. It executes no native CPU and implements no native batching or performance change.

@@ -1,0 +1,9 @@
+{
+  "status": "H5_ALL_H1_CANONICAL_NATIVE_ROWS_AND_COMPACT_JOURNAL_PASS",
+  "rows": 1649067,
+  "stderrSha256": "2f8385dbe5fa8b0445f2fd4855452c0ba5c353e1c230b8a27fd60a9dfd994603",
+  "stderrBytes": 149865640,
+  "addonSha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+  "source": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+  "scope": "Only unstructured emulator preamble ignored; every canonical field/ordinal/order exact"
+}

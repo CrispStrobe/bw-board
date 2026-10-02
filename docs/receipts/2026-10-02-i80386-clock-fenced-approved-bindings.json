@@ -1,0 +1,25 @@
+{
+  "driverRevision": "2d1cf651d7d7d0dfda55b9df482cf0ec70d9187c",
+  "driverSourceInputs": 67,
+  "newSourceHashes": {
+    "scripts/audit-i80386-native-clock-batch-witness.mjs": "085c028f1781631b01e5ade9399be17ccbf290a1ad4c4ac5f9f2316d0c66d6de",
+    "scripts/bochs-cpu3-native-clock-batch-witness/capture.mjs": "34589f96957ddc9c3e5d6249de476c5139e18f18d5e89de5d8c78eba0f6fd877",
+    "scripts/bochs-cpu3-native-clock-batch-witness/contract.md": "312994f17ba416b7da1e92a5d5f0b0821f2353442c6ca9a8d84284e0f0be1296",
+    "scripts/bochs-cpu3-native-clock-batch-witness/fences.mjs": "225ab26e73d3fe9078640247611c24a5bf35162a760ca3b565cdb4b507a4361a",
+    "scripts/bochs-cpu3-native-clock-batch-witness/model.mjs": "67c7557d4af75cd4386a59034f0e3e575bd1446e8e6a452c0c7793259896f63b",
+    "scripts/run-i80386-native-hot-clock-fenced.mjs": "26671c381fcbdfb9acad2b4c4105e661061bc92c72af0acda0f0c63152cd24e1",
+    "test/i80386-native-clock-batch-witness.test.mjs": "f054003755a832ed803b82ceb2141f738d92e25a91dafc090422e0231cb93b5c"
+  },
+  "manifestPath": "/mnt/volume1/tmp-astra/native-hot-build-h4-20261001/prepare.json",
+  "manifestSha256": "3877bd9102cd000e86e29f13e60a95c935b66162280198d5cb7485737ef0105f",
+  "tree": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h4-20261001",
+  "addonPath": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h4-20261001/bochs/bw_direct.node",
+  "addonSha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+  "preparedFileHashes": {
+    "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "b57a3cea1f5f5eea2092401f8dba3041eb0bc0d19551bf4273e66ad7372c60cb",
+    "bochs/cpu/bw_slice_runtime.inc": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+    "bochs/bochs-cpu3-native-direct-board/abi.h": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d",
+    "bochs/config.h": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+  },
+  "helperSha256": "06758ea835e80b7085756930fa43937062f7cc329425603f65b7b15aec3ad3bd"
+}

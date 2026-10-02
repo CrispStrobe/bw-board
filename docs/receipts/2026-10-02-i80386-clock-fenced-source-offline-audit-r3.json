@@ -1,0 +1,85 @@
+{
+  "status": "AUTHENTICATED_OFFLINE_CLOCK_CHRONOLOGY_PASS_NOT_BATCH_ADMISSION",
+  "clocks": {
+    "nativeTicks": 100684,
+    "successfulQuanta": 100682
+  },
+  "canonicalRows": 1649067,
+  "counts": {
+    "page": 8,
+    "quantum": 100682,
+    "nativeTick": 100684,
+    "write": 4203,
+    "read": 4235,
+    "outPort": 26,
+    "ack": 1
+  },
+  "tags": {
+    "PROBE": 4,
+    "RESET": 1,
+    "RESET_EXTRA": 1,
+    "RESET_SEG": 6,
+    "RESET_SYS": 2,
+    "RESET_DR": 1,
+    "TLB_OBSERVED": 8,
+    "ACTIVATE": 1,
+    "PREFETCH": 35,
+    "EXEC": 26,
+    "ATTEMPT": 100682,
+    "QUANTUM": 100682,
+    "BOUNDARY": 100688,
+    "COHERENCE": 100688,
+    "POST_STATE": 100688,
+    "POST_EXTRA": 100688,
+    "POST_SEG": 604128,
+    "POST_SYS": 201376,
+    "POST_DR": 100688,
+    "NATIVE_TICK": 100684,
+    "MEM": 33732,
+    "COMMIT": 4203,
+    "ALIAS_UPDATE": 4,
+    "STAMP": 4,
+    "PREFETCH_INVALIDATE": 3,
+    "PORT": 26,
+    "IRQ_LINE": 2,
+    "FAULT_BEGIN": 2,
+    "FAULT_DELIVERED": 2,
+    "IRQ_ACK": 1,
+    "IRQ_DELIVERED": 1,
+    "MAP_COMMIT": 2,
+    "TLB_INVALIDATE": 2,
+    "HALT_IDLE": 2,
+    "STATE": 1,
+    "CALLBACKS": 1,
+    "FALLBACK": 1,
+    "DEACTIVATE": 1
+  },
+  "unfencedClockRuns": 8322,
+  "unfencedMaxClockRun": 160008,
+  "fences": {
+    "status": "UNQUALIFIED_MISSING_RESUME_AND_OBSERVER_FENCES",
+    "resumesDeclared": 439,
+    "missing": [
+      "entry",
+      "return",
+      "stage-irq",
+      "inspect",
+      "close"
+    ]
+  },
+  "scope": "Clock runs omit resume boundaries unless separately authenticated fences are present. No legal batch count, bridge ownership, speed or guest qualification is inferred.",
+  "inputs": {
+    "journal": {
+      "path": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/callbacks.jsonl",
+      "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1"
+    },
+    "trace": {
+      "path": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace.stderr",
+      "sha256": "2f8385dbe5fa8b0445f2fd4855452c0ba5c353e1c230b8a27fd60a9dfd994603"
+    },
+    "capture": {
+      "path": "/mnt/volume1/tmp-astra/native-hot-h5-fulltrace-20261001/fulltrace/capture.json",
+      "sha256": "980abe236fba92d6b627d1538cf6da9932bd95f7d751d87dadb3e7ef9daacc4d"
+    }
+  }
+}
