@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "--test",
+    "test/i80386-owned-baseline-profile.test.mjs"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 0.5826095193624496,
+  "sourcePinsUnchanged": true,
+  "scope": "SOURCE_ONLY_NO_ADDON_PROFILE_OR_ALIGNMENT_EXECUTION",
+  "stdoutSha256": "3627b2afaaae3a6cff51459c4de95d59f6de5ae53fd89fbb4831e7547e39fb59",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

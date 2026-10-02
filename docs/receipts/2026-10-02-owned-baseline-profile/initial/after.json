@@ -1,0 +1,8 @@
+{
+  "scripts/owned-baseline-profile/derive.mjs": "f4ca89a8e325d2a464953e9b99546e8573f7951ed2e733f833a54a228e089d32",
+  "scripts/owned-baseline-profile/alignment.mjs": "ec4977c69c59588c54f29fe4a16df65cdb66e1e84d17efaef6e27abc0c19cd40",
+  "scripts/owned-baseline-profile/plan.json": "40fffc8104466ec3ac3c403ce6b1a60618862ffac14178d4e5e561ec03e5d6dd",
+  "scripts/ci-profile-i80386-owned-baseline.py": "991060d013da00f3a1b6101b460ccba00a496089ea73653ce92b2d09b97dcd81",
+  ".github/workflows/i80386-owned-baseline-profile.yml": "d0e8000751105a34191491536aebf2756bfc4264edfb064a87bd36a4360d6ffc",
+  "test/i80386-owned-baseline-profile.test.mjs": "cbc65475089038d2305ccc91cb85b34bf9088ebade227b09974e7d05e51b70d5"
+}
