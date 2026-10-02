@@ -1,0 +1,23 @@
+{
+  "status": "ROOT_ACTUAL_OWNED_REPLAY_BINDINGS_PASS_NOT_NATIVE_ADMISSION",
+  "checks": 629637,
+  "sourceRevision": "a46083c0e7792aa4e9ee1923bcaf6a2eb5870e0d",
+  "sourceFiles": 51,
+  "resumes": 439,
+  "historicalLogicalRows": 209839,
+  "historicalNativeTicks": 100684,
+  "historicalSuccessfulQuanta": 100682,
+  "checkpoints": [
+    "hot_profile_start",
+    "hot_register_loop",
+    "hot_register_end",
+    "hot_memory_loop",
+    "hot_memory_end",
+    "terminal_hlt"
+  ],
+  "orderedClockGroups": 8738,
+  "ramSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+  "journalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "reportSha256": "6e3ca34a556644f48dd726f24892ff357e491e84cce4e002292d8659838544d5",
+  "scope": "Actual source-bound runner asserts every expanded row/checkpoint/settled state/RAM during real board replay. This audit independently verifies provenance and historical ledgers; it does not execute a new CPU or reconstruct unexported replay state independently."
+}

@@ -612,3 +612,7 @@ The bounded free protected-mode workload now has [H2 cost profiling](I80386-NATI
 ## Clock witness checkpoint (2026-10-02)
 
 The [fenced H4 diagnostic](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md) passed all 439 resume-pair fence checks and full canonical trace/journal/state parity using the unchanged held H4 engine. Its source-owned offline witness preserves independent native ticks and successful quanta. No native batching or performance backend is implemented, and diagnostic timing does not establish progress toward 10×.
+
+## Owned replay checkpoint (2026-10-02)
+
+The [private worker ownership/replay proof](I80386-NATIVE-OWNED-CLOCK-REPLAY-WIP.md) reproduced all 439 historical resumes and 209,839 logical host rows, six real-board checkpoints and entire RAM. This supplies an owned host boundary for later native work; it runs no addon/CPU and provides no native batching or speed result. H4 remains the baseline and the 10× target remains open.
