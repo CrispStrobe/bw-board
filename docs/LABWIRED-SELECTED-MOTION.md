@@ -242,6 +242,15 @@ the [landing receipt](receipts/2026-10-01-wasm-cached-runs/landing.json) records
 the exact head and verdicts. Neither a
 green diagnostic comparison nor core landing overrides the failed fresh floor.
 
+A fresh rebuild of landed `43b2d62f` retains the exact fixed module bytes but
+measured **0.775416× median / 0.769654× minimum** on EPYC 7763: all five
+windows still fail. The unmerged literal-load experiment passed correctness
+but was rejected for landing after hosted paired results of **−0.66% and
+−16.30%**. A separate faster-host fresh pass is not evidence of improvement.
+The [literal-load report](receipts/2026-10-01-wasm-literal-loads/README.md)
+retains the negative results and separate compile-time-policy follow-up, also
+rejected after **−2.23% and −3.09%** hosted pairs. Neither experiment is on main.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is
