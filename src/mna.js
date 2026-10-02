@@ -1456,7 +1456,33 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     nodeIndex.set(net.id, nodeCount++);
   }
 
-  if (nodeCount === 0) {
+  // A same-node ideal source says 0 = volts, even when that node is the
+  // reference and therefore has no matrix index. Check before the zero-node
+  // return; zero constraints are redundant, not a row that grounds a live net.
+  const redundantIdealSources = new Set();
+  const resistiveSelfSources = new Set();
+  if (!powerOff) {
+    for (const part of parts) {
+      if (part.kind !== 'vsource') continue;
+      const posNet = findNet(nets, part.id, 'pos');
+      const negNet = findNet(nets, part.id, 'neg');
+      if (posNet === undefined || negNet === undefined || posNet !== negNet) continue;
+      const rInt = Number(part.params?.rInternal);
+      if (Number.isFinite(rInt) && rInt > 0) {
+        resistiveSelfSources.add(part.id);
+        continue;
+      }
+      if (rInt > 0 || Number(part.params?.iLimit) > 0) continue;
+      const volts = independentSourceVoltage(part, vcc, tSeconds, controls, dcSources);
+      if (volts !== 0) {
+        throw new Error(`solveMNA: inconsistent ideal voltage constraint ${part.id}; ` +
+          `${volts} V cannot be imposed across the same net ${posNet}`);
+      }
+      redundantIdealSources.add(part.id);
+    }
+  }
+
+  if (nodeCount === 0 && resistiveSelfSources.size === 0) {
     return { nodeVoltages: new Map(), branchCurrents: new Map() };
   }
 
@@ -1528,13 +1554,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
       }
       // Independent voltage source (may have current limit for CC mode)
-      if (part.kind === 'vsource') {
+      if (part.kind === 'vsource' && !redundantIdealSources.has(part.id)) {
         const posNet = findNet(nets, part.id, 'pos');
         const negNet = findNet(nets, part.id, 'neg');
         // Ground is implicit and therefore absent from nodeIndex. The source
         // still needs one MNA row when EITHER terminal is a live node; the
         // stamp below already handles an absent (ground) index on either side.
-        if ((posNet && nodeIndex.has(posNet)) || (negNet && nodeIndex.has(negNet))) {
+        if ((posNet && nodeIndex.has(posNet)) || (negNet && nodeIndex.has(negNet))
+            || resistiveSelfSources.has(part.id)) {
           vsIndex.set(part.id, vsCount++);
         }
       }
@@ -5117,7 +5144,7 @@ export function sourceDcValue(part, fallback) {
  * Params: {volts} — DC value; plus the waveform params of `sourceVoltage`
  * for time-varying operation (sine/square/triangle/pulse).
  */
-function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1, dcSources = false) {
+function independentSourceVoltage(part, vcc, tSeconds, controls, dcSources) {
   // Control value overrides params.volts for interactive adjustment (bench supply knob)
   let volts;
   if (part._ccClampedVolts !== undefined) {
@@ -5127,7 +5154,11 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
   } else {
     volts = dcSources ? sourceDcValue(part, vcc) : sourceVoltage(part, tSeconds, vcc);
   }
-  volts *= srcScale;
+  return volts;
+}
+
+function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1, dcSources = false) {
+  const volts = independentSourceVoltage(part, vcc, tSeconds, controls, dcSources) * srcScale;
   const posNet = findNet(nets, part.id, 'pos');
   const negNet = findNet(nets, part.id, 'neg');
 
@@ -5149,15 +5180,19 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
   // exactly the loaded-terminal-voltage effect. Found by the
   // EXPECTED-quantities gate; the bw-board `battery` DEVICE always
   // honored it (referenced-drives oracle), so the gap was this stamp.
-  if (idxPos !== undefined) {
+  const rInt = Number(part.params?.rInternal) || 0;
+  // A finite resistive self-short has no node incidence: +I and -I cancel.
+  // Its row remains solvable through -rInternal*I = volts, including ground.
+  const resistiveSelf = Number.isFinite(rInt) && rInt > 0
+    && posNet !== undefined && posNet === negNet;
+  if (idxPos !== undefined && !resistiveSelf) {
     A.set(row, idxPos, 1);
     A.set(idxPos, row, 1);
   }
-  if (idxNeg !== undefined) {
+  if (idxNeg !== undefined && !resistiveSelf) {
     A.set(row, idxNeg, -1);
     A.set(idxNeg, row, -1);
   }
-  const rInt = Number(part.params?.rInternal) || 0;
   if (rInt > 0) A.set(row, row, -rInt);
   b[row] = volts;
 }

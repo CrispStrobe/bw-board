@@ -87,6 +87,52 @@ The [bounded native 386 gate](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOAR
 now combines paging, executable RAM updates, A20 aliases, REP retries and actual
 PIT/PIC delivery. Its receipts qualify this free fixture; a general native backend remains WIP.
 
+## LabWired WASM performance (2026-10-01)
+
+These results use the selected 64 MHz micro:bit motion guest in Node.js, not
+browser/UI qualification or a universal chip-speed claim. The guarded cached
+T16 scalar optimization landed on core `main` as `c05e8de3` after all 19 enabled
+final-head checks passed. Three independent exact-artifact A/B/B/A runs measured
+**+6.94%, +1.23% and +4.85%** median gains, with matching cycle-indexed guest
+observations. One repeat's candidate minimum worsened, so this is not an
+every-window improvement.
+
+The exact final-head fresh qualification still failed every 1× window:
+**0.704710× median / 0.690863× minimum**, EPYC 7763. Determinism and all 101
+actual WASM integration tests passed with zero skips; publication stayed blocked.
+App engine pins remain unchanged and CP13 remains open. Hardware content
+acknowledgements were explicitly approved with their existing expiry and
+capture evidence preserved; live re-capture remains owed.
+
+Interpreter outlining was rejected after two negative paired runs (−7.68% and
+−4.37%). See the [scalar results and raw receipts](docs/receipts/2026-10-01-wasm-cached-scalar/README.md),
+[rejected outlining evidence](docs/receipts/2026-10-01-wasm-outline/README.md) and
+[profiling/tier-validation guide](docs/LABWIRED-WASM-PROFILING.md).
+
+The bounded cached-run optimization landed on core `main` as
+[`43b2d62f`](https://github.com/CrispStrobe/labwired-core/pull/146) after all 19
+enabled final-head checks passed; the app artifact remains unpromoted. It measured
+**+8.24%, +7.15% and +9.65%** in three exact-artifact paired comparisons against
+the landed scalar baseline, with identical cycle-indexed guest observations.
+The earlier exact fixed-artifact fresh qualification was
+**0.834235× median / 0.808772× minimum**: still below the
+unchanged every-window 1× floor. Both builds, determinism and 101 actual WASM
+integration tests passed; the fixed-head local core suite passed 4,234 tests
+with three existing ignored tests. Host rates are not interchangeable. App pins
+remain unchanged. Two ordinary VPS repeats measured +9.20% and +10.06%, also
+below 1× in every window. See
+[bounded-run results and raw receipts](docs/receipts/2026-10-01-wasm-cached-runs/README.md)
+for exact source references, final CI and hardware-drift approval status.
+
+A fresh rebuild of landed `43b2d62f` measured **0.775416× median / 0.769654×
+minimum** on EPYC 7763, with the same module bytes and every window below 1×.
+The unmerged literal-load follow-up passed correctness but was rejected for
+landing after hosted paired results of **−0.66% and −16.30%**. Its separate
+Xeon 6973P-C qualification passed 1×, which is not a same-host speedup claim.
+The compile-time-specialized variant was also rejected (**−2.23%, −3.09%**).
+See [literal-load evidence and compiler-policy follow-up](docs/receipts/2026-10-01-wasm-literal-loads/README.md).
+App pins remain unchanged; the all-host/all-target goal is not yet met.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

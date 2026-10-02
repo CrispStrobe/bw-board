@@ -1,0 +1,157 @@
+{
+  "status": "pass-independent-source-artifacts-and-fresh-pair",
+  "captures": [
+    {
+      "captureSha256": "af14c0e2293dd48ce907b95016f9605fcb2f877dda96c74593065c02d6756f58",
+      "captureBytes": 121543425,
+      "sourceRevision": "aca754b32b56829ecd943aaddb91370cd3ccf441",
+      "sourceInputs": 62,
+      "artifactFiles": 206,
+      "nativeGuards": 19,
+      "transportGuards": 18,
+      "arms": [
+        "continuous",
+        "budget1",
+        "budget2",
+        "budget257"
+      ],
+      "result": {
+        "claim": "native-actual-board-compact-rep-two-pf-pit-only",
+        "budgetProof": {
+          "logicalEvents": 3747,
+          "rawPreserved": true,
+          "onlyScopedResumeDecodes": true
+        },
+        "arms": {
+          "continuous": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          },
+          "budget1": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          },
+          "budget2": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          },
+          "budget257": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          }
+        },
+        "fullResetParity": false,
+        "fullByteBusOrderParity": false,
+        "nativeBudgetByteBusOrderParity": true
+      }
+    },
+    {
+      "captureSha256": "3d9602b88602268efa680480b074994aaa64228ccd4708abc6b675017d60950e",
+      "captureBytes": 121543835,
+      "sourceRevision": "aca754b32b56829ecd943aaddb91370cd3ccf441",
+      "sourceInputs": 62,
+      "artifactFiles": 206,
+      "nativeGuards": 19,
+      "transportGuards": 18,
+      "arms": [
+        "continuous",
+        "budget1",
+        "budget2",
+        "budget257"
+      ],
+      "result": {
+        "claim": "native-actual-board-compact-rep-two-pf-pit-only",
+        "budgetProof": {
+          "logicalEvents": 3747,
+          "rawPreserved": true,
+          "onlyScopedResumeDecodes": true
+        },
+        "arms": {
+          "continuous": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          },
+          "budget1": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          },
+          "budget2": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          },
+          "budget257": {
+            "successfulQuanta": 135,
+            "nativeTicks": 137,
+            "faults": 2,
+            "irq": 32,
+            "boardClocks": 814
+          }
+        },
+        "fullResetParity": false,
+        "fullByteBusOrderParity": false,
+        "nativeBudgetByteBusOrderParity": true
+      }
+    }
+  ],
+  "semantics": {
+    "continuous": {
+      "nativeHostRpcExact": true,
+      "rawStderrDifferenceOnlyTwoConfigurationPathLines": true,
+      "nativeTicks": 137,
+      "successfulQuanta": 135,
+      "nativeRawSha256": "6a1f97b3c45649e371714516fd5174ae02f288d8a3f46e625caa9d8e9cb2b832",
+      "rpcFromNativeSha256": "5c9ced41e0b0cdca977f15eac2ff35def0bf46a1f34b2c1e3a11dee7b00e8a8b",
+      "rpcToNativeSha256": "4409197cda0da785290d411d15623b257dd22fc37b4aa0fbc0fd316853c09d54"
+    },
+    "budget1": {
+      "nativeHostRpcExact": true,
+      "rawStderrDifferenceOnlyTwoConfigurationPathLines": true,
+      "nativeTicks": 137,
+      "successfulQuanta": 135,
+      "nativeRawSha256": "bdfbc887d91b215143ff0d5ac5b4b13ba349b54cb31d5296e34e652a0e750e78",
+      "rpcFromNativeSha256": "24f3c7e1e62b71aff3617549c6e36f43e149f97b0d021850e731fa047e668841",
+      "rpcToNativeSha256": "5913aa77b96561b736d38f1869aafab786b354897dae1e0c33e6cee3f9424ddc"
+    },
+    "budget2": {
+      "nativeHostRpcExact": true,
+      "rawStderrDifferenceOnlyTwoConfigurationPathLines": true,
+      "nativeTicks": 137,
+      "successfulQuanta": 135,
+      "nativeRawSha256": "388340262eccb461eedf56b2dcaba07b64f0cc241b11572f31cb0f9ac1685b5c",
+      "rpcFromNativeSha256": "387abdc060b8592ec7bf6791f11337a8f922023f72da2ca97e1b26f0e0e15dea",
+      "rpcToNativeSha256": "f75a115cd279bc5ed44c13632755be5eba6ee20d80d764a24453844faa9657dd"
+    },
+    "budget257": {
+      "nativeHostRpcExact": true,
+      "rawStderrDifferenceOnlyTwoConfigurationPathLines": true,
+      "nativeTicks": 137,
+      "successfulQuanta": 135,
+      "nativeRawSha256": "eb435fe9b10ded8a3497fc7aa5bea15ad49d888743e5a5e75fba1133511f4d54",
+      "rpcFromNativeSha256": "5c9ced41e0b0cdca977f15eac2ff35def0bf46a1f34b2c1e3a11dee7b00e8a8b",
+      "rpcToNativeSha256": "b27e5c9d553e88938e0c0def4115ed0df36464ffcee45918abb986421f41097d"
+    }
+  },
+  "wholeCaptureByteIdentical": false,
+  "differenceScope": "output directory in bochsrc/log artifacts; native, host and RPC exact; raw stderr differs only in two configuration path diagnostics"
+}

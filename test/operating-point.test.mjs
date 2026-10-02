@@ -36,6 +36,25 @@ function sameNetSourceBench(volts) {
   return board;
 }
 
+function resistiveSelfBench(volts, live) {
+  const board = new BoardImpl(5);
+  const ground = { id: 'gnd', terminals: [
+    { part: 'G1', terminal: 'gnd' }, { part: 'VGOOD', terminal: 'neg' },
+    { part: 'RLOAD', terminal: 'b' },
+  ] };
+  const node = { id: 'live', terminals: [
+    { part: 'VGOOD', terminal: 'pos' }, { part: 'RLOAD', terminal: 'a' },
+  ] };
+  (live ? node : ground).terminals.push(
+    { part: 'VBAD', terminal: 'pos' }, { part: 'VBAD', terminal: 'neg' });
+  board.setNetlist([
+    gnd, resistor('RLOAD', 1000),
+    { id: 'VGOOD', kind: 'vsource', params: { volts: 1 }, terminals: ['pos', 'neg'] },
+    { id: 'VBAD', kind: 'vsource', params: { volts, rInternal: 10 }, terminals: ['pos', 'neg'] },
+  ], [ground, node]);
+  return board;
+}
+
 function controlledBench(volts = 1, extraParts = []) {
   const board = new BoardImpl(5);
   board.setNetlist([
@@ -170,6 +189,27 @@ describe('BoardImpl.operatingPoint', () => {
     assert.ok(match, ng.stdout);
     const op = rcBench().operatingPoint();
     assert.ok(Math.abs(op.nodeVoltages.get('out') - Number(match[1])) < 1e-6);
+    // A Thevenin source with external terminals shorted is equivalent to
+    // this ordinary ideal-source + series-resistor deck, not a shorted VSRC.
+    for (const live of [false, true]) for (const volts of [5, -5]) {
+      const base = live ? 'live' : '0';
+      const control = `Resistive short oracle\nVhold live 0 DC 1\nRload live 0 1000\nVinternal hidden ${base} DC ${volts}\nRinternal hidden ${base} 10\n.op\n.end\n`;
+      const oracle = spawnSync('ngspice', ['-b'], { input: control, encoding: 'utf8' });
+      assert.equal(oracle.status, 0, oracle.stderr || oracle.stdout);
+      const sourceCurrent = oracle.stdout.match(/vinternal#branch\s+([+\-0-9.e]+)/i);
+      const holdCurrent = oracle.stdout.match(/vhold#branch\s+([+\-0-9.e]+)/i);
+      assert.ok(sourceCurrent && holdCurrent, oracle.stdout);
+      const board = resistiveSelfBench(volts, live);
+      const before = stateWitness(board);
+      const point = board.operatingPoint();
+      assert.equal(point.converged, true);
+      assert.ok(Math.abs(point.nodeVoltages.get('live') - 1) < 1e-12);
+      assert.ok(Math.abs(point.branchCurrents.get('VBAD').get('pos') - Number(sourceCurrent[1])) < 1e-12);
+      assert.ok(Math.abs(point.branchCurrents.get('VGOOD').get('pos') - Number(holdCurrent[1])) < 1e-12);
+      assert.ok(Math.abs(board.branchCurrent('VBAD', 'pos') + Number(sourceCurrent[1])) < 1e-12,
+        'live out-of-part current and strict OP into-part current have opposite signs');
+      assertUnchanged(board, before);
+    }
   });
 
   it('solves ideal VCVS/VCCS with signed terminal currents, KCL, and no state adoption', () => {
@@ -361,7 +401,11 @@ describe('BoardImpl.operatingPoint', () => {
   });
 
   it('rejects a nonzero source shorted onto one net and preserves a zero-volt control', () => {
-    const invalid = sameNetSourceBench(5);
+    assert.throws(() => sameNetSourceBench(5), /solveMNA: inconsistent ideal voltage constraint V1/);
+    // A valid loaded board can acquire a contradictory authored control.
+    // Exercise the independent observational OP guard without another live solve.
+    const invalid = sameNetSourceBench(0);
+    invalid.controls.set('V1', 5);
     const invalidBefore = stateWitness(invalid);
     assert.throws(() => invalid.operatingPoint(),
       /inconsistent ideal voltage constraint V1; 5 V cannot be imposed across the same net gnd/);
@@ -373,6 +417,33 @@ describe('BoardImpl.operatingPoint', () => {
     assert.equal(op.converged, true);
     assert.equal(op.nodeVoltages.get('n'), 0);
     assertUnchanged(zero, zeroBefore);
+  });
+
+  it('preserves a driven live node with a zero redundant source and validates merged grounds observationally', () => {
+    const zero = rcBench(1);
+    zero.setNetlist([...zero.parts,
+      { id: 'VZERO', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] },
+    ], zero.nets.map(net => net.id === 'in' ? { ...net, terminals: [...net.terminals,
+      { part: 'VZERO', terminal: 'pos' }, { part: 'VZERO', terminal: 'neg' },
+    ] } : net));
+    const before = stateWitness(zero);
+    const point = zero.operatingPoint();
+    assert.equal(point.converged, true);
+    assert.ok(Math.abs(point.nodeVoltages.get('in') - 1) < 1e-12);
+    assert.equal(point.branchCurrents.get('VZERO').size, 0);
+    assertUnchanged(zero, before);
+
+    const merged = sameNetSourceBench(0);
+    merged.setNetlist([...merged.parts,
+      { id: 'G2', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ], [
+      ...merged.nets.map(net => ({ ...net, terminals: net.terminals.filter(t => !(t.part === 'V1' && t.terminal === 'neg')) })),
+      { id: 'gnd2', terminals: [{ part: 'V1', terminal: 'neg' }, { part: 'G2', terminal: 'gnd' }] },
+    ]);
+    merged.controls.set('V1', -5);
+    const mergedBefore = stateWitness(merged);
+    assert.throws(() => merged.operatingPoint(), /solveMNA: inconsistent ideal voltage constraint V1; -5 V/);
+    assertUnchanged(merged, mergedBefore);
   });
 
   it('refuses unsupported and DC-floating semantics without touching live state', () => {

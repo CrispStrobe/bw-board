@@ -1,3 +1,81 @@
+2026-10-02 Indeterminate ideal-source current observers — CLAIM, Codex bwcx `/root`.
+Isolated worktree wt-board-indeterminate-current-20261002, branch
+lane/indeterminate-source-current, exact base
+6f693b077f1b712e4a484c3d789f21a152c866a4. Five-path envelope: this row;
+src/mna.js explicit redundant-source current metadata in all return paths;
+src/board.js scoped public current refusal, OP/cache propagation and sticky
+meter history handling; existing test/vsource-ground-reference.test.mjs;
+new spec-updates/indeterminate-source-current.md. Four ground/live ideal/
+resistive controls prove raw absent ideal current becomes public/meter zero,
+while determinate resistance gives 0.5 A and unrelated load remains 1 mA.
+Actual installed precision CLI falsely succeeds with a zero-current reading.
+Mark only omitted same-node ideal-source current, not every absent map;
+preserve power-off, known zero, unknown/custom-device fallbacks and voltage
+observation. Refusal must not register empty history or corrupt unrelated
+meter/solve state; topology-induced failures remain sticky across capture.
+Prove raw, instantaneous, repeated/mean, OP initialization and transient
+observers plus finite-resistance controls and load-bearing mutations.
+No current convention/tolerance, generic source cycles, parser/GUI, CPU,
+workflow/package/pin, CUI/Lite/corpus or deployment changes. Prior source
+adoption closed at qualified CUI 4eb8bc0 before this implementation claim.
+
+2026-10-01 Resistive-source self-constraint — DONE candidate, Codex bwcx `/root`.
+Reuse clean closed worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
+new branch `lane/resistive-source-self-constraint`, exact base
+`28dcfee95906f113899910d12a7a1704668e5759`. Five-path envelope: this row;
+only finite-positive-internal-resistance same-node independent-source
+allocation/stamp/zero-node handling in `src/mna.js`; existing
+`test/vsource-ground-reference.test.mjs` and `test/operating-point.test.mjs`;
+new `spec-updates/resistive-source-self-constraint.md`. Measured 5 V/10 ohm
+short reports no ground current or 0.6 A on a 1 V node instead of 0.5 A,
+and corrupts the unrelated supply current from 1 mA to 601 mA. Both old and
+ideal-repaired engines reproduce; equivalent explicit-source/resistor ngspice
+controls prove 0.5 A and 1 mA in both placements. Allocate the solvable
+resistive row on ground and cancel same-node incidences without grounding
+the live node; preserve ordinary distinct-node stamps and ideal-source guards.
+Prove signed currents, KCL, all-ground, merged grounds, OP/live conventions,
+power-off and current-limit compatibility; no invented ideal-short CC model,
+generic cycles, source semantics, tolerance/budget, Board/CPU/workflow,
+CUI/Lite package/pin or corpus changes. One exact hosted qualification.
+Final focused/adjacent proof: 95/95 with zero skips, including four signed
+ground/live Thevenin equivalent ngspice controls inside the existing OP gate.
+Actual public meter means retain 0.5 A circulation and 1 mA unrelated load
+across three advances; strict OP is observational and uses its documented
+opposite terminal-current convention. Three isolated buildable mutants red:
+lost resistive allocation (5), lost incidence cancellation (4), premature
+zero-node return (2). Restoration syntax/hash/diff and focused 25/25 green;
+MNA blob `6a75099a782bce11f412820a1cc5ee59d949c616`. No heating or ideal
+zero-resistance current-limit short claim. Hosted qualification precedes FF.
+
+2026-10-01 Independent ideal-source self-constraint — DONE candidate, Codex bwcx `/root`.
+Isolated worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
+branch `lane/ideal-source-self-constraint`, exact base
+`fef791758182377cf7714d344d29f46d480d1d11`. Five-path envelope: this row;
+only independent-source consistency/allocation in `src/mna.js`; existing
+`test/vsource-ground-reference.test.mjs` and `test/operating-point.test.mjs`;
+new `spec-updates/ideal-source-self-constraint.md`. Refuse nonzero ideal
+voltage across the same solver-local net, including merged ground symbols
+and zero-node circuits; omit valid zero redundant rows without grounding
+a live node. Use existing waveform/DC/control voltage authority. Preserve
+power-off, detached terminals, positive internal resistance/current limits,
+ordinary source polarity/currents, caller netlists and strict OP state.
+Require exported solver/public Board regressions and isolated guard,
+allocation and early-return mutants. No general cycle solver, board.js,
+waveform/parser, tolerance/work budget, CPU, workflow, package/pin, CUI/Lite
+or corpus changes. User explicitly released this separate upstream task
+while CUI scope-summary candidate bc98cd1 remains frozen for hosted CI.
+That CUI candidate subsequently passed all four jobs of CI 36897790381 and
+landed unchanged on master; no engine pin moved there. This upstream repair
+passes 91/91 focused/adjacent tests with zero skips, including live ngspice
+controls, current-limit, source polarity/KCL, waveform, OP, transient and meter
+regressions. Three isolated buildable mutations genuinely red: removed
+conflict guard (6), restored redundant live row (3), validation after the
+zero-node return (1). A mutation-restoration duplicate declaration was caught
+by the restored run, removed, and the final syntax/full focused surface rerun;
+it is not a valid mutant result. Invalid public setNetlist now refuses during
+its actual solve; valid zero-source OP remains observational and preserves 1 V.
+One exact hosted CI/Harris qualification remains required before guarded FF.
+
 2026-10-01 README refresh — DONE, Codex bwcx `/root`.
 Clean reused worktree `wt-board-public-docs-20261001`, branch
 `docs/readme-current-20261001`, base `fbadc8fc40c5fcba52573194e2b34fe13784bbb0`.
