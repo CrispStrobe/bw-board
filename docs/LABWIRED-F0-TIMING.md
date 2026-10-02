@@ -56,3 +56,10 @@ Next investigations should start from landed main, not either rejected
 literal-load branch: live-address rejection/admission overhead, ordinary bus
 reads, and GPIO write-hook costs. Never cache MMIO values, skip read side
 effects, suppress edges or widen interrupt/debugger guards to obtain speed.
+
+For a separate ordinary A/B/B/A capture, use `scripts/probe-labwired-f0-ab.mjs`
+with verified `--baseline`, `--candidate` nodejs directories and a new `--out`
+directory. `--paired-glue` must be explicit when original glue hashes differ.
+The optional `f0=true` input on `labwired-motion-ab.yml` invokes it after motion;
+the two protocols retain separate floors. See the
+[GPIO edge-metadata results](receipts/2026-10-02-gpio-edge-metadata/README.md).
