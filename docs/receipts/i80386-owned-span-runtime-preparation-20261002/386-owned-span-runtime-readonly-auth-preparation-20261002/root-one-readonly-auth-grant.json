@@ -1,0 +1,16 @@
+{
+  "status": "ROOT_APPROVES_ONE_BOUNDED_READ_ONLY_RUNTIME116_COMPILED103_METADATA_AUTH_CHILD",
+  "helperSha256": "63460d67e3c0c1e8cae4131a6ba1ec0c3f691627ee99184252995578da878fce",
+  "runtimeHead": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledHead": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "artifactCount": 179,
+  "limits": {
+    "cpuSeconds": 15,
+    "wallSeconds": 60,
+    "heapMiB": 256,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "scope": "ExactlyONE readonly source/buildproof/hash/Git child; no factory, assembly, addon load, native guest, build, profile or benchmark. Preserve failure; no blind retry."
+}

@@ -1,0 +1,35 @@
+{
+  "status": "PURE24_WRAPPER_AST_AND_LITERAL_PINS_PASS_NOT_EXECUTED",
+  "recordedUtc": "2026-10-02T18:46:40.677243+00:00",
+  "wrapper": "/mnt/volume1/tmp-astra/run-386-owned-span-runtime-pure-controls-20261002.py",
+  "wrapperSha256": "ed101f2dddfd2c508dcbf38c72bda16c6a018a7f0d7e25d2d33268e09880c90f",
+  "binding": "/mnt/volume1/tmp-astra/386-owned-span-runtime-source-preparation-20261002/static-preparation.json",
+  "bindingSha256": "0b01959139ac199854a56699374e5b2c54d45ffd320022e7e7201627207f0eff",
+  "node": "/tmp/node-v22.23.3-linux-x64/bin/node",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "runtimeHead": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledHead": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "runtimeSourceCount": 116,
+  "compiledSourceCount": 103,
+  "limits": {
+    "cpuSeconds": 5,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "exclusiveOutput": "/mnt/volume1/tmp-astra/native-owned-span-runtime-pure-controls-20261002",
+  "outputAbsentBeforeGrant": true,
+  "childLaunched": false,
+  "features": [
+    "explicit one-file node --test",
+    "blank6",
+    "source116/compiled103 before/after maps even failure",
+    "Node/helper/binding before/after safe hashes",
+    "process group timeout kill",
+    "exit persisted before TAP24 summary assertions",
+    "runtime+compiled Git heads before/after, retained read failures, success requires unchanged heads"
+  ],
+  "historicalWrapperSha256BeforeAfterHeadChecks": "7f84811393d6b0d071b822f5137680c063a588336ca4c90ae5b85b4ae95a6cc5"
+}

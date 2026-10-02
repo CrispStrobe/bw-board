@@ -1,0 +1,37 @@
+{
+  "status": "ONE_ACTUAL_PURE_RUNTIME24_RECEIPT_AUDIT_PASS",
+  "recordedUtc": "2026-10-02T18:48:24.143560+00:00",
+  "childCount": 1,
+  "runtimeHead": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledHead": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "testSummary": {
+    "tests": 24,
+    "pass": 24,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "runtimeSourceCount": 116,
+  "compiledSourceCount": 103,
+  "sourceBeforeAfterAndGitHeadsUnchanged": true,
+  "NodeHelperBindingBeforeAfterUnchanged": true,
+  "limits": {
+    "cpuSeconds": 5,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "output": "/mnt/volume1/tmp-astra/native-owned-span-runtime-pure-controls-20261002",
+  "evidenceHashes": {
+    "invocation.json": "59e47983a1756976089ebee5774790e80156f8102b725aadfaa10c65d1b5be11",
+    "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source-after.json": "ca1f1b06b1e9d5924c1fdd2785048c83d9b58bd5997669fe249b4e19a12de5b6",
+    "stdout.tap": "105d2fd2eae3427a09fb6d6ebfd9edecfb7845b8da09fef02c0a8e8fc36e12e2",
+    "source-before.json": "ca1f1b06b1e9d5924c1fdd2785048c83d9b58bd5997669fe249b4e19a12de5b6",
+    "exit.json": "55776866781c19c019905d59749366f65ad2f3dc360003e1260afb6898e4d4c9"
+  },
+  "scope": "Pure runner inverse/admission refusal controls only; no authenticateBuild call, ROM/provider construction, addon/build/native/guest/profile/performance result."
+}

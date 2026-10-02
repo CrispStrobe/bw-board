@@ -1,0 +1,65 @@
+/** Pure source/admission controls only; no provider construction, ROM assembly or addon load. */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {deriveRunner,inverseRunner,sourceRunner} from '../scripts/bochs-cpu3-native-owned-span-runtime/derive.mjs';
+import {validateMaps,validateOrigin,supportPaths} from '../scripts/bochs-cpu3-native-owned-span-runtime/identity.mjs';
+import * as base from '../scripts/bochs-cpu3-native-owned-in8/admission.mjs';
+import * as admission from '../scripts/bochs-cpu3-native-owned-span-runtime/admission.mjs';
+const frozen=JSON.parse(readFileSync(new URL('../scripts/bochs-cpu3-native-owned-span-runtime/frozen-source.json',import.meta.url)));
+const runtime=()=>({revision:'1'.repeat(40),hashes:{...frozen.runtime.hashes,...Object.fromEntries(supportPaths.map(p=>[p,'0'.repeat(64)]))}});
+const clone=v=>structuredClone(v),input={sha256:'8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841'};
+const receipt=()=>({provenanceKind:'DERIVED_RELOCATED_CI_BUILD',sourceRevision:frozen.compiled.revision,sourceHashes:clone(frozen.compiled.hashes),relocation:{original:{sourceRevision:frozen.compiled.revision,sourceHashes:clone(frozen.compiled.hashes),addonSha256:input.sha256}}});
+
+test('exact full runner inverse retains original scheduler, timing, guards and snapshots',()=>{
+ const b=sourceRunner(),d=deriveRunner(b);
+ assert.equal(d,readFileSync(new URL('../scripts/run-i80386-native-owned-span.mjs',import.meta.url),'utf8'));
+ assert.equal(inverseRunner(d),b.toString());
+ assert.equal(d.split('createOwnedSpanProvider as createOwnedIn8Provider').length,2);
+ assert.equal(d.split('bochs-cpu3-native-owned-span-runtime/admission.mjs').length,2);
+ for(const malformed of [b.toString()+'\n',b.toString().replace('handle.resume(600,','handle.resume(599,')])assert.throws(()=>deriveRunner(Buffer.from(malformed)));
+ for(const malformed of [d+'\n',d.replace('target===6','target===5'),d.replace('createOwnedSpanProvider','createOwnedIn8Provider')])assert.throws(()=>inverseRunner(malformed));
+});
+test('fixed IN8 validators remain exact original functions with unchanged narrow input policy',()=>{
+ for(const k of ['validateInput','validateBaseline','boundedBytes','authenticateConfiguration'])assert.equal(admission[k],base[k]);
+ const valid={addon:'/unused/addon',sha256:input.sha256,configuration:'/unused/configuration',baseline:'/unused/baseline',output:'/unused/output',preparedManifest:'/unused/manifest',preparedManifestSha256:'0'.repeat(64),buildReceipt:'/unused/receipt',buildReceiptSha256:'0'.repeat(64),hostJournal:false,nativeTrace:false,baselineSha256:'bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e'};
+ assert.equal(admission.validateInput(valid),valid);
+ for(const v of [{},{...valid,profile:true},{...valid,nativeTrace:1},{...valid,baselineSha256:'0'.repeat(64)},{...valid,output:'relative'}])assert.throws(()=>admission.validateInput(v));
+ assert.throws(()=>admission.validateBaseline({}));
+});
+test('frozen span110 plus six authenticated support files remains separate from compiled fe1/103',()=>{
+ validateMaps(runtime(),frozen.compiled);
+ assert.equal(Object.keys(runtime().hashes).length,116);
+ assert.equal(Object.keys(frozen.compiled.hashes).length,103);
+ assert.equal(supportPaths.length,6);assert.equal(new Set(supportPaths).size,6);
+ assert.equal(frozen.runtime.revision,'8e35080d29b32e9fcee5f8fbc5800209c74df2e7');
+});
+for(const kind of ['provider','compiled','compiled-pin','support-missing','support-malformed','extra','old-runtime','wrong-source','same-source-revision','same-compiled-revision','bad-revision'])test('map refusal '+kind,()=>{
+ const r=runtime(),c=clone(frozen.compiled);
+ if(kind==='provider')r.hashes['scripts/bochs-cpu3-native-owned-span/provider.mjs']='0'.repeat(64);
+ if(kind==='compiled')c.revision=frozen.runtime.revision;
+ if(kind==='compiled-pin')c.hashes['scripts/bochs-cpu3-native-owned-in8/provider.mjs']='0'.repeat(64);
+ if(kind==='support-missing')delete r.hashes[supportPaths[0]];
+ if(kind==='support-malformed')r.hashes[supportPaths[0]]='NOT_A_SHA';
+ if(kind==='extra')r.hashes['foreign.mjs']='0'.repeat(64);
+ if(kind==='old-runtime')delete r.hashes['scripts/bochs-cpu3-native-owned-span/controls.mjs'];
+ if(kind==='wrong-source'){delete r.hashes['scripts/bochs-cpu3-native-owned-span/provider.mjs'];r.hashes['scripts/bochs-cpu3-native-owned-dispatch/provider.mjs']='0'.repeat(64);}
+ if(kind==='same-source-revision')r.revision=frozen.runtime.revision;
+ if(kind==='same-compiled-revision')r.revision=frozen.compiled.revision;
+ if(kind==='bad-revision')r.revision='source-only-mock';
+ assert.throws(()=>validateMaps(r,c));
+});
+test('authentic relocated origin stays exact compiled fe1 with original DSO identity',()=>validateOrigin(receipt(),input,frozen.compiled));
+for(const kind of ['kind','revision','old103','origin-revision','origin-hash','origin-addon','addon','missing-relocation','compiled'])test('origin refusal '+kind,()=>{
+ const r=receipt(),i=clone(input),c=clone(frozen.compiled);
+ if(kind==='kind')r.provenanceKind='LOCAL_BUILD';
+ if(kind==='revision')r.sourceRevision=frozen.runtime.revision;
+ if(kind==='old103')delete r.sourceHashes['scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs'];
+ if(kind==='origin-revision')r.relocation.original.sourceRevision=frozen.runtime.revision;
+ if(kind==='origin-hash')r.relocation.original.sourceHashes={};
+ if(kind==='origin-addon')r.relocation.original.addonSha256='0'.repeat(64);
+ if(kind==='addon')i.sha256='0'.repeat(64);
+ if(kind==='missing-relocation')delete r.relocation;
+ if(kind==='compiled')c.revision=frozen.runtime.revision;
+ assert.throws(()=>validateOrigin(r,i,c));
+});

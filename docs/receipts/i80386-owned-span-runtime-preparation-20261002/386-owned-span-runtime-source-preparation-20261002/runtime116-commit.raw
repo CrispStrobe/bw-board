@@ -1,0 +1,6 @@
+tree f1b59b9fd00c3ae113247fbe86a9e17244070bda
+parent 8e35080d29b32e9fcee5f8fbc5800209c74df2e7
+author CrispStrobe <cze+github@mailbox.org> 1790966312 +0000
+committer CrispStrobe <cze+github@mailbox.org> 1790966312 +0000
+
+Prepare span-only runtime admission reusing frozen fe1 native identity
