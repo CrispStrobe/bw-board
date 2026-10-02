@@ -1,0 +1,12 @@
+{
+  "officialArtifactId": 11232663641,
+  "runId": 37019813658,
+  "retained": [
+    {
+      "path": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/artifact.zip",
+      "bytes": 14667298,
+      "sha256": "18ecd75342d8d2c6d417f6412cd349043682a8ffe4d2a3628aae4270c7c9a6f9",
+      "retention": "Local full official ZIP retained; GitHub artifact retention 14 days. No ZIP, binary or source archive vendored here."
+    }
+  ]
+}
