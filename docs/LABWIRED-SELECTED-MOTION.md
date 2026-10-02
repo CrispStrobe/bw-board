@@ -262,3 +262,10 @@ After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is
 qualified by this slice. NODEJS results must not be reported as browser RTx.
+
+The [GPIO edge-metadata follow-up](receipts/2026-10-02-gpio-edge-metadata/README.md)
+improves active F0 GPIO medians in four ordinary paired comparisons (+11–17%).
+Selected motion remains mixed (−3.07%, −0.07%, +1.18%, +3.43%); the second
+EPYC 7763 run does not reproduce the first slowdown. It is not a motion speedup
+claim. Slower hosts still fail every motion window and the faster host passes
+both artifacts. Nothing here overrides the unchanged fresh qualification floor.
