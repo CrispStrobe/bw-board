@@ -1595,8 +1595,31 @@ export class BoardImpl {
     }
   }
 
+  /** Instrument validity, not a change to the solver or nodeVoltage API. */
+  _assertMeasurementSolution(solution = this._mnaCache) {
+    if (solution?.converged !== false && !solution?.railConflicts?.length) return;
+    const error = new Error('measurement unavailable: circuit solve failed or rail conflict');
+    error.code = 'SOLVE_FAILED_MEASUREMENT';
+    throw error;
+  }
+
+  /** Keep an invalid analog capture invalid even if a later solve recovers. */
+  _scopeMeasurementFailed(ch, solution = this._mnaCache) {
+    if (ch.type === 'digital') return false;
+    if (!ch.failure) {
+      try { this._assertMeasurementSolution(solution); }
+      catch (error) {
+        if (error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+        ch.failure = error.message;
+      }
+    }
+    return !!ch.failure;
+  }
+
   /** @private */
   _meterValue(w, solution = null) {
+    if (w.kind === 'i' && !this.powered) return 0;
+    this._assertMeasurementSolution(solution ?? this._mnaCache);
     if (w.kind === 'v') {
       const at = (net) => {
         if (net == null || net === '') return 0;
@@ -1609,6 +1632,7 @@ export class BoardImpl {
     if (!this.powered) return 0;
     if (!solution && !this._mnaCache) this._mnaCache = this._solveMNA(false);
     const result = solution ?? this._mnaCache;
+    this._assertMeasurementSolution(result);
     this._assertDeterminateCurrent(result, w.part, w.terminal);
     const i = result.branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
@@ -1682,7 +1706,8 @@ export class BoardImpl {
       let v;
       try { v = this._meterValue(w,solution); }
       catch (error) {
-        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT') throw error;
+        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT'
+            && error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
         w.failure = error.message;
         continue;
       }
@@ -1994,6 +2019,11 @@ export class BoardImpl {
   getScopeData(handle) {
     const ch = this._scopeChannels.get(handle);
     if (!ch) return null;
+    if (this._scopeMeasurementFailed(ch)) {
+      const error = new Error(`scope capture refused: ${ch.failure}`);
+      error.code = 'SOLVE_FAILED_MEASUREMENT';
+      throw error;
+    }
     if (ch.type === 'digital') {
       return {
         transitions: ch.trans,
@@ -2058,6 +2088,7 @@ export class BoardImpl {
     for (const [, ch] of this._scopeChannels) {
       if (ch.type === 'digital') { this._feedDigital(ch, this.timeNs); continue; }
       if (ch.type !== 'voltage') continue;
+      if (this._scopeMeasurementFailed(ch)) continue;
       const val = this._scopeVoltage(ch);
       if (val < ch._bucketMin) ch._bucketMin = val;
       if (val > ch._bucketMax) ch._bucketMax = val;
@@ -2091,10 +2122,11 @@ export class BoardImpl {
    * Called from advanceTo when time crosses sample boundaries.
    * @private
    */
-  _updateScopeChannels(tNs, exactTimeSec = null) {
+  _updateScopeChannels(tNs, exactTimeSec = null, solution = this._mnaCache) {
     for (const [, ch] of this._scopeChannels) {
       if (ch.type === 'digital') { this._feedDigital(ch, tNs); continue; }
       if (ch.type !== 'voltage') continue;
+      if (this._scopeMeasurementFailed(ch, solution)) continue;
 
       // Get current voltage
       const val = this._scopeVoltage(ch);
@@ -2165,6 +2197,7 @@ export class BoardImpl {
     if (!this._mnaCache) {
       this._mnaCache = this._solveMNA(false);
     }
+    this._assertMeasurementSolution(this._mnaCache);
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
@@ -5091,6 +5124,7 @@ export class BoardImpl {
     // Returning the last iterate as if it were an answer is the numerical
     // form of the silent-degradation bug.
     this._lastSolveConverged = res.converged !== false;
+    for (const ch of this._scopeChannels.values()) this._scopeMeasurementFailed(ch, res);
     if (this._meterWatches.size > 0) this._recordMeterSamples();
   }
 
@@ -5393,7 +5427,7 @@ export class BoardImpl {
       if (this._meterWatches.size > 0) this._recordMeterSamples(atSec,r);
       if (this._scopeChannels.size > 0) {
         const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
-        this._updateScopeChannels(this.timeNs - remNs, atSec);
+        this._updateScopeChannels(this.timeNs - remNs, atSec, r);
       }
     };
     const accept = (r, atSec) => {

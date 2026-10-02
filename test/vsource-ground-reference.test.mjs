@@ -6,6 +6,134 @@ import { BoardImpl } from '../src/board.js';
 const current = (result, part, terminal) =>
   result.branchCurrents.get(part)?.get(terminal) ?? 0;
 
+function instrumentBench({ parallel = false, volts = 1, otherVolts = volts } = {}) {
+  const parts = [
+    { id: 'A', kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] },
+    ...(parallel ? [{ id: 'B', kind: 'vsource', params: { volts: otherVolts }, terminals: ['pos', 'neg'] }] : []),
+    { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ];
+  const sources = parts.filter(p => p.kind === 'vsource');
+  return { parts, nets: [
+    { id: 'live', terminals: [...sources.map(p => ({ part: p.id, terminal: 'pos' })), { part: 'R', terminal: 'a' }] },
+    { id: 'ground', terminals: [...sources.map(p => ({ part: p.id, terminal: 'neg' })), { part: 'R', terminal: 'b' }, { part: 'G', terminal: 'gnd' }] },
+  ] };
+}
+const instrumentBoard = opts => {
+  const b = new BoardImpl(5), f = instrumentBench(opts);
+  b.setNetlist(f.parts, f.nets);
+  return b;
+};
+const failedMeasurement = error => error.code === 'SOLVE_FAILED_MEASUREMENT' && /solve failed/.test(error.message);
+
+describe('failed live solves are not zero-valued instrument measurements', () => {
+  it('refuses voltage, source/load current and both analog scope captures for actual singular and inconsistent sources', () => {
+    for (const otherVolts of [1, 2]) {
+      const b = instrumentBoard({ parallel: true, otherVolts });
+      assert.equal(b._mnaCache.converged, false, 'the real solver fails, not a synthetic guard fixture');
+      assert.throws(() => b.meterVoltage('live', 'ground'), failedMeasurement);
+      for (const id of ['A', 'B', 'R']) {
+        const terminal = id === 'R' ? 'a' : 'pos';
+        assert.throws(() => b.branchCurrent(id, terminal), failedMeasurement);
+        assert.throws(() => b.meterCurrent(id, terminal), failedMeasurement);
+      }
+      assert.equal(b._meterWatches.size, 0, 'failed primes never register watches');
+      for (const capture of ['sample', 'envelope']) {
+        const h = b.addScopeChannel({ type: 'voltage', netId: 'live', referenceNetId: 'ground', capture, sampleRateHz: 1000, depth: 8 });
+        b.advanceTo(1_000_000n);
+        assert.throws(() => b.getScopeData(h), failedMeasurement);
+        const ch = b._scopeChannels.get(h);
+        assert.equal(ch.count, 0, 'failed solve writes no false-zero samples');
+        assert.ok([...ch.samples].every(Number.isNaN));
+      }
+      const h = b.addScopeChannel({ type: 'current', partId: 'R', terminal: 'a', depth: 8 });
+      assert.throws(() => b.sampleCurrentChannels(), failedMeasurement);
+      assert.equal(b._scopeChannels.get(h).count, 0);
+    }
+  });
+
+  it('retains determinate nonzero/zero and power-off controls without changing nodeVoltage consumers', () => {
+    for (const volts of [0, 1, -1]) {
+      const b = instrumentBoard({ volts });
+      assert.equal(b._mnaCache.converged, true);
+      assert.ok(Math.abs(b.meterVoltage('live', 'ground') - volts) < 1e-12);
+      assert.ok(Math.abs(b.meterCurrent('R', 'a') + volts / 1000) < 1e-12);
+      assert.equal(b.branchCurrent('unknown', 'custom'), 0);
+      const h = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 1000, depth: 8 });
+      b.advanceTo(1_000_000n);
+      assert.equal(b.getScopeData(h).count, 1);
+      assert.ok(Math.abs(b.getScopeData(h).samples[0] - volts) < 1e-12);
+      b.setPower(false);
+      assert.equal(b.branchCurrent('R', 'a'), 0);
+    }
+    const failed = instrumentBoard({ parallel: true });
+    assert.equal(failed.nodeVoltage('live'), 0, 'general runtime API deliberately remains unchanged');
+  });
+
+  it('keeps a bad interval sticky across recovery but permits fresh netlist meter and fresh scope capture', () => {
+    const b = instrumentBoard();
+    b.meterVoltage('live', 'ground'); b.meterCurrent('R', 'a');
+    const h = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 1000, depth: 8 });
+    b.advanceTo(1_000_000n);
+    const f = instrumentBench({ parallel: true });
+    // Exercise actual adopted results without setNetlist's intentional watch reset.
+    const bad = solveMNA(f.parts, f.nets, new Map(), new Map(), 5);
+    b._adoptSolution(bad);
+    b._updateScopeChannels(2_000_000n, null, bad);
+    const good = instrumentBench();
+    b._adoptSolution(solveMNA(good.parts, good.nets, new Map(), new Map(), 5));
+    assert.throws(() => b.meterVoltage('live', 'ground'), /meter mean refused:.*solve failed/);
+    assert.throws(() => b.meterCurrent('R', 'a'), /meter mean refused:.*solve failed/);
+    assert.throws(() => b.getScopeData(h), failedMeasurement);
+    assert.equal(b._scopeChannels.get(h).count, 1, 'invalid interval added no samples');
+    b.setNetlist(good.parts, good.nets);
+    assert.equal(b.meterVoltage('live', 'ground'), 1);
+    b.clearScopeChannels();
+    const fresh = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 1000, depth: 8 });
+    b.advanceTo(2_000_000n);
+    assert.equal(b.getScopeData(fresh).count, 1);
+  });
+
+  it('uses the matching fractional solution rather than an older converged cache and propagates unrelated errors', () => {
+    const b = instrumentBoard();
+    b.meterVoltage('live', 'ground');
+    const h = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 1000, depth: 8 });
+    const f = instrumentBench({ parallel: true });
+    const bad = solveMNA(f.parts, f.nets, new Map(), new Map(), 5);
+    assert.equal(b._mnaCache.converged, true);
+    b._recordMeterSamples(0, bad);
+    b._updateScopeChannels(1_000_000n, 0.001, bad);
+    assert.throws(() => b.meterVoltage('live', 'ground'), /meter mean refused:.*solve failed/);
+    assert.throws(() => b.getScopeData(h), failedMeasurement);
+    assert.equal(b._scopeChannels.get(h).count, 0);
+    const good = instrumentBench();
+    b.setNetlist(good.parts, good.nets);
+    b.meterVoltage('live', 'ground');
+    b._meterValue = () => { throw new Error('unexpected recorder defect'); };
+    assert.throws(() => b._recordMeterSamples(), /unexpected recorder defect/);
+  });
+
+  it('passes the actual accepted transient result into scope publication, not only the integer clock', () => {
+    const b = new BoardImpl(5), f = instrumentBench();
+    f.parts[0].params = { wave: 'sine', freq: 1000, amplitude: 1, offset: 1 };
+    b.setNetlist(f.parts, f.nets);
+    const h = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 20000, depth: 32 });
+    const update = b._updateScopeChannels;
+    let fractional = 0;
+    b._updateScopeChannels = function(tNs, exactTimeSec, solution) {
+      if (exactTimeSec != null) {
+        fractional++;
+        assert.equal(solution?.converged, true, 'production publisher supplies its real accepted result');
+        assert.deepEqual(solution.nodeVoltages, this.nodeVoltages, 'result belongs to this fractional instant');
+      }
+      return update.call(this, tNs, exactTimeSec, solution);
+    };
+    b.advanceTo(1_000_000n);
+    assert.ok(fractional > 1, 'actual transient substeps exercised');
+    assert.equal(b.getScopeData(h).count, 20);
+  });
+});
+
 function sourceAndLoad(sourceReversed) {
   const liveTerminal = sourceReversed ? 'neg' : 'pos';
   const groundTerminal = sourceReversed ? 'pos' : 'neg';

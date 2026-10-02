@@ -1,4 +1,4 @@
-2026-10-02 Failed live solve instrument refusal — CLAIM, Codex bwcx `/root`.
+2026-10-02 Failed live solve instrument refusal — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, new branch
 lane/failed-solve-instrument-refusal, exact base
 e56eff3d2065b508c765cb621b72e5efe2f947c3. Four-path envelope: this row;
@@ -14,6 +14,16 @@ history intervals. Preserve valid zero, power-off current, digital channels,
 unknown-current fallbacks on valid solves, general nodeVoltage consumers and
 unrelated exception propagation. No solver/tolerance, CPU, workflow/package,
 pin, CUI/Lite/corpus or deployment edits. Exact package adoption follows later.
+Focused 22/22, zero skips; adjacent scope/meter/OP/transient surface 151/151
+before adding the final real fractional-publication proof. Four isolated
+buildable mutants genuinely red and restored: failed-solve guard (3 tests),
+sticky meter interval (4 including earlier metadata coverage), scope validity
+(3), and missing matching-result argument in real transient publication (1).
+Actual CUI BW_BOARD diagnostic batch/watch now refuse before numeric output;
+precision retains its existing cycle refusal. Scope-only also refuses, but
+exposes the consumer's uncaught capture exception: fix that separately during
+package adoption, not in this engine envelope. No installed/deployed claim.
+One frozen automatic exact-head qualification precedes guarded landing.
 
 2026-10-02 Duplicate supply-symbol current attribution — DONE, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, branch
