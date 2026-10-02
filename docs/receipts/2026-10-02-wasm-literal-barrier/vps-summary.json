@@ -1,0 +1,137 @@
+{
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-02T13:50:05.253Z",
+  "node": "v20.20.2",
+  "publication": false,
+  "appPinChanges": false,
+  "hardwareAcknowledgementChanges": false,
+  "harnessHashes": {
+    "probe-labwired-motion-ab.mjs": "156bf6ef8a6b431757ac65a31b91c274b08bef726b328d5ef280abe178e50ab9",
+    "probe-labwired-f0-ab.mjs": "fc4254fc0f79ee1d010237804892ea80ab8e3714b890817b0fd56fa9d7fafc64"
+  },
+  "runs": [
+    {
+      "mode": "literal-experiment-attempt2",
+      "workload": "motion",
+      "reverse": false,
+      "receipt": "/mnt/volume1/code/lego/.fastpath-census-evidence.kYeuzx/literal-experiment-attempt2/vps-motion-primary.json",
+      "sha256": "2539f85cda435ec5a4fd2c59b12a7a9efa9e74a2df5c220aa1bd6bceec5698cf",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.4451239065047018,
+          "minimumRtx": 0.4203901612920812,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.4486840212175689,
+          "minimumRtx": 0.432839096977124,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.0079980307973628
+      }
+    },
+    {
+      "mode": "literal-experiment-attempt2",
+      "workload": "f0",
+      "reverse": false,
+      "receipt": "/mnt/volume1/code/lego/.fastpath-census-evidence.kYeuzx/literal-experiment-attempt2/vps-f0-primary/abba.json",
+      "sha256": "ec57f01e15ea1b47c230eeacb8252ea242591816de63f8de36dd9c8ffdf79429",
+      "summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 1.937644163277548,
+            "minimumRtx": 1.756970814209336,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 1.9639340673588643,
+            "minimumRtx": 1.2738844058589498,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 1.0135679732014606
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.40083548973882754,
+            "minimumRtx": 0.3415629424433442,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.3975620321823456,
+            "minimumRtx": 0.3604095756841014,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9918334138561063
+        }
+      }
+    },
+    {
+      "mode": "literal-experiment-attempt2",
+      "workload": "motion",
+      "reverse": true,
+      "receipt": "/mnt/volume1/code/lego/.fastpath-census-evidence.kYeuzx/literal-experiment-attempt2/vps-motion-reverse.json",
+      "sha256": "431ee2fdfbb39ee67105ca47c3a15b1006f1beddbe066172a90c5622a1be9c92",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.45226741617948696,
+          "minimumRtx": 0.4132226963668457,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.44056965839822215,
+          "minimumRtx": 0.41675334806376657,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 0.9741353072036867
+      }
+    },
+    {
+      "mode": "literal-experiment-attempt2",
+      "workload": "f0",
+      "reverse": true,
+      "receipt": "/mnt/volume1/code/lego/.fastpath-census-evidence.kYeuzx/literal-experiment-attempt2/vps-f0-reverse/abba.json",
+      "sha256": "e1a850c07e534852850e01f0ccbefac95fbb397c839629bf022f639849f18cf8",
+      "summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 1.9690977391893645,
+            "minimumRtx": 1.713362332413438,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 1.9761606810622112,
+            "minimumRtx": 1.6165980937278972,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 1.0035868924798799
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.40243651240493794,
+            "minimumRtx": 0.37955592501056984,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.379404795538825,
+            "minimumRtx": 0.35805934379317683,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9427693160134086
+        }
+      }
+    }
+  ],
+  "completedAt": "2026-10-02T14:06:05.624Z"
+}

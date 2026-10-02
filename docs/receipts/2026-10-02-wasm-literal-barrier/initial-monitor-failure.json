@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-02T13:39:57.269Z",
+  "toolHead": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+  "sources": {
+    "baseline": {
+      "run": 36915940413,
+      "commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685"
+    },
+    "candidate": {
+      "run": 37013838628,
+      "commit": "45463b863decbe085ffb890edb8d11041594b7f2"
+    }
+  },
+  "verifications": {},
+  "comparisons": [],
+  "automaticMerge": false,
+  "publication": false,
+  "appPinChanges": false,
+  "stoppedAt": "2026-10-02T13:43:03.618Z",
+  "error": "Command failed: gh run watch 37013735063 --repo CrispStrobe/labwired-core --interval 45\nfailed to get run: Get \"https://api.github.com/repos/CrispStrobe/labwired-core/actions/runs/37013735063?exclude_pull_requests=true\": net/http: TLS handshake timeout\n"
+}

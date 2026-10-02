@@ -1,0 +1,62 @@
+F0_WASM_GUEST {"workload":"ram","elfSha256":"c122e1323e442674e4d3c146d1a706e5565deaec72d95414d1b9c0ec17c6c8be","imageSha256":"70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4"}
+F0_WASM_SAMPLE {"workload":"ram","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.35291524399999996,"rtx":2.8335415287416716,"iterations":5400000,"checksum":5399872,"input":0,"mirror":5399999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.35222479799999995,"rtx":2.839095957122247,"iterations":10200000,"checksum":10199872,"input":0,"mirror":10199999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.3466059149999999,"rtx":2.8851209881977935,"iterations":15000000,"checksum":14999872,"input":0,"mirror":14999999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.3475968989999999,"rtx":2.8768956307633813,"iterations":19800000,"checksum":19799872,"input":0,"mirror":19799999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.3495415370000003,"rtx":2.8608903210264227,"iterations":24600000,"checksum":24599872,"input":0,"mirror":24599999,"output":null}
+F0_WASM_GUEST {"workload":"gpio","elfSha256":"32ceb2d9191801d870a5a4448b96b7de34b4f6f57de0616e1bcfea48a0b5b418","imageSha256":"cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"}
+F0_WASM_SAMPLE {"workload":"gpio","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.7184794909999996,"rtx":0.5819097668824028,"iterations":3000000,"checksum":2999872,"input":0,"mirror":2999999,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.5945643119999995,"rtx":0.627130553765962,"iterations":5526315,"checksum":5526484,"input":2,"mirror":5526315,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.6806214610000005,"rtx":0.5950179878132591,"iterations":8192982,"checksum":8192809,"input":0,"mirror":8192981,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.5612387090000002,"rtx":0.6405170421636016,"iterations":10719298,"checksum":10719421,"input":2,"mirror":10719297,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.7276546949999994,"rtx":0.5788193687628073,"iterations":13385965,"checksum":13385747,"input":0,"mirror":13385964,"output":0}
+TAP version 13
+# Subtest: F0 ram: active guest and RAM/MMIO observations
+ok 1 - F0 ram: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 124.834832
+  type: 'test'
+  ...
+# Subtest: F0 ram: all five 48M-cycle windows meet 1x
+ok 2 - F0 ram: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 1797.300884
+  type: 'test'
+  ...
+# Subtest: F0 gpio: active guest and RAM/MMIO observations
+ok 3 - F0 gpio: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 222.467403
+  type: 'test'
+  ...
+# Subtest: F0 gpio: all five 48M-cycle windows meet 1x
+not ok 4 - F0 gpio: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 8503.270087
+  type: 'test'
+  location: '/home/runner/work/bw-board/bw-board/test/labwired-f0-timing.test.mjs:95:5'
+  failureType: 'testCodeFailure'
+  error: 'every window must meet 1x: [0.5819097668824028,0.627130553765962,0.5950179878132591,0.6405170421636016,0.5788193687628073]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-f0-timing.test.mjs:120:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10673.066931
