@@ -1,0 +1,19 @@
+{
+  "semanticStatus": "PASS",
+  "cpuCriterion": "FAIL",
+  "adoption": "H5 experimental; retain H4 baseline",
+  "focusedTests": 34,
+  "buildStaticChecks": 121,
+  "rootBuildChecks": 130,
+  "runtimeControls": 17,
+  "rootControlChecks": 952,
+  "canonicalTraceRows": 1649067,
+  "rootTraceChecks": 1649085,
+  "timingChildren": 18,
+  "measuredPairs": 7,
+  "favorablePairs": 3,
+  "H4MeanCpuUs": 464402,
+  "H5MeanCpuUs": 465336.14285714284,
+  "H5CpuIncreasePercent": 0.2011496197567686,
+  "scope": "process-wide all-thread execution CPU on bounded free-ROM shared VPS; not pure engine, general guest, physical RTx or 10x"
+}
