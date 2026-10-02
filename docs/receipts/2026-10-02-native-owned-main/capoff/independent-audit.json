@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ACTUAL_CAPOFF_PARITY_NO_SPEED_GATE",
+  "checks": 35492,
+  "sourceRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "captureSha256": "14e8ad86ffb1ee448ae8bcbccf8c11ccffcd5ca89a47d4884547bef4f010902a",
+  "resumes": 439,
+  "checkpoints": 6,
+  "limits": "Single bounded fixture; actual main create supported here only. ExecutionCPU468884us is not performance evidence. stderr contains398 bytes ordinary Bochs startup notices; no trace."
+}

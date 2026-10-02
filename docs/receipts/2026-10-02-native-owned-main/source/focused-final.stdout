@@ -1,0 +1,196 @@
+TAP version 13
+# Subtest: trusted direct bootstrap accepts bounded heap only
+ok 1 - trusted direct bootstrap accepts bounded heap only
+  ---
+  duration_ms: 2.727523
+  type: 'test'
+  ...
+# Subtest: deny NODE_OPTIONS
+ok 2 - deny NODE_OPTIONS
+  ---
+  duration_ms: 1.318682
+  type: 'test'
+  ...
+# Subtest: deny NODE_PATH
+ok 3 - deny NODE_PATH
+  ---
+  duration_ms: 0.72713
+  type: 'test'
+  ...
+# Subtest: deny LD_PRELOAD
+ok 4 - deny LD_PRELOAD
+  ---
+  duration_ms: 3.232154
+  type: 'test'
+  ...
+# Subtest: deny LD_AUDIT
+ok 5 - deny LD_AUDIT
+  ---
+  duration_ms: 0.528982
+  type: 'test'
+  ...
+# Subtest: deny executable flag --require=x
+ok 6 - deny executable flag --require=x
+  ---
+  duration_ms: 0.514053
+  type: 'test'
+  ...
+# Subtest: deny executable flag --import=x
+ok 7 - deny executable flag --import=x
+  ---
+  duration_ms: 0.461831
+  type: 'test'
+  ...
+# Subtest: deny executable flag --loader=x
+ok 8 - deny executable flag --loader=x
+  ---
+  duration_ms: 0.331953
+  type: 'test'
+  ...
+# Subtest: deny executable flag --inspect
+ok 9 - deny executable flag --inspect
+  ---
+  duration_ms: 1.154084
+  type: 'test'
+  ...
+# Subtest: deny executable flag --max-old-space-size=8192
+ok 10 - deny executable flag --max-old-space-size=8192
+  ---
+  duration_ms: 2.471235
+  type: 'test'
+  ...
+# Subtest: deny imported entry
+ok 11 - deny imported entry
+  ---
+  duration_ms: 4.975298
+  type: 'test'
+  ...
+# Subtest: local scheduler source retains all observable stages and snapshots
+ok 12 - local scheduler source retains all observable stages and snapshots
+  ---
+  duration_ms: 1.99362
+  type: 'test'
+  ...
+# Subtest: actual historical439 request/return ledger scheduler and6cuts with mocks only
+ok 13 - actual historical439 request/return ledger scheduler and6cuts with mocks only
+  ---
+  duration_ms: 25.310237
+  type: 'test'
+  ...
+# Subtest: native exception executes end then explicit CLI abort; no subsequent resume
+ok 14 - native exception executes end then explicit CLI abort; no subsequent resume
+  ---
+  duration_ms: 32.993159
+  type: 'test'
+  ...
+# Subtest: invalid resume before chip/native effects 0,300,1
+ok 15 - invalid resume before chip/native effects 0,300,1
+  ---
+  duration_ms: 13.469838
+  type: 'test'
+  ...
+# Subtest: invalid resume before chip/native effects 601,300,1
+ok 16 - invalid resume before chip/native effects 601,300,1
+  ---
+  duration_ms: 1.069926
+  type: 'test'
+  ...
+# Subtest: invalid resume before chip/native effects 600,0,1
+ok 17 - invalid resume before chip/native effects 600,0,1
+  ---
+  duration_ms: 0.764791
+  type: 'test'
+  ...
+# Subtest: invalid resume before chip/native effects 600,301,1
+ok 18 - invalid resume before chip/native effects 600,301,1
+  ---
+  duration_ms: 3.636371
+  type: 'test'
+  ...
+# Subtest: invalid resume before chip/native effects 600,300,18446744073709551616
+ok 19 - invalid resume before chip/native effects 600,300,18446744073709551616
+  ---
+  duration_ms: 2.5281
+  type: 'test'
+  ...
+# Subtest: invalid resume before chip/native effects 600,300,-1
+ok 20 - invalid resume before chip/native effects 600,300,-1
+  ---
+  duration_ms: 4.876702
+  type: 'test'
+  ...
+# Subtest: terminal gate denies early close, repeat resume and close
+ok 21 - terminal gate denies early close, repeat resume and close
+  ---
+  duration_ms: 17.010416
+  type: 'test'
+  ...
+# Subtest: data-only exact input accepts fixed artifact identity without reading addon
+ok 22 - data-only exact input accepts fixed artifact identity without reading addon
+  ---
+  duration_ms: 7.634817
+  type: 'test'
+  ...
+# Subtest: input denial manifest
+ok 23 - input denial manifest
+  ---
+  duration_ms: 0.715835
+  type: 'test'
+  ...
+# Subtest: input denial receipt
+ok 24 - input denial receipt
+  ---
+  duration_ms: 0.404787
+  type: 'test'
+  ...
+# Subtest: input denial extra
+ok 25 - input denial extra
+  ---
+  duration_ms: 7.704764
+  type: 'test'
+  ...
+# Subtest: input denial bool
+ok 26 - input denial bool
+  ---
+  duration_ms: 0.421899
+  type: 'test'
+  ...
+# Subtest: input denial path
+ok 27 - input denial path
+  ---
+  duration_ms: 8.63446
+  type: 'test'
+  ...
+# Subtest: input denial nul
+ok 28 - input denial nul
+  ---
+  duration_ms: 1.294133
+  type: 'test'
+  ...
+# Subtest: input denial sha
+ok 29 - input denial sha
+  ---
+  duration_ms: 0.497113
+  type: 'test'
+  ...
+# Subtest: input denial missing
+ok 30 - input denial missing
+  ---
+  duration_ms: 6.826335
+  type: 'test'
+  ...
+# Subtest: configuration corruption rejected without addon read/load
+ok 31 - configuration corruption rejected without addon read/load
+  ---
+  duration_ms: 8.025634
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 665.835811

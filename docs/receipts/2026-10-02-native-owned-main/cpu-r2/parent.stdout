@@ -1,0 +1,19 @@
+{"pair": 0, "arm": "H4", "warmup": true, "executionCpuTotalUs": 454376}
+{"pair": 0, "arm": "MAIN", "warmup": true, "executionCpuTotalUs": 330463}
+{"pair": 1, "arm": "MAIN", "warmup": true, "executionCpuTotalUs": 342214}
+{"pair": 1, "arm": "H4", "warmup": true, "executionCpuTotalUs": 453059}
+{"pair": 2, "arm": "H4", "warmup": false, "executionCpuTotalUs": 532129}
+{"pair": 2, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 349951}
+{"pair": 3, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 388638}
+{"pair": 3, "arm": "H4", "warmup": false, "executionCpuTotalUs": 483586}
+{"pair": 4, "arm": "H4", "warmup": false, "executionCpuTotalUs": 509866}
+{"pair": 4, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 368613}
+{"pair": 5, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 337547}
+{"pair": 5, "arm": "H4", "warmup": false, "executionCpuTotalUs": 472077}
+{"pair": 6, "arm": "H4", "warmup": false, "executionCpuTotalUs": 518104}
+{"pair": 6, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 368425}
+{"pair": 7, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 408741}
+{"pair": 7, "arm": "H4", "warmup": false, "executionCpuTotalUs": 485925}
+{"pair": 8, "arm": "H4", "warmup": false, "executionCpuTotalUs": 519884}
+{"pair": 8, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 372465}
+{"status": "ACTUAL_ABI3_MAIN_PROCESS_CPU_GATE_PASS", "planSha256": "7347637c20402f4c1c7891b1c5a99880093b792d0ca32d60faf654932f8bb3a6", "h4SamplesUs": [532129, 483586, 509866, 472077, 518104, 485925, 519884], "ownedSamplesUs": [349951, 388638, 368613, 337547, 368425, 408741, 372465], "h4MeanUs": 503081.5714285714, "ownedMeanUs": 370625.71428571426, "meanReductionPercent": 26.32890264032729, "allSevenFavorable": true, "gatePassed": true, "scope": "process.cpuUsage user+system whole execution delta, H4 retained main-thread helper vs new closed-main ABI3, all439 full native snapshots and six full board checkpoints; excludes startup/settlement/final serialization consistently. Includes local callbacks/scheduler/GC. No timing/profile/Inspector/nativeTrace/journal.", "physicalRTxMeasured": false, "broaderGuestQualification": false}

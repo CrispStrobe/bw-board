@@ -1,0 +1,16 @@
+{
+  "status": "ROOT_ABI3_MAIN_FULL_CANONICAL_AND_LOGICAL_PARITY_PASS",
+  "checks": 1649085,
+  "canonicalNativeRows": 1649067,
+  "captureSha256": "6a396529c6c2d95a69b1897fc60251abaecfe06676e18170920c6b6fa297f65f",
+  "orderedJournalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "ramSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+  "clockTransfers": {
+    "transfers": "9204",
+    "commits": "8738",
+    "words": "201366"
+  },
+  "resumes": 439,
+  "snapshotProjection": "only new physical clockTransfers field removed and indexed-object sliceBytes bijectively converted to exact160-byte array; every original CPU/cache/segment/debug/system/logical callback counter/slice and six whole-board snapshots exact",
+  "scope": "fixed free protected-mode ROM; no native broad-guest or throughput qualification"
+}

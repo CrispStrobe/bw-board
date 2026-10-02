@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ACTUAL_MAIN_LIFECYCLE_NOT_GENERAL_ADMISSION",
+  "checks": 343,
+  "normal": 3,
+  "expectedSIGABRT": 10,
+  "approvedBindingsSha256": "baf5120a19018d30c68c77a64c39b6a6a3361163c9fe227f13cd296210e60c9a",
+  "summarySha256": "9dce82f429ffb73a295470f0691ea96f205a0b9d945213aac863148be420f697",
+  "scriptSha256": "61379408f654a0259a39f939b2d73661d89dc6a71e2dd90106972d0085107f54",
+  "scope": "Actual main initializing-thread5API/secondcreate/capturefailure/reentry controls; unsupported instrumented private-provider wrappers distinct from frozen production source; unchanged logical ordinal at attack/denial, no later observer; not rollback or speed proof"
+}

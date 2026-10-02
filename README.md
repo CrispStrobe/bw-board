@@ -92,6 +92,8 @@ preserves the full CPU/device chronology with fewer clock crossings, but measure
 integration and the 10× goal remain WIP.
 [Source-only snapshot transport comparisons](docs/I80386-NATIVE-OWNED-DTO-COST-WIP.md)
 also rejected object and packed replies before native integration.
+The [closed fresh-child main-thread diagnostic](docs/I80386-NATIVE-OWNED-MAIN-WIP.md) matches full fixture chronology and passes 13 lifecycle controls;
+its fixed-fixture paired CPU gate used 26.33% less process CPU than H4, with all seven measured pairs favorable. Broader guest qualification remains WIP.
 
 ## LabWired WASM performance (2026-10-01)
 

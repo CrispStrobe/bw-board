@@ -1,0 +1,72 @@
+{
+  "status": "PREDECLARED_NOT_EXECUTED",
+  "candidateSource": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "baselineAddonSha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+  "baselineHelperPath": "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+  "baselineHelperSha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+  "candidateHelper": "scripts/run-i80386-native-owned-main.mjs at frozen bab75182",
+  "prerequisites": [
+    "complete authentic build and static artifact audit",
+    "capture OFF and ON full canonical/journal/six checkpoint/RAM/PIT/PIC parity",
+    "all bounded actual controls qualified"
+  ],
+  "samples": {
+    "measuredPairs": 7,
+    "pairOrder": [
+      "H4,MAIN",
+      "MAIN,H4",
+      "H4,MAIN",
+      "MAIN,H4",
+      "H4,MAIN",
+      "MAIN,H4",
+      "H4,MAIN",
+      "MAIN,H4",
+      "H4,MAIN"
+    ],
+    "children": 18,
+    "freshProcessEach": true,
+    "oneHeavyChildAtOnce": true,
+    "warmupPairs": 2,
+    "warmupChildren": 4
+  },
+  "captureModes": {
+    "nativeTrace": false,
+    "hostJournal": false,
+    "profile": false
+  },
+  "metric": "process.cpuUsage user+system whole execution delta, H4 retained main-thread helper vs new closed-main ABI3, all439 full native snapshots and six full board checkpoints; excludes startup/settlement/final serialization consistently. Includes local callbacks/scheduler/GC. No timing/profile/Inspector/nativeTrace/journal.",
+  "gate": {
+    "meanProcessCpuReductionAtLeastPercent": 10,
+    "allSevenMeasuredPairsFavorable": true,
+    "fullSemanticParityEveryChild": true
+  },
+  "policy": "No retry, no best samples, no chasing gain. Preserve failure and negative result. No physical 16MHz386 RTx or broader guest claim from this synthetic fixed-ROM comparison.",
+  "compiledCandidateSource": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "candidateAddonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "containment": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    }
+  },
+  "runtimeSources": {
+    "MAIN": {
+      "revision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+      "count": 95
+    },
+    "H4": {
+      "revision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+      "count": 61
+    }
+  },
+  "compiledBaselineSourceFiles": 32
+}

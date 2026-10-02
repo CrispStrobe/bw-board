@@ -1,0 +1,13 @@
+{
+  "sourceRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "compiledSourceRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "sourceFreezeSha256": "993a71574217dc713967e6704e5f357d4bd3c03a3c9b7b7e9008349e97fe8615",
+  "inputSha256": "0b768b90daae99a9427d49c467112ed20b9febaef4e6cdc00522b9efec36580e",
+  "configSourceSha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+  "buildReceiptSha256": "acebb536e93e6e74218057f18ae1e5a47d8f436e7aee212c0d82b8658d4e3da8",
+  "preparedManifestSha256": "7092cf5efdb3d68b65e2b4b8a91f726ae07516e8df0de4712eeb8c92c7369c28",
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "sourceFiles": 95,
+  "compiledSourceFiles": 86,
+  "helperSha256": "b3a7b6ee73629fa0a26a4492cdbbefcb912af7746ea660d6fb651c3468fc597e"
+}

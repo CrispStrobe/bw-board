@@ -1,0 +1,29 @@
+{
+  "returncode": -6,
+  "signal": 6,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 465,
+  "stderrSha256": "6b0502e48d5bb6cd1ef212c33d7ae41afb3ba7cfcc3dc81c8de777e564ffb6d9",
+  "wallNs": 3794499225,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-setIRQ.input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+}

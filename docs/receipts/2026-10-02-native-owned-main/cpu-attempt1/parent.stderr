@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-20261002/run.py", line 14, in <module>
+    for p,h in h4['sourceHashes'].items():assert a['source']['hashes'][p]==h
+                                                 ~~~~~~~~~~~~~~~~~~~~~^^^
+KeyError: 'scripts/bochs-cpu3-native-direct-board/abi.h'
