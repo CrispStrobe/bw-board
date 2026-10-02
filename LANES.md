@@ -645,16 +645,26 @@ ground-current mutations each fail their independent consequence assertion.
 Isolated wt-board-adp7118-soft-start-20261002, branch
 lane/adp7118-soft-start-20261002; exact base
 6ba28adc1450a7553450ae09992b6b3f9eb01749. A concurrent evidence-only
-landing was merged before claim publication; no implementation yet. Four-path envelope: this row,
+landing was merged before claim publication. Expanded six-path envelope: this row,
 src/devices/power.js ADP7118 only, test/adp7118-soft-start.test.mjs, and
-spec-updates/adp7118-soft-start.md. Add explicit opt-in startupModel:
+spec-updates/adp7118-soft-start.md, plus src/board.js opt-in accepted-transient
+callback provenance and src/devices.js documentation of that optional contract.
+Expansion anchored at exact current master c8119b99c0ec3ff4e57c617337e91038431eb993:
+independent audit reproduced startup stamp bookkeeping mutation during the
+explicitly read-only biasPointVoltages query. Keep stamps pure; pass the actual
+accepted-transient provenance through the fresh read callback for opt-in models.
+Existing callback arity and non-opt-in readers must remain unchanged. Prove
+cloned-state nonmutation plus unchanged next trajectory, actual callback context,
+ordinary device compatibility, existing startup/CLI/mean proofs and mutations.
+Prior e1a52728 landing is held; no consumer adoption while this defect remains.
+Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
 DC behavior by default. Interpolate a bounded delayed single-pole envelope
 through Rev.H typical EN-to-10% (80 us) and EN-to-90% (380 us) anchors;
 label interpolation rather than a vendor/transistor macromodel certificate.
 Prove timing, monotonicity, enable/UVLO restart and hysteresis, actual output
 capacitor/KCL/current-ceiling controls, conservative named unsupported modes,
-scope capture and caller-consequence mutants. No Board scheduler/integrator,
+scope capture and caller-consequence mutants. No scheduler, integration formulas/budgets,
 global tolerance, other regulator, CPU, workflow/dependency/pin, CUI/Lite or
 corpus edits. External CSS, adjustable/noise-reduction networks, noise/PSRR,
 temperature and overshoot/loop-stability qualification remain excluded.
