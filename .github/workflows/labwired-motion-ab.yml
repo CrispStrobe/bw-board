@@ -26,6 +26,10 @@ on:
         description: Collect separate sampling and forced-tier diagnostics after ordinary A/B (never qualification)
         type: boolean
         default: false
+      f0:
+        description: Also capture separate ordinary active F0 RAM and GPIO A/B/B/A
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -100,6 +104,15 @@ jobs:
       - name: Test sampling and tier-trace parsing
         if: inputs.profile
         run: node --test test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs
+      - name: Verify and compare active F0 workloads without weakening their floor
+        if: inputs.f0
+        env:
+          ALLOW_PAIRED_GLUE: ${{ inputs.allow_paired_glue }}
+        run: |
+          node --test test/f0-timing-receipt.test.mjs
+          args=()
+          if [ "$ALLOW_PAIRED_GLUE" = true ]; then args+=(--paired-glue); fi
+          node scripts/probe-labwired-f0-ab.mjs --baseline baseline/nodejs --candidate candidate/nodejs --out evidence/f0-abba "${args[@]}"
       - name: Collect independent sampling and forced-tier evidence
         if: inputs.profile
         run: |

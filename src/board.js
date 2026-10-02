@@ -1586,8 +1586,9 @@ export class BoardImpl {
 
   /** Refuse only currents the solver explicitly identifies as non-unique. */
   _assertDeterminateCurrent(solution, partId, terminal) {
-    if ((terminal === 'pos' || terminal === 'neg')
-        && solution?.indeterminateBranchCurrents?.has(partId)) {
+    if (!solution?.indeterminateBranchCurrents?.has(partId)) return;
+    const railSymbol = this._solveParts.some(part => part.id === partId && part.kind === 'vcc');
+    if (railSymbol ? terminal === 'vcc' : terminal === 'pos' || terminal === 'neg') {
       const error = new Error(`indeterminate source current ${partId}.${terminal}: redundant ideal voltage source`);
       error.code = 'INDETERMINATE_BRANCH_CURRENT';
       throw error;
@@ -2169,6 +2170,26 @@ export class BoardImpl {
     if (!partCurrents) return 0;
     const i = partCurrents.get(terminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
+  }
+
+  /** Total amperes delivered by an ideal supply rail, not an alias's share. */
+  railCurrent(netId) {
+    if (typeof netId !== 'string' || netId.length === 0) {
+      throw new Error('rail current unavailable: requires a nonempty net ID');
+    }
+    this._flushSolve();
+    const known = this._solveParts.some(part => part.kind === 'vcc'
+      && this._netForTerminal(part.id, 'vcc') === netId);
+    if (!known) throw new Error(`rail current unavailable: ${netId} is not an ideal supply rail`);
+    if (!this.powered) return 0;
+    if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const result = this._mnaCache;
+    if (result.converged === false || result.railConflicts?.length) {
+      throw new Error(`rail current unavailable for ${netId}: solve failed or rail conflict`);
+    }
+    const amps = result.railCurrents?.get(netId);
+    if (!Number.isFinite(amps)) throw new Error(`rail current unavailable for ${netId}: no finite aggregate`);
+    return amps;
   }
 
   /**
@@ -3030,6 +3051,7 @@ export class BoardImpl {
     // leaking into the public reader.
     this._mnaCache = { nodeVoltages: new Map(point.nodeVoltages),
       indeterminateBranchCurrents: new Set(point.indeterminateBranchCurrents),
+      railCurrents: new Map([...(point.railCurrents ?? [])].map(([net, i]) => [net, -i])),
       branchCurrents: new Map([...point.branchCurrents].map(([id, values]) =>
         [id, new Map([...values].map(([terminal, i]) => [terminal, -i]))])),
       converged: true, deviceStamps: new Map() };
@@ -3651,9 +3673,12 @@ export class BoardImpl {
       converged: op.converged === true,
       nodeVoltages: new Map(op.nodeVoltages),
       // OP represents inductors internally as zero-volt sources. Keep this
-      // narrowly scoped observation contract on actual independent sources.
+      // narrowly scoped observation contract on actual sources/supply symbols.
       indeterminateBranchCurrents: new Set([...(op.indeterminateBranchCurrents ?? [])]
-        .filter(id => this._solveParts.some(part => part.id === id && part.kind === 'vsource'))),
+        .filter(id => this._solveParts.some(part => part.id === id && ['vsource', 'vcc'].includes(part.kind)))),
+      // As with OP branch currents, positive means INTO the supply. Live
+      // railCurrent() converts this sign back when adopting the initial state.
+      railCurrents: new Map([...(op.railCurrents ?? [])].map(([net, i]) => [net, -i])),
       branchCurrents: (() => {
         const currents = currentsIntoTerminals(op.branchCurrents);
         for (const id of inductorIds) {

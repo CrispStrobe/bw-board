@@ -116,6 +116,12 @@
  * @property {(part: string, terminal: string) => number} branchCurrent
  *   Amperes out of the named part terminal into its net. Requires MNA.
  *   OP results explicitly use the opposite, positive-into-terminal convention.
+ *   Throws for explicitly indeterminate source/supply-symbol currents.
+ *
+ * @property {(net: string) => number} railCurrent
+ *   Total amperes delivered by an ideal supply rail into its net, independent
+ *   of the number/order of vcc symbols. Refuses unknown rails, failed solves
+ *   and conflicting rails; a known powered-off rail returns zero.
  *
  * @property {() => {analysis: {kind: 'dc-operating-point', scope: string,
  *   supportedKinds: string[], capacitors: 'open', sources: 'fixed-dc-only',
@@ -126,12 +132,15 @@
  *   currentConvention: 'positive-into-part-terminal'}, converged: boolean,
  *   nodeVoltages: Map<string, number>,
  *   branchCurrents: Map<string, Map<string, number>>,
+ *   indeterminateBranchCurrents: Set<string>, railCurrents: Map<string, number>,
  *   railConflicts: string[]}} operatingPoint
  *   Non-mutating capacitor-open DC analysis for the explicitly reported
  *   supported scope (static native R/C/L/V/I, exact ideal-DC inductors,
  *   explicit finite-parameter Shockley diodes, and ideal finite-parameter
  *   VCVS/VCCS). Result currents
  *   are positive into each named terminal;
+ *   railCurrents are likewise positive into the ideal supply rail. Symbol
+ *   currents listed as indeterminate are not a physical current allocation;
  *   unsupported, floating, or non-ideal circuit semantics throw rather than
  *   being approximated.
  *
