@@ -1,0 +1,13 @@
+{
+  ".github/workflows/i80386-native-owned-pic-imr-build.yml": "5d659d597958252ea81eab99bac2337b0ad679bf222d2ba2af5e10b2dcea0574",
+  "scripts/bochs-cpu3-native-owned-pic-imr-profile/admission.mjs": "166806e287b4ac0854fb1cf52c457a401e02b9f605a8c24931abf6be8dc81d62",
+  "scripts/bochs-cpu3-native-owned-pic-imr-profile/contract.md": "fddb145d6c58f9fd14b8f43d893ec31ce16e17c6e799f0dc1fbc9684eb819ae7",
+  "scripts/bochs-cpu3-native-owned-pic-imr-profile/identity.mjs": "e383375e0151e1967445499b108388733f1e273020c8f403c3d06bc0ea6cf324",
+  "scripts/bochs-cpu3-native-owned-pic-imr-profile/reset-witness.mjs": "b9d27e94b3ffab4851602a3b29e5086b9a0369131d5a76b2b17d580fa130ff21",
+  "scripts/ci-build-i80386-native-owned-pic-imr.py": "e38320d0b68c95cb5af89c0b28517e985e7a8c9c5208a7e36c437d770d34cfb9",
+  "scripts/prepare-bochs-cpu3-native-owned-pic-imr.mjs": "8dfa32020f1a86caf3341bc00f546715fd0b096eec19662720f4772856ce039e",
+  "scripts/run-i80386-native-owned-pic-imr.mjs": "9107ee3560c174e2c81bfd709f7a7bec738f53fdd2c3b9f1ff7cd3d0159541fa",
+  "test/fixtures/i80386-owned-pic-imr-canonical-proof.json": "1e88f8b2883bbc48367be6866152a34468ad7e4fa14bebcccea72ecc057f4e14",
+  "test/fixtures/i80386-owned-pic-imr-js-reference.json": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346",
+  "test/i80386-native-owned-pic-imr-profile.test.mjs": "e31c5fe8fba4d5a503ad8c64d5e31272569a46ec3e127b6de33883edbb62a51d"
+}
