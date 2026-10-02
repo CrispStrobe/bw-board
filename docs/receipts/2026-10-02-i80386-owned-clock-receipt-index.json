@@ -1,0 +1,177 @@
+{
+  "schema": "bw.owned-clock-replay.receipt-index.v1",
+  "replaySourceRevision": "a46083c0e7792aa4e9ee1923bcaf6a2eb5870e0d",
+  "priorDiagnosticSourceRevision": "2d1cf651d7d7d0dfda55b9df482cf0ec70d9187c",
+  "priorCompiledH4SourceRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "noNativeAddonOrCPUExecution": true,
+  "files": {
+    "2026-10-02-i80386-owned-clock-replay-auth-after.json": {
+      "bytes": 1173,
+      "sha256": "e20dc2bed30508536e7245c38effc324e3992dca45a5f1289da7509ea99a11f7",
+      "originalBytes": 1173,
+      "originalSha256": "e20dc2bed30508536e7245c38effc324e3992dca45a5f1289da7509ea99a11f7",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-historical-replay-20261002/auth-after.json"
+    },
+    "2026-10-02-i80386-owned-clock-replay-auth-before.json": {
+      "bytes": 1173,
+      "sha256": "e20dc2bed30508536e7245c38effc324e3992dca45a5f1289da7509ea99a11f7",
+      "originalBytes": 1173,
+      "originalSha256": "e20dc2bed30508536e7245c38effc324e3992dca45a5f1289da7509ea99a11f7",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-historical-replay-20261002/auth-before.json"
+    },
+    "2026-10-02-i80386-owned-clock-replay-exit.json": {
+      "bytes": 908,
+      "sha256": "f376b7588e6ba3bae9eef0917a0f4de72044ac222b537114fc3a0486d4ebc667",
+      "originalBytes": 908,
+      "originalSha256": "f376b7588e6ba3bae9eef0917a0f4de72044ac222b537114fc3a0486d4ebc667",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-historical-replay-20261002/exit.json"
+    },
+    "2026-10-02-i80386-owned-clock-replay-independent-audit.json": {
+      "bytes": 1153,
+      "sha256": "0875534f7fda513e53711631c94d966cc65f7d191d1c184c19ce3fae12404a88",
+      "originalBytes": 1153,
+      "originalSha256": "0875534f7fda513e53711631c94d966cc65f7d191d1c184c19ce3fae12404a88",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-historical-replay-20261002/independent-audit.json"
+    },
+    "2026-10-02-i80386-owned-clock-replay-independent-audit.py": {
+      "bytes": 5765,
+      "sha256": "abb69887ff7572d6b99a1cbd4845e97e0eaad8fff6db0283d563c146c4e5d24b",
+      "originalBytes": 5765,
+      "originalSha256": "abb69887ff7572d6b99a1cbd4845e97e0eaad8fff6db0283d563c146c4e5d24b",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-historical-replay-20261002/independent-audit.py"
+    },
+    "2026-10-02-i80386-owned-clock-replay-root-audit.json": {
+      "bytes": 1035,
+      "sha256": "faad86b7f660a5dd0f7d356314d90bc7d0e8acc8fc8a068f6fe2358f63c28d68",
+      "originalBytes": 1035,
+      "originalSha256": "faad86b7f660a5dd0f7d356314d90bc7d0e8acc8fc8a068f6fe2358f63c28d68",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-historical-replay-20261002/root-audit.json"
+    },
+    "2026-10-02-i80386-owned-clock-owned-clock-root-source-audit-20261002.json": {
+      "bytes": 569,
+      "sha256": "d0d378e8cb65fb92c5a92ecd0fbf83fcbb159cba7aaa4aff80eb48afd1695b9c",
+      "originalBytes": 569,
+      "originalSha256": "d0d378e8cb65fb92c5a92ecd0fbf83fcbb159cba7aaa4aff80eb48afd1695b9c",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-root-source-audit-20261002.json"
+    },
+    "2026-10-02-i80386-owned-clock-owned-clock-root-startup-control-20261002.json": {
+      "bytes": 336,
+      "sha256": "0f5d89a2d768e62525ae2f73dff21a7b9da4a9974c82040abec43055861f80eb",
+      "originalBytes": 336,
+      "originalSha256": "0f5d89a2d768e62525ae2f73dff21a7b9da4a9974c82040abec43055861f80eb",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-root-startup-control-20261002.json"
+    },
+    "2026-10-02-i80386-owned-clock-owned-clock-root-startup-control-20261002.mjs": {
+      "bytes": 345,
+      "sha256": "f1825c235f31c5f37f0ba110ed3717d8de7c6d6dd23949cd7eb4844b4c325ac5",
+      "originalBytes": 345,
+      "originalSha256": "f1825c235f31c5f37f0ba110ed3717d8de7c6d6dd23949cd7eb4844b4c325ac5",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-root-startup-control-20261002.mjs"
+    },
+    "2026-10-02-i80386-owned-clock-owned-clock-root-replay-run-20261002.py": {
+      "bytes": 2912,
+      "sha256": "6b1cbe2825d0fe9c6e1e0b8b28f4c84f8d9b83852588e1dba9bee8c165a0233c",
+      "originalBytes": 2912,
+      "originalSha256": "6b1cbe2825d0fe9c6e1e0b8b28f4c84f8d9b83852588e1dba9bee8c165a0233c",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-root-replay-run-20261002.py"
+    },
+    "2026-10-02-i80386-owned-clock-owned-clock-independent-source-audit-20261002.json": {
+      "bytes": 7256,
+      "sha256": "b14cda7a7dcb04e6aea15a4e1d91c8cc1d3311d211666757c020576949079cfe",
+      "originalBytes": 7256,
+      "originalSha256": "b14cda7a7dcb04e6aea15a4e1d91c8cc1d3311d211666757c020576949079cfe",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-independent-source-audit-20261002.json"
+    },
+    "2026-10-02-i80386-owned-clock-owned-clock-factory-dispatch-review-20261002.json": {
+      "bytes": 1619,
+      "sha256": "153f74ae2764fae37888657745212d7449422306fe01bcfb5c8b4681e97d7931",
+      "originalBytes": 1619,
+      "originalSha256": "153f74ae2764fae37888657745212d7449422306fe01bcfb5c8b4681e97d7931",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-factory-dispatch-review-20261002.json"
+    },
+    "2026-10-02-i80386-owned-clock-source-freeze.json": {
+      "bytes": 6830,
+      "sha256": "231c2dff541ad1be10d9d71d35b89bbd1b0e564eff669ab4e46d4e93b453d6ac",
+      "originalBytes": 6830,
+      "originalSha256": "231c2dff541ad1be10d9d71d35b89bbd1b0e564eff669ab4e46d4e93b453d6ac",
+      "origin": "/mnt/volume1/tmp-astra/owned-clock-replay-source-20261002/source-freeze.json"
+    },
+    "2026-10-02-i80386-owned-clock-source-contract.md": {
+      "bytes": 4487,
+      "sha256": "2d5bf00635684776ab51e8ec354d14a2a32c5ee9479140320721d870a666fd97",
+      "originalBytes": 4487,
+      "originalSha256": "2d5bf00635684776ab51e8ec354d14a2a32c5ee9479140320721d870a666fd97",
+      "origin": "/tmp/bw-board-386-owned-clock-publication-20261002/scripts/bochs-cpu3-native-owned-clock-replay/contract.md"
+    },
+    "2026-10-02-i80386-owned-clock-source-factory.mjs": {
+      "bytes": 3747,
+      "sha256": "0d70d3d419ca1d48b3281ece591a09fcc7f24a8f64ed52c4babd93955b1047be",
+      "originalBytes": 3747,
+      "originalSha256": "0d70d3d419ca1d48b3281ece591a09fcc7f24a8f64ed52c4babd93955b1047be",
+      "origin": "/tmp/bw-board-386-owned-clock-publication-20261002/scripts/bochs-cpu3-native-owned-clock-replay/factory.mjs"
+    },
+    "2026-10-02-i80386-owned-clock-source-protocol.mjs": {
+      "bytes": 6047,
+      "sha256": "924d9467754ac3ef131b30fc4e56206d277032ddb291a6a766903a31000871e0",
+      "originalBytes": 6047,
+      "originalSha256": "924d9467754ac3ef131b30fc4e56206d277032ddb291a6a766903a31000871e0",
+      "origin": "/tmp/bw-board-386-owned-clock-publication-20261002/scripts/bochs-cpu3-native-owned-clock-replay/protocol.mjs"
+    },
+    "2026-10-02-i80386-owned-clock-source-worker.mjs": {
+      "bytes": 4769,
+      "sha256": "937c48b2998993c466a6b3e069afb997baf2abf0c8fcd88b1f8293ab4b6b4a4d",
+      "originalBytes": 4769,
+      "originalSha256": "937c48b2998993c466a6b3e069afb997baf2abf0c8fcd88b1f8293ab4b6b4a4d",
+      "origin": "/tmp/bw-board-386-owned-clock-publication-20261002/scripts/bochs-cpu3-native-owned-clock-replay/worker.mjs"
+    },
+    "2026-10-02-i80386-owned-clock-source-replay-i80386-native-owned-clock-journal.mjs": {
+      "bytes": 5079,
+      "sha256": "56196a48279bfa5141aa2d0f04bdf2cba5bf64e0e63a2e218dfc44c838a00c35",
+      "originalBytes": 5079,
+      "originalSha256": "56196a48279bfa5141aa2d0f04bdf2cba5bf64e0e63a2e218dfc44c838a00c35",
+      "origin": "/tmp/bw-board-386-owned-clock-publication-20261002/scripts/replay-i80386-native-owned-clock-journal.mjs"
+    },
+    "2026-10-02-i80386-owned-clock-source-i80386-native-owned-clock-replay.test.mjs": {
+      "bytes": 7414,
+      "sha256": "78bbdae0b80b4460bf2a6d3cc63e302f498bce30ace44941e9ec78c33f2a4e00",
+      "originalBytes": 7414,
+      "originalSha256": "78bbdae0b80b4460bf2a6d3cc63e302f498bce30ace44941e9ec78c33f2a4e00",
+      "origin": "/tmp/bw-board-386-owned-clock-publication-20261002/test/i80386-native-owned-clock-replay.test.mjs"
+    },
+    "2026-10-02-i80386-owned-clock-process-provenance.json.gz": {
+      "bytes": 16603,
+      "sha256": "9f239c4fd9aff3d2f27fd3934f632cbb1ab9a9863acbc632b41f194b39f398cb",
+      "originalBytes": 57042,
+      "originalSha256": "1d9464258c79d530b83eec98838c6df98f249a51ed2c3991c106f450dc3f9a60",
+      "origin": "original regular-file process artifacts"
+    },
+    "2026-10-02-i80386-owned-clock-reference-capture.json.gz": {
+      "bytes": 9155,
+      "sha256": "fcf47ff0e488e0de66030cb666eece00336c6fbb4d2006e9fa120c4cb6c36157",
+      "originalBytes": 84216,
+      "originalSha256": "fef68e50495e97ff03df0a3ce8a22a92dfb12b202eef28f3dfbbfd3d7a0befbb",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/capture.json"
+    },
+    "2026-10-02-i80386-owned-clock-reference-fences.jsonl.gz": {
+      "bytes": 18763,
+      "sha256": "d6dbd7d20b8e27ca8deaaafdd197909a0752bc584dc4c049604fa3f897d3ef64",
+      "originalBytes": 276122,
+      "originalSha256": "3e0610e5507b612ba15a6323428149d15ecdc02933c273bd4efdd92103d3c30a",
+      "origin": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/fences.jsonl"
+    }
+  },
+  "localOnly": {
+    "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced.stderr": {
+      "bytes": 149865650,
+      "sha256": "fbdcd8ae90edc1282a0725443db4942ab9d0fafb614f91dcd1d3039540312d3d",
+      "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced.stderr",
+      "reason": "historical large reference previously authenticated by clock witness receipts; no duplicate raw trace/journal"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/callbacks.jsonl": {
+      "bytes": 11728896,
+      "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+      "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/callbacks.jsonl",
+      "reason": "historical large reference previously authenticated by clock witness receipts; no duplicate raw trace/journal"
+    }
+  }
+}

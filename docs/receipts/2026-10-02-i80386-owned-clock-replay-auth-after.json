@@ -1,0 +1,27 @@
+{
+  "revision": "a46083c0e7792aa4e9ee1923bcaf6a2eb5870e0d",
+  "inputsSha256": "7bbf9d61df3597bc0432bb61968286a9b045a17a1adfc7b0450ddc708f1813c2",
+  "inputs": {
+    "trace": {
+      "bytes": 149865650,
+      "sha256": "fbdcd8ae90edc1282a0725443db4942ab9d0fafb614f91dcd1d3039540312d3d",
+      "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced.stderr"
+    },
+    "journal": {
+      "bytes": 11728896,
+      "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+      "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/callbacks.jsonl"
+    },
+    "capture": {
+      "bytes": 84216,
+      "sha256": "fef68e50495e97ff03df0a3ce8a22a92dfb12b202eef28f3dfbbfd3d7a0befbb",
+      "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/capture.json"
+    },
+    "fences": {
+      "bytes": 276122,
+      "sha256": "3e0610e5507b612ba15a6323428149d15ecdc02933c273bd4efdd92103d3c30a",
+      "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/fences.jsonl"
+    }
+  },
+  "helperSha256": "6b1cbe2825d0fe9c6e1e0b8b28f4c84f8d9b83852588e1dba9bee8c165a0233c"
+}
