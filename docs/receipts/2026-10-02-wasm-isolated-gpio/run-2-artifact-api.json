@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 11245641081,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI0NTY0MTA4MQ==",
+      "name": "active-f0-main-profile-diagnostic",
+      "size_in_bytes": 37424,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11245641081",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11245641081/zip",
+      "expired": false,
+      "digest": "sha256:88c11d84f8a59c625fe13234cc7e2dfa9c9a46bf90206f4b4a4a6398dadefad6",
+      "created_at": "2026-10-02T18:38:48Z",
+      "updated_at": "2026-10-02T18:38:48Z",
+      "expires_at": "2026-10-16T18:38:48Z",
+      "workflow_run": {
+        "id": 37048740665,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "diag/wasm-isolated-gpio-profile-20261002",
+        "head_sha": "d06d8c183d3c11d3ab65eb20a6b9c8b61c985ea2"
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "head": "d06d8c183d3c11d3ab65eb20a6b9c8b61c985ea2",
+  "ref": "diag/wasm-isolated-gpio-profile-20261002",
+  "workflow": "labwired-f0-profile.yml",
+  "dispatchAttemptedBefore": "2026-10-02T18:35:14Z",
+  "inputs": {
+    "build_run": "36915940413",
+    "core_commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "profile": "false",
+    "gpio_profile": "true"
+  },
+  "hostedOnly": true,
+  "promotion": false,
+  "localEngineDownloads": false
+}

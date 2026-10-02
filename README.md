@@ -263,6 +263,15 @@ published engine or physical acknowledgement changes. VPS load/disk headroom
 prevented local repeats. See
 [all post-RAM results and original receipts](docs/receipts/2026-10-02-wasm-live-word-post-ram/README.md).
 
+Independent GPIO-only main profiles now separate GPIO execution from the RAM
+guest. Two valid captures attribute about **20%** of whole-process self samples
+to the bounded cached executor and **11.56–12.26%** to the cold GPIO hook; the
+failed repeat's negative CPU-profile delta is preserved, not clamped or hidden.
+All ordinary GPIO captures remain below 1×. These percentages are diagnostic
+attribution, not removable costs or verified speedups. Acceptance and production
+engines are unchanged. See
+[all GPIO-only captures, failures and next experiments](docs/receipts/2026-10-02-wasm-isolated-gpio/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
