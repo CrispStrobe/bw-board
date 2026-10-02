@@ -85,3 +85,9 @@ source/output/hash options. Omitting mode retains O3. Unknown modes fail before
 file reads or optimizer execution; original bytes and completion-marker rules
 are unchanged. `postprocess.mode` and the full ordered flags identify new outputs.
 The recipe selector does not change the ordinary builder or enable publication.
+
+Both targeted recipes have now completed independent determinism, all 101 actual
+integration tests, four hosted Node 20/22 runtime/order comparisons and both VPS
+orders. Hosted RAM improves, but motion/GPIO remain mixed and both recipes have
+VPS RAM regressions. Neither is qualified for production. See the
+[full targeted results and original evidence](receipts/2026-10-02-wasm-targeted-postprocess/README.md).

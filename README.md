@@ -196,6 +196,16 @@ all-window floor still fails. This optimization is **not enabled in production**
 only manual, nonpublishing diagnostic tooling is landed. App/engine pins and
 hardware acknowledgements remain unchanged. See [postprocessing results and raw receipts](docs/receipts/2026-10-02-wasm-postprocess/README.md).
 
+Two targeted postprocessing recipes also pass independent determinism and all
+101 actual WASM integration tests, but remain **not production-qualified**.
+Hosted RAM gains **1.41–6.68%** (instruction cleanup) and **3.00–13.06%** (locals
+cleanup); motion/GPIO are mixed. VPS RAM regresses in both orders for both
+recipes, and locals cleanup loses **30.63% GPIO** in the forward run. Instruction
+cleanup's fresh motion pass (**1.017790× median / 1.001569× minimum**) does not
+erase its paired regressions. Only manual, nonpublishing recipe tooling is
+landed; production and hardware acknowledgements are unchanged. See
+[targeted results, all-window floors and original evidence](docs/receipts/2026-10-02-wasm-targeted-postprocess/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
