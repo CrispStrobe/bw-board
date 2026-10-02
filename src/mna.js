@@ -1282,6 +1282,7 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * Source-row unknowns retain their MNA orientation; extraction converts them.
  * @returns {{ nodeVoltages: Map<string, number>, branchCurrents: Map<string, Map<string, number>>,
  *             indeterminateBranchCurrents: Set<string>,
+ *             railCurrents: Map<string, number>,
  *             capVoltagesNext?: Map<string, number>, inductorCurrentsNext?: Map<string, number>,
  *             converged?: boolean }}
  */
@@ -1483,9 +1484,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
   }
 
+  const indeterminateBranchCurrents = new Set(redundantIdealSources);
   if (nodeCount === 0 && resistiveSelfSources.size === 0) {
     return { nodeVoltages: new Map(), branchCurrents: new Map(),
-      indeterminateBranchCurrents: redundantIdealSources };
+      indeterminateBranchCurrents, railCurrents: new Map() };
   }
 
   // SPICE NPN RB IS BETWEEN THE EXTERNAL BASE PIN AND THE INTRINSIC BASE.
@@ -1532,9 +1534,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // and converged:false, naming nothing. Deduped HERE rather than at
         // stamping time because an allocated row that never gets filled is
         // exactly as singular as a duplicated one.
-        if (vccNet && nodeIndex.has(vccNet) && !railOwner.has(vccNet)) {
-          railOwner.set(vccNet, part.id);
-          vsIndex.set(part.id, vsCount++);
+        if (vccNet && nodeIndex.has(vccNet)) {
+          const owner = railOwner.get(vccNet);
+          if (owner !== undefined) {
+            // The row measures total rail delivery, not a unique allocation
+            // between aliases. Neither participant has an individual current.
+            indeterminateBranchCurrents.add(owner);
+            indeterminateBranchCurrents.add(part.id);
+          } else {
+            railOwner.set(vccNet, part.id);
+            vsIndex.set(part.id, vsCount++);
+          }
         }
       }
       // Op-amp output is a voltage source (VCVS with rail clamping)
@@ -2832,6 +2842,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Compute branch currents for each part
   /** @type {Map<string, Map<string, number>>} part id → terminal → current */
   const branchCurrents = new Map();
+  /** Total amperes leaving each ideal supply rail into its net. */
+  const railCurrents = new Map();
 
   for (const part of parts) {
     const currents = new Map();
@@ -3339,6 +3351,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vsIdx = vsIndex.get(part.id);
       const iVcc = solution[nodeCount + vsIdx];
       currents.set('vcc', -iVcc);
+      railCurrents.set(findNet(nets, part.id, 'vcc'), -iVcc);
     }
 
     // Registered device models: terminal currents derived GENERICALLY from
@@ -3427,13 +3440,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         inductorVoltagesNext.set(part.id + ':s', vS);
       }
     }
-    return { nodeVoltages, branchCurrents, indeterminateBranchCurrents: redundantIdealSources,
+    return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
       capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
-  return { nodeVoltages, branchCurrents, indeterminateBranchCurrents: redundantIdealSources,
+  return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
     converged, opampRegions, deviceStamps,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }

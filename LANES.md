@@ -1,4 +1,4 @@
-2026-10-02 Duplicate supply-symbol current attribution — CLAIM, Codex bwcx `/root`.
+2026-10-02 Duplicate supply-symbol current attribution — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, branch
 lane/duplicate-rail-current, exact base
 dfeaadbdc2a3921d3b7a838079201455dff87685. Six-path envelope: this row;
@@ -16,6 +16,15 @@ Keep known single-symbol readings and unrelated absent-current fallbacks.
 No current-sharing physical model, source stamp/NR/tolerance changes, generic
 rail-conflict solver rewrite, CPU/workflow, package/pin, CUI/Lite/corpus or
 deployment edits. Prior source-current consumer closed at qualified f28050d.
+Local proof: focused 14/14; adjacent/API 128/128, zero skips. Five isolated
+buildable mutations red (owner/alias availability, aggregate sign, conflict
+refusal, adopted-cache sign), sources restored. Current scope refuses before
+writing a false alias sample; independent voltage acquisition remains usable.
+Two constructed ngspice +/-5 V, 1 kohm controls agree with signed total delivery
+and Ohm's law; not a corpus qualification. Existing unloaded-rail 1 pS numerical
+shunt remains 5 pA at 5 V, explicitly documented rather than rounded away.
+OP still returns conflict metadata; transient state adoption refuses it.
+Hosted qualification follows on this frozen implementation head.
 
 2026-10-02 Indeterminate ideal-source current observers — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-indeterminate-current-20261002, branch
