@@ -2,7 +2,7 @@
 
 A private Worker now replays the authenticated H4 host journal against a fresh actual board. The single formal replay passed **439 complete resumes, all 209,839 ordered logical callback rows, six board checkpoints, settled PIT/PIC/board state and the entire RAM hash**. Its reconstructed journal retains SHA-256 `bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1`.
 
-This is an ownership and real-board replay proof. **It loads no native addon and executes no CPU instructions. No native batching ABI or performance backend is implemented.** Canonical native CPU evidence comes from the prior [fenced H4 diagnostic](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md); it is authenticated reference evidence, rather than CPU execution produced by this replay. [H4](I80386-NATIVE-HOT-PACKED-SCALAR-WIP.md) remains the native baseline and the [10× goal](I80386-10X-PERFORMANCE.md) remains open.
+This is an ownership and real-board replay proof. **It loads no native addon and executes no CPU instructions. At this replay's freeze, no native batching ABI or performance backend was implemented. A later [separate native ABI3 candidate](I80386-NATIVE-OWNED-CLOCK-WIP.md) now has actual CPU/device parity evidence; this historical replay itself still executes no CPU instructions.** Canonical native CPU evidence comes from the prior [fenced H4 diagnostic](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md); it is authenticated reference evidence, rather than CPU execution produced by this replay. [H4](I80386-NATIVE-HOT-PACKED-SCALAR-WIP.md) remains the native baseline and the [10× goal](I80386-10X-PERFORMANCE.md) remains open.
 
 ## Private ownership boundary
 

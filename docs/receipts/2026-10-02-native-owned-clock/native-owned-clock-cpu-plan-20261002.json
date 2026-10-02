@@ -1,0 +1,43 @@
+{
+  "status": "PREDECLARED_NOT_EXECUTED",
+  "candidateSource": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "baselineAddonSha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+  "baselineHelperPath": "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+  "baselineHelperSha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+  "candidateHelper": "scripts/run-i80386-native-owned-clock.mjs at frozen candidate",
+  "prerequisites": [
+    "complete authentic build and static artifact audit",
+    "capture OFF and ON full canonical/journal/six checkpoint/RAM/PIT/PIC parity",
+    "all bounded actual controls qualified"
+  ],
+  "samples": {
+    "warmups": 2,
+    "measuredPairs": 7,
+    "pairOrder": [
+      "H4,ABI3",
+      "ABI3,H4",
+      "H4,ABI3",
+      "ABI3,H4",
+      "H4,ABI3",
+      "ABI3,H4",
+      "H4,ABI3",
+      "ABI3,H4",
+      "H4,ABI3"
+    ],
+    "children": 18,
+    "freshProcessEach": true,
+    "oneHeavyChildAtOnce": true
+  },
+  "captureModes": {
+    "nativeTrace": false,
+    "hostJournal": false,
+    "profile": false
+  },
+  "metric": "process.cpuUsage all-thread user+system delta around same full execution window including scheduling, callbacks, whole resumes, snapshots, six board checkpoints and parent/worker IPC/GC; excluding startup and settlement/serialization",
+  "gate": {
+    "meanProcessCpuReductionAtLeastPercent": 10,
+    "allSevenMeasuredPairsFavorable": true,
+    "fullSemanticParityEveryChild": true
+  },
+  "policy": "No retry, no best samples, no chasing gain. Preserve failure and negative result. No physical 16MHz386 RTx or broader guest claim from this synthetic fixed-ROM comparison."
+}

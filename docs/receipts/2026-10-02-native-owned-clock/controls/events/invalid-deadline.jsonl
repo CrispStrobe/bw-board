@@ -1,0 +1,4 @@
+{"reason":1,"ordinal":1,"name":"query"}
+{"n":"0","q":"0","ordinal":2,"name":"initialized"}
+{"before":{"query":1,"logical":0,"transfers":0},"ordinal":3,"name":"invalid-before-query-denied"}
+{"ordinal":4,"name":"done"}

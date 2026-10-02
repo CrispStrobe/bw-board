@@ -86,6 +86,10 @@ target's boundaries.
 The [bounded native 386 gate](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md)
 now combines paging, executable RAM updates, A20 aliases, REP retries and actual
 PIT/PIC delivery. Its receipts qualify this free fixture; a general native backend remains WIP.
+The [separate native clock-batching candidate](docs/I80386-NATIVE-OWNED-CLOCK-WIP.md)
+preserves the full CPU/device chronology with fewer clock crossings, but measured
+9.3% more process CPU cost than H4. H4 remains the baseline; broader guest/backend
+integration and the 10× goal remain WIP.
 
 ## LabWired WASM performance (2026-10-01)
 
