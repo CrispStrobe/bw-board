@@ -1,0 +1,227 @@
+{
+  "headRefOid": "b85ab59ef0fa29a78c8269c4d84cd9130d1ffaa8",
+  "mergeCommit": null,
+  "state": "CLOSED",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:46Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053279/job/110715987894",
+      "name": "compare-script-unit",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Core Renode speed (Zephyr hello nRF52840)"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:44Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053280/job/110715987943",
+      "name": "actionlint (+ shellcheck on run: blocks)",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Core workflows lint"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:17:26Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053276/job/110715987691",
+      "name": "python-sdk (wheel + pytest, 0 skipped)",
+      "startedAt": "2026-10-02T05:14:34Z",
+      "status": "COMPLETED",
+      "workflowName": "Python SDK"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:59Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988106",
+      "name": "release-runner-contract",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:34:55Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053316/job/110715987837",
+      "name": "board",
+      "startedAt": "2026-10-02T05:14:34Z",
+      "status": "COMPLETED",
+      "workflowName": "microbit active board qualification"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:19:32Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053279/job/110715987773",
+      "name": "labwired-vs-renode-hello",
+      "startedAt": "2026-10-02T05:14:34Z",
+      "status": "COMPLETED",
+      "workflowName": "Core Renode speed (Zephyr hello nRF52840)"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:15:21Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053280/job/110715987852",
+      "name": "shellcheck (tracked *.sh)",
+      "startedAt": "2026-10-02T05:15:11Z",
+      "status": "COMPLETED",
+      "workflowName": "Core workflows lint"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:59Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988408",
+      "name": "fmt-autofix",
+      "startedAt": "2026-10-02T05:14:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:28:50Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988317",
+      "name": "pr-default-members",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:22:48Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988346",
+      "name": "pr-feature-off",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:33Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715989332",
+      "name": "pr-gate-warm",
+      "startedAt": "2026-10-02T05:14:33Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:19:18Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988409",
+      "name": "browser-layer",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:21:32Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988391",
+      "name": "pr-scheduler-observable",
+      "startedAt": "2026-10-02T05:14:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:22:12Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988411",
+      "name": "xtensa-flash-boot",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:31:13Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988429",
+      "name": "pr-workspace-tests (shard 1)",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:29:36Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988406",
+      "name": "pr-workspace-tests (shard 2)",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:32:48Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715988416",
+      "name": "pr-workspace-tests (shard 3)",
+      "startedAt": "2026-10-02T05:14:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:33Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715989159",
+      "name": "core-integrity",
+      "startedAt": "2026-10-02T05:14:33Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:33Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715989060",
+      "name": "ci-runner-image",
+      "startedAt": "2026-10-02T05:14:33Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:14:33Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110715989256",
+      "name": "core-full",
+      "startedAt": "2026-10-02T05:14:33Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:28:55Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110719163841",
+      "name": "pr-gate",
+      "startedAt": "2026-10-02T05:28:52Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T05:33:00Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36968053303/job/110720053874",
+      "name": "pr-workspace-tests",
+      "startedAt": "2026-10-02T05:32:50Z",
+      "status": "COMPLETED",
+      "workflowName": "Rust Core CI"
+    }
+  ]
+}
