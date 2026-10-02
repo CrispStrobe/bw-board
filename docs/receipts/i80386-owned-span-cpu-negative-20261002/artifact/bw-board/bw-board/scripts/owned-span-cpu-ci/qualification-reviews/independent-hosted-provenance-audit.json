@@ -1,0 +1,12 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_HOSTED_SPAN_THREE_CELL_COMPLETE_PROVENANCE_AND_PARITY",
+  "artifactId": 11248833105,
+  "runId": 37056398077,
+  "head": "80d228ee5452f380655a16c4bc823beb76e781c1",
+  "artifactPins": 212,
+  "originalExtractedClosure": 31,
+  "runtime116Compiled103Frozen110Exact": true,
+  "coreParityReceiptSha256": "9cdeb5ed5382b4fdf7a3be3ed3c19f66de604ddfebe23af576a003056499cbfd",
+  "actualOuterLifecycleAllCellsPass": true,
+  "scope": "All3 actual semantic cells qualified fullstored166/boards/RAM/physical/canonical/journal. LocalOFF/ON andpuretimeout controls separate; no CPUgate/adoption or generalAT claim."
+}

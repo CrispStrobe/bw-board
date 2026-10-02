@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/usr/bin/python3",
+    "/home/runner/work/_temp/owned-span-cpu/gate/gate.py"
+  ],
+  "timeoutSeconds": 2400,
+  "timedOut": false,
+  "returncode": 0,
+  "status": "OUTER_COMMAND_EXIT_PASS",
+  "pid": 2880,
+  "wallSeconds": 87.30468107600001,
+  "signal": null
+}

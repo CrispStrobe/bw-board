@@ -1,0 +1,45 @@
+{
+  "status": "CPU_GATE_COMPLETED_RETAIN_ACTUAL_SUMMARY",
+  "publicationBefore": {
+    "head": "d48ba37f4b38784757275b28f26da71bb9113c11",
+    "files": {
+      ".github/workflows/i80386-owned-span-cpu-gate.yml": "2c376bd1c42e162c267e5c50a20545b60bfef7fbe6afed4960390fd836e82e6d",
+      "scripts/owned-span-cpu-ci/README.md": "b4f192a2f484e8d4f5545f92f3a486d953ac59a4c4a73558f6d96d4f7d7579f6",
+      "scripts/owned-span-cpu-ci/derivation.json": "a81d050f1961e101bbe0ddf3188f0ca82231dabddcf13bb3dce39266765d0099",
+      "scripts/owned-span-cpu-ci/gate.py": "58010b2ab597a9240d04471d30f3e8b14e6e6bb719ceef87b34acb962021db00",
+      "scripts/owned-span-cpu-ci/inverse-seams.json": "92179bf31557debb63768e3becb91febf6f486eaecc5d3a8b4bf8f0d9d6b6c7e",
+      "scripts/owned-span-cpu-ci/inverse.py": "8410113a3f3c1b497093c9dbb3c7ec4f2b52a6a8da504ee57015af02666a6557",
+      "scripts/owned-span-cpu-ci/plan.json": "76003013381ff6ca2514113b2c71b21d6e9b8ae144fa1b08e8a41a9e2c73bcc2",
+      "scripts/owned-span-cpu-ci/prepare.py": "1efd0d11f7fba21aeb38f0f11f27d5a51ec527d11e70eedb9e5f3e6f0f413b62",
+      "scripts/owned-span-cpu-ci/qualification-reviews/independent-hosted-cells-audit.json": "9cdeb5ed5382b4fdf7a3be3ed3c19f66de604ddfebe23af576a003056499cbfd",
+      "scripts/owned-span-cpu-ci/qualification-reviews/independent-hosted-provenance-audit.json": "dc3b7204ceadedc0e30b83c55032086d5a873fad403b123686e62721b4aa1875",
+      "scripts/owned-span-cpu-ci/qualification-reviews/root-actual-hosted-span-artifact-audit.json": "773e24c75153ea43ec33ac4e8afe43925e2bcd5878cbeec6a502dc54b6d55f3a",
+      "scripts/owned-span-cpu-ci/qualification-template.json": "75e1a9cd15ef87e5d6aa454748ec0cd7c9379c4cd879638c25c580e0da236374",
+      "scripts/owned-span-cpu-ci/qualification.py": "5100c8accd7e698f4c1c1e0c8d668f05cdcb971fb8416c7200e56fc6cd747d78",
+      "scripts/owned-span-cpu-ci/run-gate.py": "0cecfab202e0e3e28aaf5c18ac06e2af3c51e755964a2abcfe7b627c7f15314b",
+      "scripts/owned-span-cpu-ci/source-controls.py": "07e3b44aa1582768d100546610dae0cbb854143831d8b5f7c0245e80fe654c83",
+      "scripts/owned-span-cpu-ci/static-inverse-proof.json": "a30f9e175e9cc72a4097c489a1639b09019318cfedf3ba86f394184cf4c50b17"
+    }
+  },
+  "publicationAfter": {
+    "head": "d48ba37f4b38784757275b28f26da71bb9113c11",
+    "files": {
+      ".github/workflows/i80386-owned-span-cpu-gate.yml": "2c376bd1c42e162c267e5c50a20545b60bfef7fbe6afed4960390fd836e82e6d",
+      "scripts/owned-span-cpu-ci/README.md": "b4f192a2f484e8d4f5545f92f3a486d953ac59a4c4a73558f6d96d4f7d7579f6",
+      "scripts/owned-span-cpu-ci/derivation.json": "a81d050f1961e101bbe0ddf3188f0ca82231dabddcf13bb3dce39266765d0099",
+      "scripts/owned-span-cpu-ci/gate.py": "58010b2ab597a9240d04471d30f3e8b14e6e6bb719ceef87b34acb962021db00",
+      "scripts/owned-span-cpu-ci/inverse-seams.json": "92179bf31557debb63768e3becb91febf6f486eaecc5d3a8b4bf8f0d9d6b6c7e",
+      "scripts/owned-span-cpu-ci/inverse.py": "8410113a3f3c1b497093c9dbb3c7ec4f2b52a6a8da504ee57015af02666a6557",
+      "scripts/owned-span-cpu-ci/plan.json": "76003013381ff6ca2514113b2c71b21d6e9b8ae144fa1b08e8a41a9e2c73bcc2",
+      "scripts/owned-span-cpu-ci/prepare.py": "1efd0d11f7fba21aeb38f0f11f27d5a51ec527d11e70eedb9e5f3e6f0f413b62",
+      "scripts/owned-span-cpu-ci/qualification-reviews/independent-hosted-cells-audit.json": "9cdeb5ed5382b4fdf7a3be3ed3c19f66de604ddfebe23af576a003056499cbfd",
+      "scripts/owned-span-cpu-ci/qualification-reviews/independent-hosted-provenance-audit.json": "dc3b7204ceadedc0e30b83c55032086d5a873fad403b123686e62721b4aa1875",
+      "scripts/owned-span-cpu-ci/qualification-reviews/root-actual-hosted-span-artifact-audit.json": "773e24c75153ea43ec33ac4e8afe43925e2bcd5878cbeec6a502dc54b6d55f3a",
+      "scripts/owned-span-cpu-ci/qualification-template.json": "75e1a9cd15ef87e5d6aa454748ec0cd7c9379c4cd879638c25c580e0da236374",
+      "scripts/owned-span-cpu-ci/qualification.py": "5100c8accd7e698f4c1c1e0c8d668f05cdcb971fb8416c7200e56fc6cd747d78",
+      "scripts/owned-span-cpu-ci/run-gate.py": "0cecfab202e0e3e28aaf5c18ac06e2af3c51e755964a2abcfe7b627c7f15314b",
+      "scripts/owned-span-cpu-ci/source-controls.py": "07e3b44aa1582768d100546610dae0cbb854143831d8b5f7c0245e80fe654c83",
+      "scripts/owned-span-cpu-ci/static-inverse-proof.json": "a30f9e175e9cc72a4097c489a1639b09019318cfedf3ba86f394184cf4c50b17"
+    }
+  }
+}
