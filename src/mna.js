@@ -1281,6 +1281,7 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * Raw branchCurrents are amperes OUT of the named part terminal into its net.
  * Source-row unknowns retain their MNA orientation; extraction converts them.
  * @returns {{ nodeVoltages: Map<string, number>, branchCurrents: Map<string, Map<string, number>>,
+ *             indeterminateBranchCurrents: Set<string>,
  *             capVoltagesNext?: Map<string, number>, inductorCurrentsNext?: Map<string, number>,
  *             converged?: boolean }}
  */
@@ -1483,7 +1484,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   }
 
   if (nodeCount === 0 && resistiveSelfSources.size === 0) {
-    return { nodeVoltages: new Map(), branchCurrents: new Map() };
+    return { nodeVoltages: new Map(), branchCurrents: new Map(),
+      indeterminateBranchCurrents: redundantIdealSources };
   }
 
   // SPICE NPN RB IS BETWEEN THE EXTERNAL BASE PIN AND THE INTRINSIC BASE.
@@ -3425,12 +3427,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         inductorVoltagesNext.set(part.id + ':s', vS);
       }
     }
-    return { nodeVoltages, branchCurrents, capVoltagesNext, capCurrentsNext,
+    return { nodeVoltages, branchCurrents, indeterminateBranchCurrents: redundantIdealSources,
+      capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
-  return { nodeVoltages, branchCurrents, converged, opampRegions, deviceStamps,
+  return { nodeVoltages, branchCurrents, indeterminateBranchCurrents: redundantIdealSources,
+    converged, opampRegions, deviceStamps,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
 

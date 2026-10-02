@@ -110,6 +110,94 @@ function solveShort(fixture, options = {}, controls = new Map()) {
   return solveMNA(fixture.parts, fixture.nets, new Map(), controls, 5, options);
 }
 
+describe('explicit indeterminate ideal-source current observations', () => {
+  it('marks omitted ideal rows in ground/live/merged/all-ground and transient solves, but not powered-off or resistive controls', () => {
+    for (const placement of [{}, {live:true}, {merged:true}, {alone:true}]) {
+      const fixture = selfShort(0, placement);
+      for (const opts of [{}, {transient:{dtSec:1e-6}}]) {
+        const result = solveShort(fixture, opts);
+        assert.deepEqual([...result.indeterminateBranchCurrents], ['VBAD']);
+        assert.equal(result.branchCurrents.get('VBAD')?.size ?? 0, 0);
+      }
+      assert.equal(solveShort(fixture,{powerOff:true}).indeterminateBranchCurrents.size,0);
+      const resistive = selfShort(0,{...placement,params:{rInternal:10}});
+      assert.equal(solveShort(resistive).indeterminateBranchCurrents.size,0);
+      assert.equal(current(solveShort(resistive),'VBAD','pos'),0);
+    }
+  });
+
+  it('refuses instantaneous and repeated mean reads without installing an empty watch or breaking valid voltage/load meters', () => {
+    for (const placement of [{}, {live:true}, {merged:true}, {alone:true}]) {
+      const fixture = selfShort(0, placement);
+      const board = new BoardImpl(5); board.setNetlist(fixture.parts,fixture.nets);
+      for (const terminal of ['pos','neg']) {
+        assert.throws(()=>board.branchCurrent('VBAD',terminal),/indeterminate source current VBAD/);
+        for (let repeat=0;repeat<2;repeat++) {
+          assert.throws(()=>board.meterCurrent('VBAD',terminal),/indeterminate source current VBAD/);
+          assert.equal(board._meterWatches.size,0,'failed priming must not register empty history');
+        }
+      }
+      assert.equal(board.branchCurrent('unknown','pos'),0,'unregistered legacy fallback is unchanged');
+      assert.equal(board.branchCurrent('VBAD','unknown'),0,'unknown terminal fallback is unchanged');
+      if (!placement.alone) {
+        assert.equal(board.meterVoltage('live','ground'),1);
+        assert.ok(Math.abs(board.meterCurrent('VGOOD','pos')-.001)<1e-12);
+        assert.doesNotThrow(()=>board.advanceTo(1_000_000n));
+        assert.equal(board.meterVoltage('live','ground'),1);
+        assert.ok(Math.abs(board.meterCurrent('VGOOD','pos')-.001)<1e-12);
+      }
+      board.setPower(false);
+      assert.equal(board.branchCurrent('VBAD','pos'),0);
+      assert.equal(board.meterCurrent('VBAD','pos'),0,'known powered-off zero remains observable');
+      assert.doesNotThrow(()=>board.setPower(true),'a failed watch must not break power-on solving');
+      assert.throws(()=>board.meterCurrent('VBAD','pos'),/indeterminate source current VBAD/);
+    }
+  });
+
+  it('keeps an invalid interval sticky without making a parameter edit or unrelated meter fail', () => {
+    const fixture = selfShort(0,{live:true,params:{rInternal:10}});
+    const board = new BoardImpl(5); board.setNetlist(fixture.parts,fixture.nets);
+    assert.equal(board.meterCurrent('VBAD','pos'),0,'determinate resistive zero is valid');
+    board.meterCurrent('VGOOD','pos'); board.advanceTo(100_000n);
+    assert.doesNotThrow(()=>board.setPartParam('VBAD','rInternal',0));
+    assert.throws(()=>board.meterCurrent('VBAD','pos'),/indeterminate source current VBAD/);
+    assert.ok(Math.abs(board.meterCurrent('VGOOD','pos')-.001)<1e-12);
+    board.setPartParam('VBAD','rInternal',10);
+    assert.equal(board.branchCurrent('VBAD','pos'),0);
+    board.advanceTo(200_000n);
+    assert.throws(()=>board.meterCurrent('VBAD','pos'),/indeterminate source current VBAD/,
+      'restoring determinate topology cannot repair the earlier unmeasured interval');
+    assert.ok(Math.abs(board.meterCurrent('VGOOD','pos')-.001)<1e-12);
+    const reset = selfShort(0,{live:true,params:{rInternal:10}});
+    board.setNetlist(reset.parts,reset.nets);
+    assert.equal(board.meterCurrent('VBAD','pos'),0,'netlist reset starts a new qualified watch');
+  });
+
+  it('preserves current availability through observational OP and adopted initial-state caches', () => {
+    for (const live of [false,true]) {
+      const fixture = selfShort(0,{live});
+      const board = new BoardImpl(5); board.setNetlist(fixture.parts,fixture.nets);
+      const op = board.operatingPoint();
+      assert.deepEqual([...op.indeterminateBranchCurrents],['VBAD']);
+      assert.equal(board.timeNs,0n);
+      const initialized = board.initializeTransientFromOperatingPoint();
+      assert.equal(initialized.converged,true);
+      assert.throws(()=>board.branchCurrent('VBAD','pos'),/indeterminate source current VBAD/);
+      assert.throws(()=>board.meterCurrent('VBAD','neg'),/indeterminate source current VBAD/);
+      assert.equal(board.nodeVoltage('live'),1);
+      assert.ok(Math.abs(board.branchCurrent('VGOOD','pos')-.001)<1e-12);
+    }
+  });
+
+  it('does not swallow unrelated meter recorder exceptions', () => {
+    const fixture = selfShort(0,{params:{rInternal:10}});
+    const board = new BoardImpl(5); board.setNetlist(fixture.parts,fixture.nets);
+    board.meterCurrent('VBAD','pos');
+    board._meterValue=()=>{throw new Error('unrelated recorder defect');};
+    assert.throws(()=>board._recordMeterSamples(),/unrelated recorder defect/);
+  });
+});
+
 describe('independent ideal-source self-constraint consistency', () => {
   it('rejects signed nonzero ground, live and merged-ground constraints by name without mutating inputs', () => {
     for (const volts of [5, -5]) for (const placement of [{}, { live: true }, { merged: true }]) {

@@ -251,6 +251,13 @@ The [literal-load report](receipts/2026-10-01-wasm-literal-loads/README.md)
 retains the negative results and separate compile-time-policy follow-up, also
 rejected after **−2.23% and −3.09%** hosted pairs. Neither experiment is on main.
 
+The [2026-10-02 F0/main profiling report](receipts/2026-10-02-f0-main/README.md)
+adds a 48 MHz active RAM versus GPIO fixture. Hosted RAM windows pass, while
+GPIO windows fail (0.594× and 0.659× medians on different hosts). Separate
+motion traces confirm TurboFan execution paths; whole-process samples identify
+dispatcher, admission and bus-read work, not removable-cost percentages or a
+new speedup. This does not replace the 64 MHz motion floor or qualify browsers.
+
 After successful NODEJS qualification, run browser/worker guest and debugger
 acceptance before promoting verified artifact/package hashes. No browser/UI
 throughput, circuit replay, shared sensor IRQ or timed microphone/audio is

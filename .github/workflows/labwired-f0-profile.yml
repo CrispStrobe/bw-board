@@ -1,0 +1,87 @@
+name: LabWired active F0 timing and main profiles (diagnostic)
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Existing deterministic labwired-wasm run with build-B artifact
+        required: true
+        type: string
+        default: '36915940413'
+      core_commit:
+        description: Exact source commit of that artifact
+        required: true
+        type: string
+        default: '43b2d62f5a0fa24ae0b38a645069f5aaa78af685'
+      profile:
+        description: Separate whole-process F0 and motion profiles after ordinary F0 timing
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnostic:
+    name: Actual active F0 evidence (not artifact promotion)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: labwired-wasm-b
+          path: engine
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+      - name: Verify exact source and mark original NODEJS glue
+        env:
+          CORE_COMMIT: ${{ inputs.core_commit }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync, writeFileSync} from 'node:fs';
+          const info = JSON.parse(readFileSync('engine/BUILD-INFO.json'));
+          if (!/^[a-f0-9]{40}$/.test(process.env.CORE_COMMIT) || info.ref !== process.env.CORE_COMMIT) throw Error('Source mismatch');
+          writeFileSync('engine/nodejs/package.json', JSON.stringify({type: 'commonjs'}));
+          NODE
+      - name: Install guest compiler
+        timeout-minutes: 10
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+      - name: Verify strict receipt parsers
+        run: node --test test/f0-timing-receipt.test.mjs test/motion-ab-receipt.test.mjs test/wasm-motion-profile.test.mjs
+      - name: Preserve runner and tooling provenance
+        env:
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: |
+          mkdir -p evidence
+          cp engine/BUILD-INFO.json evidence/build-info.json
+          {
+            printf 'build_run=%s\n' "$BUILD_RUN"
+            git rev-parse HEAD
+            lscpu
+            node --version
+            arm-none-eabi-gcc --version
+            sha256sum test/fixtures/labwired/f0-timing/*
+          } > evidence/runner.txt
+      - name: Ordinary F0 timing, then optional independent sampling
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          args=()
+          if [ "$PROFILE" = true ]; then args+=(--profile); fi
+          node scripts/probe-labwired-f0.mjs --wasm engine/nodejs --out evidence/f0 "${args[@]}"
+      - name: Separate unsampled motion trace and sampled main attribution
+        if: inputs.profile
+        run: |
+          for mode in trace-default sampled-default; do
+            node scripts/profile-labwired-motion.mjs --wasm engine/nodejs --out "evidence/motion-$mode" --mode "$mode"
+          done
+      - name: Retain raw evidence including failed timing windows
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: active-f0-main-profile-diagnostic
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
