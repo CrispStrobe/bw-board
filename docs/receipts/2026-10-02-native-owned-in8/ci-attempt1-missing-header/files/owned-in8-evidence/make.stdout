@@ -1,0 +1,1 @@
+g++ -std=c++17 -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' -fPIC -pthread -I/usr/include/node -c bochs-cpu3-native-direct-board-adapter/napi.cc -o bw_direct_napi.o

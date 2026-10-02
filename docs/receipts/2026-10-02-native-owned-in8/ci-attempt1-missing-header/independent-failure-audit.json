@@ -1,0 +1,11 @@
+{
+  "status": "ACTUAL_CI_BUILD_FAILURE_MISSING_NODE_API_HEADER_NOT_TIMEOUT",
+  "checks": 16,
+  "artifactZipSha256": "84cff209b60cd527b3500cbdadced5babdae3a8c3fa51b6f1f2172aa07f622c2",
+  "runId": 37005134545,
+  "artifactId": 11225512969,
+  "makeExit": 2,
+  "makeElapsedSeconds": 0.017054637000001094,
+  "cause": "node_api.h missing when compiling NAPI adapter; preparation/configuration completed, no staticreceipt/addon qualification",
+  "scope": "Read-only downloaded exactCIfailure evidence; no build/retry/load."
+}
