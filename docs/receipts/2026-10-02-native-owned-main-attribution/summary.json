@@ -1,0 +1,126 @@
+{
+  "status": "ACTUAL_MAIN_TIMING_DIAGNOSTIC_PARITY_PASS_NOT_SPEED_GATE",
+  "exit": {
+    "returncode": 0,
+    "signal": null,
+    "timedOut": false,
+    "fileLimitReached": false,
+    "error": null,
+    "stderrBytes": 414,
+    "stderrSha256": "04c580a33a46a64f0a8e123ab865d58f4312f1a0e9be94be4b55629130957eb0",
+    "wallNs": 6913180772,
+    "transport": "regular file descriptors, no nonblocking pipe",
+    "RLIMIT_FSIZE": 268435456,
+    "heapMiB": 512,
+    "command": [
+      "/tmp/node-v22.23.3-linux-x64/bin/node",
+      "--max-old-space-size=512",
+      "/mnt/volume1/tmp-astra/native-owned-main-attribution-20261002/driver.mjs",
+      "/mnt/volume1/tmp-astra/native-owned-main-attribution-20261002/timing-only.input.json"
+    ],
+    "RLIMIT_CPU": 120,
+    "niceIncrement": 10,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    },
+    "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+  },
+  "captureSha256": "c6626f77003d1594e9f6f5651898038bb4f2cd3657453e5ac151189b9cd54309",
+  "attribution": {
+    "identity": {
+      "kind": "DISTINCT_MAIN_TIMING_DERIVATIVE_NOT_FROZEN_PRODUCTION",
+      "sourceRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+      "hashes": {
+        "generate.mjs": "8ae2e75e372c496f505d86db8566b6e48206ca574e25739f335f9d60f067f119",
+        "timing.mjs": "c501b50ec399f640b1fb48804bbd42a83e711a1ee71d16bdcae11ac19e69de2e",
+        "identity.mjs": "bf1f4f8243c65b200e63068b13c316499809f4f1e9c95605bd0d94de943cc79d",
+        "provider.mjs": "1aff240725a7c39bcefd22be77a41f7de51b2d6bcaf81552b669f4a225148ba8",
+        "driver.mjs": "0609de41452696cb0fdd01a67352c9d1f1c3b80a70f6f67f128e8fe2c9821387",
+        "derivation.json": "206c64c5e0b4f9a7c4bb4067c7df5cb3c8904956fb5dfd70ed6c78c0c847e50a",
+        "plan.json": "1557d4c21c39d80f67ee4699ab647de77052e0a87aefbca5519ec5d9f97a0586",
+        "source.test.mjs": "196675464acebe73d091a5bac4f4eb8428f1c074e9ddee761a022bf02884937d"
+      }
+    },
+    "buckets": {
+      "dispatch.stageLine": {
+        "calls": 439,
+        "ns": 6838982
+      },
+      "dispatch.beginRun": {
+        "calls": 439,
+        "ns": 442508
+      },
+      "checkState": {
+        "calls": 9668,
+        "ns": 8663506
+      },
+      "clock.preflight": {
+        "calls": 9203,
+        "ns": 18278740
+      },
+      "clock.replay": {
+        "calls": 9203,
+        "ns": 108889614
+      },
+      "clock.reply": {
+        "calls": 9203,
+        "ns": 5486515
+      },
+      "clock.inclusive": {
+        "calls": 9203,
+        "ns": 147251144
+      },
+      "dispatch.admitExecutePage": {
+        "calls": 8,
+        "ns": 18267311
+      },
+      "dispatch.quantum": {
+        "calls": 100682,
+        "ns": 36662349
+      },
+      "dispatch.nativeTick": {
+        "calls": 100684,
+        "ns": 33010331
+      },
+      "dispatch.writePhysical": {
+        "calls": 4203,
+        "ns": 24243672
+      },
+      "dispatch.readPhysical": {
+        "calls": 4235,
+        "ns": 17772015
+      },
+      "dispatch.outPort": {
+        "calls": 26,
+        "ns": 3498564
+      },
+      "native.resume.inclusive": {
+        "calls": 439,
+        "ns": 337798272
+      },
+      "dispatch.endRun": {
+        "calls": 439,
+        "ns": 623287
+      },
+      "dispatch.acknowledgeIrq": {
+        "calls": 1,
+        "ns": 156273
+      },
+      "dispatch.inspect": {
+        "calls": 6,
+        "ns": 6454607
+      },
+      "board.checkpoint": {
+        "calls": 6,
+        "ns": 6528657
+      }
+    },
+    "scope": "Execution-only overlapping diagnostic wall buckets, per-word timer overhead and shared scheduling distort values; native.resume includes C/NAPI snapshot construction; not CPU shares or speed gate"
+  },
+  "sourceRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "limitations": "execution-only overlapping wall buckets with perword timer allocations and shared scheduling; native snapshot inside native.resume inclusive; no additiveCPUshare or speedgate"
+}

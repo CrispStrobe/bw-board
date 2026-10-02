@@ -1,0 +1,29 @@
+{
+  "status": "PASS_ACTUAL_TIMING_PARITY_NOT_CPU_SHARE_OR_SPEED_GATE",
+  "checks": 18491,
+  "summarySha256": "7494c03844b578b607503946f38038c1ac80fc6e537acd1df007c0aa297bf1a9",
+  "captureSha256": "c6626f77003d1594e9f6f5651898038bb4f2cd3657453e5ac151189b9cd54309",
+  "executionNs": 359304411,
+  "executionCPUus": 512453,
+  "wallBucketsNs": {
+    "dispatch.stageLine": 6838982,
+    "dispatch.beginRun": 442508,
+    "checkState": 8663506,
+    "clock.preflight": 18278740,
+    "clock.replay": 108889614,
+    "clock.reply": 5486515,
+    "clock.inclusive": 147251144,
+    "dispatch.admitExecutePage": 18267311,
+    "dispatch.quantum": 36662349,
+    "dispatch.nativeTick": 33010331,
+    "dispatch.writePhysical": 24243672,
+    "dispatch.readPhysical": 17772015,
+    "dispatch.outPort": 3498564,
+    "native.resume.inclusive": 337798272,
+    "dispatch.endRun": 623287,
+    "dispatch.acknowledgeIrq": 156273,
+    "dispatch.inspect": 6454607,
+    "board.checkpoint": 6528657
+  },
+  "scope": "Exact main CAPOFF states/95source+86compiled/30artifacts/11helperbindings;439snapshots/sixcuts/emptyjournal;execution-only counts excludeINIT/settlement. Nested wall buckets nonsummable; perword closure/timer overhead and shared scheduling distort; native resume includes C/NAPI snapshots; no CPU shares or throughput claim."
+}
