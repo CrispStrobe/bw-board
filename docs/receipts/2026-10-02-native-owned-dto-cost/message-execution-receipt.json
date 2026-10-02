@@ -1,0 +1,37 @@
+{
+  "status": "SOURCE_MESSAGECHANNEL_PASS_NO_NATIVE_EXECUTION",
+  "identity": {
+    "sourceHashes": {
+      "scripts/compare-i80386-owned-dto-message-codecs.mjs": "022ef2ff5d76b5fe5fb4aa9666445c1114c75bf70c83f6058a413b8dce8edbf4",
+      "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+      "scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs": "6e119774c7b65e5cc5884ae1a4c0f1e636a1ad3737e7c5e8148879dc5fc74712",
+      "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93"
+    },
+    "helperSha256": "3ad417ed303400050a5623c38beea2c3c425be00f4b494b3f92a86d60cc68746",
+    "input": {
+      "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+      "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+    },
+    "scope": "SOURCE_ONLY_NO_ADDON_OR_GUEST"
+  },
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "scripts/compare-i80386-owned-dto-message-codecs.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe",
+    "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-codec.json"
+  ],
+  "exitCode": 0,
+  "streams": {
+    "stdout": {
+      "sha256": "6355ac57b18b3034b9915dd286362142cf6f04a92dac3250bb157ddced9246c5",
+      "bytes": 732
+    },
+    "stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "resultSha256": "10194c46573e731dc503d516a4a5e4682fe9f7cb750555612cbb8203a46d3904"
+}

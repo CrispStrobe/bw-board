@@ -1,0 +1,58 @@
+{
+  "status": "PASS_ACTUAL_SAVED_CODEC_AUDIT_STRICT_VALIDATION_COST_NEGATIVE_NO_NATIVE_GATE",
+  "inputSha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe",
+  "resultSha256": "37216af9b27397441b799ebbfa41b9c9b369630c4203f740d0ac0d61cef8462b",
+  "currentReviewedSourceHashes": {
+    "scripts/compare-i80386-owned-dto-codecs.mjs": "a77fcbdbed5e35b0c2e974b7e49f643fdbf98b30c42c93c115dfd45e35b4615e",
+    "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+    "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93"
+  },
+  "cpuMicrosecondsPerOperation": {
+    "native:json": [
+      123.338125,
+      73.22125,
+      67.951875
+    ],
+    "native:clone": [
+      56.678125,
+      52.004375,
+      47.811875
+    ],
+    "native:clone-validated": [
+      313.220625,
+      251.4625,
+      237.329375
+    ],
+    "board:json": [
+      226.15571428571428,
+      178.6092857142857,
+      196.30714285714285
+    ],
+    "board:clone": [
+      151.03714285714287,
+      124.32142857142857,
+      132.02285714285713
+    ],
+    "board:clone-validated": [
+      829.2514285714286,
+      773.1507142857142,
+      767.2757142857142
+    ]
+  },
+  "actualSavedPositives": {
+    "status": "PASS_ACTUAL_SAVED_DATA_POSITIVES_NO_NATIVE",
+    "native": 8,
+    "board": 7,
+    "cuts": [
+      177,
+      183,
+      80183,
+      80187,
+      100667,
+      100681
+    ]
+  },
+  "rounds": "All3retained;200loops each8native/7board; alternating3codec order; no dedicated warmup or predeclared gate; round0/JIT effects remain",
+  "scope": "Local saved payload comparison only; clonevalidated includes current descriptors; input restoration excluded; no actualIPC/native/host callbacks/performanceadoption",
+  "provenanceLimit": "Result has input pin but no execution-time script pin or exit receipt; current script/schema hashes bound by this review, actualstdout matches all18recorded cells and actualstderr empty; do not upgrade to native qualification"
+}

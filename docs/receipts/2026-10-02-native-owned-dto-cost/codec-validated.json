@@ -1,0 +1,245 @@
+{
+  "status": "SAVED_DATA_CODEC_COMPARISON_ONLY",
+  "input": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  },
+  "reconstruction": "Only NAPI-produced BigInt counters and ordinary160-byte slice snapshot reconstructed from authenticated saved JSON; not new native execution",
+  "records": [
+    {
+      "kind": "native",
+      "round": 0,
+      "codec": "json",
+      "operations": 1600,
+      "ns": 245567997,
+      "cpuMicroseconds": {
+        "user": 186225,
+        "system": 11116,
+        "total": 197341
+      },
+      "jsonCharacters": 2308400
+    },
+    {
+      "kind": "native",
+      "round": 0,
+      "codec": "clone",
+      "operations": 1600,
+      "ns": 124281046,
+      "cpuMicroseconds": {
+        "user": 88111,
+        "system": 2574,
+        "total": 90685
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "native",
+      "round": 0,
+      "codec": "clone-validated",
+      "operations": 1600,
+      "ns": 498656155,
+      "cpuMicroseconds": {
+        "user": 486998,
+        "system": 14155,
+        "total": 501153
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "native",
+      "round": 1,
+      "codec": "clone-validated",
+      "operations": 1600,
+      "ns": 414253773,
+      "cpuMicroseconds": {
+        "user": 397032,
+        "system": 5308,
+        "total": 402340
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "native",
+      "round": 1,
+      "codec": "clone",
+      "operations": 1600,
+      "ns": 86441715,
+      "cpuMicroseconds": {
+        "user": 83207,
+        "system": 0,
+        "total": 83207
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "native",
+      "round": 1,
+      "codec": "json",
+      "operations": 1600,
+      "ns": 120595765,
+      "cpuMicroseconds": {
+        "user": 117154,
+        "system": 0,
+        "total": 117154
+      },
+      "jsonCharacters": 2308400
+    },
+    {
+      "kind": "native",
+      "round": 2,
+      "codec": "json",
+      "operations": 1600,
+      "ns": 109766080,
+      "cpuMicroseconds": {
+        "user": 108723,
+        "system": 0,
+        "total": 108723
+      },
+      "jsonCharacters": 2308400
+    },
+    {
+      "kind": "native",
+      "round": 2,
+      "codec": "clone",
+      "operations": 1600,
+      "ns": 77121608,
+      "cpuMicroseconds": {
+        "user": 76485,
+        "system": 14,
+        "total": 76499
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "native",
+      "round": 2,
+      "codec": "clone-validated",
+      "operations": 1600,
+      "ns": 384955205,
+      "cpuMicroseconds": {
+        "user": 377676,
+        "system": 2051,
+        "total": 379727
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "board",
+      "round": 0,
+      "codec": "json",
+      "operations": 1400,
+      "ns": 371177132,
+      "cpuMicroseconds": {
+        "user": 309140,
+        "system": 7478,
+        "total": 316618
+      },
+      "jsonCharacters": 11248800
+    },
+    {
+      "kind": "board",
+      "round": 0,
+      "codec": "clone",
+      "operations": 1400,
+      "ns": 241570737,
+      "cpuMicroseconds": {
+        "user": 210992,
+        "system": 460,
+        "total": 211452
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "board",
+      "round": 0,
+      "codec": "clone-validated",
+      "operations": 1400,
+      "ns": 1217096809,
+      "cpuMicroseconds": {
+        "user": 1151592,
+        "system": 9360,
+        "total": 1160952
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "board",
+      "round": 1,
+      "codec": "clone-validated",
+      "operations": 1400,
+      "ns": 1169234942,
+      "cpuMicroseconds": {
+        "user": 1079234,
+        "system": 3177,
+        "total": 1082411
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "board",
+      "round": 1,
+      "codec": "clone",
+      "operations": 1400,
+      "ns": 191644509,
+      "cpuMicroseconds": {
+        "user": 174050,
+        "system": 0,
+        "total": 174050
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "board",
+      "round": 1,
+      "codec": "json",
+      "operations": 1400,
+      "ns": 259835857,
+      "cpuMicroseconds": {
+        "user": 250053,
+        "system": 0,
+        "total": 250053
+      },
+      "jsonCharacters": 11248800
+    },
+    {
+      "kind": "board",
+      "round": 2,
+      "codec": "json",
+      "operations": 1400,
+      "ns": 278846478,
+      "cpuMicroseconds": {
+        "user": 274828,
+        "system": 2,
+        "total": 274830
+      },
+      "jsonCharacters": 11248800
+    },
+    {
+      "kind": "board",
+      "round": 2,
+      "codec": "clone",
+      "operations": 1400,
+      "ns": 201037858,
+      "cpuMicroseconds": {
+        "user": 184832,
+        "system": 0,
+        "total": 184832
+      },
+      "jsonCharacters": null
+    },
+    {
+      "kind": "board",
+      "round": 2,
+      "codec": "clone-validated",
+      "operations": 1400,
+      "ns": 1104696630,
+      "cpuMicroseconds": {
+        "user": 1073074,
+        "system": 1112,
+        "total": 1074186
+      },
+      "jsonCharacters": null
+    }
+  ],
+  "limitations": "structuredClone is local payload codec only, excludes actual Worker IPC and queue/scheduler costs; clone-validated includes current strict response admission, source data type restoration excluded from timed loops (native produces those types directly). No native speed or admission claim."
+}

@@ -1,0 +1,33 @@
+Diagnostic extraction: wabt 1.0.39 wasm-objdump -d, filtering function headers
+20463, 20464, 20465, 20466, 21863 and their complete instruction bodies.
+Module SHA-256: de53613422974d2b52e89233a03839e39e95fb0225fba5c23c3a42fa38e532ef
+Candidate source: bbe915252f8264a1de11bdb0d82bc08c9f3bba95
+Not a timing measurement, profile, or realtime qualification.
+
+83b41c func[20463] <labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::h237d65ef70aa0ff5>:
+ 83b41d: 20 00                      | local.get 0
+ 83b41f: 28 02 94 01                | i32.load 2 148
+ 83b423: 41 00                      | i32.const 0
+ 83b425: 47                         | i32.ne
+ 83b426: 0b                         | end
+83b428 func[20464] <labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::h6282695c81a7ce94>:
+ 83b429: 20 00                      | local.get 0
+ 83b42b: 28 02 64                   | i32.load 2 100
+ 83b42e: 41 00                      | i32.const 0
+ 83b430: 47                         | i32.ne
+ 83b431: 0b                         | end
+83b433 func[20465] <labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::h8fa865c454ffc30b>:
+ 83b434: 20 00                      | local.get 0
+ 83b436: 28 02 f4 04                | i32.load 2 628
+ 83b43a: 41 00                      | i32.const 0
+ 83b43c: 47                         | i32.ne
+ 83b43d: 0b                         | end
+83b43f func[20466] <labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::hd56ff00f9e06a0bf>:
+ 83b440: 20 00                      | local.get 0
+ 83b442: 28 02 c4 01                | i32.load 2 196
+ 83b446: 41 00                      | i32.const 0
+ 83b448: 47                         | i32.ne
+ 83b449: 0b                         | end
+83e46a func[21863] <labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::h6b78f695a1a53519>:
+ 83e46b: 41 00                      | i32.const 0
+ 83e46d: 0b                         | end

@@ -1,0 +1,2662 @@
+{
+  "scope": "Fixed-ROM closed source board snapshot shape; observed fixture types, not event-state proof",
+  "captureSha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe",
+  "schema": {
+    "type": "object",
+    "fields": {
+      "cycles": {
+        "type": "uint"
+      },
+      "debt": {
+        "type": "uint"
+      },
+      "deadline": {
+        "type": "uint"
+      },
+      "a20Enabled": {
+        "type": "boolean"
+      },
+      "a20": {
+        "type": "object",
+        "fields": {
+          "v": {
+            "type": "uint"
+          },
+          "outputPort": {
+            "type": "uint"
+          },
+          "commandByte": {
+            "type": "uint"
+          },
+          "pendingCommand": {
+            "type": "null"
+          },
+          "outputQueue": {
+            "type": "array",
+            "length": 0,
+            "items": []
+          },
+          "responseCyclesRemaining": {
+            "type": "uint"
+          },
+          "inputBusyCyclesRemaining": {
+            "type": "uint"
+          },
+          "delayedResponse": {
+            "type": "null"
+          },
+          "keyboardSchedule": {
+            "type": "array",
+            "length": 1,
+            "items": [
+              {
+                "type": "object",
+                "fields": {
+                  "remaining": {
+                    "type": "uint"
+                  },
+                  "value": {
+                    "type": "uint"
+                  }
+                }
+              }
+            ]
+          },
+          "systemFlag": {
+            "type": "boolean"
+          },
+          "pendingKeyboardCommand": {
+            "type": "null"
+          },
+          "typematicParameter": {
+            "type": "null"
+          }
+        }
+      },
+      "fastA20Latch": {
+        "type": "uint"
+      },
+      "cpuResetPending": {
+        "type": "boolean"
+      },
+      "interruptSignals": {
+        "type": "object",
+        "fields": {
+          "nmiPending": {
+            "type": "boolean"
+          },
+          "nmiMasked": {
+            "type": "boolean"
+          },
+          "kbdStrobe": {
+            "type": "boolean"
+          },
+          "pinLevels": {
+            "type": "object",
+            "fields": {}
+          }
+        }
+      },
+      "chipStates": {
+        "type": "object",
+        "fields": {
+          "dma1": {
+            "type": "object",
+            "fields": {
+              "command": {
+                "type": "uint"
+              },
+              "status": {
+                "type": "uint"
+              },
+              "temp": {
+                "type": "uint"
+              },
+              "ff": {
+                "type": "boolean"
+              },
+              "hrq": {
+                "type": "boolean"
+              },
+              "pageScratch": {
+                "type": "uint"
+              },
+              "lowestPriority": {
+                "type": "uint"
+              },
+              "channels": {
+                "type": "array",
+                "length": 4,
+                "items": [
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "pic1": {
+            "type": "object",
+            "fields": {
+              "irr": {
+                "type": "uint"
+              },
+              "isr": {
+                "type": "uint"
+              },
+              "imr": {
+                "type": "uint"
+              },
+              "vectorBase": {
+                "type": "uint"
+              },
+              "icw4": {
+                "type": "uint"
+              },
+              "autoEOI": {
+                "type": "boolean"
+              },
+              "readISR": {
+                "type": "boolean"
+              },
+              "initPhase": {
+                "type": "uint"
+              },
+              "needICW3": {
+                "type": "boolean"
+              },
+              "initWarningAt": {
+                "type": "null"
+              },
+              "needICW4": {
+                "type": "boolean"
+              },
+              "intActive": {
+                "type": "boolean"
+              },
+              "lowestPriority": {
+                "type": "uint"
+              },
+              "rotateOnAutoEOI": {
+                "type": "boolean"
+              },
+              "pollPending": {
+                "type": "boolean"
+              },
+              "specialMask": {
+                "type": "boolean"
+              }
+            }
+          },
+          "pit1": {
+            "type": "object",
+            "fields": {
+              "counters": {
+                "type": "array",
+                "length": 3,
+                "items": [
+                  {
+                    "type": "object",
+                    "fields": {
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "rw": {
+                        "type": "uint"
+                      },
+                      "bcd": {
+                        "type": "uint"
+                      },
+                      "reload": {
+                        "type": "uint"
+                      },
+                      "ce": {
+                        "type": "uint"
+                      },
+                      "out": {
+                        "type": "uint"
+                      },
+                      "armed": {
+                        "type": "boolean"
+                      },
+                      "phase": {
+                        "type": "enum",
+                        "values": [
+                          "hi"
+                        ]
+                      },
+                      "rwPhase": {
+                        "type": "uint"
+                      },
+                      "latched": {
+                        "type": "null"
+                      },
+                      "statusLatched": {
+                        "type": "null"
+                      },
+                      "nullCount": {
+                        "type": "boolean"
+                      },
+                      "gate": {
+                        "type": "uint"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "rw": {
+                        "type": "uint"
+                      },
+                      "bcd": {
+                        "type": "uint"
+                      },
+                      "reload": {
+                        "type": "uint"
+                      },
+                      "ce": {
+                        "type": "uint"
+                      },
+                      "out": {
+                        "type": "uint"
+                      },
+                      "armed": {
+                        "type": "boolean"
+                      },
+                      "phase": {
+                        "type": "enum",
+                        "values": [
+                          "hi"
+                        ]
+                      },
+                      "rwPhase": {
+                        "type": "uint"
+                      },
+                      "latched": {
+                        "type": "null"
+                      },
+                      "statusLatched": {
+                        "type": "null"
+                      },
+                      "nullCount": {
+                        "type": "boolean"
+                      },
+                      "gate": {
+                        "type": "uint"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "rw": {
+                        "type": "uint"
+                      },
+                      "bcd": {
+                        "type": "uint"
+                      },
+                      "reload": {
+                        "type": "uint"
+                      },
+                      "ce": {
+                        "type": "uint"
+                      },
+                      "out": {
+                        "type": "uint"
+                      },
+                      "armed": {
+                        "type": "boolean"
+                      },
+                      "phase": {
+                        "type": "enum",
+                        "values": [
+                          "hi"
+                        ]
+                      },
+                      "rwPhase": {
+                        "type": "uint"
+                      },
+                      "latched": {
+                        "type": "null"
+                      },
+                      "statusLatched": {
+                        "type": "null"
+                      },
+                      "nullCount": {
+                        "type": "boolean"
+                      },
+                      "gate": {
+                        "type": "uint"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "sysctl": {
+            "type": "object",
+            "fields": {
+              "v": {
+                "type": "uint"
+              },
+              "latch": {
+                "type": "uint"
+              },
+              "refresh": {
+                "type": "boolean"
+              },
+              "refreshClock": {
+                "type": "boolean"
+              },
+              "timer2": {
+                "type": "boolean"
+              }
+            }
+          },
+          "pic2": {
+            "type": "object",
+            "fields": {
+              "irr": {
+                "type": "uint"
+              },
+              "isr": {
+                "type": "uint"
+              },
+              "imr": {
+                "type": "uint"
+              },
+              "vectorBase": {
+                "type": "uint"
+              },
+              "icw4": {
+                "type": "uint"
+              },
+              "autoEOI": {
+                "type": "boolean"
+              },
+              "readISR": {
+                "type": "boolean"
+              },
+              "initPhase": {
+                "type": "uint"
+              },
+              "needICW3": {
+                "type": "boolean"
+              },
+              "initWarningAt": {
+                "type": "null"
+              },
+              "needICW4": {
+                "type": "boolean"
+              },
+              "intActive": {
+                "type": "boolean"
+              },
+              "lowestPriority": {
+                "type": "uint"
+              },
+              "rotateOnAutoEOI": {
+                "type": "boolean"
+              },
+              "pollPending": {
+                "type": "boolean"
+              },
+              "specialMask": {
+                "type": "boolean"
+              }
+            }
+          },
+          "dma2": {
+            "type": "object",
+            "fields": {
+              "command": {
+                "type": "uint"
+              },
+              "status": {
+                "type": "uint"
+              },
+              "temp": {
+                "type": "uint"
+              },
+              "ff": {
+                "type": "boolean"
+              },
+              "hrq": {
+                "type": "boolean"
+              },
+              "pageScratch": {
+                "type": "uint"
+              },
+              "lowestPriority": {
+                "type": "uint"
+              },
+              "channels": {
+                "type": "array",
+                "length": 4,
+                "items": [
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "page": {
+                        "type": "uint"
+                      },
+                      "baseAddr": {
+                        "type": "uint"
+                      },
+                      "curAddr": {
+                        "type": "uint"
+                      },
+                      "baseCount": {
+                        "type": "uint"
+                      },
+                      "curCount": {
+                        "type": "uint"
+                      },
+                      "mode": {
+                        "type": "uint"
+                      },
+                      "transferType": {
+                        "type": "uint"
+                      },
+                      "autoinit": {
+                        "type": "boolean"
+                      },
+                      "decrement": {
+                        "type": "boolean"
+                      },
+                      "masked": {
+                        "type": "boolean"
+                      },
+                      "swRequest": {
+                        "type": "boolean"
+                      },
+                      "dreqLevel": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "rtc1": {
+            "type": "object",
+            "fields": {
+              "v": {
+                "type": "uint"
+              },
+              "index": {
+                "type": "uint"
+              },
+              "nmiMasked": {
+                "type": "boolean"
+              },
+              "seconds": {
+                "type": "uint"
+              },
+              "dayOfWeek": {
+                "type": "uint"
+              },
+              "setCalendar": {
+                "type": "null"
+              },
+              "pendingCalendar": {
+                "type": "null"
+              },
+              "cyclePhase": {
+                "type": "uint"
+              },
+              "periodicPhase": {
+                "type": "uint"
+              },
+              "ram": {
+                "type": "array",
+                "length": 128,
+                "items": [
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  }
+                ]
+              }
+            }
+          },
+          "cga1": {
+            "type": "object",
+            "fields": {
+              "cycles": {
+                "type": "uint"
+              },
+              "mode": {
+                "type": "uint"
+              },
+              "color": {
+                "type": "uint"
+              },
+              "lastVretrace": {
+                "type": "uint"
+              },
+              "frameCount": {
+                "type": "uint"
+              },
+              "crtc": {
+                "type": "array",
+                "length": 18,
+                "items": [
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  }
+                ]
+              },
+              "crtcAddr": {
+                "type": "uint"
+              }
+            }
+          },
+          "uart1": {
+            "type": "object",
+            "fields": {
+              "rxFifo": {
+                "type": "array",
+                "length": 0,
+                "items": []
+              },
+              "divisor": {
+                "type": "uint"
+              },
+              "ier": {
+                "type": "uint"
+              },
+              "lcr": {
+                "type": "uint"
+              },
+              "mcr": {
+                "type": "uint"
+              },
+              "fcr": {
+                "type": "uint"
+              },
+              "scr": {
+                "type": "uint"
+              },
+              "overrun": {
+                "type": "boolean"
+              },
+              "thrEvent": {
+                "type": "boolean"
+              },
+              "irq": {
+                "type": "boolean"
+              }
+            }
+          },
+          "fdc1": {
+            "type": "object",
+            "fields": {
+              "dor": {
+                "type": "uint"
+              },
+              "ccr": {
+                "type": "uint"
+              },
+              "phase": {
+                "type": "enum",
+                "values": [
+                  "command"
+                ]
+              },
+              "cmdBuf": {
+                "type": "array",
+                "length": 0,
+                "items": []
+              },
+              "cmdLen": {
+                "type": "uint"
+              },
+              "resultBuf": {
+                "type": "array",
+                "length": 0,
+                "items": []
+              },
+              "resultIdx": {
+                "type": "uint"
+              },
+              "pendingInt": {
+                "type": "array",
+                "length": 0,
+                "items": []
+              },
+              "intPending": {
+                "type": "boolean"
+              },
+              "irq": {
+                "type": "boolean"
+              },
+              "driveBusy": {
+                "type": "uint"
+              },
+              "srt": {
+                "type": "uint"
+              },
+              "hut": {
+                "type": "uint"
+              },
+              "hlt": {
+                "type": "uint"
+              },
+              "nonDma": {
+                "type": "boolean"
+              },
+              "refusals": {
+                "type": "uint"
+              },
+              "lastRefusal": {
+                "type": "null"
+              },
+              "lastRefusalSymptom": {
+                "type": "null"
+              },
+              "lastRefusalAt": {
+                "type": "null"
+              },
+              "lastFault": {
+                "type": "null"
+              },
+              "stats": {
+                "type": "object",
+                "fields": {
+                  "badReads": {
+                    "type": "uint"
+                  },
+                  "badWrites": {
+                    "type": "uint"
+                  },
+                  "motorOff": {
+                    "type": "uint"
+                  },
+                  "selectMismatch": {
+                    "type": "uint"
+                  },
+                  "headMismatch": {
+                    "type": "uint"
+                  },
+                  "overruns": {
+                    "type": "uint"
+                  }
+                }
+              },
+              "drives": {
+                "type": "array",
+                "length": 4,
+                "items": [
+                  {
+                    "type": "object",
+                    "fields": {
+                      "pcn": {
+                        "type": "uint"
+                      },
+                      "track": {
+                        "type": "uint"
+                      },
+                      "changed": {
+                        "type": "boolean"
+                      },
+                      "idIndex": {
+                        "type": "uint"
+                      },
+                      "writeProtect": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "pcn": {
+                        "type": "uint"
+                      },
+                      "track": {
+                        "type": "uint"
+                      },
+                      "changed": {
+                        "type": "boolean"
+                      },
+                      "idIndex": {
+                        "type": "uint"
+                      },
+                      "writeProtect": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "pcn": {
+                        "type": "uint"
+                      },
+                      "track": {
+                        "type": "uint"
+                      },
+                      "changed": {
+                        "type": "boolean"
+                      },
+                      "idIndex": {
+                        "type": "uint"
+                      },
+                      "writeProtect": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "fields": {
+                      "pcn": {
+                        "type": "uint"
+                      },
+                      "track": {
+                        "type": "uint"
+                      },
+                      "changed": {
+                        "type": "boolean"
+                      },
+                      "idIndex": {
+                        "type": "uint"
+                      },
+                      "writeProtect": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "dmapg": {
+            "type": "object",
+            "fields": {
+              "v": {
+                "type": "uint"
+              },
+              "bytes": {
+                "type": "array",
+                "length": 16,
+                "items": [
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  },
+                  {
+                    "type": "uint"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "pit": {
+        "type": "object",
+        "fields": {
+          "counters": {
+            "type": "array",
+            "length": 3,
+            "items": [
+              {
+                "type": "object",
+                "fields": {
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "rw": {
+                    "type": "uint"
+                  },
+                  "bcd": {
+                    "type": "uint"
+                  },
+                  "reload": {
+                    "type": "uint"
+                  },
+                  "ce": {
+                    "type": "uint"
+                  },
+                  "out": {
+                    "type": "uint"
+                  },
+                  "armed": {
+                    "type": "boolean"
+                  },
+                  "phase": {
+                    "type": "enum",
+                    "values": [
+                      "hi"
+                    ]
+                  },
+                  "rwPhase": {
+                    "type": "uint"
+                  },
+                  "latched": {
+                    "type": "null"
+                  },
+                  "statusLatched": {
+                    "type": "null"
+                  },
+                  "nullCount": {
+                    "type": "boolean"
+                  },
+                  "gate": {
+                    "type": "uint"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "rw": {
+                    "type": "uint"
+                  },
+                  "bcd": {
+                    "type": "uint"
+                  },
+                  "reload": {
+                    "type": "uint"
+                  },
+                  "ce": {
+                    "type": "uint"
+                  },
+                  "out": {
+                    "type": "uint"
+                  },
+                  "armed": {
+                    "type": "boolean"
+                  },
+                  "phase": {
+                    "type": "enum",
+                    "values": [
+                      "hi"
+                    ]
+                  },
+                  "rwPhase": {
+                    "type": "uint"
+                  },
+                  "latched": {
+                    "type": "null"
+                  },
+                  "statusLatched": {
+                    "type": "null"
+                  },
+                  "nullCount": {
+                    "type": "boolean"
+                  },
+                  "gate": {
+                    "type": "uint"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "rw": {
+                    "type": "uint"
+                  },
+                  "bcd": {
+                    "type": "uint"
+                  },
+                  "reload": {
+                    "type": "uint"
+                  },
+                  "ce": {
+                    "type": "uint"
+                  },
+                  "out": {
+                    "type": "uint"
+                  },
+                  "armed": {
+                    "type": "boolean"
+                  },
+                  "phase": {
+                    "type": "enum",
+                    "values": [
+                      "hi"
+                    ]
+                  },
+                  "rwPhase": {
+                    "type": "uint"
+                  },
+                  "latched": {
+                    "type": "null"
+                  },
+                  "statusLatched": {
+                    "type": "null"
+                  },
+                  "nullCount": {
+                    "type": "boolean"
+                  },
+                  "gate": {
+                    "type": "uint"
+                  }
+                }
+              }
+            ]
+          },
+          "fraction": {
+            "type": "fraction"
+          },
+          "clockHz": {
+            "type": "uint"
+          }
+        }
+      },
+      "pic1": {
+        "type": "object",
+        "fields": {
+          "irr": {
+            "type": "uint"
+          },
+          "isr": {
+            "type": "uint"
+          },
+          "imr": {
+            "type": "uint"
+          },
+          "vectorBase": {
+            "type": "uint"
+          },
+          "icw4": {
+            "type": "uint"
+          },
+          "autoEOI": {
+            "type": "boolean"
+          },
+          "readISR": {
+            "type": "boolean"
+          },
+          "initPhase": {
+            "type": "uint"
+          },
+          "needICW3": {
+            "type": "boolean"
+          },
+          "initWarningAt": {
+            "type": "null"
+          },
+          "needICW4": {
+            "type": "boolean"
+          },
+          "intActive": {
+            "type": "boolean"
+          },
+          "lowestPriority": {
+            "type": "uint"
+          },
+          "rotateOnAutoEOI": {
+            "type": "boolean"
+          },
+          "pollPending": {
+            "type": "boolean"
+          },
+          "specialMask": {
+            "type": "boolean"
+          }
+        }
+      },
+      "pic2": {
+        "type": "object",
+        "fields": {
+          "irr": {
+            "type": "uint"
+          },
+          "isr": {
+            "type": "uint"
+          },
+          "imr": {
+            "type": "uint"
+          },
+          "vectorBase": {
+            "type": "uint"
+          },
+          "icw4": {
+            "type": "uint"
+          },
+          "autoEOI": {
+            "type": "boolean"
+          },
+          "readISR": {
+            "type": "boolean"
+          },
+          "initPhase": {
+            "type": "uint"
+          },
+          "needICW3": {
+            "type": "boolean"
+          },
+          "initWarningAt": {
+            "type": "null"
+          },
+          "needICW4": {
+            "type": "boolean"
+          },
+          "intActive": {
+            "type": "boolean"
+          },
+          "lowestPriority": {
+            "type": "uint"
+          },
+          "rotateOnAutoEOI": {
+            "type": "boolean"
+          },
+          "pollPending": {
+            "type": "boolean"
+          },
+          "specialMask": {
+            "type": "boolean"
+          }
+        }
+      },
+      "rtc": {
+        "type": "object",
+        "fields": {
+          "v": {
+            "type": "uint"
+          },
+          "index": {
+            "type": "uint"
+          },
+          "nmiMasked": {
+            "type": "boolean"
+          },
+          "seconds": {
+            "type": "uint"
+          },
+          "dayOfWeek": {
+            "type": "uint"
+          },
+          "setCalendar": {
+            "type": "null"
+          },
+          "pendingCalendar": {
+            "type": "null"
+          },
+          "cyclePhase": {
+            "type": "uint"
+          },
+          "periodicPhase": {
+            "type": "uint"
+          },
+          "ram": {
+            "type": "array",
+            "length": 128,
+            "items": [
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              },
+              {
+                "type": "uint"
+              }
+            ]
+          }
+        }
+      },
+      "dma1": {
+        "type": "object",
+        "fields": {
+          "command": {
+            "type": "uint"
+          },
+          "status": {
+            "type": "uint"
+          },
+          "temp": {
+            "type": "uint"
+          },
+          "ff": {
+            "type": "boolean"
+          },
+          "hrq": {
+            "type": "boolean"
+          },
+          "pageScratch": {
+            "type": "uint"
+          },
+          "lowestPriority": {
+            "type": "uint"
+          },
+          "channels": {
+            "type": "array",
+            "length": 4,
+            "items": [
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "dma2": {
+        "type": "object",
+        "fields": {
+          "command": {
+            "type": "uint"
+          },
+          "status": {
+            "type": "uint"
+          },
+          "temp": {
+            "type": "uint"
+          },
+          "ff": {
+            "type": "boolean"
+          },
+          "hrq": {
+            "type": "boolean"
+          },
+          "pageScratch": {
+            "type": "uint"
+          },
+          "lowestPriority": {
+            "type": "uint"
+          },
+          "channels": {
+            "type": "array",
+            "length": 4,
+            "items": [
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "fields": {
+                  "page": {
+                    "type": "uint"
+                  },
+                  "baseAddr": {
+                    "type": "uint"
+                  },
+                  "curAddr": {
+                    "type": "uint"
+                  },
+                  "baseCount": {
+                    "type": "uint"
+                  },
+                  "curCount": {
+                    "type": "uint"
+                  },
+                  "mode": {
+                    "type": "uint"
+                  },
+                  "transferType": {
+                    "type": "uint"
+                  },
+                  "autoinit": {
+                    "type": "boolean"
+                  },
+                  "decrement": {
+                    "type": "boolean"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  },
+                  "swRequest": {
+                    "type": "boolean"
+                  },
+                  "dreqLevel": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "systemControl": {
+        "type": "object",
+        "fields": {
+          "v": {
+            "type": "uint"
+          },
+          "latch": {
+            "type": "uint"
+          },
+          "refresh": {
+            "type": "boolean"
+          },
+          "refreshClock": {
+            "type": "boolean"
+          },
+          "timer2": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

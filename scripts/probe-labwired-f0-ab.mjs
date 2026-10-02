@@ -8,6 +8,7 @@ import {createHash} from 'node:crypto';
 import {cpus} from 'node:os';
 import {gluePolicy, median} from './lib/motion-ab-receipt.mjs';
 import {assertSameF0Guest} from './lib/f0-timing-receipt.mjs';
+import {comparisonOrder} from './lib/ab-order.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => {
@@ -29,7 +30,7 @@ mkdirSync(out, {recursive: true});
 const receipt = {schema: 'labwired.f0-abba.v1', diagnosticOnly: true,
     startedAt: new Date().toISOString(), node: process.version, cpu: cpus()[0]?.model,
     artifacts, gluePolicy: policy, toolSha256: hash(fileURLToPath(import.meta.url)),
-    order: ['baseline', 'candidate', 'candidate', 'baseline'], runs: [],
+    order: comparisonOrder(process.argv.includes('--reverse')), runs: [],
     limitations: ['ordinary selected F0 workloads; not browser or all-target qualification',
         'shared host; failed realtime floors are retained, never waived',
         'each child verifies original source/artifact provenance; no publication or app pin changes']};

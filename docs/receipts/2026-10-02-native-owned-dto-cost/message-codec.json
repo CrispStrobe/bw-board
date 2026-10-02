@@ -1,0 +1,77 @@
+{
+  "status": "SOURCE_ONLY_MESSAGECHANNEL_REPLY_PIPELINE_NOT_NATIVE_BENCHMARK",
+  "input": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  },
+  "records": [
+    {
+      "protocol": "json",
+      "round": 0,
+      "operations": 200,
+      "ns": 52786844,
+      "cpuMicroseconds": {
+        "user": 45089,
+        "system": 11239,
+        "total": 56328
+      }
+    },
+    {
+      "protocol": "dto",
+      "round": 0,
+      "operations": 200,
+      "ns": 46167068,
+      "cpuMicroseconds": {
+        "user": 58177,
+        "system": 3948,
+        "total": 62125
+      }
+    },
+    {
+      "protocol": "dto",
+      "round": 1,
+      "operations": 200,
+      "ns": 31881889,
+      "cpuMicroseconds": {
+        "user": 40562,
+        "system": 1575,
+        "total": 42137
+      }
+    },
+    {
+      "protocol": "json",
+      "round": 1,
+      "operations": 200,
+      "ns": 21635551,
+      "cpuMicroseconds": {
+        "user": 20354,
+        "system": 2742,
+        "total": 23096
+      }
+    },
+    {
+      "protocol": "json",
+      "round": 2,
+      "operations": 200,
+      "ns": 22002947,
+      "cpuMicroseconds": {
+        "user": 27077,
+        "system": 1641,
+        "total": 28718
+      }
+    },
+    {
+      "protocol": "dto",
+      "round": 2,
+      "operations": 200,
+      "ns": 27537255,
+      "cpuMicroseconds": {
+        "user": 37734,
+        "system": 4604,
+        "total": 42338
+      }
+    }
+  ],
+  "scope": "200 repeated authentic zero-work terminal payloads per round; request JSON creation/parse, actual MessageChannel roundtrip, sender JSON-or-DTO response, receive envelope/value schema and DTO requested-cap/delta/primitive ledger included",
+  "limits": "Same-process MessageChannel, not actual private Worker scheduling, native CPU, board progression or full factory infrastructure. Repeated terminal payload is not guest chronology. Every round retained; no speed/admission claim."
+}
