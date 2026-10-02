@@ -24,6 +24,19 @@ precision retains its existing cycle refusal. Scope-only also refuses, but
 exposes the consumer's uncaught capture exception: fix that separately during
 package adoption, not in this engine envelope. No installed/deployed claim.
 One frozen automatic exact-head qualification precedes guarded landing.
+Final adjacent surface passes 152/152, zero skips. Exact source 21481d64
+qualified CI 36973086306 and Harris 36973086267, both green; hosted main
+7911 total/7622 pass/0 fail/289 documented environment skips. Master f4deb08a
+separately passed CI 36973146456 and Harris 36973146432. Its new native-clock
+tools/tests and GPIO evidence do not change src, package metadata or required
+workflows and never call the Board/instrument APIs. Forward merge preserves the
+three-path repair patch SHA256
+942101f63ec84f3b9c89a4c19ed89b565e1e2d04048f29f692d95afd5686b6a0
+and the complete qualified package runtime hash
+12ca8d699c369fce71f9641e2992f96b0f0a96bc326c649d1d98c6ff44cb5639.
+Merged source plus both newly landed native-clock suites pass 75/75, no skips.
+This documents behavioral commutation at the package boundary, not an exact
+hosted receipt for the merge; automatic master runs remain combined-tree alarms.
 
 2026-10-02 Duplicate supply-symbol current attribution — DONE, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, branch
