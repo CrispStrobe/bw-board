@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { solveMNA } from '../src/mna.js';
 import { BoardImpl } from '../src/board.js';
+import { registerDevice } from '../src/devices.js';
 
 const current = (result, part, terminal) =>
   result.branchCurrents.get(part)?.get(terminal) ?? 0;
@@ -233,6 +234,91 @@ function selfShort(volts, { live = false, merged = false, alone = false, params 
   } else target.terminals.push({ part: 'VBAD', terminal: 'neg' });
   return { parts, nets };
 }
+
+describe('live solver exceptions invalidate measurements without swallowing the fault', () => {
+  it('refuses old means and fresh probes after a real control fault, with original error identity and sticky recovery', () => {
+    const f = selfShort(0), b = new BoardImpl(5);
+    b.setNetlist(f.parts, f.nets);
+    assert.equal(b.meterVoltage('live', 'ground'), 1);
+    assert.equal(b.meterCurrent('VGOOD', 'pos'), 0.001);
+    const h = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 1000, depth: 8 });
+    b.advanceTo(1_000_000n);
+    let original;
+    assert.throws(() => b.setControl('VBAD', 5), error => {
+      original = error;
+      return /inconsistent ideal voltage constraint VBAD/.test(error.message);
+    });
+    assert.equal(b._liveSolveError, original, 'the actual thrown solver error is retained, not replaced');
+    assert.equal(b._mnaCache, null);
+    assert.throws(() => b.meterVoltage('live', 'ground'), failedMeasurement);
+    assert.throws(() => b.meterVoltage('ground', 'live'), failedMeasurement);
+    assert.throws(() => b.meterCurrent('VGOOD', 'pos'), failedMeasurement);
+    // Do not read the scope during the fault: invalidation must not depend
+    // on a consumer noticing the error before recovery.
+    b.setControl('VBAD', 0);
+    assert.equal(b._liveSolveError, null);
+    assert.equal(b.meterVoltage('ground', 'live'), -1, 'a fresh unprimed pair can read the recovered valid solve');
+    assert.throws(() => b.meterVoltage('live', 'ground'), /meter mean refused:.*solve failed/);
+    assert.throws(() => b.meterCurrent('VGOOD', 'pos'), /meter mean refused:.*solve failed/);
+    assert.throws(() => b.getScopeData(h), failedMeasurement);
+    b.setNetlist(f.parts, f.nets);
+    assert.equal(b.meterVoltage('live', 'ground'), 1, 'intentional watch reset recovers');
+  });
+
+  it('a real transient source exception invalidates observers even when the old cache still says converged', () => {
+    const f = selfShort(0, { params: { wave: 'spice-pulse', v1: 0, v2: 1, td: 10e-6, tr: 1e-6, tf: 1e-6, pw: 10e-6, per: 100e-6 } });
+    const b = new BoardImpl(5); b.setNetlist(f.parts, f.nets);
+    b.meterVoltage('live', 'ground'); b.meterCurrent('VGOOD', 'pos');
+    const h = b.addScopeChannel({ type: 'voltage', netId: 'live', capture: 'sample', sampleRateHz: 1e6, depth: 32 });
+    assert.throws(() => b.advanceTo(20_000n), /inconsistent ideal voltage constraint VBAD/);
+    assert.equal(b._mnaCache.converged, true, 'previously accepted cache is not the failed attempt');
+    assert.ok(b._scopeChannels.get(h).count > 0, 'valid observations existed before the fault');
+    assert.throws(() => b.meterVoltage('live', 'ground'), failedMeasurement);
+    assert.throws(() => b.meterCurrent('VGOOD', 'pos'), failedMeasurement);
+    assert.throws(() => b.getScopeData(h), failedMeasurement);
+  });
+
+  it('observational DC-bias refusal does not invalidate the healthy live time-zero measurement', () => {
+    const f = selfShort(0, { params: { wave: 'sine', amplitude: 1, offset: 0, freq: 1, dcValue: 2 } });
+    const b = new BoardImpl(5); b.setNetlist(f.parts, f.nets);
+    assert.equal(b.meterVoltage('live', 'ground'), 1);
+    assert.throws(() => b.operatingPoint({ waveformBias: 'dc-value' }), /inconsistent ideal voltage constraint VBAD/);
+    assert.equal(b._liveSolveError, null);
+    assert.equal(b.meterVoltage('live', 'ground'), 1);
+    assert.ok([...b._meterWatches.values()].every(w => !w.failure));
+  });
+
+  it('preserves the exact unexpected stamp exception and never classifies a merely absent cache as failure', () => {
+    const sentinel = new TypeError('load-bearing stamp defect');
+    registerDevice('measurement-stamp-defect', { terminals: ['a'], stamp() { throw sentinel; } });
+    const f = instrumentBench();
+    f.parts.push({ id: 'BUG', kind: 'measurement-stamp-defect', params: {}, terminals: ['a'] });
+    f.nets[0].terminals.push({ part: 'BUG', terminal: 'a' });
+    const b = new BoardImpl(5);
+    assert.throws(() => b.setNetlist(f.parts, f.nets), error => error === sentinel);
+    assert.throws(() => b.meterVoltage('live', 'ground'), failedMeasurement);
+    b.setPower(false);
+    assert.equal(b.branchCurrent('R', 'a'), 0);
+    const healthy = instrumentBoard({ volts: 0 });
+    healthy._mnaCache = null;
+    assert.equal(healthy.meterVoltage('live', 'ground'), 0, 'no exception authority, valid zero with absent cache');
+  });
+
+  it('recovers when replacing the failed topology with a valid closed-form circuit', () => {
+    const f = selfShort(0), b = new BoardImpl(5); b.setNetlist(f.parts, f.nets);
+    assert.throws(() => b.setControl('VBAD', 5));
+    b.setNetlist([
+      { id: 'SUP', kind: 'vcc', params: { volts: 5 }, terminals: ['vcc'] },
+      { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ], [
+      { id: 'live', terminals: [{ part: 'SUP', terminal: 'vcc' }, { part: 'R', terminal: 'a' }] },
+      { id: 'ground', terminals: [{ part: 'G', terminal: 'gnd' }, { part: 'R', terminal: 'b' }] },
+    ]);
+    assert.equal(b._mnaCache, null, 'control genuinely uses the closed-form path');
+    assert.equal(b.meterVoltage('live', 'ground'), 5);
+  });
+});
 
 function solveShort(fixture, options = {}, controls = new Map()) {
   return solveMNA(fixture.parts, fixture.nets, new Map(), controls, 5, options);

@@ -27,14 +27,34 @@ const R_VOLTMETER = 10e6;    // DMM-class input impedance
 const R_SHUNT = 0.1;         // ammeter burden
 const R_PROBE = 1e6;         // logic probe input
 
+function invalidateMeasurement(state, reason) {
+    if (!state) return;
+    state.available = false;
+    state.measurementError = reason;
+    state.reading = null;
+    if ('deflection' in state) state.deflection = null;
+}
+
+function measurementAvailable(state, read) {
+    if (read.measurementError) {
+        invalidateMeasurement(state, read.measurementError);
+        return false;
+    }
+    state.available = true;
+    state.measurementError = null;
+    return true;
+}
+
 export function registerBenchMeters() {
 
     // ─── Voltmeter (digital face) ──────────────────────────────────────
     registerDevice('voltmeter', {
         terminals: ['a', 'b'],
+        measurement: true,
+        invalidateMeasurement,
 
         init() {
-            return { drives: {}, reading: 0 };
+            return { drives: {}, reading: null, available: false, measurementError: 'No solved measurement yet' };
         },
 
         stamp(ctx) {
@@ -42,8 +62,9 @@ export function registerBenchMeters() {
         },
 
         update(part, state, read) {
+            if (!measurementAvailable(state, read)) return false;
             const v = read('a') - read('b');
-            if (Math.abs(v - state.reading) < 0.0005) return false;
+            if (Number.isFinite(state.reading) && Math.abs(v - state.reading) < 0.0005) return false;
             state.reading = v;
             return false;                 // reading changed; no drives did
         },
@@ -55,9 +76,11 @@ export function registerBenchMeters() {
     // reading — a backwards needle slam is a real bench event).
     registerDevice('analog_meter', {
         terminals: ['a', 'b'],
+        measurement: true,
+        invalidateMeasurement,
 
         init() {
-            return { drives: {}, reading: 0, deflection: 0 };
+            return { drives: {}, reading: null, deflection: null, available: false, measurementError: 'No solved measurement yet' };
         },
 
         stamp(ctx) {
@@ -65,8 +88,9 @@ export function registerBenchMeters() {
         },
 
         update(part, state, read) {
+            if (!measurementAvailable(state, read)) return false;
             const v = read('a') - read('b');
-            if (Math.abs(v - state.reading) < 0.0005) return false;
+            if (Number.isFinite(state.reading) && Math.abs(v - state.reading) < 0.0005) return false;
             state.reading = v;
             const fs = part.params?.fullScale ?? 5;
             state.deflection = Math.max(-0.1, Math.min(1.1, v / fs));
@@ -77,9 +101,11 @@ export function registerBenchMeters() {
     // ─── Ammeter ───────────────────────────────────────────────────────
     registerDevice('ammeter', {
         terminals: ['a', 'b'],
+        measurement: true,
+        invalidateMeasurement,
 
         init() {
-            return { drives: {}, reading: 0 };   // amps, a→b positive
+            return { drives: {}, reading: null, available: false, measurementError: 'No solved measurement yet' }; // amps, a→b positive
         },
 
         stamp(ctx) {
@@ -87,8 +113,9 @@ export function registerBenchMeters() {
         },
 
         update(part, state, read) {
+            if (!measurementAvailable(state, read)) return false;
             const i = (read('a') - read('b')) / R_SHUNT;
-            if (Math.abs(i - state.reading) < 1e-6) return false;
+            if (Number.isFinite(state.reading) && Math.abs(i - state.reading) < 1e-6) return false;
             state.reading = i;
             return false;
         },

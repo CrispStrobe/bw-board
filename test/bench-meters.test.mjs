@@ -13,6 +13,88 @@ const G = { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] };
 const net = (id, ...ts) => ({ id, terminals: ts.map(([part, terminal]) => ({ part, terminal })) });
 const R = (id, ohms) => ({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] });
 
+function measurementRig(kind, { parallel = false } = {}) {
+    const source = id => ({ id, kind: 'vsource', params: { volts: 1 }, terminals: ['pos', 'neg'] });
+    const parts = [source('A'), ...(parallel ? [source('B')] : []),
+        { id: 'BAD', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] },
+        G, R('RL', 1000), { id: 'M', kind, params: { fullScale: 2 }, terminals: ['a', 'b'] }];
+    const sources = parallel ? [['A', 'pos'], ['B', 'pos']] : [['A', 'pos']];
+    const grounded = [['A', 'neg'], ...(parallel ? [['B', 'neg']] : []), ['BAD', 'pos'], ['BAD', 'neg'], ['GND', 'gnd'], ['RL', 'b']];
+    const nets = kind === 'ammeter'
+        ? [net('live', ...sources, ['M', 'a']), net('sense', ['M', 'b'], ['RL', 'a']), net('ground', ...grounded)]
+        : [net('live', ...sources, ['RL', 'a'], ['M', 'a']), net('ground', ...grounded, ['M', 'b'])];
+    const b = new BoardImpl(5); b.setNetlist(parts, nets);
+    return b;
+}
+
+describe('placeable analog instrument solve availability', () => {
+    for (const kind of ['voltmeter', 'analog_meter', 'ammeter']) {
+        it(`${kind} exposes unavailable, not zero, for actual failed parallel sources`, () => {
+            const b = measurementRig(kind, { parallel: true });
+            assert.equal(b._mnaCache.converged, false);
+            const state = b.getDeviceState('M');
+            assert.equal(state.available, false);
+            assert.equal(state.reading, null);
+            assert.match(state.measurementError, /solve failed/);
+            if (kind === 'analog_meter') assert.equal(state.deflection, null, 'no fabricated needle position');
+            assert.equal(JSON.parse(JSON.stringify(state)).reading, null, 'JSON carries explicit absence');
+        });
+
+        it(`${kind} invalidates immediately on a thrown control fault and recovers to nonzero, zero and power-off`, () => {
+            const b = measurementRig(kind);
+            const expected = kind === 'ammeter' ? 1 / 1000.1 : 1;
+            const assertValid = value => {
+                const state = b.getDeviceState('M');
+                assert.equal(state.available, true);
+                assert.equal(state.measurementError, null);
+                assert.ok(Math.abs(state.reading - value) < 1e-9, `${state.reading} vs ${value}`);
+                if (kind === 'analog_meter') assert.ok(Math.abs(state.deflection - value / 2) < 1e-9);
+            };
+            assertValid(expected);
+            assert.throws(() => b.setControl('BAD', 5), /inconsistent ideal voltage constraint BAD/);
+            const bad = b.getDeviceState('M');
+            assert.equal(bad.available, false);
+            assert.equal(bad.reading, null, 'no stale successful reading after exception');
+            assert.match(bad.measurementError, /BAD/);
+            if (kind === 'analog_meter') assert.equal(bad.deflection, null);
+            b.setControl('BAD', 0); assertValid(expected);
+            b.setControl('A', 0); assertValid(0);
+            b.setControl('A', 1); assertValid(expected);
+            b.setPower(false); assertValid(0);
+            b.setPower(true); assertValid(expected);
+        });
+    }
+
+    it('rejects a matching failed fractional result even when the previous live cache is healthy', () => {
+        const b = measurementRig('voltmeter');
+        const failed = measurementRig('voltmeter', { parallel: true })._mnaCache;
+        assert.equal(b._mnaCache.converged, true);
+        assert.equal(failed.converged, false);
+        b._updateDevices(1n, failed);
+        assert.equal(b.getDeviceState('M').available, false);
+        assert.equal(b.getDeviceState('M').reading, null, 'old healthy voltages cannot become a reading for failed solution');
+    });
+
+    it('passes actual fractional solutions into opt-in device updates', () => {
+        const b = measurementRig('voltmeter');
+        b.setPartParam('A', 'wave', 'sine');
+        b.setPartParam('A', 'offset', 1); b.setPartParam('A', 'amplitude', .5); b.setPartParam('A', 'freq', 1000);
+        const update = b._updateDevices;
+        let substeps = 0;
+        b._updateDevices = function(atNs, solution, only) {
+            if (typeof atNs === 'bigint' && atNs !== this.timeNs) {
+                substeps++;
+                assert.equal(solution?.converged, true, 'production passes accepted fractional result');
+                assert.deepEqual(solution.nodeVoltages, this.nodeVoltages);
+            }
+            return update.call(this, atNs, solution, only);
+        };
+        b.advanceTo(1_000_000n);
+        assert.ok(substeps > 1);
+        assert.equal(b.getDeviceState('M').available, true);
+    });
+});
+
 describe('voltmeter', () => {
     const rig = (rTop, rBot) => {
         const board = new BoardImpl(5.0);

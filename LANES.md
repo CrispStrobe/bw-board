@@ -1,4 +1,4 @@
-2026-10-02 Live solve exceptions and placeable meter availability — CLAIM, Codex bwcx `/root`.
+2026-10-02 Live solve exceptions and placeable meter availability — DONE candidate, Codex bwcx `/root`.
 Clean reused worktree wt-board-duplicate-rail-current-20261002, new branch
 lane/live-solve-fault-and-bench-availability, exact base
 373c300ab53531ce525e843d2ae0deef97ee2cf7. Six-path envelope: this row;
@@ -15,6 +15,22 @@ and physical meter loading. Prove null-cache controls, recovery, sticky historie
 real transient exceptions, unavailable reading/deflection, and named mutations.
 No numerical/source stamp, current-sharing, tolerances, CPU, workflow/package/pin,
 CUI/Lite/corpus/deployment edits. Both fixes qualify together before one adoption.
+Focused final 40/40, zero skips. Adjacent scope/source/meter/OP/transient surface
+164/164 before the final added matching-failed-device-result case; that new
+case is included in the restored 40/40. No summed overlapping denominator.
+Actual control and transient self-constraint exceptions retain their original
+identity/message, invalidate old means and unobserved analog capture intervals,
+and permit fresh readings only after successful MNA/closed-form/power-off recovery.
+Observational explicit-DC refusal leaves healthy time-zero live readings intact.
+All three analog bench devices expose available:false and reading:null; analog
+needle deflection is null too. Recovery restores signed physical readings and
+true zero; unchanged 10 Mohm loading/0.1 ohm burden and logic-probe gates pass.
+Six isolated buildable mutations red and restored: omitted live exception
+invalidation (6), missing sticky meter interval (1), missing sticky scope interval
+(1), stale device state after throw (3), ignored failed-result validity (4), and
+missing matching fractional device result (1). Unexpected solver-stamp exception
+is rethrown by identity; unrelated recorder exceptions still propagate.
+One exact automatic CI/Harris qualification remains required before normal FF.
 
 2026-10-02 Failed live solve instrument refusal — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, new branch

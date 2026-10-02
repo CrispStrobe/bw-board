@@ -365,6 +365,7 @@ export class BoardImpl {
 
     /** Whether the last MNA solve converged. */
     this._lastSolveConverged = true;
+    this._liveSolveError = null;
 
     /** Whether advanceTo hit the device sub-step cap. */
     this._deviceSubstepOverflow = false;
@@ -1597,10 +1598,39 @@ export class BoardImpl {
 
   /** Instrument validity, not a change to the solver or nodeVoltage API. */
   _assertMeasurementSolution(solution = this._mnaCache) {
-    if (solution?.converged !== false && !solution?.railConflicts?.length) return;
-    const error = new Error('measurement unavailable: circuit solve failed or rail conflict');
+    if (!this._liveSolveError && solution?.converged !== false && !solution?.railConflicts?.length) return;
+    const detail = this._liveSolveError ? `: ${this._liveSolveError.message}` : ' or rail conflict';
+    const error = new Error(`measurement unavailable: circuit solve failed${detail}`);
     error.code = 'SOLVE_FAILED_MEASUREMENT';
     throw error;
+  }
+
+  /** Preserve the original live solver exception while invalidating observers. */
+  _invalidateLiveMeasurements(error) {
+    this._liveSolveError = error;
+    this._lastSolveConverged = false;
+    const reason = `measurement unavailable: circuit solve failed: ${error.message}`;
+    for (const w of this._meterWatches.values()) w.failure ||= reason;
+    for (const ch of this._scopeChannels.values()) {
+      if (ch.type !== 'digital') ch.failure ||= reason;
+    }
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (model?.measurement && model.invalidateMeasurement) {
+        model.invalidateMeasurement(this._deviceStates.get(part.id), reason);
+      }
+    }
+  }
+
+  /** Only opt-in measurement devices receive observer validity; ordinary reads stay unchanged. */
+  _attachMeasurementValidity(model, read, solution = this._mnaCache) {
+    if (!model.measurement) return;
+    read.measurementError = null;
+    try { this._assertMeasurementSolution(solution); }
+    catch (error) {
+      if (error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+      read.measurementError = error.message;
+    }
   }
 
   /** Keep an invalid analog capture invalid even if a later solve recovers. */
@@ -1641,6 +1671,7 @@ export class BoardImpl {
   /** @private */
   _meterRead(key, spec) {
     this._flushSolve();
+    this._assertMeasurementSolution();
     if (this._transientAccuracyUnmet) {
       throw new Error(`meter mean refused: ${this._transientAccuracyUnmet.code}`);
     }
@@ -3089,6 +3120,7 @@ export class BoardImpl {
         [id, new Map([...values].map(([terminal, i]) => [terminal, -i]))])),
       converged: true, deviceStamps: new Map() };
     this._lastSolveConverged = true;
+    this._liveSolveError = null;
     this._trapValid = false;
     this._transH = 1e-4;
     this._lastTransientSolves = 0;
@@ -3198,6 +3230,7 @@ export class BoardImpl {
     this._mnaCache = { nodeVoltages: new Map(nodeVoltages), branchCurrents: new Map(branchCurrents),
       converged: true, deviceStamps: new Map() };
     this._lastSolveConverged = true;
+    this._liveSolveError = null;
     this._trapValid = false;
     this._transH = 1e-4;
     this._lastTransientSolves = 0;
@@ -4534,7 +4567,7 @@ export class BoardImpl {
 
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
     this._syncDeviceGpioDrives();
-    return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, {
+    const options = {
       powerOff,
       temperatureC: this.temperatureC,
       testNodeA,
@@ -4547,7 +4580,22 @@ export class BoardImpl {
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
       qualifiedSources: this._qualifiedSources(),
-    });
+    };
+    if (powerOff || testNodeA || testNodeB) {
+      return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
+    }
+    return this._solveLiveMNA(this._pinSources(), options);
+  }
+
+  _solveLiveMNA(pinSources, options) {
+    try {
+      const result = solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, options);
+      this._liveSolveError = null;
+      return result;
+    } catch (error) {
+      this._invalidateLiveMeasurements(error);
+      throw error;
+    }
   }
 
   /** Copy pin states onto board-kind device drives — the engine half of
@@ -5113,6 +5161,7 @@ export class BoardImpl {
 
   /** Adopt an MNA solution as the board's current answer. */
   _adoptSolution(res) {
+    this._liveSolveError = null;
     this.nodeVoltages = new Map(res.nodeVoltages);
     for (const part of this.parts) {
       if (part.kind !== 'led') continue;
@@ -5260,10 +5309,10 @@ export class BoardImpl {
    * flip relative to the chunk end and never fired mid-chunk).
    * @param {bigint} [atNs]
    */
-  _updateDevices(atNs = this.timeNs) {
+  _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false) {
     let changed = false;
     // Built-in shift registers
-    if (this._shiftRegisters.size > 0) {
+    if (!measurementOnly && this._shiftRegisters.size > 0) {
       if (this._updateShiftRegisters()) changed = true;
     }
     // Registry devices
@@ -5271,6 +5320,7 @@ export class BoardImpl {
     for (const part of this.parts) {
       const model = getDevice(part.kind);
       if (!model || !model.update) continue;
+      if (measurementOnly && !model.measurement) continue;
       const state = this._deviceStates.get(part.id);
       const read = (terminal) => {
         const n = this._netForTerminal(part.id, terminal);
@@ -5281,6 +5331,7 @@ export class BoardImpl {
         const ov = this._digitalOverlay.get(n);
         return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
+      this._attachMeasurementValidity(model, read, solution);
       if (model.update(part, state, read, atNs)) changed = true;
     }
     return changed;
@@ -5366,6 +5417,7 @@ export class BoardImpl {
         deviceStamps: new Map(),
       };
       this._lastSolveConverged = true;
+      this._liveSolveError = null;
       this._trapValid = false;
       this._lastTransientSolves = 0;
       this._transientAttemptOverflow = false;
@@ -5395,7 +5447,7 @@ export class BoardImpl {
     };
     const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) => {
       nSolves++;
-      const r = solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, {
+      const r = this._solveLiveMNA(pinSources, {
         tSeconds: tStart + hs,
         temperatureC: this.temperatureC,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
@@ -5443,7 +5495,7 @@ export class BoardImpl {
       // history restarts and the step shrinks to look closely.
       if (this._deviceStates.size > 0) {
         const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
-        if (this._updateDevices(this.timeNs - remNs)) {
+        if (this._updateDevices(this.timeNs - remNs, r)) {
           trapReady = false;
           h = Math.max(H_MIN, h / 4);
         }
@@ -5855,7 +5907,12 @@ export class BoardImpl {
     // step re-seeds with backward Euler.
     this._trapValid = false;
 
-    if (!this.powered) return;
+    if (!this.powered) {
+      this._liveSolveError = null;
+      this._lastSolveConverged = true;
+      this._updateDevices(this.timeNs, null, true);
+      return;
+    }
 
     // Parts beyond the walker's vocabulary? One full MNA solve answers
     // everything coherently (and primes the instrument cache for free).
@@ -5988,6 +6045,8 @@ export class BoardImpl {
         }
       }
     }
+    this._liveSolveError = null;
+    this._lastSolveConverged = true;
   }
 
   /**
