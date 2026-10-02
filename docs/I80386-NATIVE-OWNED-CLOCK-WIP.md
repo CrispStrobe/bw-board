@@ -6,7 +6,7 @@ Actual counters show **9,204 clock transfers: 8,738 nonempty commits plus 466 st
 
 ## Source and ownership
 
-Compiled source is frozen at `7df84bc2c367aff1cadec7cecdde69cf0e904ace`, with 16 new files and an authenticated 86-file closure. Documentation/merge revisions do not relabel that identity. Upstream rail and other board changes merged into the publication branch are not covered by this frozen-build qualification; a different source closure needs its own authenticated build/runtime binding. The held H4 baseline was compiled from `15631beb63d7c1f17e693de7c86d4ed37b96a768`. The inherited H4 preparer lists 25 source files; the historical packed H4 compiled manifest lists 32. They are distinct provenance records.
+Compiled source is frozen at `7df84bc2c367aff1cadec7cecdde69cf0e904ace`, with 16 new files and an authenticated 86-file closure. Documentation/merge revisions do not relabel that identity. A different source closure needs its own authenticated build/runtime binding. The held H4 baseline was compiled from `15631beb63d7c1f17e693de7c86d4ed37b96a768`. The inherited H4 preparer lists 25 source files; the historical packed H4 compiled manifest lists 32. They are distinct provenance records.
 
 The factory creates the fixed ROM, board and native engine inside a pristine Node worker. Native execution and synchronous memory/page/PIO/IRQ/clock callbacks stay on its initializing thread. Parent IPC carries whole resumes and snapshots. It accepts serialized trusted artifact paths, not caller boards, hooks or live callback objects. The generic ABI2 loader and dynamic callback behavior remain unchanged.
 
