@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {cpus, loadavg} from 'node:os';
 import {median, motionProbeResult, gluePolicy, assertSameMotionGuest} from './lib/motion-ab-receipt.mjs';
+import {comparisonOrder} from './lib/ab-order.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => {
@@ -17,6 +18,7 @@ const option = name => {
     return resolve(process.argv[i + 1]);
 };
 const baseline = option('baseline'), candidate = option('candidate'), output = option('out');
+if (process.env.NODE_OPTIONS) throw Error('Unset NODE_OPTIONS for ordinary comparison');
 if (existsSync(output)) throw Error('Refusing to overwrite an existing receipt');
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const artifact = directory => ({directory,
@@ -32,7 +34,7 @@ const receipt = {schema: 1, diagnosticOnly: true, startedAt: new Date().toISOStr
     node: process.version, cpu: cpus()[0]?.model, logicalCpus: cpus().length,
     harnessSha256: hash(join(root, 'test/labwired-microbit-motion.test.mjs')),
     artifacts, gluePolicy: selectedGluePolicy,
-    order: ['baseline', 'candidate', 'candidate', 'baseline'], runs: [],
+    order: comparisonOrder(process.argv.includes('--reverse')), runs: [],
     limitations: ['shared VPS; CPU availability is uncontrolled',
         'NODEJS held motion workload, not browser/UI/circuit qualification',
         'no artifact publication or engine-pin promotion']};

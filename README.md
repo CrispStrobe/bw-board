@@ -157,8 +157,11 @@ below 1× in every window. **The cache-wrapper version was rejected for landing*
 after five ordinary VPS motion comparisons were negative (−0.9% to −19.1%).
 All 18 final core correctness checks passed, but that does not clear its
 performance tradeoff. It is not on core main. A smaller live boolean-preflight
-experiment is pending; exact sources, hashes and negative receipts are in the
-report. App pins and artifact publication remain unchanged.
+experiment measured **+5.75% and +9.99% hosted GPIO**, and **+3.09% and +3.49%
+VPS GPIO**, but motion remains mixed and RAM medians declined. GPIO and motion
+still fail every 1× window; the engine PR remains draft. See the
+[scalar-preflight results and order-control evidence](docs/receipts/2026-10-02-scalar-edge-preflight/README.md).
+App pins and artifact publication remain unchanged.
 
 ## Limits
 
