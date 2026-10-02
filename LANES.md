@@ -25,6 +25,13 @@ and Ohm's law; not a corpus qualification. Existing unloaded-rail 1 pS numerical
 shunt remains 5 pA at 5 V, explicitly documented rather than rounded away.
 OP still returns conflict metadata; transient state adoption refuses it.
 Hosted qualification follows on this frozen implementation head.
+Initial CI 36963740075 was held: 7532 pass/1 fail/289 skips; sole failure was
+inherited uncatalogued labwired-f0-timing.test.mjs, not rail behavior. Upstream
+5752f200 fixed its census registration and landed in master db66b3b5. Forward
+merge preserves all five lane source/spec/test diffs byte-for-byte (SHA256
+6a62847b8aa3d0800e325c6348b4a6fbd97e7321e8d6f7ed3656f08d3621ffec).
+Combined local rail/adjacent/API/census/clock-witness proof: 183/183, zero skips.
+The first candidate's Harris green does not substitute for combined-head CI.
 
 2026-10-02 Indeterminate ideal-source current observers — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-indeterminate-current-20261002, branch
