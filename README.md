@@ -212,9 +212,18 @@ RAM windows retire entirely through cached blocks; GPIO block attempts make
 **49.8–59.9%** of overall fast attempts return zero. Every GPIO cold hook in
 these selected windows exits with no edge-driven devices. Two runs repeat
 identically and all **101 actual-WASM integration tests** pass. These are
-instrumented counts, **not new RTx results**. An uninstrumented literal-load
-probe bypass is in testing, not production-qualified. See
+instrumented counts, **not new RTx results**. See
 [raw census receipts and next experiment](docs/receipts/2026-10-02-wasm-fastpath-census/README.md).
+
+The isolated, uninstrumented literal-load probe bypass now passes exhaustive
+opcode/T16 checks, determinism and **101 actual-WASM integration tests**, but is
+**not production-qualified**. Hosted GPIO medians improve **0.06–9.57%**;
+VPS GPIO loses **0.82% and 5.72%** in opposite orders, and both Node 22 motion
+comparisons regress. Every paired motion/GPIO run still fails the unchanged
+all-window ≥1× floor. Its separate fresh motion pass (**1.236514× median /
+1.170159× minimum**) does not erase these results. Source promotion, app pins
+and physical acknowledgements remain unchanged. See
+[complete runtime/order comparisons and original receipts](docs/receipts/2026-10-02-wasm-literal-barrier/README.md).
 
 ## Limits
 

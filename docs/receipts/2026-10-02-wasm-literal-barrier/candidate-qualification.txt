@@ -1,0 +1,329 @@
+Current runner version: '2.337.0'
+##[group]Runner Image Provisioner
+Hosted Compute Agent
+Version: 20260901.588
+Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Build Date: 2026-09-01T19:56:44Z
+Worker ID: {3df62c64-5198-4090-af9b-8adb94c9cb40}
+Azure Region: westus3
+##[endgroup]
+##[group]Operating System
+Ubuntu
+24.04.5
+LTS
+##[endgroup]
+##[group]Runner Image
+Image: ubuntu-24.04
+Version: 20260927.320.1
+Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+##[endgroup]
+##[group]GITHUB_TOKEN Permissions
+Contents: write
+Metadata: read
+##[endgroup]
+Secret source: Actions
+Cache mode: write
+Prepare workflow directory
+Prepare all required actions
+Getting action download info
+Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Download action repository 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Complete job name: motion
+##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+with:
+  repository: CrispStrobe/bw-board
+  token: ***
+  ssh-strict: true
+  ssh-user: git
+  persist-credentials: true
+  clean: true
+  sparse-checkout-cone-mode: true
+  fetch-depth: 1
+  fetch-tags: false
+  show-progress: true
+  lfs: false
+  submodules: false
+  set-safe-directory: true
+  allow-unsafe-pr-checkout: false
+##[endgroup]
+Syncing repository: CrispStrobe/bw-board
+##[group]Getting Git version info
+Working directory is '/home/runner/work/bw-board/bw-board'
+[command]/usr/bin/git version
+git version 2.55.0
+##[endgroup]
+Temporarily overriding HOME='/home/runner/work/_temp/9ec7a3ce-15bd-4223-a644-5651e82ff06f' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+Deleting the contents of '/home/runner/work/bw-board/bw-board'
+##[group]Initializing the repository
+[command]/usr/bin/git init /home/runner/work/bw-board/bw-board
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/runner/work/bw-board/bw-board/.git/
+[command]/usr/bin/git remote add origin https://github.com/CrispStrobe/bw-board
+##[endgroup]
+##[group]Disabling automatic garbage collection
+[command]/usr/bin/git config --local gc.auto 0
+##[endgroup]
+##[group]Setting up auth
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+[command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+##[endgroup]
+##[group]Fetching the repository
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +be39f8f1d52699bd40dcd535e91d6946c27ff41a:refs/remotes/origin/master
+From https://github.com/CrispStrobe/bw-board
+ * [new ref]         be39f8f1d52699bd40dcd535e91d6946c27ff41a -> origin/master
+##[endgroup]
+##[group]Determining the checkout info
+##[endgroup]
+[command]/usr/bin/git sparse-checkout disable
+[command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+##[group]Checking out the ref
+[command]/usr/bin/git checkout --progress --force -B master refs/remotes/origin/master
+Reset branch 'master'
+branch 'master' set up to track 'origin/master'.
+##[endgroup]
+[command]/usr/bin/git log -1 --format=%H
+be39f8f1d52699bd40dcd535e91d6946c27ff41a
+##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+with:
+  node-version: 22
+  always-auth: false
+  check-latest: false
+  token: ***
+##[endgroup]
+Found in cache @ /opt/hostedtoolcache/node/22.23.3/x64
+(node:2104) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+##[group]Environment details
+node: v22.23.3
+npm: 10.9.9
+yarn: 1.22.22
+##[endgroup]
+##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+with:
+  name: labwired-wasm-a
+  path: lw
+  merge-multiple: false
+  repository: CrispStrobe/bw-board
+  run-id: 37013838628
+##[endgroup]
+Downloading single artifact
+(node:2135) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Preparing to download the following artifacts:
+- labwired-wasm-a (ID: 11230225883, Size: 10052967, Expected Digest: sha256:12342b4ca6565467efa3cb3fe56383c7e2ea658615f18132a3125212b4275340)
+Redirecting to blob download url: https://productionresultssa15.blob.core.windows.net/actions-results/5a39d8f9-13aa-4484-839c-c117a7cb5563/workflow-job-run-a6b6482e-8e76-5d16-85e2-8aded2c3ebd7/artifacts/1bca951d666cf3b0cfc5fd51668238c848d1c3b393365a14975a1fe724170225.zip
+Starting download of artifact to: /home/runner/work/bw-board/bw-board/lw
+(node:2135) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+SHA256 digest of downloaded artifact is 12342b4ca6565467efa3cb3fe56383c7e2ea658615f18132a3125212b4275340
+Artifact download completed successfully.
+Total of 1 artifact(s) downloaded
+Download artifact has finished successfully
+##[group]Run sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+[36;1msudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi[0m
+shell: /usr/bin/bash -e {0}
+##[endgroup]
+Selecting previously unselected package binutils-arm-none-eabi.
+(Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 202296 files and directories currently installed.)
+Preparing to unpack .../binutils-arm-none-eabi_2.42-1ubuntu1+23_amd64.deb ...
+Unpacking binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+Selecting previously unselected package gcc-arm-none-eabi.
+Preparing to unpack .../gcc-arm-none-eabi_15%3a13.2.rel1-2_amd64.deb ...
+Unpacking gcc-arm-none-eabi (15:13.2.rel1-2) ...
+Setting up binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+Setting up gcc-arm-none-eabi (15:13.2.rel1-2) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Not building database; man-db/auto-update is not 'true'.
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+##[group]Run echo '{"type":"commonjs"}' > lw/nodejs/package.json
+[36;1mecho '{"type":"commonjs"}' > lw/nodejs/package.json[0m
+[36;1m{[0m
+[36;1m  lscpu[0m
+[36;1m  node --version[0m
+[36;1m  arm-none-eabi-gcc --version[0m
+[36;1m  sha256sum test/fixtures/labwired/microbit-motion/*[0m
+[36;1m} > motion-runner.txt[0m
+[36;1mcat lw/BUILD-INFO.json[0m
+shell: /usr/bin/bash -e {0}
+##[endgroup]
+{
+  "ref": "45463b863decbe085ffb890edb8d11041594b7f2",
+  "wasmBindgen": "0.2.121",
+  "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+  "builtAt": "2026-10-02T13:50:09.671Z",
+  "targets": {
+    "nodejs": {
+      "labwired_wasm.js": {
+        "bytes": 135762,
+        "brotliBytes": 25386,
+        "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+      },
+      "labwired_wasm_bg.wasm": {
+        "bytes": 27555241,
+        "brotliBytes": 3057855,
+        "sha256": "8971cf34cd228ec9f4e94bb843b1f37acbe978986a1379a17a7f4d5deaa5340f"
+      }
+    },
+    "web": {
+      "labwired_wasm.js": {
+        "bytes": 138392,
+        "brotliBytes": 25941,
+        "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+      },
+      "labwired_wasm_bg.wasm": {
+        "bytes": 27555241,
+        "brotliBytes": 3057855,
+        "sha256": "8971cf34cd228ec9f4e94bb843b1f37acbe978986a1379a17a7f4d5deaa5340f"
+      }
+    }
+  },
+  "rawBytes": 136668542
+}
+##[group]Run set -euo pipefail
+[36;1mset -euo pipefail[0m
+[36;1mnode test/labwired-microbit-motion.test.mjs 2>&1 | tee motion-results.txt[0m
+[36;1mtests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' motion-results.txt | tail -1)[0m
+[36;1mfails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' motion-results.txt | tail -1)[0m
+[36;1mskips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' motion-results.txt | tail -1)[0m
+[36;1m[ "${tests:-0}" -ge 2 ] && [ "${fails:-1}" = 0 ] && [ "${skips:-1}" = 0 ][0m
+[36;1m[ "$(grep -c '^MICROBIT_WASM_SAMPLE ' motion-results.txt)" -eq 5 ][0m
+shell: /usr/bin/bash -e {0}
+env:
+  LABWIRED_WASM: /home/runner/work/bw-board/bw-board/lw/nodejs
+  LABWIRED_MOTION_REQUIRED: 1
+  LABWIRED_REQUIRE_MOTION_RTX: 1
+##[endgroup]
+MICROBIT_WASM_GUEST_SHA256=1a533b7e7cd27880c2ae37381261371c8bf7b025b8ea2d06c108c60dc8ea963a
+MICROBIT_WASM_SAMPLE {"index":0,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.8545845440000001,"rtx":1.1701592393882565,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":112,"magSamples":112,"scans":2145}
+MICROBIT_WASM_SAMPLE {"index":1,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.8087252330000001,"rtx":1.236513910034015,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":212,"magSamples":212,"scans":4053}
+MICROBIT_WASM_SAMPLE {"index":2,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.8075005189999998,"rtx":1.2383892969361674,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":312,"magSamples":312,"scans":5960}
+MICROBIT_WASM_SAMPLE {"index":3,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.8168408400000003,"rtx":1.224228700416105,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":412,"magSamples":412,"scans":7867}
+MICROBIT_WASM_SAMPLE {"index":4,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.8022395000000005,"rtx":1.2465105495304074,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":512,"magSamples":512,"scans":9774}
+TAP version 13
+# Subtest: selected micro:bit motion guest on actual WASM
+    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons
+    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons
+      ---
+      duration_ms: 295.679006
+      type: 'test'
+      ...
+    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor
+    ok 2 - all five 64M-cycle windows meet the unchanged 1x floor
+      ---
+      duration_ms: 4240.111087
+      type: 'test'
+      ...
+    1..2
+ok 1 - selected micro:bit motion guest on actual WASM
+  ---
+  duration_ms: 4536.772847
+  type: 'suite'
+  ...
+1..1
+# tests 2
+# suites 1
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4545.613592
+##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+with:
+  name: selected-motion-nodejs-qualification
+  path: motion-results.txt
+motion-runner.txt
+lw/BUILD-INFO.json
+
+  if-no-files-found: error
+  compression-level: 6
+  overwrite: false
+  include-hidden-files: false
+##[endgroup]
+(node:2627) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Multiple search paths detected. Calculating the least common ancestor of all paths
+The least common ancestor is /home/runner/work/bw-board/bw-board. This will be the root directory of the artifact
+With the provided path, there will be 3 files uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+(node:2627) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Uploaded bytes 3151
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is 6d6a8fff67be2f79899b6fef1d2c9694461b16af2b5ed2e3aa86ccde28c78d4a
+Finalizing artifact upload
+Artifact selected-motion-nodejs-qualification.zip successfully finalized. Artifact ID 11229288261
+Artifact selected-motion-nodejs-qualification has been successfully uploaded! Final size is 3151 bytes. Artifact ID is 11229288261
+Artifact download URL: https://github.com/CrispStrobe/bw-board/actions/runs/37013838628/artifacts/11229288261
+Post job cleanup.
+(node:2640) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Post job cleanup.
+[command]/usr/bin/git version
+git version 2.55.0
+Temporarily overriding HOME='/home/runner/work/_temp/83cc884e-e856-4bba-8e28-8251875f3039' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+[command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Cleaning up orphan processes
+##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
