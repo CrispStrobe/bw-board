@@ -1,0 +1,14 @@
+{
+  "status": "PASS_ACTUAL_PIC_CAPOFF_REFERENCE_STATE_NO_SPEED_CLAIM",
+  "checks": 1205,
+  "captureSha256": "41a16293d16c89d0724743ec9a218a710ff0c4e112d3d9c360281caac071c588",
+  "sourceRevision": "3792a908d81e04903974aa7d2bdc545e0713a290",
+  "compiledRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "sourceInputs": 122,
+  "compiledInputs": 111,
+  "artifactPins": 975,
+  "resumes": 448,
+  "rawRamSha256": "19e8a7ebcd8260e1a33d7ebc5d11027e04d037b735e2f50f0ab53a4092d827ee",
+  "canonicalRamSha256": "e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd",
+  "scope": "All actual bindings/streams/exit/containment and stored166 native domains; six cuts/fullboards, eight mapped JS fields plus precise EDX/CR0 profile, own reset witness/canonicalRAM/PIT/PIC/totals/physicalcounts and empty journal independently verified. Entire166 native cross-mode equality pending CAPON; no speed/general AT claim. No additional guest executed."
+}

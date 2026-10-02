@@ -1,0 +1,7 @@
+{
+  "scope": "source-only asset authentication; no guest config admitted or addon loaded",
+  "assets": {
+    "BIOS-bochs-legacy": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgabios-lgpl.bin": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"
+  }
+}

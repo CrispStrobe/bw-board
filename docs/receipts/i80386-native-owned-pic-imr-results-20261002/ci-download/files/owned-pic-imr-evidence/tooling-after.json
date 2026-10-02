@@ -1,0 +1,8 @@
+{
+  "revision": "a45fc6f60cabf97e8230ff1bf49a0394bbaef622",
+  "hashes": {
+    "scripts/prepare-bochs-cpu3-native-owned-pic-imr.mjs": "8dfa32020f1a86caf3341bc00f546715fd0b096eec19662720f4772856ce039e",
+    "scripts/ci-build-i80386-native-owned-pic-imr.py": "e38320d0b68c95cb5af89c0b28517e985e7a8c9c5208a7e36c437d770d34cfb9",
+    ".github/workflows/i80386-native-owned-pic-imr-build.yml": "5d659d597958252ea81eab99bac2337b0ad679bf222d2ba2af5e10b2dcea0574"
+  }
+}
