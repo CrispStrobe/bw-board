@@ -39,13 +39,6 @@
       "uncompressedSha256": "f635abcabac6f1bc4b0565eca49fcc834b876605ac412cc9a92252f90a6846bb",
       "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/addon-nm-defined.txt"
     },
-    "2026-10-02-i80386-native-hot-h5-build-addon-readelf.txt": {
-      "bytes": 960,
-      "sha256": "6b52c1bd26be88933ca4a87fec03ecb7d0cffb0a250793c0fd90f5ff4c88d02d",
-      "uncompressedBytes": 960,
-      "uncompressedSha256": "6b52c1bd26be88933ca4a87fec03ecb7d0cffb0a250793c0fd90f5ff4c88d02d",
-      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/addon-readelf.txt"
-    },
     "2026-10-02-i80386-native-hot-h5-build-audit-build.py": {
       "bytes": 3259,
       "sha256": "cbfdcfaadc2d409a4a6615faff44d45f458bf10e9ae418d35d1c809034f2411c",
@@ -1193,6 +1186,13 @@
       "uncompressedBytes": 30962,
       "uncompressedSha256": "fa0fdc6cf45db5977d0b3e496d3154e4b64566497f1063850ba6f1efaccdb1c8",
       "source": "focused tests/syntax/preparercheck exact original logs"
+    },
+    "2026-10-02-i80386-native-hot-h5-build-addon-readelf.txt.gz": {
+      "bytes": 365,
+      "sha256": "1370ac8a437516d1ada52a26068be4fd26651d7d2f5e9a2aa9de66025e58e75f",
+      "uncompressedBytes": 960,
+      "uncompressedSha256": "6b52c1bd26be88933ca4a87fec03ecb7d0cffb0a250793c0fd90f5ff4c88d02d",
+      "source": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/addon-readelf.txt"
     }
   },
   "localOnly": {
