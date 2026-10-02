@@ -30,7 +30,17 @@ invalidation (6), missing sticky meter interval (1), missing sticky scope interv
 (1), stale device state after throw (3), ignored failed-result validity (4), and
 missing matching fractional device result (1). Unexpected solver-stamp exception
 is rethrown by identity; unrelated recorder exceptions still propagate.
-One exact automatic CI/Harris qualification remains required before normal FF.
+Exact source 9b9ebff4 qualified in CI 36977432739 and Harris 36977432742,
+both terminal green. Concurrent master a9efdf36 independently qualified CI
+36976452100/Harris 36976452087/Chip RTx 36976452061. Its CPU diagnostics,
+independent tests and records change no package/src or required CI/Harris
+workflow. Local forward merge passes 53/53, zero skips; qualified repair patch
+SHA256 remains ba677316acef3fe4c407bfc79ed9acb60b141d8ca1a865ef6c650bb8005cf7ce.
+Entire qualified and merged package runtime remains SHA256
+c041236c666443948f0acbc86ad783bdc69ede047f5e6c86536260c16b228924.
+These disjoint, independently green changes commute at the package boundary;
+this is not a hosted receipt for the merge. Normal guarded FF follows; automatic
+master runs are combined-tree alarms, not another identical-runtime gate.
 
 2026-10-02 Failed live solve instrument refusal — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, new branch
