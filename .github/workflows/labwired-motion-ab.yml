@@ -30,6 +30,10 @@ on:
         description: Also capture separate ordinary active F0 RAM and GPIO A/B/B/A
         type: boolean
         default: false
+      reverse:
+        description: Use B/A/A/B order control instead of default A/B/B/A (still diagnostic only)
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -97,9 +101,11 @@ jobs:
       - name: Complete diagnostic without relabelling failed qualification windows
         env:
           ALLOW_PAIRED_GLUE: ${{ inputs.allow_paired_glue }}
+          REVERSE_ORDER: ${{ inputs.reverse }}
         run: |
           args=()
           if [ "$ALLOW_PAIRED_GLUE" = true ]; then args+=(--paired-glue); fi
+          if [ "$REVERSE_ORDER" = true ]; then args+=(--reverse); fi
           node scripts/probe-labwired-motion-ab.mjs --baseline baseline/nodejs --candidate candidate/nodejs --out evidence/abba.json "${args[@]}"
       - name: Test sampling and tier-trace parsing
         if: inputs.profile
@@ -108,10 +114,12 @@ jobs:
         if: inputs.f0
         env:
           ALLOW_PAIRED_GLUE: ${{ inputs.allow_paired_glue }}
+          REVERSE_ORDER: ${{ inputs.reverse }}
         run: |
           node --test test/f0-timing-receipt.test.mjs
           args=()
           if [ "$ALLOW_PAIRED_GLUE" = true ]; then args+=(--paired-glue); fi
+          if [ "$REVERSE_ORDER" = true ]; then args+=(--reverse); fi
           node scripts/probe-labwired-f0-ab.mjs --baseline baseline/nodejs --candidate candidate/nodejs --out evidence/f0-abba "${args[@]}"
       - name: Collect independent sampling and forced-tier evidence
         if: inputs.profile

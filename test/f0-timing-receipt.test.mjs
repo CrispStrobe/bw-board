@@ -97,7 +97,7 @@ test('F0 tooling keeps ordinary timing separate, verifies artifacts and preserve
 
 test('F0 A/B uses ordinary verified children and matches both images and observations', () => {
     const tool = readFileSync(new URL('../scripts/probe-labwired-f0-ab.mjs', import.meta.url), 'utf8');
-    assert.match(tool, /order: \['baseline', 'candidate', 'candidate', 'baseline'\]/);
+    assert.match(tool, /order: comparisonOrder\(process.argv.includes\('--reverse'\)\)/);
     assert.match(tool, /assertSameF0Guest\(receipt.runs\[0\].capture.ordinary, result.ordinary\)/);
     assert.match(tool, /result.sampled \|\| result.ordinary.flags.length/);
     assert.match(tool, /allWindowsMeet1x: samples.every\(s => s.rtx >= 1\)/);
