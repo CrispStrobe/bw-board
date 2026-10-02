@@ -1,0 +1,35 @@
+MICROBIT_WASM_GUEST_SHA256=521b61ad8738e754cf26f588468f77f8b2af5bd3562cab570538ad89e1f1f622
+MICROBIT_WASM_SAMPLE {"index":0,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.630841877,"rtx":1.5851832867461966,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":112,"magSamples":112,"scans":2145}
+MICROBIT_WASM_SAMPLE {"index":1,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.6325532490000001,"rtx":1.5808945754067256,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":212,"magSamples":212,"scans":4053}
+MICROBIT_WASM_SAMPLE {"index":2,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.63006103,"rtx":1.5871478355041255,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":312,"magSamples":312,"scans":5960}
+MICROBIT_WASM_SAMPLE {"index":3,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.6237209119999998,"rtx":1.6032811803494578,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":412,"magSamples":412,"scans":7867}
+MICROBIT_WASM_SAMPLE {"index":4,"cycles":64000000,"cpuHz":64000000,"wallSeconds":0.6320112050000003,"rtx":1.5822504286138401,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":512,"magSamples":512,"scans":9774}
+TAP version 13
+# Subtest: selected micro:bit motion guest on actual WASM
+    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons
+    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons
+      ---
+      duration_ms: 253.0122
+      type: 'test'
+      ...
+    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor
+    ok 2 - all five 64M-cycle windows meet the unchanged 1x floor
+      ---
+      duration_ms: 3271.594479
+      type: 'test'
+      ...
+    1..2
+ok 1 - selected micro:bit motion guest on actual WASM
+  ---
+  duration_ms: 3525.494902
+  type: 'suite'
+  ...
+1..1
+# tests 2
+# suites 1
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3531.830327

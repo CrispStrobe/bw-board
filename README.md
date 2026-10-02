@@ -114,7 +114,7 @@ The bounded cached-run optimization landed on core `main` as
 enabled final-head checks passed; the app artifact remains unpromoted. It measured
 **+8.24%, +7.15% and +9.65%** in three exact-artifact paired comparisons against
 the landed scalar baseline, with identical cycle-indexed guest observations.
-The latest exact fixed-artifact fresh qualification was
+The earlier exact fixed-artifact fresh qualification was
 **0.834235× median / 0.808772× minimum**: still below the
 unchanged every-window 1× floor. Both builds, determinism and 101 actual WASM
 integration tests passed; the fixed-head local core suite passed 4,234 tests
@@ -123,6 +123,15 @@ remain unchanged. Two ordinary VPS repeats measured +9.20% and +10.06%, also
 below 1× in every window. See
 [bounded-run results and raw receipts](docs/receipts/2026-10-01-wasm-cached-runs/README.md)
 for exact source references, final CI and hardware-drift approval status.
+
+A fresh rebuild of landed `43b2d62f` measured **0.775416× median / 0.769654×
+minimum** on EPYC 7763, with the same module bytes and every window below 1×.
+The unmerged literal-load follow-up passed correctness but was rejected for
+landing after hosted paired results of **−0.66% and −16.30%**. Its separate
+Xeon 6973P-C qualification passed 1×, which is not a same-host speedup claim.
+The compile-time-specialized variant was also rejected (**−2.23%, −3.09%**).
+See [literal-load evidence and compiler-policy follow-up](docs/receipts/2026-10-01-wasm-literal-loads/README.md).
+App pins remain unchanged; the all-host/all-target goal is not yet met.
 
 ## Limits
 
