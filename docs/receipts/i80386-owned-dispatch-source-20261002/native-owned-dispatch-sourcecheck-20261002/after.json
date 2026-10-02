@@ -1,0 +1,5 @@
+{
+  "scripts/bochs-cpu3-native-owned-dispatch/provider.mjs": "3757c51ef9e84f5ff3cfc67b3536bfe5fa8aa4d7c82a0fb6d05c6a51e76e2e6e",
+  "scripts/bochs-cpu3-native-owned-dispatch/derivation.json": "946c13ff0c2323d59e86e38b37aea3f590f5451e7de7e6bf500477ee26230505",
+  "test/i80386-owned-dispatch.test.mjs": "ff972c38e2bd5cded58f29e40dd3c0c534396a6bd921d108fd76fe72b2f0a35d"
+}

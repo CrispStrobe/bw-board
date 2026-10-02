@@ -1,0 +1,109 @@
+TAP version 13
+# Subtest: exact source inverse and guard seams
+ok 1 - exact source inverse and guard seams
+  ---
+  duration_ms: 3.82511
+  type: 'test'
+  ...
+# Subtest: ordinary REP and fault-N ordering capture=false
+ok 2 - ordinary REP and fault-N ordering capture=false
+  ---
+  duration_ms: 898.836646
+  type: 'test'
+  ...
+# Subtest: ordinary REP and fault-N ordering capture=true
+ok 3 - ordinary REP and fault-N ordering capture=true
+  ---
+  duration_ms: 348.403325
+  type: 'test'
+  ...
+# Subtest: full preflight denial 3/99
+ok 4 - full preflight denial 3/99
+  ---
+  duration_ms: 427.729752
+  type: 'test'
+  ...
+# Subtest: full preflight denial 601/1
+ok 5 - full preflight denial 601/1
+  ---
+  duration_ms: 346.735062
+  type: 'test'
+  ...
+# Subtest: full preflight denial 301/2
+ok 6 - full preflight denial 301/2
+  ---
+  duration_ms: 339.057758
+  type: 'test'
+  ...
+# Subtest: query phases and paused lifecycle denial preserve subsequent work
+ok 7 - query phases and paused lifecycle denial preserve subsequent work
+  ---
+  duration_ms: 406.307301
+  type: 'test'
+  ...
+# Subtest: foreign callback receiver cannot replace factory receiver
+ok 8 - foreign callback receiver cannot replace factory receiver
+  ---
+  duration_ms: 360.572708
+  type: 'test'
+  ...
+# Subtest: PIT write/read catchup and query replies match
+ok 9 - PIT write/read catchup and query replies match
+  ---
+  duration_ms: 375.021052
+  type: 'test'
+  ...
+# Subtest: mapping publication refuses N/REP and admits only ordinary Q
+not ok 10 - mapping publication refuses N/REP and admits only ordinary Q
+  ---
+  duration_ms: 348.877319
+  type: 'test'
+  location: '/tmp/bw-board-386-owned-clock-dispatch-source-20261002/test/i80386-owned-dispatch.test.mjs:18:1'
+  failureType: 'testCodeFailure'
+  error: 'direct board callback: 8042 output port before effect'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    check (file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-direct-board/board.mjs:4:35)
+    file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-direct-board/board.mjs:42:18
+    In8Board._call (file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-hot-direct/board.mjs:6:232)
+    In8Board.outPort (file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-direct-board/board.mjs:39:40)
+    call (file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-owned-in8/provider.mjs:24:26)
+    file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-owned-in8/provider.mjs:31:749
+    Object.packedScalar (file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/scripts/bochs-cpu3-native-owned-in8/provider.mjs:28:149)
+    file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/test/i80386-owned-dispatch.test.mjs:18:179
+    Array.map (<anonymous>)
+    both (file:///tmp/bw-board-386-owned-clock-dispatch-source-20261002/test/i80386-owned-dispatch.test.mjs:9:44)
+  ...
+# Subtest: sink exception and nested callback denial retain exact partial effect/finally
+ok 11 - sink exception and nested callback denial retain exact partial effect/finally
+  ---
+  duration_ms: 443.563401
+  type: 'test'
+  ...
+# Subtest: 900-word exact independent caps and 901 refusal
+ok 12 - 900-word exact independent caps and 901 refusal
+  ---
+  duration_ms: 473.213314
+  type: 'test'
+  ...
+# Subtest: due last Q allowed and subsequent Q denied without effects
+ok 13 - due last Q allowed and subsequent Q denied without effects
+  ---
+  duration_ms: 421.772805
+  type: 'test'
+  ...
+# Subtest: post-factory mutable bind/apply cannot redirect hot dispatch
+ok 14 - post-factory mutable bind/apply cannot redirect hot dispatch
+  ---
+  duration_ms: 396.249529
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 13
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6041.516321

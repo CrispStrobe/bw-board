@@ -1,0 +1,18 @@
+{
+  "native-owned-dispatch-sourcecheck-20261002/after.json": "948480ba579a07721bb3e102c429ceffb00b396eefadc6ffa4214ee32e9bbcf0",
+  "native-owned-dispatch-sourcecheck-20261002/before.json": "948480ba579a07721bb3e102c429ceffb00b396eefadc6ffa4214ee32e9bbcf0",
+  "native-owned-dispatch-sourcecheck-20261002/exit.json": "44e100a5c0162b1cd4e8a86dcc2d5496457b26c580eb4390c581110cdd6bc9a4",
+  "native-owned-dispatch-sourcecheck-20261002/stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "native-owned-dispatch-sourcecheck-20261002/stdout": "0c6a07cc5ecebe4a73cd6c955fde4155b1f7f470f0eb17e769345910761dfa87",
+  "native-owned-dispatch-sourcecheck-r2-20261002/after.json": "10a82b5de3104e1e3fc48b0cd612bece57443e69b94e0c9dac382c9bdb1a8c50",
+  "native-owned-dispatch-sourcecheck-r2-20261002/before.json": "10a82b5de3104e1e3fc48b0cd612bece57443e69b94e0c9dac382c9bdb1a8c50",
+  "native-owned-dispatch-sourcecheck-r2-20261002/exit.json": "3bdd6032d3ba4e44c6ed6f5134095ac12d9aa717416e57c527be8b0a35eabf10",
+  "native-owned-dispatch-sourcecheck-r2-20261002/independent-frozen-source-audit.json": "f678ff3f3be06da693bf53798fafdb9db3fcabb45cf16162446a1b106baa1a15",
+  "native-owned-dispatch-sourcecheck-r2-20261002/independent-source-audit.json": "4b4b2035b818bd769bf638c36167f5c3c6f285541d11c584de9d025d0bdaf98f",
+  "native-owned-dispatch-sourcecheck-r2-20261002/inherited-source-identity.json": "a7aa19841b10075f8dc73bf4a1526333c212f14fb8a744c7c9a176e3844568d8",
+  "native-owned-dispatch-sourcecheck-r2-20261002/root-frozen-source-audit.json": "72860ebd9e326cfb5c0f28900e0c1c726baf136cf85e7d84bf89aa31104200a1",
+  "native-owned-dispatch-sourcecheck-r2-20261002/source-freeze.json": "1b8b67a92d717a2faac37577a0765c0cdc315b34371764687be844cbc2e2bc9b",
+  "native-owned-dispatch-sourcecheck-r2-20261002/stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "native-owned-dispatch-sourcecheck-r2-20261002/stdout": "e12c2b44feff6324b00b7dc4b6e50da502e336b27983cd512f40ab97a8207713",
+  "external-origins.json": "1d6afd61070f926f8efe584a1046dc4b652202282eb356a647090ecdda05479e"
+}

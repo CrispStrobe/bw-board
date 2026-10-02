@@ -97,6 +97,8 @@ its fixed-fixture paired CPU gate used 26.33% less process CPU than H4, with all
 
 The [fixed PIC IMR prototype](docs/I80386-NATIVE-OWNED-PIC-IMR-WIP.md) has authenticated source and a JavaScript reference. Native PIC build and guest qualification remain pending.
 
+The [private per-word dispatch experiment](docs/I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 source controls; native parity and performance qualification remain pending.
+
 ## LabWired WASM performance (2026-10-01)
 
 These results use the selected 64 MHz micro:bit motion guest in Node.js, not
