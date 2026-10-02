@@ -11,3 +11,11 @@ Portable runner changes resolve frozen imports, bind the path-derived BIOS confi
 The retained fixture still limits ROM admission, executable RAM, REP forms, MMIO, byte I/O, IRQ and fault profiles. Native ISA capability alone does not qualify full AT boot, Windows, Doom or GUI execution. A later bounded compatibility item could add an actual PIC IMR read fixture for `0x21`/`0xa1`, checking IRR/ISR preservation and poll refusal after the clock flush. The current guest executes PIT reads only. No such extension is implemented here.
 
 This workflow is preparation only until reviewed and dispatched at an exact source head. No cumulative speedup or 10× claim follows from prior MAIN, allocation, timing or codec experiments.
+
+## First hosted attempt: context collection failed before the benchmark
+
+[Run 37018977889](https://github.com/CrispStrobe/bw-board/actions/runs/37018977889), workflow head `b3bad5b5e81e1b2c78525c99e1a35e740bc0a5e2`, downloaded the original artifact successfully, then stopped because `/sys/fs/cgroup/cpu.max` was absent. The benchmark step was skipped: **zero benchmark children and zero measured pairs**. This is a context collection failure, with no throughput result or candidate adoption.
+
+The correction records CPU identity before optional kernel context, reports missing or unreadable files explicitly, and supports the common cgroup v1 quota/period paths alongside v2. The benchmark helper, compiled artifact, source identities, protocol and limits are unchanged. Source controls cover v1, v2 and absent files. A subsequent run must bind this changed workflow source and preserve the first failure; it cannot be presented as a favorable retry of a measured gate.
+
+The [failure and source-control archive](receipts/2026-10-02-owned-bulk-context-failure/manifest.json) retains the official artifact metadata, original context, job records, failure log and control streams. Official failure artifact `11232047069` has ZIP digest `035be1ed79529036aa8cde7f995aa0633253f7a043206d2d90dd9157871d874e`. No benchmark result is available yet.

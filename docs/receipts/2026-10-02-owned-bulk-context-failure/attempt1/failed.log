@@ -1,0 +1,31 @@
+benchmark	Download exact original build artifact and record context	﻿2026-10-02T14:20:19.4754633Z ##[group]Run set -euo pipefail
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4754952Z [36;1mset -euo pipefail[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4755173Z [36;1mmkdir "$RUNNER_TEMP/owned-bulk-context"[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4755602Z [36;1mgh api /repos/CrispStrobe/bw-board/actions/artifacts/11226630502 > "$RUNNER_TEMP/owned-bulk-context/artifact-metadata.json"[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4756141Z [36;1mgh api /repos/CrispStrobe/bw-board/actions/artifacts/11226630502/zip > "$RUNNER_TEMP/original-build.zip"[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4756475Z [36;1m{[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4756708Z [36;1m  sha256sum publication/scripts/ci-benchmark-i80386-owned-clock-bulk.py[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4757000Z [36;1m  cat /proc/loadavg[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4757238Z [36;1m  cat /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4757979Z [36;1m  cat /sys/fs/cgroup/cpu.max[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4758387Z [36;1m  node --version[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4758632Z [36;1m  uname -a[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4758794Z [36;1m  lscpu[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4758986Z [36;1m  uptime[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4759310Z [36;1m  free -h[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4759487Z [36;1m  git -C publication rev-parse HEAD[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4759701Z [36;1m  git -C baseline rev-parse HEAD[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4759914Z [36;1m  git -C candidate rev-parse HEAD[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4760151Z [36;1m  sha256sum "$RUNNER_TEMP/original-build.zip"[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:19.4760412Z [36;1m} > "$RUNNER_TEMP/owned-bulk-context/context.txt"[0m
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0405139Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0405434Z env:
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0405587Z   NODE_OPTIONS: 
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0405735Z   NODE_PATH: 
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0405874Z   LD_PRELOAD: 
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0406012Z   LD_AUDIT: 
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0406149Z   BW_HOT_NAPI_PROFILE: 
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0408264Z   GH_TOKEN: ***
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:20.0408425Z ##[endgroup]
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:26.8473904Z cat: /sys/fs/cgroup/cpu.max: No such file or directory
+benchmark	Download exact original build artifact and record context	2026-10-02T14:20:26.8483827Z ##[error]Process completed with exit code 1.

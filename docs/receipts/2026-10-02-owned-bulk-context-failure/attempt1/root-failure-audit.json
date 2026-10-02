@@ -1,0 +1,20 @@
+{
+  "status": "HOSTED_CONTEXT_FAILURE_ZERO_BENCHMARK_CHILDREN_NOT_CPU_GATE_RESULT",
+  "runId": 37018977889,
+  "workflowHead": "b3bad5b5e81e1b2c78525c99e1a35e740bc0a5e2",
+  "failure": "Context command assumes cgroup-v2 cpu.max at fixed path; optional file absent",
+  "artifactId": 11232047069,
+  "zipSha256": "035be1ed79529036aa8cde7f995aa0633253f7a043206d2d90dd9157871d874e",
+  "benchmarkStep": "skipped",
+  "benchmarkChildren": 0,
+  "originalBuildArtifactMetadataAuthenticated": true,
+  "retainedFiles": {
+    "artifact-metadata.json": "446f82ae5eacaa47cd295e7c73e9acc7372d909306c467c59a82785e558c3ede",
+    "run.json": "3204a38758cdccd86b4d4a231d5397725214a6b25fe4f053ae49fb584d04ded9",
+    "jobs.json": "ecc045d80193f84efb4f788f406cfe8f21d750357a4adf33e9bafabf35a6e6c0",
+    "failed.log": "cb6b63754858a30492ed55160197da87fd865a787180ab6656514e069305fbad",
+    "artifact.zip": "035be1ed79529036aa8cde7f995aa0633253f7a043206d2d90dd9157871d874e",
+    "files/owned-bulk-context/artifact-metadata.json": "0ece3110fc76ec138ad12c107a741b6688420122cdada1b9020547cd33318c26",
+    "files/owned-bulk-context/context.txt": "3a743c30e08655af504d1a4ea5ef51800ece8a37297127c83086c99cf285e866"
+  }
+}
