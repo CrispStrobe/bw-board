@@ -1,0 +1,29 @@
+{
+  "returncode": -9,
+  "signal": 9,
+  "timedOut": true,
+  "fileLimitReached": false,
+  "error": "child wall timeout; process group killed and waited",
+  "stderrBytes": 0,
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "wallNs": 120132837125,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/run-i80386-native-owned-in8.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BASE.input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+}

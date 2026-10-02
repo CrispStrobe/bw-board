@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ACTUAL_BULK_CAPTURE_OFF_FULL_FIELDS_NOT_SPEED_GATE",
+  "checks": 242,
+  "captureSha256": "c601925ab0cf510d17aeb61d1a68d31d6a10824dfe395ab15814ebb5a9b09cf2",
+  "runtimeSource": "7b83f0ef631ba7c1cf3dc3513f5f569f00fc49f4",
+  "runtimeInputs": 106,
+  "compiledSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "compiledInputs": 103,
+  "scope": "Whole reset/final/sixcuts full166+descriptors/physicalcounts/fullboards/rawRAM/witness/canonicalRAM/445resumes exactqualifiedfe1. Explicitdualprovenance/sourceauth/artifactpins intact. Emptyjournal; noON/tracefast/performanceclaim."
+}

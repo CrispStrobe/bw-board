@@ -1,0 +1,9 @@
+{
+  "status": "PASS_ACTUAL_BULK_NULL_SINK_TRACE_FAST_FULL_CANONICAL_AND_STATE_NOT_SPEED_GATE",
+  "checks": 1649512,
+  "canonicalRows": 1649271,
+  "captureSha256": "9f21aa415306d0b563b973f252a3c2d3db18eb1b7a115480fb1ae1cae2dcbfcc",
+  "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "rawTraceSha256": "17d2f8ff0c4fc2fb2625836980090958e158b455fafb17148d3bcc630061bd36",
+  "scope": "Everycanonicalrow exactqualifiedfe1, allstoredwhole166/native/descriptors/physical/fullboard/RAM/witness/resumes equal. ONwholejournal exact ortracefastemptyjournal/sourceboundnullsinkbulkbranch. Dual106runtime/103CIcompiled retained. No native rerun/speedclaim."
+}

@@ -1,0 +1,13 @@
+# Private bulk clock effects: hosted gate preparation
+
+The private capture-OFF candidate aggregates ledger effects only after the complete ordered tape preflight. Capture-ON retains the original per-word callbacks. Generic H4, qualified MAIN and the narrow IN8 runner remain unchanged. Three actual fixed-fixture parity cells passed, including complete canonical trace parity with host journaling disabled, exercising the source-bound bulk branch. This is a semantic proof, not a speed result.
+
+The VPS paired gate stopped during the fourth discarded warmup: the baseline child timed out before creating its guest output. No measured pair completed. This is an incomplete attempt, not a failed performance criterion, and no VPS retry is proposed. The separate hosted attempt changes the machine while retaining two discarded warmup pairs, seven alternating measured pairs, full per-child parity, a threshold of at least 10% lower mean process CPU, and all seven pairs favorable. All samples and failures must be retained.
+
+The fixed workflow checks out baseline `fe1eff2039520536350922a2164c8bbe29404c68` (103 files) and candidate `7b83f0ef631ba7c1cf3dc3513f5f569f00fc49f4` (106 files). Workflow source is a separate identity. It downloads exact artifact `11226630502` from run `37006765968`; ZIP digest is `0335f4c5088280cfcdf00186f5e0ca59ff431442edc3a978dd26b7dc2341a0e0`. The binary remains compiled fe1 with original CI provenance. Relocation changes paths and derived record hashes only. The original inventory, manifests, source archives and LGPL notices remain intact.
+
+Portable runner changes resolve frozen imports, bind the path-derived BIOS configuration hash, and substitute the Node path. BIOS bytes and every non-path configuration directive remain exact. The whole original 445-resume execution window, six checkpoints, complete snapshots, private provider guards and process CPU metric remain intact. Native singleton/fatal guards require fresh bounded processes; this does not create reusable or generic addon admission.
+
+The retained fixture still limits ROM admission, executable RAM, REP forms, MMIO, byte I/O, IRQ and fault profiles. Native ISA capability alone does not qualify full AT boot, Windows, Doom or GUI execution. A later bounded compatibility item could add an actual PIC IMR read fixture for `0x21`/`0xa1`, checking IRR/ISR preservation and poll refusal after the clock flush. The current guest executes PIT reads only. No such extension is implemented here.
+
+This workflow is preparation only until reviewed and dispatched at an exact source head. No cumulative speedup or 10× claim follows from prior MAIN, allocation, timing or codec experiments.
