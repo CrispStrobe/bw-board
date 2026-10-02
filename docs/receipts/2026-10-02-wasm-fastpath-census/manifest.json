@@ -1,0 +1,150 @@
+{
+  "schema": "labwired.fastpath-census-archive.v1",
+  "files": [
+    {
+      "path": "artifact/bindgen-version.txt",
+      "bytes": 21,
+      "sha256": "27b61212ae39430d2b366a42427c227f0c77f6ce7aac232d1a3e7e3dca622def"
+    },
+    {
+      "path": "artifact/rust-version.txt",
+      "bytes": 36,
+      "sha256": "f4d034f5660bb49f22bfcba3f3445be67e25b704c193ff421b53863b4faee148"
+    },
+    {
+      "path": "artifact/sha256.txt",
+      "bytes": 441,
+      "sha256": "c1569695b7bf4296147f807fa9c7d47d88b550dda62dbdea384c31f551892049"
+    },
+    {
+      "path": "artifact/source-head.txt",
+      "bytes": 41,
+      "sha256": "7bbd987ce1b3312409a6aa094542b35328ad7ae4f5932022b32d38ff66dd036c"
+    },
+    {
+      "path": "diagnostic-artifacts.json.utf8.json",
+      "bytes": 895,
+      "sha256": "76d281c19bae5975b1ce226c3bc88c95d4ee3c6318c4de465eefa5038169d168",
+      "original": {
+        "path": "diagnostic-artifacts.json",
+        "bytes": 751,
+        "sha256": "bb8638ecf4d0af56ac30f9f547a74a591838102f92998f9151c504089db38175",
+        "encoding": "utf8"
+      }
+    },
+    {
+      "path": "diagnostic-run.json.utf8.json",
+      "bytes": 13772,
+      "sha256": "b24272381244cc5e15274022e00088c150d4c9f39cc3cacbafd895dce9c83174",
+      "original": {
+        "path": "diagnostic-run.json",
+        "bytes": 12902,
+        "sha256": "f7c2ee2f6084661c19566e27d9b8b4517c18e2c95bdf4af63fba80a49ad34ad5",
+        "encoding": "utf8"
+      }
+    },
+    {
+      "path": "integration-tool-output.txt",
+      "bytes": 24817,
+      "sha256": "45bf836d6098387af003da99e5657498ee89e13dff178b030178d273f3ae67d9"
+    },
+    {
+      "path": "vps-first/gpio.bin.base64.json",
+      "bytes": 637,
+      "sha256": "97b1e186546148b63d5db994e4a75956d0df0708b118565b89a6cadf05829bfc",
+      "original": {
+        "path": "vps-first/gpio.bin",
+        "bytes": 344,
+        "sha256": "cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-first/gpio.elf.base64.json",
+      "bytes": 6930,
+      "sha256": "67639d45b52bde6a0e964a698cb317f86e5995a971860ab83f3cd72eb6d7ca01",
+      "original": {
+        "path": "vps-first/gpio.elf",
+        "bytes": 5064,
+        "sha256": "a395243a8ab37245820511a89ba8119a98a20f4a334f5f28e799464f41242a4d",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-first/ram.bin.base64.json",
+      "bytes": 572,
+      "sha256": "24ec90c30d4ef52f9011f37b818a402226c6077ef8740ef9086699119dc6e1dd",
+      "original": {
+        "path": "vps-first/ram.bin",
+        "bytes": 296,
+        "sha256": "70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-first/ram.elf.base64.json",
+      "bytes": 6809,
+      "sha256": "18e6caffe9518dfe8808e2327e233f05bd22e9860ac2fa13aba08e232e0c7ca4",
+      "original": {
+        "path": "vps-first/ram.elf",
+        "bytes": 4972,
+        "sha256": "a57d3fd401eb2361df4e33f13fe9be2da8438ab57702a0dae0bb8766ae13171d",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-first/receipt.json",
+      "bytes": 11286,
+      "sha256": "d7b2d5e2b9ad520c6defcdfcd8bd94b36275e22bc7b1a459235dbcadf2ad2ff0"
+    },
+    {
+      "path": "vps-repeat/gpio.bin.base64.json",
+      "bytes": 638,
+      "sha256": "b3dd81634a60478a9b5ef9916062e7e04e4c1b509f107875cdf8ee6b4ca80b5d",
+      "original": {
+        "path": "vps-repeat/gpio.bin",
+        "bytes": 344,
+        "sha256": "cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-repeat/gpio.elf.base64.json",
+      "bytes": 6931,
+      "sha256": "b2dce7c21fc7fea3fca3d7de5b966436ec4d2f34c168e9cf207e74439c4b8b10",
+      "original": {
+        "path": "vps-repeat/gpio.elf",
+        "bytes": 5064,
+        "sha256": "2d599e59d743f018a992cc88b1869b6232dd84b85efaf3df8460a65a6412cef9",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-repeat/ram.bin.base64.json",
+      "bytes": 573,
+      "sha256": "97af7c9c52afd23ced0922a88f7c8bbce42ea293991ecabb8a92b44b19ab2b7d",
+      "original": {
+        "path": "vps-repeat/ram.bin",
+        "bytes": 296,
+        "sha256": "70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-repeat/ram.elf.base64.json",
+      "bytes": 6810,
+      "sha256": "96e86fcc5435223400d97ce973ca997fb2725b3456d128b865f3a5867bf45cf6",
+      "original": {
+        "path": "vps-repeat/ram.elf",
+        "bytes": 4972,
+        "sha256": "763cbc1825955944d9a0c714555ef296e927741162928a6cc76b7df43fd78177",
+        "encoding": "base64"
+      }
+    },
+    {
+      "path": "vps-repeat/receipt.json",
+      "bytes": 11286,
+      "sha256": "251a3bc9b82e6bfd4a5e67a47b07605a95313290e50247001974501c34f091e5"
+    }
+  ]
+}
