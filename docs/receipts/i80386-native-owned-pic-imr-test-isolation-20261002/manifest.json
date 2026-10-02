@@ -1,0 +1,101 @@
+{
+  "scope": "Publication-only test isolation fix; historical3792 source16 unchanged;17tests normal+actualdirtycaller, no native/guest/CIrerun",
+  "files": {
+    "controls/test-fix-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/test-fix-audit.json",
+      "bytes": 2533,
+      "sha256": "554e1777bc315bd939b8432e526b4f3875fbf9aa3b9725a819621cfaf5954022",
+      "encoding": "raw",
+      "originalBytes": 2533,
+      "originalSha256": "554e1777bc315bd939b8432e526b4f3875fbf9aa3b9725a819621cfaf5954022"
+    },
+    "controls/caller.receipt.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/caller.receipt.json",
+      "bytes": 701,
+      "sha256": "331eed1bfe324b961dc41b375ecf0ff2f96ac8cde3e865ad1863100e0da68279",
+      "encoding": "raw",
+      "originalBytes": 701,
+      "originalSha256": "331eed1bfe324b961dc41b375ecf0ff2f96ac8cde3e865ad1863100e0da68279"
+    },
+    "controls/caller.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/caller.stdout",
+      "bytes": 3944,
+      "sha256": "ba39bb23b26e802ee012fb3342cb85a77f2f1e83f9fb332cb01652eb9335ec31",
+      "encoding": "raw",
+      "originalBytes": 3944,
+      "originalSha256": "ba39bb23b26e802ee012fb3342cb85a77f2f1e83f9fb332cb01652eb9335ec31"
+    },
+    "controls/caller.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/caller.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "encoding": "raw",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "controls/dirty-caller.receipt.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/dirty-caller.receipt.json",
+      "bytes": 690,
+      "sha256": "a0c9fbcf3c3848e1563b0497132df2dd1013c6bbed1800c6699e14d0c3463dd0",
+      "encoding": "raw",
+      "originalBytes": 690,
+      "originalSha256": "a0c9fbcf3c3848e1563b0497132df2dd1013c6bbed1800c6699e14d0c3463dd0"
+    },
+    "controls/dirty-caller.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/dirty-caller.stdout",
+      "bytes": 3940,
+      "sha256": "6c78840f295953b6ad64da379315f84c3b04deaa10acf1cb2ad5911b485f4aef",
+      "encoding": "raw",
+      "originalBytes": 3940,
+      "originalSha256": "6c78840f295953b6ad64da379315f84c3b04deaa10acf1cb2ad5911b485f4aef"
+    },
+    "controls/dirty-caller.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/dirty-caller.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "encoding": "raw",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "controls/dirty-caller-status.txt": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/dirty-caller-status.txt",
+      "bytes": 101,
+      "sha256": "8761b2df7c44da930ba00445aa966306f96f90d204f969c1a26c5722d3870de1",
+      "encoding": "raw",
+      "originalBytes": 101,
+      "originalSha256": "8761b2df7c44da930ba00445aa966306f96f90d204f969c1a26c5722d3870de1"
+    },
+    "controls/run-controls.py": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-test-isolation-20261002/run-controls.py",
+      "bytes": 2424,
+      "sha256": "8d0641cce77b8fe9a4b52d85e127403c0fc2f484a141bed470f12ef156f19269",
+      "encoding": "raw",
+      "originalBytes": 2424,
+      "originalSha256": "8d0641cce77b8fe9a4b52d85e127403c0fc2f484a141bed470f12ef156f19269"
+    },
+    "failure/run.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-publication-ci-failure-20261002/run.json",
+      "bytes": 14330,
+      "sha256": "4ab551f3bfa2a3b685a5aee25086177608c61586f056efa956d461deae10be54",
+      "encoding": "raw",
+      "originalBytes": 14330,
+      "originalSha256": "4ab551f3bfa2a3b685a5aee25086177608c61586f056efa956d461deae10be54"
+    },
+    "failure/independent-failure-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-publication-ci-failure-20261002/independent-failure-audit.json",
+      "bytes": 1539,
+      "sha256": "311efdd93a1f47fc35469414927ce3d25c342cc53728525acb7dfa705ded9c82",
+      "encoding": "raw",
+      "originalBytes": 1539,
+      "originalSha256": "311efdd93a1f47fc35469414927ce3d25c342cc53728525acb7dfa705ded9c82"
+    },
+    "failure/failed.log.gz": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-publication-ci-failure-20261002/failed.log",
+      "bytes": 663776,
+      "sha256": "8ece4c60b4d76d06c343cf444e4f29018e4d35d8e569c4e667f0f38d72f836af",
+      "encoding": "lossless gzip",
+      "originalBytes": 4042745,
+      "originalSha256": "6c693836bc9065b271fbcf6808afd3ae7f34e262cdb790c271a8d7b65d1cfee9"
+    }
+  }
+}
