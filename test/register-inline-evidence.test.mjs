@@ -10,6 +10,14 @@ const json = name => JSON.parse(read(name));
 const hashes = Object.fromEntries(['baseline', 'candidate'].map(label =>
     [label, json(`${label}/BUILD-INFO.json`).targets.nodejs['labwired_wasm_bg.wasm'].sha256]));
 
+test('hosted runtime control uses two exact runtime versions without changing the measurement protocol', () => {
+    const workflow = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
+    assert.match(workflow, /options: \['22\.23\.3', '20\.20\.2'\]/);
+    assert.match(workflow, /default: '22\.23\.3'/);
+    assert.match(workflow, /node-version: \$\{\{ inputs\.node_version \}\}/);
+    assert.match(workflow, /REVERSE_ORDER: \$\{\{ inputs\.reverse \}\}/);
+});
+
 function verifySummary (summary, values) {
     assert.equal(summary.samples, 10);
     assert.equal(values.length, 10);
