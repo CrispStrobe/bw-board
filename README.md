@@ -237,6 +237,19 @@ fresh motion floor fails, and VPS repeats were deferred because load and disk
 headroom did not permit them. App pins and physical acknowledgements stay
 unchanged. See [complete live-address results and raw receipts](docs/receipts/2026-10-02-wasm-live-word-admission/README.md).
 
+The selective-placement revision has now completed its own four pinned-runtime,
+forward/reverse comparisons: GPIO medians rise **1.67–8.90%**, but motion and
+RAM medians each regress in **three of four** pairs. The forward GPIO minimum
+also drops **1.144104× → 1.078001×** despite its median gain. Motion/GPIO floors
+still fail on both slower runners; differing CPUs are not a Node-version or
+parent-versus-revision speedup control. It remains **unmerged/unqualified**.
+Both deterministic builds and **101 actual-WASM integration tests** pass, plus
+seven focused same-PC RAM→GPIO→RAM/alignment/boundary tests on **each** original
+engine. Those prove deployed behavior, not fast-path hit counts or RTx. The
+expanded future build gate requires 108 tests. No VPS repeat, production pin or
+physical acknowledgement change is claimed. See
+[all selective results, minima and original proof](docs/receipts/2026-10-02-wasm-live-word-selective/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

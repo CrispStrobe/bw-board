@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 11240853626,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI0MDg1MzYyNg==",
+      "name": "labwired-word-dispatch-regression",
+      "size_in_bytes": 2395,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11240853626",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11240853626/zip",
+      "expired": false,
+      "digest": "sha256:d6143820c882aa996cd30b5c9f233f5055aa17b1c0ea41aadcc02bc6de390c04",
+      "created_at": "2026-10-02T17:07:11Z",
+      "updated_at": "2026-10-02T17:07:11Z",
+      "expires_at": "2026-10-16T17:07:10Z",
+      "workflow_run": {
+        "id": 37037845280,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "test/wasm-live-word-dispatch-20261002",
+        "head_sha": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974"
+      }
+    }
+  ]
+}
