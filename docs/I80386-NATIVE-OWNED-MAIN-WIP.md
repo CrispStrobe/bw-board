@@ -25,3 +25,27 @@ The passed gate qualifies this isolated main-thread fixed-ROM candidate against 
 The next bounded work is to profile the new main-thread native callback and clock-replay costs before choosing another optimization, then separately broaden freely licensed AT guest support. Existing Worker attribution does not quantify CPU shares in the new topology.
 
 [Lossless source, positive/negative controls, build bindings and SHA-indexed receipts](receipts/2026-10-02-native-owned-main/index.json) preserve the evidence. Large native traces, host journals and the native binary remain outside this small archive.
+
+## Main-thread attribution (2026-10-02)
+
+One separate, unprofiled timing diagnostic preserved all 439 resumes, six CPU/board checkpoints, settled state, RAM, and physical clock counters exactly against the qualified main-thread capture. Independent review passed 18,491 checks. Its two instrumented JavaScript files reverse exactly to the frozen source; their identity is recorded separately from runtime `bab75182` and compiled addon `7df84bc2`. Startup INIT and terminal settlement are excluded from the timer buckets.
+
+| Execution-only wall bucket | Calls | Time (ms) |
+| --- | ---: | ---: |
+| Native resume, including C/NAPI snapshot construction | 439 | 337.798 |
+| Clock callback, inclusive | 9,203 | 147.251 |
+| Ordered clock replay | 9,203 | 108.890 |
+| Clock preflight | 9,203 | 18.279 |
+| Native-tick dispatch and actual board effect | 100,684 | 33.010 |
+| Quantum dispatch and actual board effect | 100,682 | 36.662 |
+| Clock state validation | 9,668 | 8.664 |
+| Clock reply allocation | 9,203 | 5.487 |
+| Full board checkpoints | 6 | 6.529 |
+
+These buckets overlap: native resume contains clock callbacks; replay contains dispatch. Per-word closures, timestamps and bookkeeping also distort this diagnostic. The times cannot be summed, converted into process-CPU shares, or used to predict a removable speed gain. The instrumented execution used 512,453 µs of process CPU; it is not another performance-gate sample and does not replace the qualified seven-pair result.
+
+The source review found that both clock methods create temporary argument arrays and effect closures for every word even when journaling is disabled. The next source-only candidate specializes those private clock methods, preserving lifecycle and before-effect guards, ordered N/Q/REP effects, exception cleanup, and exact journal events. The generic board and held H4 remain unchanged. That candidate still needs its own controls, actual parity and predeclared CPU gate before any gain is claimed.
+
+The earlier logged source-check attempt timed out after 30 seconds before its first test result. Its partial output and failure receipt remain preserved. A subsequent unchanged, SHA-bound check passed all six tests within the 120-second containment budget. Host contention is a possible explanation for the earlier timeout; its cause was not established.
+
+[Lossless diagnostic source, test attempts, authenticated capture and audit receipts](receipts/2026-10-02-native-owned-main-attribution/index.json) retain the complete small evidence set. No extra guest, native profile or performance-gate retry was performed.
