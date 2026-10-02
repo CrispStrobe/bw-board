@@ -1,0 +1,29 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_HOSTED_GATE_AUDIT_GATE_FAILED_KEEP_FE1",
+  "checks": 326182,
+  "run": 37019813658,
+  "workflowHead": "edca15eea1414baf04f36d66a13444654163eb44",
+  "records": 18,
+  "discardedWarmupChildren": 4,
+  "measuredPairs": 7,
+  "artifactPins": 997,
+  "meansUs": {
+    "BASE": 212714.42857142858,
+    "BULK": 201105.42857142858
+  },
+  "meanReductionPercent": 5.457551741066657,
+  "favorablePairs": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    true,
+    true
+  ],
+  "gatePassed": false,
+  "summarySha256": "d55d856aef061d62adf4a1cf460b520f2dc2e78910b856fbca6bb6df76fa8685",
+  "hardwareContextSha256": "8058ed3dd8c7db8f6178b99744e9eba481869178d4f131d8d3030f406caff4ca",
+  "hardware": "AMD EPYC 7763;4 logical CPUs; explicit optional cgroup v2 missing marker retained",
+  "scope": "All18 entire stored166 states/descriptors/counters/boards/reset/final/sixcuts/settled/raw+canonicalRAM/445resumes exact same-fixture reference; compiledfe1/103 distinct runtime7b/106; all-thread process.cpuUsage arithmetic and four warmup exclusion. Workflowsuccess is not performance gate success; no adoption, cumulative speedup, retry, or broader guest qualification."
+}

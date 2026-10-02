@@ -1,0 +1,70 @@
+{
+  "status": "PREDECLARED_NOT_EXECUTED",
+  "candidateSource": "7b83f0ef631ba7c1cf3dc3513f5f569f00fc49f4",
+  "candidateFiles": 106,
+  "baselineSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "baselineFiles": 103,
+  "compiledSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "addonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "samples": {
+    "warmupPairs": 2,
+    "warmupChildren": 4,
+    "measuredPairs": 7,
+    "children": 18,
+    "pairOrder": [
+      "BASE,BULK",
+      "BULK,BASE",
+      "BASE,BULK",
+      "BULK,BASE",
+      "BASE,BULK",
+      "BULK,BASE",
+      "BASE,BULK",
+      "BULK,BASE",
+      "BASE,BULK"
+    ],
+    "freshProcessEach": true,
+    "oneHeavyChildAtOnce": true
+  },
+  "gate": {
+    "meanProcessCpuReductionAtLeastPercent": 10,
+    "allSevenMeasuredPairsFavorable": true,
+    "fullSemanticParityEveryChild": true
+  },
+  "captureModes": {
+    "nativeTrace": false,
+    "hostJournal": false,
+    "profile": false
+  },
+  "metric": "process.cpuUsage user+system unchanged fe1 main execution window: all445 complete resume snapshots, six board cuts, local callbacks, GC; excludes startup, settlement and final serialization. External candidate runner inverse recovers fe1 scheduler exactly.",
+  "containment": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    }
+  },
+  "prerequisites": "All three actual BULK cells smoke-off/fulltrace-on/trace-fast exact full native/board/RAM/physical parity and full canonical parity for both traced cells; SHA-bound independent PASS audit for each; root approved bindings and explicit one-run grant.",
+  "policy": "onepredeclared gate, retainall18children/discardonlywarmuppairs, stopsemantic/cap failure, no retry/best samples; not10x/fullguest/physicalclockclaim",
+  "requiredFastBranchProof": {
+    "parityPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/trace-fast/parity.json",
+    "independentAuditPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/trace-fast/independent-audit.json",
+    "nativeTrace": true,
+    "hostJournal": false,
+    "canonicalRows": 1649271,
+    "orderedWords": 201390
+  },
+  "compiledFiles": 103,
+  "derivation": {
+    "baselinePlanPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/plan.json",
+    "baselinePlanSha256": "6e2f828daad268f1d8c81932ee778814871136449634118991b7b8d36a1d1c33",
+    "policy": "Same predeclared schedule/criterion; distinct same-ROM fe1 baseline. No combination with historical MAIN/H4 or allocation percentages."
+  }
+}

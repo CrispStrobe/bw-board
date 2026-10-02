@@ -1,0 +1,33 @@
+{
+  "runner.mjs": {
+    "originalSha256": "712511cf33e37034f277f52afbeb85ed9b040ca19d675f2eef0d5bf67eee0b17",
+    "derivedSha256": "4bb099e7b723a3418215f476f717a3683849ee957f05ea3c474d39c41f78c527",
+    "onlyPathSubstitutions": true,
+    "profileAdmissionImportSubstitution": true
+  },
+  "admission.mjs": {
+    "originalSha256": "ee33575bd58c34283ce3ab8203fc0a8732062df777bb9459f1cf471794e483f6",
+    "derivedSha256": "80a172b3d0d7d054d9913f7d2cb743f5d7ac012bbe0146ce39ffc5549a409687",
+    "onlyPathSubstitutions": true
+  },
+  "run.py": {
+    "originalSha256": "87230b61f7747d2b2c1e1e1974838a43e1345786d095cd131a034c4e6dac7b51",
+    "derivedSha256": "03589da87e8342615f6bd3cadbfe0b6e7a48920c5d1031e10733066c07b13edc",
+    "allowedChanges": "Node path and explicit current compiled build proof (saved reference unchanged)"
+  },
+  "configuration": {
+    "originalSha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+    "derivedSha256": "d1e65fb1f8a72df91febf5d68f26a3e3b2c647a5e8636a639c8ba76dcf41f36f",
+    "allowedChanges": "BIOS/VGA/log path fields only; source-authenticated BIOS bytes"
+  },
+  "base-runner.mjs": {
+    "originalSha256": "68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b",
+    "derivedSha256": "30180ffb0010ef47db59392d914a9f209e0e1b4a9c79280e89440768fd7c2bc9",
+    "inverseExact": true
+  },
+  "profile-admission": {
+    "originalSha256": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb",
+    "derivedSha256": "f553dfcd927903ddcd1b3139d05d6c1b3334a39cb8541ffb0d15b2695debe6fc",
+    "allowedChanges": "frozen import/root paths and exact path-derived configuration SHA only"
+  }
+}

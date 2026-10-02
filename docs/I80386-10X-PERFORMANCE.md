@@ -1,5 +1,8 @@
 # Experimental 80386 speed path
 
+
+The [single complete hosted bulk-clock gate](I80386-OWNED-CLOCK-BULK-RESULTS.md) does not qualify adoption: 5.4576% lower mean process CPU and five of seven favorable pairs, against the required 10% and seven of seven. All 18 child semantics pass independent audit. Keep fe1; this is fixed-fixture CPU accounting on a GitHub runner exposing four logical AMD EPYC 7763 CPUs, not physical 386DX RTx or a cumulative gain.
+
 The [2026-09-29 plain RAM read shortcut trial](I80386-PLAIN-RAM-READ-NEGATIVE.md)
 stopped after its second 60-million-step Windows pair reversed the first
 pair's timing result. All four complete reports matched after removing only

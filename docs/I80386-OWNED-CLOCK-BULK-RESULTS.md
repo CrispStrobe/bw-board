@@ -1,0 +1,20 @@
+# Owned bulk-clock CPU result: keep the baseline
+
+The private clock aggregation candidate **does not pass its adoption gate**. The single complete hosted experiment measured 5.4576% less mean process CPU, with five of seven favorable pairs. The required threshold was at least 10% less mean CPU and all seven pairs favorable. Keep frozen baseline `fe1eff2039520536350922a2164c8bbe29404c68`; candidate `7b83f0ef631ba7c1cf3dc3513f5f569f00fc49f4` remains experimental. No favorable retry is proposed.
+
+| Process CPU, measured execution window | Baseline | Candidate |
+| --- | ---: | ---: |
+| Mean of seven samples | 212,714.43 µs | 201,105.43 µs |
+| Samples, pair order | 206610, 216919, 214579, 208161, 210551, 210108, 222073 | 196076, 187424, 189875, 215698, 217421, 206070, 195174 |
+
+[Run 37019813658](https://github.com/CrispStrobe/bw-board/actions/runs/37019813658) used reviewed workflow head `edca15eea1414baf04f36d66a13444654163eb44`, Ubuntu 24.04, Node 22.23.3, and a runner exposing four logical CPUs identified as AMD EPYC 7763 64-Core Processor. The CPU model string describes the host; this runner did not receive 64 cores. Optional cgroup quota paths were absent and recorded explicitly; no unlimited-quota inference follows.
+
+All 18 sequential children completed: two discarded warmup pairs followed by seven alternating measured pairs. Every child retained the unchanged 445-resume execution window, six board cuts, snapshots, callback effects, GC and all-process user+system CPU accounting. Startup, terminal settlement and final serialization are excluded from the measured window. All child captures match the stored baseline CPU snapshots, descriptors, device states, raw and canonical RAM hashes, reset witnesses, physical counts, N100696/Q100694, terminal state and closure. Independent audit passed 326,182 checks, including all 997 pinned artifact inputs through retained files, archive bytes or the exact workflow source. The coordinator separately recomputed the sample arithmetic and checked all 18 complete captures.
+
+The same CI artifact, compiled from fe1, served both arms. Original build artifact `11226630502` from run `37006765968`, ZIP `0335f4c5088280cfcdf00186f5e0ca59ff431442edc3a978dd26b7dc2341a0e0`, and binary `8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841` preserve their original provenance. The candidate adds only the separately authenticated 106-file runtime closure. Relocation changes paths and derived records, with exact source inverses retained.
+
+The earlier VPS gate timed out in a discarded warmup and completed zero measured pairs. The first hosted run, `37018977889`, failed in optional cgroup context collection before any guest child. The VPS attempt remains recorded in the [preparation notes](I80386-OWNED-CLOCK-BULK-GHCI-WIP.md); the first hosted failure and context correction are retained by [PR #241](https://github.com/CrispStrobe/bw-board/pull/241). The corrected hosted run supplies the single complete result; no samples are selected across attempts. Workflow success means the protocol completed, and must not be confused with `gatePassed: false`.
+
+The [lossless receipt archive](receipts/2026-10-02-owned-clock-bulk-ghci/manifest.json) retains all 18 captures, inputs, exit records, streams, guest configuration/logs, summary, pre/post admission evidence, actual context and official metadata. Official result artifact `11232663641` has ZIP SHA256 `18ecd75342d8d2c6d417f6412cd349043682a8ffe4d2a3628aae4270c7c9a6f9`; the complete ZIP remains locally retained, with GitHub retention of 14 days. Binary/source archives are not copied into these notes.
+
+This metric is process CPU for a fixed protected-mode/PIT fixture. It does not establish physical 16 MHz 386DX RTx, native AT boot, Windows/Doom compatibility, or a 10× gain. It cannot be multiplied by the earlier MAIN gain or the separately rejected allocation experiment. The next performance item is a separate profile of the baseline to identify the dominant costs, followed by a distinct candidate with its own semantic and ordered CPU evidence.
