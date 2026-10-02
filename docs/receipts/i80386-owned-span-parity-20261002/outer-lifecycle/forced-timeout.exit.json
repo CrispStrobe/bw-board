@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/opt/miniconda/bin/python3",
+    "/mnt/volume1/tmp-astra/386-owned-span-hosted-outer-lifecycle-control-20261002/outer.py"
+  ],
+  "timeoutSeconds": 1,
+  "timedOut": true,
+  "returncode": -9,
+  "status": "OUTER_COMMAND_FAILURE_PRESERVED_NO_RETRY",
+  "pid": 1760287,
+  "killedDescendants": [
+    {
+      "pid": 1760299,
+      "group": 1760299
+    }
+  ],
+  "wallSeconds": 1.3816637769341469,
+  "signal": 9
+}

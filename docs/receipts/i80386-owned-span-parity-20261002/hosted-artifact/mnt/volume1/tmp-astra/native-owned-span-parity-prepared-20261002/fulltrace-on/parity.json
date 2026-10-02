@@ -1,0 +1,12 @@
+{
+  "status": "SPAN_CAPTURE_ON_EXACT_PARITY_PASS",
+  "checks": 1408,
+  "canonicalRows": 1649271,
+  "logicalClockRows": 201390,
+  "PORTinRows": 2,
+  "captureSha256": "2705456dda873e6c245e734f7d2e2747ca5b60bea676ad19316a9940e20bc6ca",
+  "journalSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+  "sourceRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "referenceRevision": "b68f316bf25a08012a110fcd426c435c2b588ad9",
+  "scope": "All166 native words and complete native snapshot fields exact against qualified fe1 baseline in every mode; ON additionally matches candidate OFF fields; Eight recorded JS CPU fields exact; EDX/CR0 exact documented per-core profile rule, raw RAM hashes preserved with exact eight-byte reset witness verified and canonicalRAM anchor. Fullboard/IN witness checked. No invented unrecorded JS CPU state, no historical439/trace-row assumptions, no performance or broadAT claim."
+}

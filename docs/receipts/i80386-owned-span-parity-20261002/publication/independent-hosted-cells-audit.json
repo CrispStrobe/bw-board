@@ -1,0 +1,27 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_HOSTED_SPAN_THREE_CELL_CORE_PARITY_PENDING_PROVENANCE_ADDENDUM",
+  "cells": [
+    {
+      "mode": "smoke-off",
+      "captureSha256": "683e2936d6d602173a4eac8623a9119f121f80e980f3d2b5b620d9cdf5f71561",
+      "canonicalRows": 0,
+      "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stateParity": true
+    },
+    {
+      "mode": "fulltrace-on",
+      "captureSha256": "2705456dda873e6c245e734f7d2e2747ca5b60bea676ad19316a9940e20bc6ca",
+      "canonicalRows": 1649271,
+      "journalSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "stateParity": true
+    },
+    {
+      "mode": "trace-fast",
+      "captureSha256": "8148fb8e23a0be57ea221f5da4fa2233bd65e108e32e8150f380a974d3e03274",
+      "canonicalRows": 1649271,
+      "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stateParity": true
+    }
+  ],
+  "scope": "Allfullstored166/boards/RAM/physical exact baseline;445generated snapshots versus eightretained explicit. OriginalofficialZIP/event/pinclosure require separate metadata audit; no speed/adoption."
+}

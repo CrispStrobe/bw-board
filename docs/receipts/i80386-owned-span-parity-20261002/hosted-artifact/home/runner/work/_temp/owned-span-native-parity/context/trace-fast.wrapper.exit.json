@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/usr/bin/python3",
+    "/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/run.py",
+    "trace-fast"
+  ],
+  "timeoutSeconds": 200,
+  "timedOut": false,
+  "returncode": 0,
+  "status": "OUTER_COMMAND_EXIT_PASS",
+  "pid": 6897,
+  "wallSeconds": 14.348815191,
+  "signal": null
+}

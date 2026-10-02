@@ -1,0 +1,30 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 430,
+  "stderrSha256": "c54d723498616f0e1f400c42555d538ade91dc0f34b5bd08e7edf486bd09dec5",
+  "wallNs": 8182856593,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-owned-span-runtime-source-20261002/scripts/run-i80386-native-owned-span.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}

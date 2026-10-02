@@ -1,0 +1,14 @@
+{
+  "status": "ROOT_ACTUAL_SPAN_TRACE_ON_JOURNAL_ON_PARITY_PASS_NOT_SPEED_GATE",
+  "sourceRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "captureSha256": "9658aa8f545a36064ff2ff36a3471ed2302fd164fb993b8021c66b8c8f00a960",
+  "paritySha256": "aa2985ecaf5e456a6e04b50abde3e2fb7e7c109682aa67a786cd83c8386d52e3",
+  "canonicalRows": 1649271,
+  "logicalClockRows": 201390,
+  "journalRows": 209871,
+  "journalSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+  "resumes": 445,
+  "checkpointCount": 6,
+  "normalNativeSnapshotWords": 166,
+  "scope": "ActualboundedON child/exactcomplete retained snapshots/boards/provenance; frozencomparator andindependentactualaudit passedallcanonicalrows andwholejournal. No speed/adoption/generalAT/RTx."
+}
