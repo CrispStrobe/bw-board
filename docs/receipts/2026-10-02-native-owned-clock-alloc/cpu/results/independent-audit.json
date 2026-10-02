@@ -1,0 +1,13 @@
+{
+  "status": "PASS_ACTUAL18_AUDIT_GATE_FAIL_KEEP_QUALIFIED_MAIN",
+  "checks": 319728,
+  "summarySha256": "ecd4a42322c6e790c701cd87ff21cf2e9feffc394647c0229c710afc52c6d687",
+  "scriptSha256": "6eb652ec11b3508e9da0c8d00f8e52ef0f15c61621d446931382bedcdaaff2df",
+  "mainMeanUs": 379478.0,
+  "allocMeanUs": 358373.71428571426,
+  "meanReductionPercent": 5.561399004497158,
+  "favorablePairs": 5,
+  "sampleCount": 18,
+  "warmupChildrenDiscarded": 4,
+  "scope": "Matchedwholeprocess allthreadCPU sameexecutionwindow; all18fullstate+physicalparity. Nominal gain insufficient>=10pct/all7criterion; noadoption/retry. Prior3modeparity remains semanticqualification only, no broaderguest/RTxclaim."
+}

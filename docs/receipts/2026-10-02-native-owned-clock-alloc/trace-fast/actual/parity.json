@@ -1,0 +1,28 @@
+{
+  "status": "ALLOC_FAST_PATH_FULL_CANONICAL_PARITY_PASS",
+  "canonicalRows": 1649067,
+  "captureSha256": "aec02bab81f1248229975f38b7a1c5cd8ee20f91f35ed572b7a9541f7ba16091",
+  "sourceRevision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "fastPathProof": {
+    "nativeTrace": true,
+    "hostJournal": false,
+    "compactSink": "actual source-owned factory receives literal null from authenticated false boolean input; unchanged Hot constructor stores null, no runtime mutation hooks",
+    "nativeWords": 100684,
+    "quantumWords": 100682,
+    "orderedWords": 201366,
+    "coverage": "source-backed branch inference from exact input/constructor/guard plus actual logical counters; not a separate instrumented fastpath counter"
+  },
+  "snapshotFields": [
+    "reset",
+    "final",
+    "checkpoints",
+    "settled",
+    "ramSha256",
+    "resumes",
+    "terminal",
+    "closed"
+  ],
+  "journalRows": 0,
+  "scope": "fulloriginal CPUrows+snapshot/device/RAM parity exercising CAPOFFclock implementation; no speedgate or broaderguestclaim"
+}

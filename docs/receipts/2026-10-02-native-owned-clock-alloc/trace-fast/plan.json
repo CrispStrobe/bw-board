@@ -1,0 +1,12 @@
+{
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "cell": "trace-fast",
+  "nativeTrace": true,
+  "hostJournal": false,
+  "sourceRevision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "comparison": "all1649067canonicalCPUrows versusMAINCAPON, allfullguestfields/physicalcountersexactMAINCAPOFF, emptyjournal",
+  "fastPath": "source-boundhostJournalfalse\u2192compactSinknull\u2192privateclassCAPOFFbranches; actualN100684/Q100682wordcounts, no addedruntimeinstrumentation",
+  "limits": "sameheap512/CPUwall120/nice10/file256/core0/5blankenv; original executedparityhelpers untouched"
+}

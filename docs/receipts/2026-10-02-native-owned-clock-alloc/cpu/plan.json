@@ -1,0 +1,65 @@
+{
+  "status": "PREDECLARED_NOT_EXECUTED",
+  "candidateSource": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "candidateFiles": 100,
+  "baselineSource": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "baselineFiles": 95,
+  "compiledSource": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "samples": {
+    "warmupPairs": 2,
+    "warmupChildren": 4,
+    "measuredPairs": 7,
+    "children": 18,
+    "pairOrder": [
+      "MAIN,ALLOC",
+      "ALLOC,MAIN",
+      "MAIN,ALLOC",
+      "ALLOC,MAIN",
+      "MAIN,ALLOC",
+      "ALLOC,MAIN",
+      "MAIN,ALLOC",
+      "ALLOC,MAIN",
+      "MAIN,ALLOC"
+    ],
+    "freshProcessEach": true,
+    "oneHeavyChildAtOnce": true
+  },
+  "gate": {
+    "meanProcessCpuReductionAtLeastPercent": 10,
+    "allSevenMeasuredPairsFavorable": true,
+    "fullSemanticParityEveryChild": true
+  },
+  "captureModes": {
+    "nativeTrace": false,
+    "hostJournal": false,
+    "profile": false
+  },
+  "metric": "process.cpuUsage user+system same original main execution windows including local scheduler/callbacks/all439fullsnapshots/sixboardcuts/GC; excludes startup/settlement/finalserialization, no timer/profileinstrumentation",
+  "containment": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    }
+  },
+  "prerequisites": "finalpeerfreezePASS; actualCAPOFF/CAPON fullparity; distinctnativeTraceTRUE/hostJournalFALSE fastbranchall1649067canonicalrows+fullsnapshot/physical/RAM/emptyjournal proof AND rootSHA-boundindependentauditPASS; rootexplicitgrant. No new compiledaddon.",
+  "policy": "onepredeclared gate, retainall18children/discardonlywarmuppairs, stopsemantic/cap failure, no retry/best samples; not10x/fullguest/physicalclockclaim",
+  "requiredFastBranchProof": {
+    "parityPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/parity.json",
+    "status": "ALLOC_FAST_PATH_FULL_CANONICAL_PARITY_PASS",
+    "independentAuditPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/independent-audit.json",
+    "nativeTrace": true,
+    "hostJournal": false,
+    "canonicalRows": 1649067,
+    "orderedWords": 201366
+  }
+}

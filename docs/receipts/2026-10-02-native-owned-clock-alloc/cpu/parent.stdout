@@ -1,0 +1,19 @@
+{"pair": 0, "arm": "MAIN", "warmup": true, "executionCpuTotalUs": 328917}
+{"pair": 0, "arm": "ALLOC", "warmup": true, "executionCpuTotalUs": 359633}
+{"pair": 1, "arm": "ALLOC", "warmup": true, "executionCpuTotalUs": 368621}
+{"pair": 1, "arm": "MAIN", "warmup": true, "executionCpuTotalUs": 406029}
+{"pair": 2, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 409439}
+{"pair": 2, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 405725}
+{"pair": 3, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 353540}
+{"pair": 3, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 333243}
+{"pair": 4, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 361558}
+{"pair": 4, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 332063}
+{"pair": 5, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 338664}
+{"pair": 5, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 407187}
+{"pair": 6, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 398465}
+{"pair": 6, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 297849}
+{"pair": 7, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 351957}
+{"pair": 7, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 353397}
+{"pair": 8, "arm": "MAIN", "warmup": false, "executionCpuTotalUs": 393057}
+{"pair": 8, "arm": "ALLOC", "warmup": false, "executionCpuTotalUs": 428818}
+{"status": "ACTUAL_ALLOC_PROCESS_CPU_GATE_FAIL_KEEP_MAIN", "mainSamplesUs": [409439, 333243, 361558, 407187, 398465, 353397, 393057], "allocSamplesUs": [405725, 353540, 332063, 338664, 297849, 351957, 428818], "mainMeanUs": 379478.0, "allocMeanUs": 358373.71428571426, "meanReductionPercent": 5.561399004497158, "favorablePairs": [true, false, true, true, true, true, false], "allSevenFavorable": false, "gatePassed": false, "planSha256": "6e2f828daad268f1d8c81932ee778814871136449634118991b7b8d36a1d1c33", "scope": "process.cpuUsage user+system same original main execution windows including local scheduler/callbacks/all439fullsnapshots/sixboardcuts/GC; excludes startup/settlement/finalserialization, no timer/profileinstrumentation", "physicalRTxMeasured": false, "broaderGuestQualification": false}

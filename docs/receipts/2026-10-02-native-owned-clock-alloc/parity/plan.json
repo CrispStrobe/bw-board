@@ -1,0 +1,16 @@
+{
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "sourceRevision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "sourceCount": 100,
+  "qualifiedReferenceRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "compiledCount": 86,
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "cells": [
+    "smoke-off",
+    "fulltrace-on"
+  ],
+  "prerequisites": "peerfinalsourcefreeze/sourceauthentication plus rootgrant; no addon recompile",
+  "comparison": "allfullnative/board/RAM/physicalsnapshotcounterfields exactbab439/6cuts; CAPONall1649067CPUrows+bf12journal; CAPOFFemptyjournal",
+  "containment": "heap512 CPUwall120 nice10 file256 core0 fiveblankenv; regularstreams exclusive distinctoutputs"
+}

@@ -1,0 +1,869 @@
+{
+  "status": "ACTUAL_ALLOC_PROCESS_CPU_GATE_FAIL_KEEP_MAIN",
+  "records": [
+    {
+      "pair": 0,
+      "arm": "MAIN",
+      "warmup": true,
+      "executionCpuTotalUs": 328917,
+      "executionNs": 570539619,
+      "fullSemanticParity": true,
+      "captureSha256": "80ae49112bc28b1ec3c6187933a2432174f80261206de3404a545f502f828134",
+      "inputSha256": "1c3be52147de3f0cf553c38eab0b8b4e143727fb375b5131fa170d51864360ba",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 17.770102040842175,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "e5af801b81aa4a2d394f482066dad369fb9c64ca3823336e7a0fe87c7b38c107"
+          }
+        }
+      }
+    },
+    {
+      "pair": 0,
+      "arm": "ALLOC",
+      "warmup": true,
+      "executionCpuTotalUs": 359633,
+      "executionNs": 1698142581,
+      "fullSemanticParity": true,
+      "captureSha256": "db14cb080f85e54b97fe08f712f09025e01e117c9fd74e96c6b5f3f1f062e3f6",
+      "inputSha256": "cd6ace5aacef346e8f7b9f2412a0b623ce5a9c5791a55a01cde676c9c3469349",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 28.35475634224713,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "70d6c44903f834a104ae5117211196b3254f9a5b5dd954edc47e30033e954b17"
+          }
+        }
+      }
+    },
+    {
+      "pair": 1,
+      "arm": "ALLOC",
+      "warmup": true,
+      "executionCpuTotalUs": 368621,
+      "executionNs": 1693219891,
+      "fullSemanticParity": true,
+      "captureSha256": "6a0aaa9ac3a61c6c8060916437c7ffe9fa7aef4aa2b41830338b299cbc279a1d",
+      "inputSha256": "c8facd870b289167f68cf4732716a561aca15527ef7f8c49822e02e994750700",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 58.3937218580395,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "586e1370a4107c897b72481bcb6cec0effad12cb334138fa8cb23608aefc6cab"
+          }
+        }
+      }
+    },
+    {
+      "pair": 1,
+      "arm": "MAIN",
+      "warmup": true,
+      "executionCpuTotalUs": 406029,
+      "executionNs": 4102954603,
+      "fullSemanticParity": true,
+      "captureSha256": "e7d5a41fd2263db867eceec158ba189a7e61c6137c3d0b4a839ca3006b3880a1",
+      "inputSha256": "dec760f9ec5652b1161ad71222cee99be4db7521a4a51633e3e7030ec5fd274d",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 63.67479158192873,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "20603d7f3da3a6f2c0a688a32a6945ee6ef601ccc5a73e07c4f9912b0a1147e9"
+          }
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 409439,
+      "executionNs": 3644338059,
+      "fullSemanticParity": true,
+      "captureSha256": "83e2accdb5563605cdd772e3a9d533fead89fdaf4d5384c166d85a01aeaf6d7e",
+      "inputSha256": "a1d2c58b8818c4875212e882dce4ed01d99addef1e0425a478bede2b330aa644",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 76.12241516634822,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "dea827d129bc92a6b8a25a42635d7f6b0abb8e4d4aed6e0a81cd27cbd556b4a9"
+          }
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 405725,
+      "executionNs": 2848296232,
+      "fullSemanticParity": true,
+      "captureSha256": "b9eefd32fb32769adfa3bf4b793d145a3780de710527767d701e9b60cb106820",
+      "inputSha256": "29a35229cdb8cf6f661c51d8abd3115e6cd395d30870b1fb2a7f9cf32a8d37b0",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 51.14276453666389,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "093a992d27d1a2e4ec28769a2e23a21663a5bd6197197cd816cbf9a1abef77df"
+          }
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 353540,
+      "executionNs": 3218023521,
+      "fullSemanticParity": true,
+      "captureSha256": "88e0e34564e880354acd11b2a0711891a01adddde294f40635189da38526bd70",
+      "inputSha256": "0405e4a4b05d214af2da8d2f13dbe7fd853a009be48841fdfb28ad708f77076a",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 31.760494466871023,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "ad6ba894c59a48b329bf949b942adfe624b737b6d20567a646a4227810ccb346"
+          }
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 333243,
+      "executionNs": 1467865411,
+      "fullSemanticParity": true,
+      "captureSha256": "dc44bdcd19a1d6b46ff1b9bd5680a0b14ed9366da382b8712a7d53d02837fe6f",
+      "inputSha256": "2305bceaade4f3f8d66b154fced1d5406fcdd0cdcbae8e2a61054176942471ac",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 28.859461072832346,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "20ec9f9cf6258ca642ef0a9beb1b53be128c439a71914e2fed454bafdf9206de"
+          }
+        }
+      }
+    },
+    {
+      "pair": 4,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 361558,
+      "executionNs": 2101547354,
+      "fullSemanticParity": true,
+      "captureSha256": "535563bc16bd72ed6d846493e112971e3866743d407cede96c17aafcd71d4ab6",
+      "inputSha256": "de9d380b7aabca7e202f9806b8304615f7ccf0c0928918993b820ab27b569d28",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 29.89857669174671,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "2fe9e92ebea565cf4763beba0259851eb4e7474b44a143e027cd0649a33990ad"
+          }
+        }
+      }
+    },
+    {
+      "pair": 4,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 332063,
+      "executionNs": 677703454,
+      "fullSemanticParity": true,
+      "captureSha256": "7a02ab4ea475847c0d0c73094c807c15dcb8afc520ec073f669fe91fec964701",
+      "inputSha256": "d4ea050ce68a536886a7408370096da69fdefce316b837b14d954c12e6f8ea61",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 16.04867989011109,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "d8a64c77aeb39cbc36fc3c76db48fd21880566d1e29dc3beaf66e52ba7846491"
+          }
+        }
+      }
+    },
+    {
+      "pair": 5,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 338664,
+      "executionNs": 763851058,
+      "fullSemanticParity": true,
+      "captureSha256": "e540ca0e80dc00966092c3db46bd34229dd424be1ce1338f3738958c48f3f723",
+      "inputSha256": "b3407a5e511a1fafe7a75f9bfcca1d61f1d75079ca28e1ae61118345b37d85ed",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 13.869290148839355,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "3a1f4cff85e136bec574c13b46cf3f88f6b5940d379abe03b779e68780a0e2f6"
+          }
+        }
+      }
+    },
+    {
+      "pair": 5,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 407187,
+      "executionNs": 701810655,
+      "fullSemanticParity": true,
+      "captureSha256": "cfe530ca7058b5d81d958771eb7fc97d4259606a8fd1715f09aa23e74b9d79b2",
+      "inputSha256": "7a5468e289b947852e77caeed4211432156662ad09695a64e4be83836852521e",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 9.190572917461395,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "fa61fa2401fcf1a81a32daa8085e32c15245c11c97de73c142c60a8a480e635b"
+          }
+        }
+      }
+    },
+    {
+      "pair": 6,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 398465,
+      "executionNs": 365845704,
+      "fullSemanticParity": true,
+      "captureSha256": "0d9adc47b06aa00c6f876296c07e05002dc1a9562591e6f02d9ffad5b49ebbd9",
+      "inputSha256": "43e3cc13322d0d30efb9dfa3b5c074dec4a52b7138570bad86359ee0f2de5b4f",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 7.994118062779307,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "5e0d4ca4f799a69e5cd07aab8ba3ff1b73761857f827d6510ef9325f2c58498f"
+          }
+        }
+      }
+    },
+    {
+      "pair": 6,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 297849,
+      "executionNs": 354633456,
+      "fullSemanticParity": true,
+      "captureSha256": "b438f4b8a1356b8bcb51d33e4300f34246da5cddf071ef82f424ae451d54b8ef",
+      "inputSha256": "e7068ff95c6d7d64f74aa18637b7e95399b231ddccb6f561c51dcf747ca38a1f",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 7.680479004979134,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "9299cca3afa1cd4d3adf401d9af08f3ffe63c330e7e77a28346bb49df9c1167c"
+          }
+        }
+      }
+    },
+    {
+      "pair": 7,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 351957,
+      "executionNs": 361486568,
+      "fullSemanticParity": true,
+      "captureSha256": "3c7f47df5b0a4ed68974549d1695cdd3f9dd61a81aa9ba57885e5c5099a2442d",
+      "inputSha256": "0b0c3e75e8cf4120ac7bec4409d3398b479d25c4e4807e3d47df07b08c04c346",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 10.444457957521081,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "07167d98ccfbbf04906ad62888da913e89070dd5d8970471121ec36be0ae2b93"
+          }
+        }
+      }
+    },
+    {
+      "pair": 7,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 353397,
+      "executionNs": 453434765,
+      "fullSemanticParity": true,
+      "captureSha256": "94a403df94e844a6c581a0529ec72ce5d1ecfe887a3f8ea059cdd0496013f445",
+      "inputSha256": "afaa756dea167a1621668bdf41b42e7c3630ce7bedd008d559920386dd80430e",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 7.784290911629796,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "bc838b478a921660105c9f9432306746e4cd5ff384ca1c90e91f7050b1baef29"
+          }
+        }
+      }
+    },
+    {
+      "pair": 8,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 393057,
+      "executionNs": 366637307,
+      "fullSemanticParity": true,
+      "captureSha256": "86edbf240e19cc5af7b36bdda9119951ba8bf1133bbba88b7dfb6d56406a95cb",
+      "inputSha256": "53d6fceade5cc18a4839e5ad79b0983e71ebfbd0a6c85fa54a3e5465eaa7db09",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 7.262230180203915,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 428,
+            "sha256": "a781a213fbbfc8437e0be3dfe390b3d65052282e43fbfaade8922c813dbc8d65"
+          }
+        }
+      }
+    },
+    {
+      "pair": 8,
+      "arm": "ALLOC",
+      "warmup": false,
+      "executionCpuTotalUs": 428818,
+      "executionNs": 341451217,
+      "fullSemanticParity": true,
+      "captureSha256": "ec170f1d674a52c570b5700aaa72109ccc76a2c576e90da41350943f95accfa0",
+      "inputSha256": "7c5097b9e26833b6194e5ad5b36b66b25cc8435b75c5406edf0067976cd9181c",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-ALLOC.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 7.455738991498947,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0,
+          "blankEnvironment": {
+            "NODE_OPTIONS": "",
+            "NODE_PATH": "",
+            "LD_PRELOAD": "",
+            "LD_AUDIT": "",
+            "BW_HOT_NAPI_PROFILE": ""
+          }
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 430,
+            "sha256": "a8f8a9daeabf14c2bf7207583dc679194380812871a0ec2e781c874232aa809e"
+          }
+        }
+      }
+    }
+  ],
+  "mainSamplesUs": [
+    409439,
+    333243,
+    361558,
+    407187,
+    398465,
+    353397,
+    393057
+  ],
+  "allocSamplesUs": [
+    405725,
+    353540,
+    332063,
+    338664,
+    297849,
+    351957,
+    428818
+  ],
+  "mainMeanUs": 379478.0,
+  "allocMeanUs": 358373.71428571426,
+  "meanReductionPercent": 5.561399004497158,
+  "favorablePairs": [
+    true,
+    false,
+    true,
+    true,
+    true,
+    true,
+    false
+  ],
+  "allSevenFavorable": false,
+  "gatePassed": false,
+  "planSha256": "6e2f828daad268f1d8c81932ee778814871136449634118991b7b8d36a1d1c33",
+  "scope": "process.cpuUsage user+system same original main execution windows including local scheduler/callbacks/all439fullsnapshots/sixboardcuts/GC; excludes startup/settlement/finalserialization, no timer/profileinstrumentation",
+  "physicalRTxMeasured": false,
+  "broaderGuestQualification": false
+}
