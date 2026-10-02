@@ -1,0 +1,90 @@
+{
+  "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "wasmBindgen": "0.2.121",
+  "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+  "builtAt": "2026-10-01T19:57:59.544Z",
+  "targets": {
+    "nodejs": {
+      "labwired_wasm.js": {
+        "bytes": 135762,
+        "brotliBytes": 25386,
+        "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+      },
+      "labwired_wasm_bg.wasm": {
+        "bytes": 25387075,
+        "brotliBytes": 2756774,
+        "sha256": "98791ce73f5a55cc01c32de182f298858b8b5d4f3b9368cb9e454210e1e25337"
+      }
+    },
+    "web": {
+      "labwired_wasm.js": {
+        "bytes": 138392,
+        "brotliBytes": 25941,
+        "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+      },
+      "labwired_wasm_bg.wasm": {
+        "bytes": 25387075,
+        "brotliBytes": 2756774,
+        "sha256": "98791ce73f5a55cc01c32de182f298858b8b5d4f3b9368cb9e454210e1e25337"
+      }
+    }
+  },
+  "rawBytes": 136668412,
+  "postprocess": {
+    "schema": "labwired.binaryen-pilot.v1",
+    "diagnosticOnly": true,
+    "processedAt": "2026-10-02T10:55:41.429Z",
+    "optimizer": "binaryen",
+    "version": "123.0.0",
+    "versionOutput": "wasm-opt version 123 (version_123)",
+    "mode": "locals",
+    "flags": [
+      "--simplify-locals",
+      "--coalesce-locals",
+      "--optimize-instructions",
+      "--dce",
+      "--vacuum",
+      "--strip-debug",
+      "--strip-producers",
+      "--enable-bulk-memory",
+      "--enable-simd",
+      "--enable-nontrapping-float-to-int",
+      "--enable-sign-ext",
+      "--enable-reference-types",
+      "--enable-multivalue"
+    ],
+    "toolSha256": "d66c6724c07334155720eb2def29c434dcaaf741ce859b4f7f389e22674f9c4a",
+    "releaseArchiveSha256": "e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe",
+    "releaseUrl": "https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz",
+    "sourceBuildInfoSha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16",
+    "sourceTargets": {
+      "nodejs": {
+        "labwired_wasm.js": {
+          "bytes": 135762,
+          "brotliBytes": 25386,
+          "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      },
+      "web": {
+        "labwired_wasm.js": {
+          "bytes": 138392,
+          "brotliBytes": 25941,
+          "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      }
+    },
+    "reusedIdenticalTargetModule": true,
+    "publication": false,
+    "appPinChanges": false
+  }
+}
