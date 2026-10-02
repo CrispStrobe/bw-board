@@ -393,7 +393,7 @@ export const INPUTS = [
         gates: ['test/labwired-adapter.test.mjs', 'test/labwired-roundtrip.test.mjs',
             'test/pad-drive-parity.test.mjs', 'test/labwired-firmware-only.test.mjs',
             'test/labwired-microbit-matrix.test.mjs', 'test/labwired-microbit-motion.test.mjs',
-            'test/labwired-f0-timing.test.mjs'],
+            'test/labwired-f0-timing.test.mjs', 'test/labwired-f0-gpio-profile.test.mjs'],
         // Motion additionally requires arm-none-eabi-gcc and an engine with
         // LSM303AGR. labwired-wasm.yml's opt-in motion job installs the compiler
         // and makes absent artifacts/tools, skipped tests and sub-1x windows fail.
@@ -401,6 +401,8 @@ export const INPUTS = [
         // LABWIRED_F0_REQUIRED makes missing inputs fatal, and LABWIRED_REQUIRE_F0_RTX
         // enables its five-window 1x gate. WASM presence alone proves neither tool
         // usability nor timing qualification. These are absent from ordinary CI.
+        // The GPIO-only diagnostic has the same compiler/artifact requirements;
+        // its optional hosted job requires actual evidence with zero skips.
         obtain: 'point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node); '
             + 'for active F0 timing also install arm-none-eabi-gcc and arm-none-eabi-objcopy',
         ciAvailable: false,
