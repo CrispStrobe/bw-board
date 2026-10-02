@@ -178,6 +178,15 @@ remains draft: hosted Node 20 controls gained GPIO/motion but reverse-order RAM
 fell **22.03%**, so this variant is not qualified for landing. Hardware
 acknowledgements remain unchanged. See [register-inlining results and raw receipts](docs/receipts/2026-10-02-wasm-register-inline/README.md).
 
+A narrower T16-only register variant avoided the large interpreter expansion,
+but still is **not qualified for landing**. Hosted Node 20 GPIO declined
+**8.87% / 5.02%** and RAM **1.70% / 0.93%**; hosted Node 22 RAM gained
+**13.67% / 13.31%**, with worse minima and mixed motion. VPS reverse F0 lost
+about **19%** on both workloads. All 101 actual WASM integration tests and
+independent determinism passed; the fresh motion floor failed (**0.764890×
+median / 0.751187× minimum**). Engine/app pins and hardware acknowledgements
+remain unchanged. See [restricted T16 results and original receipts](docs/receipts/2026-10-02-wasm-t16-register-inline/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
