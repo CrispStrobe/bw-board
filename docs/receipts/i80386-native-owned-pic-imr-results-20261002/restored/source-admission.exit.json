@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restore-prepared-20261002/authenticate.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restored-20261002/static-input.json"
+  ],
+  "returncode": 0,
+  "timeout": false,
+  "wallSeconds": 17.308122968301177,
+  "streams": {
+    "stdout": "79ad5e5bfd5d8d6872205da2cfd308c1a5da9f2882f52a15edf4e61c0367d6b3",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

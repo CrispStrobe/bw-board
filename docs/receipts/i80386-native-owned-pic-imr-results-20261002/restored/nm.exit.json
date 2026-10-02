@@ -1,0 +1,15 @@
+{
+  "command": [
+    "nm",
+    "-D",
+    "--defined-only",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restored-20261002/prepared/bochs/bw_direct.node"
+  ],
+  "returncode": 0,
+  "timeout": false,
+  "wallSeconds": 0.17040167935192585,
+  "streams": {
+    "stdout": "0c5943c5d2e1e2808ee86c182e17f6ae5dbd3f7ec2913d89dba0a5b47370bb56",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": 11235962916,
+  "node_id": "MDg6QXJ0aWZhY3QxMTIzNTk2MjkxNg==",
+  "name": "owned-pic-imr-build-a6f60528-37027774273-1",
+  "size_in_bytes": 6722091,
+  "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11235962916",
+  "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11235962916/zip",
+  "expired": false,
+  "digest": "sha256:9adece0d5c82360fa87e77cb7c2257f96f72113cff0b1215f53e06917d18fffd",
+  "created_at": "2026-10-02T15:37:20Z",
+  "updated_at": "2026-10-02T15:37:20Z",
+  "expires_at": "2026-10-16T15:37:19Z",
+  "workflow_run": {
+    "id": 37027774273,
+    "repository_id": 1327885818,
+    "head_repository_id": 1327885818,
+    "head_branch": "lane/386-owned-pic-imr-publication-20261002",
+    "head_sha": "a45fc6f60cabf97e8230ff1bf49a0394bbaef622"
+  }
+}

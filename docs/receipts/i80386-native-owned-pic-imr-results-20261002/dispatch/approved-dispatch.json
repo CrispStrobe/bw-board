@@ -1,0 +1,10 @@
+{
+  "scope": "ONE_FIXED_BUILD_NO_ADDON_LOAD_OR_GUEST",
+  "workflowId": 373233035,
+  "workflowPath": ".github/workflows/i80386-native-owned-pic-imr-build.yml",
+  "ref": "lane/386-owned-pic-imr-publication-20261002",
+  "exactHead": "a45fc6f60cabf97e8230ff1bf49a0394bbaef622",
+  "compiledSource": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "compiledCount": 111,
+  "time": "2026-10-02T15:33:07.421428+00:00"
+}
