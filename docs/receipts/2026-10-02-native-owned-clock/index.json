@@ -1240,6 +1240,258 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-runtime-controls-20261002/tuple-throw/control.jsonl.parent",
       "kind": "lossless actual chronological events"
+    },
+    {
+      "path": "attribution/approved-bindings.json",
+      "bytes": 3263,
+      "sha256": "36a5bda3788a63355cd71771816ec68996614bddb02d1a1f8870a21998fd7069",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/approved-bindings.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/attribution-identity.json",
+      "bytes": 10457,
+      "sha256": "f354a4d8a37ae385604691378e3fbf581624218116dd68faf83d45557e3753f7",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/attribution-identity.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/auth-after.json",
+      "bytes": 11743,
+      "sha256": "eeaf42b2370e1bffc395e52e6eee6b3a25d461dbf059232dfe4f6ae66c072514",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/auth-after.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/auth-before.json",
+      "bytes": 11743,
+      "sha256": "eeaf42b2370e1bffc395e52e6eee6b3a25d461dbf059232dfe4f6ae66c072514",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/auth-before.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/derivation.json",
+      "bytes": 23763,
+      "sha256": "cd503a095ad4b051a38f3de5528ed547cf6ca3b273c0fd4479e4598a308733f9",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/derivation.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/driver.mjs",
+      "bytes": 6104,
+      "sha256": "d0abed74efc246547f024aeefc3eb9c1ff1276d38851ee8e4f61ce33656fb1cd",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/driver.mjs",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/factory.mjs",
+      "bytes": 4626,
+      "sha256": "bcdb71ed115f00704b75ed3a425decc9ddcdf3f069d92148bb8e686e4ac54224",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/factory.mjs",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/generate.py",
+      "bytes": 9973,
+      "sha256": "f0350e214d7ddbc6b783d404da757c2f2b89a68372e6c222a4b3a284e3e99215",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/generate.py",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/independent-actual-audit.json",
+      "bytes": 1224,
+      "sha256": "497aaf98ff6eba4a826ac0ed89115102d648c3724b78be097fbc2c7ec0dc6866",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/independent-actual-audit.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/independent-helper-audit.json",
+      "bytes": 1527,
+      "sha256": "9c58ae9c04c4cf6361771c354442f8ed7c281ada5cab745e1f172b2454944a0e",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/independent-helper-audit.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/parent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/parent.stderr",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/parent.stdout",
+      "bytes": 48,
+      "sha256": "b4148a78f931c55b285ee70644dc632e23d5dcf6bf420791326e6d57ecd0ce1e",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/parent.stdout",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/plan.json",
+      "bytes": 1532,
+      "sha256": "50329e40577e7ac5887b4331fcc4fbf0e3ee0b501284bc34a1ef86531e6796db",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/plan.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/preparation.json",
+      "bytes": 979,
+      "sha256": "b2124a8288db0d2e449ac01e5be7bc1b4fcff9aaae0b37bab146f55fec81c35a",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/preparation.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/provider.mjs",
+      "bytes": 5482,
+      "sha256": "f27ba8c78417ed33d8d108263282114a41be29f2615740132dcfa612e4224ce3",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/provider.mjs",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/run.py",
+      "bytes": 5353,
+      "sha256": "a25ab8f8946480988669ca1586f3469c91a28a501191d941dd31ff0f66aaff52",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/run.py",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/summary.json",
+      "bytes": 32220,
+      "sha256": "47d8d77e610f56319fea5e2869f3a89ead4f514d615df18f2f37768390389bba",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/summary.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing.mjs",
+      "bytes": 624,
+      "sha256": "67a90bff00b3c4ec9129262c93452558da96b0d2d15e5879dd0efb48a8031a33",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing.mjs",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/worker.mjs",
+      "bytes": 5083,
+      "sha256": "ac258bcabd42c09ad9fe7d06791141194ab2a8926097b15d3a8da01c70e497b8",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/worker.mjs",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only.exit.json",
+      "bytes": 636,
+      "sha256": "994bd1a637b719434a0e76e284780e6e1aab248056d2e6b74094d57bed978e4b",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only.exit.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only.input.json",
+      "bytes": 890,
+      "sha256": "1ba5c8b2e36c170ecf5574259fbd23ded5a10f6f985d5dbd52c9f0657bbfa883",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only.input.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only.stderr",
+      "bytes": 426,
+      "sha256": "f63ae12959c18f83ea28a21e0068eb79e69ddbb9b3291d273030f23cf5fab75e",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only.stderr",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only.stdout",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only-data/guest.bochsrc",
+      "bytes": 543,
+      "sha256": "3791e6cf8869f4b85d7ecfcbaba4d6826238a44e372a87f0605bb4c3b1cee300",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only-data/guest.bochsrc",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only-data/capture.json",
+      "bytes": 227602,
+      "sha256": "70f41c38990334287cd6b023a8e4a753718240230079a8c6b3e8f3fb02006e99",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only-data/capture.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only-data/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only-data/callbacks.jsonl",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-only-data/guest.bochs.log",
+      "bytes": 7425,
+      "sha256": "27c92167769facf863a4789dd87fa30306804518aac916fd11d67227ec9c5fdf",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-only-data/guest.bochs.log",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile.exit.json",
+      "bytes": 646,
+      "sha256": "1cf8323d72e464048a2cfa448b4fd1d9ede5e86ec81441a879610c3b1e18fc98",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile.exit.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile.input.json",
+      "bytes": 900,
+      "sha256": "fac6f9de9be128da047cd04ada5414dac0b714544e95bc813e5f8eb6e12992a6",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile.input.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile.stderr",
+      "bytes": 446,
+      "sha256": "148839f3a693f450ddd88ea92a316f364f70ac4de7d3d838e9fce8937062cc1d",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile.stderr",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile.stdout",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile-data/guest.bochsrc",
+      "bytes": 553,
+      "sha256": "3b5dd12facb486923b0b1772091761be8d7c7f8dbd2520e5020973bfdf30e499",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile-data/guest.bochsrc",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile-data/capture.json",
+      "bytes": 227626,
+      "sha256": "a32956b04b27d59390c4934a2b9b1e9c24b6e12fd003033632e09cc3a4697c71",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile-data/capture.json",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile-data/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile-data/callbacks.jsonl",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile-data/guest.bochs.log",
+      "bytes": 7425,
+      "sha256": "7f2e61ec199c58db628ab2dab1d07bac134b77ea87c357e3207c08b0c6a9391c",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile-data/guest.bochs.log",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
+    },
+    {
+      "path": "attribution/timing-worker-profile-data/callbacks.jsonl.worker.cpuprofile",
+      "bytes": 31242,
+      "sha256": "00c43917b9c3dc2aa99d48d6fc056d8b9f087a1a78eb1cee125a4e71ae1c3e51",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-attribution-20261002/timing-worker-profile-data/callbacks.jsonl.worker.cpuprofile",
+      "kind": "lossless actual attribution artifact; diagnostic only, not a speed gate"
     }
   ],
   "largeLocalReferences": {

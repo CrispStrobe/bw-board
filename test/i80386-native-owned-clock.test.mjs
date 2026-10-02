@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import {deriveOwnedRuntime,heldRuntimeSha256} from '../scripts/bochs-cpu3-native-owned-clock/runtime.mjs';
 import {deriveOwnedNapi,heldNapiSha256} from '../scripts/bochs-cpu3-native-owned-clock/napi.mjs';
 import {authenticated,replacement,sha256} from '../scripts/bochs-cpu3-native-owned-clock/derive.mjs';
@@ -28,4 +32,27 @@ test('compact sink cannot reenter private transfer',()=>{let p,rejected=false;p=
 test('ABI3 loader refuses main-thread before any artifact read',()=>{assert.throws(()=>loadOwnedNative('/does-not-exist.node','0'.repeat(64)),/initializing worker/);});
 test('ABI2 generic tracked implementations remain untouched by derived outputs',()=>{const header=readFileSync(new URL('../scripts/bochs-cpu3-native-direct-board/abi.h',import.meta.url),'utf8');assert.match(header,/#define BW_DIRECT_ABI_VERSION 2/);assert.match(readFileSync(new URL('../scripts/bochs-cpu3-native-direct-board-adapter/loader.mjs',import.meta.url),'utf8'),/if\(!isMainThread\)/);});
 test('A20 pending mapping permits only ordinary Q before more work',()=>{const p=setup();begin(p);p.callbacks.packedScalar(3,0x64,1,0xd1);p.callbacks.clockTransfer(new Uint32Array(),6);p.callbacks.packedScalar(3,0x60,1,1);const s=[...p.callbacks.clockTransfer(new Uint32Array(),6)];assert.deepEqual(s.slice(5),[1,0]);assert.throws(()=>p.callbacks.clockTransfer(Uint32Array.of(1),11));assert.throws(()=>p.callbacks.clockTransfer(Uint32Array.of(3),11));assert.throws(()=>p.callbacks.readPhysical(0x500,1));assert.throws(()=>p.callbacks.admitExecutePage(0xf0000));assert.throws(()=>p.callbacks.packedScalar(4,0,0,0));p.callbacks.clockTransfer(Uint32Array.of(2,1),11);p.end();p.close();});
-test('actual frozen identity resolves recursive source assets without truncation',async()=>{const {sourceIdentity}=await import('../scripts/bochs-cpu3-native-owned-clock/identity.mjs');const s=sourceIdentity();for(const p of ['scripts/bochs-cpu3-native-owned-clock/abi.h','scripts/bochs-cpu3-native-direct-board/runtime.inc','scripts/bochs-cpu3-native-direct-board/runtime.h','scripts/bochs-cpu3-native-direct-board/addon.mk','scripts/bochs-cpu3-native-direct-board-adapter/napi.cc','test/fixtures/i80386-free-combined-paging-ram.S'])assert.match(s.hashes[p],/^[a-f0-9]{64}$/);});
+test('actual frozen identity resolves clean checkout assets and refuses dirty checkouts',async()=>{
+ // CI dependency/firmware setup may dirty the caller checkout. Admission still
+ // requires a clean tree, so exercise the real function in an isolated HEAD.
+ const root=fileURLToPath(new URL('../',import.meta.url));
+ const temporary=mkdtempSync(join(tmpdir(),'owned-clock-frozen-identity-'));
+ const checkout=join(temporary,'checkout');let added=false;
+ try{
+  execFileSync('git',['worktree','add','--detach',checkout,'HEAD'],{cwd:root,stdio:'pipe'});added=true;
+  const {sourceIdentity}=await import(pathToFileURL(join(checkout,'scripts/bochs-cpu3-native-owned-clock/identity.mjs')).href);
+  const identity=sourceIdentity();
+  assert.equal(identity.revision,execFileSync('git',['rev-parse','HEAD'],{cwd:checkout,encoding:'utf8'}).trim());
+  for(const p of ['scripts/bochs-cpu3-native-owned-clock/abi.h','scripts/bochs-cpu3-native-direct-board/runtime.inc','scripts/bochs-cpu3-native-direct-board/runtime.h','scripts/bochs-cpu3-native-direct-board/addon.mk','scripts/bochs-cpu3-native-direct-board-adapter/napi.cc','test/fixtures/i80386-free-combined-paging-ram.S'])assert.match(identity.hashes[p],/^[a-f0-9]{64}$/);
+  const packagePath=join(checkout,'package.json'),original=readFileSync(packagePath);
+  writeFileSync(packagePath,Buffer.concat([original,Buffer.from('\n')]));
+  assert.throws(()=>sourceIdentity(),/frozen clean source/);
+  writeFileSync(packagePath,original);
+  const untracked=join(checkout,'unexpected-identity-input');writeFileSync(untracked,'untracked fixture');
+  assert.throws(()=>sourceIdentity(),/frozen clean source/);rmSync(untracked);
+  assert.deepEqual(sourceIdentity(),identity);
+ }finally{
+  if(added)execFileSync('git',['worktree','remove','--force',checkout],{cwd:root,stdio:'pipe'});
+  rmSync(temporary,{recursive:true,force:true});
+ }
+});

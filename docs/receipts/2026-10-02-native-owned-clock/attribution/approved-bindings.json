@@ -1,0 +1,37 @@
+{
+  "helperHashes": {
+    "generate.py": "f0350e214d7ddbc6b783d404da757c2f2b89a68372e6c222a4b3a284e3e99215",
+    "timing.mjs": "67a90bff00b3c4ec9129262c93452558da96b0d2d15e5879dd0efb48a8031a33",
+    "provider.mjs": "f27ba8c78417ed33d8d108263282114a41be29f2615740132dcfa612e4224ce3",
+    "worker.mjs": "ac258bcabd42c09ad9fe7d06791141194ab2a8926097b15d3a8da01c70e497b8",
+    "factory.mjs": "bcdb71ed115f00704b75ed3a425decc9ddcdf3f069d92148bb8e686e4ac54224",
+    "driver.mjs": "d0abed74efc246547f024aeefc3eb9c1ff1276d38851ee8e4f61ce33656fb1cd",
+    "derivation.json": "cd503a095ad4b051a38f3de5528ed547cf6ca3b273c0fd4479e4598a308733f9",
+    "attribution-identity.json": "f354a4d8a37ae385604691378e3fbf581624218116dd68faf83d45557e3753f7",
+    "plan.json": "50329e40577e7ac5887b4331fcc4fbf0e3ee0b501284bc34a1ef86531e6796db",
+    "run.py": "a25ab8f8946480988669ca1586f3469c91a28a501191d941dd31ff0f66aaff52"
+  },
+  "artifactHashes": {
+    "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-owned-clock-20261002/bochs/bw_direct.node": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+    "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/prepare.json": "7092cf5efdb3d68b65e2b4b8a91f726ae07516e8df0de4712eeb8c92c7369c28",
+    "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/build-static-preflight.json": "acebb536e93e6e74218057f18ae1e5a47d8f436e7aee212c0d82b8658d4e3da8",
+    "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-source.bochsrc": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+    "/mnt/volume1/tmp-astra/js-hot-formal-final-20261001/capture.json": "c079fc196461e7d062df7e6a8a9b13b28ab9014b36a1040698fc5bab91ecdc5f",
+    "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe",
+    "/tmp/bw-board-386-native-owned-clock-20261002/roms/free-at-bios/BIOS-bochs-legacy": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "/tmp/bw-board-386-native-owned-clock-20261002/roms/free-at-bios/vgabios-lgpl.bin": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"
+  },
+  "referenceCapture": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+  "buildInput": {
+    "addon": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-owned-clock-20261002/bochs/bw_direct.node",
+    "sha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+    "preparedManifest": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/prepare.json",
+    "preparedManifestSha256": "7092cf5efdb3d68b65e2b4b8a91f726ae07516e8df0de4712eeb8c92c7369c28",
+    "buildReceipt": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/build-static-preflight.json",
+    "buildReceiptSha256": "acebb536e93e6e74218057f18ae1e5a47d8f436e7aee212c0d82b8658d4e3da8",
+    "configuration": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-source.bochsrc",
+    "baseline": "/mnt/volume1/tmp-astra/js-hot-formal-final-20261001/capture.json"
+  },
+  "boundedRunnerSha256": "4b0d7e7e2466f2ca84660171a8e8f8656bb04b0b47cab13fa5a8d93f8c89dfa8",
+  "grant": "ROOT_TWO_DIAGNOSTIC_ATTRIBUTION_CELLS_AFTER_235CHECK_SOURCE_AUDIT_NOT_PERFORMANCE_GATE_RETRY"
+}
