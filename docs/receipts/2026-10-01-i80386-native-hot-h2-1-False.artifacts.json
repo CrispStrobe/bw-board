@@ -1,0 +1,10 @@
+{
+  ".stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  ".stderr": {
+    "bytes": 396,
+    "sha256": "295241172fe9d107c4901bd196eff2a64204085cb9df5b5e2e58737955d7ea8f"
+  }
+}

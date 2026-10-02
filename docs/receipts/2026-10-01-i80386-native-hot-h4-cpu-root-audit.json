@@ -1,0 +1,86 @@
+{
+  "status": "ROOT_H3_H4_CPU_AND_WALL_BENCHMARK_FULL_INVARIANTS_AND_PREDECLARED_CPU_GATE_PASS",
+  "checks": 1675,
+  "summarySha256": "6f508677e6c42d8d84021dc8d1df7d4371d3e4ade7d656552682e3adb3c45680",
+  "distributions": {
+    "H3": {
+      "allNs": [
+        454180214,
+        600593525,
+        646380730,
+        754186692,
+        554277562,
+        574608629,
+        545480307
+      ],
+      "minNs": 454180214,
+      "medianNs": 574608629,
+      "maxNs": 754186692
+    },
+    "H4": {
+      "allNs": [
+        429491672,
+        421764021,
+        590863301,
+        507294602,
+        544176873,
+        647547225,
+        505714335
+      ],
+      "minNs": 421764021,
+      "medianNs": 507294602,
+      "maxNs": 647547225
+    }
+  },
+  "pairs": [
+    {
+      "index": 2,
+      "H3": 454180214,
+      "H4": 429491672,
+      "H4overH3": 0.9456415289812691
+    },
+    {
+      "index": 3,
+      "H4": 421764021,
+      "H3": 600593525,
+      "H4overH3": 0.7022453680299001
+    },
+    {
+      "index": 4,
+      "H3": 646380730,
+      "H4": 590863301,
+      "H4overH3": 0.9141103278249029
+    },
+    {
+      "index": 5,
+      "H4": 507294602,
+      "H3": 754186692,
+      "H4overH3": 0.6726379653487707
+    },
+    {
+      "index": 6,
+      "H3": 554277562,
+      "H4": 544176873,
+      "H4overH3": 0.9817768394528661
+    },
+    {
+      "index": 7,
+      "H4": 647547225,
+      "H3": 574608629,
+      "H4overH3": 1.12693613064415
+    },
+    {
+      "index": 8,
+      "H3": 545480307,
+      "H4": 505714335,
+      "H4overH3": 0.9270991610701722
+    }
+  ],
+  "cpuMeanUs": {
+    "H3": 580046.5714285715,
+    "H4": 502477.4285714286
+  },
+  "meanCpuReductionPercent": 13.372916361888187,
+  "allSevenCpuPairsFavorable": true,
+  "scope": "Process-wide execution CPU includes all active child threads and tiny measurement overhead. Whole H3/H4 candidate comparison meets predeclared CPU criterion, not isolated protocol/core, general applications, 10x or physical RTx. Historical noisy wall result remains inconclusive."
+}

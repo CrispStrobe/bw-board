@@ -1,0 +1,48 @@
+{
+  "status": "ROOT_18_ACTUAL_CAPTURE_DISABLED_GUESTS_SOURCE_AND_INVARIANTS_TIMING_PASS",
+  "sourceRevision": "5e31ea058e16746c6bf3a540a3325ed201576719",
+  "checks": 446,
+  "sourceInputs": {
+    "js": 41,
+    "native": 54
+  },
+  "children": 18,
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "distribution": {
+    "js": {
+      "unit": "nanoseconds",
+      "samples": 7,
+      "min": 338530032,
+      "median": 513123808,
+      "max": 1664944128,
+      "sorted": [
+        338530032,
+        424798808,
+        476168521,
+        513123808,
+        773868924,
+        1055714676,
+        1664944128
+      ]
+    },
+    "native": {
+      "unit": "nanoseconds",
+      "samples": 7,
+      "min": 794956027,
+      "median": 1344550170,
+      "max": 3102902688,
+      "sorted": [
+        794956027,
+        998664909,
+        1034017616,
+        1344550170,
+        1365250393,
+        1920505428,
+        3102902688
+      ]
+    }
+  },
+  "medianNativeVsJsTimeRatio": 2.6203231053352334,
+  "limitations": "entire bounded adapter vs JS on short register-heavy free guest, fresh processes/JIT cold, shared busy VPS; native report historical scope string annotated separately. Not pure CPU, isolated host, representative applications, physical 386 RTx or 10x performance."
+}

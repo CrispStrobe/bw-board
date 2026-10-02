@@ -1,0 +1,116 @@
+{
+  "status": "ANNOTATION_OF_IMMUTABLE_ACTUAL_SEVEN_H2_H3_PAIRS",
+  "originalSummarySha256": "e66e4d2187fb4bb9f5cd029c0744b24fb43ddfd4c8f625c798aa600130d5ead4",
+  "originalHelperSha256": "84de24c8455a0c60fc10a6784337427835e9c436ab6aa37ec8946f946d584eb2",
+  "corrections": [
+    "Original summary.scope contains inherited three profiling pairs/instrumentation wording; actual experiment was18profiler-disabled children:two warmup pairs andseven samplepairs.",
+    "Original sample.profile is a legacy boolean buildselector: false=H2,true=H3. It does not enable profiling; explicit BW_HOT_NAPI_PROFILE=0 for all18children. sample.build is authoritative H2/H3.",
+    "CPUProfiler/Inspector/nativeRawTrace/hostCompactSink all disabled. Whole adapter execution includes keysetup/close, scheduler, synchronouscallbacks andresumereturnconversion."
+  ],
+  "pairs": [
+    {
+      "pair": 0,
+      "order": [
+        "H2",
+        "H3"
+      ],
+      "h2ExecutionNs": 488240473,
+      "h3ExecutionNs": 437006919,
+      "h3OverH2": 0.8950649181433182
+    },
+    {
+      "pair": 1,
+      "order": [
+        "H3",
+        "H2"
+      ],
+      "h2ExecutionNs": 486794996,
+      "h3ExecutionNs": 444208139,
+      "h3OverH2": 0.9125158283262221
+    },
+    {
+      "pair": 2,
+      "order": [
+        "H2",
+        "H3"
+      ],
+      "h2ExecutionNs": 454600164,
+      "h3ExecutionNs": 412634640,
+      "h3OverH2": 0.907686958071577
+    },
+    {
+      "pair": 3,
+      "order": [
+        "H3",
+        "H2"
+      ],
+      "h2ExecutionNs": 542644869,
+      "h3ExecutionNs": 455161981,
+      "h3OverH2": 0.8387842712652647
+    },
+    {
+      "pair": 4,
+      "order": [
+        "H2",
+        "H3"
+      ],
+      "h2ExecutionNs": 619070587,
+      "h3ExecutionNs": 498055032,
+      "h3OverH2": 0.8045205869229901
+    },
+    {
+      "pair": 5,
+      "order": [
+        "H3",
+        "H2"
+      ],
+      "h2ExecutionNs": 497369391,
+      "h3ExecutionNs": 449992957,
+      "h3OverH2": 0.9047459798345331
+    },
+    {
+      "pair": 6,
+      "order": [
+        "H2",
+        "H3"
+      ],
+      "h2ExecutionNs": 460159110,
+      "h3ExecutionNs": 485097784,
+      "h3OverH2": 1.054195762852549
+    }
+  ],
+  "distributions": {
+    "H2": {
+      "samples": 7,
+      "minNs": 454600164,
+      "medianNs": 488240473,
+      "maxNs": 619070587,
+      "allNs": [
+        488240473,
+        486794996,
+        454600164,
+        542644869,
+        619070587,
+        497369391,
+        460159110
+      ]
+    },
+    "H3": {
+      "samples": 7,
+      "minNs": 412634640,
+      "medianNs": 449992957,
+      "maxNs": 498055032,
+      "allNs": [
+        437006919,
+        444208139,
+        412634640,
+        455161981,
+        498055032,
+        449992957,
+        485097784
+      ]
+    }
+  },
+  "medianReductionFraction": 0.07833745483037824,
+  "limits": "SharedVPS/freshprocess/JITcold; one pairH3higher. No general optimization gain, purecore or physicalRTx claim."
+}
