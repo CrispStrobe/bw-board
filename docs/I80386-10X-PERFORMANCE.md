@@ -6,7 +6,36 @@ pair's timing result. All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
-## Current checkpoint (2026-09-30)
+## Current checkpoint (2026-10-02)
+
+The 10× goal and physical 16 MHz 386DX calibration remain open. The existing
+JavaScript AT executor has bounded [Windows 3.11 enhanced-mode evidence](I80386-WINDOWS-ENHANCED-PROBE.md),
+[Doom input/demo evidence](I80386-DOOM.md), and the stock xv6 full-suite result
+linked below. Those results do not qualify the newer full-CPU native experiment.
+
+The [private main-thread native diagnostic](I80386-NATIVE-OWNED-MAIN-WIP.md)
+passed a single predeclared gate: 26.3289% lower mean process CPU than its
+H4 predecessor, with all seven measured pairs favorable and full fixed-ROM
+snapshot/device/RAM parity in all 18 children. This corresponds to about
+1.35738× fixture work at an equal CPU budget. It was measured on the shared
+four-vCPU KVM Skylake VPS with Node 22.23.3, not on GitHub/Kaggle or a physical
+386. It is separate from the older native xv6 executor and its measurements.
+
+The subsequent [allocation candidate](I80386-NATIVE-OWNED-CLOCK-ALLOC-WIP.md)
+failed its unchanged gate: nominally 5.5614% lower mean CPU, but only five of
+seven pairs favorable. It is not adopted. Nested timing instrumentation does
+not establish removable CPU shares. The next structural hypothesis folds
+private capture-OFF clock ledger effects only after the full ordered tape
+preflight; it still needs native qualification and its own paired CPU gate.
+
+The [ABI4 byte-IN experiment](I80386-NATIVE-OWNED-IN8-WIP.md) adds narrowly
+admitted PIT/PIC reads. Its production comparison is still unfinished; the
+corrected reset-profile/RAM comparison needs a successful pinned rebuild and
+fresh capture-OFF/ON execution. General native AT boot, xv6, Windows, Doom and
+GUI admission remain separate work. No cumulative speedup is calculated from
+these different sources, fixtures, or executors.
+
+## Previous checkpoint (2026-09-30)
 
 The 10× performance goal remains open. The
 [audited stock xv6 full usertests pass](receipts/2026-09-29-xv6-stock-224m-full-suite.json)
