@@ -1,4 +1,4 @@
-2026-10-02 Duplicate supply-symbol current attribution — DONE candidate, Codex bwcx `/root`.
+2026-10-02 Duplicate supply-symbol current attribution — DONE, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, branch
 lane/duplicate-rail-current, exact base
 dfeaadbdc2a3921d3b7a838079201455dff87685. Six-path envelope: this row;
@@ -32,6 +32,17 @@ merge preserves all five lane source/spec/test diffs byte-for-byte (SHA256
 6a62847b8aa3d0800e325c6348b4a6fbd97e7321e8d6f7ed3656f08d3621ffec).
 Combined local rail/adjacent/API/census/clock-witness proof: 183/183, zero skips.
 The first candidate's Harris green does not substitute for combined-head CI.
+Qualified bef4b3bb: CI 36965389333, Harris 36965389249 and xv6 36965389373
+all green; hosted main 7905 total/7616 pass/0 fail/289 environment skips.
+Master f400df4f separately passed CI 36965792801/Harris 36965792796. Its
+additional F0 evidence, parser test and default-off manual diagnostic workflow
+have no engine/package/required-workflow changes or overlap with this lane.
+Forward merge preserves the five-path patch SHA256 above AND complete package
+runtime hash 0ab6495f8fb308c6ceda42e17a60ea8f30f52e4a5b764e67ce295cc2ecb5f6d4.
+Merged rail/census/F0 tests pass 25/25, zero skips. Behavioral commutation is
+proved at that runtime boundary; the added test reads only separate F0 tooling.
+Normal guarded FF carries both green trees; automatic default-branch runs are
+combined-tree alarms, not a claim that this merge already has exact-head CI.
 
 2026-10-02 Indeterminate ideal-source current observers — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-indeterminate-current-20261002, branch
