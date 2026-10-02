@@ -1,0 +1,15 @@
+{
+  "returncode": 0,
+  "timedOut": false,
+  "wallSecondsResourceOnly": 1.6177647914737463,
+  "pinsBefore": {
+    "control.py": "83e04aa9933a6480453d28ff69caae9200d65febb448f61510b78916c4698e68",
+    "run-cells.py": "2e323bda0025f96fd909dd37d52ed39cb52172a0fe012f03a3e2d9c9dce8bca7"
+  },
+  "pinsAfter": {
+    "control.py": "83e04aa9933a6480453d28ff69caae9200d65febb448f61510b78916c4698e68",
+    "run-cells.py": "2e323bda0025f96fd909dd37d52ed39cb52172a0fe012f03a3e2d9c9dce8bca7"
+  },
+  "stdoutSha256": "f933a6200c34f4408eb2bfd51f13924f447193b2a86018a5a5910be84bd88aa5",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

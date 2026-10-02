@@ -1,0 +1,1 @@
+{"status": "THREE_SPAN_NATIVE_PARITY_CELLS_PASS_AWAITING_INDEPENDENT_ARTIFACT_AUDIT", "cells": [{"label": "smoke-off", "status": "ACTUAL_CELL_AND_FULL_ORIGINAL_COMPARATOR_PASS"}, {"label": "fulltrace-on", "status": "ACTUAL_CELL_AND_FULL_ORIGINAL_COMPARATOR_PASS"}, {"label": "trace-fast", "status": "ACTUAL_CELL_AND_FULL_ORIGINAL_COMPARATOR_PASS"}]}

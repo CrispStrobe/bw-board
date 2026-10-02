@@ -1,0 +1,52 @@
+{
+  "status": "PREPARED_ONLY_NO_NATIVE_EXECUTION",
+  "cells": [
+    {
+      "label": "smoke-off",
+      "nativeTrace": false,
+      "hostJournal": false
+    },
+    {
+      "label": "fulltrace-on",
+      "nativeTrace": true,
+      "hostJournal": true
+    },
+    {
+      "label": "trace-fast",
+      "nativeTrace": true,
+      "hostJournal": false
+    }
+  ],
+  "runtime": {
+    "revision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+    "sourceCount": 116,
+    "frozenSpanRevision": "8e35080d29b32e9fcee5f8fbc5800209c74df2e7",
+    "frozenSpanCount": 110
+  },
+  "compiled": {
+    "revision": "fe1eff2039520536350922a2164c8bbe29404c68",
+    "sourceCount": 103,
+    "addonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+    "origin": "Unchanged genuine official CI build; no C/native rebuild."
+  },
+  "parity": "Exact whole recorded reset/final/sixcut snapshots, all166 stored words and complete descriptors/system/debug/physical/counter fields; six complete boards; raw and canonical RAM with exact own8byte reset witness; all445 original resume calls still produce normal full snapshots, only eight snapshots stored. ON wholejournal plus all1649271 canonical rows; tracefast emptyjournal/nullsink and all1649271 canonical rows. No projection or wider fixture/guest admission.",
+  "bounds": {
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "heapMiB": 512,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "blankEnvironment": [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "LD_PRELOAD",
+      "LD_AUDIT",
+      "BW_HOT_NAPI_PROFILE",
+      "NODE_V8_COVERAGE"
+    ]
+  },
+  "execution": "Preparation only. Each local cell needs separate root grant. Prefer a dedicated hosted PR workflow after portable exact-byte reconstruction and source/helper review; no guest or push here.",
+  "speedGate": false,
+  "adoption": false
+}

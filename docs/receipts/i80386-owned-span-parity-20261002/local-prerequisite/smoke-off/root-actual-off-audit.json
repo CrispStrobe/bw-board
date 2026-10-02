@@ -1,0 +1,25 @@
+{
+  "status": "ROOT_ACTUAL_SPAN_CAPTURE_OFF_PARITY_PASS_NOT_SPEED_GATE",
+  "sourceRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "sourceCount": 116,
+  "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "compiledCount": 103,
+  "captureSha256": "59efb16b186e8eafc8e0ad4ae57e7948723d42ceaf6ca1cb910bebdc80324eec",
+  "resumes": 445,
+  "checkpointCount": 6,
+  "normalNativeSnapshotWords": 166,
+  "referenceFieldsChecked": [
+    "reset",
+    "final",
+    "checkpoints",
+    "settled",
+    "in8Witness",
+    "ramSha256",
+    "resetWitness",
+    "ramCanonicalSha256",
+    "resumes",
+    "terminal",
+    "closed"
+  ],
+  "scope": "Actual firstOFF native guest and complete retained fields/closure/provenance compare; all445 full snapshot calls remain unchanged. No trace/performance/generalAT/physicalRTx claim."
+}

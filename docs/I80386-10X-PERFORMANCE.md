@@ -1,8 +1,8 @@
 # Experimental 80386 speed path
 
-[Private span runtime preparation](I80386-OWNED-SPAN-RUNTIME-PREPARATION.md) passes 24 pure controls and read-only compiled/build admission, with runtime116 distinct from compiledfe1/103. Three native parity cells and performance qualification remain unexecuted.
+[Private span native parity](I80386-OWNED-SPAN-PARITY-RESULTS.md) passes three fresh hosted cells against unchanged compiled fe1/103: whole stored166-word snapshots, boards/RAM, ON journal and both full1,649,271-row canonical traces. Runtime116 remains distinct from compiled103. Performance qualification and adoption remain pending.
 
-[Private span hosted source controls](I80386-OWNED-SPAN-SOURCE-RESULTS.md) pass 232,337 checks in ten cases, with unchanged compiled inputs. This is source-only evidence; native and performance qualification remain unperformed.
+[Private span hosted source controls](I80386-OWNED-SPAN-SOURCE-RESULTS.md) pass 232,337 checks in ten cases, with unchanged compiled inputs. Subsequent [native parity passed](I80386-OWNED-SPAN-PARITY-RESULTS.md); no performance result or broader guest admission follows.
 
 [Private per-word dispatch source experiment](I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 differential factory controls with frozen runtime106/unchanged compiledfe1/103 inputs. [Three native parity cells](I80386-OWNED-DISPATCH-PARITY-RESULTS.md) now pass against fe1, including canonical chronology through the null-sink branch; [the hosted paired CPU gate failed](I80386-OWNED-DISPATCH-CPU-RESULTS.md): 1.719745% nominal mean reduction and four of seven favorable pairs, below the ≥10%/all-seven requirement. All 18 children retained semantic parity; keep `fe1`, with no adoption, retry or RTx claim.
 
@@ -19,7 +19,7 @@ pair's timing result. All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
-The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) prepares three closed-fixture cells against unchanged compiled fe1; hosted native and CPU qualification remain pending. The packet establishes no adoption, speed result or broader AT admission.
+The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). A separate paired CPU gate is still required; this establishes no adoption, speed result or broader AT admission.
 
 ## Current checkpoint (2026-10-02)
 

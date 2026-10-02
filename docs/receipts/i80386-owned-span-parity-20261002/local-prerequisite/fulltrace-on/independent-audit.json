@@ -1,0 +1,11 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_SPAN_CAPTURE_ON_CANONICAL_AND_STATE_NOT_SPEED",
+  "checks": 2069115,
+  "sourceRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "runtimeSourceCount": 116,
+  "compiledSourceCount": 103,
+  "artifactCount": 186,
+  "captureSha256": "9658aa8f545a36064ff2ff36a3471ed2302fd164fb993b8021c66b8c8f00a960",
+  "bindingSha256": "bf269ade7c912e8276d39b96003f3160010935f356fafbe3416f8ee5e3097106",
+  "scope": "ActualON: entire retained166/native descriptors/counters, six fullboards, RAM/resetwitness/physicalcounts exact qualifiedfe1; fullsnapshot produced445resumes but eight retained. Tracefast not run; no speed/adoption qualification."
+}
