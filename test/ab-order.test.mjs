@@ -14,6 +14,13 @@ test('default ABBA and optional BAAB balance both labels and mirror process posi
     }
 });
 
+test('hosted order control defaults off and is passed through environment to both runners', () => {
+    const source = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
+    assert.match(source, /reverse:\n\s+description:.*\n\s+type: boolean\n\s+default: false/);
+    assert.equal((source.match(/REVERSE_ORDER: \$\{\{ inputs.reverse \}\}/g) || []).length, 2);
+    assert.equal((source.match(/if \[ "\$REVERSE_ORDER" = true \]; then args\+=\(--reverse\); fi/g) || []).length, 2);
+});
+
 test('both ordinary runners use explicit order control and reject injected Node options', () => {
     for (const name of ['motion', 'f0']) {
         const source = readFileSync(new URL(`../scripts/probe-labwired-${name}-ab.mjs`, import.meta.url), 'utf8');
