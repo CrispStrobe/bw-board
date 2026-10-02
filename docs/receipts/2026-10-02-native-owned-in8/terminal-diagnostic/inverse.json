@@ -1,0 +1,6 @@
+{
+  "nativeRunner": true,
+  "nativeProvider": true,
+  "historicalJsRunner": true,
+  "scope": "Exact bytes recovered by removing only RAM/report diagnostic writes and resolving documented imports/root relocation."
+}

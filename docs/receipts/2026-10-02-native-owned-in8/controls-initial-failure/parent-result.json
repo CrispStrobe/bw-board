@@ -1,0 +1,9 @@
+{
+  "exitCode": 1,
+  "status": "FIRST_CONTROL_NATIVE_INITIALIZE_REJECTED_PRESERVED",
+  "completedChildren": 1,
+  "sourceRevision": "370cb30fe8af055508f37c2a100b1e9f9b4cbfe9",
+  "addonSha256": "6619653658938f2d13cfc91e2101906a2802f8e7ae379ec7a14e15815c9b9ede",
+  "cause": "actual C initializer compares old ROM0c020 hash against new25c242 fixture before native lifetime/INIT",
+  "parentStreamScope": "transcribed verbatim from complete unified-exec result; child regular-file streams retained exact"
+}

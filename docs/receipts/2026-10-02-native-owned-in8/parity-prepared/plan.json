@@ -1,0 +1,66 @@
+{
+  "schema": "bw.owned-in8.actual-parity-plan.v1",
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "sourceRevision": "6b975da14342bc040082142568a539605f580fd7",
+  "abiVersion": 4,
+  "sourceClosure": 102,
+  "compiledClosure": 102,
+  "JSReference": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-in8-source-r3-20261002/js-reference/capture.json",
+    "sha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+    "revision": "b68f316b",
+    "CPUFields": [
+      "eax",
+      "ebx",
+      "ecx",
+      "edx",
+      "esp",
+      "eip",
+      "cs",
+      "cr0",
+      "cr2",
+      "cr3"
+    ],
+    "scope": "Actual JS capture has mapped CPU fields, not all166 native words. All166 native words/complete descriptors/counters preserved and compared exactly CAPOFF versus CAPON; no invented reference words.",
+    "CPUFieldCount": 10
+  },
+  "cells": [
+    {
+      "label": "smoke-off",
+      "nativeTrace": false,
+      "hostJournal": false
+    },
+    {
+      "label": "fulltrace-on",
+      "nativeTrace": true,
+      "hostJournal": true
+    }
+  ],
+  "requirements": [
+    "allfullnative reset/final/six checkpoint fields exact between modes including physical clocks",
+    "allrecorded JS CPU fields and full board states at six actual cuts",
+    "finalRAM and two PIT bytes match pinned JS capture",
+    "journal ordered N/Q expansion matches all JS STEP successful/fault ratios, kinds validated",
+    "all PORTin canonical rows and compact IN events match actual JS attempts,Q,cycles,port,byte",
+    "wholecanonical trace preserved, no CPUprojection masking or historical1.649m count assumption",
+    "no fixed439 resume assumption",
+    "no speedgate or fullAT admission"
+  ],
+  "bounds": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "CPUSeconds": 120,
+    "fileMiB": 256,
+    "core": 0,
+    "nice": 10,
+    "processGroupTimeoutKill": true
+  },
+  "blankEnvironment": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE"
+  ],
+  "snapshotScope": "Production CLI produces full snapshot on every resume, preserves reset/final/six selected snapshots in capture. These stored full native fields are compared exactly between modes; raw canonical resume/step rows retained for all steps, not a fabricated archived all-resume array."
+}

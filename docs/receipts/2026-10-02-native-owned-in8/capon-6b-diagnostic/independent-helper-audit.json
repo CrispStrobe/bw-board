@@ -1,0 +1,13 @@
+{
+  "status": "PASS_ONE_CAPON_DIAGNOSTIC_STATIC_READY_NOT_EXECUTED",
+  "checks": 246,
+  "helperHashes": {
+    "run.py": "8210534ccb6b2df029963cc419c2ca1526656d19bb6fc9b4231fbeab5c5548a4",
+    "runner.mjs": "b6e3486d8658d7050087d88cc79c847fb2a8a2dd9811ad05a4a8985ba1ed2387",
+    "provider.mjs": "2baeaef4b1cfb2c36cb86f0bba96b9e575bf47c1cce95b44c9d0b688b11dc2a5",
+    "bounded.py": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b",
+    "inverse.json": "cbe4f60e29824b9c8697d8d4295b49e0b3b72735a4ef9176673b3ef39674bade",
+    "plan.json": "2105922f35d076529513546a9fdf9085f66540589d4922424b97e9ef0309b7c0"
+  },
+  "scope": "Same source6b102/nativeDSO, input trace+journal on only, namespace-relocated identical diagnostic provider/runner; originalRAM assertion expectedexit1 preserved. No JS rerun/native execution."
+}

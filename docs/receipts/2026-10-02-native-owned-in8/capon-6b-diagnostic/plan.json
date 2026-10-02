@@ -1,0 +1,9 @@
+{
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "scope": "ONE CAPON diagnostic keeps original6b rawRAMassert and expectedexit1; full native reset/final/sixcuts/rawRAM/journal/canonical trace retained. Compare againstexistingCAPOFFdiagnostic samefullfields, independentJSknownprofileRAMproof separately; no qualification or broadCPUprojection.",
+  "command": "python3 run.py native",
+  "source": "6b975da14342bc040082142568a539605f580fd7",
+  "imports": "Runner provider remains original immutable terminaldiagnostic provider path; bound as artifact.",
+  "bounds": "blank5env/heap512/nice10/CPUwall120/files256/core0/groupkill",
+  "canonicalRAMSHA": "588f9bfd1292b8405d0e42552147fb2d8d082a8253b52771291ca0a603eaf18f"
+}

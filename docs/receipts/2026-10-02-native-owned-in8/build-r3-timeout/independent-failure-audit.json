@@ -1,0 +1,33 @@
+{
+  "status": "ACTUAL_R3_BUILD_MAKE_TIMEOUT_NO_NATIVE_QUALIFICATION",
+  "streamChecks": 12,
+  "makeExit": {
+    "command": [
+      "make",
+      "-j1",
+      "-f",
+      "Makefile",
+      "-f",
+      "bw_direct_addon.mk",
+      "bw_direct.node"
+    ],
+    "exitCode": -9,
+    "timedOut": true,
+    "elapsedSeconds": 600.2193675320596,
+    "streams": {
+      "stdout": {
+        "bytes": 15654,
+        "sha256": "38d5630c3fd0292aefaf04a95caa1c12d19308b1c2e8bc887ccdf607b35539f1"
+      },
+      "stderr": {
+        "bytes": 6438,
+        "sha256": "ab8b2cb8e87ac6fed0607e7d06cab7c0b7e2167687e7675d24853fe08a8cb2d3"
+      }
+    }
+  },
+  "missingCompletedArtifacts": {
+    "addon": true,
+    "staticReceipt": true
+  },
+  "scope": "Actualmake bounded600s timeout/SIGKILL; no completedDSO/staticreceipt. Not a compilerdiagnostic orCPUgate failure. Partialtree preserved; no retry."
+}

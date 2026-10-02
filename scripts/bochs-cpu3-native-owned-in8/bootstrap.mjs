@@ -1,0 +1,3 @@
+/** Trusted fresh-child checks; cannot undo a preload already executed. */
+import assert from 'node:assert/strict';import {realpathSync}from 'node:fs';import {fileURLToPath}from 'node:url';import {isMainThread}from 'node:worker_threads';
+export function checkBootstrap(entry,argv=process.argv,execArgv=process.execArgv,env=process.env){assert.ok(isMainThread,'main thread only');assert.equal(realpathSync(argv[1]),realpathSync(fileURLToPath(entry)),'direct CLI entry');for(const k of ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT'])assert.ok(!env[k],'trusted empty '+k);assert.ok(execArgv.length<=1&&execArgv.every(x=>/^--max-old-space-size=(256|512)$/.test(x)),'heap flag only');}

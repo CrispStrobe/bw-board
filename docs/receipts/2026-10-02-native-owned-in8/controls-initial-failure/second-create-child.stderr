@@ -1,0 +1,11 @@
+file:///mnt/volume1/tmp-astra/native-owned-in8-runtime-controls-20261002/child.mjs:19
+const reset=api.create(config.path,provider.rom,callbacks,input.control.startsWith('in-reply-'));record('initialized',{n:String(reset.nativeTicks),q:String(reset.successfulQuanta),calls});
+                ^
+
+Error: native initialize rejected
+    at file:///mnt/volume1/tmp-astra/native-owned-in8-runtime-controls-20261002/child.mjs:19:17
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.3

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/mnt/volume1/tmp-astra/native-owned-in8-runtime-controls-20261002/run.py", line 40, in <module>
+    assert result['status']=='CHILD_EXIT_PASS_NOT_QUALIFICATION'and names[-1]=='done'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
