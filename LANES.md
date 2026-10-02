@@ -657,6 +657,14 @@ Existing callback arity and non-opt-in readers must remain unchanged. Prove
 cloned-state nonmutation plus unchanged next trajectory, actual callback context,
 ordinary device compatibility, existing startup/CLI/mean proofs and mutations.
 Prior e1a52728 landing is held; no consumer adoption while this defect remains.
+Further caller audit reproduced a caught reactive startup refusal leaving a
+numeric partial meter/scope capture and accuracyMet:true. e237705b landing is
+held too. The existing six-path envelope now includes narrowly invalidating
+live observers on an opted-in accepted-transient device-update refusal and
+marking the existing transient status unsuccessful, while rethrowing the
+original exception. Prove caught-error identity, stale/fresh meter and scope
+refusal, status honesty and intentional-reset recovery; preserve ordinary
+callbacks, observational queries and unrelated exceptions. No solver change.
 Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
 DC behavior by default. Interpolate a bounded delayed single-pole envelope
