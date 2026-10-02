@@ -1,0 +1,19 @@
+{
+  "status": "ACTUAL_KNOWN_RESET_PROFILE_ONLY_RAM_DIFF_CONFIRMED_NOT_CAPON_PARITY",
+  "excludedRange": {
+    "start": 1296,
+    "length": 8
+  },
+  "nativeRecordedResetWitness": [
+    0,
+    2147483632
+  ],
+  "javascriptRecordedResetWitness": [
+    768,
+    0
+  ],
+  "canonicalRamSha256": "588f9bfd1292b8405d0e42552147fb2d8d082a8253b52771291ca0a603eaf18f",
+  "rawNativeRamSha256": "ecb57a4b83090fcf232c4bd2f7019cdfde992bdc8ecf708e04bdc1de9272733a",
+  "rawJSRamSha256": "8bbabd33892728f64bae9b9a558ba106112aef5024196e10aa037e45d0ca7344",
+  "ramBytes": 16777216
+}

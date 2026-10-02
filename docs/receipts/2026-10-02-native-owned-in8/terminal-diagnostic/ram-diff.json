@@ -1,0 +1,34 @@
+{
+  "status": "ACTUAL_DIAGNOSTIC_RAM_DIFF_NOT_QUALIFICATION",
+  "ramBytes": 16777216,
+  "differentBytes": 5,
+  "differences": [
+    {
+      "address": 1297,
+      "native": 0,
+      "javascript": 3
+    },
+    {
+      "address": 1300,
+      "native": 240,
+      "javascript": 0
+    },
+    {
+      "address": 1301,
+      "native": 255,
+      "javascript": 0
+    },
+    {
+      "address": 1302,
+      "native": 255,
+      "javascript": 0
+    },
+    {
+      "address": 1303,
+      "native": 127,
+      "javascript": 0
+    }
+  ],
+  "nativeSha256": "ecb57a4b83090fcf232c4bd2f7019cdfde992bdc8ecf708e04bdc1de9272733a",
+  "javascriptSha256": "8bbabd33892728f64bae9b9a558ba106112aef5024196e10aa037e45d0ca7344"
+}

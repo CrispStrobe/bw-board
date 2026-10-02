@@ -1,0 +1,40 @@
+{
+  "exitCode": 0,
+  "timeout": false,
+  "wallSeconds": 11.522785183042288,
+  "before": {
+    "scripts/bochs-cpu3-native-owned-in8/abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "scripts/bochs-cpu3-native-owned-in8/admission.mjs": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb",
+    "scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs": "13868ff311ae46e488047cca858e3c7fca14cd0d816edff0fee8c867d23b88fb",
+    "scripts/bochs-cpu3-native-owned-in8/contract.md": "a023a30740389553dced4da1a49f9e3ad4212a227c7f7691abf98e997e2183e3",
+    "scripts/bochs-cpu3-native-owned-in8/identity.mjs": "a01eef0e61ec4947cc7de89b60005d9a73d3a4974ad491aef20aaccc61dff703",
+    "scripts/bochs-cpu3-native-owned-in8/napi.mjs": "0bde7031426c5dfcd1caf44938854edf687ada5e5cc69557afec9ea575f61741",
+    "scripts/bochs-cpu3-native-owned-in8/provider.mjs": "906af74f8320edfc31c39407ebdf062d8757f3db8a95a1212eeae5f847007c5d",
+    "scripts/bochs-cpu3-native-owned-in8/runtime.mjs": "b20b0af4322cb3f71c97e7ce04297196bd316750b48ec1bb7213c4ce0f59af73",
+    "scripts/i80386-free-owned-in8.mjs": "49638e1f07a31f53eadc4ecf2c15e360bf232642c4e9f87effe6eb0bd05ce100",
+    "scripts/prepare-bochs-cpu3-native-owned-in8.mjs": "7bc6b3fb342ea2e90f8570d8b7f2d1bd4fef92ade8e224f46dbc873fa7760a2f",
+    "scripts/run-i80386-free-owned-in8.mjs": "258fe8a78c472f00750fec450d1920e441f424802620794268c6fd1adf3ed3e5",
+    "scripts/run-i80386-native-owned-in8.mjs": "baa933ca4aa04c91597cb9e50dca9f11c5e0854f6facfbe23a6928455b2cf4d8",
+    "test/fixtures/i80386-free-owned-in8.S": "05c26591c4cdd11969307b00cb60bda741568dd6b0d75ffa448b1cb84b5b265e",
+    "test/i80386-native-owned-in8.test.mjs": "cceedabf1d71bb0ba3b7c0d6f98ed200276d80815454a4b3cbc8e2600d23e6a3"
+  },
+  "after": {
+    "scripts/bochs-cpu3-native-owned-in8/abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "scripts/bochs-cpu3-native-owned-in8/admission.mjs": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb",
+    "scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs": "13868ff311ae46e488047cca858e3c7fca14cd0d816edff0fee8c867d23b88fb",
+    "scripts/bochs-cpu3-native-owned-in8/contract.md": "a023a30740389553dced4da1a49f9e3ad4212a227c7f7691abf98e997e2183e3",
+    "scripts/bochs-cpu3-native-owned-in8/identity.mjs": "a01eef0e61ec4947cc7de89b60005d9a73d3a4974ad491aef20aaccc61dff703",
+    "scripts/bochs-cpu3-native-owned-in8/napi.mjs": "0bde7031426c5dfcd1caf44938854edf687ada5e5cc69557afec9ea575f61741",
+    "scripts/bochs-cpu3-native-owned-in8/provider.mjs": "906af74f8320edfc31c39407ebdf062d8757f3db8a95a1212eeae5f847007c5d",
+    "scripts/bochs-cpu3-native-owned-in8/runtime.mjs": "b20b0af4322cb3f71c97e7ce04297196bd316750b48ec1bb7213c4ce0f59af73",
+    "scripts/i80386-free-owned-in8.mjs": "49638e1f07a31f53eadc4ecf2c15e360bf232642c4e9f87effe6eb0bd05ce100",
+    "scripts/prepare-bochs-cpu3-native-owned-in8.mjs": "7bc6b3fb342ea2e90f8570d8b7f2d1bd4fef92ade8e224f46dbc873fa7760a2f",
+    "scripts/run-i80386-free-owned-in8.mjs": "258fe8a78c472f00750fec450d1920e441f424802620794268c6fd1adf3ed3e5",
+    "scripts/run-i80386-native-owned-in8.mjs": "baa933ca4aa04c91597cb9e50dca9f11c5e0854f6facfbe23a6928455b2cf4d8",
+    "test/fixtures/i80386-free-owned-in8.S": "05c26591c4cdd11969307b00cb60bda741568dd6b0d75ffa448b1cb84b5b265e",
+    "test/i80386-native-owned-in8.test.mjs": "cceedabf1d71bb0ba3b7c0d6f98ed200276d80815454a4b3cbc8e2600d23e6a3"
+  },
+  "unchanged": true,
+  "stdoutSha256": "44f636c2485ce17da556b3d8f4cbc7ecc7fe32c7989595deba79f3a83bdfe077",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

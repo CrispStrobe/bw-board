@@ -1,0 +1,8 @@
+{
+  "oldSha256": "8215c00db69bcf9ba4b97b3ac811c4a274220fd9eab2ef30f860549e433da8c3",
+  "newSha256": "6e29284b471dc32b9c588e9bb6cf364590f00c980d0a7de2539ce07f07d84e57",
+  "rule": "successful STEP delta1 -> Q,N; failed delta0 -> N; PIO completedN=JScurrentAttempt-1",
+  "scope": "Source-bound reconstruction from JS outcomes, not observed JS native clock callbacks. Full canonical and host journal kind/order comparison retained.",
+  "sourceRevision": "6b975da14342bc040082142568a539605f580fd7",
+  "executed": false
+}

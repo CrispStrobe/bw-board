@@ -1,0 +1,3 @@
+{"n":"0","q":"0","calls":1,"ordinal":1,"name":"initialized"}
+{"operation":"inPort","args":[64,1],"value":50,"n":17,"q":17,"ordinal":2,"name":"actual-IN-read-effect"}
+{"operation":"in-reply-offset","logicalBefore":41,"logicalAfter":42,"byte":50,"epoch":0,"a20":1,"ordinal":3,"name":"mutation-after-IN-effect"}

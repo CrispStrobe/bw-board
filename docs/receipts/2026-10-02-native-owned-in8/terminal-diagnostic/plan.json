@@ -1,0 +1,28 @@
+{
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "sourceRevision": "6b975da14342bc040082142568a539605f580fd7",
+  "sourceHashes": {
+    "scripts/run-i80386-native-owned-in8.mjs": "baa933ca4aa04c91597cb9e50dca9f11c5e0854f6facfbe23a6928455b2cf4d8",
+    "scripts/bochs-cpu3-native-owned-in8/provider.mjs": "906af74f8320edfc31c39407ebdf062d8757f3db8a95a1212eeae5f847007c5d"
+  },
+  "derivatives": {
+    "provider.mjs": "2baeaef4b1cfb2c36cb86f0bba96b9e575bf47c1cce95b44c9d0b688b11dc2a5",
+    "runner.mjs": "b6e3486d8658d7050087d88cc79c847fb2a8a2dd9811ad05a4a8985ba1ed2387"
+  },
+  "changes": [
+    "Absolute frozen source imports; provider terminal copies private RAM after settle.",
+    "Write copied RAM and full terminal report before unchanged postterminal parity assertions."
+  ],
+  "execution": "ONE bounded CAPOFF diagnostic after root/peer review; exact scheduler/cuts/NQ/guards/assertions unchanged; expected exit1 retained on RAM mismatch. Parent must pin full102/build/input/helpers beforeafter; blank5env/heap512/nice10/CPUwall120/file256/core0/groupkill.",
+  "limits": "Distinct instrumented diagnostic; no native qualification, no rollback or performance claim.",
+  "historicalJS": {
+    "worktree": "/tmp/bw-board-386-owned-in8-js-diagnostic-20261002",
+    "revision": "b68f316b (full revision in binding draft)",
+    "derivation": "Absolute imports/root relocation only; fullRAM write before unchanged report/assertions. Not a new baseline.",
+    "anchor": "8bbabd33892728f64bae9b9a558ba106112aef5024196e10aa037e45d0ca7344"
+  },
+  "commands": [
+    "python3 run.py native",
+    "python3 run.py js"
+  ]
+}
