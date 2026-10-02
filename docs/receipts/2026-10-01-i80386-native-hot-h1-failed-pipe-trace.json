@@ -1,0 +1,130 @@
+{
+  "status": "ROOT_RAW_TRACE_INCOMPLETE_NOT_QUALIFIED",
+  "traceSha256": "8ed3f0d699a8f4e1fb3fe7922719e4f97c2e879685291d00def5cd1486b3dee8",
+  "bytes": 124684311,
+  "actualTagCounts": {
+    "PROBE": 4,
+    "RESET": 1,
+    "RESET_EXTRA": 1,
+    "RESET_SEG": 6,
+    "RESET_SYS": 2,
+    "RESET_DR": 1,
+    "TLB_OBSERVED": 8,
+    "ACTIVATE": 1,
+    "PREFETCH": 33,
+    "EXEC": 26,
+    "ATTEMPT": 83663,
+    "QUANTUM": 83782,
+    "BOUNDARY": 83893,
+    "COHERENCE": 83902,
+    "POST_STATE": 83918,
+    "POST_EXTRA": 83816,
+    "POST_SEG": 502047,
+    "POST_SYS": 166799,
+    "POST_DR": 83423,
+    "NATIVE_TICK": 83513,
+    "MEM": 28740,
+    "COMMIT": 3594,
+    "ALIAS_UPDATE": 4,
+    "STAMP": 4,
+    "PREFETCH_INVALIDATE": 3,
+    "PORT": 25,
+    "IRQ_LINE": 2,
+    "FAULT_BEGIN": 1,
+    "FAULT_DELIVERED": 1,
+    "IRQ_ACK": 1,
+    "IRQ_DELIVERED": 1,
+    "MAP_COMMIT": 2,
+    "TLB_INVALIDATE": 2,
+    "HALT_IDLE": 2,
+    "STATE": 1,
+    "CALLBACKS": 1,
+    "FALLBACK": 1,
+    "DEACTIVATE": 1
+  },
+  "expectedNativeTicks": 100684,
+  "expectedSuccessfulQuanta": 100682,
+  "malformedExamples": [
+    {
+      "line": 4123,
+      "prefix": "\t256\t255\t5326"
+    },
+    {
+      "line": 11049,
+      "prefix": "\t871\t870\t15161"
+    },
+    {
+      "line": 15658,
+      "prefix": ""
+    },
+    {
+      "line": 16491,
+      "prefix": "6649\t000f0340\trom\t0\t2\t1\t1"
+    },
+    {
+      "line": 16923,
+      "prefix": ""
+    },
+    {
+      "line": 22625,
+      "prefix": "\t1774\t1773\t29608"
+    },
+    {
+      "line": 27706,
+      "prefix": ""
+    },
+    {
+      "line": 29434,
+      "prefix": "43\t000f033e\trom\t0\t2\t1\t1"
+    },
+    {
+      "line": 30035,
+      "prefix": "\t000f0342\trom\t0\t2\t1\t1"
+    },
+    {
+      "line": 53737,
+      "prefix": "f7\t000f0342\trom\t0\t2\t1\t1"
+    },
+    {
+      "line": 58030,
+      "prefix": ""
+    },
+    {
+      "line": 73166,
+      "prefix": ""
+    },
+    {
+      "line": 73797,
+      "prefix": ""
+    },
+    {
+      "line": 74544,
+      "prefix": "\t5359\t5358\t86974"
+    },
+    {
+      "line": 74662,
+      "prefix": "\t5368\t5367\t87113"
+    },
+    {
+      "line": 75016,
+      "prefix": ""
+    },
+    {
+      "line": 78760,
+      "prefix": ""
+    },
+    {
+      "line": 82649,
+      "prefix": "\t5896\t5895\t95563"
+    },
+    {
+      "line": 82766,
+      "prefix": "\t5904\t5903\t95684"
+    },
+    {
+      "line": 91106,
+      "prefix": ""
+    }
+  ],
+  "limitation": "full CPU trace cannot be established; separate snapshot/callback parity does not authenticate missing native raw records"
+}

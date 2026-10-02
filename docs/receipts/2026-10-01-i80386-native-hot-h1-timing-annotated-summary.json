@@ -1,0 +1,231 @@
+{
+  "status": "EQUIVALENT_NO_JOURNAL_ACTUAL_INVARIANTS_PASS",
+  "scope": "fresh-process Node22 compatibility JS vs CPU3 direct native same100682Q workload; six acceptance snapshots and delivery/callback counts included; native resume snapshot conversion included; no physical386/representativeRTx claim",
+  "samples": [
+    {
+      "index": 0,
+      "engine": "js",
+      "discardedWarmup": true,
+      "executionNs": 1892311011,
+      "startupNs": 5180473,
+      "wallNs": 21292925791,
+      "reportSha256": "a6853da185ce5c209dbc5aa68ee6370ac8873bcbc6f467c36f6474166b6d631a",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 0,
+      "engine": "native",
+      "discardedWarmup": true,
+      "executionNs": 3302991784,
+      "startupNs": 129274915,
+      "wallNs": 17273740041,
+      "reportSha256": "9432273e043f10a9d8af0e33c090a0223778a493390d6032f7fac6ca040744cf",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 1,
+      "engine": "native",
+      "discardedWarmup": true,
+      "executionNs": 2370901731,
+      "startupNs": 125936130,
+      "wallNs": 12673124685,
+      "reportSha256": "162a4137fd6c4f4ccc24e89db8b42af4bc2c99c01da5c43e16cd5bc2124404b5",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 1,
+      "engine": "js",
+      "discardedWarmup": true,
+      "executionNs": 674465223,
+      "startupNs": 1007037,
+      "wallNs": 4549089912,
+      "reportSha256": "5f7cb62db96c4edb145a3a1b7c58317c8338c332c063774a48d12b24c0fadc55",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 2,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 1664944128,
+      "startupNs": 3467638,
+      "wallNs": 9192128030,
+      "reportSha256": "eb572dcddbcb4e6228ce63b2d43a97e00d8105880324d7ea036e1607fca872b6",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 2,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 1920505428,
+      "startupNs": 92315883,
+      "wallNs": 13210393317,
+      "reportSha256": "bbe18bbf17318d7f1ceaccb8854f865a3838c992efa9471bafa5bd9906639cad",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 3,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 3102902688,
+      "startupNs": 83611435,
+      "wallNs": 9550767040,
+      "reportSha256": "ffa9e1612bc38b60163af7885c7fdca0b9cd9e156ac5bf93396dde68b409aeb5",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 3,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 338530032,
+      "startupNs": 930402,
+      "wallNs": 3481984012,
+      "reportSha256": "70e12f7211b3759e81e71266a22909d1968bd46374253460ce517cda720c63da",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 4,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 513123808,
+      "startupNs": 998246,
+      "wallNs": 4236988004,
+      "reportSha256": "5c2f3101e34b32781d5fbd84b2ff847eb99e0ae93cf0d2901dea79b8ff7f0b46",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 4,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 1344550170,
+      "startupNs": 29539875,
+      "wallNs": 6731078926,
+      "reportSha256": "23cb7ff32bb0762d7acba6075013e9aae15c71f0f4c665940975e3c6d0fc6c68",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 5,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 1034017616,
+      "startupNs": 143059543,
+      "wallNs": 6035408047,
+      "reportSha256": "b0410ece4cf679b514525679c9c400ddd6c3e9cdd59d5f69e667802d36120f6f",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 5,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 424798808,
+      "startupNs": 1548193,
+      "wallNs": 5442414038,
+      "reportSha256": "27d5a11cac5f198b01e19fcac1ae1f945ecbe4d9865f4f6ae015634b6e7be348",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 6,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 1055714676,
+      "startupNs": 17251568,
+      "wallNs": 4393389071,
+      "reportSha256": "d3922429347639042e99b064bca95a99c1bb19c1b547a611368ba7a198b96755",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 6,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 998664909,
+      "startupNs": 62246098,
+      "wallNs": 6649305868,
+      "reportSha256": "9ed7d3127f0698ca65e22d88ed3380851cd876b0f57f5c2630f47d5ba46c0704",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 7,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 1365250393,
+      "startupNs": 443868522,
+      "wallNs": 11028000569,
+      "reportSha256": "c29b4eef06f98c46946fc5c7c3d8411e63f9258674c4fa129c0d6b5961ad4477",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 7,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 476168521,
+      "startupNs": 1821666,
+      "wallNs": 7531961328,
+      "reportSha256": "ec5062faec2cd85338e42d7fe4ce6d35d42da33f4a12a6a698a858815070ff0d",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 8,
+      "engine": "js",
+      "discardedWarmup": false,
+      "executionNs": 773868924,
+      "startupNs": 4991317,
+      "wallNs": 7962733476,
+      "reportSha256": "cbea66ef7319d85f0636579b9f3356c69b892b4ec2154441186b1b1e0dfb5a1f",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    },
+    {
+      "index": 8,
+      "engine": "native",
+      "discardedWarmup": false,
+      "executionNs": 794956027,
+      "startupNs": 31839225,
+      "wallNs": 6881476111,
+      "reportSha256": "0d48f08139377e1fb32f54360e05d9a00c1cf170c4184a4ad7921fe7957e2a78",
+      "source": "5e31ea058e16746c6bf3a540a3325ed201576719"
+    }
+  ],
+  "distribution": {
+    "js": {
+      "unit": "nanoseconds",
+      "samples": 7,
+      "min": 338530032,
+      "median": 513123808,
+      "max": 1664944128,
+      "sorted": [
+        338530032,
+        424798808,
+        476168521,
+        513123808,
+        773868924,
+        1055714676,
+        1664944128
+      ]
+    },
+    "native": {
+      "unit": "nanoseconds",
+      "samples": 7,
+      "min": 794956027,
+      "median": 1344550170,
+      "max": 3102902688,
+      "sorted": [
+        794956027,
+        998664909,
+        1034017616,
+        1344550170,
+        1365250393,
+        1920505428,
+        3102902688
+      ]
+    }
+  },
+  "interpretation": {
+    "captureModes": {
+      "jsStepWriteJournal": false,
+      "nativeRawTrace": false,
+      "nativeHostCompactSink": false
+    },
+    "includedCosts": "native synchronous board callbacks, callback count wrappers, mandatory resume snapshot conversion and six selected snapshots; JS two delivery count wrappers and six selected snapshots",
+    "historicalScopeCorrection": "native sample timing.scope literal mentions compact callback journal although actual hostJournal=false; all journal files are zero bytes/rows, reports preserved unchanged",
+    "sharedHostInterference": "4vCPU sharedKVM VPS, initialload5.27/3.74/4.52 and concurrent root ~10second instruction-byte audit; distributions broad, no isolated speed claim",
+    "comparison": "native whole adapter median higher than compatibility JS for this register-heavy owned guest; not pure Bochs compute, physical386 RTx or representative application throughput"
+  }
+}

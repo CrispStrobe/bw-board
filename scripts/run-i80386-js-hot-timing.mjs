@@ -1,0 +1,21 @@
+/** Fresh-process equivalent hot workload timing, actual compatibility JS board. */
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {ExperimentalI80386ATMachine} from '../src/experimental/i80386-at-machine.js';
+import {combinedBoardConfig,combinedBoardState} from './bochs-cpu3-native-combined-paging-ram/host.mjs';
+import {assembleCombinedHotRom} from './i80386-free-combined-hot.mjs';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),sha=b=>createHash('sha256').update(b).digest('hex'),git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+function identity(){const revision=git(['rev-parse','HEAD']),paths=new Set();function visit(p){if(paths.has(p))return;paths.add(p);const b=readFileSync(resolve(root,p));assert.equal(sha(b),sha(execFileSync('git',['show',revision+':'+p],{cwd:root,maxBuffer:32<<20})),p);if(/\.(?:mjs|js)$/.test(p))for(const m of b.toString().matchAll(/(?:from\s+|import\s*)['"](\.[^'"]+)['"]/g))visit(resolve(root,dirname(p),m[1]).slice(root.length+1));}for(const p of ['package.json','scripts/run-i80386-js-hot-timing.mjs','test/fixtures/i80386-free-combined-hot.S'])visit(p);return {revision,hashes:Object.fromEntries([...paths].sort().map(p=>[p,sha(readFileSync(resolve(root,p)))]))};}
+const input=JSON.parse(readFileSync(process.argv[2]));assert.equal(git(['status','--porcelain']),'');const source=identity(),referenceBytes=readFileSync(input.baseline);assert.equal(sha(referenceBytes),'c079fc196461e7d062df7e6a8a9b13b28ab9014b36a1040698fc5bab91ecdc5f');const reference=JSON.parse(referenceBytes);mkdirSync(input.output,{recursive:false});
+const {rom,symbols}=assembleCombinedHotRom(),m=new ExperimentalI80386ATMachine(combinedBoardConfig);m.loadRom(rom,0xf0000);m.loadRom(rom);const start=process.hrtime.bigint();m.reset();const startupNs=Number(process.hrtime.bigint()-start);let faults=0,irqs=0;
+for(const method of ['interrupt','_deliverFault']){const original=m.cpu[method];m.cpu[method]=(...args)=>{if(method==='interrupt'){assert.equal(args[0],32);irqs++;}else{assert.equal(args[0].vector,14);faults++;}return original.apply(m.cpu,args);};}
+const cpu=()=>{const c=m.cpu;return {eax:c.eax,ebx:c.ebx,ecx:c.ecx,edx:c.edx,esp:c.esp,eip:c.eip,cs:c.cs,cr0:c.cr0,cr2:c.cr2,cr3:c.cr3,cycles:c.cycles,cpuProfile:c.cpuProfile,strict386:c._strict386};};
+let q=0,attempts=0;const snapshots={},targets=Object.entries(reference.boundaries).sort((a,b)=>a[1].q-b[1].q);let targetIndex=0;const executionStart=process.hrtime.bigint();
+while(!m.cpu.halted&&q<150000&&attempts<160000){if(targetIndex<targets.length&&q===targets[targetIndex][1].q){const name=targets[targetIndex++][0];snapshots[name]={q,cpu:cpu(),board:combinedBoardState(m)};}const before=m.cpu.cycles;attempts++;m.step();q+=m.cpu.cycles-before;}
+const executionNs=Number(process.hrtime.bigint()-executionStart),settlementStart=process.hrtime.bigint();m._catchUpChips();const final={cpu:cpu(),board:combinedBoardState(m),memorySha256:sha(m.mem)},settlementAndHashNs=Number(process.hrtime.bigint()-settlementStart);
+assert.equal(m.cpu.halted,true);assert.equal(q,reference.q);assert.equal(attempts,reference.attempts);assert.equal(faults,2);assert.equal(irqs,1);assert.equal(targetIndex,targets.length);assert.deepEqual(final.cpu,reference.final.cpu);assert.deepEqual(final.board,reference.final.board);assert.equal(final.memorySha256,reference.final.memorySha256);for(const [name,snapshot] of Object.entries(snapshots)){assert.deepEqual(snapshot.cpu,reference.boundaries[name].cpu);assert.deepEqual(snapshot.board,reference.boundaries[name].board);}assert.deepEqual(identity(),source);
+const report={status:'ACTUAL_JS_HOT_NO_JOURNAL_TIMING',scope:'fresh process compatibility JS board; no STEP/WRITE/fetch/read hooks; two delivery counter wrappers and six acceptance snapshots included',source,q,attempts,faults,irqs,final,snapshots,timing:{unit:'nanoseconds',startupNs,executionNs,settlementAndHashNs}};writeFileSync(input.output+'/capture.json',JSON.stringify(report,null,2),{flag:'wx'});

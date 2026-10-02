@@ -1,0 +1,85 @@
+{
+  "scope": "actual source46cb repeat; nativecompiledc626 separately bound; WIP comparisons, not production qualification or throughput",
+  "receipts": {
+    "2026-10-01-i80386-native-hot-h1-build.json": {
+      "bytes": 1175,
+      "sha256": "96e821b962b0be231f0a957f960f23406a88e6ad29c9a3ffb84b90e00d02f038"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-0.cpuprofile.gz": {
+      "bytes": 4638,
+      "sha256": "7c4437d529e7e2268fe71866650104e8d01a5cee17862a00293fae5e5837c6ef"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-1.cpuprofile.gz": {
+      "bytes": 4362,
+      "sha256": "0ee66ae6b74d738796b9d48becfb264f4ee8932d77f13a67429691b5c10c9224"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-2.cpuprofile.gz": {
+      "bytes": 4292,
+      "sha256": "17d1b0ddd16c11f29c055a523e1e31b5179d1e7699c81025541620e5b2976f69"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-profile-environment.json": {
+      "bytes": 4974,
+      "sha256": "e0cab1e7fb7314e44a91e3fb7d53fade417358fae5347c9373c924029738faa1"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-profile-root-profile-audit.json": {
+      "bytes": 1720,
+      "sha256": "265ebb1c3f42dd9ed11c4b474cc7d3ac09009bfbd8f5d119c2224414c8e483a0"
+    },
+    "2026-10-01-i80386-native-hot-h1-execution-profile-summary.json": {
+      "bytes": 62501,
+      "sha256": "7f7dcdc7baafb098c63ebd4c9952535d773b21a20f05299a02dca94f0121ddab"
+    },
+    "2026-10-01-i80386-native-hot-h1-failed-pipe-trace.json": {
+      "bytes": 2537,
+      "sha256": "efc14802a960bccaaf8cb92ed455639ba6ad569a4514bdaa6eda854010d3f6f9"
+    },
+    "2026-10-01-i80386-native-hot-h1-independent-regular-trace.json": {
+      "bytes": 6391,
+      "sha256": "caf5fde0ac800187da726549b560608304a3c91080609e9bfa20040145cdeebf"
+    },
+    "2026-10-01-i80386-native-hot-h1-initial-binding.json": {
+      "bytes": 2822,
+      "sha256": "27782892b009f8fa17cd117eecbcfa79e99a6e0118e40576c27ff7fb0d5618ac"
+    },
+    "2026-10-01-i80386-native-hot-h1-initial-root-ram.json": {
+      "bytes": 1251,
+      "sha256": "292666f5e3811e393031a0515f833540c830f588a51084621060591ddd05aefc"
+    },
+    "2026-10-01-i80386-native-hot-h1-off-capture.json.gz": {
+      "bytes": 8311,
+      "sha256": "f7b44906f4e401e571097ff30a1dc536cf42f325ab74557c43aeeb5cb0c25ee8"
+    },
+    "2026-10-01-i80386-native-hot-h1-on-capture.json.gz": {
+      "bytes": 8304,
+      "sha256": "aa69a34396a31919cf45aaf27f60a0f5ab57c8ec650ff60be7b06ec48087a28f"
+    },
+    "2026-10-01-i80386-native-hot-h1-regular-trace.json": {
+      "bytes": 1678,
+      "sha256": "52bb8106d771793211dd9b3afa85306af98dac2efeecdaa6f219bd9ab215443f"
+    },
+    "2026-10-01-i80386-native-hot-h1-root-trace-semantic.json": {
+      "bytes": 947,
+      "sha256": "e12a84e8659b905ed473925920894821040d17a9ae4019aff7c07e2e5ecacdfd"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-annotated-summary.json": {
+      "bytes": 7767,
+      "sha256": "6142b1e4a67cd50b5b5ba25dfdcc6c4697851d7e58ed8a2111dac5595ff7e2be"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-artifact-sha256.json": {
+      "bytes": 13100,
+      "sha256": "1c49e73132cdd88096fb78b0408ddc03e30be0918dde896668f709557c935b7f"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-environment-after.json": {
+      "bytes": 1651,
+      "sha256": "e150a71a0e4c40a7ce3394b00c2257aa6951b15b4d5556f60c2d6ef6a863e8f3"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-environment-before.json": {
+      "bytes": 5185,
+      "sha256": "b2751b6535f57ce8ee7b4815abaa309d21af51f090ee1ed25774a957efad5e4f"
+    },
+    "2026-10-01-i80386-native-hot-h1-timing-root-timing-audit.json": {
+      "bytes": 1271,
+      "sha256": "c1ab5f1524f08aa4e322e7179bca8197a72d54dfccf3b487ea49d9c5f9033dc0"
+    }
+  }
+}
