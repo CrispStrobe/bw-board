@@ -1,5 +1,6 @@
 /** Worker-local private actual device owner. Not a caller board/brand API. */
 import assert from 'node:assert/strict';
+import {ramResetEvidence} from './reset-witness.mjs';
 import {HotDirectBoardFacade} from '../bochs-cpu3-native-hot-direct/board.mjs';
 import {assembleOwnedIn8Rom} from '../i80386-free-owned-in8.mjs';
 import {createHash} from 'node:crypto';
@@ -51,7 +52,7 @@ export function createOwnedIn8Provider({compactSink=null}={}){
   begin(){assert.ok(initialized&&!lease&&!closed&&!active);call('beginRun');lease=true;entry=true;n=q=0;checkState();},
   end(){assert.ok(lease&&!active&&!entry&&!postPio&&!mappingPending);call('endRun');lease=false;},
   checkpoint(){assert.ok(!lease&&!active&&!closed);return call('inspect');},
-  terminal(){assert.ok(!lease&&!active&&!closed);const state=call('settleTerminal');return {state,in8Witness:Array.from(board.machine.mem.subarray(0x590,0x592)),ramSha256:createHash('sha256').update(board.machine.mem).digest('hex')};},
+  terminal(){assert.ok(!lease&&!active&&!closed);const state=call('settleTerminal');return {state,...ramResetEvidence(board.machine.mem),in8Witness:Array.from(board.machine.mem.subarray(0x590,0x592)),ramSha256:createHash('sha256').update(board.machine.mem).digest('hex')};},
   close(){assert.ok(!lease&&!active&&!closed);call('close');closed=true;}
  });
 }
