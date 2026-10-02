@@ -13,7 +13,7 @@ function owner(sink=null){const p=createOwnedIn8Provider({compactSink:sink});p.c
 function out(p,port,value){p.callbacks.packedScalar(3,port,1,value);p.callbacks.clockTransfer(empty(),6);}
 function input(p,port=0x40){const r=p.callbacks.packedScalar(5,port,1,0);p.callbacks.clockTransfer(empty(),6);return r;}
 test('distinct ABI4 and exact source inverse seams',()=>{
- const runtime=deriveOwnedIn8Runtime(),napi=deriveOwnedIn8Napi();assert.equal(runtime.edits.length,3);assert.equal(napi.edits.length,3);
+ const runtime=deriveOwnedIn8Runtime(),napi=deriveOwnedIn8Napi();assert.equal(runtime.edits.length,4);assert.equal(napi.edits.length,3);
  assert.match(readFileSync(new URL('../scripts/bochs-cpu3-native-owned-in8/abi.h',import.meta.url),'utf8'),/#define BW_DIRECT_ABI_VERSION 4/);
  assert.match(runtime.bytes.toString(),/BW_TRACE\("BWSD1\\tPORT\\tin\\t/);
  assert.ok(!runtime.bytes.toString().includes('BWSD1\\\\tPORT\\\\tin'));
@@ -47,3 +47,5 @@ test('baseline admits only bounded IN8 profile before native loading',()=>assert
 for(const [label,mutate] of [['ROM',b=>b.rom.sha256='0'.repeat(64)],['halt',b=>b.halted=false],['N',b=>b.attempts=160001],['Q',b=>b.q=NaN],['RAM',b=>b.final.memorySha256='x'],['witness',b=>b.final.in8Witness=[1,256]],['cut',b=>b.boundaries.terminal_hlt.q=1],['EIP',b=>b.boundaries.terminal_hlt.cpu.eip=-1],['CS',b=>b.boundaries.terminal_hlt.cpu.cs=65536],['name',b=>{b.boundaries.wrong=b.boundaries.terminal_hlt;delete b.boundaries.terminal_hlt;}]])test('baseline rejects '+label,()=>{const b=baseline();mutate(b);assert.throws(()=>validateBaseline(b));});
 
 test('input pins actual historical JS reference SHA before addon read',()=>{const v=Object.fromEntries(['addon','configuration','baseline','output','preparedManifest','buildReceipt'].map(k=>[k,'/not-read']));Object.assign(v,{sha256:'a'.repeat(64),preparedManifestSha256:'b'.repeat(64),buildReceiptSha256:'c'.repeat(64),baselineSha256:'bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e',hostJournal:false,nativeTrace:false});assert.equal(validateInput(v),v);assert.throws(()=>validateInput({...v,baselineSha256:'0'.repeat(64)}));});
+
+test('native initializer admits exactly the actual assembled IN8 ROM before lifetime/bootstrap/query',()=>{const text=deriveOwnedIn8Runtime().bytes.toString(),start=text.indexOf('extern "C" int bw_direct_initialize('),end=text.indexOf('extern "C" int bw_direct_resume(',start),body=text.slice(start,end),expected=assembleOwnedIn8Rom().sha256;assert.ok(start>=0&&end>start);const match=body.match(/if\(strcmp\(sha,"([a-f0-9]{64})"\)\)return 0;/);assert.equal(match?.[1],expected);assert.ok(!body.includes('0c020faecb76160cfc748ca909d498a69ae47dd19a365891ccb20b3b5186b631'));assert.ok(body.indexOf('if(strcmp(sha,')<body.indexOf('compare_exchange_strong'));assert.ok(body.indexOf('compare_exchange_strong')<body.indexOf('bw_direct_bootstrap'));assert.ok(body.indexOf('bw_direct_bootstrap')<body.indexOf('BW_OWNED_INIT'));});

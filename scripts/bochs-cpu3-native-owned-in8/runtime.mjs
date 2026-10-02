@@ -3,6 +3,7 @@ import {replacement,sha256} from '../bochs-cpu3-native-owned-clock/derive.mjs';
 export function deriveOwnedIn8Runtime(){
  const base=deriveOwnedRuntime();let s=base.bytes.toString();const edits=[];
  const once=(old,next,label)=>{s=replacement(s,old,next,label);edits.push({old,next,label});};
+ once('if(strcmp(sha,"0c020faecb76160cfc748ca909d498a69ae47dd19a365891ccb20b3b5186b631"))return 0;','if(strcmp(sha,"25c242668fb1e0cbf940a35045a5e1173d992232766a4cbdb6a369ef3929a939"))return 0;','fixed IN8 ROM admission');
  once('callbacks->version!=3','callbacks->version!=4','ABI4 admission');
  once('static int bw_host_in(void *,uint16_t,uint32_t,uint32_t *){return 0;}',String.raw`static int bw_host_in(void *,uint16_t port,uint32_t width,uint32_t *value){
   if(!value||!bw_in_resume||width!=1||(port!=0x40&&port!=0x21&&port!=0xa1))bw_slice_fail("owned-IN8-admission");
