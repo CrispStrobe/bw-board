@@ -1,0 +1,71 @@
+{
+  "status": "PASS_ACTUAL_THREE_CELL_PRIVATE_PERWORD_DISPATCH_SEMANTIC_QUALIFICATION_NOT_PERFORMANCE_ADOPTION",
+  "runtimeRevision": "2c688e69cae516b9749d70a126a3b474707d5cb7",
+  "runtimeInputs": 112,
+  "frozenDispatchRevision": "e7a6a4ab7f2bed32a5f6d0c81e35c04e1d16d759",
+  "frozenDispatchInputs": 106,
+  "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "compiledInputs": 103,
+  "cells": [
+    {
+      "status": "PASS_ACTUAL_DISPATCH_SMOKE_OFF_EXACT_STATE_AND_CANONICAL_WHERE_ENABLED",
+      "checks": 397,
+      "canonicalRows": 0,
+      "runtimeInputs": 112,
+      "frozenDispatchInputs": 106,
+      "compiledInputs": 103,
+      "artifactPins": 223,
+      "resumes": 445,
+      "captureSha256": "ffeb611d36433463e576346e100614cfc4ac74250cd20fccb366d0d11c180231",
+      "traceSha256": "17113488c0f878f2b2e541710a78d31569af64196b7e7c4fea9e89ab8996c2bf",
+      "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "All full166 native snapshot/reset/final/sixcut/boards/counters/rawcanonicalRAM/physical fields exact qualifiedfe1 reference; source/provenance/input/streams/bounds/artifact auth verified. Traced modes everycanonicalrow exact; ON wholejournal and candidateOFF snapshots exact, nullsink traced mode source-backedfalse-to-null and emptyjournal. Eight recordedJS CPU fields plus exact EDX/CR0 resetprofile only. No speed/adoption/generalAT claim; no extra native execution.",
+      "independentAuditSha256": "65a11671447771dd1dc5a7d9d4c1e23dc21ad88e0ab8c060cf6bf3e707705423"
+    },
+    {
+      "status": "PASS_ACTUAL_DISPATCH_FULLTRACE_ON_EXACT_STATE_AND_CANONICAL_WHERE_ENABLED",
+      "checks": 1649680,
+      "canonicalRows": 1649271,
+      "runtimeInputs": 112,
+      "frozenDispatchInputs": 106,
+      "compiledInputs": 103,
+      "artifactPins": 223,
+      "resumes": 445,
+      "captureSha256": "2464a2fd11e355eb79c50b9f30b62e38edadf266f5c855b82b6da5da1f4cdbf3",
+      "traceSha256": "a0c7faf726342fbd1a36390f97de1ebcb9ac0467618a24ee63601aa91b3d94c3",
+      "journalSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "scope": "All full166 native snapshot/reset/final/sixcut/boards/counters/rawcanonicalRAM/physical fields exact qualifiedfe1 reference; source/provenance/input/streams/bounds/artifact auth verified. Traced modes everycanonicalrow exact; ON wholejournal and candidateOFF snapshots exact, nullsink traced mode source-backedfalse-to-null and emptyjournal. Eight recordedJS CPU fields plus exact EDX/CR0 resetprofile only. No speed/adoption/generalAT claim; no extra native execution.",
+      "independentAuditSha256": "bdebf660a5e1185f824ce41a5bbca82d1a0bb1fe2df3fe004e6e420692794426"
+    },
+    {
+      "status": "PASS_ACTUAL_DISPATCH_TRACE_FAST_EXACT_STATE_AND_CANONICAL_WHERE_ENABLED",
+      "checks": 1649669,
+      "canonicalRows": 1649271,
+      "runtimeInputs": 112,
+      "frozenDispatchInputs": 106,
+      "compiledInputs": 103,
+      "artifactPins": 223,
+      "resumes": 445,
+      "captureSha256": "42d5c36eaa5e2f849e3d098fef7ef3151920a36ba840b0dbc33f0bd3bbb53342",
+      "traceSha256": "fff770b740838158adb31d0b013749c2801ad98709fac301b68fd036ab099379",
+      "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "All full166 native snapshot/reset/final/sixcut/boards/counters/rawcanonicalRAM/physical fields exact qualifiedfe1 reference; source/provenance/input/streams/bounds/artifact auth verified. Traced modes everycanonicalrow exact; ON wholejournal and candidateOFF snapshots exact, nullsink traced mode source-backedfalse-to-null and emptyjournal. Eight recordedJS CPU fields plus exact EDX/CR0 resetprofile only. No speed/adoption/generalAT claim; no extra native execution.",
+      "independentAuditSha256": "eea71ac2abb8825969fd5a88df568bb74d6f8698129879677024aac462ef0e98"
+    }
+  ],
+  "fullFieldsEqual": [
+    "reset",
+    "final",
+    "checkpoints",
+    "settled",
+    "in8Witness",
+    "ramSha256",
+    "resetWitness",
+    "ramCanonicalSha256",
+    "resumes",
+    "terminal",
+    "closed"
+  ],
+  "bindingSha256": "9a2ade3a06cb974ffd451f6ac80dcc9e8d11e6078553b2ef47a88066326b1e5c",
+  "scope": "All three fresh authorized cells actualPASS full166 native stored snapshots/fullboard/physical/rawcanonicalRAM exact heldfe1 and each other. ON and trace-fast both every1649271canonicalrow exact; ON wholehostjournal exact; trace-fast journalempty and authenticated source inputfalse\u2192null selects captured-bound perword branch. Original compiled guards/nativeDSO unchanged; no CPU gate, speed, broadAT or adoption claim."
+}

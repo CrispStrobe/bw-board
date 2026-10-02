@@ -1,5 +1,7 @@
 # Experimental 80386 speed path
 
+[Private per-word dispatch source experiment](I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 differential factory controls with frozen runtime106/unchanged compiledfe1/103 inputs. [Three native parity cells](I80386-OWNED-DISPATCH-PARITY-RESULTS.md) now pass against fe1, including canonical chronology through the null-sink branch; there is no new speed or RTx result.
+
 [Baseline profiling preparation](I80386-OWNED-BASELINE-PROFILE-WIP.md) adds source-only phase-bounded diagnostics after the failed bulk gate. No fixture profiling or new speed result has run.
 
 

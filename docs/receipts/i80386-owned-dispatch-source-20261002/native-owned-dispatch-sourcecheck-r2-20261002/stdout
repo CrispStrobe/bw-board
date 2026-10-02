@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: exact source inverse and guard seams
+ok 1 - exact source inverse and guard seams
+  ---
+  duration_ms: 3.608066
+  type: 'test'
+  ...
+# Subtest: ordinary REP and fault-N ordering capture=false
+ok 2 - ordinary REP and fault-N ordering capture=false
+  ---
+  duration_ms: 885.153302
+  type: 'test'
+  ...
+# Subtest: ordinary REP and fault-N ordering capture=true
+ok 3 - ordinary REP and fault-N ordering capture=true
+  ---
+  duration_ms: 1029.292212
+  type: 'test'
+  ...
+# Subtest: full preflight denial 3/99
+ok 4 - full preflight denial 3/99
+  ---
+  duration_ms: 390.606516
+  type: 'test'
+  ...
+# Subtest: full preflight denial 601/1
+ok 5 - full preflight denial 601/1
+  ---
+  duration_ms: 299.808691
+  type: 'test'
+  ...
+# Subtest: full preflight denial 301/2
+ok 6 - full preflight denial 301/2
+  ---
+  duration_ms: 428.064587
+  type: 'test'
+  ...
+# Subtest: query phases and paused lifecycle denial preserve subsequent work
+ok 7 - query phases and paused lifecycle denial preserve subsequent work
+  ---
+  duration_ms: 389.400458
+  type: 'test'
+  ...
+# Subtest: foreign callback receiver cannot replace factory receiver
+ok 8 - foreign callback receiver cannot replace factory receiver
+  ---
+  duration_ms: 381.582416
+  type: 'test'
+  ...
+# Subtest: PIT write/read catchup and query replies match
+ok 9 - PIT write/read catchup and query replies match
+  ---
+  duration_ms: 453.981138
+  type: 'test'
+  ...
+# Subtest: mapping publication refuses N/REP and admits only ordinary Q
+ok 10 - mapping publication refuses N/REP and admits only ordinary Q
+  ---
+  duration_ms: 416.404691
+  type: 'test'
+  ...
+# Subtest: sink exception and nested callback denial retain exact partial effect/finally
+ok 11 - sink exception and nested callback denial retain exact partial effect/finally
+  ---
+  duration_ms: 375.044812
+  type: 'test'
+  ...
+# Subtest: 900-word exact independent caps and 901 refusal
+ok 12 - 900-word exact independent caps and 901 refusal
+  ---
+  duration_ms: 450.936427
+  type: 'test'
+  ...
+# Subtest: due last Q allowed and subsequent Q denied without effects
+ok 13 - due last Q allowed and subsequent Q denied without effects
+  ---
+  duration_ms: 457.860837
+  type: 'test'
+  ...
+# Subtest: post-factory mutable bind/apply cannot redirect hot dispatch
+ok 14 - post-factory mutable bind/apply cannot redirect hot dispatch
+  ---
+  duration_ms: 461.27718
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7700.869253

@@ -1,0 +1,17 @@
+{
+  "native-owned-dispatch-sourcecheck-20261002/after.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-20261002/after.json",
+  "native-owned-dispatch-sourcecheck-20261002/before.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-20261002/before.json",
+  "native-owned-dispatch-sourcecheck-20261002/exit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-20261002/exit.json",
+  "native-owned-dispatch-sourcecheck-20261002/stderr": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-20261002/stderr",
+  "native-owned-dispatch-sourcecheck-20261002/stdout": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-20261002/stdout",
+  "native-owned-dispatch-sourcecheck-r2-20261002/after.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/after.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/before.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/before.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/exit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/exit.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/independent-frozen-source-audit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/independent-frozen-source-audit.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/independent-source-audit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/independent-source-audit.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/inherited-source-identity.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/inherited-source-identity.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/root-frozen-source-audit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/root-frozen-source-audit.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/source-freeze.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/source-freeze.json",
+  "native-owned-dispatch-sourcecheck-r2-20261002/stderr": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/stderr",
+  "native-owned-dispatch-sourcecheck-r2-20261002/stdout": "/mnt/volume1/tmp-astra/native-owned-dispatch-sourcecheck-r2-20261002/stdout"
+}
