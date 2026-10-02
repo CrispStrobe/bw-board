@@ -16,6 +16,10 @@ on:
         description: Separate whole-process F0 and motion profiles after ordinary F0 timing
         type: boolean
         default: false
+      gpio_profile:
+        description: Independent GPIO-only process profile on pinned Node 22.23.3 (diagnostic only)
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -29,6 +33,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+      - name: Pin runtime for isolated GPIO attribution
+        if: inputs.gpio_profile
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.23.3
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: labwired-wasm-b
@@ -49,7 +58,7 @@ jobs:
         timeout-minutes: 10
         run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
       - name: Verify strict receipt parsers
-        run: node --test test/f0-timing-receipt.test.mjs test/motion-ab-receipt.test.mjs test/wasm-motion-profile.test.mjs
+        run: node --test test/f0-timing-receipt.test.mjs test/f0-gpio-profile-receipt.test.mjs test/motion-ab-receipt.test.mjs test/wasm-motion-profile.test.mjs
       - name: Preserve runner and tooling provenance
         env:
           BUILD_RUN: ${{ inputs.build_run }}
@@ -71,6 +80,9 @@ jobs:
           args=()
           if [ "$PROFILE" = true ]; then args+=(--profile); fi
           node scripts/probe-labwired-f0.mjs --wasm engine/nodejs --out evidence/f0 "${args[@]}"
+      - name: Independent ordinary and sampled GPIO-only processes
+        if: inputs.gpio_profile
+        run: node scripts/profile-labwired-f0-gpio.mjs --wasm engine/nodejs --out evidence/gpio-only --profile
       - name: Separate unsampled motion trace and sampled main attribution
         if: inputs.profile
         run: |
