@@ -97,7 +97,7 @@ its fixed-fixture paired CPU gate used 26.33% less process CPU than H4, with all
 
 The [fixed PIC IMR native fixture](docs/I80386-NATIVE-OWNED-PIC-IMR-RESULTS.md) passes actual capture-OFF/ON state and chronology checks. This bounded compatibility proof is not a speed or general AT result.
 
-The [private per-word dispatch experiment](docs/I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 source controls and [three native parity cells](docs/I80386-OWNED-DISPATCH-PARITY-RESULTS.md) for the fixed free fixture; performance qualification remains pending.
+The [private per-word dispatch experiment](docs/I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 source controls and [three native parity cells](docs/I80386-OWNED-DISPATCH-PARITY-RESULTS.md) for the fixed free fixture; [its paired CPU gate failed](docs/I80386-OWNED-DISPATCH-CPU-RESULTS.md): 1.72% nominal mean reduction and four of seven favorable pairs, below the ≥10%/all-seven requirement. Keep `fe1`; no adoption.
 
 ## LabWired WASM performance (2026-10-01)
 

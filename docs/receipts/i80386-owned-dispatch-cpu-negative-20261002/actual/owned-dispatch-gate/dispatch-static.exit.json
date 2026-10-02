@@ -1,0 +1,1 @@
+{"command": ["/opt/hostedtoolcache/node/22.23.3/x64/bin/node", "--max-old-space-size=512", "/home/runner/work/_temp/owned-dispatch-gate/dispatch-static.mjs"], "returncode": 0, "timeout": false, "terminatedDescendantPids": []}

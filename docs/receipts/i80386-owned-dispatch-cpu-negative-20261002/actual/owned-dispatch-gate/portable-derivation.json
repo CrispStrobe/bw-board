@@ -1,0 +1,135 @@
+{
+  "configuration": {
+    "originalSha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+    "derivedSha256": "3a8c09d57138101d9538ddeff2f5b83ac77429f3e83970813ef377b0638f5eb6",
+    "seams": [
+      [
+        "/tmp/bw-board-386-native-owned-clock-20261002/roms/free-at-bios/BIOS-bochs-legacy",
+        "/tmp/bw-board-386-native-owned-in8-r3-20261002/roms/free-at-bios/BIOS-bochs-legacy"
+      ],
+      [
+        "/tmp/bw-board-386-native-owned-clock-20261002/roms/free-at-bios/vgabios-lgpl.bin",
+        "/tmp/bw-board-386-native-owned-in8-r3-20261002/roms/free-at-bios/vgabios-lgpl.bin"
+      ],
+      [
+        "/mnt/volume1/tmp-astra/native-direct-smoke-r3-20261001/bochs.log",
+        "/home/runner/work/_temp/owned-dispatch-gate/bochs.log"
+      ]
+    ],
+    "inverseExact": true
+  },
+  "profile-admission.mjs": {
+    "originalSha256": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb",
+    "derivedSha256": "8ee57223592ca858bdf5c045b9e651b3c2b3882deca00e7cb8da730db87f7778",
+    "seams": [
+      [
+        "'../bochs-cpu3-native-owned-clock/derive.mjs'",
+        "'/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-clock/derive.mjs'"
+      ],
+      [
+        "'../bochs-cpu3-native-combined-paging-ram/host.mjs'",
+        "'/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs'"
+      ],
+      [
+        "fileURLToPath(new URL('../../',import.meta.url))",
+        "'/tmp/bw-board-386-native-owned-in8-r3-20261002/'"
+      ],
+      [
+        "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+        "3a8c09d57138101d9538ddeff2f5b83ac77429f3e83970813ef377b0638f5eb6"
+      ]
+    ],
+    "inverseExact": true
+  },
+  "BASE": {
+    "originalSha256": "68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b",
+    "derivedSha256": "a7459b126e5fed41f6be2039f055f7fdd9bd72e7040f6648f7d6c4a62c7e051d",
+    "seams": [
+      [
+        "from './bochs-cpu3-native-owned-in8/reset-witness.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-in8/provider.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-in8/provider.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-hot-direct/journal.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-hot-direct/journal.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-in8/admission.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-in8/admission.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-in8/bootstrap.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-clock/derive.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-clock/derive.mjs'"
+      ],
+      [
+        "from './audit-i80386-native-direct-board-adapter.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/audit-i80386-native-direct-board-adapter.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-in8/identity.mjs'",
+        "from '/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-in8/identity.mjs'"
+      ],
+      [
+        "/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/bochs-cpu3-native-owned-in8/admission.mjs",
+        "/home/runner/work/_temp/owned-dispatch-gate/gate/profile-admission.mjs"
+      ]
+    ],
+    "inverseExact": true
+  },
+  "DISPATCH": {
+    "originalSha256": "ad21a082496beb6fac54b051c5b453404d71c93a316d6078c2e56c7744ed2115",
+    "derivedSha256": "5303dcb6877ac7b1f5e5f7248d81a131106b935573765f1225666cf72caa5848",
+    "seams": [
+      [
+        "from './bochs-cpu3-native-owned-in8/reset-witness.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-dispatch/provider.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-dispatch/provider.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-hot-direct/journal.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-hot-direct/journal.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-in8/admission.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-in8/admission.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-in8/bootstrap.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-clock/derive.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-clock/derive.mjs'"
+      ],
+      [
+        "from './audit-i80386-native-direct-board-adapter.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/audit-i80386-native-direct-board-adapter.mjs'"
+      ],
+      [
+        "from './bochs-cpu3-native-owned-dispatch-runtime/identity.mjs'",
+        "from '/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-dispatch-runtime/identity.mjs'"
+      ],
+      [
+        "/tmp/bw-board-386-owned-dispatch-runtime-20261002/scripts/bochs-cpu3-native-owned-in8/admission.mjs",
+        "/home/runner/work/_temp/owned-dispatch-gate/gate/profile-admission.mjs"
+      ]
+    ],
+    "inverseExact": true
+  },
+  "run.py": {
+    "originalSha256": "e63a3b14c5e7462499c755da69a9d09f562c6af74d247068140bbaca2b41fb77",
+    "derivedSha256": "d05dbad55bfa84e8795c5bddcf38cf2b024daf1986de3fd2cb1929af70a28d5a",
+    "onlyNodePathSubstitution": true
+  }
+}

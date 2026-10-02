@@ -1,8 +1,8 @@
 # Experimental 80386 speed path
 
-[Private per-word dispatch source experiment](I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 differential factory controls with frozen runtime106/unchanged compiledfe1/103 inputs. [Three native parity cells](I80386-OWNED-DISPATCH-PARITY-RESULTS.md) now pass against fe1, including canonical chronology through the null-sink branch; there is no new speed or RTx result.
+[Private per-word dispatch source experiment](I80386-OWNED-DISPATCH-SOURCE-WIP.md) passes 14 differential factory controls with frozen runtime106/unchanged compiledfe1/103 inputs. [Three native parity cells](I80386-OWNED-DISPATCH-PARITY-RESULTS.md) now pass against fe1, including canonical chronology through the null-sink branch; [the hosted paired CPU gate failed](I80386-OWNED-DISPATCH-CPU-RESULTS.md): 1.719745% nominal mean reduction and four of seven favorable pairs, below the ≥10%/all-seven requirement. All 18 children retained semantic parity; keep `fe1`, with no adoption, retry or RTx claim.
 
-[Baseline profiling preparation](I80386-OWNED-BASELINE-PROFILE-WIP.md) adds source-only phase-bounded diagnostics after the failed bulk gate. No fixture profiling or new speed result has run.
+[Baseline profiling preparation](I80386-OWNED-BASELINE-PROFILE-WIP.md) records the source-only preparation stage after the failed bulk gate. The subsequent [actual baseline profiling results](I80386-OWNED-BASELINE-PROFILE-RESULTS.md) retain one phase-bounded fixture diagnostic; it is not a speed gate or a new speed result.
 
 
 The [single complete hosted bulk-clock gate](I80386-OWNED-CLOCK-BULK-RESULTS.md) does not qualify adoption: 5.4576% lower mean process CPU and five of seven favorable pairs, against the required 10% and seven of seven. All 18 child semantics pass independent audit. Keep fe1; this is fixed-fixture CPU accounting on a GitHub runner exposing four logical AMD EPYC 7763 CPUs, not physical 386DX RTx or a cumulative gain.
