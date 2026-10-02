@@ -1,11 +1,11 @@
-name: Owned 386 bulk clocks pinned CPU gate
+name: Owned 386 private dispatch pinned CPU gate
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: owned-clock-bulk-fixed-gate
+  group: owned-dispatch-fixed-gate
   cancel-in-progress: false
 jobs:
   benchmark:
@@ -26,13 +26,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: fe1eff2039520536350922a2164c8bbe29404c68
-          path: baseline
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 7b83f0ef631ba7c1cf3dc3513f5f569f00fc49f4
-          path: candidate
+          path: baseline-checkout
           persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -44,11 +38,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir "$RUNNER_TEMP/owned-bulk-context"
-          gh api /repos/CrispStrobe/bw-board/actions/artifacts/11226630502 > "$RUNNER_TEMP/owned-bulk-context/artifact-metadata.json"
+          mkdir "$RUNNER_TEMP/owned-dispatch-context"
+          gh api /repos/CrispStrobe/bw-board/actions/artifacts/11226630502 > "$RUNNER_TEMP/owned-dispatch-context/artifact-metadata.json"
           gh api /repos/CrispStrobe/bw-board/actions/artifacts/11226630502/zip > "$RUNNER_TEMP/original-build.zip"
           {
-            sha256sum publication/scripts/ci-benchmark-i80386-owned-clock-bulk.py
+            sha256sum publication/scripts/ci-benchmark-i80386-owned-dispatch.py
             cat /proc/loadavg
             # CPU identity is required; optional kernel context reports absence explicitly.
             lscpu
@@ -71,22 +65,21 @@ jobs:
             uptime
             free -h
             git -C publication rev-parse HEAD
-            git -C baseline rev-parse HEAD
-            git -C candidate rev-parse HEAD
+            git -C baseline-checkout rev-parse HEAD
             sha256sum "$RUNNER_TEMP/original-build.zip"
-          } > "$RUNNER_TEMP/owned-bulk-context/context.txt"
+          } > "$RUNNER_TEMP/owned-dispatch-context/context.txt"
       - name: Authenticate, relocate and run one fixed paired gate
         shell: bash
         run: |
           set -euo pipefail
-          python3 publication/scripts/ci-benchmark-i80386-owned-clock-bulk.py > "$RUNNER_TEMP/owned-bulk-context/parent.stdout" 2> "$RUNNER_TEMP/owned-bulk-context/parent.stderr"
+          python3 publication/scripts/ci-benchmark-i80386-owned-dispatch.py > "$RUNNER_TEMP/owned-dispatch-context/parent.stdout" 2> "$RUNNER_TEMP/owned-dispatch-context/parent.stderr"
       - name: Retain complete result and failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: owned-clock-bulk-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          name: owned-dispatch-gate-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/owned-bulk-context
-            ${{ runner.temp }}/owned-bulk-gate
+            ${{ runner.temp }}/owned-dispatch-context
+            ${{ runner.temp }}/owned-dispatch-gate
           retention-days: 14
           if-no-files-found: error
