@@ -1,3 +1,21 @@
+2026-10-02 Live solve exceptions and placeable meter availability — CLAIM, Codex bwcx `/root`.
+Clean reused worktree wt-board-duplicate-rail-current-20261002, new branch
+lane/live-solve-fault-and-bench-availability, exact base
+373c300ab53531ce525e843d2ae0deef97ee2cf7. Six-path envelope: this row;
+src/board.js live-solve exception authority, sticky observer invalidation and
+matching device-update validity; src/devices/bench-meters.js opt-in analog
+measurement-state availability; existing test/vsource-ground-reference.test.mjs
+and test/bench-meters.test.mjs; spec-updates/failed-solve-instruments.md.
+Measured primed 1 V meter remains 1 after setControl makes a ground/self ideal
+source inconsistent and solve throws; cache becomes null. Separate real singular
+parallel-source fixture leaves placeable voltmeter reading=0 with failed solve.
+Retain original exception identity/propagation, distinguish live from observational
+OP/test-current solves, preserve successful zeros, ordinary digital/device callbacks
+and physical meter loading. Prove null-cache controls, recovery, sticky histories,
+real transient exceptions, unavailable reading/deflection, and named mutations.
+No numerical/source stamp, current-sharing, tolerances, CPU, workflow/package/pin,
+CUI/Lite/corpus/deployment edits. Both fixes qualify together before one adoption.
+
 2026-10-02 Failed live solve instrument refusal — DONE candidate, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, new branch
 lane/failed-solve-instrument-refusal, exact base
