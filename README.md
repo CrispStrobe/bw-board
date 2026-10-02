@@ -95,7 +95,7 @@ also rejected object and packed replies before native integration.
 The [closed fresh-child main-thread diagnostic](docs/I80386-NATIVE-OWNED-MAIN-WIP.md) matches full fixture chronology and passes 13 lifecycle controls;
 its fixed-fixture paired CPU gate used 26.33% less process CPU than H4, with all seven measured pairs favorable. Broader guest qualification remains WIP.
 
-The [fixed PIC IMR prototype](docs/I80386-NATIVE-OWNED-PIC-IMR-WIP.md) has authenticated source and a JavaScript reference. Native PIC build and guest qualification remain pending.
+The [fixed PIC IMR native fixture](docs/I80386-NATIVE-OWNED-PIC-IMR-RESULTS.md) passes actual capture-OFF/ON state and chronology checks. This bounded compatibility proof is not a speed or general AT result.
 
 ## LabWired WASM performance (2026-10-01)
 
@@ -226,6 +226,16 @@ all-window ≥1× floor. Its separate fresh motion pass (**1.236514× median /
 1.170159× minimum**) does not erase these results. Source promotion, app pins
 and physical acknowledgements remain unchanged. See
 [complete runtime/order comparisons and original receipts](docs/receipts/2026-10-02-wasm-literal-barrier/README.md).
+
+A separate live word-address admission candidate now improves hosted GPIO in
+all four Node 20/22 and forward/reverse comparisons (**+1.24–9.12%**). One Node 22
+GPIO minimum crosses **0.983296× → 1.032780×**, passing every candidate window.
+Both independent builds, determinism, exhaustive live-admission/T16 checks and
+**101 actual-WASM integration tests** pass. It remains **unmerged/unqualified**:
+motion loses **2.24%** in one pair, another motion minimum worsens, the separate
+fresh motion floor fails, and VPS repeats were deferred because load and disk
+headroom did not permit them. App pins and physical acknowledgements stay
+unchanged. See [complete live-address results and raw receipts](docs/receipts/2026-10-02-wasm-live-word-admission/README.md).
 
 ## Limits
 

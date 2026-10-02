@@ -1,0 +1,16 @@
+{
+  "scope": "STATIC_RESTORE_NO_ADDON_LOAD_OR_GUEST",
+  "command": [
+    "python3",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restore-prepared-20261002/restore.py",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restore-prepared-20261002/approved-bindings.json"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 24.610586620867252,
+  "bindingSha256": "de4b60cdd207bb9d014b8267bfc3cbb2c0b9bc01df101b848eb77ea892bda0b4",
+  "streams": {
+    "stdout": "ac6adddd8ff291da4adec7c885652df4842708284946424ef5b5a943dfb8af56",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

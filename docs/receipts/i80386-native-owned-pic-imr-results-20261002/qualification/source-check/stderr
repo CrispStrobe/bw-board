@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/mnt/volume1/tmp-astra/native-owned-pic-imr-parity-prepared-20261002/source-controls.py", line 9, in <module>
+    ref=pathlib.Path(A['baseline']);raw=ref.read_bytes();assert sha(raw)=='fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346';js=json.loads(raw);assert js['attempts']==100702 and js['q']==100700 and len(js['ports'])==35;ins=[p for p in js['ports']if p['dir']=='in'];assert [(p['port'],p['value'])for p in ins]==[(0x21,255),(0xa1,255),(0x40,50),(0x40,18)];assert js['final']['picImrWitness']==[255,255];assert len(js['boundaries'])>=6;checks.append('authentic actual four-IN and35-PIO reference')
+                                                                                                                                                                                                                                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -1,0 +1,8 @@
+{
+  "status": "PASS_POPULATED_PIC_QUALIFICATION_BINDINGS_READY_FOR_ROOT_SINGLE_CAPOFF",
+  "artifactPins": 975,
+  "bindingSha256": "a746b53c7c5b89c58f1857e63689e39faa77fc73e6eddf93004fa6885416a894",
+  "compiledInputs": 111,
+  "runtimeInputs": 122,
+  "scope": "All actual artifact/helper hashes independently authenticated; exact real static-admission buildInput and provenance, restored source identities and baseline verified. Prepared two-cell helper review and actual static restoration audits separately PASS. No addon/guest executed."
+}
