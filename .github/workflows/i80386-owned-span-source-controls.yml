@@ -25,8 +25,6 @@ jobs:
       BW_HOT_NAPI_PROFILE: ''
       NODE_V8_COVERAGE: ''
       BW_SPAN_ROOT: ${{ github.workspace }}/baseline
-      BW_SPAN_OUT: ${{ runner.temp }}/owned-span-source-controls/result
-      BW_SPAN_CONTEXT: ${{ runner.temp }}/owned-span-source-controls/context
       BW_SPAN_BINDING: ${{ github.workspace }}/publication/docs/receipts/2026-10-02-owned-span-source-preparation/source-binding.json
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -47,6 +45,9 @@ jobs:
       - name: Materialize exact seven-file source payload and retain context
         id: materialize
         if: always()
+        env:
+          BW_SPAN_OUT: ${{ runner.temp }}/owned-span-source-controls/result
+          BW_SPAN_CONTEXT: ${{ runner.temp }}/owned-span-source-controls/context
         shell: bash
         run: |
           set -euo pipefail
@@ -55,6 +56,9 @@ jobs:
           python3 publication/docs/receipts/2026-10-02-owned-span-source-preparation/prepare-hosted.py > "$BW_SPAN_CONTEXT/preparation.stdout" 2> "$BW_SPAN_CONTEXT/preparation.stderr"
       - name: Authenticate 110 files and run one bounded source-control child
         if: ${{ steps.materialize.outcome == 'success' }}
+        env:
+          BW_SPAN_OUT: ${{ runner.temp }}/owned-span-source-controls/result
+          BW_SPAN_CONTEXT: ${{ runner.temp }}/owned-span-source-controls/context
         shell: bash
         run: |
           set -euo pipefail
