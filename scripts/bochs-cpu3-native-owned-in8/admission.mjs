@@ -1,6 +1,17 @@
 /** Fixed free-ROM diagnostic profile admission, no addon load. */
 import assert from 'node:assert/strict';import {readFileSync,statSync}from 'node:fs';import {execFileSync}from 'node:child_process';import {fileURLToPath}from 'node:url';import {sha256}from '../bochs-cpu3-native-owned-clock/derive.mjs';
+import {combinedBoardConfig} from '../bochs-cpu3-native-combined-paging-ram/host.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url)),revision='7df84bc2c367aff1cadec7cecdde69cf0e904ace';
 export function validateInput(v){const names=['addon','sha256','configuration','baseline','output','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256','hostJournal','nativeTrace','baselineSha256'];assert.ok(v&&typeof v==='object'&&!Array.isArray(v));assert.deepEqual(Object.keys(v).sort(),names.sort());for(const k of names.filter(x=>!['hostJournal','nativeTrace'].includes(x)))assert.equal(typeof v[k],'string');for(const k of ['hostJournal','nativeTrace'])assert.equal(typeof v[k],'boolean');for(const k of ['sha256','preparedManifestSha256','buildReceiptSha256','baselineSha256'])assert.match(v[k],/^[a-f0-9]{64}$/);for(const k of ['addon','configuration','baseline','output','preparedManifest','buildReceipt'])assert.ok(v[k].startsWith('/')&&v[k].length<=4096&&!v[k].includes('\0'));return v;}
 export function boundedBytes(path,max){const st=statSync(path);assert.ok(st.isFile()&&st.size<=max);return readFileSync(path);}
+export function validateBaseline(b){
+ assert.equal(b?.schema,'bw.js-owned-in8.baseline.v1');assert.equal(b?.rom?.sha256,'25c242668fb1e0cbf940a35045a5e1173d992232766a4cbdb6a369ef3929a939');assert.equal(b.halted,true);
+ assert.deepEqual(b.configuration,combinedBoardConfig,'fixed actual board profile');
+ for(const [k,max] of [['attempts',160000],['q',150000]])assert.ok(Number.isSafeInteger(b[k])&&b[k]>0&&b[k]<=max,'bounded baseline '+k);
+ assert.ok(b.attempts>=b.q);assert.match(b.final?.memorySha256??'',/^[a-f0-9]{64}$/);
+ assert.ok(Array.isArray(b.final.in8Witness)&&b.final.in8Witness.length===2&&b.final.in8Witness.every(x=>Number.isInteger(x)&&x>=0&&x<=255),'two IN bytes');
+ const names=['hot_profile_start','hot_register_loop','hot_register_end','hot_memory_loop','hot_memory_end','terminal_hlt'];assert.deepEqual(Object.keys(b.boundaries??{}).sort(),[...names].sort());
+ const targets=names.map(name=>{const v=b.boundaries[name];assert.ok(v&&Number.isSafeInteger(v.q)&&v.q>0&&v.q<=b.q);assert.ok(Number.isSafeInteger(v.cpu?.eip)&&v.cpu.eip>=0&&v.cpu.eip<=0xffffffff);assert.ok(Number.isSafeInteger(v.cpu.cs)&&v.cpu.cs>=0&&v.cpu.cs<=65535);return {name,q:v.q,cpu:v.cpu};}).sort((a,b)=>a.q-b.q);
+ assert.ok(targets.every((t,i)=>!i||t.q>targets[i-1].q));return targets;
+}
 export function authenticateConfiguration(path){const b=boundedBytes(path,16384);assert.equal(sha256(b),'5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d');const assets=[['romimage','BIOS-bochs-legacy','6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac'],['vgaromimage','vgabios-lgpl.bin','76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1']];for(const [key,name,h]of assets){const matches=[...b.toString().matchAll(new RegExp('^'+key+': file=(.+)$','gm'))];assert.equal(matches.length,1);assert.equal(sha256(boundedBytes(matches[0][1],1024*1024)),h);assert.equal(sha256(execFileSync('git',['show',revision+':roms/free-at-bios/'+name],{cwd:root,maxBuffer:2<<20})),h);assert.equal(sha256(boundedBytes(root+'roms/free-at-bios/'+name,1024*1024)),h);}return b.toString();}

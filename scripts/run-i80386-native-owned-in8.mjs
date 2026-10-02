@@ -9,7 +9,7 @@ import {realpathSync,openSync,closeSync}from 'node:fs';
 import {createHash}from 'node:crypto';
 import {createOwnedIn8Provider}from './bochs-cpu3-native-owned-in8/provider.mjs';
 import {writeJournalRecord}from './bochs-cpu3-native-hot-direct/journal.mjs';
-import {validateInput,boundedBytes,authenticateConfiguration}from './bochs-cpu3-native-owned-in8/admission.mjs';
+import {validateInput,validateBaseline,boundedBytes,authenticateConfiguration}from './bochs-cpu3-native-owned-in8/admission.mjs';
 import {checkBootstrap}from './bochs-cpu3-native-owned-in8/bootstrap.mjs';
 import {sha256} from './bochs-cpu3-native-owned-clock/derive.mjs';
 import {ownedChildConfiguration} from './audit-i80386-native-direct-board-adapter.mjs';
@@ -17,7 +17,7 @@ import {sourceIdentity as identity,authenticateBuild} from './bochs-cpu3-native-
 checkBootstrap(import.meta.url);
 const path=process.argv[2];assert.equal(process.argv.length,3);assert.ok(statSync(path).isFile()&&statSync(path).size<=16384);const input=validateInput(JSON.parse(readFileSync(path)));
 for(const k of ['addon','sha256','configuration','baseline','output'])assert.equal(typeof input[k],'string');assert.ok(input.output.startsWith('/'));assert.ok(!input.profile,'no profiler protocol');
-const baselineBytes=boundedBytes(input.baseline,16*1024*1024);assert.equal(sha256(baselineBytes),input.baselineSha256);const baseline=JSON.parse(baselineBytes),targets=Object.entries(baseline.boundaries).map(([name,v])=>({name,q:v.q,cpu:v.cpu})).sort((a,b)=>a.q-b.q);assert.equal(baseline.schema,'bw.js-owned-in8.baseline.v1');assert.equal(targets.length,6);assert.ok(targets.every((t,i)=>Number.isSafeInteger(t.q)&&t.q>0&&t.q<=150000&&(!i||t.q>targets[i-1].q)));
+const baselineBytes=boundedBytes(input.baseline,16*1024*1024);assert.equal(sha256(baselineBytes),input.baselineSha256);const baseline=JSON.parse(baselineBytes),targets=validateBaseline(baseline);
 const admittedConfiguration=authenticateConfiguration(input.configuration);
 const source=identity(),provenance=authenticateBuild(input,source);mkdirSync(input.output,{recursive:false});const config=ownedChildConfiguration(admittedConfiguration,input.output+'/guest');writeFileSync(config.path,config.text,{flag:'wx'});
 // No exported native/provider capability. All artifact admission precedes require.

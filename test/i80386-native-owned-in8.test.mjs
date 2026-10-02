@@ -6,6 +6,8 @@ import {deriveOwnedIn8Napi} from '../scripts/bochs-cpu3-native-owned-in8/napi.mj
 import {createOwnedIn8Provider} from '../scripts/bochs-cpu3-native-owned-in8/provider.mjs';
 import {assembleOwnedIn8Rom,in8Witness} from '../scripts/i80386-free-owned-in8.mjs';
 import {assembleCombinedHotRom} from '../scripts/i80386-free-combined-hot.mjs';
+import {validateBaseline} from '../scripts/bochs-cpu3-native-owned-in8/admission.mjs';
+import {combinedBoardConfig} from '../scripts/bochs-cpu3-native-combined-paging-ram/host.mjs';
 const empty=()=>new Uint32Array();
 function owner(sink=null){const p=createOwnedIn8Provider({compactSink:sink});p.callbacks.clockTransfer(empty(),1);p.begin();p.callbacks.clockTransfer(empty(),2);return p;}
 function out(p,port,value){p.callbacks.packedScalar(3,port,1,value);p.callbacks.clockTransfer(empty(),6);}
@@ -40,3 +42,6 @@ test('sink exception keeps prior read effect and releases active guard',()=>{let
 for(const port of [0x21,0xa1])test('unarmed PIC data read '+port+' returns byte without clocks',()=>{const p=owner(),r=input(p,port);assert.ok(r instanceof Uint32Array&&r.length===3);assert.equal(r[0],255);p.end();const s=p.checkpoint();assert.equal(s.nativeTicks,0);assert.equal(s.successfulQuanta,0);p.close();});
 test('IN event sink reentry is denied after exactly one device read',()=>{let p,seen=0;p=owner(e=>{if(e.operation==='inPort'){seen++;assert.throws(()=>p.callbacks.packedScalar(5,0x40,1,0),/lease/);}});out(p,0x43,0x34);out(p,0x40,0x34);out(p,0x40,0x12);out(p,0x43,0);input(p);p.end();assert.equal(seen,1);assert.equal(p.checkpoint().board.pit.counters[0].rwPhase,1);p.close();});
 test('mapping publication must precede IN',()=>{const p=owner();out(p,0x64,0xd1);out(p,0x60,1);assert.throws(()=>p.callbacks.packedScalar(5,0x40,1,0),/lease/);p.callbacks.clockTransfer(Uint32Array.of(2),5);input(p);p.end();assert.equal(p.checkpoint().mappingEpoch,1);p.close();});
+const baseline=()=>({schema:'bw.js-owned-in8.baseline.v1',configuration:structuredClone(combinedBoardConfig),rom:{sha256:'25c242668fb1e0cbf940a35045a5e1173d992232766a4cbdb6a369ef3929a939'},halted:true,attempts:10,q:9,final:{memorySha256:'a'.repeat(64),in8Witness:[1,2]},boundaries:Object.fromEntries(['hot_profile_start','hot_register_loop','hot_register_end','hot_memory_loop','hot_memory_end','terminal_hlt'].map((name,i)=>[name,{q:i+1,cpu:{eip:256+i,cs:8}}]))});
+test('baseline admits only bounded IN8 profile before native loading',()=>assert.equal(validateBaseline(baseline()).length,6));
+for(const [label,mutate] of [['ROM',b=>b.rom.sha256='0'.repeat(64)],['halt',b=>b.halted=false],['N',b=>b.attempts=160001],['Q',b=>b.q=NaN],['RAM',b=>b.final.memorySha256='x'],['witness',b=>b.final.in8Witness=[1,256]],['cut',b=>b.boundaries.terminal_hlt.q=1],['EIP',b=>b.boundaries.terminal_hlt.cpu.eip=-1],['CS',b=>b.boundaries.terminal_hlt.cpu.cs=65536],['name',b=>{b.boundaries.wrong=b.boundaries.terminal_hlt;delete b.boundaries.terminal_hlt;}]])test('baseline rejects '+label,()=>{const b=baseline();mutate(b);assert.throws(()=>validateBaseline(b));});
