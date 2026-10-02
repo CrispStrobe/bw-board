@@ -1,0 +1,6 @@
+{
+  "status": "TWO_PARENT_COMMAND_PARSE_FAILURES_ZERO_CONTROLS",
+  "error": "IndentationError: unexpected indent at def_dummy=0",
+  "sourceControlsStarted": 0,
+  "evidence": "Two actual tool outputs; Python parsed before any statements, so no child streams or files created."
+}
