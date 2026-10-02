@@ -81,11 +81,22 @@ ADP7118/LT1763 cases remain unchanged.
 Charging-current observations are explicitly caller-sampled at real 10 µs
 instants; engine-clock voltage scope capture is checked separately. They are
 not claimed to be an automatically clocked current-channel waveform.
-Six in-memory executable production mutants bypass the ramp, retain a stale
+Seven in-memory executable production mutants bypass the ramp, retain a stale
 restart clock, drop the SS refusal, bypass the non-reactive current ceiling,
-post a late rather than exact corner wake, or remove the reactive-limit refusal. Each must
+post a late rather than exact corner wake, remove the reactive-limit refusal,
+or omit the opt-in callback context. Each must
 fail its actual Board caller consequence; the registry is restored in `finally`
 and the source file remains byte-unchanged.
+
+Stamps do not mutate device state. Accepted transient-step provenance is passed
+through `read.transient` only for models declaring `transientUpdateContext`;
+ordinary models keep their original read shape and four-argument callback.
+An observational bias-query regression checks cloned-state nonmutation and
+the unchanged next real trajectory. A separate executable Board-dispatch
+mutant omits the actual context delivery and reds the real callback assertion.
+The combined focused startup, adjacent regulator, scope and baseline-profile
+surface passes 42/42 with no skips; all eight isolated mutants red and restore
+the registry or dispatcher.
 
 An independent closed-form solution of the authored delayed exponential driving
 the actual 0.05 Ω / 500 Ω / 2.2 µF RC circuit checks 120 instantaneous scope

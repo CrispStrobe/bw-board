@@ -5308,8 +5308,10 @@ export class BoardImpl {
    * long advanceTo used to see the far future (a tpd gate scheduled its
    * flip relative to the chunk end and never fired mid-chunk).
    * @param {bigint} [atNs]
+   * @param {boolean} [acceptedTransient] Accepted adaptive substep provenance;
+   *   exposed only to models opting into transientUpdateContext.
    */
-  _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false) {
+  _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
     let changed = false;
     // Built-in shift registers
     if (!measurementOnly && this._shiftRegisters.size > 0) {
@@ -5332,6 +5334,7 @@ export class BoardImpl {
         return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
       this._attachMeasurementValidity(model, read, solution);
+      if (model.transientUpdateContext === true) read.transient = acceptedTransient;
       if (model.update(part, state, read, atNs)) changed = true;
     }
     return changed;
@@ -5495,7 +5498,7 @@ export class BoardImpl {
       // history restarts and the step shrinks to look closely.
       if (this._deviceStates.size > 0) {
         const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
-        if (this._updateDevices(this.timeNs - remNs, r)) {
+        if (this._updateDevices(this.timeNs - remNs, r, false, true)) {
           trapReady = false;
           h = Math.max(H_MIN, h / 4);
         }

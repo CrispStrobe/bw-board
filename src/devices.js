@@ -37,6 +37,12 @@
  * @property {(part: import('./types.js').Part) => object} [init]
  *   Create per-part persistent state. Default: `{ drives: {} }`.
  *   `state.drives` maps terminal → {vTh, rTh} | null (null = high-Z).
+ * @property {boolean} [transientUpdateContext]
+ *   Opt in to `read.transient` on update callbacks: true only for an
+ *   accepted adaptive transient substep, false for ordinary endpoint or
+ *   instantaneous updates. Non-opt-in models retain the original read shape
+ *   and all models retain the four-argument update callback. Stamping must
+ *   not mutate live device state to discover which solve route is observing it.
  * @property {(ctx: DeviceStampCtx, part: import('./types.js').Part, state: object) => void} [stamp]
  *   Add passive/analog loading each NR iteration (input impedance etc.).
  * @property {(part: import('./types.js').Part, state: object,

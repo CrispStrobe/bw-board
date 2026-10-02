@@ -657,6 +657,17 @@ Existing callback arity and non-opt-in readers must remain unchanged. Prove
 cloned-state nonmutation plus unchanged next trajectory, actual callback context,
 ordinary device compatibility, existing startup/CLI/mean proofs and mutations.
 Prior e1a52728 landing is held; no consumer adoption while this defect remains.
+Forward pure-stamp repair now removes both stamp bookkeeping fields and uses
+the opt-in read callback context at accepted transient substeps. The bias-query
+regression was red before repair and now preserves full state and the next
+trajectory. Existing four-argument callbacks/non-opt-in read shape are proved
+unchanged. Final combined focused surface: 42/42, zero skips; seven Power
+mutants plus one real Board-dispatch mutant red with restoration. The actual
+CLI retains 120 accurate scope observations (0.051 uV maximum analytic error)
+and a capture-window mean within 13.3 uV; reactive overload exits 2 with named
+refusal and no numeric output. All 21 cloned default snapshots remain exactly
+equal to the parent. Expanded claim published at 8c2c16e2, merged into this
+candidate; replacement exact-head hosted qualification remains pending.
 Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
 DC behavior by default. Interpolate a bounded delayed single-pole envelope

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BoardImpl} from '../src/board.js';
 import {registerPowerDevices} from '../src/devices/power.js';
+import {getDevice,registerDevice,unregisterDevice} from '../src/devices.js';
 
 registerPowerDevices();
 const terminals = ['vout_1', 'vout_2', 'sense_adj', 'gnd', 'en', 'ss', 'vin_7', 'vin_8'];
@@ -192,6 +193,44 @@ test('observational bias queries never mutate startup device state or its next r
   assert.equal(observed.transientAnalysisStatus().accuracyMet,true);
 });
 
+test('accepted transient callback context is opt-in and preserves legacy callback arity/read shape', () => {
+  const model=getDevice('adp7118'), original=model.update, contexts=[];
+  model.update=function(...args) {
+    contexts.push({count:args.length,transient:args[2].transient});
+    return original.apply(this,args);
+  };
+  try {
+    const b=rig(); b.advanceTo(380_000n);
+    assert.ok(contexts.some(c=>c.transient===true),'accepted adaptive steps must be identified');
+    assert.ok(contexts.some(c=>c.transient===false),'instantaneous/endpoint updates remain distinct');
+    assert.ok(contexts.every(c=>c.count===4),'no extra argument in the established callback ABI');
+    assert.equal(b.transientAnalysisStatus().accuracyMet,true);
+  } finally {model.update=original;}
+
+  const calls=[];
+  registerDevice('bwcx-startup-context-legacy',{
+    terminals:['a','b'],
+    stamp(ctx){ctx.conductance('a','b',1/1000);},
+    update(...args){calls.push({count:args.length,hasContext:Object.hasOwn(args[2],'transient')});return false;},
+  });
+  try {
+    const b=new BoardImpl(5);
+    b.setNetlist([
+      {id:'V',kind:'vsource',params:{volts:1},terminals:['pos','neg']},
+      {id:'G',kind:'gnd',params:{},terminals:['gnd']},
+      {id:'D',kind:'bwcx-startup-context-legacy',params:{},terminals:['a','b']},
+      {id:'C',kind:'capacitor',params:{farads:1e-6},terminals:['a','b']},
+    ],[
+      net('pos',['V','pos'],['D','a'],['C','a']),
+      net('gnd',['V','neg'],['D','b'],['G','gnd'],['C','b']),
+    ]);
+    b.advanceTo(1000n);
+    assert.ok(calls.length>0);
+    assert.ok(calls.every(c=>c.count===4&&!c.hasContext),
+      'ordinary models must not receive new properties even during transient integration');
+  } finally {unregisterDevice('bwcx-startup-context-legacy');}
+});
+
 test('unknown startup model, external SS, adjustable and invalid nominal configurations refuse by name', () => {
   for (const params of [
     {startupModel: 'made-up'}, {startupModel: null},
@@ -209,7 +248,7 @@ test('unknown startup model, external SS, adjustable and invalid nominal configu
   assert.throws(() => rig({sense: false}), /ADP7118.*directly connected SENSE/);
 });
 
-test('six executable startup mutants fail their real Board caller consequences; registry always restored', async () => {
+test('seven executable startup mutants fail their real Board caller consequences; registry always restored', async () => {
   const pristine = readFileSync(new URL('../src/devices/power.js', import.meta.url), 'utf8');
   const mutants = [
     ['ramp bypass', '(part.params?.vOut ?? 5) * fraction', '(part.params?.vOut ?? 5)', () => {
@@ -239,9 +278,18 @@ test('six executable startup mutants fail their real Board caller consequences; 
         b.getDeviceState('U')._startupStartNs + delayNs,
         'the device must post the actual interpolation corner, not a late periodic wake');
     }],
-    ['missing reactive current-limit refusal', 'limited && state._startupTransientStamp', 'false && state._startupTransientStamp', () => {
+    ['missing reactive current-limit refusal', 'limited && read.transient', 'false && read.transient', () => {
       assert.throws(() => rig({load: 10}).advanceTo(1_200_000n),
         /ADP7118.*current-limited startup transient is unqualified/);
+    }],
+    ['missing accepted-transient opt-in', 'transientUpdateContext: true,', 'transientUpdateContext: false,', () => {
+      const model=getDevice('adp7118'), original=model.update;
+      let seen=false;
+      model.update=function(...args){seen ||= args[2].transient===true;return original.apply(this,args);};
+      try {
+        const b=rig(); b.advanceTo(80_000n);
+        assert.equal(seen,true,'the actual model must distinguish accepted transient callbacks');
+      } finally {model.update=original;}
     }],
   ];
   for (const [name, anchor, replacement, prove] of mutants) {
@@ -257,4 +305,26 @@ test('six executable startup mutants fail their real Board caller consequences; 
   assert.equal(readFileSync(new URL('../src/devices/power.js', import.meta.url), 'utf8'), pristine);
   const restored = rig({cap: 0}); restored.advanceTo(380_000n);
   assert.ok(Math.abs(restored.nodeVoltage('out') - 4.5) < .015);
+});
+
+test('omitting real Board transient-context delivery reds the callback contract and restores the dispatcher', () => {
+  const original=BoardImpl.prototype._updateDevices;
+  const source=original.toString();
+  const anchor='read.transient = acceptedTransient';
+  assert.equal(source.split(anchor).length-1,1,'one exact real dispatch anchor');
+  const mutant=new Function('getDevice',`return function ${source.replace(anchor,'read.transient = false')}`)(getDevice);
+  const model=getDevice('adp7118'), update=model.update;
+  let seen=false;
+  model.update=function(...args){seen ||= args[2].transient===true;return update.apply(this,args);};
+  try {
+    BoardImpl.prototype._updateDevices=mutant;
+    const b=rig(); b.advanceTo(80_000n);
+    assert.throws(()=>assert.equal(seen,true,'accepted callbacks must carry actual context'),
+      {name:'AssertionError'});
+  } finally {
+    BoardImpl.prototype._updateDevices=original;
+    model.update=update;
+  }
+  assert.equal(BoardImpl.prototype._updateDevices,original);
+  assert.equal(getDevice('adp7118').update,update);
 });

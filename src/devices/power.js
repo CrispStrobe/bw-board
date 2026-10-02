@@ -201,6 +201,7 @@ export function registerPowerDevices() {
   // noise/PSRR, thermal shutdown and exposed-pad parasitics remain unmodeled.
   registerDevice('adp7118', {
     terminals: ['vout_1', 'vout_2', 'sense_adj', 'gnd', 'en', 'ss', 'vin_7', 'vin_8'],
+    transientUpdateContext: true,
 
     init(part) {
       const nominal = part.params?.adjustable ? 1.2 : (part.params?.vOut ?? 5.0);
@@ -226,8 +227,7 @@ export function registerPowerDevices() {
         _outputAmps: 0,
         ...(startup ? {startupModel: startup, startupFraction: 0,
           _startupStartNs: null, _wakeNs: null, _currentLimited: false,
-          _headroom: 0, _startupUpdateNs: null, _startupRamping: false,
-          _startupTransientStamp: false, _startupStampedLimit: false} : {}),
+          _headroom: 0, _startupUpdateNs: null, _startupRamping: false} : {}),
       };
     },
 
@@ -236,12 +236,6 @@ export function registerPowerDevices() {
         throw new Error(`ADP7118 ${part.id}: startup SS must be open; external SS networks are unmodeled`);
       }
       if (state.startupModel) {
-        // Record only which existing solve route evaluates the source, not
-        // any trial-step voltage or integration history. Non-reactive boards
-        // need explicit endpoint re-solves; reactive substeps already evaluate
-        // the continuous reference and must not restart for every new value.
-        state._startupTransientStamp = ctx.dtSec !== undefined;
-        state._startupStampedLimit = state._currentLimited;
         const sense = ctx.netFor('sense_adj');
         if (!sense || ![ctx.netFor('vout_1'), ctx.netFor('vout_2')].includes(sense)) {
           throw new Error(`ADP7118 ${part.id}: startup requires directly connected SENSE; external feedback is unmodeled`);
@@ -320,7 +314,7 @@ export function registerPowerDevices() {
         const target = enabled ? Math.min(headroom, nominal * startupFraction) : 0;
         const demanded = Math.max(0, (target - vOut) / rOut);
         const limited = enabled && demanded > currentLimit;
-        if (limited && state._startupTransientStamp) {
+        if (limited && read.transient) {
           throw new Error(`ADP7118 ${part.id}: current-limited startup transient is unqualified`);
         }
         const outputAmps = enabled ? Math.min(currentLimit, demanded) : 0;
@@ -330,9 +324,8 @@ export function registerPowerDevices() {
         const ramping = enabled && tNs >= state._startupStartNs + ADP7118_STARTUP_DELAY_NS;
         const sameInstant = state._startupUpdateNs === tNs;
         const changed = enabled !== state._enabled || limited !== state._currentLimited
-          || limited !== state._startupStampedLimit
           || headroom !== state._headroom || ramping !== state._startupRamping
-          || (!state._startupTransientStamp && target !== state._command)
+          || (!read.transient && target !== state._command)
           || (sameInstant && Math.abs(inputAmps - state._inputAmps) > 1e-9);
         state._startupUpdateNs = tNs;
         state._enabled = enabled;
