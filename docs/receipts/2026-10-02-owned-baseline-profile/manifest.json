@@ -1,0 +1,110 @@
+{
+  "scope": "Source-only profiling preparation; local nonguest alignment control distinct from unexecuted hosted prerequisite/native fixture",
+  "files": {
+    "initial/before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-20261002/before.json",
+      "bytes": 709,
+      "sha256": "5018a7636098d48dc2c48b1262035fd32284ebeac9863dc3e8e917d71082a4b0"
+    },
+    "initial/after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-20261002/after.json",
+      "bytes": 709,
+      "sha256": "5018a7636098d48dc2c48b1262035fd32284ebeac9863dc3e8e917d71082a4b0"
+    },
+    "initial/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-20261002/exit.json",
+      "bytes": 510,
+      "sha256": "c73b51a5233e9dc18a37dfb873dfdd5cb7331f9f66bfdda6c26bafc5a5633d5f"
+    },
+    "initial/stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-20261002/stdout",
+      "bytes": 1020,
+      "sha256": "3627b2afaaae3a6cff51459c4de95d59f6de5ae53fd89fbb4831e7547e39fb59"
+    },
+    "initial/stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-20261002/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "r2/before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-r2-20261002/before.json",
+      "bytes": 709,
+      "sha256": "76e81581797e194874cd62ccd8acb9a31f3ab3efb596dc728fd50293c091723a"
+    },
+    "r2/after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-r2-20261002/after.json",
+      "bytes": 709,
+      "sha256": "76e81581797e194874cd62ccd8acb9a31f3ab3efb596dc728fd50293c091723a"
+    },
+    "r2/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-r2-20261002/exit.json",
+      "bytes": 510,
+      "sha256": "95418561cc8b01ba308bd0e24fc6000244c80e2f6eacb201dfc050dc3a492f42"
+    },
+    "r2/stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-r2-20261002/stdout",
+      "bytes": 1264,
+      "sha256": "44e36d38c40338b4a0595b405467a27ded489e45ba9c24e77b38d9442ec54a6c"
+    },
+    "r2/stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-r2-20261002/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final/before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/before.json",
+      "bytes": 709,
+      "sha256": "2111355b64073368fe6f31aa445b9608648859500bc26c3081db47fcff9b116a"
+    },
+    "final/after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/after.json",
+      "bytes": 709,
+      "sha256": "2111355b64073368fe6f31aa445b9608648859500bc26c3081db47fcff9b116a"
+    },
+    "final/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/exit.json",
+      "bytes": 815,
+      "sha256": "598293c87f25a708f4f0b90a43bad638cc68d93ed792d7b3a9a119d809ab3240"
+    },
+    "final/stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/stdout",
+      "bytes": 1264,
+      "sha256": "dcf8b1459104aa203c3a5e78885cf3cfe07d1c9e3786b7ab5b3866827e7b84c2"
+    },
+    "final/stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final/source-freeze.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/source-freeze.json",
+      "bytes": 1508,
+      "sha256": "f180e2a793748a8de960ea6bebd646ef8155c54264e6687c101baa3e8b4e9d7b"
+    },
+    "final/independent-final-source-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-sourcecheck-final-20261002/independent-final-source-audit.json",
+      "bytes": 1351,
+      "sha256": "fb41669bf6b97079b898f02ce1063614962c162d546d39aecbae376b3e26f768"
+    },
+    "review/independent-source-review.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-plan-20261002/independent-source-review.json",
+      "bytes": 1457,
+      "sha256": "ad0d484c6a81c4b48b1aa0e2305c052faf7a52ffec371adf1a517dac053dc359"
+    },
+    "review/phase-control.mjs": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-plan-20261002/phase-control.mjs",
+      "bytes": 1861,
+      "sha256": "5eb934dd3c7b0ca9c85fdc5f90b66ec17340dde96d870f98cf00bb31b23d48b0"
+    },
+    "review/phase-control.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-plan-20261002/phase-control.json",
+      "bytes": 483,
+      "sha256": "e3bdb4f6c4ee90cede374d1195fd0978e09f23b0e63b4428e86ab83e1149d97a"
+    },
+    "review/plan.txt": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-baseline-profile-plan-20261002/plan.txt",
+      "bytes": 3822,
+      "sha256": "0f3f8d1c542efcf3295b325b3617112626233660ac711c23b4c383ca5528919d"
+    }
+  }
+}

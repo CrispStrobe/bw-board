@@ -1,5 +1,7 @@
 # Experimental 80386 speed path
 
+[Baseline profiling preparation](I80386-OWNED-BASELINE-PROFILE-WIP.md) adds source-only phase-bounded diagnostics after the failed bulk gate. No fixture profiling or new speed result has run.
+
 
 The [single complete hosted bulk-clock gate](I80386-OWNED-CLOCK-BULK-RESULTS.md) does not qualify adoption: 5.4576% lower mean process CPU and five of seven favorable pairs, against the required 10% and seven of seven. All 18 child semantics pass independent audit. Keep fe1; this is fixed-fixture CPU accounting on a GitHub runner exposing four logical AMD EPYC 7763 CPUs, not physical 386DX RTx or a cumulative gain.
 
