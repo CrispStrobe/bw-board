@@ -206,6 +206,16 @@ erase its paired regressions. Only manual, nonpublishing recipe tooling is
 landed; production and hardware acknowledgements are unchanged. See
 [targeted results, all-window floors and original evidence](docs/receipts/2026-10-02-wasm-targeted-postprocess/README.md).
 
+An off-by-default WASM occurrence census now isolates the next source targets:
+RAM windows retire entirely through cached blocks; GPIO block attempts make
+**zero progress**, mostly from already-memoized discovery misses, and
+**49.8–59.9%** of overall fast attempts return zero. Every GPIO cold hook in
+these selected windows exits with no edge-driven devices. Two runs repeat
+identically and all **101 actual-WASM integration tests** pass. These are
+instrumented counts, **not new RTx results**. An uninstrumented literal-load
+probe bypass is in testing, not production-qualified. See
+[raw census receipts and next experiment](docs/receipts/2026-10-02-wasm-fastpath-census/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

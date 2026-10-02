@@ -1,0 +1,661 @@
+TAP version 13
+# Subtest: labwired-wasm boundary-A adapter
+    # Subtest: generates one input binding per pin, so every pad is drivable
+    ok 1 - generates one input binding per pin, so every pad is drivable
+      ---
+      duration_ms: 45.887494
+      ...
+    # Subtest: pillar 1: attach SEATS every pin, before any edge exists
+    ok 2 - pillar 1: attach SEATS every pin, before any edge exists
+      ---
+      duration_ms: 28300.272108
+      ...
+    # Subtest: the firmware's BSRR writes arrive as pin edges, time before edge
+    ok 3 - the firmware's BSRR writes arrive as pin edges, time before edge
+      ---
+      duration_ms: 51585.253823
+      ...
+    # Subtest: PA5 is reported as an output once the firmware configures MODER
+    ok 4 - PA5 is reported as an output once the firmware configures MODER
+      ---
+      duration_ms: 2208.923319
+      ...
+    # Subtest: pillar 2: an undriven pin takes its level from the board
+    ok 5 - pillar 2: an undriven pin takes its level from the board
+      ---
+      duration_ms: 39.968562
+      ...
+    # Subtest: a RAW flash image runs too — the form lite actually compiles
+    ok 6 - a RAW flash image runs too — the form lite actually compiles
+      ---
+      duration_ms: 906.043042
+      ...
+    # Subtest: the adapter wraps a raw image for you
+    ok 7 - the adapter wraps a raw image for you
+      ---
+      duration_ms: 604.216811
+      ...
+    # Subtest: time advances at the configured clock rate
+    ok 8 - time advances at the configured clock rate
+      ---
+      duration_ms: 305.515261
+      ...
+    # Subtest: the released AVR core publishes DDR output and PORT pull-up modes
+    ok 9 - the released AVR core publishes DDR output and PORT pull-up modes
+      ---
+      duration_ms: 369.123667
+      ...
+    # Subtest: the debug target, over the same engine
+        # Subtest: declares only what labwired can actually do
+        ok 1 - declares only what labwired can actually do
+          ---
+          duration_ms: 112.05274
+          ...
+        # Subtest: a memory and a register write land in the engine, when it has them
+        ok 2 - a memory and a register write land in the engine, when it has them
+          ---
+          duration_ms: 68.765844
+          ...
+        # Subtest: single-steps, and the PC moves
+        ok 3 - single-steps, and the PC moves
+          ---
+          duration_ms: 46.536736
+          ...
+        # Subtest: an odd Thumb breakpoint address is refused, not silently never hit
+        ok 4 - an odd Thumb breakpoint address is refused, not silently never hit
+          ---
+          duration_ms: 29.097502
+          ...
+        # Subtest: a code breakpoint halts, and reports where
+        ok 5 - a code breakpoint halts, and reports where
+          ---
+          duration_ms: 77.166482
+          ...
+        # Subtest: reading memory works, and an unknown space says so
+        ok 6 - reading memory works, and an unknown space says so
+          ---
+          duration_ms: 10.531708
+          ...
+        # Subtest: free-running still drives the board
+        ok 7 - free-running still drives the board
+          ---
+          duration_ms: 273.59881
+          ...
+        1..7
+    ok 10 - the debug target, over the same engine
+      ---
+      duration_ms: 651.533964
+      type: 'suite'
+      ...
+    1..10
+ok 1 - labwired-wasm boundary-A adapter
+  ---
+  duration_ms: 85788.495333
+  type: 'suite'
+  ...
+# Subtest: labwired bridge: our netlist → their system manifest
+    # Subtest: every header pin gets an injection binding, whatever it is wired to
+    ok 1 - every header pin gets an injection binding, whatever it is wired to
+      ---
+      duration_ms: 83.780844
+      ...
+    # Subtest: the classifier walks THROUGH the series resistor to the LED
+    ok 2 - the classifier walks THROUGH the series resistor to the LED
+      ---
+      duration_ms: 15.60466
+      ...
+    # Subtest: an output binding is named with OUR part id, so a consumer can join on it
+    ok 3 - an output binding is named with OUR part id, so a consumer can join on it
+      ---
+      duration_ms: 84.420086
+      ...
+    # Subtest: the manifest declares NO external_devices — one board, one truth
+    ok 4 - the manifest declares NO external_devices — one board, one truth
+      ---
+      duration_ms: 393.353147
+      ...
+    # Subtest: a pull-up + button pad is a contact, and gets ONE input binding
+    ok 5 - a pull-up + button pad is a contact, and gets ONE input binding
+      ---
+      duration_ms: 20.241181
+      ...
+    # Subtest: an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+    ok 6 - an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+      ---
+      duration_ms: 12.782352
+      ...
+    # Subtest: a connection on a pad outside the header map is refused BY NAME
+    ok 7 - a connection on a pad outside the header map is refused BY NAME
+      ---
+      duration_ms: 7.703639
+      ...
+    # Subtest: the controller's OWN supply terminals are not refusals
+    ok 8 - the controller's OWN supply terminals are not refusals
+      ---
+      duration_ms: 5.485824
+      ...
+    # Subtest: a chip with no heavy-tier descriptor refuses, and names what does ship
+    ok 9 - a chip with no heavy-tier descriptor refuses, and names what does ship
+      ---
+      duration_ms: 9.4751
+      ...
+    # Subtest: maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+    ok 10 - maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+      ---
+      duration_ms: 10.825801
+      ...
+    # Subtest: bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+    ok 11 - bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+      ---
+      duration_ms: 15.381969
+      ...
+    # Subtest: no controller, or two, refuses rather than guessing
+    ok 12 - no controller, or two, refuses rather than guessing
+      ---
+      duration_ms: 6.943476
+      ...
+    # Subtest: classifyAttachment orders analog before contact before indicator
+    ok 13 - classifyAttachment orders analog before contact before indicator
+      ---
+      duration_ms: 19.926893
+      ...
+    # Subtest: adapter options come out ready to hand to createLabwiredAdapter
+    ok 14 - adapter options come out ready to hand to createLabwiredAdapter
+      ---
+      duration_ms: 0.609193
+      ...
+    # Subtest: a board the bridge cannot carry throws with the reasons attached
+    ok 15 - a board the bridge cannot carry throws with the reasons attached
+      ---
+      duration_ms: 23.908106
+      ...
+    1..15
+ok 2 - labwired bridge: our netlist → their system manifest
+  ---
+  duration_ms: 777.447688
+  type: 'suite'
+  ...
+# Subtest: labwired bridge census: the shipped F030 gallery
+    # Subtest: the fixture is the corpus, and says where it came from
+    ok 1 - the fixture is the corpus, and says where it came from
+      ---
+      duration_ms: 63.000838
+      ...
+    # Subtest: every shipped bench bridges — no chip, mcu or pin refusal anywhere
+    ok 2 - every shipped bench bridges — no chip, mcu or pin refusal anywhere
+      ---
+      duration_ms: 464.518054
+      ...
+    # Subtest: THE LEDGER IS EMPTY for every bench with no analog pad
+    ok 3 - THE LEDGER IS EMPTY for every bench with no analog pad
+      ---
+      duration_ms: 623.813651
+      ...
+    # Subtest: the analog refusals are exactly the ADC pads, one per pad
+    ok 4 - the analog refusals are exactly the ADC pads, one per pad
+      ---
+      duration_ms: 765.746371
+      ...
+    # Subtest: the pad-role census matches what the corpus actually wires
+    ok 5 - the pad-role census matches what the corpus actually wires
+      ---
+      duration_ms: 231.975797
+      ...
+    1..5
+ok 3 - labwired bridge census: the shipped F030 gallery
+  ---
+  duration_ms: 2234.957081
+  type: 'suite'
+  ...
+# Subtest: labwired catalog
+    # Subtest: is generated at the wasm build PIN — regenerate after a PIN bump
+    ok 1 - is generated at the wasm build PIN — regenerate after a PIN bump
+      ---
+      duration_ms: 335.959813
+      ...
+    # Subtest: holds exactly the generator's chips, each with the arch and clock its own YAML declares
+    ok 2 - holds exactly the generator's chips, each with the arch and clock its own YAML declares
+      ---
+      duration_ms: 6695.608055
+      ...
+    1..2
+ok 4 - labwired catalog
+  ---
+  duration_ms: 7356.199309
+  type: 'suite'
+  ...
+# Subtest: firmware-only construction (no engine)
+    # Subtest: the factory builds from a catalog chip with no board, and no board_io
+    ok 1 - the factory builds from a catalog chip with no board, and no board_io
+      ---
+      duration_ms: 332.092625
+      ...
+    # Subtest: a raw .bin is refused by name instead of loaded at a guessed address
+    ok 2 - a raw .bin is refused by name instead of loaded at a guessed address
+      ---
+      duration_ms: 239.390838
+      ...
+    # Subtest: the bench path still requires a header map
+    ok 3 - the bench path still requires a header map
+      ---
+      duration_ms: 132.947825
+      ...
+    1..3
+ok 5 - firmware-only construction (no engine)
+  ---
+  duration_ms: 749.466529
+  type: 'suite'
+  ...
+# Subtest: UF2 → ELF
+    # Subtest: merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks
+    ok 1 - merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks
+      ---
+      duration_ms: 129.134065
+      ...
+    # Subtest: refuses a corrupt block by position instead of loading half an image
+    ok 2 - refuses a corrupt block by position instead of loading half an image
+      ---
+      duration_ms: 2408.247307
+      ...
+    # Subtest: firmware-only accepts a UF2 (converted), and hands the engine an ELF
+    ok 3 - firmware-only accepts a UF2 (converted), and hands the engine an ELF
+      ---
+      duration_ms: 2095.245179
+      ...
+    1..3
+ok 6 - UF2 → ELF
+  ---
+  duration_ms: 5622.771133
+  type: 'suite'
+  ...
+# Subtest: RP2040 bootrom as a named blob
+    # Subtest: firmware-only rp2040 hands the engine this repo's clean-room ROM as `bootrom`
+    ok 1 - firmware-only rp2040 hands the engine this repo's clean-room ROM as `bootrom`
+      ---
+      duration_ms: 6551.04506
+      ...
+    # Subtest: no other chip gets a blob
+    ok 2 - no other chip gets a blob
+      ---
+      duration_ms: 441.139593
+      ...
+    1..2
+ok 7 - RP2040 bootrom as a named blob
+  ---
+  duration_ms: 8188.900691
+  type: 'suite'
+  ...
+# Subtest: Thumb bit is ARM's alone
+    # Subtest: xtensa: an odd PC is reported and breakable as-is
+    ok 1 - xtensa: an odd PC is reported and breakable as-is
+      ---
+      duration_ms: 300.113566
+      ...
+    # Subtest: arm: the Thumb bit is masked and an odd breakpoint refused
+    ok 2 - arm: the Thumb bit is masked and an odd breakpoint refused
+      ---
+      duration_ms: 101.204864
+      ...
+    # Subtest: xtensa: a breakpoint on an odd address halts there
+    ok 3 - xtensa: a breakpoint on an odd address halts there
+      ---
+      duration_ms: 1555.398539
+      ...
+    1..3
+ok 8 - Thumb bit is ARM's alone
+  ---
+  duration_ms: 2043.422365
+  type: 'suite'
+  ...
+# Subtest: firmware-only on the real engine
+    # Subtest: stm32f103: a user ELF boots, runs, and stops on a breakpoint at its loop
+    ok 1 - stm32f103: a user ELF boots, runs, and stops on a breakpoint at its loop
+      ---
+      duration_ms: 50308.55947
+      ...
+    # Subtest: nrf52840: a user ELF boots, runs, and stops on a breakpoint at its loop
+    ok 2 - nrf52840: a user ELF boots, runs, and stops on a breakpoint at its loop
+      ---
+      duration_ms: 31774.367291
+      ...
+    # Subtest: stm32f103: record, restore the checkpoint, and replay reproduces every retire event
+    ok 3 - stm32f103: record, restore the checkpoint, and replay reproduces every retire event
+      ---
+      duration_ms: 52324.018425
+      ...
+    # Subtest: esp32: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+    ok 4 - esp32: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+      ---
+      duration_ms: 265.743856
+      ...
+    # Subtest: esp32s3: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+    ok 5 - esp32s3: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+      ---
+      duration_ms: 551.522625
+      ...
+    # Subtest: rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom
+    ok 6 - rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom
+      ---
+      duration_ms: 6877.502696
+      ...
+    1..6
+ok 9 - firmware-only on the real engine
+  ---
+  duration_ms: 142270.59738
+  type: 'suite'
+  ...
+# Subtest: RTT / semihosting / ITM reach a listener
+    # Subtest: each stream is drained on the pump and labelled by channel; the UART listener is untouched
+    ok 1 - each stream is drained on the pump and labelled by channel; the UART listener is untouched
+      ---
+      duration_ms: 69.974135
+      ...
+    1..1
+ok 10 - RTT / semihosting / ITM reach a listener
+  ---
+  duration_ms: 76.733352
+  type: 'suite'
+  ...
+# Subtest: engineering input JS call contract (backend doubles, not model proof)
+    # Subtest: missing APIs refuse explicitly, never use sequential set_input fallback
+    ok 1 - missing APIs refuse explicitly, never use sequential set_input fallback
+      ---
+      duration_ms: 1531.411979
+      ...
+    # Subtest: discovery normalizes actual serde Map shapes and rejects malformed top level
+    ok 2 - discovery normalizes actual serde Map shapes and rejects malformed top level
+      ---
+      duration_ms: 33.458821
+      ...
+    # Subtest: validates every row before one copied atomic call, without trimming identities
+    ok 3 - validates every row before one copied atomic call, without trimming identities
+      ---
+      duration_ms: 3.515242
+      ...
+    # Subtest: bad later rows, nonfinite values and unknown fields never reach the backend
+    ok 4 - bad later rows, nonfinite values and unknown fields never reach the backend
+      ---
+      duration_ms: 10.503881
+      ...
+    # Subtest: backend transaction errors propagate without a success receipt
+    ok 5 - backend transaction errors propagate without a success receipt
+      ---
+      duration_ms: 54.826984
+      ...
+    # Subtest: reset uses the new backend for both discovery and writes
+    ok 6 - reset uses the new backend for both discovery and writes
+      ---
+      duration_ms: 19.723412
+      ...
+    # Subtest: debug boundary refuses missing input methods and detached targets
+    ok 7 - debug boundary refuses missing input methods and detached targets
+      ---
+      duration_ms: 36.58625
+      ...
+    1..7
+ok 11 - engineering input JS call contract (backend doubles, not model proof)
+  ---
+  duration_ms: 2997.19176
+  type: 'suite'
+  ...
+# Subtest: actual WASM engineering-input transaction proof
+    # Subtest: discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+    ok 1 - discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+      ---
+      duration_ms: 51802.131018
+      ...
+    # Subtest: backend rejects ambiguous or unknown identities and bad later ranges atomically
+    ok 2 - backend rejects ambiguous or unknown identities and bad later ranges atomically
+      ---
+      duration_ms: 32.453636
+      ...
+    # Subtest: debug success emits one isolated input fact; replay routes atomically without re-emitting
+    ok 3 - debug success emits one isolated input fact; replay routes atomically without re-emitting
+      ---
+      duration_ms: 32.469604
+      ...
+    # Subtest: a circuit-bound target refuses input replay rather than half-rewinding its board
+    ok 4 - a circuit-bound target refuses input replay rather than half-rewinding its board
+      ---
+      duration_ms: 21.672269
+      ...
+    1..4
+ok 12 - actual WASM engineering-input transaction proof
+  ---
+  duration_ms: 51890.85436
+  type: 'suite'
+  ...
+# Subtest: the micro:bit matrix, without an engine
+    # Subtest: gray8 draws red LEDs by brightness, a dark one as a dim body
+    ok 1 - gray8 draws red LEDs by brightness, a dark one as a dim body
+      ---
+      duration_ms: 28.103546
+      ...
+    # Subtest: a micro:bit bench declares its on-module matrix; other benches declare no devices
+    ok 2 - a micro:bit bench declares its on-module matrix; other benches declare no devices
+      ---
+      duration_ms: 16.996707
+      ...
+    # Subtest: Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+    ok 3 - Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+      ---
+      duration_ms: 25.63531
+      ...
+    # Subtest: Board.setPartMatrix: a part with a registered model gets it on its own state
+    ok 4 - Board.setPartMatrix: a part with a registered model gets it on its own state
+      ---
+      duration_ms: 49.793315
+      ...
+    # Subtest: binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+    ok 5 - binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+      ---
+      duration_ms: 4.538784
+      ...
+    1..5
+ok 13 - the micro:bit matrix, without an engine
+  ---
+  duration_ms: 150.308107
+  type: 'suite'
+  ...
+# Subtest: the micro:bit matrix on the real engine
+    # Subtest: the catalog offers microbit-v2 with its matrix as a drawable display
+    ok 1 - the catalog offers microbit-v2 with its matrix as a drawable display
+      ---
+      duration_ms: 0.29269
+      ...
+    # Subtest: the engine's picture reaches the micro:bit part's device state
+    ok 2 - the engine's picture reaches the micro:bit part's device state
+      ---
+      duration_ms: 19702.182477
+      ...
+    1..2
+ok 14 - the micro:bit matrix on the real engine
+  ---
+  duration_ms: 20679.961444
+  type: 'suite'
+  ...
+#     [round trip] polled UIF: light 20.001 ms, heavy 20.000 ms
+#     [round trip] TIM3 handler entries per update event over 40 ms: light 0.97, heavy 0.97
+# Subtest: labwired round trip: a gallery bench on both tiers
+    # Subtest: 01-blink: the bridged manifest runs the bench, and both tiers agree
+    ok 1 - 01-blink: the bridged manifest runs the bench, and both tiers agree
+      ---
+      duration_ms: 270471.580414
+      ...
+    # Subtest: POLLED off UIF, the two timelines agree — so the COUNTER is not the difference
+    ok 2 - POLLED off UIF, the two timelines agree — so the COUNTER is not the difference
+      ---
+      duration_ms: 7292.924281
+      ...
+    # Subtest: REPAIRED: labwired enters the TIM3 handler once per update event
+    ok 3 - REPAIRED: labwired enters the TIM3 handler once per update event
+      ---
+      duration_ms: 7900.095631
+      ...
+    # Subtest: 11-toggle-button: the board drives the pad, and the firmware sees it
+    ok 4 - 11-toggle-button: the board drives the pad, and the firmware sees it
+      ---
+      duration_ms: 5728.236933
+      ...
+    # Subtest: the debug factory derives the manifest from the board it was given
+    ok 5 - the debug factory derives the manifest from the board it was given
+      ---
+      duration_ms: 122.770843
+      ...
+    # Subtest: a bench the bridge refuses does not quietly half-run
+    ok 6 - a bench the bridge refuses does not quietly half-run
+      ---
+      duration_ms: 10.634219
+      ...
+    1..6
+ok 15 - labwired round trip: a gallery bench on both tiers
+  ---
+  duration_ms: 295108.514482
+  type: 'suite'
+  ...
+#     [pad parity] DC high: light 0.078193  heavy 0.078193  hand 0.078192
+#     [pad parity] polled blink: light peak 0.078191 mean 0.035383  heavy peak 0.078188 mean 0.035382
+#     [pad parity] open-drain high: light 0.000000  heavy 0.000000
+#     [pad parity] open-drain low (active-low bench): light 0.078193  heavy 0.078193  hand 0.078192
+# Subtest: pad drive: the inferred blink bench, solved by hand
+    # Subtest: the improvised bench is the one the arithmetic describes
+    ok 1 - the improvised bench is the one the arithmetic describes
+      ---
+      duration_ms: 11.430595
+      ...
+    # Subtest: 0.0712, not 0.33: the board reproduces the hand-computed on-state
+    ok 2 - 0.0712, not 0.33: the board reproduces the hand-computed on-state
+      ---
+      duration_ms: 97.833202
+      ...
+    # Subtest: the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim
+    ok 3 - the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim
+      ---
+      duration_ms: 10.621478
+      ...
+    # Subtest: a 50 % blink far slower than the window PEAKS at the on-state value
+    ok 4 - a 50 % blink far slower than the window PEAKS at the on-state value
+      ---
+      duration_ms: 337.417217
+      ...
+    # Subtest: a blink FASTER than the window reads a steady duty-weighted 0.0356
+    ok 5 - a blink FASTER than the window reads a steady duty-weighted 0.0356
+      ---
+      duration_ms: 657.347864
+      ...
+    1..5
+ok 16 - pad drive: the inferred blink bench, solved by hand
+  ---
+  duration_ms: 1157.036062
+  type: 'suite'
+  ...
+# Subtest: open drain: the pad that lets go
+    # Subtest: od LOW is a real pull to ground — the SAME Thevenin as push-pull low
+    ok 1 - od LOW is a real pull to ground — the SAME Thevenin as push-pull low
+      ---
+      duration_ms: 115.262373
+      ...
+    # Subtest: od HIGH is high-Z: the LED is DARK and the pad is not a source
+    ok 2 - od HIGH is high-Z: the LED is DARK and the pad is not a source
+      ---
+      duration_ms: 25.210102
+      ...
+    # Subtest: od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad
+    ok 3 - od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad
+      ---
+      duration_ms: 88.925227
+      ...
+    # Subtest: od HIGH with the INTERNAL pull-up is `quasi`, not floating
+    ok 4 - od HIGH with the INTERNAL pull-up is `quasi`, not floating
+      ---
+      duration_ms: 1.378863
+      ...
+    1..4
+ok 17 - open drain: the pad that lets go
+  ---
+  duration_ms: 236.249714
+  type: 'suite'
+  ...
+# Subtest: open drain: the two publishers, at register level
+    # Subtest: OTYPER before MODER still reaches the board
+    ok 1 - OTYPER before MODER still reaches the board
+      ---
+      duration_ms: 2.418658
+      ...
+    # Subtest: the light tier maps the register combinations
+    ok 2 - the light tier maps the register combinations
+      ---
+      duration_ms: 0.650853
+      ...
+    # Subtest: the heavy tier derives the same modes from the same registers
+    ok 3 - the heavy tier derives the same modes from the same registers
+      ---
+      duration_ms: 3.293676
+      ...
+    # Subtest: OTYPER flipped on an ALREADY-configured output still reaches the board
+    ok 4 - OTYPER flipped on an ALREADY-configured output still reaches the board
+      ---
+      duration_ms: 2.121273
+      ...
+    # Subtest: a family whose snapshot has no OTYPER stays push-pull, not invented
+    ok 5 - a family whose snapshot has no OTYPER stays push-pull, not invented
+      ---
+      duration_ms: 0.785481
+      ...
+    # Subtest: the two publishers agree on every combination, cell by cell
+    ok 6 - the two publishers agree on every combination, cell by cell
+      ---
+      duration_ms: 78.263
+      ...
+    1..6
+ok 18 - open drain: the two publishers, at register level
+  ---
+  duration_ms: 88.291292
+  type: 'suite'
+  ...
+# Subtest: pad drive: heavy and light tier, same firmware, same bench
+    # Subtest: the improvised bench bridges to the heavy tier with an empty ledger
+    ok 1 - the improvised bench bridges to the heavy tier with an empty ledger
+      ---
+      duration_ms: 4426.373135
+      ...
+    # Subtest: DC high: both tiers land on the hand-computed 0.0712
+    ok 2 - DC high: both tiers land on the hand-computed 0.0712
+      ---
+      duration_ms: 72.577874
+      ...
+    # Subtest: DC high: both tiers publish the pad as a driven push-pull output
+    ok 3 - DC high: both tiers publish the pad as a driven push-pull output
+      ---
+      duration_ms: 12.899452
+      ...
+    # Subtest: polled 20 ms blink: peaks and duty-weighted means agree
+    ok 4 - polled 20 ms blink: peaks and duty-weighted means agree
+      ---
+      duration_ms: 13274.961809
+      ...
+    # Subtest: REPAIRED: an open-drain pad driving 1 is DARK on both tiers
+    ok 5 - REPAIRED: an open-drain pad driving 1 is DARK on both tiers
+      ---
+      duration_ms: 4243.050999
+      ...
+    # Subtest: REPAIRED: the same open-drain pad driving 0 still DRIVES, on both
+    ok 6 - REPAIRED: the same open-drain pad driving 0 still DRIVES, on both
+      ---
+      duration_ms: 2466.449682
+      ...
+    1..6
+ok 19 - pad drive: heavy and light tier, same firmware, same bench
+  ---
+  duration_ms: 24498.913943
+  type: 'suite'
+  ...
+1..19
+# tests 101
+# suites 20
+# pass 101
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 500603.667816
