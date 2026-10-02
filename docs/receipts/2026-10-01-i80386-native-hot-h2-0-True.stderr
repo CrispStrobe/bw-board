@@ -1,0 +1,21 @@
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'
+00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-hot-h2-cost-pairs-20261001/0-True/guest.bochsrc
+00000000000i[      ] installing nogui module as the Bochs GUI
+00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-hot-h2-cost-pairs-20261001/0-True/guest.bochs.log
+BWNP1	HEADER	1	nanoseconds	resume-only
+BWNP1	CONTROL	439	209839	1	0	1428373	0	0	0
+BWNP1	BUCKET	native_resume_inclusive	439	592066808	22950132
+BWNP1	BUCKET	resume_return_conversion	439	31150924	1024402
+BWNP1	BUCKET	scalar_whole	201393	415494468	4858464
+BWNP1	BUCKET	memory_whole	8438	93849021	6832497
+BWNP1	BUCKET	page_whole	8	21517296	10538247
+BWNP1	BUCKET	scalar_arguments_scopes	201393	23975015	897263
+BWNP1	BUCKET	scalar_op_call	201393	153144981	4847163
+BWNP1	BUCKET	scalar_return_validation	201393	12452309	99389
+BWNP1	BUCKET	scalar_mapping_call	201367	102193357	552019
+BWNP1	BUCKET	scalar_mapping_fields	201393	105522256	1064633
+BWNP1	BUCKET	scalar_scope_close	201393	18206550	1144517
+BWNP1	BUCKET	scalar_native_tick	100684	204218810	4858464
+BWNP1	BUCKET	scalar_quantum	100682	207564250	1633446
+BWNP1	BUCKET	scalar_pio	26	3514919	827436
+BWNP1	BUCKET	scalar_ack	1	196489	196489
