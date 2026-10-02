@@ -47,6 +47,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Fetch exact compiled source of fixed PIC IMR profile
         run: git fetch --no-tags --depth=1 origin a6f605280f778b2bc409ef97ac3b40e15874530c
+      - name: Fetch fixed native dispatch baseline for source reconstruction controls
+        run: git fetch --no-tags --depth=1 origin fe1eff2039520536350922a2164c8bbe29404c68
       - name: Fetch exact source revision of dated FreeDOS evidence
         run: git fetch --no-tags --depth=1 origin 46de3726abe68cb8ff106ddb4131f5d0b7bd7578
       - name: Fetch exact source revision of Win16 I/O boundary oracle

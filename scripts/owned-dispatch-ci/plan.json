@@ -1,0 +1,69 @@
+{
+  "status": "PREDECLARED_DISPATCH_GATE_NOT_EXECUTED",
+  "candidateSource": "2c688e69cae516b9749d70a126a3b474707d5cb7",
+  "candidateFiles": 112,
+  "baselineSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "baselineFiles": 103,
+  "compiledSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "addonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "samples": {
+    "warmupPairs": 2,
+    "warmupChildren": 4,
+    "measuredPairs": 7,
+    "children": 18,
+    "pairOrder": [
+      "BASE,DISPATCH",
+      "DISPATCH,BASE",
+      "BASE,DISPATCH",
+      "DISPATCH,BASE",
+      "BASE,DISPATCH",
+      "DISPATCH,BASE",
+      "BASE,DISPATCH",
+      "DISPATCH,BASE",
+      "BASE,DISPATCH"
+    ],
+    "freshProcessEach": true,
+    "oneHeavyChildAtOnce": true
+  },
+  "gate": {
+    "meanProcessCpuReductionAtLeastPercent": 10,
+    "allSevenMeasuredPairsFavorable": true,
+    "fullSemanticParityEveryChild": true
+  },
+  "captureModes": {
+    "nativeTrace": false,
+    "hostJournal": false,
+    "profile": false
+  },
+  "metric": "process.cpuUsage user+system unchanged fe1 main execution window: all445 complete resume snapshots, six board cuts, local callbacks, GC; excludes startup, settlement and final serialization. External candidate runner inverse recovers fe1 scheduler exactly.",
+  "containment": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    }
+  },
+  "prerequisites": "All three actual dispatch OFF/ON/trace-fast cells and independent audits, exact archived reconstruction, source112/compiled103 and official CI artifact admission. No prior rejected candidate retry.",
+  "policy": "onepredeclared gate, retainall18children/discardonlywarmuppairs, stopsemantic/cap failure, no retry/best samples; not10x/fullguest/physicalclockclaim",
+  "requiredFastBranchProof": {
+    "parityPath": "trace-fast/parity.json",
+    "independentAuditPath": "trace-fast/independent-audit.json",
+    "nativeTrace": true,
+    "hostJournal": false,
+    "canonicalRows": 1649271,
+    "orderedWords": 201390
+  },
+  "compiledFiles": 103,
+  "derivation": {
+    "publicationRef": "df602248db514a7d86510a39a877b62b814e0030",
+    "method": "Isolated Git index read-tree fe1; exact3 then6 source blobs, exact tree and raw commit object hashes; detachedcheckout original2c. No revision relabel."
+  }
+}
