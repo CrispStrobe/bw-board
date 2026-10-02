@@ -1,0 +1,714 @@
+correctness	Set up job	﻿2026-10-02T14:54:50.3698141Z Current runner version: '2.337.0'
+correctness	Set up job	2026-10-02T14:54:50.3718429Z ##[group]Runner Image Provisioner
+correctness	Set up job	2026-10-02T14:54:50.3719159Z Hosted Compute Agent
+correctness	Set up job	2026-10-02T14:54:50.3719596Z Version: 20260901.588
+correctness	Set up job	2026-10-02T14:54:50.3720041Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+correctness	Set up job	2026-10-02T14:54:50.3720573Z Build Date: 2026-09-01T19:56:44Z
+correctness	Set up job	2026-10-02T14:54:50.3721030Z Worker ID: {6c903f7b-3ab0-49b4-945b-2e40e100c232}
+correctness	Set up job	2026-10-02T14:54:50.3721521Z Azure Region: centralus
+correctness	Set up job	2026-10-02T14:54:50.3721934Z ##[endgroup]
+correctness	Set up job	2026-10-02T14:54:50.3722928Z ##[group]Operating System
+correctness	Set up job	2026-10-02T14:54:50.3723625Z Ubuntu
+correctness	Set up job	2026-10-02T14:54:50.3723985Z 24.04.5
+correctness	Set up job	2026-10-02T14:54:50.3724345Z LTS
+correctness	Set up job	2026-10-02T14:54:50.3724693Z ##[endgroup]
+correctness	Set up job	2026-10-02T14:54:50.3725068Z ##[group]Runner Image
+correctness	Set up job	2026-10-02T14:54:50.3725493Z Image: ubuntu-24.04
+correctness	Set up job	2026-10-02T14:54:50.3725876Z Version: 20260927.320.1
+correctness	Set up job	2026-10-02T14:54:50.3726616Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+correctness	Set up job	2026-10-02T14:54:50.3727798Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+correctness	Set up job	2026-10-02T14:54:50.3728454Z ##[endgroup]
+correctness	Set up job	2026-10-02T14:54:50.3729198Z ##[group]GITHUB_TOKEN Permissions
+correctness	Set up job	2026-10-02T14:54:50.3731079Z Contents: read
+correctness	Set up job	2026-10-02T14:54:50.3731532Z Metadata: read
+correctness	Set up job	2026-10-02T14:54:50.3732179Z ##[endgroup]
+correctness	Set up job	2026-10-02T14:54:50.3733946Z Secret source: Actions
+correctness	Set up job	2026-10-02T14:54:50.3734572Z Cache mode: write
+correctness	Set up job	2026-10-02T14:54:50.3735209Z Prepare workflow directory
+correctness	Set up job	2026-10-02T14:54:50.4595923Z Prepare all required actions
+correctness	Set up job	2026-10-02T14:54:50.4637005Z Getting action download info
+correctness	Set up job	2026-10-02T14:54:50.7277792Z Download action repository 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' (SHA:11bd71901bbe5b1630ceea73d27597364c9af683)
+correctness	Set up job	2026-10-02T14:54:50.8223392Z Download action repository 'dtolnay/rust-toolchain@1.95.0' (SHA:eb0a44f258ec94ab9ee0f14f998f4cf332c25d3a)
+correctness	Set up job	2026-10-02T14:54:51.1177301Z Complete job name: correctness
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	﻿2026-10-02T14:54:51.2592397Z ##[group]Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2593394Z with:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2593850Z   repository: CrispStrobe/labwired-core
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2596651Z   token: ***
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2597035Z   ssh-strict: true
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2597419Z   ssh-user: git
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2597782Z   persist-credentials: true
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2598189Z   clean: true
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2598546Z   sparse-checkout-cone-mode: true
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2598944Z   fetch-depth: 1
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2599324Z   fetch-tags: false
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2599673Z   show-progress: true
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2600029Z   lfs: false
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2600373Z   submodules: false
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2600763Z   set-safe-directory: true
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2601308Z env:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2601641Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2602034Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2602428Z   CARGO_INCREMENTAL: 0
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.2602788Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3387158Z Syncing repository: CrispStrobe/labwired-core
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3389101Z ##[group]Getting Git version info
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3389848Z Working directory is '/home/runner/work/labwired-core/labwired-core'
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3391101Z [command]/usr/bin/git version
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3406032Z git version 2.55.0
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3439816Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3447193Z Temporarily overriding HOME='/home/runner/work/_temp/51a8d688-b379-4825-98f4-24791fc0ed44' before making global git config changes
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3448893Z Adding repository directory to the temporary git global config as a safe directory
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3450228Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/labwired-core/labwired-core
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3492559Z Deleting the contents of '/home/runner/work/labwired-core/labwired-core'
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3515664Z ##[group]Initializing the repository
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3516951Z [command]/usr/bin/git init /home/runner/work/labwired-core/labwired-core
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3615123Z hint: Using 'master' as the name for the initial branch. This default branch name
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3619251Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3620349Z hint: to use in all of your new repositories, which will suppress this warning,
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3621217Z hint: call:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3621691Z hint:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3622292Z hint: 	git config --global init.defaultBranch <name>
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3622931Z hint:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3623694Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3624665Z hint: 'development'. The just-created branch can be renamed via this command:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3625431Z hint:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3625901Z hint: 	git branch -m <name>
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3626426Z hint:
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3627075Z hint: Disable this message with "git config set advice.defaultBranchName false"
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3628115Z Initialized empty Git repository in /home/runner/work/labwired-core/labwired-core/.git/
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3636912Z [command]/usr/bin/git remote add origin https://github.com/CrispStrobe/labwired-core
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3680235Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3681093Z ##[group]Disabling automatic garbage collection
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3689392Z [command]/usr/bin/git config --local gc.auto 0
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3707895Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3708536Z ##[group]Setting up auth
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3714627Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.3738633Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.4028321Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.4059147Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.4220487Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.4252623Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.4254297Z ##[group]Fetching the repository
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:51.4260848Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +03302546de866ae00e805b0a4c791c684c2903c0:refs/remotes/origin/perf/wasm-live-word-admission-20261002
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1490780Z From https://github.com/CrispStrobe/labwired-core
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1493752Z  * [new ref]         03302546de866ae00e805b0a4c791c684c2903c0 -> origin/perf/wasm-live-word-admission-20261002
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1510221Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1511955Z ##[group]Determining the checkout info
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1513659Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1514684Z [command]/usr/bin/git sparse-checkout disable
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1548647Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1572589Z ##[group]Checking out the ref
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.1577207Z [command]/usr/bin/git checkout --progress --force -B perf/wasm-live-word-admission-20261002 refs/remotes/origin/perf/wasm-live-word-admission-20261002
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.6212319Z Switched to a new branch 'perf/wasm-live-word-admission-20261002'
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.6213672Z branch 'perf/wasm-live-word-admission-20261002' set up to track 'origin/perf/wasm-live-word-admission-20261002'.
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.6231883Z ##[endgroup]
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.6270040Z [command]/usr/bin/git log -1 --format=%H
+correctness	Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:54:54.6296919Z 03302546de866ae00e805b0a4c791c684c2903c0
+correctness	Run dtolnay/rust-toolchain@1.95.0	﻿2026-10-02T14:54:54.7010635Z ##[group]Run dtolnay/rust-toolchain@1.95.0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7011017Z with:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7011205Z   components: rustfmt
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7011387Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7011684Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7011902Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7012105Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7012289Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7134471Z ##[start-action display=Parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7260773Z ##[group]Run if [[ -z $toolchain ]]; then
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7261207Z [36;1mif [[ -z $toolchain ]]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7261608Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7262025Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7262265Z [36;1m  exit 1[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7262543Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7262948Z [36;1m  if [[ Linux == macOS ]]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7263686Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7264108Z [36;1m  else[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7264421Z [36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7264759Z [36;1m  fi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7265308Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7265734Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7266086Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7266483Z [36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7266847Z [36;1melse[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7267054Z [36;1m  echo "toolchain=$toolchain" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7267293Z [36;1mfi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7424424Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7424793Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7424989Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7425205Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7425408Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7425598Z   toolchain: 1.95.0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7425774Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7523383Z ##[end-action id=__dtolnay_rust-toolchain.parse;outcome=success;conclusion=success;duration_ms=38]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7607923Z ##[start-action display=Construct rustup command line;id=__dtolnay_rust-toolchain.flags]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7707727Z ##[group]Run echo "targets=$(for t in ${targets//,/ }; do echo -n ' --target' $t; done)" >> $GITHUB_OUTPUT
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7708229Z [36;1mecho "targets=$(for t in ${targets//,/ }; do echo -n ' --target' $t; done)" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7708708Z [36;1mecho "components=$(for c in ${components//,/ }; do echo -n ' --component' $c; done)" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7709076Z [36;1mecho "downgrade=" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7741129Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7741436Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7741635Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7741866Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7742071Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7742258Z   targets: 
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7742434Z   components: rustfmt
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7742616Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7804751Z ##[end-action id=__dtolnay_rust-toolchain.flags;outcome=success;conclusion=success;duration_ms=19]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7879937Z ##[start-action display=Set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7976821Z ##[group]Run echo CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.7977390Z [36;1mecho CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8004014Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8004498Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8004701Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8004916Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8005119Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8005304Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8057495Z ##[end-action id=__dtolnay_rust-toolchain.__run;outcome=success;conclusion=success;duration_ms=17]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8138024Z ##[start-action display=Install rustup if needed;id=__dtolnay_rust-toolchain.__run_2]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8243852Z ##[group]Run if ! command -v rustup &>/dev/null; then
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8244217Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8244790Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://sh.rustup.rs | sh -s -- --default-toolchain none -y[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8245330Z [36;1m  echo "$CARGO_HOME/bin" >> $GITHUB_PATH[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8245560Z [36;1mfi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8272014Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8272368Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8272586Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8272832Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8273249Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8273507Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8273759Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8322312Z ##[end-action id=__dtolnay_rust-toolchain.__run_2;outcome=success;conclusion=success;duration_ms=18]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8404533Z ##[start-action display=Install rustup if needed on windows;id=__dtolnay_rust-toolchain.__run_3]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8451132Z ##[end-action id=__dtolnay_rust-toolchain.__run_3;outcome=skipped;conclusion=skipped;duration_ms=0]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8547437Z ##[start-action display=rustup toolchain install 1.95.0;id=__dtolnay_rust-toolchain.__run_4]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8672286Z ##[group]Run log=$(mktemp)
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8672585Z [36;1mlog=$(mktemp)[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8672854Z [36;1mtrap 'rm -f "$log"' EXIT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8673290Z [36;1mfor attempt in 1 2 3 4 5; do[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8673786Z [36;1m  if rustup toolchain install 1.95.0 --component rustfmt --profile minimal --no-self-update --force-non-host 2>&1 | tee "$log"; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8674210Z [36;1m    break[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8674403Z [36;1m  else[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8674584Z [36;1m    status=$?[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8674778Z [36;1m  fi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8675045Z [36;1m  if [[ $attempt == 5 ]] || ! grep -Fq 'checksum failed for ' "$log" \[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8675512Z [36;1m      || ! grep -Fq 'this is likely due to an ongoing update of the official release server' "$log"; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8675905Z [36;1m    exit "$status"[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8676127Z [36;1m  fi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8676450Z [36;1m  echo "Retrying rustup toolchain install in 30 seconds (retry $attempt of 4)" >&2[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8676824Z [36;1m  sleep 30[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8677031Z [36;1mdone[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8705788Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8706141Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8706332Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8706552Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8706763Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8707019Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8707249Z   RUSTUP_PERMIT_COPY_RENAME: 1
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.8707461Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:54.9172911Z info: syncing channel updates for 1.95.0-x86_64-unknown-linux-gnu
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:55.1157868Z info: latest update on 2026-04-16 for version 1.95.0 (59807616e 2026-04-14)
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:54:55.1159268Z info: downloading 4 components
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7455464Z 
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7520557Z   1.95.0-x86_64-unknown-linux-gnu installed - rustc 1.95.0 (59807616e 2026-04-14)
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7521522Z 
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7567660Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=6901]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7695613Z ##[start-action display=rustup default 1.95.0;id=__dtolnay_rust-toolchain.__run_5]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7868162Z ##[group]Run rustup default 1.95.0 --force-non-host
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7868474Z [36;1mrustup default 1.95.0 --force-non-host[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7906842Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7907113Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7907282Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7907478Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7907655Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7907831Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7908011Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.7990760Z info: using existing install for 1.95.0-x86_64-unknown-linux-gnu
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8001459Z info: default toolchain set to 1.95.0-x86_64-unknown-linux-gnu
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8001733Z 
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8061611Z   1.95.0-x86_64-unknown-linux-gnu unchanged - rustc 1.95.0 (59807616e 2026-04-14)
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8061921Z 
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8064029Z info: note that the toolchain '1.95.0-x86_64-unknown-linux-gnu' is currently in use (overridden by '/home/runner/work/labwired-core/labwired-core/rust-toolchain.toml')
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8074299Z ##[end-action id=__dtolnay_rust-toolchain.__run_5;outcome=success;conclusion=success;duration_ms=37]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8205331Z ##[start-action display=Create cachekey;id=__dtolnay_rust-toolchain.rustc-version]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8356011Z ##[group]Run DATE=$(rustc +1.95.0 --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8356575Z [36;1mDATE=$(rustc +1.95.0 --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8357004Z [36;1mHASH=$(rustc +1.95.0 --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8357347Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8389895Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8390179Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8390357Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8390595Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8390792Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8390966Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8391146Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8640213Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=43]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8775928Z ##[start-action display=Disable incremental compilation;id=__dtolnay_rust-toolchain.__run_6]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8922366Z ##[group]Run if [ -z "${CARGO_INCREMENTAL+set}" ]; then
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8922674Z [36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8922909Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8923321Z [36;1mfi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8958065Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8958342Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8958524Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8958722Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8958895Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8959065Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.8959242Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9011539Z ##[end-action id=__dtolnay_rust-toolchain.__run_6;outcome=success;conclusion=success;duration_ms=23]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9139303Z ##[start-action display=Enable colors in Cargo output;id=__dtolnay_rust-toolchain.__run_7]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9283175Z ##[group]Run if [ -z "${CARGO_TERM_COLOR+set}" ]; then
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9283472Z [36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9283703Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9283909Z [36;1mfi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9315783Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9316040Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9316207Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9316534Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9316709Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9316878Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9317067Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9367842Z ##[end-action id=__dtolnay_rust-toolchain.__run_7;outcome=success;conclusion=success;duration_ms=22]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9499104Z ##[start-action display=Enable Cargo sparse registry;id=__dtolnay_rust-toolchain.__run_8]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9773710Z ##[group]Run # implemented in 1.66, stabilized in 1.68, made default in 1.70
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9774090Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9774558Z [36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9775038Z [36;1m  if rustc +1.95.0 --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9775415Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9775779Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9776105Z [36;1m  elif rustc +1.95.0 --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9776477Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9776826Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9777064Z [36;1m  fi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9777206Z [36;1mfi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9808090Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9808342Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9808498Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9808680Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9808859Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9809029Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9809212Z   CARGO_TERM_COLOR: always
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:01.9809383Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0049379Z ##[end-action id=__dtolnay_rust-toolchain.__run_8;outcome=success;conclusion=success;duration_ms=54]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0162948Z ##[start-action display=Work around spurious network errors in curl 8.0;id=__dtolnay_rust-toolchain.__run_9]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0293998Z ##[group]Run # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0294515Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0294978Z [36;1mif rustc +1.95.0 --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0295287Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0295509Z [36;1mfi[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0327125Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0327380Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0327538Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0327736Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0327911Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0328078Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0328262Z   CARGO_TERM_COLOR: always
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0328429Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0468824Z ##[end-action id=__dtolnay_rust-toolchain.__run_9;outcome=success;conclusion=success;duration_ms=30]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0582902Z ##[start-action display=rustc +1.95.0 --version --verbose;id=__dtolnay_rust-toolchain.__run_10]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0711735Z ##[group]Run rustc +1.95.0 --version --verbose
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0711990Z [36;1mrustc +1.95.0 --version --verbose[0m
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0740245Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0740502Z env:
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0740672Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0740995Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0741175Z   CARGO_INCREMENTAL: 0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0741347Z   CARGO_HOME: /home/runner/.cargo
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0741610Z   CARGO_TERM_COLOR: always
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0741775Z ##[endgroup]
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0866294Z rustc 1.95.0 (59807616e 2026-04-14)
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0866788Z binary: rustc
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0867221Z commit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0867658Z commit-date: 2026-04-14
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0868009Z host: x86_64-unknown-linux-gnu
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0868375Z release: 1.95.0
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0868821Z LLVM version: 22.1.2
+correctness	Run dtolnay/rust-toolchain@1.95.0	2026-10-02T14:55:02.0879868Z ##[end-action id=__dtolnay_rust-toolchain.__run_10;outcome=success;conclusion=success;duration_ms=29]
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	﻿2026-10-02T14:55:02.1242297Z ##[group]Run cargo fmt --all -- --check
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1242549Z [36;1mcargo fmt --all -- --check[0m
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1242834Z [36;1mcargo test --locked -p labwired-core --features event-scheduler --lib t16[0m
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1272804Z shell: /usr/bin/bash -e {0}
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1273189Z env:
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1273405Z   CARGO_PROFILE_TEST_DEBUG: 0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1273624Z   CARGO_PROFILE_DEV_DEBUG: 0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1273800Z   CARGO_INCREMENTAL: 0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1273968Z   CARGO_HOME: /home/runner/.cargo
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1274154Z   CARGO_TERM_COLOR: always
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:02.1274328Z ##[endgroup]
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7295012Z [1m[33mwarning[0m: profiles for the non root package will be ignored, specify profiles at the workspace root:
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7295622Z package:   /home/runner/work/labwired-core/labwired-core/examples/h735-telematics-lab/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7296129Z workspace: /home/runner/work/labwired-core/labwired-core/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7296685Z [1m[33mwarning[0m: profiles for the non root package will be ignored, specify profiles at the workspace root:
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7297145Z package:   /home/runner/work/labwired-core/labwired-core/examples/rc-oscilloscope-lab/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7297511Z workspace: /home/runner/work/labwired-core/labwired-core/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7297936Z [1m[33mwarning[0m: profiles for the non root package will be ignored, specify profiles at the workspace root:
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7298405Z package:   /home/runner/work/labwired-core/labwired-core/examples/tier1-fixture/nrf52832/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7298772Z workspace: /home/runner/work/labwired-core/labwired-core/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7299188Z [1m[33mwarning[0m: profiles for the non root package will be ignored, specify profiles at the workspace root:
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7299620Z package:   /home/runner/work/labwired-core/labwired-core/examples/tier1-fixture/nrf52840/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7299978Z workspace: /home/runner/work/labwired-core/labwired-core/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7300394Z [1m[33mwarning[0m: profiles for the non root package will be ignored, specify profiles at the workspace root:
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7300855Z package:   /home/runner/work/labwired-core/labwired-core/examples/tier1-fixture/rp2040/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7301212Z workspace: /home/runner/work/labwired-core/labwired-core/Cargo.toml
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:05.7523880Z [1m[92m    Updating[0m crates.io index
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0206220Z [1m[92m Downloading[0m crates ...
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0646858Z [1m[92m  Downloaded[0m adler2 v2.0.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0707179Z [1m[92m  Downloaded[0m anstyle v1.0.14
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0726985Z [1m[92m  Downloaded[0m anstream v1.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0755546Z [1m[92m  Downloaded[0m addr2line v0.21.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0802265Z [1m[92m  Downloaded[0m anstyle-query v1.1.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0834613Z [1m[92m  Downloaded[0m generic-array v0.14.7
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0866596Z [1m[92m  Downloaded[0m anyhow v1.0.102
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0900458Z [1m[92m  Downloaded[0m arrayvec v0.7.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0911556Z [1m[92m  Downloaded[0m anstyle-parse v1.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0948055Z [1m[92m  Downloaded[0m cfg-if v1.0.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0962488Z [1m[92m  Downloaded[0m heck v0.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.0980729Z [1m[92m  Downloaded[0m clap_lex v1.1.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1043690Z [1m[92m  Downloaded[0m crypto-common v0.1.7
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1051704Z [1m[92m  Downloaded[0m bit-set v0.5.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1060000Z [1m[92m  Downloaded[0m crunchy v0.2.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1069431Z [1m[92m  Downloaded[0m cpufeatures v0.2.17
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1080590Z [1m[92m  Downloaded[0m fixedbitset v0.4.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1090335Z [1m[92m  Downloaded[0m dirs-next v2.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1125554Z [1m[92m  Downloaded[0m pio-parser v0.2.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1145152Z [1m[92m  Downloaded[0m rfc6979 v0.4.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1153226Z [1m[92m  Downloaded[0m human-size v0.4.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1164522Z [1m[92m  Downloaded[0m bit-vec v0.6.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1174654Z [1m[92m  Downloaded[0m block-buffer v0.10.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1185688Z [1m[92m  Downloaded[0m unicode-xid v0.2.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1195727Z [1m[92m  Downloaded[0m lalrpop-util v0.19.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1200286Z [1m[92m  Downloaded[0m either v1.15.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1209880Z [1m[92m  Downloaded[0m equivalent v1.0.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1234006Z [1m[92m  Downloaded[0m dirs-sys-next v0.1.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1234568Z [1m[92m  Downloaded[0m plain v0.2.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1234901Z [1m[92m  Downloaded[0m base16ct v0.2.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1243556Z [1m[92m  Downloaded[0m log v0.4.29
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1256867Z [1m[92m  Downloaded[0m shlex v1.3.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1263662Z [1m[92m  Downloaded[0m crc32fast v1.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1277338Z [1m[92m  Downloaded[0m scroll_derive v0.11.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1284008Z [1m[92m  Downloaded[0m scopeguard v1.2.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1292404Z [1m[92m  Downloaded[0m sha2 v0.10.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1305103Z [1m[92m  Downloaded[0m rand_core v0.6.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1312341Z [1m[92m  Downloaded[0m paste v1.0.15
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1328926Z [1m[92m  Downloaded[0m rustc-demangle v0.1.27
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1338254Z [1m[92m  Downloaded[0m primeorder v0.13.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1345824Z [1m[92m  Downloaded[0m utf8parse v0.2.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1352167Z [1m[92m  Downloaded[0m phf_shared v0.11.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1360307Z [1m[92m  Downloaded[0m ruzstd v0.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1379162Z [1m[92m  Downloaded[0m stable_deref_trait v1.2.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1385286Z [1m[92m  Downloaded[0m bitflags v2.11.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1403918Z [1m[92m  Downloaded[0m signature v2.2.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1411180Z [1m[92m  Downloaded[0m scroll v0.11.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1420037Z [1m[92m  Downloaded[0m quote v1.0.45
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1433249Z [1m[92m  Downloaded[0m version_check v0.9.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1442401Z [1m[92m  Downloaded[0m once_cell v1.21.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1460669Z [1m[92m  Downloaded[0m sec1 v0.7.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1472556Z [1m[92m  Downloaded[0m roxmltree v0.20.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1521793Z [1m[92m  Downloaded[0m wat v1.250.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1532030Z [1m[92m  Downloaded[0m p256 v0.13.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1555917Z [1m[92m  Downloaded[0m strsim v0.11.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1567058Z [1m[92m  Downloaded[0m flate2 v1.1.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1588536Z [1m[92m  Downloaded[0m indexmap v2.14.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1617144Z [1m[92m  Downloaded[0m static_assertions v1.1.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1628403Z [1m[92m  Downloaded[0m semver v1.0.28
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1642923Z [1m[92m  Downloaded[0m thiserror v1.0.69
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1666883Z [1m[92m  Downloaded[0m libm v0.2.16
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1715314Z [1m[92m  Downloaded[0m zmij v1.0.21
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1726333Z [1m[92m  Downloaded[0m zeroize v1.8.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1735753Z [1m[92m  Downloaded[0m tiny-keccak v2.0.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1750278Z [1m[92m  Downloaded[0m thiserror-impl v1.0.69
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1759066Z [1m[92m  Downloaded[0m lalrpop v0.19.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1813332Z [1m[92m  Downloaded[0m tracing-attributes v0.1.31
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1826365Z [1m[92m  Downloaded[0m ryu v1.0.23
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1841733Z [1m[92m  Downloaded[0m regex-syntax v0.6.29
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1876514Z [1m[92m  Downloaded[0m object v0.32.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1923511Z [1m[92m  Downloaded[0m svd-rs v0.14.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1935007Z [1m[92m  Downloaded[0m unsafe-libyaml v0.2.11
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1950162Z [1m[92m  Downloaded[0m twox-hash v1.6.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1959055Z [1m[92m  Downloaded[0m svd-parser v0.14.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1970370Z [1m[92m  Downloaded[0m smallvec v1.15.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1981121Z [1m[92m  Downloaded[0m serde_core v1.0.228
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.1994449Z [1m[92m  Downloaded[0m regex-syntax v0.8.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2035313Z [1m[92m  Downloaded[0m unicode-ident v1.0.24
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2051669Z [1m[92m  Downloaded[0m term v0.7.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2068962Z [1m[92m  Downloaded[0m tracing-core v0.1.36
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2082261Z [1m[92m  Downloaded[0m simd-adler32 v0.3.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2091069Z [1m[92m  Downloaded[0m serde_yaml v0.9.34+deprecated
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2106634Z [1m[92m  Downloaded[0m serde_derive v1.0.228
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2121241Z [1m[92m  Downloaded[0m regex-automata v0.4.14
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2196698Z [1m[92m  Downloaded[0m serde v1.0.228
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2214006Z [1m[92m  Downloaded[0m wasm-encoder v0.250.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2233747Z [1m[92m  Downloaded[0m typenum v1.20.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2256329Z [1m[92m  Downloaded[0m petgraph v0.6.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2351264Z [1m[92m  Downloaded[0m gimli v0.28.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2387486Z [1m[92m  Downloaded[0m wast v250.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2433569Z [1m[92m  Downloaded[0m string_cache v0.8.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2441153Z [1m[92m  Downloaded[0m serde_json v1.0.149
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2473179Z [1m[92m  Downloaded[0m clap_builder v4.6.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2503562Z [1m[92m  Downloaded[0m unicode-width v0.2.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2537702Z [1m[92m  Downloaded[0m hashbrown v0.17.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2565522Z [1m[92m  Downloaded[0m libc v0.2.186
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2724725Z [1m[92m  Downloaded[0m wasmparser v0.250.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2766663Z [1m[92m  Downloaded[0m syn v1.0.109
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2808623Z [1m[92m  Downloaded[0m syn v2.0.117
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2858788Z [1m[92m  Downloaded[0m regex v1.12.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2885346Z [1m[92m  Downloaded[0m goblin v0.7.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2911158Z [1m[92m  Downloaded[0m itertools v0.10.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2937779Z [1m[92m  Downloaded[0m cc v1.2.62
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2953287Z [1m[92m  Downloaded[0m der v0.7.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.2975387Z [1m[92m  Downloaded[0m aho-corasick v1.1.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3001483Z [1m[92m  Downloaded[0m tracing v0.1.44
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3079977Z [1m[92m  Downloaded[0m crypto-bigint v0.5.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3107035Z [1m[92m  Downloaded[0m bumpalo v3.20.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3120847Z [1m[92m  Downloaded[0m memchr v2.8.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3143188Z [1m[92m  Downloaded[0m miniz_oxide v0.8.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3155096Z [1m[92m  Downloaded[0m elliptic-curve v0.13.8
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3171357Z [1m[92m  Downloaded[0m pio v0.2.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3184023Z [1m[92m  Downloaded[0m memmap2 v0.9.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3192253Z [1m[92m  Downloaded[0m diff v0.1.13
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3204850Z [1m[92m  Downloaded[0m clap_derive v4.6.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3214691Z [1m[92m  Downloaded[0m clap v4.6.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3251220Z [1m[92m  Downloaded[0m byteorder v1.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3258636Z [1m[92m  Downloaded[0m proc-macro2 v1.0.106
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3271782Z [1m[92m  Downloaded[0m pin-project-lite v0.2.17
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3292204Z [1m[92m  Downloaded[0m parking_lot_core v0.9.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3301517Z [1m[92m  Downloaded[0m parking_lot v0.12.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3312485Z [1m[92m  Downloaded[0m num_enum_derive v0.5.11
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3317469Z [1m[92m  Downloaded[0m memmap2 v0.5.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3324806Z [1m[92m  Downloaded[0m ecdsa v0.16.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3332878Z [1m[92m  Downloaded[0m cpp_demangle v0.4.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3347344Z [1m[92m  Downloaded[0m const-oid v0.9.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3356403Z [1m[92m  Downloaded[0m bincode v1.3.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3365537Z [1m[92m  Downloaded[0m group v0.13.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3371822Z [1m[92m  Downloaded[0m is_terminal_polyfill v1.70.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3376528Z [1m[92m  Downloaded[0m colorchoice v1.0.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3380974Z [1m[92m  Downloaded[0m num_enum v0.5.11
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3400175Z [1m[92m  Downloaded[0m lock_api v0.4.14
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3406686Z [1m[92m  Downloaded[0m derive_more v0.99.20
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3425333Z [1m[92m  Downloaded[0m siphasher v1.0.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3431368Z [1m[92m  Downloaded[0m hmac v0.12.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3439661Z [1m[92m  Downloaded[0m leb128fmt v0.1.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3444132Z [1m[92m  Downloaded[0m new_debug_unreachable v1.0.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3448100Z [1m[92m  Downloaded[0m itoa v1.0.18
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3454589Z [1m[92m  Downloaded[0m is-terminal v0.4.17
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3458739Z [1m[92m  Downloaded[0m fallible-iterator v0.3.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3464448Z [1m[92m  Downloaded[0m ascii-canvas v3.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3468857Z [1m[92m  Downloaded[0m precomputed-hash v0.1.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3471485Z [1m[92m  Downloaded[0m find-msvc-tools v0.1.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3478708Z [1m[92m  Downloaded[0m ff v0.13.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3485260Z [1m[92m  Downloaded[0m ena v0.14.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3492103Z [1m[92m  Downloaded[0m digest v0.10.7
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.3499628Z [1m[92m  Downloaded[0m subtle v2.6.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.4148685Z [1m[92m   Compiling[0m proc-macro2 v1.0.106
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.4149155Z [1m[92m   Compiling[0m quote v1.0.45
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.4149505Z [1m[92m   Compiling[0m unicode-ident v1.0.24
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.4149839Z [1m[92m   Compiling[0m libc v0.2.186
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.4634703Z [1m[92m   Compiling[0m version_check v0.9.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.5429097Z [1m[92m   Compiling[0m zeroize v1.8.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.5759129Z [1m[92m   Compiling[0m typenum v1.20.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.6375876Z [1m[92m   Compiling[0m generic-array v0.14.7
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.6424092Z [1m[92m   Compiling[0m memchr v2.8.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:07.7061503Z [1m[92m   Compiling[0m subtle v2.6.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.1774757Z [1m[92m   Compiling[0m syn v2.0.117
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.4338980Z [1m[92m   Compiling[0m const-oid v0.9.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.6045180Z [1m[92m   Compiling[0m cfg-if v1.0.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.6325090Z [1m[92m   Compiling[0m serde_core v1.0.228
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.7532467Z [1m[92m   Compiling[0m block-buffer v0.10.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.7614148Z [1m[92m   Compiling[0m crypto-common v0.1.7
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.8204681Z [1m[92m   Compiling[0m digest v0.10.7
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.8865301Z [1m[92m   Compiling[0m serde v1.0.228
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:08.9514442Z [1m[92m   Compiling[0m rand_core v0.6.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:09.0104709Z [1m[92m   Compiling[0m parking_lot_core v0.9.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:09.0734948Z [1m[92m   Compiling[0m aho-corasick v1.1.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:09.0985047Z [1m[92m   Compiling[0m dirs-sys-next v0.1.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:10.4355130Z [1m[92m   Compiling[0m regex-syntax v0.8.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:10.7014318Z [1m[92m   Compiling[0m thiserror v1.0.69
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:10.8225771Z [1m[92m   Compiling[0m equivalent v1.0.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:11.7235075Z [1m[92m   Compiling[0m serde_derive v1.0.228
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:12.2934848Z [1m[92m   Compiling[0m scopeguard v1.2.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:12.3468611Z [1m[92m   Compiling[0m hashbrown v0.17.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:12.8051070Z [1m[92m   Compiling[0m smallvec v1.15.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:12.9314622Z [1m[92m   Compiling[0m crunchy v0.2.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:13.1495841Z [1m[92m   Compiling[0m indexmap v2.14.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:13.6434310Z [1m[92m   Compiling[0m lock_api v0.4.14
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:13.7897067Z [1m[92m   Compiling[0m regex-automata v0.4.14
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:14.9605380Z [1m[92m   Compiling[0m thiserror-impl v1.0.69
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:15.7127370Z [1m[92m   Compiling[0m dirs-next v2.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:15.7574669Z [1m[92m   Compiling[0m zmij v1.0.21
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:15.8685126Z [1m[92m   Compiling[0m once_cell v1.21.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:16.0164407Z [1m[92m   Compiling[0m syn v1.0.109
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:16.1634977Z [1m[92m   Compiling[0m siphasher v1.0.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:16.5175164Z [1m[92m   Compiling[0m tiny-keccak v2.0.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:16.5754788Z [1m[92m   Compiling[0m phf_shared v0.11.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:16.6954235Z [1m[92m   Compiling[0m term v0.7.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:16.7324426Z [1m[92m   Compiling[0m regex v1.12.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.0394643Z [1m[92m   Compiling[0m parking_lot v0.12.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.1484633Z [1m[92m   Compiling[0m ff v0.13.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.2063982Z [1m[92m   Compiling[0m der v0.7.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.2706748Z [1m[92m   Compiling[0m anyhow v1.0.102
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.3994724Z [1m[92m   Compiling[0m itoa v1.0.18
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.5454417Z [1m[92m   Compiling[0m base16ct v0.2.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.6405176Z [1m[92m   Compiling[0m precomputed-hash v0.1.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.6645523Z [1m[92m   Compiling[0m fixedbitset v0.4.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.6688931Z [1m[92m   Compiling[0m new_debug_unreachable v1.0.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.6941479Z [1m[92m   Compiling[0m leb128fmt v0.1.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.7729885Z [1m[92m   Compiling[0m either v1.15.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.7784017Z [1m[92m   Compiling[0m serde_json v1.0.149
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.8445038Z [1m[92m   Compiling[0m bit-vec v0.6.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.8974619Z [1m[92m   Compiling[0m log v0.4.29
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.9494424Z [1m[92m   Compiling[0m bit-set v0.5.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:17.9814562Z [1m[92m   Compiling[0m ena v0.14.4
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:18.0214235Z [1m[92m   Compiling[0m itertools v0.10.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:18.0994564Z [1m[92m   Compiling[0m wasm-encoder v0.250.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:18.6994470Z [1m[92m   Compiling[0m petgraph v0.6.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:18.8884979Z [1m[92m   Compiling[0m string_cache v0.8.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:18.9105143Z [1m[92m   Compiling[0m sec1 v0.7.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.0365236Z [1m[92m   Compiling[0m group v0.13.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.1984733Z [1m[92m   Compiling[0m lalrpop-util v0.19.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.3045536Z [1m[92m   Compiling[0m ascii-canvas v3.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.5064668Z [1m[92m   Compiling[0m crypto-bigint v0.5.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.5374896Z [1m[92m   Compiling[0m is-terminal v0.4.17
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.5840204Z [1m[92m   Compiling[0m paste v1.0.15
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.6774795Z [1m[92m   Compiling[0m unicode-width v0.2.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.8014841Z [1m[92m   Compiling[0m diff v0.1.13
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.9314868Z [1m[92m   Compiling[0m unicode-xid v0.2.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:19.9744368Z [1m[92m   Compiling[0m crc32fast v1.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:20.0834665Z [1m[92m   Compiling[0m regex-syntax v0.6.29
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:20.9564384Z [1m[92m   Compiling[0m ryu v1.0.23
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:21.0223788Z [1m[92m   Compiling[0m unsafe-libyaml v0.2.11
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:21.1714677Z [1m[92m   Compiling[0m bumpalo v3.20.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:21.3124907Z [1m[92m   Compiling[0m wast v250.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:21.6644716Z [1m[92m   Compiling[0m serde_yaml v0.9.34+deprecated
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:22.7414885Z [1m[92m   Compiling[0m lalrpop v0.19.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:22.8325486Z [1m[92m   Compiling[0m num_enum_derive v0.5.11
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:23.2935880Z [1m[92m   Compiling[0m elliptic-curve v0.13.8
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:25.5055036Z [1m[92m   Compiling[0m tracing-core v0.1.36
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.2024778Z [1m[92m   Compiling[0m tracing-attributes v0.1.31
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.3254672Z [1m[92m   Compiling[0m hmac v0.12.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.3999604Z [1m[92m   Compiling[0m labwired-config v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/config)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.5544129Z [1m[92m   Compiling[0m static_assertions v1.1.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.5815857Z [1m[92m   Compiling[0m utf8parse v0.2.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.6326011Z [1m[92m   Compiling[0m shlex v1.3.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.7384848Z [1m[92m   Compiling[0m pin-project-lite v0.2.17
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.7762745Z [1m[92m   Compiling[0m simd-adler32 v0.3.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.7785462Z [1m[92m   Compiling[0m find-msvc-tools v0.1.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:26.9174622Z [1m[92m   Compiling[0m adler2 v2.0.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.0064707Z [1m[92m   Compiling[0m miniz_oxide v0.8.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.0400936Z [1m[92m   Compiling[0m cc v1.2.62
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.0814861Z [1m[92m   Compiling[0m tracing v0.1.44
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.3285177Z [1m[92m   Compiling[0m anstyle-parse v1.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.4554676Z [1m[92m   Compiling[0m twox-hash v1.6.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.7624486Z [1m[92m   Compiling[0m rfc6979 v0.4.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.8155324Z [1m[92m   Compiling[0m wat v1.250.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:27.9084858Z [1m[92m   Compiling[0m labwired-ir v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/ir)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.2865606Z [1m[92m   Compiling[0m num_enum v0.5.11
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.3150644Z [1m[92m   Compiling[0m scroll_derive v0.11.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.3170388Z [1m[92m   Compiling[0m derive_more v0.99.20
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.3784308Z [1m[92m   Compiling[0m signature v2.2.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.4275045Z [1m[92m   Compiling[0m cpufeatures v0.2.17
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.4575342Z [1m[92m   Compiling[0m byteorder v1.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.5607932Z [1m[92m   Compiling[0m human-size v0.4.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.6214557Z [1m[92m   Compiling[0m arrayvec v0.7.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.7054461Z [1m[92m   Compiling[0m anstyle v1.0.14
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.7404548Z [1m[92m   Compiling[0m cpp_demangle v0.4.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.8554156Z [1m[92m   Compiling[0m is_terminal_polyfill v1.70.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.9004605Z [1m[92m   Compiling[0m anstyle-query v1.1.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.9284203Z [1m[92m   Compiling[0m colorchoice v1.0.5
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.9454168Z [1m[92m   Compiling[0m libm v0.2.16
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:28.9704165Z [1m[92m   Compiling[0m anstream v1.0.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:29.0724929Z [1m[92m   Compiling[0m pio v0.2.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:29.2654227Z [1m[92m   Compiling[0m scroll v0.11.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:29.4148036Z [1m[92m   Compiling[0m ruzstd v0.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:29.4264631Z [1m[92m   Compiling[0m sha2 v0.10.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:29.7885325Z [1m[92m   Compiling[0m pio-parser v0.2.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:30.3115339Z [1m[92m   Compiling[0m ecdsa v0.16.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:30.5993828Z [1m[92m   Compiling[0m flate2 v1.1.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:30.7652834Z [1m[92m   Compiling[0m labwired-core v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/core)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:30.9074398Z [1m[92m   Compiling[0m primeorder v0.13.6
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.0434425Z [1m[92m   Compiling[0m clap_lex v1.1.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.2214829Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.2363958Z [1m[92m   Compiling[0m heck v0.5.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.2554476Z [1m[92m   Compiling[0m plain v0.2.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.3011023Z [1m[92m   Compiling[0m fallible-iterator v0.3.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.3564468Z [1m[92m   Compiling[0m strsim v0.11.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.5288812Z [1m[92m   Compiling[0m gimli v0.28.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:31.8814399Z [1m[92m   Compiling[0m clap_builder v4.6.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:35.2884439Z [1m[92m   Compiling[0m clap_derive v4.6.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:35.8392253Z [1m[92m   Compiling[0m goblin v0.7.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:36.4528881Z [1m[92m   Compiling[0m p256 v0.13.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:37.0454468Z [1m[92m   Compiling[0m object v0.32.2
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:42.7304498Z [1m[92m   Compiling[0m memmap2 v0.9.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:42.8934584Z [1m[92m   Compiling[0m memmap2 v0.5.10
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:43.0395022Z [1m[92m   Compiling[0m svd-rs v0.14.12
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:43.9114965Z [1m[92m   Compiling[0m labwired-hw-trace v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/hw-trace)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:44.0735145Z [1m[92m   Compiling[0m bincode v1.3.3
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:44.2214869Z [1m[92m   Compiling[0m roxmltree v0.20.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:44.3674325Z [1m[92m   Compiling[0m bitflags v2.11.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:44.5884704Z [1m[92m   Compiling[0m rustc-demangle v0.1.27
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:45.1984759Z [1m[92m   Compiling[0m nrf-softdevice-hle v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/nrf-softdevice-hle)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:45.8704951Z [1m[92m   Compiling[0m addr2line v0.21.0
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:47.0934728Z [1m[92m   Compiling[0m svd-parser v0.14.9
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:47.1554307Z [1m[92m   Compiling[0m clap v4.6.1
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:55:48.3195402Z [1m[92m   Compiling[0m svd-ingestor v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/svd-ingestor)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:56:03.8659429Z [1m[92m   Compiling[0m labwired-loader v0.25.0 (/home/runner/work/labwired-core/labwired-core/crates/loader)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.0552454Z [1m[92m    Finished[0m `test` profile [optimized] target(s) in 4m 40s
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1169271Z [1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/labwired_core-c6e7d65079ea78e9)
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1216508Z 
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1216807Z running 42 tests
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1239481Z test cpu::cortex_m::t16_countdown_tests::code_patch_invalidation_cannot_reuse_a_cached_countdown ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1240323Z test cpu::cortex_m::t16_countdown_tests::countdown_pc_wrap_matches_thumb_branch_target_and_odd_retirement ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1251035Z test cpu::cortex_m::t16_countdown_tests::branch_rotated_cold_wrong_opcode_tag_and_width_entries_are_side_effect_free ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1251733Z test cpu::cortex_m::t16_countdown_tests::maximum_budget_and_initial_zero_do_not_overflow_retirement_math ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1271916Z test cpu::cortex_m::t16_countdown_tests::pending_interrupt_takes_priority_over_the_countdown_fast_path ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1278356Z test cpu::cortex_m::t16_countdown_tests::machine_scheduler_budgets_preserve_retirement_and_cycle_accounting ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1304234Z test cpu::cortex_m::t16_countdown_tests::observers_receive_every_instruction_and_batched_clock_matches_ordinary_steps ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1311557Z test cpu::cortex_m::t16_countdown_tests::zero_wrap_signed_overflow_carry_and_odd_exit_keep_last_subs_flags ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1312642Z test cpu::cortex_m::t16_discovery_tests::admitted_load_falls_back_for_mmio_without_side_effects_then_accepts_ram ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1313950Z test cpu::cortex_m::t16_discovery_tests::borrowed_cached_opcode_preserves_every_halfword_and_width_filter ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1314947Z test cpu::cortex_m::t16_discovery_tests::cached_block_before_barrier_cannot_execute_unrelated_tail ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1315977Z test cpu::cortex_m::t16_discovery_tests::backward_search_at_zero_does_not_underflow_or_poison_future_discovery ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1379632Z test cpu::cortex_m::t16_discovery_tests::cached_runs_stop_before_cold_collision_wide_and_dynamic_mmio_barriers ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1396745Z test cpu::cortex_m::t16_discovery_tests::cached_scalar_declines_budget_sleep_width_tag_mmio_and_unmapped_without_side_effects ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1436536Z test cpu::cortex_m::t16_discovery_tests::cbnz_is_rejected_at_current_entry_and_cannot_be_spanned ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1476042Z test cpu::cortex_m::t16_discovery_tests::cold_miss_is_not_a_permanent_negative_cache ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1489361Z test cpu::cortex_m::t16_discovery_tests::decoding_disabled_then_enabled_warms_cache_and_invalidates_old_miss ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1514122Z test cpu::cortex_m::t16_discovery_tests::discovery_memo_is_stable_until_real_decoder_warms_the_window ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1544036Z test cpu::cortex_m::t16_discovery_tests::dispatch_declines_cold_collided_and_wide_entries_without_side_effects ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1574080Z test cpu::cortex_m::t16_discovery_tests::fast_fetch_insertion_and_decode_tag_collision_invalidate_discovery_misses ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1575416Z test cpu::cortex_m::t16_discovery_tests::forward_and_wrong_target_terminal_branches_reject_without_retiring ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1604119Z test cpu::cortex_m::t16_discovery_tests::generation_wrap_clears_old_misses_before_reusing_generation_one ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1633846Z test cpu::cortex_m::t16_discovery_tests::invalid_decode_tag_does_not_admit_aliasing_slot ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1664028Z test cpu::cortex_m::t16_discovery_tests::invalid_tag_inside_candidate_rejects_then_repaired_window_matches_interpreter ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1665264Z test cpu::cortex_m::t16_discovery_tests::invalidate_reset_and_snapshot_restore_drop_positive_and_negative_state ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1694000Z test cpu::cortex_m::t16_discovery_tests::live_word_admission_matches_current_memory_bounds_registers_and_wrapping ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1723890Z test cpu::cortex_m::t16_discovery_tests::live_word_admission_selects_exactly_word_immediate_accesses ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1785275Z test cpu::cortex_m::t16_discovery_tests::live_word_rejections_do_not_retire_or_touch_architectural_bus_state ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.1813932Z test cpu::cortex_m::t16_discovery_tests::memo_slot_aliases_require_exact_pc_and_generation ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.3822182Z test cpu::cortex_m::t16_discovery_tests::cached_runs_match_interpreter_across_budgets_branches_and_live_ram ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.3844070Z test cpu::cortex_m::t16_discovery_tests::positive_cache_is_considered_before_negative_memo_and_zero_budget_retires_nothing ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.3963922Z test cpu::cortex_m::t16_discovery_tests::rotated_entry_and_branch_entry_match_reference_for_every_budget ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.3983836Z test cpu::cortex_m::t16_discovery_tests::supported_window_longer_than_capacity_rejects_from_start_and_terminal ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.4003802Z test cpu::cortex_m::t16_discovery_tests::thumb32_width_is_a_barrier_even_if_instruction_is_supported ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.4004797Z test cpu::cortex_m::tests::coalesced_t16_self_branch_matches_repeated_interpretation ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.4154025Z test cpu::cortex_m::tests::coalesced_t16_store_spin_matches_compiler_loop_from_every_phase_and_budget ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.4183838Z test cpu::cortex_m::tests::generic_t16_block_matches_a_finite_byte_copy_loop ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.4195048Z test cpu::cortex_m::tests::t16_ram_fast_path_does_not_cache_an_unsupported_thumb32_prefix ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.4196622Z test peripherals::components::sps30::tests::uint16_mode_returns_30_bytes ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:46.5126402Z test cpu::cortex_m::t16_discovery_tests::opcode_dispatch_matches_original_paths_at_rotated_entries_and_budgets ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:47.4860070Z test cpu::cortex_m::t16_countdown_tests::countdown_matches_real_decoder_and_interpreter_for_registers_flags_and_budgets ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:51.5110067Z test cpu::cortex_m::t16_discovery_tests::cached_scalar_matches_interpreter_for_every_halfword_and_flags ... ok
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:51.5110574Z 
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:51.5110827Z test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 4198 filtered out; finished in 5.39s
+correctness	Test live address bounds, dynamic admission and existing T16 differential invariants	2026-10-02T14:59:51.5111164Z 
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	﻿2026-10-02T14:59:51.5486700Z Post job cleanup.
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6086996Z [command]/usr/bin/git version
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6116139Z git version 2.55.0
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6140414Z Temporarily overriding HOME='/home/runner/work/_temp/bcc4f3b7-e7c8-4fb4-bb26-790437b0874c' before making global git config changes
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6141267Z Adding repository directory to the temporary git global config as a safe directory
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6144327Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/labwired-core/labwired-core
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6171381Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6195040Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6371642Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6392189Z http.https://github.com/.extraheader
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6399427Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+correctness	Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683	2026-10-02T14:59:51.6425298Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+correctness	Complete job	﻿2026-10-02T14:59:51.6728469Z Cleaning up orphan processes
+correctness	Complete job	2026-10-02T14:59:51.6935113Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
