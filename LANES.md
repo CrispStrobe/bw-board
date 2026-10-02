@@ -1,3 +1,24 @@
+2026-10-02 Indeterminate ideal-source current observers — CLAIM, Codex bwcx `/root`.
+Isolated worktree wt-board-indeterminate-current-20261002, branch
+lane/indeterminate-source-current, exact base
+6f693b077f1b712e4a484c3d789f21a152c866a4. Five-path envelope: this row;
+src/mna.js explicit redundant-source current metadata in all return paths;
+src/board.js scoped public current refusal, OP/cache propagation and sticky
+meter history handling; existing test/vsource-ground-reference.test.mjs;
+new spec-updates/indeterminate-source-current.md. Four ground/live ideal/
+resistive controls prove raw absent ideal current becomes public/meter zero,
+while determinate resistance gives 0.5 A and unrelated load remains 1 mA.
+Actual installed precision CLI falsely succeeds with a zero-current reading.
+Mark only omitted same-node ideal-source current, not every absent map;
+preserve power-off, known zero, unknown/custom-device fallbacks and voltage
+observation. Refusal must not register empty history or corrupt unrelated
+meter/solve state; topology-induced failures remain sticky across capture.
+Prove raw, instantaneous, repeated/mean, OP initialization and transient
+observers plus finite-resistance controls and load-bearing mutations.
+No current convention/tolerance, generic source cycles, parser/GUI, CPU,
+workflow/package/pin, CUI/Lite/corpus or deployment changes. Prior source
+adoption closed at qualified CUI 4eb8bc0 before this implementation claim.
+
 2026-10-01 Resistive-source self-constraint — DONE candidate, Codex bwcx `/root`.
 Reuse clean closed worktree `/mnt/volume1/code/lego/wt-board-source-constraint-20261001`,
 new branch `lane/resistive-source-self-constraint`, exact base
