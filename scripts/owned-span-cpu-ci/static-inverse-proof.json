@@ -1,0 +1,6 @@
+{
+  "status": "EXACT_SOURCE_STRING_INVERSE_PASS_NO_GATE_EXECUTION",
+  "originalSha256": "e63a3b14c5e7462499c755da69a9d09f562c6af74d247068140bbaca2b41fb77",
+  "candidateSha256": "58010b2ab597a9240d04471d30f3e8b14e6e6bb719ceef87b34acb962021db00",
+  "seams": 42
+}

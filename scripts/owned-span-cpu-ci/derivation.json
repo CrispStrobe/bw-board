@@ -1,0 +1,14 @@
+{
+  "source": "scripts/owned-dispatch-ci/gate.py",
+  "sourceSha256": "e63a3b14c5e7462499c755da69a9d09f562c6af74d247068140bbaca2b41fb77",
+  "derivedSha256": "58010b2ab597a9240d04471d30f3e8b14e6e6bb719ceef87b34acb962021db00",
+  "changes": [
+    "arm/status DISPATCH\u2192SPAN",
+    "candidate map count112\u2192116",
+    "Mode-specific exactstatus/inputflags and exact independentaudits",
+    "Sharedcompiledproof/currentruntime provenance and eight-byte resetcanonical policy guard",
+    "Authenticated resolvedNode path replaces formerVPSabsolute alias; exact officialbinarySHA required in every beforeafter/perchild auth"
+  ],
+  "inverse": "Exactsourcepositionseams reversed then arm/countinverse; originalSHA asserted source-only.",
+  "scope": "SOURCE_ONLY; parity schema/provenance and hosted relocation admission pending review; no executable approved bindings exist"
+}
