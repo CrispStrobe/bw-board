@@ -1,0 +1,6 @@
+{
+  "status": "SOURCE_IDENTITY_ENOENT_NO_NATIVE_LOAD",
+  "revision": "b12af5b7",
+  "reason": "regex static import inventory falsely recognized quoted import literals in inverse tests; not missing runtime source or changed old95",
+  "expectedClosure": 100
+}

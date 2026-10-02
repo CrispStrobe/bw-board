@@ -1,0 +1,208 @@
+TAP version 13
+# Subtest: fault N without Q and independent REP Q expansion
+ok 1 - fault N without Q and independent REP Q expansion
+  ---
+  duration_ms: 311.294988
+  type: 'test'
+  ...
+# Subtest: whole tape malformed zero denies before earlier effects
+ok 2 - whole tape malformed zero denies before earlier effects
+  ---
+  duration_ms: 276.835406
+  type: 'test'
+  ...
+# Subtest: whole tape malformed unknown denies before earlier effects
+ok 3 - whole tape malformed unknown denies before earlier effects
+  ---
+  duration_ms: 160.130897
+  type: 'test'
+  ...
+# Subtest: whole tape malformed large denies before earlier effects
+ok 4 - whole tape malformed large denies before earlier effects
+  ---
+  duration_ms: 237.800335
+  type: 'test'
+  ...
+# Subtest: reset wrong query phase 2
+ok 5 - reset wrong query phase 2
+  ---
+  duration_ms: 163.293791
+  type: 'test'
+  ...
+# Subtest: reset wrong query phase 6
+ok 6 - reset wrong query phase 6
+  ---
+  duration_ms: 230.955106
+  type: 'test'
+  ...
+# Subtest: reset wrong query phase 11
+ok 7 - reset wrong query phase 11
+  ---
+  duration_ms: 516.318705
+  type: 'test'
+  ...
+# Subtest: active wrong or repeated query 1
+ok 8 - active wrong or repeated query 1
+  ---
+  duration_ms: 361.718185
+  type: 'test'
+  ...
+# Subtest: active wrong or repeated query 2
+ok 9 - active wrong or repeated query 2
+  ---
+  duration_ms: 265.62372
+  type: 'test'
+  ...
+# Subtest: active wrong or repeated query 6
+ok 10 - active wrong or repeated query 6
+  ---
+  duration_ms: 195.656262
+  type: 'test'
+  ...
+# Subtest: active wrong or repeated query 11
+ok 11 - active wrong or repeated query 11
+  ---
+  duration_ms: 470.301987
+  type: 'test'
+  ...
+# Subtest: independent N cap without Q and failed tape leaves counters unchanged
+ok 12 - independent N cap without Q and failed tape leaves counters unchanged
+  ---
+  duration_ms: 369.609299
+  type: 'test'
+  ...
+# Subtest: independent Q cap without N and failed tape leaves counters unchanged
+ok 13 - independent Q cap without N and failed tape leaves counters unchanged
+  ---
+  duration_ms: 285.142792
+  type: 'test'
+  ...
+# Subtest: offset backing refuses before effects
+ok 14 - offset backing refuses before effects
+  ---
+  duration_ms: 504.398722
+  type: 'test'
+  ...
+# Subtest: shared backing refuses before effects
+ok 15 - shared backing refuses before effects
+  ---
+  duration_ms: 377.18706
+  type: 'test'
+  ...
+# Subtest: capture off still ordered logical state/caps
+ok 16 - capture off still ordered logical state/caps
+  ---
+  duration_ms: 561.435053
+  type: 'test'
+  ...
+# Subtest: PIO actual catchup and one post-query with unchanged cumulative clocks
+ok 17 - PIO actual catchup and one post-query with unchanged cumulative clocks
+  ---
+  duration_ms: 962.855755
+  type: 'test'
+  ...
+# Subtest: pending PIO query denies clocks and second PIO
+ok 18 - pending PIO query denies clocks and second PIO
+  ---
+  duration_ms: 952.595856
+  type: 'test'
+  ...
+# Subtest: lease denies inspect/end-before-entry and callback after end
+ok 19 - lease denies inspect/end-before-entry and callback after end
+  ---
+  duration_ms: 1019.209162
+  type: 'test'
+  ...
+# Subtest: compact sink cannot reenter private transfer
+ok 20 - compact sink cannot reenter private transfer
+  ---
+  duration_ms: 435.997555
+  type: 'test'
+  ...
+# Subtest: A20 pending mapping permits only ordinary Q before more work
+ok 21 - A20 pending mapping permits only ordinary Q before more work
+  ---
+  duration_ms: 1985.146556
+  type: 'test'
+  ...
+# Subtest: exact provider inverse and unchanged dispatch/preflight
+ok 22 - exact provider inverse and unchanged dispatch/preflight
+  ---
+  duration_ms: 0.892556
+  type: 'test'
+  ...
+# Subtest: CAPOFF direct private N/fault/QREP effects match generic
+ok 23 - CAPOFF direct private N/fault/QREP effects match generic
+  ---
+  duration_ms: 451.486168
+  type: 'test'
+  ...
+# Subtest: lifecycle/caps/kind denial order nativeTick
+ok 24 - lifecycle/caps/kind denial order nativeTick
+  ---
+  duration_ms: 268.163663
+  type: 'test'
+  ...
+# Subtest: lifecycle/caps/kind denial order quantum
+ok 25 - lifecycle/caps/kind denial order quantum
+  ---
+  duration_ms: 330.482542
+  type: 'test'
+  ...
+# Subtest: capture sink throws after exact event/effect and finally active clear nativeTick
+ok 26 - capture sink throws after exact event/effect and finally active clear nativeTick
+  ---
+  duration_ms: 815.795493
+  type: 'test'
+  ...
+# Subtest: capture sink throws after exact event/effect and finally active clear quantum
+ok 27 - capture sink throws after exact event/effect and finally active clear quantum
+  ---
+  duration_ms: 269.22238
+  type: 'test'
+  ...
+# Subtest: capture event cap before effects unchanged
+ok 28 - capture event cap before effects unchanged
+  ---
+  duration_ms: 1240.480888
+  type: 'test'
+  ...
+# Subtest: partial exceptional CAPOFF Q effect clears active exactly
+ok 29 - partial exceptional CAPOFF Q effect clears active exactly
+  ---
+  duration_ms: 1510.263434
+  type: 'test'
+  ...
+# Subtest: actual historical439 request/return ledger scheduler and6cuts with mocks only
+ok 30 - actual historical439 request/return ledger scheduler and6cuts with mocks only
+  ---
+  duration_ms: 96.861547
+  type: 'test'
+  ...
+# Subtest: CAPOFF skips _call and CAPON keeps dynamic generic dispatch
+ok 31 - CAPOFF skips _call and CAPON keeps dynamic generic dispatch
+  ---
+  duration_ms: 3767.969472
+  type: 'test'
+  ...
+# Subtest: CAPON exact ordered full event objects match original provider
+ok 32 - CAPON exact ordered full event objects match original provider
+  ---
+  duration_ms: 3861.880321
+  type: 'test'
+  ...
+# Subtest: new CLI inverse changes only provider and runtime identity imports
+ok 33 - new CLI inverse changes only provider and runtime identity imports
+  ---
+  duration_ms: 79.485712
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 24725.399602

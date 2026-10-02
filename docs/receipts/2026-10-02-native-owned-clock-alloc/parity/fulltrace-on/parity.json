@@ -1,0 +1,10 @@
+{
+  "status": "ALLOC_FULL_PARITY_PASS",
+  "canonicalRows": 1649067,
+  "completeSnapshotFields": 9,
+  "captureSha256": "7c452a6b74a0f9072930bb569618f9a510710130fe1e1a04d932efdfb0ebb307",
+  "journalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "sourceRevision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "scope": "alloriginal fullfields plusphysicalclockcounters exact qualifiedMAINbab, no maskedprojection/no broaderguestqualification"
+}

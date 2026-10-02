@@ -1,0 +1,17 @@
+# Third independent trace-fast coverage proof; no native execution here.
+from pathlib import Path
+import json,hashlib,itertools
+P=Path(__file__).parent;R=P/'actual';MAIN=Path('/mnt/volume1/tmp-astra/native-owned-main-fulltrace-on-20261002');OFF=Path('/mnt/volume1/tmp-astra/native-owned-main-smoke-off-20261002');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert sha(OFF/'guest/capture.json')=='14e8ad86ffb1ee448ae8bcbccf8c11ccffcd5ca89a47d4884547bef4f010902a';assert sha(MAIN/'guest/capture.json')=='6a396529c6c2d95a69b1897fc60251abaecfe06676e18170920c6b6fa297f65f'
+a=json.loads((OFF/'guest/capture.json').read_bytes());b=json.loads((R/'guest/capture.json').read_bytes());input=json.loads((R/'input.json').read_bytes());assert input['nativeTrace']is True and input['hostJournal']is False
+freeze=json.loads(Path('/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/source-freeze.json').read_bytes());assert b['source']==freeze['source'];assert b['provenance']['compiledSource']==a['provenance']['compiledSource'];fields=['reset','final','checkpoints','settled','ramSha256','resumes','terminal','closed'];assert all(b[f]==a[f]for f in fields);assert b['resumes']==439 and len(b['checkpoints'])==6;assert b['journal']=={'rows':0,'bytes':0,'sha256':hashlib.sha256(b'').hexdigest()}and(R/'guest/callbacks.jsonl').stat().st_size==0
+count=0
+
+def rows(p):
+ with p.open('rb')as f:
+  for line in f:
+   if line.startswith(b'BWSD1\t'):yield line
+   elif b'BWSD1'in line:raise AssertionError('malformed trace fragment')
+for x,y in itertools.zip_longest(rows(MAIN/'stderr'),rows(R/'stderr')):assert x==y;count+=1
+assert count==1649067;final=b['final'];assert final['clockTransfers']=={'transfers':'9204','commits':'8738','words':'201366'};assert final['callbacks']['nativeTickCallbacks']==final['nativeTicks']=='100684'and final['callbacks']['quantumCallbacks']==final['successfulQuanta']=='100682'
+W=Path('/tmp/bw-board-386-native-owned-clock-alloc-20261002');entry=W/'scripts/run-i80386-native-owned-clock-alloc.mjs';provider=W/'scripts/bochs-cpu3-native-owned-clock-alloc/provider.mjs';assert sha(entry)==freeze['source']['hashes']['scripts/run-i80386-native-owned-clock-alloc.mjs'];assert sha(provider)==freeze['source']['hashes']['scripts/bochs-cpu3-native-owned-clock-alloc/provider.mjs'];assert 'compactSink:input.hostJournal!==false?'in entry.read_text();assert 'if(this.compactSink!==null)return super.nativeTick();'in provider.read_text()and'if(this.compactSink!==null)return super.quantum(kind);'in provider.read_text()
+proof={'status':'ALLOC_FAST_PATH_FULL_CANONICAL_PARITY_PASS','canonicalRows':count,'captureSha256':sha(R/'guest/capture.json'),'sourceRevision':b['source']['revision'],'compiledRevision':b['provenance']['compiledSource']['revision'],'fastPathProof':{'nativeTrace':True,'hostJournal':False,'compactSink':'actual source-owned factory receives literal null from authenticated false boolean input; unchanged Hot constructor stores null, no runtime mutation hooks','nativeWords':100684,'quantumWords':100682,'orderedWords':201366,'coverage':'source-backed branch inference from exact input/constructor/guard plus actual logical counters; not a separate instrumented fastpath counter'},'snapshotFields':fields,'journalRows':0,'scope':'fulloriginal CPUrows+snapshot/device/RAM parity exercising CAPOFFclock implementation; no speedgate or broaderguestclaim'};(R/'parity.json').write_text(json.dumps(proof,indent=2)+'\n');print(json.dumps(proof))

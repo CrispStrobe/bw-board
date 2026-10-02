@@ -1,0 +1,903 @@
+{
+  "status": "ALLOC_SEMANTIC_PARITY_PASS_CPU_GATE_FAIL_KEEP_MAIN",
+  "runtimeRevision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "runtimeCount": 100,
+  "unchangedQualifiedBaselineRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "unchangedBaselineCount": 95,
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "compiledCount": 86,
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "scope": "lossless source/receipt archive; compiled artifacts unchanged and referenced to prior main proof; no binaries/largeCPUtrace/hostjournal; publicationcheckout not runtimequalification",
+  "files": [
+    {
+      "path": "qualified-source-5da2a4c5/scripts/run-i80386-native-owned-clock-alloc.mjs",
+      "bytes": 7214,
+      "sha256": "65ac1fb1914328d6e27bdcbfb331d1d1cc84260a569a83336df1a63cf8a76162",
+      "originalPath": "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/run-i80386-native-owned-clock-alloc.mjs"
+    },
+    {
+      "path": "qualified-source-5da2a4c5/scripts/bochs-cpu3-native-owned-clock-alloc/provider.mjs",
+      "bytes": 6039,
+      "sha256": "9b6baee32c215f9074399fe0d322fb0ed0bd42dc221690ae0a937959388ddb33",
+      "originalPath": "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/bochs-cpu3-native-owned-clock-alloc/provider.mjs"
+    },
+    {
+      "path": "qualified-source-5da2a4c5/scripts/bochs-cpu3-native-owned-clock-alloc/identity.mjs",
+      "bytes": 4231,
+      "sha256": "14672a08616f14f0108154f63f60bee3dab43122518ab7ef095e2df96639e688",
+      "originalPath": "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/bochs-cpu3-native-owned-clock-alloc/identity.mjs"
+    },
+    {
+      "path": "qualified-source-5da2a4c5/scripts/bochs-cpu3-native-owned-clock-alloc/contract.md",
+      "bytes": 1387,
+      "sha256": "252691627c26f582664cd727c413d0b054a02ecbd53331d167958a169f47e6c9",
+      "originalPath": "/tmp/bw-board-386-native-owned-clock-alloc-20261002/scripts/bochs-cpu3-native-owned-clock-alloc/contract.md"
+    },
+    {
+      "path": "qualified-source-5da2a4c5/test/i80386-native-owned-clock-alloc.test.mjs",
+      "bytes": 12617,
+      "sha256": "3ba68acf2d98d9bbcb8d61a64b95879ed67da4bf16683dc8fc9fa0d0fc79eaa5",
+      "originalPath": "/tmp/bw-board-386-native-owned-clock-alloc-20261002/test/i80386-native-owned-clock-alloc.test.mjs"
+    },
+    {
+      "path": "source/source-freeze.json",
+      "bytes": 34057,
+      "sha256": "6dd59e02aff506b7016d690ebc3426c6977c007809e5a9225b5b89014960b9b9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/source-freeze.json"
+    },
+    {
+      "path": "source/focused-receipt.json",
+      "bytes": 1259,
+      "sha256": "2a0c2b652f4d71fc75018a5219b0ad7320ea39a660fdfed94d5b9eefce69b715",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/focused-receipt.json"
+    },
+    {
+      "path": "source/focused.stdout",
+      "bytes": 5892,
+      "sha256": "d4b2b78fbc005c93660dfdc53f07f8b8afe469294070603029c65c562acac108",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/focused.stdout"
+    },
+    {
+      "path": "source/focused.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/focused.stderr"
+    },
+    {
+      "path": "source/focused-final-receipt.json",
+      "bytes": 515,
+      "sha256": "bce37c971b2a0f7c04f4063b5ef7f2af6051426677c4211f9b640deeb8a62dfa",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/focused-final-receipt.json"
+    },
+    {
+      "path": "source/focused-final.stdout",
+      "bytes": 5902,
+      "sha256": "592852c3eec20a231f6da1a95ed8b401eb0f10c4b09d41e95ce21a1276ca3021",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/focused-final.stdout"
+    },
+    {
+      "path": "source/focused-final.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/focused-final.stderr"
+    },
+    {
+      "path": "source/identity-first-failure.json",
+      "bytes": 257,
+      "sha256": "1a490463a3b7a1859dddf915defe2319a2fb1d6003c49c007b0abaab587c5bc8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/identity-first-failure.json"
+    },
+    {
+      "path": "source/independent-source-review.json",
+      "bytes": 491,
+      "sha256": "89f3ea1718645d4f6669fb57336683ad38ff0162a0393126fbca75ed9db8a9cc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-source-20261002/independent-source-review.json"
+    },
+    {
+      "path": "parity/run.py",
+      "bytes": 6667,
+      "sha256": "43872df86465d20b5a3c6b1d6ca919445e5c8100cf0733f736e8d78dd3aaab8e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/run.py"
+    },
+    {
+      "path": "parity/parity.py",
+      "bytes": 2397,
+      "sha256": "7c39f656674845990135a4658b498530710b7d845e70b0158a987d04f476a67f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/parity.py"
+    },
+    {
+      "path": "parity/plan.json",
+      "bytes": 797,
+      "sha256": "724ebed33f3172334557a3b41f8912ae2d1feee3a7fdfa2993f87063de8bef37",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/plan.json"
+    },
+    {
+      "path": "parity/prepared-helper-pins.json",
+      "bytes": 308,
+      "sha256": "27b80b903150bff8c626239ec746cd5208c643b94cfcec019562eb1112de5af1",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/prepared-helper-pins.json"
+    },
+    {
+      "path": "parity/approved-bindings.json",
+      "bytes": 18486,
+      "sha256": "384d05a732f2fa2b70d7b1e7337dae16d8602622a4a690ee96ce8070fdf23de9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/approved-bindings.json"
+    },
+    {
+      "path": "parity/independent-audit.json",
+      "bytes": 847,
+      "sha256": "283e0232f35bc4ed694c22f7796a77cf684f3e8f63aed23d9198af93f1b8100e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/independent-audit.json"
+    },
+    {
+      "path": "parity/smoke-off/input.json",
+      "bytes": 897,
+      "sha256": "6775e9a8a219ee5cd2149b0b0c3bbaa0d00fd34d2192c238fa9489037ac0c873",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/smoke-off/input.json"
+    },
+    {
+      "path": "parity/smoke-off/exit.json",
+      "bytes": 1021,
+      "sha256": "fd976f92ece01222f74715cf0221d9a301aeccc93d34315fd90a52e20b7b11ab",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/smoke-off/exit.json"
+    },
+    {
+      "path": "parity/smoke-off/auth-before.json",
+      "bytes": 818,
+      "sha256": "5db2d20e4629da1da018934d6babe2e00e4d1fd55a9cd19eb263803b60eb1021",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/smoke-off/auth-before.json"
+    },
+    {
+      "path": "parity/smoke-off/auth-after.json",
+      "bytes": 818,
+      "sha256": "5db2d20e4629da1da018934d6babe2e00e4d1fd55a9cd19eb263803b60eb1021",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/smoke-off/auth-after.json"
+    },
+    {
+      "path": "parity/smoke-off/parity.json",
+      "bytes": 556,
+      "sha256": "ee9a807e895e6872deec901921ec73407885798bf9e3a4c276bd092e35546022",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/smoke-off/parity.json"
+    },
+    {
+      "path": "parity/smoke-off/guest/capture.json",
+      "bytes": 237479,
+      "sha256": "15742b1125015d6c2a6ec1e108702673862ed889c31f63a3d03fb76f3f0f5f34",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/smoke-off/guest/capture.json"
+    },
+    {
+      "path": "parity/fulltrace-on/input.json",
+      "bytes": 898,
+      "sha256": "31f49784607829242127deadbe4b68e6f89ec2fd2cc3756855a8cba45d99eefc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/fulltrace-on/input.json"
+    },
+    {
+      "path": "parity/fulltrace-on/exit.json",
+      "bytes": 1031,
+      "sha256": "1c6c4e81e2d75bebc2d1b88021d8d7459602d5676096e13052104a55cc0ea9ca",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/fulltrace-on/exit.json"
+    },
+    {
+      "path": "parity/fulltrace-on/auth-before.json",
+      "bytes": 818,
+      "sha256": "390833ade534e7a8dd6c329f761d19fe78e55d63cf80019984873f18b5168469",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/fulltrace-on/auth-before.json"
+    },
+    {
+      "path": "parity/fulltrace-on/auth-after.json",
+      "bytes": 818,
+      "sha256": "390833ade534e7a8dd6c329f761d19fe78e55d63cf80019984873f18b5168469",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/fulltrace-on/auth-after.json"
+    },
+    {
+      "path": "parity/fulltrace-on/parity.json",
+      "bytes": 540,
+      "sha256": "460325ade9ff98a0031d55be1bbc46cd62a249f9b103f9484d70f2f8d06bd260",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/fulltrace-on/parity.json"
+    },
+    {
+      "path": "parity/fulltrace-on/guest/capture.json",
+      "bytes": 237508,
+      "sha256": "7c452a6b74a0f9072930bb569618f9a510710130fe1e1a04d932efdfb0ebb307",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-parity-20261002/fulltrace-on/guest/capture.json"
+    },
+    {
+      "path": "trace-fast/run.py",
+      "bytes": 6619,
+      "sha256": "4df4be5cd1326e2851ef57149aaa2e49cc9b31aceb40d7972da1ae300d856369",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/run.py"
+    },
+    {
+      "path": "trace-fast/parity.py",
+      "bytes": 3482,
+      "sha256": "e7c649239f7fc200c94b59c075d365d394f495de4edbb5721334e9dc0cfb0a9e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/parity.py"
+    },
+    {
+      "path": "trace-fast/plan.json",
+      "bytes": 734,
+      "sha256": "e753ea37863922077e3c4b9a470e5a1362ee12ea6831ee005080afe4debe66dc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/plan.json"
+    },
+    {
+      "path": "trace-fast/prepared-helper-pins.json",
+      "bytes": 321,
+      "sha256": "086cb29d17c8f989a77f4d127fac1e2ca76e409b7d699a1b8e1e4b0384b6168a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/prepared-helper-pins.json"
+    },
+    {
+      "path": "trace-fast/approved-bindings.json",
+      "bytes": 18481,
+      "sha256": "423665760b3371f0105bfbe692942639eb8f35c2a02da2d1daac2663b7d678f6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/approved-bindings.json"
+    },
+    {
+      "path": "cpu/run.py",
+      "bytes": 7936,
+      "sha256": "67adef2a40774ef906ac59248cf8415d35625593581fa3b990fede0bac87ec07",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/run.py"
+    },
+    {
+      "path": "cpu/plan.json",
+      "bytes": 2425,
+      "sha256": "6e2f828daad268f1d8c81932ee778814871136449634118991b7b8d36a1d1c33",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/plan.json"
+    },
+    {
+      "path": "cpu/prepared-helper-pins.json",
+      "bytes": 240,
+      "sha256": "597164b8a731769beb09694a168d93a614c8479805101c56cbc642655cc48d5c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/prepared-helper-pins.json"
+    },
+    {
+      "path": "trace-fast/actual/input.json",
+      "bytes": 897,
+      "sha256": "391c0f8542fc05e1de88307959557fd2f01114e98b610f9e3d7d7579bc2a2807",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/input.json"
+    },
+    {
+      "path": "trace-fast/actual/exit.json",
+      "bytes": 1028,
+      "sha256": "11535308625305efd77cfe51f6f3874332c1911dcb8e328929772ad7a2f89c6a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/exit.json"
+    },
+    {
+      "path": "trace-fast/actual/auth-before.json",
+      "bytes": 818,
+      "sha256": "906e6b0bdf7d8b687d07f3b57e3c9b1cea421dccdd09542317eca75d28c468c8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/auth-before.json"
+    },
+    {
+      "path": "trace-fast/actual/auth-after.json",
+      "bytes": 818,
+      "sha256": "906e6b0bdf7d8b687d07f3b57e3c9b1cea421dccdd09542317eca75d28c468c8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/auth-after.json"
+    },
+    {
+      "path": "trace-fast/actual/parity.json",
+      "bytes": 1105,
+      "sha256": "04a0ed08117f229b5c9db01f56e06f501862a8b3cd573854dfac3cbbd09260e5",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/parity.json"
+    },
+    {
+      "path": "trace-fast/actual/independent-audit.json",
+      "bytes": 795,
+      "sha256": "7b7113b95d6a405c25d98372cef322690d6c4116693879c7a4ab029651b3e616",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/independent-audit.json"
+    },
+    {
+      "path": "trace-fast/actual/guest/capture.json",
+      "bytes": 237489,
+      "sha256": "aec02bab81f1248229975f38b7a1c5cd8ee20f91f35ed572b7a9541f7ba16091",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/guest/capture.json"
+    },
+    {
+      "path": "cpu/approved-bindings.json",
+      "bytes": 43815,
+      "sha256": "5981e9bcb5022824e6c1a296f11959f703493aec1eb9bbc2fdd643b1968edaa7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/approved-bindings.json"
+    },
+    {
+      "path": "cpu/hardware.json",
+      "bytes": 3379,
+      "sha256": "00579beb4d8c830aed6b7f96d699be8c90d859cc7c30c283ed4c987385694394",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/hardware.json"
+    },
+    {
+      "path": "cpu/results/summary.json",
+      "bytes": 28603,
+      "sha256": "ecd4a42322c6e790c701cd87ff21cf2e9feffc394647c0229c710afc52c6d687",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/summary.json"
+    },
+    {
+      "path": "cpu/results/auth-before.json",
+      "bytes": 41311,
+      "sha256": "1e68618b443c8f09dc1fe082e9d78d2e8c80fa4be87d6745abb6202ed9a765ae",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/auth-before.json"
+    },
+    {
+      "path": "cpu/results/auth-after.json",
+      "bytes": 41311,
+      "sha256": "1e68618b443c8f09dc1fe082e9d78d2e8c80fa4be87d6745abb6202ed9a765ae",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/auth-after.json"
+    },
+    {
+      "path": "cpu/results/0-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "cd6ace5aacef346e8f7b9f2412a0b623ce5a9c5791a55a01cde676c9c3469349",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/0-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "1c3be52147de3f0cf553c38eab0b8b4e143727fb375b5131fa170d51864360ba",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/1-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "c8facd870b289167f68cf4732716a561aca15527ef7f8c49822e02e994750700",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/1-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "dec760f9ec5652b1161ad71222cee99be4db7521a4a51633e3e7030ec5fd274d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/2-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "29a35229cdb8cf6f661c51d8abd3115e6cd395d30870b1fb2a7f9cf32a8d37b0",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/2-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "a1d2c58b8818c4875212e882dce4ed01d99addef1e0425a478bede2b330aa644",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/3-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "0405e4a4b05d214af2da8d2f13dbe7fd853a009be48841fdfb28ad708f77076a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/3-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "2305bceaade4f3f8d66b154fced1d5406fcdd0cdcbae8e2a61054176942471ac",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/4-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "d4ea050ce68a536886a7408370096da69fdefce316b837b14d954c12e6f8ea61",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/4-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "de9d380b7aabca7e202f9806b8304615f7ccf0c0928918993b820ab27b569d28",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/5-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "b3407a5e511a1fafe7a75f9bfcca1d61f1d75079ca28e1ae61118345b37d85ed",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/5-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "7a5468e289b947852e77caeed4211432156662ad09695a64e4be83836852521e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/6-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "e7068ff95c6d7d64f74aa18637b7e95399b231ddccb6f561c51dcf747ca38a1f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/6-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "43e3cc13322d0d30efb9dfa3b5c074dec4a52b7138570bad86359ee0f2de5b4f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/7-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "0b0c3e75e8cf4120ac7bec4409d3398b479d25c4e4807e3d47df07b08c04c346",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/7-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "afaa756dea167a1621668bdf41b42e7c3630ce7bedd008d559920386dd80430e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/8-ALLOC.input.json",
+      "bytes": 899,
+      "sha256": "7c5097b9e26833b6194e5ad5b36b66b25cc8435b75c5406edf0067976cd9181c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-ALLOC.input.json"
+    },
+    {
+      "path": "cpu/results/8-MAIN.input.json",
+      "bytes": 898,
+      "sha256": "53d6fceade5cc18a4839e5ad79b0983e71ebfbd0a6c85fa54a3e5465eaa7db09",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-MAIN.input.json"
+    },
+    {
+      "path": "cpu/results/0-ALLOC.exit.json",
+      "bytes": 962,
+      "sha256": "94b5ce4ceadf2df134b87bce253209570d97a40b6956ac1784adc5363efcda7c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/0-MAIN.exit.json",
+      "bytes": 948,
+      "sha256": "392a5f22b29c136fa9e1a8a0447c7d2774050bf1fcb3a96a0a5db66efad09b31",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/1-ALLOC.exit.json",
+      "bytes": 961,
+      "sha256": "ced117e821d0341a69e568c702999127ea80f5faf9675ef8f96702b05c5d02cb",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/1-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "ac78793f2a7206ea3805e73872b60d8729b6def92335a76323cfb212a5ed78e2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/2-ALLOC.exit.json",
+      "bytes": 962,
+      "sha256": "b99e6f7bcbed1e8c067f99c118573e00ee9f766d292affc24cd95355ddff841c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/2-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "edc73e364ca87f0e70418c5b1df189faa7212c8a9c83bb613bfff7feff53cff9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/3-ALLOC.exit.json",
+      "bytes": 963,
+      "sha256": "167ee9fd4a97db59cb97d78eb1aa2c0b5b49f982a191c2a35d6d46d2a80edd34",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/3-MAIN.exit.json",
+      "bytes": 948,
+      "sha256": "208a307ee82cb17b820c643669ccc141b68ae1b7cd8cb193928c9f68430a083c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/4-ALLOC.exit.json",
+      "bytes": 962,
+      "sha256": "4eeeb48168d61f38f29d5dbbd309efd9bce54b654c13860e9f2024200eadb933",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/4-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "f250a1b21398543c561e740acc48a0341683fad7f0b16cf12b32b88567888029",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/5-ALLOC.exit.json",
+      "bytes": 963,
+      "sha256": "7f19123a78eb54817c4c89d2c5b8daa6da4ea0855679cf2dfc82a2e1717677e6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/5-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "b9f6ba25041193ac882c56c4c8bb3560db279a79663f39b46e88f30cfc25cb13",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/6-ALLOC.exit.json",
+      "bytes": 962,
+      "sha256": "6841c6500b5bbecc654a9009be8dcd371fe10469874a2f3e77958459143b2fa6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/6-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "1983de7f13bb70d401f1a14f07e3b1a87e688ad6542348d75f54a2d7ef3e9345",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/7-ALLOC.exit.json",
+      "bytes": 963,
+      "sha256": "391357f1e0cad780ecd33b8e90c7e75be83f75465799aebdf081d08feeb74cc1",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/7-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "238c802f30e0840ccee430939802837fc5130f8574f782222a6abd72d0710733",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/8-ALLOC.exit.json",
+      "bytes": 962,
+      "sha256": "6ac428f22042941664d9e5e8dde090247d9f0eabb45949bb563cec763672df74",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-ALLOC.exit.json"
+    },
+    {
+      "path": "cpu/results/8-MAIN.exit.json",
+      "bytes": 947,
+      "sha256": "2f4a890f127dcf38a643c5f9d40183d14a98e19389af060b4ba29d06e01b5ee6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-MAIN.exit.json"
+    },
+    {
+      "path": "cpu/results/0-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/0-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/1-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/1-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/2-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/2-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/3-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/3-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/4-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/4-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/5-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/5-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/6-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/6-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/7-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/7-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/8-ALLOC.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-ALLOC.stdout"
+    },
+    {
+      "path": "cpu/results/8-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-MAIN.stdout"
+    },
+    {
+      "path": "cpu/results/0-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "70d6c44903f834a104ae5117211196b3254f9a5b5dd954edc47e30033e954b17",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/0-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "e5af801b81aa4a2d394f482066dad369fb9c64ca3823336e7a0fe87c7b38c107",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/1-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "586e1370a4107c897b72481bcb6cec0effad12cb334138fa8cb23608aefc6cab",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/1-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "20603d7f3da3a6f2c0a688a32a6945ee6ef601ccc5a73e07c4f9912b0a1147e9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/2-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "093a992d27d1a2e4ec28769a2e23a21663a5bd6197197cd816cbf9a1abef77df",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/2-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "dea827d129bc92a6b8a25a42635d7f6b0abb8e4d4aed6e0a81cd27cbd556b4a9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/3-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "ad6ba894c59a48b329bf949b942adfe624b737b6d20567a646a4227810ccb346",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/3-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "20ec9f9cf6258ca642ef0a9beb1b53be128c439a71914e2fed454bafdf9206de",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/4-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "d8a64c77aeb39cbc36fc3c76db48fd21880566d1e29dc3beaf66e52ba7846491",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/4-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "2fe9e92ebea565cf4763beba0259851eb4e7474b44a143e027cd0649a33990ad",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/5-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "3a1f4cff85e136bec574c13b46cf3f88f6b5940d379abe03b779e68780a0e2f6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/5-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "fa61fa2401fcf1a81a32daa8085e32c15245c11c97de73c142c60a8a480e635b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/6-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "9299cca3afa1cd4d3adf401d9af08f3ffe63c330e7e77a28346bb49df9c1167c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/6-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "5e0d4ca4f799a69e5cd07aab8ba3ff1b73761857f827d6510ef9325f2c58498f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/7-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "07167d98ccfbbf04906ad62888da913e89070dd5d8970471121ec36be0ae2b93",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/7-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "bc838b478a921660105c9f9432306746e4cd5ff384ca1c90e91f7050b1baef29",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/8-ALLOC.stderr",
+      "bytes": 430,
+      "sha256": "a8f8a9daeabf14c2bf7207583dc679194380812871a0ec2e781c874232aa809e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-ALLOC.stderr"
+    },
+    {
+      "path": "cpu/results/8-MAIN.stderr",
+      "bytes": 428,
+      "sha256": "a781a213fbbfc8437e0be3dfe390b3d65052282e43fbfaade8922c813dbc8d65",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-MAIN.stderr"
+    },
+    {
+      "path": "cpu/results/0-ALLOC/capture.json",
+      "bytes": 237488,
+      "sha256": "db14cb080f85e54b97fe08f712f09025e01e117c9fd74e96c6b5f3f1f062e3f6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/0-MAIN/capture.json",
+      "bytes": 236177,
+      "sha256": "80ae49112bc28b1ec3c6187933a2432174f80261206de3404a545f502f828134",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/0-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/1-ALLOC/capture.json",
+      "bytes": 237489,
+      "sha256": "6a0aaa9ac3a61c6c8060916437c7ffe9fa7aef4aa2b41830338b299cbc279a1d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/1-MAIN/capture.json",
+      "bytes": 236178,
+      "sha256": "e7d5a41fd2263db867eceec158ba189a7e61c6137c3d0b4a839ca3006b3880a1",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/1-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/2-ALLOC/capture.json",
+      "bytes": 237488,
+      "sha256": "b9eefd32fb32769adfa3bf4b793d145a3780de710527767d701e9b60cb106820",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/2-MAIN/capture.json",
+      "bytes": 236177,
+      "sha256": "83e2accdb5563605cdd772e3a9d533fead89fdaf4d5384c166d85a01aeaf6d7e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/2-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/3-ALLOC/capture.json",
+      "bytes": 237489,
+      "sha256": "88e0e34564e880354acd11b2a0711891a01adddde294f40635189da38526bd70",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/3-MAIN/capture.json",
+      "bytes": 236177,
+      "sha256": "dc44bdcd19a1d6b46ff1b9bd5680a0b14ed9366da382b8712a7d53d02837fe6f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/3-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/4-ALLOC/capture.json",
+      "bytes": 237488,
+      "sha256": "7a02ab4ea475847c0d0c73094c807c15dcb8afc520ec073f669fe91fec964701",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/4-MAIN/capture.json",
+      "bytes": 236177,
+      "sha256": "535563bc16bd72ed6d846493e112971e3866743d407cede96c17aafcd71d4ab6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/4-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/5-ALLOC/capture.json",
+      "bytes": 237486,
+      "sha256": "e540ca0e80dc00966092c3db46bd34229dd424be1ce1338f3738958c48f3f723",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/5-MAIN/capture.json",
+      "bytes": 236175,
+      "sha256": "cfe530ca7058b5d81d958771eb7fc97d4259606a8fd1715f09aa23e74b9d79b2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/5-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/6-ALLOC/capture.json",
+      "bytes": 237486,
+      "sha256": "b438f4b8a1356b8bcb51d33e4300f34246da5cddf071ef82f424ae451d54b8ef",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/6-MAIN/capture.json",
+      "bytes": 236175,
+      "sha256": "0d9adc47b06aa00c6f876296c07e05002dc1a9562591e6f02d9ffad5b49ebbd9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/6-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/7-ALLOC/capture.json",
+      "bytes": 237486,
+      "sha256": "3c7f47df5b0a4ed68974549d1695cdd3f9dd61a81aa9ba57885e5c5099a2442d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/7-MAIN/capture.json",
+      "bytes": 236175,
+      "sha256": "94a403df94e844a6c581a0529ec72ce5d1ecfe887a3f8ea059cdd0496013f445",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/7-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/results/8-ALLOC/capture.json",
+      "bytes": 237486,
+      "sha256": "ec170f1d674a52c570b5700aaa72109ccc76a2c576e90da41350943f95accfa0",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-ALLOC/capture.json"
+    },
+    {
+      "path": "cpu/results/8-MAIN/capture.json",
+      "bytes": 236174,
+      "sha256": "86edbf240e19cc5af7b36bdda9119951ba8bf1133bbba88b7dfb6d56406a95cb",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/8-MAIN/capture.json"
+    },
+    {
+      "path": "cpu/parent.stdout",
+      "bytes": 2159,
+      "sha256": "0ebc6641acdd3f4aaff807f43900d13706a6207b2334cb27d7af252a2604f8f7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-parent-20261002.stdout"
+    },
+    {
+      "path": "cpu/parent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-parent-20261002.stderr"
+    },
+    {
+      "path": "cpu/independent-preflight.json",
+      "bytes": 636,
+      "sha256": "00f209658969936d413b17c98f9ae99a7081490b8f96edbac102776e282546ac",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-independent-preflight-20261002.json"
+    },
+    {
+      "path": "cpu/results/independent-audit.json",
+      "bytes": 689,
+      "sha256": "803dc9402af74ffcf4c5011620dd4f5cae9e8c11398e2430b7d489481ef27b2f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-cpu-gate-20261002/results/independent-audit.json"
+    }
+  ],
+  "fastTraceIndependentChecks": 1666954,
+  "cpuGate": {
+    "mainMeanUs": 379478.0,
+    "allocMeanUs": 358373.71428571426,
+    "nominalMeanReductionPercent": 5.561399004497158,
+    "favorablePairs": 5,
+    "measuredPairs": 7,
+    "thresholdPercent": 10,
+    "allSevenRequired": true,
+    "passed": false,
+    "semanticsChildren": 18,
+    "summarySha256": "ecd4a42322c6e790c701cd87ff21cf2e9feffc394647c0229c710afc52c6d687"
+  },
+  "independentCpuAuditChecks": 319728
+}
