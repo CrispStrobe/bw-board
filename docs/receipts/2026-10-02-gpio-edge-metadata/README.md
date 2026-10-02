@@ -10,8 +10,9 @@ values, peripheral transitions, clock gates, IRQs or device services are cached
 or suppressed. The Rust field type changes; explicit Vec assignment now needs
 `.into()`. WASM exports and snapshot formats do not change.
 
-## Exact ordinary comparisons
+## Prototype exact ordinary comparisons
 
+These four comparisons measure the prototype, not the final lint-fixed head.
 Baseline source: `43b2d62f5a0fa24ae0b38a645069f5aaa78af685`,
 [build 36915940413](https://github.com/CrispStrobe/bw-board/actions/runs/36915940413).
 Measured candidate source: `d74f658985fa1a4524f185b1ccbf56e4592941fc`,
@@ -56,6 +57,49 @@ artifacts include stderr and are subject to GitHub's 14-day
 retention. The local evidence root is `.gpio-edge-evidence.hr82lw` on the VPS.
 Sixteen F0 stdout captures were reparsed against the strict parser,
 and all 36 committed raw files were byte-compared to downloaded originals.
+
+## Independent prototype attribution
+
+[Run 36965058001](https://github.com/CrispStrobe/bw-board/actions/runs/36965058001)
+profiles the original candidate artifact separately, on Xeon 8573C / Node
+22.23.3. Its [F0 receipt](prototype-profile/f0-receipt.json) keeps ordinary
+timing separate from sampling; [ordinary](prototype-profile/f0-ordinary.txt)
+and [sampled](prototype-profile/f0-sampled.txt) raw stdout are retained.
+The edge-scan helper has 31 self samples / 32,953 µs out of 6,076,952 sampled
+µs (**0.54%** whole-process self share). This is not a same-host profile A/B,
+isolated GPIO cost or a removable-cost percentage. The three Cortex-M execution
+functions dominate the remaining attribution; bus reads/writes and GPIO
+register processing remain visible. The separate
+[motion extract](prototype-profile/motion-profile-extract.json) retains
+unsampled compiler-tier evidence and hash-bound independent sampling.
+
+Next experiments should investigate admission/dispatch and bus-access work
+without caching live MMIO values, dropping side effects or weakening timing,
+interrupt and debugger guards. This profile does not by itself establish a gain.
+
+## Final-head verification
+
+The measured lint-fixed artifact source is `7f1c295c11d882dd6a5b3fa18fd762f167190ea0`.
+Its [build 36964690092](https://github.com/CrispStrobe/bw-board/actions/runs/36964690092)
+passed both build legs, determinism and all 101 actual WASM integration tests
+with zero skips. The explicit cache-field initialization changed module
+bytes, so the prototype comparisons are **not** reused as final-artifact proof.
+The verified NODEJS and web module hash is
+`0405f0169379dee9f18229e127556f88a61c40675e7882ba8eb41334b5fcbcd6`;
+[BUILD-INFO](verified-artifact/BUILD-INFO.json) retains original glue hashes and
+lengths. Fresh motion qualification passed functionality but failed all five
+1× windows: **0.807894× median / 0.797765× minimum**, EPYC 7763. Raw
+[results](verified-artifact/fresh-motion-results.txt) and
+[runner](verified-artifact/fresh-motion-runner.txt) are retained. Publication
+was skipped. Two new ordinary comparisons are gated on those correctness
+checks, with outcomes still pending.
+
+Latest source `77b2b54270809765466131413c049bb0a0a30d7e` additionally updates
+the debugger collection scanner's source-test marker to recognize the wrapper;
+it does not relax the requirement to walk every collection. Its exact rebuild
+[36966049317](https://github.com/CrispStrobe/bw-board/actions/runs/36966049317)
+must establish artifact equivalence, and all latest-head enabled CI checks must
+pass before runtime landing. These results and landing status remain pending.
 
 ```sh
 env -u NODE_OPTIONS node scripts/probe-labwired-f0-ab.mjs \
