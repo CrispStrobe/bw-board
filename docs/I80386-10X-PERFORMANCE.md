@@ -608,3 +608,7 @@ The bounded free protected-mode workload now has [H2 cost profiling](I80386-NATI
 ## Conditional argument checkpoint (2026-10-02)
 
 [H5 conditional arguments](I80386-NATIVE-HOT-CONDITIONAL-ARGS-WIP.md) preserved all bounded semantic controls and complete canonical trace/journal parity, but its seven-pair CPU gate failed: mean process CPU increased 0.20115% against H4, with three pairs favorable. All 18 children passed semantic checks. Retain H4 as the baseline; H5 provides no measured CPU gain or progress claim toward 10×.
+
+## Clock witness checkpoint (2026-10-02)
+
+The [fenced H4 diagnostic](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md) passed all 439 resume-pair fence checks and full canonical trace/journal/state parity using the unchanged held H4 engine. Its source-owned offline witness preserves independent native ticks and successful quanta. No native batching or performance backend is implemented, and diagnostic timing does not establish progress toward 10×.
