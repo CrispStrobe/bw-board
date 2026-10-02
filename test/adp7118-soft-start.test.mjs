@@ -179,6 +179,19 @@ test('real scope samples and voltage-meter mean agree with an independent closed
     'meter is the capture-window integral, not the final ~5 V endpoint');
 });
 
+test('observational bias queries never mutate startup device state or its next real trajectory', () => {
+  const observed=rig(), control=rig();
+  observed.advanceTo(380_000n); control.advanceTo(380_000n);
+  const before=structuredClone(observed.getDeviceState('U'));
+  observed.biasPointVoltages();
+  assert.deepEqual(observed.getDeviceState('U'),before,
+    'a read-only bias query must not overwrite live callback/limiter bookkeeping');
+  observed.advanceTo(600_000n); control.advanceTo(600_000n);
+  assert.equal(observed.nodeVoltage('out'),control.nodeVoltage('out'));
+  assert.deepEqual(observed.getDeviceState('U'),control.getDeviceState('U'));
+  assert.equal(observed.transientAnalysisStatus().accuracyMet,true);
+});
+
 test('unknown startup model, external SS, adjustable and invalid nominal configurations refuse by name', () => {
   for (const params of [
     {startupModel: 'made-up'}, {startupModel: null},
