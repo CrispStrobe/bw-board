@@ -29,7 +29,7 @@ def main():
   b['runtimeWorktree']=str(CANDIDATE);b['driver']=str(CANDIDATE/'scripts/run-i80386-native-owned-span.mjs');b['node']=str(node);b['status']='HOSTED_CLOSED_BINDINGS_AUTHENTICATED_AWAITING_THREE_NATIVE_CELLS'
   # Pin every artifact actually used, original official records, all20 prepared files,
   # all103 frozen bytes, complete source packet/currentGit context, and lossless raw oracles.
-  artifact={str(evidence/name):h for name,h in inventory['files'].items()};artifact[str(evidence/'artifact-inventory.json')]=OFFICIAL['inventorySha256'];artifact[str(archive)]=OFFICIAL['zipSha256'];artifact[str(context/'official-artifact-metadata.json')]=sha(context/'official-artifact-metadata.json');artifact.update(record['restored']['prepared20']);artifact.update(record['restored']['frozenSource103'])
+  artifact={str(path):sha(path)for path in (context/'official-extract').rglob('*')if path.is_file()};assert len(artifact)==31;record['officialArtifact']['extractedFiles']=dict(artifact);artifact[str(archive)]=OFFICIAL['zipSha256'];artifact[str(context/'official-artifact-metadata.json')]=sha(context/'official-artifact-metadata.json');artifact.update(record['restored']['prepared20']);artifact.update(record['restored']['frozenSource103'])
   for name in ['derived-prepare.json','derived-build-receipt.json','relocation-proof.json']:artifact[str(RESTORED/name)]=sha(RESTORED/name)
   for name in ['configuration','baseline','baselineNativeCapture','baselineNativeTrace','baselineNativeJournal','driver']:artifact[b[name]]=sha(b[name])
   events=pathlib.Path(b['baseline']).parent/'events.jsonl';artifact[str(events)]=sha(events)
