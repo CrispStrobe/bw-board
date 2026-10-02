@@ -641,6 +641,23 @@ ground-current curve; shutdown current; and eight-terminal KCL. Focused old/new
 power and source-once coverage is 18/18; dropout, threshold, limit and
 ground-current mutations each fail their independent consequence assertion.
 
+2026-10-02 ADP7118 internal soft-start envelope — CLAIM, Codex bwcx `/root`.
+Isolated wt-board-adp7118-soft-start-20261002, branch
+lane/adp7118-soft-start-20261002; exact base
+25b2b0614c86eef5996f159ad1ac49dd3a8d5dea. Four-path envelope: this row,
+src/devices/power.js ADP7118 only, test/adp7118-soft-start.test.mjs, and
+spec-updates/adp7118-soft-start.md. Add explicit opt-in startupModel:
+'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
+DC behavior by default. Interpolate a bounded delayed single-pole envelope
+through Rev.H typical EN-to-10% (80 us) and EN-to-90% (380 us) anchors;
+label interpolation rather than a vendor/transistor macromodel certificate.
+Prove timing, monotonicity, enable/UVLO restart and hysteresis, actual output
+capacitor/KCL/current-ceiling controls, conservative named unsupported modes,
+scope capture and caller-consequence mutants. No Board scheduler/integrator,
+global tolerance, other regulator, CPU, workflow/dependency/pin, CUI/Lite or
+corpus edits. External CSS, adjustable/noise-reduction networks, noise/PSRR,
+temperature and overshoot/loop-stability qualification remain excluded.
+
 2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.
 Owns documentation-only corrections in `docs/HARRIS-COMPILED-NETS.md` and
