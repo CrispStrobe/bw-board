@@ -1,0 +1,22 @@
+{
+  "exitCode": 0,
+  "timedOut": false,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "--test",
+    "/tmp/bw-board-386-owned-pic-imr-source-20261002/test/i80386-native-owned-pic-imr.test.mjs"
+  ],
+  "wallSeconds": 2.5907312780618668,
+  "scope": "Source assembly/device controls only; no CPU guest/addon/build",
+  "sourceHashes": {
+    "scripts/run-i80386-free-owned-pic-imr.mjs": "bb06632fb5cc71304379d7ccc30d3fc62d0e5c1a7e6a567eb3cc7365ce924f86",
+    "scripts/i80386-free-owned-pic-imr.mjs": "d638da039117668090dd41a502c43679490e1779a66ef659071db6d2944ae1ee",
+    "test/i80386-native-owned-pic-imr.test.mjs": "4b713e3d6f5edad0e603cccd8eee62acc4ff9def91cce335989fb15348d4d7ed",
+    "test/fixtures/i80386-free-owned-pic-imr.S": "ac58991d9211d0d88c3c4935982302ffc17da9f9f39c7a32b090654184564d65",
+    "scripts/bochs-cpu3-native-owned-pic-imr/runtime.mjs": "5c338f99875c7beb460421245caa7767626d9f7196c35fd4d4c20d4a19e91abb",
+    "scripts/bochs-cpu3-native-owned-pic-imr/identity.mjs": "15bdf110a3a6e29e5127053817c4381a51d16eeb783139426a74a9956634fa0b",
+    "scripts/bochs-cpu3-native-owned-pic-imr/provider.mjs": "c18e6782a1dfe64e73a648877b6ef6290128ed3c0e174b03bb7ed8122ac70ae7",
+    "scripts/bochs-cpu3-native-owned-pic-imr/contract.md": "b8bbd7936ae1087471d61860111d7217e34045beb1e7853c9deb5c1f451ccd45"
+  }
+}

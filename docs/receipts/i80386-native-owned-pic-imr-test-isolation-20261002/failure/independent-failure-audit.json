@@ -1,0 +1,22 @@
+{
+  "status": "CONFIRMED_SEVEN_PROFILE_TEST_ISOLATION_FAILURES_NO_NATIVE_FAILURE",
+  "run": 37022996204,
+  "head": "726c1ca1799a4d316c206ae4ff9f72bea9c8bb89",
+  "failedCount": 7,
+  "failures": [
+    "2851 - build metadata rejects old103 manifest before reading nonexistent prepared tree/addon",
+    "2852 - build metadata rejects wrong ROM before reading nonexistent prepared tree/addon",
+    "2853 - build metadata rejects wrong witness before reading nonexistent prepared tree/addon",
+    "2854 - build metadata rejects wrong tooling hash before reading nonexistent prepared tree/addon",
+    "2855 - build metadata rejects wrong tooling revision before reading nonexistent prepared tree/addon",
+    "2856 - build metadata rejects old initializer before reading nonexistent prepared tree/addon",
+    "2857 - known old PIT addon denied before any manifest/prepared/addon read"
+  ],
+  "cause": "Real sourceIdentity clean guard called on CI caller checkout after setup modifies package-lock and creates firmware directory; tests fail before intended metadata denial/addon reads",
+  "recommendedFix": "Test-only detached clean HEAD fixture with actualidentity/authenticator, dirtyfixture rejection, dirtycallerpositive; production guard and frozen3792 unchanged",
+  "records": {
+    "run.json": "4ab551f3bfa2a3b685a5aee25086177608c61586f056efa956d461deae10be54",
+    "failed.log": "6c693836bc9065b271fbcf6808afd3ae7f34e262cdb790c271a8d7b65d1cfee9"
+  },
+  "scope": "No addon/native/profiler/guest failure inferred; no retry/edit performed."
+}
