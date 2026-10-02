@@ -94,3 +94,17 @@ test('F0 tooling keeps ordinary timing separate, verifies artifacts and preserve
     assert.ok(workflow.indexOf('node scripts/probe-labwired-f0.mjs') < workflow.indexOf('node scripts/profile-labwired-motion.mjs'));
     assert.doesNotMatch(workflow, /contents: write|publish=true/);
 });
+
+test('F0 A/B uses ordinary verified children and matches both images and observations', () => {
+    const tool = readFileSync(new URL('../scripts/probe-labwired-f0-ab.mjs', import.meta.url), 'utf8');
+    assert.match(tool, /order: \['baseline', 'candidate', 'candidate', 'baseline'\]/);
+    assert.match(tool, /assertSameF0Guest\(receipt.runs\[0\].capture.ordinary, result.ordinary\)/);
+    assert.match(tool, /result.sampled \|\| result.ordinary.flags.length/);
+    assert.match(tool, /allWindowsMeet1x: samples.every\(s => s.rtx >= 1\)/);
+    assert.doesNotMatch(tool, /--profile|--cpu-prof/);
+    const workflow = readFileSync(new URL('../.github/workflows/labwired-motion-ab.yml', import.meta.url), 'utf8');
+    assert.match(workflow, /f0:\n[\s\S]*?type: boolean\n        default: false/);
+    assert.match(workflow, /if: inputs.f0/);
+    assert.ok(workflow.indexOf('node scripts/probe-labwired-motion-ab.mjs') <
+        workflow.indexOf('node scripts/probe-labwired-f0-ab.mjs'));
+});
