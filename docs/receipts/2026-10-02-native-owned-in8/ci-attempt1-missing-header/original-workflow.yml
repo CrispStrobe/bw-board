@@ -39,11 +39,8 @@ jobs:
           set -euo pipefail
           mkdir "$RUNNER_TEMP/owned-in8-context"
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev libnode-dev
-          test -r /usr/include/node/node_api.h
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev
           {
-            dpkg-query -W build-essential g++ libc6-dev libltdl-dev libnode-dev nodejs
-            sha256sum /usr/include/node/node_api.h
             git -C publication rev-parse HEAD
             git -C frozen-owned-in8 rev-parse HEAD
             node --version

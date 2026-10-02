@@ -1788,6 +1788,103 @@
       "kind": "external-file",
       "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-root-build-20261002.py",
       "sha256": "5ecc4532a3e09ee50bddc63b9a8b92fcbacb9dba42007993ab99be7ef9c5907c"
+    },
+    "ci-attempt1-missing-header/independent-failure-audit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/independent-failure-audit.json",
+      "sha256": "9bcfb3e883d04ca29f3d0fa519c4fb19a7206e72f701ef80b07953ff01adfa54"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/prepare.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/prepare.stderr",
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/make.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/make.stdout",
+      "sha256": "a3226db0bff1c6a7ac76b9dbd3220fac9d925b676aa27b47accfefd764d6d1f7"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/prepare.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/prepare.exit.json",
+      "sha256": "c6159d4d0f0bc01a93b5e25c24257a53a9e425117eda48a19b72dadaed3d92fd"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/identity-before.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/identity-before.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/prepare.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/prepare.stdout",
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/make.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/make.exit.json",
+      "sha256": "c98b54dad10b854a85a505b1d4f4ac922bc07fc65d70e21f910c7e8b721543f9"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/configure.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/configure.exit.json",
+      "sha256": "83edd54f431039f6ac590674ce51be1ac7f83250b12e5014d7e4b66117ab462b"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/make.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/make.stderr",
+      "sha256": "3dd5bbc628c2a20200839b7d1f81f7395b342f4ccb23a7f0cc8e30d2967adc28"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/identity-before.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/identity-before.exit.json",
+      "sha256": "48036948247a88404eed53d9c55a96122208495d64206ea6f19ac75ab04f5841"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/identity-before.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/identity-before.stdout",
+      "sha256": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/configure.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/configure.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/configure.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/configure.stdout",
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/source-before.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/source-before.json",
+      "sha256": "3b02c9fec32b3f89aabc1282d298452ad46d9461ee25a594805f72cd5ec7c6c0"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-evidence/prepare.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-evidence/prepare.json",
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-context/context.txt": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-context/context.txt",
+      "sha256": "b69f6c2f539c3894098253ac89170dc5ee62970ef7c8c08a502ef16ab0996344"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-context/parent.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-context/parent.stdout",
+      "sha256": "2995f0dd609c53737b10825b37062738cbfa139b2d0fcbc338940f635ae2bd3c"
+    },
+    "ci-attempt1-missing-header/files/owned-in8-context/parent.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt1-20261002/files/owned-in8-context/parent.stderr",
+      "sha256": "84c211481dc267ba94405417bda37d4775e0981921bd3d11772b3606ecbd8b90"
+    },
+    "ci-attempt1-missing-header/original-workflow.yml": {
+      "kind": "git-blob",
+      "repository": "/tmp/bw-board-386-owned-in8-ci-headers-20261002",
+      "revision": "3e236128a079565229a2ba35d3754cc1698726e5",
+      "path": ".github/workflows/i80386-native-owned-in8-build.yml",
+      "sha256": "7de04d1f03567fa79d59159182727b18071c1d5783831d7f1671e1d35376f6d9"
     }
   }
 }

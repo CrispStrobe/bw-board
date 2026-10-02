@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/runner/work/bw-board/bw-board/publication/scripts/ci-build-i80386-native-owned-in8.py", line 39, in <module>
+    run('make',M['build'][1:],T/'bochs',600,env) # preexec already applies nice10 exactly once
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/publication/scripts/ci-build-i80386-native-owned-in8.py", line 26, in run
+    assert code==0 and not timedout and all(s['bytes']<256*1024*1024 for s in receipt['streams'].values())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
