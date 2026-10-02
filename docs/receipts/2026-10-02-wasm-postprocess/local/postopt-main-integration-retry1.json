@@ -1,0 +1,31 @@
+{
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-02T09:03:24.086Z",
+  "completedAt": "2026-10-02T09:03:37.967Z",
+  "node": "v20.20.2",
+  "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "wasmSha256": "880fcdde04b581675c89cf5c638cf2c198c276478532c4a013dd36cb2e135b29",
+  "files": {
+    "test/labwired-adapter.test.mjs": "1b938e84f7f656dee279dc1f001af52c4e91497b4af9ea00ae9f0a1037022204",
+    "test/labwired-bridge.test.mjs": "9d3a7943ae7017839eeb264654653f49363ca921e2cc2e6966daf5a449d5593f",
+    "test/labwired-roundtrip.test.mjs": "b63e8d4832c6209fd3545c06dd6dda4f58e95a444f53a699561c95940684902c",
+    "test/pad-drive-parity.test.mjs": "cdf609dbf49e6236bc71509a07861ddb8fabae57b74a34f64cc13068f2a9e949",
+    "test/labwired-firmware-only.test.mjs": "da469bfe1469e09c805b94f387c1a79b9106e31a1ae8429dc8ca63ef2285111e",
+    "test/labwired-microbit-matrix.test.mjs": "8426a1b66e26ffe6eac9723febc1de216d59ea7f4df0cddfe91d51cf59e0c7fb",
+    "test/labwired-input-boundary.test.mjs": "c8e5682569df28c141776c6d707b07664f10c1d5cd3b72b9a7b39d9071fa445b"
+  },
+  "exitCode": 0,
+  "signal": null,
+  "counts": {
+    "tests": 101,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "publication": false,
+  "appPinChanges": false,
+  "limitations": [
+    "local actual integration coverage, not independent-machine determinism or performance qualification"
+  ]
+}

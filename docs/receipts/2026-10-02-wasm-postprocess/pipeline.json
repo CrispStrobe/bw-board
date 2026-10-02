@@ -1,0 +1,766 @@
+{
+  "schema": 1,
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-02T09:41:22.764Z",
+  "toolHead": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+  "sources": {
+    "baseline": {
+      "run": 36915940413,
+      "commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685"
+    },
+    "candidate": {
+      "run": 36991093841,
+      "commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685"
+    }
+  },
+  "verifications": {
+    "baseline": {
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413",
+      "integrationTests": 101,
+      "qualification": {
+        "samples": [
+          {
+            "index": 0,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2992859669999999,
+            "rtx": 0.7696535061553544,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 112,
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "index": 1,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2677851150000001,
+            "rtx": 0.7887772053547102,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 212,
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "index": 2,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.274304579,
+            "rtx": 0.784741745795767,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 312,
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "index": 3,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2918256780000001,
+            "rtx": 0.7740982525972052,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 412,
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "index": 4,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2896296279999997,
+            "rtx": 0.7754164283204574,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 512,
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "guestSha256": "9c6df4457cc0c9d492ce32dcee50ec6045d97bc492ca3ba87e5869a413555c4f",
+        "guestObservations": [
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 112,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 0,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 212,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 1,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 312,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 2,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 412,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 3,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 512,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 4,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "allWindowsMeet1x": false,
+        "medianRtx": 0.7754164283204574,
+        "minimumRtx": 0.7696535061553544
+      },
+      "buildInfo": {
+        "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+        "wasmBindgen": "0.2.121",
+        "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+        "builtAt": "2026-10-01T19:57:59.544Z",
+        "targets": {
+          "nodejs": {
+            "labwired_wasm.js": {
+              "bytes": 135762,
+              "brotliBytes": 25386,
+              "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27556189,
+              "brotliBytes": 3056678,
+              "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+            }
+          },
+          "web": {
+            "labwired_wasm.js": {
+              "bytes": 138392,
+              "brotliBytes": 25941,
+              "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27556189,
+              "brotliBytes": 3056678,
+              "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+            }
+          }
+        },
+        "rawBytes": 136668412
+      }
+    },
+    "candidate": {
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36991093841",
+      "integrationTests": 101,
+      "qualification": {
+        "samples": [
+          {
+            "index": 0,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.230177611,
+            "rtx": 0.8128907493179861,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 112,
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "index": 1,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2398596560000001,
+            "rtx": 0.8065428979487658,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 212,
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "index": 2,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2534682200000002,
+            "rtx": 0.7977864807773106,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 312,
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "index": 3,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2399272940000001,
+            "rtx": 0.8064989010557259,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 412,
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "index": 4,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2195292909999997,
+            "rtx": 0.8199885048927457,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 512,
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "guestSha256": "2ad70383eb5b4dc72ed33bcfd1cac9ae04166d9cbd78aa5f2139c8110f1f2a15",
+        "guestObservations": [
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 112,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 0,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 212,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 1,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 312,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 2,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 412,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 3,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 512,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 4,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "allWindowsMeet1x": false,
+        "medianRtx": 0.8065428979487658,
+        "minimumRtx": 0.7977864807773106
+      },
+      "buildInfo": {
+        "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+        "wasmBindgen": "0.2.121",
+        "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+        "builtAt": "2026-10-01T19:57:59.544Z",
+        "targets": {
+          "nodejs": {
+            "labwired_wasm.js": {
+              "bytes": 135762,
+              "brotliBytes": 25386,
+              "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 24492963,
+              "brotliBytes": 2792353,
+              "sha256": "880fcdde04b581675c89cf5c638cf2c198c276478532c4a013dd36cb2e135b29"
+            }
+          },
+          "web": {
+            "labwired_wasm.js": {
+              "bytes": 138392,
+              "brotliBytes": 25941,
+              "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 24492963,
+              "brotliBytes": 2792353,
+              "sha256": "880fcdde04b581675c89cf5c638cf2c198c276478532c4a013dd36cb2e135b29"
+            }
+          }
+        },
+        "rawBytes": 136668412,
+        "postprocess": {
+          "schema": "labwired.binaryen-pilot.v1",
+          "diagnosticOnly": true,
+          "processedAt": "2026-10-02T09:41:15.118Z",
+          "optimizer": "binaryen",
+          "version": "123.0.0",
+          "versionOutput": "wasm-opt version 123 (version_123)",
+          "flags": [
+            "-O3",
+            "--strip-debug",
+            "--strip-producers",
+            "--enable-bulk-memory",
+            "--enable-simd",
+            "--enable-nontrapping-float-to-int",
+            "--enable-sign-ext",
+            "--enable-reference-types",
+            "--enable-multivalue"
+          ],
+          "toolSha256": "d66c6724c07334155720eb2def29c434dcaaf741ce859b4f7f389e22674f9c4a",
+          "releaseArchiveSha256": "e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe",
+          "releaseUrl": "https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz",
+          "sourceBuildInfoSha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16",
+          "sourceTargets": {
+            "nodejs": {
+              "labwired_wasm.js": {
+                "bytes": 135762,
+                "brotliBytes": 25386,
+                "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+              },
+              "labwired_wasm_bg.wasm": {
+                "bytes": 27556189,
+                "brotliBytes": 3056678,
+                "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+              }
+            },
+            "web": {
+              "labwired_wasm.js": {
+                "bytes": 138392,
+                "brotliBytes": 25941,
+                "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+              },
+              "labwired_wasm_bg.wasm": {
+                "bytes": 27556189,
+                "brotliBytes": 3056678,
+                "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+              }
+            }
+          },
+          "reusedIdenticalTargetModule": true,
+          "publication": false,
+          "appPinChanges": false
+        }
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "repeat": 1,
+      "nodeVersion": "20.20.2",
+      "reverse": false,
+      "run": 36991552272,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36991552272",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.5725777707527558,
+          "minimumRtx": 0.5021868209729551,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.6049728788361077,
+          "minimumRtx": 0.5840300772733175,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.0565776558890205
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 2.8166659774427614,
+            "minimumRtx": 2.7374537682725073,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 2.5391350173342184,
+            "minimumRtx": 2.4439037573495277,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9014682740761075
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.5583145175064235,
+            "minimumRtx": 0.5479328483177145,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.5546431074144258,
+            "minimumRtx": 0.5140965013915236,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9934241185266055
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "nodeVersion": "20.20.2",
+      "reverse": true,
+      "run": 36991842327,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36991842327",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.8674033766356593,
+          "minimumRtx": 0.8580645881621702,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.8692173734146587,
+          "minimumRtx": 0.8595110775923563,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.002091295500872
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 3.8287888607247234,
+            "minimumRtx": 3.620316576555661,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 3.5349877844433815,
+            "minimumRtx": 3.443156896964339,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9232652708288202
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.7343277922703129,
+            "minimumRtx": 0.717374942927981,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.7101868800105462,
+            "minimumRtx": 0.701111958799094,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.967125155122986
+        }
+      }
+    },
+    {
+      "repeat": 3,
+      "nodeVersion": "22.23.3",
+      "reverse": false,
+      "run": 36992022366,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36992022366",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.7519810714816773,
+          "minimumRtx": 0.7345446023775573,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.8038264316682804,
+          "minimumRtx": 0.7888047889588203,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.068945033529167
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 3.0219819849485985,
+            "minimumRtx": 2.8915692276993625,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 2.9294580748240007,
+            "minimumRtx": 2.227824686433564,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9693830371638792
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.6045341178546326,
+            "minimumRtx": 0.6024404181787627,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.588564095865066,
+            "minimumRtx": 0.5804139148004749,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9735829268888231
+        }
+      }
+    },
+    {
+      "repeat": 4,
+      "nodeVersion": "22.23.3",
+      "reverse": true,
+      "run": 36992254830,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36992254830",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.9767257628155694,
+          "minimumRtx": 0.9292344134308125,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 1.0203600056085196,
+          "minimumRtx": 0.9563084035233737,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.0446739959711593
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 3.80559021684014,
+            "minimumRtx": 3.6906860389300586,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 3.7958932813986355,
+            "minimumRtx": 3.3776724562460774,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9974519233840273
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.7912635331747334,
+            "minimumRtx": 0.7832247414812246,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.756423721809066,
+            "minimumRtx": 0.7417614093851306,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9559693959029276
+        }
+      }
+    }
+  ],
+  "automaticMerge": false,
+  "publication": false,
+  "appPinChanges": false,
+  "completedAt": "2026-10-02T09:54:36.429Z"
+}
