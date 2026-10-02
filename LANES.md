@@ -644,7 +644,8 @@ ground-current mutations each fail their independent consequence assertion.
 2026-10-02 ADP7118 internal soft-start envelope — CLAIM, Codex bwcx `/root`.
 Isolated wt-board-adp7118-soft-start-20261002, branch
 lane/adp7118-soft-start-20261002; exact base
-25b2b0614c86eef5996f159ad1ac49dd3a8d5dea. Four-path envelope: this row,
+6ba28adc1450a7553450ae09992b6b3f9eb01749. A concurrent evidence-only
+landing was merged before claim publication; no implementation yet. Four-path envelope: this row,
 src/devices/power.js ADP7118 only, test/adp7118-soft-start.test.mjs, and
 spec-updates/adp7118-soft-start.md. Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
