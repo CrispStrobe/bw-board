@@ -1,0 +1,3 @@
+HEAD is now at fe1eff2 Compare IN8 fixture with explicit native reset profile
+HEAD is now at bbf2a73 Prepare span-only runtime admission reusing frozen fe1 native identity
+{"status": "HOSTED_NEW_MATERIALIZATION_EXACT_SOURCE_AND_ORACLES_PASS_NO_NATIVE_EXECUTION", "bindingSha256": "9ee82e13b3a8a5d00cdce3afc125719682cf9c6ce4df22beae87eac6ea06bb3f", "artifactCount": 212, "runtimeRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1", "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68"}

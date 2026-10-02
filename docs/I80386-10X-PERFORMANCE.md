@@ -1,6 +1,8 @@
 # Experimental 80386 speed path
 
-[Private span native parity](I80386-OWNED-SPAN-PARITY-RESULTS.md) passes three fresh hosted cells against unchanged compiled fe1/103: whole stored166-word snapshots, boards/RAM, ON journal and both full1,649,271-row canonical traces. Runtime116 remains distinct from compiled103. Performance qualification and adoption remain pending.
+[The private span CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md): 4.221876% nominal mean process-CPU reduction and five of seven favorable pairs, below the required ≥10% and all-seven criterion. All 18 semantic comparisons passed; keep unchanged `fe1`, with no adoption or physical-clock claim.
+
+[Private span native parity](I80386-OWNED-SPAN-PARITY-RESULTS.md) passes three fresh hosted cells against unchanged compiled fe1/103: whole stored166-word snapshots, boards/RAM, ON journal and both full1,649,271-row canonical traces. Runtime116 remains distinct from compiled103. The subsequent [paired CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md); the span candidate is not adopted.
 
 [Private span hosted source controls](I80386-OWNED-SPAN-SOURCE-RESULTS.md) pass 232,337 checks in ten cases, with unchanged compiled inputs. Subsequent [native parity passed](I80386-OWNED-SPAN-PARITY-RESULTS.md); no performance result or broader guest admission follows.
 
@@ -19,7 +21,7 @@ pair's timing result. All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
-The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). A separate paired CPU gate is still required; this establishes no adoption, speed result or broader AT admission.
+The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). Its separate [paired CPU gate has now failed](I80386-OWNED-SPAN-CPU-RESULTS.md); this establishes no adoption or broader AT admission.
 
 ## Current checkpoint (2026-10-02)
 

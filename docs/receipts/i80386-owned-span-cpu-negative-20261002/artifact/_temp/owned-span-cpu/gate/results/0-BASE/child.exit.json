@@ -1,0 +1,30 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 396,
+  "stderrSha256": "21d1ac3e64a324a944ff5e2cb2497498b8d513986f6af6f847b2569bb7e36179",
+  "wallNs": 14486829372,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/run-i80386-native-owned-in8.mjs",
+    "/home/runner/work/_temp/owned-span-cpu/gate/results/0-BASE.input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}
