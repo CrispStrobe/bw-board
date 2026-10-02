@@ -1,0 +1,13 @@
+{
+  "status": "PASS_NONGUEST_INSPECTOR_PHASE_ALIGNMENT_CONTROL",
+  "startBefore": 10056074423544,
+  "executionStart": 10056074458573,
+  "executionEnd": 10056074489257,
+  "stopAfter": 10056074492374,
+  "profileStart": 10056074423667,
+  "profileEnd": 10056074489573,
+  "samples": 19,
+  "inWindow": 18,
+  "result": 1079415456,
+  "scope": "Only boundedJSloop; proves localNode22 monotonicmicrosecond phase alignment, not native visibility, guest behavior or profiler CPU attribution."
+}
