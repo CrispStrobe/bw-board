@@ -1,15 +1,14 @@
 # ADP7118 internal startup envelope
 
-Status: **held candidate, not released**. Actual CLI capture reports
-`minimum-step-accuracy-unmet` near 70.011 µs even though endpoint voltage and
-scope shape look plausible; its voltage meter refuses the capture. Mandatory
-`transientAnalysisStatus().accuracyMet === true` assertions now expose this
-in the direct timing and scope regressions. Earlier endpoint-only checks did
-not qualify the integrator. A legacy-DC capacitor CLI control also refuses its
-meter; this is not evidence that startup alone introduced the problem.
-No package adoption or physical accuracy claim is authorized by this candidate.
-The repair must preserve the existing solver tolerances and genuinely qualify
-scope and meter captures, not suppress the failure or skip its assertion.
+Status: **replacement candidate, hosted qualification pending**. The initial
+candidate was held after actual CLI capture reported
+`minimum-step-accuracy-unmet` near 70.011 µs despite plausible endpoints.
+Mandatory `transientAnalysisStatus().accuracyMet === true` checks are retained.
+The replacement evaluates its reference at the actual MNA time, explicitly
+schedules the interpolation corner, and distinguishes continuous source changes
+from discrete behavioral events. Solver tolerances and budgets are unchanged.
+Reactive current-limit transitions remain explicitly refused, not certified.
+No installed-package adoption or physical accuracy certificate is implied.
 
 The default ADP7118 model remains its existing DC regulation contract. Select
 the following explicit model on a fixed-output part to capture internal startup:
@@ -24,6 +23,8 @@ refused, including a singleton SS net: this slice cannot qualify an external
 SS network. Adjustable mode, authored external soft-start capacitance and
 startup into a prebiased output also refuse by name. They are not simulated
 as if the pin or stored charge were absent.
+Missing or externally divided SENSE also refuses: this startup slice admits
+only direct output sensing, unlike the unchanged legacy adjustable/DC model.
 
 ## Timing authority and interpolation
 
@@ -42,14 +43,23 @@ f(t)  = 0                         when t <= delay
 f(t)  = 1 - exp(-(t-delay)/tau)    otherwise
 ```
 
-The existing feedback reference becomes `vOut * f(t)` from the qualified
-enable transition. Scheduled 5 µs updates use the engine's existing device
-deadline mechanism; scope/adaptive substeps can update more often. The output
-capacitor remains a real circuit element. Dropout, current limits and input/
-output/ground current accounting retain their existing equations. The opt-in
-actuator additionally bounds the output drive to forward current at or below
-the selected current limit and applies anti-windup. The old DC load-line
-controller is not applied to a charging capacitor or changed on the default path.
+The direct-sense reference becomes `vOut * f(t)` from the qualified enable
+transition and is evaluated at every actual MNA solve time, not held between
+device callbacks. The corner is rounded to the engine's nanosecond clock and
+posted as the first deadline. Subsequent 10 µs wakes use the existing device
+mechanism; the whole envelope fits its unchanged 200-deadline budget even in
+one long advance. Reactive solves evaluate the reference continuously rather
+than as a 10 µs staircase. The real external output capacitor and authored
+output resistance determine the resulting RC response.
+
+The opt-in non-reactive current-limited branch stamps a Norton current directly
+instead of repeatedly moving a voltage source. Reactive overload/high-inrush
+transitions require a within-solve nonlinear limiter, which this device-only
+slice does not supply: it throws a named refusal when that regime is encountered.
+A 10 Ω load with output capacitance and a 22 µF charging fixture explicitly
+exercise this boundary. Neither is counted as simulated successfully.
+Dropout/headroom, enable/UVLO and input/quiescent-current bookkeeping remain
+bounded behavioral approximations. The legacy DC controller is unchanged.
 
 EN/UVLO hysteresis does not restart an already enabled device. A real disable
 clears startup progress. In this opt-in mode the disabled output is high
@@ -71,10 +81,26 @@ ADP7118/LT1763 cases remain unchanged.
 Charging-current observations are explicitly caller-sampled at real 10 µs
 instants; engine-clock voltage scope capture is checked separately. They are
 not claimed to be an automatically clocked current-channel waveform.
-Four in-memory executable production mutants bypass the ramp, retain a stale
-restart clock, drop the SS refusal or bypass the current ceiling. Each must
+Six in-memory executable production mutants bypass the ramp, retain a stale
+restart clock, drop the SS refusal, bypass the non-reactive current ceiling,
+post a late rather than exact corner wake, or remove the reactive-limit refusal. Each must
 fail its actual Board caller consequence; the registry is restored in `finally`
 and the source file remains byte-unchanged.
+
+An independent closed-form solution of the authored delayed exponential driving
+the actual 0.05 Ω / 500 Ω / 2.2 µF RC circuit checks 120 instantaneous scope
+observations and the capture-window meter integral. Native low/high sample pairs
+are checked as paired storage of one observation, not double-counted. The actual
+CUI CLI diagnostic run also passes both scope and voltage-meter capture with
+`accuracyMet:true`: maximum waveform error 0.051 µV and mean error 13.3 µV on
+this fixture. The meter mean is about 4.157 V, not the roughly 4.996 V final
+endpoint. These are analytic model/circuit checks, not vendor-SPICE agreement;
+the CLI used a checkout override, not an installed/downstream adoption.
+
+Next separate model task: a within-MNA nonlinear current-limited regulator stamp
+with actual-capacitor transition, accepted-step ceiling, KCL, recovery and oracle
+proofs. Measure solver ownership and scope first; do not replace this named
+refusal with a post-step clamp or tolerance relaxation.
 
 The interpolated waveform is not vendor transistor-model agreement. External
 CSS, adjustable-mode noise-reduction networks, overshoot, load-step feedback,

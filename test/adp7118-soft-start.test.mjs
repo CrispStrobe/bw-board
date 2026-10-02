@@ -8,7 +8,7 @@ registerPowerDevices();
 const terminals = ['vout_1', 'vout_2', 'sense_adj', 'gnd', 'en', 'ss', 'vin_7', 'vin_8'];
 const net = (id, ...nodes) => ({id, terminals: nodes.map(([part, terminal]) => ({part, terminal}))});
 function rig({params = {vOut: 5, startupModel: 'datasheet-envelope'}, cap = 2.2e-6,
-  enable = 3.3, ss = false, load = 500} = {}) {
+  enable = 3.3, ss = false, sense = true, load = 500} = {}) {
   const b = new BoardImpl(5);
   const parts = [
     {id: 'VIN', kind: 'vsource', params: {volts: 8}, terminals: ['pos', 'neg']},
@@ -21,7 +21,7 @@ function rig({params = {vOut: 5, startupModel: 'datasheet-envelope'}, cap = 2.2e
   const nets = [
     net('vin', ['VIN', 'pos'], ['U', 'vin_7'], ['U', 'vin_8']),
     net('en', ['EN', 'pos'], ['U', 'en']),
-    net('out', ['U', 'vout_1'], ['U', 'vout_2'], ['U', 'sense_adj'], ['RL', 'a'],
+    net('out', ['U', 'vout_1'], ['U', 'vout_2'], ...(sense ? [['U', 'sense_adj']] : []), ['RL', 'a'],
       ...(cap ? [['C', 'a']] : [])),
     net('gnd', ['G', 'gnd'], ['VIN', 'neg'], ['EN', 'neg'], ['U', 'gnd'], ['RL', 'b'],
       ...(cap ? [['C', 'b']] : []), ...(ss ? [['U', 'ss']] : [])),
@@ -48,6 +48,7 @@ test('opt-in ADP7118 startup meets independent 80us/380us data-sheet timing anch
   assert.equal(b.transientAnalysisStatus().accuracyMet, true,
     `startup must satisfy the real integrator, not only endpoint voltage: ${JSON.stringify(b.transientAnalysisStatus())}`);
   assert.equal(b.getDeviceState('U').startupModel, 'datasheet-envelope');
+  assert.equal(b._deviceSubstepOverflow, false, 'startup must not exhaust the real device-deadline budget');
 });
 
 test('dynamic shutdown releases the real output capacitor and refuses unsupported prebiased restart', () => {
@@ -70,6 +71,15 @@ test('startup never bypasses the existing output-current ceiling', () => {
     `startup-limited load reads ${b.nodeVoltage('out') / 10} A`);
 });
 
+test('reactive overload and high-inrush startup refuse rather than certify an overshooting current limiter', () => {
+  for (const options of [{load: 10}, {cap: 22e-6}]) {
+    const b = rig(options);
+    b.addScopeChannel({type: 'voltage', netId: 'out', sampleRateHz: 100000, capture: 'sample'});
+    assert.throws(() => b.advanceTo(1_200_000n),
+      /ADP7118.*current-limited startup transient is unqualified/);
+  }
+});
+
 test('default DC model remains immediate and explicit dynamic model is voltage-scaled', () => {
   const legacy = rig({params: {vOut: 5}, cap: 0});
   legacy.advanceTo(1n);
@@ -78,6 +88,10 @@ test('default DC model remains immediate and explicit dynamic model is voltage-s
   const scaled = rig({params: {vOut: 3.3, startupModel: 'datasheet-envelope'}});
   scaled.advanceTo(380_000n);
   assert.ok(Math.abs(scaled.nodeVoltage('out') - 2.97) < .015);
+  const longAdvance = rig({cap: 0});
+  longAdvance.advanceTo(3_000_000n);
+  assert.equal(longAdvance._deviceSubstepOverflow, false,
+    'a single full startup advance must fit the unchanged device deadline budget');
 });
 
 test('shutdown, enable hysteresis and UVLO restart preserve a fresh startup clock', () => {
@@ -99,7 +113,8 @@ test('shutdown, enable hysteresis and UVLO restart preserve a fresh startup cloc
   b.setControl('VIN', 8);
   const uvloRestart = b.timeNs;
   b.advanceTo(uvloRestart + 380_000n);
-  assert.ok(Math.abs(b.nodeVoltage('out') - 4.5) < .015);
+  assert.ok(Math.abs(b.nodeVoltage('out') - 4.5) < .015,
+    `UVLO restart reads ${b.nodeVoltage('out')} at ${b.timeNs}, state=${JSON.stringify(b.getDeviceState('U'), (_,v)=>typeof v==='bigint'?String(v):v)}`);
 });
 
 test('startup scope captures monotonic finite history and complete device KCL', () => {
@@ -129,6 +144,41 @@ test('startup scope captures monotonic finite history and complete device KCL', 
   assert.ok(Math.abs(currents.reduce((a, c) => a + c, 0)) < 1e-8);
 });
 
+test('real scope samples and voltage-meter mean agree with an independent closed-form RC solution', () => {
+  const b = rig();
+  const handle = b.addScopeChannel({type:'voltage',netId:'out',referenceNetId:'gnd',
+    sampleRateHz:100000,capture:'sample',depth:122});
+  assert.equal(b.meterVoltage('out','gnd'),0);
+  b.advanceTo(1_200_000n);
+  assert.equal(b.transientAnalysisStatus().accuracyMet,true);
+  assert.equal(b._deviceSubstepOverflow,false);
+  const tau=300e-6/Math.log(9);
+  const delay=Math.round((80e-6+tau*Math.log(.9))*1e9)/1e9;
+  const gain=500/(500+.05), rc=(.05*500/(500+.05))*2.2e-6;
+  const expected = t => {
+    const x=t-delay;
+    return x<=0 ? 0 : 5*gain*(1-(tau*Math.exp(-x/tau)-rc*Math.exp(-x/rc))/(tau-rc));
+  };
+  const data=b.getScopeData(handle);
+  assert.equal(data.count,120);
+  // Native scope ABI stores a low/high pair for every bucket; sample
+  // capture repeats the one instantaneous value, not two observations.
+  const pairs=Array.from(data.samples).filter(Number.isFinite);
+  assert.equal(pairs.length,240);
+  const samples=pairs.filter((_,i)=>i%2===0);
+  for (let i=0;i<pairs.length;i+=2) assert.equal(pairs[i],pairs[i+1]);
+  assert.equal(samples.length,120);
+  for (let i=0;i<samples.length;i++) {
+    const time=(i+1)*10e-6;
+    assert.ok(Math.abs(samples[i]-expected(time))<1e-5,
+      `sample ${time}: ${samples[i]} versus independent RC ${expected(time)}`);
+  }
+  const duration=.0012,x=duration-delay;
+  const mean=5*gain*(x-(tau*tau*(1-Math.exp(-x/tau))-rc*rc*(1-Math.exp(-x/rc)))/(tau-rc))/duration;
+  assert.ok(Math.abs(b.meterVoltage('out','gnd')-mean)<1e-4,
+    'meter is the capture-window integral, not the final ~5 V endpoint');
+});
+
 test('unknown startup model, external SS, adjustable and invalid nominal configurations refuse by name', () => {
   for (const params of [
     {startupModel: 'made-up'}, {startupModel: null},
@@ -143,12 +193,13 @@ test('unknown startup model, external SS, adjustable and invalid nominal configu
     b.advanceTo(1n);
     b.nodeVoltage('out');
   }, /ADP7118.*SS/i);
+  assert.throws(() => rig({sense: false}), /ADP7118.*directly connected SENSE/);
 });
 
-test('four executable startup mutants fail their real Board caller consequences; registry always restored', async () => {
+test('six executable startup mutants fail their real Board caller consequences; registry always restored', async () => {
   const pristine = readFileSync(new URL('../src/devices/power.js', import.meta.url), 'utf8');
   const mutants = [
-    ['ramp bypass', 'nominal * startupFraction - vSense', 'nominal - vSense', () => {
+    ['ramp bypass', '(part.params?.vOut ?? 5) * fraction', '(part.params?.vOut ?? 5)', () => {
       const b = rig({cap: 0}); b.advanceTo(80_000n);
       assert.ok(Math.abs(b.nodeVoltage('out') - .5) < .015);
     }],
@@ -162,9 +213,22 @@ test('four executable startup mutants fail their real Board caller consequences;
     ['missing SS refusal', "state.startupModel && ctx.netFor('ss')", "false && ctx.netFor('ss')", () => {
       assert.throws(() => rig({ss: true}), /ADP7118.*SS/);
     }],
-    ['output current ceiling bypass', 'Math.max(vOut, Math.min(command, vOut + currentLimit * rOut))', 'command', () => {
+    ['output current ceiling bypass', "ctx.current('vout_1', amps);", "ctx.current('vout_1', amps * 2);", () => {
       const b = rig({cap: 0, load: 10}); b.advanceTo(1_200_000n);
       assert.ok(Math.abs(b.nodeVoltage('out') / 10 - .36) < .003);
+    }],
+    ['missing exact startup-corner wake', 'state._startupStartNs + ADP7118_STARTUP_DELAY_NS\n            : startupFraction',
+      'tNs + ADP7118_STARTUP_TICK_NS\n            : startupFraction', () => {
+      const b = rig(); b.advanceTo(1n);
+      const tau = 300e-6 / Math.log(9);
+      const delayNs = BigInt(Math.round((80e-6 + tau * Math.log(.9)) * 1e9));
+      assert.equal(b.getDeviceState('U')._wakeNs,
+        b.getDeviceState('U')._startupStartNs + delayNs,
+        'the device must post the actual interpolation corner, not a late periodic wake');
+    }],
+    ['missing reactive current-limit refusal', 'limited && state._startupTransientStamp', 'false && state._startupTransientStamp', () => {
+      assert.throws(() => rig({load: 10}).advanceTo(1_200_000n),
+        /ADP7118.*current-limited startup transient is unqualified/);
     }],
   ];
   for (const [name, anchor, replacement, prove] of mutants) {

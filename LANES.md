@@ -641,11 +641,11 @@ ground-current curve; shutdown current; and eight-terminal KCL. Focused old/new
 power and source-once coverage is 18/18; dropout, threshold, limit and
 ground-current mutations each fail their independent consequence assertion.
 
-2026-10-02 ADP7118 internal soft-start envelope — HOLD, Codex bwcx `/root`.
+2026-10-02 ADP7118 internal soft-start envelope — replacement candidate, Codex bwcx `/root`.
 Isolated wt-board-adp7118-soft-start-20261002, branch
 lane/adp7118-soft-start-20261002; exact base
 6ba28adc1450a7553450ae09992b6b3f9eb01749. A concurrent evidence-only
-landing was merged before claim publication; no implementation yet. Four-path envelope: this row,
+landing was merged before claim publication. Four-path envelope: this row,
 src/devices/power.js ADP7118 only, test/adp7118-soft-start.test.mjs, and
 spec-updates/adp7118-soft-start.md. Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
@@ -680,6 +680,21 @@ No unchanged rerun, tolerance relaxation, main landing or consumer adoption.
 Repair the device/transient boundary and prove actual CLI scope plus voltage
 meter accuracy before requalification. Global solver changes remain outside
 this envelope and require a separately measured scope/ownership decision.
+Forward device-only repair now evaluates the interpolation at actual MNA time,
+posts its exact nanosecond corner, and keeps continuous updates from restarting
+integration. A 10 us periodic wake fits the unchanged 200-deadline limit for
+the complete envelope. Non-reactive current limit uses a real Norton stamp;
+reactive overload/high-inrush transitions explicitly refuse pending a separately
+scoped nonlinear solver stamp. Direct SENSE is mandatory in this opt-in mode.
+Final focused 34/34, zero skips, includes retained accuracy assertions, actual
+deadline budget, both reactive-limit refusals, 120 closed-form RC scope checks
+and a capture-window voltage-meter integral. Six isolated executable mutants
+red and restore the registry/source. Default 21 cloned state/current/voltage
+snapshots remain exactly equal to the parent. Actual CUI checkout CLI capture
+returns accuracyMet:true with 120 samples: max analytic scope error 0.051 uV,
+meter mean error 13.3 uV (4.156958 V versus 4.156971 V). This is diagnostic
+BW_BOARD override evidence, not installed adoption or vendor-SPICE agreement.
+Reconcile current master and qualify the frozen replacement once before landing.
 
 2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.

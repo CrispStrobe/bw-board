@@ -19,7 +19,11 @@ const ADP151_FIXED_OUTPUTS = new Set([
 // behavioural approximation, not an ADI transistor/feedback-loop model.
 const ADP7118_STARTUP_TAU_SEC = 300e-6 / Math.log(9);
 const ADP7118_STARTUP_DELAY_SEC = 80e-6 + ADP7118_STARTUP_TAU_SEC * Math.log(.9);
-const ADP7118_STARTUP_TICK_NS = 5000n;
+const ADP7118_STARTUP_DELAY_NS = BigInt(Math.round(ADP7118_STARTUP_DELAY_SEC * 1e9));
+// A 10 us wake keeps the whole ~1.95 ms envelope below the existing 200
+// device-deadline budget. Reactive solves evaluate f(t) continuously, not
+// as a 10 us staircase; this deadline refreshes non-reactive endpoints.
+const ADP7118_STARTUP_TICK_NS = 10000n;
 
 /**
  * Register power device models.
@@ -213,7 +217,7 @@ export function registerPowerDevices() {
       }
       return {
         drives: {
-          vout_1: { vTh: 0, rTh: rOut, ref: 'gnd' },
+          vout_1: startup ? null : { vTh: 0, rTh: rOut, ref: 'gnd' },
         },
         _enabled: false,
         _command: startup ? 0 : nominal,
@@ -221,13 +225,43 @@ export function registerPowerDevices() {
         _inputAmps: 0,
         _outputAmps: 0,
         ...(startup ? {startupModel: startup, startupFraction: 0,
-          _startupStartNs: null, _wakeNs: null} : {}),
+          _startupStartNs: null, _wakeNs: null, _currentLimited: false,
+          _headroom: 0, _startupUpdateNs: null, _startupRamping: false,
+          _startupTransientStamp: false, _startupStampedLimit: false} : {}),
       };
     },
 
     stamp(ctx, part, state) {
       if (state.startupModel && ctx.netFor('ss')) {
         throw new Error(`ADP7118 ${part.id}: startup SS must be open; external SS networks are unmodeled`);
+      }
+      if (state.startupModel) {
+        // Record only which existing solve route evaluates the source, not
+        // any trial-step voltage or integration history. Non-reactive boards
+        // need explicit endpoint re-solves; reactive substeps already evaluate
+        // the continuous reference and must not restart for every new value.
+        state._startupTransientStamp = ctx.dtSec !== undefined;
+        state._startupStampedLimit = state._currentLimited;
+        const sense = ctx.netFor('sense_adj');
+        if (!sense || ![ctx.netFor('vout_1'), ctx.netFor('vout_2')].includes(sense)) {
+          throw new Error(`ADP7118 ${part.id}: startup requires directly connected SENSE; external feedback is unmodeled`);
+        }
+        if (state._enabled && state._currentLimited) {
+          // A current ceiling is a Norton current, not a voltage source
+          // moved after each accepted capacitor-integration step.
+          const amps = part.params?.currentLimit ?? .36;
+          ctx.current('vout_1', amps);
+          ctx.current('gnd', -amps);
+        } else {
+          const elapsed = state._startupStartNs === null ? 0
+            : ctx.tSeconds - Number(state._startupStartNs) / 1e9;
+          const fraction = Math.max(0, 1 - Math.exp(
+            -Math.max(0, elapsed - Number(ADP7118_STARTUP_DELAY_NS) / 1e9) / ADP7118_STARTUP_TAU_SEC));
+          const target = state._enabled
+            ? Math.min(state._headroom, (part.params?.vOut ?? 5) * fraction) : 0;
+          ctx.theveninBetween('vout_1', 'gnd', target,
+            state._enabled ? (part.params?.rOut ?? .05) : 1e9);
+        }
       }
       // Duplicate package leads are the same die nodes. Ten milliohms keeps
       // them observable as separate physical terminals without fabricating a
@@ -269,14 +303,48 @@ export function registerPowerDevices() {
           }
           const elapsedSec = Number(tNs - state._startupStartNs) / 1e9;
           startupFraction = Math.max(0, 1 - Math.exp(
-            -Math.max(0, elapsedSec - ADP7118_STARTUP_DELAY_SEC) / ADP7118_STARTUP_TAU_SEC));
-          state._wakeNs = startupFraction < 1 - 1e-6 ? tNs + ADP7118_STARTUP_TICK_NS : null;
+            -Math.max(0, elapsedSec - Number(ADP7118_STARTUP_DELAY_NS) / 1e9) / ADP7118_STARTUP_TAU_SEC));
+          state._wakeNs = tNs < state._startupStartNs + ADP7118_STARTUP_DELAY_NS
+            ? state._startupStartNs + ADP7118_STARTUP_DELAY_NS
+            : startupFraction < 1 - 1e-6 ? tNs + ADP7118_STARTUP_TICK_NS : null;
         } else {
           startupFraction = 0;
           state._startupStartNs = null;
           state._wakeNs = null;
         }
         state.startupFraction = startupFraction;
+      }
+
+      if (state.startupModel) {
+        const headroom = Math.max(0, vIn - .2);
+        const target = enabled ? Math.min(headroom, nominal * startupFraction) : 0;
+        const demanded = Math.max(0, (target - vOut) / rOut);
+        const limited = enabled && demanded > currentLimit;
+        if (limited && state._startupTransientStamp) {
+          throw new Error(`ADP7118 ${part.id}: current-limited startup transient is unqualified`);
+        }
+        const outputAmps = enabled ? Math.min(currentLimit, demanded) : 0;
+        const iq = enabled ? 50e-6 + 130e-6 * Math.min(outputAmps, .2) / .2
+          : 1.8e-6 + 1.2e-6 * Math.min(1, Math.max(0, vIn - 5) / 15);
+        const inputAmps = outputAmps + iq;
+        const ramping = enabled && tNs >= state._startupStartNs + ADP7118_STARTUP_DELAY_NS;
+        const sameInstant = state._startupUpdateNs === tNs;
+        const changed = enabled !== state._enabled || limited !== state._currentLimited
+          || limited !== state._startupStampedLimit
+          || headroom !== state._headroom || ramping !== state._startupRamping
+          || (!state._startupTransientStamp && target !== state._command)
+          || (sameInstant && Math.abs(inputAmps - state._inputAmps) > 1e-9);
+        state._startupUpdateNs = tNs;
+        state._enabled = enabled;
+        state._currentLimited = limited;
+        state._startupRamping = ramping;
+        state._headroom = headroom;
+        state._command = target;
+        state._driveV = target;
+        state._inputAmps = inputAmps;
+        state._outputAmps = outputAmps;
+        state.drives.vout_1 = null;
+        return changed;
       }
 
       let command = state._command;
@@ -301,15 +369,9 @@ export function registerPowerDevices() {
         // of the current ceiling, and settles in one behavioral pass rather
         // than depending on an unbounded number of tiny voltage steps.
         const loadOhms = demanded > 1e-12 ? Math.max(0, vOut / demanded) : Infinity;
-        // A changing startup reference must not escape the limit on the
-        // iteration whose measured current sits exactly at the ceiling.
-        // Retain the original DC controller verbatim when startup is off.
-        driveV = state.startupModel
-          ? Math.max(vOut, Math.min(command, vOut + currentLimit * rOut))
-          : demanded > currentLimit ? currentLimit * (loadOhms + rOut) : command;
-        if (state.startupModel) command = driveV; // anti-windup follows the bounded actuator
+        driveV = demanded > currentLimit ? currentLimit * (loadOhms + rOut) : command;
       } else {
-        command = state.startupModel ? 0 : nominal;
+        command = nominal;
       }
 
       // Ground current: 50 uA no-load, rising linearly to 180 uA at the
@@ -329,8 +391,7 @@ export function registerPowerDevices() {
       state._driveV = driveV;
       state._outputAmps = outputAmps;
       state._inputAmps = inputAmps;
-      state.drives.vout_1 = { vTh: driveV,
-        rTh: state.startupModel && !enabled ? 1e9 : rOut, ref: 'gnd' };
+      state.drives.vout_1 = { vTh: driveV, rTh: rOut, ref: 'gnd' };
       return changed;
     },
   });
