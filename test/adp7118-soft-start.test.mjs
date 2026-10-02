@@ -81,6 +81,92 @@ test('reactive overload and high-inrush startup refuse rather than certify an ov
   }
 });
 
+test('caught reactive startup refusal invalidates partial and fresh instrument readings with original error identity', () => {
+  const b=rig({load:10}), model=getDevice('adp7118'), update=model.update;
+  const h=b.addScopeChannel({type:'voltage',netId:'out',referenceNetId:'gnd',sampleRateHz:100000,capture:'sample'});
+  b.meterVoltage('out','gnd'); b.meterCurrent('U','vout_1');
+  let original;
+  model.update=function(...args){try{return update.apply(this,args);}catch(error){original=error;throw error;}};
+  try {
+    assert.throws(()=>b.advanceTo(1_200_000n),error=>error===original && /current-limited startup transient/.test(error.message));
+    assert.ok(b._scopeChannels.get(h).count>0,'partial valid samples preceded the refusal');
+    assert.equal(b._liveSolveError,original,'retain original model error identity');
+    for(const read of [()=>b.meterVoltage('out','gnd'),()=>b.meterVoltage('gnd','out'),
+      ()=>b.meterCurrent('U','vout_1'),()=>b.meterCurrent('VIN','pos'),()=>b.getScopeData(h)]) {
+      assert.throws(read,/measurement unavailable: circuit solve failed/);
+    }
+    const status=b.transientAnalysisStatus();
+    assert.equal(status.accuracyMet,false);
+    assert.equal(status.failure.code,'device-update-refused');
+    assert.equal(status.failure.partId,'U');
+    assert.match(status.failure.detail,/current-limited startup transient/);
+    assert.ok(status.failure.timeSec>0 && status.failure.timeSec<.0012);
+    const healthy=rig({cap:0});
+    b.setNetlist(healthy.parts,healthy.nets);
+    assert.equal(b._liveSolveError,null,'intentional netlist reset clears refusal authority');
+    assert.equal(b.transientAnalysisStatus().accuracyMet,false,'netlist editing alone does not erase prior acquisition failure');
+    assert.throws(()=>b.getScopeData(h),/scope capture refused/,'old partial capture stays invalid after a successful solve');
+    assert.equal(healthy.transientAnalysisStatus().failure,null);
+    assert.equal(healthy.meterVoltage('out','gnd'),0,'a genuinely fresh acquisition starts with valid zero');
+    healthy.advanceTo(1_200_000n);
+    assert.ok(healthy.meterVoltage('gnd','out') < -4.99,'fresh unprimed acquisition qualifies independently');
+  } finally {model.update=update;}
+});
+
+test('first accepted callback refusal is unsuccessful without fabricating completed work; ordinary callback faults remain unchanged', () => {
+  const b=rig(), model=getDevice('adp7118'), update=model.update;
+  const error=new Error('injected first-step admission refusal');
+  model.update=function(...args){if(args[2].transient)throw error;return update.apply(this,args);};
+  try {
+    assert.throws(()=>b.advanceTo(1n),caught=>caught===error);
+    assert.equal(b.transientAnalysisStatus().work.advances,0);
+    assert.equal(b.transientAnalysisStatus().accuracyMet,false);
+    assert.equal(b.transientAnalysisStatus().failure.timeSec,1e-9);
+    assert.equal(b._liveSolveError,error);
+  } finally {model.update=update;}
+  const ordinary=rig({cap:0});
+  model.update=()=>{throw error;};
+  try {
+    assert.throws(()=>ordinary._updateDevices(),caught=>caught===error);
+    assert.equal(ordinary._liveSolveError,null,'do not expand ordinary callback fault semantics');
+    assert.equal(ordinary.transientAnalysisStatus().failure,null);
+  } finally {model.update=update;}
+});
+
+test('three observer-validity mutants red actual caught-refusal callers and restore dispatcher/status', () => {
+  const model=getDevice('adp7118'), update=model.update;
+  const mutations=[
+    ['missing observer invalidation','_updateDevices','this._invalidateLiveMeasurements(error);','void error;',b=>{
+      assert.throws(()=>b.meterVoltage('out','gnd'),/measurement unavailable/);
+    }],
+    ['missing failure record','_updateDevices','this._transientAccuracyUnmet ||= {','this._transientAccuracyUnmet ||= false && {',b=>{
+      assert.equal(b.transientAnalysisStatus().failure?.code,'device-update-refused');
+    }],
+    ['failure loses to zero completed work','transientAnalysisStatus',
+      'accuracyMet: this._transientAccuracyUnmet ? false\n        : this._transientAnalysisWork.advances > 0 ? true : null,',
+      'accuracyMet: this._transientAnalysisWork.advances > 0 ? this._transientAccuracyUnmet === null : null,',b=>{
+        assert.equal(b.transientAnalysisStatus().accuracyMet,false);
+      }],
+  ];
+  for(const [name,method,anchor,replacement,prove] of mutations){
+    const original=BoardImpl.prototype[method], source=original.toString();
+    assert.equal(source.split(anchor).length-1,1,`${name}: exact single production anchor`);
+    const b=rig(); b.meterVoltage('out','gnd');
+    const error=new Error('injected accepted-step refusal');
+    model.update=function(...args){if(args[2].transient)throw error;return update.apply(this,args);};
+    try {
+      BoardImpl.prototype[method]=new Function('getDevice',`return function ${source.replace(anchor,replacement)}`)(getDevice);
+      assert.throws(()=>b.advanceTo(1n),caught=>caught===error,'mutant remains buildable and reaches actual callback refusal');
+      assert.equal(b.transientAnalysisStatus().work.advances,0);
+      assert.throws(()=>prove(b),{name:'AssertionError'},`${name}: actual caller consequence must red`);
+    } finally {
+      BoardImpl.prototype[method]=original; model.update=update;
+    }
+    assert.equal(BoardImpl.prototype[method],original);
+    assert.equal(model.update,update);
+  }
+});
+
 test('default DC model remains immediate and explicit dynamic model is voltage-scaled', () => {
   const legacy = rig({params: {vOut: 5}, cap: 0});
   legacy.advanceTo(1n);

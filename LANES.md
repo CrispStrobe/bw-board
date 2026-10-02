@@ -676,6 +676,15 @@ marking the existing transient status unsuccessful, while rethrowing the
 original exception. Prove caught-error identity, stale/fresh meter and scope
 refusal, status honesty and intentional-reset recovery; preserve ordinary
 callbacks, observational queries and unrelated exceptions. No solver change.
+Caught-refusal forward repair is now locally complete: original error identity
+is preserved, existing observer invalidation refuses old/fresh meter and scope
+reads, and device-update-refused status takes precedence even before any
+completed advance. Ordinary callbacks retain previous semantics. Two new
+regressions red before repair; three added executable observer/status mutants
+red with restoration. Expanded adjacent surface passes 85/85, zero skips;
+all eleven mutations red. CLI analytic waveform/mean and 21 exact cloned
+legacy snapshots remain unchanged. e237 CI/xv6 cancelled; its Harris green
+is historical only. Claim aa92959d merged; new hosted qualification pending.
 Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
 DC behavior by default. Interpolate a bounded delayed single-pole envelope

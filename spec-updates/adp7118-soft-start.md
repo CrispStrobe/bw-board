@@ -98,6 +98,20 @@ The combined focused startup, adjacent regulator, scope and baseline-profile
 surface passes 42/42 with no skips; all eight isolated mutants red and restore
 the registry or dispatcher.
 
+A caught accepted-transient model refusal also invalidates analog observers
+and records `device-update-refused` in the existing qualification status while
+rethrowing the original error. An explicit failure takes precedence even if no
+advance completed; work counters are not fabricated. Earlier partial scope
+samples and meter means cannot be retrieved as successful readings afterward.
+This boundary applies only to opted-in accepted-transient updates, preserving
+ordinary callback faults and observational behavior. Editing the netlist does
+not erase the failed acquisition; a genuinely fresh acquisition qualifies
+independently. Two regressions were red before repair. Three additional
+executable mutants omit observer invalidation, omit the failure record, or
+restore the erroneous zero-work status precedence. The expanded startup,
+regulator, scope, source and instrument surface passes 85/85 with zero skips;
+all eleven isolated mutants red and restore their production functions.
+
 An independent closed-form solution of the authored delayed exponential driving
 the actual 0.05 Ω / 500 Ω / 2.2 µF RC circuit checks 120 instantaneous scope
 observations and the capture-window meter integral. Native low/high sample pairs

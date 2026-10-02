@@ -1497,8 +1497,8 @@ export class BoardImpl {
       profile: Object.freeze({ ...this._transientAnalysisProfile }),
       integrationMode: this._transientIntegrationMode(),
       stepBound: Object.freeze(this._transientStepBound()),
-      accuracyMet: this._transientAnalysisWork.advances > 0
-        ? this._transientAccuracyUnmet === null : null,
+      accuracyMet: this._transientAccuracyUnmet ? false
+        : this._transientAnalysisWork.advances > 0 ? true : null,
       failure: this._transientAccuracyUnmet ? Object.freeze({ ...this._transientAccuracyUnmet }) : null,
       work: Object.freeze({ ...this._transientAnalysisWork }),
     };
@@ -5335,7 +5335,21 @@ export class BoardImpl {
       };
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
-      if (model.update(part, state, read, atNs)) changed = true;
+      try {
+        if (model.update(part, state, read, atNs)) changed = true;
+      } catch (error) {
+        // A rejected accepted-step model invalidates the whole analog capture,
+        // including earlier partial samples. Preserve ordinary callback and
+        // observational semantics, and rethrow the original admission error.
+        if (acceptedTransient && model.transientUpdateContext === true) {
+          this._invalidateLiveMeasurements(error);
+          this._transientAccuracyUnmet ||= {
+            code: 'device-update-refused', stage: 'device-update',
+            timeSec: Number(atNs) / 1e9, partId: part.id, detail: error.message,
+          };
+        }
+        throw error;
+      }
     }
     return changed;
   }
