@@ -616,3 +616,9 @@ The [fenced H4 diagnostic](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md) passed all
 ## Owned replay checkpoint (2026-10-02)
 
 The [private worker ownership/replay proof](I80386-NATIVE-OWNED-CLOCK-REPLAY-WIP.md) reproduced all 439 historical resumes and 209,839 logical host rows, six real-board checkpoints and entire RAM. This supplies an owned host boundary for later native work; it runs no addon/CPU and provides no native batching or speed result. H4 remains the baseline and the 10× target remains open.
+
+## Native clock and snapshot checkpoint (2026-10-02)
+
+The [actual private-worker clock batching](I80386-NATIVE-OWNED-CLOCK-WIP.md) now matches the full fixed-ROM CPU/device chronology and all six checkpoints, with 33 runtime controls passing. Its seven-pair process-CPU gate failed: 9.2997% more CPU than H4, only one pair favorable. Fewer crossings did not yield a retained speed improvement. Subsequent diagnostic wall buckets identify snapshot serialization and messaging as possible costs, without establishing removable CPU shares.
+
+The [first structured-snapshot cost screen](I80386-NATIVE-OWNED-DTO-COST-WIP.md) also rejected its descriptor-heavy validator before native execution. A lighter private-channel schema passed 39 source controls, but the subsequent complete MessageChannel reply exercise also cost 35.56% more CPU than JSON, with all three rounds unfavorable. Object DTO development stopped before native integration. A fixed packed snapshot format also failed the subsequent all-costs source comparison, using 162.77% more CPU than JSON with every round unfavorable. Both transports stopped before native integration. The next source candidate runs the same addon/provider and full fixed-ROM scheduler inside a closed fresh child on its main thread, with separate ownership/provenance proof, actual parity checks and a predeclared CPU gate required. H4, the 10× target and the unqualified full-guest native scope are unchanged.

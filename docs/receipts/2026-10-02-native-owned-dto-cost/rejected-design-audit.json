@@ -1,0 +1,64 @@
+{
+  "status": "STRICT_DESCRIPTOR_DTO_COST_NOT_PLAUSIBLE_NO_NATIVE_EXECUTION",
+  "assuranceLimit": "Codec execution did not capture a pre-execution source inventory. These current source hashes were collected at audit time and are not claimed to authenticate precisely executed earlier bytes. Original unvalidated and strict stdout/stderr/results retained.",
+  "savedInput": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  },
+  "currentHashesAtAudit": {
+    "scripts/compare-i80386-owned-dto-codecs.mjs": "a77fcbdbed5e35b0c2e974b7e49f643fdbf98b30c42c93c115dfd45e35b4615e",
+    "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+    "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93",
+    "test/i80386-owned-dto-response.test.mjs": "b81019edd74395cabce6720cc66921c6a01091a507c0d9227de247a923e31285",
+    "test/fixtures/i80386-owned-dto-snapshots.json": "ed4d5e592db186edf90464a0250cde308f083e12ad701e528a7030a8eb46731d"
+  },
+  "actualCommands": [
+    {
+      "command": "/tmp/node-v22.23.3-linux-x64/bin/node --max-old-space-size=512 scripts/compare-i80386-owned-dto-codecs.mjs /mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec.json",
+      "note": "Original hardcoded-input script version, subsequently changed",
+      "exitCode": 0
+    },
+    {
+      "command": "/tmp/node-v22.23.3-linux-x64/bin/node --max-old-space-size=512 scripts/compare-i80386-owned-dto-codecs.mjs /mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json 246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe /mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec-validated.json",
+      "exitCode": 0
+    },
+    {
+      "command": "/tmp/node-v22.23.3-linux-x64/bin/node --test test/i80386-owned-dto-response.test.mjs",
+      "exitCode": 0
+    }
+  ],
+  "artifacts": {
+    "codec.json": {
+      "sha256": "d9d80cc8f8192cf07e7373668092121ab4da139061b4ccdb8b5c0e076a44586f",
+      "bytes": 3786
+    },
+    "codec.stdout": {
+      "sha256": "8681059455296d0cf3ef75511bb044a7df87509d572b0fc5dc711aa50e95a969",
+      "bytes": 1936
+    },
+    "codec.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "codec-validated.json": {
+      "sha256": "37216af9b27397441b799ebbfa41b9c9b369630c4203f740d0ac0d61cef8462b",
+      "bytes": 5558
+    },
+    "codec-validated.stdout": {
+      "sha256": "798f48e00c1941a7a305611ed4626fb571e27a132cfa2b8f1b5c3b7d8bb79849",
+      "bytes": 2963
+    },
+    "codec-validated.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "raw-schema-tests.stdout": {
+      "sha256": "5c0c4094a1a789f1bb06839c49d418aa67687f0f59ba3d20bcbd601c54ac61be",
+      "bytes": 3332
+    },
+    "raw-schema-tests.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  }
+}

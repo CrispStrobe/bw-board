@@ -90,6 +90,8 @@ The [separate native clock-batching candidate](docs/I80386-NATIVE-OWNED-CLOCK-WI
 preserves the full CPU/device chronology with fewer clock crossings, but measured
 9.3% more process CPU cost than H4. H4 remains the baseline; broader guest/backend
 integration and the 10× goal remain WIP.
+[Source-only snapshot transport comparisons](docs/I80386-NATIVE-OWNED-DTO-COST-WIP.md)
+also rejected object and packed replies before native integration.
 
 ## LabWired WASM performance (2026-10-01)
 

@@ -1,0 +1,50 @@
+{
+  "status": "PASS_SOURCE_PINNED_LEAN_CODEC_AND_REAL_CHANNEL_CONTROLS_NO_NATIVE_QUALIFICATION",
+  "checks": 41,
+  "focusedTests": 39,
+  "sourceHashes": {
+    "scripts/compare-i80386-owned-dto-codecs.mjs": "d57c887980f9add9dcc03a7b1a1b6dc444d2adad848e9ba9f28665759b1f41fb",
+    "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+    "scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs": "6e119774c7b65e5cc5884ae1a4c0f1e636a1ad3737e7c5e8148879dc5fc74712",
+    "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93",
+    "test/i80386-owned-dto-response.test.mjs": "b81019edd74395cabce6720cc66921c6a01091a507c0d9227de247a923e31285",
+    "test/i80386-owned-dto-message-channel.test.mjs": "3b26f83afe535dc9b8ba440b1e49960beb0d466103a0227833ad611e832ece2e",
+    "test/fixtures/i80386-owned-dto-snapshots.json": "ed4d5e592db186edf90464a0250cde308f083e12ad701e528a7030a8eb46731d"
+  },
+  "inputSha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe",
+  "resultSha256": "914bf475b54c6441350b1cf04034140b558be4319558c35681cbc55abd15e141",
+  "executionReceiptSha256": "cb670deded8cdb8519e0d463e705cd9b82f0b52b468f225bf994c5e1d706f682",
+  "cpuMicrosecondsPerOperation": {
+    "native:json": [
+      87.278125,
+      70.421875,
+      66.156875
+    ],
+    "native:clone": [
+      47.45,
+      45.97625,
+      45.7075
+    ],
+    "native:clone-ipc-validated": [
+      107.435,
+      59.850625,
+      56.414375
+    ],
+    "board:json": [
+      223.39214285714286,
+      190.81642857142856,
+      195.53
+    ],
+    "board:clone": [
+      138.865,
+      125.88214285714285,
+      125.56571428571428
+    ],
+    "board:clone-ipc-validated": [
+      246.6992857142857,
+      223.75714285714287,
+      234.11428571428573
+    ]
+  },
+  "scope": "actualsaved8native/7boardcuts; all3roundsretained/nodedicatedwarmup; receiveronlycloneinvariantsverifiedactualMessageChannel; no wholeenvelope/ledger/requestparse/actualIPCcost included incodec; boardleanstillworse/noadoption"
+}
