@@ -668,6 +668,14 @@ and a capture-window mean within 13.3 uV; reactive overload exits 2 with named
 refusal and no numeric output. All 21 cloned default snapshots remain exactly
 equal to the parent. Expanded claim published at 8c2c16e2, merged into this
 candidate; replacement exact-head hosted qualification remains pending.
+Further caller audit reproduced a caught reactive startup refusal leaving a
+numeric partial meter/scope capture and accuracyMet:true. e237705b landing is
+held too. The existing six-path envelope now includes narrowly invalidating
+live observers on an opted-in accepted-transient device-update refusal and
+marking the existing transient status unsuccessful, while rethrowing the
+original exception. Prove caught-error identity, stale/fresh meter and scope
+refusal, status honesty and intentional-reset recovery; preserve ordinary
+callbacks, observational queries and unrelated exceptions. No solver change.
 Add explicit opt-in startupModel:
 'datasheet-envelope' for fixed 1.2–5 V/open-SS configurations. Preserve legacy
 DC behavior by default. Interpolate a bounded delayed single-pole envelope
