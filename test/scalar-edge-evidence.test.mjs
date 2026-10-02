@@ -10,7 +10,7 @@ const json = name => JSON.parse(read(name));
 test('preserved scalar motion receipts reparse all observations and negative floors', () => {
     for (const file of ['hosted-ab-1/abba.json', 'hosted-ab-2/abba.json',
         'vps-motion-primary.json', 'vps-motion-repeat.json',
-        'vps-motion-reverse-primary.json', 'vps-motion-reverse-repeat.json']) {
+        'vps-motion-reverse-primary.json', 'vps-motion-reverse-repeat.json', 'hosted-reverse/abba.json']) {
         const receipt = json(file);
         assert.ok(receipt.completedAt && receipt.guestObservationsMatch);
         assert.equal(receipt.runs.length, 4);
@@ -29,7 +29,7 @@ test('preserved scalar motion receipts reparse all observations and negative flo
 });
 test('preserved scalar F0 raw stdout matches every stored child and loaded guest', () => {
     for (const directory of ['hosted-ab-1/f0-abba', 'hosted-ab-2/f0-abba',
-        'vps-f0-primary', 'vps-f0-repeat']) {
+        'vps-f0-primary', 'vps-f0-repeat', 'hosted-reverse/f0-abba']) {
         const receipt = json(directory + '/abba.json');
         assert.ok(receipt.completedAt && receipt.guestObservationsMatch);
         assert.equal(receipt.runs.length, 4);

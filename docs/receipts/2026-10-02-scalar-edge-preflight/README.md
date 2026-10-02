@@ -86,3 +86,24 @@ Decision: keep PR 148 draft pending stronger performance evidence. No core
 merge, app engine-pin change, artifact publication, physical capture rewrite,
 or hardware drift acknowledgement update is made by this report. CP13 and
 the every-window all-target ≥1× checkpoint remain open.
+
+## Hosted reverse-order repeat
+
+[Run 36974977350](https://github.com/CrispStrobe/bw-board/actions/runs/36974977350)
+used tool head `8d04a4b0687e5651f3d4b0ff4eaa6a3f3179191e`, EPYC 7763,
+Node 22.23.3 and the same original artifact hashes/sources. Its ordinary
+B/A/A/B comparison has matching guest observations:
+
+| Workload | Baseline median | Candidate median | Change | Candidate minimum |
+| --- | ---: | ---: | ---: | ---: |
+| F0 GPIO | 0.669437× | 0.702832× | +4.99% | 0.690943× |
+| F0 RAM | 2.895025× | 2.859593× | −1.22% | 2.818524× |
+| micro:bit motion | 0.826474× | 0.818026× | −1.02% | 0.789545× |
+
+GPIO and motion fail every window; RAM passes every window. The reverse
+ordering does not eliminate the hosted motion/RAM declines. This repeat
+therefore does not clear the performance tradeoff or change the draft decision.
+Raw [motion](hosted-reverse/abba.json), [F0](hosted-reverse/f0-abba/abba.json),
+[runner](hosted-reverse/runner.txt), [baseline BUILD-INFO](hosted-reverse/baseline-build-info.json)
+and [candidate BUILD-INFO](hosted-reverse/candidate-build-info.json) are retained,
+with all four F0 ordinary child stdout captures in numbered directories.

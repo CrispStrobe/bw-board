@@ -158,7 +158,8 @@ after five ordinary VPS motion comparisons were negative (−0.9% to −19.1%).
 All 18 final core correctness checks passed, but that does not clear its
 performance tradeoff. It is not on core main. A smaller live boolean-preflight
 experiment measured **+5.75% and +9.99% hosted GPIO**, and **+3.09% and +3.49%
-VPS GPIO**, but motion remains mixed and RAM medians declined. GPIO and motion
+VPS GPIO**. A hosted reverse-order repeat gained **4.99% GPIO**, but lost
+**1.02% motion and 1.22% RAM**. Motion remains mixed and RAM medians declined. GPIO and motion
 still fail every 1× window; the engine PR remains draft. See the
 [scalar-preflight results and order-control evidence](docs/receipts/2026-10-02-scalar-edge-preflight/README.md).
 App pins and artifact publication remain unchanged.
