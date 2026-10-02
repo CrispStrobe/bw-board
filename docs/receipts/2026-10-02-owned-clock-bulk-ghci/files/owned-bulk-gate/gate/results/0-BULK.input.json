@@ -1,0 +1,14 @@
+{
+  "preparedManifest": "/home/runner/work/_temp/owned-bulk-gate/restored/derived-prepare.json",
+  "preparedManifestSha256": "22ebc9eed8bf2042515cf5ffd9b8b374245b1898260fabe218cd2c71573c99ee",
+  "buildReceipt": "/home/runner/work/_temp/owned-bulk-gate/restored/derived-build-receipt.json",
+  "buildReceiptSha256": "3808cdbfbc4ac1d6fc2a84a91ccee7be0d557b90285ba62a480e6881d1a97123",
+  "addon": "/home/runner/work/_temp/owned-bulk-gate/restored/prepared/bochs/bw_direct.node",
+  "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "configuration": "/home/runner/work/_temp/owned-bulk-gate/gate/guest.bochsrc",
+  "baseline": "/home/runner/work/_temp/owned-bulk-gate/gate/js-reference.json",
+  "baselineSha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+  "output": "/home/runner/work/_temp/owned-bulk-gate/gate/results/0-BULK/guest",
+  "nativeTrace": false,
+  "hostJournal": false
+}
