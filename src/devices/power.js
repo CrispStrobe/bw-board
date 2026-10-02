@@ -14,6 +14,13 @@ const ADP151_FIXED_OUTPUTS = new Set([
   1.1, 1.2, 1.5, 1.8, 2.1, 2.5, 2.6, 2.7, 2.75, 2.8, 2.85, 2.9, 3.0, 3.3,
 ]);
 
+// ADP7118 Rev.H Table 1: typical EN-to-10% = 80 us, EN-to-90% = 380 us.
+// A delayed single pole interpolates these anchors; its shape is a stated
+// behavioural approximation, not an ADI transistor/feedback-loop model.
+const ADP7118_STARTUP_TAU_SEC = 300e-6 / Math.log(9);
+const ADP7118_STARTUP_DELAY_SEC = 80e-6 + ADP7118_STARTUP_TAU_SEC * Math.log(.9);
+const ADP7118_STARTUP_TICK_NS = 5000n;
+
 /**
  * Register power device models.
  */
@@ -185,28 +192,43 @@ export function registerPowerDevices() {
   //
   // This is a bounded DC model of the Rev. H data-sheet contract. It models
   // regulation/feedback, dropout, enable and UVLO hysteresis, quiescent or
-  // shutdown current, and the typical current limit. Soft-start timing,
-  // noise/PSRR, thermal shutdown and exposed-pad parasitics are intentionally
-  // outside this first slice.
+  // shutdown current, and the typical current limit. Internal soft-start
+  // timing is opt-in via startupModel:'datasheet-envelope'. External SS,
+  // noise/PSRR, thermal shutdown and exposed-pad parasitics remain unmodeled.
   registerDevice('adp7118', {
     terminals: ['vout_1', 'vout_2', 'sense_adj', 'gnd', 'en', 'ss', 'vin_7', 'vin_8'],
 
     init(part) {
       const nominal = part.params?.adjustable ? 1.2 : (part.params?.vOut ?? 5.0);
       const rOut = part.params?.rOut ?? 0.05;
+      const startup = part.params?.startupModel;
+      if (startup !== undefined && startup !== 'datasheet-envelope') {
+        throw new Error(`ADP7118 ${part.id}: unsupported startupModel ${String(startup)}`);
+      }
+      if (startup && (part.params?.adjustable || !Number.isFinite(nominal)
+          || nominal < 1.2 || nominal > 5 || !Number.isFinite(rOut) || rOut <= 0
+          || !Number.isFinite(part.params?.currentLimit ?? .36) || (part.params?.currentLimit ?? .36) <= 0
+          || part.params?.softStartCapacitanceF !== undefined)) {
+        throw new Error(`ADP7118 ${part.id}: startup supports fixed 1.2–5 V with open SS only`);
+      }
       return {
         drives: {
           vout_1: { vTh: 0, rTh: rOut, ref: 'gnd' },
         },
         _enabled: false,
-        _command: nominal,
+        _command: startup ? 0 : nominal,
         _driveV: 0,
         _inputAmps: 0,
         _outputAmps: 0,
+        ...(startup ? {startupModel: startup, startupFraction: 0,
+          _startupStartNs: null, _wakeNs: null} : {}),
       };
     },
 
     stamp(ctx, part, state) {
+      if (state.startupModel && ctx.netFor('ss')) {
+        throw new Error(`ADP7118 ${part.id}: startup SS must be open; external SS networks are unmodeled`);
+      }
       // Duplicate package leads are the same die nodes. Ten milliohms keeps
       // them observable as separate physical terminals without fabricating a
       // measurable package drop at the model's 200 mA rated load.
@@ -220,7 +242,7 @@ export function registerPowerDevices() {
       ctx.current('gnd', state._inputAmps);
     },
 
-    update(part, state, read) {
+    update(part, state, read, tNs) {
       const vGnd = read('gnd');
       const vIn = ((read('vin_7') + read('vin_8')) / 2) - vGnd;
       const vOut = ((read('vout_1') + read('vout_2')) / 2) - vGnd;
@@ -238,6 +260,25 @@ export function registerPowerDevices() {
       const vinOk = state._enabled ? vIn > 2.2 : vIn >= 2.69;
       const enabled = enOk && vinOk && vIn <= 20;
 
+      let startupFraction = 1;
+      if (state.startupModel) {
+        if (enabled) {
+          if (!state._enabled || state._startupStartNs === null) {
+            if (vOut > 1e-6) throw new Error(`ADP7118 ${part.id}: startup into a prebiased output is unmodeled`);
+            state._startupStartNs = tNs;
+          }
+          const elapsedSec = Number(tNs - state._startupStartNs) / 1e9;
+          startupFraction = Math.max(0, 1 - Math.exp(
+            -Math.max(0, elapsedSec - ADP7118_STARTUP_DELAY_SEC) / ADP7118_STARTUP_TAU_SEC));
+          state._wakeNs = startupFraction < 1 - 1e-6 ? tNs + ADP7118_STARTUP_TICK_NS : null;
+        } else {
+          startupFraction = 0;
+          state._startupStartNs = null;
+          state._wakeNs = null;
+        }
+        state.startupFraction = startupFraction;
+      }
+
       let command = state._command;
       let driveV = 0;
       let outputAmps = 0;
@@ -245,7 +286,7 @@ export function registerPowerDevices() {
         // The SENSE/ADJ pin closes the real feedback loop. Direct sensing
         // regulates at the selected fixed voltage; an external divider can
         // raise VOUT, while the adjustable variant uses the 1.2 V reference.
-        command += nominal - vSense;
+        command += nominal * startupFraction - vSense;
         const headroom = Math.max(0, vIn - 0.2); // 200 mV typical @ 200 mA
         command = Math.min(headroom, Math.max(0, command));
 
@@ -260,11 +301,15 @@ export function registerPowerDevices() {
         // of the current ceiling, and settles in one behavioral pass rather
         // than depending on an unbounded number of tiny voltage steps.
         const loadOhms = demanded > 1e-12 ? Math.max(0, vOut / demanded) : Infinity;
-        driveV = demanded > currentLimit
-          ? currentLimit * (loadOhms + rOut)
-          : command;
+        // A changing startup reference must not escape the limit on the
+        // iteration whose measured current sits exactly at the ceiling.
+        // Retain the original DC controller verbatim when startup is off.
+        driveV = state.startupModel
+          ? Math.max(vOut, Math.min(command, vOut + currentLimit * rOut))
+          : demanded > currentLimit ? currentLimit * (loadOhms + rOut) : command;
+        if (state.startupModel) command = driveV; // anti-windup follows the bounded actuator
       } else {
-        command = nominal;
+        command = state.startupModel ? 0 : nominal;
       }
 
       // Ground current: 50 uA no-load, rising linearly to 180 uA at the
@@ -284,7 +329,8 @@ export function registerPowerDevices() {
       state._driveV = driveV;
       state._outputAmps = outputAmps;
       state._inputAmps = inputAmps;
-      state.drives.vout_1 = { vTh: driveV, rTh: rOut, ref: 'gnd' };
+      state.drives.vout_1 = { vTh: driveV,
+        rTh: state.startupModel && !enabled ? 1e9 : rOut, ref: 'gnd' };
       return changed;
     },
   });
