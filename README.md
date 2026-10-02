@@ -227,6 +227,16 @@ all-window ≥1× floor. Its separate fresh motion pass (**1.236514× median /
 and physical acknowledgements remain unchanged. See
 [complete runtime/order comparisons and original receipts](docs/receipts/2026-10-02-wasm-literal-barrier/README.md).
 
+A separate live word-address admission candidate now improves hosted GPIO in
+all four Node 20/22 and forward/reverse comparisons (**+1.24–9.12%**). One Node 22
+GPIO minimum crosses **0.983296× → 1.032780×**, passing every candidate window.
+Both independent builds, determinism, exhaustive live-admission/T16 checks and
+**101 actual-WASM integration tests** pass. It remains **unmerged/unqualified**:
+motion loses **2.24%** in one pair, another motion minimum worsens, the separate
+fresh motion floor fails, and VPS repeats were deferred because load and disk
+headroom did not permit them. App pins and physical acknowledgements stay
+unchanged. See [complete live-address results and raw receipts](docs/receipts/2026-10-02-wasm-live-word-admission/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
