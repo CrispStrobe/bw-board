@@ -139,7 +139,14 @@ medians**), but GPIO failed every window (**0.594× / 0.659× medians**).
 These are distinct workloads/hosts, not an optimization A/B or universal F0
 rating. See [raw F0 results and main profiling](docs/receipts/2026-10-02-f0-main/README.md)
 and the [timing guide](docs/LABWIRED-F0-TIMING.md). Runtime and app pins are
-unchanged; bus/admission and GPIO write hooks are the next investigation targets.
+unchanged. A follow-up [GPIO edge-metadata experiment](docs/receipts/2026-10-02-gpio-edge-metadata/README.md)
+measured **+17.46%, +14.21%, +11.08% and +16.17%** F0 GPIO median gains in
+four ordinary same-runner A/B/B/A comparisons. Motion was mixed (−3.07% to
++3.43%) and RAM roughly flat to −2.39%; neither is a claimed speedup. On the
+EPYC 7763 repeat, GPIO rose **0.648× → 0.752×**, still below 1× in every window.
+One faster host passed both artifacts, which is not universal qualification.
+Final-head verification and landing status are tracked in that report; app
+pins and artifact publication remain unchanged.
 
 ## Limits
 
