@@ -252,6 +252,17 @@ expanded future build gate requires 108 tests. No VPS repeat, production pin or
 physical acknowledgement change is claimed. See
 [all selective results, minima and original proof](docs/receipts/2026-10-02-wasm-live-word-selective/README.md).
 
+The subsequent post-RAM placement also completed all four comparisons: GPIO
+medians improve **2.87–8.20%**, but motion medians regress in two pairs and RAM
+medians in three. Node 22 forward RAM loses **7.94%**; reversed motion minimum
+falls **0.756411× → 0.509397×**. Both deterministic builds pass and the candidate
+passes **108 actual-WASM integration tests**, including the seven same-PC word
+dispatcher cases. Its separate fresh motion floor remains **0.758882× median /
+0.749085× minimum**. Source is **unmerged/unqualified**; no production pin,
+published engine or physical acknowledgement changes. VPS load/disk headroom
+prevented local repeats. See
+[all post-RAM results and original receipts](docs/receipts/2026-10-02-wasm-live-word-post-ram/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
