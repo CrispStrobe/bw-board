@@ -168,6 +168,16 @@ still fail every 1× window; the engine PR remains draft. See the
 [scalar-preflight results and order-control evidence](docs/receipts/2026-10-02-scalar-edge-preflight/README.md).
 App pins and artifact publication remain unchanged.
 
+A separate WASM register-inlining experiment gained **3.64–8.73% GPIO,
+7.06–20.47% RAM and 5.48–8.24% motion** on three hosted Node 22 comparisons.
+Clean VPS Node 20 F0 comparisons instead lost **4.00–32.00% GPIO** and
+**7.75–29.94% RAM**; reverse-order RAM goes from every window passing to a
+candidate minimum of **0.862541×**. VPS motion is roughly flat to +4.86%,
+still below 1×. The largest hot WASM body grows **181.63%**. The engine PR
+remains draft: hosted Node 20 controls gained GPIO/motion but reverse-order RAM
+fell **22.03%**, so this variant is not qualified for landing. Hardware
+acknowledgements remain unchanged. See [register-inlining results and raw receipts](docs/receipts/2026-10-02-wasm-register-inline/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
