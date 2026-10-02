@@ -1,5 +1,7 @@
 # Fixed PIC IMR read prototype (WIP)
 
+This is the historical source-preparation record. Subsequent [actual native results](I80386-NATIVE-OWNED-PIC-IMR-RESULTS.md) qualify the fixed fixture; the preparation statements below describe the earlier state.
+
 This opt-in prototype adds two real byte IN instructions to the free owned IN8 fixture: master PIC IMR at port `0x21` and slave PIC IMR at `0xa1`. Both return `0xff` while interrupts are masked. The original master mask is restored before the existing PIT, page-fault, IRQ, and REP workload. This is source-ready with an actual JavaScript reference; no native PIC addon build or native guest run has qualified it yet.
 
 The immutable fixture/source checkout is [a6f60528](https://github.com/CrispStrobe/bw-board/tree/a6f605280f778b2bc409ef97ac3b40e15874530c), with 111 authenticated source files. The separate build/runner support is [3792a908](https://github.com/CrispStrobe/bw-board/tree/3792a908d81e04903974aa7d2bdc545e0713a290), with a 122-file runtime closure and three build-tool hashes. The new ROM SHA is `8a7380f01bbc40985d377fe9764667749c36b05d45ee602b28c7e68556bd509f`. The native derivation changes only the initializer ROM admission hash; ABI4, ordered clock protocol, caps, mapping checks, and scheduler remain unchanged. The old PIT fixture addon cannot initialize this ROM. A separate build is required.

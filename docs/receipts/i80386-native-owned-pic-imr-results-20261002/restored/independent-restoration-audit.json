@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ACTUAL_PIC_STATIC_RESTORATION_PATH_ONLY_NO_ADDON_LOAD",
+  "checks": 2112,
+  "compiledInputs": 111,
+  "runtimeInputs": 122,
+  "addonSha256": "baaf3ba0b39f8ffeb001837c30a5f682ced39a75be87cbaf0ed55c8844ae660b",
+  "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+  "bindingSha256": "de4b60cdd207bb9d014b8267bfc3cbb2c0b9bc01df101b848eb77ea892bda0b4",
+  "scope": "Original official inventory unchanged; restored archives byteexact; only declared local path/manifest SHA and explicit origin additions changed. Static exports/dependencies/source admission and current/Git clean identities authenticated. No addon or guest executed; populated qualification bindings still require review."
+}

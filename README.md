@@ -95,7 +95,7 @@ also rejected object and packed replies before native integration.
 The [closed fresh-child main-thread diagnostic](docs/I80386-NATIVE-OWNED-MAIN-WIP.md) matches full fixture chronology and passes 13 lifecycle controls;
 its fixed-fixture paired CPU gate used 26.33% less process CPU than H4, with all seven measured pairs favorable. Broader guest qualification remains WIP.
 
-The [fixed PIC IMR prototype](docs/I80386-NATIVE-OWNED-PIC-IMR-WIP.md) has authenticated source and a JavaScript reference. Native PIC build and guest qualification remain pending.
+The [fixed PIC IMR native fixture](docs/I80386-NATIVE-OWNED-PIC-IMR-RESULTS.md) passes actual capture-OFF/ON state and chronology checks. This bounded compatibility proof is not a speed or general AT result.
 
 ## LabWired WASM performance (2026-10-01)
 

@@ -1,0 +1,19 @@
+{
+  "status": "PASS_OFFICIAL_PIC_BUILD_AND_POPULATED_STATIC_RESTORATION_BINDINGS_NO_ADDON_LOAD",
+  "checks": 1389,
+  "run": 37027774273,
+  "artifactId": 11235962916,
+  "workflowHead": "a45fc6f60cabf97e8230ff1bf49a0394bbaef622",
+  "zipSha256": "9adece0d5c82360fa87e77cb7c2257f96f72113cff0b1215f53e06917d18fffd",
+  "compiledRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "compiledInputs": 111,
+  "toolingInputs": 3,
+  "runtimeRevision": "3792a908d81e04903974aa7d2bdc545e0713a290",
+  "runtimeInputs": 122,
+  "addonSha256": "baaf3ba0b39f8ffeb001837c30a5f682ced39a75be87cbaf0ed55c8844ae660b",
+  "addonBytes": 2069608,
+  "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+  "inventorySha256": "fb70d03644f4eab625ea1745c1a3ba83f167de69a270c40f6d457365b20bc36e",
+  "restorationBindingSha256": "de4b60cdd207bb9d014b8267bfc3cbb2c0b9bc01df101b848eb77ea892bda0b4",
+  "scope": "Official metadata/digest/inventory/tarordinaryfiles/frozen111currentGit/generated12+4/ABI4/initializerPIC8a/intermediateIN8proof/configfeatures/exports/licenses and actual populated source/helper/tool bindings independently authenticated. No addon load, native guest or restoration executed. Ready for root single static restoration; guest qualification remains future."
+}

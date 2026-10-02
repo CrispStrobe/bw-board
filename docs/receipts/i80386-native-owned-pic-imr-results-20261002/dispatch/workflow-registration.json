@@ -1,0 +1,12 @@
+{
+  "id": 373233035,
+  "node_id": "W_kwDOTyXt-s4WPxWL",
+  "name": "Owned 386 masked PIC IMR pinned build only",
+  "path": ".github/workflows/i80386-native-owned-pic-imr-build.yml",
+  "state": "active",
+  "created_at": "2026-10-02T15:32:28.000Z",
+  "updated_at": "2026-10-02T15:32:28.000Z",
+  "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/workflows/373233035",
+  "html_url": "https://github.com/CrispStrobe/bw-board/blob/master/.github/workflows/i80386-native-owned-pic-imr-build.yml",
+  "badge_url": "https://github.com/CrispStrobe/bw-board/workflows/Owned%20386%20masked%20PIC%20IMR%20pinned%20build%20only/badge.svg"
+}
