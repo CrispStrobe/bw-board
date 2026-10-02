@@ -1,0 +1,60 @@
+{
+  "run.py": {
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/run.py",
+    "originalSha256": "a652179e9f342cc3e0553d1b0ac59e8705972fbfa004e42ccc9e6092e9474091",
+    "derivedSha256": "dc5819c2e6d25d6f188a93a949c9798504fd45ea94ed1ecbbeee92f24d92a5c6",
+    "changes": [
+      {
+        "before": "/tmp/bw-board-386-owned-clock-bulk-source-20261002",
+        "after": "/tmp/bw-board-386-owned-dispatch-runtime-20261002"
+      },
+      {
+        "before": "approved['runtimeSourceCount']==106",
+        "after": "approved['runtimeSourceCount']==112 and approved['frozenDispatchSourceCount']==106"
+      },
+      {
+        "before": "def auth():\n",
+        "after": "def auth():\n for name in ['driver','baselineNativeCapture','baselineNativeTrace','baselineNativeJournal','baseline','configuration']:assert approved[name]in approved['artifactHashes'],'mandatory admission artifact '+name\n"
+      }
+    ]
+  },
+  "parity.py": {
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/parity.py",
+    "originalSha256": "4bd7a2c65eead8aaa0837ff2d1710752fc55b2af8f0d5aebd37c346b4052102b",
+    "derivedSha256": "1e4a1828c82bf01c9c545f72eb4b9b5908a5ebebe46c2a8960bb8ecbdbf0c75c",
+    "changes": [
+      {
+        "before": "BULK_FULL_CANONICAL_TRACE_NULLSINK_PARITY_PASS",
+        "after": "DISPATCH_FULL_CANONICAL_TRACE_NULLSINK_PARITY_PASS"
+      },
+      {
+        "before": "BULK_CAPTURE_ON_EXACT_PARITY_PASS",
+        "after": "DISPATCH_CAPTURE_ON_EXACT_PARITY_PASS"
+      },
+      {
+        "before": "BULK_CAPTURE_OFF_EXACT_PARITY_PASS_NOT_SPEED_GATE",
+        "after": "DISPATCH_CAPTURE_OFF_EXACT_PARITY_PASS_NOT_SPEED_GATE"
+      },
+      {
+        "before": "assert a['provenance']['runtime']==a['source']",
+        "after": "assert a['provenance']['runtime']==a['source']\nassert a['provenance']==approved['expectedProvenance'],'complete separately authenticated dual provenance'"
+      },
+      {
+        "before": "All166 native words and complete native snapshot fields exact between CAP modes;",
+        "after": "All166 native words and complete native snapshot fields exact against qualified fe1 baseline in every mode; ON additionally matches candidate OFF fields;"
+      }
+    ]
+  },
+  "bounded.py": {
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/bounded.py",
+    "originalSha256": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b",
+    "derivedSha256": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b",
+    "changes": []
+  },
+  "bounded-derivation.json": {
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/bounded-derivation.json",
+    "originalSha256": "baa432e9868ab488e941860daca02914be7b3b71f5b2b4a443e215f9e3766ae9",
+    "derivedSha256": "baa432e9868ab488e941860daca02914be7b3b71f5b2b4a443e215f9e3766ae9",
+    "changes": []
+  }
+}

@@ -29,3 +29,5 @@ No native addon, guest, build, Inspector profile, or performance gate ran for th
 ## Receipts
 
 The [receipt index](receipts/i80386-owned-dispatch-source-20261002/sha256.json) binds lossless copies of both bounded runs, source identities, and root/independent audits. [External origins](receipts/i80386-owned-dispatch-source-20261002/external-origins.json) identify the retained local originals. These files contain no private OS media.
+
+Subsequent [three-cell native parity results](I80386-OWNED-DISPATCH-PARITY-RESULTS.md) qualify this fixed free fixture. They do not alter the source-phase receipts or establish a speed gain.

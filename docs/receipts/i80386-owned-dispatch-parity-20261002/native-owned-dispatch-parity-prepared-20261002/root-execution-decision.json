@@ -1,0 +1,24 @@
+{
+  "status": "ROOT_APPROVED_THREE_BOUNDED_PARITY_CELLS_NO_PERFORMANCE_GATE",
+  "approvedBindingSha256": "9a2ade3a06cb974ffd451f6ac80dcc9e8d11e6078553b2ef47a88066326b1e5c",
+  "cellsOnceEach": [
+    "smoke-off",
+    "fulltrace-on",
+    "trace-fast"
+  ],
+  "runtimeRevision": "2c688e69cae516b9749d70a126a3b474707d5cb7",
+  "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "nativeBounds": {
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "heapMiB": 512,
+    "fileMiB": 256,
+    "niceIncrement": 10,
+    "coreBytes": 0
+  },
+  "outerWallSeconds": 240,
+  "rootAudit": "root-readiness-audit.json",
+  "peerAudit": "independent-final-readiness-audit.json",
+  "scope": "Fixed free IN8 fixture parity only; no build/performance gate/retry/AT expansion/adoption. Stop on any failed cell.",
+  "time": "2026-10-02T16:52:07.101058+00:00"
+}

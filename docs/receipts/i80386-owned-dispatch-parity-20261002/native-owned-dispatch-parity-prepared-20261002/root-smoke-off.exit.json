@@ -1,0 +1,9 @@
+{
+  "label": "smoke-off",
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 45.66877029836178,
+  "approvedBindingSha256": "9a2ade3a06cb974ffd451f6ac80dcc9e8d11e6078553b2ef47a88066326b1e5c",
+  "stdoutSha256": "1a39bf6468416c95333fa7c438e103e0b6a76971e025fc1d3289d9dea2a26ba3",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

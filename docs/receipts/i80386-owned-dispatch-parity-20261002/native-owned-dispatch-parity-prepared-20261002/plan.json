@@ -1,0 +1,49 @@
+{
+  "status": "PREPARED_ONLY_NO_NATIVE_EXECUTION",
+  "cells": [
+    {
+      "label": "smoke-off",
+      "nativeTrace": false,
+      "hostJournal": false
+    },
+    {
+      "label": "fulltrace-on",
+      "nativeTrace": true,
+      "hostJournal": true
+    },
+    {
+      "label": "trace-fast",
+      "nativeTrace": true,
+      "hostJournal": false
+    }
+  ],
+  "runtime": {
+    "frozenDispatchRevision": "e7a6a4ab7f2bed32a5f6d0c81e35c04e1d16d759",
+    "frozenDispatchCount": 106,
+    "integrationRevision": null,
+    "integrationCount": 112
+  },
+  "compiled": {
+    "revision": "fe1eff2039520536350922a2164c8bbe29404c68",
+    "count": 103,
+    "addonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+    "origin": "Unchanged official CI binary, derived relocated receipt retained separately."
+  },
+  "parity": "All full native166/state/descriptors/counters/physical fields equal qualified fe1 capture in all three modes; all six named board checkpoints and CPU8exact+2profile, own8resetbytes/canonicalRAM, 32PIO and twoPITIN, full orderedcanonical rows1649271; fulltrace-on journal exact original, trace-fast emptyjournal and literalnullsink source-bound branch. No omitted snapshot/guard, no new native execution during preparation.",
+  "bounds": {
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "nice": 10,
+    "heapMiB": 512,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "environmentBlank": [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "LD_PRELOAD",
+      "LD_AUDIT",
+      "BW_HOT_NAPI_PROFILE"
+    ]
+  },
+  "qualification": "Parent root only after actual approved bindings and independent source review. No speed gate, no AT expansion."
+}
