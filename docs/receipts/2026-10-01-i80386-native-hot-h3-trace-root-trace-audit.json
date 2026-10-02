@@ -1,0 +1,10 @@
+{
+  "status": "ROOT_H3_FULL_CANONICAL_NATIVE_TRACE_AND_HOST_JOURNAL_EXACT_H1_PASS",
+  "checks": 1649085,
+  "canonicalNativeRows": 1649067,
+  "h3TraceSha256": "f586171d2ad40abe8b5890a3234a586a565358c525bd05b4db316ec20757c1a3",
+  "h3CaptureSha256": "3e4a4862f70da24973c09443f7a3ae0d7e53741df376717515431358a62cbc7a",
+  "orderedJournalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "projection": "Every BWSD1 field and ordering exact; only unstructured emulator preamble excluded. No ISA states or trace events masked.",
+  "scope": "Bounded free protected-mode workload; no broader guest admission or Windows/Doom qualification."
+}

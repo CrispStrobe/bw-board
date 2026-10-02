@@ -1,0 +1,29 @@
+{
+  "status": "H3_H1_ALL_CANONICAL_NATIVE_ROWS_AND_HOST_JOURNAL_EXACT_PASS",
+  "canonicalNativeRows": 1649067,
+  "projection": "only non-BWSD1 preamble ignored; every BWSD1 field/ordinal/order retained",
+  "h1TraceSha256": "21ea17d068097696c3bf3c991cfdead2f236a833319a563747cabc66f7488308",
+  "h3TraceSha256": "f586171d2ad40abe8b5890a3234a586a565358c525bd05b4db316ec20757c1a3",
+  "compactJournalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "compactJournalBytes": 11728896,
+  "captureSha256": "3e4a4862f70da24973c09443f7a3ae0d7e53741df376717515431358a62cbc7a",
+  "sourceRevision": "a645480594a9bc20a4046619745bb85e57abacd0",
+  "sourceInputs": 55,
+  "compiledSourceInputs": 34,
+  "compiledTransformInputs": 12,
+  "compiledBeforeAfterExact": true,
+  "snapshotBoardRamCounterFieldsExact": [
+    "reset",
+    "final",
+    "checkpoints",
+    "settled",
+    "ramSha256",
+    "checksums",
+    "witnesses",
+    "rawResetWitness",
+    "callbackCounts",
+    "resumes",
+    "closed",
+    "journal"
+  ]
+}

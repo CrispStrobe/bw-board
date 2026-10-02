@@ -1,0 +1,19 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 149865626,
+  "stderrSha256": "f586171d2ad40abe8b5890a3234a586a565358c525bd05b4db316ec20757c1a3",
+  "wallNs": 51332201174,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "scripts/run-i80386-native-hot-direct.mjs",
+    "/mnt/volume1/tmp-astra/native-hot-h3-fulltrace-20261001/on.input.json"
+  ],
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}
