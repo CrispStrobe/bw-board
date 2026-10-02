@@ -1,0 +1,12 @@
+{
+  "status": "ROOT_ACTUAL_SOURCE_CONTROL_AND_OFFICIAL_PROVENANCE_PASS_NO_NATIVE_OR_SPEED_CLAIM",
+  "auditChecks": 44,
+  "actualControlChecks": 232337,
+  "actualControlCases": 10,
+  "sourceCount": 110,
+  "inheritedGitCount": 103,
+  "run": 37047476650,
+  "artifact": 11244763075,
+  "head": "6422a7824a1143f99d8ad206a41fb10146933840",
+  "scope": "One actual hosted source-only child; original110 bytes+103 Git+Node/binding/wrapper pins unchanged. Hiddenworkflow sourced only from genuine frozen Git, not invented uploadfile. No guest, addon, benchmark or adoption."
+}

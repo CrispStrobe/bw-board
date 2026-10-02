@@ -1,0 +1,32 @@
+{
+  "status": "FIRST_ACTUAL_HOSTED_SOURCE_CONTROL_RECEIPT_AUDIT_PASS",
+  "recordedUtc": "2026-10-02T18:31:00.265620+00:00",
+  "prNumber": 256,
+  "head": "6422a7824a1143f99d8ad206a41fb10146933840",
+  "runId": 37047476650,
+  "checks": 232337,
+  "caseChecks": 232336,
+  "finalGlobalSourcePinCheck": 1,
+  "caseCount": 10,
+  "sourceCount": 110,
+  "gitBaselineCount": 103,
+  "providerSha256": "c0194f3d39a59d79d5875d9ff25dd32900eace493257cc6a092f5f840a169d7d",
+  "resultSha256": "1e4ceb7b10ef7f8a9d11cdf98bacaa17b80e1c739123f4bc6f24b75b20e3b0a9",
+  "exitSha256": "efeef75c40d7b19baafd7954e1a7c351e7c93551d6ebc300269f531c0d0c7210",
+  "artifactPath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-source-preparation-publication-20261002/artifact/owned-span-source-controls-pr-256-37047476650-1",
+  "verified": [
+    "110 source maps before/after/child/parent exact",
+    "103 inherited Git fe1 blob hashes",
+    "seven payload bytes",
+    "one child exit0/no timeout",
+    "Node/binding/wrapper before/after",
+    "limits/blank6",
+    "ten cases232336 plus final global source pin check1",
+    "publication6422/baselinefe1/helper frozen Git bytes",
+    "stdout/stderr raw hashes",
+    "binutils tool metadata",
+    "test seams absent after success"
+  ],
+  "workflowHiddenPathOmission": "Workflow bytes omitted by artifact hidden-path filtering; context SHA verified against frozen Git6422. No workflow edit or repeat child needed.",
+  "scope": "Source-only callback differential controls; no native qualification, performance measurement, adoption or broader AT admission."
+}

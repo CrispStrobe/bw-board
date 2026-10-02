@@ -1,0 +1,64 @@
+{
+  "status": "EXACT_REVIEWED_PREPARATION_PUSHED_PR_CREATED_FIRST_AUTOMATIC_SOURCE_CAPTURE_REQUESTED",
+  "recordedUtc": "2026-10-02T18:24:31.744803+00:00",
+  "head": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+  "prNumber": 256,
+  "prUrl": "https://github.com/CrispStrobe/bw-board/pull/256",
+  "prHead": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+  "rootGrant": "/mnt/volume1/tmp-astra/386-owned-span-hosted-source-preparation-root-grant-20261002.json",
+  "localChildLaunched": false,
+  "manualDispatch": false,
+  "mergePerformed": false,
+  "runs": [
+    {
+      "id": 37047190914,
+      "name": "Harris native qualification",
+      "path": ".github/workflows/harris-native.yml",
+      "event": "pull_request",
+      "head_sha": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047190914"
+    },
+    {
+      "id": 37047190987,
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_sha": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047190987"
+    },
+    {
+      "id": 37047177111,
+      "name": "Harris native qualification",
+      "path": ".github/workflows/harris-native.yml",
+      "event": "push",
+      "head_sha": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047177111"
+    },
+    {
+      "id": 37047177121,
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "event": "push",
+      "head_sha": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047177121"
+    },
+    {
+      "id": 37047175179,
+      "name": ".github/workflows/i80386-owned-span-source-controls.yml",
+      "path": ".github/workflows/i80386-owned-span-source-controls.yml",
+      "event": "push",
+      "head_sha": "76d1dccbf149d4a627346a4b4b087873e51a0cec",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/CrispStrobe/bw-board/actions/runs/37047175179"
+    }
+  ]
+}
