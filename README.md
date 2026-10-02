@@ -145,8 +145,12 @@ four ordinary same-runner A/B/B/A comparisons. Motion was mixed (−3.07% to
 +3.43%) and RAM roughly flat to −2.39%; neither is a claimed speedup. On the
 EPYC 7763 repeat, GPIO rose **0.648× → 0.752×**, still below 1× in every window.
 One faster host passed both artifacts, which is not universal qualification.
-Final-head verification and landing status are tracked in that report; app
-pins and artifact publication remain unchanged.
+The lint-fixed rebuilt artifact then measured **+10.20%, +33.28% and +30.57%**
+GPIO gains with matching observations. Its first two comparisons pass all GPIO
+windows, but the third still fails (**0.796× median / 0.781× minimum**).
+Motion remains roughly flat, and latest-head fresh motion is **0.817× median**,
+below 1× in every window. Exact sources, hashes, final CI and landing status
+are tracked in that report; app pins and artifact publication remain unchanged.
 
 ## Limits
 

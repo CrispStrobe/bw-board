@@ -77,7 +77,7 @@ Next experiments should investigate admission/dispatch and bus-access work
 without caching live MMIO values, dropping side effects or weakening timing,
 interrupt and debugger guards. This profile does not by itself establish a gain.
 
-## Final-head verification
+## Rebuilt artifact comparisons and final-head verification
 
 The measured lint-fixed artifact source is `7f1c295c11d882dd6a5b3fa18fd762f167190ea0`.
 Its [build 36964690092](https://github.com/CrispStrobe/bw-board/actions/runs/36964690092)
@@ -91,15 +91,41 @@ lengths. Fresh motion qualification passed functionality but failed all five
 1× windows: **0.807894× median / 0.797765× minimum**, EPYC 7763. Raw
 [results](verified-artifact/fresh-motion-results.txt) and
 [runner](verified-artifact/fresh-motion-runner.txt) are retained. Publication
-was skipped. Two new ordinary comparisons are gated on those correctness
-checks, with outcomes still pending.
+was skipped. Three new ordinary comparisons were gated on correctness
+checks, using the same immutable A/B tooling as the prototype comparisons.
+
+| Run / host | F0 GPIO baseline → candidate median | Candidate GPIO minimum | GPIO gain | RAM gain | Motion gain |
+| --- | --- | --- | --- | --- | --- |
+| [36966063542](https://github.com/CrispStrobe/bw-board/actions/runs/36966063542), Xeon 8573C | 0.967689× → 1.066382× | 1.039588× | +10.20% | −0.66% | +0.40% |
+| [36966537023](https://github.com/CrispStrobe/bw-board/actions/runs/36966537023), EPYC 9V74 | 0.784693× → 1.045852× | 1.026665× | +33.28% | −1.31% | +1.09% |
+| [36967186499](https://github.com/CrispStrobe/bw-board/actions/runs/36967186499), EPYC 9V74 repeat | 0.609309× → 0.795597× | 0.781405× | +30.57% | +1.97% | +0.02% |
+
+All twenty candidate GPIO windows in the first two comparisons pass the
+unchanged 1× floor; **all ten fail in the third comparison**. All baseline
+GPIO captures fail that floor. Shared-host speed varies even under the same CPU
+name; absolute medians must not be pooled across hosts. RAM passes all windows
+for both labels. Motion passes on the first host but still fails the floor on the second
+(candidate median 0.995042× / minimum 0.984150×) and third (0.773914× / 0.742910×).
+No universal realtime, browser,
+RAM or motion speedup is claimed. All observations match in both protocols.
+Raw originals and all twelve F0 stdout captures are retained in `rebuilt-1/`,
+`rebuilt-2/` and `rebuilt-3/`, separately from the four prototype comparisons.
+The first two use the verified lint-fixed artifact; the third uses the
+byte-identical latest-head artifact below, with its own original BUILD-INFO.
 
 Latest source `77b2b54270809765466131413c049bb0a0a30d7e` additionally updates
 the debugger collection scanner's source-test marker to recognize the wrapper;
 it does not relax the requirement to walk every collection. Its exact rebuild
 [36966049317](https://github.com/CrispStrobe/bw-board/actions/runs/36966049317)
-must establish artifact equivalence, and all latest-head enabled CI checks must
-pass before runtime landing. These results and landing status remain pending.
+passed both build legs, determinism and all 101 actual WASM integration tests
+with zero skips. Both original NODEJS and web JS/WASM hashes and lengths match
+the measured rebuilt artifact exactly; actual downloaded bytes were checked
+against [latest-head BUILD-INFO](latest-head/BUILD-INFO.json).
+Its fresh motion run still failed all five windows (**0.817207× median /
+0.811487× minimum**, EPYC 7763); [raw results](latest-head/fresh-motion-results.txt)
+and [runner](latest-head/fresh-motion-runner.txt) are preserved, publication
+skipped. All latest-head enabled native CI checks must pass before runtime
+landing. Native CI and landing status remain pending.
 
 ```sh
 env -u NODE_OPTIONS node scripts/probe-labwired-f0-ab.mjs \
