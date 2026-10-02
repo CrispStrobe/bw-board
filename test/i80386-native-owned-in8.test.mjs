@@ -6,7 +6,7 @@ import {deriveOwnedIn8Napi} from '../scripts/bochs-cpu3-native-owned-in8/napi.mj
 import {createOwnedIn8Provider} from '../scripts/bochs-cpu3-native-owned-in8/provider.mjs';
 import {assembleOwnedIn8Rom,in8Witness} from '../scripts/i80386-free-owned-in8.mjs';
 import {assembleCombinedHotRom} from '../scripts/i80386-free-combined-hot.mjs';
-import {validateBaseline} from '../scripts/bochs-cpu3-native-owned-in8/admission.mjs';
+import {validateBaseline,validateInput} from '../scripts/bochs-cpu3-native-owned-in8/admission.mjs';
 import {combinedBoardConfig} from '../scripts/bochs-cpu3-native-combined-paging-ram/host.mjs';
 const empty=()=>new Uint32Array();
 function owner(sink=null){const p=createOwnedIn8Provider({compactSink:sink});p.callbacks.clockTransfer(empty(),1);p.begin();p.callbacks.clockTransfer(empty(),2);return p;}
@@ -45,3 +45,5 @@ test('mapping publication must precede IN',()=>{const p=owner();out(p,0x64,0xd1)
 const baseline=()=>({schema:'bw.js-owned-in8.baseline.v1',configuration:structuredClone(combinedBoardConfig),rom:{sha256:'25c242668fb1e0cbf940a35045a5e1173d992232766a4cbdb6a369ef3929a939'},halted:true,attempts:10,q:9,final:{memorySha256:'a'.repeat(64),in8Witness:[1,2]},boundaries:Object.fromEntries(['hot_profile_start','hot_register_loop','hot_register_end','hot_memory_loop','hot_memory_end','terminal_hlt'].map((name,i)=>[name,{q:i+1,cpu:{eip:256+i,cs:8}}]))});
 test('baseline admits only bounded IN8 profile before native loading',()=>assert.equal(validateBaseline(baseline()).length,6));
 for(const [label,mutate] of [['ROM',b=>b.rom.sha256='0'.repeat(64)],['halt',b=>b.halted=false],['N',b=>b.attempts=160001],['Q',b=>b.q=NaN],['RAM',b=>b.final.memorySha256='x'],['witness',b=>b.final.in8Witness=[1,256]],['cut',b=>b.boundaries.terminal_hlt.q=1],['EIP',b=>b.boundaries.terminal_hlt.cpu.eip=-1],['CS',b=>b.boundaries.terminal_hlt.cpu.cs=65536],['name',b=>{b.boundaries.wrong=b.boundaries.terminal_hlt;delete b.boundaries.terminal_hlt;}]])test('baseline rejects '+label,()=>{const b=baseline();mutate(b);assert.throws(()=>validateBaseline(b));});
+
+test('input pins actual historical JS reference SHA before addon read',()=>{const v=Object.fromEntries(['addon','configuration','baseline','output','preparedManifest','buildReceipt'].map(k=>[k,'/not-read']));Object.assign(v,{sha256:'a'.repeat(64),preparedManifestSha256:'b'.repeat(64),buildReceiptSha256:'c'.repeat(64),baselineSha256:'bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e',hostJournal:false,nativeTrace:false});assert.equal(validateInput(v),v);assert.throws(()=>validateInput({...v,baselineSha256:'0'.repeat(64)}));});
