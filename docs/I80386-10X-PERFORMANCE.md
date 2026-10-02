@@ -604,3 +604,7 @@ that is not a measured CPU-time share.
 ## Native bridge checkpoint (2026-10-01)
 
 The bounded free protected-mode workload now has [H2 cost profiling](I80386-NATIVE-HOT-NAPI-COST-WIP.md), [H3 key reuse](I80386-NATIVE-HOT-PROPERTY-KEYS-WIP.md) and [H4 packed scalar evidence](I80386-NATIVE-HOT-PACKED-SCALAR-WIP.md). H3 reduced median adapter wall time by 7.83% in its seven-pair comparison. H4 reduced mean process CPU cost by 13.37% against H3 in a separate seven-pair comparison, with all pairs favorable and complete canonical trace/journal parity. These percentages use different metrics and must not be combined. The 10× target, physical 386DX RTx calibration and full-guest native admission remain open.
+
+## Clock witness checkpoint (2026-10-02)
+
+The [fenced H4 diagnostic](I80386-NATIVE-CLOCK-FENCED-WITNESS-WIP.md) passed all 439 resume-pair fence checks and full canonical trace/journal/state parity using the unchanged held H4 engine. Its source-owned offline witness preserves independent native ticks and successful quanta. No native batching or performance backend is implemented, and diagnostic timing does not establish progress toward 10×.

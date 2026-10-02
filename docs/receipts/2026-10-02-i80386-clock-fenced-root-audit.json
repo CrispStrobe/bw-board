@@ -1,0 +1,24 @@
+{
+  "status": "ROOT_ACTUAL_FENCED_H4_AND_OFFLINE_VALIDATOR_PASS_NOT_BATCH_ADMISSION",
+  "checks": 22311,
+  "driverRevision": "2d1cf651d7d7d0dfda55b9df482cf0ec70d9187c",
+  "driverSourceInputs": 67,
+  "compiledSourceRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "compiledSourceInputs": 32,
+  "transformInputs": 12,
+  "canonicalRowsComparedByActualRootParent": 1649067,
+  "fenceRows": 1326,
+  "phaseCounts": {
+    "start": 1,
+    "stage-irq": 439,
+    "entry": 439,
+    "return": 439,
+    "inspect": 6,
+    "settle": 1,
+    "close": 1
+  },
+  "comparisonSha256": "23b99dac075164b7627dd7d5bf216602bea97ac50070189c8c5967fe2bb996fd",
+  "offlineOutputSha256": "56fc09104447d089e2a0c4902c2a116ef5bcd2bb371f84771e15f2f4977e386d",
+  "auditScriptSha256": "89e61ce8cc3a5731392962840bfe3a094f5862fc53e5b6314a4d948ba23d66dd",
+  "scope": "Diagnostic capture and offline chronology only; no native batch implementation or speed qualification"
+}

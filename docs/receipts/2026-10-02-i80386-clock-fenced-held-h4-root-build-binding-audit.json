@@ -1,0 +1,9 @@
+{
+  "status": "ROOT_H4_FRESH_BUILD_BINDING_PASS",
+  "checks": 86,
+  "sourceRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "manifestSha256": "3877bd9102cd000e86e29f13e60a95c935b66162280198d5cb7485737ef0105f",
+  "addonSha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+  "runtimeConfigAbiIdenticalH3": true,
+  "guestExecuted": false
+}
