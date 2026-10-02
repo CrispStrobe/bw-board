@@ -28,6 +28,9 @@ Hosted artifacts include original build info, runner/tool provenance, both raw
 ordinary workloads, GPIO-only ordinary/sampled stdout/stderr, the complete raw
 CPU profile and its hash/named-frame summary. Do not download engine binaries
 to a resource-constrained VPS. Missing or failed evidence is not qualification.
+Invalid CPU samples keep the original raw profile and its hash plus the parser
+error in the receipt, and fail the diagnostic. Negative time deltas are not
+clamped or silently removed. Ordinary timing receipts remain independent.
 Core main, app pins, published engines and physical acknowledgements remain
 unchanged. Further candidates still require their own correctness and repeated
 ordinary RAM/GPIO/motion acceptance.

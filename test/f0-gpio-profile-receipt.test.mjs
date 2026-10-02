@@ -61,6 +61,8 @@ test('isolated harness changes only workload selection; ordinary acceptance is u
  assert.match(tool,/LABWIRED_F0_REQUIRED: '1', LABWIRED_REQUIRE_F0_RTX: '1'/);
  assert.match(tool,/assertSameGpioGuest\(receipt.ordinary, receipt.sampled\)/);
  assert.match(tool,/Unset NODE_OPTIONS/);assert.match(tool,/Refusing to overwrite evidence/);
+ assert.match(tool,/profileError = error.message;[\s\S]*?save\(\);[\s\S]*?throw error/);
+ assert.ok(tool.indexOf('save(); // Preserve the original profile identity')<tool.indexOf('summarizeCpuProfile(JSON.parse(bytes))'));
  assert.ok(tool.indexOf("label + '-stdout.txt'")<tool.indexOf('f0GpioTimingResult(child.stdout'));
  assert.ok(tool.indexOf("run('ordinary', [])")<tool.indexOf("run('sampled',"));
  const workflow=read('.github/workflows/labwired-f0-profile.yml');

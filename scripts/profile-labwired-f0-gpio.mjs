@@ -66,7 +66,14 @@ if (profile) {
     assertSameGpioGuest(receipt.ordinary, receipt.sampled);
     const bytes = readFileSync(join(out, 'f0-gpio.cpuprofile'));
     receipt.sampled.profileSha256 = hash(bytes);
-    receipt.sampled.profile = summarizeCpuProfile(JSON.parse(bytes));
+    save(); // Preserve the original profile identity even if attribution fails.
+    try {
+        receipt.sampled.profile = summarizeCpuProfile(JSON.parse(bytes));
+    } catch (error) {
+        receipt.sampled.profileError = error.message;
+        save(); // Invalid profiling is not a successful diagnostic or a floor pass.
+        throw error;
+    }
     const names = wasmFunctionNames(readFileSync(join(directory, 'labwired_wasm_bg.wasm')));
     for (const frame of receipt.sampled.profile.topWasmFrames) {
         const index = frame.functionName.match(/wasm-function\[(\d+)\]/)?.[1];
