@@ -1,0 +1,246 @@
+{
+  "schema": "labwired.binaryen-local-pilot.v1",
+  "diagnosticOnly": true,
+  "completedAt": "2026-10-02T09:17:18.248Z",
+  "source": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "artifactHashes": {
+    "baseline": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+    "candidate": "880fcdde04b581675c89cf5c638cf2c198c276478532c4a013dd36cb2e135b29"
+  },
+  "optimizer": {
+    "schema": "labwired.binaryen-pilot.v1",
+    "diagnosticOnly": true,
+    "processedAt": "2026-10-02T08:55:59.749Z",
+    "optimizer": "binaryen",
+    "version": "123.0.0",
+    "versionOutput": "wasm-opt version 123 (version_123)",
+    "flags": [
+      "-O3",
+      "--strip-debug",
+      "--strip-producers",
+      "--enable-bulk-memory",
+      "--enable-simd",
+      "--enable-nontrapping-float-to-int",
+      "--enable-sign-ext",
+      "--enable-reference-types",
+      "--enable-multivalue"
+    ],
+    "sourceBuildInfoSha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16",
+    "toolSha256": "d66c6724c07334155720eb2def29c434dcaaf741ce859b4f7f389e22674f9c4a",
+    "releaseArchiveSha256": "e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe",
+    "releaseUrl": "https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz",
+    "sourceTargets": {
+      "nodejs": {
+        "labwired_wasm.js": {
+          "bytes": 135762,
+          "brotliBytes": 25386,
+          "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      },
+      "web": {
+        "labwired_wasm.js": {
+          "bytes": 138392,
+          "brotliBytes": 25941,
+          "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      }
+    },
+    "publication": false,
+    "appPinChanges": false
+  },
+  "originalModuleBytes": 27556189,
+  "optimizedModuleBytes": 24492963,
+  "integration": {
+    "diagnosticOnly": true,
+    "startedAt": "2026-10-02T09:03:24.086Z",
+    "completedAt": "2026-10-02T09:03:37.967Z",
+    "node": "v20.20.2",
+    "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "wasmSha256": "880fcdde04b581675c89cf5c638cf2c198c276478532c4a013dd36cb2e135b29",
+    "files": {
+      "test/labwired-adapter.test.mjs": "1b938e84f7f656dee279dc1f001af52c4e91497b4af9ea00ae9f0a1037022204",
+      "test/labwired-bridge.test.mjs": "9d3a7943ae7017839eeb264654653f49363ca921e2cc2e6966daf5a449d5593f",
+      "test/labwired-roundtrip.test.mjs": "b63e8d4832c6209fd3545c06dd6dda4f58e95a444f53a699561c95940684902c",
+      "test/pad-drive-parity.test.mjs": "cdf609dbf49e6236bc71509a07861ddb8fabae57b74a34f64cc13068f2a9e949",
+      "test/labwired-firmware-only.test.mjs": "da469bfe1469e09c805b94f387c1a79b9106e31a1ae8429dc8ca63ef2285111e",
+      "test/labwired-microbit-matrix.test.mjs": "8426a1b66e26ffe6eac9723febc1de216d59ea7f4df0cddfe91d51cf59e0c7fb",
+      "test/labwired-input-boundary.test.mjs": "c8e5682569df28c141776c6d707b07664f10c1d5cd3b72b9a7b39d9071fa445b"
+    },
+    "exitCode": 0,
+    "signal": null,
+    "counts": {
+      "tests": 101,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "publication": false,
+    "appPinChanges": false,
+    "limitations": [
+      "local actual integration coverage, not independent-machine determinism or performance qualification"
+    ]
+  },
+  "excludedFirstIntegrationAttempt": {
+    "file": "postopt-main-integration.json",
+    "reason": "locked avr8js/rp2040js dependencies missing; 42 tests and four failures, not an engine acceptance pass",
+    "counts": {
+      "tests": 42,
+      "fail": 4,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    }
+  },
+  "comparisons": [
+    {
+      "file": "postopt-vps-motion-primary.json",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.25742083659539083,
+          "minimumRtx": 0.16757523004278896,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.2795890632069852,
+          "minimumRtx": 0.18559900580225105,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.086116675342944
+      },
+      "rawSha256": "fd587c0fad750ceef8648d83f345e79c000401d390185157893c6df2464ac54d"
+    },
+    {
+      "file": "postopt-vps-motion-reverse.json",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.17066055857523124,
+          "minimumRtx": 0.13663810084478073,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.1730017232991033,
+          "minimumRtx": 0.11406549439727706,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.0137182530247024
+      },
+      "rawSha256": "a31566fc8db849427e2f17df25b43013713477af94cc6d9c24cc10576623aabf"
+    },
+    {
+      "file": "postopt-vps-motion-repeat.json",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.2017271967516333,
+          "minimumRtx": 0.17654958764342982,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.1896819580240982,
+          "minimumRtx": 0.14517636949704446,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 0.9402894655678719
+      },
+      "rawSha256": "6f65210524074d54aa752e55a282ef21a0c024a3001aef413cc6ec4c6de9f4cb"
+    },
+    {
+      "file": "postopt-vps-f0-primary/abba.json",
+      "summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 1.2075413808033448,
+            "minimumRtx": 0.9412287949364724,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 1.1444130436471465,
+            "minimumRtx": 0.9339986701502775,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9477215951686884
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.3094098452837519,
+            "minimumRtx": 0.19352989451626199,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.28427259437695573,
+            "minimumRtx": 0.24396470417221772,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9187574303469773
+        }
+      },
+      "rawSha256": "e4f3eaa571a13d106229d03e44490a3310bff1487b74a46aff061310cc20bce2"
+    },
+    {
+      "file": "postopt-vps-f0-reverse/abba.json",
+      "summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.6201009959703965,
+            "minimumRtx": 0.4248196510586442,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.7130214593997639,
+            "minimumRtx": 0.488721192856495,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 1.1498473055731127
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.16479198155224656,
+            "minimumRtx": 0.12448416299220848,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.18899736326669436,
+            "minimumRtx": 0.1263479330049505,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 1.1468844629844663
+        }
+      },
+      "rawSha256": "f0fd1acbe2d7261f855568cb7ba47447119aa941d7ec476faa1d3128e738b322"
+    }
+  ],
+  "acceptance": false,
+  "publication": false,
+  "appPinChanges": false,
+  "hardwareAcknowledgementChanges": false,
+  "limitations": [
+    "mixed sequential local shared-VPS comparisons; no owned compiler/optimizer/overlapping benchmark during timings",
+    "no independent-machine optimizer determinism, hosted Node20/22 comparisons or browser/UI qualification yet",
+    "module size and passing integration do not establish a workload-wide speedup"
+  ],
+  "next": "opt-in pinned optimizer CI on unchanged main, independently reproduce output and test runtime/order controls before considering production"
+}

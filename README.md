@@ -187,6 +187,15 @@ independent determinism passed; the fresh motion floor failed (**0.764890×
 median / 0.751187× minimum**). Engine/app pins and hardware acknowledgements
 remain unchanged. See [restricted T16 results and original receipts](docs/receipts/2026-10-02-wasm-t16-register-inline/README.md).
 
+Pinned Binaryen `-O3` postprocessing of unchanged core main produces an
+**11.12% smaller module** and passes independent byte determinism plus all 101
+actual WASM integration tests. Four hosted Node 20/22 order-controlled comparisons
+gain **0.21–6.89% motion**, but lose **0.25–9.85% RAM** and **0.66–4.40% GPIO**.
+One motion median reaches **1.020360×**, with a **0.956308× minimum**, so the
+all-window floor still fails. This optimization is **not enabled in production**;
+only manual, nonpublishing diagnostic tooling is landed. App/engine pins and
+hardware acknowledgements remain unchanged. See [postprocessing results and raw receipts](docs/receipts/2026-10-02-wasm-postprocess/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

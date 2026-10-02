@@ -47,8 +47,13 @@ attempt, not accepted evidence. Local sequential ordinary VPS comparisons are
 mixed: motion +8.61%, reverse +1.37%, repeat −5.97%; F0 RAM −5.23% then +14.98%,
 GPIO −8.12% then +14.69%. Every selected every-window qualification fails.
 This does not establish a workload-wide speedup or justify enabling optimization
-by default. Independent hosted reproduction and Node 20/22 normal/reverse
-comparisons are still owed before considering production acceptance.
+by default. Independent hosted reproduction and all four Node 20/22
+normal/reverse comparisons are now complete. Both optimizer build jobs, byte
+determinism and all 101 actual integration tests passed. Fresh motion still
+failed the floor (0.806543× median / 0.797786× minimum). Hosted motion medians
+gained 0.21–6.89%, but RAM lost 0.25–9.85% and GPIO lost 0.66–4.40% across all
+four comparisons. The transformation is not qualified for production. See the
+[full results and byte-identical evidence](receipts/2026-10-02-wasm-postprocess/README.md).
 
 After successful independent determinism and actual integration, use the
 existing `labwired-motion-ab.yml` with the original build as baseline and this
