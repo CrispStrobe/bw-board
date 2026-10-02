@@ -93,6 +93,9 @@ for (const workload of ['ram', 'gpio']) {
             wasm.fastpath_census_reset();
             runCycles(adapter, windowCycles);
             const counts = JSON.parse(wasm.fastpath_census_snapshot_json());
+            const sample = {high, cycles: windowCycles, counts};
+            result.samples.push(sample);
+            save(); // Preserve raw counts even if validation below fails.
             const summary = validateCensus(counts);
             assert.equal(summary.countedRetired, windowCycles, 'complete active guest window census');
             const bytes = adapter.sim.read_memory(0x20000000, 16);
@@ -111,8 +114,7 @@ for (const workload of ['ram', 'gpio']) {
                 output = snapshot.odr & 1;
                 assert.equal(output, high ? 1 : 0);
             } else assert.equal(input, 0);
-            result.samples.push({high, cycles: windowCycles, counts, summary,
-                guest: {iterations, checksum, input, mirror, output}});
+            Object.assign(sample, {summary, guest: {iterations, checksum, input, mirror, output}});
             previous = iterations;
             save();
         }
