@@ -17,6 +17,7 @@ export function sourceIdentity(){
 }
 export function boundedJson(path,expectedSha){assert.equal(typeof path,'string');assert.match(expectedSha,/^[a-f0-9]{64}$/);const st=statSync(path);assert.ok(st.isFile()&&st.size<=16*1024*1024);const b=readFileSync(path);assert.equal(sha256(b),expectedSha);return JSON.parse(b);}
 export function authenticateBuild(input,source){
+ assert.equal(input.preparedManifestSha256,'7092cf5efdb3d68b65e2b4b8a91f726ae07516e8df0de4712eeb8c92c7369c28');assert.equal(input.buildReceiptSha256,'acebb536e93e6e74218057f18ae1e5a47d8f436e7aee212c0d82b8658d4e3da8');
  const receipt=boundedJson(input.buildReceipt,input.buildReceiptSha256);assert.equal(receipt.sourceRevision,'7df84bc2c367aff1cadec7cecdde69cf0e904ace');assert.equal(Object.keys(receipt.sourceHashes).length,86);for(const [p,h]of Object.entries(receipt.sourceHashes))assert.equal(source.hashes[p],h,'compiled86 untouched '+p);
  const compiled={revision:receipt.sourceRevision,hashes:receipt.sourceHashes};return {compiledSource:compiled,...authenticateCompiled(input,compiled),runtimeJS:source};
 }
