@@ -600,3 +600,7 @@ instructions natively. Serial user-CPU pairs were 27.90/31.39 and
 The full-workload no-regression gate failed, so its executable changes were
 discarded. Those native retirements cover 4.268% of completed step calls;
 that is not a measured CPU-time share.
+
+## Native bridge checkpoint (2026-10-01)
+
+The bounded free protected-mode workload now has [H2 cost profiling](I80386-NATIVE-HOT-NAPI-COST-WIP.md), [H3 key reuse](I80386-NATIVE-HOT-PROPERTY-KEYS-WIP.md) and [H4 packed scalar evidence](I80386-NATIVE-HOT-PACKED-SCALAR-WIP.md). H3 reduced median adapter wall time by 7.83% in its seven-pair comparison. H4 reduced mean process CPU cost by 13.37% against H3 in a separate seven-pair comparison, with all pairs favorable and complete canonical trace/journal parity. These percentages use different metrics and must not be combined. The 10× target, physical 386DX RTx calibration and full-guest native admission remain open.

@@ -1,0 +1,81 @@
+{
+  "status": "H3_H4_ACTUAL_EIGHTEEN_CHILDREN_INDEPENDENT_PASS",
+  "checks": 2622,
+  "summarySha256": "85710a7b346a71f673af6982ef2590c8bdb1167850aafb6bcda4049ad95e38e6",
+  "distributions": {
+    "H3": {
+      "allNs": [
+        486490864,
+        644291593,
+        878684389,
+        1730694744,
+        700100139,
+        2081916911,
+        1525248553
+      ],
+      "minNs": 486490864,
+      "medianNs": 878684389,
+      "maxNs": 2081916911
+    },
+    "H4": {
+      "allNs": [
+        488828780,
+        497880150,
+        1585043423,
+        1319968578,
+        570185584,
+        502354901,
+        471847373
+      ],
+      "minNs": 471847373,
+      "medianNs": 502354901,
+      "maxNs": 1585043423
+    }
+  },
+  "pairs": [
+    {
+      "index": 2,
+      "H3": 486490864,
+      "H4": 488828780,
+      "H4overH3": 1.0048056729797088
+    },
+    {
+      "index": 3,
+      "H3": 644291593,
+      "H4": 497880150,
+      "H4overH3": 0.77275593133496
+    },
+    {
+      "index": 4,
+      "H3": 878684389,
+      "H4": 1585043423,
+      "H4overH3": 1.8038825348927419
+    },
+    {
+      "index": 5,
+      "H3": 1730694744,
+      "H4": 1319968578,
+      "H4overH3": 0.7626813350974156
+    },
+    {
+      "index": 6,
+      "H3": 700100139,
+      "H4": 570185584,
+      "H4overH3": 0.814434324801641
+    },
+    {
+      "index": 7,
+      "H3": 2081916911,
+      "H4": 502354901,
+      "H4overH3": 0.2412944043759679
+    },
+    {
+      "index": 8,
+      "H3": 1525248553,
+      "H4": 471847373,
+      "H4overH3": 0.30935769260159396
+    }
+  ],
+  "medianH4ReductionPercent": 42.82874405317334,
+  "scope": "H3 disabled-profiler/key-cache bridge vs H4 unprofiled a131 packed scalar protocol+JS wrapper; corresponding original/new drivers with labelled sourceclosures. Freshprocess/JITcold/sharedhost wholeadapter execution, no purecore or physicalRTx claim."
+}
