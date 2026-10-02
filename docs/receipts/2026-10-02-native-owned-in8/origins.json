@@ -1885,6 +1885,481 @@
       "revision": "3e236128a079565229a2ba35d3754cc1698726e5",
       "path": ".github/workflows/i80386-native-owned-in8-build.yml",
       "sha256": "7de04d1f03567fa79d59159182727b18071c1d5783831d7f1671e1d35376f6d9"
+    },
+    "ci-attempt2-success/artifact-metadata.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/artifact-metadata.json",
+      "sha256": "2322640e265ba09147fc1b00b24336f2f708f2c29a84d515bb86fc4b45b7a88a"
+    },
+    "ci-attempt2-success/restoration-parent.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/restoration-parent.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-attempt2-success/independent-build-audit.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/independent-build-audit.py",
+      "sha256": "d52a53b7b2806d7cc982055f44d32ac762cd34ad02f1381ffe96721bab16bae9"
+    },
+    "ci-attempt2-success/restoration-parent.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/restoration-parent.stdout",
+      "sha256": "5d97d21ef3180d370c1a88868eaba39306bc82b5027c5a43794a47c655ae35e0"
+    },
+    "ci-attempt2-success/restoration-bindings.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/restoration-bindings.json",
+      "sha256": "24f5781bd85902059374a1fc4216c36eb611f9c5227bada1cf00c73a8674a7eb"
+    },
+    "ci-attempt2-success/independent-build-audit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/independent-build-audit.json",
+      "sha256": "351ea772be185f6f800827d83818ebcbc653e2bc6e70174cea0cdbbc8d5f6592"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/prepare.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/prepare.stderr",
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/make.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/make.stdout",
+      "sha256": "9de8a9690fa6fcec055072404c4af8eacb1de68024e93883d843d819380f7a3a"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/prepare.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/prepare.exit.json",
+      "sha256": "e3fab706469807a3a7a48ab74c16c982726040ad2f1cd500572ca40dd1bdb6e0"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/identity.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/identity.exit.json",
+      "sha256": "8ed14ecf9310011283cd2a5741fc1a433118e1b7717166de1150e56baa59c5f1"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/addon-ldd.txt": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/addon-ldd.txt",
+      "sha256": "c394692e00f854d0c0b26305196a1270315721139199c736e020385159550c3f"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/identity-before.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/identity-before.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/prepare.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/prepare.stdout",
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/make.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/make.exit.json",
+      "sha256": "d228c614f15f4f1c30975538e6f9e6018f9d381496cb59faeec7d1d2f8704d7f"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/upstream-LICENSE": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/upstream-LICENSE",
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/configure.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/configure.exit.json",
+      "sha256": "0f66cb1509295bd3453d7cfb369af0163eefbdfdc74139f23f3f45aa6cb59a06"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/make.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/make.stderr",
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/identity.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/identity-before.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/identity-before.exit.json",
+      "sha256": "6a3eecd209dcc0c88896b001aa0c4df8300b3adf5a6a8ab81bb8a461cc825a43"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/identity-before.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/identity-before.stdout",
+      "sha256": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/config.h": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/config.h",
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/configure.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/configure.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/identity.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/identity.stdout",
+      "sha256": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/configure.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/configure.stdout",
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/upstream-COPYING": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/upstream-COPYING",
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/source-before.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/source-before.json",
+      "sha256": "3b02c9fec32b3f89aabc1282d298452ad46d9461ee25a594805f72cd5ec7c6c0"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/build-static-preflight.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/build-static-preflight.json",
+      "sha256": "7b798173e3326c64f855d12c98bdda91f984bd49eade9717672d88f87e54a4ba"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/free-assets.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/free-assets.json",
+      "sha256": "20e9b85ab30da79de3c6761440d434de1498f99d4ac4b8cf88cadcbd11780072"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/addon-nm-defined.txt": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/addon-nm-defined.txt",
+      "sha256": "0c5943c5d2e1e2808ee86c182e17f6ae5dbd3f7ec2913d89dba0a5b47370bb56"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/prepare.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/prepare.json",
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "ci-attempt2-success/files/owned-in8-evidence/artifact-inventory.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-evidence/artifact-inventory.json",
+      "sha256": "1b880f0b37b02432743bed4ead8b7544a027d36ce3a9e935161ae38f17d2cd87"
+    },
+    "ci-attempt2-success/files/owned-in8-context/context.txt": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-context/context.txt",
+      "sha256": "8188c080f529817c5817e975f6fd1767dd0236a95ccf220adb7a7224b631f052"
+    },
+    "ci-attempt2-success/files/owned-in8-context/parent.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-context/parent.stdout",
+      "sha256": "ac9d674fa57d9543a36eaa06802d9dffda27f57587c87a125dd88ea6acaaf6e2"
+    },
+    "ci-attempt2-success/files/owned-in8-context/parent.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/files/owned-in8-context/parent.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-restored/ldd.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/ldd.stdout",
+      "sha256": "5ef26221dbc5121f5ea6cb7f85b9cb0796145382696b8711728595055f6aa8c4"
+    },
+    "ci-restored/ldd.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/ldd.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-restored/derived-build-receipt.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/derived-build-receipt.json",
+      "sha256": "33809d68e99497f957905b5d3ab5e119bf90a5de87c52d65e91715dc995fdb10"
+    },
+    "ci-restored/independent-restoration-audit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/independent-restoration-audit.json",
+      "sha256": "1ca0daf7c4513ad6a773627088d5fcdb98e0f2ce7d14c6da01927ec52d60f199"
+    },
+    "ci-restored/source-admission.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/source-admission.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ci-restored/source-admission.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/source-admission.exit.json",
+      "sha256": "4be881f3f29e64616292a0cebd4283d17bbb40ef446eeb6b57bfeaea873ebc80"
+    },
+    "ci-restored/source-admission.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/source-admission.stdout",
+      "sha256": "6c66eb99e47507d6c8f8bf4938ce561d758f1eae21b996eeefc48618fa37bbb0"
+    },
+    "ci-restored/relocation-proof.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/relocation-proof.json",
+      "sha256": "ab914d76203463a5d5721ab4f6fe41039f409e342826a4a66e81b0d0d74d91f3"
+    },
+    "ci-restored/ldd.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/ldd.exit.json",
+      "sha256": "52f9bf474910530e61969dd60c44eb9218726b152f04cfa546d351e29ff0fed7"
+    },
+    "ci-restored/independent-restoration-audit.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/independent-restoration-audit.py",
+      "sha256": "2c61846e61156217e62fcd70abd43f52f3f9deeb604f066c938da0b47b03b95c"
+    },
+    "ci-restored/static-input.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/static-input.json",
+      "sha256": "89fec197eaf8c9c9cc8fdb43d831475fc7b4d55e8306eccb2bbaf880c708cd1c"
+    },
+    "ci-restored/nm.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/nm.exit.json",
+      "sha256": "29bec822eac13f98db41c84b2babf0bce3ac0c335291e87d1e057b0b6995b1ca"
+    },
+    "ci-restored/derived-prepare.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/derived-prepare.json",
+      "sha256": "b3c606e3bd5a2dc9f536116dbefa4f347efb2f6316239d6f7162d134c00f4c3a"
+    },
+    "ci-restored/nm.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/nm.stdout",
+      "sha256": "0c5943c5d2e1e2808ee86c182e17f6ae5dbd3f7ec2913d89dba0a5b47370bb56"
+    },
+    "ci-restored/nm.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/nm.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/independent-helper-audit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/independent-helper-audit.json",
+      "sha256": "0e4e4b259d9d12cbf51a23831b2818cae7b40bd1a712da8a3ab96696b497f16e"
+    },
+    "production-r3-parity/independent-actual-audit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/independent-actual-audit.json",
+      "sha256": "e93235f53e2860285100aeec34de2ae42390a9d37354df7f1cefae7c90752097"
+    },
+    "production-r3-parity/prepared-auth.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/prepared-auth.json",
+      "sha256": "ef01f8a430d326e46f58e608c5d7c4f1cbd7e48ce6c6bf403a5e9b406d10ce9d"
+    },
+    "production-r3-parity/actual-bindings-derivation.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/actual-bindings-derivation.json",
+      "sha256": "2b72f0af94e9fd1538ec186f47bd00131e0d276753aaa9fabbbd1980e7a44838"
+    },
+    "production-r3-parity/smoke-off-parity.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off-parity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/independent-on-audit-r2.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/independent-on-audit-r2.json",
+      "sha256": "34a807354af85c0b93deb0501b392516f758ad314666dd581b50a56352e486eb"
+    },
+    "production-r3-parity/root-execution-decision.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/root-execution-decision.json",
+      "sha256": "457435dcb97df137c5df3def9207bf436fb1268cc9464335e4fd4f594e6da825"
+    },
+    "production-r3-parity/smoke-off-parent.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off-parent.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/independent-off-audit.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/independent-off-audit.py",
+      "sha256": "64930822af31264b5d4a89a6ff24b3393facfad17ddf4da9acb759bb1e2525ff"
+    },
+    "production-r3-parity/fulltrace-on-parent.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on-parent.stdout",
+      "sha256": "b02c7593d8f1d4e08a5bdb18d48d435038125cd70ae31b7030ce13e9879f28d9"
+    },
+    "production-r3-parity/bounded.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/bounded.py",
+      "sha256": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b"
+    },
+    "production-r3-parity/bounded-derivation.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/bounded-derivation.json",
+      "sha256": "baa432e9868ab488e941860daca02914be7b3b71f5b2b4a443e215f9e3766ae9"
+    },
+    "production-r3-parity/fulltrace-on-parent.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on-parent.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/binding-draft.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/binding-draft.json",
+      "sha256": "8456f20889e5c7405aecc04ba018108e724cfbfc6cce1e11d7dd7427f2e8b8e2"
+    },
+    "production-r3-parity/fulltrace-on-parity.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on-parity.stdout",
+      "sha256": "de4a70c3c53a8d3905af701117330679e5399162c689a0b1e7a51d11b086bd3a"
+    },
+    "production-r3-parity/approved-bindings.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/approved-bindings.json",
+      "sha256": "8456f20889e5c7405aecc04ba018108e724cfbfc6cce1e11d7dd7427f2e8b8e2"
+    },
+    "production-r3-parity/smoke-off-parity.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off-parity.stdout",
+      "sha256": "98c8e9e9700ee5a9e132e939cca3f8ba124ce0400904d7be79f70427dc21c13a"
+    },
+    "production-r3-parity/run.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/run.py",
+      "sha256": "89d75c4fe3552292f2eebb3956bed6411094cc1c3aed16921bc395d405705bec"
+    },
+    "production-r3-parity/parity.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/parity.py",
+      "sha256": "25f92a0d3cb2d9ea00b9444b0087fc810812269b46f03ea3845cf7aa9f90c6de"
+    },
+    "production-r3-parity/fulltrace-on-parity.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on-parity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/independent-on-audit.py": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/independent-on-audit.py",
+      "sha256": "5766defb8d86aeb8c08448caa05a4349730fcef5f028b2cc25cea166e8c7de08"
+    },
+    "production-r3-parity/prepared-helper-hashes.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/prepared-helper-hashes.json",
+      "sha256": "0f1e1badcf7b7bc77912f7391b47c6c509ce974e072d82dbf46a82b8b7b7e322"
+    },
+    "production-r3-parity/smoke-off-parent.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off-parent.stdout",
+      "sha256": "94be48ef407be7e0c6ba4cb1d211b24089928c7b4f7ee472688eb9fc87a8ea3d"
+    },
+    "production-r3-parity/plan.before-actual-build.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/plan.before-actual-build.json",
+      "sha256": "0d9986d9fd1df9952f475539d2de07cd94464a021b2fc6b06f900ddefabb4d33"
+    },
+    "production-r3-parity/plan-derivation.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/plan-derivation.json",
+      "sha256": "b0593fda8f51ee19ef2a3711de7ee6276de59ceafd5c0483f108202d79c143ab"
+    },
+    "production-r3-parity/plan.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/plan.json",
+      "sha256": "38901ec86dab0ad1e2f44943d8f3a5ac17e64a52a842dedff4a0ffd61b9b81fe"
+    },
+    "production-r3-parity/fulltrace-on/input.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/input.json",
+      "sha256": "c4554856ccec8fd8bdde489d12353615c16960914a9b337c94b6736e572f5aa4"
+    },
+    "production-r3-parity/fulltrace-on/child.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/child.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/fulltrace-on/parity.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/parity.json",
+      "sha256": "bff9ffae9bcb001c08dd78629603c10b56d0c141f699b581fcbb510354a05634"
+    },
+    "production-r3-parity/fulltrace-on/auth-before.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/auth-before.json",
+      "sha256": "522df3af0dcb5769141e0359efc5bf0725fadb9b9a7c45fff84d925d67c4ac8a"
+    },
+    "production-r3-parity/fulltrace-on/child.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/child.exit.json",
+      "sha256": "77d0a1062d07d671624574e1dbbe7d19953808b721f45ca9ad95dca9ba293aa0"
+    },
+    "production-r3-parity/fulltrace-on/auth-after.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/auth-after.json",
+      "sha256": "522df3af0dcb5769141e0359efc5bf0725fadb9b9a7c45fff84d925d67c4ac8a"
+    },
+    "production-r3-parity/smoke-off/input.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/input.json",
+      "sha256": "ff1b24240f3901290ed342a8e43e8d3ae17dfd078f28010d4e9af68918aa4552"
+    },
+    "production-r3-parity/smoke-off/child.stdout": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/child.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/smoke-off/parity.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/parity.json",
+      "sha256": "236b07ba700839bfba920d023b216ab407a04bc69fac1f27286b5932292ecc1d"
+    },
+    "production-r3-parity/smoke-off/auth-before.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/auth-before.json",
+      "sha256": "522df3af0dcb5769141e0359efc5bf0725fadb9b9a7c45fff84d925d67c4ac8a"
+    },
+    "production-r3-parity/smoke-off/independent-audit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/independent-audit.json",
+      "sha256": "44c6937d3a821c70dbe412de57634741fcebf8c2452bdcb5837e21ec12c32ff7"
+    },
+    "production-r3-parity/smoke-off/child.exit.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/child.exit.json",
+      "sha256": "aea0de3d3e82d077a5aef126592aecc06fb221393264349b0a231a1e4a1a5e98"
+    },
+    "production-r3-parity/smoke-off/auth-after.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/auth-after.json",
+      "sha256": "522df3af0dcb5769141e0359efc5bf0725fadb9b9a7c45fff84d925d67c4ac8a"
+    },
+    "production-r3-parity/smoke-off/child.stderr": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/child.stderr",
+      "sha256": "441f2ece88d6c218f0c0a318c556c514d2a2cb6186d4d3273f091492c5f2d76c"
+    },
+    "production-r3-parity/smoke-off/guest/guest.bochsrc": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/guest/guest.bochsrc",
+      "sha256": "a3bd7a282f94e75232caa36496d99930e294b397e8bac7b18e5826dc01b3b2b0"
+    },
+    "production-r3-parity/smoke-off/guest/capture.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/guest/capture.json",
+      "sha256": "8e94d6c67478dec5b5e1f13675984c264e0383cd9e18f39b9f9ca39653ebe41c"
+    },
+    "production-r3-parity/smoke-off/guest/callbacks.jsonl": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/smoke-off/guest/callbacks.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production-r3-parity/fulltrace-on/guest/guest.bochsrc": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/guest/guest.bochsrc",
+      "sha256": "d3cc244a930385ed47347206c73646006d37fb8102e6e6ac2afeefe60c3a0657"
+    },
+    "production-r3-parity/fulltrace-on/guest/capture.json": {
+      "kind": "external-file",
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/guest/capture.json",
+      "sha256": "86bc14cab1d0fe883a1f7f3e7511aec82a026e45133b362c3b1826b57b9d3969"
+    },
+    "bulk-retention.json": {
+      "kind": "generated-inventory",
+      "scope": "Deterministic SHA/size inventory of explicitly omitted external bulk paths, not a guest capture or runtime proof.",
+      "sha256": "3db1c51faaafb4ec6b31ca27ab15c49cc0365fefec322f28d05a6e736b07a3e9"
     }
   }
 }

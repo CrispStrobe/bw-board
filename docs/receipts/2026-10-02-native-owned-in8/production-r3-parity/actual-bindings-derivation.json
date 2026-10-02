@@ -1,0 +1,6 @@
+{
+  "oldPlanSha256": "0d9986d9fd1df9952f475539d2de07cd94464a021b2fc6b06f900ddefabb4d33",
+  "newPlanSha256": "38901ec86dab0ad1e2f44943d8f3a5ac17e64a52a842dedff4a0ffd61b9b81fe",
+  "status": "NO_EXECUTION",
+  "change": "Populate actualauditedCIbuild/relocation metadata only; executablehelpers unchanged."
+}

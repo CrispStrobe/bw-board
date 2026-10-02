@@ -1,0 +1,9 @@
+{
+  "status": "PASS_ACTUAL_CI_STATIC_RESTORATION_NO_ADDON_LOAD",
+  "checks": 167,
+  "compiledSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "sourceInputs": 103,
+  "addonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+  "scope": "RawCIinventory unchanged; derivedmanifest onlypreparedTree; derivedreceipt onlyallowedpaths/manifesthash/explicitrelocationmetadata. Frozen103/generatedoutputs/config/DSO exact; localnm/ldd/sourceadmission successful. No localbuild/addonload/guest."
+}

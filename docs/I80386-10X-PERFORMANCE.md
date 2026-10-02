@@ -29,9 +29,11 @@ private capture-OFF clock ledger effects only after the full ordered tape
 preflight; it still needs native qualification and its own paired CPU gate.
 
 The [ABI4 byte-IN experiment](I80386-NATIVE-OWNED-IN8-WIP.md) adds narrowly
-admitted PIT/PIC reads. Its production comparison is still unfinished; the
-corrected reset-profile/RAM comparison needs a successful pinned rebuild and
-fresh capture-OFF/ON execution. General native AT boot, xv6, Windows, Doom and
+admitted PIT/PIC reads. The pinned CI rebuild and fresh production capture-OFF/ON
+comparison passed the bounded fixture: 445 resumes, both PIT witness bytes,
+complete native mode parity, and 1,649,271 canonical rows. Independent ON audit
+passed 520,820 checks. The documented reset-profile/RAM policy retains raw
+states and hashes; this extension has no speed gate. General native AT boot, xv6, Windows, Doom and
 GUI admission remain separate work. No cumulative speedup is calculated from
 these different sources, fixtures, or executors.
 
