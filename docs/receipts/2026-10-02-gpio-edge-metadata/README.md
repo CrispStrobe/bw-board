@@ -1,7 +1,13 @@
-# WASM GPIO edge-metadata experiment — 2026-10-02
+# Rejected WASM GPIO edge-metadata experiment — 2026-10-02
+
+**Rejected for landing.** Hosted GPIO gains did not establish acceptable
+cross-runtime performance: all five ordinary VPS motion comparisons were
+negative. Core PR 147 is closed, unmerged; core `main` remains `43b2d62f`.
+All code and evidence are preserved. Correctness passed; performance is the
+reason not to accept the collection wrapper/cache into main.
 
 This is a targeted optimization, not an all-target or browser qualification.
-Core [PR 147](https://github.com/CrispStrobe/labwired-core/pull/147) introduces
+Unmerged core [PR 147](https://github.com/CrispStrobe/labwired-core/pull/147) proposed
 a Vec-compatible resident-device owner. WASM caches **absence** of edge hooks
 only when every resident explicitly declares stable metadata; currently only
 Button opts in. Mutable access invalidates the cache, unknown models remain
@@ -113,7 +119,7 @@ Raw originals and all twelve F0 stdout captures are retained in `rebuilt-1/`,
 The first two use the verified lint-fixed artifact; the third uses the
 byte-identical latest-head artifact below, with its own original BUILD-INFO.
 
-Latest source `77b2b54270809765466131413c049bb0a0a30d7e` additionally updates
+Intermediate source `77b2b54270809765466131413c049bb0a0a30d7e` additionally updates
 the debugger collection scanner's source-test marker to recognize the wrapper;
 it does not relax the requirement to walk every collection. Its exact rebuild
 [36966049317](https://github.com/CrispStrobe/bw-board/actions/runs/36966049317)
@@ -124,8 +130,69 @@ against [latest-head BUILD-INFO](latest-head/BUILD-INFO.json).
 Its fresh motion run still failed all five windows (**0.817207× median /
 0.811487× minimum**, EPYC 7763); [raw results](latest-head/fresh-motion-results.txt)
 and [runner](latest-head/fresh-motion-runner.txt) are preserved, publication
-skipped. All latest-head enabled native CI checks must pass before runtime
-landing. Native CI and landing status remain pending.
+skipped. The final source `b85ab59ef0fa29a78c8269c4d84cd9130d1ffaa8` completes
+the test-only debugger scanner repair (it needed both a model marker and
+recognition of the wrapper as a collection) and adds a parser regression test.
+Its [build 36968187502](https://github.com/CrispStrobe/bw-board/actions/runs/36968187502)
+passed both build legs, determinism and 101 actual WASM tests with zero skips;
+publication stayed skipped after failed fresh motion. Both targets' JS/WASM
+hashes and lengths remain byte-identical to the measured rebuilt artifact;
+actual bytes match [final BUILD-INFO](vps/test-fixed-build-info.json).
+All **18 enabled final-head core checks passed**, with four intentionally
+disabled lanes skipped; [raw verdicts](rejected-core-checks.json) are retained.
+The local core suite passed 4,239 tests with three existing ignored tests;
+resident-device/display tests passed all eight, and debugger tests passed eight
+with one existing ignored test after the parser repair. None of this waives a
+performance regression or grants realtime qualification.
+
+## Ordinary VPS repeat failures and decision
+
+VPS: Intel Xeon Processor (Skylake, IBRS, no TSX), Node **20.20.2**. These
+results must not be pooled with the hosted Node 22 measurements. Our native
+compilation jobs were finished before capture; other shared-host load remains
+uncontrolled and every process retains before/after load snapshots.
+
+| Motion capture | Baseline → candidate median | Candidate median change |
+| --- | --- | --- |
+| [primary](vps/motion-primary.json) | 0.400753× → 0.397146× | −0.90% |
+| [repeat](vps/motion-repeat.json) | 0.431559× → 0.412857× | −4.33% |
+| [third](vps/motion-third.json) | 0.319670× → 0.258768× | −19.05% |
+| [fourth](vps/motion-fourth.json) | 0.443523× → 0.421064× | −5.06% |
+| [fifth](vps/motion-fifth.json) | 0.451055× → 0.446124× | −1.09% |
+
+All fifty candidate motion windows fail 1×. The third comparison has a large
+within-candidate process difference (0.304008× versus 0.177600× medians);
+shared scheduling or JIT variability are hypotheses, **not established causes**.
+The load snapshots do not prove either cause or establish that the code is
+regression-free. Negative ordinary medians are retained, not discarded as noise.
+
+| F0 capture | GPIO baseline → candidate median | GPIO change | RAM change |
+| --- | --- | --- | --- |
+| [primary](vps/f0-primary.json) | 0.401976× → 0.430076× | +6.99% | +0.17% |
+| [repeat](vps/f0-repeat.json) | 0.399308× → 0.415972× | +4.17% | −7.30% |
+| [third](vps/f0-third.json) | 0.337760× → 0.344840× | +2.10% | +1.87% |
+
+RAM passes every window but all VPS GPIO windows fail. The second candidate
+GPIO minimum worsens substantially (0.233842× versus baseline 0.358966×);
+positive medians are not every-window improvement. The JSON files retain all
+raw windows, guest observations and verified original artifacts; all twelve
+F0 stdout captures are committed alongside them. Guest observations match in
+every comparison. Absolute rates vary between repeats even on the same host.
+
+Separate unsampled compiler diagnostics find all three Cortex-M functions at
+TurboFan: [baseline trace extract](vps/baseline-trace-extract.json),
+[candidate trace extract](vps/candidate-trace-extract.json). Their medians are
+0.471150× / 0.477253×, but these traced processes are **not** ordinary A/B or
+qualification and do not explain or clear the earlier slowdown. Raw traces
+remain locally, bound by SHA256 in the extracts.
+
+The next experiment is independent [core PR 148](https://github.com/CrispStrobe/labwired-core/pull/148),
+starting from `43b2d62f`: a default **live scalar boolean preflight** instead
+of crossing the WASM virtual-call boundary with a slice only to inspect its
+length. It retains the existing public Vec and native production scan policy,
+requires no mutation tracking or metadata lifetime cache, and must preserve
+getter effects. It is a new code-generation hypothesis, not a measured gain
+or an accepted fix for the negative VPS results above.
 
 ```sh
 env -u NODE_OPTIONS node scripts/probe-labwired-f0-ab.mjs \
@@ -144,5 +211,5 @@ does not override failed floor verdicts. See the
 App engine pins and published packages remain unchanged. No physical capture
 or hardware acknowledgement was rewritten. The generated C6 smoke-only digest
 refresh is not silicon evidence. Existing hardware re-capture debt and CP13
-remain open. Final-head verification and landing status will be recorded here
-only after their actual results are available.
+remain open. The cache-wrapper branch is preserved but **not on main**;
+no artifact or app engine was promoted.

@@ -278,3 +278,11 @@ byte-identical to that measured module and passes determinism and 101 actual
 WASM integration tests. Its own fresh motion still fails all five windows:
 **0.817207× median / 0.811487× minimum** on EPYC 7763. Publication and app pins
 remain unchanged; see the report for final CI and landing status.
+
+The cache-wrapper experiment is now **rejected for landing**, despite all 18
+final core correctness checks passing. Five ordinary VPS Node 20 motion pairs
+were negative (−0.90%, −4.33%, −19.05%, −5.06%, −1.09%). Separate traced runs
+reaching TurboFan do not explain or waive those results. Its code is preserved
+on the closed, unmerged PR 147 branch; core main is unchanged. The independent
+scalar-preflight PR 148 keeps the original Vec and live metadata queries, and
+is an unmeasured hypothesis, not an accepted speedup.
