@@ -62,3 +62,26 @@ the same original main commit; artifact hashes and explicit transformation
 provenance distinguish them. Run Node 20.20.2 and 22.23.3 in both orders with
 F0 enabled. Do not relabel failed floors, pool hosts, discard negative results,
 change hardware acknowledgements or publish this diagnostic artifact.
+
+## Targeted follow-up recipes
+
+The manual workflow accepts three closed recipes, never arbitrary flags:
+
+| Mode | Ordered optimization passes |
+| --- | --- |
+| `o3` (existing default) | `-O3` |
+| `instructions` | `optimize-instructions`, `dce`, `vacuum` |
+| `locals` | `simplify-locals`, `coalesce-locals`, `optimize-instructions`, `dce`, `vacuum` |
+
+All retain the same stripping/feature flags and pinned executable/archive.
+These targeted passes are described in the [pinned upstream pass registry](https://github.com/WebAssembly/binaryen/blob/version_123/src/passes/pass.cpp).
+The hypothesis is that narrower transformations may avoid the broad preset's
+workload tradeoffs; this is not a performance claim. Each mode must receive its
+own deterministic outputs, actual integration and repeated runtime/order timing
+evidence. Original O3 receipts do not qualify either targeted recipe.
+
+CLI callers may add `--mode instructions` or `--mode locals` to the six explicit
+source/output/hash options. Omitting mode retains O3. Unknown modes fail before
+file reads or optimizer execution; original bytes and completion-marker rules
+are unchanged. `postprocess.mode` and the full ordered flags identify new outputs.
+The recipe selector does not change the ordinary builder or enable publication.
