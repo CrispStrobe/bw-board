@@ -1,0 +1,29 @@
+  // Private, source-pinned page proof. Generic span and every board effect remain original.
+  span(raw,width,{execute=false}={}){
+   // Invalid arguments take the original validator, in its original error order.
+   if(!Number.isSafeInteger(raw)||raw<0||raw>0xffffffff||
+      !Number.isSafeInteger(width)||width<0||width>(execute?4096:16)||
+      width===0||raw>0xffffffff-(width-1)||(raw&4095)+width>4096)
+    return super.span(raw,width,{execute});
+   const m=this.machine;
+   // A different decoder/classifier is outside this proof, even if its endpoints agree.
+   if(m._decode386!==decode386||m._gate386!==gate386||this._class!==facadeClass||
+      NativeCombinedPagingRamHost.prototype._class!==hostClass||
+      !Number.isSafeInteger(m._resetRomAliasBase)||m._resetRomAliasBase<0||
+      m._resetRomAliasBase>0xffff0000||(m._resetRomAliasBase&4095)!==0||
+      m._xv6Mp||m.vgaMemory)
+    return super.span(raw,width,{execute});
+   // Effective A20 gating precedes reset-alias decode; classification excludes video first.
+   const decoded=m._decode386(raw),kind=this._class(decoded),last=decoded+width-1;
+   if((kind!==1&&kind!==2)||!Number.isSafeInteger(decoded)||decoded<0||
+      decoded>0xffffffff-(width-1)||(decoded&4095)+width>4096||last>=m.memoryBytes||
+      m._page[decoded>>>12]!==kind||
+      m._mmio.some(w=>last>=w.start&&decoded<=w.end))
+    return super.span(raw,width,{execute});
+   // Within one raw page the pinned bit-20 gate and aligned reset alias are affine.
+   // _page 1/2 proves the entire decoded page is one RAM/ROM region, without MMIO.
+   if(execute&&!(width===4096&&(raw&4095)===0&&(decoded&4095)===0&&
+      (kind===2||(kind===1&&[0x7000,0x107000].includes(decoded)&&[0x7000,0x107000].includes(raw)))))
+    return super.span(raw,width,{execute});
+   return {decoded,kind};
+  }
