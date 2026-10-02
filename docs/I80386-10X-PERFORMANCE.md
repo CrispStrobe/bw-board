@@ -19,6 +19,8 @@ pair's timing result. All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
+The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) prepares three closed-fixture cells against unchanged compiled fe1; hosted native and CPU qualification remain pending. The packet establishes no adoption, speed result or broader AT admission.
+
 ## Current checkpoint (2026-10-02)
 
 The 10× goal and physical 16 MHz 386DX calibration remain open. The existing
@@ -37,9 +39,7 @@ four-vCPU KVM Skylake VPS with Node 22.23.3, not on GitHub/Kaggle or a physical
 The subsequent [allocation candidate](I80386-NATIVE-OWNED-CLOCK-ALLOC-WIP.md)
 failed its unchanged gate: nominally 5.5614% lower mean CPU, but only five of
 seven pairs favorable. It is not adopted. Nested timing instrumentation does
-not establish removable CPU shares. The next structural hypothesis folds
-private capture-OFF clock ledger effects only after the full ordered tape
-preflight; it still needs native qualification and its own paired CPU gate.
+not establish removable CPU shares. The subsequent [bulk-clock trial](I80386-OWNED-CLOCK-BULK-RESULTS.md) failed at 5.4576% nominal mean reduction with five of seven favorable pairs; the [dispatch trial](I80386-OWNED-DISPATCH-CPU-RESULTS.md) failed at 1.719745% with four of seven. Neither is adopted.
 
 The [ABI4 byte-IN experiment](I80386-NATIVE-OWNED-IN8-WIP.md) adds narrowly
 admitted PIT/PIC reads. The pinned CI rebuild and fresh production capture-OFF/ON
