@@ -1,0 +1,23 @@
+{
+  "status": "READ_ONLY_ARCHITECTURE_REVIEW_PRIVATE_REALM_RECOMMENDED",
+  "heldH4Source": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "dispatch": [
+    "facade read/write -> _memory -> _call/span/_generation -> host _class and machine _decode386/_read386/_write386 -> _read/_write",
+    "outPort -> _out386 -> _out -> _catchUpChips/_advanceChips/_wakeHorizon -> chip advance/advanceMs/nextWake/nextWakeMs",
+    "PIT advance -> Counter advance/_setOut -> hooks.onOutput -> machine _pitOutput -> PIC setIRQ/_serviceable/_priorityOrder/_updateInt; intActive getter",
+    "PIC PIO write -> _writeData/_writeCommand/_ocw2 and nested serviceability",
+    "8042 writeData/writeCommand -> _publish -> A20 callback and PIC lines",
+    "inspect -> combinedBoardState -> chip getState/counter getState plus mutable builtins"
+  ],
+  "minimalSafeScope": "pristine private Worker owning machine/config/ROM/callbacks; eventual native addon and CPU in same worker, callbacks local; IPC parent resume/input/snapshot boundaries only",
+  "constraints": [
+    "primitive serialized protocol and bounded complete batch preflight",
+    "no caller board/machine/objects/functions/hooks or shared buffers",
+    "fixed worker path and execArgv; import closure provenance",
+    "closed lease rejects inspection/stage/settlement/close while pending",
+    "detached snapshot copies and fail-closed worker termination/error lifecycle",
+    "source-only replay proof reconstructs host journal/board state, not independently executing native CPU",
+    "generic H4 methods/prototypes remain unchanged"
+  ],
+  "guestBuildBenchmarkExecuted": false
+}
