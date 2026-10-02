@@ -158,6 +158,7 @@ jobs:
       - name: Adapter, bridge and round trip, against the freshly built engine
         env:
           LABWIRED_WASM: ${{ github.workspace }}/lw/nodejs
+          LABWIRED_WORD_REQUIRED: '1'
         run: |
           set -euo pipefail
           # The round-trip suite is the one that runs a real gallery bench
@@ -179,7 +180,8 @@ jobs:
                       test/pad-drive-parity.test.mjs \
                       test/labwired-firmware-only.test.mjs \
                       test/labwired-microbit-matrix.test.mjs \
-                      test/labwired-input-boundary.test.mjs 2>&1 | tee out.txt
+                      test/labwired-input-boundary.test.mjs \
+                      test/labwired-word-admission.test.mjs 2>&1 | tee out.txt
           # A suite that does not RUN is not a suite that passes, and these skip
           # themselves whenever LABWIRED_WASM or the ARM toolchain is missing —
           # which in this job would mean the wiring broke, not that there is
@@ -197,7 +199,9 @@ jobs:
           fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)
           skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)
           echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
-          [ "${tests:-0}" -ge 88 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          # The prior suite executed 101 tests; seven actual-WASM same-PC word
+          # dispatch cases raise the count floor to 108. None may silently skip.
+          [ "${tests:-0}" -ge 108 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
           [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
           [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 
