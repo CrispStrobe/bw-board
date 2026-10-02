@@ -1,3 +1,20 @@
+2026-10-02 Failed live solve instrument refusal — CLAIM, Codex bwcx `/root`.
+Isolated worktree wt-board-duplicate-rail-current-20261002, new branch
+lane/failed-solve-instrument-refusal, exact base
+e56eff3d2065b508c765cb621b72e5efe2f947c3. Four-path envelope: this row;
+src/board.js instrument-only named refusal and sticky capture validity;
+existing test/vsource-ground-reference.test.mjs; new
+spec-updates/failed-solve-instruments.md. Two independent parallel ideal
+1 V sources reproduce converged:false with successful 0 V/0 A meter and
+scope readings, including installed CUI batch/watch CLI. Precision refuses.
+Do not solve arbitrary ideal-source cycles or invent current sharing. Protect
+voltage/current meters, branch current and analog scope capture from explicitly
+failed solutions, including matching fractional transient results and invalid
+history intervals. Preserve valid zero, power-off current, digital channels,
+unknown-current fallbacks on valid solves, general nodeVoltage consumers and
+unrelated exception propagation. No solver/tolerance, CPU, workflow/package,
+pin, CUI/Lite/corpus or deployment edits. Exact package adoption follows later.
+
 2026-10-02 Duplicate supply-symbol current attribution — DONE, Codex bwcx `/root`.
 Isolated worktree wt-board-duplicate-rail-current-20261002, branch
 lane/duplicate-rail-current, exact base
