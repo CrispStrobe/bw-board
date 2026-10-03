@@ -54,7 +54,7 @@ adoption, full AT/Windows/Doom10x or broad CPU-model parity.
 
 The inherited fixture controls and one new hosted pending-audit refusal are written: pending refusal, exact schedule, all166 and
 counter mutations, full board/RAM/PIO/JS scope, metric separation, file-role guards
-and one tiny Python sleeper timeout with detached descendant. The e05 source stage passed ten pure controls. The current pin/audit derivative controls remain unrun.
+and one tiny Python sleeper timeout with detached descendant. The e05 source stage passed ten pure controls. The current pin/audit derivative passed all ten bounded pure controls; raw evidence is retained in /tmp/native-cold-paired-qualified-pure-controls-20261003.
 No hardware machine is constructed by the controls. Source freeze and independent
 review precede even the lightweight control execution requested for this draft.
 
@@ -67,7 +67,7 @@ rewriting them, then supplies a hashed derived ready binding to the paired paren
 One comparison is chosen per dispatch; no prior semantic arm is rerun by setup.
 Process cgroup quota/stat files are read from the actual unified cgroup domain;
 root hierarchy files are separately labelled and may not describe the process.
-No current hosted setup or paired child has been run; the new source-control suite remains unrun.
+No current hosted setup or paired child has been run; the new source-control suite passed.
 
 Only the setup child may receive the read-only GitHub API credential; every
 performance child strips it. No credential values are printed or retained.
