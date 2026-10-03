@@ -10,7 +10,7 @@ def derive_builder(raw):
   assert s.count(old)==count,'exact build helper seams: '+old
   s=s.replace(old,new);edits.append((old,new,count))
  replace('bochs-cpu3-native-cold-bios/identity.mjs','bochs-cpu3-native-ram-bootstrap/build-identity.mjs',3)
- replace('cold-bios','ram-bootstrap',5)
+ for old,new in [('ci-build-i80386-native-cold-bios.py','ci-build-i80386-native-ram-bootstrap.py'),('i80386-native-cold-bios-build.yml','i80386-native-ram-bootstrap-build.yml'),('prepare-bochs-cpu3-native-cold-bios.mjs','prepare-bochs-cpu3-native-ram-bootstrap.mjs'),('bw.native-cold-bios-build-context.v1','bw.native-ram-bootstrap-build-context.v1'),('bw.native-cold-bios-build-receipt.v1','bw.native-ram-bootstrap-build-receipt.v1')]:replace(old,new,1)
  replace('COLD_BIOS','RAM_BOOTSTRAP',2)
  replace('coldProfile','ramProfile',2)
  inverse=s
