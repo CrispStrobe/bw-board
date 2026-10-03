@@ -1,0 +1,20 @@
+{
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "officialZipSha256": "98063e7c7a429408d02096b0d9ac42be57114ec16d940d2d19d05b8692af3156",
+  "sources": {
+    "cpu/shift32.cc": {
+      "archiveMember": "cold-bios-build-evidence/prepared-source.tar.gz",
+      "tarMember": "bochs/cpu/shift32.cc",
+      "sha256": "21cf4409012e6da047c0566653c6c3027b99f460344b35011ead98b0f2bbbc5d",
+      "bytes": 14526
+    },
+    "src/experimental/i80386.js": {
+      "archiveMember": "cold-bios-build-evidence/frozen-source.tar.gz",
+      "tarMember": "src/experimental/i80386.js",
+      "sha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed",
+      "bytes": 133968
+    }
+  },
+  "authority": "Intel SDM Vol2B SAL/SAR/SHL/SHR Flags Affected https://cdrdv2-public.intel.com/782151/253667-sdm-vol-2b.pdf",
+  "observed": "Q4709 SHL EAX16 raw OF differs; only exact reviewed lifetime owned"
+}

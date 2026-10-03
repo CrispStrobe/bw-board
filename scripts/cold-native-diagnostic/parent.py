@@ -194,7 +194,7 @@ def main(armed):
         event=json.loads(ordinary(Path(os.environ['GITHUB_EVENT_PATH'])));require(os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch' and before['toolingHead']==os.environ['GITHUB_SHA'],'trusted manual tooling head')
         for n,h in before['toolingFiles'].items():require(digest(git(ROOT,'show',before['toolingHead']+':'+n))==h,'tooling Git blob')
         packet=out/'source-packet';packet.mkdir()
-        for role,root,map_ in [('compiled125',W,before['compiledFiles']),('driver52',D,before['driverFiles']),('tooling',ROOT,before['toolingFiles'])]:
+        for role,root,map_ in [('compiled125',W,before['compiledFiles']),('driver53',D,before['driverFiles']),('tooling',ROOT,before['toolingFiles'])]:
             for n,h in map_.items():
                 data=ordinary(root/n);require(digest(data)==h,'source packet bytes');target=packet/role/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
         zip_path=download(c,out)
