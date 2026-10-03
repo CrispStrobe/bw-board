@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {INPUTS} from '../scripts/oracle-census.mjs';
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const ordinary = read('test/labwired-f0-gpio-profile.test.mjs');
 const diagnostic = read('test/labwired-f0-gpio-window-profile.test.mjs');
@@ -43,4 +44,15 @@ test('workflow freezes runtimes/repeats, preserves failed originals and cannot p
     assert(script.includes('const result = {flags: []'));
     assert(script.indexOf('Bind every raw profile before any attribution') < script.indexOf('summarizeCpuProfile(raw)'));
     assert(script.includes('receipt.error = error.message'));
+});
+test('artifact and opt-in capture absence are registered, not hidden as an untriaged skip', () => {
+    const file = 'test/labwired-f0-gpio-window-profile.test.mjs';
+    assert(INPUTS.find(row => row.id === 'labwired-wasm').gates.includes(file));
+    const row = INPUTS.find(row => row.id === 'labwired-warmed-window-profile');
+    assert.equal(row.env, 'LABWIRED_WINDOW_PROFILE_OUT');
+    assert.equal(row.envRole, 'capture-output');
+    assert.deepEqual(row.gates, [file]);
+    assert.equal(row.ciAvailable, false);
+    assert(row.what.includes('separate unchanged process'));
+    assert(row.obtain.includes('activation does not authenticate'));
 });
