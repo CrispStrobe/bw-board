@@ -126,8 +126,22 @@ class HostedPendingTests(unittest.TestCase):
     def test_owned_pending_audit_denies_before_setup_network_or_process(self):
         import importlib.util
         spec=importlib.util.spec_from_file_location('paired_setup_pending',Path(__file__).parent/'setup-entry.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+        raw=(Path(__file__).parent/'hosted-contract.json').read_bytes();contract=json.loads(raw)
         with unittest.mock.patch.object(m.subprocess,'check_output',side_effect=AssertionError('must not spawn metadata')):
-            with self.assertRaisesRegex(ValueError,'PENDING actual semantic audit'):m.pending_guard()
+            actual,path=m.pending_guard();self.assertEqual(actual['qualificationArtifact']['runId'],37126251298)
+            pending=copy.deepcopy(contract);pending['status']='PENDING_ACTUAL_AUDIT'
+            original=m.Path.read_bytes
+            def pending_bytes(path):return json.dumps(pending).encode() if path.name=='hosted-contract.json' else original(path)
+            with unittest.mock.patch.object(m.Path,'read_bytes',pending_bytes):
+                with self.assertRaisesRegex(ValueError,'PENDING actual semantic audit'):m.pending_guard()
+            corrupt=copy.deepcopy(contract);corrupt['nodeSha256']='0'*64
+            def corrupt_bytes(path):return json.dumps(corrupt).encode() if path.name=='hosted-contract.json' else original(path)
+            with unittest.mock.patch.object(m.Path,'read_bytes',corrupt_bytes):
+                with self.assertRaisesRegex(ValueError,'runtime Node'):m.pending_guard()
+        spec=importlib.util.spec_from_file_location('paired_hosted_resource',Path(__file__).parent/'hosted.py');hosted=importlib.util.module_from_spec(spec);spec.loader.exec_module(hosted)
+        bounds=hosted.setup_bounds(contract);self.assertEqual(bounds['fileBytes'],32<<20);self.assertGreater(contract['qualificationArtifact']['zipBytes'],16<<20)
+        too_large=copy.deepcopy(contract);too_large['qualificationArtifact']['zipBytes']=(32<<20)+1
+        with self.assertRaisesRegex(ValueError,'setup file cap'):hosted.setup_bounds(too_large)
         source=(Path(__file__).parents[2]/'.github/workflows/i80386-cold-paired-performance.yml').read_text()
         self.assertIn('default: false',source);self.assertIn('m.pending_guard()',source)
         self.assertNotIn('qualify.py enabled',source)

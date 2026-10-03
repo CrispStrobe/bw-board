@@ -17,6 +17,7 @@ def pending_guard():
     require(audit['targetN']==c['targetN'] and audit['targetQ']==c['targetQ'] and set(audit['qualifiedArms'])=={'plain-JS','native-oneQ','native-batched'},'actual three-arm extent')
     require(audit['workers']=={k:{'revision':v['revision'],'sourceSha256':v['sourceSha256']} for k,v in c['workers'].items()} and audit['captureSha256']==c['captureSha256'],'same frozen workers/capture')
     require(audit['officialArtifact']==c['qualificationArtifact'],'exact official semantic artifact provenance')
+    require(audit['addonSha256']==c['addonSha256'] and audit['nodeSha256']==c['nodeSha256'],'same authenticated compiled addon and runtime Node')
     return c,p
 
 def main(out,node):
