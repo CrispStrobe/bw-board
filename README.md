@@ -297,6 +297,20 @@ runs stop at instruction/address barriers, which a larger cap does not remove.
 Different hosted CPUs do not establish Node-version causality or significance.
 See [all cached-run64 results and original receipts](docs/receipts/2026-10-03-wasm-cached-run64/README.md).
 
+The isolated ordinary scalar LDR/STR word-dispatch experiment completed four
+more hosted pairs without stacking earlier variants. GPIO gains **3.46–5.12%**
+in the Node 20 pairs but loses **1.36–3.59%** in the Node 22 pairs; candidate
+GPIO fails the ≥1× floor in all four. Motion gains **2.79%** once but loses
+**1.31–3.37%** in the other three; RAM is mixed (**−1.02% to +1.44%**).
+Timed-source native verification, independent WASM determinism and **108 actual
+integrations** pass, but fresh motion is only **0.793103× median / 0.791293×
+minimum**. Separate supplemental differential tests strengthen fault/reset,
+state and observer proofs without changing the timed production source. The
+initial scanner-ratchet failure is also preserved. This candidate remains
+**unmerged/unqualified**; production, app pins and physical acknowledgements
+are unchanged. Different hosted CPUs do not establish Node-version causality.
+See [all scalar word-dispatch results and original receipts](docs/receipts/2026-10-03-wasm-scalar-word-dispatch/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

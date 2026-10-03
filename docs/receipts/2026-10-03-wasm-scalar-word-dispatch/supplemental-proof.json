@@ -1,0 +1,113 @@
+{
+  "candidate": "ce3021331b8cd0ee623e0d50ed43562227f3bdcd",
+  "proof": "c932c9921b25587e13f8ddd096847d24d4d9404b",
+  "run": 37099776518,
+  "native": {
+    "conclusion": "success",
+    "headSha": "c932c9921b25587e13f8ddd096847d24d4d9404b",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T05:32:12Z",
+        "conclusion": "success",
+        "databaseId": 111136882506,
+        "name": "correctness",
+        "startedAt": "2026-10-03T05:25:38Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T05:25:39Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T05:25:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:25:56Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T05:25:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:25:56Z",
+            "conclusion": "success",
+            "name": "Preserve the real main merge-base for bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T05:25:56Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:26:06Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T05:25:56Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:32:09Z",
+            "conclusion": "success",
+            "name": "Verify canonical dispatch, guards and full core regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T05:26:06Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:32:09Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T05:32:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:32:09Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T05:32:09Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37099776518/job/111136882506"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37099776518"
+  },
+  "testOnlyChanges": [
+    "crates/core/src/cpu/cortex_m/scalar_word_dispatch_tests.rs"
+  ],
+  "productionEquivalence": [
+    {
+      "path": "crates/core/src/cpu/cortex_m.rs",
+      "sha256": "f3206331307cf7c96fda79d0214f256c58561c474212141824e42b8889ca9c58"
+    },
+    {
+      "path": "crates/core/src/tests/cortex_m_memory_contract.rs",
+      "sha256": "4411fb3b8225ff00116a18ab8974142b9b3855afc1b09449c5427cb65143610c"
+    },
+    {
+      "path": ".github/workflows/wasm-scalar-word-dispatch.yml",
+      "sha256": "c9236a3581a9c1b76213a32df31b73e260313974d83783d13e321ac392615fb1"
+    }
+  ],
+  "requiredNames": [
+    "scalar_word_dispatch_exhaustive_halfwords_match_original_scalar_execution",
+    "scalar_word_dispatch_ram_mmio_bounds_and_errors_match_original_path",
+    "scalar_word_dispatch_it_observers_debug_and_wfe_keep_canonical_guards",
+    "scalar_word_dispatch_wide_entries_are_read_only_refusals",
+    "scalar_word_dispatch_wired_fault_escalation_and_lockup_match_original",
+    "scalar_word_dispatch_wired_reset_ends_batch_on_aircr_store",
+    "scalar_word_dispatch_batch_gpio_bus_observers_see_live_cycles"
+  ],
+  "library": {
+    "passed": 4243,
+    "failed": 0,
+    "ignored": 3
+  },
+  "timedCandidateUnchanged": true,
+  "hardwareAcknowledgementChanges": false
+}

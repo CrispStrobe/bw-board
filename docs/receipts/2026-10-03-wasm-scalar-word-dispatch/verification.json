@@ -1,0 +1,99 @@
+{
+  "source": "ce3021331b8cd0ee623e0d50ed43562227f3bdcd",
+  "nativeRun": 37098864660,
+  "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+  "toolRef": "test/wasm-live-word-dispatch-20261002",
+  "hostedOnly": true,
+  "publication": false,
+  "appPinChanges": false,
+  "startedAt": "2026-10-03T05:09:51.443Z",
+  "nativeCorrectness": {
+    "conclusion": "success",
+    "headSha": "ce3021331b8cd0ee623e0d50ed43562227f3bdcd",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T05:14:57Z",
+        "conclusion": "success",
+        "databaseId": 111134262788,
+        "name": "correctness",
+        "startedAt": "2026-10-03T05:08:40Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T05:08:41Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T05:08:41Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:08:59Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T05:08:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:09:00Z",
+            "conclusion": "success",
+            "name": "Preserve the real main merge-base for bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T05:08:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:09:10Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T05:09:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:14:55Z",
+            "conclusion": "success",
+            "name": "Verify canonical dispatch, guards and full core regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T05:09:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:14:55Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T05:14:55Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:14:55Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T05:14:55Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37098864660/job/111134262788"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37098864660"
+  },
+  "dispatchAttemptedAt": "2026-10-03T05:15:16.717Z",
+  "buildInputs": {
+    "ref": "ce3021331b8cd0ee623e0d50ed43562227f3bdcd",
+    "publish": false,
+    "qualify_motion": true
+  },
+  "dispatchCommandCompletedAt": "2026-10-03T05:15:18.693Z",
+  "buildRun": {
+    "createdAt": "2026-10-03T05:15:18Z",
+    "databaseId": 37099235200,
+    "headSha": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+    "status": "in_progress",
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37099235200"
+  }
+}

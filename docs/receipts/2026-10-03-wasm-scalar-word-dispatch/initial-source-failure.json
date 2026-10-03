@@ -1,0 +1,98 @@
+{
+  "source": "4b5a64d103692940861c2c68af2841cacf76450d",
+  "run": 37098198326,
+  "native": {
+    "conclusion": "failure",
+    "headSha": "4b5a64d103692940861c2c68af2841cacf76450d",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T05:02:35Z",
+        "conclusion": "failure",
+        "databaseId": 111132335141,
+        "name": "correctness",
+        "startedAt": "2026-10-03T04:56:33Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T04:56:35Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T04:56:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:56:50Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T04:56:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:56:50Z",
+            "conclusion": "success",
+            "name": "Preserve the real main merge-base for bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T04:56:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:56:59Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T04:56:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:02:34Z",
+            "conclusion": "failure",
+            "name": "Verify canonical dispatch, guards and full core regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T04:56:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:02:34Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T05:02:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T05:02:34Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T05:02:34Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37098198326/job/111132335141"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37098198326"
+  },
+  "focusedCases": {
+    "passed": 4,
+    "failed": 0
+  },
+  "fullLibrary": {
+    "passed": 4237,
+    "failed": 1,
+    "ignored": 3
+  },
+  "realIntegrationsReached": false,
+  "failure": "Memory-contract scanner incorrectly stopped at a test-only field, hiding production reset-vector reads. Allowlist unchanged; tightened test-module boundary plus two scanner regressions.",
+  "initialWasmBuildsDispatched": 0,
+  "initialBenchmarksDispatched": 0,
+  "replacement": {
+    "source": "ce3021331b8cd0ee623e0d50ed43562227f3bdcd",
+    "run": 37098864660
+  },
+  "dispatchPrototypeUnchanged": true,
+  "hardwareAcknowledgementChanges": false
+}
