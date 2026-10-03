@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "scripts/prepare-bochs-cpu3-native-cold-bios.mjs",
+    "--prepare",
+    "/home/runner/work/_temp/cold-bios-build-prepared"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 1.5187839709999977,
+  "streams": {
+    "stdout": {
+      "bytes": 28304,
+      "sha256": "42769b5d8b266ed0d29cbc4d5e40c94d12e090c1b2d86bfdde0785ee7b3a7717"
+    },
+    "stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    }
+  }
+}

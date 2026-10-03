@@ -67,3 +67,14 @@ int main(){
  const run=spawnSync(binary,[],{encoding:'utf8',timeout:3000});assert.equal(run.status,0,run.stderr);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+test('exact cold ROM-data C helper admits unvisited bytes and denies invalid domains',()=>{
+ const d=deriveColdBiosRuntime();const edit=d.edits.find(e=>e.label==='cold authenticated ROM data independent of execute cache');assert.ok(edit);assert.ok(d.bytes.toString().includes(edit.next));
+ const dir=mkdtempSync(join(tmpdir(),'cold-rom-data-'));try{
+ const source=join(dir,'control.cc'),binary=join(dir,'control');
+ writeFileSync(source,`#include <cstdint>\n#include <cstring>\n#include <cstdio>\n#include <cassert>\n#include <initializer_list>\nstatic uint8_t bw_direct_rom[65536];\n${edit.next}\nint main(int argc,char**argv){assert(argc==2);FILE*f=fopen(argv[1],"rb");assert(f);assert(fread(bw_direct_rom,1,65536,f)==65536);assert(fgetc(f)==EOF);fclose(f);\nuint8_t data[16];memcpy(data,bw_direct_rom+0x8000,16);assert(bw_rom_observed(0xf8000,data,16));assert(bw_rom_observed(0xff8000,data,16));\ndata[3]^=1;assert(!bw_rom_observed(0xf8000,data,16));data[3]^=1;\nassert(!bw_rom_observed(0xf8000,nullptr,1));assert(!bw_rom_observed(0xf8000,data,0));assert(!bw_rom_observed(0xf8000,data,17));\nfor(uint32_t address:{0xeffffU,0x100000U,0xfeffffU,0x1000000U,0xffff0000U,0xffffffffU})assert(!bw_rom_observed(address,data,1));\nmemcpy(data,bw_direct_rom+65535,1);assert(bw_rom_observed(0xfffff,data,1));assert(bw_rom_observed(0xffffff,data,1));assert(!bw_rom_observed(0xfffff,data,2));assert(!bw_rom_observed(0xffffff,data,2));\nmemcpy(data,bw_direct_rom+4095,1);assert(bw_rom_observed(0xf0fff,data,1));assert(!bw_rom_observed(0xf0fff,data,2));\nuint8_t attemptedWrite=data[0]^1;assert(!bw_rom_observed(0xf0fff,&attemptedWrite,1));assert(bw_rom_observed(0xf0fff,data,1));return 0;}`);
+
+ const compile=spawnSync('g++',['-std=c++11','-Wall','-Wextra','-Werror',source,'-o',binary],{encoding:'utf8',timeout:10000});assert.equal(compile.status,0,compile.stderr);
+ const rom=new URL('../roms/free-at-bios/BIOS-bochs-legacy',import.meta.url).pathname;
+ const run=spawnSync(binary,[rom],{encoding:'utf8',timeout:3000});assert.equal(run.status,0,run.stderr);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

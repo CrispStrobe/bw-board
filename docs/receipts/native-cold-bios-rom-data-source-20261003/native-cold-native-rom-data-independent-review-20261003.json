@@ -1,0 +1,8 @@
+{
+  "status": "PASS_FROZEN_COLD_ROM_DATA_SOURCE_REVIEW",
+  "head": "59219a30941286fbd2d27bf4f69a38402451c4f2",
+  "controls": 6,
+  "currentGitFilesExact": 3,
+  "beforeAfterEqual": true,
+  "scope": "Exact tiny C helper compiled and executed; no Bochs/core/addon/guest. New compiled125 source and new artifact required; original a6 provenance remains immutable."
+}

@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as d:
 });
 test('closed workflow only triggers own build paths and retains failures without guests',()=>{
  const s=readFileSync(new URL('../.github/workflows/i80386-native-cold-bios-build.yml',import.meta.url),'utf8');
- const paths=s.slice(s.indexOf('    paths:'),s.indexOf('\npermissions:'));assert.equal((paths.match(/      - /g)||[]).length,2);assert.ok(paths.includes('ci-build-i80386-native-cold-bios.py'));assert.ok(!paths.includes('reference'));
+ const paths=s.slice(s.indexOf('    paths:'),s.indexOf('\npermissions:'));assert.deepEqual([...paths.matchAll(/      - '([^']+)'/g)].map(m=>m[1]),['.github/workflows/i80386-native-cold-bios-build.yml','scripts/ci-build-i80386-native-cold-bios.py','scripts/bochs-cpu3-native-cold-bios/runtime.mjs','scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs','test/i80386-cold-bios-runtime-source.test.mjs']);
  assert.ok(s.includes('if: always()'));assert.ok(s.includes('cancel-in-progress: false'));assert.ok(s.includes('node-version: 22.23.3'));assert.ok(s.includes('libnode-dev'));
  const code=readFileSync(helper,'utf8');assert.ok(!code.includes('scripts/run-i80386'));assert.ok(!code.includes('ldd'));assert.ok(code.includes("run('nm'"));assert.ok(code.includes("run('readelf'"));assert.ok(code.includes("'addonLoaded':False"));
 });

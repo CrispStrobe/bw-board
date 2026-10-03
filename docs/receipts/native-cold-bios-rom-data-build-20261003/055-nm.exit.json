@@ -1,0 +1,21 @@
+{
+  "command": [
+    "nm",
+    "-D",
+    "--defined-only",
+    "/home/runner/work/_temp/cold-bios-build-prepared/bochs/bw_direct.node"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 0.06610290800000485,
+  "streams": {
+    "stdout": {
+      "bytes": 188038,
+      "sha256": "ab0cd25d211bfd1e4f12f326f07e388e71466731f7112fd104697437873a98a6"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}
