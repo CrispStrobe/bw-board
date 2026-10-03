@@ -50,7 +50,7 @@ jobs:
           import {execFileSync} from 'node:child_process';
           import {selectEdgeWat} from './scripts/lib/wasm-edge-inspection.mjs';
           const bytes = readFileSync(process.env.RUNNER_TEMP + '/production.wat');
-          const receipt = {diagnosticOnly: true, toolCommit: execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), buildRun: '36915940413', coreCommit: '43b2d62f5a0fa24ae0b38a645069f5aaa78af685', wasmSha256: '7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d', fullWat: {bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex')}, ...selectEdgeWat(bytes.toString('utf8'))};
+          const receipt = {diagnosticOnly: true, toolCommit: execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), buildRun: '36915940413', coreCommit: '43b2d62f5a0fa24ae0b38a645069f5aaa78af685', wasmSha256: '7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d', fullWat: {bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex')}, ...selectEdgeWat(bytes.toString('utf8'), {inspectVtables: true})};
           writeFileSync('evidence/selected-callees.json', JSON.stringify(receipt, null, 2) + '\n', {flag: 'wx'});
           NODE
       - name: Preserve inspection even on failure (never engine bytes)

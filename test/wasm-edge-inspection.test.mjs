@@ -30,3 +30,16 @@ test('unnamed numeric WABT type annotations are retained', () => {
     const result = selectEdgeWat(fixture.replace('(type $t (func', '(type (;2;) (func').replaceAll('(type $t)', '(type 2)'));
     assert.deepEqual(result.types, ['  (type (;2;) (func (param i32)))']);
 });
+test('static slot 48 candidates retain words and resolved neighbor symbols', () => {
+    const bytes = Buffer.alloc(56);
+    for (const [slot, value] of [[3, 2], [4, 3], [12, 1], [13, 4]]) bytes.writeUInt32LE(value, slot * 4);
+    const encoded = [...bytes].map(byte => '\\' + byte.toString(16).padStart(2, '0')).join('');
+    const wat = fixture.replaceAll('$input_channels', '$DeclarativeLogicDevice.input_channels')
+        .replace('func $DeclarativeLogicDevice.input_channels)', 'func $DeclarativeLogicDevice.input_channels $id $as_any $service)')
+        .replace('"secret"', '"' + encoded + '"');
+    const result = selectEdgeWat(wat, {inspectVtables: true});
+    assert.equal(result.vtableCandidates.length, 1);
+    assert.equal(result.vtableCandidates[0].slots[12].symbol, '$DeclarativeLogicDevice.input_channels');
+    assert.equal(result.vtableCandidates[0].slots[13].symbol, '$service');
+    assert.throws(() => selectEdgeWat(wat.replace(encoded, '\\00'), {inspectVtables: true}), /No static/);
+});
