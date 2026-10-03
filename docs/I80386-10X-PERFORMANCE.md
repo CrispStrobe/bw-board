@@ -10,7 +10,9 @@
 
 [Baseline profiling preparation](I80386-OWNED-BASELINE-PROFILE-WIP.md) records the source-only preparation stage after the failed bulk gate. The subsequent [actual baseline profiling results](I80386-OWNED-BASELINE-PROFILE-RESULTS.md) retain one phase-bounded fixture diagnostic; it is not a speed gate or a new speed result.
 
-The separate [fixed 8042 self-test source proposal](../scripts/bochs-cpu3-native-owned-8042/README.md) passes 106 device/provider controls and a 28-step JavaScript ROM probe. C/native initializer and ROM admission remain pending; this establishes no native qualification, broader AT admission or speed result.
+The earlier [fixed 8042 self-test source proposal](../scripts/bochs-cpu3-native-owned-8042/README.md) passes 106 device/provider controls and a 28-step JavaScript ROM probe. That source stage established no native qualification, broader AT admission or speed result.
+
+The subsequent [fixed 8042 native qualification](I80386-OWNED-8042-NATIVE-RESULTS.md) passes its first pinned build and separate OFF/ON cells: all 166 native words at every instruction, complete board state, eight PIO events and raw whole RAM agree. This qualifies the 28-instruction self-test fixture only, with no performance result or broader native AT admission.
 
 The [private uniform-page span preparation](receipts/2026-10-02-owned-span-source-preparation/README.md) records the stage before differential controls ran against unchanged fe1. The subsequent [hosted source controls passed](I80386-OWNED-SPAN-SOURCE-RESULTS.md); this source-only evidence establishes no adoption, speed result or broader AT admission.
 
@@ -25,7 +27,11 @@ was run and no speed benefit is claimed.
 
 The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). Its separate [paired CPU gate has now failed](I80386-OWNED-SPAN-CPU-RESULTS.md); this establishes no adoption or broader AT admission.
 
-## Current checkpoint (2026-10-02)
+## Current checkpoint (2026-10-03)
+
+The [fixed 8042 native self-test](I80386-OWNED-8042-NATIVE-RESULTS.md) now passes its first reviewed build and both native modes. Its 28-instruction fixture advances device admission; the 10× speed goal and broader native BIOS/AT boot remain open.
+
+## Previous checkpoint (2026-10-02)
 
 The 10× goal and physical 16 MHz 386DX calibration remain open. The existing
 JavaScript AT executor has bounded [Windows 3.11 enhanced-mode evidence](I80386-WINDOWS-ENHANCED-PROBE.md),
