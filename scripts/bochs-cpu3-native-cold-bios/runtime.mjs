@@ -1,6 +1,7 @@
 /** Cold BIOS C source preparation only: no initializer/build/guest is executed here. */
 import {deriveColdBiosRepFragment} from './runtime-rep.mjs';
 import {cHelpers} from './fetch-policy.mjs';
+import {coldRomObservedHelper} from './rom-data-policy.mjs';
 import {authenticateBiosRepPolicy} from './rep-policy.mjs';
 import {replacement,sha256} from '../bochs-cpu3-native-owned-clock/derive.mjs';
 export const coldNativeProfile=Object.freeze({romSha256:'6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac',totalNativeTicks:400000,totalQuanta:400000,checkpointCs:0xf000,checkpointEip:0xe16,abiVersion:4,status:'SOURCE_ONLY_NO_BUILD_OR_GUEST'});
@@ -8,6 +9,10 @@ export function deriveColdBiosRuntime(){
  authenticateBiosRepPolicy();const base=deriveColdBiosRepFragment();let s=base.bytes.toString();const edits=[];
  const once=(old,next,label)=>{s=replacement(s,old,next,label);edits.push({old,next,label});};
  once('if(strcmp(sha,"25c242668fb1e0cbf940a35045a5e1173d992232766a4cbdb6a369ef3929a939"))return 0;',`if(strcmp(sha,"${coldNativeProfile.romSha256}"))return 0;`,'unmodified cold BIOS initializer');
+ once(`static bool bw_rom_observed(uint32_t address,const uint8_t *bytes,unsigned length){
+  for(unsigned i=0;i<bw_page_count;++i)if(bw_pages[i].epoch==bw_mapping_epoch&&bw_pages[i].kind==2&&bw_pages[i].decoded==(address&~4095U))return memcmp(bw_pages[i].bytes+(address&4095),bytes,length)==0;
+  return false;
+}`,coldRomObservedHelper,'cold authenticated ROM data independent of execute cache');
  const caps=[
  '    if(bw_slice_ticks>=bw_native_budget||bw_owned.n>=160000)bw_slice_fail("owned-N-cap");',
  '    if(bw_slice_quanta>=bw_quantum_budget||bw_owned.q>=150000||bw_owned.debt>=bw_owned.deadline)bw_slice_fail("owned-Q-cap-or-due");',
