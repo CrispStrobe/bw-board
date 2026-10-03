@@ -1,0 +1,17 @@
+{
+  "schema": "lossless-source-controls.v1",
+  "files": {
+    "r2-exit.json": "0df58320352c14e9ca0d170d1fd6bc957e3e0241dfa1291550bfb353a150317f",
+    "attempt1-exit.json": "5dc09daf20e287eba7fdb4077b113bc73f4e7e0fc0b24114b3e9ad33217732d9",
+    "r2-after.json": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946",
+    "executed-scope-note.txt": "c8211162507f21062e131d95a039c3dd2f9e9eea425d98233999cb8cd2e1c82a",
+    "r2-stdout": "5fa1d504649d9eac76f8b70af545f71096c57b3c06ad5262a807c95199990ad1",
+    "attempt1-after.json": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946",
+    "r2-before.json": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946",
+    "r2-stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "attempt1-stderr": "125b8175af7baead97987218fc1a8a899655ecdf97af46eb970b5082930e843d",
+    "attempt1-stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "origins.json": "9421ab420d5189c3c35378ea9ee93e211751b9a31d5732a4fe2920829e83327b",
+    "attempt1-before.json": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946"
+  }
+}

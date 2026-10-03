@@ -1,0 +1,47 @@
+{
+  "executed-scope-note.txt": {
+    "kind": "pre-edit source note",
+    "source": "/tmp/bw-cold-native-runtime-source-20261003/scripts/bochs-cpu3-native-cold-bios/NATIVE-SOURCE-PREPARATION.md",
+    "sha256": "c8211162507f21062e131d95a039c3dd2f9e9eea425d98233999cb8cd2e1c82a"
+  },
+  "attempt1-before.json": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-20261003/before.json",
+    "sha256": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946"
+  },
+  "attempt1-after.json": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-20261003/after.json",
+    "sha256": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946"
+  },
+  "attempt1-exit.json": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-20261003/exit.json",
+    "sha256": "5dc09daf20e287eba7fdb4077b113bc73f4e7e0fc0b24114b3e9ad33217732d9"
+  },
+  "attempt1-stdout": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-20261003/stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "attempt1-stderr": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-20261003/stderr",
+    "sha256": "125b8175af7baead97987218fc1a8a899655ecdf97af46eb970b5082930e843d"
+  },
+  "r2-before.json": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-r2-20261003/before.json",
+    "sha256": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946"
+  },
+  "r2-after.json": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-r2-20261003/after.json",
+    "sha256": "f341a29b6f83b7935b6002a59c5a0505e1926417f0232e7e0d0caed16cd1b946"
+  },
+  "r2-exit.json": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-r2-20261003/exit.json",
+    "sha256": "0df58320352c14e9ca0d170d1fd6bc957e3e0241dfa1291550bfb353a150317f"
+  },
+  "r2-stdout": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-r2-20261003/stdout",
+    "sha256": "5fa1d504649d9eac76f8b70af545f71096c57b3c06ad5262a807c95199990ad1"
+  },
+  "r2-stderr": {
+    "source": "/tmp/native-cold-bios-runtime-sourcecheck-r2-20261003/stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

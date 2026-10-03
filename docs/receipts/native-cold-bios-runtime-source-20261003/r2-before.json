@@ -1,0 +1,7 @@
+{
+  "scripts/bochs-cpu3-native-cold-bios/runtime.mjs": "e83bf45cf29cce7bebb3faaf42c23309887a18215fd1dc5e62ef785f0158a54d",
+  "scripts/bochs-cpu3-native-cold-bios/napi.mjs": "e9e43dc0c71b0603b09164cc5093f45ce68e9eee434d5df88669f81ea2439a01",
+  "scripts/bochs-cpu3-native-cold-bios/fetch-policy.mjs": "59c28bc3e5a29d27a06599094f9a7f7c152c081499a46b2df19d278099ae4369",
+  "scripts/bochs-cpu3-native-cold-bios/NATIVE-SOURCE-PREPARATION.md": "c8211162507f21062e131d95a039c3dd2f9e9eea425d98233999cb8cd2e1c82a",
+  "test/i80386-cold-bios-runtime-source.test.mjs": "1462a9fd2a31ff556bb2ceec243cc25538d3978de41cbc6f518e46fe1354d0d5"
+}
