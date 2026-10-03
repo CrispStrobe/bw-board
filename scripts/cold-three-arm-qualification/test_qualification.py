@@ -20,7 +20,8 @@ def fixture(arm='native-batched'):
 
 class QualificationControls(unittest.TestCase):
     def test_pending_and_disabled_never_spawn_or_download(self):
-        with unittest.mock.patch.object(qualify.subprocess,'Popen',side_effect=AssertionError('must never spawn')),unittest.mock.patch.object(qualify,'download',side_effect=AssertionError('must never download')):
+        pending=copy.deepcopy(admission.read_json(admission.HERE/'contract.json'));pending['status']='PENDING_ROOT_SOURCE_REVIEW'
+        with unittest.mock.patch.object(qualify,'read_json',return_value=pending),unittest.mock.patch.object(qualify.subprocess,'Popen',side_effect=AssertionError('must never spawn')),unittest.mock.patch.object(qualify,'download',side_effect=AssertionError('must never download')):
             qualify.main('disabled')
             with self.assertRaisesRegex(ValueError,'pending'):qualify.main('enabled')
     def test_fixed_roles_bounds_and_worker_closure_mutations(self):
