@@ -1,0 +1,109 @@
+name: LabWired pinned edge layout inspection (diagnostic)
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Original independent build run
+        required: true
+        type: string
+      core_ref:
+        description: Exact verified core commit
+        required: true
+        type: string
+      wasm_sha:
+        description: Verified original Node WASM SHA256
+        required: true
+        type: string
+      glue_sha:
+        description: Verified original Node glue SHA256
+        required: true
+        type: string
+      vtable_words:
+        description: Bounded raw words to retain (not an ABI assertion)
+        required: true
+        default: '19'
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    name: Inspect edge layout ${{ inputs.core_ref }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      BUILD_RUN: ${{ inputs.build_run }}
+      CORE_REF: ${{ inputs.core_ref }}
+      WASM_SHA: ${{ inputs.wasm_sha }}
+      GLUE_SHA: ${{ inputs.glue_sha }}
+      VTABLE_WORDS: ${{ inputs.vtable_words }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Validate pinned inputs without executing engines
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const e = process.env;
+          assert(/^[1-9][0-9]+$/.test(e.BUILD_RUN));
+          assert(/^[a-f0-9]{40}$/.test(e.CORE_REF));
+          for (const k of ['WASM_SHA', 'GLUE_SHA']) assert(/^[a-f0-9]{64}$/.test(e[k]));
+          assert(/^(1[4-9]|2[0-9]|3[0-2])$/.test(e.VTABLE_WORDS));
+          NODE
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: labwired-wasm-b
+          path: engine
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+      - name: Verify original bytes and preserve provenance
+        run: |
+          mkdir evidence
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync, writeFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import {execFileSync} from 'node:child_process';
+          const e = process.env, info = JSON.parse(readFileSync('engine/BUILD-INFO.json'));
+          assert.equal(info.ref, e.CORE_REF);
+          for (const [file, expected] of [['labwired_wasm_bg.wasm', e.WASM_SHA], ['labwired_wasm.js', e.GLUE_SHA]]) {
+            const bytes = readFileSync('engine/nodejs/' + file);
+            assert.equal(createHash('sha256').update(bytes).digest('hex'), expected);
+            assert.equal(info.targets.nodejs[file].sha256, expected);
+            assert.equal(info.targets.nodejs[file].bytes, bytes.length);
+          }
+          writeFileSync('evidence/build-info.json', JSON.stringify(info, null, 2) + '\n', {flag: 'wx'});
+          writeFileSync('evidence/provenance.json', JSON.stringify({buildRun: e.BUILD_RUN, coreCommit: e.CORE_REF, wasmSha256: e.WASM_SHA, glueSha256: e.GLUE_SHA, vtableWords: Number(e.VTABLE_WORDS), toolCommit: execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(), diagnosticOnly: true, engineExecution: false}, null, 2) + '\n', {flag: 'wx'});
+          NODE
+      - name: Portable selection guards
+        run: node --test test/wasm-edge-inspection.test.mjs test/wasm-edge-layout.test.mjs
+      - name: Install disassembler on hosted runner only
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends wabt
+      - name: Preserve original compiled layout and target bodies without execution
+        run: |
+          wasm2wat --version > evidence/disassembler-version.txt
+          wasm2wat engine/nodejs/labwired_wasm_bg.wasm -o "$RUNNER_TEMP/engine.wat"
+          node --input-type=module <<'NODE'
+          import {readFileSync, writeFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import {selectEdgeWat} from './scripts/lib/wasm-edge-inspection.mjs';
+          const bytes = readFileSync(process.env.RUNNER_TEMP + '/engine.wat');
+          const fullWat = {bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex')};
+          writeFileSync('evidence/disassembly-provenance.json', JSON.stringify(fullWat, null, 2) + '\n', {flag: 'wx'});
+          const text = bytes.toString('utf8');
+          // Preserve the original narrow selection before extended interpretation.
+          writeFileSync('evidence/selected-prefix.json', JSON.stringify(selectEdgeWat(text, {inspectVtables: true}), null, 2) + '\n', {flag: 'wx'});
+          const selected = selectEdgeWat(text, {inspectVtables: true, vtableWords: Number(process.env.VTABLE_WORDS), includeButtonTargets: true});
+          const provenance = JSON.parse(readFileSync('evidence/provenance.json'));
+          writeFileSync('evidence/selected-layout.json', JSON.stringify({...provenance, fullWat, ...selected}, null, 2) + '\n', {flag: 'wx'});
+          NODE
+      - name: Retain original inspection even on failure (never engines or full WAT)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: compiled-edge-layout-inspection
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
