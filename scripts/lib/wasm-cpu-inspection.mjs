@@ -1,7 +1,6 @@
 // Static original-code selection only; never instantiate or execute engines.
 import {createHash} from 'node:crypto';
-const wanted = ['step_batch', 'run_t16_cached_run', 'run_t16_cached_fast_paths',
-    'execute_t16_fast_op', 'run_t16_fast_block', 'debug_halted'];
+const wanted = ['step_batch', 'run_t16_cached_run'];
 // The full interpreter is intentionally outside this bounded hotpath receipt.
 // Its code remains in the original module/full-WAT provenance on the runner.
 export function selectCpuWat(wat, {metadataOnly = false, onBody} = {}) {
@@ -43,7 +42,7 @@ export function selectCpuWat(wat, {metadataOnly = false, onBody} = {}) {
     const capturedTypes = new Set(types.map(line => line.match(/^  \(type (?:\(;(\d+);\)|([^\s)]+))/)?.slice(1).find(Boolean)));
     for (const ref of references) if (!capturedTypes.has(ref)) throw Error('Missing original CPU type: ' + ref);
     const result = {functions, types,
-        absentLabels: wanted.filter(label => !functions.some(f => f.labels.includes(label))),
+        absentLabels: ['execute_t16_fast_op', 'run_t16_cached_fast_paths', 'debug_halted'].filter(label => !functions.some(f => f.labels.includes(label))),
         limitations: ['Static code and textual operation counts are not execution frequency or performance evidence',
             'Functions may be inlined, folded or labelled with aliases; absent names do not prove absent work',
             'Direct calls are references, not a complete transitive call graph',
