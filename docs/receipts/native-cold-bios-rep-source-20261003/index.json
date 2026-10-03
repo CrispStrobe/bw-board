@@ -1,0 +1,29 @@
+{
+  "scope": "ONE bounded source-only four-control run; no native addon/build/guest qualification",
+  "files": {
+    "after.json": {
+      "sha256": "f3ff3a763a3f7bf5059240614fbf89ce92cb993d9766c1faaba865f6436b8888",
+      "bytes": 485
+    },
+    "before.json": {
+      "sha256": "f3ff3a763a3f7bf5059240614fbf89ce92cb993d9766c1faaba865f6436b8888",
+      "bytes": 485
+    },
+    "exit.json": {
+      "sha256": "955883a216c08b326a5e03461029b9e690bf3d7b35409e1a9f65780c26716c89",
+      "bytes": 261
+    },
+    "origins.json": {
+      "sha256": "48f7117e61b3e5fc7c79d804e66a11ed4ef7affa746154a4c7642806b3507027",
+      "bytes": 372
+    },
+    "stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "stdout": {
+      "sha256": "ebc2b8ac9bd9cfc270ace148501246e543b5d3376500a636d9d0ce6d96867b33",
+      "bytes": 999
+    }
+  }
+}

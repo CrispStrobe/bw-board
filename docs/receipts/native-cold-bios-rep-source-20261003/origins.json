@@ -1,0 +1,7 @@
+{
+  "before.json": "/tmp/native-cold-bios-rep-sourcecheck-20261003/before.json",
+  "after.json": "/tmp/native-cold-bios-rep-sourcecheck-20261003/after.json",
+  "exit.json": "/tmp/native-cold-bios-rep-sourcecheck-20261003/exit.json",
+  "stdout": "/tmp/native-cold-bios-rep-sourcecheck-20261003/stdout",
+  "stderr": "/tmp/native-cold-bios-rep-sourcecheck-20261003/stderr"
+}
