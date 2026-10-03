@@ -1,12 +1,13 @@
 /** Manufactured diagnostic fixtures only: no machine construction or CPU/addon. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {deriveDriverProvider,builtProviderSha256} from '../scripts/bochs-cpu3-native-ram-bootstrap/driver-provider.mjs';
 import {deriveRamProvider} from '../scripts/bochs-cpu3-native-ram-bootstrap/provider-derivation.mjs';
 import {compareBoundary,ramProgress,validateMilestones,wholeNativeWords} from '../scripts/bochs-cpu3-native-ram-bootstrap/parity.mjs';
 import {initializeRamReset,cutName} from '../scripts/bochs-cpu3-native-ram-bootstrap/reference.mjs';
 import {validateInput,finalizeAuthentication} from '../scripts/bochs-cpu3-native-ram-bootstrap/runner.mjs';
-import {compiledRevision,addonSha256} from '../scripts/bochs-cpu3-native-ram-bootstrap/driver-auth.mjs';
+import {compiledRevision,addonSha256,relativeImports} from '../scripts/bochs-cpu3-native-ram-bootstrap/driver-auth.mjs';
 import {namedCuts,expectedRamPage,bootStores,patchStore} from '../scripts/bochs-cpu3-native-ram-bootstrap/profile.mjs';
 const copy=x=>structuredClone(x);
 function fixture(){
@@ -21,6 +22,7 @@ function fixture(){
 test('driver provider has exactly one byte-invertible paused copied page seam',()=>{
  const original=deriveRamProvider().bytes,result=deriveDriverProvider(original);assert.equal(result.parentSha256,builtProviderSha256);assert.ok(result.bytes.toString().includes('return Uint8Array.from(board.machine.mem.subarray(0x7000,0x8000))'));
  const bad=Buffer.from(original);bad[0]^=1;assert.throws(()=>deriveDriverProvider(bad));assert.throws(()=>deriveDriverProvider(Buffer.from('unknown provider')));
+ const actual=readFileSync(new URL('../src/i8086-machine.js',import.meta.url));assert.ok(relativeImports(actual).includes('./machine-checkpoint.js'),'actual multiline imported source enters closure');assert.deepEqual(relativeImports(Buffer.from(`const quoted="import {x} from './foreign.js'";\nexport {\n x\n} from './actual.js';`)),['./actual.js']);
 });
 test('manufactured dynamic CPU/page/board parity refuses real field mutations',()=>{
  const f=fixture();compareBoundary(f.n,f.board,f.js,f.page);assert.equal(wholeNativeWords(f.n).length,166);
