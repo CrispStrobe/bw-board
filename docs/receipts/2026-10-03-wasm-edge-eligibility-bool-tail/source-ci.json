@@ -1,0 +1,75 @@
+{
+  "conclusion": "success",
+  "headSha": "226fe97835bb5bed06cbb377b3d218c661937a49",
+  "jobs": [
+    {
+      "completedAt": "2026-10-03T12:29:57Z",
+      "conclusion": "success",
+      "databaseId": 111200294554,
+      "name": "correctness",
+      "startedAt": "2026-10-03T12:18:54Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T12:18:56Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T12:18:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T12:19:10Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T12:18:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T12:19:11Z",
+          "conclusion": "success",
+          "name": "Preserve main merge-base for unchanged bus-proof ratchets",
+          "number": 3,
+          "startedAt": "2026-10-03T12:19:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T12:19:19Z",
+          "conclusion": "success",
+          "name": "Run dtolnay/rust-toolchain@1.95.0",
+          "number": 4,
+          "startedAt": "2026-10-03T12:19:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T12:29:53Z",
+          "conclusion": "success",
+          "name": "Live predicate, canonical stores and device integration",
+          "number": 5,
+          "startedAt": "2026-10-03T12:19:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T12:29:54Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 10,
+          "startedAt": "2026-10-03T12:29:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T12:29:54Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "startedAt": "2026-10-03T12:29:54Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37122173204/job/111200294554"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37122173204"
+}
