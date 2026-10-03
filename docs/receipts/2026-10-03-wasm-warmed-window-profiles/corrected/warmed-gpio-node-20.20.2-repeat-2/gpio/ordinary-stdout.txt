@@ -1,0 +1,42 @@
+F0_WASM_GUEST {"workload":"gpio","elfSha256":"1854c5f0e7aafa544496382b4146368e8a2bfc3fca79288a3262033867152186","imageSha256":"cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"}
+F0_WASM_SAMPLE {"workload":"gpio","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.2413437710000002,"rtx":0.80557861839869,"iterations":3000000,"checksum":2999872,"input":0,"mirror":2999999,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.0541189499999999,"rtx":0.9486595416959349,"iterations":5526315,"checksum":5526484,"input":2,"mirror":5526315,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.210265045,"rtx":0.8262652913354198,"iterations":8192982,"checksum":8192809,"input":0,"mirror":8192981,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.037662336,"rtx":0.9637046323323429,"iterations":10719298,"checksum":10719421,"input":2,"mirror":10719297,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.224643314,"rtx":0.8165642914700958,"iterations":13385965,"checksum":13385747,"input":0,"mirror":13385964,"output":0}
+TAP version 13
+# Subtest: F0 gpio: active guest and RAM/MMIO observations
+ok 1 - F0 gpio: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 289.401914
+  ...
+# Subtest: F0 gpio: all five 48M-cycle windows meet 1x
+not ok 2 - F0 gpio: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 5928.422418
+  location: '/home/runner/work/bw-board/bw-board/test/labwired-f0-gpio-profile.test.mjs:95:5'
+  failureType: 'testCodeFailure'
+  error: 'every window must meet 1x: [0.80557861839869,0.9486595416959349,0.8262652913354198,0.9637046323323429,0.8165642914700958]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-f0-gpio-profile.test.mjs:120:20)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6225.75887

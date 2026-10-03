@@ -1,0 +1,43 @@
+F0_WASM_GUEST {"workload":"gpio","elfSha256":"6aea9825d1eebf74ebabfe68a53c4a7b5a5e31b3de00a193d62c714495dcfa75","imageSha256":"cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"}
+F0_WINDOW_PROFILE {"index":0,"profileFile":"gpio-0.cpuprofile","profileSha256":"3a86c31804fa4b860dc600874f3f1a0e10ae1ed734b1e5a41ccc2053dd2c8292","samplingIntervalMicros":1000,"warmupCycles":6000000,"cycles":48000000,"scope":"warmed-cycle-window-with-profiler-boundary-overhead"}
+F0_WASM_SAMPLE {"workload":"gpio","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.9263974679999998,"rtx":0.5191036723268784,"iterations":3000000,"checksum":2999872,"input":0,"mirror":2999999,"output":0}
+F0_WINDOW_PROFILE {"index":1,"profileFile":"gpio-1.cpuprofile","profileSha256":"2341cd25787480c7b8cb7e7126f9df48aa7faf05d16999833013474ca3582e17","samplingIntervalMicros":1000,"warmupCycles":6000000,"cycles":48000000,"scope":"warmed-cycle-window-with-profiler-boundary-overhead"}
+F0_WASM_SAMPLE {"workload":"gpio","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.6564356479999998,"rtx":0.6037059158968306,"iterations":5526315,"checksum":5526484,"input":2,"mirror":5526315,"output":1}
+F0_WINDOW_PROFILE {"index":2,"profileFile":"gpio-2.cpuprofile","profileSha256":"dd9a733f0ff4f054bf29cbefb5d97d1c4acc77d5b74dae939f24f8a6fd531e02","samplingIntervalMicros":1000,"warmupCycles":6000000,"cycles":48000000,"scope":"warmed-cycle-window-with-profiler-boundary-overhead"}
+F0_WASM_SAMPLE {"workload":"gpio","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.9197647569999998,"rtx":0.5208971549007346,"iterations":8192982,"checksum":8192809,"input":0,"mirror":8192981,"output":0}
+F0_WINDOW_PROFILE {"index":3,"profileFile":"gpio-3.cpuprofile","profileSha256":"bb12feea2f789dd6845ab9803f85666942af6fa2b7c9065e1a0f323ad3f04824","samplingIntervalMicros":1000,"warmupCycles":6000000,"cycles":48000000,"scope":"warmed-cycle-window-with-profiler-boundary-overhead"}
+F0_WASM_SAMPLE {"workload":"gpio","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.706806404,"rtx":0.5858895289216409,"iterations":10719298,"checksum":10719421,"input":2,"mirror":10719297,"output":1}
+F0_WINDOW_PROFILE {"index":4,"profileFile":"gpio-4.cpuprofile","profileSha256":"0092eb051fa6d5b5e586874fb26e73fee7dc89452c9c54d45d93677fa5b243c5","samplingIntervalMicros":1000,"warmupCycles":6000000,"cycles":48000000,"scope":"warmed-cycle-window-with-profiler-boundary-overhead"}
+F0_WASM_SAMPLE {"workload":"gpio","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.9543761649999998,"rtx":0.5116722245740242,"iterations":13385965,"checksum":13385747,"input":0,"mirror":13385964,"output":0}
+TAP version 13
+# Subtest: F0 gpio: active guest and RAM/MMIO observations
+ok 1 - F0 gpio: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 389.462643
+  ...
+# Subtest: F0 gpio: all five 48M-cycle windows meet 1x
+not ok 2 - F0 gpio: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 9523.4504
+  location: '/home/runner/work/bw-board/bw-board/test/labwired-f0-gpio-window-profile.test.mjs:99:5'
+  failureType: 'testCodeFailure'
+  error: 'every window must meet 1x: [0.5191036723268784,0.6037059158968306,0.5208971549007346,0.5858895289216409,0.5116722245740242]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-f0-gpio-window-profile.test.mjs:138:20)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9927.131242
