@@ -4167,7 +4167,7 @@
   "runId": 37149215092,
   "schema": "bw.protected-ram.hosted-one-run.v1",
   "scope": "FIXED_PROTECTED_RAM_CORRECTNESS_ONE_TRACE_OFF_CHILD_NO_BUILD_NO_PERFORMANCE",
-  "status": "SOURCE_REVIEW_PENDING",
+  "status": "ROOT_REVIEWED_PROTECTED_RAM_SOURCE_READY",
   "zipBytes": 7658134,
   "zipMembers": {
     "protected-ram-build-context/build-helper.py": {
