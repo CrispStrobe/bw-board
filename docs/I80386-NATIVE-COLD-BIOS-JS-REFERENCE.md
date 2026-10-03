@@ -1,0 +1,30 @@
+# Authenticated ordinary JS cold-BIOS reference
+
+One bounded ordinary JavaScript execution of the unmodified free AT BIOS reaches **before F000:E16**, after consuming AA→55 and AB→00. This is the authenticated JS reference for a future native checkpoint. It is not a native BIOS run, full AT boot, hardware calibration, speed result or adoption.
+
+The executed source head is `60a9b11ab480531e692dbac70ecbb35430cf425d`, with [48 current/Git inputs](receipts/native-cold-bios-js-reference-20261003/baseline.json) checked before and after capture. The inventory covers the reference/test/executed note, package metadata, complete relative CPU/machine/config/device/helper JS imports, and explicit BIOS/license assets. Node22.23.3, both external helpers, clean HEAD and source/Git maps remain unchanged. Unexecuted native derivatives and unrelated docs are excluded. The older exploratory census had no complete before/after inventory and is not this authenticated baseline.
+
+[The single child](receipts/native-cold-bios-js-reference-20261003/invocation.json) exits zero without timeout in 6.099058428779244 seconds under CPU15/wall30/heap128/file8MiB/core0/nice10 and six empty hook variables. All eight tests pass: seven pure refusal controls plus exactly one full ordinary-JS capture. These bounds contain the execution; they are not a benchmark. [Raw baseline JSON](receipts/native-cold-bios-js-reference-20261003/baseline.json) is 1,643,253 bytes, SHA-256 `92e2fd339115d97e84eae28d09f00f1a4a4d5c1178fad38ada17ab79b8eec8ce`.
+
+The measured reference completes **316,562 successful JS steps/quanta**, including individual REP elements. It retains all 16,475 ordered actual byte PIO operations and fifteen named raw CPU/full-board cuts: reset, entry/exit of each REP site, before AA, after each controller command/response and before E16. It does not retain 316k full snapshots or assign native N/attempt/completion counters. The pull oracle exposes one JS completion or REP element per `step()`; a future native runner must advance it by returned Q delta0/1 rather than assume one advancement per resume.
+
+All 400 REP elements retain actual Q/CX/DI/EIP progress, destination and before/after store bytes. Entry/exit records preserve full raw CPU registers and bind their named cuts:
+
+| F000 site | Width/count | Entry→exit Q | Entry CX / DI / EAX | Exit DI / EIP |
+| --- | --- | --- | --- | --- |
+| E0C4 | 2 / 128 | 32→160 | 0080 / 0400 / 00000000 | 0500 / E0C6 |
+| 9DAF | 4 / 120 | 4711→4831 | 0078 / 0000 / F000FF53 | 01E0 / 9DB2 |
+| 9E3A | 2 / 16 | 4921→4937 | 0010 / 0180 / F0000000 | 01A0 / 9E3C |
+| 9E44 | 4 / 136 | 4940→5076 | 0088 / 01E0 / 00000000 | 0400 / 9E47 |
+
+Each site has ES0, PE0 and DF clear. The reference hashes whole **raw** final RAM: `c188c7153084dc45e45a503fc2b5e0e3ab0b81dcbc7a1ef59cfd1c5a3b4de5d2`. No reset-witness or other RAM normalization is applied. The digest is computed from actual RAM by the private oracle; full RAM bytes are not retained in this baseline JSON. Five observed instruction code-page mappings are retained: raw/decoded `F0000/F0000`, `F1000/F1000`, `F9000/F9000`, `FE000/FE000`, `FFFFF000/FFF000`. These describe actual JS instruction-byte addresses; they do not prove a native page-table capacity requirement.
+
+AA is issued at Q316422, 55 is consumed at Q316479, AB at Q316498 and 00 at Q316555; the ordinary E16 checkpoint is Q316562. Final CPU is not halted or shut down, IF is clear, and no fault/IRQ delivery occurs. Device settlement leaves board cycles1,899,376, debt0, deadline672 and A20 enabled. Actual master PIC is IRR1/ISR0/IMR0 with interrupt output asserted; slave IRR/ISR/IMR are zero. The line is not masked artificially. [The cut/REP/PIC summary](receipts/native-cold-bios-js-reference-20261003/actual-cut-rep-pic-summary.json) and raw baseline retain complete states.
+
+EDX is `0300h` at reset, REP cuts, before AA and final E16, while controller command/read cuts temporarily show DX64h/60h. Its reappearance after those temporary writes demonstrates that a first-write-only expiry rule cannot describe the reset-derived difference. A future native comparator must account for actual writes/restores and stored values with precise source-backed bounds. The persistent literal EDX rule from the tiny AA/AB fixture is also unsuitable. No native comparator, hardware reset change or blanket normalization is introduced here; CR0, descriptor/debug defaults and whole RAM remain raw.
+
+[Independent read-only audit](receipts/native-cold-bios-js-reference-20261003/independent-audit.json) passes49,914 checks across source authentication, complete PIO, named cuts and REP metadata; it does not rerun the guest or independently reconstruct unretained RAM bytes.
+
+[The lossless receipt index](receipts/native-cold-bios-js-reference-20261003/index.json) retains the baseline, single invocation/stdout/stderr/exit, actual helpers, metadata-only preflight, summaries and historical pure controls. The original namespace remains `/tmp/native-cold-bios-js-authenticated-baseline-20261003`. [Executed note bytes](receipts/native-cold-bios-js-reference-20261003/executed-REFERENCE-SOURCE.md) are reconstructed from their authenticated Git60a9 blob and retained separately from the subsequent evidence update. The initial EAX refusal was strengthened to preserve uint32 values; an unchanged redundant pure run remains identified without a new coverage claim. No full cold capture was retried.
+
+Native reset→E16 qualification still needs a separately authenticated new build, closed runner, dynamic architectural/reset-difference policy, complete ordered port and REP comparisons, native hidden-word coverage and fresh bounded OFF/ON executions. Existing authored AA/AB native results and broader ordinary-JS Windows/Doom/xv6 evidence remain separate.
