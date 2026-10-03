@@ -1,0 +1,11 @@
+{
+  "schema": "lossless-build-source-controls.v1",
+  "files": {
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "after.json": "c35f8e37cfc3f96d5f229eff75debda264c5d58727c1d47b5437ddf0eb01e4b1",
+    "exit.json": "df08d705a7cd2fc086a3ecdf9d22f6aeb719461fb9cec5f396674c56a4de138b",
+    "before.json": "c35f8e37cfc3f96d5f229eff75debda264c5d58727c1d47b5437ddf0eb01e4b1",
+    "stdout": "1a9cbfd1f3a6560df4372a7f5314a720d1f14765e1f57849581573e336c3eb36",
+    "origins.json": "0cbf8b47cca87d58d6deb6d8fc4b4691182bb6bc21439cb62e9a84db8d5a65c3"
+  }
+}
