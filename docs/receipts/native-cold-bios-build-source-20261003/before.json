@@ -1,0 +1,6 @@
+{
+  "scripts/bochs-cpu3-native-cold-bios/identity.mjs": "1978141aec85057a17bde07ea62b4c2b54743d86eed4143f3fe4c56d22356c75",
+  "scripts/ci-build-i80386-native-cold-bios.py": "0c951ee68c227fc290287170ad87b53a5370641c77b691e38278b86486f42a47",
+  ".github/workflows/i80386-native-cold-bios-build.yml": "24c54c02af99e2db0178dd82a23c00d9bcec46bca3d7ee3a8f855f8de759191f",
+  "test/i80386-cold-bios-build-source.test.mjs": "ece45abf2458255e5252c6bb59600d6a104410979e7042567782b706309c4f4a"
+}

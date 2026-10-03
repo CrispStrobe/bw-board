@@ -1,0 +1,22 @@
+{
+  "before.json": {
+    "source": "/tmp/native-cold-bios-build-sourcecheck-20261003/before.json",
+    "sha256": "c35f8e37cfc3f96d5f229eff75debda264c5d58727c1d47b5437ddf0eb01e4b1"
+  },
+  "after.json": {
+    "source": "/tmp/native-cold-bios-build-sourcecheck-20261003/after.json",
+    "sha256": "c35f8e37cfc3f96d5f229eff75debda264c5d58727c1d47b5437ddf0eb01e4b1"
+  },
+  "exit.json": {
+    "source": "/tmp/native-cold-bios-build-sourcecheck-20261003/exit.json",
+    "sha256": "df08d705a7cd2fc086a3ecdf9d22f6aeb719461fb9cec5f396674c56a4de138b"
+  },
+  "stdout": {
+    "source": "/tmp/native-cold-bios-build-sourcecheck-20261003/stdout",
+    "sha256": "1a9cbfd1f3a6560df4372a7f5314a720d1f14765e1f57849581573e336c3eb36"
+  },
+  "stderr": {
+    "source": "/tmp/native-cold-bios-build-sourcecheck-20261003/stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}
