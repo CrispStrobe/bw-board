@@ -445,6 +445,16 @@ in the [short-budget results archive](docs/receipts/2026-10-03-wasm-short-cached
 Native dispatch, engine/app pins and physical acknowledgements are unchanged;
 CP13 remains open.
 
+Static inspection of the unchanged production CPU hotpaths is now complete.
+The apparent multi-megabyte WAT bodies are mostly indentation, **not binary
+size or runtime cost**. Cached-run has 107 static 18-target branch tables,
+consistent with repeated generic register dispatch but not proof of dynamic
+cost. This motivates testing shared register helpers, not claiming a speedup.
+Original selected code, all three bounded-capture failures and exact tool
+merge gates are retained in the
+[CPU hotpath inspection archive](docs/receipts/2026-10-03-wasm-cpu-hotpath-inspection/README.md).
+No engine, app pin or physical acknowledgement changed.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
