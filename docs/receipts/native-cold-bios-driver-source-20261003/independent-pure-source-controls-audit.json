@@ -1,0 +1,21 @@
+{
+  "status": "PASS_ACTUAL_SEVEN_PURE_DRIVER_CONTROLS_ONLY",
+  "sourceCount": 52,
+  "wallSeconds": 4.704207303002477,
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileMiB": 8,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "currentSourceDifferences": [],
+  "nativeExecuted": false,
+  "scope": "constructor/reset/paused stage and synthetic comparator/admission tests; no CPU instruction/native/addon/restore",
+  "reviewCorrection": "Initial API config-text suggestion retracted: pinned direct-board patch.mjs23-34 passes authenticated config filename to bochsrc -f. Path is correct; no runtime failure/change.",
+  "limitsNotProved": [
+    "Full driver sourceIdentity clean/currentGit requires future frozen metadata query.",
+    "Actual compiled build admission+native cold execution+wholeRAM comparison remain unexecuted."
+  ]
+}

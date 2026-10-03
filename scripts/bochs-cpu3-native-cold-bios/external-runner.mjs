@@ -1,0 +1,62 @@
+/** Closed external diagnostic; compiled source and driver source are distinct. */
+import assert from 'node:assert/strict';
+import {writeFileSync,mkdirSync,lstatSync,realpathSync} from 'node:fs';
+import {resolve,isAbsolute} from 'node:path';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+import {isMainThread} from 'node:worker_threads';
+import {createHash} from 'node:crypto';
+import {createBochsResetColdOracle,bochsResetProfile} from './bochs-reference.mjs';
+import {coldCheckpointReached} from './reference.mjs';
+import {repSites,biosSha256} from './rep-policy.mjs';
+import {compareCpu,wholeNativeWords,validateProgress,compareTiming,comparePorts,createBoundaryDigest,parityPolicy,boundedCount} from './parity.mjs';
+import {driverSourceIdentity,authenticateCompiledCheckout,compiledRevision,resetSource,regularBytes,sha} from './driver-auth.mjs';
+const serialize=value=>JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v instanceof Uint8Array?Array.from(v):v);
+export function validateDriverInput(input){
+ const names=['compiledRoot','compiledRevision','driverRevision','driverSourceSha256','addon','sha256','configuration','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256','output','nativeTrace'];
+ assert.deepEqual(Object.keys(input).sort(),names.sort());assert.equal(input.compiledRevision,compiledRevision);assert.match(input.driverRevision,/^[a-f0-9]{40}$/);assert.equal(typeof input.nativeTrace,'boolean');
+ for(const name of names.filter(k=>!['compiledRevision','driverRevision','nativeTrace'].includes(k))){assert.equal(typeof input[name],'string');if(name.endsWith('Sha256')||name==='sha256')assert.match(input[name],/^[a-f0-9]{64}$/);else assert.ok(isAbsolute(input[name])&&resolve(input[name])===input[name]&&input[name].length<=4096&&!/[\0\r\n]/.test(input[name]));}
+ return input;
+}
+async function runExternalCold(input){
+ validateDriverInput(input);assert.ok(isMainThread);assert.equal(realpathSync(process.argv[1]),realpathSync(fileURLToPath(import.meta.url)),'closed CLI entry');assert.equal(process.version,'v22.23.3');assert.deepEqual(process.execArgv,['--max-old-space-size=128']);for(const k of ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE'])assert.ok(!process.env[k]);
+ assert.ok(lstatSync(resolve(input.output,'..')).isDirectory());assert.equal(realpathSync(resolve(input.output,'..')),resolve(input.output,'..'));mkdirSync(input.output,{recursive:false});
+ const write=(name,value)=>{const bytes=serialize(value)+'\n';assert.ok(Buffer.byteLength(bytes)<=8<<20,'bounded raw receipt');writeFileSync(resolve(input.output,name),bytes,{flag:'wx'});};
+ const receipt={schema:'bw.native-cold-bios.external-diagnostic.v1',status:'FAIL',input,policy:parityPolicy,resetProfile:bochsResetProfile,resetSource,scope:'Closed reset-model diagnostic before E16; no ordinary-reset/hardware/performance/AT-boot claim',cuts:[],reps:[],coverage:{allReturnedNative166Digest:true,perReturnRepresentedCpu:true,perReturnScalarTiming:true,perReturnFullBoard:false,perElementNativeRam:false,orderedPorts:'compared once at terminal; partial retained on failure',wholeRawFinalRam:true,nativeOnlyOffOn:'pending separate actual capture comparison',unretainedComparedStates:'Source-attested comparison/digest only; no independent reconstruction'}};
+ let api=null,provider=null,oracle=null,native=null,closed=false,digestFinished=false,identity=null,compiled=null;const digest=createBoundaryDigest();let progress={n:0,q:0},resumes=0,zeroQ=0,lastPortCount=0,currentRep=null,lastFrame=null,zeroSignature=null;
+ const boardHash=createHash('sha256');let boardComparisons=0;const pausedCpu=()=>oracle.cpu();
+ const compareBoard=(phase,board,js)=>{receipt.lastComparedBoard={phase,resumes,n:progress.n,q:progress.q,native:board,javascript:js};assert.deepEqual(board.board,js.board,'whole actual board at '+phase);boardHash.update(serialize([phase,resumes,progress.n,progress.q,board.board])+'\n');boardComparisons++;};
+ const fullCut=(name)=>{assert.ok(receipt.cuts.length<15,'named cuts only');const js=oracle.checkpoint(),board=provider.checkpoint();compareBoard(name,board,js);const cut={name,resumes,n:progress.n,q:progress.q,native,board,javascript:js};receipt.cuts.push(cut);return cut;};
+ const finishBoards=()=>({comparisons:boardComparisons,sha256:boardHash.digest('hex'),coverage:'Whole actual board at named cuts/stage effects/PIO; other matched states not retained'});
+ const capturePartial=()=>{if(provider)try{receipt.nativePorts=provider.records();}catch(error){receipt.nativePartialUnavailable=String(error);}if(oracle)try{receipt.javascriptPorts=oracle.records();receipt.lastJavascript=oracle.checkpoint();receipt.pages=oracle.pageUsage();}catch(error){receipt.javascriptPartialUnavailable=String(error);}if(native)receipt.lastSuccessfullyReturnedNative=native;receipt.progress={...progress,resumes,zeroQ,lastFrame};if(!digestFinished){receipt.nativeBoundaryCommitment=digest.finish();digestFinished=true;}if(!receipt.boardComparisonCommitment)receipt.boardComparisonCommitment=finishBoards();};
+ try{
+  receipt.driverBefore=driverSourceIdentity();assert.equal(receipt.driverBefore.revision,input.driverRevision);assert.equal(sha(Buffer.from(JSON.stringify(receipt.driverBefore))),input.driverSourceSha256);receipt.node=realpathSync(process.execPath);receipt.nodeSha256Before=sha(regularBytes(receipt.node,128<<20));
+  const manifestBytes=regularBytes(input.preparedManifest,1<<20);assert.equal(sha(manifestBytes),input.preparedManifestSha256);const manifest=JSON.parse(manifestBytes);receipt.compiledBefore=authenticateCompiledCheckout(input.compiledRoot,manifest);
+  // All compiled current/Git inputs are checked before even importing its
+  // admission/provider modules. Addon loading remains after full build proof.
+  const base=resolve(input.compiledRoot,'scripts/bochs-cpu3-native-cold-bios');identity=await import(pathToFileURL(resolve(base,'identity.mjs')).href);const providerModule=await import(pathToFileURL(resolve(base,'board-provider.mjs')).href);
+  compiled=identity.sourceIdentity();assert.deepEqual(compiled,receipt.compiledBefore);receipt.provenance=identity.authenticateBuild(input,compiled);receipt.configuration=identity.authenticateConfiguration(input.configuration);assert.equal(sha(regularBytes(resolve(manifest.preparedTree,resetSource.path))),resetSource.sha256,'audited exact native reset source');
+  assert.equal(sha(regularBytes(input.addon)),input.sha256);write('admission.json',receipt);
+  provider=providerModule.createOwnedColdBiosProvider();assert.equal(sha(provider.rom),biosSha256);oracle=createBochsResetColdOracle();api=createRequire(import.meta.url)(input.addon);assert.equal(api.abiVersion,4);for(const name of ['create','resume','setIRQ','inspect','close'])assert.equal(typeof api[name],'function');
+  native=api.create(input.configuration,provider.rom,provider.callbacks,input.nativeTrace);digest.append('reset',native);assert.equal(boundedCount(native.nativeTicks),0);assert.equal(boundedCount(native.successfulQuanta),0);compareCpu(native,pausedCpu());compareTiming(provider.checkpoint(),oracle.timing());fullCut('reset');
+  while(true){
+   const position=oracle.position();if(coldCheckpointReached(position)){assert.equal(native.state[13],0xf000);assert.equal(native.state[8],0xe16);break;}
+   assert.ok(resumes<800000&&zeroQ<=400000,'closed resume/zeroQ cap');
+   const site=repSites.find(r=>position.cs===0xf000&&position.eip===r.eip);if(site&&!currentRep&&!receipt.reps.some(r=>r.siteEip===site.eip)){currentRep={siteEip:site.eip,entry:fullCut('rep-entry-'+site.eip.toString(16)),elements:[]};}
+   if(position.cs===0xf000&&position.eip===0xcd0&&!receipt.cuts.some(c=>c.name==='before-AA-routine'))fullCut('before-AA-routine');
+   const jsStage=oracle.stage(),nativeStage=provider.stage();assert.deepEqual(nativeStage,{asserted:jsStage.asserted,changed:jsStage.changed},'actual PIC stage');
+   if(nativeStage.changed){native=api.setIRQ(nativeStage.asserted);digest.append('irq',native);compareCpu(native,pausedCpu());}
+   compareTiming(provider.checkpoint(),oracle.timing());if(jsStage.flushed||nativeStage.changed)compareBoard('stage',provider.checkpoint(),oracle.checkpoint());
+   provider.begin();let resumeError=null;try{native=api.resume(1,1,0xffffffffffffffffn);}catch(error){resumeError=error;receipt.resumeError=String(error);throw error;}finally{try{provider.end();}catch(error){receipt.endError=String(error);if(!resumeError)throw error;}}resumes++;digest.append('resume',native);const next=validateProgress(progress,native);if(next.dq){lastFrame=oracle.step();assert.equal(lastFrame.chargedQuanta,1);assert.equal(lastFrame.q,next.q);zeroSignature=null;}else{zeroQ++;lastFrame=null;}progress=next;
+   compareCpu(native,pausedCpu());const board=provider.checkpoint();compareTiming(board,oracle.timing());if(!next.dn&&!next.dq){const signature=serialize([wholeNativeWords(native),board.board.cycles,board.board.debt,board.board.deadline,board.lineAsserted]);assert.notEqual(signature,zeroSignature,'repeated zero-clock event without state progress');zeroSignature=signature;}
+   if(currentRep&&lastFrame?.rep){currentRep.elements.push({...lastFrame.rep,n:progress.n});if(lastFrame.rep.cx===0){currentRep.exit=fullCut('rep-exit-'+currentRep.siteEip.toString(16));receipt.reps.push(currentRep);currentRep=null;}}
+   const portCount=board.cold.portEventCount;if(portCount!==lastPortCount){const js=oracle.checkpoint();compareBoard('PIO',board,js);const added=oracle.records(lastPortCount);for(const event of added)if(event.port===0x64&&event.dir==='out'||event.port===0x60&&event.dir==='in')fullCut((event.dir==='out'?'after-command-':'after-response-')+event.value.toString(16));lastPortCount=portCount;}
+  }
+  assert.equal(currentRep,null);assert.deepEqual(receipt.reps.map(r=>r.siteEip),repSites.map(r=>r.eip));native=api.inspect();digest.append('final-inspect',native);compareCpu(native,pausedCpu());fullCut('before-F000-E16');
+  receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settleCheckpoint();compareBoard('settled',receipt.nativeFinal.state,receipt.javascriptFinal);assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw RAM without normalization');
+  receipt.nativePorts=provider.records();receipt.javascriptPorts=oracle.records();receipt.portComparison=comparePorts(receipt.nativePorts,receipt.javascriptPorts);receipt.pages=oracle.pageUsage();receipt.nativeBoundaryCommitment=digest.finish();digestFinished=true;receipt.boardComparisonCommitment=finishBoards();receipt.progress={...progress,resumes,zeroQ};
+  api.close();provider.close();oracle.close();closed=true;receipt.closed={native:true,provider:true,javascript:true};
+  receipt.driverAfter=driverSourceIdentity();assert.deepEqual(receipt.driverAfter,receipt.driverBefore);receipt.compiledAfter=identity.sourceIdentity();assert.deepEqual(receipt.compiledAfter,compiled);assert.deepEqual(identity.authenticateBuild(input,compiled),receipt.provenance);assert.deepEqual(identity.authenticateConfiguration(input.configuration),receipt.configuration);receipt.nodeSha256After=sha(regularBytes(receipt.node,128<<20));assert.equal(receipt.nodeSha256After,receipt.nodeSha256Before);receipt.status='CLOSED_COLD_BIOS_BOCHS_RESET_MODEL_JS_DIAGNOSTIC_PASS';write('capture.json',receipt);return receipt;
+ }catch(error){receipt.error=String(error);try{if(!closed)capturePartial();}catch(partialError){receipt.partialError=String(partialError);}try{receipt.driverAfter=driverSourceIdentity();}catch(afterError){receipt.driverAfterError=String(afterError);}if(identity)try{receipt.compiledAfter=identity.sourceIdentity();if(compiled)receipt.provenanceAfter=identity.authenticateBuild(input,compiled);}catch(afterError){receipt.compiledAfterError=String(afterError);}if(receipt.node)try{receipt.nodeSha256After=sha(regularBytes(receipt.node,128<<20));}catch(afterError){receipt.nodeAfterError=String(afterError);}receipt.closed=closed;write('first-divergence.json',receipt);throw error;}
+}
+if(process.argv[1]&&realpathSync(process.argv[1])===realpathSync(fileURLToPath(import.meta.url))){assert.equal(process.argv.length,3);const input=JSON.parse(regularBytes(process.argv[2],16384));await runExternalCold(input);}
