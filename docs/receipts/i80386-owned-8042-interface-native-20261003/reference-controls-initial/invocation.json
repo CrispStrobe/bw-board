@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-kbc-interface-reference.test.mjs"
+  ],
+  "sourceBefore": {
+    "scripts/bochs-cpu3-native-owned-8042-interface/runtime.mjs": "b4b5763fe08228f41a6d36dfa461ba6a82e8cab8d211336bdd591d2407ac16d8",
+    "scripts/bochs-cpu3-native-owned-8042-interface/identity.mjs": "60aee343046b95e41a98d33a4571484dee60421cbf7c719958e5d9b5882ed692",
+    "scripts/bochs-cpu3-native-owned-8042-interface/provider.mjs": "6c5387e4634d8503b9daa2aab203d2aa304ca11f9fa8c8f3953cad578edd6ca0",
+    "scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs": "0216ac1fde6d2d98cefaf1ad06b40326f5a4456c20b572e12c3f908f728c3276",
+    "scripts/bochs-cpu3-native-owned-8042-interface/derivation.json": "ebc3206f47dca1781f8bb19ca91b660c26669130b9ec009a62848510959336d4",
+    "scripts/bochs-cpu3-native-owned-8042-interface/derivation.mjs": "242d7992dca17d66fd12c95e1a5d93f54151c30b31266e103a827f729578778f",
+    "scripts/bochs-cpu3-native-owned-8042-interface/README.md": "08c5059bbde273e813d18eb29d461eb2fecc08a5f986d409d39cb524694f8857",
+    "scripts/bochs-cpu3-native-owned-8042-interface/napi.mjs": "c68c09471a905742aa385f101d4dceb5a9da8d59d26308199f9c92a97e1c79e2",
+    "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e",
+    "test/i80386-kbc-interface-reference.test.mjs": "44f8d14701dcf7096176af0d1c234233542b506dba82a1687f3e102d38c7685f",
+    "test/fixtures/i80386-8042-selftest-first-trace.json.gz": "16cc4c94546572d67909d5bb6dbc3c425c12a90ad7582a907e77d1452fd3f645"
+  },
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "cpuSeconds": 10,
+  "wallSeconds": 30,
+  "heapMiB": 128,
+  "scope": "Actual ordinary JS AA/AB reference and pure architectural/fulltrace refusal controls only; no addon/build/native"
+}

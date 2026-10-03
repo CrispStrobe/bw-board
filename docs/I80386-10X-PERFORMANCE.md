@@ -14,6 +14,8 @@ The earlier [fixed 8042 self-test source proposal](../scripts/bochs-cpu3-native-
 
 The subsequent [fixed 8042 native qualification](I80386-OWNED-8042-NATIVE-RESULTS.md) passes its first pinned build and separate OFF/ON cells: all 166 native words at every instruction, complete board state, eight PIO events and raw whole RAM agree. This qualifies the 28-instruction self-test fixture only, with no performance result or broader native AT admission.
 
+The separate [ordered AA/AB interface-test qualification](I80386-OWNED-8042-INTERFACE-NATIVE-RESULTS.md) passes its first hosted build and OFF/ON cells: 38N/Q, 40 saved full166 boundaries, all 39 emitted CPU blocks, 11 PIO events and whole raw RAM. This advances fixed-device admission only; cold BIOS/AT boot, speed and adoption remain open.
+
 The [private uniform-page span preparation](receipts/2026-10-02-owned-span-source-preparation/README.md) records the stage before differential controls ran against unchanged fe1. The subsequent [hosted source controls passed](I80386-OWNED-SPAN-SOURCE-RESULTS.md); this source-only evidence establishes no adoption, speed result or broader AT admission.
 
 
@@ -29,7 +31,7 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 ## Current checkpoint (2026-10-03)
 
-The [fixed 8042 native self-test](I80386-OWNED-8042-NATIVE-RESULTS.md) now passes its first reviewed build and both native modes. Its 28-instruction fixture advances device admission; the 10× speed goal and broader native BIOS/AT boot remain open.
+The [fixed 8042 native self-test](I80386-OWNED-8042-NATIVE-RESULTS.md) and subsequent [ordered AA/AB interface-test](I80386-OWNED-8042-INTERFACE-NATIVE-RESULTS.md) pass their first reviewed builds and both native modes. These 28- and 38-instruction fixtures advance device admission; the 10× speed goal and broader native BIOS/AT boot remain open.
 
 ## Previous checkpoint (2026-10-02)
 

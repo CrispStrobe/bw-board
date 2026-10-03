@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "scripts/run-i80386-native-owned-8042-interface.mjs",
+    "/home/runner/work/_temp/fixed-8042-interface-evidence/off.input.json"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/publication",
+  "pid": 8086,
+  "cpuSeconds": 30,
+  "wallSeconds": 60,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}
