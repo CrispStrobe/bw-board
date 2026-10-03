@@ -101,6 +101,8 @@ The [private per-word dispatch experiment](docs/I80386-OWNED-DISPATCH-SOURCE-WIP
 
 The [private span paired CPU gate](docs/I80386-OWNED-SPAN-CPU-RESULTS.md) failed its ≥10%/all-seven criterion despite full fixed-fixture parity in all 18 children; the candidate is not adopted.
 
+The [native cold BIOS E16 diagnostic](docs/I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) reached the fixed checkpoint with independent correctness evidence. This is neither full boot nor a speed or adoption result.
+
 ## LabWired WASM performance (2026-10-01)
 
 These results use the selected 64 MHz micro:bit motion guest in Node.js, not
@@ -413,5 +415,3 @@ historical totals are not a statement of current coverage.
 MIT. See [LICENSE](LICENSE) and [third-party notices](THIRD-PARTY.md).
 
 The fixed native baseline has [qualitative Inspector results](docs/I80386-OWNED-BASELINE-PROFILE-RESULTS.md), with full parity evidence and explicit attribution limits.
-
-The [cold BIOS diagnostic status](docs/I80386-NATIVE-COLD-BIOS-UNDEFINED-OF.md) records the qualified 125-input build and 4,709 executed completions before an architecturally undefined OF comparison differed. E16, full native BIOS execution and speed remain unqualified.

@@ -1,0 +1,56 @@
+{
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 3.014066904999993,
+  "terminatedPids": [],
+  "interrupted": null,
+  "wait4": {
+    "userSeconds": 1.546454,
+    "systemSeconds": 1.541503,
+    "maxRssKiB": 306796,
+    "minorFaults": 247895,
+    "majorFaults": 1,
+    "voluntaryContextSwitches": 3395,
+    "involuntaryContextSwitches": 189
+  },
+  "memoryEventsBefore": {
+    "available": true,
+    "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.events",
+    "events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0
+    },
+    "raw": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+    "scope": "Cgroup aggregate events; concurrent processes may contribute"
+  },
+  "memoryEventsAfter": {
+    "available": true,
+    "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.events",
+    "events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0
+    },
+    "raw": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+    "scope": "Cgroup aggregate events; concurrent processes may contribute"
+  },
+  "memoryEventDelta": {
+    "available": true,
+    "events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0
+    },
+    "scope": "Cgroup aggregate deltas; not proof this child caused an event"
+  }
+}
