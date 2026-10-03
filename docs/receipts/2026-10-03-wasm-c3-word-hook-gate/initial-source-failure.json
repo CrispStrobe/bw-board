@@ -1,0 +1,105 @@
+{
+  "source": "b8eb327e9eaa445af258f6c551d2c84bba9ac4c6",
+  "run": 37104300410,
+  "native": {
+    "conclusion": "failure",
+    "headSha": "b8eb327e9eaa445af258f6c551d2c84bba9ac4c6",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T07:01:11Z",
+        "conclusion": "failure",
+        "databaseId": 111149721312,
+        "name": "correctness",
+        "startedAt": "2026-10-03T06:49:39Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T06:49:40Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T06:49:40Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T06:49:58Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T06:49:41Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T06:49:58Z",
+            "conclusion": "success",
+            "name": "Preserve the real main merge-base for bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T06:49:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T06:50:07Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T06:49:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T07:01:08Z",
+            "conclusion": "failure",
+            "name": "Verify live gate, both scheduler configurations and full regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T06:50:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T07:01:08Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T07:01:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T07:01:08Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T07:01:08Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37104300410/job/111149721312"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37104300410"
+  },
+  "focusedWithScheduler": {
+    "passed": 4,
+    "failed": 0
+  },
+  "focusedWithoutScheduler": {
+    "passed": 3,
+    "failed": 0
+  },
+  "fullLibrary": {
+    "passed": 4237,
+    "failed": 1,
+    "ignored": 3
+  },
+  "realIntegrationsReached": false,
+  "initialWasmBuildsDispatched": 0,
+  "initialBenchmarksDispatched": 0,
+  "failure": "A new scheduler-source fixture directly asserted walk deletion. Corrected the fixture to declare walk independence and call recompute_walk_deletable; the ratchet and engine prototype are unchanged.",
+  "replacement": {
+    "source": "324a3e1a0b48a1520c00bed12bc6560742ee5b46",
+    "run": 37105056159
+  },
+  "testOnlyCorrection": [
+    "crates/core/src/bus/c3_irq_word_gate_tests.rs"
+  ],
+  "engineAndRatchetsUnchanged": true,
+  "hardwareAcknowledgementChanges": false
+}

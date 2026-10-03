@@ -324,6 +324,24 @@ only its WASM inlining attribute differs. This experiment remains
 are unchanged. See
 [all cached-executor inlining results and original receipts](docs/receipts/2026-10-03-wasm-cached-run-inline/README.md).
 
+The isolated live C3 word-store hook gate completed four ordinary hosted pairs.
+GPIO medians improve **0.78–4.77% in all four**, but motion is mixed
+(**−4.76% to +3.31%**), as is RAM (**−2.17% to +14.02%**). Motion/GPIO
+fail the unchanged all-window ≥1× floor in two pairs; RAM passes all four.
+The Node 20 reverse RAM minimum drops **2.817329× → 2.787352×**, and its
+GPIO minimum drops **0.534801× → 0.532774×**, despite median gains.
+Native verification passes both scheduler configurations, **4,238 library
+tests** and **16 GPIO integrations**; independent WASM determinism and
+**108 actual integrations** pass. Fresh motion reaches **1.471221× median /
+1.419914× minimum**, but that separate capture is not a paired speedup or
+universal qualification. The gate preserves live C3 cache updates and uncached
+scheduler-source refresh; native production dispatch and other access widths
+are unchanged. The initial test-fixture ratchet failure and its test-only fix
+are retained. Source remains **unmerged/unqualified**; production, app pins
+and physical acknowledgements are unchanged. Different hosted CPUs do not
+establish Node-version causality. See
+[all C3 word-hook gate results and original receipts](docs/receipts/2026-10-03-wasm-c3-word-hook-gate/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
