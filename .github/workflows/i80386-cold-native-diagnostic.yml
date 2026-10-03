@@ -35,12 +35,12 @@ jobs:
           from parent import validate_contract
           c=json.load(open('runtime/scripts/cold-native-diagnostic/contract.json'))
           validate_contract(c)
-          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('driver='+c['driverRevision']+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('driver='+c['driverRevision']+'\ncompiled='+c['compiledRevision']+'\n')
           PY
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         if: inputs.enable_guest
         with:
-          ref: a6fae61a549d595c88a324f50589d92497040c07
+          ref: ${{ steps.pins.outputs.compiled }}
           path: publication
           persist-credentials: false
           fetch-depth: 1

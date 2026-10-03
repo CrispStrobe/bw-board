@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py", line 243, in <module>
+    require(len(sys.argv)==2,'explicit disabled/enabled argument required');main(sys.argv[1])
+                                                                            ^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py", line 189, in main
+    before=snapshot(c,node);(out/'before.json').write_text(json.dumps(before,indent=2)+'\n')
+           ^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py", line 109, in snapshot
+    result={'toolingHead':git(ROOT,'rev-parse','HEAD').decode().strip(),'toolingStatus':git(ROOT,'status','--porcelain').decode(),'compiledHead':git(W,'rev-parse','HEAD').decode().strip(),'compiledStatus':git(W,'status','--porcelain').decode(),'compiledFiles':source_map(W,f),'driverHead':git(D,'rev-parse','HEAD').decode().strip(),'driverStatus':git(D,'status','--porcelain').decode(),'driverFiles':source_map(D,c['driverFiles']),'nodeSha256':digest(ordinary(node))}
+                                                                                                                                                                                                                                                                    ^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py", line 105, in source_map
+    return {n:digest(ordinary(root/n)) for n in files}
+                     ^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-restore/archive.py", line 19, in ordinary
+    require(stat.S_ISREG(path.lstat().st_mode), 'ordinary file required')
+                         ^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 849, in lstat
+    return self.stat(follow_symlinks=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 842, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs'

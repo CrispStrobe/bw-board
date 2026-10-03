@@ -413,3 +413,5 @@ historical totals are not a statement of current coverage.
 MIT. See [LICENSE](LICENSE) and [third-party notices](THIRD-PARTY.md).
 
 The fixed native baseline has [qualitative Inspector results](docs/I80386-OWNED-BASELINE-PROFILE-RESULTS.md), with full parity evidence and explicit attribution limits.
+
+The [cold BIOS diagnostic status](docs/I80386-NATIVE-COLD-BIOS-UNDEFINED-OF.md) records the qualified 125-input build and 4,709 executed completions before an architecturally undefined OF comparison differed. E16, full native BIOS execution and speed remain unqualified.

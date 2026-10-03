@@ -1,0 +1,7 @@
+{
+  "ref": "lane/386-cold-native-checkout-fix-20261003",
+  "head": "26b540e08b787d9e834aa3f58bd72655fd48c3d9",
+  "run": 37112502937,
+  "enable_guest": true,
+  "oneTotal": true
+}
