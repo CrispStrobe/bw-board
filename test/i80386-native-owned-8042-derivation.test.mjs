@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {deriveOwned8042Runtime,native8042Profile} from '../scripts/bochs-cpu3-native-owned-8042/runtime.mjs';
+import {deriveOwned8042Napi} from '../scripts/bochs-cpu3-native-owned-8042/napi.mjs';
+import {deriveOwnedIn8Runtime} from '../scripts/bochs-cpu3-native-owned-in8/runtime.mjs';
+import {deriveOwnedIn8Napi} from '../scripts/bochs-cpu3-native-owned-in8/napi.mjs';
+import {replacement,sha256} from '../scripts/bochs-cpu3-native-owned-clock/derive.mjs';
+import {selfTestRomSha256,selfTestRomLayout} from '../scripts/bochs-cpu3-native-owned-8042/profile.mjs';
+import {canonicalConfiguration,ownedAssets} from '../scripts/bochs-cpu3-native-owned-8042/identity.mjs';
+for(const [name,derive,base] of [['runtime',deriveOwned8042Runtime,deriveOwnedIn8Runtime],['NAPI',deriveOwned8042Napi,deriveOwnedIn8Napi]]){
+ test(name+' inverse recovers exact authenticated IN8 input',()=>{const d=derive();let s=d.bytes.toString();for(const e of [...d.edits].reverse())s=replacement(s,e.next,e.old,e.label);assert.equal(sha256(s),sha256(base().bytes));assert.equal(d.baseSha256,sha256(base().bytes));});
+ test(name+' seam refuses absent/duplicate input',()=>{const e=derive().edits[0];assert.throws(()=>replacement('',e.old,e.next,'absent'));assert.throws(()=>replacement(e.old+e.old,e.old,e.next,'duplicate'));});
+}
+test('native initializer and terminal bind actual assembled source ROM',()=>{const s=deriveOwned8042Runtime().bytes.toString();assert.equal(native8042Profile.romSha256,selfTestRomSha256);assert.equal(selfTestRomLayout.successHlt,0xf0032);assert.ok(s.includes('strcmp(sha,"'+selfTestRomSha256+'")'));assert.ok(!s.includes('strcmp(sha,"25c242'));assert.ok(s.includes('get_eip()!=0x33'));assert.ok(s.includes('static const char marker[]="K"'));assert.ok(s.includes('bw_port_bytes_seen!=1'));});
+test('only allowed byte controller extension; original IN barriers retained',()=>{const r=deriveOwned8042Runtime().bytes.toString(),n=deriveOwned8042Napi().bytes.toString();assert.ok(r.includes('port!=0x60&&port!=0x64'));assert.ok(n.includes('a!=0x60&&a!=0x64'));for(const token of ['width!=1','owned-IN8-mapping-pending','BW_OWNED_PRE_PIO','BW_OWNED_POST_PIO'])assert.ok(r.includes(token),token);assert.equal(deriveOwned8042Napi().edits.length,1);});
+test('fixed profile denies old fault IRQ REP executable RAM admissions',()=>{const s=deriveOwned8042Runtime().bytes.toString();for(const tag of ['8042-no-fault','8042-no-IRQ-delivery','8042-no-ACK','8042-no-REP','8042-terminal-HLT-profile'])assert.ok(s.includes(tag));assert.ok(s.includes('if(type!=2||(want&4095)'));assert.ok(s.includes('bw_in_resume||asserted!=0'));assert.ok(!s.includes('bw_successful_quanta>=150000'));assert.ok(s.includes('bw_successful_quanta>=512'));assert.ok(s.includes('max_native_ticks>600'));assert.ok(s.includes('max_successful_quanta>300'));});
+test('configuration fixes semantic options and rejects ambiguous log tokens',()=>{const s=canonicalConfiguration('/tmp/test8042.log');assert.ok(s.includes('cpu: count=1, ips=10000000'));assert.ok(s.includes('memory: guest=16, host=16'));assert.ok(s.includes('log: /tmp/test8042.log\n'));for(const v of ['relative','/tmp/a,b','/tmp/a\nlog: x','/tmp/a b',null])assert.throws(()=>canonicalConfiguration(v));for(const p of ['roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin'])assert.ok(ownedAssets.includes(p));});
+test('preparer preserves historical provenance before declaring new profile',()=>{const s=readFileSync(new URL('../scripts/prepare-bochs-cpu3-native-owned-8042.mjs',import.meta.url),'utf8');assert.ok(s.indexOf('originalH4Provenance=structuredClone(result)')<s.indexOf('result.native8042Profile=runtime.profile'));assert.ok(s.includes('originalH4Profile=structuredClone(result.profile)'));});
