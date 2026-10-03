@@ -16,7 +16,7 @@
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/scripts/cold-native-performance/actual-snapshot-fixtures.json": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/scripts/cold-native-performance/admission.mjs": "fd28224bfb91213440d04a5f790dc1f586a63f14521a2d21926b87904af53031",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/scripts/cold-native-performance/capture-binding.json": "5bc446815953759f4d088834c3c369aee35f526168acc94fd12b29596c105735",
-  "/tmp/bw-cold-native-worker-snapshot-schema-20261003/scripts/cold-native-performance/protocol.mjs": "57b30cae49f376be29c31a3ee2fc5600f3a0d37135ffddf11ca4cd4bff2bd70b",
+  "/tmp/bw-cold-native-worker-snapshot-schema-20261003/scripts/cold-native-performance/protocol.mjs": "e15f481a5e0af0aec007dc4d48259b87aef9e86b7f7b6bbc31d047bde549b74b",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/scripts/cold-native-performance/worker.mjs": "29ecdef2339de1aec89812208b8b38f71c80e7c02e814b8ebf6bbf1e5cf8e7f8",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/src/adc0809.js": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/src/at-8042-a20.js": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8",
@@ -54,9 +54,9 @@
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/src/upd765.js": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
   "/tmp/bw-cold-native-worker-snapshot-schema-20261003/src/ym3812.js": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04",
-  "/tmp/bw-cold-native-worker-snapshot-schema-20261003/test/i80386-cold-native-performance-source.test.mjs": "2cb20a2bb47a58bb643e962b3fb880b63b01b77dcae29289be0a2957bdd5082b",
+  "/tmp/bw-cold-native-worker-snapshot-schema-20261003/test/i80386-cold-native-performance-source.test.mjs": "6ceff4bee0415749ee893d583745ee62fe2a3a5b73d772790e1c8f0fc07048b5",
   "/tmp/node-v22.23.3-linux-x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
   "/tmp/native-cold-native-eighth-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/guest/capture.json": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
   "/tmp/native-cold-native-eighth-diagnostic-publication-20261003/independent-eighth-attempt-audit.json": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
-  "/tmp/native-cold-native-worker-snapshot-controls-r2-20261003/parent.py": "b7bf895889a03c76f83247d7d12d8120205c8728ef8e62ef175c4c52732af90e"
+  "/tmp/native-cold-native-worker-live-slice-controls-20261003/parent.py": "b7bf895889a03c76f83247d7d12d8120205c8728ef8e62ef175c4c52732af90e"
 }

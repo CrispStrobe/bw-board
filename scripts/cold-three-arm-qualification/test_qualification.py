@@ -44,8 +44,8 @@ class QualificationControls(unittest.TestCase):
         for mutate in [lambda x:x.pop('activityState'),lambda x:x.update(activityState=1),lambda x:x.update(reason=2),lambda x:x.update(chargedNativeTicks=601),lambda x:x.update(chargedQuanta=301),lambda x:x['sliceBytes'].pop(),lambda x:x['sliceBytes'].__setitem__(0,256)]:
             v=copy.deepcopy(resume);mutate(v)
             with self.assertRaises(ValueError):policy.validate_resume_snapshot(v)
-        self.assertEqual(c['workers']['native']['revision'],'33c90876ff024923588ec3ecb2538754bc72634b');self.assertEqual(len(c['workers']['native']['files']),56);self.assertEqual(c['workers']['native']['sourceQualification']['controls'],9)
-        for change in [lambda x:x['workers']['native'].update(revision='8ed0366af9bf92823561d5130d0ad6274020c6da'),lambda x:x['workers']['native']['sourceQualification'].update(controls=8),lambda x:x['workers']['native'].update(sourceSha256='a'*64)]:
+        self.assertEqual(c['workers']['native']['revision'],'b01c922c2d634aba9367f6e2a70d109370e4adee');self.assertEqual(len(c['workers']['native']['files']),56);self.assertEqual(c['workers']['native']['sourceQualification']['controls'],9)
+        for change in [lambda x:x['workers']['native'].update(revision='33c90876ff024923588ec3ecb2538754bc72634b'),lambda x:x['workers']['native'].update(revision='8ed0366af9bf92823561d5130d0ad6274020c6da'),lambda x:x['workers']['native']['sourceQualification'].update(controls=8),lambda x:x['workers']['native'].update(sourceSha256='a'*64)]:
             v=copy.deepcopy(c);change(v)
             with self.assertRaises((ValueError,KeyError)):admission.validate_source_packets(v)
         v=copy.deepcopy(c);v['workers']['native']['sourceQualification']['records']['stdout']['sha256']='c'*64

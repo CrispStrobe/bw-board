@@ -1,9 +1,9 @@
 {
-  "status": "PASS_SOURCE_ONLY_NATIVE_WORKER_INSPECT_RETURN_FIX",
-  "head": "33c90876ff024923588ec3ecb2538754bc72634b",
+  "status": "PASS_SOURCE_ONLY_NATIVE_LIVE_SLICE_FIX",
+  "head": "b01c922c2d634aba9367f6e2a70d109370e4adee",
   "sourceFiles": 56,
-  "canonicalIdentitySha256": "fcb989d43bc0c69815b32bd71c67f8a08d9e9c1aa4fb78528e6371189e3eec25",
   "pureControls": 9,
+  "canonicalIdentitySha256": "9d70f04a099df42d4cac13796705a4da963c295d9d83cec8c1bc709d3cb60bf1",
   "readonlyIdentity": true,
-  "scope": "Exact genuine eighth inspect/resume fixtures; strict return activity/metadata preserved. Prelaunch typo retained separately. No guest/benchmark."
+  "scope": "Only live Uint8Array guard/test reconstruction changed outside timer. No guest/build/benchmark."
 }

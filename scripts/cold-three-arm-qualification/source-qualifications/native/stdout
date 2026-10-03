@@ -2,55 +2,55 @@ TAP version 13
 # Subtest: closed oneQ/batched budgets clip remaining Q without equating independent N
 ok 1 - closed oneQ/batched budgets clip remaining Q without equating independent N
   ---
-  duration_ms: 20.253424
+  duration_ms: 19.34527
   type: 'test'
   ...
 # Subtest: real return guard allows N/Q differences, PIO and zero-Q events within exact caps
 ok 2 - real return guard allows N/Q differences, PIO and zero-Q events within exact caps
   ---
-  duration_ms: 3.396084
+  duration_ms: 3.308134
   type: 'test'
   ...
 # Subtest: terminal guard retains raw CR0, real activity and all fallback/execution counters
 ok 3 - terminal guard retains raw CR0, real activity and all fallback/execution counters
   ---
-  duration_ms: 6.223489
+  duration_ms: 7.782446
   type: 'test'
   ...
 # Subtest: every raw final166 word and independent final N remain strict
 ok 4 - every raw final166 word and independent final N remain strict
   ---
-  duration_ms: 118.311259
+  duration_ms: 141.244006
   type: 'test'
   ...
 # Subtest: complete PIO, real asserted PIC and whole raw RAM cannot be normalized away
 ok 5 - complete PIO, real asserted PIC and whole raw RAM cannot be normalized away
   ---
-  duration_ms: 9.920741
+  duration_ms: 9.444196
   type: 'test'
   ...
 # Subtest: pending/failed/unaudited or inconsistent capture cannot authorize native execution
 ok 6 - pending/failed/unaudited or inconsistent capture cannot authorize native execution
   ---
-  duration_ms: 5.68608
+  duration_ms: 7.016238
   type: 'test'
   ...
 # Subtest: fixed CLI mode/source/artifact/output roles refuse caller knobs before native load
 ok 7 - fixed CLI mode/source/artifact/output roles refuse caller knobs before native load
   ---
-  duration_ms: 5.32557
+  duration_ms: 7.606529
   type: 'test'
   ...
 # Subtest: genuine aggregate audit must bind the same capture extent, cuts, ports and raw RAM phase
 ok 8 - genuine aggregate audit must bind the same capture extent, cuts, ports and raw RAM phase
   ---
-  duration_ms: 2.741623
+  duration_ms: 4.694098
   type: 'test'
   ...
 # Subtest: genuine eighth inspect and resume schemas remain distinct without fabricated activity
 ok 9 - genuine eighth inspect and resume schemas remain distinct without fabricated activity
   ---
-  duration_ms: 11.423033
+  duration_ms: 14.155648
   type: 'test'
   ...
 1..9
@@ -61,4 +61,4 @@ ok 9 - genuine eighth inspect and resume schemas remain distinct without fabrica
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 501.364976
+# duration_ms 467.794306

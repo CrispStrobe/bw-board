@@ -6,9 +6,11 @@ oracle rerun, warmup pairs or measured performance gate. The original
 source-owned contract passed root source review. Its first hosted
 qualification failed after plain JS completed: native one-Q initialized but
 stopped before any resume on an inspect-schema assertion, and native batched
-never started. The corrected native worker 33c90876 has a reviewed 56-input
-source freeze, nine pure controls and current/Git identity authentication. This
-derivative contract binds that source authority. The workflow remains
+never started. A corrected attempt using native 33c90876 completed execution
+but failed a live slice-type guard, again leaving batched unstarted. The new
+native worker b01c922c has a reviewed 56-input source freeze, nine pure controls
+and current/Git identity authentication. This derivative contract binds that
+source authority. The workflow remains
 disabled by default; another execution requires a separate root grant. Its pure
 fixtures never execute a worker.
 
@@ -51,10 +53,18 @@ adoption. A successful raw qualification remains subject to independent audit;
 the parent neither requires nor fabricates an armQualificationAudit to run itself.
 That genuine later audit is a prerequisite for the separate 18-child paired gates.
 
-The terminal policy now distinguishes the genuine 13-field inspect result from
+The terminal policy distinguishes the genuine 13-field inspect result from
 the last resume result: resume supplies the active-state field, independent N/Q
 and the same raw 166 CPU words. No activity field is synthesized on inspect.
-The native binding now pins 33c90876 and its genuine nine-control source packet.
-This qualifies source only; another actual semantic attempt is still pending.
-The first-failure evidence and unchanged E16 correctness scope are documented in
-[the results note](../../docs/I80386-COLD-THREE-ARM-FIRST-FAILURE.md).
+The native binding now pins b01c922c and its genuine nine-control source packet.
+The separately authorized corrected attempt completed native one-Q execution,
+then failed because its live 160-byte Uint8Array was tested with Array.isArray.
+The retained JSON projects that typed array to an ordinary array; the serialized
+fixture therefore missed the live-type mismatch. Plain JS passed, and batched
+never started. Independent audit verified the retained one-Q terminal CPU,
+board, RAM hash and complete PIO tape, but this is not three-arm qualification.
+The new native source authority and this derivative are reviewed and bound;
+actual three-arm qualification remains pending. The persisted Python policy still
+requires ordinary JSON arrays. No actual retry is authorized by these edits.
+See the [first failure](../../docs/I80386-COLD-THREE-ARM-FIRST-FAILURE.md) and
+[corrected-run checkpoint](../../docs/I80386-COLD-THREE-ARM-CORRECTED-FAILURE.md).
