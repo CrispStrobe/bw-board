@@ -13,7 +13,7 @@ const git=(cwd,args)=>execFileSync('git',args,{cwd,timeout:10000,maxBuffer:32<<2
 export function driverSourceIdentity(){
  assert.equal(git(root,['status','--porcelain']).toString().trim(),'','clean frozen driver');const revision=git(root,['rev-parse','HEAD']).toString().trim(),hashes={};
  function visit(p){assert.ok(!isAbsolute(p)&&resolve(root,p).startsWith(root+'/'));if(hashes[p])return;const b=regularBytes(resolve(root,p));hashes[p]=sha(b);assert.equal(hashes[p],sha(git(root,['show',revision+':'+p])),'current/Git '+p);
-  if(/\.(mjs|js)$/.test(p))for(const m of b.toString().matchAll(/^\s*(?:import|export)\s+[^;\n]+?\s*from\s*['"](\.[^'"]+)['"]/gm))visit(resolve(root,dirname(p),m[1]).slice(root.length+1));
+  if(/\.(mjs|js)$/.test(p))for(const pattern of [/^\s*(?:import|export)\s+(?:(?:[\w$]+\s*,\s*)?\{[^}]*\}|\*(?:\s+as\s+[\w$]+)?|[\w$]+)\s+from\s*['"](\.[^'"]+)['"]/gm,/^\s*import\s*['"](\.[^'"]+)['"]/gm])for(const m of b.toString().matchAll(pattern))visit(resolve(root,dirname(p),m[1]).slice(root.length+1));
  }
  for(const p of ['scripts/bochs-cpu3-native-ram-bootstrap/runner.mjs','scripts/bochs-cpu3-native-ram-bootstrap/DRIVER-SOURCE.md','scripts/bochs-cpu3-native-cold-bios/board-provider.mjs','test/i80386-ram-bootstrap-driver-source.test.mjs','package.json','roms/free-at-bios/LICENSE','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin'])visit(p);
  return {revision,hashes:Object.fromEntries(Object.entries(hashes).sort(([a],[b])=>a.localeCompare(b)))};
