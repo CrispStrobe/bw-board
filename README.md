@@ -274,6 +274,16 @@ attribution, not removable costs or verified speedups. Acceptance and production
 engines are unchanged. See
 [all GPIO-only captures, failures and next experiments](docs/receipts/2026-10-02-wasm-isolated-gpio/README.md).
 
+The resulting live GPIO edge-gate experiment completed all four ordinary hosted
+pairs. Node 20 GPIO medians gain **4.30–4.51%**, but Node 22 loses
+**5.42–7.49%**; motion is mixed and reverse Node 20 RAM loses **27.57%**.
+Native verification, independent WASM determinism and **108 actual integration
+tests** pass. Fresh motion is **1.004303× median / 0.987461× minimum**, so the
+unchanged all-window ≥1× gate fails. This source remains **unmerged/unqualified**;
+production, app pins and physical acknowledgements are unchanged. VPS load/disk
+prevented local repeats. See
+[all live GPIO gate results and original receipts](docs/receipts/2026-10-03-wasm-live-gpio-edge-gate/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
