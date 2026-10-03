@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {driverSourceIdentity} from './scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs'; console.log(JSON.stringify(driverSourceIdentity()));"
+  ],
+  "cwd": "/tmp/bw-native-cold-driver-compiled-7632-20261003",
+  "cpuSeconds": 10,
+  "wallSeconds": 30,
+  "heapMiB": 128,
+  "fileMiB": 8,
+  "nice": 10,
+  "core": 0,
+  "emptyHooks": 6
+}

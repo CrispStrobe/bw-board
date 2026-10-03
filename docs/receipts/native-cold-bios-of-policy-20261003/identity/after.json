@@ -1,0 +1,8 @@
+{
+  "scripts/bochs-cpu3-native-cold-bios/undefined-of.mjs": "99bae79696c73b6ede31136659ddde8a876a5417b00a1c82b9242c40297e6840",
+  "scripts/bochs-cpu3-native-cold-bios/parity.mjs": "5943e3bbb6225e224cbaa4555782fa320f8e4637323c8f16c63d42e851704ff0",
+  "scripts/bochs-cpu3-native-cold-bios/external-runner.mjs": "3c13abf31d5a0821b75c83fcc867ec050ee628919b21b30dac9ea85ffd10920d",
+  "scripts/bochs-cpu3-native-cold-bios/DRIVER-SOURCE.md": "08f31ddea8c614e1994ac2e853ef81124afd8f256afa5f9cb6f835dd288060e5",
+  "test/i80386-cold-bios-parity-source.test.mjs": "7bc31cf4dd93935a2b7549bb181e5a5d52c3a5e14fde8de9c943c12c00e6028d",
+  "/tmp/node-v22.23.3-linux-x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+}
