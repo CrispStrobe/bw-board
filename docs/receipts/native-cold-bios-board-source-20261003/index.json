@@ -1,0 +1,29 @@
+{
+  "scope": "ONE bounded six-control source-only actual-board check; no native BIOS execution/build or performance claim",
+  "files": {
+    "after.json": {
+      "sha256": "f6c0723197fc36a52bf119fce7311c59c429003624688bc810bb1c1211422ee7",
+      "bytes": 374
+    },
+    "before.json": {
+      "sha256": "f6c0723197fc36a52bf119fce7311c59c429003624688bc810bb1c1211422ee7",
+      "bytes": 374
+    },
+    "exit.json": {
+      "sha256": "c4f3e7eb9347aa2c120a7db6ae9797bfe7690fc9ad902037d0f4e9fec058f3c7",
+      "bytes": 263
+    },
+    "origins.json": {
+      "sha256": "1bb095d5a0c1967c6e9fdca7abecd6eea0f6384f81e25d3defb41978390ae0bd",
+      "bytes": 382
+    },
+    "stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "stdout": {
+      "sha256": "b84ed38da49bdabd59cd0317e331f392a165574451263a4826b62826e6520d5c",
+      "bytes": 1486
+    }
+  }
+}
