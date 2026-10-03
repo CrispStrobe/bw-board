@@ -1,0 +1,14 @@
+{
+  "baseline": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "candidate": "68747bf0b2cc50989af9ee28907719709a053aa8",
+  "changed": [
+    ".github/workflows/wasm-cached-run-inline.yml",
+    "crates/core/src/cpu/cortex_m.rs"
+  ],
+  "enginePath": "crates/core/src/cpu/cortex_m.rs",
+  "baselineSha256": "3cce26ce11616709e363419f520a60eccc118c9a01af3d65959a9159b6af2e98",
+  "candidateSha256": "38410177f7c3600e157f6e41decbb789cebd86b443a38d5c26375562aad940e9",
+  "cpuFileIdenticalAfterReplacingAttributeAndComment": true,
+  "nativeProductionUnchanged": true,
+  "cpuDiff": "diff --git a/crates/core/src/cpu/cortex_m.rs b/crates/core/src/cpu/cortex_m.rs\nindex f2382cea..65063893 100644\n--- a/crates/core/src/cpu/cortex_m.rs\n+++ b/crates/core/src/cpu/cortex_m.rs\n@@ -633,8 +633,12 @@ impl CortexM {\n     /// caller's scheduler-bounded budget. No MMIO occurs within the run, so the\n     /// caller's existing aggregate cycle update precedes the next MMIO access.\n     /// Compile the same primitive in host unit tests for reference comparison.\n+    /// Experimental WASM-only call-site inlining: keep the exact executor and\n+    /// 16-instruction bound, but expose its loop to the guarded batch caller.\n+    /// Native test compilation retains the original outlined primitive.\n     #[cfg(any(target_arch = \"wasm32\", test))]\n-    #[inline(never)]\n+    #[cfg_attr(target_arch = \"wasm32\", inline(always))]\n+    #[cfg_attr(not(target_arch = \"wasm32\"), inline(never))]\n     fn run_t16_cached_run(&mut self, bus: &mut SystemBus, max_count: u32) -> u32 {\n         if max_count == 0 || self.sleeping || self.waiting_for_event {\n             return 0;\n"
+}

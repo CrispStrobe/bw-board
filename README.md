@@ -311,6 +311,19 @@ initial scanner-ratchet failure is also preserved. This candidate remains
 are unchanged. Different hosted CPUs do not establish Node-version causality.
 See [all scalar word-dispatch results and original receipts](docs/receipts/2026-10-03-wasm-scalar-word-dispatch/README.md).
 
+WASM-only call-site inlining of the unchanged 16-instruction cached executor
+also completed four ordinary hosted pairs. GPIO loses **9.26–15.93% in all
+four**; motion is mixed (**−2.53% to +14.23%**), as is RAM (**−1.40% to
++5.36%**). The Node 22 reverse RAM minimum drops **2.849149× → 2.754971×**.
+Native verification, independent WASM determinism and **108 actual integrations**
+pass. Fresh motion remains **0.805111× median / 0.800217× minimum**, below the
+unchanged ≥1× floor. The candidate WASM is 26,554 bytes smaller, which does not
+establish a speedup. The engine body, cap and all safety guards are unchanged;
+only its WASM inlining attribute differs. This experiment remains
+**unmerged/unqualified**; production, app pins and physical acknowledgements
+are unchanged. See
+[all cached-executor inlining results and original receipts](docs/receipts/2026-10-03-wasm-cached-run-inline/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
