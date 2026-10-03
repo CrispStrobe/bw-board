@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-cold-bios-runtime-source.test.mjs"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "wallSeconds": 0.9225445613265038,
+  "pinsUnchanged": true,
+  "limits": {
+    "cpu": 10,
+    "wall": 30,
+    "heapMiB": 128,
+    "nice": 10,
+    "fileMiB": 256,
+    "core": 0
+  }
+}
