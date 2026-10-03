@@ -19,9 +19,16 @@ def validate_authority(c):
  require(typed['targetN']==c['targetN'] and typed['targetQ']==c['targetQ'] and typed['worker']=={'revision':NATIVE,'sourceSha256':c['workers']['native']['sourceSha256']},'same typed worker/extent')
  require(typed['compiledRevision']==c['compiledRevision'] and typed['addonSha256']==c['addonSha256'] and typed['nodeSha256']==c['nodeSha256'] and typed['captureSha256']==c['captureSha256'],'same typed source/addon/Node/capture')
  require(typed['stateExportProfile']=='bw.cold-native.copied-u32-state.v1' and typed['officialArtifact']==c['typedQualificationArtifact'],'actual profile/artifact authority')
- artifact=c['typedQualificationArtifact'];require(type(artifact['zipBytes']) is int and 0<artifact['zipBytes']<=32<<20,'semantic artifact fits setup cap')
+ artifact=c['typedQualificationArtifact'];download_descriptor(artifact);require(type(artifact['zipBytes']) is int and 0<artifact['zipBytes']<=32<<20,'semantic artifact fits setup cap')
  old=c['plainQualificationAudit'];pp=HERE/old['file'];require(pp.is_file() and not pp.is_symlink() and digest(pp)==old['sha256'],'held original qualification authority')
  plain=json.loads(pp.read_bytes());require(plain['schema']=='bw.cold-performance.arm-qualification.v1' and plain['status']=='PASS' and 'plain-JS' in plain['qualifiedArms'],'genuine plain semantic PASS')
  require(plain['workers']['plainJs']=={'revision':PLAIN,'sourceSha256':c['workers']['plainJs']['sourceSha256']} and plain['captureSha256']==c['captureSha256'] and plain['nodeSha256']==c['nodeSha256'] and plain['officialArtifact']==old['officialArtifact'],'held plain worker/capture/Node/provenance')
  return c,p
+def download_descriptor(record):
+ require(type(record) is dict and set(record)=={'runId','headSha','artifactId','zipBytes','zipSha256'},'closed actual typed artifact record')
+ require(type(record['runId']) is int and record['runId']>0 and type(record['artifactId']) is int and record['artifactId']>0,'official positive IDs')
+ require(type(record['zipBytes']) is int and 0<record['zipBytes']<=32<<20,'setup file cap')
+ require(type(record['headSha']) is str and len(record['headSha'])==40 and all(x in '0123456789abcdef' for x in record['headSha']),'actual source SHA')
+ require(type(record['zipSha256']) is str and len(record['zipSha256'])==64 and all(x in '0123456789abcdef' for x in record['zipSha256']),'actual ZIP SHA')
+ return {'runId':record['runId'],'head':record['headSha'],'artifactId':record['artifactId'],'zipBytes':record['zipBytes'],'zipSha256':record['zipSha256']}
 def pending_guard():return validate_authority(json.loads((HERE/'hosted-contract.json').read_bytes()))

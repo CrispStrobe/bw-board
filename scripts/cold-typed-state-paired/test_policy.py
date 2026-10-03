@@ -152,21 +152,21 @@ class HostedPendingTests(unittest.TestCase):
     def test_owned_pending_audit_denies_before_setup_network_or_process(self):
         import authority,importlib.util
         c=json.loads((Path(__file__).parent/'hosted-contract.json').read_bytes())
-        with unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must not spawn')),unittest.mock.patch.object(parent.subprocess,'check_output',side_effect=AssertionError('must not query metadata')):
-            with self.assertRaisesRegex(ValueError,'PENDING'):authority.pending_guard()
-        # Manufactured future authority only, not a claim of typed qualification.
-        ready=copy.deepcopy(c);ready['status']='ROOT_REVIEWED_ACTUAL_TYPED_QUALIFICATION_READY'
-        ready['typedQualificationArtifact']={'artifactId':1,'runId':2,'head':'a'*40,'zipBytes':20000000,'zipSha256':'b'*64}
-        typed={'schema':'bw.cold-typed-state.qualification-audit.v1','status':'PASS','targetN':316562,'targetQ':316562,'worker':{'revision':authority.NATIVE,'sourceSha256':c['workers']['native']['sourceSha256']},'compiledRevision':c['compiledRevision'],'addonSha256':c['addonSha256'],'nodeSha256':c['nodeSha256'],'captureSha256':c['captureSha256'],'stateExportProfile':'bw.cold-native.copied-u32-state.v1','officialArtifact':ready['typedQualificationArtifact']}
+        # Actual source-owned audit is read-only evidence; no child/download.
+        actual,path=authority.pending_guard();self.assertEqual(actual['typedQualificationArtifact']['runId'],37147862236)
+        ready=copy.deepcopy(c)
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);(root/'typed-audit.json').write_text(json.dumps(typed));(root/c['plainQualificationAudit']['file']).write_bytes((authority.HERE/c['plainQualificationAudit']['file']).read_bytes());ready['typedQualificationAudit']={'file':'typed-audit.json','sha256':authority.digest(root/'typed-audit.json')}
-            with unittest.mock.patch.object(authority,'HERE',root):
-                authority.validate_authority(ready)
-                for field in ('typedQualificationArtifact','typedQualificationAudit'):
-                    bad=copy.deepcopy(ready);bad[field]=None
-                    with self.assertRaises((ValueError,TypeError)):authority.validate_authority(bad)
-                bad=copy.deepcopy(ready);bad['addonSha256']='0'*64
-                with self.assertRaises(ValueError):authority.validate_authority(bad)
+            root=Path(directory);pending=copy.deepcopy(c);pending['status']='PENDING_ACTUAL_TYPED_QUALIFICATION_AUDIT';pending['typedQualificationAudit']=None;pending['typedQualificationArtifact']=None;(root/'hosted-contract.json').write_text(json.dumps(pending))
+            with unittest.mock.patch.object(authority,'HERE',root),unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must not spawn')),unittest.mock.patch.object(parent.subprocess,'check_output',side_effect=AssertionError('must not query metadata')):
+                with self.assertRaisesRegex(ValueError,'PENDING'):authority.pending_guard()
+        for field in ('typedQualificationArtifact','typedQualificationAudit'):
+            bad=copy.deepcopy(ready);bad[field]=None
+            with self.assertRaises((ValueError,TypeError)):authority.validate_authority(bad)
+        bad=copy.deepcopy(ready);bad['addonSha256']='0'*64
+        with self.assertRaises(ValueError):authority.validate_authority(bad)
+        mapped=authority.download_descriptor(ready['typedQualificationArtifact']);self.assertEqual(mapped['head'],ready['typedQualificationArtifact']['headSha']);self.assertNotIn('headSha',mapped);self.assertEqual(set(mapped),{'runId','head','artifactId','zipBytes','zipSha256'})
+        bad=copy.deepcopy(ready['typedQualificationArtifact']);bad['head']=bad['headSha']
+        with self.assertRaises(ValueError):authority.download_descriptor(bad)
         spec=importlib.util.spec_from_file_location('typed_hosted_resource',Path(__file__).parent/'hosted.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);identity={'source':'frozen'}

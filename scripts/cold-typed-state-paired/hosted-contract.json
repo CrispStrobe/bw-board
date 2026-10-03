@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-typed-state.paired-source.v1",
-  "status": "PENDING_ACTUAL_TYPED_QUALIFICATION_AUDIT",
+  "status": "ROOT_REVIEWED_ACTUAL_TYPED_QUALIFICATION_READY",
   "qualifierRevision": "fd15172085d59daed331d40a2dfec5d6666b3d99",
   "qualifierRoot": "/home/runner/work/bw-board/bw-board/qualifier",
   "qualifierFiles": {
@@ -194,8 +194,17 @@
   "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
   "addonSha256": "d7fa1a7206afc8204d96fcd75d0130f17f39ade5c18fa32b3e25c7a62cb93993",
   "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
-  "typedQualificationAudit": null,
-  "typedQualificationArtifact": null,
+  "typedQualificationAudit": {
+    "file": "independent-typed-qualification-audit.json",
+    "sha256": "b61d61eb42273ad970715ad5b514685bb581d7d6fe02cf355a91e8b91c435cce"
+  },
+  "typedQualificationArtifact": {
+    "runId": 37147862236,
+    "headSha": "fd15172085d59daed331d40a2dfec5d6666b3d99",
+    "artifactId": 11282553617,
+    "zipBytes": 18466040,
+    "zipSha256": "a6888bb1479ca4f8d62c178b2e682b1449d2533c7bace64d611b15b8ea597c62"
+  },
   "plainQualificationAudit": {
     "file": "independent-plain-qualification-audit.json",
     "sha256": "5eb7c2cf155bbc3f355dcd677fb6f39b9f6f7826476945d1376bc19bb728e191",

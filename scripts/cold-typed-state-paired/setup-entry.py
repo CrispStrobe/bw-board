@@ -3,7 +3,7 @@ import sys
 sys.dont_write_bytecode=True
 import json,os,hashlib,subprocess
 from pathlib import Path
-from authority import pending_guard,require,HERE,digest
+from authority import pending_guard,require,HERE,digest,download_descriptor
 WORKSPACE=Path('/home/runner/work/bw-board/bw-board')
 def main(out,node):
  c,audit_path=pending_guard() # FIRST before even metadata subprocesses.
@@ -21,7 +21,7 @@ def main(out,node):
  out.mkdir();report={'status':'FAIL','scope':'Restoration only; no semantic child/pair/rebuild'};before=None;initial=None;qualificationpins=None;primary=None;finalerror=None
  try:
   before={'tooling':q.tooling(),'plain':plainbefore,'node':q.fingerprint(node)};q.write(out/'before.json',before)
-  setup,data=q.setup(qc,node,out,report);q.download(c['typedQualificationArtifact'],out/'typed-qualification-artifact');qualificationpins={str(p):q.fingerprint(p) for p in (out/'typed-qualification-artifact').rglob('*') if p.is_file()};initial=q.restored(qc,node,out);q.write(out/'restored-before.json',initial)
+  setup,data=q.setup(qc,node,out,report);q.download(download_descriptor(c['typedQualificationArtifact']),out/'typed-qualification-artifact');qualificationpins={str(p):q.fingerprint(p) for p in (out/'typed-qualification-artifact').rglob('*') if p.is_file()};initial=q.restored(qc,node,out);q.write(out/'restored-before.json',initial)
   binding=q.read_json(HERE/'binding.json');require(binding['workers']==c['workers'],'fixed paired worker maps')
   binding.update(status='ROOT_REVIEWED_READY_FOR_SEPARATELY_GRANTED_PAIRS',capture={'path':data['capture'],'sha256':qc['captureArtifact']['captureSha256']},independentAudit={'path':data['independentAudit'],'sha256':qc['independentAudit']['sha256']},armQualificationAudit={'path':str(audit_path),'sha256':c['typedQualificationAudit']['sha256']},node={'path':str(node),'version':'v22.23.3','sha256':c['nodeSha256']},nativeInput=setup['nativeInput'])
   pins=dict(initial['records']);pins.update(q.original_inputs(out))
