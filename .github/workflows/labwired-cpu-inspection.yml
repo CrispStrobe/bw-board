@@ -88,9 +88,26 @@ jobs:
           const fullWat = {bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex')};
           writeFileSync('evidence/disassembly-provenance.json', JSON.stringify(fullWat, null, 2) + '\n', {flag: 'wx'});
           const text = bytes.toString('utf8');
-          const selected = selectCpuWat(text);
+          const bodies = [];
+          const selected = selectCpuWat(text, {metadataOnly: true, onBody: body => bodies.push(body)});
           const provenance = JSON.parse(readFileSync('evidence/provenance.json'));
-          writeFileSync('evidence/selected-cpu.json', JSON.stringify({...provenance, fullWat, ...selected}, null, 2) + '\n', {flag: 'wx'});
+          writeFileSync('evidence/selection-sizing.json', JSON.stringify({...provenance, fullWat, ...selected}, null, 2) + '\n', {flag: 'wx'});
+          // Bound both metadata and lossless selected source; never full-module WAT.
+          const totalBytes = bodies.reduce((n, b) => n + Buffer.byteLength(b.wat), 0);
+          if (totalBytes > 16 * 1024 * 1024) throw Error('Selected CPU bodies exceed total text bound');
+          const bodyFiles = bodies.map((body, index) => {
+            const bytes = Buffer.from(body.wat), chunks = [];
+            for (let at = 0; at < bytes.length; at += 512 * 1024) {
+              const chunk = bytes.subarray(at, at + 512 * 1024);
+              const path = 'body-' + index + '-' + chunks.length + '.txt';
+              writeFileSync('evidence/' + path, chunk, {flag: 'wx'});
+              chunks.push({path, bytes: chunk.length, sha256: createHash('sha256').update(chunk).digest('hex')});
+            }
+            return {name: body.name, chunks};
+          });
+          const receipt = JSON.stringify({...provenance, fullWat, ...selected, totalBodyBytes: totalBytes, bodyFiles}, null, 2) + '\n';
+          if (Buffer.byteLength(receipt) > 2_000_000) throw Error('CPU metadata receipt exceeds bound');
+          writeFileSync('evidence/selected-cpu.json', receipt, {flag: 'wx'});
           NODE
       - name: Retain original inspection even on failure (never engines or full WAT)
         if: always()
