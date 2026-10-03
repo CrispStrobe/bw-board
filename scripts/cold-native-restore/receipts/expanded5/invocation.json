@@ -1,0 +1,1 @@
+{"command": ["python3", "-B", "scripts/cold-native-restore/test_archive.py"], "cwd": "/tmp/bw-cold-native-restoration-source-20261003", "cpu": 10, "wall": 30, "blankHooks": {"NODE_OPTIONS": "", "NODE_PATH": "", "LD_PRELOAD": "", "LD_AUDIT": "", "BW_HOT_NAPI_PROFILE": "", "NODE_V8_COVERAGE": ""}}

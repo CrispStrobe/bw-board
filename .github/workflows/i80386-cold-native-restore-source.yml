@@ -1,0 +1,19 @@
+name: Cold native restoration archive source controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - scripts/cold-native-restore/**
+      - .github/workflows/i80386-cold-native-restore-source.yml
+permissions:
+  contents: read
+jobs:
+  archive-source-controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Synthetic archive refusals only
+        run: python3 -B scripts/cold-native-restore/test_archive.py
