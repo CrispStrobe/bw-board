@@ -1,0 +1,11 @@
+{
+  "schema": "bw.cold-plain-js.capture-binding.v1",
+  "status": "PENDING_INDEPENDENTLY_AUDITED_SUCCESSFUL_CAPTURE",
+  "compiledRevision": "a6fae61a549d595c88a324f50589d92497040c07",
+  "driverRevision": "64514be6e45418910c5f952873382a2581810e1f",
+  "driverSourceSha256": "ec9a89ec22aa6332fd64f6058c88706ed493fbefd33d8576a9d88e747dfd7ea9",
+  "captureSha256": null,
+  "independentAuditSha256": null,
+  "independentAuditApproved": false,
+  "targetQ": null
+}
