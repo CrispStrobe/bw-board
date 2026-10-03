@@ -31,12 +31,18 @@ maximum errors 67.548/1.716/0.0505 microvolts, capture-mean errors
 -10.202/-2.352/-13.273 microvolts. Actual accepted adaptive solutions preserve
 the ceiling and simultaneous terminal KCL at 211 overload and 225 inrush points.
 Independent unbounded-peak controls bracket the ceiling by +/-0.5 percent.
-Five isolated production mutants red actual Board consequences, including stale
+Six isolated production mutants red actual Board consequences, including stale
 VIN authority before endpoint diagnostic repair; registry/dispatcher restored.
-The complete focused startup/DC/primitive surface passes 51/51 without skips;
+The complete focused startup/DC/primitive surface passes 52/52 without skips;
 36 independent full legacy solver results remain bit-exact to the foundation
 parent. Solver/integrator tolerances and work budgets are unchanged. No vendor
 transient certificate, downstream adoption or deployment is claimed.
+Final audit found that public getDeviceState returns live state: an added
+drive could otherwise contribute extra output current without matching VIN.
+The new mode now refuses additional state drives and mismatched/uninitialized
+mode state, with public getter/restore regressions and a sixth load-bearing
+mutant. Earlier 7222dc89 CI37098874966/Harris37098874961 greens qualify only
+that superseded tree; the forward repair needs its own exact-head receipts.
 
 2026-10-03 Registered nonlinear terminal-current authority — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch

@@ -25,3 +25,11 @@ Admission controls reject unsupported topology and source authorities; caught so
 Five executable production-source mutations fail actual Board callers: remove the upper current clamp with its matching derivative; restore previous-step VIN current with its constant derivative; bypass the target clock; omit domain admission; and omit the final prebias guard. The stale-VIN mutation is checked at accepted adaptive solutions because a settled endpoint can repair its bookkeeping and hide the defect. Clock bypass is checked against the cold output current, avoiding an irrelevant adaptive backoff failure. Mutated modules load in memory; the power registry and temporary observer dispatcher are restored, healthy callers are rechecked, and the on-disk source remains unchanged.
 
 This domain does not qualify dynamic enable, shutdown/restart, changing headroom, dropout, prebiased startup, reverse power, adjustable feedback, external SS, inductive loading or coupled regulators. Generic primitive diagnostics preceding this mode are feasibility evidence only; production qualification belongs to the executable ADP7118 tests.
+
+The selected mode also requires matching initialized device state and refuses
+any additional `state.drives` authority. `getDeviceState()` exposes live state;
+adding a separate output drive there must not silently defeat the current
+ceiling or draw output power without simultaneous VIN current. A public
+getter/restore regression and an executable guard-removal mutant prove this
+boundary. Board snapshots do not themselves serialize device state. Existing
+default DC and earlier startup paths retain their behavior.

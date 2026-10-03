@@ -337,6 +337,10 @@ export function registerPowerDevices() {
     },
 
     stamp(ctx, part, state) {
+      if (part.params?.startupModel === 'current-limited-envelope'
+          && state.startupModel !== 'current-limited-envelope') {
+        throw new Error(`ADP7118 ${part.id}: current-limited startup requires matching initialized model state`);
+      }
       if (state.startupModel && ctx.netFor('ss')) {
         throw new Error(`ADP7118 ${part.id}: startup SS must be open; external SS networks are unmodeled`);
       }
@@ -353,6 +357,9 @@ export function registerPowerDevices() {
           throw new Error(`ADP7118 ${part.id}: startup requires directly connected SENSE; external feedback is unmodeled`);
         }
         if (state.startupModel === 'current-limited-envelope') {
+          if (Object.values(state.drives ?? {}).some(Boolean)) {
+            throw new Error(`ADP7118 ${part.id}: current-limited startup refuses additional state drive authority`);
+          }
           assertAdp7118CurrentLimitedDomain(ctx, part);
           const target = adp7118StartupTarget(part, state, ctx.tSeconds);
           const resistance = part.params.rOut;

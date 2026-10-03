@@ -244,6 +244,19 @@ test('authored capacitor prebias refuses through the actual snapshot restoration
   assert.throws(()=>b.meterVoltage('out','gnd'),/measurement unavailable|circuit solve failed/);
 });
 
+test('public mutable device state cannot add a driver or silently replace the selected current law',()=>{
+  for(const alteration of [state=>{state.drives.vout_1={vTh:.1,rTh:1,ref:'gnd'};},
+    state=>{state.startupModel='datasheet-envelope';}]){
+    const b=rig();alteration(b.getDeviceState('U'));
+    assert.throws(()=>b.restore(b.snapshot()),/ADP7118.*(state drive|initialized model state)/i);
+    assert.throws(()=>b.meterVoltage('out','gnd'),/measurement unavailable|circuit solve failed/);
+  }
+  const b=rig();
+  assert.throws(()=>solveMNA(b._solveParts,b._solveNets,new Map(),b.controls,5,
+    {capVoltages:b.capVoltages}),/ADP7118.*initialized model state/i);
+  assert.doesNotThrow(()=>b.restore(b.snapshot()),'unchanged real snapshot restoration remains admitted');
+});
+
 test('production ADP limiter mutations fail real Board callers and restore the registered model',async()=>{
   const pristine=readFileSync(new URL('../src/devices/power.js',import.meta.url),'utf8');
   const mutations=[
@@ -275,6 +288,10 @@ test('production ADP limiter mutations fail real Board callers and restore the r
     ['final prebias guard removed', [['if (out > target + 1e-6 || out < -1e-6)', 'if (false)']], ()=>{
       const b=rig(),snap=b.snapshot();snap.capVoltages=[['C',1]];
       assert.throws(()=>b.restore(snap),/ADP7118.*prebias/i);
+    }],
+    ['additional state drive guard removed', [['if (Object.values(state.drives ?? {}).some(Boolean))', 'if (false)']], ()=>{
+      const b=rig();b.getDeviceState('U').drives.vout_1={vTh:.1,rTh:1,ref:'gnd'};
+      assert.throws(()=>b.restore(b.snapshot()),/ADP7118.*state drive/i);
     }],
   ];
   for(const [name,patches,prove] of mutations){
