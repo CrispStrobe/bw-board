@@ -1,0 +1,114 @@
+name: Cold BIOS three-arm semantic qualification (manual, disabled)
+on:
+  workflow_dispatch:
+    inputs:
+      enable_qualification:
+        description: Root-reviewed one plain-JS and two native semantic children
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-three-arm-semantic-qualification
+  cancel-in-progress: false
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: runtime
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Require root-reviewed source and both genuine worker-control packets
+        if: inputs.enable_qualification
+        id: pins
+        run: |
+          python3 -B - <<'PY'
+          import sys,json,os
+          sys.path.insert(0,'runtime/scripts/cold-three-arm-qualification')
+          from admission import validate_contract,validate_source_packets
+          c=validate_contract(json.load(open('runtime/scripts/cold-three-arm-qualification/contract.json')))
+          validate_source_packets(c)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              for k,v in [('compiled',c['compiledRevision']),('driver',c['driver']['revision']),('native',c['workers']['native']['revision']),('plainJs',c['workers']['plainJs']['revision'])]:f.write(k+'='+v+'\n')
+          PY
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_qualification && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.compiled }}
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_qualification && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_qualification && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.native }}
+          path: native-worker
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_qualification && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.plainJs }}
+          path: plain-worker
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: inputs.enable_qualification && steps.pins.outcome == 'success'
+        with:
+          node-version: 22.23.3
+      - name: Exactly three bounded semantic workers; stop on first failure
+        if: inputs.enable_qualification && steps.pins.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BW_COLD_QUALIFICATION_OUTPUT: ${{ runner.temp }}/cold-three-arm-qualification
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          BW_HOT_NAPI_PROFILE: ''
+          NODE_V8_COVERAGE: ''
+          PYTHONPATH: ''
+          PYTHONSTARTUP: ''
+          PYTHONHOME: ''
+          PYTHONINSPECT: ''
+          PYTHONBREAKPOINT: ''
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/cold-three-arm-context"
+          export BW_COLD_NODE="$(command -v node)"
+          python3 -B runtime/scripts/cold-three-arm-qualification/qualify.py enabled > "$RUNNER_TEMP/cold-three-arm-context/parent.stdout" 2> "$RUNNER_TEMP/cold-three-arm-context/parent.stderr"
+      - name: Retain first raw failure or complete semantic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-three-arm-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-three-arm-qualification
+            ${{ runner.temp }}/cold-three-arm-context
+            ${{ runner.temp }}/cold-bios-build-evidence
+            ${{ github.workspace }}/runtime/scripts/cold-three-arm-qualification
+            ${{ github.workspace }}/runtime/scripts/cold-native-restore
+            ${{ github.workspace }}/runtime/.github/workflows/i80386-cold-three-arm-qualification.yml
+          include-hidden-files: true
+          if-no-files-found: error

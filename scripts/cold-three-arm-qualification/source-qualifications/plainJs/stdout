@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: pending capture and invalid audit/target/role bindings deny
+ok 1 - pending capture and invalid audit/target/role bindings deny
+  ---
+  duration_ms: 240.829052
+  type: 'test'
+  ...
+# Subtest: missing/failed/mismatched successful capture denies without execution
+ok 2 - missing/failed/mismatched successful capture denies without execution
+  ---
+  duration_ms: 6.406771
+  type: 'test'
+  ...
+# Subtest: pure reset profile guard rejects model/mapping/clock/queue deviations without constructing a machine
+ok 3 - pure reset profile guard rejects model/mapping/clock/queue deviations without constructing a machine
+  ---
+  duration_ms: 2.895378
+  type: 'test'
+  ...
+# Subtest: raw final CPU, whole board/RAM and complete ordered PIO comparator rejects mutations
+ok 4 - raw final CPU, whole board/RAM and complete ordered PIO comparator rejects mutations
+  ---
+  duration_ms: 3.165813
+  type: 'test'
+  ...
+# Subtest: closed worker input refuses extra hooks, aliases and unbounded paths
+ok 5 - closed worker input refuses extra hooks, aliases and unbounded paths
+  ---
+  duration_ms: 4.576247
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1063.750209

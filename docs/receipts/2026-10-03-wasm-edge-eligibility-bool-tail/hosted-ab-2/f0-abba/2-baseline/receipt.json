@@ -1,0 +1,343 @@
+{
+  "schema": "labwired.f0-timing.v1",
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-03T13:02:05.924Z",
+  "node": "v20.20.2",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "logicalCpus": 4,
+  "buildInfo": {
+    "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "wasmBindgen": "0.2.121",
+    "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+    "builtAt": "2026-10-01T19:57:59.544Z",
+    "targets": {
+      "nodejs": {
+        "labwired_wasm.js": {
+          "bytes": 135762,
+          "brotliBytes": 25386,
+          "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      },
+      "web": {
+        "labwired_wasm.js": {
+          "bytes": 138392,
+          "brotliBytes": 25941,
+          "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      }
+    },
+    "rawBytes": 136668412
+  },
+  "files": {
+    "test/labwired-f0-timing.test.mjs": "23d29e1a2475578e9d61673891bd78c78714c76828c359880461a636b633265a",
+    "scripts/probe-labwired-f0.mjs": "7eeb305b0dc747454708c2e4b0e6792ec268d0cac4ec3db989b1e0e91c24e114",
+    "scripts/lib/f0-timing-receipt.mjs": "a4e55d0f8bb7b3c6495da42f85c3075285fe46812ca35480c1f1c1421654d8e5",
+    "test/fixtures/labwired/f0-timing/active.S": "48b9a92d1b3e82f20b944312634e13e9048a64163cb6483b0993aa615a3309c5",
+    "test/fixtures/labwired/f0-timing/active.ld": "fb2065445ff60036572f85b1b6d0eb15f7445b674a3f43bbea0cdc4ab0af7efc"
+  },
+  "compiler": "arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "limitations": [
+    "selected active F0 workloads; not all firmware, silicon CPI or browser/UI qualification",
+    "48 MHz scales engine-reported cycles, not physically calibrated instruction timing",
+    "production recommended peripheral tick policy, no observers/debugger/circuit solving",
+    "shared host; original artifact bytes verified; no app pin or hardware change",
+    "ordinary timings separate from whole-process sampled attribution"
+  ],
+  "ordinary": {
+    "flags": [],
+    "loadBefore": [
+      1.06,
+      0.46,
+      0.17
+    ],
+    "loadAfter": [
+      1.05,
+      0.48,
+      0.18
+    ],
+    "exitCode": 1,
+    "signal": null,
+    "workloads": {
+      "ram": {
+        "guest": {
+          "workload": "ram",
+          "elfSha256": "43c6ccbbd3785c5c4c83bcb19b4853c77aa1eb085a8ea54ffcb1068dc8e5c47b",
+          "imageSha256": "70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4"
+        },
+        "samples": [
+          {
+            "workload": "ram",
+            "index": 0,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.343351956,
+            "rtx": 2.912463384947194,
+            "iterations": 5400000,
+            "checksum": 5399872,
+            "input": 0,
+            "mirror": 5399999,
+            "output": null
+          },
+          {
+            "workload": "ram",
+            "index": 1,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.3447233580000001,
+            "rtx": 2.9008768242504757,
+            "iterations": 10200000,
+            "checksum": 10199872,
+            "input": 0,
+            "mirror": 10199999,
+            "output": null
+          },
+          {
+            "workload": "ram",
+            "index": 2,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.3414106499999999,
+            "rtx": 2.9290240360105937,
+            "iterations": 15000000,
+            "checksum": 14999872,
+            "input": 0,
+            "mirror": 14999999,
+            "output": null
+          },
+          {
+            "workload": "ram",
+            "index": 3,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.34392782299999997,
+            "rtx": 2.907586804920985,
+            "iterations": 19800000,
+            "checksum": 19799872,
+            "input": 0,
+            "mirror": 19799999,
+            "output": null
+          },
+          {
+            "workload": "ram",
+            "index": 4,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.3483446759999997,
+            "rtx": 2.8707199187967523,
+            "iterations": 24600000,
+            "checksum": 24599872,
+            "input": 0,
+            "mirror": 24599999,
+            "output": null
+          }
+        ],
+        "allWindowsMeet1x": true,
+        "medianRtx": 2.907586804920985,
+        "minimumRtx": 2.8707199187967523,
+        "guestObservations": [
+          {
+            "checksum": 5399872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 0,
+            "input": 0,
+            "iterations": 5400000,
+            "mirror": 5399999,
+            "output": null,
+            "workload": "ram"
+          },
+          {
+            "checksum": 10199872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 1,
+            "input": 0,
+            "iterations": 10200000,
+            "mirror": 10199999,
+            "output": null,
+            "workload": "ram"
+          },
+          {
+            "checksum": 14999872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 2,
+            "input": 0,
+            "iterations": 15000000,
+            "mirror": 14999999,
+            "output": null,
+            "workload": "ram"
+          },
+          {
+            "checksum": 19799872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 3,
+            "input": 0,
+            "iterations": 19800000,
+            "mirror": 19799999,
+            "output": null,
+            "workload": "ram"
+          },
+          {
+            "checksum": 24599872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 4,
+            "input": 0,
+            "iterations": 24600000,
+            "mirror": 24599999,
+            "output": null,
+            "workload": "ram"
+          }
+        ]
+      },
+      "gpio": {
+        "guest": {
+          "workload": "gpio",
+          "elfSha256": "2586d1a19e9f97a108dad6cdfff8b9b2bebbd5672ac133761c36ee12b7ec6cd2",
+          "imageSha256": "cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"
+        },
+        "samples": [
+          {
+            "workload": "gpio",
+            "index": 0,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 1.8289323440000003,
+            "rtx": 0.5467670815055583,
+            "iterations": 3000000,
+            "checksum": 2999872,
+            "input": 0,
+            "mirror": 2999999,
+            "output": 0
+          },
+          {
+            "workload": "gpio",
+            "index": 1,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 1.611901997,
+            "rtx": 0.6203851114156788,
+            "iterations": 5526315,
+            "checksum": 5526484,
+            "input": 2,
+            "mirror": 5526315,
+            "output": 1
+          },
+          {
+            "workload": "gpio",
+            "index": 2,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 1.8322889150000001,
+            "rtx": 0.5457654586094574,
+            "iterations": 8192982,
+            "checksum": 8192809,
+            "input": 0,
+            "mirror": 8192981,
+            "output": 0
+          },
+          {
+            "workload": "gpio",
+            "index": 3,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 1.6083322560000006,
+            "rtx": 0.6217620745150308,
+            "iterations": 10719298,
+            "checksum": 10719421,
+            "input": 2,
+            "mirror": 10719297,
+            "output": 1
+          },
+          {
+            "workload": "gpio",
+            "index": 4,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 1.8055002999999996,
+            "rtx": 0.5538631037613232,
+            "iterations": 13385965,
+            "checksum": 13385747,
+            "input": 0,
+            "mirror": 13385964,
+            "output": 0
+          }
+        ],
+        "allWindowsMeet1x": false,
+        "medianRtx": 0.5538631037613232,
+        "minimumRtx": 0.5457654586094574,
+        "guestObservations": [
+          {
+            "checksum": 2999872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 0,
+            "input": 0,
+            "iterations": 3000000,
+            "mirror": 2999999,
+            "output": 0,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 5526484,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 1,
+            "input": 2,
+            "iterations": 5526315,
+            "mirror": 5526315,
+            "output": 1,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 8192809,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 2,
+            "input": 0,
+            "iterations": 8192982,
+            "mirror": 8192981,
+            "output": 0,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 10719421,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 3,
+            "input": 2,
+            "iterations": 10719298,
+            "mirror": 10719297,
+            "output": 1,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 13385747,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 4,
+            "input": 0,
+            "iterations": 13385965,
+            "mirror": 13385964,
+            "output": 0,
+            "workload": "gpio"
+          }
+        ]
+      }
+    },
+    "allWindowsMeet1x": false
+  },
+  "completedAt": "2026-10-03T13:02:17.174Z"
+}

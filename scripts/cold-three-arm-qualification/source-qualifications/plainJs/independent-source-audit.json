@@ -1,0 +1,9 @@
+{
+  "status": "PASS_SOURCE_ONLY_PLAIN_JS_EIGHTH_MIGRATION",
+  "head": "0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83",
+  "sourceFiles": 49,
+  "controls": 5,
+  "wallSeconds": 1.4849949721246958,
+  "beforeAfterExact": true,
+  "scope": "Factory/timed loop unchanged; exact eighth capture/audit prerequisite and explicit pre-settle CPU check. No worker execution, guest or timing qualification."
+}

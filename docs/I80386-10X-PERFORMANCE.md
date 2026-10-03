@@ -33,6 +33,8 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 The [native cold BIOS E16 diagnostic](I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) now passes the fixed checkpoint: 316,562 completions, 400 REP elements and 16,475 ordered PIO events, with independent audit evidence. This is a correctness diagnostic, not full boot, speed qualification or adoption.
 
+The [three-arm semantic qualification](I80386-COLD-THREE-ARM-RESULTS.md) now independently passes plain JS, native one-Q and native batched at the same E16 checkpoint and complete 16,475-event PIO tape. Batched reaches 316,562 N/Q in 16,524 resumes; one-Q uses 316,562. The earlier [inspect-schema](I80386-COLD-THREE-ARM-FIRST-FAILURE.md) and [live-slice type](I80386-COLD-THREE-ARM-CORRECTED-FAILURE.md) failures remain retained. This is terminal/PIO semantic qualification with unchanged source, not a paired speed result or Windows/Doom 10× claim.
+
 The [first cold-BIOS paired attempt](I80386-COLD-PAIRED-FIRST-FAILURE.md) stopped after one qualified native one-Q warmup child: the parent failed constructing its progress-file path. Batched never started and no measured pairs ran. The source correction does not establish a paired speed result; the independently qualified three-arm checkpoint remains unchanged.
 
 The [undefined-OF diagnostic](I80386-NATIVE-COLD-BIOS-UNDEFINED-OF.md) records the historical sixth attempt, which stopped after 4,709 completions before the reviewed ownership policy was added. The [first 124-input build](I80386-NATIVE-COLD-BIOS-BUILD-RESULTS.md) remains historical static evidence.

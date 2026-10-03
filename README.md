@@ -400,6 +400,34 @@ production, app pins and physical acknowledgements are unchanged. All **240
 paired timing windows**, gains, losses and original verdicts are retained:
 [live boolean eligibility results and complete receipts](docs/receipts/2026-10-03-wasm-edge-eligibility-bool/README.md).
 
+The follow-up runs **four ordinary pairs on one hosted VM per runtime**,
+balancing ABBA/BAAB/BAAB/ABBA, with the same frozen harness and original
+engine/glue bytes. Across **480 new timing windows**, GPIO medians improve
+in all eight pairs (**+1.61% to +19.05%**), but motion changes **−5.00% to
++0.99%** and RAM **−1.18% to +1.81%**. Candidate medians span
+**0.574467×–0.808689× motion**, **0.567689×–0.707280× GPIO**, and
+**2.813353×–2.889983× RAM**. Motion/GPIO fail the unchanged every-window
+≥1× floor in all eight pairs; RAM passes all eight. The persistent mixed
+tradeoff leaves the candidate **unmerged/unqualified** and CP13 open.
+Separate runtime VMs do not establish Node-version causality or statistical
+significance. No production engine, app pin or physical acknowledgement
+changed. All pairs, minima, regressions and original job logs are retained:
+[repeated same-host results and complete receipts](docs/receipts/2026-10-03-wasm-same-host-orders/README.md).
+
+The next isolated experiment moves the same boolean method to the trait's
+end. Exact compiled inspection confirms the Button's old `service_edge` slot
+is restored, but all four frozen-harness pairs still show **motion losses
+of 0.31–0.67%** and worse minima. GPIO gains **2.62–19.14%**; RAM changes
+**−1.28% to +3.06%**. Candidate motion/GPIO medians span
+**0.626131×–0.961721× / 0.593837×–0.777377×**, with both floors failing
+all four pairs. Native **4,239 tests + 16 GPIO integrations**, independent
+WASM determinism and **108 actual integrations** pass, but the separate fresh
+motion floor fails (**0.810358× median / 0.789109× min**). This source stays
+**unmerged/unqualified**. Restored compiled layout is not a performance
+explanation or permission to ignore regressions. All **240 timing windows**,
+initial/corrected raw disassembly and original gates are retained:
+[tail-method experiment and complete evidence](docs/receipts/2026-10-03-wasm-edge-eligibility-bool-tail/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
