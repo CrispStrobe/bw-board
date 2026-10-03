@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {resolve,dirname,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
-export const compiledRevision='a6fae61a549d595c88a324f50589d92497040c07';
+export const compiledRevision='7632e6a0995ceaab88bc8cede91506a5330d2e1c';
 export const resetSource=Object.freeze({path:'bochs/cpu/init.cc',sha256:'4bdf4a39a2a3ceecafdd070836a055b5dec8696acf59652e2150a12fdfa7a9f3',lines:'705–874',meaning:'Pinned Bochs CPU3 model reset; not an Intel hardware correction'});
 const root=resolve(fileURLToPath(new URL('../../',import.meta.url)));
 export const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
