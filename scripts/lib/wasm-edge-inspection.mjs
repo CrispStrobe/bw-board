@@ -44,6 +44,8 @@ export function selectEdgeWat (wat, {inspectVtables = false, vtableWords = 14, i
             const words = Array.from({length: vtableWords}, (_, i) => view.getUint32(base + 4 * i, true));
             if (!table.has(words[13]) || !table.has(words[3]) || !table.has(words[4])) continue;
             vtableCandidates.push({address: Number(m[1]) + base, words,
+                ...(includeButtonTargets ? {segmentAddress: Number(m[1]), segmentByteOffset: base,
+                    rawBytesHex: [...bytes.slice(base, base + vtableWords * 4)].map(b => b.toString(16).padStart(2, '0')).join('')} : {}),
                 slots: words.map((value, i) => ({offset: i * 4, value, symbol: i === 1 || i === 2 ? null : table.get(value) || null}))});
         }
     }

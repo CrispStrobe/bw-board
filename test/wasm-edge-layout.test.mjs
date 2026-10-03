@@ -42,6 +42,11 @@ test('default narrow selection is unchanged; opt-in retains full bounded Button 
     assert.equal(wide.vtableCandidates[0].words.length, 19);
     assert.equal(wide.vtableCandidates[0].slots[18].offset, 72);
     assert.equal(wide.vtableCandidates[0].slots[18].symbol, '$other_trait_merged_zero');
+    const vtable = wide.vtableCandidates[0], raw = Buffer.from(vtable.rawBytesHex, 'hex');
+    assert.equal(raw.length, 19 * 4);
+    assert.equal(vtable.segmentAddress + vtable.segmentByteOffset, vtable.address);
+    assert.deepEqual(Array.from({length: 19}, (_, i) => raw.readUInt32LE(i * 4)), vtable.words);
+    assert.equal(narrow.vtableCandidates[0].rawBytesHex, undefined);
     assert(wide.functions.some(f => f.header.includes('other_trait_merged_zero') && f.wat.endsWith('i32.const 0)')));
     assert(!wide.functions.some(f => f.header.includes('not_referenced')));
     assert(wide.types.includes('  (type $boolean (func (param i32) (result i32)))'));
