@@ -1,0 +1,57 @@
+{
+  "schema": "bw.cold-typed-state.qualification-audit.v1",
+  "status": "PASS",
+  "worker": {
+    "revision": "162a9b2a72d780cd7ea4491c91cf7260b15b0a8b",
+    "sourceSha256": "b2356b677458f998352a0119553d846dbf210fd4cc083a4c857b090b833e3a56"
+  },
+  "compiledRevision": "f4a2f2ceae48dde3e4585d84e6c759e13ebadc53",
+  "targetN": 316562,
+  "targetQ": 316562,
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "addonSha256": "d7fa1a7206afc8204d96fcd75d0130f17f39ade5c18fa32b3e25c7a62cb93993",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+  "officialArtifact": {
+    "runId": 37147862236,
+    "headSha": "fd15172085d59daed331d40a2dfec5d6666b3d99",
+    "artifactId": 11282553617,
+    "zipBytes": 18466040,
+    "zipSha256": "a6888bb1479ca4f8d62c178b2e682b1449d2533c7bace64d611b15b8ea597c62"
+  },
+  "checks": 66349,
+  "scope": "Actual typed batched reset/final/last-return raw166, terminal represented JS counterparts via immutable capture, full board/RAM hash/ordered PIO and source/input/restoration guards. No intermediate166 reconstruction or performance qualification. Typed ownership assertion is instrumented source-attested; serialized arrays cannot independently prove live backing-buffer identity.",
+  "returns": {
+    "resumes": 16524,
+    "irqSnapshots": 1,
+    "zeroQ": 0,
+    "reasons": {
+      "1": 3,
+      "3": 16475,
+      "7": 46
+    },
+    "maxChargedN": 300,
+    "maxChargedQ": 300
+  },
+  "child": {
+    "pid": 4857,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "timedOut": false,
+    "wallSeconds": 4.947605693,
+    "terminatedPids": [],
+    "interrupted": null,
+    "rusage": {
+      "ru_utime": 3.189035,
+      "ru_stime": 2.366906,
+      "ru_maxrss": 268044,
+      "ru_minflt": 408971,
+      "ru_majflt": 0,
+      "ru_inblock": 0,
+      "ru_oublock": 3792,
+      "ru_nvcsw": 5279,
+      "ru_nivcsw": 295
+    },
+    "cpuSeconds": 5.555941000000001
+  }
+}
