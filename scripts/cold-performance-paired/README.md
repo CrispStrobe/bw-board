@@ -2,10 +2,12 @@
 
 This parent prepares two separate comparisons: native-only one-Q versus native
 batching, and plain functional Bochs-profile JS versus native batching. It never
-uses the mixed native/JS diagnostic timing as a performance baseline. Frozen
-worker drafts41c00ddb/d69ea6ff remain unchanged; their own pending locks and the
-JS draft's historical compiled pin must be separately rebound and qualified.
-This parent has no restoration, download, native build or addon-load code.
+uses the mixed native/JS diagnostic timing as a performance baseline. Frozen workers `8ed0366a` (55 inputs) and `0f1ec8cc` (49 inputs) bind the
+independently audited eighth capture and unchanged compiled7632. Their real
+three-arm semantic qualification is still pending. The original0fe parent and
+be5 qualifier remain immutable. A separate source-only hosted setup adapter
+reuses the exact31-file qualifier setup in another process, calling no arm loop
+and doing no rebuild. The paired parent itself contains no addon-load code.
 
 The source-owned binding is PENDING. Its ready guard precedes every child spawn,
 including metadata subprocesses. Before a future execution grant it must pin the
@@ -50,8 +52,22 @@ inherited AT board configuration. This is functional six-clock virtual pacing,
 not measured physical80386 timing. Neither comparison establishes default
 adoption, full AT/Windows/Doom10x or broad CPU-model parity.
 
-Seven fixture controls are written: pending refusal, exact schedule, all166 and
+The inherited fixture controls and one new hosted pending-audit refusal are written: pending refusal, exact schedule, all166 and
 counter mutations, full board/RAM/PIO/JS scope, metric separation, file-role guards
-and one tiny Python sleeper timeout with detached descendant. They have not run.
+and one tiny Python sleeper timeout with detached descendant. The new integration controls have not run.
 No hardware machine is constructed by the controls. Source freeze and independent
 review precede even the lightweight control execution requested for this draft.
+
+The new manual workflow defaults disabled. The source-owned semantic-audit
+prerequisite remains PENDING and rejects before any setup subprocess, download
+or benchmark child. Future actual audit bytes, their immutable digest and exact
+official semantic artifact metadata must be reviewed before filling this gate.
+The closed setup binds original compiled/prepared/evidence records without
+rewriting them, then supplies a hashed derived ready binding to the paired parent.
+One comparison is chosen per dispatch; no prior semantic arm is rerun by setup.
+Process cgroup quota/stat files are read from the actual unified cgroup domain;
+root hierarchy files are separately labelled and may not describe the process.
+No current hosted setup, source-control suite or paired child has been run.
+
+Only the setup child may receive the read-only GitHub API credential; every
+performance child strips it. No credential values are printed or retained.

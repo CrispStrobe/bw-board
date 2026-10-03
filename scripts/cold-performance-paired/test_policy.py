@@ -9,7 +9,8 @@ import policy
 import parent
 
 def fixture(arm='native-batched'):
-    native={'state':[0]*20,'extra':[0]*20,'segments':[0]*90,'system':[0]*30,'debug':[0]*6,'nativeTicks':'12','successfulQuanta':'10','activityState':0,'mappingEpoch':0,'boardA20':1,'fallback':{k:'0' for k in ('bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer')},'execution':{k:'0' for k in ('attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts')}}
+    native={'state':[0]*20,'extra':[0]*20,'segments':[0]*90,'system':[0]*30,'debug':[0]*6,'nativeTicks':'12','successfulQuanta':'10','mappingEpoch':0,'boardA20':1,'fallback':{k:'0' for k in ('bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer')},'execution':{k:'0' for k in ('attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts')}}
+    native['clockTransfers']={k:'0' for k in ('transfers','commits','words')};native['callbacks']={k:'0' for k in ('physicalReads','physicalWrites','executePages','nativeTickCallbacks','quantumCallbacks')}
     native['state'][8]=0xe16;native['state'][10]=0x7ffffff0;native['state'][13]=0xf000
     files={'lock.json':'a'*64,'source.mjs':'a'*64};revision='b'*40;source={'revision':revision,'hashes':files};b={'workers':{k:{'revision':revision,'files':files,'binding':'lock.json'} for k in ('native','plainJs')},'compiledFiles':{'source':'c'*64},'targetN':12,'targetQ':10,'configuredClockHz':6000000,'node':{'sha256':'d'*64},'capture':{'sha256':'e'*64},'independentAudit':{'sha256':'f'*64},'nativeInput':{'sha256':'1'*64}}
     ports=[{'ordinal':1,'dir':'out','port':0x64,'width':8,'value':0xaa,'q':3,'cycles':16},{'ordinal':2,'dir':'in','port':0x60,'width':8,'value':0x55,'q':9,'cycles':52}];board={'cycles':64,'debt':0,'a20Enabled':True,'pic1':{'irr':1,'imr':0,'isr':0}};final={'q':10,'cpu':{'cycles':10,'edx':0},'board':board,'ramSha256':'2'*64}
@@ -18,7 +19,7 @@ def fixture(arm='native-batched'):
     if arm=='plain-JS':r.update(schema='bw.cold-plain-js.worker.v1',status='PLAIN_JS_ARM_EXECUTION_AND_FINAL_PARITY_PASS',sourceBefore=source,sourceAfter=copy.deepcopy(source),result={'final':copy.deepcopy(final),'ports':copy.deepcopy(ports),'timing':timing})
     else:
         compiled={'revision':policy.COMPILED,'hashes':b['compiledFiles']};build={'addonSha256':'1'*64};native_ports=[{**p,'successfulQuanta':p['q']-1,'nativeTicks':p['q']+2} for p in ports]
-        r.update(schema='bw.cold-native-performance.worker.v1',status='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS',workerBefore=source,workerAfter=copy.deepcopy(source),compiledBefore=compiled,compiledAfter=copy.deepcopy(compiled),buildBefore=build,buildAfter=copy.deepcopy(build),finalNative=copy.deepcopy(native),finalBoard={'state':{'board':copy.deepcopy(board),'nativeTicks':12,'successfulQuanta':10,'cold':{'phase':'complete'}},'ramSha256':'2'*64},ports=native_ports,executionTiming=timing)
+        r.update(schema='bw.cold-native-performance.worker.v1',status='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS',workerBefore=source,workerAfter=copy.deepcopy(source),compiledBefore=compiled,compiledAfter=copy.deepcopy(compiled),buildBefore=build,buildAfter=copy.deepcopy(build),finalNative=copy.deepcopy(native),lastReturnedNative={**copy.deepcopy(native),'activityState':0,'reason':1,'chargedNativeTicks':1,'chargedQuanta':1,'sliceBytes':[0]*160},progress={'n':12,'q':10,'dn':1,'dq':1},finalBoard={'state':{'board':copy.deepcopy(board),'nativeTicks':12,'successfulQuanta':10,'cold':{'phase':'complete'}},'ramSha256':'2'*64},ports=native_ports,executionTiming=timing)
     return r,data,b,capture
 
 class PureControls(unittest.TestCase):
@@ -36,9 +37,9 @@ class PureControls(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,'pending'):parent.main(request)
                 self.assertFalse(Path(directory,'never-created').exists())
         initial={'source':'frozen'};pin={'sha256':'a'*64,'bytes':1}
-        report={'finalAuthentication':initial,'requestPinAfter':pin}
+        report={'finalAuthentication':initial,'requestPinAfter':pin,'bindingPinBefore':pin,'bindingPinAfter':pin}
         parent.validate_final_authentication(report,initial,pin)
-        for patch in ({'finalAuthentication':{'source':'changed'}},{'finalAuthentication':None},{'requestPinAfter':{'sha256':'b'*64,'bytes':1}},{'requestPinAfter':None}):
+        for patch in ({'finalAuthentication':{'source':'changed'}},{'finalAuthentication':None},{'requestPinAfter':{'sha256':'b'*64,'bytes':1}},{'requestPinAfter':None},{'bindingPinAfter':{'sha256':'b'*64,'bytes':1}},{'bindingPinAfter':None}):
             changed={**report,**patch}
             with self.assertRaises(ValueError):parent.validate_final_authentication(changed,initial,pin)
         # Manufactured completion only: no workers or subprocesses execute.
@@ -50,6 +51,20 @@ class PureControls(unittest.TestCase):
                     with self.assertRaises((ValueError,RuntimeError)):parent.main(Path(directory)/'request.json')
                 retained=json.loads(Path(directory,'result','result.json').read_text());self.assertEqual(retained['status'],'FAIL');self.assertIn('finalizationError',retained);self.assertIn('finalAuthenticationUnavailable',retained)
                 self.assertEqual('error' in retained,primary_failure)
+        # A changed derived binding is the sole final failure; preserve both pins.
+        with tempfile.TemporaryDirectory() as directory:
+            initial={'parent':{'revision':'a'*40,'hashes':{}}};request={'comparison':'native-oneQ-v-batched','output':directory+'/result','parentRevision':'a'*40,'parentSourceSha256':policy.identity_sha('a'*40,{})}
+            binding={'compiledRoot':'/never-compiled','workers':{},'capture':{'path':'/manufactured-capture'}};calls=0
+            def fingerprint(path,max_bytes=256<<20):
+                nonlocal calls
+                if Path(path)==parent.HERE/'binding.json':
+                    calls+=1
+                    if calls>=4:return {'sha256':'b'*64,'bytes':1}
+                return pin
+            with unittest.mock.patch.object(parent,'read_json',side_effect=[request,binding,{}]),unittest.mock.patch.object(parent,'validate_ready_binding',return_value=binding),unittest.mock.patch.object(parent,'pair_schedule',return_value=[]),unittest.mock.patch.object(parent,'host_context',return_value={}),unittest.mock.patch.object(parent,'fingerprint',side_effect=fingerprint),unittest.mock.patch.object(parent,'immutable_snapshot',return_value=initial),unittest.mock.patch.object(parent,'validate_prerequisites'),unittest.mock.patch.object(parent,'summarize_pairs',return_value={'quantitativeGatePass':True}),unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must never spawn')):
+                with self.assertRaisesRegex(ValueError,'binding'):parent.main(Path(directory)/'request.json')
+            retained=json.loads(Path(directory,'result','result.json').read_text());self.assertEqual(retained['status'],'FAIL');self.assertIn('finalizationError',retained);self.assertNotIn('error',retained);self.assertEqual(retained['bindingPinBefore'],pin);self.assertEqual(retained['bindingPinAfter']['sha256'],'b'*64)
+
     def test_exact_separate_alternating_protocol(self):
         for name in policy.COMPARISONS:
             schedule=policy.pair_schedule(name);self.assertEqual(len(schedule),9);self.assertEqual(sum(p['phase']=='warmup' for p in schedule),2);self.assertEqual(sum(p['phase']=='measured' for p in schedule),7);self.assertEqual(schedule[0]['order'],list(policy.COMPARISONS[name]));self.assertEqual(schedule[1]['order'],list(reversed(policy.COMPARISONS[name])));self.assertEqual(sum(len(p['order']) for p in schedule),18)
@@ -106,5 +121,51 @@ class PureControls(unittest.TestCase):
                 if state=='Z':break
                 time.sleep(.01)
             self.assertIn(state,(None,'Z'),'detached fixture no longer running')
+
+class HostedPendingTests(unittest.TestCase):
+    def test_owned_pending_audit_denies_before_setup_network_or_process(self):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('paired_setup_pending',Path(__file__).parent/'setup-entry.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+        with unittest.mock.patch.object(m.subprocess,'check_output',side_effect=AssertionError('must not spawn metadata')):
+            with self.assertRaisesRegex(ValueError,'PENDING actual semantic audit'):m.pending_guard()
+        source=(Path(__file__).parents[2]/'.github/workflows/i80386-cold-paired-performance.yml').read_text()
+        self.assertIn('default: false',source);self.assertIn('m.pending_guard()',source)
+        self.assertNotIn('qualify.py enabled',source)
+    def test_process_cgroup_quota_is_separate_from_hierarchy_root(self):
+        import io
+        opened=[]
+        def fake_open(path,*args,**kwargs):
+            path=str(path);opened.append(path)
+            return io.StringIO('200000 100000' if path=='/sys/fs/cgroup/owned/cpu.max' else 'root-or-other-file')
+        with unittest.mock.patch.object(parent.Path,'read_text',return_value='0::/owned\n'),unittest.mock.patch.object(parent.Path,'glob',return_value=[]),unittest.mock.patch('builtins.open',side_effect=fake_open):context=parent.host_context()
+        self.assertEqual(context['processCgroup']['path'],'/sys/fs/cgroup/owned')
+        self.assertEqual(context['processCgroup']['files']['cpu.max'],'200000 100000')
+        self.assertEqual(context['cgroupRootFiles']['cpu.max'],'root-or-other-file')
+        self.assertIn('/sys/fs/cgroup/owned/cpu.max',opened)
+
+
+class ActualMetadataTests(unittest.TestCase):
+    def test_genuine_inspect_and_resume_shapes_and_terminal_return_mutations(self):
+        actual=json.loads((Path(__file__).parent/'actual-snapshot-fixtures.json').read_text());policy.inspect_metadata(actual['reset']);policy.inspect_metadata(actual['finalInspect'])
+        self.assertNotIn('activityState',actual['finalInspect']);returned=actual['resume'];inspect=copy.deepcopy(returned)
+        for k in ('activityState','reason','chargedNativeTicks','chargedQuanta','sliceBytes'):del inspect[k]
+        progress={'n':int(returned['nativeTicks']),'q':int(returned['successfulQuanta']),'dn':returned['chargedNativeTicks'],'dq':returned['chargedQuanta']};policy.terminal_return_metadata(returned,inspect,'oneQ',progress)
+        for change in ('activity','missingActivity','n','q','word','charge','slice'):
+            bad=copy.deepcopy(returned)
+            if change=='activity':bad['activityState']=1
+            elif change=='missingActivity':del bad['activityState']
+            elif change=='n':bad['nativeTicks']=str(int(bad['nativeTicks'])+1)
+            elif change=='q':bad['successfulQuanta']=str(int(bad['successfulQuanta'])+1)
+            elif change=='word':bad['state'][2]^=1
+            elif change=='charge':bad['chargedNativeTicks']=2
+            else:del bad['sliceBytes']
+            with self.assertRaises(ValueError):policy.terminal_return_metadata(bad,inspect,'oneQ',progress)
+        for change in ('inventedActivity','fault','irq','halt','missingCallbacks'):
+            bad=copy.deepcopy(actual['finalInspect'])
+            if change=='inventedActivity':bad['activityState']=0
+            elif change=='missingCallbacks':del bad['callbacks']
+            else:bad['execution'][{'fault':'faults','irq':'irqDeliveries','halt':'haltIdleCuts'}[change]]='1'
+            with self.assertRaises(ValueError):policy.inspect_metadata(bad)
+
 if __name__=='__main__':
     unittest.main()

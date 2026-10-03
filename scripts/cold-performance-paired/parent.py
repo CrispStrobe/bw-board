@@ -32,14 +32,20 @@ def source_identity(root,revision,files):
     return {'revision':revision,'hashes':dict(sorted(files.items()))}
 def parent_identity():
     files={str(p.relative_to(ROOT)):fingerprint(p)['sha256'] for p in HERE.iterdir() if p.is_file() and p.suffix in ('.py','.json','.md')}
-    for name in ('package.json','test/i80386-cold-paired-parent-source.test.mjs'):files[name]=fingerprint(ROOT/name)['sha256']
+    for name in ('package.json','test/i80386-cold-paired-parent-source.test.mjs','.github/workflows/i80386-cold-paired-performance.yml'):files[name]=fingerprint(ROOT/name)['sha256']
     revision=git(ROOT,'rev-parse','HEAD').decode().strip();return source_identity(str(ROOT),revision,files)
 def host_context():
     def text(path,limit=1<<20):
         try:
             with open(path) as f:return f.read(limit)
         except OSError as e:return {'unavailable':str(e)}
-    return {'utc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'platform':platform.platform(),'uname':list(platform.uname()),'python':sys.version,'logicalCpus':os.cpu_count(),'allowedCpuSet':sorted(os.sched_getaffinity(0)),'load':list(os.getloadavg()),'memory':text('/proc/meminfo'),'cpuInfo':text('/proc/cpuinfo'),'selfCgroup':text('/proc/self/cgroup'),'cgroups':{n:text('/sys/fs/cgroup/'+n) for n in ('cpu.max','cpu.stat','memory.max','memory.current','cpuset.cpus.effective')},'governors':{str(p):text(p) for p in Path('/sys/devices/system/cpu').glob('cpu*/cpufreq/scaling_governor')},'configuredModel':'Six board clocks per Q at6MHz; virtual pacing only, no physical386 calibration'}
+    domain=None
+    try:
+        for line in Path('/proc/self/cgroup').read_text().splitlines():
+            if line.startswith('0::'):domain=Path('/sys/fs/cgroup')/line[3:].lstrip('/')
+    except OSError:pass
+    processCgroup={'path':None if domain is None else str(domain),'files':{} if domain is None else {n:text(domain/n) for n in ('cpu.max','cpu.stat','memory.max','memory.current','cpuset.cpus.effective')}}
+    return {'processCgroup':processCgroup,'utc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'platform':platform.platform(),'uname':list(platform.uname()),'python':sys.version,'logicalCpus':os.cpu_count(),'allowedCpuSet':sorted(os.sched_getaffinity(0)),'load':list(os.getloadavg()),'memory':text('/proc/meminfo'),'cpuInfo':text('/proc/cpuinfo'),'selfCgroup':text('/proc/self/cgroup'),'cgroupRootFiles':{n:text('/sys/fs/cgroup/'+n) for n in ('cpu.max','cpu.stat','memory.max','memory.current','cpuset.cpus.effective')},'governors':{str(p):text(p) for p in Path('/sys/devices/system/cpu').glob('cpu*/cpufreq/scaling_governor')},'configuredModel':'Six board clocks per Q at6MHz; virtual pacing only, no physical386 calibration'}
 def stopped_descendants(pid):
     parents={pid};stopped=set()
     try:os.killpg(pid,signal.SIGSTOP)
@@ -76,12 +82,15 @@ def interrupted(signum,frame):
             except (OSError,ValueError,IndexError):pass
     for pid in owned:kill_tree(pid)
     raise SystemExit(128+signum)
-def bounded_child(command,cwd,out,bounds):
+def bounded_child(command,cwd,out,bounds,permit_api_token=False):
     """One fresh process. wait4 owns reaping and individual child rusage."""
+    require(type(permit_api_token) is bool,'explicit credential scope')
+    if permit_api_token:require(len(command)==5 and command[:3]==[sys.executable,'-B',str(HERE/'setup-entry.py')],'API credential only closed setup entry')
     out=Path(out);out.mkdir(exist_ok=False);env=os.environ.copy()
     for k in HOOKS:env[k]=''
-    for k in ('GH_TOKEN','BW_COLD_REFERENCE_OUTPUT','PYTHONPATH','PYTHONSTARTUP'):env.pop(k,None)
-    write(out/'invocation.json',{'command':command,'cwd':str(cwd),'bounds':bounds,'blankHooks':{k:'' for k in HOOKS},'processGroup':True,'rusageScope':'Raw kernel wait4 rusage when this main child exits; descendant accounting follows OS semantics. Separate from execution-phase self process.cpuUsage.'})
+    for k in ('BW_COLD_REFERENCE_OUTPUT','PYTHONPATH','PYTHONSTARTUP'):env.pop(k,None)
+    if not permit_api_token:env.pop('GH_TOKEN',None)
+    write(out/'invocation.json',{'command':command,'cwd':str(cwd),'bounds':bounds,'heapScope':'heapMiB is enforced only by explicit Node --max-old-space-size; Python has no V8 heap limit','blankHooks':{k:'' for k in HOOKS},'processGroup':True,'apiCredentialAllowed':permit_api_token,'rusageScope':'Raw kernel wait4 rusage when this main child exits; descendant accounting follows OS semantics. Separate from execution-phase self process.cpuUsage.'})
     def limits():
         os.nice(bounds['niceIncrement']);resource.setrlimit(resource.RLIMIT_CPU,(bounds['cpuSeconds'],bounds['cpuSeconds']));resource.setrlimit(resource.RLIMIT_FSIZE,(bounds['fileBytes'],bounds['fileBytes']));resource.setrlimit(resource.RLIMIT_CORE,(bounds['coreBytes'],bounds['coreBytes']))
     start=time.monotonic();timed_out=False;terminated=[];interruption=None;usage=None;raw_status=None
@@ -131,7 +140,7 @@ def validate_prerequisites(b,capture):
     require(capture['input']['compiledRevision']==COMPILED and capture['progress']['q']==b['targetQ'] and capture['progress']['n']==b['targetN'],'fixed target from actual native capture')
     require(capture['driverBefore']==capture['driverAfter'] and capture['compiledBefore']==capture['compiledAfter'],'successful actual before/after maps')
     require(capture['compiledBefore']=={'revision':COMPILED,'hashes':b['compiledFiles']} and capture['closed']=={'native':True,'provider':True,'javascript':True},'qualified exact source and closed native capture')
-    require(read_json(b['independentAudit']['path'])['status']=='PASS','independent actual capture audit')
+    require(read_json(b['independentAudit']['path'])['status']=='PASS_INDEPENDENT_EIGHTH_COLD_E16_AUDIT','independent actual capture audit')
     qualification=read_json(b['armQualificationAudit']['path']);require(qualification['schema']=='bw.cold-performance.arm-qualification.v1' and qualification['status']=='PASS' and qualification['targetQ']==b['targetQ'] and qualification['targetN']==b['targetN'] and set(qualification['qualifiedArms'])=={'native-oneQ','native-batched','plain-JS'},'separate actual workers semantic qualification')
     require(qualification['workers']=={k:{'revision':w['revision'],'sourceSha256':w['sourceSha256']} for k,w in b['workers'].items()} and qualification['captureSha256']==b['capture']['sha256'] and qualification['addonSha256']==b['nativeInput']['sha256'] and qualification['nodeSha256']==b['node']['sha256'],'qualification tied to actual frozen workers/capture/addon/Node')
     for w in b['workers'].values():
@@ -141,34 +150,36 @@ def validate_prerequisites(b,capture):
 def validate_final_authentication(report,initial,request_pin):
     require(initial is not None and report.get('finalAuthentication')==initial,'immutable final source authentication unavailable or changed')
     require(request_pin is not None and report.get('requestPinAfter')==request_pin,'immutable final request pin unavailable or changed')
-def main(input_path):
+    require(report.get('bindingPinBefore') is not None and report.get('bindingPinAfter')==report['bindingPinBefore'],'immutable final derived binding unavailable or changed')
+def main(input_path,binding_path=None):
     request=read_json(input_path,16384);require(set(request)=={'comparison','output','parentRevision','parentSourceSha256'},'closed paired request')
     # Deliberately FIRST: pending configuration cannot spawn even metadata
     # children. This module contains no restoration/download/build operation.
-    binding=validate_ready_binding(read_json(HERE/'binding.json',1<<20));schedule=pair_schedule(request['comparison']);out=Path(request['output']);require(out.is_absolute() and str(out)==str(out.resolve()) and out.parent.is_dir(),'canonical exclusive output');require(not out.exists(),'exclusive run namespace')
+    binding_path=Path(binding_path) if binding_path is not None else HERE/'binding.json'
+    binding=validate_ready_binding(read_json(binding_path,1<<20));schedule=pair_schedule(request['comparison']);out=Path(request['output']);require(out.is_absolute() and str(out)==str(out.resolve()) and out.parent.is_dir(),'canonical exclusive output');require(not out.exists(),'exclusive run namespace')
     for root in (str(ROOT),binding['compiledRoot'],*[w['root'] for w in binding['workers'].values()]):require(str(out)!=root and not str(out).startswith(root+'/'),'output outside source trees')
-    out.mkdir();report={'schema':'bw.cold-performance.paired-result.v1','status':'FAIL','request':request,'bindingSha256':fingerprint(HERE/'binding.json')['sha256'],'comparison':request['comparison'],'pairs':[],'claims':'Configured functional cold slice only; no physical386 RTx/full AT/Windows/Doom10x/default adoption'}
+    out.mkdir();report={'schema':'bw.cold-performance.paired-result.v1','status':'FAIL','request':request,'bindingPinBefore':fingerprint(binding_path),'bindingSha256':fingerprint(binding_path)['sha256'],'comparison':request['comparison'],'pairs':[],'claims':'Configured functional cold slice only; no physical386 RTx/full AT/Windows/Doom10x/default adoption'}
     initial=None;request_pin=None
     try:
         write(out/'request.json',request);write(out/'binding.json',binding);write(out/'host-before.json',host_context());initial=immutable_snapshot(binding);write(out/'initial-authentication.json',initial)
         require(initial['parent']['revision']==request['parentRevision'] and identity_sha(initial['parent']['revision'],initial['parent']['hashes'])==request['parentSourceSha256'],'frozen parent own closure')
-        capture=read_json(binding['capture']['path']);validate_prerequisites(binding,capture);request_pin=fingerprint(input_path);report['requestPinBefore']=request_pin
+        capture=read_json(binding['capture']['path']);validate_prerequisites(binding,capture);request_pin=fingerprint(input_path);report['requestPinBefore']=request_pin;binding_pin=fingerprint(binding_path)
         for pair in schedule:
             record={**pair,'arms':{}};report['pairs'].append(record)
             for arm in pair['order']:
-                ns=out/(f"pair-{pair['pair']:02d}-"+arm);before=immutable_snapshot(binding);require(before==initial and fingerprint(input_path)==request_pin,'immutable pre-child proof');write(out/(ns.name+'-before.json'),before);write(out/(ns.name+'-host.json'),host_context());data=child_input(arm,binding,ns/'receipt');input_file=out/(ns.name+'-input.json');write(input_file,data)
+                ns=out/(f"pair-{pair['pair']:02d}-"+arm);before=immutable_snapshot(binding);require(before==initial and fingerprint(input_path)==request_pin and fingerprint(binding_path)==binding_pin,'immutable pre-child proof');write(out/(ns.name+'-before.json'),before);write(out/(ns.name+'-host.json'),host_context());data=child_input(arm,binding,ns/'receipt');input_file=out/(ns.name+'-input.json');write(input_file,data)
                 kind=worker_for(arm);w=binding['workers'][kind];command=[binding['node']['path'],'--max-old-space-size=128',str(Path(w['root'])/w['entry']),str(input_file)]
                 lifecycle=bounded_child(command,w['root'],ns,binding['bounds'])
                 after=None
                 try:after=immutable_snapshot(binding);write(ns/'after-authentication.json',after)
                 except BaseException as error:write(ns/'after-authentication-unavailable.json',{'error':repr(error)})
-                require(lifecycle['exitCode']==0 and not lifecycle['timedOut'] and not lifecycle['interrupted'],'child failure: stop, no retry');require(after==before and fingerprint(input_path)==request_pin,'immutable post-child proof')
+                require(lifecycle['exitCode']==0 and not lifecycle['timedOut'] and not lifecycle['interrupted'],'child failure: stop, no retry');require(after==before and fingerprint(input_path)==request_pin and fingerprint(binding_path)==binding_pin,'immutable post-child proof')
                 receipt=read_json(ns/'receipt'/'receipt.json');require(receipt['inputSha256Before']==receipt['inputSha256After']==fingerprint(input_file)['sha256'],'actual child input before/after');metrics=validate_worker_receipt(receipt,arm,data,binding,capture)
                 record['arms'][arm]={'execution':metrics,'wholeChild':lifecycle,'rawReceipt':str(ns/'receipt'/'receipt.json'),'rawReceiptSha256':fingerprint(ns/'receipt'/'receipt.json')['sha256']};write(ns/'terminal-validation.json',record['arms'][arm]);write(out/'progress-'+ns.name+'.json',report)
         report['summary']=summarize_pairs(request['comparison'],report['pairs']);report['status']='PAIRED_CAPTURE_COMPLETE_QUANTITATIVE_PASS' if report['summary']['quantitativeGatePass'] else 'PAIRED_CAPTURE_COMPLETE_QUANTITATIVE_FAIL_KEEP_BASELINE'
     except BaseException as error:report['error']=repr(error);raise
     finally:
-        try:report['requestPinAfter']=fingerprint(input_path)
+        try:report['requestPinAfter']=fingerprint(input_path);report['bindingPinAfter']=fingerprint(binding_path);require(report['bindingPinAfter']['sha256']==report['bindingSha256'],'binding unchanged')
         except BaseException as error:report['requestPinAfterUnavailable']=repr(error)
         try:report['finalAuthentication']=immutable_snapshot(binding)
         except BaseException as error:report['finalAuthenticationUnavailable']=repr(error)

@@ -1,0 +1,64 @@
+{
+  "schema": "bw.cold-paired.hosted-setup.v1",
+  "status": "PENDING_ACTUAL_THREE_ARM_AUDIT_AND_ROOT_REVIEW",
+  "qualifierRevision": "034c50723a79816e171d52d8bfc15339460bb9ea",
+  "qualifierFiles": {
+    ".github/workflows/i80386-cold-three-arm-qualification.yml": "43c1487a71f208bfb9efc32ccf434caf88bb482471e3d3dd604fc618a625160f",
+    "package.json": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee",
+    "scripts/cold-native-restore/admission.py": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3",
+    "scripts/cold-native-restore/archive.py": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139",
+    "scripts/cold-native-restore/frozen-members.json": "5f36d19304ca2f5ea76d819a20c08466f5d14527e0c8be9d9ab97443abc03778",
+    "scripts/cold-native-restore/official-members.json": "230fd48c8998aa17fd5627dd1e78f13783ed2e5e04112be094224e3b1c4fbee6",
+    "scripts/cold-native-restore/prepared-members.json": "ef0ee970baee93edae2d4c232be07f5ab942eab24767a8e5faa749786fd68778",
+    "scripts/cold-native-restore/restore.py": "84456fef7ca890530925cfade3ed3e0ecfc1806ee0f3ae00e5bc64ad73df5645",
+    "scripts/cold-three-arm-qualification/README.md": "5019791e28eeaa3a574ebcec44cd56b55a89bf1cd3b1d6237d07511749c0f16f",
+    "scripts/cold-three-arm-qualification/admission.py": "e8fe5963db12731dabe0a8b82a58b8841f5d3b9a0a177e9c773e3f4b36a1ab9a",
+    "scripts/cold-three-arm-qualification/contract.json": "2b7182df72595137ed81c568dcbea013841fe54e86150a12414a7923f339e836",
+    "scripts/cold-three-arm-qualification/independent-eighth-attempt-audit.json": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+    "scripts/cold-three-arm-qualification/lifecycle.py": "97aae841d5effd5a7e47b1a81cd0eb2e4c60ebec654ddee490c9ae8d3624b86d",
+    "scripts/cold-three-arm-qualification/policy.py": "bf55cf98a4c53554f44a99c6797309e8c5c343ca34727c496ddd354d4d3dc67d",
+    "scripts/cold-three-arm-qualification/qualify.py": "ca3d955a733ac77b110c7da07bf0ddb43f8cc69b642ffcebeb300fd497bd6530",
+    "scripts/cold-three-arm-qualification/source-fixtures/eighth-snapshot-shapes.json": "1bbdd6bb6bc4092403fecfb1ddc4eda6b63b19bc44648c003227dc7357c6c65d",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/after.json": "cdcb37281875dc2447f072ceb1bbc0e56754447fe1553402d88c60ee1d2778fd",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/before.json": "cdcb37281875dc2447f072ceb1bbc0e56754447fe1553402d88c60ee1d2778fd",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/exit.json": "43b8828bf13edf9ddeda7f023c1309c19cbf001bafa39e4c7f3798722b73f49d",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/independent-source-audit.json": "710a9c2711cdcd2ac6be638ade008968e9702f967eaafc6d90c88fc897134c62",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/invocation.json": "7db977ccb7b20c226facf44bb3130b2b7af83fa260394cb6da3290578a834456",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "scripts/cold-three-arm-qualification/source-qualifications/native/stdout": "46d6744f6f48fb691bdb761cd85c714a861dc5c79cbb0f1571ef55a021202e66",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/after.json": "ca3bf82393b3f7e6d01518f4137c6ceff676db6ef5c13ee6f5ad204bc70fda2a",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/before.json": "ca3bf82393b3f7e6d01518f4137c6ceff676db6ef5c13ee6f5ad204bc70fda2a",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/exit.json": "a03d0cb734c8f0c69d6085183b84c74925c1d774be8425064a5c5be52983cb20",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/independent-source-audit.json": "06c221faba030636ca04f99def7123af731a63c3a39dabca725e469cff0cf3ad",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/invocation.json": "8340e83c5e50e37858db8bca6eb468ee14f3e3f0e1d851b72ef53dd82be88081",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "scripts/cold-three-arm-qualification/source-qualifications/plainJs/stdout": "2d096b37d5a7982b6a9202c5be287d897a030085ff34ac43fa6771d7d12898ec",
+    "scripts/cold-three-arm-qualification/test_qualification.py": "6046f9b732ffc64cc72604aeb5904cf03f168188af314ed692637d6f9c19f3b4",
+    "test/i80386-cold-three-arm-source.test.mjs": "1a07d26db7fe7051f73c8c20e3ce6d45d84013dfa3c1eaa85d7d7a10650e3f51"
+  },
+  "qualifierRoot": "/home/runner/work/bw-board/bw-board/runtime",
+  "qualificationAudit": {
+    "file": null,
+    "sha256": null
+  },
+  "qualificationArtifact": null,
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+  "workers": {
+    "plainJs": {
+      "revision": "0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83",
+      "sourceSha256": "9d648c4204e4892dbbb9a7008ea47fd682320063432b902dc1eb0a7c24d2fbd0",
+      "count": 49
+    },
+    "native": {
+      "revision": "33c90876ff024923588ec3ecb2538754bc72634b",
+      "sourceSha256": "fcb989d43bc0c69815b32bd71c67f8a08d9e9c1aa4fb78528e6371189e3eec25",
+      "count": 56
+    }
+  },
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "captureAuditSha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+  "targetN": 316562,
+  "targetQ": 316562,
+  "qualifierStatus": "REVIEWED_CORRECTED_SOURCE_FREEZE_ACTUAL_THREE_ARM_AUDIT_PENDING"
+}

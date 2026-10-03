@@ -18,10 +18,10 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 def hexpin(value,n):return type(value) is str and len(value)==n and all(c in '0123456789abcdef' for c in value)
 def integer(value,minimum=0,maximum=400000):
     require(type(value) is int and minimum<=value<=maximum,'bounded integer');return value
-def counter(value):
+def counter(value,maximum=400000):
     if type(value) is str:
         require(value.isascii() and value.isdecimal() and (value=='0' or not value.startswith('0')) and len(value)<=16,'counter lexical domain');value=int(value)
-    return integer(value)
+    return integer(value,0,maximum)
 def identity_sha(revision,files):return sha(json.dumps({'revision':revision,'hashes':dict(sorted(files.items()))},separators=(',',':'),ensure_ascii=False).encode())
 def absolute(value):return type(value) is str and value.startswith('/') and str(PurePosixPath(value))==value and '..' not in PurePosixPath(value).parts and not any(c in value for c in '\0\r\n')
 def validate_ready_binding(b):
@@ -58,6 +58,25 @@ def words(n):
     for key,size in zip(('state','extra','segments','system','debug'),(20,20,90,30,6)):
         require(type(n[key]) is list and len(n[key])==size,'full166 shape');out.extend(integer(v,0,0xffffffff) for v in n[key])
     return out
+INSPECT_KEYS={'state','extra','segments','system','debug','nativeTicks','successfulQuanta','mappingEpoch','boardA20','clockTransfers','callbacks','fallback','execution'}
+RESUME_KEYS=INSPECT_KEYS|{'activityState','reason','chargedNativeTicks','chargedQuanta','sliceBytes'}
+def inspect_metadata(n):
+    require(set(n)==INSPECT_KEYS,'actual ABI4 inspect schema without fabricated activity');words(n);counter(n['nativeTicks']);counter(n['successfulQuanta']);integer(n['mappingEpoch'],0,0);integer(n['boardA20'],1,1);require(n['mappingEpoch']==0 and n['boardA20']==1,'inspect mapping/A20')
+    groups={'clockTransfers':{'transfers','commits','words'},'callbacks':{'physicalReads','physicalWrites','executePages','nativeTickCallbacks','quantumCallbacks'},'fallback':{'bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'},'execution':{'attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'}}
+    for group,keys in groups.items():
+        require(set(n[group])==keys,'actual inspect counter shape '+group)
+        for value in n[group].values():counter(value,9007199254740991)
+    require(all(counter(v)==0 for v in n['fallback'].values()),'no inspect fallback')
+    require(all(counter(n['execution'][k])==0 for k in ('faults','irqDeliveries','haltIdleCuts')),'no inspect fault/IRQ/HLT')
+    return n
+def terminal_return_metadata(last,final,mode,progress):
+    require(set(last)==RESUME_KEYS,'actual terminal resume schema');integer(last['activityState'],0,0);integer(last['reason'],1,7);require(last['activityState']==0 and last['reason'] in (1,3,7),'represented active terminal resume')
+    require(counter(last['nativeTicks'])==counter(final['nativeTicks']) and counter(last['successfulQuanta'])==counter(final['successfulQuanta']) and words(last)==words(final),'actual last return raw166 and N/Q equal inspect')
+    integer(last['chargedNativeTicks'],0,1 if mode=='oneQ' else 600);integer(last['chargedQuanta'],0,1 if mode=='oneQ' else 300)
+    require(progress['n']==counter(final['nativeTicks']) and progress['q']==counter(final['successfulQuanta']) and progress['dn']==last['chargedNativeTicks'] and progress['dq']==last['chargedQuanta'],'actual last return progress/charges')
+    require(type(last['sliceBytes']) is list and len(last['sliceBytes'])==160,'actual ABI4 slice metadata bytes')
+    for byte in last['sliceBytes']:integer(byte,0,255)
+    return last
 def phase_metrics(timing):
     require(type(timing['cpuMicroseconds']) is dict and set(timing['cpuMicroseconds'])=={'user','system'},'execution process CPU fields')
     microseconds=sum(integer(v,0,10**15) for v in timing['cpuMicroseconds'].values());cpu=microseconds/1e6
@@ -87,8 +106,8 @@ def validate_worker_receipt(r,arm,expected_input,b,capture):
         require(r['result']['final']==capture['javascriptFinal'],'whole raw final JS CPU/board/RAM');ports=r['result']['ports'];timing=r['result']['timing'];require(r['result']['final']['cpu']['cycles']==b['targetQ'],'actual JS Q, no invented native N')
     else:
         require(r['schema']=='bw.cold-native-performance.worker.v1' and r['status']=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','native actual parity success');require(expected_input['mode']==('oneQ' if arm=='native-oneQ' else 'batched'),'closed native mode')
-        n=r['finalNative'];require(words(n)==words(finalcut['native']),'entire raw terminal166 CPU');require(counter(n['nativeTicks'])==b['targetN'] and counter(n['successfulQuanta'])==b['targetQ'],'actual native N/Q independent')
-        require(n['activityState']==0 and n['mappingEpoch']==0 and n['boardA20']==1 and n['state'][13]==0xf000 and n['state'][8]==0xe16 and n['state'][10]==0x7ffffff0,'normal E16 reset-model scope')
+        n=r['finalNative'];inspect_metadata(n);inspect_metadata(finalcut['native']);terminal_return_metadata(r['lastReturnedNative'],n,expected_input['mode'],r['progress']);require(words(n)==words(finalcut['native']),'entire raw terminal166 CPU');require(counter(n['nativeTicks'])==b['targetN'] and counter(n['successfulQuanta'])==b['targetQ'],'actual native N/Q independent')
+        require(n['mappingEpoch']==0 and n['boardA20']==1 and n['state'][13]==0xf000 and n['state'][8]==0xe16 and n['state'][10]==0x7ffffff0,'normal E16 reset-model scope')
         require(set(n['fallback'])=={'bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'} and all(counter(v)==0 for v in n['fallback'].values()),'no fallback')
         require(set(n['execution'])=={'attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'},'actual execution counter fields');require(all(counter(n['execution'][k])==0 for k in ('faults','irqDeliveries','haltIdleCuts')),'no fault/IRQ/HLT')
         s=r['finalBoard'];require(s['state']['board']==capture['javascriptFinal']['board'] and s['ramSha256']==capture['javascriptFinal']['ramSha256'],'whole final board/rawRAM');require(s['state']['nativeTicks']==b['targetN'] and s['state']['successfulQuanta']==b['targetQ'] and s['state']['cold']['phase']=='complete','provider terminal totals/controller')
