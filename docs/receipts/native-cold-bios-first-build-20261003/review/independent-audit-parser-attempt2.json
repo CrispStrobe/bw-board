@@ -1,0 +1,5 @@
+{
+  "status": "READ_ONLY_AUDIT_ASSERTION_FAILURE_NOT_BUILD_FAILURE",
+  "reason": "Historical --check originalH4Provenance lacks preparedTree; actual --prepare adds authenticated preparedTree. Explicit revision and role differences now checked independently.",
+  "nativeOrBuildRetries": 0
+}

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {readFileSync} from 'node:fs';import {sourceIdentity,authenticateBuild} from './scripts/bochs-cpu3-native-cold-bios/identity.mjs';console.log(JSON.stringify(authenticateBuild(JSON.parse(readFileSync(\"/home/runner/work/_temp/cold-bios-build-evidence/static-input.json\")),sourceIdentity())))"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/publication",
+  "pid": 8515,
+  "cpuSeconds": 120,
+  "wallSeconds": 120,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}
