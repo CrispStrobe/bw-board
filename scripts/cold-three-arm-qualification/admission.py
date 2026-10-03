@@ -47,7 +47,7 @@ def validate_contract(c):
     require(a['zipBytes']==10438346 and a['zipSha256']=='702c9eafeb7dbfd95d6d49b0df9b1d293491d8276d8a8857a543a80ce8abb1f2','genuine eighth ZIP')
     require(a['member']=='_temp/cold-native-diagnostic/guest/capture.json' and a['captureBytes']==3852756 and a['captureSha256']=='b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf','immutable successful capture')
     require(c['independentAudit']=={'file':'independent-eighth-attempt-audit.json','sha256':'a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2','bytes':1020},'genuine independent actual audit')
-    for kind,count,revision in [('plainJs',49,'0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83'),('native',56,'33c90876ff024923588ec3ecb2538754bc72634b')]:
+    for kind,count,revision in [('plainJs',49,'0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83'),('native',56,'b01c922c2d634aba9367f6e2a70d109370e4adee')]:
         w=c['workers'][kind];require(w['revision']==revision and len(w['files'])==count and hexpin(w['sourceSha256'],64),'fixed source-qualified worker')
         hashes={p:r['sha256'] for p,r in w['files'].items()};require(identity_sha(revision,hashes)==w['sourceSha256'],'complete canonical worker closure')
     return c

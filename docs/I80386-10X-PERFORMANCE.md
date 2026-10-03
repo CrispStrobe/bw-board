@@ -33,7 +33,7 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 The [native cold BIOS E16 diagnostic](I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) now passes the fixed checkpoint: 316,562 completions, 400 REP elements and 16,475 ordered PIO events, with independent audit evidence. This is a correctness diagnostic, not full boot, speed qualification or adoption.
 
-The [first three-arm qualification attempt](I80386-COLD-THREE-ARM-FIRST-FAILURE.md) stopped after plain JS passed: native one-Q failed on an inspect-schema assertion before any resume, and batched never started. The source correction binds a reviewed native-worker freeze; another actual attempt remains pending. The E16 diagnostic is unchanged, with no three-arm or speed qualification.
+The [first three-arm attempt](I80386-COLD-THREE-ARM-FIRST-FAILURE.md) stopped before native execution on an inspect-schema assertion. The [corrected attempt](I80386-COLD-THREE-ARM-CORRECTED-FAILURE.md) completed native one-Q to E16, then failed a live Uint8Array-versus-Array validator; independent audit matched its retained terminal CPU/board/RAM hash and all 16,475 PIO events. Plain JS passed and batched never started. A further source correction is pending; there is no complete three-arm or speed qualification.
 
 The [undefined-OF diagnostic](I80386-NATIVE-COLD-BIOS-UNDEFINED-OF.md) records the historical sixth attempt, which stopped after 4,709 completions before the reviewed ownership policy was added. The [first 124-input build](I80386-NATIVE-COLD-BIOS-BUILD-RESULTS.md) remains historical static evidence.
 
