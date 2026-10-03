@@ -1,0 +1,46 @@
+F0_WASM_GUEST {"workload":"ram","elfSha256":"0743568475496415fe1df64c95a10cdd6b75e563cfb0ed2c2699180793bbbe9f","imageSha256":"70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4"}
+F0_WASM_SAMPLE {"workload":"ram","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.19159861399999994,"rtx":5.219244435661733,"iterations":5400000,"checksum":5399872,"input":0,"mirror":5399999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.18990394100000002,"rtx":5.265820154832911,"iterations":10200000,"checksum":10199872,"input":0,"mirror":10199999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.19003369700000008,"rtx":5.262224625351574,"iterations":15000000,"checksum":14999872,"input":0,"mirror":14999999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.18956275899999991,"rtx":5.275297770908686,"iterations":19800000,"checksum":19799872,"input":0,"mirror":19799999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.18903906600000006,"rtx":5.289911874617491,"iterations":24600000,"checksum":24599872,"input":0,"mirror":24599999,"output":null}
+F0_WASM_GUEST {"workload":"gpio","elfSha256":"af143c7dc18fc8dd9d2a4acefc4ed9c72c926ffa7db8d388f930a720ff8e0706","imageSha256":"cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"}
+F0_WASM_SAMPLE {"workload":"gpio","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.7527061280000003,"rtx":1.3285397352311707,"iterations":3000000,"checksum":2999872,"input":0,"mirror":2999999,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6619032710000001,"rtx":1.510794769890176,"iterations":5526315,"checksum":5526484,"input":2,"mirror":5526315,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.7529222279999999,"rtx":1.3281584243518976,"iterations":8192982,"checksum":8192809,"input":0,"mirror":8192981,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6633718960000001,"rtx":1.5074500533257438,"iterations":10719298,"checksum":10719421,"input":2,"mirror":10719297,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.7528355229999998,"rtx":1.3283113900033119,"iterations":13385965,"checksum":13385747,"input":0,"mirror":13385964,"output":0}
+TAP version 13
+# Subtest: F0 ram: active guest and RAM/MMIO observations
+ok 1 - F0 ram: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 61.84059
+  type: 'test'
+  ...
+# Subtest: F0 ram: all five 48M-cycle windows meet 1x
+ok 2 - F0 ram: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 977.369461
+  type: 'test'
+  ...
+# Subtest: F0 gpio: active guest and RAM/MMIO observations
+ok 3 - F0 gpio: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 104.63424
+  type: 'test'
+  ...
+# Subtest: F0 gpio: all five 48M-cycle windows meet 1x
+ok 4 - F0 gpio: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 3681.100542
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4842.172084

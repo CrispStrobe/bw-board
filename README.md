@@ -385,6 +385,21 @@ physical acknowledgement changed. Different hosted CPUs do not establish
 Node-version causality. See
 [warmed-window tools, all results and original profiles](docs/receipts/2026-10-03-wasm-warmed-window-profiles/README.md).
 
+A subsequent isolated **live boolean GPIO eligibility** experiment retains
+the outlined hook and current-address query but returns eligibility directly
+instead of an empty slice through the WASM trait ABI. All **4,239 library
+tests**, **16 GPIO integrations**, independent-build determinism and **108
+actual WASM integrations** pass. Across all four ordinary Node/order pairs,
+GPIO medians improve **2.19–14.69%** (candidate **0.579855×–1.328426×**);
+motion remains mixed (**−2.23% to +3.86%**) and RAM changes **−0.89% to
++0.53%**. GPIO minima improve in every pair, but motion/GPIO still fail the
+unchanged all-window ≥1× floor in three of four pairs; RAM passes all four.
+The separate fresh motion check passes at **1.112814× median / 1.085248× min**,
+not a paired speedup. This candidate remains **unmerged/unqualified**;
+production, app pins and physical acknowledgements are unchanged. All **240
+paired timing windows**, gains, losses and original verdicts are retained:
+[live boolean eligibility results and complete receipts](docs/receipts/2026-10-03-wasm-edge-eligibility-bool/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
