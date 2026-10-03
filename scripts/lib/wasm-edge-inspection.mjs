@@ -1,5 +1,18 @@
 // Text inspection only: no instantiation, tier forcing, timing or qualification.
-export function selectEdgeWat (wat, {inspectVtables = false} = {}) {
+export function isButtonVtableCandidate (v) {
+    // Multiple independent prefix clues reject coincidental function-table
+    // windows. Still static labelled evidence, not a dynamic device inventory.
+    const size = v?.words?.[1], align = v?.words?.[2];
+    return Boolean(Number.isInteger(size) && Number.isInteger(align) && align > 0 && align <= 4096 &&
+        (align & (align - 1)) === 0 && size >= align && size % align === 0 &&
+        /drop_in_place<[^>]*::Button>/.test(v.slots?.[0]?.symbol || '') &&
+        /Button_as_core::fmt::Debug/.test(v.slots?.[3]?.symbol || '') &&
+        /Button.*as_sim_input/.test(v.slots?.[9]?.symbol || ''));
+}
+
+export function selectEdgeWat (wat, {inspectVtables = false, vtableWords = 14, includeButtonTargets = false} = {}) {
+    if (!Number.isInteger(vtableWords) || vtableWords < 14 || vtableWords > 32) throw Error('Invalid vtable word bound');
+    if (includeButtonTargets && !inspectVtables) throw Error('Button targets require vtable inspection');
     const lines = wat.split('\n');
     const functions = [];
     for (let i = 0; i < lines.length; i++) {
@@ -12,8 +25,6 @@ export function selectEdgeWat (wat, {inspectVtables = false} = {}) {
         !functions.some(f => f.header.includes('service_edge_driven_gpio_devices_cold'))) {
         throw Error('Required named callees absent');
     }
-    const typeNames = new Set(functions.flatMap(f => [...f.wat.matchAll(/\(type (\$[^\s)]+|\d+)\)/g)].map(m => m[1])));
-    const types = lines.filter(line => /^  \(type /.test(line) && typeNames.has(line.match(/^  \(type (?:\(;(\d+);\)|([^\s)]+))/)?.slice(1).find(Boolean)));
     const elements = lines.filter(line => /^  \(elem /.test(line));
     if (!elements.length) throw Error('No function table elements');
     const empty = functions.find(f => /DeclarativeLogicDevice.*input_channels/.test(f.header));
@@ -38,16 +49,37 @@ export function selectEdgeWat (wat, {inspectVtables = false} = {}) {
             else throw Error('Unsupported WAT byte escape');
         }
         const bytes = Uint8Array.from(data), view = new DataView(bytes.buffer);
-        for (let p = 48; p + 8 <= bytes.length; p += 4) {
+        for (let p = 48; p + (vtableWords - 12) * 4 <= bytes.length; p += 4) {
             if (!emptyIndices.has(view.getUint32(p, true))) continue;
             const base = p - 48;
-            const words = Array.from({length: 14}, (_, i) => view.getUint32(base + 4 * i, true));
+            const words = Array.from({length: vtableWords}, (_, i) => view.getUint32(base + 4 * i, true));
             if (!table.has(words[13]) || !table.has(words[3]) || !table.has(words[4])) continue;
             vtableCandidates.push({address: Number(m[1]) + base, words,
+                ...(includeButtonTargets ? {segmentAddress: Number(m[1]), segmentByteOffset: base,
+                    rawBytesHex: [...bytes.slice(base, base + vtableWords * 4)].map(b => b.toString(16).padStart(2, '0')).join('')} : {}),
                 slots: words.map((value, i) => ({offset: i * 4, value, symbol: i === 1 || i === 2 ? null : table.get(value) || null}))});
         }
     }
     if (inspectVtables && (!emptyIndices.size || !vtableCandidates.length)) throw Error('No static empty-slice vtable candidates');
+    if (includeButtonTargets) {
+        // Identity clue, not an inventory or a stable Rust ABI contract. Retain
+        // the complete raw bodies so merged labels are not interpreted as cost.
+        const buttons = vtableCandidates.filter(isButtonVtableCandidate);
+        if (!buttons.length) throw Error('No Button-labelled static vtable candidates');
+        const wanted = new Set(buttons.flatMap(v => v.slots.map(s => s.symbol).filter(Boolean)));
+        const captured = new Set(functions.map(f => f.header.match(/^  \(func (\S+)/)?.[1]));
+        for (let i = 0; i < lines.length; i++) {
+            const name = lines[i].match(/^  \(func (\S+)/)?.[1];
+            if (!wanted.has(name) || captured.has(name)) continue;
+            const start = i;
+            while (i + 1 < lines.length && !/^  \(/.test(lines[i + 1])) i++;
+            functions.push({header: lines[start], wat: lines.slice(start, i + 1).join('\n')});
+            captured.add(name);
+        }
+        for (const name of wanted) if (!captured.has(name)) throw Error('Missing original vtable target body: ' + name);
+    }
+    const typeNames = new Set(functions.flatMap(f => [...f.wat.matchAll(/\(type (\$[^\s)]+|\d+)\)/g)].map(m => m[1])));
+    const types = lines.filter(line => /^  \(type /.test(line) && typeNames.has(line.match(/^  \(type (?:\(;(\d+);\)|([^\s)]+))/)?.slice(1).find(Boolean)));
     const result = {functions, types, elements, emptyName, emptyIndices: [...emptyIndices], vtableCandidates,
         limitations: ['Static selected disassembly is not execution or performance evidence',
             'Names can label merged methods; table presence alone does not establish a concrete device vtable slot',
