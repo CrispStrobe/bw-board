@@ -1,7 +1,7 @@
 {
-  "addonSha256": null,
-  "artifactId": null,
-  "buildRun": null,
+  "addonSha256": "98c7d11961463ae8a4dfbd108cf94d1e745f09f5d7684afa3bc31792cdac203e",
+  "artifactId": 11283630476,
+  "buildRun": 37149215092,
   "compiledFiles": {
     ".github/workflows/i80386-native-cold-bios-build.yml": "f7ff9624b5a75a27470d592f42f36c1539ce1f5f27d20e1a152ed93e898ae1a3",
     ".github/workflows/i80386-native-protected-ram-build.yml": "358c25e60b16877afc15bdd092cfaaf0df73d12d61767c76fefe15695b72d30f",
@@ -173,5 +173,5 @@
     "bochs/owned-protected-ram-provider.mjs": "ba1c3c76e5a74dd65c9129527f23d7f744ff3f7955f624fff08034242218071e"
   },
   "schema": "bw.protected-ram.driver-build-binding.v1",
-  "status": "PENDING_PROTECTED_NATIVE_BUILD"
+  "status": "ROOT_REVIEWED_PROTECTED_NATIVE_BUILD"
 }
