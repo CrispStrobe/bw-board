@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "actualOutcome": "SUPPORTED_FIXED_WORKLOAD_ONLY",
+  "run": 37134835355,
+  "artifact": 11278456539,
+  "zipSha256": "83227457ddba0ba7948137fd9f820027568772dee897cf1c62924e23cd615a2d",
+  "members": 40,
+  "sourceBeforeAfterEqual": true,
+  "uid": 0,
+  "sampleCountsByTid": {
+    "2315": 123,
+    "2313": 123
+  },
+  "resolvedLeafMiddleChainByTid": {
+    "2315": 123,
+    "2313": 122
+  },
+  "effectivePerfImageSha256": "5fb08c90293471b24086be829f4da4707ecc83101945868101964be48267ab71",
+  "scope": "Root nonguest fixed two-thread fixture only; raw script has resolved workload chain on both TIDs and no reported lost events. Executing-image provenance is source-attested proc/exe observation plus exact target/version/final hash guards; ELF itself not retained. No addon, emulator, guest, JIT or Bochs unwind qualification, calibrated CPU shares, or profiling permission.",
+  "officialHeadAttemptEventVerified": true,
+  "invocationLimitsVerified": true
+}
