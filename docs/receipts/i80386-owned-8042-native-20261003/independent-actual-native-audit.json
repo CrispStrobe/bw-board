@@ -1,0 +1,13 @@
+{
+  "status": "PASS_INDEPENDENT_FIRST_FIXED_8042_NATIVE_BUILD_OFF_ON_AND_JS_REFERENCE",
+  "checks": 6343,
+  "head": "5b182d4147020931a4c19c380a088a1587d7d31c",
+  "artifactId": 11262792369,
+  "addonSha256": "bf361a26ce7a20652a1f76f061cd08b7b1a2cc876a3dfbe096620585f2a33db0",
+  "sourceFiles": 107,
+  "completedInstructions": 28,
+  "full166BoundariesEachMode": 30,
+  "pioEvents": 8,
+  "wholeRawRamSha256": "baf177abbc78f7001397fa13f726752e8f0dc5da956a2fdd0185d31d7467b729",
+  "scope": "Exact fixed-ROM semantic evidence; literal Bochs/JS reset model deviations retained, no hardware correctness/generalAT/performance/adoption claim. Genuine ZIP/source/prepared TAR hashes authenticated by streaming without extraction."
+}

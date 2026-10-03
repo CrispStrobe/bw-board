@@ -1,0 +1,17 @@
+{
+  "scope": "First new fixed-ROM build and semantic qualification; no speed/broader AT claim",
+  "completed": true,
+  "result": "FIRST_FIXED_8042_BUILD_AND_TWO_NATIVE_SEMANTIC_CELLS_PASS_PENDING_INDEPENDENT_ARTIFACT_AUDIT",
+  "preparedBeforeAfterEqual": true,
+  "beforeAfterEqual": true,
+  "guards": {
+    "head": "5b182d4147020931a4c19c380a088a1587d7d31c",
+    "status": "",
+    "upstreamHead": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "helper": "6abe631e5a3abeca56a8754457225a61c47f32d92bf0db411b2ace7cf9ea0d51"
+  },
+  "errors": {},
+  "nodeSha256Before": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "helperSha256Before": "6abe631e5a3abeca56a8754457225a61c47f32d92bf0db411b2ace7cf9ea0d51"
+}

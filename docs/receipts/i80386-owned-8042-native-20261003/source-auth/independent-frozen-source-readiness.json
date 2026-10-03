@@ -1,0 +1,8 @@
+{
+  "status": "PASS_INDEPENDENT_FROZEN_NATIVE_8042_SOURCE_READY_FOR_FIRST_HOSTED_BUILD",
+  "revision": "5b182d4147020931a4c19c380a088a1587d7d31c",
+  "authenticatedSourceFiles": 107,
+  "newFiles": 11,
+  "sourceIdentityReceiptSha256": "9af9e2073826f75d70f7bef11f5162642b2236cd57995ac2b122ed01dd38447e",
+  "scope": "Reviewed exact derivedC/NAPIguards, newROM/profile, canonicalconfig, preaddon manifest/config/source admission, Q1 full166 everyboundary and literalJSoracle-profile comparison; no hardware-correctness claim/resetnormalization. Source controls9derivation+3reference separately preserved; no native build/load/guest result yet."
+}
