@@ -1,0 +1,15 @@
+{
+  "status": "PASS_INDEPENDENT_SEVENTH_TERMINATION_AUDIT",
+  "artifactId": 11271127904,
+  "head": "e9f167cef1c778568ad186c4f449486bd207756b",
+  "zipSha256": "sha256:9f879b6c9113e51c1b2ff3372dde0bba1ca4373814634c89caba7d8e49d2639f",
+  "members": 410,
+  "nativeReturncode": -9,
+  "wallSeconds": 59.60194512000001,
+  "timedOut": false,
+  "sourceImmutableAndArtifactMapsEqual": true,
+  "retainedExtent": "Admission only; no capture/divergence/progress, no matched Q or OF-completion evidence",
+  "cause": "CPU60 hard limit is consistent with elapsed time but remains inference; no wait4/rusage evidence proves cause",
+  "qualification": "No E16, final RAM, close, correctness or speed pass; no retry",
+  "auditParserCorrection": "First read assumed unwrapped member map; actual members key used without execution changes"
+}

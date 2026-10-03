@@ -1,0 +1,30 @@
+{
+  "status": "PASS_INDEPENDENT_EIGHTH_COLD_E16_AUDIT",
+  "checks": 34066,
+  "zipSha256": "702c9eafeb7dbfd95d6d49b0df9b1d293491d8276d8a8857a543a80ce8abb1f2",
+  "members": 448,
+  "extent": {
+    "n": 316562,
+    "q": 316562,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 316562,
+    "zeroQ": 0
+  },
+  "cuts": 15,
+  "repElements": 400,
+  "ports": 16475,
+  "progressRecords": 34,
+  "ramSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
+  "wait4": {
+    "userSeconds": 98.088854,
+    "systemSeconds": 2.423767,
+    "maxRssKiB": 286200,
+    "minorFaults": 375091,
+    "majorFaults": 0,
+    "voluntaryContextSwitches": 37991,
+    "involuntaryContextSwitches": 966
+  },
+  "wallSeconds": 98.884914907,
+  "limits": "Source-attested intermediate comparisons/digests are not independently reconstructible from retained cuts. Raw RAM equality is attested hashes, not retained full bytes. One OFF diagnostic; no OFF/ON or speed qualification. Cgroup deltas aggregate; no inference about prior SIGKILL cause."
+}

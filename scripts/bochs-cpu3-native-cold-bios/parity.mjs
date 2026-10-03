@@ -1,9 +1,10 @@
 /** Streaming diagnostic policy, not proof of all166 native/JS counterparts. */
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {ownedUndefinedFlags} from './undefined-of.mjs';
 import {bochsResetProfile} from './bochs-reference.mjs';
 export const parityPolicy=Object.freeze({
- compared:'Dynamic GPR/EIP/EFLAGS/CR0/CR2/CR3; selectors and represented segment base/limit/default32/presence; GDTR/IDTR; LDTR/TR selector/base/limit/presence and represented type; DR0..3/6/7; logical PC and represented activity state',
+ compared:'Dynamic GPR/EIP/defined EFLAGS (only OF owns exact authenticated SHL count16 lifetime through ADD retirement; raw flags retained)/CR0/CR2/CR3; selectors and represented segment base/limit/default32/presence; GDTR/IDTR; LDTR/TR selector/base/limit/presence and represented type; DR0..3/6/7; logical PC and represented activity state',
  nativeOnly:'Cached selector index/TI/RPL and hidden cache valid/type/DPL/G/AVL, pending_event/event_mask and remaining hidden166 words retained in ordered native-word digest. Whole OFF/ON equality requires identical boundary protocol and separate audited captures.',
  javascriptOnly:'CR4, code/readable/writable semantic cache flags, shutdown and shadow fields retained at named cuts; no invented native field counterpart.',
  boardCoverage:'Scalar cycles/debt/deadline/A20 every return. Full actual chip/controller/PIC board at real due-flush, PIO and named cuts, plus final catchup; no synthetic masking or per-return full-board claim.',
@@ -17,9 +18,10 @@ export function boundedCount(value,max=400000){
 export function wholeNativeWords(n){
  return ['state','extra','segments','system','debug'].flatMap((key,i)=>{assert.ok(Array.isArray(n[key]));assert.equal(n[key].length,[20,20,90,30,6][i]);for(const value of n[key])assert.ok(Number.isInteger(value)&&value>=0&&value<=0xffffffff,key+' uint32');return n[key];});
 }
-export function compareCpu(n,j){
+export function compareCpu(n,j,ownedToken){
+ const undefinedMask=ownedToken===undefined?0:ownedUndefinedFlags(ownedToken);
  wholeNativeWords(n);const fields=['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags','cr0','cr2','cr3','cs','ds','ss'];
- fields.forEach((key,i)=>assert.equal(n.state[i],j[key],'raw '+key));
+ fields.forEach((key,i)=>assert.equal(key==='eflags'?(n.state[i]&~undefinedMask)>>>0:n.state[i],key==='eflags'?(j[key]&~undefinedMask)>>>0:j[key],'raw '+key));
  assert.equal(n.state[10],bochsResetProfile.cr0,'native CR0 scope');assert.equal(j.cr0,bochsResetProfile.cr0,'JS CR0 scope');
  assert.deepEqual(n.state.slice(16),[j.gdtr.base,j.gdtr.limit,j.idtr.base,j.idtr.limit]);
  assert.deepEqual(n.extra.slice(2,5),[j.es,j.fs,j.gs]);

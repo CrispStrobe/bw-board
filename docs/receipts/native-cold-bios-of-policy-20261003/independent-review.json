@@ -1,0 +1,9 @@
+{
+  "status": "PASS_FROZEN_UNDEFINED_OF_DRIVER_SOURCE",
+  "head": "fe0948c7ca30381170c6b029c8449867e8df3e4c",
+  "sourceCountCurrentGit": 53,
+  "identityCanonicalSha256": "1aa69cc8db796330c814c560a0b156c1cc19b0aa7b2eae60f97752bc182139a3",
+  "pureControls": 12,
+  "actualQ4709FixtureExact": true,
+  "scope": "Exact authenticated instruction-lifetime OF comparison only. Raw166/CPU/flags/RAM remain unchanged. No addon/guest; parent contract needs separate update."
+}

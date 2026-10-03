@@ -1,7 +1,7 @@
-2026-10-03 Whole-advance transient work budget — CLAIM, Codex bwcx `/root`.
+2026-10-03 Whole-advance transient work budget — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch
 lane/transient-whole-advance-budget-20261003, exact base
-744dcb8a (full identity from git rev-parse in the claim commit parent).
+744dcb8af2a72053c61ac740da05eb3f418732dc.
 Four-path envelope: this entry; src/board.js; new
 test/transient-whole-advance-budget.test.mjs; new
 spec-updates/transient-whole-advance-budget.md. Add an explicit one-shot
@@ -16,6 +16,24 @@ stops for all three counters, timed ADP multiple intervals, bounded/default
 bit-exact results, ordinary error identity, malformed/reentrant requests and
 load-bearing guard/refusal mutants. No CPU/other model/CUI/Lite/pin/package/
 workflow/deployment changes. CLI admission stays held until engine lands.
+Canonical claim8c7c22c5 preceded edits. New focused suite10/10, no skips:
+three counter-charge bypass mutants and one invalidation bypass genuinely red,
+with prototype restoration; bounded/default scope storage, mean, endpoint and
+ordinary status bit-exact for passive and timed captures. Direct OP/bias/test
+solves charged too; getter budgets sampled once; existing incomplete-device
+backstop cannot certify completion. Final combined adaptive/profile/budget
+suite30/30 green, zero skips, including the safe-horizon boundary. One exact hosted CI/Harris
+set then guarded normal landing; no default-path numerical or model change.
+Forward audit found a public onChange listener could catch a budget refusal
+and retain a false completed receipt (one actual solve, two caught refusals).
+Failure now latches before throwing and the outer advance rethrows it; a public
+listener regression and latch-removal mutant prove the correction. Prior
+242386ce receipts do not qualify the replacement; cancel own old runs and
+qualify one fresh exact-head set. Default listener swallowing remains unchanged.
+Replacement focused12/12, zero skips; fifth executable mutant removes the
+failure latch and reds the same public listener caller. The new observation
+assertion uses meterVoltage (qualified acquisition), not raw nodeVoltage's
+cached endpoint, which does not itself promise capture qualification.
 
 2026-10-03 ADP7118 source/acquisition precision proof — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch

@@ -1,0 +1,85 @@
+{
+  "total_count": 4,
+  "artifacts": [
+    {
+      "id": 11269942610,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI2OTk0MjYxMA==",
+      "name": "warmed-gpio-node-20.20.2-repeat-2",
+      "size_in_bytes": 37303,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269942610",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269942610/zip",
+      "expired": false,
+      "digest": "sha256:11702f5b0011775985987ce345469ec25fcddc0b562a04dcd11ed7865c08c6f3",
+      "created_at": "2026-10-03T08:56:18Z",
+      "updated_at": "2026-10-03T08:56:18Z",
+      "expires_at": "2026-10-17T08:56:18Z",
+      "workflow_run": {
+        "id": 37111247979,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-window-profile-20261003",
+        "head_sha": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94"
+      }
+    },
+    {
+      "id": 11269179039,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI2OTE3OTAzOQ==",
+      "name": "warmed-gpio-node-22.23.3-repeat-2",
+      "size_in_bytes": 46826,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269179039",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269179039/zip",
+      "expired": false,
+      "digest": "sha256:2f72c785851b8bd5ec505758b6627783d717a6a8d6d6b16b2c1521619a956bf9",
+      "created_at": "2026-10-03T08:56:31Z",
+      "updated_at": "2026-10-03T08:56:31Z",
+      "expires_at": "2026-10-17T08:56:31Z",
+      "workflow_run": {
+        "id": 37111247979,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-window-profile-20261003",
+        "head_sha": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94"
+      }
+    },
+    {
+      "id": 11269103959,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI2OTEwMzk1OQ==",
+      "name": "warmed-gpio-node-22.23.3-repeat-1",
+      "size_in_bytes": 34623,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269103959",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269103959/zip",
+      "expired": false,
+      "digest": "sha256:7d7dcb6a11c81e650b702a2c20550d67103551184c51486aa50b6c8b3ea801b7",
+      "created_at": "2026-10-03T08:55:21Z",
+      "updated_at": "2026-10-03T08:55:21Z",
+      "expires_at": "2026-10-17T08:55:20Z",
+      "workflow_run": {
+        "id": 37111247979,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-window-profile-20261003",
+        "head_sha": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94"
+      }
+    },
+    {
+      "id": 11269089154,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI2OTA4OTE1NA==",
+      "name": "warmed-gpio-node-20.20.2-repeat-1",
+      "size_in_bytes": 41004,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269089154",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11269089154/zip",
+      "expired": false,
+      "digest": "sha256:aacbd1a79e5575f0b6f8ed03df27e4c341be6c45d0b8ffcf5b3c4c7a974e8c50",
+      "created_at": "2026-10-03T08:57:11Z",
+      "updated_at": "2026-10-03T08:57:11Z",
+      "expires_at": "2026-10-17T08:57:10Z",
+      "workflow_run": {
+        "id": 37111247979,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-window-profile-20261003",
+        "head_sha": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94"
+      }
+    }
+  ]
+}

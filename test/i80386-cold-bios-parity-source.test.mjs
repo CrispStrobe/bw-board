@@ -1,7 +1,9 @@
+import {serializeMatchedProgress,createMatchedProgressWriter} from '../scripts/bochs-cpu3-native-cold-bios/progress.mjs';
+import {createUndefinedOfPolicy,ownedUndefinedFlags} from '../scripts/bochs-cpu3-native-cold-bios/undefined-of.mjs';
 /** Pure diagnostic controls; no CPU instruction, native addon or cold capture. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync,symlinkSync,rmSync} from 'node:fs';
+import {readFileSync,mkdtempSync,writeFileSync,symlinkSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createBochsResetColdOracle,bochsResetProfile} from '../scripts/bochs-cpu3-native-cold-bios/bochs-reference.mjs';
@@ -63,4 +65,39 @@ test('actual Q182 stale selector cache keeps architecture strict',()=>{
  assert.throws(()=>assert.deepEqual(n.segments.slice(47,50),[j.ds>>>3,(j.ds>>>2)&1,j.ds&3]));
  compareCpu(n,j);
  for(const mutate of [x=>x.state[14]^=1,x=>x.segments[46]^=1,x=>x.segments[55]^=1,x=>x.state[0]^=1,x=>x.extra[5]^=1]){const bad=clone(n);mutate(bad);assert.throws(()=>compareCpu(bad,j));}
+});
+
+const actual4709={"native":{"state":[4026531840,120,0,55342,65532,0,0,0,40363,2182,2147483632,0,0,61440,0,0,0,65535,0,65535],"extra":[4294909936,1024,0,0,0,7680,0,0,1,1,0,1,3,983040,65535,0,0,0,0,3904],"segments":[0,0,0,0,0,7,1,0,1,3,0,65535,0,0,0,1,61440,7680,0,0,1,1,0,1,3,983040,65535,0,0,0,2,0,0,0,0,7,1,0,1,3,0,65535,0,0,0,3,0,0,0,0,1,1,0,1,3,0,65535,0,0,0,4,0,0,0,0,7,1,0,1,3,0,65535,0,0,0,5,0,0,0,0,7,1,0,1,3,0,65535,0,0,0],"system":[6,0,0,0,0,1,1,0,0,2,0,65535,0,0,0,7,0,0,0,0,1,1,0,0,11,0,65535,0,0,0],"debug":[0,0,0,0,4294909936,1024],"nativeTicks":"4709","successfulQuanta":"4709","mappingEpoch":0,"boardA20":1,"clockTransfers":{"transfers":"9500","commits":"4709","words":"9418"},"callbacks":{"physicalReads":"1801","physicalWrites":"1484","executePages":"10","nativeTickCallbacks":"4709","quantumCallbacks":"4709"},"fallback":{"bochsRamReads":"0","bochsRamWrites":"0","bochsDirectPointers":"0","bochsPio":"0","bochsTimer":"0"},"execution":{"attempts":"4709","completed":"4582","repIterations":"128","repPartial":"127","faults":"0","portCommits":"81","irqDeliveries":"0","haltIdleCuts":"0"},"sliceBytes":[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,101,18,0,0,0,0,0,0,101,18,0,0,0,0,0,0,101,18,0,0,0,0,0,0,230,17,0,0,0,0,0,0,128,0,0,0,0,0,0,0,127,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,81,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,240,0,0,171,157,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"reason":1,"activityState":0,"chargedNativeTicks":1,"chargedQuanta":1},"javascript":{"eax":4026531840,"ecx":120,"edx":0,"ebx":55342,"esp":65532,"ebp":0,"esi":0,"edi":0,"eip":40363,"eflags":134,"cr0":2147483632,"cr2":0,"cr3":0,"cs":61440,"ds":0,"ss":0,"es":0,"fs":0,"gs":0,"cr4":0,"pc":1023403,"gdtr":{"base":0,"limit":65535},"idtr":{"base":0,"limit":65535},"ldtr":{"selector":0,"base":0,"limit":65535,"present":true,"type":2},"tr":{"selector":0,"base":0,"limit":65535,"present":true,"type":11},"segmentCaches":{"0":{"base":0,"limit":65535,"default32":false,"present":true,"code":false,"writable":true,"null":false},"1":{"base":983040,"limit":65535,"default32":false,"present":true,"code":true,"readable":true,"writable":false,"null":false},"2":{"base":0,"limit":65535,"default32":false,"present":true,"code":false,"writable":true,"null":false},"3":{"base":0,"limit":65535,"default32":false,"present":true,"code":false,"writable":true,"null":false},"4":{"base":0,"limit":65535,"default32":false,"present":true,"code":false,"writable":true},"5":{"base":0,"limit":65535,"default32":false,"present":true,"code":false,"writable":true}},"debugRegisters":[0,0,0,0,0,0,4294909936,1024],"halted":false,"shutdown":false,"interruptShadow":0,"nmiShadow":0,"debugShadow":0,"cycles":4709}};
+
+const fixedRom=()=>readFileSync(new URL('../roms/free-at-bios/BIOS-bochs-legacy',import.meta.url));
+function startOf(){const p=createUndefinedOfPolicy(fixedRom()),post=clone(actual4709.javascript),pre={...post,eip:0x9da7};p.retire(pre,post,{q:4709,chargedQuanta:1});return p;}
+test('actual Q4709 undefined OF accepted only through private executed-owner token; other bits and architecture strict',()=>{
+ const f=clone(actual4709),original=clone(f);assert.equal(f.native.successfulQuanta,'4709');assert.equal(f.native.state[9]^f.javascript.eflags,0x800);assert.throws(()=>compareCpu(f.native,f.javascript));const p=startOf();compareCpu(f.native,f.javascript,p.token);assert.deepEqual(f,original);assert.throws(()=>compareCpu(f.native,f.javascript,{}));
+ for(const bit of [1,4,0x10,0x40,0x80,0x100,0x200,0x400]){const n=clone(f.native);n.state[9]^=bit;assert.throws(()=>compareCpu(n,f.javascript,p.token));}
+ for(const i of [0,8,14]){const n=clone(f.native);n.state[i]^=1;assert.throws(()=>compareCpu(n,f.javascript,p.token));}
+});
+test('exact executed lifetime retains OF through postPC9dbc and restores strict only after ADD retirement',()=>{
+ const p=startOf();let q=4709;const cpu={...clone(actual4709.javascript),eax:0xf000ff53,ecx:120,edi:0,es:0,eflags:0x86};
+ const go=(pc,next,rep)=>{const before={...cpu,eip:pc},after={...cpu,eip:next};if(rep){after.ecx--;after.edi+=4;}p.retire(before,after,{q:++q,chargedQuanta:1,...(rep?{rep:{siteEip:pc,address:before.edi&0xffff,q,cx:after.ecx&0xffff,di:after.edi&0xffff,eip:after.eip}}:{})});Object.assign(cpu,after);};
+ go(0x9dab,0x9dae);go(0x9dae,0x9daf);for(let i=0;i<120;i++)go(0x9daf,i===119?0x9db2:0x9daf,true);
+ for(const [pc,next]of [[0x9db2,0x9db5],[0x9db5,0x9db7],[0x9db7,0x9dba],[0x9dba,0x9dbc]])go(pc,next);assert.equal(ownedUndefinedFlags(p.token),0x800);go(0x9dbc,0x9dbf);assert.equal(ownedUndefinedFlags(p.token),0);assert.equal(p.receipt().repElements,120);assert.throws(()=>compareCpu(actual4709.native,actual4709.javascript,p.token));assert.throws(()=>p.retire({...cpu,eip:0x9da7},{...cpu,eip:0x9dab},{q:++q,chargedQuanta:1}));
+});
+test('unknown paths/consumers, bad counts, REP progress and altered ROM fail closed',()=>{
+ for(const pc of [0x9dbc,0x9daf,0xce4]){const p=startOf();assert.throws(()=>p.retire({...actual4709.javascript,eip:pc},actual4709.javascript,{q:4710,chargedQuanta:1}));}
+ const p=startOf();assert.throws(()=>p.retire({...actual4709.javascript,eip:0x9dab},actual4709.javascript,{q:4711,chargedQuanta:1}));
+ const r=fixedRom();r[0x9daa]=1;assert.throws(()=>createUndefinedOfPolicy(r));
+ const rep=startOf();rep.retire({...actual4709.javascript,eip:0x9dab},{...actual4709.javascript,eip:0x9dae},{q:4710,chargedQuanta:1});rep.retire({...actual4709.javascript,eip:0x9dae},{...actual4709.javascript,eip:0x9daf},{q:4711,chargedQuanta:1});assert.throws(()=>rep.retire({...actual4709.javascript,eip:0x9daf,ecx:119,edi:0,eax:0xf000ff53,es:0},{...actual4709.javascript,eip:0x9daf},{q:4712,chargedQuanta:1,rep:{siteEip:0x9daf}}));
+});
+
+test('OF owner denies PE/base/DB instruction-domain changes',()=>{for(const change of [c=>c.cr0|=1,c=>c.segmentCaches[1].base=0xffff0000,c=>c.segmentCaches[1].default32=true]){const p=createUndefinedOfPolicy(fixedRom()),pre=clone(actual4709.javascript);pre.eip=0x9da7;change(pre);assert.throws(()=>p.retire(pre,actual4709.javascript,{q:4709,chargedQuanta:1}));}});
+
+function progressFixture(){const j=cpuFixture(),n=nativeFixture(j);return {name:'cut-reset',n:0,q:0,native:n,javascript:{q:0,cpu:j,board:{cycles:4}},board:{board:{cycles:4}},ownership:{mask:0,events:[],started:false,repElements:0},elapsed:{processUserUs:0,processSystemUs:0,wallNs:'0'}};}
+test('durable progress roundtrips every raw native word/JS flag and preserves timing domains',()=>{
+ const f=progressFixture(),before=clone(f),raw=serializeMatchedProgress(f),saved=JSON.parse(raw);assert.deepEqual(saved.native,f.native);assert.deepEqual(saved.javascript,f.javascript);assert.deepEqual(f,before);assert.ok(raw.length<1<<20);
+ for(const mutate of [x=>x.name='../escape',x=>x.q=1,x=>x.native.state.pop(),x=>x.elapsed.wallNs='-1',x=>x.elapsed.processUserUs=.5,x=>x.ownership.mask=1]){const x=clone(f);mutate(x);assert.throws(()=>serializeMatchedProgress(x));}
+});
+test('progress writer is exclusive and count/size bounded',()=>{
+ const d=mkdtempSync(join(tmpdir(),'cold-progress-'));try{const writer=createMatchedProgressWriter(d),f=progressFixture();writer.append(f);const saved=readFileSync(join(d,'progress-cut-reset.json'));assert.throws(()=>writer.append(f));assert.deepEqual(readFileSync(join(d,'progress-cut-reset.json')),saved);
+ for(let i=1;i<64;i++)writer.append({...f,name:'q-'+String(i).padStart(6,'0')});assert.equal(writer.receipt().records.length,64);assert.throws(()=>writer.append({...f,name:'q-000064'}));assert.throws(()=>serializeMatchedProgress({...f,board:{board:{huge:'x'.repeat((1<<20)+1)}}}));
+ }finally{rmSync(d,{recursive:true,force:true});}
 });

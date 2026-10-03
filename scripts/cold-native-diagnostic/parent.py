@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from resources import wait4_until,wait4_reap,memory_events,memory_delta
 import platform
 import resource
 import signal
@@ -29,9 +30,9 @@ HOOKS=('NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE',
 
 def validate_contract(c):
     require(c['schema']=='bw.cold-native.hosted-diagnostic-contract.v1','contract schema')
-    require(c['artifactId']==11265997873 and c['runId']==37102085724,'original official artifact')
-    require(c['compiledRevision']=='a6fae61a549d595c88a324f50589d92497040c07' and c['bochsRevision']=='0e45b736ef9792eb9b752b0a35db49eaf2faea47','fixed source roles')
-    require(c['zipBytes']==7396223 and c['zipSha256']=='315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9','official digest')
+    require(c['artifactId']==11269563080 and c['runId']==37111139585,'original official artifact')
+    require(c['compiledRevision']=='7632e6a0995ceaab88bc8cede91506a5330d2e1c' and c['bochsRevision']=='0e45b736ef9792eb9b752b0a35db49eaf2faea47','fixed source roles')
+    require(c['zipBytes']==7452841 and c['zipSha256']=='98063e7c7a429408d02096b0d9ac42be57114ec16d940d2d19d05b8692af3156','official digest')
     require(c['nativeTrace'] is False and c['guestEnabledByDefault'] is False,'single trace-OFF only')
     require(type(c['driverRevision']) is str and len(c['driverRevision'])==40,'frozen driver required')
     for n in ('driverSourceIdentitySha256','driverAuthSha256'):
@@ -78,23 +79,29 @@ def interrupted(signum,frame):
     raise SystemExit(128+signum)
 for signum in (signal.SIGTERM,signal.SIGINT):signal.signal(signum,interrupted)
 
-def bounded(command,cwd,out,label,cpu=60,wall=120,file_bytes=16<<20):
+def bounded(command,cwd,out,label,cpu=60,wall=120,file_bytes=16<<20,cpu_hard=None):
+    cpu_hard=cpu if cpu_hard is None else cpu_hard
+    require(isinstance(cpu,int) and isinstance(cpu_hard,int) and 0<cpu<=cpu_hard,'CPU limit domain')
     env=os.environ.copy()
     for k in HOOKS:env[k]=''
     env.pop('GH_TOKEN',None)
-    invocation={'command':command,'cwd':str(cwd),'cpuSeconds':cpu,'wallSeconds':wall,'heapMiB':128 if '--max-old-space-size=128' in command else None,'fileBytes':file_bytes,'coreBytes':0,'niceIncrement':10,'blankHooks':{k:'' for k in HOOKS}}
+    invocation={'command':command,'cwd':str(cwd),'cpuSeconds':cpu,'cpuHardSeconds':cpu_hard,'wallSeconds':wall,'heapMiB':128 if '--max-old-space-size=128' in command else None,'fileBytes':file_bytes,'coreBytes':0,'niceIncrement':10,'blankHooks':{k:'' for k in HOOKS}}
     (out/(label+'.invocation.json')).write_text(json.dumps(invocation,indent=2)+'\n')
     def limits():
-        os.nice(10);resource.setrlimit(resource.RLIMIT_CPU,(cpu,cpu));resource.setrlimit(resource.RLIMIT_FSIZE,(file_bytes,file_bytes));resource.setrlimit(resource.RLIMIT_CORE,(0,0))
-    timeout=False;start=time.monotonic();terminated=[];interrupt=None
+        os.nice(10);resource.setrlimit(resource.RLIMIT_CPU,(cpu,cpu_hard));resource.setrlimit(resource.RLIMIT_FSIZE,(file_bytes,file_bytes));resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+    timeout=False;start=time.monotonic();terminated=[];interrupt=None;usage=None;memory_before=memory_events()
     with (out/(label+'.stdout')).open('xb') as so,(out/(label+'.stderr')).open('xb') as se:
         proc=subprocess.Popen(command,cwd=cwd,env=env,preexec_fn=limits,start_new_session=True,stdout=so,stderr=se)
         ACTIVE.add(proc.pid)
-        try:proc.wait(timeout=wall)
-        except subprocess.TimeoutExpired:timeout=True;terminated=kill_tree(proc.pid);proc.wait()
-        except BaseException as error:interrupt=error;terminated=kill_tree(proc.pid);proc.wait()
+        try:
+            usage,timeout=wait4_until(proc,start+wall)
+            if timeout:terminated=kill_tree(proc.pid);usage=wait4_reap(proc)
+        except BaseException as error:
+            interrupt=error;terminated=kill_tree(proc.pid)
+            if proc.returncode is None:usage=wait4_reap(proc)
         finally:ACTIVE.discard(proc.pid)
-    result={'returncode':proc.returncode,'timedOut':timeout,'wallSeconds':time.monotonic()-start,'terminatedPids':terminated,'interrupted':str(interrupt) if interrupt else None}
+    result={'returncode':proc.returncode,'timedOut':timeout,'wallSeconds':time.monotonic()-start,'terminatedPids':terminated,'interrupted':str(interrupt) if interrupt else None,'wait4':usage,'memoryEventsBefore':memory_before,'memoryEventsAfter':memory_events()}
+    result['memoryEventDelta']=memory_delta(result['memoryEventsBefore'],result['memoryEventsAfter'])
     (out/(label+'.exit.json')).write_text(json.dumps(result,indent=2)+'\n')
     if interrupt:raise interrupt
     return result
@@ -194,7 +201,7 @@ def main(armed):
         event=json.loads(ordinary(Path(os.environ['GITHUB_EVENT_PATH'])));require(os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch' and before['toolingHead']==os.environ['GITHUB_SHA'],'trusted manual tooling head')
         for n,h in before['toolingFiles'].items():require(digest(git(ROOT,'show',before['toolingHead']+':'+n))==h,'tooling Git blob')
         packet=out/'source-packet';packet.mkdir()
-        for role,root,map_ in [('compiled124',W,before['compiledFiles']),('driver52',D,before['driverFiles']),('tooling',ROOT,before['toolingFiles'])]:
+        for role,root,map_ in [('compiled125',W,before['compiledFiles']),('driver54',D,before['driverFiles']),('tooling',ROOT,before['toolingFiles'])]:
             for n,h in map_.items():
                 data=ordinary(root/n);require(digest(data)==h,'source packet bytes');target=packet/role/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
         zip_path=download(c,out)
@@ -212,7 +219,7 @@ def main(armed):
         inp={**original,'compiledRoot':str(W),'compiledRevision':c['compiledRevision'],'driverRevision':c['driverRevision'],'driverSourceSha256':c['driverSourceIdentitySha256'],'configuration':str(config),'output':str(out/'guest'),'nativeTrace':False}
         (out/'input.json').write_text(json.dumps(inp,indent=2)+'\n')
         artifact_before=artifact_snapshot(out);(out/'artifacts-before-native.json').write_text(json.dumps(artifact_before,indent=2)+'\n')
-        final['child']=bounded([str(node),'--max-old-space-size=128',str(D/c['runner']),str(out/'input.json')],D,out,'native',cpu=60,wall=120)
+        final['child']=bounded([str(node),'--max-old-space-size=128',str(D/c['runner']),str(out/'input.json')],D,out,'native',cpu=180,cpu_hard=185,wall=240)
         require(final['child']['returncode']==0 and not final['child']['timedOut'],'first native divergence/failure retained; no retry')
         final['status']='ONE_TRACE_OFF_DIAGNOSTIC_CHILD_EXIT_PASS_REQUIRES_INDEPENDENT_AUDIT'
     except BaseException as error:

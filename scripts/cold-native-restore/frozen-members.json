@@ -1,7 +1,7 @@
 {
   ".github/workflows/i80386-native-cold-bios-build.yml": {
-    "bytes": 3810,
-    "sha256": "24c54c02af99e2db0178dd82a23c00d9bcec46bca3d7ee3a8f855f8de759191f"
+    "bytes": 3990,
+    "sha256": "f7ff9624b5a75a27470d592f42f36c1539ce1f5f27d20e1a152ed93e898ae1a3"
   },
   "package.json": {
     "bytes": 2820,
@@ -28,8 +28,8 @@
     "sha256": "6b905d485bac7f965beef4c10a6a33ee0f53bd7029690fbcc7677ac4b9241343"
   },
   "scripts/bochs-cpu3-native-cold-bios/NATIVE-SOURCE-PREPARATION.md": {
-    "bytes": 2689,
-    "sha256": "0bbe46f2ef71af1d16d71a0e8464291d7f04f0030c9138953f87a2bb9f57c08b"
+    "bytes": 2929,
+    "sha256": "398683c1662ff7b692e80fc6a5d1bbf239494e83b6d0436ddcf7be6ab77fa12f"
   },
   "scripts/bochs-cpu3-native-cold-bios/README.md": {
     "bytes": 1350,
@@ -59,13 +59,17 @@
     "bytes": 1729,
     "sha256": "411b8fdfe5a31193bd09c5f874eb397d7ce46684f26e3366e528f318ce4f3c80"
   },
+  "scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs": {
+    "bytes": 621,
+    "sha256": "39e6b1c471a9804a0ab89fbcc3afa5e948ab278aa433db861d7ca6f1a1c4b9b2"
+  },
   "scripts/bochs-cpu3-native-cold-bios/runtime-rep.mjs": {
     "bytes": 3467,
     "sha256": "d79b652a3120da61e99f08a2a5844bba4fd372a3c4221073f2626661949abb5d"
   },
   "scripts/bochs-cpu3-native-cold-bios/runtime.mjs": {
-    "bytes": 6358,
-    "sha256": "e83bf45cf29cce7bebb3faaf42c23309887a18215fd1dc5e62ef785f0158a54d"
+    "bytes": 6815,
+    "sha256": "4577806b3a1cea0e1fb02df73843576fb5a2e0aec616a64a3d015c28f57e600a"
   },
   "scripts/bochs-cpu3-native-combined-paging-ram/host.mjs": {
     "bytes": 18738,
@@ -460,8 +464,8 @@
     "sha256": "015411b2fe542c0cfda15966a080a09a3c2e25d612655280b3077fef04cf8d82"
   },
   "test/i80386-cold-bios-build-source.test.mjs": {
-    "bytes": 2904,
-    "sha256": "ece45abf2458255e5252c6bb59600d6a104410979e7042567782b706309c4f4a"
+    "bytes": 3076,
+    "sha256": "4b84590a5bf5d2562ce84aa8c8cd187da9d1b5474a26937cdd8398fc1307729e"
   },
   "test/i80386-cold-bios-preparation-source.test.mjs": {
     "bytes": 7066,
@@ -472,8 +476,8 @@
     "sha256": "1fe54572a641537b1eb5bbdfebf201e35410dd9812b48881044c1432d264434d"
   },
   "test/i80386-cold-bios-runtime-source.test.mjs": {
-    "bytes": 5183,
-    "sha256": "1462a9fd2a31ff556bb2ceec243cc25538d3978de41cbc6f518e46fe1354d0d5"
+    "bytes": 7287,
+    "sha256": "06a474aa642e781206c419060a0d1e3ce90a2a3f9904617ca8b1e708e6588c48"
   },
   "test/i80386-native-direct-board.test.mjs": {
     "bytes": 7653,

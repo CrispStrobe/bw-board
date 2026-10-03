@@ -207,13 +207,13 @@
     "bytes": 39424,
     "sha256": "6624bf15ddee39c6c18be1b58212492649736f384029d1d7252b07d7ff720170"
   },
-  "bochs/bochs-cpu3-native-direct-board/abi.h": {
-    "bytes": 7038,
-    "sha256": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990"
-  },
   "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": {
     "bytes": 12776,
     "sha256": "e4f4e55d139971ba073aa0ff422a6f6f1206587b80fccc88e5f6aba10f8cf1a7"
+  },
+  "bochs/bochs-cpu3-native-direct-board/abi.h": {
+    "bytes": 7038,
+    "sha256": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990"
   },
   "bochs/bochs.h": {
     "bytes": 11316,
@@ -497,7 +497,7 @@
   },
   "bochs/config.log": {
     "bytes": 144508,
-    "sha256": "a7cec043eac9f5a11eee96cd2ee7fd6969daf9db8460898d756831f9c9c50c7b"
+    "sha256": "b1690739c3aa4979b80855fcab0669ff74b273f831b68e9aacc896d020db7123"
   },
   "bochs/config.status": {
     "bytes": 38848,
@@ -704,8 +704,8 @@
     "sha256": "58cf1014f613c450654ec885e2dfc6b0da53581cc5d8883c4dd66aec914f9ea3"
   },
   "bochs/cpu/bw_slice_runtime.inc": {
-    "bytes": 55853,
-    "sha256": "5c8b2ac38871433a99ec01e2a1109e121a225e1b9a35705aa6406b5cb265cfbe"
+    "bytes": 55953,
+    "sha256": "6fdf5fccf797777acce655be2609cf58fb498d18ad6d0dd78fdef8e38a505643"
   },
   "bochs/cpu/call_far.cc": {
     "bytes": 23479,

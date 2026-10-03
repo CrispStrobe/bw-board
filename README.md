@@ -101,6 +101,8 @@ The [private per-word dispatch experiment](docs/I80386-OWNED-DISPATCH-SOURCE-WIP
 
 The [private span paired CPU gate](docs/I80386-OWNED-SPAN-CPU-RESULTS.md) failed its ≥10%/all-seven criterion despite full fixed-fixture parity in all 18 children; the candidate is not adopted.
 
+The [native cold BIOS E16 diagnostic](docs/I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) reached the fixed checkpoint with independent correctness evidence. This is neither full boot nor a speed or adoption result.
+
 ## LabWired WASM performance (2026-10-01)
 
 These results use the selected 64 MHz micro:bit motion guest in Node.js, not
@@ -359,6 +361,44 @@ fix are retained. This variant remains **unmerged/unqualified**; production,
 app pins and physical acknowledgements are unchanged. These measurements do
 not prove a compiler-layout or Node-version cause. See
 [all outlined C3 admission results and original receipts](docs/receipts/2026-10-03-wasm-c3-word-hook-thunk/README.md).
+
+Separate **warmed-window GPIO profiling** is now available without changing
+ordinary timing or the engine. Eight hosted production-artifact captures retain
+**40 raw profiles and 80 ordinary/profiled timing windows**, with matching
+guest observations. Ordinary GPIO medians span **0.518398×–1.300640×**;
+seven of eight captures fail the unchanged all-window ≥1× floor. Sampled RTx
+is separate and never substitutes for ordinary qualification. Window-only self
+attribution highlights batch dispatch (**22.30–31.75%**), cached runs
+(**16.39–21.55%**) and cold GPIO servicing (**5.70–15.36%**), not removable
+cost or a predicted speedup. The `input_channels` label is not evidence of
+expensive metadata work: its source returns an empty borrowed slice, while
+sampled callers are GPIO edge servicing. Hosted inspection of the exact
+production module now resolves the static alias: the Button resident-device
+vtable's edge-service-address slot points to the same empty-slice function
+labelled `DeclarativeLogicDevice::input_channels`. This is dispatch eligibility,
+not channel discovery or allocation. It establishes compiled identity, not a
+removable-cost estimate or a speedup. See
+[compiled callee, table and source evidence](docs/receipts/2026-10-03-wasm-edge-callee-inspection/README.md).
+Initial missing-census failures, their registration-only fix and
+both complete capture sets are retained. No engine promotion, app pin or
+physical acknowledgement changed. Different hosted CPUs do not establish
+Node-version causality. See
+[warmed-window tools, all results and original profiles](docs/receipts/2026-10-03-wasm-warmed-window-profiles/README.md).
+
+A subsequent isolated **live boolean GPIO eligibility** experiment retains
+the outlined hook and current-address query but returns eligibility directly
+instead of an empty slice through the WASM trait ABI. All **4,239 library
+tests**, **16 GPIO integrations**, independent-build determinism and **108
+actual WASM integrations** pass. Across all four ordinary Node/order pairs,
+GPIO medians improve **2.19–14.69%** (candidate **0.579855×–1.328426×**);
+motion remains mixed (**−2.23% to +3.86%**) and RAM changes **−0.89% to
++0.53%**. GPIO minima improve in every pair, but motion/GPIO still fail the
+unchanged all-window ≥1× floor in three of four pairs; RAM passes all four.
+The separate fresh motion check passes at **1.112814× median / 1.085248× min**,
+not a paired speedup. This candidate remains **unmerged/unqualified**;
+production, app pins and physical acknowledgements are unchanged. All **240
+paired timing windows**, gains, losses and original verdicts are retained:
+[live boolean eligibility results and complete receipts](docs/receipts/2026-10-03-wasm-edge-eligibility-bool/README.md).
 
 ## Limits
 
