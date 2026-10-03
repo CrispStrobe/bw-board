@@ -46,6 +46,13 @@
  * @property {(ctx: DeviceStampCtx, part: import('./types.js').Part, state: object) => void} [stamp]
  *   Add passive/analog loading each NR iteration (input impedance etc.).
  * @property {(part: import('./types.js').Part, state: object,
+ *             read: (terminal: string) => number, tSeconds: number) => void} [validateSolution]
+ *   Optional pure admission check of the final converged physical solution,
+ *   after Newton/continuation/refinement and before results are published.
+ *   Never called on trial linearization points or nonconverged results.
+ *   Throw a named refusal when unsupported; the original error propagates.
+ *   Must not mutate device state or retain trial state.
+ * @property {(part: import('./types.js').Part, state: object,
  *             read: (terminal: string) => number, tNs: bigint) => boolean} [update]
  *   Behavioral step; return true if the network must be re-solved.
  * @property {(part: import('./types.js').Part, state: object,
@@ -69,6 +76,12 @@
 /**
  * @typedef {object} DeviceStampCtx
  * @property {(terminal: string) => string | undefined} netFor
+ * @property {DeviceTopology} topology
+ *   Lazy immutable inspection of this solve's canonical, ground-merged nets.
+ *   No snapshot/index work occurs until this property is accessed. Snapshots
+ *   contain copied scalar electrical fields, never caller-owned objects.
+ *   Inspection refuses duplicate part or canonical net IDs: a last-ID view
+ *   cannot certify a matrix assembled from multiple conflicting elements.
  * @property {(tA: string, tB: string | null, g: number) => void} conductance
  *   Conductance between two terminals' nets (tB null = to reference).
  * @property {(terminal: string, vTh: number, rTh: number) => void} thevenin
@@ -96,6 +109,28 @@
  * @property {number} tSeconds
  * @property {number} [dtSec] - present during transient sub-steps
  * @property {number | undefined} control - this part's control value
+ */
+
+/**
+ * @typedef {object} DeviceTopology
+ * @property {string | null} referenceNet
+ * @property {boolean} powerOff
+ * @property {boolean} dcSources
+ * @property {(netId: string) => object | undefined} net
+ *   Cached frozen {id, terminals, extraSources}, undefined for unknown nets.
+ *   Merged ground aliases return the canonical snapshot. Each terminal is
+ *   {partId, kind, terminal, connections, electrical}; connections is a frozen
+ *   plain terminal-to-net object. electrical contains only copied ohms,
+ *   farads, wave, authoredVolts, effectiveVolts, controlPresent, rInternal,
+ *   iLimit, ccClampPresent and a frozen parameterKeys array. Absent fields are
+ *   undefined; malformed nonscalar values are null. effectiveVolts uses the
+ *   solver's actual control/clamp precedence for absent/exact 'dc' wave only;
+ *   waveforms remain visible but unevaluated. Values are unscaled physical
+ *   source values, not continuation rungs. Unknown kinds remain visible.
+ *   extraSources lists actual additional matrix sources at this net:
+ *   {kind:'pin'|'qualified',partId,terminal,vTh,rTh} or {kind:'test',amps}.
+ *   Pin entries preserve MCU declared-terminal multiplicity; qualified entries
+ *   follow their source Map once, regardless of repeated net memberships.
  */
 
 /** @type {Map<string, DeviceModel>} */

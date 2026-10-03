@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BoardImpl} from '../src/board.js';
 import {registerDevice, unregisterDevice} from '../src/devices.js';
+import {solveMNA} from '../src/mna.js';
 
 const kind = 'proof-nonlinear-multiport';
 const terminals = ['out', 'in', 'gnd'];
@@ -239,4 +240,182 @@ test('production convergence and extraction mutants red real Board callers and r
   }
   assert.equal(BoardImpl.prototype._solveLiveMNA,original);
   assert.equal(readFileSync(new URL('../src/mna.js',import.meta.url),'utf8'),pristine);
+});
+
+const inspectionKind = 'proof-topology-inspection';
+function inspectionFixture(stamp, validateSolution) {
+  registerDevice(inspectionKind, {terminals, stamp, ...(validateSolution ? {validateSolution} : {})});
+  const parts = [
+    {id:'G',kind:'gnd',params:{},terminals:['gnd']},
+    {id:'G2',kind:'gnd',params:{},terminals:['gnd']},
+    {id:'VS',kind:'vsource',params:{volts:8,wave:'dc',rInternal:4},terminals:['pos','neg']},
+    {id:'U',kind:inspectionKind,params:{},terminals},
+    {id:'RL',kind:'resistor',params:{ohms:10},terminals:['a','b']},
+  ];
+  const nets = [net('zero',['G','gnd'],['RL','b']),
+    net('island',['G2','gnd'],['VS','neg'],['U','gnd']),
+    net('vin',['VS','pos'],['U','in']), net('out',['U','out'],['RL','a'])];
+  const state = Object.freeze({drives:Object.freeze({}),sentinel:Object.freeze({unchanged:true})});
+  const controls = new Map();
+  const pinSources = new Map();
+  return {parts,nets,state,controls,pinSources,
+    solve: opts => solveMNA(parts,nets,pinSources,controls,5,
+      {deviceStates:new Map([['U',state]]),...opts})};
+}
+
+test('topology inspection is lazy, immutable and reports canonical merged membership and source authority', () => {
+  let inspect = false, snapshot;
+  let metadataReads = 0;
+  try {
+    const fixture = inspectionFixture(ctx => {
+      ctx.conductance('out','gnd',1);
+      if (inspect) snapshot = ctx.topology;
+    });
+    const unknown = {id:'OTHER',kind:'inspection-unknown',terminals:['seen'],params:{
+      get rInternal() {metadataReads++; return {unsafe:true};}, nested:{mutable:true},
+    }};
+    fixture.parts.push(unknown);
+    fixture.nets.find(n => n.id === 'out').terminals.push({part:'OTHER',terminal:'seen'});
+    const beforeNets = structuredClone(fixture.nets);
+    assert.equal(fixture.solve().converged,true);
+    assert.equal(metadataReads,0,'ordinary stamping never builds inspection metadata');
+    inspect = true;
+    fixture.controls.set('VS',9);
+    assert.equal(fixture.solve().converged,true);
+    assert.equal(metadataReads,0,'accessing topology alone does not inspect unrelated parameters');
+    const ground = snapshot.net('island');
+    assert.equal(ground,snapshot.net('zero'));
+    assert.equal(snapshot.referenceNet,'zero');
+    assert.equal(snapshot.powerOff,false);
+    assert.equal(snapshot.dcSources,false);
+    assert.equal(snapshot.net('missing'),undefined);
+    assert.deepEqual(ground.terminals.filter(t => t.kind === 'gnd').map(t => t.partId),['G','G2']);
+    const supply = snapshot.net('vin').terminals.find(t => t.partId === 'VS');
+    assert.equal(supply.connections.neg,'zero');
+    assert.equal(supply.electrical.authoredVolts,8);
+    assert.equal(supply.electrical.effectiveVolts,9);
+    assert.equal(supply.electrical.controlPresent,true);
+    assert.equal(supply.electrical.ccClampPresent,false);
+    const output = snapshot.net('out');
+    const other = output.terminals.find(t => t.partId === 'OTHER');
+    assert.equal(other.kind,'inspection-unknown','unknown parts remain visible');
+    assert.equal(other.electrical.rInternal,null,'a malformed object cannot escape the snapshot');
+    assert.ok(other.electrical.parameterKeys.includes('nested'));
+    assert.equal(metadataReads,1);
+    assert.equal(snapshot.net('out'),output,'inspection caches each net snapshot');
+    for (const object of [snapshot,ground,ground.terminals,output,other,other.connections,
+      other.electrical,other.electrical.parameterKeys,output.extraSources]) assert.equal(Object.isFrozen(object),true);
+    assert.throws(() => {supply.connections.neg = 'out';},{name:'TypeError'});
+    assert.throws(() => {supply.electrical.effectiveVolts = 0;},{name:'TypeError'});
+    assert.throws(() => {output.terminals.push({});},{name:'TypeError'});
+    fixture.parts.find(p => p.id === 'RL').params.ohms = 77;
+    fixture.controls.set('VS',10);
+    assert.equal(output.terminals.find(t => t.partId === 'RL').electrical.ohms,10);
+    assert.equal(supply.electrical.effectiveVolts,9);
+    assert.deepEqual(fixture.nets,beforeNets,'inspection preserves caller ground islands');
+    assert.equal(fixture.state.sentinel.unchanged,true);
+
+    // Each fresh solve reflects the real clamp > control > authored precedence.
+    fixture.parts.find(p => p.id === 'VS')._ccClampedVolts = 7;
+    fixture.solve();
+    const clamped = snapshot.net('vin').terminals.find(t => t.partId === 'VS').electrical;
+    assert.equal(clamped.effectiveVolts,7);
+    assert.equal(clamped.ccClampPresent,true);
+    fixture.parts.find(p => p.id === 'VS').params.wave = 'spice-pwl';
+    fixture.solve({dcSources:true});
+    const waveform = snapshot.net('vin').terminals.find(t => t.partId === 'VS').electrical;
+    assert.equal(waveform.wave,'spice-pwl');
+    assert.equal(waveform.effectiveVolts,undefined,'inspection never certifies waveform DC as a static source');
+  } finally {unregisterDevice(inspectionKind);}
+});
+
+test('topology inspection accounts for actual pin, qualified and test-current sources', () => {
+  let snapshot;
+  try {
+    const fixture = inspectionFixture(ctx => {
+      ctx.conductance('out','gnd',1);
+      snapshot = ctx.topology;
+    });
+    fixture.parts.push({id:'MCU',kind:'mcu',params:{},terminals:['D2','D2','D3']});
+    fixture.nets.find(n => n.id === 'out').terminals.push({part:'MCU',terminal:'D2'});
+    fixture.nets.find(n => n.id === 'out').terminals.push({part:'MCU',terminal:'D2'},{part:'U',terminal:'out'});
+    fixture.nets.find(n => n.id === 'island').terminals.push({part:'MCU',terminal:'D3'});
+    fixture.pinSources.set('D2',{vTh:2,rTh:10});
+    fixture.pinSources.set('D3',{vTh:3,rTh:10});
+    const qualifiedSources = new Map([['U',new Map([['out',{vTh:4,rTh:20}],['gnd',{vTh:4,rTh:20}]])]]);
+    const solved = fixture.solve({qualifiedSources,testNodeA:'out',testNodeB:'zero',testCurrent:.001});
+    assert.equal(solved.converged,true);
+    const extras = snapshot.net('out').extraSources;
+    assert.deepEqual(extras,[
+      {kind:'qualified',partId:'U',terminal:'out',vTh:4,rTh:20},
+      {kind:'pin',partId:'MCU',terminal:'D2',vTh:2,rTh:10},
+      {kind:'pin',partId:'MCU',terminal:'D2',vTh:2,rTh:10},
+      {kind:'test',amps:.001},
+    ]);
+    assert.ok(extras.every(Object.isFrozen));
+    assert.deepEqual(snapshot.net('zero').extraSources,[],'sources dropped on the reference have no matrix contribution');
+    near(solved.nodeVoltages.get('out'),(.2+.4+.001)/1.35,
+      'declared pin duplicates stamp twice; repeated net memberships do not multiply qualified sources');
+    fixture.solve({qualifiedSources,powerOff:true});
+    assert.equal(snapshot.powerOff,true);
+    assert.deepEqual(snapshot.net('out').extraSources,[],'omitted power-off drives are not reported as stamped');
+  } finally {unregisterDevice(inspectionKind);}
+});
+
+test('raw solver topology inspection refuses duplicate part and canonical net IDs without changing ordinary solves', () => {
+  let inspect = false;
+  try {
+    const fixture = inspectionFixture(ctx => {
+      ctx.conductance('out','gnd',1);
+      if (inspect) ctx.topology.net('out');
+    });
+    // The matrix would stamp both resistors, although the old inspection view
+    // reported only the last, positive resistor under this ID.
+    fixture.parts.unshift({id:'RL',kind:'resistor',params:{ohms:-10},terminals:['a','b']});
+    assert.equal(fixture.solve().converged,true,'noninspecting legacy path retains its behavior');
+    inspect = true;
+    assert.throws(() => fixture.solve(),/topology inspection: duplicate part ID RL/);
+    fixture.parts.shift();
+    fixture.nets.push(net('out',['U','out'],['RL','a']));
+    assert.throws(() => fixture.solve(),/topology inspection: duplicate net ID out/);
+  } finally {unregisterDevice(inspectionKind);}
+});
+
+test('final solution validation sees the physical root once, preserves state and propagates the original refusal', () => {
+  let calls = 0;
+  const refusal = new Error('named final headroom refusal');
+  let refuse = false;
+  try {
+    const fixture = inspectionFixture(ctx => ctx.nonlinearCurrents('output',law),
+      (part,state,read,tSeconds) => {
+        calls++;
+        assert.equal(part.id,'U');
+        assert.equal(state,fixture.state);
+        near(read('out')-read('gnd'),3.6,'final root, not zero or a region-boundary trial');
+        near(read('in')-read('gnd'),8-4*(.36+.00018),'final simultaneous input');
+        assert.equal(tSeconds,.001);
+        if (refuse) throw refusal;
+      });
+    const before = structuredClone(fixture.state);
+    assert.equal(fixture.solve({tSeconds:.001}).converged,true);
+    assert.equal(calls,1,'hook runs only after final Newton/refinement');
+    assert.deepEqual(fixture.state,before);
+    refuse = true;
+    assert.throws(() => fixture.solve({tSeconds:.001}),error => error === refusal);
+    assert.equal(calls,2);
+    assert.deepEqual(fixture.state,before);
+
+    registerDevice(inspectionKind,{terminals,
+      stamp(ctx) {
+        ctx.nonlinearCurrents('impossible',read => {
+          const low = read('out')-read('gnd') < 5;
+          return {region:low?'low':'high',currents:new Map([['out',low?6:4]]),
+            jacobian:new Map([['out',new Map()]]),residualOhms:1};
+        });
+      }, validateSolution() {calls++; throw refusal;},
+    });
+    fixture.parts.find(p => p.id === 'RL').params.ohms = 1;
+    assert.equal(fixture.solve().converged,false);
+    assert.equal(calls,2,'nonconverged iterates never reach final admission');
+  } finally {unregisterDevice(inspectionKind);}
 });

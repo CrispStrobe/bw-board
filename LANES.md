@@ -1,4 +1,4 @@
-2026-10-03 ADP7118 current-limited startup envelope — CLAIM, Codex bwcx `/root`.
+2026-10-03 ADP7118 current-limited startup envelope — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch
 lane/adp7118-current-limited-envelope-20261003, exact base
 b2689a1f0a43b7566d89e9a240d3915e8469f176. Eight-path envelope: this entry;
@@ -21,6 +21,22 @@ advance, source refusal and mutations required. Generic diagnostic fixtures
 this is not production-model qualification. No Board/integrator/tolerance/budget,
 CPU/workflow/package/pin/CUI/Lite/corpus/deployment or other-model changes.
 Canonical claim lands before implementation; one final hosted CI/Harris set.
+Canonical claim 6a57331f landed before production edits. The strict new mode
+uses same-solve output/VIN/IQ currents; accepted-state diagnostics never select
+the next matrix law. Lazy solver inspection refuses duplicate part/net IDs and
+preserves actual MCU source multiplicity; a pure final-root hook guards prebias
+without rejecting Newton guesses. Independent production scope proofs cover
+120 observations each for sustained overload, inrush/release and linear control:
+maximum errors 67.548/1.716/0.0505 microvolts, capture-mean errors
+-10.202/-2.352/-13.273 microvolts. Actual accepted adaptive solutions preserve
+the ceiling and simultaneous terminal KCL at 211 overload and 225 inrush points.
+Independent unbounded-peak controls bracket the ceiling by +/-0.5 percent.
+Five isolated production mutants red actual Board consequences, including stale
+VIN authority before endpoint diagnostic repair; registry/dispatcher restored.
+The complete focused startup/DC/primitive surface passes 51/51 without skips;
+36 independent full legacy solver results remain bit-exact to the foundation
+parent. Solver/integrator tolerances and work budgets are unchanged. No vendor
+transient certificate, downstream adoption or deployment is claimed.
 
 2026-10-03 Registered nonlinear terminal-current authority — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch

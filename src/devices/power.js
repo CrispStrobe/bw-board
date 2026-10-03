@@ -25,6 +25,102 @@ const ADP7118_STARTUP_DELAY_NS = BigInt(Math.round(ADP7118_STARTUP_DELAY_SEC * 1
 // as a 10 us staircase; this deadline refreshes non-reactive endpoints.
 const ADP7118_STARTUP_TICK_NS = 10000n;
 
+function adp7118StartupTarget(part, state, tSeconds) {
+  const elapsed = state._startupStartNs === null ? 0
+    : tSeconds - Number(state._startupStartNs) / 1e9;
+  return (part.params.vOut ?? 5) * Math.max(0, 1 - Math.exp(
+    -Math.max(0, elapsed - Number(ADP7118_STARTUP_DELAY_NS) / 1e9) / ADP7118_STARTUP_TAU_SEC));
+}
+
+// This first current-limited slice proves a constant, adequately powered RC
+// experiment from actual solver memberships, not the author's intended wiring.
+// Everything outside that proof domain is refused rather than silently reduced
+// to a zero-valued operand or an ideal/uncontrolled supply.
+function assertAdp7118CurrentLimitedDomain(ctx, part) {
+  const fail = reason => { throw new Error(`ADP7118 ${part.id}: current-limited startup ${reason}`); };
+  const topology = ctx.topology;
+  const vin = ctx.netFor('vin_7'), out = ctx.netFor('vout_1');
+  const gnd = ctx.netFor('gnd'), en = ctx.netFor('en');
+  if (!gnd || !en) fail('requires connected GND and EN');
+  if (vin !== ctx.netFor('vin_8') || out !== ctx.netFor('vout_2')) {
+    fail('requires coincident duplicate VIN and VOUT leads');
+  }
+  if (vin === out || vin === gnd || out === gnd || en === out || en === gnd) {
+    fail('requires distinct VIN, VOUT, GND and enabled EN nets');
+  }
+  if (topology.powerOff || topology.dcSources) fail('requires powered transient source authority');
+  const snapshot = id => {
+    const net = topology.net(id);
+    if (!net || net.extraSources.length) fail('refuses foreign source injections');
+    return net;
+  };
+  const own = term => term.partId === part.id;
+  const keysOnly = (term, allowed) => term.electrical.parameterKeys.every(key => allowed.includes(key));
+  const resistor = term => term.kind === 'resistor'
+    && Number.isFinite(term.electrical.ohms) && term.electrical.ohms > 0
+    && keysOnly(term, ['ohms']);
+  const opposite = (term, id) => {
+    const a = term.connections.a, b = term.connections.b;
+    return a === id ? b : b === id ? a : undefined;
+  };
+  let resistors = 0, capacitors = 0;
+  const outputSeen = new Set();
+  for (const term of snapshot(out).terminals) {
+    if (own(term)) {
+      if (!['vout_1', 'vout_2', 'sense_adj'].includes(term.terminal)) fail('refuses extra output terminals');
+      continue;
+    }
+    if (outputSeen.has(term.partId)) continue;
+    outputSeen.add(term.partId);
+    if (opposite(term, out) !== gnd) fail('requires output load R/C directly to GND');
+    if (resistor(term)) resistors++;
+    else if (term.kind === 'capacitor' && Number.isFinite(term.electrical.farads)
+        && term.electrical.farads > 0 && keysOnly(term, ['farads'])) capacitors++;
+    else fail(`refuses unsupported output load ${term.partId}`);
+  }
+  if (!resistors || !capacitors) fail('requires explicit positive output resistor and capacitor');
+
+  const staticSource = (term, positiveNet, ideal = false) => {
+    const e = term.electrical;
+    if (term.kind !== 'vsource' || term.connections.pos !== positiveNet || term.connections.neg !== gnd
+        || !keysOnly(term, ['volts', 'wave', 'rInternal']) || e.controlPresent || e.ccClampPresent
+        || e.iLimit !== undefined || (e.wave !== undefined && e.wave !== 'dc')
+        || !Number.isFinite(e.authoredVolts) || e.effectiveVolts !== e.authoredVolts
+        || (e.rInternal !== undefined && (!Number.isFinite(e.rInternal) || e.rInternal < 0))
+        || (ideal && (e.rInternal ?? 0) !== 0)) {
+      fail(`requires constant uncontrolled ${ideal ? 'EN' : 'VIN'} source ${term.partId}`);
+    }
+    return e;
+  };
+  const inputTerms = snapshot(vin).terminals.filter(term => !own(term));
+  if (inputTerms.length !== 1) fail('requires one exclusive VIN source path');
+  let sourceTerm = inputTerms[0], sourceNet = vin, seriesR = 0;
+  if (resistor(sourceTerm)) {
+    seriesR = sourceTerm.electrical.ohms;
+    sourceNet = opposite(sourceTerm, vin);
+    if (!sourceNet || [gnd, out, en, vin].includes(sourceNet)) fail('requires a distinct series-source net');
+    const sourceTerms = snapshot(sourceNet).terminals.filter(term => term.partId !== sourceTerm.partId);
+    if (sourceTerms.length !== 1) fail('requires one exclusive constant source behind VIN resistance');
+    sourceTerm = sourceTerms[0];
+  }
+  const supply = staticSource(sourceTerm, sourceNet);
+  const enableTerms = snapshot(en).terminals.filter(term => !own(term));
+  if (en === vin) {
+    if (seriesR !== 0 || (supply.rInternal ?? 0) !== 0) fail('requires ideal static EN source');
+  } else {
+    if (enableTerms.length !== 1) fail('requires one exclusive EN source');
+    const enable = staticSource(enableTerms[0], en, true);
+    if (enable.authoredVolts < 1.22 || enable.authoredVolts > 20) fail('requires enabled EN voltage');
+  }
+  snapshot(gnd);
+  const limit = part.params.currentLimit;
+  const iqMax = 50e-6 + 130e-6 * Math.min(limit, .2) / .2;
+  const minimumVin = supply.authoredVolts - (seriesR + (supply.rInternal ?? 0)) * (limit + iqMax);
+  if (supply.authoredVolts > 20 || minimumVin <= Math.max((part.params.vOut ?? 5) + .2, 2.69)) {
+    fail('requires guaranteed VIN headroom across the current envelope');
+  }
+}
+
 /**
  * Register power device models.
  */
@@ -197,7 +293,9 @@ export function registerPowerDevices() {
   // This is a bounded DC model of the Rev. H data-sheet contract. It models
   // regulation/feedback, dropout, enable and UVLO hysteresis, quiescent or
   // shutdown current, and the typical current limit. Internal soft-start
-  // timing is opt-in via startupModel:'datasheet-envelope'. External SS,
+  // timing is opt-in via startupModel:'datasheet-envelope'; the separate
+  // 'current-limited-envelope' selects the stricter passive RC experiment.
+  // External SS,
   // noise/PSRR, thermal shutdown and exposed-pad parasitics remain unmodeled.
   registerDevice('adp7118', {
     terminals: ['vout_1', 'vout_2', 'sense_adj', 'gnd', 'en', 'ss', 'vin_7', 'vin_8'],
@@ -207,7 +305,7 @@ export function registerPowerDevices() {
       const nominal = part.params?.adjustable ? 1.2 : (part.params?.vOut ?? 5.0);
       const rOut = part.params?.rOut ?? 0.05;
       const startup = part.params?.startupModel;
-      if (startup !== undefined && startup !== 'datasheet-envelope') {
+      if (startup !== undefined && startup !== 'datasheet-envelope' && startup !== 'current-limited-envelope') {
         throw new Error(`ADP7118 ${part.id}: unsupported startupModel ${String(startup)}`);
       }
       if (startup && (part.params?.adjustable || !Number.isFinite(nominal)
@@ -215,6 +313,13 @@ export function registerPowerDevices() {
           || !Number.isFinite(part.params?.currentLimit ?? .36) || (part.params?.currentLimit ?? .36) <= 0
           || part.params?.softStartCapacitanceF !== undefined)) {
         throw new Error(`ADP7118 ${part.id}: startup supports fixed 1.2–5 V with open SS only`);
+      }
+      if (startup === 'current-limited-envelope' && (!Object.hasOwn(part.params, 'rOut')
+          || !Object.hasOwn(part.params, 'currentLimit')
+          || !Number.isFinite(part.params.rOut) || part.params.rOut <= 0
+          || !Number.isFinite(part.params.currentLimit) || part.params.currentLimit <= 0
+          || Object.keys(part.params).some(key => !['startupModel', 'vOut', 'rOut', 'currentLimit'].includes(key)))) {
+        throw new Error(`ADP7118 ${part.id}: current-limited startup requires explicit rOut/currentLimit and fixed-output parameters only`);
       }
       return {
         drives: {
@@ -246,6 +351,32 @@ export function registerPowerDevices() {
         const sense = ctx.netFor('sense_adj');
         if (!sense || ![ctx.netFor('vout_1'), ctx.netFor('vout_2')].includes(sense)) {
           throw new Error(`ADP7118 ${part.id}: startup requires directly connected SENSE; external feedback is unmodeled`);
+        }
+        if (state.startupModel === 'current-limited-envelope') {
+          assertAdp7118CurrentLimitedDomain(ctx, part);
+          const target = adp7118StartupTarget(part, state, ctx.tSeconds);
+          const resistance = part.params.rOut;
+          ctx.nonlinearCurrents('current-limited-startup', (read, scale) => {
+            // F_s(v) = s F(v/s): scale every independent voltage/current
+            // authority together, preserving slopes and all region boundaries.
+            const demand = (target * scale - read('vout_1') + read('gnd')) / resistance;
+            const limit = part.params.currentLimit * scale, knee = .2 * scale;
+            const amps = Math.min(limit, Math.max(0, demand));
+            const iq = 50e-6 * scale + 130e-6 * Math.min(amps, knee) / .2;
+            const slope = demand > 0 && demand < limit ? -1 / resistance : 0;
+            const iqSlope = amps < knee ? .00065 : 0;
+            const row = factor => new Map([['vout_1', factor * slope], ['gnd', -factor * slope]]);
+            return {
+              region: demand <= 0 ? 'zero' : demand >= limit ? 'limit'
+                : amps < knee ? 'linear-low-iq' : 'linear-high-iq',
+              currents: new Map([['vout_1', amps], ['vin_7', -amps - iq], ['gnd', iq]]),
+              jacobian: new Map([['vout_1', row(1)], ['vin_7', row(-1 - iqSlope)], ['gnd', row(iqSlope)]]),
+              residualOhms: resistance,
+            };
+          });
+          ctx.conductance('vout_1', 'vout_2', 1 / 0.01);
+          ctx.conductance('vin_7', 'vin_8', 1 / 0.01);
+          return;
         }
         if (state._enabled && state._currentLimited) {
           // A current ceiling is a Norton current, not a voltage source
@@ -314,6 +445,23 @@ export function registerPowerDevices() {
           state._wakeNs = null;
         }
         state.startupFraction = startupFraction;
+      }
+
+      if (state.startupModel === 'current-limited-envelope') {
+        // Diagnostics follow the accepted solution; none is a stamp authority.
+        const target = nominal * startupFraction;
+        const outputAmps = Math.min(currentLimit, Math.max(0, (target - vOut) / rOut));
+        const ramping = enabled && tNs >= state._startupStartNs + ADP7118_STARTUP_DELAY_NS;
+        const changed = enabled !== state._enabled || ramping !== state._startupRamping;
+        state._enabled = enabled;
+        state._startupRamping = ramping;
+        state._currentLimited = outputAmps >= currentLimit;
+        state._startupUpdateNs = tNs;
+        state._command = target;
+        state._driveV = target;
+        state._outputAmps = outputAmps;
+        state._inputAmps = outputAmps + 50e-6 + 130e-6 * Math.min(outputAmps, .2) / .2;
+        return changed;
       }
 
       if (state.startupModel) {
@@ -393,6 +541,20 @@ export function registerPowerDevices() {
       state._inputAmps = inputAmps;
       state.drives.vout_1 = { vTh: driveV, rTh: rOut, ref: 'gnd' };
       return changed;
+    },
+
+    validateSolution(part, state, read, tSeconds) {
+      if (state.startupModel !== 'current-limited-envelope') return;
+      const ground = read('gnd'), vin = read('vin_7') - ground;
+      const out = read('vout_1') - ground;
+      const target = adp7118StartupTarget(part, state, tSeconds);
+      if (out > target + 1e-6 || out < -1e-6) {
+        throw new Error(`ADP7118 ${part.id}: current-limited startup into a prebiased output is unmodeled`);
+      }
+      if (vin <= Math.max((part.params.vOut ?? 5) + .2, 2.69) || vin > 20
+          || read('en') - ground < 1.22) {
+        throw new Error(`ADP7118 ${part.id}: current-limited startup solved VIN/EN violates the qualified envelope`);
+      }
     },
   });
 

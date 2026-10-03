@@ -138,10 +138,11 @@ this fixture. The meter mean is about 4.157 V, not the roughly 4.996 V final
 endpoint. These are analytic model/circuit checks, not vendor-SPICE agreement;
 the CLI used a checkout override, not an installed/downstream adoption.
 
-Next separate model task: a within-MNA nonlinear current-limited regulator stamp
-with actual-capacitor transition, accepted-step ceiling, KCL, recovery and oracle
-proofs. Measure solver ownership and scope first; do not replace this named
-refusal with a post-step clamp or tolerance relaxation.
+The separately selected [`current-limited-envelope`](adp7118-current-limited-startup.md)
+mode supplies a within-MNA output limiter and simultaneous VIN/quiescent-current
+law for a stricter, explicitly powered passive RC experiment. It does not remove
+this mode's reactive-limit refusal or widen its existing admission boundary.
+Its analytic circuit proofs are not vendor transient-macromodel agreement.
 
 The interpolated waveform is not vendor transistor-model agreement. External
 CSS, adjustable-mode noise-reduction networks, overshoot, load-step feedback,

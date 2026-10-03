@@ -1782,6 +1782,107 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const nonlinearDimensions = new Map();
   // solveAssembled replaces solution; the initial zero vector is not mutated.
   let nonlinearIterate = solution;
+  let topology;
+  const getTopology = () => {
+    if (topology) return topology;
+    if (partMap.size !== parts.length) {
+      const seen = new Set();
+      for (const part of parts) {
+        if (seen.has(part.id)) throw new Error(`Device topology inspection: duplicate part ID ${part.id}`);
+        seen.add(part.id);
+      }
+    }
+    // Only an inspecting model pays for this index/snapshot. Use the solver's
+    // canonical, ground-merged topology, but never expose caller-owned objects.
+    const netById = new Map(nets.map(net => [net.id, net]));
+    if (netById.size !== nets.length) {
+      const seen = new Set();
+      for (const net of nets) {
+        if (seen.has(net.id)) throw new Error(`Device topology inspection: duplicate net ID ${net.id}`);
+        seen.add(net.id);
+      }
+    }
+    const scalar = value => value === null || ['undefined', 'number', 'string', 'boolean'].includes(typeof value) ? value : null;
+    const connectionsByPart = new Map();
+    for (const net of nets) {
+      for (const t of net.terminals) {
+        let connections = connectionsByPart.get(t.part);
+        if (!connections) { connections = Object.create(null); connectionsByPart.set(t.part, connections); }
+        if (!Object.hasOwn(connections, t.terminal)) connections[t.terminal] = scalar(net.id);
+      }
+    }
+    for (const connections of connectionsByPart.values()) Object.freeze(connections);
+    const partSnapshots = new Map();
+    const describePart = id => {
+      if (partSnapshots.has(id)) return partSnapshots.get(id);
+      const part = partMap.get(id);
+      const p = part?.params ?? {};
+      const wave = scalar(p.wave);
+      // Inspect only static source authority. A waveform is visible for named
+      // refusal; evaluating it here could throw before the model can refuse it.
+      const effectiveVolts = part?.kind === 'vsource' && (wave === undefined || wave === 'dc')
+        ? scalar(independentSourceVoltage(part, vcc, tSeconds, controls, dcSources)) : undefined;
+      const result = Object.freeze({
+        partId: scalar(id), kind: scalar(part?.kind),
+        connections: connectionsByPart.get(id) ?? Object.freeze(Object.create(null)),
+        electrical: Object.freeze({
+          ohms: scalar(p.ohms), farads: scalar(p.farads), wave,
+          authoredVolts: scalar(p.volts), effectiveVolts,
+          controlPresent: controls.has(id), rInternal: scalar(p.rInternal),
+          iLimit: scalar(p.iLimit), ccClampPresent: part?._ccClampedVolts !== undefined,
+          parameterKeys: Object.freeze(Object.keys(p)),
+        }),
+      });
+      partSnapshots.set(id, result);
+      return result;
+    };
+    const netSnapshots = new Map();
+    topology = Object.freeze({
+      referenceNet: scalar(groundNetId), powerOff: Boolean(powerOff), dcSources,
+      net: id => {
+        const canonical = mergedGndIds.has(id) ? groundNetId : id;
+        if (netSnapshots.has(canonical)) return netSnapshots.get(canonical);
+        const net = netById.get(canonical);
+        if (!net) return undefined;
+        const terminals = net.terminals.map(t => Object.freeze({ ...describePart(t.part), terminal: scalar(t.terminal) }));
+        const extraSources = [];
+        if (!powerOff && nodeIndex.has(canonical)) {
+          const seen = new Set();
+          for (const t of net.terminals) {
+            const key = termKey(t.part, t.terminal);
+            if (seen.has(key) || findNet(nets,t.part,t.terminal) !== canonical) continue;
+            seen.add(key);
+            const part = partMap.get(t.part);
+            const pin = part?.kind === 'mcu' && part.terminals.includes(t.terminal) ? pinSources.get(t.terminal) : null;
+            if (pin && pin !== 'high-z') {
+              // stampMcuPins iterates declared terminals, including repeated
+              // entries. Net memberships do not determine that multiplicity.
+              for (const declared of part.terminals) {
+                if (declared === t.terminal) extraSources.push(Object.freeze({
+                  kind: 'pin', partId: scalar(t.part), terminal: scalar(t.terminal),
+                  vTh: scalar(pin.vTh), rTh: scalar(pin.rTh),
+                }));
+              }
+            }
+            const qualified = opts.qualifiedSources?.get(t.part)?.get(t.terminal);
+            if (qualified) extraSources.push(Object.freeze({
+              kind: 'qualified', partId: scalar(t.part), terminal: scalar(t.terminal),
+              vTh: scalar(qualified.vTh), rTh: scalar(qualified.rTh),
+            }));
+          }
+        }
+        if (testNodeA && testNodeB && nodeIndex.has(canonical)) {
+          if (canonical === testNodeA) extraSources.push(Object.freeze({ kind: 'test', amps: scalar(testCurrent) }));
+          if (canonical === testNodeB) extraSources.push(Object.freeze({ kind: 'test', amps: scalar(-testCurrent) }));
+        }
+        const result = Object.freeze({ id: scalar(canonical),
+          terminals: Object.freeze(terminals), extraSources: Object.freeze(extraSources) });
+        netSnapshots.set(canonical, result);
+        return result;
+      },
+    });
+    return topology;
+  };
 
   // Nonlinear registered currents own their candidate checks as well as their
   // matrix companions. Records and evaluator closures live only in this solve;
@@ -2211,7 +2312,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             const previouslyStamped = deviceStamps.has(part.id);
             deviceStamps.set(part.id, rec);
             stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,
-              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec, nonlinearIterate, nonlinearDimensions, previouslyStamped);
+              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec, nonlinearIterate, nonlinearDimensions, previouslyStamped, getTopology);
           }
           break;
         }
@@ -3456,6 +3557,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           const n = findNet(nets, part.id, terminal);
           return n ? (nodeVoltages.get(n) ?? 0) : 0;
         };
+        if (converged && model.validateSolution) {
+          const state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
+          // This is the physical, converged result, after all continuation and
+          // refinement. Never validate admission against Newton trial points.
+          model.validateSolution(part, state, read, tSeconds);
+        }
         const rec = deviceStamps.get(part.id);
         const authoritativeTerminals = new Set();
         if (rec && rec.length) {
@@ -3842,7 +3949,7 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
  * Stamp a registered device: its `state.drives` as Norton sources, then the
  * model's own `stamp(ctx)` for input impedance / analog loading.
  */
-function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1, groundNetId = undefined, rec = null, iterate = undefined, nonlinearDimensions = null, previouslyStamped = false) {
+function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1, groundNetId = undefined, rec = null, iterate = undefined, nonlinearDimensions = null, previouslyStamped = false, getTopology = undefined) {
   // KCL-visibility: `rec` collects one record per stamped companion so the
   // extraction can derive terminal currents from exactly what was stamped.
   // A terminal on the GROUND net has no matrix row (nodeIndex miss) and its
@@ -3890,6 +3997,7 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
   }
   let nonlinearKeys = null;
   const ctx = {
+    get topology() { return getTopology(); },
     netFor: (terminal) => findNet(nets, part.id, terminal),
     conductance: (tA, tB, g) => {
       const netA = findNet(nets, part.id, tA);
