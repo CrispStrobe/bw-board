@@ -1,0 +1,10 @@
+{
+  "status": "PASS_INDEPENDENT_AUTHENTICATED_JS_COLD_BASELINE_ONLY",
+  "checks": 49914,
+  "sourceInputs": 48,
+  "quanta": 316562,
+  "ports": 16475,
+  "repElements": 400,
+  "namedCuts": 15,
+  "scope": "Ordinary JS only; raw RAM hash attested by private oracle, full RAM bytes not retained here; no native/reset-normalization/performance claim."
+}

@@ -1,0 +1,261 @@
+{
+  "status": "PASS",
+  "q": 316562,
+  "namedCuts": [
+    {
+      "name": "reset",
+      "q": 0,
+      "cs": "0xf000",
+      "eip": "0xfff0",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-entry-e0c4",
+      "q": 32,
+      "cs": "0xf000",
+      "eip": "0xe0c4",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-exit-e0c4",
+      "q": 160,
+      "cs": "0xf000",
+      "eip": "0xe0c6",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-entry-9daf",
+      "q": 4711,
+      "cs": "0xf000",
+      "eip": "0x9daf",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-exit-9daf",
+      "q": 4831,
+      "cs": "0xf000",
+      "eip": "0x9db2",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-entry-9e3a",
+      "q": 4921,
+      "cs": "0xf000",
+      "eip": "0x9e3a",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-exit-9e3a",
+      "q": 4937,
+      "cs": "0xf000",
+      "eip": "0x9e3c",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-entry-9e44",
+      "q": 4940,
+      "cs": "0xf000",
+      "eip": "0x9e44",
+      "edx": "0x300"
+    },
+    {
+      "name": "rep-exit-9e44",
+      "q": 5076,
+      "cs": "0xf000",
+      "eip": "0x9e47",
+      "edx": "0x300"
+    },
+    {
+      "name": "before-AA-routine",
+      "q": 316410,
+      "cs": "0xf000",
+      "eip": "0xcd0",
+      "edx": "0x300"
+    },
+    {
+      "name": "after-command-aa",
+      "q": 316422,
+      "cs": "0xf000",
+      "eip": "0x54b",
+      "edx": "0x64"
+    },
+    {
+      "name": "after-response-55",
+      "q": 316479,
+      "cs": "0xf000",
+      "eip": "0x531",
+      "edx": "0x60"
+    },
+    {
+      "name": "after-command-ab",
+      "q": 316498,
+      "cs": "0xf000",
+      "eip": "0x54b",
+      "edx": "0x64"
+    },
+    {
+      "name": "after-response-0",
+      "q": 316555,
+      "cs": "0xf000",
+      "eip": "0x531",
+      "edx": "0x60"
+    },
+    {
+      "name": "before-F000-E16",
+      "q": 316562,
+      "cs": "0xf000",
+      "eip": "0xe16",
+      "edx": "0x300"
+    }
+  ],
+  "rep": [
+    {
+      "siteEip": "0xe0c4",
+      "width": 2,
+      "elements": 128,
+      "entryQ": 32,
+      "exitQ": 160,
+      "entry": {
+        "ecx": "0x80",
+        "edi": "0x400",
+        "eax": "0x0",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x13"
+      },
+      "exit": {
+        "ecx": "0x0",
+        "edi": "0x500",
+        "eax": "0x0",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x13",
+        "eip": "0xe0c6"
+      }
+    },
+    {
+      "siteEip": "0x9daf",
+      "width": 4,
+      "elements": 120,
+      "entryQ": 4711,
+      "exitQ": 4831,
+      "entry": {
+        "ecx": "0x78",
+        "edi": "0x0",
+        "eax": "0xf000ff53",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x86"
+      },
+      "exit": {
+        "ecx": "0x0",
+        "edi": "0x1e0",
+        "eax": "0xf000ff53",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x86",
+        "eip": "0x9db2"
+      }
+    },
+    {
+      "siteEip": "0x9e3a",
+      "width": 2,
+      "elements": 16,
+      "entryQ": 4921,
+      "exitQ": 4937,
+      "entry": {
+        "ecx": "0x10",
+        "edi": "0x180",
+        "eax": "0xf0000000",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x46"
+      },
+      "exit": {
+        "ecx": "0x0",
+        "edi": "0x1a0",
+        "eax": "0xf0000000",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x46",
+        "eip": "0x9e3c"
+      }
+    },
+    {
+      "siteEip": "0x9e44",
+      "width": 4,
+      "elements": 136,
+      "entryQ": 4940,
+      "exitQ": 5076,
+      "entry": {
+        "ecx": "0x88",
+        "edi": "0x1e0",
+        "eax": "0x0",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x46"
+      },
+      "exit": {
+        "ecx": "0x0",
+        "edi": "0x400",
+        "eax": "0x0",
+        "es": "0x0",
+        "cr0": "0x0",
+        "eflags": "0x46",
+        "eip": "0x9e47"
+      }
+    }
+  ],
+  "finalCpu": {
+    "cs": 61440,
+    "eip": 3606,
+    "edx": 768,
+    "cr0": 0,
+    "eflags": 70,
+    "halted": false,
+    "shutdown": false
+  },
+  "finalBoard": {
+    "cycles": 1899376,
+    "debt": 0,
+    "deadline": 672,
+    "a20Enabled": true,
+    "pic1": {
+      "irr": 1,
+      "isr": 0,
+      "imr": 0,
+      "vectorBase": 0,
+      "icw4": 0,
+      "autoEOI": false,
+      "readISR": false,
+      "initPhase": 0,
+      "needICW3": false,
+      "initWarningAt": null,
+      "needICW4": false,
+      "intActive": true,
+      "lowestPriority": 7,
+      "rotateOnAutoEOI": false,
+      "pollPending": false,
+      "specialMask": false
+    },
+    "pic2": {
+      "irr": 0,
+      "isr": 0,
+      "imr": 0,
+      "vectorBase": 0,
+      "icw4": 0,
+      "autoEOI": false,
+      "readISR": false,
+      "initPhase": 0,
+      "needICW3": false,
+      "initWarningAt": null,
+      "needICW4": false,
+      "intActive": false,
+      "lowestPriority": 7,
+      "rotateOnAutoEOI": false,
+      "pollPending": false,
+      "specialMask": false
+    }
+  },
+  "baselineBytes": 1643253
+}
