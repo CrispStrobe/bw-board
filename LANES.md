@@ -1,4 +1,4 @@
-2026-10-03 ADP7118 source/acquisition precision proof — CLAIM, Codex bwcx `/root`.
+2026-10-03 ADP7118 source/acquisition precision proof — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch
 lane/adp7118-source-acquisition-audit-20261003, exact base
 3cf52d1dd8b77d8f4d39747f1002ed8c7206ffab. Three-path envelope: this entry;
@@ -11,7 +11,14 @@ precision maximum0.411microvolts, all native120-sample captures and local
 accuracy gates satisfied. No production/model/solver/tolerance/work-budget,
 other-device/GUI/CPU/package/pin/workflow/deployment edits; no universal accuracy
 or vendor waveform claim. Existing tighter4ohm fixture assertions stay intact.
-Canonical claim must precede test edits; one exact hosted qualification set.
+Canonical claim f1ae30b5 preceded test edits. Final focused suite14/14,
+zero failures/skips:18 interactive and6 precision captures, each120 native
+observations, plus two actual precision-bypass waveform negatives. Persisted
+precision maximum0.408microvolts and mean maximum0.964microvolts; wider
+interactive maximum100.159microvolts and mean maximum58.489microvolts.
+Existing six model mutants remain red and registry restoration is verified.
+One frozen exact-head CI/Harris set then guarded normal landing; no downstream
+pin bump or deployment is necessary for unchanged production source bytes.
 
 2026-10-03 ADP7118 current-limited startup envelope — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch
