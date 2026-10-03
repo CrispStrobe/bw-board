@@ -1,0 +1,84 @@
+name: LabWired warmed GPIO window sampling (diagnostic)
+on:
+  push:
+    branches: ['perf/wasm-window-profile-20261003']
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Existing deterministic production build-B artifact
+        required: true
+        type: string
+        default: '36915940413'
+      core_commit:
+        description: Exact production source of that artifact
+        required: true
+        type: string
+        default: '43b2d62f5a0fa24ae0b38a645069f5aaa78af685'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnostic:
+    name: Window sampling Node ${{ matrix.node }} repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.20.2', '22.23.3']
+        repeat: [1, 2]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: labwired-wasm-b
+          path: engine
+          run-id: ${{ inputs.build_run || '36915940413' }}
+          github-token: ${{ github.token }}
+      - name: Verify source and original artifact bytes
+        env:
+          CORE_COMMIT: ${{ inputs.core_commit || '43b2d62f5a0fa24ae0b38a645069f5aaa78af685' }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync, writeFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const info = JSON.parse(readFileSync('engine/BUILD-INFO.json'));
+          if (!/^[a-f0-9]{40}$/.test(process.env.CORE_COMMIT) || info.ref !== process.env.CORE_COMMIT) throw Error('Source mismatch');
+          for (const file of ['labwired_wasm.js', 'labwired_wasm_bg.wasm']) {
+            const bytes = readFileSync('engine/nodejs/' + file), d = info.targets.nodejs[file];
+            if (bytes.length !== d.bytes || createHash('sha256').update(bytes).digest('hex') !== d.sha256) throw Error('Original bytes mismatch');
+          }
+          writeFileSync('engine/nodejs/package.json', JSON.stringify({type: 'commonjs'}));
+          NODE
+      - name: Install guest compiler
+        timeout-minutes: 10
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+      - name: Portable boundaries and strict existing profile/guest parsers
+        run: node --test test/window-cpu-profiler.test.mjs test/f0-gpio-profile-receipt.test.mjs test/wasm-motion-profile.test.mjs
+      - name: Preserve runner provenance
+        env:
+          BUILD_RUN: ${{ inputs.build_run || '36915940413' }}
+          REPEAT: ${{ matrix.repeat }}
+        run: |
+          mkdir evidence
+          cp engine/BUILD-INFO.json evidence/build-info.json
+          {
+            printf 'build_run=%s\nrepeat=%s\n' "$BUILD_RUN" "$REPEAT"
+            git rev-parse HEAD
+            lscpu
+            node --version
+            arm-none-eabi-gcc --version
+          } > evidence/runner.txt
+      - name: Unchanged ordinary GPIO timing then separate warmed-window sampling
+        run: node scripts/profile-labwired-f0-windows.mjs --wasm engine/nodejs --out evidence/gpio
+      - name: Retain originals even if timing or profiling fails
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: warmed-gpio-node-${{ matrix.node }}-repeat-${{ matrix.repeat }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
