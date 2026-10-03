@@ -8,8 +8,31 @@ import sys
 import tempfile
 import time
 import urllib.request
+from setup import checkout
+from archive import digest
 from parent import validate_contract,main,bounded,ArtifactRedirect,https_origin
 class Controls(unittest.TestCase):
+    def test_both_checkout_roles_follow_validated_contract(self):
+        c=json.loads((Path(__file__).parent/'contract.json').read_text());validate_contract(c)
+        workflow=(Path(__file__).resolve().parents[2]/'.github/workflows/i80386-cold-native-diagnostic.yml').read_text()
+        self.assertIn("compiled='+c['compiledRevision']",workflow)
+        self.assertIn("driver='+c['driverRevision']",workflow)
+        self.assertIn('ref: ${{ steps.pins.outputs.compiled }}\n          path: publication',workflow)
+        self.assertIn('ref: ${{ steps.pins.outputs.driver }}\n          path: driver',workflow)
+        self.assertNotIn('ref: a6fae61',workflow)
+    def test_setup_current_git_maps_reject_wrong_head_and_missing_input(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)/'role';root.mkdir()
+            def git(*args):
+                return subprocess.check_output(['git','-C',str(root),*args],stderr=subprocess.PIPE,env={**os.environ,'GIT_AUTHOR_NAME':'Fixture','GIT_AUTHOR_EMAIL':'fixture@example.invalid','GIT_COMMITTER_NAME':'Fixture','GIT_COMMITTER_EMAIL':'fixture@example.invalid'}).decode().strip()
+            git('init','--quiet');(root/'input').write_bytes(b'fixed source\n');git('add','input');git('commit','--quiet','-m','first');first=git('rev-parse','HEAD')
+            records={'input':{'bytes':13,'sha256':digest(b'fixed source\n')}}
+            checkout(root,first,records)
+            git('commit','--allow-empty','--quiet','-m','different identity')
+            with self.assertRaises(ValueError):checkout(root,first,records)
+            current=git('rev-parse','HEAD');checkout(root,current,records)
+            (root/'input').unlink()
+            with self.assertRaises(ValueError):checkout(root,current,records)
     def test_disabled_never_downloads(self):main('disabled')
     def test_unfrozen_contract_refuses(self):
         c=json.loads((Path(__file__).parent/'contract.json').read_text())

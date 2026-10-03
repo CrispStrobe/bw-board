@@ -13,7 +13,7 @@ from admission import disjoint_roles, driver_identity, evidence_equal
 from archive import ordinary, digest, require, zip_members, tar_members, exclusive_tree
 
 HERE = Path(__file__).resolve().parent
-COMPILED = 'a6fae61a549d595c88a324f50589d92497040c07'
+COMPILED = '7632e6a0995ceaab88bc8cede91506a5330d2e1c'
 BOCHS = '0e45b736ef9792eb9b752b0a35db49eaf2faea47'
 W = Path('/home/runner/work/bw-board/bw-board/publication')
 T = Path('/home/runner/work/_temp/cold-bios-build-prepared')
@@ -66,7 +66,7 @@ def main(binding_path):
     require(subprocess.run([str(node),'--version'],check=True,capture_output=True,timeout=10).stdout.strip()==b'v22.23.3','Node version')
     meta=json.loads(ordinary(HERE/'official-members.json'))
     frozen=json.loads(ordinary(HERE/'frozen-members.json')); prepared=json.loads(ordinary(HERE/'prepared-members.json'))
-    require(len(frozen)==124 and len(prepared)==810,'fixed inventory counts')
+    require(len(frozen)==125 and len(prepared)==810,'fixed inventory counts')
     members=zip_members(Path(b['zip']),meta['members'],meta['zipSha256'],meta['zipBytes'])
     require(sum(len(v) for v in members.values()) <= 128*1024*1024,'ZIP aggregate limit')
     prefix='cold-bios-build-evidence/'
@@ -124,7 +124,7 @@ def main(binding_path):
     for n,h in context['upstreamHashes'].items():require(digest(git(upstream,'show',BOCHS+':'+n))==h,'upstream after blob')
     evidence_equal({n:ordinary(R/n) for n in evidence},evidence)
     require(local_before=={str(p):digest(ordinary(p)) for p in HERE.glob('*') if p.is_file()} and ordinary(Path(binding_path))==binding_before,'helper/binding after bytes')
-    proof={'schema':'bw.cold-native-restored-materialization.v1','status':'RESTORED_AND_READONLY_ADMITTED_NO_ADDON_LOAD_OR_GUEST','originalBuild':meta,'compiledRevision':COMPILED,'driverRevision':b['driverRevision'],'compiledCount':124,'preparedCount':810,'driverSourceIdentitySha256':b['driverIdentitySha256'],'driverSourceIdentity':actual_driver,'roles':{k:b[k] for k in ('compiledRoot','upstreamRoot','driverRoot','output')},'runtimeHost':{'platform':platform.platform(),'architecture':platform.machine(),'libc':platform.libc_ver(),'nodeSha256':digest(nb)},'admission':admission,'originalRecordsUnchanged':True}
+    proof={'schema':'bw.cold-native-restored-materialization.v1','status':'RESTORED_AND_READONLY_ADMITTED_NO_ADDON_LOAD_OR_GUEST','originalBuild':meta,'compiledRevision':COMPILED,'driverRevision':b['driverRevision'],'compiledCount':125,'preparedCount':810,'driverSourceIdentitySha256':b['driverIdentitySha256'],'driverSourceIdentity':actual_driver,'roles':{k:b[k] for k in ('compiledRoot','upstreamRoot','driverRoot','output')},'runtimeHost':{'platform':platform.platform(),'architecture':platform.machine(),'libc':platform.libc_ver(),'nodeSha256':digest(nb)},'admission':admission,'originalRecordsUnchanged':True}
     with (out/'materialization-proof.json').open('x') as f:json.dump(proof,f,indent=2);f.write('\n')
 
 if __name__=='__main__':
