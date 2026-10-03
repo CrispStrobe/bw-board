@@ -1,3 +1,27 @@
+2026-10-03 ADP7118 current-limited startup envelope — CLAIM, Codex bwcx `/root`.
+Clean reused isolated wt-board-startup-context-claim-20261002, branch
+lane/adp7118-current-limited-envelope-20261003, exact base
+144a9a32d124770cab86d0760e39610a6ea075d3. Eight-path envelope: this entry;
+src/mna.js lazy immutable actual-net inspection and opt-in pure final-solution
+validation; src/devices.js those contracts; src/devices/power.js ADP7118 only;
+new test/adp7118-current-limited-startup.test.mjs;
+test/registered-nonlinear-currents.test.mjs inspection/validation authority;
+new spec-updates/adp7118-current-limited-startup.md; existing
+spec-updates/adp7118-soft-start.md mode-boundary pointer. Add separate explicit
+startupModel:'current-limited-envelope', preserving default DC and existing
+datasheet-envelope behavior. Admit fully bonded duplicate nets, direct SENSE,
+open SS, static uncontrolled ideal EN source, positive parallel R/C load and
+one static uncontrolled VIN source optionally behind one series resistor;
+prove worst-case headroom, refuse foreign source injections/unsupported topology,
+controls, prebias and dropout. Stamp clipped output and simultaneous VIN/IQ/GND
+through qualified solve-local primitive; no previous-step input-current authority.
+Independent analytic RC entry/release/waveform/mean and current/KCL, partitioned
+advance, source refusal and mutations required. Generic diagnostic fixtures
+10ohm/2.2uF and500ohm/22uF already accuracyMet=true within unchanged budget;
+this is not production-model qualification. No Board/integrator/tolerance/budget,
+CPU/workflow/package/pin/CUI/Lite/corpus/deployment or other-model changes.
+Canonical claim lands before implementation; one final hosted CI/Harris set.
+
 2026-10-03 Registered nonlinear terminal-current authority — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch
 lane/registered-nonlinear-current-authority-20261003, exact base
