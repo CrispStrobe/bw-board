@@ -1,0 +1,33 @@
+{
+  "baseline": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "candidate": "3b959f5193a2773648fe9c12f0e36042a71a7df0",
+  "changed": [
+    ".github/workflows/wasm-c3-word-hook-thunk.yml",
+    "crates/core/src/bus/accessors.rs",
+    "crates/core/src/bus/c3_irq_word_gate_tests.rs",
+    "crates/core/src/bus/tests_main.rs"
+  ],
+  "enginePath": "crates/core/src/bus/accessors.rs",
+  "baselineSha256": "8a39a7759eefdc43aad948d5854dceca6ad173969598634af1c84d24eea297c2",
+  "candidateSha256": "2c4abfa141cec3222f18ce213a4fa364625d92f85c1af0d13f2d0670df88da95",
+  "onlyHelperAndWordHookGuardAdded": true,
+  "nativeProductionDispatchUnchanged": true,
+  "byteHalfwordAndReadsUnchanged": true,
+  "originalHookAndCpuUnchanged": [
+    {
+      "path": "crates/core/src/bus/routing.rs",
+      "sha256": "d6f4f64c8b9c653556a46cc4fad57a0121c59765199569d1a2f6681b4007a0b1"
+    },
+    {
+      "path": "crates/core/src/bus/tick.rs",
+      "sha256": "b46f824b63fc16233bd1d9ca87ce3bbe298ac96ae6b25abad5befb25aa20d4c7"
+    },
+    {
+      "path": "crates/core/src/cpu/cortex_m.rs",
+      "sha256": "3cce26ce11616709e363419f520a60eccc118c9a01af3d65959a9159b6af2e98"
+    }
+  ],
+  "helper": "    /// Query the live state required by either arm of the C3 write hook.\n    /// Keep uncached scheduler-source refreshes and cached-register updates,\n    /// including cache updates while routing is disabled.\n    #[cfg(any(target_arch = \"wasm32\", test))]\n    #[inline(always)]\n    pub(super) fn c3_irq_word_write_hook_needed(&self) -> bool {\n        let needed = self.irq_fabric.esp32c3.intc.is_some();\n        #[cfg(feature = \"event-scheduler\")]\n        let needed = needed || (self.legacy_walk_disabled && self.irq_fabric.esp32c3.routing);\n        needed\n    }\n\n    /// Word-only outlined admission experiment. Keep the branch out of the\n    /// word accessor and leave the original shared hook untouched.\n    #[cfg(any(target_arch = \"wasm32\", test))]\n    #[inline(never)]\n    fn sync_c3_irq_word_write_if_needed(&mut self, idx: usize, offset: u64) {\n        if self.c3_irq_word_write_hook_needed() {\n            self.sync_esp32c3_irq_cache_write(idx, offset);\n        }\n    }\n\n",
+  "guard": "                #[cfg(any(target_arch = \"wasm32\", test))]\n                self.sync_c3_irq_word_write_if_needed(idx, mmio_addr - base);\n                #[cfg(not(any(target_arch = \"wasm32\", test)))]\n",
+  "engineDiff": "diff --git a/crates/core/src/bus/accessors.rs b/crates/core/src/bus/accessors.rs\nindex 4dd2a6bc..19ba0055 100644\n--- a/crates/core/src/bus/accessors.rs\n+++ b/crates/core/src/bus/accessors.rs\n@@ -10,6 +10,28 @@ use crate::{SimResult, SimulationError};\n use std::sync::atomic::Ordering;\n \n impl SystemBus {\n+    /// Query the live state required by either arm of the C3 write hook.\n+    /// Keep uncached scheduler-source refreshes and cached-register updates,\n+    /// including cache updates while routing is disabled.\n+    #[cfg(any(target_arch = \"wasm32\", test))]\n+    #[inline(always)]\n+    pub(super) fn c3_irq_word_write_hook_needed(&self) -> bool {\n+        let needed = self.irq_fabric.esp32c3.intc.is_some();\n+        #[cfg(feature = \"event-scheduler\")]\n+        let needed = needed || (self.legacy_walk_disabled && self.irq_fabric.esp32c3.routing);\n+        needed\n+    }\n+\n+    /// Word-only outlined admission experiment. Keep the branch out of the\n+    /// word accessor and leave the original shared hook untouched.\n+    #[cfg(any(target_arch = \"wasm32\", test))]\n+    #[inline(never)]\n+    fn sync_c3_irq_word_write_if_needed(&mut self, idx: usize, offset: u64) {\n+        if self.c3_irq_word_write_hook_needed() {\n+            self.sync_esp32c3_irq_cache_write(idx, offset);\n+        }\n+    }\n+\n     /// Register a [`crate::SimulationObserver`] for the bus's own events\n     /// (`on_memory_write`).\n     ///\n@@ -1129,6 +1151,9 @@ impl crate::Bus for SystemBus {\n             self.collect_scheduled_events(idx);\n             if r.is_ok() {\n                 let base = self.peripherals[idx].base;\n+                #[cfg(any(target_arch = \"wasm32\", test))]\n+                self.sync_c3_irq_word_write_if_needed(idx, mmio_addr - base);\n+                #[cfg(not(any(target_arch = \"wasm32\", test)))]\n                 self.sync_esp32c3_irq_cache_write(idx, mmio_addr - base);\n                 // Same write choke, ESP32-S3 interrupt matrix: a level moved by\n                 // this write (above all the FROM_CPU self-IPI that implements\n"
+}
