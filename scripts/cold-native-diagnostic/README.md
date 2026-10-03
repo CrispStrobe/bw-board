@@ -1,0 +1,11 @@
+# One hosted cold BIOS diagnostic preparation
+
+Manual workflow only; the guest defaults to disabled. Source/refusal controls do not download, restore or initialize native code. A later explicit root-reviewed dispatch may perform exactly one trace-OFF child, CPU60/wall120/Nodeheap128/file16MiB/nice10/core0 with six empty executable hooks. No automatic retry or trace-ON child exists. Trace-ON needs a separate reviewed coverage and hosted512MiB-cap decision.
+
+Three sibling checkouts separate compiled a6fa source124, frozen driver64514 source52, and current parent/runtime tooling. The driver uses a separately identified Bochs-reset JS oracle; the original hardware-reset JS baseline remains immutable and is not normalized. All original artifact records and paths remain unchanged. The pinned official ZIP is downloaded once, digest/member maps checked, then the reviewed restore-only helper admits source/generated/native bytes before the first addon load.
+
+Parent preserves first child failure or timeout, raw streams/exit, original artifacts and source before/after checks; stop/descendant-closure/kill contains separately sessioned restore children. Source setup has its own logs/status. Whole CPU166 per-return digests and named raw cuts, PIO/scalar comparison and raw final RAM are the driver's declared coverage; do not imply retained every-return states, per-element RAM, full AT boot or calibrated speed.
+
+This packet is source preparation. Real artifact download, role materialization and the native child remain unrun locally. It must not be published as an armed guest workflow until parent/driver/source controls are reviewed.
+
+Four bounded source controls passed in r3, including a forced3s timeout with both wrapper and independently sessioned nested PID killed. Two earlier source fixture failures are retained: an inner file limit exceeding the source check's outer hard limit, and a0.4s timeout before nested startup completed. These are not guest attempts. The r3 parser/harness bytes are authenticated before/after; historical r1/r2 receipts retain their source hashes and errors, without claiming archived old executable bytes or a persisted preexecution inline wrapper. All real-host setup, download, restoration and native execution remain unrun.
