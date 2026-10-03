@@ -1,0 +1,121 @@
+name: Cold BIOS paired CPU gate (manual, prerequisite pending)
+on:
+  workflow_dispatch:
+    inputs:
+      enable_pairs:
+        description: Separately reviewed one paired comparison
+        type: boolean
+        required: true
+        default: false
+      comparison:
+        type: choice
+        required: true
+        default: native-oneQ-v-batched
+        options: [native-oneQ-v-batched, plain-JS-v-batched]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-bios-paired-performance
+  cancel-in-progress: false
+jobs:
+  pairs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: paired
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Require genuine reviewed three-arm audit before setup
+        if: inputs.enable_pairs
+        id: pins
+        run: |
+          python3 -B - <<'PYCODE'
+          import sys,os
+          sys.path.insert(0,'paired/scripts/cold-performance-paired')
+          import importlib.util
+          spec=importlib.util.spec_from_file_location('guard','paired/scripts/cold-performance-paired/setup-entry.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          c,a=m.pending_guard()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              for k,v in [('qualifier',c['qualifierRevision']),('compiled',c['compiledRevision']),('driver',c['driverRevision']),*[(k,v['revision']) for k,v in c['workers'].items()]]:f.write(k+'='+v+'\n')
+          PYCODE
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.qualifier }}
+          path: runtime
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.compiled }}
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.native }}
+          path: native-worker
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.plainJs }}
+          path: plain-worker
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        with:
+          node-version: 22.23.3
+      - name: One comparison, exactly two warmup and seven measured pairs
+        if: inputs.enable_pairs && steps.pins.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BW_COLD_COMPARISON: ${{ inputs.comparison }}
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          BW_HOT_NAPI_PROFILE: ''
+          NODE_V8_COVERAGE: ''
+          PYTHONPATH: ''
+          PYTHONSTARTUP: ''
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/cold-paired-context"
+          export BW_COLD_NODE="$(command -v node)"
+          python3 -B paired/scripts/cold-performance-paired/hosted.py "$BW_COLD_COMPARISON" "$RUNNER_TEMP/cold-paired-performance" > "$RUNNER_TEMP/cold-paired-context/parent.stdout" 2> "$RUNNER_TEMP/cold-paired-context/parent.stderr"
+      - name: Retain first failure or complete eighteen-child evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-paired-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-paired-performance
+            ${{ runner.temp }}/cold-paired-context
+            ${{ github.workspace }}/paired/scripts/cold-performance-paired
+            ${{ github.workspace }}/paired/.github/workflows/i80386-cold-paired-performance.yml
+          include-hidden-files: true
+          if-no-files-found: error
