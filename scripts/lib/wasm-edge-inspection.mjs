@@ -1,4 +1,15 @@
 // Text inspection only: no instantiation, tier forcing, timing or qualification.
+export function isButtonVtableCandidate (v) {
+    // Multiple independent prefix clues reject coincidental function-table
+    // windows. Still static labelled evidence, not a dynamic device inventory.
+    const size = v?.words?.[1], align = v?.words?.[2];
+    return Boolean(Number.isInteger(size) && Number.isInteger(align) && align > 0 && align <= 4096 &&
+        (align & (align - 1)) === 0 && size >= align && size % align === 0 &&
+        /drop_in_place<[^>]*::Button>/.test(v.slots?.[0]?.symbol || '') &&
+        /Button_as_core::fmt::Debug/.test(v.slots?.[3]?.symbol || '') &&
+        /Button.*as_sim_input/.test(v.slots?.[9]?.symbol || ''));
+}
+
 export function selectEdgeWat (wat, {inspectVtables = false, vtableWords = 14, includeButtonTargets = false} = {}) {
     if (!Number.isInteger(vtableWords) || vtableWords < 14 || vtableWords > 32) throw Error('Invalid vtable word bound');
     if (includeButtonTargets && !inspectVtables) throw Error('Button targets require vtable inspection');
@@ -53,7 +64,7 @@ export function selectEdgeWat (wat, {inspectVtables = false, vtableWords = 14, i
     if (includeButtonTargets) {
         // Identity clue, not an inventory or a stable Rust ABI contract. Retain
         // the complete raw bodies so merged labels are not interpreted as cost.
-        const buttons = vtableCandidates.filter(v => v.slots.some(s => /Button.*as_sim_input/.test(s.symbol || '')));
+        const buttons = vtableCandidates.filter(isButtonVtableCandidate);
         if (!buttons.length) throw Error('No Button-labelled static vtable candidates');
         const wanted = new Set(buttons.flatMap(v => v.slots.map(s => s.symbol).filter(Boolean)));
         const captured = new Set(functions.map(f => f.header.match(/^  \(func (\S+)/)?.[1]));

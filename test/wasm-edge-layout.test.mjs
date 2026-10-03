@@ -1,11 +1,11 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {selectEdgeWat} from '../scripts/lib/wasm-edge-inspection.mjs';
+import {selectEdgeWat, isButtonVtableCandidate} from '../scripts/lib/wasm-edge-inspection.mjs';
 // Text-parser fixtures only: not compiled ABI or timing evidence.
 function fixture (words = 19) {
     const bytes = Buffer.alloc(words * 4);
-    for (const [slot, value] of [[3, 2], [4, 3], [9, 5], [12, 1], [13, 4], [18, 6]]) {
+    for (const [slot, value] of [[0, 7], [1, 40], [2, 8], [3, 2], [4, 3], [9, 5], [12, 1], [13, 4], [18, 6]]) {
         if (slot < words) bytes.writeUInt32LE(value, slot * 4);
     }
     const encoded = [...bytes].map(b => '\\' + b.toString(16).padStart(2, '0')).join('');
@@ -17,7 +17,7 @@ function fixture (words = 19) {
     nop)
   (func $service_edge_driven_gpio_devices_cold (type $slice)
     call_indirect (type $boolean))
-  (func $id (type $slice)
+  (func $Button_as_core::fmt::Debug.fmt (type $slice)
     nop)
   (func $as_any (type $boolean)
     i32.const 8)
@@ -27,9 +27,11 @@ function fixture (words = 19) {
     i32.const 8)
   (func $other_trait_merged_zero (type $boolean)
     i32.const 0)
+  (func $drop_in_place<button::Button> (type $slice)
+    nop)
   (func $not_referenced (type $unused)
     nop)
-  (elem (;0;) (i32.const 1) func $DeclarativeLogicDevice.input_channels $id $as_any $service $Button.as_sim_input $other_trait_merged_zero)
+  (elem (;0;) (i32.const 1) func $DeclarativeLogicDevice.input_channels $Button_as_core::fmt::Debug.fmt $as_any $service $Button.as_sim_input $other_trait_merged_zero $drop_in_place<button::Button>)
   (data (;0;) (i32.const 4096) "${encoded}"))`;
 }
 test('default narrow selection is unchanged; opt-in retains full bounded Button target bodies', () => {
@@ -51,6 +53,20 @@ test('default narrow selection is unchanged; opt-in retains full bounded Button 
     assert(!wide.functions.some(f => f.header.includes('not_referenced')));
     assert(wide.types.includes('  (type $boolean (func (param i32) (result i32)))'));
     assert(!wide.types.some(t => t.includes('$unused')));
+});
+test('independent Button prefix clues reject shifted table windows and partial identity', () => {
+    const v = selectEdgeWat(fixture(), {inspectVtables: true, vtableWords: 19}).vtableCandidates[0];
+    assert.equal(isButtonVtableCandidate(v), true);
+    for (const offset of [0, 3, 9]) {
+        const wrong = structuredClone(v); wrong.slots[offset].symbol = '$unrelated';
+        assert.equal(isButtonVtableCandidate(wrong), false);
+    }
+    for (const [size, align] of [[7696, 7697], [40, 0], [40, 3], [39, 8], [0, 8]]) {
+        const wrong = structuredClone(v); wrong.words[1] = size; wrong.words[2] = align;
+        assert.equal(isButtonVtableCandidate(wrong), false);
+    }
+    assert.equal(isButtonVtableCandidate({}), false);
+    assert.equal(isButtonVtableCandidate(null), false);
 });
 test('extended bounds reject short data, invalid words, missing identity and missing target bodies', () => {
     for (const vtableWords of [0, 13, 33, 19.1, NaN, '19']) assert.throws(() => selectEdgeWat(fixture(), {vtableWords}), /word bound/);
