@@ -1184,9 +1184,64 @@ export class BoardImpl {
     sr.oeActive = oeActive;
   }
 
-  /**
-   * @param {bigint} tNs
-   */
+  /** One-shot, opt-in whole-capture work limit; ordinary advanceTo is unchanged. */
+  advanceToBounded(tNs, limits) {
+    if (this._boundedAdvanceContext) throw new Error('advanceToBounded refuses reentrant capture');
+    if (this.timeNs !== 0n || this._lastBoundedAdvance || this._transientAnalysisWork.advances) {
+      throw new Error('advanceToBounded requires a fresh Board at time zero');
+    }
+    if (typeof tNs !== 'bigint' || tNs <= 0n || tNs > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error('advanceToBounded requires a positive bigint target within the safe nanosecond horizon');
+    }
+    if (this.drivenPwm.size) throw new Error('advanceToBounded refuses driven PWM');
+    const ceilings = { maxAttempts: 20000, maxSolves: 60001, maxAdvances: 200 };
+    if (!limits || typeof limits !== 'object' || Array.isArray(limits)
+      || Object.keys(limits).length !== 3
+      || Object.keys(limits).some(key => !Object.hasOwn(ceilings, key))) {
+      throw new Error('advanceToBounded requires bounded maxAttempts/maxSolves/maxAdvances');
+    }
+    const selected = Object.fromEntries(Object.keys(ceilings).map(key => [key, limits[key]]));
+    if (Object.entries(ceilings).some(([key, ceiling]) =>
+      !Number.isSafeInteger(selected[key]) || selected[key] < 1 || selected[key] > ceiling)) {
+      throw new Error('advanceToBounded requires bounded maxAttempts/maxSolves/maxAdvances');
+    }
+    const context = { limits: Object.freeze(selected), work: { attempts: 0, solves: 0, advances: 0 } };
+    this._boundedAdvanceContext = context;
+    let failure = null;
+    try {
+      this.advanceTo(tNs);
+      if (this._deviceSubstepOverflow || this._transientAttemptOverflow) {
+        throw new Error('advanceToBounded refuses incomplete device/transient work');
+      }
+    } catch (error) {
+      failure = error.code === 'WHOLE_ADVANCE_BUDGET_EXCEEDED'
+        ? 'whole-advance-budget-exceeded' : 'whole-advance-refused';
+      this._transientAccuracyUnmet ||= { code: failure, timeSec: Number(this.timeNs) / 1e9,
+        detail: error.message };
+      this._invalidateLiveMeasurements(error);
+      throw error;
+    } finally {
+      this._lastBoundedAdvance = Object.freeze({ limits: context.limits,
+        work: Object.freeze({ ...context.work }), requestedTimeNs: tNs.toString(),
+        completed: failure === null, failure });
+      this._boundedAdvanceContext = null;
+    }
+    return this._lastBoundedAdvance;
+  }
+
+  _chargeBoundedAdvanceWork(counter) {
+    const context = this._boundedAdvanceContext;
+    if (!context) return;
+    const key = `max${counter[0].toUpperCase()}${counter.slice(1)}`;
+    if (context.work[counter] >= context.limits[key]) {
+      const error = new Error(`whole-advance work budget exceeded: ${counter} limit ${context.limits[key]}`);
+      error.code = 'WHOLE_ADVANCE_BUDGET_EXCEEDED';
+      throw error;
+    }
+    context.work[counter]++;
+  }
+
+  /** @param {bigint} tNs */
   advanceTo(tNs) {
     // A DRIVEN PWM IS REAL SWITCHING. With none (every emulator route, which
     // publishes its own timer edges), this is the plain advance. With one, the
@@ -1501,6 +1556,7 @@ export class BoardImpl {
         : this._transientAnalysisWork.advances > 0 ? true : null,
       failure: this._transientAccuracyUnmet ? Object.freeze({ ...this._transientAccuracyUnmet }) : null,
       work: Object.freeze({ ...this._transientAnalysisWork }),
+      ...(this._lastBoundedAdvance ? { boundedAdvance: this._lastBoundedAdvance } : {}),
     };
   }
 
@@ -4503,6 +4559,7 @@ export class BoardImpl {
   /** Shared capacitor-open DC solve used by public OP analysis and runAc. */
   _solveDcOperatingPoint({ parts, nets = this._solveNets, controls, deviceStates, tSeconds,
     dcSources = false }) {
+    this._chargeBoundedAdvanceWork('solves');
     return solveMNA(parts, nets, this._pinSources(), controls, this.vcc, {
       tSeconds,
       dcSources,
@@ -4550,6 +4607,7 @@ export class BoardImpl {
    */
   biasPointVoltages() {
     this._syncDeviceGpioDrives();
+    this._chargeBoundedAdvanceWork('solves');
     const res = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
       this.controls, this.vcc, {
         powerOff: false,
@@ -4582,6 +4640,7 @@ export class BoardImpl {
       qualifiedSources: this._qualifiedSources(),
     };
     if (powerOff || testNodeA || testNodeB) {
+      this._chargeBoundedAdvanceWork('solves');
       return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
     }
     return this._solveLiveMNA(this._pinSources(), options);
@@ -4589,6 +4648,7 @@ export class BoardImpl {
 
   _solveLiveMNA(pinSources, options) {
     try {
+      this._chargeBoundedAdvanceWork('solves');
       const result = solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, options);
       this._liveSolveError = null;
       return result;
@@ -5377,6 +5437,7 @@ export class BoardImpl {
    * @param {number} dtSec
    */
   _integrateTransientMNA(dtSec) {
+    this._chargeBoundedAdvanceWork('advances');
     const tEnd = Number(this.timeNs) / 1e9;
     const t0 = tEnd - dtSec;
     const profile = this._transientAnalysisProfile;
@@ -5411,6 +5472,7 @@ export class BoardImpl {
 
     const constrained = this._sourceConstrainedInductorDirect();
     if (constrained) {
+      this._chargeBoundedAdvanceWork('attempts');
       const amps = sourceCurrent(constrained.source, tEnd);
       const current = constrained.currentSign * amps;
       const voltage = constrained.henrys * constrained.currentSign
@@ -5528,6 +5590,7 @@ export class BoardImpl {
     // intentionally disabled by a scope: its intermediate buckets are
     // observable and still require the existing time grid.
     if (this._transientIntegrationMode() === 'algebraic-direct') {
+      this._chargeBoundedAdvanceWork('attempts');
       attempts = 1;
       // Keep the established first-step diagnostic stage (`be`). With no
       // storage, BE and trapezoidal stamp the identical algebraic system.
@@ -5538,6 +5601,7 @@ export class BoardImpl {
     }
 
     while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
+      this._chargeBoundedAdvanceWork('attempts');
       attempts++;
       let hEff = Math.min(h, tEnd - t, hMax);
       const requestedEnd = t + hEff;
