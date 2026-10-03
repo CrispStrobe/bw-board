@@ -113,6 +113,26 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const INPUTS = [
     {
+        id: '386-cold-bios-js-capture', kind: 'fixture',
+        what: 'Controlled opt-in ordinary-JS cold reset to before F000:E16 using the '
+            + 'fixed vendored free BIOS. Seven pure refusal controls always run; only '
+            + 'the eighth, full-capture test requires an explicit bounded invocation. '
+            + 'The retained historical capture passes all eight with 48 current/Git '
+            + 'inputs authenticated before and after; it proves no native or performance claim.',
+        env: 'BW_COLD_REFERENCE_OUTPUT', envRole: 'capture-output', paths: [],
+        gates: ['test/i80386-cold-bios-reference-source.test.mjs'],
+        obtain: 'Use an exclusive new absolute output path as BW_COLD_REFERENCE_OUTPUT '
+            + 'only inside a reviewed single-child harness: Node22.23.3, heap128MiB, '
+            + 'CPU15s/wall30s/file8MiB/core0/nice10 and six empty hook variables. '
+            + 'This variable requests capture output; it is not an external firmware input '
+            + 'or an authenticated receipt. See docs/I80386-NATIVE-COLD-BIOS-JS-REFERENCE.md '
+            + 'for the existing immutable raw baseline and its source/Node/helper receipts.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI intentionally skips only the full cold capture to preserve '
+            + 'its execution budget; the seven pure refusal controls always run. '
+            + 'The historical bounded eight-test execution is recorded evidence.',
+    },
+    {
         id: '386-native-ram-coherence-report', kind: 'fixture',
         what: 'Committed actual four-budget native RAM, SMC and A20 coherence capture '
             + 'used by mandatory baseline and mutation checks. Preserves native raw bus '
@@ -787,6 +807,14 @@ export const INPUTS = [
  *  PRESENT line can be checked rather than trusted. */
 export function resolve(input) {
     const fromEnv = input.env ? process.env[input.env] : null;
+    // This gate requests a NEW output, not an existing input file. Presence
+    // here establishes only that capture was requested, never that it ran or
+    // produced authenticated evidence. Do not probe or digest the output path.
+    if (input.envRole === 'capture-output') {
+        return fromEnv
+            ? { present: true, via: `$${input.env} set; capture requested; output is not evidence; census does not execute it` }
+            : { present: false, via: `tried $${input.env}; full capture not requested` };
+    }
     // A SERVICE IS NOT A FILE, AND THE CENSUS DELIBERATELY DOES NOT PROBE IT.
     //
     // `existsSync` on "https://host/compile" is false, so without this the
