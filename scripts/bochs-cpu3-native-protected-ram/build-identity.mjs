@@ -38,7 +38,7 @@ export const {ownedAssets,sourceIdentity,regularBytes,boundedJson,authenticateEn
 export function validateProtectedManifest(m){
  assert.deepEqual(m.profile,protectedRamProfile);assert.deepEqual(m.protectedProfile,protectedRamProfile);assert.equal(m.ramProfile,undefined,'real-mode profile is historical only');
  assert.ok(m.originalRamProvenance,'held RAM derivation provenance');validateRamManifest(m.originalRamProvenance);
- const held=m.originalRamProvenance;assert.equal(held.boardRevision,m.boardRevision);assert.equal(held.preparedTree,m.preparedTree);assert.equal(held.bochsRevision,m.bochsRevision);assert.deepEqual(held.originalColdProvenance,m.originalColdProvenance);assert.deepEqual(held.originalH4Provenance,m.originalH4Provenance);
+ const held=m.originalRamProvenance;assert.equal(held.generatedRuntimeSha256,'56d64c8664b1edaeadd28944484ec53df111357acada96a83fca11245629ca7e','exact held RAM generation');assert.equal(held.ownedClock.runtimeSha256,held.generatedRuntimeSha256);assert.equal(held.boardRevision,m.boardRevision);assert.equal(held.preparedTree,m.preparedTree);assert.equal(held.bochsRevision,m.bochsRevision);assert.deepEqual(held.originalColdProvenance,m.originalColdProvenance);assert.deepEqual(held.originalH4Provenance,m.originalH4Provenance);
  for(const [p,h]of Object.entries(held.sourceHashes))assert.equal(m.sourceHashes[p],h);
  assert.deepEqual(m.actualPreparedHashes,generatedHashes());assert.equal(m.generatedRuntimeSha256,generatedHashes()['bochs/cpu/bw_slice_runtime.inc']);assert.ok(isAbsolute(m.preparedTree)&&resolve(m.preparedTree)===m.preparedTree);return m;
 }
