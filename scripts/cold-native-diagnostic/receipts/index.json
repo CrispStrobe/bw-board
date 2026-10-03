@@ -1,0 +1,21 @@
+{
+  "origins.json": "5b7ee8f254244ccc8cb15440dee6fb5c22385e0fe2737c94eeb0c7a7905791e6",
+  "r2-startup-fixture-failure/stderr": "12430c102a76303f29231e12d9e7dcd57d28ce77324105c1189a39624a71bc99",
+  "r2-startup-fixture-failure/after.json": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7",
+  "r2-startup-fixture-failure/invocation.json": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545",
+  "r2-startup-fixture-failure/exit.json": "5830102f548fa6150e6e87a1313126beab5b04bd98214da5574956e3d2444c1b",
+  "r2-startup-fixture-failure/before.json": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7",
+  "r2-startup-fixture-failure/stdout": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c",
+  "r1-preexec-fixture-failure/stderr": "eb469b51b10ae0f407fce112f45fcdf9cbd56ab5e8ef9731ff69dee8adc9e55e",
+  "r1-preexec-fixture-failure/after.json": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362",
+  "r1-preexec-fixture-failure/invocation.json": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545",
+  "r1-preexec-fixture-failure/exit.json": "1c352c82d0d957dc287314b262abb0adc572020454f1a348293c1833eb73a225",
+  "r1-preexec-fixture-failure/before.json": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362",
+  "r1-preexec-fixture-failure/stdout": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c",
+  "r3-four-pass/stderr": "7e9f2780f9656d9890852c80088e3c2cc7adf086d162bc5957d00b9be24bf445",
+  "r3-four-pass/after.json": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863",
+  "r3-four-pass/invocation.json": "a4db7e1916960e731a4af6c4e7afd1126dc831034ef37a87c7f90b9d6a7fdbd2",
+  "r3-four-pass/exit.json": "a3407b43daed6edb9429bdd6a2ddacc6a290ffe1b8291a575a2c83f52e9e79a3",
+  "r3-four-pass/before.json": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863",
+  "r3-four-pass/stdout": "fb36edd9d9c1ae464808cc0391bf7c8fe9118bbcd1d45ed3f0fdfa31baa9f44e"
+}
