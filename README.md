@@ -370,8 +370,14 @@ attribution highlights batch dispatch (**22.30–31.75%**), cached runs
 (**16.39–21.55%**) and cold GPIO servicing (**5.70–15.36%**), not removable
 cost or a predicted speedup. The `input_channels` label is not evidence of
 expensive metadata work: its source returns an empty borrowed slice, while
-sampled callers are GPIO edge servicing; shared code/name attribution is only
-an inference. Initial missing-census failures, their registration-only fix and
+sampled callers are GPIO edge servicing. Hosted inspection of the exact
+production module now resolves the static alias: the Button resident-device
+vtable's edge-service-address slot points to the same empty-slice function
+labelled `DeclarativeLogicDevice::input_channels`. This is dispatch eligibility,
+not channel discovery or allocation. It establishes compiled identity, not a
+removable-cost estimate or a speedup. See
+[compiled callee, table and source evidence](docs/receipts/2026-10-03-wasm-edge-callee-inspection/README.md).
+Initial missing-census failures, their registration-only fix and
 both complete capture sets are retained. No engine promotion, app pin or
 physical acknowledgement changed. Different hosted CPUs do not establish
 Node-version causality. See

@@ -1,0 +1,116 @@
+{
+  "conclusion": "failure",
+  "databaseId": 37115414464,
+  "headSha": "29372ec7195f671c5dd5a2d28fc487edaa5bb06d",
+  "jobs": [
+    {
+      "completedAt": "2026-10-03T10:12:00Z",
+      "conclusion": "failure",
+      "databaseId": 111181184740,
+      "name": "inspect",
+      "startedAt": "2026-10-03T10:11:34Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T10:11:36Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T10:11:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:40Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "number": 2,
+          "startedAt": "2026-10-03T10:11:36Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:41Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "number": 3,
+          "startedAt": "2026-10-03T10:11:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:42Z",
+          "conclusion": "success",
+          "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+          "number": 4,
+          "startedAt": "2026-10-03T10:11:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:42Z",
+          "conclusion": "success",
+          "name": "Verify original production bytes before disassembly",
+          "number": 5,
+          "startedAt": "2026-10-03T10:11:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:42Z",
+          "conclusion": "success",
+          "name": "Portable selection checks",
+          "number": 6,
+          "startedAt": "2026-10-03T10:11:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:53Z",
+          "conclusion": "success",
+          "name": "Install disassembler on hosted runner only",
+          "number": 7,
+          "startedAt": "2026-10-03T10:11:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:57Z",
+          "conclusion": "failure",
+          "name": "Disassemble without executing engine and retain selected original text",
+          "number": 8,
+          "startedAt": "2026-10-03T10:11:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:58Z",
+          "conclusion": "success",
+          "name": "Preserve inspection even on failure (never engine bytes)",
+          "number": 9,
+          "startedAt": "2026-10-03T10:11:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:58Z",
+          "conclusion": "skipped",
+          "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "number": 17,
+          "startedAt": "2026-10-03T10:11:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:58Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "number": 18,
+          "startedAt": "2026-10-03T10:11:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T10:11:58Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-10-03T10:11:58Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37115414464/job/111181184740"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37115414464"
+}
