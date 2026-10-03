@@ -414,6 +414,20 @@ significance. No production engine, app pin or physical acknowledgement
 changed. All pairs, minima, regressions and original job logs are retained:
 [repeated same-host results and complete receipts](docs/receipts/2026-10-03-wasm-same-host-orders/README.md).
 
+The next isolated experiment moves the same boolean method to the trait's
+end. Exact compiled inspection confirms the Button's old `service_edge` slot
+is restored, but all four frozen-harness pairs still show **motion losses
+of 0.31–0.67%** and worse minima. GPIO gains **2.62–19.14%**; RAM changes
+**−1.28% to +3.06%**. Candidate motion/GPIO medians span
+**0.626131×–0.961721× / 0.593837×–0.777377×**, with both floors failing
+all four pairs. Native **4,239 tests + 16 GPIO integrations**, independent
+WASM determinism and **108 actual integrations** pass, but the separate fresh
+motion floor fails (**0.810358× median / 0.789109× min**). This source stays
+**unmerged/unqualified**. Restored compiled layout is not a performance
+explanation or permission to ignore regressions. All **240 timing windows**,
+initial/corrected raw disassembly and original gates are retained:
+[tail-method experiment and complete evidence](docs/receipts/2026-10-03-wasm-edge-eligibility-bool-tail/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
