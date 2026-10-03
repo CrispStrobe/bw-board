@@ -6,8 +6,9 @@ oracle rerun, warmup pairs or measured performance gate. The original
 source-owned contract passed root source review. Its first hosted
 qualification failed after plain JS completed: native one-Q initialized but
 stopped before any resume on an inspect-schema assertion, and native batched
-never started. This derivative contract refuses before setup until the corrected
-native worker has a reviewed source freeze and binding. The workflow remains
+never started. The corrected native worker 33c90876 has a reviewed 56-input
+source freeze, nine pure controls and current/Git identity authentication. This
+derivative contract binds that source authority. The workflow remains
 disabled by default; another execution requires a separate root grant. Its pure
 fixtures never execute a worker.
 
@@ -53,7 +54,7 @@ That genuine later audit is a prerequisite for the separate 18-child paired gate
 The terminal policy now distinguishes the genuine 13-field inspect result from
 the last resume result: resume supplies the active-state field, independent N/Q
 and the same raw 166 CPU words. No activity field is synthesized on inspect.
-The corrected native-worker revision is pending; the retained old worker map and
-source-control packet remain historical until replaced by a qualified derivative.
+The native binding now pins 33c90876 and its genuine nine-control source packet.
+This qualifies source only; another actual semantic attempt is still pending.
 The first-failure evidence and unchanged E16 correctness scope are documented in
 [the results note](../../docs/I80386-COLD-THREE-ARM-FIRST-FAILURE.md).

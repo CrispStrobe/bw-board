@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-three-arm.source-contract.v1",
-  "status": "PENDING_CORRECTED_NATIVE_WORKER_SOURCE_FREEZE",
+  "status": "ROOT_REVIEWED_THREE_ARM_SOURCE_READY",
   "guestEnabledByDefault": false,
   "order": [
     "plain-JS",
@@ -998,8 +998,8 @@
       }
     },
     "native": {
-      "revision": "8ed0366af9bf92823561d5130d0ad6274020c6da",
-      "sourceSha256": "a5b068e37cd05a08262dc6ac5ad4f11835427fcaa720b831440bab583212321f",
+      "revision": "33c90876ff024923588ec3ecb2538754bc72634b",
+      "sourceSha256": "fcb989d43bc0c69815b32bd71c67f8a08d9e9c1aa4fb78528e6371189e3eec25",
       "entry": "scripts/cold-native-performance/worker.mjs",
       "binding": "scripts/cold-native-performance/capture-binding.json",
       "files": {
@@ -1056,24 +1056,28 @@
           "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
         },
         "scripts/cold-native-performance/README.md": {
-          "bytes": 4476,
-          "sha256": "0b77b03e3fe72dcf5ec70b28120389eeabda6797a91c2b188507041677845325"
+          "bytes": 5090,
+          "sha256": "56bff3bbed8015428aabbc5d0887ded039d7716879b55e66b2524a5a11f8edd2"
+        },
+        "scripts/cold-native-performance/actual-snapshot-fixtures.json": {
+          "bytes": 9224,
+          "sha256": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080"
         },
         "scripts/cold-native-performance/admission.mjs": {
-          "bytes": 6895,
-          "sha256": "ce771bbe6ba102e5e7008dfa4156753292e006a56fbc0c3dba0111be2df9effc"
+          "bytes": 6959,
+          "sha256": "fd28224bfb91213440d04a5f790dc1f586a63f14521a2d21926b87904af53031"
         },
         "scripts/cold-native-performance/capture-binding.json": {
           "bytes": 577,
           "sha256": "5bc446815953759f4d088834c3c369aee35f526168acc94fd12b29596c105735"
         },
         "scripts/cold-native-performance/protocol.mjs": {
-          "bytes": 4395,
-          "sha256": "137ae341c72573e2cacf750e45633e2c214b105e84b1de85e82abc444c079e4a"
+          "bytes": 6159,
+          "sha256": "57b30cae49f376be29c31a3ee2fc5600f3a0d37135ffddf11ca4cd4bff2bd70b"
         },
         "scripts/cold-native-performance/worker.mjs": {
-          "bytes": 10720,
-          "sha256": "49b75208699f580dedeb5f1d963ce99f6eaf68ff36f6c476ba619fb15f34189b"
+          "bytes": 10747,
+          "sha256": "29ecdef2339de1aec89812208b8b38f71c80e7c02e814b8ebf6bbf1e5cf8e7f8"
         },
         "src/adc0809.js": {
           "bytes": 6267,
@@ -1220,40 +1224,40 @@
           "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
         },
         "test/i80386-cold-native-performance-source.test.mjs": {
-          "bytes": 10711,
-          "sha256": "900c319e27f0747c68a98d610b9e0c7694f08d6df4233fc4426696e23cbb2732"
+          "bytes": 12960,
+          "sha256": "2cb20a2bb47a58bb643e962b3fb880b63b01b77dcae29289be0a2957bdd5082b"
         }
       },
       "sourceQualification": {
-        "controls": 8,
+        "controls": 9,
         "records": {
           "before.json": {
-            "bytes": 227103,
-            "sha256": "2dc9d6f35b0b788095c12c9250391ab57b99478cc0ddedd4ed9d9128b303b603"
+            "bytes": 9256,
+            "sha256": "cdcb37281875dc2447f072ceb1bbc0e56754447fe1553402d88c60ee1d2778fd"
           },
           "after.json": {
-            "bytes": 227103,
-            "sha256": "2dc9d6f35b0b788095c12c9250391ab57b99478cc0ddedd4ed9d9128b303b603"
+            "bytes": 9256,
+            "sha256": "cdcb37281875dc2447f072ceb1bbc0e56754447fe1553402d88c60ee1d2778fd"
           },
           "invocation.json": {
-            "bytes": 423,
-            "sha256": "cc97186cb0c76e13faa2af821aeef174a4985cafb9477786e120475a6be2e6ef"
+            "bytes": 513,
+            "sha256": "7db977ccb7b20c226facf44bb3130b2b7af83fa260394cb6da3290578a834456"
           },
           "exit.json": {
             "bytes": 100,
-            "sha256": "4a734302fbdb73f105e56c5d2241543626a75e3104b3a3b00eea518b4248da07"
+            "sha256": "43b8828bf13edf9ddeda7f023c1309c19cbf001bafa39e4c7f3798722b73f49d"
           },
           "stdout": {
-            "bytes": 1940,
-            "sha256": "81421651d3da82b32c03f24a37f9c0a91d60bdefdde38099712511e375c22926"
+            "bytes": 2180,
+            "sha256": "46d6744f6f48fb691bdb761cd85c714a861dc5c79cbb0f1571ef55a021202e66"
           },
           "stderr": {
             "bytes": 0,
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           "independent-source-audit.json": {
-            "bytes": 426,
-            "sha256": "8e90629730a1a1f6f8da78d0a939becf05a50fc0ad608fae42dae8d493281d4c"
+            "bytes": 448,
+            "sha256": "710a9c2711cdcd2ac6be638ade008968e9702f967eaafc6d90c88fc897134c62"
           }
         },
         "origin": "/tmp/native-cold-native-worker-eighth-controls-r2-20261003",
