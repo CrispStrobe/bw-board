@@ -1,0 +1,15 @@
+{
+  "run.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/run.json",
+  "artifacts.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/artifacts.json",
+  "dispatch-request.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/dispatch-request.json",
+  "branch-head.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/branch-head.json",
+  "zip-verification.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/zip-verification.json",
+  "coder-actual-outcome-audit.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/coder-actual-outcome-audit.json",
+  "independent-seventh-attempt-audit.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/independent-seventh-attempt-audit.json",
+  "final-status.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/final-status.json",
+  "native.invocation.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/native.invocation.json",
+  "native.exit.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/native.exit.json",
+  "native.stdout": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/native.stdout",
+  "native.stderr": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/native.stderr",
+  "guest/admission.json": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/guest/admission.json"
+}

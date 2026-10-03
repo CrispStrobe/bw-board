@@ -1,0 +1,10 @@
+{
+  "workflow": "i80386-cold-native-diagnostic.yml",
+  "ref": "lane/386-cold-native-of-contract-20261003",
+  "head": "e9f167cef1c778568ad186c4f449486bd207756b",
+  "inputs": {
+    "enable_guest": "true"
+  },
+  "requestedAt": "2026-10-03T09:50:10.645003+00:00",
+  "authorizedAttempts": 1
+}

@@ -1,0 +1,9 @@
+{
+  "status": "PASS_PROGRESS_DRIVER_AND_RESOURCE_CONTROLS_SOURCE_ONLY",
+  "driverHead": "11c0bdcade020117fc682e97db284c6ff8797842",
+  "driverFilesCurrentGit": 54,
+  "driverIdentityCanonicalSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+  "driverControls": 14,
+  "parentControls": 9,
+  "scope": "Bounded progress/source serialization, real tiny Python wait4 CPU-signal and manufactured cgroup deltas only. No addon/guest. Python has no V8 heap enforcement; parent finalfreeze pending."
+}

@@ -1,0 +1,18 @@
+import os,json,pathlib,hashlib,subprocess,time,signal,resource
+W=pathlib.Path('/tmp/bw-cold-native-diagnostic-source-20261003');R=pathlib.Path(__file__).parent
+paths=[str(p.relative_to(W)) for folder in ['scripts/cold-native-diagnostic','scripts/cold-native-restore'] for p in sorted((W/folder).rglob('*')) if p.is_file()]+['.github/workflows/i80386-cold-native-diagnostic.yml']
+node='/tmp/node-v22.23.3-linux-x64/bin/node'
+def pins():return {str(p):hashlib.sha256((W/p).read_bytes()).hexdigest() for p in paths}|{node:hashlib.sha256(pathlib.Path(node).read_bytes()).hexdigest()}
+def save(n,v):(R/n).write_text(json.dumps(v,indent=2)+'\n')
+def limits():
+ os.nice(10);resource.setrlimit(resource.RLIMIT_CPU,(10,10));resource.setrlimit(resource.RLIMIT_FSIZE,(8<<20,8<<20));resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+env=os.environ.copy()
+for k in ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE']:env[k]=''
+cmd=['/opt/miniconda/bin/python3','-S','scripts/cold-native-diagnostic/test_parent.py']
+b=pins();save('before.json',b);save('invocation.json',{'command':cmd,'cwd':str(W),'cpuSeconds':10,'wallSeconds':30,'heapMiB':128,'fileMiB':8,'nice':10,'core':0,'emptyHooks':6});start=time.monotonic();timeout=False
+with (R/'stdout').open('wb') as out,(R/'stderr').open('wb') as err:
+ p=subprocess.Popen(cmd,cwd=W,env=env,stdout=out,stderr=err,start_new_session=True,preexec_fn=limits)
+ try:p.wait(timeout=30)
+ except subprocess.TimeoutExpired:
+  timeout=True;os.killpg(p.pid,signal.SIGKILL);p.wait()
+a=pins();save('after.json',a);save('exit.json',{'returncode':p.returncode,'timedOut':timeout,'wallSeconds':time.monotonic()-start,'pinsEqual':a==b});assert p.returncode==0 and not timeout and a==b

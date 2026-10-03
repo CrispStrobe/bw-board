@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/opt/miniconda/bin/python3",
+    "-S",
+    "scripts/cold-native-diagnostic/test_parent.py"
+  ],
+  "cwd": "/tmp/bw-cold-native-diagnostic-source-20261003",
+  "cpuSeconds": 10,
+  "wallSeconds": 30,
+  "heapMiB": 128,
+  "fileMiB": 8,
+  "nice": 10,
+  "core": 0,
+  "emptyHooks": 6
+}
