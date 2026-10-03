@@ -16,7 +16,9 @@ Six hooks and the API token are cleared; inherited Git-config overrides are
 removed. The unprivileged setup retains only a credential-free ordinary owner
 environment whitelist; root verifies HOME/USER and UID/GID against that owner,
 rather than exposing root HOME/config defaults. Output ownership and process UID
-change only the wrapper, not frozen worker code or inputs. Read-only safe.directory child configuration names only the exact
+change only the wrapper, not frozen worker code or inputs. Child Git reads
+/dev/null for global configuration and disables system config, preventing inherited
+wildcard trust/credential settings without writing config. Read-only safe.directory child configuration names only the exact
 native-worker and compiled publication roots; no global or wildcard trust writes.
 
 The executing perf ELF hash and version must equal the genuine privileged C
@@ -45,3 +47,8 @@ check admission/parser/resource-shim/cleanup behavior only; actual restoration,
 Bochs/JIT unwind quality, sampling volume and profiled terminal parity are unrun.
 This README evidence paragraph was added after controls; executable bytes are
 exactly the tested bytes.
+
+After the six-control freeze393d3713, root approved explicit read-only Git global/
+system isolation. One affected environment control then passed (exit0/no timeout,
+all captured pins unchanged). The original six-test receipt is retained separately;
+this is a focused delta check, not a relabelled seven-test full-suite run.

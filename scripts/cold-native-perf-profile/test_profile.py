@@ -39,4 +39,9 @@ class Pure(unittest.TestCase):
    with mock.patch.object(shim.resource,'setrlimit'),mock.patch.object(shim.os,'geteuid',side_effect=[0,1000,1000]),mock.patch.object(shim.os,'getuid',return_value=1000),mock.patch.object(shim.os,'getgid',return_value=1000),mock.patch.object(shim.os,'getegid',return_value=1000),mock.patch.object(shim.os,'getgroups',return_value=[]),mock.patch.object(shim.os,'setgroups',side_effect=lambda _:events.append('groups')),mock.patch.object(shim.os,'setgid',side_effect=lambda _:events.append('gid')),mock.patch.object(shim.os,'setuid',side_effect=lambda _:events.append('uid')),mock.patch.object(shim.os,'execv',side_effect=lambda *a:events.append('exec')):
     shim.exec_worker(['1000','1000','/node','--max-old-space-size=128','/entry',str(root/'input.json')])
    self.assertEqual(events,['groups','gid','uid','exec']);self.assertEqual(json.loads((root/'worker-output/launch.json').read_text())['uid'],1000)
+ def test_owner_environment_isolates_inherited_git_and_credentials(self):
+  ordinary={'HOME':'/home/runner','USER':'runner','PATH':'/usr/bin'}
+  with mock.patch.dict(profile.os.environ,{'HOME':'/root','GH_TOKEN':'manufactured-secret','GIT_CONFIG_VALUE_0':'*'}):env=profile.child_environment(ordinary)
+  self.assertEqual(env['HOME'],'/home/runner');self.assertNotIn('GH_TOKEN',env);self.assertEqual(env['GIT_CONFIG_GLOBAL'],'/dev/null');self.assertEqual(env['GIT_CONFIG_NOSYSTEM'],'1');self.assertEqual(env['GIT_CONFIG_COUNT'],'2');self.assertEqual(env['GIT_CONFIG_VALUE_0'],str(profile.WS/'native-worker'));self.assertEqual(env['GIT_CONFIG_VALUE_1'],str(profile.WS/'publication'));self.assertTrue(all(env[h]=='' for h in profile.HOOKS));self.assertEqual(ordinary['HOME'],'/home/runner')
+  with self.assertRaisesRegex(ValueError,'whitelist'):profile.child_environment(dict(ordinary,GIT_CONFIG_VALUE_0='*'))
 if __name__=='__main__':unittest.main()

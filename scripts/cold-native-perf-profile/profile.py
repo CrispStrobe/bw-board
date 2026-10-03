@@ -50,6 +50,12 @@ def sample_summary(raw):
   if '[unknown]' in block:unresolved+=1
   if re.search(r'\bLOST\b|lost \d+ events',block,re.I):lost.append(block)
  return {'pidTidSamples':bins,'dsoFrameCounts':dsos,'unresolvedSampleBlocks':unresolved,'lostEventBlocks':lost,'scope':'Whole process tree; counts are sampled blocks, not removable cost or execution-only CPU shares'}
+def child_environment(ordinary):
+ require(set(ordinary)<=set(('HOME','USER','LOGNAME','PATH','LANG','LC_ALL','TMPDIR','XDG_CONFIG_HOME','XDG_CACHE_HOME')),'credential-free environment whitelist')
+ env=dict(ordinary)
+ for h in HOOKS:env[h]=''
+ env.update(PYTHONDONTWRITEBYTECODE='1',LC_ALL='C',GIT_CONFIG_GLOBAL='/dev/null',GIT_CONFIG_NOSYSTEM='1',GIT_CONFIG_COUNT='2',GIT_CONFIG_KEY_0='safe.directory',GIT_CONFIG_VALUE_0=str(WS/'native-worker'),GIT_CONFIG_KEY_1='safe.directory',GIT_CONFIG_VALUE_1=str(WS/'publication'))
+ return env
 def command(p,out,name,args,cpu,wall,file_bytes,env):
  p.write(out/(name+'-invocation.json'),{'command':args,'cpuSeconds':cpu,'wallSeconds':wall,'fileBytes':file_bytes,'coreBytes':0,'niceIncrement':10,'emptyHooks':list(HOOKS)})
  def limits():
@@ -95,11 +101,7 @@ def main(out,node,revision):
   owner=(WS/'native-worker').stat();compiled_owner=(WS/'publication').stat();require(owner.st_uid>0 and (owner.st_uid,owner.st_gid)==(compiled_owner.st_uid,compiled_owner.st_gid),'same authenticated nonroot worker/compiled owner');require(proof['uid']==owner.st_uid and proof['gid']==owner.st_gid,'setup authenticated worker owner');account=pwd.getpwuid(owner.st_uid);require(proof['environment']['HOME']==account.pw_dir and proof['environment'].get('USER',account.pw_name)==account.pw_name,'ordinary owner home/user environment');require(set(proof['environment'])<=set(('HOME','USER','LOGNAME','PATH','LANG','LC_ALL','TMPDIR','XDG_CONFIG_HOME','XDG_CACHE_HOME')),'credential-free environment whitelist');worker_parent=OUT/'worker-output';worker_parent.mkdir();os.chown(worker_parent,owner.st_uid,owner.st_gid)
   data=p.child_input('native-batched',b,worker_parent/'receipt');input_file=OUT/'input.json';p.write(input_file,data);input_sha=sha(input_file);binding_sha=sha(SETUP/'derived-paired-binding.json')
   perf=load(HERE/'capability-result.json')['effectivePerfExecutable']['records'][0]['path'];require(sha(perf)==c['perfElfSha256'],'same authenticated effective perf ELF')
-  env=dict(proof['environment'])
-  for key in list(env):
-   if key.startswith('GIT_CONFIG_'):env.pop(key)
-  for h in HOOKS:env[h]=''
-  env.update(PYTHONDONTWRITEBYTECODE='1',LC_ALL='C',GIT_CONFIG_COUNT='2',GIT_CONFIG_KEY_0='safe.directory',GIT_CONFIG_VALUE_0=str(WS/'native-worker'),GIT_CONFIG_KEY_1='safe.directory',GIT_CONFIG_VALUE_1=str(WS/'publication'))
+  env=child_environment(proof['environment'])
   version=command(p,OUT,'perf-version',[perf,'--version'],5,10,8<<20,env);require(version['exitCode']==0 and not version['timedOut'],'same effective version command');require((OUT/'perf-version.stdout').read_bytes()==(HERE/'capability-version.stdout').read_bytes(),'same observed version')
   worker=[node,'--max-old-space-size=128',str(Path(b['workers']['native']['root'])/b['workers']['native']['entry']),str(input_file)]
   wrapper=[sys.executable,'-I','-B',str(HERE/'worker-entry.py'),str(owner.st_uid),str(owner.st_gid),*worker]
