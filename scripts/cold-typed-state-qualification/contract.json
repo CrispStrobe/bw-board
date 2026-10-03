@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-typed-state.qualification-source.v1",
-  "status": "PENDING_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_TYPED_QUALIFICATION_READY",
   "guestEnabledByDefault": false,
   "compiledRevision": "f4a2f2ceae48dde3e4585d84e6c759e13ebadc53",
   "compiledFiles": {
