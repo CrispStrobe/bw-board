@@ -1,0 +1,11 @@
+# Plain JS versus copied-u32 native batched timing source draft
+
+This separate adapter reuses the d9f paired schedule/lifecycle/final authentication and progress path repair: two warmups followed by seven alternating measured pairs, all seven favorable and at least 10% mean execution-CPU reduction. Primary comparison only; held-native comparison is deferred. Existing paired parent, workers and qualifiers are unchanged.
+
+The native role is immutable typed worker 162a/62 with actual f4/134 compiled build. The plain role is immutable 0f1/49, whose original 7632/40179 qualification remains separate. Both compare the same genuine eighth reset-model capture. Native raw166/independent NQ and represented JS CPU/Q plus final board/RAMhash/complete PIO remain distinguished. The RAM bytes are not retained; discarded intermediate native states are not reconstructible.
+
+Hosted authority is PENDING_ACTUAL_TYPED_QUALIFICATION_AUDIT. Both new audit and artifact are null. This refuses before checkout, metadata subprocess, download, setup or pair spawning. A source-reviewed actual independent typed PASS and exact artifact pins must replace them before readiness. No caller-supplied readiness authority exists. The prior genuine plain qualification is independently retained, not relabeled as typed proof.
+
+A separate setup child calls only the frozen fd151720 qualifier setup(), never its semantic guest main(). It authenticates the distinct plain checkout too. Native and plain workers keep their exact accepted heap flag/input CLI. Setup file allowance is 32MiB; all eighteen workers stay CPU60/wall120/heap128/file16MiB/core0/nice10 with six blank hooks. Whole-child wait4 and execution self reports remain separate. Configured 6MHz virtual RTx is not physical 386 calibration.
+
+Source controls and all actual adapter setup/timing remain unrun pending review.
