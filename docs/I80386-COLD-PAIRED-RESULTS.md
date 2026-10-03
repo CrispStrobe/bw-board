@@ -2,6 +2,23 @@
 
 Keep the plain-JS baseline. Native batching passed against native one-Q, but failed against plain JS: it used 4.116236× the execution CPU and lost all seven measured pairs. This is a fixed free-BIOS checkpoint result, not a Windows/full-boot speed result or default adoption.
 
+## Copied Uint32Array candidate: keep plain JS
+
+The separately qualified typed-state candidate also failed its primary plain-JS gate. [Run 37149610856](https://github.com/CrispStrobe/bw-board/actions/runs/37149610856), frozen parent `9f304281`, used typed worker `162a9b2a` with compiled `f4a2f2ce`/DSO `d7fa1a72`, and unchanged plain-JS worker `0f1ec8cc`. On one AMD EPYC 7763 host with four logical CPUs, two warmup pairs and seven alternating measured pairs completed all 18 fresh children. All seven measured pairs favored JS.
+
+| Measured window | Plain JS mean / median | Typed batched mean / median |
+| --- | ---: | ---: |
+| Execution CPU | 0.403618571 / 0.404506 s | 1.640092 / 1.623479 s |
+| Execution wall | 0.198146057 / 0.199575364 s | 1.364892926 / 1.354852740 s |
+| Whole-child CPU (wait4) | 1.451751429 / 1.454489 s | 5.590119429 / 5.552564 s |
+| Whole-child wall | 1.127077741 / 1.134210475 s | 4.978225903 / 4.949974635 s |
+
+Typed batching used **4.063470× execution CPU** and **6.888317× execution wall**, so the ≥10% reduction/all-seven gate failed. Keep JS; this comparison did not measure old native array exports against typed exports. Do not combine absolute timings with the earlier hosts or infer a physical 16-MHz 386 calibration.
+
+The independent [actual audit](receipts/i80386-cold-typed-paired-results-20261003/independent-typed-paired-audit.json) verifies all 267 artifact members and all 18 terminal proofs. Nine native children retain raw reset/final/last-return 166-word snapshots and N/Q; nine JS children retain represented CPU/Q. All children match board, RAM hash and the full 16,475-event PIO tape. Live typed-buffer ownership is attested by executed source; whole RAM bytes were not retained. Coverage remains the fixed E16 checkpoint, not Windows/full boot or adoption. The [result summary and receipt index](receipts/i80386-cold-typed-paired-results-20261003/index.json) and [external ZIP retention record](receipts/i80386-cold-typed-paired-results-20261003/external-retention.json) preserve the exact outcome without duplicating the large artifact. The [upstream result comment](https://github.com/CrispStrobe/bw-board/pull/330#issuecomment-5973001871) records the outcome. No retry occurred.
+
+## Earlier ordinary-array comparisons
+
 Both separately dispatched gates used frozen parent `d9fbe713`, native worker `b01c922c` (56 inputs), plain-JS worker `0f1ec8cc` (49 inputs), qualifier `fc0c71fb`, and unchanged compiled `7632e6a0`/DSO `40179a4f`. Each ran two discarded warmup pairs followed by seven alternating measured pairs: 18 fresh children, with the predeclared requirement of at least 10% mean execution-process CPU reduction and all seven candidate pairs favorable.
 
 | Separate comparison | Host, four logical CPUs | Baseline mean execution CPU | Batched mean execution CPU | Whole-child CPU means | Gate |
