@@ -65,6 +65,32 @@ class PureControls(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'binding'):parent.main(Path(directory)/'request.json')
             retained=json.loads(Path(directory,'result','result.json').read_text());self.assertEqual(retained['status'],'FAIL');self.assertIn('finalizationError',retained);self.assertNotIn('error',retained);self.assertEqual(retained['bindingPinBefore'],pin);self.assertEqual(retained['bindingPinAfter']['sha256'],'b'*64)
 
+    def test_actual_parent_success_writes_all_eighteen_progress_records(self):
+        # Manufactured receipts/prerequisites; actual main, schedule, filesystem,
+        # input fingerprints, summary and final authentication. No child spawn.
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);capture=root/'capture.json';capture.write_text('{}')
+            initial={'parent':{'revision':'a'*40,'hashes':{}}}
+            request={'comparison':'native-oneQ-v-batched','output':str(root/'result'),'parentRevision':'a'*40,'parentSourceSha256':policy.identity_sha('a'*40,{})}
+            binding={'compiledRoot':'/never-compiled','workers':{k:{'root':'/never-'+k,'entry':'worker.mjs'} for k in ('native','plainJs')},'capture':{'path':str(capture)},'node':{'path':'/never-node'},'bounds':{}}
+            request_path=root/'request.json';binding_path=root/'binding.json';request_path.write_text(json.dumps(request));binding_path.write_text(json.dumps(binding));calls=[]
+            def child(command,cwd,out,bounds):
+                out.mkdir();(out/'receipt').mkdir();data=json.loads(Path(command[-1]).read_text());pin=parent.fingerprint(command[-1])['sha256'];calls.append(out.name)
+                parent.write(out/'receipt'/'receipt.json',{'inputSha256Before':pin,'inputSha256After':pin,'arm':data['arm']})
+                return {'exitCode':0,'timedOut':False,'interrupted':None,'cpuSeconds':20,'wallSeconds':25}
+            def metrics(receipt,arm,data,binding,capture):
+                self.assertEqual(receipt['arm'],arm);value=8 if arm=='native-batched' else 10
+                return {'cpuSeconds':value,'cpuMicrosecondsSum':value*1000000,'wallSeconds':12}
+            with unittest.mock.patch.object(parent,'validate_ready_binding',return_value=binding),unittest.mock.patch.object(parent,'host_context',return_value={}),unittest.mock.patch.object(parent,'immutable_snapshot',return_value=initial),unittest.mock.patch.object(parent,'validate_prerequisites'),unittest.mock.patch.object(parent,'child_input',side_effect=lambda arm,b,out:{'arm':arm}),unittest.mock.patch.object(parent,'bounded_child',side_effect=child),unittest.mock.patch.object(parent,'validate_worker_receipt',side_effect=metrics),unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must never spawn')):
+                parent.main(request_path,binding_path)
+            report=json.loads((root/'result'/'result.json').read_text());schedule=policy.pair_schedule(request['comparison'])
+            self.assertEqual(calls,[f"pair-{p['pair']:02d}-"+arm for p in schedule for arm in p['order']]);self.assertEqual(len(calls),18)
+            self.assertEqual([p['phase'] for p in report['pairs']],['warmup']*2+['measured']*7);self.assertEqual(report['status'],'PAIRED_CAPTURE_COMPLETE_QUANTITATIVE_PASS')
+            self.assertEqual(report['finalAuthentication'],initial);self.assertEqual(report['bindingPinBefore'],report['bindingPinAfter'])
+            for i,name in enumerate(calls):
+                progress=json.loads((root/'result'/('progress-'+name+'.json')).read_text())
+                self.assertEqual(sum(len(p['arms']) for p in progress['pairs']),i+1)
+
     def test_exact_separate_alternating_protocol(self):
         for name in policy.COMPARISONS:
             schedule=policy.pair_schedule(name);self.assertEqual(len(schedule),9);self.assertEqual(sum(p['phase']=='warmup' for p in schedule),2);self.assertEqual(sum(p['phase']=='measured' for p in schedule),7);self.assertEqual(schedule[0]['order'],list(policy.COMPARISONS[name]));self.assertEqual(schedule[1]['order'],list(reversed(policy.COMPARISONS[name])));self.assertEqual(sum(len(p['order']) for p in schedule),18)

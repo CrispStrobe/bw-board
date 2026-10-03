@@ -175,7 +175,7 @@ def main(input_path,binding_path=None):
                 except BaseException as error:write(ns/'after-authentication-unavailable.json',{'error':repr(error)})
                 require(lifecycle['exitCode']==0 and not lifecycle['timedOut'] and not lifecycle['interrupted'],'child failure: stop, no retry');require(after==before and fingerprint(input_path)==request_pin and fingerprint(binding_path)==binding_pin,'immutable post-child proof')
                 receipt=read_json(ns/'receipt'/'receipt.json');require(receipt['inputSha256Before']==receipt['inputSha256After']==fingerprint(input_file)['sha256'],'actual child input before/after');metrics=validate_worker_receipt(receipt,arm,data,binding,capture)
-                record['arms'][arm]={'execution':metrics,'wholeChild':lifecycle,'rawReceipt':str(ns/'receipt'/'receipt.json'),'rawReceiptSha256':fingerprint(ns/'receipt'/'receipt.json')['sha256']};write(ns/'terminal-validation.json',record['arms'][arm]);write(out/'progress-'+ns.name+'.json',report)
+                record['arms'][arm]={'execution':metrics,'wholeChild':lifecycle,'rawReceipt':str(ns/'receipt'/'receipt.json'),'rawReceiptSha256':fingerprint(ns/'receipt'/'receipt.json')['sha256']};write(ns/'terminal-validation.json',record['arms'][arm]);write(out/('progress-'+ns.name+'.json'),report)
         report['summary']=summarize_pairs(request['comparison'],report['pairs']);report['status']='PAIRED_CAPTURE_COMPLETE_QUANTITATIVE_PASS' if report['summary']['quantitativeGatePass'] else 'PAIRED_CAPTURE_COMPLETE_QUANTITATIVE_FAIL_KEEP_BASELINE'
     except BaseException as error:report['error']=repr(error);raise
     finally:
