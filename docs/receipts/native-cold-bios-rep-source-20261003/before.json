@@ -1,0 +1,6 @@
+{
+  "scripts/bochs-cpu3-native-cold-bios/rep-policy.mjs": "411b8fdfe5a31193bd09c5f874eb397d7ce46684f26e3366e528f318ce4f3c80",
+  "scripts/bochs-cpu3-native-cold-bios/runtime-rep.mjs": "d79b652a3120da61e99f08a2a5844bba4fd372a3c4221073f2626661949abb5d",
+  "scripts/bochs-cpu3-native-cold-bios/README.md": "cd51dbb39c7227a59014f999939f4c3c329892aea754536c4b503f95a74a3477",
+  "test/i80386-cold-bios-rep-source.test.mjs": "1fe54572a641537b1eb5bbdfebf201e35410dd9812b48881044c1432d264434d"
+}
