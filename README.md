@@ -103,6 +103,8 @@ The [private span paired CPU gate](docs/I80386-OWNED-SPAN-CPU-RESULTS.md) failed
 
 The [native cold BIOS E16 diagnostic](docs/I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) reached the fixed checkpoint with independent correctness evidence. This is neither full boot nor a speed or adoption result.
 
+The [cold BIOS paired CPU results](docs/I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: batching improves the native one-Q route but uses 4.12× its execution CPU against plain JS on a separate gate. No default adoption or Windows speed claim follows.
+
 ## LabWired WASM performance (2026-10-01)
 
 These results use the selected 64 MHz micro:bit motion guest in Node.js, not

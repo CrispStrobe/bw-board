@@ -31,6 +31,8 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 ## Current checkpoint (2026-10-03)
 
+The [completed cold E16 paired gates](I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: native batching passed against native one-Q, but used 4.116236× execution CPU against plain JS and lost all seven measured pairs. The separately hosted results do not establish default adoption, physical386 RTx or Windows/full-boot speed.
+
 The [native cold BIOS E16 diagnostic](I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) now passes the fixed checkpoint: 316,562 completions, 400 REP elements and 16,475 ordered PIO events, with independent audit evidence. This is a correctness diagnostic, not full boot, speed qualification or adoption.
 
 The [three-arm semantic qualification](I80386-COLD-THREE-ARM-RESULTS.md) now independently passes plain JS, native one-Q and native batched at the same E16 checkpoint and complete 16,475-event PIO tape. Batched reaches 316,562 N/Q in 16,524 resumes; one-Q uses 316,562. The earlier [inspect-schema](I80386-COLD-THREE-ARM-FIRST-FAILURE.md) and [live-slice type](I80386-COLD-THREE-ARM-CORRECTED-FAILURE.md) failures remain retained. This is terminal/PIO semantic qualification with unchanged source, not a paired speed result or Windows/Doom 10× claim.

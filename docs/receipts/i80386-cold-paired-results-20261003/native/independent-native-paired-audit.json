@@ -1,0 +1,15 @@
+{
+  "status": "PASS_INDEPENDENT_NATIVE_ONEQ_V_BATCHED_PAIRED_AUDIT",
+  "officialMembers": 279,
+  "children": 18,
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "baselineMeanExecutionCpuSeconds": 10.444491142857142,
+  "candidateMeanExecutionCpuSeconds": 1.8666382857142858,
+  "meanReduction": 0.8212801121487995,
+  "executionCpuSpeedRatio": 5.595348184375456,
+  "favorablePairs": 7,
+  "gatePassed": true,
+  "semanticProof": "All18 fullterminal166/NQ/wholeboard/rawRAMhash/full16475PIO/source-input-finalmaps exact",
+  "scope": "Native batching versus nativeoneQ only, configuredcold slice. No plainJS competitiveness, physical386 calibration/fullboot/adoption."
+}
