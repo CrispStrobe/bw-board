@@ -41,5 +41,6 @@ test('static slot 48 candidates retain words and resolved neighbor symbols', () 
     assert.equal(result.vtableCandidates.length, 1);
     assert.equal(result.vtableCandidates[0].slots[12].symbol, '$DeclarativeLogicDevice.input_channels');
     assert.equal(result.vtableCandidates[0].slots[13].symbol, '$service');
+    assert.deepEqual(selectEdgeWat(wat.replace(')\n)', '))'), {inspectVtables: true}).vtableCandidates, result.vtableCandidates);
     assert.throws(() => selectEdgeWat(wat.replace(encoded, '\\00'), {inspectVtables: true}), /No static/);
 });

@@ -27,8 +27,8 @@ export function selectEdgeWat (wat, {inspectVtables = false} = {}) {
     const emptyIndices = new Set([...table].filter(([, name]) => name === emptyName).map(([index]) => index));
     const vtableCandidates = [];
     for (const line of inspectVtables ? lines.filter(line => /^  \(data /.test(line)) : []) {
-        const m = line.match(/^  \(data .*?\(i32.const (\d+)\) "(.*)"\)$/);
-        if (!m) throw Error('Unsupported active data format');
+        const m = line.match(/^  \(data .*?\(i32.const (\d+)\) "(.*)"\)\)?$/);
+        if (!m) throw Error('Unsupported active data format: ' + line.split('"')[0].slice(0, 160));
         const data = [];
         for (let i = 0; i < m[2].length; i++) {
             if (m[2][i] !== '\\') { data.push(m[2].charCodeAt(i)); continue; }
