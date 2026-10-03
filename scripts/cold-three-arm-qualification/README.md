@@ -1,10 +1,11 @@
-# Cold BIOS three-arm semantic qualification — source draft
+# Cold BIOS three-arm semantic qualification — source preparation
 
 This manual workflow prepares exactly one fresh plain-JS worker, native one-Q
 worker and native batched worker, in that order. It performs no build, mixed
 oracle rerun, warmup pairs or measured performance gate. The source-owned
-contract is pending root review and refuses before setup or spawning a child.
-The workflow is disabled by default. Its separate pure fixtures never execute
+contract has passed root source review. The workflow is disabled by default;
+its first manual execution still requires a separate root grant after workflow
+registration and exact-head CI checks. Its separate pure fixtures never execute
 a worker. No qualification arm has executed.
 
 The source-qualified workers are immutable plain-JS 0f1ec8cc (49 inputs, five pure
