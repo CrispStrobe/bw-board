@@ -1,0 +1,156 @@
+{
+  "head": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "publication": false,
+  "engineMerge": false,
+  "physicalAcknowledgementChanges": false,
+  "mergeAttemptedAt": "2026-10-03T18:21:10.425Z",
+  "pr": {
+    "baseRefName": "master",
+    "headRefOid": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+    "mergeCommit": null,
+    "mergeStateStatus": "CLEAN",
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:20:24Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142452306/job/111259527429",
+        "name": "test",
+        "startedAt": "2026-10-03T18:10:23Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:17:54Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446927/job/111259513332",
+        "name": "test",
+        "startedAt": "2026-10-03T18:07:51Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:06:34Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142452249/job/111259527247",
+        "name": "qualify",
+        "startedAt": "2026-10-03T18:04:10Z",
+        "status": "COMPLETED",
+        "workflowName": "Harris native qualification"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:06:29Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446892/job/111259513260",
+        "name": "qualify",
+        "startedAt": "2026-10-03T18:03:59Z",
+        "status": "COMPLETED",
+        "workflowName": "Harris native qualification"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T17:59:24Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446921/job/111259513206",
+        "name": "Inspect CPU hotpath 43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+        "startedAt": "2026-10-03T17:58:55Z",
+        "status": "COMPLETED",
+        "workflowName": "LabWired pinned CPU hotpath inspection (diagnostic)"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:11:08Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142452306/job/111259527473",
+        "name": "vectors",
+        "startedAt": "2026-10-03T18:10:20Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:07:50Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446927/job/111259513283",
+        "name": "vectors",
+        "startedAt": "2026-10-03T18:07:04Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:08:39Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142452306/job/111259527412",
+        "name": "corpus",
+        "startedAt": "2026-10-03T18:08:16Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:08:08Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446927/job/111259513229",
+        "name": "corpus",
+        "startedAt": "2026-10-03T18:07:44Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:10:17Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142452306/job/111259527341",
+        "name": "vectors186",
+        "startedAt": "2026-10-03T18:09:31Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T18:09:30Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446927/job/111259513407",
+        "name": "vectors186",
+        "startedAt": "2026-10-03T18:08:54Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T17:58:13Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142452306/job/111259528461",
+        "name": "vectors-full",
+        "startedAt": "2026-10-03T17:58:13Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-03T17:58:08Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37142446927/job/111259514017",
+        "name": "vectors-full",
+        "startedAt": "2026-10-03T17:58:08Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      }
+    ],
+    "url": "https://github.com/CrispStrobe/bw-board/pull/320"
+  },
+  "after": {
+    "headRefOid": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+    "mergeCommit": {
+      "oid": "f0bff66711d5bdef392b783351a6386482581b72"
+    },
+    "state": "MERGED",
+    "url": "https://github.com/CrispStrobe/bw-board/pull/320"
+  },
+  "completedAt": "2026-10-03T18:21:13.943Z"
+}

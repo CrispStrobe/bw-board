@@ -1,0 +1,54 @@
+{
+  "baseRevision": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+  "basePath": "scripts/cold-native-performance/worker.mjs",
+  "baseSha256": "29ecdef2339de1aec89812208b8b38f71c80e7c02e814b8ebf6bbf1e5cf8e7f8",
+  "heldProtocolPath": "scripts/cold-native-performance/protocol.mjs",
+  "heldProtocolSha256": "e15f481a5e0af0aec007dc4d48259b87aef9e86b7f7b6bbc31d047bde549b74b",
+  "edits": [
+    {
+      "old": "import {authenticateCompiledCheckout,compiledRevision,resetSource} from '../bochs-cpu3-native-cold-bios/driver-auth.mjs';",
+      "next": "import {authenticateCompiledCheckout,compiledRevision,resetSource} from './admission.mjs';\nimport {stateExportProfile,validateAddonProfile,retainSnapshot,validateRetainedSnapshot,serializeEvidence} from './snapshot.mjs';",
+      "label": "candidate admission and outside-timer snapshot ownership"
+    },
+    {
+      "old": "const serialize=x=>JSON.stringify(x,(_,v)=>typeof v==='bigint'?v.toString():v instanceof Uint8Array?Array.from(v):v);",
+      "next": "const serialize=serializeEvidence;",
+      "label": "evidence serialization outside measured loop"
+    },
+    {
+      "old": "schema:'bw.cold-native-performance.worker.v1',",
+      "next": "schema:'bw.cold-native-typed-state-performance.worker.v1',requiredStateExportProfile:stateExportProfile,",
+      "label": "distinct receipt profile"
+    },
+    {
+      "old": "closed=false,progress={n:0,q:0},lastZero=null;",
+      "next": "closed=false,progress={n:0,q:0},lastZero=null,resetRetained=null;",
+      "label": "private retained reset token"
+    },
+    {
+      "old": "Object.keys(manifest.sourceHashes).length,125",
+      "next": "Object.keys(manifest.sourceHashes).length,134",
+      "label": "distinct full compiled source inventory"
+    },
+    {
+      "old": "identity=await import(pathToFileURL(resolve(base,'identity.mjs')).href)",
+      "next": "identity=await import(pathToFileURL(resolve(input.compiledRoot,'scripts/bochs-cpu3-native-cold-bios-typed-state/identity.mjs')).href)",
+      "label": "candidate typed build identity"
+    },
+    {
+      "old": "assert.equal(api.abiVersion,4);for(const name of ['create','resume','setIRQ','inspect','close'])assert.equal(typeof api[name],'function');",
+      "next": "validateAddonProfile(api);receipt.admittedStateExportProfile=api.stateExportProfile;",
+      "label": "actual addon typed profile before construction"
+    },
+    {
+      "old": "receipt.reset={native,board:provider.checkpoint()};",
+      "next": "resetRetained=retainSnapshot(native);receipt.reset={native,board:provider.checkpoint()};",
+      "label": "reset old-snapshot ownership outside timer"
+    },
+    {
+      "old": "native=api.inspect();receipt.finalNative=native;",
+      "next": "const lastRetained=retainSnapshot(receipt.lastReturnedNative);native=api.inspect();validateRetainedSnapshot(resetRetained,native);validateRetainedSnapshot(lastRetained,native);receipt.typedSnapshotOwnership='RESET_STABLE_AND_FINAL_LAST_RETURN_DISTINCT';receipt.finalNative=native;",
+      "label": "final raw snapshot independence outside timer"
+    }
+  ]
+}
