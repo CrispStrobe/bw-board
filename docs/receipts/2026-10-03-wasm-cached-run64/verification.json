@@ -1,0 +1,99 @@
+{
+  "source": "f16a4f3da13a6267a0618824a0c172bd643b3081",
+  "nativeRun": 37095691659,
+  "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+  "toolRef": "test/wasm-live-word-dispatch-20261002",
+  "hostedOnly": true,
+  "publication": false,
+  "appPinChanges": false,
+  "startedAt": "2026-10-03T04:11:53.886Z",
+  "nativeCorrectness": {
+    "conclusion": "success",
+    "headSha": "f16a4f3da13a6267a0618824a0c172bd643b3081",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T04:17:47Z",
+        "conclusion": "success",
+        "databaseId": 111125028485,
+        "name": "correctness",
+        "startedAt": "2026-10-03T04:11:46Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T04:11:48Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T04:11:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:12:03Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T04:11:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:12:03Z",
+            "conclusion": "success",
+            "name": "Preserve the real main merge-base for bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T04:12:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:12:11Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T04:12:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:17:45Z",
+            "conclusion": "success",
+            "name": "Verify bounded retirement, live barriers and full core regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T04:12:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:17:45Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T04:17:45Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T04:17:45Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T04:17:45Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37095691659/job/111125028485"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37095691659"
+  },
+  "dispatchAttemptedAt": "2026-10-03T04:18:06.252Z",
+  "buildInputs": {
+    "ref": "f16a4f3da13a6267a0618824a0c172bd643b3081",
+    "publish": false,
+    "qualify_motion": true
+  },
+  "dispatchCommandCompletedAt": "2026-10-03T04:18:08.114Z",
+  "buildRun": {
+    "createdAt": "2026-10-03T04:18:07Z",
+    "databaseId": 37096084052,
+    "headSha": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+    "status": "in_progress",
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37096084052"
+  }
+}

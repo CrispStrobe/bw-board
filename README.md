@@ -284,6 +284,19 @@ production, app pins and physical acknowledgements are unchanged. VPS load/disk
 prevented local repeats. See
 [all live GPIO gate results and original receipts](docs/receipts/2026-10-03-wasm-live-gpio-edge-gate/README.md).
 
+The isolated cached-run cap experiment (16 → 64 instructions) also completed
+all four ordinary hosted pairs. Motion medians gain **0.52–1.58%** in three
+pairs but lose **1.19%** in the fourth; reverse Node 20 motion minimum drops
+**1.252052× → 1.085393×**. RAM medians are mixed (**−0.34% to +2.42%**),
+as are GPIO (**−0.22% to +3.20%**). Native verification, independent WASM
+determinism and **108 actual integrations** pass; fresh motion remains
+**0.809596× median / 0.783265× minimum**, below the unchanged ≥1× gate.
+Source remains **unmerged/unqualified**; production, app pins and physical
+acknowledgements are unchanged. Prior census indicates almost all GPIO cached
+runs stop at instruction/address barriers, which a larger cap does not remove.
+Different hosted CPUs do not establish Node-version causality or significance.
+See [all cached-run64 results and original receipts](docs/receipts/2026-10-03-wasm-cached-run64/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
