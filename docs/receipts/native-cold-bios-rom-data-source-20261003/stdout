@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: cold C exact inverse recovers held four-site REP fragment
+ok 1 - cold C exact inverse recovers held four-site REP fragment
+  ---
+  duration_ms: 30.7897
+  type: 'test'
+  ...
+# Subtest: both CS aliases and actual-length page tape replace stale fetch pointer
+ok 2 - both CS aliases and actual-length page tape replace stale fetch pointer
+  ---
+  duration_ms: 20.601955
+  type: 'test'
+  ...
+# Subtest: cold profile preserves clock barriers and closes only paused state
+ok 3 - cold profile preserves clock barriers and closes only paused state
+  ---
+  duration_ms: 11.645984
+  type: 'test'
+  ...
+# Subtest: ABI4 typed reply machinery unchanged outside exact port seam
+ok 4 - ABI4 typed reply machinery unchanged outside exact port seam
+  ---
+  duration_ms: 2.272019
+  type: 'test'
+  ...
+# Subtest: exact C helpers admit aliases/crossing and deny missing stale wrong-kind pages and wrap
+ok 5 - exact C helpers admit aliases/crossing and deny missing stale wrong-kind pages and wrap
+  ---
+  duration_ms: 334.464527
+  type: 'test'
+  ...
+# Subtest: exact cold ROM-data C helper admits unvisited bytes and denies invalid domains
+ok 6 - exact cold ROM-data C helper admits unvisited bytes and denies invalid domains
+  ---
+  duration_ms: 174.006954
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 830.22902

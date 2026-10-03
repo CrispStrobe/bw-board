@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/i80386-native-cold-bios-build.yml'
       - 'scripts/ci-build-i80386-native-cold-bios.py'
+      - 'scripts/bochs-cpu3-native-cold-bios/runtime.mjs'
+      - 'scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs'
+      - 'test/i80386-cold-bios-runtime-source.test.mjs'
 
 permissions:
   contents: read
