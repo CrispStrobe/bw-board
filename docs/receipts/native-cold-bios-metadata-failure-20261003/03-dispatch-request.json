@@ -1,0 +1,17 @@
+{
+  "command": [
+    "gh",
+    "workflow",
+    "run",
+    "i80386-cold-native-diagnostic.yml",
+    "--repo",
+    "CrispStrobe/bw-board",
+    "--ref",
+    "lane/386-cold-native-redirect-fix-20261003",
+    "-f",
+    "enable_guest=true"
+  ],
+  "expectedHead": "6862d480d02b3ed9b2e4df418ef340d8f54ab60b",
+  "requestedAt": "2026-10-03T07:53:09.939738+00:00",
+  "scope": "ONE_CHANGED_DOWNLOADER_ATTEMPT_NATIVE_STILL_UNATTEMPTED_NO_RETRY"
+}

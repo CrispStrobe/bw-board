@@ -1,0 +1,31 @@
+fatal: not a git repository (or any of the parent directories): .git
+node:internal/errors:983
+  const err = new Error(message);
+              ^
+
+Error: Command failed: git rev-parse HEAD
+fatal: not a git repository (or any of the parent directories): .git
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:916:11)
+    at execFileSync (node:child_process:952:15)
+    at authenticateBuild (file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/identity.mjs:71:15)
+    at file:///home/runner/work/bw-board/bw-board/runtime/[eval1]:1:250
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)
+    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  status: 128,
+  signal: null,
+  output: [
+    null,
+    '',
+    'fatal: not a git repository (or any of the parent directories): .git\n'
+  ],
+  pid: 3417,
+  stdout: '',
+  stderr: 'fatal: not a git repository (or any of the parent directories): .git\n'
+}
+
+Node.js v22.23.3

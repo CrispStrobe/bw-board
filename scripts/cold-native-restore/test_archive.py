@@ -2,6 +2,9 @@ import io
 from pathlib import Path
 import tarfile
 import tempfile
+import subprocess
+import os
+import json
 import unittest
 import zipfile
 from admission import disjoint_roles, driver_identity, evidence_equal
@@ -20,6 +23,31 @@ def tar(entries):
     return out.getvalue()
 
 class Controls(unittest.TestCase):
+    def test_empty_git_metadata_directories(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); original=root/'original'
+            subprocess.run(['git','init','--quiet',str(original)],check=True)
+            def git(*args, data=None):
+                return subprocess.run(['git','-C',str(original),*args],input=data,capture_output=True,check=True,env={**os.environ,'GIT_AUTHOR_NAME':'Fixture','GIT_AUTHOR_EMAIL':'fixture@example.invalid','GIT_COMMITTER_NAME':'Fixture','GIT_COMMITTER_EMAIL':'fixture@example.invalid','GIT_AUTHOR_DATE':'2000-01-01T00:00:00Z','GIT_COMMITTER_DATE':'2000-01-01T00:00:00Z'}).stdout.strip()
+            blob=git('hash-object','-w','--stdin',data=b'pinned object\n')
+            tree=git('mktree',data=b'100644 blob '+blob+b'\twitness\n')
+            head=git('commit-tree',tree.decode(),data=b'detached fixture\n')
+            (original/'.git/HEAD').write_bytes(head+b'\n')
+            metadata=original/'.git'
+            files={str(p.relative_to(metadata)):p.read_bytes() for p in metadata.rglob('*') if p.is_file()}
+            directories=[str(p.relative_to(metadata)) for p in metadata.rglob('*') if p.is_dir()]
+            self.assertIn('refs',directories)
+            broken=root/'broken'; broken.mkdir(); exclusive_tree(broken/'.git',files)
+            self.assertNotEqual(subprocess.run(['git','-C',str(broken),'rev-parse','--git-dir'],capture_output=True).returncode,0)
+            restored=root/'restored'; restored.mkdir(); exclusive_tree(restored/'.git',files,directories)
+            result=subprocess.run(['git','-C',str(restored),'rev-parse','--git-dir'],capture_output=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(subprocess.check_output(['git','-C',str(restored),'rev-parse','HEAD']).strip(),head)
+            self.assertEqual(subprocess.check_output(['git','-C',str(restored),'show','HEAD:witness']),b'pinned object\n')
+            if os.environ.get('BW_METADATA_CONTROL_RECEIPT'):
+                Path(os.environ['BW_METADATA_CONTROL_RECEIPT']).write_text(json.dumps({'directories':sorted(directories),'files':{n:record(b) for n,b in sorted(files.items())},'head':head.decode(),'blob':blob.decode(),'fileOnlyRecognized':False,'directoryPreservingHeadAndObjectRead':True},indent=2)+'\n')
+            self.assertEqual({str(p.relative_to(restored/'.git')):p.read_bytes() for p in (restored/'.git').rglob('*') if p.is_file()},files)
+            with self.assertRaises(ValueError): exclusive_tree(root/'bad',files,['../escape'])
     def test_tar_admission(self):
         expected = {'a': record(b'x')}
         self.assertEqual(tar_members(tar([('a', tarfile.REGTYPE)]), expected), {'a': b'x'})

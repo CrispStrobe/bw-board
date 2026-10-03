@@ -1,0 +1,106 @@
+{
+  "directories": [
+    "branches",
+    "hooks",
+    "info",
+    "objects",
+    "objects/8d",
+    "objects/9c",
+    "objects/aa",
+    "objects/info",
+    "objects/pack",
+    "refs",
+    "refs/heads",
+    "refs/tags"
+  ],
+  "files": {
+    "HEAD": {
+      "bytes": 41,
+      "sha256": "e3dc8f0620608123b7ec3877855e91733fe68c078fafbb1d7ec6da96730ff28d"
+    },
+    "config": {
+      "bytes": 92,
+      "sha256": "cfe7ba1238c9a78be7535d7c63bcaf5a4d5011d46b07c9b45d3bbf7d6c312dfe"
+    },
+    "description": {
+      "bytes": 73,
+      "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    "hooks/applypatch-msg.sample": {
+      "bytes": 478,
+      "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    "hooks/commit-msg.sample": {
+      "bytes": 896,
+      "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    "hooks/fsmonitor-watchman.sample": {
+      "bytes": 4726,
+      "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    "hooks/post-update.sample": {
+      "bytes": 189,
+      "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    "hooks/pre-applypatch.sample": {
+      "bytes": 424,
+      "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    "hooks/pre-commit.sample": {
+      "bytes": 1643,
+      "sha256": "f9af7d95eb1231ecf2eba9770fedfa8d4797a12b02d7240e98d568201251244a"
+    },
+    "hooks/pre-merge-commit.sample": {
+      "bytes": 416,
+      "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    "hooks/pre-push.sample": {
+      "bytes": 1374,
+      "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    "hooks/pre-rebase.sample": {
+      "bytes": 4898,
+      "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    "hooks/pre-receive.sample": {
+      "bytes": 544,
+      "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    "hooks/prepare-commit-msg.sample": {
+      "bytes": 1492,
+      "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    "hooks/push-to-checkout.sample": {
+      "bytes": 2783,
+      "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    "hooks/sendemail-validate.sample": {
+      "bytes": 2308,
+      "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    "hooks/update.sample": {
+      "bytes": 3650,
+      "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    "info/exclude": {
+      "bytes": 240,
+      "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    "objects/8d/dad3bf45bfa544307fe2c278d8ece84dde4199": {
+      "bytes": 52,
+      "sha256": "6cce130437bc5cf3e2f714ed318458afb32e1e4c7c3e28efdddc4f80b8153b81"
+    },
+    "objects/9c/6d3fb95012ca929d4b80262f988b7b105f64f9": {
+      "bytes": 30,
+      "sha256": "bc5aa5983db34bbf8b687cff5be2b0d230b2cec5d70ade416909f497e95f4da0"
+    },
+    "objects/aa/fb759f6e456d404bfa62a393fd257a37f3e874": {
+      "bytes": 127,
+      "sha256": "0ea96010e74136d969bbed2d712b0d0301156ac02153b959008bcdade421aae7"
+    }
+  },
+  "head": "aafb759f6e456d404bfa62a393fd257a37f3e874",
+  "blob": "9c6d3fb95012ca929d4b80262f988b7b105f64f9",
+  "fileOnlyRecognized": false,
+  "directoryPreservingHeadAndObjectRead": true
+}

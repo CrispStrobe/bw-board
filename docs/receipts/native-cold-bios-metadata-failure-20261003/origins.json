@@ -1,0 +1,21 @@
+{
+  "00-run-initial.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/run-initial.json",
+  "01-jobs-initial.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/jobs-initial.json",
+  "02-artifacts.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/artifacts.json",
+  "03-dispatch-request.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/dispatch-request.json",
+  "04-dispatch-exit.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/dispatch-exit.json",
+  "05-final-status.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/final-status.json",
+  "06-restore.stderr": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/restore.stderr",
+  "07-admission-command.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/materialization/admission-command.json",
+  "08-admission-exit.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/materialization/admission-exit.json",
+  "09-admission.stderr": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/materialization/admission.stderr",
+  "10-parent.stderr": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-parent-context/parent.stderr",
+  "11-final-status.json": "/tmp/native-cold-native-second-diagnostic-publication-20261003/selected/_temp/cold-native-setup/final-status.json",
+  "12-stderr": "/tmp/native-cold-native-git-metadata-source-controls-20261003/stderr",
+  "13-run.py.txt": "/tmp/native-cold-native-git-metadata-source-controls-20261003/run.py",
+  "14-after.json": "/tmp/native-cold-native-git-metadata-source-controls-20261003/after.json",
+  "15-metadata-control.json": "/tmp/native-cold-native-git-metadata-source-controls-20261003/metadata-control.json",
+  "16-exit.json": "/tmp/native-cold-native-git-metadata-source-controls-20261003/exit.json",
+  "17-before.json": "/tmp/native-cold-native-git-metadata-source-controls-20261003/before.json",
+  "18-stdout": "/tmp/native-cold-native-git-metadata-source-controls-20261003/stdout"
+}
