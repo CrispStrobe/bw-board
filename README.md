@@ -430,6 +430,21 @@ explanation or permission to ignore regressions. All **240 timing windows**,
 initial/corrected raw disassembly and original gates are retained:
 [tail-method experiment and complete evidence](docs/receipts/2026-10-03-wasm-edge-eligibility-bool-tail/README.md).
 
+The subsequent WASM-only short-budget experiment admits the existing checked
+cached executor below eight remaining instructions, without loop discovery.
+It also stays **unmerged/unqualified**: all four ordinary pairs show RAM
+median losses (**0.60–1.27%**) and worse minima; motion changes **−6.90% to
++1.43%**, GPIO **−6.74% to +1.98%**. Candidate motion/GPIO medians span
+**0.576022×–0.818331× / 0.534285×–0.620955×**; both floors fail all four
+pairs, while RAM passes. Native **4,235 tests + 16 GPIO integrations**,
+independent WASM determinism and **108 actual integrations** pass, including
+real same-PC RAM/MMIO/RAM guest cases at budgets 1 and 7. The separate fresh
+motion floor still fails (**0.995947× median / 0.911775× min**). All **240
+windows**, losses, original source/build/test logs and guest proofs are bound
+in the [short-budget results archive](docs/receipts/2026-10-03-wasm-short-cached-budget/README.md).
+Native dispatch, engine/app pins and physical acknowledgements are unchanged;
+CP13 remains open.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
