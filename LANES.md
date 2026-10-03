@@ -1,7 +1,7 @@
 2026-10-03 ADP7118 current-limited startup envelope — CLAIM, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch
 lane/adp7118-current-limited-envelope-20261003, exact base
-144a9a32d124770cab86d0760e39610a6ea075d3. Eight-path envelope: this entry;
+b2689a1f0a43b7566d89e9a240d3915e8469f176. Eight-path envelope: this entry;
 src/mna.js lazy immutable actual-net inspection and opt-in pure final-solution
 validation; src/devices.js those contracts; src/devices/power.js ADP7118 only;
 new test/adp7118-current-limited-startup.test.mjs;
