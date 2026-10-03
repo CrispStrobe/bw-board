@@ -1779,6 +1779,66 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // coil carrying 25 mA read 0 A because no hook existed for it.
   /** @type {Map<string, Array<object>>} part id → stamped-companion records */
   const deviceStamps = new Map();
+  const nonlinearDimensions = new Map();
+  // solveAssembled replaces solution; the initial zero vector is not mutated.
+  let nonlinearIterate = solution;
+
+  // Nonlinear registered currents own their candidate checks as well as their
+  // matrix companions. Records and evaluator closures live only in this solve;
+  // rejected adaptive trials cannot leave an operating region in device state.
+  const nonlinearDevicesValid = () => {
+    if (nonlinearDimensions.size === 0) return { present: false, valid: true };
+    let present = false;
+    for (const records of deviceStamps.values()) {
+      for (const r of records) {
+        if (r.kind !== 'nonlinear') continue;
+        present = true;
+        if (!solution.every(Number.isFinite)) return { present, valid: false };
+        const candidate = r.evaluateAt(solution);
+        if (candidate.region !== r.region || candidate.currents.size !== r.intercepts.size) {
+          return { present, valid: false };
+        }
+        for (const [terminal, amps] of candidate.currents) {
+          if (!r.intercepts.has(terminal)) return { present, valid: false };
+          const stamped = nonlinearAffineCurrent(r, terminal, r.readAt(solution));
+          if (!Number.isFinite(stamped)
+              || Math.abs(amps - stamped) * r.residualOhms > NR_TOL) {
+            return { present, valid: false };
+          }
+        }
+      }
+    }
+    return { present, valid: true };
+  };
+
+  const advanceNonlinearIterate = () => {
+    const records = [...deviceStamps.values()].flat().filter(r => r.kind === 'nonlinear');
+    const sameRegions = (values) => records.every(r => r.evaluateAt(values).region === r.region);
+    const along = (fraction) => Float64Array.from(nonlinearIterate,
+      (old, index) => old + fraction * (solution[index] - old));
+    if (!sameRegions(solution)) {
+      // A limited source's affine root can jump past its entire linear region
+      // (e.g. 180 V from a .36 A clamp into 500 ohms), then the off root jumps
+      // back to zero. Find the boundary on this trial segment and stamp on its
+      // changed-region side. Only full matrix roots can pass convergence; this
+      // interpolated point is never published as an electrical solution.
+      let low = 0, high = 1;
+      let changed = Float64Array.from(solution);
+      for (let search = 0; search < 48; search++) {
+        const mid = (low + high) / 2;
+        const trial = along(mid);
+        if (sameRegions(trial)) low = mid;
+        else { high = mid; changed = trial; }
+      }
+      nonlinearIterate = changed;
+    } else {
+      // Smooth laws use the existing voltage trust-step magnitude, confined
+      // to this new primitive's linearization point and existing NR budget.
+      let delta = 0;
+      for (let i = 0; i < nodeCount; i++) delta = Math.max(delta, Math.abs(solution[i] - nonlinearIterate[i]));
+      nonlinearIterate = along(delta > NR_MAX_STEP ? NR_MAX_STEP / delta : 1);
+    }
+  };
 
   // The Newton loop, callable per ladder rung. Knobs: `gmin` (GMIN
   // stepping) and `srcScale` (source stepping — every independent source,
@@ -2148,9 +2208,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
               if (dropped) state = { ...state, drives: kept };
             }
             const rec = [];
+            const previouslyStamped = deviceStamps.has(part.id);
             deviceStamps.set(part.id, rec);
             stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,
-              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec);
+              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec, nonlinearIterate, nonlinearDimensions, previouslyStamped);
           }
           break;
         }
@@ -2263,6 +2324,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // Singular matrix — bail
       return false;
     }
+    if (nonlinearDimensions.size && !solution.every(Number.isFinite)) return false;
 
     // Update diode/transistor operating points and check convergence
     let maxDelta = 0;
@@ -2667,8 +2729,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
 
     // If nothing nonlinear, or everything settled, stop.
-    if ((diodeVoltages.size === 0 && opampRegions.size === 0 && !ccChanged)
-        || (maxDelta < NR_TOL && !regionChanged && !ccChanged)) {
+    const deviceCheck = nonlinearDevicesValid();
+    if (deviceCheck.present) {
+      if (deviceCheck.valid) nonlinearIterate = Float64Array.from(solution);
+      else advanceNonlinearIterate();
+    }
+    if ((diodeVoltages.size === 0 && opampRegions.size === 0 && !ccChanged && !deviceCheck.present)
+        || (maxDelta < NR_TOL && !regionChanged && !ccChanged && deviceCheck.valid)) {
       return true;
     }
   }
@@ -2759,12 +2826,28 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   if (converged && !transient) {
     const shunted = Float64Array.from(solution);
     const snap = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc].map((m) => new Map(m));
+    const nonlinearPresent = nonlinearDevicesValid().present;
+    // A failed refinement must restore the companions used by the accepted
+    // solution too. Limit this additional snapshot to the new authority path.
+    const deviceSnap = nonlinearPresent ? new Map(deviceStamps) : null;
+    const nonlinearSnap = nonlinearPresent ? Float64Array.from(nonlinearIterate) : null;
+    const regionSnap = nonlinearPresent
+      ? [opampRegions, bjtRegions, bjtVceSat, mosRegions, vccsClamps].map(m => [m, new Map(m)]) : [];
     const restore = () => {
       solution = shunted;
       for (const [m, saved] of [[diodeVoltages, snap[0]], [mosVsb, snap[1]],
         [mosVdb, snap[2]], [mosVds, snap[3]], [bjtVbc, snap[4]]]) {
         m.clear();
         for (const [k, v] of saved) m.set(k, v);
+      }
+      if (deviceSnap) {
+        deviceStamps.clear();
+        for (const [k, v] of deviceSnap) deviceStamps.set(k, v);
+        nonlinearIterate = nonlinearSnap;
+        for (const [map, saved] of regionSnap) {
+          map.clear();
+          for (const [k, v] of saved) map.set(k, v);
+        }
       }
     };
     const allFinite = (v) => {
@@ -2819,11 +2902,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // circuit is in that class -- the 2,131-circuit A/B is +10 and zero
     // regressions -- but it is a real consequence and not a case the threshold
     // rules out.
-    if (moved > 1e-6) {
+    if (moved > 1e-6 || (nonlinearPresent && !nonlinearDevicesValid().valid)) {
       const ok2 = runNewton(GMIN, 1, true);
-      if (!ok2 || !allFinite(solution)) restore();
+      if (!ok2 || !allFinite(solution) || (nonlinearPresent && !nonlinearDevicesValid().valid)) restore();
     }
   }
+
+  // No continuation/refinement route may publish a region-stale authority.
+  if (converged && !nonlinearDevicesValid().valid) converged = false;
 
   // ─── Extract results ────────────────────────────────────────────────────
 
@@ -3371,6 +3457,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           return n ? (nodeVoltages.get(n) ?? 0) : 0;
         };
         const rec = deviceStamps.get(part.id);
+        const authoritativeTerminals = new Set();
         if (rec && rec.length) {
           const acc = new Map();
           const add = (t, i) => acc.set(t, (acc.get(t) ?? 0) + i);
@@ -3385,6 +3472,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
               add(r.tP, -i); add(r.tN, i);
             } else if (r.kind === 'inject') {
               add(r.t, r.amps);
+            } else if (r.kind === 'nonlinear') {
+              for (const t of r.intercepts.keys()) {
+                add(t, nonlinearAffineCurrent(r, t, read));
+                authoritativeTerminals.add(t);
+              }
             }
           }
           for (const [t, i] of acc) currents.set(t, i);
@@ -3393,7 +3485,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // override — it may know region physics the companions flatten.
         if (model.branchCurrents) {
           const state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
-          for (const [t, i] of model.branchCurrents(part, state, read)) currents.set(t, i);
+          for (const [t, i] of model.branchCurrents(part, state, read)) {
+            if (!authoritativeTerminals.has(t)) currents.set(t, i);
+          }
         }
       }
     }
@@ -3748,7 +3842,7 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
  * Stamp a registered device: its `state.drives` as Norton sources, then the
  * model's own `stamp(ctx)` for input impedance / analog loading.
  */
-function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1, groundNetId = undefined, rec = null) {
+function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1, groundNetId = undefined, rec = null, iterate = undefined, nonlinearDimensions = null, previouslyStamped = false) {
   // KCL-visibility: `rec` collects one record per stamped companion so the
   // extraction can derive terminal currents from exactly what was stamped.
   // A terminal on the GROUND net has no matrix row (nodeIndex miss) and its
@@ -3789,7 +3883,12 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
       b[idx] += drive.vTh * srcScale * g;
     }
   }
-  if (!model.stamp) return;
+  const expectedDimensions = nonlinearDimensions.get(part.id);
+  if (!model.stamp) {
+    if (expectedDimensions) throw new Error(`Device ${part.id} nonlinearCurrents: authority keys must remain constant within a solve`);
+    return;
+  }
+  let nonlinearKeys = null;
   const ctx = {
     netFor: (terminal) => findNet(nets, part.id, terminal),
     conductance: (tA, tB, g) => {
@@ -3835,6 +3934,81 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
       const idx = nodeIndex.get(net);
       if (idx !== undefined) b[idx] += amps * srcScale;
     },
+    nonlinearCurrents: (key, evaluate) => {
+      const fail = (detail) => {
+        throw new Error(`Device ${part.id} nonlinearCurrents ${String(key)}: ${detail}`);
+      };
+      if (typeof key !== 'string' || !key || nonlinearKeys?.has(key)) fail('key must be a unique nonempty string');
+      if (typeof evaluate !== 'function') fail('evaluate must be a pure function');
+      if ((expectedDimensions && !expectedDimensions.has(key))
+          || (previouslyStamped && !expectedDimensions)) fail('authority keys must remain constant within a solve');
+      nonlinearKeys ??= new Set();
+      nonlinearKeys.add(key);
+      let dimensions = nonlinearDimensions.get(part.id);
+      if (!dimensions) { dimensions = new Map(); nonlinearDimensions.set(part.id, dimensions); }
+      let residualOhms;
+      const terminalNet = (terminal) => {
+        if (typeof terminal !== 'string' || !model.terminals.includes(terminal)) fail(`undeclared terminal ${String(terminal)}`);
+        const net = findNet(nets, part.id, terminal);
+        if (!net || !rowOrGround(net)) fail(`terminal ${terminal} must be connected to a node or reference`);
+        return net;
+      };
+      const readAt = (values) => (terminal) => {
+        const index = nodeIndex.get(terminalNet(terminal));
+        const volts = index === undefined ? 0 : values[index];
+        if (!Number.isFinite(volts)) fail(`non-finite voltage at ${terminal}`);
+        return volts;
+      };
+      const evaluateAt = (values) => {
+        const result = evaluate(readAt(values), srcScale);
+        if (!result || typeof result.region !== 'string' || !result.region) fail('region must be a nonempty string');
+        if (!(result.currents instanceof Map) || !result.currents.size
+            || !(result.jacobian instanceof Map)
+            || result.jacobian.size !== result.currents.size) fail('currents and Jacobian must be nonempty Maps with matching rows');
+        if (!Number.isFinite(result.residualOhms) || result.residualOhms <= 0) fail('residualOhms must be finite and positive');
+        if (residualOhms !== undefined && result.residualOhms !== residualOhms) fail('residualOhms must remain constant for candidate checks');
+        residualOhms = result.residualOhms;
+        const currents = new Map();
+        const jacobian = new Map();
+        for (const [terminal, amps] of result.currents) {
+          terminalNet(terminal);
+          if (!Number.isFinite(amps)) fail(`non-finite current at ${terminal}`);
+          const row = result.jacobian.get(terminal);
+          if (!(row instanceof Map)) fail(`missing Jacobian row for ${terminal}`);
+          const derivatives = new Map();
+          for (const [control, slope] of row) {
+            terminalNet(control);
+            if (!Number.isFinite(slope)) fail(`non-finite derivative ${terminal}/${control}`);
+            derivatives.set(control, slope);
+          }
+          currents.set(terminal, amps);
+          jacobian.set(terminal, derivatives);
+        }
+        const previous = dimensions.get(key);
+        if (previous && (previous.size !== currents.size || [...previous].some(t => !currents.has(t)))) {
+          fail('terminal-current dimensions must remain constant within a solve');
+        }
+        if (!previous) dimensions.set(key, new Set(currents.keys()));
+        return { region: result.region, currents, jacobian, residualOhms: result.residualOhms };
+      };
+      const evaluated = evaluateAt(iterate);
+      const read = readAt(iterate);
+      const intercepts = new Map();
+      for (const [terminal, amps] of evaluated.currents) {
+        const rowIndex = nodeIndex.get(terminalNet(terminal));
+        let intercept = amps;
+        for (const [control, slope] of evaluated.jacobian.get(terminal)) {
+          intercept -= slope * read(control);
+          const colIndex = nodeIndex.get(terminalNet(control));
+          if (rowIndex !== undefined && colIndex !== undefined) A.add(rowIndex, colIndex, -slope);
+        }
+        if (!Number.isFinite(intercept)) fail(`non-finite affine intercept at ${terminal}`);
+        intercepts.set(terminal, intercept);
+        if (rowIndex !== undefined) b[rowIndex] += intercept;
+      }
+      if (rec) rec.push({ kind: 'nonlinear', key, region: evaluated.region,
+        intercepts, jacobian: evaluated.jacobian, residualOhms: evaluated.residualOhms, evaluateAt, readAt });
+    },
     vcc,
     tSeconds,
     temperatureC: benchTemperatureC,
@@ -3842,6 +4016,18 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
     control: controls.get(part.id),
   };
   model.stamp(ctx, part, state);
+  const dimensions = nonlinearDimensions.get(part.id);
+  if (dimensions && ((nonlinearKeys?.size ?? 0) !== dimensions.size
+      || [...dimensions.keys()].some(key => !nonlinearKeys?.has(key)))) {
+    throw new Error(`Device ${part.id} nonlinearCurrents: authority keys must remain constant within a solve`);
+  }
+}
+
+/** Outward terminal current from the exact affine companion stamped above. */
+function nonlinearAffineCurrent(record, terminal, read) {
+  let amps = record.intercepts.get(terminal);
+  for (const [control, slope] of record.jacobian.get(terminal)) amps += slope * read(control);
+  return amps;
 }
 
 /**

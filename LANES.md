@@ -1,4 +1,4 @@
-2026-10-03 Registered nonlinear terminal-current authority — CLAIM, Codex bwcx `/root`.
+2026-10-03 Registered nonlinear terminal-current authority — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch
 lane/registered-nonlinear-current-authority-20261003, exact base
 6bcb1055f6ed8a345161c6ec916af642c266953b. Five-path envelope: this entry;
@@ -14,7 +14,19 @@ and named load-bearing mutants. Legacy/no-primitive numerical path unchanged.
 No ADP7118 or other model change, Board/controller/tolerance/budget edits,
 CPU/workflow/package/pin/CUI/Lite/corpus/deployment edits. Two read-only design
 audits identified the premature no-diode convergence arm and frozen-refinement
-boundary; implementation begins only after this canonical claim lands.
+boundary; canonical claim 6c820aaf landed before implementation. Final focused
+proof 10/10, zero failures/cancellations/skips. Five in-memory production mutants
+red real Board callers: omitted convergence authority, stale current extraction,
+legacy hook override, missed tiny-refinement region crossing, and omitted
+accepted-companion restoration. Two authored fixture clamp mutants also red.
+The adjacent 75/75 surface passed before the final schema-drift case; no summed
+overlapping denominator. Independently cloned full legacy results on 36 fixtures
+are exactly equal to the parent solver. Initial point/authority-key allocations
+and companion scans remain lazy on the no-primitive path; solver voltage
+tolerance, trust-step magnitude and iteration/work budgets are unchanged.
+Boundary search never publishes an interpolated trial point as a solved root.
+No ADP startup integration or source-stepping exercise is claimed. Frozen-head
+automatic CI/Harris qualification remains the landing gate.
 
 2026-10-02 Live solve exceptions and placeable meter availability — DONE candidate, Codex bwcx `/root`.
 Clean reused worktree wt-board-duplicate-rail-current-20261002, new branch

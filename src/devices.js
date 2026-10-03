@@ -75,6 +75,23 @@
  *   Norton-stamp a Thévenin source driving this terminal.
  * @property {(terminal: string, amps: number) => void} current
  *   Inject a current into this terminal's net.
+ * @property {(key: string, evaluate: (read: (terminal: string) => number,
+ *   sourceScale: number) => {region: string, currents: Map<string, number>,
+ *   jacobian: Map<string, Map<string, number>>, residualOhms: number}) => void} nonlinearCurrents
+ *   Stamp simultaneous nonlinear terminal currents, positive OUT into the net.
+ *   Each current row needs a Jacobian row (an empty Map for a constant current).
+ *   Keys and regions are nonempty strings; keys are unique within this stamp
+ *   and the part's authority key set must remain constant within a solve.
+ *   All referenced terminals must be declared and connected. Values must be
+ *   finite, and residualOhms must be positive: current residuals times this
+ *   resistance are checked against the existing Newton voltage tolerance.
+ *   This resistance must remain constant during checks of a stamped candidate.
+ *   evaluate is a pure callback: it must not mutate device state, retain trial
+ *   operating points, or change its terminal-current dimensions. It can be
+ *   called repeatedly for Newton candidates and refinement. It owns coherent
+ *   sourceScale homotopy (1 is the physical law); the solver does not scale its
+ *   returned currents again. Its solve-local companions participate in
+ *   convergence and protect their currents from branchCurrents overrides.
  * @property {number} vcc
  * @property {number} tSeconds
  * @property {number} [dtSec] - present during transient sub-steps
