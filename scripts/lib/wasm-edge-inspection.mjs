@@ -12,8 +12,8 @@ export function selectEdgeWat (wat) {
         !functions.some(f => f.header.includes('service_edge_driven_gpio_devices_cold'))) {
         throw Error('Required named callees absent');
     }
-    const typeNames = new Set(functions.flatMap(f => [...f.wat.matchAll(/\(type (\$[^\s)]+)\)/g)].map(m => m[1])));
-    const types = lines.filter(line => /^  \(type /.test(line) && typeNames.has(line.match(/^  \(type (\$[^\s)]+)/)?.[1]));
+    const typeNames = new Set(functions.flatMap(f => [...f.wat.matchAll(/\(type (\$[^\s)]+|\d+)\)/g)].map(m => m[1])));
+    const types = lines.filter(line => /^  \(type /.test(line) && typeNames.has(line.match(/^  \(type (?:\(;(\d+);\)|([^\s)]+))/)?.slice(1).find(Boolean)));
     const elements = lines.filter(line => /^  \(elem /.test(line));
     if (!elements.length) throw Error('No function table elements');
     const result = {functions, types, elements,

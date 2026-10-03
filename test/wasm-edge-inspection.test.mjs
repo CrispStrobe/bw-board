@@ -26,3 +26,7 @@ test('missing named functions or function table fail closed', () => {
     assert.throws(() => selectEdgeWat(fixture.replaceAll('input_channels', 'other')), /Required/);
     assert.throws(() => selectEdgeWat(fixture.replace(/^  \(elem .*\n/m, '')), /No function table/);
 });
+test('unnamed numeric WABT type annotations are retained', () => {
+    const result = selectEdgeWat(fixture.replace('(type $t (func', '(type (;2;) (func').replaceAll('(type $t)', '(type 2)'));
+    assert.deepEqual(result.types, ['  (type (;2;) (func (param i32)))']);
+});
