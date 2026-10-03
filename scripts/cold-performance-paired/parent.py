@@ -138,6 +138,9 @@ def validate_prerequisites(b,capture):
         lock=read_json(Path(w['root'])/w['binding'],16384);require(lock['driverRevision']==capture['input']['driverRevision'] and lock['driverSourceSha256']==capture['input']['driverSourceSha256'],'same actual driver provenance in worker locks')
     for role in ('capture','independentAudit','armQualificationAudit'):
         require(b[role]['path'] in b['pinnedFiles'] and b['pinnedFiles'][b[role]['path']]['sha256']==b[role]['sha256'],'retained pinned '+role)
+def validate_final_authentication(report,initial,request_pin):
+    require(initial is not None and report.get('finalAuthentication')==initial,'immutable final source authentication unavailable or changed')
+    require(request_pin is not None and report.get('requestPinAfter')==request_pin,'immutable final request pin unavailable or changed')
 def main(input_path):
     request=read_json(input_path,16384);require(set(request)=={'comparison','output','parentRevision','parentSourceSha256'},'closed paired request')
     # Deliberately FIRST: pending configuration cannot spawn even metadata
@@ -145,6 +148,7 @@ def main(input_path):
     binding=validate_ready_binding(read_json(HERE/'binding.json',1<<20));schedule=pair_schedule(request['comparison']);out=Path(request['output']);require(out.is_absolute() and str(out)==str(out.resolve()) and out.parent.is_dir(),'canonical exclusive output');require(not out.exists(),'exclusive run namespace')
     for root in (str(ROOT),binding['compiledRoot'],*[w['root'] for w in binding['workers'].values()]):require(str(out)!=root and not str(out).startswith(root+'/'),'output outside source trees')
     out.mkdir();report={'schema':'bw.cold-performance.paired-result.v1','status':'FAIL','request':request,'bindingSha256':fingerprint(HERE/'binding.json')['sha256'],'comparison':request['comparison'],'pairs':[],'claims':'Configured functional cold slice only; no physical386 RTx/full AT/Windows/Doom10x/default adoption'}
+    initial=None;request_pin=None
     try:
         write(out/'request.json',request);write(out/'binding.json',binding);write(out/'host-before.json',host_context());initial=immutable_snapshot(binding);write(out/'initial-authentication.json',initial)
         require(initial['parent']['revision']==request['parentRevision'] and identity_sha(initial['parent']['revision'],initial['parent']['hashes'])==request['parentSourceSha256'],'frozen parent own closure')
@@ -168,7 +172,14 @@ def main(input_path):
         except BaseException as error:report['requestPinAfterUnavailable']=repr(error)
         try:report['finalAuthentication']=immutable_snapshot(binding)
         except BaseException as error:report['finalAuthenticationUnavailable']=repr(error)
+        final_error=None
+        try:validate_final_authentication(report,initial,request_pin)
+        except BaseException as error:
+            final_error=error;report['finalizationError']=repr(error);report['status']='FAIL'
         write(out/'host-after.json',host_context());write(out/'result.json',report)
+        # Retain primary failure when one exists, alongside finalizationError.
+        # A final-only failure must also exit nonzero after the raw receipt.
+        if final_error is not None and 'error' not in report:raise final_error
 if __name__=='__main__':
     for s in (signal.SIGINT,signal.SIGTERM):signal.signal(s,interrupted)
     require(len(sys.argv)==2,'one closed request JSON');main(sys.argv[1])

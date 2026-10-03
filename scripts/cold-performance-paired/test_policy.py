@@ -35,6 +35,21 @@ class PureControls(unittest.TestCase):
                 with unittest.mock.patch.object(parent,'read_json',side_effect=read):
                     with self.assertRaisesRegex(ValueError,'pending'):parent.main(request)
                 self.assertFalse(Path(directory,'never-created').exists())
+        initial={'source':'frozen'};pin={'sha256':'a'*64,'bytes':1}
+        report={'finalAuthentication':initial,'requestPinAfter':pin}
+        parent.validate_final_authentication(report,initial,pin)
+        for patch in ({'finalAuthentication':{'source':'changed'}},{'finalAuthentication':None},{'requestPinAfter':{'sha256':'b'*64,'bytes':1}},{'requestPinAfter':None}):
+            changed={**report,**patch}
+            with self.assertRaises(ValueError):parent.validate_final_authentication(changed,initial,pin)
+        # Manufactured completion only: no workers or subprocesses execute.
+        for primary_failure in (False,True):
+            with tempfile.TemporaryDirectory() as directory:
+                initial={'parent':{'revision':'a'*40,'hashes':{}}};request={'comparison':'native-oneQ-v-batched','output':directory+'/result','parentRevision':'a'*40,'parentSourceSha256':policy.identity_sha('a'*40,{})}
+                binding={'compiledRoot':'/never-compiled','workers':{}}
+                with unittest.mock.patch.object(parent,'read_json',side_effect=[request,binding,{}]),unittest.mock.patch.object(parent,'validate_ready_binding',return_value=binding),unittest.mock.patch.object(parent,'pair_schedule',return_value=[]),unittest.mock.patch.object(parent,'host_context',return_value={}),unittest.mock.patch.object(parent,'fingerprint',return_value=pin),unittest.mock.patch.object(parent,'immutable_snapshot',side_effect=[initial,OSError('manufactured final auth unavailable')]),unittest.mock.patch.object(parent,'validate_prerequisites',side_effect=RuntimeError('manufactured primary failure') if primary_failure else None),unittest.mock.patch.object(parent,'summarize_pairs',return_value={'quantitativeGatePass':True}),unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must never spawn')):
+                    with self.assertRaises((ValueError,RuntimeError)):parent.main(Path(directory)/'request.json')
+                retained=json.loads(Path(directory,'result','result.json').read_text());self.assertEqual(retained['status'],'FAIL');self.assertIn('finalizationError',retained);self.assertIn('finalAuthenticationUnavailable',retained)
+                self.assertEqual('error' in retained,primary_failure)
     def test_exact_separate_alternating_protocol(self):
         for name in policy.COMPARISONS:
             schedule=policy.pair_schedule(name);self.assertEqual(len(schedule),9);self.assertEqual(sum(p['phase']=='warmup' for p in schedule),2);self.assertEqual(sum(p['phase']=='measured' for p in schedule),7);self.assertEqual(schedule[0]['order'],list(policy.COMPARISONS[name]));self.assertEqual(schedule[1]['order'],list(reversed(policy.COMPARISONS[name])));self.assertEqual(sum(len(p['order']) for p in schedule),18)
