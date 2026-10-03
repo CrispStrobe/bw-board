@@ -1,6 +1,6 @@
 {
   "schema": "bw.ram-bootstrap.hosted-one-run.v1",
-  "status": "SOURCE_REVIEW_PENDING",
+  "status": "ROOT_REVIEWED_RAM_SOURCE_READY",
   "enabledByDefault": false,
   "compiledRevision": "81694d0d19a86ded0449ab56b3554020ffc344ca",
   "driverRevision": "368ad8b61bb80f49380ed91b8ea1db442712e083",
