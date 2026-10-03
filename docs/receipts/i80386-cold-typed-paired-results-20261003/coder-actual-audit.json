@@ -1,0 +1,150 @@
+{
+  "status": "PASS_CODER_ACTUAL_TYPED_PAIRED_AUDIT",
+  "runId": 37149610856,
+  "head": "9f3042810d59fa6911e33c5cc480a6c405c5a618",
+  "artifactId": 11283860658,
+  "zipBytes": 42374947,
+  "zipSha256": "dc752350edbaf021cf39091205adaa6ed3b90ab6624757f14d75902dd98a5877",
+  "members": 267,
+  "children": 18,
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "quantitativeGatePassed": false,
+  "favorablePairs": 0,
+  "candidateOverBaselineMeanExecutionCpu": 4.063470107916597,
+  "candidateOverBaselineMeanExecutionWall": 6.888317373804948,
+  "metrics": {
+    "plain-JS": {
+      "executionCpu": {
+        "mean": 0.40361857142857144,
+        "median": 0.404506,
+        "series": [
+          0.401254,
+          0.404506,
+          0.405909,
+          0.390586,
+          0.397141,
+          0.41388,
+          0.412054
+        ]
+      },
+      "executionWall": {
+        "mean": 0.19814605685714284,
+        "median": 0.199575364,
+        "series": [
+          0.204890024,
+          0.203710117,
+          0.201339141,
+          0.187976689,
+          0.190028071,
+          0.199502992,
+          0.199575364
+        ]
+      },
+      "wholeChildCpu": {
+        "mean": 1.4517514285714286,
+        "median": 1.4544890000000001,
+        "series": [
+          1.44903,
+          1.4544890000000001,
+          1.459396,
+          1.419879,
+          1.4347679999999998,
+          1.467302,
+          1.4773960000000002
+        ]
+      },
+      "wholeChildWall": {
+        "mean": 1.1270777405714287,
+        "median": 1.1342104750000033,
+        "series": [
+          1.135120779999994,
+          1.1345759689999966,
+          1.1336668160000016,
+          1.1081667170000031,
+          1.1079142480000002,
+          1.135889179000003,
+          1.1342104750000033
+        ]
+      }
+    },
+    "typed-batched": {
+      "executionCpu": {
+        "mean": 1.6400919999999999,
+        "median": 1.623479,
+        "series": [
+          1.601118,
+          1.605584,
+          1.574249,
+          1.623479,
+          1.625183,
+          1.632318,
+          1.818713
+        ]
+      },
+      "executionWall": {
+        "mean": 1.364892926,
+        "median": 1.35485274,
+        "series": [
+          1.343228938,
+          1.350651811,
+          1.315115694,
+          1.35599592,
+          1.35485274,
+          1.362661161,
+          1.471744218
+        ]
+      },
+      "wholeChildCpu": {
+        "mean": 5.590119428571429,
+        "median": 5.552564,
+        "series": [
+          5.463506,
+          5.496945999999999,
+          5.460242,
+          5.560366999999999,
+          5.552564,
+          5.569753,
+          6.027458
+        ]
+      },
+      "wholeChildWall": {
+        "mean": 4.978225903428566,
+        "median": 4.94997463499999,
+        "series": [
+          4.8732957010000035,
+          4.922205751999996,
+          4.846755098999992,
+          4.94997463499999,
+          4.950160117999999,
+          4.975208713000001,
+          5.329981305999979
+        ]
+      }
+    }
+  },
+  "hardware": {
+    "cpuModels": [
+      "AMD EPYC 7763 64-Core Processor"
+    ],
+    "logicalCpus": 4,
+    "allowedCpuSet": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "processCgroup": {
+      "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service",
+      "files": {
+        "cpu.max": "max 100000\n",
+        "cpu.stat": "usage_usec 20771462\nuser_usec 13712900\nsystem_usec 7058561\nnice_usec 4166000\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+        "memory.max": "max\n",
+        "memory.current": "966254592\n",
+        "cpuset.cpus.effective": "0-3\n"
+      }
+    }
+  },
+  "scope": "Samehost primary plain-JS versus typed-batched only. Native nine reset/final/last-return166/NQ; JS nine represented CPU/Q; all18 board/RAMhash/PIO/source-input-final proof. Live typed ownership is executed-source-attested. No old-native-versus-typed measurement, physical386 calibration, fullboot or adoption."
+}
