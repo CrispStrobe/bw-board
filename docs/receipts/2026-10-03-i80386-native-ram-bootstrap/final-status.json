@@ -1,0 +1,17 @@
+{
+  "schema": "bw.ram-bootstrap.hosted-correctness.v1",
+  "status": "PASS",
+  "scope": "FIXED_RAM_CORRECTNESS_ONE_TRACE_OFF_CHILD_NO_BUILD_NO_PERFORMANCE",
+  "workerStarted": true,
+  "originalProvenance": "Original build records retained unchanged; recreated filesystem is new materialization, not original build execution",
+  "workerAttempted": true,
+  "workerPid": 3349,
+  "progress": {
+    "n": 19,
+    "q": 19,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 19,
+    "zeroQ": 0
+  }
+}
