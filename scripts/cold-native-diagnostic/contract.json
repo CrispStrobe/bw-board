@@ -6,8 +6,8 @@
   "runId": 37102085724,
   "zipBytes": 7396223,
   "zipSha256": "315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9",
-  "driverRevision": "64514be6e45418910c5f952873382a2581810e1f",
-  "driverSourceIdentitySha256": "ec9a89ec22aa6332fd64f6058c88706ed493fbefd33d8576a9d88e747dfd7ea9",
+  "driverRevision": "ad1bb6a2ab1052a88ac4edc1479b3478ebc1e5a3",
+  "driverSourceIdentitySha256": "0f0d8cd6bf3c2075218dbf0d3b1d245bf4dcf13d4a03f024a1ab962b1be39938",
   "driverAuthSha256": "807376a0d7d635242ed995f51a2aad3fd7223d0562fd1f532dee19859ccb6193",
   "driverFiles": {
     "package.json": {
@@ -43,8 +43,8 @@
       "bytes": 12328
     },
     "scripts/bochs-cpu3-native-cold-bios/parity.mjs": {
-      "sha256": "de07b43eb20b9ae824bc0ca7cc7b482dcdd71a0cfc9b3ccc0a0de9cf6dda4b2b",
-      "bytes": 7303
+      "sha256": "27cae080fb9671a4614945ce7173a1639461e4d815327b42612c6bf2c1183963",
+      "bytes": 7425
     },
     "scripts/bochs-cpu3-native-cold-bios/reference.mjs": {
       "sha256": "49654b942878e01dcc9824fd78fe7509750fd896a5fd43b456828bc8791c476a",
@@ -215,8 +215,8 @@
       "bytes": 15069
     },
     "test/i80386-cold-bios-parity-source.test.mjs": {
-      "sha256": "3e1016f4f081267a7ffa138e7af226304f2d468dd94894eff8db1e03815b5d46",
-      "bytes": 9538
+      "sha256": "801fe977864b59d5872ec47b7447f4e7199a164362ff0077d17a1481c6647ebb",
+      "bytes": 12759
     }
   },
   "driverAuth": "scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs",

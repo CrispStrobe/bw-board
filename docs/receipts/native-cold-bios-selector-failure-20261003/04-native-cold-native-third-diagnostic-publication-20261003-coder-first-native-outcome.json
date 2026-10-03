@@ -1,0 +1,30 @@
+{
+  "status": "ACTUAL_FIRST_NATIVE_DIVERGENCE_RETAINED",
+  "run": 37109006890,
+  "head": "0f9f02eff01589ad7d8252dfd295e5c35ff8937d",
+  "artifactId": 11269131195,
+  "zipSha256": "ed03df1bb5df04cc9101b03f35983aa955fc6e724daeea7f516432e05b16d2f6",
+  "restorationAndStaticAdmission": "PASS",
+  "nativeProgress": {
+    "n": 182,
+    "q": 182,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 182,
+    "zeroQ": 0,
+    "lastFrame": {
+      "done": false,
+      "chargedQuanta": 1,
+      "q": 182,
+      "portStart": 8,
+      "portCount": 0
+    }
+  },
+  "firstError": "AssertionError [ERR_ASSERTION]: ds selector decomposition\n+ actual - expected\n\n  [\n-   7680,\n    0,\n    0,\n+   0\n  ]\n",
+  "nativeSelector": 61440,
+  "javascriptSelector": 61440,
+  "nativeEip": 1636,
+  "sourceAndProvenanceUnchanged": true,
+  "closed": false,
+  "scope": "No E16 checkpoint, full BIOS, speed or complete qualification claim; no retry"
+}
