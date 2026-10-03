@@ -1,11 +1,11 @@
 {
   "schema": "bw.cold-plain-js.capture-binding.v1",
-  "status": "PENDING_INDEPENDENTLY_AUDITED_SUCCESSFUL_CAPTURE",
-  "compiledRevision": "a6fae61a549d595c88a324f50589d92497040c07",
-  "driverRevision": "64514be6e45418910c5f952873382a2581810e1f",
-  "driverSourceSha256": "ec9a89ec22aa6332fd64f6058c88706ed493fbefd33d8576a9d88e747dfd7ea9",
-  "captureSha256": null,
-  "independentAuditSha256": null,
-  "independentAuditApproved": false,
-  "targetQ": null
+  "status": "INDEPENDENTLY_AUDITED_CAPTURE_READY",
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+  "driverSourceSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "independentAuditSha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+  "independentAuditApproved": true,
+  "targetQ": 316562
 }

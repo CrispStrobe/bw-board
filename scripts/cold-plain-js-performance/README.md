@@ -3,11 +3,13 @@
 This separate worker prepares a functional JavaScript baseline for the fixed
 cold reset → before F000:E16 slice. It has not executed that slice or established
 parity, speed, physical real-time behavior, broader AT boot, Windows or Doom.
-The frozen compiled a6fa tree, driver 64514be6 and ordinary JS reference remain
-unchanged. `capture-binding.json` is deliberately pending: execution fails before
-machine construction until a separately reviewed change pins the successful
-one-Q diagnostic capture, independent audit bytes and actual target Q. No target
-is inferred from the ordinary 316,562-Q census.
+The frozen d69ea6 source draft and ordinary JS reference remain unchanged. This
+separate source migration binds compiled 7632e6a (125 inputs), driver 11c0bdc,
+the successful eighth OFF one-Q capture b4dd7174 and its independent audit
+a1b93101. The source-owned binding records their complete SHA values and the
+measured target of 316,562 Q. This diagnostic proves its own fixed reset-model
+slice; the plain worker has not executed or qualified that slice. No worker,
+benchmark or adoption authorization follows from the ready capture binding.
 
 `factory.mjs` owns a fresh authentic AT machine, the exact repository BIOS, the
 fixed 12/32 controller configuration and all internal hooks. It installs the
@@ -25,8 +27,9 @@ element per step. There are no diagnostic snapshots, page census, per-step REP
 byte collection, assertions or comparison work in that loop. Reset initialization,
 source/Node/capture authentication, final CPU/board/RAM snapshots and comparison,
 chip catchup, hashing, receipt writing and close occur outside execution timing.
-The final complete ordered PIO tape and raw CPU/full board/whole RAM hash must
-match the pinned capture exactly; PIC state is never synthetically masked. The
+The pre-settle CPU must match the named before-F000:E16 cut. The final complete
+ordered PIO tape and raw settled CPU/full board/whole RAM hash must match the
+pinned capture exactly; PIC state is never synthetically masked. The
 post-loop settled evidence does not prove every intermediate state or native
 REP store byte effect. Six board clocks per completion is a configured functional
 clock model, not calibrated physical 386 timing.
@@ -40,7 +43,11 @@ mutations and closed input guards. No pure test constructs a machine, calls CPU
 step or performs a guest. The exact actual driver revision and source identity
 must agree with the pinned capture; their strict hash syntax permits separately
 reviewed corrected drivers without changing worker logic. The source-owned
-binding remains pending. Pure source controls do not qualify execution or speed.
+binding now pins the independently audited successful diagnostic. Missing,
+failed or changed capture/audit bytes still refuse before machine construction.
+Pure source controls do not qualify execution or speed. The one OFF diagnostic
+retains final raw RAM hashes, not full RAM bytes; final RAM equality is a
+source-attested hash comparison, not independently reconstructable raw backing.
 
 A future parent must supply fresh bounded children, process-group timeout cleanup,
 host context, whole-child rusage CPU/wall and raw exit/stdout/stderr. Execution

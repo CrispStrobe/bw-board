@@ -14,6 +14,7 @@ export function validateWorkerInput(input){
  assert.equal(new Set([input.capture,input.independentAudit,input.output]).size,3,'disjoint file roles');assert.ok(input.output!==sourceRoot&&!input.output.startsWith(sourceRoot+'/'),'external output');for(const k of ['capture','independentAudit'])assert.ok(!input[k].startsWith(input.output+'/'),'input outside exclusive output');return input;
 }
 export function compareFinalEvidence(result,capture){
+ const boundary=capture.cuts.at(-1);assert.equal(boundary.name,'before-F000-E16');assert.deepEqual(result.beforeSettle.cpu,boundary.javascript.cpu,'raw CPU before final chip catchup');
  assert.deepEqual(result.final,capture.javascriptFinal,'raw complete JS final CPU/board/RAM');assert.deepEqual(result.ports,capture.javascriptPorts,'complete ordered PIO/value/preQ clock ownership');
  return {status:'PLAIN_JS_FINAL_AND_COMPLETE_PIO_MATCH_PINNED_CAPTURE',q:result.final.q,ports:result.ports.length,coverage:'Final raw CPU/full board/whole raw RAM hash and complete PIO only; no per-instruction state parity'};
 }

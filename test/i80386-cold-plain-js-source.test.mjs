@@ -7,14 +7,14 @@ import {validatePlainResetSnapshot} from '../scripts/cold-plain-js-performance/f
 import {validateWorkerInput,compareFinalEvidence} from '../scripts/cold-plain-js-performance/worker.mjs';
 const clone=x=>JSON.parse(JSON.stringify(x)),hash='a'.repeat(64);
 function fixture(){
- const identity={revision:'64514be6e45418910c5f952873382a2581810e1f',hashes:{diagnostic:hash}};
+ const identity={revision:'11c0bdcade020117fc682e97db284c6ff8797842',hashes:{diagnostic:hash}};
  // Manufactured structural fixtures do not authenticate provenance or create
  // the private execution token. The worker reads only its source-owned lock.
- const b={schema:'bw.cold-plain-js.capture-binding.v1',status:'INDEPENDENTLY_AUDITED_CAPTURE_READY',compiledRevision:'a6fae61a549d595c88a324f50589d92497040c07',driverRevision:identity.revision,driverSourceSha256:sha(Buffer.from(JSON.stringify(identity))),captureSha256:hash,independentAuditSha256:hash,independentAuditApproved:true,targetQ:10};
+ const b={schema:'bw.cold-plain-js.capture-binding.v1',status:'INDEPENDENTLY_AUDITED_CAPTURE_READY',compiledRevision:'7632e6a0995ceaab88bc8cede91506a5330d2e1c',driverRevision:identity.revision,driverSourceSha256:sha(Buffer.from(JSON.stringify(identity))),captureSha256:hash,independentAuditSha256:hash,independentAuditApproved:true,targetQ:10};
  return {b,identity};
 }
 test('pending capture and invalid audit/target/role bindings deny',()=>{
- const pending=JSON.parse(readFileSync(new URL('../scripts/cold-plain-js-performance/capture-binding.json',import.meta.url)));assert.throws(()=>validateReadyBinding(pending));
+ const pending=JSON.parse(readFileSync(new URL('../scripts/cold-plain-js-performance/capture-binding.json',import.meta.url)));pending.status='PENDING_MANUFACTURED_SOURCE_CONTROL';assert.throws(()=>validateReadyBinding(pending));
  const {b}=fixture();assert.equal(validateReadyBinding(b),b);for(const change of [x=>x.targetQ=null,x=>x.targetQ=0,x=>x.targetQ=400001,x=>x.targetQ=1.5,x=>x.independentAuditApproved=false,x=>x.captureSha256=null,x=>x.status='FAIL',x=>x.compiledRevision='b'.repeat(40),x=>x.extra=1]){const v=clone(b);change(v);assert.throws(()=>validateReadyBinding(v));}
 });
 test('missing/failed/mismatched successful capture denies without execution',()=>{
@@ -28,8 +28,8 @@ test('pure reset profile guard rejects model/mapping/clock/queue deviations with
  for(const change of [x=>x.cpu.edx=0x300,x=>x.cpu.cr0=0,x=>x.cpu.segmentCaches[1].base=0xf0000,x=>x.cpu.idtr.limit=0x3ff,x=>x.cpu.tr.present=false,x=>x.cpu.debugRegisters[6]=0,x=>x.board.cycles++,x=>x.board.a20.outputQueue.push({value:0x55}),x=>x.board.a20Enabled=false]){const v=clone(r);change(v);assert.throws(()=>validatePlainResetSnapshot(v));}
 });
 test('raw final CPU, whole board/RAM and complete ordered PIO comparator rejects mutations',()=>{
- const final={q:10,cpu:{edx:0,cr0:0x7ffffff0,eip:0xe16},board:{pic1:{irr:1},cycles:64},ramSha256:hash},ports=[{ordinal:1,q:3,cycles:16,width:8,dir:'out',port:0x64,value:0xaa},{ordinal:2,q:9,cycles:52,width:8,dir:'in',port:0x60,value:0x55}],capture={javascriptFinal:clone(final),javascriptPorts:clone(ports)},result={final,ports};assert.equal(compareFinalEvidence(result,capture).q,10);
- for(const change of [x=>x.final.cpu.edx=0x300,x=>x.final.cpu.cr0=0,x=>x.final.board.pic1.irr=0,x=>x.final.ramSha256='b'.repeat(64),x=>x.ports.reverse(),x=>x.ports[0].q++,x=>x.ports[1].value=0,x=>x.ports.pop()]){const v=clone(result);change(v);assert.throws(()=>compareFinalEvidence(v,capture));}
+ const final={q:10,cpu:{edx:0,cr0:0x7ffffff0,eip:0xe16},board:{pic1:{irr:1},cycles:64},ramSha256:hash},ports=[{ordinal:1,q:3,cycles:16,width:8,dir:'out',port:0x64,value:0xaa},{ordinal:2,q:9,cycles:52,width:8,dir:'in',port:0x60,value:0x55}],capture={cuts:[{name:'before-F000-E16',javascript:{cpu:clone(final.cpu)}}],javascriptFinal:clone(final),javascriptPorts:clone(ports)},result={beforeSettle:{cpu:clone(final.cpu)},final,ports};assert.equal(compareFinalEvidence(result,capture).q,10);
+ for(const change of [x=>x.beforeSettle.cpu.edx=0x300,x=>x.final.cpu.edx=0x300,x=>x.final.cpu.cr0=0,x=>x.final.board.pic1.irr=0,x=>x.final.ramSha256='b'.repeat(64),x=>x.ports.reverse(),x=>x.ports[0].q++,x=>x.ports[1].value=0,x=>x.ports.pop()]){const v=clone(result);change(v);assert.throws(()=>compareFinalEvidence(v,capture));}
 });
 test('closed worker input refuses extra hooks, aliases and unbounded paths',()=>{
  const input={capture:'/capture.json',independentAudit:'/audit.json',output:'/new-output',workerRevision:'b'.repeat(40),workerSourceSha256:hash,nodeSha256:hash};assert.equal(validateWorkerInput(input),input);
