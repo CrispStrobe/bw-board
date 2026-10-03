@@ -1,0 +1,11 @@
+{
+  "scripts/cold-native-restore/archive.py": "683f4c2086e9039e289db19175f6a92bcbb71a48173639d8162f0fc5ffd5e370",
+  "scripts/cold-native-restore/prepared-members.json": "69f139ff9196b958523af8e1905362734b3248088678526a3f753d0884eac302",
+  "scripts/cold-native-restore/frozen-members.json": "a6e9e9bc96eaf8237d2524719338e78d1d631d37c93085e6407976b1e203cd9c",
+  "scripts/cold-native-restore/restore.py": "35148eadcf9878923c093e25ebe39c5dcc92110e60ea95c426f4f58a9de791ed",
+  "scripts/cold-native-restore/README.md": "f3e3daf64dab3f3233ee2aa55ed9e2bab96ee856290e9dd492697aae2873996f",
+  "scripts/cold-native-restore/official-members.json": "d2df0987fe9bda0d956f1ed7c0c8c49020e4046cd06e7cf53358d9a4a4651dec",
+  "scripts/cold-native-restore/test_archive.py": "1ab03e011353249976ac9916963557b47380c95a9e18d7bfbcad386896658297",
+  "scripts/cold-native-restore/admission.py": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3",
+  ".github/workflows/i80386-cold-native-restore-source.yml": "343156e34d32e926b2f0a860e8c2274827463058c45d7aee09eca97fb2fb1aed"
+}

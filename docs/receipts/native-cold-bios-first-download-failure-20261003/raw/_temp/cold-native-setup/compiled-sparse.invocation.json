@@ -1,0 +1,25 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "-c",
+    "import subprocess,sys; subprocess.run(['git','-C',sys.argv[1],'sparse-checkout','set','--no-cone','--stdin'],input=open(sys.argv[2]).read(),text=True,check=True,timeout=30)",
+    "/home/runner/work/bw-board/bw-board/publication",
+    "/home/runner/work/_temp/cold-native-setup/compiled-sparse-patterns.txt"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/runtime",
+  "cpuSeconds": 30,
+  "wallSeconds": 40,
+  "heapMiB": null,
+  "fileBytes": 16777216,
+  "coreBytes": 0,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

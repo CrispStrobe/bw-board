@@ -1,0 +1,74 @@
+{
+  "primitive3/stderr": {
+    "source": "/tmp/native-cold-native-restore-source-controls-20261003/stderr",
+    "sha256": "7ba600c131d14938fa296eb6eb208c575bf239a15b65439f37d0578df0fff9bf"
+  },
+  "primitive3/after.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-20261003/after.json",
+    "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+  },
+  "primitive3/exit.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-20261003/exit.json",
+    "sha256": "f0a3977bfad64730a7f2fa34d52854ebbe374244f5c7f4726bb7dee28f1af2ed"
+  },
+  "primitive3/before.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-20261003/before.json",
+    "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+  },
+  "primitive3/stdout": {
+    "source": "/tmp/native-cold-native-restore-source-controls-20261003/stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "expanded5/stderr": {
+    "source": "/tmp/native-cold-native-restore-source-controls-r2-20261003/stderr",
+    "sha256": "38bf320bde0206302c1e57a1b42621b895232f0c74ebfec8c7b81ec6681fa5a0"
+  },
+  "expanded5/after.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-r2-20261003/after.json",
+    "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+  },
+  "expanded5/invocation.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-r2-20261003/invocation.json",
+    "sha256": "c971608087ed70d2ff16e36e8f3a9c5a769f249dcbebf405b8d43ac78195bfa0"
+  },
+  "expanded5/exit.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-r2-20261003/exit.json",
+    "sha256": "125c1c0f3964aeee89580de6a885aca22b74f1cc113f88b53f858da1e12cd3d4"
+  },
+  "expanded5/before.json": {
+    "source": "/tmp/native-cold-native-restore-source-controls-r2-20261003/before.json",
+    "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+  },
+  "expanded5/stdout": {
+    "source": "/tmp/native-cold-native-restore-source-controls-r2-20261003/stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "genuine-readonly/stderr": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "genuine-readonly/check.py.txt": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/check.py",
+    "sha256": "6d9a49317e211018cc9ba2b40f042aa900a6484dd618e30fa5c19e02fe6d2b68"
+  },
+  "genuine-readonly/after.json": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/after.json",
+    "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+  },
+  "genuine-readonly/invocation.json": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/invocation.json",
+    "sha256": "539a24f200ad5e07865a0de307871c06e9d69469c70f56279601e869eb898634"
+  },
+  "genuine-readonly/exit.json": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/exit.json",
+    "sha256": "24da40561fb7856141728495eb6bbc20873d8f11fa0675453fc9022e51b153e6"
+  },
+  "genuine-readonly/before.json": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/before.json",
+    "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+  },
+  "genuine-readonly/stdout": {
+    "source": "/tmp/native-cold-native-restore-genuine-readonly-20261003/stdout",
+    "sha256": "55babcb54c99e102b5533bbb5f914735803a1b46d2301d26d998062a3018d73b"
+  }
+}

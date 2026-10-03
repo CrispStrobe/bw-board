@@ -1,0 +1,9 @@
+{
+  "status": "FIRST_DOWNLOAD_FAILURE_AUDIT_PASS_ZERO_RESTORE_NATIVE",
+  "checks": 1110,
+  "runId": 37106448211,
+  "artifactId": 11267273346,
+  "causeObserved": "urllib ZIP redirect followed by HTTP401; no body downloaded",
+  "causeHypothesis": "default urllib forwards Authorization across redirect; root must review source correction separately",
+  "scope": "read-only actualfailure/source evidence audit; no retry/download/materialization/guest"
+}
