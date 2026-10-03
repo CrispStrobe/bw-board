@@ -1,0 +1,26 @@
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'
+00000000000i[      ] reading configuration from /home/runner/work/_temp/cold-native-diagnostic/guest-source.bochsrc
+00000000000i[      ] installing nogui module as the Bochs GUI
+00000000000i[      ] using log file /home/runner/work/_temp/cold-native-diagnostic/bochs.log
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: raw eflags
+
+2182 !== 134
+
+    at file:///home/runner/work/bw-board/bw-board/driver/scripts/bochs-cpu3-native-cold-bios/parity.mjs:22:33
+    at Array.forEach (<anonymous>)
+    at compareCpu (file:///home/runner/work/bw-board/bw-board/driver/scripts/bochs-cpu3-native-cold-bios/parity.mjs:22:9)
+    at runExternalCold (file:///home/runner/work/bw-board/bw-board/driver/scripts/bochs-cpu3-native-cold-bios/external-runner.mjs:51:4)
+    at async file:///home/runner/work/bw-board/bw-board/driver/scripts/bochs-cpu3-native-cold-bios/external-runner.mjs:62:195 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 2182,
+  expected: 134,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.23.3

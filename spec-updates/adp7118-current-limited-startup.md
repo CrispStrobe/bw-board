@@ -22,6 +22,42 @@ Each waveform case captures 120 native voltage samples over 1.2 ms. The producti
 
 Admission controls reject unsupported topology and source authorities; caught source-control refusal invalidates prior meter/scope observations. Authored capacitor prebias is tested through Board snapshot restoration, which solves immediately after adopting the stored capacitor voltage. This is stored-state restoration, not a separate UIC initializer.
 
+## Source resistance, acquisition and precision
+
+The table above qualifies the 4 ohm VIN-series fixture with one bulk advance,
+not every admitted supply and acquisition protocol. A further independent
+matrix covers the three loads above, VIN series resistances of 0, 1 and 4 ohms,
+and bulk versus 120 partitioned advances: 18 interactive captures, each with
+120 native observations. Maximum waveform error is 100.159 microvolts; maximum
+absolute window-mean error is 58.489 microvolts. The wider matrix retains the
+existing 120-microvolt partition waveform and 100-microvolt linear-control
+mean bounds; none of the tighter fixture-specific tests is replaced.
+
+Inrush with an ideal VIN source measures 68.659 microvolts in bulk and
+65.648 microvolts partitioned, compared with 1.716 and 1.860 microvolts at
+4 ohms. Source resistance does not change this authored headroom-qualified
+output law. It does add a changing VIN voltage to the integrator's existing
+node-voltage error estimator, so different adaptive meshes are expected.
+These measurements establish source-dependent numerical error, not a physical
+benefit from adding a resistor. `accuracyMet` means the selected **local**
+adaptive error/work checks passed; it is not a global waveform certificate.
+
+Select the existing `precision-v1` profile on a fresh Board before setting
+the netlist when a tighter measurement is required. Six persistent precision
+captures cover ideal-source overload and inrush plus 4-ohm inrush, each in both
+acquisition modes, against the same independent piecewise analytic solution.
+They require waveform error below 0.5 microvolts, mean error below 1 microvolt,
+120 actual samples, simultaneous supply/terminal KCL and unchanged work gates.
+The measured maxima are 0.408 and 0.964 microvolts respectively. A real caller
+control omitting precision selection fails the waveform assertion for ideal
+inrush in both protocols. No solver/profile/default tolerance or budget is
+changed, and these bounds are not promised for all admitted component values.
+
+Register the meter before advancing to observe its capture-window mean. A
+meter first requested afterwards returns the current endpoint; it cannot
+retroactively integrate a window that it did not observe. Native paired scope
+storage remains 120 observations, not 240 independent measurements.
+
 Five executable production-source mutations fail actual Board callers: remove the upper current clamp with its matching derivative; restore previous-step VIN current with its constant derivative; bypass the target clock; omit domain admission; and omit the final prebias guard. The stale-VIN mutation is checked at accepted adaptive solutions because a settled endpoint can repair its bookkeeping and hide the defect. Clock bypass is checked against the cold output current, avoiding an irrelevant adaptive backoff failure. Mutated modules load in memory; the power registry and temporary observer dispatcher are restored, healthy callers are rechecked, and the on-disk source remains unchanged.
 
 This domain does not qualify dynamic enable, shutdown/restart, changing headroom, dropout, prebiased startup, reverse power, adjustable feedback, external SS, inductive loading or coupled regulators. Generic primitive diagnostics preceding this mode are feasibility evidence only; production qualification belongs to the executable ADP7118 tests.

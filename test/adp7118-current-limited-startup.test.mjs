@@ -111,6 +111,58 @@ test('explicit current-limited ADP startup matches independently transitioned RC
   }
 });
 
+function acquisitionProof({R,C,inputR,partitioned,profile='interactive-v1'},sampleTolerance,meanTolerance){
+  const b=rig({R,C,inputR,edit:({b})=>b.configureTransientAnalysis(profile)}),expected=oracle(R,C);
+  const h=b.addScopeChannel({type:'voltage',netId:'out',referenceNetId:'gnd',
+    sampleRateHz:100000,capture:'sample',depth:122});
+  // Register the mean before advancing: a newly requested meter is an endpoint,
+  // not a retrospective capture-window average.
+  near(b.meterVoltage('out','gnd'),0,1e-12,'cold registered capture mean');
+  if(partitioned)for(let i=1;i<=120;i++)b.advanceTo(BigInt(i)*10000n);
+  else b.advanceTo(1200000n);
+  const status=b.transientAnalysisStatus();
+  assert.equal(status.profile.id,profile);
+  assert.equal(status.accuracyMet,true);assert.equal(status.failure,null);
+  assert.equal(status.profile.maxAttempts,20000);
+  assert.equal(b._deviceSubstepOverflow,false);assert.notEqual(b._transientAttemptOverflow,true);
+  const data=b.getScopeData(h),pairs=Array.from(data.samples).filter(Number.isFinite);
+  assert.equal(data.count,120);assert.equal(pairs.length,240);
+  let maxError=0;
+  for(let i=0;i<120;i++){
+    assert.equal(pairs[2*i],pairs[2*i+1]);
+    const value=expected.voltage((i+1)*1e-5);
+    maxError=Math.max(maxError,Math.abs(pairs[2*i]-value));
+    near(pairs[2*i],value,sampleTolerance,`source/acquisition RC sample ${i+1}`);
+  }
+  const meanError=b.meterVoltage('out','gnd')-expected.mean;
+  near(meanError,0,meanTolerance,'source/acquisition capture mean');
+  currents(b,{R,inputR});
+  return {R,C,inputR,partitioned,profile,maxError,meanError,attempts:status.work.attempts};
+}
+
+test('ideal and finite VIN preserve analytic acquisition across interactive bulk and partitions',t=>{
+  // This broader matrix uses the existing partition waveform/control mean
+  // bounds. It does NOT replace the tighter 4ohm bulk fixture proofs above.
+  for(const [R,C] of [[10,2.2e-6],[500,22e-6],[500,2.2e-6]])
+    for(const inputR of [0,1,4])for(const partitioned of [false,true])
+      t.diagnostic(JSON.stringify(acquisitionProof({R,C,inputR,partitioned},1.2e-4,1e-4)));
+});
+
+test('existing precision profile independently resolves ideal VIN and partitioned clamp transitions',t=>{
+  for(const [R,C,inputR] of [[10,2.2e-6,0],[500,22e-6,0],[500,22e-6,4]])
+    for(const partitioned of [false,true])
+      t.diagnostic(JSON.stringify(acquisitionProof({R,C,inputR,partitioned,profile:'precision-v1'},5e-7,1e-6)));
+});
+
+test('bypassing precision selection fails the actual analytic waveform oracle',()=>{
+  for(const partitioned of [false,true]){
+    // Execute the caller with its precision selection removed. A synthetic
+    // profile label or a receipt-field assertion alone cannot prove accuracy.
+    assert.throws(()=>acquisitionProof({R:500,C:22e-6,inputR:0,partitioned},5e-7,1e-6),
+      error=>error.name==='AssertionError'&&/source\/acquisition RC sample/.test(error.message));
+  }
+});
+
 test('caller-sampled ceiling and coherent supply survive shifted reference and partitioned advances',()=>{
   for(const [R,C] of [[10,2.2e-6],[500,22e-6]]){
     const big=rig({R,C}),partitioned=rig({R,C,shift:2.5,internalR:1});

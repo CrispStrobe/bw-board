@@ -1,3 +1,44 @@
+2026-10-03 Whole-advance transient work budget — CLAIM, Codex bwcx `/root`.
+Isolated wt-board-adp-source-audit-20261003, branch
+lane/transient-whole-advance-budget-20261003, exact base
+744dcb8a (full identity from git rev-parse in the claim commit parent).
+Four-path envelope: this entry; src/board.js; new
+test/transient-whole-advance-budget.test.mjs; new
+spec-updates/transient-whole-advance-budget.md. Add an explicit one-shot
+advanceToBounded API for fresh zero-time captures; charge actual MNA solves,
+adaptive attempts and integrator entries before executing work across all
+device sub-intervals. Hard ceilings cannot exceed20000 attempts/60001 solves/
+200 integrator entries. Return copy-safe actual receipt, throw named budget
+failure and invalidate prior/partial/fresh analog observations; never fabricate
+completion or retry a partially advanced capture. Default advanceTo and all
+numerical/profile/model/tolerance contracts unchanged. Prove independent hard
+stops for all three counters, timed ADP multiple intervals, bounded/default
+bit-exact results, ordinary error identity, malformed/reentrant requests and
+load-bearing guard/refusal mutants. No CPU/other model/CUI/Lite/pin/package/
+workflow/deployment changes. CLI admission stays held until engine lands.
+
+2026-10-03 ADP7118 source/acquisition precision proof — DONE candidate, Codex bwcx `/root`.
+Isolated wt-board-adp-source-audit-20261003, branch
+lane/adp7118-source-acquisition-audit-20261003, exact base
+3cf52d1dd8b77d8f4d39747f1002ed8c7206ffab. Three-path envelope: this entry;
+test/adp7118-current-limited-startup.test.mjs;
+spec-updates/adp7118-current-limited-startup.md. Persist independent RC proofs
+across ideal/1ohm/4ohm VIN and bulk/partitioned acquisition, with separate
+unchanged interactive/precision profiles and a real precision-bypass negative.
+Read-only 36-run measurement found interactive maximum100.159microvolts,
+precision maximum0.411microvolts, all native120-sample captures and local
+accuracy gates satisfied. No production/model/solver/tolerance/work-budget,
+other-device/GUI/CPU/package/pin/workflow/deployment edits; no universal accuracy
+or vendor waveform claim. Existing tighter4ohm fixture assertions stay intact.
+Canonical claim f1ae30b5 preceded test edits. Final focused suite14/14,
+zero failures/skips:18 interactive and6 precision captures, each120 native
+observations, plus two actual precision-bypass waveform negatives. Persisted
+precision maximum0.408microvolts and mean maximum0.964microvolts; wider
+interactive maximum100.159microvolts and mean maximum58.489microvolts.
+Existing six model mutants remain red and registry restoration is verified.
+One frozen exact-head CI/Harris set then guarded normal landing; no downstream
+pin bump or deployment is necessary for unchanged production source bytes.
+
 2026-10-03 ADP7118 current-limited startup envelope — DONE candidate, Codex bwcx `/root`.
 Clean reused isolated wt-board-startup-context-claim-20261002, branch
 lane/adp7118-current-limited-envelope-20261003, exact base

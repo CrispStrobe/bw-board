@@ -413,7 +413,8 @@ export const INPUTS = [
         gates: ['test/labwired-adapter.test.mjs', 'test/labwired-roundtrip.test.mjs',
             'test/pad-drive-parity.test.mjs', 'test/labwired-firmware-only.test.mjs',
             'test/labwired-microbit-matrix.test.mjs', 'test/labwired-microbit-motion.test.mjs',
-            'test/labwired-f0-timing.test.mjs', 'test/labwired-f0-gpio-profile.test.mjs'],
+            'test/labwired-f0-timing.test.mjs', 'test/labwired-f0-gpio-profile.test.mjs',
+            'test/labwired-f0-gpio-window-profile.test.mjs'],
         // Motion additionally requires arm-none-eabi-gcc and an engine with
         // LSM303AGR. labwired-wasm.yml's opt-in motion job installs the compiler
         // and makes absent artifacts/tools, skipped tests and sub-1x windows fail.
@@ -423,10 +424,29 @@ export const INPUTS = [
         // usability nor timing qualification. These are absent from ordinary CI.
         // The GPIO-only diagnostic has the same compiler/artifact requirements;
         // its optional hosted job requires actual evidence with zero skips.
+        // Window sampling additionally requires an exclusive output directory;
+        // the separate capture-output row describes activation, not qualification.
         obtain: 'point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node); '
             + 'for active F0 timing also install arm-none-eabi-gcc and arm-none-eabi-objcopy',
         ciAvailable: false,
         ci: 'no',
+    },
+    {
+        id: 'labwired-warmed-window-profile', kind: 'fixture',
+        what: 'Opt-in diagnostic capture of five warmed GPIO cycle windows using '
+            + 'Node Inspector. Ordinary timing is a separate unchanged process. '
+            + 'Requires verified LABWIRED_WASM NODEJS bytes, the ARM guest compiler '
+            + 'and LABWIRED_REQUIRE_F0_RTX=1; profiles never waive the ordinary 1x floor.',
+        env: 'LABWIRED_WINDOW_PROFILE_OUT', envRole: 'capture-output', paths: [],
+        gates: ['test/labwired-f0-gpio-window-profile.test.mjs'],
+        obtain: 'Use scripts/profile-labwired-f0-windows.mjs with a new exclusive --out '
+            + 'directory and --wasm pointing at the original verified NODEJS artifact. '
+            + 'The wrapper supplies this output variable only to its diagnostic child; '
+            + 'activation does not authenticate a profile or establish performance.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI intentionally skips artifact-dependent capture. '
+            + 'labwired-window-profile.yml runs two actual repeats each on pinned '
+            + 'Node20.20.2/22.23.3, retaining raw profiles and floor failures.',
     },
     {
         id: 'labwired-cli', kind: 'oracle',
