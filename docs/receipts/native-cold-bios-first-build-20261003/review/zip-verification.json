@@ -1,0 +1,337 @@
+{
+  "status": "OFFICIAL_ZIP_DIGEST_PASS_SELECTIVE_EXTRACTION_ONLY",
+  "runId": 37102085724,
+  "head": "a6fae61a549d595c88a324f50589d92497040c07",
+  "event": "pull_request",
+  "attempt": 1,
+  "artifactId": 11265997873,
+  "zipSha256": "315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9",
+  "zipBytes": 7396223,
+  "entries": {
+    "cold-bios-build-context/build-helper.py": {
+      "bytes": 12525,
+      "sha256": "0c951ee68c227fc290287170ad87b53a5370641c77b691e38278b86486f42a47"
+    },
+    "cold-bios-build-context/context.txt": {
+      "bytes": 4184,
+      "sha256": "f16dcde24c943ce5e3febeaf0f715fb5673d248039593a6ac4550a4175439fe2"
+    },
+    "cold-bios-build-context/parent.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-context/workflow.yml": {
+      "bytes": 3810,
+      "sha256": "24c54c02af99e2db0178dd82a23c00d9bcec46bca3d7ee3a8f855f8de759191f"
+    },
+    "cold-bios-build-evidence/architecture.exit.json": {
+      "bytes": 392,
+      "sha256": "68154ffb75c011b897671fa598785477ae3a57529b74c648e7e5da47cbe18065"
+    },
+    "cold-bios-build-evidence/architecture.invocation.json": {
+      "bytes": 396,
+      "sha256": "a1f1019efb1d0f5930ea6e60fbb7d3e36d0e9c4d390efc165f22e191a8619ea5"
+    },
+    "cold-bios-build-evidence/architecture.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/architecture.stdout": {
+      "bytes": 7,
+      "sha256": "aaf631698ae5160ceb04a97681a14887fdcab47cd6e0f163c87485b3b1340b62"
+    },
+    "cold-bios-build-evidence/artifact-inventory.json": {
+      "bytes": 8250,
+      "sha256": "324f0d8a3beb910d63c9731d0912ba2f2d518d2cbd0a35c246a0297546f80c82"
+    },
+    "cold-bios-build-evidence/build-context.json": {
+      "bytes": 17826,
+      "sha256": "ca98c9667f99afbac048ef752aea5385f9f79854d0ed6bf24b44e4e9ff879840"
+    },
+    "cold-bios-build-evidence/build-static-preflight.json": {
+      "bytes": 16221,
+      "sha256": "e823bca77363886b31dcb6565a2a187a480489402d70e8db1db56da0f143f86f"
+    },
+    "cold-bios-build-evidence/bw_direct.node": {
+      "bytes": 2069552,
+      "sha256": "4b372f2d0e7b677c56e168a0da791c1c0aeaae391eb6a103507e383540281907"
+    },
+    "cold-bios-build-evidence/compiler.exit.json": {
+      "bytes": 400,
+      "sha256": "2d8e4fdafb82f8bc79f4ea96d7cccb759d62c1a9c48bd5ebf5c98cb7a480517f"
+    },
+    "cold-bios-build-evidence/compiler.invocation.json": {
+      "bytes": 401,
+      "sha256": "217d62e5991fe453337e1feead2ac496a680e7297e102fc667fb35d0616df927"
+    },
+    "cold-bios-build-evidence/compiler.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/compiler.stdout": {
+      "bytes": 246,
+      "sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8"
+    },
+    "cold-bios-build-evidence/config.h": {
+      "bytes": 28122,
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+    },
+    "cold-bios-build-evidence/configure.exit.json": {
+      "bytes": 655,
+      "sha256": "793700e7cb3cbd5e4d53aa14daa4a5d2d9661ad90c973bc43652bfd3aead0700"
+    },
+    "cold-bios-build-evidence/configure.invocation.json": {
+      "bytes": 667,
+      "sha256": "00dc8c3d510ffb1fedc49ce8e2b5ef8bb7e7b5d9182f65b73d2e0842bd60a9af"
+    },
+    "cold-bios-build-evidence/configure.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/configure.stdout": {
+      "bytes": 13400,
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "cold-bios-build-evidence/final-status.json": {
+      "bytes": 1172,
+      "sha256": "66e4b5e8461dd64684bde933b0586f532511c5b9b5f0626c20b525a7b715cb47"
+    },
+    "cold-bios-build-evidence/frozen-source.tar.gz": {
+      "bytes": 595364,
+      "sha256": "f37f0ebad3e69a45ef72ef94db3f8c81a0346f9c1bf34d6762854c4da33e4072"
+    },
+    "cold-bios-build-evidence/identity-after.exit.json": {
+      "bytes": 629,
+      "sha256": "fe34807734cca1d3cc0bdc779caf2a7f11be9d528d21f88e84abe31c90acb1f5"
+    },
+    "cold-bios-build-evidence/identity-after.invocation.json": {
+      "bytes": 631,
+      "sha256": "22b5abddfb6de6cdf5e21dbd222c5e03de755a25bb24e05c5cbe01baac79eafd"
+    },
+    "cold-bios-build-evidence/identity-after.stdout": {
+      "bytes": 13404,
+      "sha256": "3521193c183d7ffeeeb3090bc396a5bf6e14249687c8ae566c3c1c2316fd4ba0"
+    },
+    "cold-bios-build-evidence/identity-after.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/identity-before.exit.json": {
+      "bytes": 629,
+      "sha256": "ae5ce2b8a0215cda77a6c3b764e40da475c3fc2bd5d5295b16ee43de83cc8874"
+    },
+    "cold-bios-build-evidence/identity-before.invocation.json": {
+      "bytes": 631,
+      "sha256": "f58e0511b0370fe9b25fa98cb7b9f03d8b88c531a780617d6ae0ac345f5bee26"
+    },
+    "cold-bios-build-evidence/identity-before.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/identity-before.stdout": {
+      "bytes": 13404,
+      "sha256": "3521193c183d7ffeeeb3090bc396a5bf6e14249687c8ae566c3c1c2316fd4ba0"
+    },
+    "cold-bios-build-evidence/make.exit.json": {
+      "bytes": 480,
+      "sha256": "e3cd24e431467f8dcd430a1611573619f6500b972326d75e855317d730c88e71"
+    },
+    "cold-bios-build-evidence/make.invocation.json": {
+      "bytes": 489,
+      "sha256": "8fc73580994deffce47d6b2b148ddbc4ab630262bb846ba4b4ba789ae72ca7f1"
+    },
+    "cold-bios-build-evidence/make.stderr": {
+      "bytes": 7894,
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    },
+    "cold-bios-build-evidence/make.stdout": {
+      "bytes": 36338,
+      "sha256": "6a70466d2c8dfae65204278cd022ccb9e2bd99ee74927d2fd4135aa3cf116c6d"
+    },
+    "cold-bios-build-evidence/nm.exit.json": {
+      "bytes": 492,
+      "sha256": "6e75b3f28c1dd296989a97dacda3425b2c97604d62e319312a4233e75e37f862"
+    },
+    "cold-bios-build-evidence/nm.invocation.json": {
+      "bytes": 492,
+      "sha256": "0a9b625ade756878d917dc9b74a47afe5ae957bff6afa8381d5145491acc0674"
+    },
+    "cold-bios-build-evidence/nm.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/nm.stdout": {
+      "bytes": 188038,
+      "sha256": "333893c1a401f9cbfc77a615ad97a5cfc7dcef1d21c75795036632c55c9e7790"
+    },
+    "cold-bios-build-evidence/platform.exit.json": {
+      "bytes": 395,
+      "sha256": "c29e82b29844ffb7eed39badb177ec1676727575efc7da4fc6040aa628d8fa1e"
+    },
+    "cold-bios-build-evidence/platform.invocation.json": {
+      "bytes": 396,
+      "sha256": "a60ab010a573ba2e760d1246a83032eea1eae1fd6eec3e1985f3f12306b42125"
+    },
+    "cold-bios-build-evidence/platform.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/platform.stdout": {
+      "bytes": 113,
+      "sha256": "6ecb75ce9d770bd2cfb6898b267dd8f29398821b25cb233675e182e0323ba0d2"
+    },
+    "cold-bios-build-evidence/prepare.exit.json": {
+      "bytes": 587,
+      "sha256": "55bdca579736342a346b174e3297e1bf4a9f405ce641c72cae9a4371e82cb62e"
+    },
+    "cold-bios-build-evidence/prepare.invocation.json": {
+      "bytes": 589,
+      "sha256": "0a8ae491e71a78c733727f51174e2bdf96c13ffb359c0903aabfd09cdae50d70"
+    },
+    "cold-bios-build-evidence/prepare.json": {
+      "bytes": 28107,
+      "sha256": "008d7393f574deaa7a8be18ca67ff805e05c3d14fef3f094267a5c2cfcb6ead7"
+    },
+    "cold-bios-build-evidence/prepare.stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "cold-bios-build-evidence/prepare.stdout": {
+      "bytes": 28107,
+      "sha256": "008d7393f574deaa7a8be18ca67ff805e05c3d14fef3f094267a5c2cfcb6ead7"
+    },
+    "cold-bios-build-evidence/prepared-after-build.json": {
+      "bytes": 81821,
+      "sha256": "18d42d9cc4bf1713f6be443073b4113fadb2b16409765bc6fd8d2f1fe12eccf0"
+    },
+    "cold-bios-build-evidence/prepared-before-build.json": {
+      "bytes": 78832,
+      "sha256": "f0280aab96fef0c44b64386cd0086425a383b3d552350c39fe4d7287304186b1"
+    },
+    "cold-bios-build-evidence/prepared-source.tar.gz": {
+      "bytes": 5329926,
+      "sha256": "b8ca7259746434b6e67af71b96e5dc1d21159782b89eaf287c3ace425139097f"
+    },
+    "cold-bios-build-evidence/readelf.exit.json": {
+      "bytes": 472,
+      "sha256": "b3301ce4b81a308cf978b208b9e3dc53676fa0d466f59fb66abbc82de3a079aa"
+    },
+    "cold-bios-build-evidence/readelf.invocation.json": {
+      "bytes": 475,
+      "sha256": "d16fb227aad428e1507833bb471b32e1a818698551f60d95127fc2463f5942eb"
+    },
+    "cold-bios-build-evidence/readelf.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/readelf.stdout": {
+      "bytes": 1539,
+      "sha256": "14b21b19308bc08654bced77ff18f8d58b99c553446663e986a515cbffae0753"
+    },
+    "cold-bios-build-evidence/source-after.json": {
+      "bytes": 1148236,
+      "sha256": "7351d6af9d7883a4fe6057eb769d4b1613ce662378388cc3f9dd51a898728b92"
+    },
+    "cold-bios-build-evidence/source-before.json": {
+      "bytes": 1148236,
+      "sha256": "7351d6af9d7883a4fe6057eb769d4b1613ce662378388cc3f9dd51a898728b92"
+    },
+    "cold-bios-build-evidence/static-admission.exit.json": {
+      "bytes": 798,
+      "sha256": "ab2f991ea9f99480e1802010f3903ddabce7eaa514be71bff7def339e33dd06d"
+    },
+    "cold-bios-build-evidence/static-admission.invocation.json": {
+      "bytes": 804,
+      "sha256": "70c0338a77adac8647d66e3b0d485440237209f7112d7319658ec731d4d7e66e"
+    },
+    "cold-bios-build-evidence/static-admission.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cold-bios-build-evidence/static-admission.stdout": {
+      "bytes": 983,
+      "sha256": "5bc543f3641b99ef7f868732c4fae0e20129130699bfc288685f98440e54afff"
+    },
+    "cold-bios-build-evidence/static-input.json": {
+      "bytes": 540,
+      "sha256": "042c3d04f4a1e30905d5fb3b1e5f809cf8515f722996082095922579b0d1b5a8"
+    },
+    "cold-bios-build-evidence/upstream-COPYING": {
+      "bytes": 26428,
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2"
+    },
+    "cold-bios-build-evidence/upstream-LICENSE": {
+      "bytes": 301,
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+    }
+  },
+  "selected": [
+    "cold-bios-build-context/build-helper.py",
+    "cold-bios-build-context/context.txt",
+    "cold-bios-build-context/parent.stderr",
+    "cold-bios-build-context/parent.stdout",
+    "cold-bios-build-context/workflow.yml",
+    "cold-bios-build-evidence/architecture.exit.json",
+    "cold-bios-build-evidence/architecture.invocation.json",
+    "cold-bios-build-evidence/architecture.stderr",
+    "cold-bios-build-evidence/architecture.stdout",
+    "cold-bios-build-evidence/artifact-inventory.json",
+    "cold-bios-build-evidence/build-context.json",
+    "cold-bios-build-evidence/build-static-preflight.json",
+    "cold-bios-build-evidence/compiler.exit.json",
+    "cold-bios-build-evidence/compiler.invocation.json",
+    "cold-bios-build-evidence/compiler.stderr",
+    "cold-bios-build-evidence/compiler.stdout",
+    "cold-bios-build-evidence/config.h",
+    "cold-bios-build-evidence/configure.exit.json",
+    "cold-bios-build-evidence/configure.invocation.json",
+    "cold-bios-build-evidence/configure.stderr",
+    "cold-bios-build-evidence/configure.stdout",
+    "cold-bios-build-evidence/final-status.json",
+    "cold-bios-build-evidence/identity-after.exit.json",
+    "cold-bios-build-evidence/identity-after.invocation.json",
+    "cold-bios-build-evidence/identity-after.stdout",
+    "cold-bios-build-evidence/identity-after.stderr",
+    "cold-bios-build-evidence/identity-before.exit.json",
+    "cold-bios-build-evidence/identity-before.invocation.json",
+    "cold-bios-build-evidence/identity-before.stderr",
+    "cold-bios-build-evidence/identity-before.stdout",
+    "cold-bios-build-evidence/make.exit.json",
+    "cold-bios-build-evidence/make.invocation.json",
+    "cold-bios-build-evidence/make.stderr",
+    "cold-bios-build-evidence/make.stdout",
+    "cold-bios-build-evidence/nm.exit.json",
+    "cold-bios-build-evidence/nm.invocation.json",
+    "cold-bios-build-evidence/nm.stderr",
+    "cold-bios-build-evidence/nm.stdout",
+    "cold-bios-build-evidence/platform.exit.json",
+    "cold-bios-build-evidence/platform.invocation.json",
+    "cold-bios-build-evidence/platform.stderr",
+    "cold-bios-build-evidence/platform.stdout",
+    "cold-bios-build-evidence/prepare.exit.json",
+    "cold-bios-build-evidence/prepare.invocation.json",
+    "cold-bios-build-evidence/prepare.json",
+    "cold-bios-build-evidence/prepare.stderr",
+    "cold-bios-build-evidence/prepare.stdout",
+    "cold-bios-build-evidence/prepared-after-build.json",
+    "cold-bios-build-evidence/prepared-before-build.json",
+    "cold-bios-build-evidence/readelf.exit.json",
+    "cold-bios-build-evidence/readelf.invocation.json",
+    "cold-bios-build-evidence/readelf.stderr",
+    "cold-bios-build-evidence/readelf.stdout",
+    "cold-bios-build-evidence/source-after.json",
+    "cold-bios-build-evidence/source-before.json",
+    "cold-bios-build-evidence/static-admission.exit.json",
+    "cold-bios-build-evidence/static-admission.invocation.json",
+    "cold-bios-build-evidence/static-admission.stderr",
+    "cold-bios-build-evidence/static-admission.stdout",
+    "cold-bios-build-evidence/static-input.json",
+    "cold-bios-build-evidence/upstream-COPYING",
+    "cold-bios-build-evidence/upstream-LICENSE"
+  ],
+  "binaryAndSourceArchivesRetainedInsideZip": true
+}

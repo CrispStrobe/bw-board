@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {sourceIdentity} from './scripts/bochs-cpu3-native-cold-bios/identity.mjs';console.log(JSON.stringify(sourceIdentity()))"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 0.5171261439999739,
+  "streams": {
+    "stdout": {
+      "bytes": 13404,
+      "sha256": "3521193c183d7ffeeeb3090bc396a5bf6e14249687c8ae566c3c1c2316fd4ba0"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "status": "READ_ONLY_AUDIT_SCHEMA_FAILURE_NOT_BUILD_FAILURE",
+  "reason": "--prepare H4 metadata additionally includes configure/build/embedding/status/requiredConfig; all historical common provenance fields required exact, added fields explicitly enumerated and actual commands independently checked.",
+  "nativeOrBuildRetries": 0
+}

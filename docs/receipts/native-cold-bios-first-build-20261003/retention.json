@@ -1,0 +1,33 @@
+{
+  "schema": "official-build-artifact-retention.v1",
+  "runId": 37102085724,
+  "head": "a6fae61a549d595c88a324f50589d92497040c07",
+  "event": "pull_request",
+  "attempt": 1,
+  "jobId": 111143460894,
+  "artifactId": 11265997873,
+  "artifactUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37102085724/artifacts/11265997873",
+  "officialApiMetadata": "review/artifacts.json",
+  "zip": {
+    "path": "/tmp/native-cold-bios-first-build-publication-20261003/official-artifact.zip",
+    "bytes": 7396223,
+    "sha256": "315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9"
+  },
+  "members": {
+    "cold-bios-build-evidence/bw_direct.node": {
+      "bytes": 2069552,
+      "sha256": "4b372f2d0e7b677c56e168a0da791c1c0aeaae391eb6a103507e383540281907"
+    },
+    "cold-bios-build-evidence/frozen-source.tar.gz": {
+      "bytes": 595364,
+      "sha256": "f37f0ebad3e69a45ef72ef94db3f8c81a0346f9c1bf34d6762854c4da33e4072"
+    },
+    "cold-bios-build-evidence/prepared-source.tar.gz": {
+      "bytes": 5329926,
+      "sha256": "b8ca7259746434b6e67af71b96e5dc1d21159782b89eaf287c3ace425139097f"
+    }
+  },
+  "policy": "One official ZIP retained externally; no DSO or source TAR bytes vendored or locally extracted. All ZIP member hashes and sizes retained; small selected metadata/logs archived losslessly.",
+  "officialArtifactExpiresAt": "2026-10-17T06:10:22Z",
+  "externalCanonicalZipRetained": true
+}
