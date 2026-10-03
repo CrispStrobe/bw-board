@@ -1,3 +1,22 @@
+2026-10-03 Whole-advance transient work budget — CLAIM, Codex bwcx `/root`.
+Isolated wt-board-adp-source-audit-20261003, branch
+lane/transient-whole-advance-budget-20261003, exact base
+744dcb8a (full identity from git rev-parse in the claim commit parent).
+Four-path envelope: this entry; src/board.js; new
+test/transient-whole-advance-budget.test.mjs; new
+spec-updates/transient-whole-advance-budget.md. Add an explicit one-shot
+advanceToBounded API for fresh zero-time captures; charge actual MNA solves,
+adaptive attempts and integrator entries before executing work across all
+device sub-intervals. Hard ceilings cannot exceed20000 attempts/60001 solves/
+200 integrator entries. Return copy-safe actual receipt, throw named budget
+failure and invalidate prior/partial/fresh analog observations; never fabricate
+completion or retry a partially advanced capture. Default advanceTo and all
+numerical/profile/model/tolerance contracts unchanged. Prove independent hard
+stops for all three counters, timed ADP multiple intervals, bounded/default
+bit-exact results, ordinary error identity, malformed/reentrant requests and
+load-bearing guard/refusal mutants. No CPU/other model/CUI/Lite/pin/package/
+workflow/deployment changes. CLI admission stays held until engine lands.
+
 2026-10-03 ADP7118 source/acquisition precision proof — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch
 lane/adp7118-source-acquisition-audit-20261003, exact base
