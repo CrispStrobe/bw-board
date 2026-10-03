@@ -1,0 +1,26 @@
+{
+  "schema": "bw.cold-performance.paired-binding.v1",
+  "status": "PENDING_SUCCESSFUL_CAPTURE_WORKER_QUALIFICATION_AND_ROOT_REVIEW",
+  "protocol": {"warmupPairs": 2, "measuredPairs": 7, "alternating": true, "firstBaseline": true},
+  "criteria": {"primaryMetric": "executionProcessCpuSeconds", "meanReductionAtLeast": 0.10, "allSevenCandidateFaster": true},
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "compiledRoot": null,
+  "compiledFiles": null,
+  "targetQ": null,
+  "targetN": null,
+  "configuredClockHz": 6000000,
+  "functionalCyclesPerQ": 6,
+  "capture": {"path": null, "sha256": null},
+  "independentAudit": {"path": null, "sha256": null},
+  "armQualificationAudit": {"path": null, "sha256": null},
+  "node": {"path": null, "version": "v22.23.3", "sha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"},
+  "workers": null,
+  "nativeInput": null,
+  "pinnedFiles": null,
+  "bounds": {"cpuSeconds": 60, "wallSeconds": 120, "heapMiB": 128, "fileBytes": 16777216, "coreBytes": 0, "niceIncrement": 10},
+  "draftWorkerProvenance": {
+    "native": "41c00ddb383d8aacf7bf4288472f80857eaac172",
+    "plainJs": "d69ea6ff720c1bfad70bc8a8f209b2ca2ba994ef",
+    "status": "Historical source-only drafts, both own locks pending; not executable bindings"
+  }
+}
