@@ -1,0 +1,1290 @@
+{
+  "source": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94",
+  "corrected": "1d7023e9813d8a574301b42e0447a02e383032e0",
+  "runs": [
+    {
+      "id": 37111247913,
+      "run": {
+        "conclusion": "failure",
+        "headSha": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94",
+        "jobs": [
+          {
+            "completedAt": "2026-10-03T08:55:48Z",
+            "conclusion": "success",
+            "databaseId": 111169433690,
+            "name": "corpus",
+            "startedAt": "2026-10-03T08:55:25Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:55:27Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:55:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:31Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:55:27Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:32Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 3,
+                "startedAt": "2026-10-03T08:55:31Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:33Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 4,
+                "startedAt": "2026-10-03T08:55:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:34Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 5,
+                "startedAt": "2026-10-03T08:55:33Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:34Z",
+                "conclusion": "success",
+                "name": "The corpus is actually here",
+                "number": 6,
+                "startedAt": "2026-10-03T08:55:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:35Z",
+                "conclusion": "success",
+                "name": "The harness can tell the verdicts apart",
+                "number": 7,
+                "startedAt": "2026-10-03T08:55:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:45Z",
+                "conclusion": "success",
+                "name": "525 programs, assembled and run",
+                "number": 8,
+                "startedAt": "2026-10-03T08:55:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:45Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 14,
+                "startedAt": "2026-10-03T08:55:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:46Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 15,
+                "startedAt": "2026-10-03T08:55:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:46Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-03T08:55:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:46Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-03T08:55:46Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111247913/job/111169433690"
+          },
+          {
+            "completedAt": "2026-10-03T09:04:50Z",
+            "conclusion": "failure",
+            "databaseId": 111169433736,
+            "name": "test",
+            "startedAt": "2026-10-03T08:55:02Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:55:05Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:55:04Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:09Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:55:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:09Z",
+                "conclusion": "success",
+                "name": "Fetch exact compiled source of fixed PIC IMR profile",
+                "number": 3,
+                "startedAt": "2026-10-03T08:55:09Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:10Z",
+                "conclusion": "success",
+                "name": "Fetch fixed native dispatch baseline for source reconstruction controls",
+                "number": 4,
+                "startedAt": "2026-10-03T08:55:09Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:10Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of dated FreeDOS evidence",
+                "number": 5,
+                "startedAt": "2026-10-03T08:55:10Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:11Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of Win16 I/O boundary oracle",
+                "number": 6,
+                "startedAt": "2026-10-03T08:55:10Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:11Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of ES-cache output witness",
+                "number": 7,
+                "startedAt": "2026-10-03T08:55:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:12Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native cold-reset capture",
+                "number": 8,
+                "startedAt": "2026-10-03T08:55:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:12Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript cold-reset oracle",
+                "number": 9,
+                "startedAt": "2026-10-03T08:55:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:13Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native RAM coherence test capture",
+                "number": 10,
+                "startedAt": "2026-10-03T08:55:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:13Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript RAM coherence oracle",
+                "number": 11,
+                "startedAt": "2026-10-03T08:55:13Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:13Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript REP PF PIT oracle",
+                "number": 12,
+                "startedAt": "2026-10-03T08:55:13Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:14Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native REP PF PIT test capture",
+                "number": 13,
+                "startedAt": "2026-10-03T08:55:13Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:14Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript combined paging RAM oracle",
+                "number": 14,
+                "startedAt": "2026-10-03T08:55:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:15Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native combined paging RAM test capture",
+                "number": 15,
+                "startedAt": "2026-10-03T08:55:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:16Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-03T08:55:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:16Z",
+                "conclusion": "success",
+                "name": "Mark the emulator build as CommonJS",
+                "number": 17,
+                "startedAt": "2026-10-03T08:55:16Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:17Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 18,
+                "startedAt": "2026-10-03T08:55:16Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:17Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 19,
+                "startedAt": "2026-10-03T08:55:17Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:18Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 20,
+                "startedAt": "2026-10-03T08:55:17Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:28Z",
+                "conclusion": "success",
+                "name": "Install nasm and ngspice (the differential oracles)",
+                "number": 21,
+                "startedAt": "2026-10-03T08:55:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:29Z",
+                "conclusion": "success",
+                "name": "The oracle is actually present",
+                "number": 22,
+                "startedAt": "2026-10-03T08:55:28Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:46Z",
+                "conclusion": "failure",
+                "name": "Test",
+                "number": 23,
+                "startedAt": "2026-10-03T08:55:29Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:46Z",
+                "conclusion": "skipped",
+                "name": "Which oracles are present",
+                "number": 24,
+                "startedAt": "2026-10-03T09:04:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:46Z",
+                "conclusion": "skipped",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 45,
+                "startedAt": "2026-10-03T09:04:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:46Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 46,
+                "startedAt": "2026-10-03T09:04:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:46Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 47,
+                "startedAt": "2026-10-03T09:04:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:47Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 48,
+                "startedAt": "2026-10-03T09:04:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:04:47Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 49,
+                "startedAt": "2026-10-03T09:04:47Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111247913/job/111169433736"
+          },
+          {
+            "completedAt": "2026-10-03T08:56:34Z",
+            "conclusion": "success",
+            "databaseId": 111169433784,
+            "name": "vectors",
+            "startedAt": "2026-10-03T08:55:50Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:55:51Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:55:51Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:56Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:55:51Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:59Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 3,
+                "startedAt": "2026-10-03T08:55:56Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:06Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 4,
+                "startedAt": "2026-10-03T08:55:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:07Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 5,
+                "startedAt": "2026-10-03T08:56:06Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:08Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 6,
+                "startedAt": "2026-10-03T08:56:07Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:08Z",
+                "conclusion": "success",
+                "name": "The vectors are actually here",
+                "number": 7,
+                "startedAt": "2026-10-03T08:56:08Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:08Z",
+                "conclusion": "success",
+                "name": "MOO reader agrees with the JSON encoding",
+                "number": 8,
+                "startedAt": "2026-10-03T08:56:08Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:12Z",
+                "conclusion": "success",
+                "name": "8086 core — all 646,000 vectors",
+                "number": 9,
+                "startedAt": "2026-10-03T08:56:08Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:26Z",
+                "conclusion": "success",
+                "name": "FAST 286 real-mode — 200 vectors from every opcode file",
+                "number": 10,
+                "startedAt": "2026-10-03T08:56:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:26Z",
+                "conclusion": "success",
+                "name": "Retain FAST 286 sample evidence",
+                "number": 11,
+                "startedAt": "2026-10-03T08:56:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:32Z",
+                "conclusion": "success",
+                "name": "8086 disassembler — all 646,000, on text and length",
+                "number": 12,
+                "startedAt": "2026-10-03T08:56:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:32Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 21,
+                "startedAt": "2026-10-03T08:56:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:32Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 22,
+                "startedAt": "2026-10-03T08:56:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:32Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 23,
+                "startedAt": "2026-10-03T08:56:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:32Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 24,
+                "startedAt": "2026-10-03T08:56:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:32Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 25,
+                "startedAt": "2026-10-03T08:56:32Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111247913/job/111169433784"
+          },
+          {
+            "completedAt": "2026-10-03T08:56:23Z",
+            "conclusion": "success",
+            "databaseId": 111169433804,
+            "name": "vectors186",
+            "startedAt": "2026-10-03T08:55:52Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:55:53Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:55:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:56Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:55:53Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:58Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 3,
+                "startedAt": "2026-10-03T08:55:56Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:55:59Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 4,
+                "startedAt": "2026-10-03T08:55:58Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:00Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 5,
+                "startedAt": "2026-10-03T08:55:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:00Z",
+                "conclusion": "success",
+                "name": "The v20 vectors are actually here",
+                "number": 6,
+                "startedAt": "2026-10-03T08:56:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:11Z",
+                "conclusion": "success",
+                "name": "80186 core — the fifteen added opcodes",
+                "number": 7,
+                "startedAt": "2026-10-03T08:56:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:21Z",
+                "conclusion": "success",
+                "name": "80186 disassembler — on text and length",
+                "number": 8,
+                "startedAt": "2026-10-03T08:56:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:21Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 14,
+                "startedAt": "2026-10-03T08:56:21Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:22Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 15,
+                "startedAt": "2026-10-03T08:56:21Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:22Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-03T08:56:22Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:22Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-03T08:56:22Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111247913/job/111169433804"
+          },
+          {
+            "completedAt": "2026-10-03T08:54:19Z",
+            "conclusion": "skipped",
+            "databaseId": 111169434941,
+            "name": "vectors-full",
+            "startedAt": "2026-10-03T08:54:19Z",
+            "status": "completed",
+            "steps": [],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111247913/job/111169434941"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111247913"
+      },
+      "failedStepLog": "initial-ci-37111247913-failed-step-log.json",
+      "failures": 1
+    },
+    {
+      "id": 37111250672,
+      "run": {
+        "conclusion": "failure",
+        "headSha": "68a70a71cfc71ea434eb38765e90ae6e8b47ca94",
+        "jobs": [
+          {
+            "completedAt": "2026-10-03T08:56:40Z",
+            "conclusion": "success",
+            "databaseId": 111169441992,
+            "name": "vectors186",
+            "startedAt": "2026-10-03T08:56:05Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:56:06Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:56:06Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:10Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:56:06Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:13Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 3,
+                "startedAt": "2026-10-03T08:56:10Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:13Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 4,
+                "startedAt": "2026-10-03T08:56:13Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:15Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 5,
+                "startedAt": "2026-10-03T08:56:13Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:15Z",
+                "conclusion": "success",
+                "name": "The v20 vectors are actually here",
+                "number": 6,
+                "startedAt": "2026-10-03T08:56:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:26Z",
+                "conclusion": "success",
+                "name": "80186 core — the fifteen added opcodes",
+                "number": 7,
+                "startedAt": "2026-10-03T08:56:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:38Z",
+                "conclusion": "success",
+                "name": "80186 disassembler — on text and length",
+                "number": 8,
+                "startedAt": "2026-10-03T08:56:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:38Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 14,
+                "startedAt": "2026-10-03T08:56:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:38Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 15,
+                "startedAt": "2026-10-03T08:56:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:38Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-03T08:56:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:38Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-03T08:56:38Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111250672/job/111169441992"
+          },
+          {
+            "completedAt": "2026-10-03T08:55:00Z",
+            "conclusion": "success",
+            "databaseId": 111169442043,
+            "name": "corpus",
+            "startedAt": "2026-10-03T08:54:37Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:54:39Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:54:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:43Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:54:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:44Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 3,
+                "startedAt": "2026-10-03T08:54:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:44Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 4,
+                "startedAt": "2026-10-03T08:54:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:45Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 5,
+                "startedAt": "2026-10-03T08:54:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:45Z",
+                "conclusion": "success",
+                "name": "The corpus is actually here",
+                "number": 6,
+                "startedAt": "2026-10-03T08:54:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:46Z",
+                "conclusion": "success",
+                "name": "The harness can tell the verdicts apart",
+                "number": 7,
+                "startedAt": "2026-10-03T08:54:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:57Z",
+                "conclusion": "success",
+                "name": "525 programs, assembled and run",
+                "number": 8,
+                "startedAt": "2026-10-03T08:54:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:57Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 14,
+                "startedAt": "2026-10-03T08:54:57Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:57Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 15,
+                "startedAt": "2026-10-03T08:54:57Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:57Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-03T08:54:57Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:54:57Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-03T08:54:57Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111250672/job/111169442043"
+          },
+          {
+            "completedAt": "2026-10-03T09:06:40Z",
+            "conclusion": "failure",
+            "databaseId": 111169442057,
+            "name": "test",
+            "startedAt": "2026-10-03T08:56:34Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:56:35Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:56:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:39Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:56:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:39Z",
+                "conclusion": "success",
+                "name": "Fetch exact compiled source of fixed PIC IMR profile",
+                "number": 3,
+                "startedAt": "2026-10-03T08:56:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:39Z",
+                "conclusion": "success",
+                "name": "Fetch fixed native dispatch baseline for source reconstruction controls",
+                "number": 4,
+                "startedAt": "2026-10-03T08:56:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:40Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of dated FreeDOS evidence",
+                "number": 5,
+                "startedAt": "2026-10-03T08:56:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:40Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of Win16 I/O boundary oracle",
+                "number": 6,
+                "startedAt": "2026-10-03T08:56:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:40Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of ES-cache output witness",
+                "number": 7,
+                "startedAt": "2026-10-03T08:56:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:41Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native cold-reset capture",
+                "number": 8,
+                "startedAt": "2026-10-03T08:56:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:41Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript cold-reset oracle",
+                "number": 9,
+                "startedAt": "2026-10-03T08:56:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:41Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native RAM coherence test capture",
+                "number": 10,
+                "startedAt": "2026-10-03T08:56:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:41Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript RAM coherence oracle",
+                "number": 11,
+                "startedAt": "2026-10-03T08:56:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:42Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript REP PF PIT oracle",
+                "number": 12,
+                "startedAt": "2026-10-03T08:56:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:42Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native REP PF PIT test capture",
+                "number": 13,
+                "startedAt": "2026-10-03T08:56:42Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:42Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of published JavaScript combined paging RAM oracle",
+                "number": 14,
+                "startedAt": "2026-10-03T08:56:42Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:43Z",
+                "conclusion": "success",
+                "name": "Fetch exact source revision of native combined paging RAM test capture",
+                "number": 15,
+                "startedAt": "2026-10-03T08:56:42Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:43Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-03T08:56:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:43Z",
+                "conclusion": "success",
+                "name": "Mark the emulator build as CommonJS",
+                "number": 17,
+                "startedAt": "2026-10-03T08:56:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:44Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 18,
+                "startedAt": "2026-10-03T08:56:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:47Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 19,
+                "startedAt": "2026-10-03T08:56:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:49Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 20,
+                "startedAt": "2026-10-03T08:56:47Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:04Z",
+                "conclusion": "success",
+                "name": "Install nasm and ngspice (the differential oracles)",
+                "number": 21,
+                "startedAt": "2026-10-03T08:56:49Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:05Z",
+                "conclusion": "success",
+                "name": "The oracle is actually present",
+                "number": 22,
+                "startedAt": "2026-10-03T08:57:04Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:38Z",
+                "conclusion": "failure",
+                "name": "Test",
+                "number": 23,
+                "startedAt": "2026-10-03T08:57:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:38Z",
+                "conclusion": "skipped",
+                "name": "Which oracles are present",
+                "number": 24,
+                "startedAt": "2026-10-03T09:06:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:38Z",
+                "conclusion": "skipped",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 45,
+                "startedAt": "2026-10-03T09:06:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:38Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 46,
+                "startedAt": "2026-10-03T09:06:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:39Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 47,
+                "startedAt": "2026-10-03T09:06:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:39Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 48,
+                "startedAt": "2026-10-03T09:06:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T09:06:39Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 49,
+                "startedAt": "2026-10-03T09:06:39Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111250672/job/111169442057"
+          },
+          {
+            "completedAt": "2026-10-03T08:57:20Z",
+            "conclusion": "success",
+            "databaseId": 111169442079,
+            "name": "vectors",
+            "startedAt": "2026-10-03T08:56:36Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-03T08:56:37Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-03T08:56:36Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:41Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-03T08:56:37Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:44Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 3,
+                "startedAt": "2026-10-03T08:56:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:50Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 4,
+                "startedAt": "2026-10-03T08:56:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:51Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 5,
+                "startedAt": "2026-10-03T08:56:50Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:52Z",
+                "conclusion": "success",
+                "name": "Install",
+                "number": 6,
+                "startedAt": "2026-10-03T08:56:51Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:52Z",
+                "conclusion": "success",
+                "name": "The vectors are actually here",
+                "number": 7,
+                "startedAt": "2026-10-03T08:56:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:52Z",
+                "conclusion": "success",
+                "name": "MOO reader agrees with the JSON encoding",
+                "number": 8,
+                "startedAt": "2026-10-03T08:56:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:56:58Z",
+                "conclusion": "success",
+                "name": "8086 core — all 646,000 vectors",
+                "number": 9,
+                "startedAt": "2026-10-03T08:56:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:11Z",
+                "conclusion": "success",
+                "name": "FAST 286 real-mode — 200 vectors from every opcode file",
+                "number": 10,
+                "startedAt": "2026-10-03T08:56:58Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:12Z",
+                "conclusion": "success",
+                "name": "Retain FAST 286 sample evidence",
+                "number": 11,
+                "startedAt": "2026-10-03T08:57:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:17Z",
+                "conclusion": "success",
+                "name": "8086 disassembler — all 646,000, on text and length",
+                "number": 12,
+                "startedAt": "2026-10-03T08:57:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:18Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 21,
+                "startedAt": "2026-10-03T08:57:17Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:18Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 22,
+                "startedAt": "2026-10-03T08:57:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:18Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 23,
+                "startedAt": "2026-10-03T08:57:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:18Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 24,
+                "startedAt": "2026-10-03T08:57:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-03T08:57:18Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 25,
+                "startedAt": "2026-10-03T08:57:18Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111250672/job/111169442079"
+          },
+          {
+            "completedAt": "2026-10-03T08:54:22Z",
+            "conclusion": "skipped",
+            "databaseId": 111169442580,
+            "name": "vectors-full",
+            "startedAt": "2026-10-03T08:54:23Z",
+            "status": "completed",
+            "steps": [],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111250672/job/111169442580"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37111250672"
+      },
+      "failedStepLog": "initial-ci-37111250672-failed-step-log.json",
+      "failures": 1
+    }
+  ],
+  "changed": [
+    "scripts/oracle-census.mjs",
+    "test/window-profile-scope.test.mjs"
+  ],
+  "unchanged": [
+    {
+      "path": ".github/workflows/labwired-window-profile.yml",
+      "sha256": "1fc504e33fe1cb0f32eb83aa0347926cc8f2e199066561d536d6185a8f879d8f"
+    },
+    {
+      "path": "scripts/lib/window-cpu-profiler.mjs",
+      "sha256": "43c61a4037f7acc8b9f94573ecbab8611839a648884fe6b9af4afe0a657ed288"
+    },
+    {
+      "path": "scripts/profile-labwired-f0-windows.mjs",
+      "sha256": "fa516e9d55f25703f3662bc1addc089efef7a097fcf3516ad9d8b46199141c87"
+    },
+    {
+      "path": "test/labwired-f0-gpio-window-profile.test.mjs",
+      "sha256": "8ac18faf988b758bd34a72fbe9c2ea7b740393a5b2ffada67ba4ca10e1679b35"
+    }
+  ],
+  "correctionDiff": "diff --git a/scripts/oracle-census.mjs b/scripts/oracle-census.mjs\nindex 0d783090..609041d3 100644\n--- a/scripts/oracle-census.mjs\n+++ b/scripts/oracle-census.mjs\n@@ -413,7 +413,8 @@ export const INPUTS = [\n         gates: ['test/labwired-adapter.test.mjs', 'test/labwired-roundtrip.test.mjs',\n             'test/pad-drive-parity.test.mjs', 'test/labwired-firmware-only.test.mjs',\n             'test/labwired-microbit-matrix.test.mjs', 'test/labwired-microbit-motion.test.mjs',\n-            'test/labwired-f0-timing.test.mjs', 'test/labwired-f0-gpio-profile.test.mjs'],\n+            'test/labwired-f0-timing.test.mjs', 'test/labwired-f0-gpio-profile.test.mjs',\n+            'test/labwired-f0-gpio-window-profile.test.mjs'],\n         // Motion additionally requires arm-none-eabi-gcc and an engine with\n         // LSM303AGR. labwired-wasm.yml's opt-in motion job installs the compiler\n         // and makes absent artifacts/tools, skipped tests and sub-1x windows fail.\n@@ -423,11 +424,30 @@ export const INPUTS = [\n         // usability nor timing qualification. These are absent from ordinary CI.\n         // The GPIO-only diagnostic has the same compiler/artifact requirements;\n         // its optional hosted job requires actual evidence with zero skips.\n+        // Window sampling additionally requires an exclusive output directory;\n+        // the separate capture-output row describes activation, not qualification.\n         obtain: 'point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node); '\n             + 'for active F0 timing also install arm-none-eabi-gcc and arm-none-eabi-objcopy',\n         ciAvailable: false,\n         ci: 'no',\n     },\n+    {\n+        id: 'labwired-warmed-window-profile', kind: 'fixture',\n+        what: 'Opt-in diagnostic capture of five warmed GPIO cycle windows using '\n+            + 'Node Inspector. Ordinary timing is a separate unchanged process. '\n+            + 'Requires verified LABWIRED_WASM NODEJS bytes, the ARM guest compiler '\n+            + 'and LABWIRED_REQUIRE_F0_RTX=1; profiles never waive the ordinary 1x floor.',\n+        env: 'LABWIRED_WINDOW_PROFILE_OUT', envRole: 'capture-output', paths: [],\n+        gates: ['test/labwired-f0-gpio-window-profile.test.mjs'],\n+        obtain: 'Use scripts/profile-labwired-f0-windows.mjs with a new exclusive --out '\n+            + 'directory and --wasm pointing at the original verified NODEJS artifact. '\n+            + 'The wrapper supplies this output variable only to its diagnostic child; '\n+            + 'activation does not authenticate a profile or establish performance.',\n+        ciAvailable: false,\n+        ci: 'no — ordinary CI intentionally skips artifact-dependent capture. '\n+            + 'labwired-window-profile.yml runs two actual repeats each on pinned '\n+            + 'Node20.20.2/22.23.3, retaining raw profiles and floor failures.',\n+    },\n     {\n         id: 'labwired-cli', kind: 'oracle',\n         what: 'The labwired binary — the STM32F030 differential oracle.',\ndiff --git a/test/window-profile-scope.test.mjs b/test/window-profile-scope.test.mjs\nindex 4de84aa1..7e8829f1 100644\n--- a/test/window-profile-scope.test.mjs\n+++ b/test/window-profile-scope.test.mjs\n@@ -1,6 +1,7 @@\n import {test} from 'node:test';\n import assert from 'node:assert/strict';\n import {readFileSync} from 'node:fs';\n+import {INPUTS} from '../scripts/oracle-census.mjs';\n const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');\n const ordinary = read('test/labwired-f0-gpio-profile.test.mjs');\n const diagnostic = read('test/labwired-f0-gpio-window-profile.test.mjs');\n@@ -44,3 +45,14 @@ test('workflow freezes runtimes/repeats, preserves failed originals and cannot p\n     assert(script.indexOf('Bind every raw profile before any attribution') < script.indexOf('summarizeCpuProfile(raw)'));\n     assert(script.includes('receipt.error = error.message'));\n });\n+test('artifact and opt-in capture absence are registered, not hidden as an untriaged skip', () => {\n+    const file = 'test/labwired-f0-gpio-window-profile.test.mjs';\n+    assert(INPUTS.find(row => row.id === 'labwired-wasm').gates.includes(file));\n+    const row = INPUTS.find(row => row.id === 'labwired-warmed-window-profile');\n+    assert.equal(row.env, 'LABWIRED_WINDOW_PROFILE_OUT');\n+    assert.equal(row.envRole, 'capture-output');\n+    assert.deepEqual(row.gates, [file]);\n+    assert.equal(row.ciAvailable, false);\n+    assert(row.what.includes('separate unchanged process'));\n+    assert(row.obtain.includes('activation does not authenticate'));\n+});\n",
+  "ratchetUnchanged": true,
+  "debtListUnchanged": true,
+  "initialProfileRun": 37111247979,
+  "initialActualCapturesPassed": 4,
+  "initialProfiles": 20,
+  "engineOrTimingHarnessChanged": false,
+  "mergeAttempted": false
+}

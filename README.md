@@ -360,6 +360,23 @@ app pins and physical acknowledgements are unchanged. These measurements do
 not prove a compiler-layout or Node-version cause. See
 [all outlined C3 admission results and original receipts](docs/receipts/2026-10-03-wasm-c3-word-hook-thunk/README.md).
 
+Separate **warmed-window GPIO profiling** is now available without changing
+ordinary timing or the engine. Eight hosted production-artifact captures retain
+**40 raw profiles and 80 ordinary/profiled timing windows**, with matching
+guest observations. Ordinary GPIO medians span **0.518398×–1.300640×**;
+seven of eight captures fail the unchanged all-window ≥1× floor. Sampled RTx
+is separate and never substitutes for ordinary qualification. Window-only self
+attribution highlights batch dispatch (**22.30–31.75%**), cached runs
+(**16.39–21.55%**) and cold GPIO servicing (**5.70–15.36%**), not removable
+cost or a predicted speedup. The `input_channels` label is not evidence of
+expensive metadata work: its source returns an empty borrowed slice, while
+sampled callers are GPIO edge servicing; shared code/name attribution is only
+an inference. Initial missing-census failures, their registration-only fix and
+both complete capture sets are retained. No engine promotion, app pin or
+physical acknowledgement changed. Different hosted CPUs do not establish
+Node-version causality. See
+[warmed-window tools, all results and original profiles](docs/receipts/2026-10-03-wasm-warmed-window-profiles/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
