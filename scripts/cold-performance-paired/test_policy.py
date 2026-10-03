@@ -45,7 +45,7 @@ class PureControls(unittest.TestCase):
         for primary_failure in (False,True):
             with tempfile.TemporaryDirectory() as directory:
                 initial={'parent':{'revision':'a'*40,'hashes':{}}};request={'comparison':'native-oneQ-v-batched','output':directory+'/result','parentRevision':'a'*40,'parentSourceSha256':policy.identity_sha('a'*40,{})}
-                binding={'compiledRoot':'/never-compiled','workers':{}}
+                binding={'compiledRoot':'/never-compiled','workers':{},'capture':{'path':'/manufactured-capture'}}
                 with unittest.mock.patch.object(parent,'read_json',side_effect=[request,binding,{}]),unittest.mock.patch.object(parent,'validate_ready_binding',return_value=binding),unittest.mock.patch.object(parent,'pair_schedule',return_value=[]),unittest.mock.patch.object(parent,'host_context',return_value={}),unittest.mock.patch.object(parent,'fingerprint',return_value=pin),unittest.mock.patch.object(parent,'immutable_snapshot',side_effect=[initial,OSError('manufactured final auth unavailable')]),unittest.mock.patch.object(parent,'validate_prerequisites',side_effect=RuntimeError('manufactured primary failure') if primary_failure else None),unittest.mock.patch.object(parent,'summarize_pairs',return_value={'quantitativeGatePass':True}),unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must never spawn')):
                     with self.assertRaises((ValueError,RuntimeError)):parent.main(Path(directory)/'request.json')
                 retained=json.loads(Path(directory,'result','result.json').read_text());self.assertEqual(retained['status'],'FAIL');self.assertIn('finalizationError',retained);self.assertIn('finalAuthenticationUnavailable',retained)
