@@ -1,0 +1,15 @@
+{
+  "addon": "/home/runner/work/_temp/cold-bios-build-prepared/bochs/bw_direct.node",
+  "sha256": "40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0",
+  "preparedManifest": "/home/runner/work/_temp/cold-bios-build-evidence/prepare.json",
+  "preparedManifestSha256": "8b43eb0ef3573c239688d365b6e11be8ba3523a0553f0dd86ded5255a69adf1c",
+  "buildReceipt": "/home/runner/work/_temp/cold-bios-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "471c906511aa3b13367e5d50b58bc2df72ea58dbf37ade137457dd34e1d401af",
+  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication",
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+  "driverSourceSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+  "configuration": "/home/runner/work/_temp/cold-native-diagnostic/guest-source.bochsrc",
+  "output": "/home/runner/work/_temp/cold-native-diagnostic/guest",
+  "nativeTrace": false
+}
