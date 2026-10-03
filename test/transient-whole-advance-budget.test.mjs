@@ -159,3 +159,37 @@ test('an existing incomplete device backstop cannot become a completed bounded c
   assert.equal(b.transientAnalysisStatus().boundedAdvance.completed,false);
   assert.throws(()=>b.getScopeData(scope),/incomplete device\/transient work/);
 });
+
+function swallowedFailureOracle(){
+  const b=new BoardImpl();
+  b.setNetlist([{id:'V',kind:'vsource',params:{volts:5},terminals:['pos','neg']},
+    {id:'G',kind:'gnd',params:{},terminals:['gnd']},
+    {id:'R',kind:'resistor',params:{ohms:1000},terminals:['a','b']}],
+    [net('out',['V','pos'],['R','a']),net('zero',['V','neg'],['G','gnd'],['R','b'])]);
+  let caught=0,first;
+  b.onChange(()=>{
+    for(let i=0;i<3;i++)try{b.biasPointVoltages();}catch(error){first ||= error;caught++;}
+  });
+  assert.throws(()=>b.advanceToBounded(1000n,{...limits,maxSolves:1}),
+    error=>error===first&&error.code==='WHOLE_ADVANCE_BUDGET_EXCEEDED');
+  assert.equal(caught,2);
+  assert.equal(b.transientAnalysisStatus().boundedAdvance.completed,false);
+  assert.equal(b.transientAnalysisStatus().boundedAdvance.work.solves,1);
+  assert.throws(()=>b.meterVoltage('out','zero'),/work budget exceeded/);
+}
+test('a caught public listener budget refusal remains latched across the outer capture',()=>{
+  swallowedFailureOracle();
+});
+test('clearing a caught budget failure latch reds the public listener consequence',()=>{
+  const original=BoardImpl.prototype._chargeBoundedAdvanceWork;
+  try{
+    BoardImpl.prototype._chargeBoundedAdvanceWork=function(counter){
+      try{return original.call(this,counter);}catch(error){
+        if(this._boundedAdvanceContext)this._boundedAdvanceContext.failure=null;
+        throw error;
+      }
+    };
+    assert.throws(swallowedFailureOracle,{name:'AssertionError'});
+  }finally{BoardImpl.prototype._chargeBoundedAdvanceWork=original;}
+  swallowedFailureOracle();
+});

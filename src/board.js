@@ -1210,6 +1210,7 @@ export class BoardImpl {
     let failure = null;
     try {
       this.advanceTo(tNs);
+      if (context.failure) throw context.failure;
       if (this._deviceSubstepOverflow || this._transientAttemptOverflow) {
         throw new Error('advanceToBounded refuses incomplete device/transient work');
       }
@@ -1232,10 +1233,12 @@ export class BoardImpl {
   _chargeBoundedAdvanceWork(counter) {
     const context = this._boundedAdvanceContext;
     if (!context) return;
+    if (context.failure) throw context.failure;
     const key = `max${counter[0].toUpperCase()}${counter.slice(1)}`;
     if (context.work[counter] >= context.limits[key]) {
       const error = new Error(`whole-advance work budget exceeded: ${counter} limit ${context.limits[key]}`);
       error.code = 'WHOLE_ADVANCE_BUDGET_EXCEEDED';
+      context.failure = error;
       throw error;
     }
     context.work[counter]++;

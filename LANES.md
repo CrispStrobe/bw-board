@@ -24,6 +24,16 @@ solves charged too; getter budgets sampled once; existing incomplete-device
 backstop cannot certify completion. Final combined adaptive/profile/budget
 suite30/30 green, zero skips, including the safe-horizon boundary. One exact hosted CI/Harris
 set then guarded normal landing; no default-path numerical or model change.
+Forward audit found a public onChange listener could catch a budget refusal
+and retain a false completed receipt (one actual solve, two caught refusals).
+Failure now latches before throwing and the outer advance rethrows it; a public
+listener regression and latch-removal mutant prove the correction. Prior
+242386ce receipts do not qualify the replacement; cancel own old runs and
+qualify one fresh exact-head set. Default listener swallowing remains unchanged.
+Replacement focused12/12, zero skips; fifth executable mutant removes the
+failure latch and reds the same public listener caller. The new observation
+assertion uses meterVoltage (qualified acquisition), not raw nodeVoltage's
+cached endpoint, which does not itself promise capture qualification.
 
 2026-10-03 ADP7118 source/acquisition precision proof — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch
