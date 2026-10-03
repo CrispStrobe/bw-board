@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-three-arm.source-contract.v1",
-  "status": "ROOT_REVIEWED_THREE_ARM_SOURCE_READY",
+  "status": "PENDING_CORRECTED_NATIVE_WORKER_SOURCE_FREEZE",
   "guestEnabledByDefault": false,
   "order": [
     "plain-JS",

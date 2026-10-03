@@ -58,6 +58,26 @@ def words(n):
     for key,size in zip(('state','extra','segments','system','debug'),(20,20,90,30,6)):
         require(type(n[key]) is list and len(n[key])==size,'full166 shape');out.extend(integer(v,0,0xffffffff) for v in n[key])
     return out
+INSPECT_FIELDS={'state','extra','segments','system','debug','nativeTicks','successfulQuanta','mappingEpoch','boardA20','clockTransfers','callbacks','fallback','execution'}
+RESUME_FIELDS=INSPECT_FIELDS|{'activityState','reason','chargedNativeTicks','chargedQuanta','sliceBytes'}
+METADATA_COUNTER_FIELDS={'clockTransfers':{'transfers','commits','words'},'callbacks':{'physicalReads','physicalWrites','executePages','nativeTickCallbacks','quantumCallbacks'},'fallback':{'bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'},'execution':{'attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'}}
+def metadata_counter(value):
+    if type(value) is str:
+        require(value.isascii() and value.isdecimal() and (value=='0' or not value.startswith('0')) and len(value)<=16,'metadata counter lexical domain');value=int(value)
+    return integer(value,0,2**53-1)
+def validate_inspect_snapshot(n):
+    require(type(n) is dict and set(n)==INSPECT_FIELDS,'actual thirteen-field inspect schema');words(n);counter(n['nativeTicks']);counter(n['successfulQuanta']);require(n['mappingEpoch']==0 and n['boardA20']==1,'fixed inspect mapping/A20')
+    for name,keys in METADATA_COUNTER_FIELDS.items():
+        require(type(n[name]) is dict and set(n[name])==keys,'actual '+name+' counter fields')
+        for value in n[name].values():metadata_counter(value)
+    require(all(metadata_counter(v)==0 for v in n['fallback'].values()),'no inspect fallback');require(all(metadata_counter(n['execution'][k])==0 for k in ('faults','irqDeliveries','haltIdleCuts')),'no inspect fault/IRQ/HLT');return n
+def validate_resume_snapshot(n,max_n=600,max_q=300):
+    require(type(n) is dict and set(n)==RESUME_FIELDS,'actual eighteen-field resume schema');validate_inspect_snapshot({k:n[k] for k in INSPECT_FIELDS})
+    require(type(n['activityState']) is int and n['activityState']==0,'actual resume active state');require(type(n['reason']) is int and n['reason'] in (1,3,7),'budget/PIO/event resume only')
+    dn=integer(n['chargedNativeTicks'],0,max_n);dq=integer(n['chargedQuanta'],0,max_q);require(dn<=counter(n['nativeTicks']) and dq<=counter(n['successfulQuanta']) and (dn or dq or n['reason']==7),'bounded resume deltas and real zero-progress event')
+    require(type(n['sliceBytes']) is list and len(n['sliceBytes'])==160,'actual ABI4 slice length')
+    for byte in n['sliceBytes']:integer(byte,0,255)
+    return n
 def phase_metrics(timing):
     require(type(timing['cpuMicroseconds']) is dict and set(timing['cpuMicroseconds'])=={'user','system'},'execution process CPU fields')
     microseconds=sum(integer(v,0,10**15) for v in timing['cpuMicroseconds'].values());cpu=microseconds/1e6
@@ -88,7 +108,14 @@ def validate_worker_receipt(r,arm,expected_input,b,capture):
     else:
         require(r['schema']=='bw.cold-native-performance.worker.v1' and r['status']=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','native actual parity success');require(expected_input['mode']==('oneQ' if arm=='native-oneQ' else 'batched'),'closed native mode')
         n=r['finalNative'];require(words(n)==words(finalcut['native']),'entire raw terminal166 CPU');require(counter(n['nativeTicks'])==b['targetN'] and counter(n['successfulQuanta'])==b['targetQ'],'actual native N/Q independent')
-        require(n['activityState']==0 and n['mappingEpoch']==0 and n['boardA20']==1 and n['state'][13]==0xf000 and n['state'][8]==0xe16 and n['state'][10]==0x7ffffff0,'normal E16 reset-model scope')
+        # inspect() retains the thirteen common fields; only resume() returns
+        # activityState and charged deltas. Keep the actual final resume proof
+        # separate instead of synthesizing an activity field on inspect().
+        validate_inspect_snapshot(n)
+        last=validate_resume_snapshot(r['lastReturnedNative'],1 if arm=='native-oneQ' else 600,1 if arm=='native-oneQ' else 300)
+        require(counter(last['nativeTicks'])==b['targetN'] and counter(last['successfulQuanta'])==b['targetQ'],'final resume independent N/Q')
+        require(words(last)==words(n),'actual last resume and final inspect raw166 agreement')
+        require(n['mappingEpoch']==0 and n['boardA20']==1 and n['state'][13]==0xf000 and n['state'][8]==0xe16 and n['state'][10]==0x7ffffff0 and n['state'][9]&0x200==0,'normal E16 reset-model scope')
         require(set(n['fallback'])=={'bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'} and all(counter(v)==0 for v in n['fallback'].values()),'no fallback')
         require(set(n['execution'])=={'attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'},'actual execution counter fields');require(all(counter(n['execution'][k])==0 for k in ('faults','irqDeliveries','haltIdleCuts')),'no fault/IRQ/HLT')
         s=r['finalBoard'];require(s['state']['board']==capture['javascriptFinal']['board'] and s['ramSha256']==capture['javascriptFinal']['ramSha256'],'whole final board/rawRAM');require(s['state']['nativeTicks']==b['targetN'] and s['state']['successfulQuanta']==b['targetQ'] and s['state']['cold']['phase']=='complete','provider terminal totals/controller')
