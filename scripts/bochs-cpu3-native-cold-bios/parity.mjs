@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {bochsResetProfile} from './bochs-reference.mjs';
 export const parityPolicy=Object.freeze({
  compared:'Dynamic GPR/EIP/EFLAGS/CR0/CR2/CR3; selectors and represented segment base/limit/default32/presence; GDTR/IDTR; LDTR/TR selector/base/limit/presence and represented type; DR0..3/6/7; logical PC and represented activity state',
- nativeOnly:'Hidden cache valid/type/DPL/G/AVL, pending_event/event_mask and remaining hidden166 words retained in ordered native-word digest. Whole OFF/ON equality requires identical boundary protocol and separate audited captures.',
+ nativeOnly:'Cached selector index/TI/RPL and hidden cache valid/type/DPL/G/AVL, pending_event/event_mask and remaining hidden166 words retained in ordered native-word digest. Whole OFF/ON equality requires identical boundary protocol and separate audited captures.',
  javascriptOnly:'CR4, code/readable/writable semantic cache flags, shutdown and shadow fields retained at named cuts; no invented native field counterpart.',
  boardCoverage:'Scalar cycles/debt/deadline/A20 every return. Full actual chip/controller/PIC board at real due-flush, PIO and named cuts, plus final catchup; no synthetic masking or per-return full-board claim.',
  resetScope:'Private fixed Bochs CPU3 model literals installed once before first instruction; no after-step or RAM normalization. CR0 must stay 7ffffff0; later control-register write semantics are outside this profile.',
@@ -23,11 +23,12 @@ export function compareCpu(n,j){
  assert.equal(n.state[10],bochsResetProfile.cr0,'native CR0 scope');assert.equal(j.cr0,bochsResetProfile.cr0,'JS CR0 scope');
  assert.deepEqual(n.state.slice(16),[j.gdtr.base,j.gdtr.limit,j.idtr.base,j.idtr.limit]);
  assert.deepEqual(n.extra.slice(2,5),[j.es,j.fs,j.gs]);
- assert.deepEqual(n.extra.slice(5,8),[j.cs>>>3,(j.cs>>>2)&1,j.cs&3],'duplicated CS selector decomposition');
+ assert.deepEqual(n.extra.slice(5,8),n.segments.slice(17,20),'duplicated native CS cached selector fields');
  assert.deepEqual([n.extra[9],n.extra[13],n.extra[14],n.extra[16]],[Number(j.segmentCaches[1].present),j.segmentCaches[1].base>>>0,j.segmentCaches[1].limit>>>0,Number(j.segmentCaches[1].default32)],'duplicated represented CS cache');
  for(const [i,key]of ['es','cs','ss','ds','fs','gs'].entries()){
   const s=n.segments.slice(i*15,i*15+15),c=j.segmentCaches[i];assert.equal(s[0],i);assert.equal(s[1],j[key],key+' selector');
-  assert.deepEqual(s.slice(2,5),[j[key]>>>3,(j[key]>>>2)&1,j[key]&3],key+' selector decomposition');
+  // Bochs real/v8086 loads leave cached index/TI stale; these have no JS snapshot counterpart.
+  // Preserve all raw words and compare duplicated CS fields only within the native snapshot.
   assert.equal(s[10],c.base>>>0,key+' base');assert.equal(s[11],c.limit>>>0,key+' limit');assert.equal(s[13],Number(c.default32),key+' DB');assert.equal(s[6],Number(c.present),key+' present');
  }
  assert.equal((n.segments[25]+n.state[8])>>>0,j.pc,'logical PC');
