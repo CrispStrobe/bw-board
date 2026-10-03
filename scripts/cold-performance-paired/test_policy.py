@@ -24,11 +24,16 @@ def fixture(arm='native-batched'):
 class PureControls(unittest.TestCase):
     def test_pending_refuses_before_any_spawn(self):
         binding=json.loads((Path(__file__).parent/'binding.json').read_text())
+        binding['status']='PENDING_MANUFACTURED_CONTROL'
         with unittest.mock.patch.object(parent.subprocess,'Popen',side_effect=AssertionError('must never spawn')):
             with self.assertRaisesRegex(ValueError,'pending'):policy.validate_ready_binding(binding)
             with tempfile.TemporaryDirectory() as directory:
                 request=Path(directory)/'request.json';request.write_text(json.dumps({'comparison':'native-oneQ-v-batched','output':directory+'/never-created','parentRevision':'a'*40,'parentSourceSha256':'b'*64}))
-                with self.assertRaisesRegex(ValueError,'pending'):parent.main(request)
+                real_read=parent.read_json
+                def read(path,max_bytes=8<<20):
+                    return binding if Path(path)==parent.HERE/'binding.json' else real_read(path,max_bytes)
+                with unittest.mock.patch.object(parent,'read_json',side_effect=read):
+                    with self.assertRaisesRegex(ValueError,'pending'):parent.main(request)
                 self.assertFalse(Path(directory,'never-created').exists())
     def test_exact_separate_alternating_protocol(self):
         for name in policy.COMPARISONS:
