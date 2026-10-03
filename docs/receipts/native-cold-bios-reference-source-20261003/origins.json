@@ -1,0 +1,85 @@
+{
+  "scope": "Pure source controls only; full cold capture disabled. Initial EAX test was strengthened to uint32; unchanged r3 duplicate is retained, not new coverage. Relevant REP Q guard tests run after the source fix.",
+  "files": {
+    "initial/exit.json": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-20261003/exit.json",
+      "bytes": 5258,
+      "sha256": "3f3ff956868738171159e606e426b9347d56edfdd1e2038993288ff50b2d21e9"
+    },
+    "initial/invocation.json": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-20261003/invocation.json",
+      "bytes": 5481,
+      "sha256": "dad6e651b291bf097c5adf02872005fb0f91c98e0ffdfedd215b24b1d27c9bf7"
+    },
+    "initial/stderr": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-20261003/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "initial/stdout": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-20261003/stdout",
+      "bytes": 1859,
+      "sha256": "40c1f501dc7c531ddc0885b3e52e47a51d99bfe01cd1c605c00c66d65784861c"
+    },
+    "r2-uint32/exit.json": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r2-20261003/exit.json",
+      "bytes": 5258,
+      "sha256": "4150fc4910e2131c493c1de6688a0f4289c0488e744645d3fc50130bdc0210a0"
+    },
+    "r2-uint32/invocation.json": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r2-20261003/invocation.json",
+      "bytes": 5575,
+      "sha256": "4daf3df89585342111613f0ba9e14533124aacb2e3a18b70cb1773b0343efa16"
+    },
+    "r2-uint32/stderr": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r2-20261003/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "r2-uint32/stdout": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r2-20261003/stdout",
+      "bytes": 1858,
+      "sha256": "9a823162fe9605753ec0f5e65fb0a9f79444caa5df4152d967b001bd9ff7c325"
+    },
+    "redundant-unchanged-r3/exit.json": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r3-20261003/exit.json",
+      "bytes": 5258,
+      "sha256": "eb56c5fa0e08b02a770e2150b97501af8d1832ff705ec0866470b720799d05ba"
+    },
+    "redundant-unchanged-r3/invocation.json": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r3-20261003/invocation.json",
+      "bytes": 5562,
+      "sha256": "58f8aa324987c183a8fcc5e5f65602beeda516aabc22f42cf5f71bd80603edac"
+    },
+    "redundant-unchanged-r3/stderr": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r3-20261003/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "redundant-unchanged-r3/stdout": {
+      "path": "/tmp/native-cold-bios-reference-pure-controls-r3-20261003/stdout",
+      "bytes": 1857,
+      "sha256": "565ee235adeb49fc2d47a904b5272d2a9e9a4d666ef549af7b1a4edb5cef3bb1"
+    },
+    "rep-q-guard/exit.json": {
+      "path": "/tmp/native-cold-bios-reference-rep-q-controls-20261003/exit.json",
+      "bytes": 5258,
+      "sha256": "2764e7293935a7929a4f4f587e14af6b2b2b1764657e697c855a53dd4e59ce87"
+    },
+    "rep-q-guard/invocation.json": {
+      "path": "/tmp/native-cold-bios-reference-rep-q-controls-20261003/invocation.json",
+      "bytes": 5637,
+      "sha256": "0044c8d9f481a77b0688f527d8cc2564200c8dea96f980e8b3989f59e2606669"
+    },
+    "rep-q-guard/stderr": {
+      "path": "/tmp/native-cold-bios-reference-rep-q-controls-20261003/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "rep-q-guard/stdout": {
+      "path": "/tmp/native-cold-bios-reference-rep-q-controls-20261003/stdout",
+      "bytes": 553,
+      "sha256": "40eeedd1585c1649ff2f90c034fbbeccf6bd22f024efafc0e33ac8ebc2587ad4"
+    }
+  }
+}
