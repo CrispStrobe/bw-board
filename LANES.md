@@ -1,4 +1,4 @@
-2026-10-03 Finite bounded transient stream — CLAIM, Codex bwcx `/root`.
+2026-10-03 Finite bounded transient stream — DONE candidate, Codex bwcx `/root`.
 Isolated /tmp/bwcx-board-stream-bounded-20261003, branch
 lane/transient-bounded-stream-20261003, exact base
 a22c0f0e951ca4cbd1af9c3afaa26ed4595a67fc. Four-path envelope: this entry;
@@ -16,6 +16,18 @@ Read-only1.2ms timed fixture at10us gives120chunks/665attempts/1933solves/
 No solver/model/profile/tolerance, CPU, other source path, CUI/Lite/package/pin,
 workflow or deployment edits. Remotely merge claim before source changes;
 one final exact-head CI/Harris set then guarded normal landing. CLI stays held.
+Canonical claim6d4d39eb preceded source edits. New focused10/10 green:
+native timed120-chunk capture, same-partition bit-exact agreement, independent
+RC and ADP inrush120-point waveform/window mean at unchanged0.5uV/1uV bounds,
+simultaneous current/KCL, all three hard stops, observer cancellation/async
+refusal, latched caught reentrancy, malformed request and frozen final metadata.
+Five executable mutants red with prototype restoration: each counter bypass,
+caught failure latch removal and reset allowance per chunk. Prior adjacent
+profile/scope/batch surface44/44 green including two actual ngspice probe cases;
+final combined rerun and hosted exact-head qualification precede landing.
+Initial new oracle used nonexistent sampleOriginNs and buffer capacity rather
+than sample count; corrected to existing startTNs/count/paired storage, not
+production physics or tolerances. No CUI/Lite adoption or deployment claimed.
 
 2026-10-03 Whole-advance transient work budget — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch
