@@ -1,0 +1,101 @@
+pc_system.cc: In member function ‘void bx_pc_system_c::register_state()’:
+pc_system.cc:237:20: warning: ‘%u’ directive writing between 1 and 10 bytes into a region of size 4 [-Wformat-overflow=]
+  237 |     sprintf(name, "%u", i);
+      |                    ^~
+pc_system.cc:237:19: note: directive argument in the range [0, 4294967294]
+  237 |     sprintf(name, "%u", i);
+      |                   ^~~~
+In file included from /usr/include/stdio.h:980,
+                 from bochs.h:46,
+                 from pc_system.cc:23:
+In function ‘int sprintf(char*, const char*, ...)’,
+    inlined from ‘void bx_pc_system_c::register_state()’ at pc_system.cc:237:12:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:30:34: note: ‘__builtin___sprintf_chk’ output between 2 and 11 bytes into a destination of size 4
+   30 |   return __builtin___sprintf_chk (__s, __USE_FORTIFY_LEVEL - 1,
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   31 |                                   __glibc_objsize (__s), __fmt,
+      |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   32 |                                   __va_arg_pack ());
+      |                                   ~~~~~~~~~~~~~~~~~
+virt_timer.cc: In member function ‘void bx_virt_timer_c::register_state()’:
+virt_timer.cc:394:20: warning: ‘%u’ directive writing between 1 and 10 bytes into a region of size 4 [-Wformat-overflow=]
+  394 |     sprintf(name, "%u", i);
+      |                    ^~
+virt_timer.cc:394:19: note: directive argument in the range [0, 4294967294]
+  394 |     sprintf(name, "%u", i);
+      |                   ^~~~
+In file included from /usr/include/stdio.h:980,
+                 from ../bochs.h:46,
+                 from virt_timer.cc:60:
+In function ‘int sprintf(char*, const char*, ...)’,
+    inlined from ‘void bx_virt_timer_c::register_state()’ at virt_timer.cc:394:12:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:30:34: note: ‘__builtin___sprintf_chk’ output between 2 and 11 bytes into a destination of size 4
+   30 |   return __builtin___sprintf_chk (__s, __USE_FORTIFY_LEVEL - 1,
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   31 |                                   __glibc_objsize (__s), __fmt,
+      |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   32 |                                   __va_arg_pack ());
+      |                                   ~~~~~~~~~~~~~~~~~
+serial.cc: In static member function ‘static void bx_serial_c::tx_timer()’:
+serial.cc:1454:14: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1454 |         write(BX_SER_THIS s[port].tty_id, (bx_ptr_t) & BX_SER_THIS s[port].tsrbuffer, 1);
+      |         ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+serial.cc: In static member function ‘static void bx_serial_c::rx_timer()’:
+serial.cc:1611:22: warning: ignoring return value of ‘ssize_t read(int, void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1611 |           (void) read(BX_SER_THIS s[port].tty_id, &chbuf, 1);
+      |                  ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ar: creating libiodev.a
+ar: creating libdisplay.a
+hdimage.cc: In member function ‘int redolog_t::create(int, const char*, Bit64u)’:
+hdimage.cc:1777:10: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1777 |   ::write(fd, &header, dtoh32(header.standard.header));
+      |   ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+hdimage.cc:1781:10: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1781 |   ::write(fd, catalog, dtoh32(header.specific.catalog) * sizeof (Bit32u));
+      |   ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+hdimage.cc: In member function ‘ssize_t redolog_t::write(const void*, size_t)’:
+hdimage.cc:2026:14: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 2026 |       ::write(fd, zerobuffer, 512);
+      |       ~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+hdimage.cc:2030:14: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 2030 |       ::write(fd, zerobuffer, 512);
+      |       ~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+vmware4.cc: In member function ‘off_t vmware4_image_t::perform_seek()’:
+vmware4.cc:341:12: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  341 |     ::write(file_descriptor, tlb, (unsigned)header.tlb_size_sectors * SECTOR_SIZE);
+      |     ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vmware4.cc:350:11: warning: ignoring return value of ‘ssize_t read(int, void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  350 |     ::read(file_descriptor, tlb, (unsigned)header.tlb_size_sectors * SECTOR_SIZE);
+      |     ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vmware4.cc: In member function ‘void vmware4_image_t::flush()’:
+vmware4.cc:366:10: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  366 |   ::write(file_descriptor, tlb, (unsigned)header.tlb_size_sectors * SECTOR_SIZE);
+      |   ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vvfat.cc: In member function ‘bool vvfat_image_t::write_file(const char*, direntry_t*, bool)’:
+vvfat.cc:1522:14: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1522 |       ::write(fd, buffer, csize);
+      |       ~~~~~~~^~~~~~~~~~~~~~~~~~~
+vvfat.cc:1525:14: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1525 |       ::write(fd, buffer, fsize);
+      |       ~~~~~~~^~~~~~~~~~~~~~~~~~~
+ar: creating libhdimage.a
+ar: creating libcpu.a
+ar: creating libcpudb.a
+ar: creating libmemory.a
+gui.cc: In static member function ‘static void bx_gui_c::snapshot_handler()’:
+gui.cc:605:10: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  605 |     write(fd, bmp_header, 54);
+      |     ~~~~~^~~~~~~~~~~~~~~~~~~~
+gui.cc:607:12: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  607 |       write(fd, BX_GUI_THIS palette, 256 * 4);
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+gui.cc:639:12: warning: ignoring return value of ‘ssize_t write(int, const void*, size_t)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  639 |       write(fd, row_buffer, rlen);
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~
+siminterface.cc: In member function ‘virtual bool bx_real_sim_c::restore_bochs_param(bx_list_c*, const char*, const char*)’:
+siminterface.cc:1259:30: warning: ignoring return value of ‘size_t fread(void*, size_t, size_t, FILE*)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+ 1259 |                         fread(dparam->getptr(), 1, dparam->get_size(), fp2);
+      |                         ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ar: creating libgui.a
+ar: creating libinstrument.a
+ar: creating libfpu.a
