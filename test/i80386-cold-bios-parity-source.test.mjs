@@ -1,3 +1,4 @@
+import {serializeMatchedProgress,createMatchedProgressWriter} from '../scripts/bochs-cpu3-native-cold-bios/progress.mjs';
 import {createUndefinedOfPolicy,ownedUndefinedFlags} from '../scripts/bochs-cpu3-native-cold-bios/undefined-of.mjs';
 /** Pure diagnostic controls; no CPU instruction, native addon or cold capture. */
 import test from 'node:test';
@@ -89,3 +90,14 @@ test('unknown paths/consumers, bad counts, REP progress and altered ROM fail clo
 });
 
 test('OF owner denies PE/base/DB instruction-domain changes',()=>{for(const change of [c=>c.cr0|=1,c=>c.segmentCaches[1].base=0xffff0000,c=>c.segmentCaches[1].default32=true]){const p=createUndefinedOfPolicy(fixedRom()),pre=clone(actual4709.javascript);pre.eip=0x9da7;change(pre);assert.throws(()=>p.retire(pre,actual4709.javascript,{q:4709,chargedQuanta:1}));}});
+
+function progressFixture(){const j=cpuFixture(),n=nativeFixture(j);return {name:'cut-reset',n:0,q:0,native:n,javascript:{q:0,cpu:j,board:{cycles:4}},board:{board:{cycles:4}},ownership:{mask:0,events:[],started:false,repElements:0},elapsed:{processUserUs:0,processSystemUs:0,wallNs:'0'}};}
+test('durable progress roundtrips every raw native word/JS flag and preserves timing domains',()=>{
+ const f=progressFixture(),before=clone(f),raw=serializeMatchedProgress(f),saved=JSON.parse(raw);assert.deepEqual(saved.native,f.native);assert.deepEqual(saved.javascript,f.javascript);assert.deepEqual(f,before);assert.ok(raw.length<1<<20);
+ for(const mutate of [x=>x.name='../escape',x=>x.q=1,x=>x.native.state.pop(),x=>x.elapsed.wallNs='-1',x=>x.elapsed.processUserUs=.5,x=>x.ownership.mask=1]){const x=clone(f);mutate(x);assert.throws(()=>serializeMatchedProgress(x));}
+});
+test('progress writer is exclusive and count/size bounded',()=>{
+ const d=mkdtempSync(join(tmpdir(),'cold-progress-'));try{const writer=createMatchedProgressWriter(d),f=progressFixture();writer.append(f);const saved=readFileSync(join(d,'progress-cut-reset.json'));assert.throws(()=>writer.append(f));assert.deepEqual(readFileSync(join(d,'progress-cut-reset.json')),saved);
+ for(let i=1;i<64;i++)writer.append({...f,name:'q-'+String(i).padStart(6,'0')});assert.equal(writer.receipt().records.length,64);assert.throws(()=>writer.append({...f,name:'q-000064'}));assert.throws(()=>serializeMatchedProgress({...f,board:{board:{huge:'x'.repeat((1<<20)+1)}}}));
+ }finally{rmSync(d,{recursive:true,force:true});}
+});
