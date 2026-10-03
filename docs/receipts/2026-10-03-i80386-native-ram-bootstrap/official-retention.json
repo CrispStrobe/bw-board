@@ -1,0 +1,401 @@
+{
+  "status": "PASS_OFFICIAL_ZIP_SAFE_LOSSLESS_RETENTION",
+  "runConclusion": "success",
+  "runId": 37142542286,
+  "head": "79a626b8adf7bc70c08ff7bf7c40c424a4c77b2e",
+  "attempt": 1,
+  "artifactId": 11280788469,
+  "zipBytes": 9500151,
+  "zipSha256": "b8fbf9f03ec36a6626c11cfcc18ecae72924873c0dd44c7bcb73613b2ad98b15",
+  "entries": 96,
+  "files": 96,
+  "uncompressedBytes": 14858998,
+  "extraction": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected",
+  "filesByPath": {
+    "_temp/ram-bootstrap-execution/bochs.log": {
+      "bytes": 7365,
+      "sha256": "038b5020d1a971127988d06372445190285c49cec10ee4ec7f776d828abd2090"
+    },
+    "_temp/ram-bootstrap-execution/driver-identity.invocation.json": {
+      "bytes": 694,
+      "sha256": "28e5121486efa152a0fc0094089f1c819c141b3dac0676a06efc87eab9db41c5"
+    },
+    "_temp/ram-bootstrap-execution/driver-identity.exit.json": {
+      "bytes": 1452,
+      "sha256": "a32a753cd990cd04984133e80b59eeede749c20ac739a2598d6ebf39471030e3"
+    },
+    "_temp/ram-bootstrap-execution/driver-identity.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-execution/driver-identity.stdout": {
+      "bytes": 6142,
+      "sha256": "5345d2301cb35394d6761a48714744c754529d005ae0f901df5749e9b094283c"
+    },
+    "_temp/ram-bootstrap-execution/final-status.json": {
+      "bytes": 481,
+      "sha256": "f857cdcb37645c0d878e69ce1010fa20da6a228c46932f82c870a8e122cbbb2b"
+    },
+    "_temp/ram-bootstrap-execution/fixed-after.json": {
+      "bytes": 23714,
+      "sha256": "6a871c38ce445e0644e159197511541feab43b768a5650ae72b5dbcf6d0fb4d0"
+    },
+    "_temp/ram-bootstrap-execution/fixed-before.json": {
+      "bytes": 23714,
+      "sha256": "6a871c38ce445e0644e159197511541feab43b768a5650ae72b5dbcf6d0fb4d0"
+    },
+    "_temp/ram-bootstrap-execution/guest/capture.json": {
+      "bytes": 992606,
+      "sha256": "85670aff7afdc34205c11b0ac46d7414e7cc8b4290d8c7052cf8e6fc4ed4841f"
+    },
+    "_temp/ram-bootstrap-execution/host.json": {
+      "bytes": 8029,
+      "sha256": "b7738f948353b680a633c8ea6190819e12cb208bda10a3ee32d7ec116f332ab3"
+    },
+    "_temp/ram-bootstrap-execution/input.json": {
+      "bytes": 1025,
+      "sha256": "c477bd08e9bc46d741dd9658ea24a71113063f8c1c8f773b08c68d68d8ea597c"
+    },
+    "_temp/ram-bootstrap-execution/materialization.json": {
+      "bytes": 339,
+      "sha256": "a184d810cb6d4327e7d82397d1cbc54cf666317c665e01cb5587a9ad23dae09c"
+    },
+    "_temp/ram-bootstrap-execution/official-artifact.zip": {
+      "bytes": 7580867,
+      "sha256": "632a8a39787938c63f4607136b51d2628afaaf555b6e5a06c68258fe45305f29"
+    },
+    "_temp/ram-bootstrap-execution/original-artifact.json": {
+      "bytes": 754,
+      "sha256": "ed040ddef8f2fe6ce2d77d976843c570b4e7386d8d5682df0c928115d9b664d4"
+    },
+    "_temp/ram-bootstrap-execution/original-run.json": {
+      "bytes": 12606,
+      "sha256": "698754af99b01f84b4848da2f97acc8ae14ff7facff02f83a7fcf1d75f82e1f6"
+    },
+    "_temp/ram-bootstrap-execution/ram-source.bochsrc": {
+      "bytes": 500,
+      "sha256": "7be0e0f723410e47272e594faa7c8ee8a48a8ffe86dd9c937df5cebd84fa74dc"
+    },
+    "_temp/ram-bootstrap-execution/restored-after.json": {
+      "bytes": 138335,
+      "sha256": "7fd5f4ce83ed2150f79d96bd1090aa743d622c2d335d604d0c31d716b03cdfae"
+    },
+    "_temp/ram-bootstrap-execution/restored-before.json": {
+      "bytes": 138335,
+      "sha256": "7fd5f4ce83ed2150f79d96bd1090aa743d622c2d335d604d0c31d716b03cdfae"
+    },
+    "_temp/ram-bootstrap-execution/static-admission-config.exit.json": {
+      "bytes": 1444,
+      "sha256": "f756a1670ceb6bc5d35fb87407944396973519b480df77eeb23c4bd2ba657c47"
+    },
+    "_temp/ram-bootstrap-execution/static-admission-config.invocation.json": {
+      "bytes": 1123,
+      "sha256": "1ecc6392a3258b0a9d0f935be2700effa49d9c48b12e4a70723c9c08c6ddf344"
+    },
+    "_temp/ram-bootstrap-execution/static-admission-config.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-execution/static-admission-config.stdout": {
+      "bytes": 500,
+      "sha256": "7be0e0f723410e47272e594faa7c8ee8a48a8ffe86dd9c937df5cebd84fa74dc"
+    },
+    "_temp/ram-bootstrap-execution/worker-launch.json": {
+      "bytes": 81,
+      "sha256": "a847a442560f937bde5b2f9a78a1043583d606b875d52f6d47ee2c77bb1e5a3e"
+    },
+    "_temp/ram-bootstrap-execution/worker.exit.json": {
+      "bytes": 1454,
+      "sha256": "115a623006302871218b0785741b59278166fa23d2ece0fba31b277af9b118f5"
+    },
+    "_temp/ram-bootstrap-execution/worker.invocation.json": {
+      "bytes": 620,
+      "sha256": "fee16e6084e3da5b32eab95d9404d9e3b69aa96dfd6c71b112517be0d183a706"
+    },
+    "_temp/ram-bootstrap-execution/worker.stderr": {
+      "bytes": 361,
+      "sha256": "3de4f9912ba2df31a11e82b3e0106928382d1e7b7943937d26b60803b62b0aaf"
+    },
+    "_temp/ram-bootstrap-execution/worker.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-execution-context/parent.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-execution-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-execution-context/source.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-execution-context/source.stdout": {
+      "bytes": 182,
+      "sha256": "9868a61ac38789b03c9f55fd9b54b7f48f602e5daa7eaf32c00d06be9727618a"
+    },
+    "_temp/ram-bootstrap-build-evidence/architecture.exit.json": {
+      "bytes": 392,
+      "sha256": "937513d0a8aae317264ace222abfd519badc83a1c37001137ab3dd31bf66f7be"
+    },
+    "_temp/ram-bootstrap-build-evidence/architecture.invocation.json": {
+      "bytes": 396,
+      "sha256": "48255c71a57927ea09ce7406261c19a44bbed7452ffaed2d74bf8a4203063409"
+    },
+    "_temp/ram-bootstrap-build-evidence/architecture.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/architecture.stdout": {
+      "bytes": 7,
+      "sha256": "aaf631698ae5160ceb04a97681a14887fdcab47cd6e0f163c87485b3b1340b62"
+    },
+    "_temp/ram-bootstrap-build-evidence/artifact-inventory.json": {
+      "bytes": 8251,
+      "sha256": "b45e065395d481b171a83be0c940058ae9a12c6c49afc7db3b7d93ee1e36dbbf"
+    },
+    "_temp/ram-bootstrap-build-evidence/build-context.json": {
+      "bytes": 19833,
+      "sha256": "9b8e3d90e4e143977ea980018865890480e66eb21dc3bb45d6bc6d9f6e4336bb"
+    },
+    "_temp/ram-bootstrap-build-evidence/build-static-preflight.json": {
+      "bytes": 18318,
+      "sha256": "b8d74bc7416e6fcbf032591be1299d731e12a3f0efc3cc636bb1110dd2833eb6"
+    },
+    "_temp/ram-bootstrap-build-evidence/bw_direct.node": {
+      "bytes": 2069584,
+      "sha256": "9475b94b4dd067bc6c25ccd7c61c60cef5c9696fba0725ed05913838a3ee9873"
+    },
+    "_temp/ram-bootstrap-build-evidence/compiler.exit.json": {
+      "bytes": 399,
+      "sha256": "77c8f1de6375dd1c9ffae4c7e7a7a3d66f84e3220d418116755e9bff0d07afc8"
+    },
+    "_temp/ram-bootstrap-build-evidence/compiler.invocation.json": {
+      "bytes": 401,
+      "sha256": "5b4c63e42ce20e5a1cb77e5ebb197caf6546fa3434e8b832605e725a71c688f7"
+    },
+    "_temp/ram-bootstrap-build-evidence/compiler.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/compiler.stdout": {
+      "bytes": 246,
+      "sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8"
+    },
+    "_temp/ram-bootstrap-build-evidence/config.h": {
+      "bytes": 28122,
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+    },
+    "_temp/ram-bootstrap-build-evidence/configure.exit.json": {
+      "bytes": 656,
+      "sha256": "161bde3817451fc8d0475e4bbf69d4eff9660802ef6f0732b4199720442b7632"
+    },
+    "_temp/ram-bootstrap-build-evidence/configure.invocation.json": {
+      "bytes": 671,
+      "sha256": "94339aa83b204e19f981409989d6f606c8095e8cc9c9f137822c20cd482be5e2"
+    },
+    "_temp/ram-bootstrap-build-evidence/configure.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/configure.stdout": {
+      "bytes": 13400,
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "_temp/ram-bootstrap-build-evidence/final-status.json": {
+      "bytes": 1180,
+      "sha256": "486a3a66549a83b8364b16caf7b59117f28bda2ea9ac820cca22548f544bf1e5"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-after.exit.json": {
+      "bytes": 639,
+      "sha256": "1b88dd502c881a1fcbaabd11b92f51824b1b0ac70b00b0f9f236c396dd887536"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-after.invocation.json": {
+      "bytes": 641,
+      "sha256": "a1a34701dea75b59dbd813d48562e1ae447f8a34def801a10bc7dfab865b3b46"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-after.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-after.stdout": {
+      "bytes": 15120,
+      "sha256": "2f8002cf477834d685594ec9384517699e1e479776bdc32eee4d9841ce80d1bf"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-before.exit.json": {
+      "bytes": 639,
+      "sha256": "cdb3bbcb7e50923a48f74588f23f3199a5e011d7268e669a463c14f01a3b8673"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-before.invocation.json": {
+      "bytes": 641,
+      "sha256": "127a83e39dadd5b281438d60ccda66666a64621e098e546317cfb4b1b1f30bc2"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-before.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/identity-before.stdout": {
+      "bytes": 15120,
+      "sha256": "2f8002cf477834d685594ec9384517699e1e479776bdc32eee4d9841ce80d1bf"
+    },
+    "_temp/ram-bootstrap-build-evidence/make.exit.json": {
+      "bytes": 481,
+      "sha256": "b3018a739a573c873af4d2eb7baccc1785d16e9a257332e12e257d828e4ebcc9"
+    },
+    "_temp/ram-bootstrap-build-evidence/make.invocation.json": {
+      "bytes": 493,
+      "sha256": "ce5499441ed6fbce51da89e3ca7ad44fd978dcd29c15454d7461963772babaec"
+    },
+    "_temp/ram-bootstrap-build-evidence/make.stderr": {
+      "bytes": 7894,
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    },
+    "_temp/ram-bootstrap-build-evidence/make.stdout": {
+      "bytes": 36410,
+      "sha256": "bfa6b6286e16c35dacc38dd8f61b61fa142c015f81389b7165eed2a60860fd48"
+    },
+    "_temp/ram-bootstrap-build-evidence/nm.exit.json": {
+      "bytes": 495,
+      "sha256": "1aa4ab4bf346be20c6f1839bcea18b18efadd77434e960d36bee8d2a92e0db16"
+    },
+    "_temp/ram-bootstrap-build-evidence/nm.invocation.json": {
+      "bytes": 496,
+      "sha256": "7949edda8ca0155259afc7efeca6757d7bb5fb0e5292c9d456afd4ac09971c4b"
+    },
+    "_temp/ram-bootstrap-build-evidence/nm.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/nm.stdout": {
+      "bytes": 188038,
+      "sha256": "d1fac7429aaf7b7f4fae02c852e547b1c06ff626fc54a71b7d368b872b9d44fc"
+    },
+    "_temp/ram-bootstrap-build-evidence/platform.exit.json": {
+      "bytes": 395,
+      "sha256": "1a4a700627e575b7037b84eff279835dc194f6a0a6c91ea2ac0ea94f4558ccea"
+    },
+    "_temp/ram-bootstrap-build-evidence/platform.invocation.json": {
+      "bytes": 396,
+      "sha256": "b5838cfe86a410692f67b77f509d1c931d23520ccb95edb7b6b0c4447d966135"
+    },
+    "_temp/ram-bootstrap-build-evidence/platform.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/platform.stdout": {
+      "bytes": 113,
+      "sha256": "6ecb75ce9d770bd2cfb6898b267dd8f29398821b25cb233675e182e0323ba0d2"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepare.exit.json": {
+      "bytes": 595,
+      "sha256": "7361e8a550f1359eae991e887aea72124f15fcd80035142f3fdb22d4e8701522"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepare.invocation.json": {
+      "bytes": 597,
+      "sha256": "6d4d16a74a0f69d14accdd654b122744ac200331ea8f281f908ec06bc0b89161"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepare.json": {
+      "bytes": 60190,
+      "sha256": "657eecfaaa9f9cc2215f80558fcd35c13d4ba7b1842a0731eca8a766c78b4978"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepare.stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepare.stdout": {
+      "bytes": 60190,
+      "sha256": "657eecfaaa9f9cc2215f80558fcd35c13d4ba7b1842a0731eca8a766c78b4978"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepared-after-build.json": {
+      "bytes": 82020,
+      "sha256": "42e5caf2ca614cb27cf4377eec1ab6d26faef59d9887a18391a169244898d4de"
+    },
+    "_temp/ram-bootstrap-build-evidence/prepared-before-build.json": {
+      "bytes": 79031,
+      "sha256": "e9cd18238dc1a057bd00ea154c4523e9bb13b6e6cf22f56fd67e3c603aece0a4"
+    },
+    "_temp/ram-bootstrap-build-evidence/readelf.exit.json": {
+      "bytes": 477,
+      "sha256": "b9c6d26a6f4ba618d8bd35e8dc328e3449a8fb2be05b0c2516597e33d3360bca"
+    },
+    "_temp/ram-bootstrap-build-evidence/readelf.invocation.json": {
+      "bytes": 479,
+      "sha256": "088e51f6b669caf9b331b95c36ba274b71471809a7f7f5811092aa084725d4b5"
+    },
+    "_temp/ram-bootstrap-build-evidence/readelf.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/readelf.stdout": {
+      "bytes": 1539,
+      "sha256": "a3833da5be3ee1b4d8c3cea1a5e36d21723f1810fad2a16097865024a34915ce"
+    },
+    "_temp/ram-bootstrap-build-evidence/source-after.json": {
+      "bytes": 1486058,
+      "sha256": "02ca91bf9dc2f92f97a8182c981c3c33fb0ec24edde5e0db155ab59e7151938b"
+    },
+    "_temp/ram-bootstrap-build-evidence/source-before.json": {
+      "bytes": 1486058,
+      "sha256": "02ca91bf9dc2f92f97a8182c981c3c33fb0ec24edde5e0db155ab59e7151938b"
+    },
+    "_temp/ram-bootstrap-build-evidence/static-admission.exit.json": {
+      "bytes": 813,
+      "sha256": "a2011d2ec18aef8b0682c85f9016bc66c708784dba92fa86b77ed806b3fa412e"
+    },
+    "_temp/ram-bootstrap-build-evidence/static-admission.invocation.json": {
+      "bytes": 818,
+      "sha256": "0522f07aa7129a68912513d46daec20f431cce764e087fb36567269c14727d5c"
+    },
+    "_temp/ram-bootstrap-build-evidence/static-admission.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/ram-bootstrap-build-evidence/static-admission.stdout": {
+      "bytes": 1178,
+      "sha256": "339faae73bdf65756d60ebde7faf7c4633d84a45bdf2a2045f596ae5583f34d4"
+    },
+    "_temp/ram-bootstrap-build-evidence/static-input.json": {
+      "bytes": 552,
+      "sha256": "f33a32f95558c40285b91722f78918967c8dfa3320e78b39e7f643af1fee4633"
+    },
+    "_temp/ram-bootstrap-build-evidence/upstream-COPYING": {
+      "bytes": 26428,
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2"
+    },
+    "_temp/ram-bootstrap-build-evidence/upstream-LICENSE": {
+      "bytes": 301,
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+    },
+    "bw-board/bw-board/ram-wrapper/scripts/ram-bootstrap-hosted/README.md": {
+      "bytes": 2792,
+      "sha256": "6d037c50116a04cc72aff1017e3454839a93a33ea9f3c59ff3c43edcfe232f8c"
+    },
+    "bw-board/bw-board/ram-wrapper/scripts/ram-bootstrap-hosted/contract.json": {
+      "bytes": 163896,
+      "sha256": "54ed4fabfec8c0a60401535730b2b912f30263ddfbce6d23886c6e889773f85c"
+    },
+    "bw-board/bw-board/ram-wrapper/scripts/ram-bootstrap-hosted/parent.py": {
+      "bytes": 17008,
+      "sha256": "4c0613c76803ab6d350337f4290d7a5d9d7f2b03362b7d7e1605f3d8b091550b"
+    },
+    "bw-board/bw-board/ram-wrapper/scripts/cold-native-restore/archive.py": {
+      "bytes": 3772,
+      "sha256": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139"
+    },
+    "bw-board/bw-board/ram-wrapper/scripts/ram-bootstrap-hosted/test_source.py": {
+      "bytes": 4468,
+      "sha256": "04e007956a5018ba89b6e78c8cc377e9b58375ce77702e5435c9d1980be59bc5"
+    },
+    "bw-board/bw-board/ram-wrapper/scripts/cold-native-diagnostic/resources.py": {
+      "bytes": 2662,
+      "sha256": "7e968b306c522deee93169bb698c2a80dbb23af5380af2f1cadf4fcf3c1467dc"
+    },
+    "bw-board/bw-board/ram-wrapper/.github/workflows/i80386-ram-bootstrap-execution.yml": {
+      "bytes": 3822,
+      "sha256": "3588d6df11fb85bf8ce736917da3a9a20813a95c5ba38601513971422fee05fe"
+    }
+  },
+  "noQualificationOrPerformancePassClaim": true
+}

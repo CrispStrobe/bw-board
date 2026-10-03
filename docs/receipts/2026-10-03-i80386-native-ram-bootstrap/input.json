@@ -1,0 +1,15 @@
+{
+  "addon": "/home/runner/work/_temp/ram-bootstrap-build-prepared/bochs/bw_direct.node",
+  "sha256": "9475b94b4dd067bc6c25ccd7c61c60cef5c9696fba0725ed05913838a3ee9873",
+  "preparedManifest": "/home/runner/work/_temp/ram-bootstrap-build-evidence/prepare.json",
+  "preparedManifestSha256": "657eecfaaa9f9cc2215f80558fcd35c13d4ba7b1842a0731eca8a766c78b4978",
+  "buildReceipt": "/home/runner/work/_temp/ram-bootstrap-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "b8d74bc7416e6fcbf032591be1299d731e12a3f0efc3cc636bb1110dd2833eb6",
+  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication",
+  "compiledRevision": "81694d0d19a86ded0449ab56b3554020ffc344ca",
+  "driverRevision": "368ad8b61bb80f49380ed91b8ea1db442712e083",
+  "driverSourceSha256": "62513c3320fc1033066eacf3fcb8b67ccb974932e6479c428dccf8fdad55153c",
+  "configuration": "/home/runner/work/_temp/ram-bootstrap-execution/ram-source.bochsrc",
+  "output": "/home/runner/work/_temp/ram-bootstrap-execution/guest",
+  "nativeTrace": false
+}
