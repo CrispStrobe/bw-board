@@ -1,0 +1,28 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "-m",
+    "unittest",
+    "test_archive"
+  ],
+  "cwd": "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore",
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 4.675965825095773,
+  "pinsEqual": true,
+  "cpuSeconds": 10,
+  "wallLimitSeconds": 30,
+  "fileBytes": 8388608,
+  "coreBytes": 0,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "scope": "PYTHON_PURE_ARCHIVE_AND_LOCAL_GIT_NO_NETWORK_NATIVE_OR_BUILD"
+}

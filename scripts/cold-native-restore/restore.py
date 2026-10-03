@@ -93,16 +93,19 @@ def main(binding_path):
     metadata=Path(git(upstream,'rev-parse','--absolute-git-dir').decode().strip())
     require(metadata.resolve()==metadata and metadata.is_dir(),'ordinary Git metadata')
     metadata_files={}
+    metadata_directories=[]
     for p in metadata.rglob('*'):
         require(not p.is_symlink(),'Git metadata symlink')
-        if p.is_file(): metadata_files[str(p.relative_to(metadata))]=ordinary(p)
+        if p.is_dir(): metadata_directories.append(str(p.relative_to(metadata)))
+        elif p.is_file(): metadata_files[str(p.relative_to(metadata))]=ordinary(p)
+        else: require(False,'unsupported Git metadata entry')
     for path in (T,R,Path(b['output'])): require(not os.path.lexists(path),'existing output role')
     out=Path(b['output']); exclusive_tree(out,{})
     identity_raw=run_logged([str(node),'--max-old-space-size=128','--input-type=module','-e',identity_script],out,'driver-identity')
     actual_driver=json.loads(identity_raw); driver_identity(actual_driver,b['driverRevision'],b['driverFiles'])
     require(digest(json.dumps(actual_driver,separators=(',',':'),ensure_ascii=False).encode())==b['driverIdentitySha256'],'driver identity canonical SHA')
     exclusive_tree(T,files)
-    exclusive_tree(T/'.git',metadata_files)
+    exclusive_tree(T/'.git',metadata_files,metadata_directories)
     addon=members[prefix+'bw_direct.node']; destination=T/'bochs/bw_direct.node'
     require(not os.path.lexists(destination),'addon exists')
     with destination.open('xb') as f:f.write(addon)

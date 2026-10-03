@@ -72,14 +72,18 @@ def tar_members(data, expected):
     require(set(result) == set(expected), 'missing TAR member')
     return result
 
-def exclusive_tree(target, files):
+def exclusive_tree(target, files, directories=()):
     """Only called after the complete archive has authenticated; never overwrites."""
     target = Path(target)
     require(target.is_absolute() and target.parent.resolve() == target.parent, 'target parent')
     require(not os.path.lexists(target), 'existing destination')
     for n in files:
         name(n)
+    for n in directories:
+        name(n)
     target.mkdir()
+    for n in sorted(directories, key=lambda n: (len(Path(n).parts), n)):
+        (target / n).mkdir(parents=True, exist_ok=True)
     for n, data in files.items():
         p = target / n
         p.parent.mkdir(parents=True, exist_ok=True)
