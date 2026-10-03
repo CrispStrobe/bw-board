@@ -1,0 +1,11 @@
+{
+  "schema": "bw.cold-native-performance.capture-binding.v1",
+  "status": "PENDING_INDEPENDENTLY_AUDITED_SUCCESSFUL_CAPTURE",
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "driverRevision": "8d444cfb5d2f1a8de7af594c08bb2cf28d063998",
+  "driverSourceSha256": "0f1508384b0bbadadd6903dbc1ff708c215d8bb3e3f4329783dcf5b7a2f4ff58",
+  "captureSha256": null,
+  "independentAuditSha256": null,
+  "independentAuditApproved": false,
+  "targetQ": null
+}
