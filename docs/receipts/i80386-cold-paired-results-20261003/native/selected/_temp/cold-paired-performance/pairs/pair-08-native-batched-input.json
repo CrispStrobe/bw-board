@@ -1,0 +1,18 @@
+{
+  "capture": "/home/runner/work/_temp/cold-paired-performance/setup/capture.json",
+  "independentAudit": "/home/runner/work/_temp/cold-paired-performance/setup/independent-audit.json",
+  "output": "/home/runner/work/_temp/cold-paired-performance/pairs/pair-08-native-batched/receipt",
+  "workerRevision": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+  "workerSourceSha256": "9d70f04a099df42d4cac13796705a4da963c295d9d83cec8c1bc709d3cb60bf1",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "addon": "/home/runner/work/_temp/cold-bios-build-prepared/bochs/bw_direct.node",
+  "sha256": "40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0",
+  "preparedManifest": "/home/runner/work/_temp/cold-bios-build-evidence/prepare.json",
+  "preparedManifestSha256": "8b43eb0ef3573c239688d365b6e11be8ba3523a0553f0dd86ded5255a69adf1c",
+  "buildReceipt": "/home/runner/work/_temp/cold-bios-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "471c906511aa3b13367e5d50b58bc2df72ea58dbf37ade137457dd34e1d401af",
+  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication",
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "configuration": "/home/runner/work/_temp/cold-paired-performance/setup/guest-source.bochsrc",
+  "mode": "batched"
+}
