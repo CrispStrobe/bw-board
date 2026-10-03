@@ -1,6 +1,8 @@
 # ADP7118 internal startup envelope
 
-Status: **replacement candidate, hosted qualification pending**. The initial
+Status: **startup envelope landed and adopted** at upstream `944d1357` and
+Lite `ac346a44`; the duplicate-lead admission follow-up below awaits its own
+exact-head hosted qualification. The initial
 candidate was held after actual CLI capture reported
 `minimum-step-accuracy-unmet` near 70.011 µs despite plausible endpoints.
 Mandatory `transientAnalysisStatus().accuracyMet === true` checks are retained.
@@ -8,7 +10,8 @@ The replacement evaluates its reference at the actual MNA time, explicitly
 schedules the interpolation corner, and distinguishes continuous source changes
 from discrete behavioral events. Solver tolerances and budgets are unchanged.
 Reactive current-limit transitions remain explicitly refused, not certified.
-No installed-package adoption or physical accuracy certificate is implied.
+Installed CLI and published-browser waveform/mean checks qualify the authored
+interpolation, not a physical accuracy certificate.
 
 The default ADP7118 model remains its existing DC regulation contract. Select
 the following explicit model on a fixed-output part to capture internal startup:
@@ -23,6 +26,15 @@ refused, including a singleton SS net: this slice cannot qualify an external
 SS network. Adjustable mode, authored external soft-start capacitance and
 startup into a prebiased output also refuse by name. They are not simulated
 as if the pin or stored charge were absent.
+Both VIN package leads (7/8) and both VOUT leads (1/2) must have authored
+net memberships. An absent lead refuses by name before acquisition: the engine
+does not create a private die node for an unwired lead, so silently accepting it
+would drop a bond stamp or supply-current injection. This is a model admission
+boundary, not a claim that a physical ADP7118 cannot operate through one bonded
+lead. Implicit die-node topology remains a separate extension; the default DC
+path is unchanged. The qualified startup fixture bonds each duplicate pair to
+the same external net.
+
 Missing or externally divided SENSE also refuses: this startup slice admits
 only direct output sensing, unlike the unchanged legacy adjustable/DC model.
 
@@ -87,6 +99,10 @@ post a late rather than exact corner wake, remove the reactive-limit refusal,
 or omit the opt-in callback context. Each must
 fail its actual Board caller consequence; the registry is restored in `finally`
 and the source file remains byte-unchanged.
+An additional exact-anchor mutant removes duplicate-lead admission and makes
+the real missing-lead refusal regression fail. All four leads have explicit
+caller controls, with a fully bonded startup control and unchanged default-DC
+admission control.
 
 Stamps do not mutate device state. Accepted transient-step provenance is passed
 through `read.transient` only for models declaring `transientUpdateContext`;

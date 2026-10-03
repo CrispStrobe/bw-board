@@ -236,6 +236,13 @@ export function registerPowerDevices() {
         throw new Error(`ADP7118 ${part.id}: startup SS must be open; external SS networks are unmodeled`);
       }
       if (state.startupModel) {
+        // An unmapped lead has no MNA node: its bond conductance and current
+        // injection would be dropped, not connected to an implicit die node.
+        for (const lead of ['vin_7', 'vin_8', 'vout_1', 'vout_2']) {
+          if (!ctx.netFor(lead)) {
+            throw new Error(`ADP7118 ${part.id}: startup requires connected package lead ${lead}; implicit die nodes are unmodeled`);
+          }
+        }
         const sense = ctx.netFor('sense_adj');
         if (!sense || ![ctx.netFor('vout_1'), ctx.netFor('vout_2')].includes(sense)) {
           throw new Error(`ADP7118 ${part.id}: startup requires directly connected SENSE; external feedback is unmodeled`);

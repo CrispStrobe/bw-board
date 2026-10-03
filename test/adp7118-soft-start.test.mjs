@@ -9,7 +9,7 @@ registerPowerDevices();
 const terminals = ['vout_1', 'vout_2', 'sense_adj', 'gnd', 'en', 'ss', 'vin_7', 'vin_8'];
 const net = (id, ...nodes) => ({id, terminals: nodes.map(([part, terminal]) => ({part, terminal}))});
 function rig({params = {vOut: 5, startupModel: 'datasheet-envelope'}, cap = 2.2e-6,
-  enable = 3.3, ss = false, sense = true, load = 500} = {}) {
+  enable = 3.3, ss = false, sense = true, load = 500, missingLead = null} = {}) {
   const b = new BoardImpl(5);
   const parts = [
     {id: 'VIN', kind: 'vsource', params: {volts: 8}, terminals: ['pos', 'neg']},
@@ -27,9 +27,30 @@ function rig({params = {vOut: 5, startupModel: 'datasheet-envelope'}, cap = 2.2e
     net('gnd', ['G', 'gnd'], ['VIN', 'neg'], ['EN', 'neg'], ['U', 'gnd'], ['RL', 'b'],
       ...(cap ? [['C', 'b']] : []), ...(ss ? [['U', 'ss']] : [])),
   ];
+  for (const n of nets) {
+    n.terminals = n.terminals.filter(t => !(t.part === 'U' && t.terminal === missingLead));
+  }
   b.setNetlist(parts, nets);
   return b;
 }
+
+test('startup refuses each unmapped duplicate supply/output lead before reporting a successful acquisition', () => {
+  for (const missingLead of ['vin_7', 'vin_8', 'vout_1', 'vout_2']) {
+    assert.throws(() => rig({missingLead}),
+      error => error.message.includes('ADP7118 U: startup requires connected package lead') &&
+        error.message.includes(missingLead), `missing ${missingLead} must refuse by name`);
+  }
+});
+
+test('duplicate-lead admission is opt-in and leaves the default DC path unchanged', () => {
+  for (const missingLead of ['vin_7', 'vin_8', 'vout_1', 'vout_2']) {
+    assert.doesNotThrow(() => rig({params: {vOut: 5}, cap: 0, missingLead}));
+  }
+  const b = rig();
+  b.advanceTo(1_200_000n);
+  assert.ok(Math.abs(b.nodeVoltage('out') - 4.998266901869621) < 1e-9);
+  assert.equal(b.transientAnalysisStatus().accuracyMet, true);
+});
 
 test('opt-in ADP7118 startup meets independent 80us/380us data-sheet timing anchors with real output capacitance', () => {
   const b = rig();
@@ -334,9 +355,16 @@ test('unknown startup model, external SS, adjustable and invalid nominal configu
   assert.throws(() => rig({sense: false}), /ADP7118.*directly connected SENSE/);
 });
 
-test('seven executable startup mutants fail their real Board caller consequences; registry always restored', async () => {
+test('eight executable startup mutants fail their real Board caller consequences; registry always restored', async () => {
   const pristine = readFileSync(new URL('../src/devices/power.js', import.meta.url), 'utf8');
   const mutants = [
+    ['missing duplicate-lead admission', 'if (!ctx.netFor(lead)) {', 'if (false) {', () => {
+      for (const missingLead of ['vin_7', 'vin_8', 'vout_1', 'vout_2']) {
+        assert.throws(() => rig({missingLead}),
+          error => error.message.includes('startup requires connected package lead') &&
+            error.message.includes(missingLead));
+      }
+    }],
     ['ramp bypass', '(part.params?.vOut ?? 5) * fraction', '(part.params?.vOut ?? 5)', () => {
       const b = rig({cap: 0}); b.advanceTo(80_000n);
       assert.ok(Math.abs(b.nodeVoltage('out') - .5) < .015);
