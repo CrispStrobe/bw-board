@@ -1,0 +1,17 @@
+{
+  "nativeRun": 37101693500,
+  "sources": {
+    "baseline": {
+      "run": 36915940413,
+      "commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "toolHead": "1cac10ba28ddd5e71c5a7e32437a3b0080d47f14",
+      "integrationTests": 101
+    },
+    "candidate": {
+      "run": 37102087322,
+      "commit": "68747bf0b2cc50989af9ee28907719709a053aa8",
+      "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+      "integrationTests": 108
+    }
+  }
+}

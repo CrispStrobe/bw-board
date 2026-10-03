@@ -1,0 +1,19 @@
+{
+  "status": "ACTUAL_FIRST_COLD_BUILD_STATIC_ARTIFACT_AUDIT_PASS",
+  "checks": 1629,
+  "runId": 37102085724,
+  "head": "a6fae61a549d595c88a324f50589d92497040c07",
+  "attempt": 1,
+  "artifactId": 11265997873,
+  "zipSha256": "315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9",
+  "zipBytes": 7396223,
+  "sourceCount": 124,
+  "frozenArchiveFiles": 124,
+  "preparedArchiveFiles": 810,
+  "addonSha256": "4b372f2d0e7b677c56e168a0da791c1c0aeaae391eb6a103507e383540281907",
+  "addonBytes": 2069552,
+  "scope": "NO_ADDON_LOAD_OR_GUEST",
+  "method": "Independent read-only review of retained raw artifact and adapted audit, additional official metadata/ZIP safety/prior independently authenticated CPU rederivation checks",
+  "warnings": "Compiler diagnostics retained; successful compilation does not prove cold guest compatibility",
+  "auditSourceSha256": "283753e5021d7f612f3a0d88c1d6a7f479e7d49294389b0c9acf2713b6cf2f6a"
+}
