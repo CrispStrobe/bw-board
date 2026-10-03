@@ -9,6 +9,10 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const fields=['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags','cr0','cr2','cr3','cs','ds','ss','es','fs','gs'];
 const cpuSnapshot=c=>clone({...Object.fromEntries(fields.map(k=>[k,c[k]>>>0])),cr4:c.cr4,pc:c.pc>>>0,gdtr:c.gdtr,idtr:c.idtr,ldtr:c.ldtr,tr:c.tr,segmentCaches:c.segmentCaches,debugRegisters:[...c._debugRegisters],halted:c.halted,shutdown:c.shutdown,interruptShadow:c._interruptShadow,nmiShadow:c._nmiShadow,debugShadow:c._debugShadow,cycles:c.cycles});
 export const resetSource=Object.freeze({path:'bochs/cpu/init.cc',sha256:'4bdf4a39a2a3ceecafdd070836a055b5dec8696acf59652e2150a12fdfa7a9f3',lines:'705–874',meaning:'Bochs CPU3 model reset profile; not Intel hardware correction'});
+/** Pure reset-model guard, also usable without constructing a machine. */
+export function validatePlainResetSnapshot(r){
+ assert.equal(r.q,0);const c=r.cpu,b=r.board;assert.equal(c.cycles,0);assert.equal(c.edx,0);assert.equal(c.cr0,0x7ffffff0);assert.equal(c.cs,0xf000);assert.equal(c.eip,0xfff0);assert.equal(c.segmentCaches[1].base,0xffff0000);assert.deepEqual(c.gdtr,{base:0,limit:0xffff});assert.deepEqual(c.idtr,{base:0,limit:0xffff});assert.deepEqual(c.ldtr,{selector:0,base:0,limit:0xffff,present:true,type:2});assert.deepEqual(c.tr,{selector:0,base:0,limit:0xffff,present:true,type:11});assert.deepEqual(c.debugRegisters,[0,0,0,0,0,0,0xffff1ff0,0x400]);assert.equal(c.halted,false);assert.equal(c.shutdown,false);assert.equal(c.eflags&0x200,0);assert.equal(b.cycles,4);assert.equal(b.debt,0);assert.equal(b.a20Enabled,true);assert.deepEqual(b.a20.outputQueue,[]);assert.equal(b.a20.delayedResponse,null);return r;
+}
 export function createPlainJsBochsResetMachine(...args){
  assert.equal(args.length,0,'fixed no-arg factory; no caller config/hooks/ROM');
  let active=false,executed=false,closed=false,executionTiming=null;const ports=[];
@@ -27,7 +31,7 @@ export function createPlainJsBochsResetMachine(...args){
  for(const method of ['interrupt','_deliverFault'])c[method]=()=>{throw Error('plain fixed slice forbids '+method);};
  const paused=()=>assert.ok(!active&&!closed,'paused live plain machine');
  return Object.freeze({
-  reset(){paused();assert.equal(executed,false);return {q:0,cpu:cpuSnapshot(c),board:combinedBoardState(m)};},
+  reset(){paused();assert.equal(executed,false);return validatePlainResetSnapshot({q:0,cpu:cpuSnapshot(c),board:combinedBoardState(m)});},
   execute(token){
    paused();assert.equal(executed,false,'single execution');const targetQ=authorizedTarget(token);executed=true;
    active=true;const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();

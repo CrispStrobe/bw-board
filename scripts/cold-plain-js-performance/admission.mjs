@@ -17,7 +17,7 @@ export function ordinaryBytes(path,max=8<<20){
 export function validateReadyBinding(b){
  assert.deepEqual(Object.keys(b).sort(),['schema','status','compiledRevision','driverRevision','driverSourceSha256','captureSha256','independentAuditSha256','independentAuditApproved','targetQ'].sort());
  assert.equal(b.schema,'bw.cold-plain-js.capture-binding.v1');assert.equal(b.status,'INDEPENDENTLY_AUDITED_CAPTURE_READY','successful capture not yet bound');
- assert.equal(b.compiledRevision,'a6fae61a549d595c88a324f50589d92497040c07');assert.equal(b.driverRevision,'64514be6e45418910c5f952873382a2581810e1f');assert.equal(b.driverSourceSha256,'ec9a89ec22aa6332fd64f6058c88706ed493fbefd33d8576a9d88e747dfd7ea9');
+ assert.equal(b.compiledRevision,'a6fae61a549d595c88a324f50589d92497040c07');assert.match(b.driverRevision,/^[a-f0-9]{40}$/);digest(b.driverSourceSha256);
  digest(b.captureSha256);digest(b.independentAuditSha256);assert.equal(b.independentAuditApproved,true);assert.ok(Number.isSafeInteger(b.targetQ)&&b.targetQ>0&&b.targetQ<=400000);return b;
 }
 export function validateSuccessfulCapture(c,b){

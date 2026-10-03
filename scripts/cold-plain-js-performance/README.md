@@ -35,9 +35,12 @@ The private CLI requires Node 22.23.3, heap 128 MiB, blank six hook variables,
 exclusive output, pinned clean current/Git worker closure, Node hash, and immutable
 capture/audit inputs. It authenticates them again after success or retains readable
 after maps on failure. Pure tests exercise pending/invalid capture, synthetic
-authorization refusal, reset-only constructor, full final/PIO mutations and closed
-input guards. No pure test calls CPU step or performs a guest. This draft has not
-run its tests; static source preparation is the only current evidence.
+authorization refusal, manufactured reset-model deviations, full final/PIO
+mutations and closed input guards. No pure test constructs a machine, calls CPU
+step or performs a guest. The exact actual driver revision and source identity
+must agree with the pinned capture; their strict hash syntax permits separately
+reviewed corrected drivers without changing worker logic. The source-owned
+binding remains pending. Pure source controls do not qualify execution or speed.
 
 A future parent must supply fresh bounded children, process-group timeout cleanup,
 host context, whole-child rusage CPU/wall and raw exit/stdout/stderr. Execution
