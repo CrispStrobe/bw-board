@@ -12,6 +12,18 @@ def setup_bounds(contract):
     bounds={'cpuSeconds':60,'wallSeconds':240,'heapMiB':128,'fileBytes':32<<20,'coreBytes':0,'niceIncrement':10}
     size=contract['typedQualificationArtifact']['zipBytes'];require(type(size) is int and 0<size<=bounds['fileBytes'],'genuine semantic ZIP fits setup file cap');return bounds
 
+def finish(out,identity,primary):
+    final_error=None;report={'status':'FAIL' if primary is not None else 'HOSTED_PAIRS_RETURNED','primaryError':None if primary is None else repr(primary)}
+    try:
+        after=parent_identity();write(out/'parent-source-after.json',after);require(after==identity,'outer parent source unchanged')
+    except BaseException as e:final_error=e;report['sourceFinalizationError']=repr(e)
+    try:write(out/'host-after-setup-or-pairs.json',host_context())
+    except BaseException as e:
+        report['hostAfterUnavailable']=repr(e)
+        if final_error is None:final_error=e
+    if final_error is not None:report['status']='FAIL'
+    write(out/'hosted-result.json',report)
+    if final_error is not None and primary is None:raise final_error
 def main(comparison,out):
     contract,_=pending_guard() # No metadata subprocess, download or child before source authority.
     require(comparison=='plain-JS-v-typed-batched','one explicit comparison')
@@ -28,13 +40,7 @@ def main(comparison,out):
         request=out/'request.json';write(request,{'comparison':comparison,'output':str(out/'pairs'),'parentRevision':identity['revision'],'parentSourceSha256':identity_sha(identity['revision'],identity['hashes'])})
         paired_main(request,setup/'derived-paired-binding.json')
     except BaseException as error:primary=error;raise
-    finally:
-        final_error=None
-        try:
-            after=parent_identity();write(out/'parent-source-after.json',after);require(after==identity,'outer parent source unchanged on every outcome')
-        except BaseException as error:final_error=error;write(out/'parent-source-after-unavailable.json',{'error':repr(error)})
-        write(out/'host-after-setup-or-pairs.json',host_context())
-        if final_error is not None and primary is None:raise final_error
+    finally:finish(out,identity,primary)
 if __name__=='__main__':
     for s in (signal.SIGINT,signal.SIGTERM):signal.signal(s,interrupted)
     require(len(sys.argv)==3,'one comparison and closed output');main(sys.argv[1],sys.argv[2])

@@ -185,7 +185,11 @@ def main(input_path,binding_path=None):
         try:validate_final_authentication(report,initial,request_pin)
         except BaseException as error:
             final_error=error;report['finalizationError']=repr(error);report['status']='FAIL'
-        write(out/'host-after.json',host_context());write(out/'result.json',report)
+        try:write(out/'host-after.json',host_context())
+        except BaseException as error:
+            report['hostAfterUnavailable']=repr(error);report['status']='FAIL'
+            if final_error is None:final_error=error
+        write(out/'result.json',report)
         # Retain primary failure when one exists, alongside finalizationError.
         # A final-only failure must also exit nonzero after the raw receipt.
         if final_error is not None and 'error' not in report:raise final_error

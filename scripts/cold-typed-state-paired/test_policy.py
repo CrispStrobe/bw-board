@@ -168,6 +168,11 @@ class HostedPendingTests(unittest.TestCase):
                 bad=copy.deepcopy(ready);bad['addonSha256']='0'*64
                 with self.assertRaises(ValueError):authority.validate_authority(bad)
         spec=importlib.util.spec_from_file_location('typed_hosted_resource',Path(__file__).parent/'hosted.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);identity={'source':'frozen'}
+            with unittest.mock.patch.object(m,'parent_identity',return_value=identity),unittest.mock.patch.object(m,'host_context',side_effect=OSError('manufactured host unavailable')):
+                m.finish(root,identity,RuntimeError('manufactured primary'))
+            retained=json.loads((root/'hosted-result.json').read_text());self.assertEqual(retained['status'],'FAIL');self.assertIn('manufactured primary',retained['primaryError']);self.assertIn('hostAfterUnavailable',retained)
         self.assertEqual(m.setup_bounds(ready)['fileBytes'],32<<20)
         bad=copy.deepcopy(ready);bad['typedQualificationArtifact']['zipBytes']=(32<<20)+1
         with self.assertRaises(ValueError):m.setup_bounds(bad)
