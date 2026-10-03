@@ -62,3 +62,12 @@ backend speed for this cold slice. Both require the future consolidated parity a
 paired harness; no mixed diagnostic timing is reusable as a native baseline. Six
 board clocks per completion is a configured functional model, not physical 386
 calibration, and this gate cannot establish Windows/Doom or full AT 10× speed.
+
+ABI4 inspect snapshots contain the genuine 13 metadata fields and omit
+activityState. Resume results explicitly contain activityState/reason/charges.
+Every resume must represent activityState0. Outside timing, the actual last
+returned native166 and independent N/Q must equal final inspect; its explicit
+activityState0 supplies terminal activity evidence without fabricating an inspect
+field. Capture-backed reset/final/resume fixtures retain those distinct schemas.
+This correction remains source preparation until its focused controls and new
+semantic qualification pass. Compiled C/ABI/addon remain unchanged.

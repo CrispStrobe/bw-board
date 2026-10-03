@@ -41,7 +41,7 @@ function git(args){return execFileSync('git',args,{cwd:sourceRoot,maxBuffer:32<<
 export function nativeWorkerSourceIdentity(){
  assert.equal(git(['status','--porcelain']).toString().trim(),'','clean native-only worker checkout');const revision=git(['rev-parse','HEAD']).toString().trim(),paths=new Set();
  function visit(p){assert.ok(!isAbsolute(p)&&!p.startsWith('../'));if(paths.has(p))return;paths.add(p);const bytes=ordinaryBytes(resolve(sourceRoot,p));assert.equal(sha(bytes),sha(git(['show',revision+':'+p])),'current/Git '+p);if(/\.(mjs|js)$/.test(p))for(const m of bytes.toString().matchAll(/(?:from\s+|import\s*\(?\s*)['"](\.[^'"]+)['"]/g)){const file=resolve(sourceRoot,dirname(p),m[1]);assert.ok(file.startsWith(sourceRoot+'/'));visit(file.slice(sourceRoot.length+1));}}
- for(const p of ['scripts/cold-native-performance/worker.mjs','scripts/cold-native-performance/README.md','scripts/cold-native-performance/capture-binding.json','test/i80386-cold-native-performance-source.test.mjs','package.json','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/LICENSE'])visit(p);
+ for(const p of ['scripts/cold-native-performance/worker.mjs','scripts/cold-native-performance/README.md','scripts/cold-native-performance/capture-binding.json','scripts/cold-native-performance/actual-snapshot-fixtures.json','test/i80386-cold-native-performance-source.test.mjs','package.json','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/LICENSE'])visit(p);
  return {revision,hashes:Object.fromEntries([...paths].sort().map(p=>[p,sha(ordinaryBytes(resolve(sourceRoot,p)))]))};
 }
 export function authenticatePrerequisite(input){

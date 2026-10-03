@@ -43,7 +43,7 @@ async function run(input,inputPath){
   }finally{receipt.executionTiming={cpuMicroseconds:process.cpuUsage(startCpu),wallNanoseconds:(process.hrtime.bigint()-startWall).toString(),scope:'Native-only loop: actual stage/IRQ/begin/resume/end, owned PIO/device/deadline work, mandatory166 materialization, cheap budget/progress guards and counters; no JS oracle/hash/disk/snapshot copying'};receipt.progress=progress;receipt.lastReturnedNative=native;}
   // Evidence, settlement, comparisons, authentication and close are outside
   // execution timing. Whole provider tape is copied exactly once on success.
-  native=api.inspect();receipt.finalNative=native;receipt.finalBoard=provider.settleCheckpoint();receipt.ports=provider.records();receipt.comparison=compareFinalEvidence(native,receipt.finalBoard,receipt.ports,prerequisite.capture);
+  native=api.inspect();receipt.finalNative=native;receipt.finalBoard=provider.settleCheckpoint();receipt.ports=provider.records();receipt.comparison=compareFinalEvidence(native,receipt.finalBoard,receipt.ports,prerequisite.capture,receipt.lastReturnedNative);
   api.close();provider.close();closed=true;receipt.closed={native:true,provider:true};afterChecks();receipt.processCpuMicrosecondsAtReceipt=process.cpuUsage();receipt.processUptimeSecondsAtReceipt=process.uptime();receipt.wholeChildEvidence='Separate parent wait4/rusage CPU/wall, host context, lifecycle limits and raw exit required';receipt.status='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS';write('receipt.json');
  }catch(error){
   receipt.error=String(error);if(native)receipt.lastSuccessfullyReturnedNative=native;
