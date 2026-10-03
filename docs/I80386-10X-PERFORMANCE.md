@@ -33,6 +33,8 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 The [native cold BIOS E16 diagnostic](I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) now passes the fixed checkpoint: 316,562 completions, 400 REP elements and 16,475 ordered PIO events, with independent audit evidence. This is a correctness diagnostic, not full boot, speed qualification or adoption.
 
+The [first cold-BIOS paired attempt](I80386-COLD-PAIRED-FIRST-FAILURE.md) stopped after one qualified native one-Q warmup child: the parent failed constructing its progress-file path. Batched never started and no measured pairs ran. The source correction does not establish a paired speed result; the independently qualified three-arm checkpoint remains unchanged.
+
 The [undefined-OF diagnostic](I80386-NATIVE-COLD-BIOS-UNDEFINED-OF.md) records the historical sixth attempt, which stopped after 4,709 completions before the reviewed ownership policy was added. The [first 124-input build](I80386-NATIVE-COLD-BIOS-BUILD-RESULTS.md) remains historical static evidence.
 
 The [fixed 8042 native self-test](I80386-OWNED-8042-NATIVE-RESULTS.md) and subsequent [ordered AA/AB interface-test](I80386-OWNED-8042-INTERFACE-NATIVE-RESULTS.md) pass their first reviewed builds and both native modes. These 28- and 38-instruction fixtures advance device admission; the 10× speed goal and broader native BIOS/AT boot remain open.
