@@ -1,6 +1,8 @@
 // Static original-code selection only; never instantiate or execute engines.
 const wanted = ['step_batch', 'run_t16_cached_run', 'run_t16_cached_fast_paths',
-    'execute_t16_fast_op', 'run_t16_fast_block', 'step_internal', 'debug_halted'];
+    'execute_t16_fast_op', 'run_t16_fast_block', 'debug_halted'];
+// The full interpreter is intentionally outside this bounded hotpath receipt.
+// Its code remains in the original module/full-WAT provenance on the runner.
 export function selectCpuWat(wat) {
     const lines = wat.split('\n');
     const functions = [];

@@ -33,6 +33,11 @@ test('missing roots, missing types, duplicate identities and excessive receipts 
     assert.throws(()=>selectCpuWat(wat.replace('$CortexM_run_t16_cached_run (type','$CortexM_step_batch (type')),/Duplicate/);
     assert.throws(()=>selectCpuWat(wat.replace('    memory.copy)','    memory.copy\n'+('    nop\n'.repeat(300000))+')')),/receipt bound/);
 });
+test('large interpreter body is outside the bounded batch/cached selection',()=>{
+    const large=wat.replace('  (func $Unrelated_step_batch',
+        '  (func $CortexM_step_internal (type 0)\n'+('    nop\n'.repeat(300000))+')\n  (func $Unrelated_step_batch');
+    assert.deepEqual(selectCpuWat(large),selectCpuWat(wat));
+});
 test('hosted CPU inspection pins original artifacts and retains only text evidence',()=>{
     const workflow=readFileSync(new URL('../.github/workflows/labwired-cpu-inspection.yml',import.meta.url),'utf8');
     for(const text of ['36915940413','43b2d62f5a0fa24ae0b38a645069f5aaa78af685',
