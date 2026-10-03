@@ -1,0 +1,10 @@
+{
+  "status": "PRELAUNCH_SETUP_FAILURE_NO_NODE_CHILD",
+  "cause": "Sparse merge omitted inherited interface/profile.mjs from ordinary helper import closure",
+  "helperSha256": "3e45f745c3dba63d62cb65495a75ae33a27e1688fa8b10d713cd83bf73ab3e25",
+  "resolvedBy": "Materialized missing exact current Git closure inputs; source bytes unchanged",
+  "materialized": [
+    "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs",
+    "scripts/bochs-cpu3-native-owned-8042/profile.mjs"
+  ]
+}

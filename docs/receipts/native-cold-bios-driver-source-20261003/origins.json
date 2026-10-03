@@ -1,0 +1,40 @@
+{
+  "scope": "Seven pure source controls only; no instruction execution/addon/build/native/cold capture. First setup failure occurred before any Node child.",
+  "files": {
+    "invocation.json": {
+      "path": "/tmp/native-cold-bios-driver-source-controls-r2-20261003/invocation.json",
+      "bytes": 6546,
+      "sha256": "0052f4935da2ff74a02500cdf7a97aedccbf8ceb6940bb8912388c36814a8bf4"
+    },
+    "exit.json": {
+      "path": "/tmp/native-cold-bios-driver-source-controls-r2-20261003/exit.json",
+      "bytes": 6213,
+      "sha256": "2ca5b4144babea340997cf52f5c4296a796dce92f68dcafa4e0051e953a954ff"
+    },
+    "stdout": {
+      "path": "/tmp/native-cold-bios-driver-source-controls-r2-20261003/stdout",
+      "bytes": 1812,
+      "sha256": "c026b016354593b88f9081e80a2f2659884d3882531e4b72e989284bdda49130"
+    },
+    "stderr": {
+      "path": "/tmp/native-cold-bios-driver-source-controls-r2-20261003/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "helper.py": {
+      "path": "/tmp/run-native-cold-bios-driver-source-controls-r2-20261003.py",
+      "bytes": 3921,
+      "sha256": "6f4ef249947e418e51e59cabe2ef0dfe4760ec213551d86ae87a0d719fa6ccea"
+    },
+    "independent-pure-source-controls-audit.json": {
+      "path": "/tmp/native-cold-bios-driver-source-controls-r2-20261003/independent-pure-source-controls-audit.json",
+      "bytes": 863,
+      "sha256": "30dab4c7ba033e4f6f6f283ab584007a7ba5614ef7db0b84589ec8da3ba028b8"
+    },
+    "prelaunch-setup-failure.json": {
+      "path": "/tmp/native-cold-bios-driver-source-controls-20261003/prelaunch-failure.json",
+      "bytes": 488,
+      "sha256": "ebb822a7f42565622eb66da5cdbdc895b4a991635366b5b5eddbf33274589404"
+    }
+  }
+}
