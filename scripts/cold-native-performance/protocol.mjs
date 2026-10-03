@@ -26,7 +26,7 @@ export function validateTerminalMetadata(n){
 }
 export function validateFinalReturn(last,final){
  assert.deepEqual(Object.keys(last).sort(),[...inspectKeys,'activityState','reason','chargedNativeTicks','chargedQuanta','sliceBytes'].sort(),'actual resume schema');assert.equal(last.activityState,0,'actual last resume active; not inferred from inspect');assert.ok([1,3,7].includes(last.reason));
- assert.ok(Number.isSafeInteger(last.chargedNativeTicks)&&last.chargedNativeTicks>=0&&last.chargedNativeTicks<=600);assert.ok(Number.isSafeInteger(last.chargedQuanta)&&last.chargedQuanta>=0&&last.chargedQuanta<=300);assert.ok(Array.isArray(last.sliceBytes)&&last.sliceBytes.length===160);for(const byte of last.sliceBytes)assert.ok(Number.isInteger(byte)&&byte>=0&&byte<=255);
+ assert.ok(Number.isSafeInteger(last.chargedNativeTicks)&&last.chargedNativeTicks>=0&&last.chargedNativeTicks<=600);assert.ok(Number.isSafeInteger(last.chargedQuanta)&&last.chargedQuanta>=0&&last.chargedQuanta<=300);assert.ok(last.sliceBytes instanceof Uint8Array&&last.sliceBytes.length===160);for(const byte of last.sliceBytes)assert.ok(Number.isInteger(byte)&&byte>=0&&byte<=255);
  assert.equal(boundedCount(last.nativeTicks),boundedCount(final.nativeTicks));assert.equal(boundedCount(last.successfulQuanta),boundedCount(final.successfulQuanta));assert.deepEqual(wholeNativeWords(last),wholeNativeWords(final),'last returned raw166 equals final inspect');
  return last;
 }
