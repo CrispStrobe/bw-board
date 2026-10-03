@@ -1,0 +1,7 @@
+{
+  "scripts/cold-native-restore/archive.py": "a7feb1edf9d329763f1948ce86d3af138b43673dea59c0e319749f2060076d46",
+  "scripts/cold-native-restore/README.md": "6bf56a15a0fd6aa56c0c24bf2bfe4f39b142f2725a0e4a43a4ba64337a051dec",
+  "scripts/cold-native-restore/official-members.json": "d2df0987fe9bda0d956f1ed7c0c8c49020e4046cd06e7cf53358d9a4a4651dec",
+  "scripts/cold-native-restore/test_archive.py": "874cdc5d5be8c6c4f37bae2e630206ace58558b6297712c07746f7149725e579",
+  ".github/workflows/i80386-cold-native-restore-source.yml": "343156e34d32e926b2f0a860e8c2274827463058c45d7aee09eca97fb2fb1aed"
+}

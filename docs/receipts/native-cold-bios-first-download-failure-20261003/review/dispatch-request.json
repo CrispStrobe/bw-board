@@ -1,0 +1,17 @@
+{
+  "command": [
+    "gh",
+    "workflow",
+    "run",
+    "i80386-cold-native-diagnostic.yml",
+    "--repo",
+    "CrispStrobe/bw-board",
+    "--ref",
+    "lane/386-cold-native-diagnostic-source-20261003",
+    "-f",
+    "enable_guest=true"
+  ],
+  "expectedHead": "e4114004a49395d2494f201087488fc4dde522a8",
+  "requestedAt": "2026-10-03T07:28:15.913631+00:00",
+  "scope": "EXACTLY_ONE_TRACE_OFF_NO_RETRY"
+}

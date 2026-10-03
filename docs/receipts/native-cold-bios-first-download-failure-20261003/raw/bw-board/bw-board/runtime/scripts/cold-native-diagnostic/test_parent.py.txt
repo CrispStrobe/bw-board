@@ -7,8 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.request
-from parent import validate_contract,main,bounded,ArtifactRedirect,https_origin
+from parent import validate_contract,main,bounded
 class Controls(unittest.TestCase):
     def test_disabled_never_downloads(self):main('disabled')
     def test_unfrozen_contract_refuses(self):
@@ -24,18 +23,6 @@ class Controls(unittest.TestCase):
             self.assertTrue(r['timedOut']);self.assertIn(int(pid.read_text()),r['terminatedPids'])
             path=Path('/proc')/pid.read_text()/'stat'
             if path.exists():self.assertEqual(path.read_text().split(') ')[1].split()[0],'Z')
-    def test_redirect_credentials_and_https(self):
-        req=urllib.request.Request('https://api.github.com/original',headers={'Authorization':'Bearer SYNTHETIC_NOT_A_CREDENTIAL','Accept':'application/octet-stream'})
-        handler=ArtifactRedirect()
-        foreign=handler.redirect_request(req,None,302,'redirect',{},'https://storage.example.invalid/signed')
-        self.assertIsNone(foreign.get_header('Authorization'));self.assertEqual(foreign.get_header('Accept'),'application/octet-stream')
-        same=handler.redirect_request(req,None,302,'redirect',{},'https://api.github.com:443/other')
-        self.assertEqual(same.get_header('Authorization'),'Bearer SYNTHETIC_NOT_A_CREDENTIAL')
-        other_port=handler.redirect_request(req,None,302,'redirect',{},'https://api.github.com:8443/other')
-        self.assertIsNone(other_port.get_header('Authorization'))
-        for url in ('https://api.github.com:0/file','http://storage.example.invalid/file','file:///tmp/blob','https://user:password@storage.example.invalid/file'):
-            with self.assertRaises(ValueError):handler.redirect_request(req,None,302,'redirect',{},url)
-        self.assertEqual(req.get_header('Authorization'),'Bearer SYNTHETIC_NOT_A_CREDENTIAL')
     def test_fixed_artifact_and_mode(self):
         c=json.loads((Path(__file__).parent/'contract.json').read_text())
         c.update(driverRevision='1'*40,driverSourceIdentitySha256='2'*64,driverAuthSha256='3'*64,driverFiles={c['driverAuth']:{'sha256':'3'*64,'bytes':1},c['runner']:{'sha256':'4'*64,'bytes':1}})

@@ -1,0 +1,26 @@
+import json,pathlib,hashlib,zipfile,subprocess
+P=pathlib.Path(__file__).parent;S=P/'selected';checks=0
+
+def check(condition,message):
+ global checks
+ assert condition,message;checks+=1
+run=json.loads((P/'run-final.json').read_bytes());check(run['id']==37106448211 and run['head_sha']=='e4114004a49395d2494f201087488fc4dde522a8' and run['run_attempt']==1 and run['event']=='workflow_dispatch','exactfirstrequest')
+meta=json.loads((P/'artifacts.json').read_bytes())['artifacts'][0];raw=(P/'official-artifact.zip').read_bytes();check(meta['id']==11267273346 and len(raw)==meta['size_in_bytes'] and hashlib.sha256(raw).hexdigest()==meta['digest'].split(':')[1],'officialresultdigest')
+v=json.loads((P/'zip-verification.json').read_bytes())
+with zipfile.ZipFile(P/'official-artifact.zip') as z:
+ check(len(z.infolist())==320,'membercount')
+ for i in z.infolist():
+  b=z.read(i);check((S/i.filename).read_bytes()==b,'retainedlossless '+i.filename);check(v['entries'][i.filename]=={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()},'memberhash '+i.filename)
+D=S/'_temp/cold-native-diagnostic';before=json.loads((D/'before.json').read_bytes());after=json.loads((D/'after.json').read_bytes());final=json.loads((D/'final-status.json').read_bytes());check(before==after and final['sourceBeforeAfterEqual'] is True,'sourceafter')
+repo='/tmp/bw-cold-native-diagnostic-source-20261003'
+for role,revision,key in [('compiled124','a6fae61a549d595c88a324f50589d92497040c07','compiledFiles'),('driver52','64514be6e45418910c5f952873382a2581810e1f','driverFiles'),('tooling','e4114004a49395d2494f201087488fc4dde522a8','toolingFiles')]:
+ for n,h in before[key].items():
+  b=(D/'source-packet'/role/n).read_bytes();check(hashlib.sha256(b).hexdigest()==h,'packetmap '+role+n);git=subprocess.check_output(['git','-C',repo,'show',revision+':'+n]);check(git==b,'frozenGit '+role+n)
+check(len(before['compiledFiles'])==124 and len(before['driverFiles'])==52,'separateclosures')
+check(final['status']=='FAIL' and '401' in final['error'],'firstdownloadfailure')
+check(not (D/'official-artifact.zip').exists() and not (D/'restore.invocation.json').exists() and not (D/'native.invocation.json').exists() and not (D/'guest').exists(),'zero restore/native')
+check(json.loads((S/'_temp/cold-native-setup/final-status.json').read_bytes())['status']=='EXACT_SOURCE_ROLE_SETUP_PASS_NO_ARTIFACT_OR_NATIVE','source setup')
+check(json.loads((D/'partial-restored-inventory.json').read_bytes())=={},'no restoredrole files')
+o=json.loads((D/'official-artifact-metadata.json').read_bytes());check(o['id']==11265997873 and o['digest']=='sha256:315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9','originalmetadataAPIpass')
+result={'status':'FIRST_DOWNLOAD_FAILURE_AUDIT_PASS_ZERO_RESTORE_NATIVE','checks':checks,'runId':37106448211,'artifactId':11267273346,'causeObserved':'urllib ZIP redirect followed by HTTP401; no body downloaded','causeHypothesis':'default urllib forwards Authorization across redirect; root must review source correction separately','scope':'read-only actualfailure/source evidence audit; no retry/download/materialization/guest'}
+(P/'coder-first-failure-audit.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))

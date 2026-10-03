@@ -13,7 +13,6 @@ import signal
 import subprocess
 import time
 import urllib.request
-import urllib.parse
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts/cold-native-restore'))
@@ -138,36 +137,17 @@ def artifact_snapshot(out):
     paths.append(T/'bochs/bw_direct.node')
     return {str(p):digest(ordinary(p)) for p in paths}
 
-def https_origin(url):
-    parts=urllib.parse.urlsplit(url)
-    require(parts.scheme=='https' and parts.hostname and parts.username is None and parts.password is None,'HTTPS artifact URL required')
-    port=443 if parts.port is None else parts.port
-    require(1<=port<=65535,'HTTPS port domain')
-    return (parts.scheme,parts.hostname.lower(),port)
-
-class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
-    """Drop credentials on origin changes; never downgrade the transport."""
-    def redirect_request(self,req,fp,code,msg,headers,newurl):
-        old_origin=https_origin(req.full_url);new_origin=https_origin(newurl)
-        redirected=super().redirect_request(req,fp,code,msg,headers,newurl)
-        if redirected is not None and old_origin!=new_origin:
-            redirected.remove_header('Authorization')
-        return redirected
-
-
 def download(c,out):
     token=os.environ.get('GH_TOKEN');require(token,'read-only API credential required')
     url='https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/'+str(c['artifactId'])
     headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}
-    https_origin(url)
-    opener=urllib.request.build_opener(ArtifactRedirect())
-    with opener.open(urllib.request.Request(url,headers=headers),timeout=30) as response:
+    with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=30) as response:
         raw=response.read(1<<20);require(len(raw)<1<<20,'metadata bound')
     (out/'official-artifact-metadata.json').write_bytes(raw);meta=json.loads(raw)
     require(meta['id']==c['artifactId'] and meta['size_in_bytes']==c['zipBytes'] and meta['workflow_run']['id']==c['runId'] and meta['workflow_run']['head_sha']==c['compiledRevision'],'official run/head/size')
     require(meta['digest']=='sha256:'+c['zipSha256'] and not meta['expired'],'official digest/expiry')
     target=out/'official-artifact.zip'
-    with opener.open(urllib.request.Request(url+'/zip',headers=headers),timeout=60) as response,target.open('xb') as f:
+    with urllib.request.urlopen(urllib.request.Request(url+'/zip',headers=headers),timeout=60) as response,target.open('xb') as f:
         count=0
         while True:
             chunk=response.read(65536)

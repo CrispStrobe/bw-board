@@ -1,0 +1,2 @@
+Guest disabled; no download, restore or native child
+{"syntheticTimeout": {"returncode": -9, "timedOut": true, "wallSeconds": 3.149424321949482, "terminatedPids": [2426765, 2426766], "interrupted": null}, "nestedPidPresent": true, "childStderr": ""}
