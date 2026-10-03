@@ -1,0 +1,8 @@
+{
+  "status": "PASS_SOURCE_ONLY_NATIVE_WORKER_EIGHTH_MIGRATION",
+  "head": "8ed0366af9bf92823561d5130d0ad6274020c6da",
+  "sourceFiles": 55,
+  "controls": 8,
+  "wallSeconds": 1.7196677792817354,
+  "scope": "Exact eighth prerequisites and aggregate review validation; unchanged timed worker/protocol and strict pre-settle CPU vs settled board/RAM. R1 sparse missing module preserved. No native worker execution or benchmark."
+}
