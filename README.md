@@ -342,6 +342,24 @@ and physical acknowledgements are unchanged. Different hosted CPUs do not
 establish Node-version causality. See
 [all C3 word-hook gate results and original receipts](docs/receipts/2026-10-03-wasm-c3-word-hook-gate/README.md).
 
+Moving that word-only live gate into a small **non-inlined thunk** did not
+resolve the tradeoff. Across four ordinary hosted pairs, motion gains only
+**0.02%** once and loses **1.51–8.19%** in the other three; GPIO gains
+**6.17%** once but loses **0.63–1.80%** in the other three. RAM medians range
+from **−0.18% to +3.50%**, with minima regressing in two pairs. The Node 20
+reverse motion minimum drops **0.601694× → 0.522977×**. Motion/GPIO fail
+the unchanged all-window ≥1× floor in all four; RAM passes all four.
+Native verification passes both scheduler configurations, **4,238 library
+tests** and **16 GPIO integrations**; independent WASM determinism and
+**108 actual integrations** pass. Fresh motion is **0.825183× median /
+0.821529× minimum**, below the unchanged floor. The original hook, CPU,
+scheduler, other access widths and native production dispatch are unchanged.
+The initial sibling-test visibility error and its one-line internal visibility
+fix are retained. This variant remains **unmerged/unqualified**; production,
+app pins and physical acknowledgements are unchanged. These measurements do
+not prove a compiler-layout or Node-version cause. See
+[all outlined C3 admission results and original receipts](docs/receipts/2026-10-03-wasm-c3-word-hook-thunk/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
