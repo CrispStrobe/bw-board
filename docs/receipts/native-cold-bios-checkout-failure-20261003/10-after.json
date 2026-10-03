@@ -1,0 +1,17 @@
+{
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/archive.py": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/prepared-members.json": "ef0ee970baee93edae2d4c232be07f5ab942eab24767a8e5faa749786fd68778",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/frozen-members.json": "5f36d19304ca2f5ea76d819a20c08466f5d14527e0c8be9d9ab97443abc03778",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/restore.py": "84456fef7ca890530925cfade3ed3e0ecfc1806ee0f3ae00e5bc64ad73df5645",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/README.md": "bfda73fe9fdfddd7eac2c411c2ed9570f97bbb71458d79f1040d29cbf87e20a4",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/official-members.json": "230fd48c8998aa17fd5627dd1e78f13783ed2e5e04112be094224e3b1c4fbee6",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/test_archive.py": "a55a72d75df4b420f422f558eda98bdd5b9c5a0c70a67e73d605c63c91f10745",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-restore/admission.py": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/setup.py": "99ff9b694dc2d3cab9987735e83b161e5f81ad3f9a6a7b809ffb96fc9122292e",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/README.md": "33985c6e17490df3c814f28f1f636dc3ad1ecf6d3ddff7c99d5f7ec68ccf21ef",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/test_parent.py": "ab5f56c5a226b2cc8816252a40c06d736816a63e0efd01b16b83e68d5dab251e",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/contract.json": "483b8bfd92625be848dbd06064c9096a48c2a659e48f3e72dcd4d6f2a6c88b39",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/parent.py": "1066eb51ad407a94d2d168b212484fe2a363654958dde847ba8766b70f913829",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/.github/workflows/i80386-cold-native-diagnostic.yml": "7a3c3f47db3a2117f934ef6b0504a2668d2b0b72133367a418ee89a48c75ae47",
+  "/tmp/native-cold-native-checkout-source-controls-20261003/run.py": "9c114027a27e8102d0966c6cd100b8efb184a5717a063773f6cbe7e90d268221"
+}

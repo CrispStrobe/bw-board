@@ -1,0 +1,16 @@
+{
+  "00-run-initial.json": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/run-initial.json",
+  "01-artifacts.json": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/artifacts.json",
+  "02-dispatch-request.json": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/dispatch-request.json",
+  "03-independent-fifth-attempt-audit.json": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/independent-fifth-attempt-audit.json",
+  "04-final-status.json": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/final-status.json",
+  "05-parent.stderr": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/selected/_temp/cold-native-parent-context/parent.stderr",
+  "06-final-status.json": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/selected/_temp/cold-native-setup/final-status.json",
+  "07-compiled-sparse-patterns.txt": "/tmp/native-cold-native-fifth-diagnostic-publication-20261003/selected/_temp/cold-native-setup/compiled-sparse-patterns.txt",
+  "08-stderr": "/tmp/native-cold-native-checkout-source-controls-20261003/stderr",
+  "09-run.py.txt": "/tmp/native-cold-native-checkout-source-controls-20261003/run.py",
+  "10-after.json": "/tmp/native-cold-native-checkout-source-controls-20261003/after.json",
+  "11-exit.json": "/tmp/native-cold-native-checkout-source-controls-20261003/exit.json",
+  "12-before.json": "/tmp/native-cold-native-checkout-source-controls-20261003/before.json",
+  "13-stdout": "/tmp/native-cold-native-checkout-source-controls-20261003/stdout"
+}
