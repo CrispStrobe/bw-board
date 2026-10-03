@@ -1,3 +1,21 @@
+2026-10-03 Registered nonlinear terminal-current authority — CLAIM, Codex bwcx `/root`.
+Clean reused isolated wt-board-startup-context-claim-20261002, branch
+lane/registered-nonlinear-current-authority-20261003, exact base
+6bcb1055f6ed8a345161c6ec916af642c266953b. Five-path envelope: this entry;
+src/mna.js solve-local nonlinear registered current stamps, both convergence
+arms, final companion/extraction/refinement authority; src/devices.js API
+contract; new test/registered-nonlinear-currents.test.mjs; new
+spec-updates/registered-nonlinear-currents.md. Foundation only: pure evaluator
+returns terminal injections, Jacobian, exact piecewise region and voltage
+residual normalization. Same-solve multiport current/KCL, clamp/knee crossings,
+common-mode invariance, final extraction, protected hook authority, trial-state
+isolation, current source scaling, explicit invalid/missing-terminal refusals,
+and named load-bearing mutants. Legacy/no-primitive numerical path unchanged.
+No ADP7118 or other model change, Board/controller/tolerance/budget edits,
+CPU/workflow/package/pin/CUI/Lite/corpus/deployment edits. Two read-only design
+audits identified the premature no-diode convergence arm and frozen-refinement
+boundary; implementation begins only after this canonical claim lands.
+
 2026-10-02 Live solve exceptions and placeable meter availability — DONE candidate, Codex bwcx `/root`.
 Clean reused worktree wt-board-duplicate-rail-current-20261002, new branch
 lane/live-solve-fault-and-bench-availability, exact base
