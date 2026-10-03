@@ -1,3 +1,22 @@
+2026-10-03 Finite bounded transient stream — CLAIM, Codex bwcx `/root`.
+Isolated /tmp/bwcx-board-stream-bounded-20261003, branch
+lane/transient-bounded-stream-20261003, exact base
+a22c0f0e951ca4cbd1af9c3afaa26ed4595a67fc. Four-path envelope: this entry;
+src/board.js; new test/transient-bounded-stream.test.mjs; new
+spec-updates/transient-bounded-stream.md. Add explicit one-shot finite chunked
+capture with one native cumulative budget, <=200 synchronous provisional
+observations, latched failures and existing measurement invalidation. Preserve
+ordinary advance and existing two-argument bounded capture behavior exactly.
+Keep20000 attempts/60001 solves/200 entries ceilings; no per-chunk allowance,
+resume or unbounded/async stream. Prove actual chunked/default agreement,
+independent RC behavior, later-chunk exhaustion, observer/reentrant failures,
+endpoint and receipt authority, and isolated executable mutants with restoration.
+Read-only1.2ms timed fixture at10us gives120chunks/665attempts/1933solves/
+121entries under unchanged ceilings; this diagnostic is not API qualification.
+No solver/model/profile/tolerance, CPU, other source path, CUI/Lite/package/pin,
+workflow or deployment edits. Remotely merge claim before source changes;
+one final exact-head CI/Harris set then guarded normal landing. CLI stays held.
+
 2026-10-03 Whole-advance transient work budget — DONE candidate, Codex bwcx `/root`.
 Isolated wt-board-adp-source-audit-20261003, branch
 lane/transient-whole-advance-budget-20261003, exact base
