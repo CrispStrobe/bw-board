@@ -1,0 +1,31 @@
+test	Test	2026-10-03T06:05:32.3838449Z # Subtest: every guard-then-skip test is in the census or named as debt
+test	Test	2026-10-03T06:05:32.3841055Z not ok 539 - every guard-then-skip test is in the census or named as debt
+test	Test	2026-10-03T06:05:32.3841599Z   ---
+test	Test	2026-10-03T06:05:32.3841862Z   duration_ms: 146.304938
+test	Test	2026-10-03T06:05:32.3842157Z   type: 'test'
+test	Test	2026-10-03T06:05:32.3842854Z   location: '/home/runner/work/bw-board/bw-board/test/census-covers-the-tree.test.mjs:124:1'
+test	Test	2026-10-03T06:05:32.3844059Z   failureType: 'testCodeFailure'
+test	Test	2026-10-03T06:05:32.3844389Z   error: |-
+test	Test	2026-10-03T06:05:32.3845382Z     These probe an external input and skip when it is absent, with no census row and no debt entry. An absent input that reads as a pass is how fifteen cross-repo tests once went quiet for weeks. Add a row to scripts/oracle-census.mjs, or add the file to UNTRIAGED with a reason:
+test	Test	2026-10-03T06:05:32.3846305Z       i80386-cold-bios-reference-source.test.mjs
+test	Test	2026-10-03T06:05:32.3846585Z     + actual - expected
+test	Test	2026-10-03T06:05:32.3846791Z     
+test	Test	2026-10-03T06:05:32.3846962Z     + [
+test	Test	2026-10-03T06:05:32.3847209Z     +   'i80386-cold-bios-reference-source.test.mjs'
+test	Test	2026-10-03T06:05:32.3847479Z     + ]
+test	Test	2026-10-03T06:05:32.3847651Z     - []
+test	Test	2026-10-03T06:05:32.3847818Z     
+test	Test	2026-10-03T06:05:32.3847995Z   code: 'ERR_ASSERTION'
+test	Test	2026-10-03T06:05:32.3848215Z   name: 'AssertionError'
+test	Test	2026-10-03T06:05:32.3848417Z   expected:
+test	Test	2026-10-03T06:05:32.3848594Z   actual:
+test	Test	2026-10-03T06:05:32.3848845Z     0: 'i80386-cold-bios-reference-source.test.mjs'
+test	Test	2026-10-03T06:05:32.3849126Z   operator: 'deepStrictEqual'
+test	Test	2026-10-03T06:05:32.3849393Z   stack: |-
+test	Test	2026-10-03T06:05:32.3850181Z     TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/census-covers-the-tree.test.mjs:129:12)
+test	Test	2026-10-03T06:05:32.3851146Z     Test.runInAsyncScope (node:async_hooks:214:14)
+test	Test	2026-10-03T06:05:32.3851744Z     Test.run (node:internal/test_runner/test:1047:25)
+test	Test	2026-10-03T06:05:32.3852332Z     Test.start (node:internal/test_runner/test:944:17)
+test	Test	2026-10-03T06:05:32.3852928Z     startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+test	Test	2026-10-03T06:05:32.3853252Z   ...
+test	Test	2026-10-03T06:05:32.3853534Z # Subtest: the debt list does not outlive the debt

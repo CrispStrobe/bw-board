@@ -23,6 +23,42 @@ import { createHash } from 'node:crypto';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+test('cold BIOS capture has a dedicated census row for bounded output opt-in', () => {
+    const row = INPUTS.find(input => input.id === '386-cold-bios-js-capture');
+    assert.ok(row);
+    assert.equal(row.kind, 'fixture');
+    assert.equal(row.env, 'BW_COLD_REFERENCE_OUTPUT');
+    assert.equal(row.envRole, 'capture-output');
+    assert.deepEqual(row.paths, []);
+    assert.deepEqual(row.gates, ['test/i80386-cold-bios-reference-source.test.mjs']);
+    assert.equal(row.ciAvailable, false);
+    assert.match(row.what, /Seven pure refusal controls always run/);
+    assert.match(row.what, /48 current\/Git/);
+    assert.match(row.obtain, /CPU15s\/wall30s\/file8MiB/);
+    assert.match(row.ci, /skips only the full cold capture/);
+    assert.ok(readFileSync(join(ROOT, row.gates[0]), 'utf8').includes(row.env));
+});
+
+test('capture-output census resolution reports activation without reading or authenticating output', () => {
+    const key = 'BW_CENSUS_CAPTURE_OUTPUT_TEST', previous = process.env[key];
+    const row = {kind: 'fixture', env: key, envRole: 'capture-output', paths: []};
+    try {
+        delete process.env[key];
+        assert.equal(resolve(row).present, false);
+        process.env[key] = '';
+        assert.equal(resolve(row).present, false);
+        for (const value of [join(ROOT, 'nonexistent-capture-output.json'), fileURLToPath(import.meta.url)]) {
+            process.env[key] = value;
+            const result = resolve(row);
+            assert.equal(result.present, true);
+            assert.match(result.via, /capture requested; output is not evidence; census does not execute it/);
+            assert.equal(result.digest, undefined);
+        }
+    } finally {
+        if (previous === undefined) delete process.env[key]; else process.env[key] = previous;
+    }
+});
+
 test('native RAM coherence report fixture has a mandatory ordinary-CI census row', () => {
     const row = INPUTS.find(input => input.id === '386-native-ram-coherence-report');
     assert.ok(row);
