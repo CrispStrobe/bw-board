@@ -1,0 +1,8 @@
+{
+  "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e",
+  "scripts/bochs-cpu3-native-owned-8042-interface/provider.mjs": "6c5387e4634d8503b9daa2aab203d2aa304ca11f9fa8c8f3953cad578edd6ca0",
+  "scripts/bochs-cpu3-native-owned-8042-interface/runtime.mjs": "b4b5763fe08228f41a6d36dfa461ba6a82e8cab8d211336bdd591d2407ac16d8",
+  "scripts/bochs-cpu3-native-owned-8042-interface/derivation.mjs": "242d7992dca17d66fd12c95e1a5d93f54151c30b31266e103a827f729578778f",
+  "scripts/bochs-cpu3-native-owned-8042-interface/derivation.json": "ebc3206f47dca1781f8bb19ca91b660c26669130b9ec009a62848510959336d4",
+  "test/i80386-kbc-interface-source.test.mjs": "a2cac8118b5ed94efd35bbe34dbc47a954e7cc6401bc9c3795f6cfb424524e57"
+}

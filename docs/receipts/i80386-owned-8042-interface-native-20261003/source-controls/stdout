@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: exact provider/native inverses and independent fixed ROM
+ok 1 - exact provider/native inverses and independent fixed ROM
+  ---
+  duration_ms: 23.580506
+  type: 'test'
+  ...
+# Subtest: actual AA then AB delayed responses preserve whole PIC/mapping and consume once
+ok 2 - actual AA then AB delayed responses preserve whole PIC/mapping and consume once
+  ---
+  duration_ms: 44.490995
+  type: 'test'
+  ...
+# Subtest: early duplicate commands, wrong width and foreign delayed/queued responses deny consumption
+ok 3 - early duplicate commands, wrong width and foreign delayed/queued responses deny consumption
+  ---
+  duration_ms: 16.776406
+  type: 'test'
+  ...
+# Subtest: each response phase has independent bounded nonconsuming status reads
+ok 4 - each response phase has independent bounded nonconsuming status reads
+  ---
+  duration_ms: 26.63055
+  type: 'test'
+  ...
+# Subtest: actual fixture branches success
+ok 5 - actual fixture branches success
+  ---
+  duration_ms: 38.031692
+  type: 'test'
+  ...
+# Subtest: actual fixture branches wrong55
+ok 6 - actual fixture branches wrong55
+  ---
+  duration_ms: 11.632023
+  type: 'test'
+  ...
+# Subtest: actual fixture branches wrong00
+ok 7 - actual fixture branches wrong00
+  ---
+  duration_ms: 64.473631
+  type: 'test'
+  ...
+# Subtest: actual fixture branches poll-exhaustion
+ok 8 - actual fixture branches poll-exhaustion
+  ---
+  duration_ms: 33.15258
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 579.063092

@@ -1,0 +1,28 @@
+{
+  "status": "RETAINED_ACTUAL_INTERFACE_CAPTURE_MAP_AND_CROSSMODE_PASS_PENDING_INDEPENDENT_REVIEW",
+  "head": "c7efff26f6d0ace3a29e2f9bcda7bc0f96d40129",
+  "run": 37095573249,
+  "artifactId": 11264256418,
+  "zipSha256": "4ef2d5790ef19bb9122088532b4f44f15f95707ceb235441a9300792b476d0f6",
+  "sourceInputs": 123,
+  "fullSourceBeforeAfterInputs": 2057,
+  "inventoryVerifiedMembers": 62,
+  "addonSha256": "4b877e6d83189149f1f365f4e541721ba796362db0f4360b0f6b273149f95432",
+  "instructions": 38,
+  "nativeTicks": 38,
+  "successfulQuanta": 38,
+  "saved166Boundaries": 40,
+  "jsonlRowsPerMode": 41,
+  "emittedBlocks": 39,
+  "emittedWords": 6474,
+  "ports": 11,
+  "witness": [
+    85,
+    0
+  ],
+  "ramSha256": "de07920708e587fbe3034d6a7bb8ffd0ddd1901b5eaedc6ac0a876a63d82f854",
+  "sourceAndPreparedMapsUnchanged": true,
+  "offOnEvery166AndBoardEqual": true,
+  "offOnSettledBoardAndRamEqual": true,
+  "performanceClaim": false
+}
