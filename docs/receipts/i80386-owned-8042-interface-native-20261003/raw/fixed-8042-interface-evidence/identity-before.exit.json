@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {sourceIdentity}from './scripts/bochs-cpu3-native-owned-8042-interface/identity.mjs';console.log(JSON.stringify(sourceIdentity()))"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 0.36592882700000473,
+  "streams": {
+    "stdout": {
+      "bytes": 13504,
+      "sha256": "5e30a0aaf900d5dde9c68010aa8a015bfed11cce7ed4816cb9d87cf39d91982a"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

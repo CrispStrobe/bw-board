@@ -1,0 +1,35 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {sourceIdentity}from './scripts/bochs-cpu3-native-owned-8042-interface/identity.mjs';console.log(JSON.stringify(sourceIdentity()))"
+  ],
+  "head": "c7efff26f6d0ace3a29e2f9bcda7bc0f96d40129",
+  "tree": "265adddca2949cb5719341a6b7da59b87068dc12",
+  "cpuSeconds": 15,
+  "wallSeconds": 45,
+  "heapMiB": 128,
+  "sourceBefore": {
+    ".github/workflows/i80386-native-owned-8042-interface-build.yml": "18bbad8f2b7218982984daaa25dc5d4b01a6c27269f7d2ae528579fb22f18b8b",
+    "docs/I80386-NATIVE-COLD-BIOS-CHECKPOINT-PLAN.md": "044ecd8b6b84d07d568d66b737bf1bc6aa1661e54e427fbbb61c692aaef13ec5",
+    "scripts/bochs-cpu3-native-owned-8042-interface/README.md": "f85d3819b48916afe47e080001762ab92eb28922d1a69ca28829552b44a6ddc1",
+    "scripts/bochs-cpu3-native-owned-8042-interface/derivation.json": "ebc3206f47dca1781f8bb19ca91b660c26669130b9ec009a62848510959336d4",
+    "scripts/bochs-cpu3-native-owned-8042-interface/derivation.mjs": "242d7992dca17d66fd12c95e1a5d93f54151c30b31266e103a827f729578778f",
+    "scripts/bochs-cpu3-native-owned-8042-interface/identity.mjs": "60aee343046b95e41a98d33a4571484dee60421cbf7c719958e5d9b5882ed692",
+    "scripts/bochs-cpu3-native-owned-8042-interface/napi.mjs": "c68c09471a905742aa385f101d4dceb5a9da8d59d26308199f9c92a97e1c79e2",
+    "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e",
+    "scripts/bochs-cpu3-native-owned-8042-interface/provider.mjs": "6c5387e4634d8503b9daa2aab203d2aa304ca11f9fa8c8f3953cad578edd6ca0",
+    "scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs": "381f1c233bddd27c73dc19cb144c3308d4b4b8fe5ae0b4bf952351fbc5945757",
+    "scripts/bochs-cpu3-native-owned-8042-interface/runtime.mjs": "b4b5763fe08228f41a6d36dfa461ba6a82e8cab8d211336bdd591d2407ac16d8",
+    "scripts/ci-build-i80386-native-owned-8042-interface.py": "a057fc499d4f1b824cddeb1ccd0617aa068df14ca8ec81a80fed82f824d51db1",
+    "scripts/prepare-bochs-cpu3-native-owned-8042-interface.mjs": "09ed887cdbe646a80c95b269a24ef0b0b0d48bb2181c12c82099384fb7f633d2",
+    "scripts/run-i80386-native-owned-8042-interface.mjs": "06cb67040a4bdfa5e5b5ccf33f67fbfd3fafd539f75f7066d0a5748f929f4df7",
+    "test/fixtures/i80386-8042-selftest-first-trace.json.gz": "16cc4c94546572d67909d5bb6dbc3c425c12a90ad7582a907e77d1452fd3f645",
+    "test/i80386-kbc-interface-reference.test.mjs": "37084fa99470455347e22305b407a6a1ad645e199533ebc434b27dd36b1a7b79",
+    "test/i80386-kbc-interface-source.test.mjs": "a2cac8118b5ed94efd35bbe34dbc47a954e7cc6401bc9c3795f6cfb424524e57"
+  },
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "scope": "Read-only current+Git sourceIdentity authentication; no factory/addon/guest/build"
+}
