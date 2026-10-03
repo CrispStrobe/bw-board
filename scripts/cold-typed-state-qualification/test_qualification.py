@@ -7,7 +7,8 @@ class Controls(unittest.TestCase):
   c=q.read_json(q.HERE/'contract.json');c['status']='ROOT_REVIEWED_TYPED_QUALIFICATION_READY';return c
  def test_pending_precedes_effects(self):
   with patch.object(q,'download',side_effect=AssertionError('network forbidden')),patch.object(q,'bounded_child',side_effect=AssertionError('child forbidden')):
-   with self.assertRaises(ValueError):q.contract(q.read_json(q.HERE/'contract.json'))
+   c=self.ready();c['status']='PENDING_SOURCE_REVIEW'
+   with self.assertRaises(ValueError):q.contract(c)
  def test_closed_maps_and_bounds(self):
   c=self.ready();self.assertIs(q.contract(c),c)
   for mutation in [lambda x:x['worker']['files'].pop(next(iter(x['worker']['files']))),lambda x:x['compiledFiles'].pop(next(iter(x['compiledFiles']))),lambda x:x['bounds'].update(cpuSeconds=61),lambda x:x['buildArtifact'].update(artifactId=1)]:
