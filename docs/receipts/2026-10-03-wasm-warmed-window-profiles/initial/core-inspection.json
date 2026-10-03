@@ -1,0 +1,26 @@
+{
+  "core": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "files": [
+    {
+      "path": "crates/core/src/peripherals/components/declarative_logic.rs",
+      "sha256": "fbb6dcb2110924d066475c656ad59d98735893c5d184c6cbdfb99f4979784340"
+    },
+    {
+      "path": "crates/core/src/sim_input.rs",
+      "sha256": "a86f0219ff590227ed73a34bc636c665aa10cbea747ea52203a17f9cd7717972"
+    },
+    {
+      "path": "crates/core/src/bus/device_hooks.rs",
+      "sha256": "a000d693262484b42a1f9222e3e1157d6bbc8d0103451e06d4a82b5366d7163a"
+    }
+  ],
+  "implementation": "    fn input_channels(&self) -> &[InputChannel] {\n        NO_CHANNELS\n    }",
+  "traitSignature": "fn input_channels(&self) -> &[InputChannel];",
+  "coldBody": "    fn service_edge_driven_gpio_devices_cold(&mut self, idx: usize) {\n        // Cheap gate: almost every bus has no edge-driven device at all, and\n        // this runs on every MMIO write.\n        if !self\n            .gpio_devices\n            .iter()\n            .any(|d| !d.edge_service_addrs().is_empty())\n        {\n            return;\n        }\n        let now = self.current_cycle;\n        let (base, size) = (self.peripherals[idx].base, self.peripherals[idx].size);\n        let mut devices = std::mem::take(&mut self.gpio_devices);\n        for device in &mut devices {\n            // An address outside the written peripheral's window cannot be\n            // hosted by it; only an address inside it needs the routing\n            // lookup (a narrower window may still own it). This keeps the\n            // lookup off the writes to every other peripheral.\n            let hosted = device.edge_service_addrs().iter().any(|a| {\n                a.wrapping_sub(base) < size && self.find_peripheral_index(*a) == Some(idx)\n            });\n            if hosted {\n                device.service_edge(self, now);\n            }\n        }\n        self.gpio_devices = devices;\n    }\n\n",
+  "conclusions": [
+    "input_channels returns an empty borrowed slice; no metadata allocation or scan in that implementation",
+    "the cold source queries edge_service_addrs, not SimInput channel discovery",
+    "sampled labels/caller paths can reflect shared trivial bodies; do not infer metadata-work cost from this label alone"
+  ],
+  "engineModified": false
+}

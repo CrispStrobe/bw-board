@@ -1,0 +1,743 @@
+{
+  "schema": 1,
+  "diagnosticOnly": true,
+  "hostedOnly": true,
+  "files": [
+    {
+      "path": "initial/artifacts.json",
+      "bytes": 3616,
+      "sha256": "aee6e4dab18b7d12e66b4f60db6be8d32710e86abad84649c1eb8f112f535b97"
+    },
+    {
+      "path": "initial/baseline-verification.json",
+      "bytes": 21373,
+      "sha256": "8c0db8066bcdb982531cb7878901f9726bb72b6f1a7f2320368e280f881cbccd"
+    },
+    {
+      "path": "initial/core-inspection.json",
+      "bytes": 2299,
+      "sha256": "8c5476ad38da86a5a2b5bbb31447fc2df86b062f5615db807d0e81fff20cc9d8"
+    },
+    {
+      "path": "initial/initial-census-failure.json",
+      "bytes": 56146,
+      "sha256": "6bb1dc3aa2a85c76de1bf6c45bf1822f39a94683102cab8d19dd4ea1ffd06325"
+    },
+    {
+      "path": "initial/initial-ci-37111247913-failed-step-log.json",
+      "bytes": 930991,
+      "sha256": "3bcbbb5c792ef7ce76d4b3607c118b81f97b151c6572c7a6a25c3821d9293c19"
+    },
+    {
+      "path": "initial/initial-ci-37111250672-failed-step-log.json",
+      "bytes": 933451,
+      "sha256": "36991e2f92061faac3c69f5e4c52ae798a92865930220909a87ec674f381ee29"
+    },
+    {
+      "path": "initial/pipeline.json",
+      "bytes": 147041,
+      "sha256": "be66e80f1a5dd77547412d96ade04484491220707e936c652a24e1a00520fa85"
+    },
+    {
+      "path": "initial/run.json",
+      "bytes": 16085,
+      "sha256": "13934c5629baaac9465e71930d3e3bf509c7eef94db2b6871bc9a9d4d8f0d07e"
+    },
+    {
+      "path": "initial/source-contract.json",
+      "bytes": 1687,
+      "sha256": "cfaac7abc957d7b0c072792b5e2a4183f54def85bbd1911a7b935199244ff3ee"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "32471e2ae68ac5a2294ecb2f110fbace251295bd9bb2633cbef07a6a5bfc87db",
+      "original": {
+        "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/ordinary-stdout.txt",
+      "bytes": 2540,
+      "sha256": "7c2696e9dc37ef75bafeda68d18fd1212bab8dce04d02ba4bf38ab2a0688a8ae"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "abf74fdff1a3c04061818bfdf99bc2616266369eda3c5d8378ddf6cdff3b282c",
+      "original": {
+        "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/profiled-stdout.txt",
+      "bytes": 3717,
+      "sha256": "dd33d60c57326f1bdf61de5e3df618908958ce2d4fdb1df04cdfab72487f155e"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/receipt.json",
+      "bytes": 136806,
+      "sha256": "b78b712e5f6d07d7630ab006212292a3426de4a0dc24a385d9243d40f62c0205"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 31999,
+      "sha256": "2445b06d0edce1bfc24dfc9630b514b65c09a274b63d4a610f1d89ac93cde1f1"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 27335,
+      "sha256": "7a0f4580d2bf428012421d21519308d2007c5dfa0007eefb35cacc78e83d096c"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 29829,
+      "sha256": "ca70bf6c4e8e3b0a1b8c1aca8161a007a824f14dcd876f51670d95590e28b09d"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 29622,
+      "sha256": "6c459ab82cbb860124dfb24b06e66daa00da31fc8627b1acaea3dd56fa7e1ef0"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 31369,
+      "sha256": "99a1562727ba4854d94b9f11bf570bc52ea957ed30c3c72970f6f32452365d7c"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-1/runner.txt",
+      "bytes": 3750,
+      "sha256": "f7a0c566aa44084519e8cf737186745cf4b925fbcd59462b9d51df6517746213"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "4bcaa70affda744edcd2d465dfe36dbfff0c7c603b59534e7d46df97d56509f9",
+      "original": {
+        "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/ordinary-stdout.txt",
+      "bytes": 2552,
+      "sha256": "d76b095b3d54c4f8b79d436df0d5c96f7bc69ac272d9e82b08cebba3a3ad45f8"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "9e1ae2e464b0e0543ec6db765b4c4cb2237b7d1042274b4c5a7715fd9e19860f",
+      "original": {
+        "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/profiled-stdout.txt",
+      "bytes": 3722,
+      "sha256": "be3bbacd9d826da0a0012c7199b4ca1c31e45825df6b590bac0b118fb4f5d1f7"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/receipt.json",
+      "bytes": 136642,
+      "sha256": "081e9c57b288c94bc8965731f811be46a467cc2ad1074b4d6c24eb5626008f78"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 29402,
+      "sha256": "1fe620833fae4565228c625f4888ef6e2b87addea8fea3bc495e4a98f12975e0"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 27549,
+      "sha256": "0637a13f7c4c97d21aadb683c31994c6f7a9228813d22b332c253af2669a8572"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 28806,
+      "sha256": "d16b0e780c3be44fe0094ace9dc3c049bd4d7c901fd4a0b4beece28f393dbd54"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 25221,
+      "sha256": "d13b1aaeab2fc6b82121b00b7f78212cf1e85c57554038b67db9c6204e43880d"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 27926,
+      "sha256": "b440edb94d1a4c75829ef8c53292820b937accfea55d0c47991ac688eef333be"
+    },
+    {
+      "path": "initial/warmed-gpio-node-20.20.2-repeat-2/runner.txt",
+      "bytes": 3799,
+      "sha256": "4b1afbe58b1678faa7a99a8fa5d4f17f6f3affc5387dc1098a5dc935645518d5"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "bc16e3864847a71a348f62e0925146ccf4cd5eaeb1e643d610e60952dfbf67d5",
+      "original": {
+        "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/ordinary-stdout.txt",
+      "bytes": 1716,
+      "sha256": "6d2918002170aab6e5cbe2603b752c29e073e46f0dd9daa25a39ad5a01570938"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "1f569f9a0c6427c0019cad14326164e2747735d7883d4be5e7b297aff6f7a179",
+      "original": {
+        "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/profiled-stdout.txt",
+      "bytes": 3112,
+      "sha256": "819e1323af2b35af1cf58d420a6793a948d77a74f16031b95d6d3a2b101bdd65"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/receipt.json",
+      "bytes": 136677,
+      "sha256": "8c3ee596ca65180ffada5b51a775989c1aace4b5f0516d233d0db52a61bedaac"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 35379,
+      "sha256": "7ffce89cdd91f14f0ef0aec5bd9421feb2952a6e687193705dc4de1ef1aabaf9"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 27372,
+      "sha256": "182ea505eb324d55b32031ebfaeb84e1f767503800053d53f2c1b3f457902051"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 25895,
+      "sha256": "cafec888590ff75cc2fa4ee16c0a1d1f4a145bd38f3d27876986f5b5bcb1c103"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 25839,
+      "sha256": "781f072517b5cc4e7f294a139ff7b96ef7feabd122ddd3c33ffaa4f88eba9bcf"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 24624,
+      "sha256": "ef0112dc71019b836ea5bf21f27bf45d9087a23544fb53eccfe22323b3a1e11c"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-1/runner.txt",
+      "bytes": 3696,
+      "sha256": "423817310a1886efc1a1e1da71badb00ca77fd4669914137d82bf13371cca6de"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "c098a0a5570b8d9fb49c9220997e5cb72f2b60d4435c09f90be10fa0695a41cf",
+      "original": {
+        "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/ordinary-stdout.txt",
+      "bytes": 2575,
+      "sha256": "c681f9ed7a3cb9aaa76fd103ba720ed881d34383e15e6e290937540a72a532bf"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 127,
+      "sha256": "d9a95c0a21248beec6c3a018c8a2256b32121e5be922a992800b011701b4fab1",
+      "original": {
+        "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/profiled-stdout.txt",
+      "bytes": 3765,
+      "sha256": "b5a436b4c01831869019ce6e2f485663a7d2b310edcf94f31765fa384ef868a6"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/receipt.json",
+      "bytes": 136923,
+      "sha256": "2379f45b6bba16897be274c659a68535a8f0676b505016008ceadfb79fa134ba"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 51302,
+      "sha256": "d1c0a9f4241a45c54e4dc018adc7de1fc0acd06f17b883d9f08b33bb842ffe2f"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 34281,
+      "sha256": "e3113703359cab6713f4555721c95aa3945961203a50bb3e389b045976e5a5a3"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 37266,
+      "sha256": "b1981d87c1c9c0f84be5ad5433e36048d8ad42c299a4063273598b70fc44242d"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 36079,
+      "sha256": "22612ab2de2c56ab78b45dda44fb0521c61f31aac08949883633b59017e0232b"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 35514,
+      "sha256": "6fcc5271295c938c7fd3a3b330c4816202c20d3cf5f959318ba9d8e4656ffdf4"
+    },
+    {
+      "path": "initial/warmed-gpio-node-22.23.3-repeat-2/runner.txt",
+      "bytes": 3523,
+      "sha256": "cd0cb428bcd0e8d9b47e0f6e1beec4ffb7a7b2cacf46b0d44c87c97215605af5"
+    },
+    {
+      "path": "corrected/artifacts.json",
+      "bytes": 3616,
+      "sha256": "18261be26fad4c361dc387e321bfb96d1d9072a9968282f06d70c96786417a06"
+    },
+    {
+      "path": "corrected/baseline-verification.json",
+      "bytes": 21373,
+      "sha256": "8c0db8066bcdb982531cb7878901f9726bb72b6f1a7f2320368e280f881cbccd"
+    },
+    {
+      "path": "corrected/pipeline.json",
+      "bytes": 150351,
+      "sha256": "c4a149e1f1beece3115f6402cb73faa6144058df66138c6a7ccf67044eb0d66a"
+    },
+    {
+      "path": "corrected/run.json",
+      "bytes": 16085,
+      "sha256": "f3fc9f940df7e2d9c4a980303d02f5b76dd6576571ca9e9b81ccc58b672a5488"
+    },
+    {
+      "path": "corrected/source-contract.json",
+      "bytes": 1720,
+      "sha256": "b0238407ce305566e76c443fbba51c98d775b954d1cfe34eb793a21e33a3a695"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "8f3e3b144c9336e60535d05d26de6337a2915fa2346cf51040a06db3ed9fcb2d",
+      "original": {
+        "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/ordinary-stdout.txt",
+      "bytes": 2546,
+      "sha256": "e14f7842582e3f0afd61a57a29cb6ef1dc4988d7d18dc9d8dff207e9f5698e2f"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "c39a5323b9f3fa2184670ff5f59c755b3ff906935f254f23618b33266c3411c5",
+      "original": {
+        "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/profiled-stdout.txt",
+      "bytes": 3733,
+      "sha256": "119e4a099907079c9f8d201ca30635dec25d6fb36eeff76b2c5cc1b17121d0d0"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/receipt.json",
+      "bytes": 137273,
+      "sha256": "8501d93d705bea03d13b8e463ca9ce1953bd9224bbac4e1ff766268ee2bf10bc"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 36084,
+      "sha256": "3a86c31804fa4b860dc600874f3f1a0e10ae1ed734b1e5a41ccc2053dd2c8292"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 32670,
+      "sha256": "2341cd25787480c7b8cb7e7126f9df48aa7faf05d16999833013474ca3582e17"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 38830,
+      "sha256": "dd9a733f0ff4f054bf29cbefb5d97d1c4acc77d5b74dae939f24f8a6fd531e02"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 37748,
+      "sha256": "bb12feea2f789dd6845ab9803f85666942af6fa2b7c9065e1a0f323ad3f04824"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 37592,
+      "sha256": "0092eb051fa6d5b5e586874fb26e73fee7dc89452c9c54d45d93677fa5b243c5"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-1/runner.txt",
+      "bytes": 3523,
+      "sha256": "7508966a3482b2c9c29f31c5f4fd4f3b140e98264fe6e91232fdacd5a61705ca"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "072acda838f4b1aeb45b39af274aa969639a8e0758e2d6ef555b0cb786e2c9d0",
+      "original": {
+        "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/ordinary-stdout.txt",
+      "bytes": 2529,
+      "sha256": "2c531894ae1fecd80576df2b8a10c349fd27ff8fbafe28bd56c26c028c09250d"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "1e178bdbe1208c3519acdd72d0bb59307815af241552658b979ac030399ba842",
+      "original": {
+        "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/profiled-stdout.txt",
+      "bytes": 3717,
+      "sha256": "f903dd577de840637be756c585d95e566da970f3b491a8c982855cb7b3981fd3"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/receipt.json",
+      "bytes": 137165,
+      "sha256": "d82b387a42cd042212026654e3d5f0e5a552dc8186bc66d82a08c5953fae00f1"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 29968,
+      "sha256": "a7d8a7a7f0cab778abe60066597f8caff38fb705d08190ef6b6016ce450f4a5e"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 26800,
+      "sha256": "31e1a2f56354e1aef14fc27ced4d8131b45ef610fd8535acd37779eb4a3e0988"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 31841,
+      "sha256": "95dd2495afef574ff5e919b4db425f29054d7455948a72a8f866fb017adf8f7d"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 26985,
+      "sha256": "7fa70944d065d8b9f12e8c564066e5b944ca34833333459846d849bf224d289c"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 29061,
+      "sha256": "a1593ee6b88f8e98fcee8d21c7b853fe4a36188a9d989eebe3dc5a7c6b41c4b5"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-20.20.2-repeat-2/runner.txt",
+      "bytes": 3799,
+      "sha256": "ea37b658a4ed1dda4985c4c3291251513d5fb3d6e646fa5b0a099b25a0d148fa"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "08d2388cbd73ef704d623f97f3092e989b48f89e95850553f2df2efc2175afe1",
+      "original": {
+        "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/ordinary-stdout.txt",
+      "bytes": 2577,
+      "sha256": "f86f16f1a959e8097ec5dec5842e4341554b72bb0a14d821e8e35f217670ae76"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "c4e2e3a84b6d802e06029526a515c9821db895ccc1abc0693dc7cf59d4ca2a76",
+      "original": {
+        "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/profiled-stdout.txt",
+      "bytes": 3759,
+      "sha256": "69acc71104c69d4a619aaa09c3a8afb22e71877a0ccfff88e9a61a9d4c2e3204"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/receipt.json",
+      "bytes": 136595,
+      "sha256": "767b6dd3fcac6af315f565567ed5242ddb41dc6d2717818daf133db11977b278"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 43437,
+      "sha256": "31554c740e55155dc4a885f360c3f23724e627ee2877f60110c13bcccf1e2e5e"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 32782,
+      "sha256": "9f87787beaae3ec8b6cb27e34adcccdae61835acaeb217b7f8e06f51effef6c8"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 31439,
+      "sha256": "c238c412d8033088e12e3d3a75f2f4f342e46f4b41d3e087e0b8d37c69bceeba"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 33659,
+      "sha256": "e1876920663665d34854768e3f6c694b606f8eb9aae10fb205d1fb84b76af1a5"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 33707,
+      "sha256": "0b4d9f2cd3b89b4082736eb562451ad975cb7bbc2465542fd3b572324113a42f"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-1/runner.txt",
+      "bytes": 3673,
+      "sha256": "a40e853576b327bfd64b845c7d18f43ac1785a9a0b707b6e3324361f1fa38218"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/ordinary-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "c13be68e27b13232887311ef9b37d2eb0689f902003f785dbc4a4fe2995a95ed",
+      "original": {
+        "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/ordinary-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/ordinary-stdout.txt",
+      "bytes": 2584,
+      "sha256": "1616f29d9b9c8fe4ddf9be7065c64749f20afaa37911e49984283489c2a754fd"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/profiled-stderr.txt.utf8.json",
+      "bytes": 129,
+      "sha256": "9d93974547af32c7f9c811e306d81af2e2a487460ed1fda03ee89b445cae43ea",
+      "original": {
+        "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/profiled-stderr.txt",
+        "encoding": "utf8",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/profiled-stdout.txt",
+      "bytes": 3758,
+      "sha256": "88aac22bd4cf4ee76a93fe909bba94c346595c9686dcd80f566662bf0d1ca49c"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/receipt.json",
+      "bytes": 136569,
+      "sha256": "f5a0f4513f73ac617f7a52c22ce27b654b85721b1313b0a74415527379564abe"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-0.cpuprofile",
+      "bytes": 55824,
+      "sha256": "3753138a0fcbe52bdaffd1fccb6ccfdb4f91fdd5f1d0a1982c7b24dde5f4e566"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-1.cpuprofile",
+      "bytes": 33703,
+      "sha256": "c8a1af8527ca144fe413a6e9c00e68b58db0637f78014128546951db6adf5288"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-2.cpuprofile",
+      "bytes": 34498,
+      "sha256": "746431063f3fdb3e36c493ff987562da430b3ce0dd7612af6c1a7c3512e1e488"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-3.cpuprofile",
+      "bytes": 33775,
+      "sha256": "8d570cf55d598efc43ece0437dcca3c1acbdb8b68658de0c2600ce9bfa148d94"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/gpio/window-profiles/gpio-4.cpuprofile",
+      "bytes": 37179,
+      "sha256": "68a151ef974ea851180b4706c5d23e78817c84fa8f9c76792f26cbc2d4dfe589"
+    },
+    {
+      "path": "corrected/warmed-gpio-node-22.23.3-repeat-2/runner.txt",
+      "bytes": 3524,
+      "sha256": "c3830ef28fb6551c905bfea5a4bfede267f24a56ce1a8607356692e777179edf"
+    },
+    {
+      "path": "tool-landing.json",
+      "bytes": 7058,
+      "sha256": "c472635c2c95019a0d36f83c9eb62d0776219a7d0318b5546a15e49703af6e31"
+    },
+    {
+      "path": "controllers/capture-warmed-window-profiles.mjs",
+      "bytes": 8067,
+      "sha256": "2d78cf1c8d768d9e0c31165f43a7474959410b577dbde2c77940787dd6547319"
+    },
+    {
+      "path": "controllers/capture-warmed-window-r2-profiles.mjs",
+      "bytes": 8098,
+      "sha256": "20196e83822373b1865431e42633251730a024a1213605c3b4cba604b9d9ad34"
+    },
+    {
+      "path": "controllers/capture-window-profile-census-failure.mjs",
+      "bytes": 2961,
+      "sha256": "96fe3395b2d626b0487755628cabf01c138089e019995eff81a118a430dabbd4"
+    },
+    {
+      "path": "controllers/capture-window-profile-core-inspection.mjs",
+      "bytes": 2234,
+      "sha256": "659273d5a2d25c8d90d2dffce37d84cebe2ff0ed6a7d533cbc6ed2b76c222f1d"
+    },
+    {
+      "path": "baseline-build-a.txt",
+      "bytes": 63488,
+      "sha256": "acbb330bd76606ceef3772095cd7eef1675841b9d7000efb1fce6c49cfba1c72"
+    },
+    {
+      "path": "baseline-build-b.txt",
+      "bytes": 63489,
+      "sha256": "d8ec4165b72a156adf64318e7d7cdf466cf406701e178d41b8c0b770ff5c25d0"
+    },
+    {
+      "path": "baseline-integration.txt",
+      "bytes": 72221,
+      "sha256": "9cf3e0c3b47e64ed289b9da8d8000750f9900d85467bc11775505056f1961547"
+    },
+    {
+      "path": "baseline-qualification.txt",
+      "bytes": 27955,
+      "sha256": "26baad53add464c7a10611c9941fb5d2f56703a91bc8dc301787cdb848f1618d"
+    },
+    {
+      "path": "initial/hosted-job-111169433592.txt",
+      "bytes": 81054,
+      "sha256": "bfecebb23650cca6ac13c8eefa2f516da76f9eeefecf67bc5beab10b2a24ce92"
+    },
+    {
+      "path": "initial/hosted-job-111169433759.txt",
+      "bytes": 81318,
+      "sha256": "bbd725e5485a6dca9cbb8d5922d8823c8be803b8e13855257d840a411881a125"
+    },
+    {
+      "path": "initial/hosted-job-111169433762.txt",
+      "bytes": 79559,
+      "sha256": "c26583c8865f52928d16af20bf3a40d9937fd2036c12371fd8a3838a34675314"
+    },
+    {
+      "path": "initial/hosted-job-111169433763.txt",
+      "bytes": 79463,
+      "sha256": "ef39048698ec87eab9a0fb08dd5e906b214ae0ad4b1b3d48701dd8ae1fa6f5ac"
+    },
+    {
+      "path": "corrected/hosted-job-111171930738.txt",
+      "bytes": 79565,
+      "sha256": "88924b8d3e8c2ff2775d076a382e3376c4e4ec3408744a2de1d59d908f8a79f4"
+    },
+    {
+      "path": "corrected/hosted-job-111171930861.txt",
+      "bytes": 79524,
+      "sha256": "cdae49146d3aaff550baec763f0a404b89730b840c36e4327d20ac91104aacd5"
+    },
+    {
+      "path": "corrected/hosted-job-111171930878.txt",
+      "bytes": 81303,
+      "sha256": "f9704f6196926ae96fc800890f40be4d09e96fdb62b480dfc8580ffa711f94f0"
+    },
+    {
+      "path": "corrected/hosted-job-111171930899.txt",
+      "bytes": 81245,
+      "sha256": "cf743d35376b2a6eefb7caefe8a16e2b1249621f6e5fdecc66cd3717a676f15a"
+    },
+    {
+      "path": "caller-attribution.json",
+      "bytes": 4788,
+      "sha256": "8d66c7c5acc829220847a7625bb12723f348ce52a0ab5ee15fec7f884288793d"
+    }
+  ]
+}
