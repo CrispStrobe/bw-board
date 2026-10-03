@@ -31,6 +31,12 @@ export function validateSuccessfulCapture(c,b){
  c.javascriptPorts.forEach((e,i)=>{assert.equal(e.ordinal,i+1);assert.ok(Number.isSafeInteger(e.q)&&e.q>=previousQ&&e.q>0&&e.q<=b.targetQ);previousQ=e.q;assert.equal(e.cycles,4+6*(e.q-1));assert.equal(e.width,8);assert.ok(e.dir==='in'||e.dir==='out');assert.ok(Number.isInteger(e.port)&&e.port>=0&&e.port<=65535);assert.ok(Number.isInteger(e.value)&&e.value>=0&&e.value<=255);});
  return c;
 }
+/** Genuine aggregate review, separate from the retained capture and CPU cut. */
+export function validateIndependentAudit(a,c,b){
+ validateSuccessfulCapture(c,b);assert.equal(a.status,'PASS_INDEPENDENT_EIGHTH_COLD_E16_AUDIT');assert.ok(Number.isSafeInteger(a.checks)&&a.checks>0);assert.equal(a.members,448);
+ assert.equal(a.extent.q,b.targetQ);assert.equal(a.extent.n,c.progress.n);assert.equal(a.extent.resumes,c.progress.resumes);assert.equal(a.extent.zeroQ,0);assert.equal(a.cuts,c.cuts.length);assert.equal(a.repElements,400);assert.equal(a.ports,c.javascriptPorts.length);assert.equal(a.ramSha256,c.javascriptFinal.ramSha256);
+ return a;
+}
 function git(args){return execFileSync('git',args,{cwd:sourceRoot,maxBuffer:32<<20,timeout:10000});}
 export function nativeWorkerSourceIdentity(){
  assert.equal(git(['status','--porcelain']).toString().trim(),'','clean native-only worker checkout');const revision=git(['rev-parse','HEAD']).toString().trim(),paths=new Set();
@@ -41,7 +47,7 @@ export function nativeWorkerSourceIdentity(){
 export function authenticatePrerequisite(input){
  const bindingBytes=ordinaryBytes(resolve(sourceRoot,'scripts/cold-native-performance/capture-binding.json'),16384),binding=validateReadyBinding(JSON.parse(bindingBytes));
  const captureBytes=ordinaryBytes(input.capture),auditBytes=ordinaryBytes(input.independentAudit);assert.equal(sha(captureBytes),binding.captureSha256);assert.equal(sha(auditBytes),binding.independentAuditSha256);
- const capture=validateSuccessfulCapture(JSON.parse(captureBytes),binding);assert.ok(JSON.parse(auditBytes)&&typeof JSON.parse(auditBytes)==='object','pinned independent audit JSON');
+ const capture=validateSuccessfulCapture(JSON.parse(captureBytes),binding);validateIndependentAudit(JSON.parse(auditBytes),capture,binding);
  const token=Object.freeze({targetQ:binding.targetQ});authorized.add(token);return {token,capture,binding,bindingSha256:sha(bindingBytes),captureSha256:sha(captureBytes),independentAuditSha256:sha(auditBytes)};
 }
 export function authorizedTarget(token){assert.ok(token&&authorized.has(token),'only authenticated frozen successful capture may authorize execution');return token.targetQ;}

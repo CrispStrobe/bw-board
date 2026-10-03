@@ -2,10 +2,11 @@
 
 This unqualified source draft implements two closed modes for the fixed cold
 reset → before F000:E16 slice. It neither executes nor qualifies a guest by
-itself. The source-owned capture binding remains PENDING, refusing execution
-before compiled module import, factory construction or addon loading. A separately
-reviewed successful one-Q diagnostic and independent audit must pin their bytes,
-driver identity and actual target Q. Failed diagnostic attempts and the ordinary
+itself. The source-owned binding pins the independently audited eighth diagnostic: capture
+`b4dd7174`, audit `a1b93101`, driver `11c0bdca` with its 54-file identity, and
+316,562 completed Q. Prerequisite authentication occurs before compiled module
+import, factory construction or addon loading. This source migration does not
+authorize or qualify either worker arm. Failed diagnostic attempts and the ordinary
 JS census are not performance baselines or valid target-Q authorities.
 
 The worker uses the fixed no-argument compiled provider and original ABI4 APIs
@@ -52,7 +53,7 @@ Pure tests use manufactured protocol fixtures only, with no machine construction
 CPU instruction, addon load, native guest or benchmark. A future parent must freeze
 source/Node/input/helper/artifact pins, supply process-group CPU/wall/file/core limits
 and retain raw stdout/stderr/exit plus whole-child rusage and host context. Those
-whole-child costs differ from execution timing. The pending binding is not a guest
+whole-child costs differ from execution timing. The ready prerequisite binding is not a guest
 authorization. No source control success establishes speed or adoption.
 
 Native-only one-Q versus batched execution measures complete-slice scheduling/API

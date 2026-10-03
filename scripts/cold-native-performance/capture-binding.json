@@ -1,11 +1,11 @@
 {
   "schema": "bw.cold-native-performance.capture-binding.v1",
-  "status": "PENDING_INDEPENDENTLY_AUDITED_SUCCESSFUL_CAPTURE",
+  "status": "INDEPENDENTLY_AUDITED_CAPTURE_READY",
   "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
-  "driverRevision": "8d444cfb5d2f1a8de7af594c08bb2cf28d063998",
-  "driverSourceSha256": "0f1508384b0bbadadd6903dbc1ff708c215d8bb3e3f4329783dcf5b7a2f4ff58",
-  "captureSha256": null,
-  "independentAuditSha256": null,
-  "independentAuditApproved": false,
-  "targetQ": null
+  "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+  "driverSourceSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "independentAuditSha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+  "independentAuditApproved": true,
+  "targetQ": 316562
 }

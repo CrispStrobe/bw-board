@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {nextBudget,validateReturn,validateTerminalMetadata,compareReset,compareFinalEvidence,noArtificialNativeDeadline} from '../scripts/cold-native-performance/protocol.mjs';
-import {validateReadyBinding,validateSuccessfulCapture,authorizedTarget,sha} from '../scripts/cold-native-performance/admission.mjs';
+import {validateReadyBinding,validateSuccessfulCapture,validateIndependentAudit,authorizedTarget,sha} from '../scripts/cold-native-performance/admission.mjs';
 import {validateWorkerInput} from '../scripts/cold-native-performance/worker.mjs';
 const clone=x=>JSON.parse(JSON.stringify(x)),hash='a'.repeat(64);
 function cpuFixture(final=false){
@@ -40,11 +40,18 @@ test('complete PIO, real asserted PIC and whole raw RAM cannot be normalized awa
  for(const change of [p=>p.reverse(),p=>p.pop(),p=>p[0].cycles++,p=>p[0].successfulQuanta++,p=>p[1].value=0]){const p=clone(nativePorts);change(p);assert.throws(()=>compareFinalEvidence(final,settled,p,capture));}
 });
 test('pending/failed/unaudited or inconsistent capture cannot authorize native execution',()=>{
- const pending=JSON.parse(readFileSync(new URL('../scripts/cold-native-performance/capture-binding.json',import.meta.url)));assert.throws(()=>validateReadyBinding(pending));assert.throws(()=>authorizedTarget({targetQ:10}));const {binding,capture}=fixture();validateSuccessfulCapture(capture,binding);
+ const pending=JSON.parse(readFileSync(new URL('../scripts/cold-native-performance/capture-binding.json',import.meta.url)));validateReadyBinding(pending);assert.equal(pending.targetQ,316562);assert.throws(()=>validateReadyBinding({...pending,status:'PENDING_INDEPENDENTLY_AUDITED_SUCCESSFUL_CAPTURE'}));assert.throws(()=>authorizedTarget({targetQ:10}));const {binding,capture}=fixture();validateSuccessfulCapture(capture,binding);
  for(const change of [b=>b.targetQ=null,b=>b.targetQ=400001,b=>b.independentAuditApproved=false,b=>b.driverRevision='bad',b=>b.driverSourceSha256=null,b=>b.compiledRevision='a'.repeat(40)]){const b=clone(binding);change(b);assert.throws(()=>validateReadyBinding(b));}
  for(const change of [c=>c.status='FAIL',c=>c.input.driverRevision='c'.repeat(40),c=>c.input.driverSourceSha256='c'.repeat(64),c=>c.progress.q=9,c=>c.driverAfter.hashes.driver='b'.repeat(64),c=>c.javascriptPorts[0].cycles++,c=>c.nativeFinal.ramSha256='b'.repeat(64)]){const c=clone(capture);change(c);assert.throws(()=>validateSuccessfulCapture(c,binding));}
 });
 test('fixed CLI mode/source/artifact/output roles refuse caller knobs before native load',()=>{
  const input={compiledRoot:'/compiled',compiledRevision:'7632e6a0995ceaab88bc8cede91506a5330d2e1c',addon:'/addon.node',sha256:hash,configuration:'/config',preparedManifest:'/manifest',preparedManifestSha256:hash,buildReceipt:'/receipt',buildReceiptSha256:hash,capture:'/capture',independentAudit:'/audit',output:'/exclusive-output',workerRevision:'b'.repeat(40),workerSourceSha256:hash,nodeSha256:hash,mode:'batched'};assert.equal(validateWorkerInput(input),input);validateWorkerInput({...input,mode:'oneQ'});
  for(const patch of [{mode:'custom'},{maxQ:1000},{nativeTrace:true},{compiledRevision:'a'.repeat(40)},{output:'/compiled/new'},{capture:'/exclusive-output/capture'},{independentAudit:'/capture'},{addon:'relative'},{nodeSha256:null}])assert.throws(()=>validateWorkerInput({...input,...patch}));
+});
+
+test('genuine aggregate audit must bind the same capture extent, cuts, ports and raw RAM phase',()=>{
+ const {binding,capture}=fixture();capture.progress.resumes=10;
+ const audit={status:'PASS_INDEPENDENT_EIGHTH_COLD_E16_AUDIT',checks:34066,members:448,extent:{n:12,q:10,resumes:10,zeroQ:0},cuts:15,repElements:400,ports:2,ramSha256:capture.javascriptFinal.ramSha256};
+ validateIndependentAudit(audit,capture,binding);
+ for(const mutate of [a=>a.status='PASS',a=>a.extent.q++,a=>a.extent.n++,a=>a.extent.resumes++,a=>a.extent.zeroQ=1,a=>a.cuts--,a=>a.repElements--,a=>a.ports++,a=>a.ramSha256='b'.repeat(64)]){const a=clone(audit);mutate(a);assert.throws(()=>validateIndependentAudit(a,capture,binding));}
 });
