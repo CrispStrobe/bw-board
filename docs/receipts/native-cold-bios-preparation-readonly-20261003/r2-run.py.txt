@@ -1,0 +1,24 @@
+import os,subprocess,resource,hashlib,json,time,pathlib,signal
+w=pathlib.Path('/tmp/bw-cold-native-preparation-20261003');b=pathlib.Path('/tmp/bw-bochs-pristine-in8-20261002');r=pathlib.Path('/tmp/native-cold-bios-preparation-readonly-preflight-r2-20261003');node=pathlib.Path('/tmp/node-v22.23.3-linux-x64/bin/node')
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def git(root,args):return subprocess.check_output(['git',*args],cwd=root).decode().strip()
+paths=git(w,['ls-files']).splitlines();keys=['bochs/bochs.h','bochs/cpu/cpu.cc','bochs/cpu/paging.cc','bochs/cpu/exception.cc','bochs/cpu/event.cc','bochs/main.cc','bochs/memory/memory.cc','bochs/memory/misc_mem.cc','bochs/pc_system.h','bochs/pc_system.cc','bochs/iodev/devices.cc','bochs/cpu/init.cc','bochs/cpu/cpu.h','bochs/cpu/icache.cc']
+def snap():return {'sourceHead':git(w,['rev-parse','HEAD']),'sourceStatus':git(w,['status','--porcelain']),'sourcePresentHashes':{p:sha(w/p) for p in paths if (w/p).is_file()},'bochsHead':git(b,['rev-parse','HEAD']),'bochsStatus':git(b,['status','--porcelain']),'bochsKeyHashes':{p:sha(b/p) for p in keys},'nodeSha256':sha(node),'helperSha256':sha(r/'helper.mjs'),'parentSha256':sha(r/'run.py')}
+before=snap();assert before['sourceHead']=='5c8c39efacc90b621f1415ddc426dcef13b372e1' and before['sourceStatus']=='';assert before['bochsHead']=='0e45b736ef9792eb9b752b0a35db49eaf2faea47' and before['bochsStatus']==''
+(r/'before.json').write_text(json.dumps(before,indent=2)+'\n');env=os.environ.copy();hooks=['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE']
+for k in hooks:env[k]=''
+env['BOCHS_386_ROOT']=str(b);cmd=[str(node),'--max-old-space-size=128',str(r/'helper.mjs')]
+def limits():
+ os.nice(10);resource.setrlimit(resource.RLIMIT_CPU,(15,15));resource.setrlimit(resource.RLIMIT_FSIZE,(256*1024*1024,256*1024*1024));resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+t=time.monotonic()
+with (r/'stdout').open('wb') as out,(r/'stderr').open('wb') as err:
+ p=subprocess.Popen(cmd,cwd=w,env=env,stdout=out,stderr=err,preexec_fn=limits,start_new_session=True)
+ try:code=p.wait(timeout=30);timed=False
+ except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);code=p.wait();timed=True
+elapsed=time.monotonic()-t;after=snap();(r/'after.json').write_text(json.dumps(after,indent=2)+'\n');exit={'command':cmd,'exitCode':code,'timedOut':timed,'wallSeconds':elapsed,'beforeAfterUnchanged':before==after,'limits':{'cpuSeconds':15,'wallSeconds':30,'topNodeHeapMiB':128,'nice':10,'fileMiB':256,'core':0},'emptyHooks':hooks,'bochsRoot':str(b),'nestedHeldH4NodeHeap':'inherited source preparer invokes default Node heap; CPU/wall/group bounds retained','stdoutSha256':sha(r/'stdout'),'stderrSha256':sha(r/'stderr')};(r/'exit.json').write_text(json.dumps(exit,indent=2)+'\n');print(json.dumps(exit,indent=2))
+if code==0 and not timed:
+ result=json.loads((r/'stdout').read_text());m=result['source'];assert m['revision']==before['sourceHead'];assert result['preparation']['sourceHashes']==m['hashes'];assert before==after
+ for path,h in m['hashes'].items():
+  assert before['sourcePresentHashes'][path]==h==after['sourcePresentHashes'][path]
+  assert hashlib.sha256(subprocess.check_output(['git','show',m['revision']+':'+path],cwd=w)).hexdigest()==h
+ (r/'audit.json').write_text(json.dumps({'status':'READONLY_SOURCE_IDENTITY_AND_CHECK_PASS','sourceCount':len(m['hashes']),'sourceRevision':m['revision'],'bochsRevision':before['bochsHead'],'generatedRuntimeSha256':result['preparation']['generatedRuntimeSha256'],'noPreparedTree':not 'preparedTree' in result['preparation'],'beforeAfterUnchanged':True},indent=2)+'\n');print((r/'audit.json').read_text())

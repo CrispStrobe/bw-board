@@ -1,0 +1,5 @@
+import {sourceIdentity} from '/tmp/bw-cold-native-preparation-20261003/scripts/bochs-cpu3-native-cold-bios/identity.mjs';
+import {execFileSync} from 'node:child_process';
+const source=sourceIdentity();
+const preparation=JSON.parse(execFileSync(process.execPath,['--max-old-space-size=128','/tmp/bw-cold-native-preparation-20261003/scripts/prepare-bochs-cpu3-native-cold-bios.mjs','--check'],{encoding:'utf8',timeout:25000,maxBuffer:16<<20}));
+console.log(JSON.stringify({source,preparation},null,2));
