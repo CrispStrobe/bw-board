@@ -1,0 +1,5 @@
+This source-only manual wrapper restores the exact independently audited first protected build (37149215092, artifact11283630476), compiled158/prepared814/DSO98c7, and authenticates the separate bound driver65 checkout. Original build records remain unchanged; the hosted filesystem is newly materialized. It never builds Bochs.
+
+Default enable is false. Source contract remains pending review. A separate root dispatch is required for one trace-OFF correctness child under CPU60/wall120/heap128/file16MiB/core0/nice10 and blank executable hooks. Raw process launch, wait4, stdout/stderr/exit, full source/artifact maps and first failure are retained. Node launch is distinct from CPU execution.
+
+The fixed driver retains raw166 words, compares represented CPU/full boards/both GDT and code4096 pages and exact stores/generations at every returned boundary, stopping ordinarily after RAM MOV before HLT. No native protected execution, parity, performance or broader OS claim exists yet. Manufactured source controls do not download, restore or execute the real worker.
