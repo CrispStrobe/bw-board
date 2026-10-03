@@ -2,14 +2,14 @@
 
 This parent prepares two separate comparisons: native-only one-Q versus native
 batching, and plain functional Bochs-profile JS versus native batching. It never
-uses the mixed native/JS diagnostic timing as a performance baseline. Frozen workers `8ed0366a` (55 inputs) and `0f1ec8cc` (49 inputs) bind the
-independently audited eighth capture and unchanged compiled7632. Their real
-three-arm semantic qualification is still pending. The original0fe parent and
+uses the mixed native/JS diagnostic timing as a performance baseline. Frozen workers `b01c922c` (56 inputs) and `0f1ec8cc` (49 inputs) bind the
+independently audited eighth capture and unchanged compiled7632. Their genuine three-arm qualification passed in run37126251298, with
+independent governing audit retained in this source packet. The original0fe parent and
 be5 qualifier remain immutable. A separate source-only hosted setup adapter
-reuses the exact31-file qualifier setup in another process, calling no arm loop
+reuses the exact32-file fc0c71fb qualifier setup in another process, calling no arm loop
 and doing no rebuild. The paired parent itself contains no addon-load code.
 
-The source-owned binding is PENDING. Its ready guard precedes every child spawn,
+The static source binding remains a template; the hosted setup gate now pins the genuine all-three-arm audit. Its ready guard precedes every child spawn,
 including metadata subprocesses. Before a future execution grant it must pin the
 successful actual diagnostic, independent capture audit, separate actual semantic
 qualification of all three worker arms, native125 build/artifact/prepared/config
@@ -54,20 +54,20 @@ adoption, full AT/Windows/Doom10x or broad CPU-model parity.
 
 The inherited fixture controls and one new hosted pending-audit refusal are written: pending refusal, exact schedule, all166 and
 counter mutations, full board/RAM/PIO/JS scope, metric separation, file-role guards
-and one tiny Python sleeper timeout with detached descendant. The new integration controls have not run.
+and one tiny Python sleeper timeout with detached descendant. The e05 source stage passed ten pure controls. The current pin/audit derivative passed all ten bounded pure controls; raw evidence is retained in /tmp/native-cold-paired-qualified-pure-controls-20261003.
 No hardware machine is constructed by the controls. Source freeze and independent
 review precede even the lightweight control execution requested for this draft.
 
 The new manual workflow defaults disabled. The source-owned semantic-audit
-prerequisite remains PENDING and rejects before any setup subprocess, download
-or benchmark child. Future actual audit bytes, their immutable digest and exact
-official semantic artifact metadata must be reviewed before filling this gate.
+prerequisite now binds the genuine governing audit and original official
+semantic artifact. Missing or altered authority refuses before setup or children;
+source readiness does not grant a dispatch.
 The closed setup binds original compiled/prepared/evidence records without
 rewriting them, then supplies a hashed derived ready binding to the paired parent.
 One comparison is chosen per dispatch; no prior semantic arm is rerun by setup.
 Process cgroup quota/stat files are read from the actual unified cgroup domain;
 root hierarchy files are separately labelled and may not describe the process.
-No current hosted setup, source-control suite or paired child has been run.
+No current hosted setup or paired child has been run; the new source-control suite passed.
 
 Only the setup child may receive the read-only GitHub API credential; every
 performance child strips it. No credential values are printed or retained.
