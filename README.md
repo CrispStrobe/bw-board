@@ -400,6 +400,20 @@ production, app pins and physical acknowledgements are unchanged. All **240
 paired timing windows**, gains, losses and original verdicts are retained:
 [live boolean eligibility results and complete receipts](docs/receipts/2026-10-03-wasm-edge-eligibility-bool/README.md).
 
+The follow-up runs **four ordinary pairs on one hosted VM per runtime**,
+balancing ABBA/BAAB/BAAB/ABBA, with the same frozen harness and original
+engine/glue bytes. Across **480 new timing windows**, GPIO medians improve
+in all eight pairs (**+1.61% to +19.05%**), but motion changes **−5.00% to
++0.99%** and RAM **−1.18% to +1.81%**. Candidate medians span
+**0.574467×–0.808689× motion**, **0.567689×–0.707280× GPIO**, and
+**2.813353×–2.889983× RAM**. Motion/GPIO fail the unchanged every-window
+≥1× floor in all eight pairs; RAM passes all eight. The persistent mixed
+tradeoff leaves the candidate **unmerged/unqualified** and CP13 open.
+Separate runtime VMs do not establish Node-version causality or statistical
+significance. No production engine, app pin or physical acknowledgement
+changed. All pairs, minima, regressions and original job logs are retained:
+[repeated same-host results and complete receipts](docs/receipts/2026-10-03-wasm-same-host-orders/README.md).
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

@@ -1,0 +1,21 @@
+{
+  "originalCaptureSession": 77353,
+  "originalCaptureExitCode": 1,
+  "originalFailure": "AssertionError: Disk reserve",
+  "guardBeforeAnyReceiptDownload": true,
+  "originalLandingSession": 70955,
+  "originalLandingExitCode": 143,
+  "originalLandingMadeMergeWrite": false,
+  "checkedAt": "2026-10-03T11:44:46Z",
+  "workspaceFreeMiB": 0,
+  "rootFilesystemFreeMiB": 3241,
+  "availableMemoryMiB": 3880,
+  "loadAverage": [3.67, 3.02, 3.95],
+  "actualArtifactCompressedBytes": [124403, 124242],
+  "localEngineDownloads": false,
+  "cleanupPerformed": false,
+  "newAgents": false,
+  "replacementCaptureExitCode": 0,
+  "replacementCaptureSession": 21972,
+  "replacementLandingSession": 59188
+}
