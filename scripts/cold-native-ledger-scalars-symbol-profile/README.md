@@ -41,8 +41,19 @@ and real temporary receipt writes only. They cover the ten count1 worker seams,
 exact held timer/loop, PENDING refusal, ordered ACK/proof/nonce checks, original
 Error identity through sampler failures, attainable proof before observer
 failure, independent final guards, owner environment and launch/cleanup paths.
-No controls have run yet. After source review, the proposed invocation is pinned
+The reviewed invocation uses pinned
 Node 22.23.3 with heap 128 MiB, CPU 10 seconds, wall 30 seconds, file 8 MiB,
 core 0, nice increment 10 and six blank hooks. Native/recorder limits remain
 worker CPU 60/wall 120/file 16 MiB and profiler CPU 60/file 64 MiB, with bounded
 control waits and post-disable collection. This proposal is not a benchmark.
+
+The first bounded suite at `52ceafdd` passed all seven Node methods and the six
+nested Python methods, whose forwarded unittest tape is retained with the TAP.
+The wrapper exited 0 without timeout in 1.970445 seconds; all 92 current/Git
+source paths and recorded tool pins were unchanged before/after. The packet is
+`/tmp/native-cold-ledger-scalars-native-symbol-pure-controls-20261004`. These are
+manufactured transport/process controls and count-bound source inverses, with
+real temporary receipt writes. They do not prove live perf readiness/control,
+permissions, inherited sampling, Bochs unwind, clock equivalence or guest
+execution. Authority remains PENDING. This README-only outcome suffix follows
+the tested source; no final-head suite or live diagnostic is claimed.
