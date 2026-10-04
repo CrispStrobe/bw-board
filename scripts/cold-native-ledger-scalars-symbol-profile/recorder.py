@@ -85,6 +85,9 @@ def observed_process(pid):
  p=Path('/proc')/str(pid);raw=(p/'exe').read_bytes();require(raw[:4]==b'\x7fELF','actual executing inode ELF')
  return {'pid':pid,'executable':str((p/'exe').resolve()),'imageSha256':hashlib.sha256(raw).hexdigest(),'cmdline':(p/'cmdline').read_bytes().split(b'\0')[:-1],'status':(p/'status').read_text(),'threadIds':sorted(int(t.name) for t in (p/'task').iterdir()),'maps':(p/'maps').read_text()}
 def threads(pid):return sorted(int(p.name) for p in (Path('/proc')/str(pid)/'task').iterdir())
+def remaining_budget(started,cap=None):
+ left=120-(time.monotonic()-started);require(left>0,'absolute child wall120 exhausted')
+ return left if cap is None else min(left,cap)
 def recorder_environment():
  return {'PATH':'/usr/bin:/bin','HOME':str(OUT/'perf-home'),'XDG_CONFIG_HOME':str(OUT/'perf-home'),'XDG_CACHE_HOME':str(OUT/'perf-home'),'PERF_CONFIG':'/dev/null','LC_ALL':'C','DEBUGINFOD_URLS':'','PYTHONDONTWRITEBYTECODE':'1',**{h:'' for h in HOOKS}}
 def final_guards(report,guards):
@@ -136,12 +139,12 @@ def read_message(connection,timeout=5):
 def send_message(connection,value):connection.sendall((json.dumps(value,separators=(',',':'))+'\n').encode())
 class RecorderControl:
  """Serialized source-owned perf commands; a timeout ends this session permanently."""
- def __init__(self,write_fd,read_fd,perf):self.write_fd=write_fd;self.read_fd=read_fd;self.perf=perf;self.failed=False;self.records=[]
+ def __init__(self,write_fd,read_fd,perf,worker_started=None):self.write_fd=write_fd;self.read_fd=read_fd;self.perf=perf;self.failed=False;self.records=[];self.worker_started=time.monotonic() if worker_started is None else worker_started
  def command(self,name,sequence):
   require(not self.failed and name in ('disable','enable'),'closed live perf command');require(self.perf.poll() is None,'recorder alive')
   before=time.monotonic_ns()
   try:
-   require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK');os.write(self.write_fd,(name+'\n').encode());ready,_,_=select.select([self.read_fd],[],[],5);require(ready,'bounded perf ACK timeout');raw=os.read(self.read_fd,64);require(raw==b'ack\n','exact single perf ACK')
+   require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK');os.write(self.write_fd,(name+'\n').encode());ready,_,_=select.select([self.read_fd],[],[],remaining_budget(self.worker_started,5));require(ready,'bounded perf ACK timeout');raw=os.read(self.read_fd,64);require(raw==b'ack\n','exact single perf ACK')
    self.records.append({'command':name,'sessionSequence':sequence,'controllerBeforeNs':str(before),'controllerAfterNs':str(time.monotonic_ns()),'rawAck':raw.decode(),'scope':'perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session'})
   except BaseException:self.failed=True;terminate(self.perf);raise
 class WindowState:
@@ -192,25 +195,26 @@ def main():
   parent=OUT/'worker-output';require(not parent.exists(),'exclusive worker parent');parent.mkdir();os.chown(parent,owner.st_uid,owner.st_gid)
   listener=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);listener.bind(str(OUT/'control.sock'));os.chown(OUT/'control.sock',owner.st_uid,owner.st_gid);os.chmod(OUT/'control.sock',0o600);listener.listen(1);listener.settimeout(15)
   wrapper=[sys.executable,'-I','-B',str(HERE/'worker-entry.py'),str(owner.st_uid),str(owner.st_gid),node,'--max-old-space-size=128',str(WORKER/setup['worker']['entry']),str(OUT/'input.json')];worker_started=time.monotonic();worker=launch('worker',wrapper,env,60,16<<20)
-  connection,_=listener.accept();peer=struct.unpack('3i',connection.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12));require(peer==(worker.pid,owner.st_uid,owner.st_gid),'actual connected owner/PID')
+  listener.settimeout(remaining_budget(worker_started,15));connection,_=listener.accept();peer=struct.unpack('3i',connection.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12));require(peer==(worker.pid,owner.st_uid,owner.st_gid),'actual connected owner/PID')
   node_observed=observed_process(worker.pid);require(node_observed['imageSha256']==b['nodeSha256'] and node_observed['cmdline']==[x.encode() for x in wrapper[6:]],'observed unchanged Node CLI');node_observed['cmdline']=[x.decode() for x in node_observed['cmdline']];report['workerObserved']=node_observed
   ctl_read,ctl_write=os.pipe();ack_read,ack_write=os.pipe();fds=[ctl_read,ctl_write,ack_read,ack_write]
   args=[perf_path,'record','--no-buildid','--no-buildid-cache','-e','cpu-clock','-F','99','--call-graph','dwarf,8192','--delay=-1','--control=fd:'+str(ctl_read)+','+str(ack_write),'--clockid','mono','-p',str(worker.pid),'-o',str(OUT/'perf.data')]
   write(OUT/'record-invocation.json',{'command':args,'cpuSeconds':60,'wallSeconds':120,'fileBytes':64<<20,'coreBytes':0,'niceIncrement':10,'scope':'Existing process attach, initially disabled; no system-wide sampling'})
+  perf_started=time.monotonic()
   with (OUT/'record.stdout').open('xb') as so,(OUT/'record.stderr').open('xb') as se:perf=subprocess.Popen(args,cwd=OUT,env=perf_env,stdout=so,stderr=se,start_new_session=True,preexec_fn=limits(60,64<<20),pass_fds=(ctl_read,ack_write));ACTIVE['record']=perf
-  deadline=time.monotonic()+5;image=None
+  deadline=time.monotonic()+remaining_budget(worker_started,5);image=None
   while time.monotonic()<deadline and perf.poll() is None:
    try:image=observed_process(perf.pid);break
    except FileNotFoundError:time.sleep(.01)
   require(image is not None and image['imageSha256']==b['perfElfSha256'],'observed executing perf inode before release');image['cmdline']=[x.decode(errors='replace') for x in image['cmdline']];report['perfObserved']=image
-  control=RecorderControl(ctl_write,ack_read,perf);control.command('disable',0);state=WindowState(worker.pid,owner.st_uid,owner.st_gid);report['controlRecords']=control.records;report['workerControlRecords']=state.records;message=read_message(connection);state.accept(message);initial_threads=threads(worker.pid);report['attachedExistingTids']=initial_threads;send_message(connection,state.response('ready',{'disabledAck':True,'effectivePerfSha256':image['imageSha256'],'uid':owner.st_uid,'gid':owner.st_gid,'threadIds':initial_threads}))
-  state.accept(read_message(connection));control.command('enable',1);send_message(connection,state.response('enabled'));start=time.monotonic();tid_observations=[];report['observedExistingAndLaterTids']=tid_observations
-  while not select.select([connection],[],[],.01)[0]:
-   require(time.monotonic()-start<120 and worker.poll() is None and perf.poll() is None,'bounded active window');tid_observations.append({'controllerNs':str(time.monotonic_ns()),'tids':threads(worker.pid)})
-  state.accept(read_message(connection));control.command('disable',2);send_message(connection,state.response('disabled'));connection.close();connection=None
+  control=RecorderControl(ctl_write,ack_read,perf,worker_started);control.command('disable',0);state=WindowState(worker.pid,owner.st_uid,owner.st_gid);report['controlRecords']=control.records;report['workerControlRecords']=state.records;message=read_message(connection,remaining_budget(worker_started,5));state.accept(message);initial_threads=threads(worker.pid);report['attachedExistingTids']=initial_threads;send_message(connection,state.response('ready',{'disabledAck':True,'effectivePerfSha256':image['imageSha256'],'uid':owner.st_uid,'gid':owner.st_gid,'threadIds':initial_threads}))
+  state.accept(read_message(connection,remaining_budget(worker_started,5)));control.command('enable',1);send_message(connection,state.response('enabled'));tid_observations=[];report['observedExistingAndLaterTids']=tid_observations
+  while not select.select([connection],[],[],remaining_budget(worker_started,.01))[0]:
+   require(worker.poll() is None and perf.poll() is None,'bounded active window');remaining_budget(perf_started);tid_observations.append({'controllerNs':str(time.monotonic_ns()),'tids':threads(worker.pid)})
+  state.accept(read_message(connection,remaining_budget(worker_started,5)));control.command('disable',2);send_message(connection,state.response('disabled'));connection.close();connection=None
   report.update(controlRecords=control.records,workerControlRecords=state.records,observedExistingAndLaterTids=tid_observations,clockProof='UNPROVEN_SAME_CLOCK; no execution-only timestamp clipping or percentages')
   # Stop recording outside the worker loop; proof/close proceeds with events disabled.
-  os.write(ctl_write,b'stop\n');perf.wait(timeout=30);worker.wait(timeout=120);write(OUT/'record-exit.json',{'exitCode':perf.returncode});write(OUT/'worker-exit.json',{'exitCode':worker.returncode})
+  os.write(ctl_write,b'stop\n');worker.wait(timeout=remaining_budget(worker_started));perf.wait(timeout=remaining_budget(perf_started,30));write(OUT/'record-exit.json',{'exitCode':perf.returncode});write(OUT/'worker-exit.json',{'exitCode':worker.returncode})
   report['threadCoverage']='Observed existing/later worker TIDs only; actual perf COMM/FORK and sample PID/TID coverage must be audited from raw recording, not inferred from attach'
   require(perf.returncode==0 and worker.returncode==0,'first recorder/worker failure; no retry');report['status']='RAW_DISABLED_ENABLE_DISABLE_RECORDING_REQUIRES_TERMINAL_AND_SAMPLE_AUDIT'
  except BaseException as error:primary=error;report['error']=repr(error);raise

@@ -47,6 +47,9 @@ class Controls(unittest.TestCase):
    with self.assertRaisesRegex(OSError,'manufactured'):r.launch('fixture',['never-executed'],{},5,8<<20)
    record=json.loads((Path(directory)/'fixture-launch-error.json').read_text());self.assertFalse(record['childCreated']);self.assertIsNone(record['exitCode'])
  def test_cleanup_reaps_after_group_kill(self):
+  with patch.object(r.time,'monotonic',return_value=110):self.assertEqual(r.remaining_budget(100),110);self.assertEqual(r.remaining_budget(0,30),10)
+  with patch.object(r.time,'monotonic',return_value=120):
+   with self.assertRaisesRegex(ValueError,'wall120'):r.remaining_budget(0,30)
   child=Mock(pid=77);empty=Mock();empty.iterdir.return_value=[]
   with patch.object(r,'Path',return_value=empty),patch.object(r.os,'killpg') as killpg:
    r.terminate(child)
