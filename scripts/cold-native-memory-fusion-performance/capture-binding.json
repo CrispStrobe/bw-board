@@ -1,0 +1,32 @@
+{
+  "schema": "bw.cold-native-memory-fusion.capture-binding.v1",
+  "status": "CANDIDATE_BUILD_STATIC_AUDIT_READY",
+  "captureAuthority": {
+    "schema": "bw.cold-native-performance.capture-binding.v1",
+    "status": "INDEPENDENTLY_AUDITED_CAPTURE_READY",
+    "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+    "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+    "driverSourceSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+    "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+    "independentAuditSha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+    "independentAuditApproved": true,
+    "targetQ": 316562
+  },
+  "candidateBuild": {
+    "sourceRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+    "sourceContextSha256": "891e35d51b0ff74f421f8fc9b83d0f56c64f2a2095165a21713a80170d59e490",
+    "sourceInputs": 151,
+    "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+    "napiSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+    "addonSha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+    "officialArtifact": {
+      "id": 11295731777,
+      "runId": 37182277120,
+      "headSha": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+      "sizeInBytes": 7537808,
+      "sha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875"
+    },
+    "independentBuildAuditSha256": "bfdf6bbe0d1680c4b3294f9553b92c448da7bfaab013cb207d9a5be01ccdf5a9",
+    "memoryFusionProfile": "bw.cold-native.memory-clock-fusion.v1"
+  }
+}
