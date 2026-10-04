@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-memory-fusion.execution-profile-hosted.v1",
-  "status": "PENDING_SOURCE_REVIEW_NO_EXECUTION",
+  "status": "ROOT_REVIEWED_EXECUTION_PROFILE_HOSTED_READY",
   "enableProfileByDefault": false,
   "qualifier": {
     "revision": "a200b3d6fe8d42a020e8c65f0f33dacb777e6317",
