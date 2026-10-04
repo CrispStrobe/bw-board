@@ -44,8 +44,15 @@ class Controls(unittest.TestCase):
     with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write',side_effect=lambda *args:stderr.write_bytes(raw)),patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
      with self.assertRaisesRegex(ValueError,'selector refused|exact named selector'):bad.command('disable',0)
      stop.assert_called_once_with(child)
-    self.assertTrue(bad.failed);self.assertEqual(bad.records,[])
+    self.assertTrue(bad.failed);self.assertEqual(len(bad.records),1);self.assertEqual(bad.records[0]['status'],'FAIL');self.assertEqual(bad.records[0]['rawAck'],'ack\n');self.assertIn(raw.decode(),bad.records[0]['stderrAtFailure']['rawExcerpt'])
     with self.assertRaisesRegex(ValueError,'closed'):bad.command('enable',1)
+   stderr.write_bytes(b'');startup=r.RecorderControl(10,11,child);report={'controlRecords':startup.records}
+   def startup_reply(fd,payload):
+    if payload==b'disable cpu-clock\n':stderr.write_bytes(b"failed: can't find 'cpu-clock' event\n")
+   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]*2),patch.object(r.os,'write',side_effect=startup_reply),patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate',side_effect=OSError('secondary cleanup failure')):
+    startup.command('enable',-2)
+    with self.assertRaisesRegex(ValueError,'selector refused'):startup.command('disable',0)
+   self.assertEqual([x['status'] for x in report['controlRecords']],['PASS','FAIL']);self.assertEqual(report['controlRecords'][1]['rawAck'],'ack\n');self.assertIn('secondary cleanup',report['controlRecords'][1]['cleanupError'])
    text=(Path(r.__file__)).read_text();self.assertIn("'-e','cpu-clock','-e','dummy:u'",text);self.assertIn("control.command('enable',-2);control.command('disable',0)",text);self.assertNotIn("command('enable dummy",text)
  def test_independent_final_guards_and_terminal_projection(self):
   report={'status':'RAW_RECORDING','error':'original guest/controller error'}
