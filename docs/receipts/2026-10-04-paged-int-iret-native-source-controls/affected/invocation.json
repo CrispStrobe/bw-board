@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern",
+    "tiny nonguest C fixture",
+    "test/i80386-paged-int-iret-native-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-int-iret-native-source-20261004",
+  "scope": "ONE_AFFECTED_ACTUAL_GENERATED_C_COMPILE_EXECUTION_CASE_PRIOR_FOUR_PASS_RETAINED_NO_CPU_NO_BOCHS_BUILD_ADDON",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "absentCompilerInjectionVariables": {
+    "CPATH": true,
+    "CPLUS_INCLUDE_PATH": true,
+    "C_INCLUDE_PATH": true,
+    "LIBRARY_PATH": true,
+    "COMPILER_PATH": true,
+    "GCC_EXEC_PREFIX": true
+  },
+  "blankVariables": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  }
+}
