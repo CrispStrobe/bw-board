@@ -52,7 +52,7 @@ all six nested Python methods (`Ran 6 tests` / `OK`). The child exited 0 without
 timeout; source/tool before and after pins matched, with no cleanup or final
 pin errors. Thirteen owned paths and 390 exact frozen Git materialized source
 paths were authenticated; these source snapshots are distinct from runtime
-checkouts. This outcome proves mocked/source guards only. Neither PENDING gate
+checkouts. This outcome proves mocked/source guards only. At that historical tested revision neither PENDING gate
 was promoted, and no setup, sudo, recorder, addon or guest ran. This paragraph
 and compact receipts were added after the tested revision.
 
@@ -66,3 +66,10 @@ these changed metadata controls have not run. Worker/recorder controllers and
 setup-only dispatch alias mechanics are unchanged. The diagnostic tracker may
 produce pre-ready waiting samples; only its conservative active ACK window is
 admissible. Source READY does not qualify sampling or speed.
+
+The retained ordinary C-fixture capability used privileged UID 0 and exactly
+`-e cpu-clock` without `:u`; this recorder also requires root, while the worker
+is separately dropped to its ordinary owner. That receipt establishes no
+ordinary-user permission and no attach/delay/control/dummy sideband or Bochs
+unwind capability. Actual effective tool/options/permission and selector ACK
+checks still precede provider/addon release, preserving the first refusal.
