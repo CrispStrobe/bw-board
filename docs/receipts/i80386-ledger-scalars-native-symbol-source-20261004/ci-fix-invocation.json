@@ -1,0 +1,30 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=count-bound complete worker inverse|the scan sees the tree at all|no test file reaches for a sibling checkout at a fixed depth",
+    "test/i80386-cold-ledger-scalars-symbol-profile-source.test.mjs",
+    "test/sibling-checkout-lookup.test.mjs"
+  ],
+  "cwd": "/tmp/bw-cold-ledger-scalars-native-symbol-source-20261004",
+  "revision": "e36e5f6ac6382cb225579b6b48d0b1ea853ac051",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; no Python test child selected"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "scope": "Three selected Node methods: affected exact inverse and actual repository lint/census; all other methods unselected;1073 pinned sources; no guest/perf/Inspector/addon/build"
+}
