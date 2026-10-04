@@ -74,6 +74,16 @@ This separate source derivative promotes only the owned diagnostic metadata to
 READY and makes its metadata control validate that owned status while retaining
 a manufactured PENDING refusal and fixed-pin mutation denials. Historical
 `88645607` remains PENDING. Worker, timer/while, recorder, admission and compiled
-inputs are unchanged. No controls, identity query, live readiness, sampling or
-guest call has run at this new revision. Source READY is not sampling capability
+inputs are unchanged. No live readiness, sampling or guest call has run at this new revision. Source READY is not sampling capability
 or speed qualification; hosted authority remains separately gated.
+
+At tested `f7919504`, the one selected READY metadata method passed (1 PASS,
+0 skips; remaining methods unselected), followed by a separate actual read-only
+92-file identity query. Both bounded calls exited 0 without timeout, matched
+current/Git source and before/after tool pins, and passed independent/root audits.
+This post-test outcome paragraph and compact records do not change executable
+bytes. The query's source map is retained; digest conventions are labelled in
+the receipts. These source-only results do not resolve disabled-recorder MMAP
+tracking, live control readiness, sampling quality or native CPU attribution.
+
+[Retained READY source records](../../docs/receipts/i80386-ledger-scalars-native-symbol-ready-source-20261004/index.json)
