@@ -1,0 +1,10 @@
+{
+  "exitCode": 0,
+  "timeout": false,
+  "wallSeconds": 0.823313508182764,
+  "error": null,
+  "pinsEqual": true,
+  "status": "READONLY_SOURCE_IDENTITY_PASS",
+  "actualSourceCount": 51,
+  "identityJsonSha256": "22d4fd6f0407214b6af851e24bfb2ca40710cbdbfdb47bcf80ab5edd1d0e676c"
+}
