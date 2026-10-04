@@ -1,6 +1,6 @@
 {
   "schema": "bw.paged-int-iret.driver-build-binding.v1",
-  "status": "PENDING_PAGED_INT_IRET_NATIVE_BUILD",
+  "status": "ROOT_REVIEWED_PAGED_INT_IRET_NATIVE_BUILD",
   "compiledRevision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
   "compiledSourceSha256": "9024e2ad32c8d41a017b2713278685a1e0aa45ee301238a0ae9f1df897ffdb5c",
   "compiledFiles": {
@@ -221,8 +221,14 @@
     "bochs/owned-paged-int-iret-provider.mjs": "afc02de595449021f64cfa74cb0004ae71028e57596195769563439b5d0f005f",
     "bochs/owned-paged-int-iret-ROM.bin": "b8b3525d4299ba14dc467144fc743a39f1c04d1a7d92ea3b34da6f4ee601cd30"
   },
-  "addonSha256": null,
-  "buildRun": null,
-  "artifactId": null,
-  "staticAuthority": null
+  "addonSha256": "92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f",
+  "buildRun": 37218196080,
+  "artifactId": 11309320742,
+  "staticAuthority": {
+    "artifactZipSha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+    "artifactZipBytes": 8097621,
+    "independentAuditSha256": "bb123e88d360607c5d649e935bf79effd985a33342bfb92892f1bec927d09d01",
+    "preparedManifestSha256": "bc37a25c7eae18c5ef9e586de3df8317bd7375e3062e70dfda6e87dd610a28f2",
+    "buildReceiptSha256": "cefafcb47bc0358d3ffc692dad4d04cd5fbc7ec54d10c4cf28fa9c3276d879f4"
+  }
 }
