@@ -74,6 +74,26 @@ In Brickwright Lite, the device dropdown's **Manage machines…** entry opens **
 
 Import saves configuration and media references, not a package archive. Activation fetches referenced URLs and checks hashes when supplied. Browser-accessible URLs and correct relative URL bases are required; a host path such as `C:\games` does not grant browser filesystem access. The DOSBox GUI importer records `mount` directories as provenance and turns the first `.COM`/`.EXE` command into a program URL. It does not read that directory or reproduce every DOSBox command. Its `cputype` mapping can select an experimental 386 target; that alone does not establish compatibility for an arbitrary executable.
 
+### Local FreeDOS floppy/HDD recipe
+
+The current Lite interface has a dedicated **FreeDOS VGA (named 386 profile)** section in **Manage machines…**. This selects the board preset `freedos-vga`; it is separate from pasting a DOSBox program config.
+
+1. Under **Floppy**, choose a freely licensed raw 360 KiB or 1.2 MiB boot image (`.img`, `.ima` or `.dsk`). Alternatively, under **HDD**, choose a raw 306 × 4 × 17-sector image (`.img` or `.ima`, exactly 10,653,696 bytes). These are this named profile's supported sizes, not a general geometry dialog. If both are supplied, the floppy is first in the boot order.
+2. Optionally select **AT BIOS** (exactly 64 KiB) and **VGA ROM** (1–40 KiB). If omitted, the runner fetches its bundled LGPL Bochs BIOS and VGA firmware. Supplied files must have appropriate licenses; the browser does not establish licensing from their extensions.
+3. Leave **Native blocks (experimental)** unchecked for the plain functional route. That checkbox selects the experimental JS block dispatcher, not a Bochs addon.
+4. Click **Boot FreeDOS VGA**. Selected local files are read into this tab's memory and passed directly to the loader; they are not uploaded or converted to public URLs. The frontend creates the named target, calls the board's `applyMedia` for BIOS/VGA/floppy/HDD, calls `machine.reset()`, then starts the runner. There is no separate **Apply** or **Reset** button in this form. Boot/attachment errors remain visible in the manager. Repeating the boot action creates a fresh runner with the selected media.
+5. Use the **AT VGA** screen in the **Controller**/Widgets pane. The debugger offers **Run**, **Pause** and **Step** as target capabilities allow; the initial boot action already starts execution. Select **Play** in Controller for interactive widgets; its Play/Edit switch controls widget interaction, not CPU reset.
+
+For another raw HDD geometry, the separate **Boot a local DOSBox HDD** form has a disk picker plus an optional DOSBox `.conf` picker and **Boot disk** button. Its config must select a supported 386 CPU and `imgmount -size` geometry, and the selected filename must match `imgmount`. This route also keeps the disk bytes in the current tab. It does not unpack a ZIP or infer CD-ROM hardware from an ISO.
+
+### Referenced media versus local files
+
+Pasted saved configs use URL references: activation fetches media only on Run, verifies provided SHA-256 values, and reports fetch/hash failures. For a named profile, use `machine: "i80386"`, `machineConfig: "freedos-vga"`, `executionMode: "functional"`, and `slots` entries for `floppy` or `hdd`, plus optional `bios` and `vga-rom`. A slot reference uses `url`, optional `sha256`, and explicit `geometry` where appropriate. Give manifests/configs browser-resolvable URLs; filenames pasted without a base are not a local-file selection. The dedicated forms above instead use private `local-media:` references backed by the selected File objects and do not persist those bytes in a reusable exported package.
+
+### Enlarge the screen
+
+Select **Controller** in the stage-header view controls to show interactive widgets. In its toolbar, **Full screen** expands that pane; **Exit full screen** returns it to the normal layout. The standard stage-header full-screen control and Escape also exit full-screen mode. This enlarges the pane, not the emulated VGA resolution. In Controller **Edit** mode, the VGA widget can be resized using the existing widget layout controls; its canvas fills the widget and uses pixelated rendering. The stage-header **Debugger** view enlarges the debugger in the right pane, which is a different surface from the Controller screen.
+
 Wired configs require a circuit reference. The `wired`, `functional` and `auto` modes are not interchangeable media loaders. The debugger's firmware file picker accepts `.bin`, `.hex` and `.ihx`; it is not an ISO, disk-image or DOSBox-package picker. Browser imports do not select the Bochs native addon.
 
 ## Disk and ISO boundaries
@@ -86,6 +106,6 @@ The generic `runMediaBundle` helper requires an explicit factory for x86. For 80
 
 The CLI contracts are in [run-dos.mjs](../scripts/run-dos.mjs), [run-i80386-at-console.mjs](../scripts/run-i80386-at-console.mjs) and [its HDD config parser](../scripts/lib/i80386-at-dosbox-config.mjs). Library slots and bundle behavior are in [machine-media.js](../src/machine-media.js), [machine-media-i8086.js](../src/machine-media-i8086.js) and [dosbox-config.js](../src/dosbox-config.js).
 
-GUI behavior was inspected at Brickwright Lite revision `d7e07b51541397e3fece31d251e2dd47d3d288f0` in a separate checkout: `overlay/scratch-gui/src/components/tw-pseudocode/machine-manager.jsx`, `debug-panel.jsx`, and `overlay/scratch-gui/src/lib/bw-machines/{importers,activate,machine-config}.js`. This guide is a source audit, not a new browser or guest acceptance run.
+GUI behavior was initially inspected at historical Brickwright Lite revision `d7e07b51541397e3fece31d251e2dd47d3d288f0`, then checked against remote default HEAD `598febf364969f42483821c87bbdc0317e3cdb61` on 2026-10-04. The current local-file and fullscreen recipes use that newer source: `overlay/scratch-gui/src/components/tw-pseudocode/{machine-manager,debug-panel,controller-panel-view}.jsx`, `components/stage-header/stage-header.jsx`, and `overlay/scratch-gui/src/lib/bw-machines/{importers,activate,machine-config,local-freedos-vga,run-machine}.js`, plus `lib/bw-debug/debug-runner.js`. This guide is a source audit, not a new browser or guest acceptance run.
 
 For actual bounded 386 results, see [experimental architecture](I80386-EXPERIMENTAL.md), [paired performance results](I80386-COLD-PAIRED-RESULTS.md) and [protected stack results](I80386-PROTECTED-STACK-RESULTS.md). Native fixture parity does not establish general OS boot, physical 386 timing or GUI availability.
