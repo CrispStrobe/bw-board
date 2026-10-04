@@ -1,0 +1,25 @@
+TAP version 13
+# test_authenticated_archive_rejects_unsafe_or_modified_members (__main__.Controls.test_authenticated_archive_rejects_unsafe_or_modified_members) ... ok
+# test_final_authentication_cannot_leave_pass_on_mutation_or_missing_maps (__main__.Controls.test_final_authentication_cannot_leave_pass_on_mutation_or_missing_maps) ... ok
+# test_fixed_artifact_sources_counts_node_and_addon (__main__.Controls.test_fixed_artifact_sources_counts_node_and_addon) ... ok
+# test_https_redirect_origin_domains (__main__.Controls.test_https_redirect_origin_domains) ... ok
+# test_pending_refuses_before_any_download_or_restore (__main__.Controls.test_pending_refuses_before_any_download_or_restore) ... ok
+# test_source_current_and_git_are_required (__main__.Controls.test_source_current_and_git_are_required) ... ok
+# ----------------------------------------------------------------------
+# Ran 6 tests in 0.194s
+# OK
+# Subtest: Paged INT/IRET hosted wrapper manufactured source controls only
+ok 1 - Paged INT/IRET hosted wrapper manufactured source controls only
+  ---
+  duration_ms: 629.564121
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 778.954183
