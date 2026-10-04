@@ -5,7 +5,7 @@ import {validateCandidateBinding,validateCandidateBuildAudit} from '../scripts/c
 import {wholeNativeWords} from '../scripts/bochs-cpu3-native-cold-bios/parity.mjs';
 import {validateInspectMetadata,validateFinalReturn} from '../scripts/cold-native-memory-fusion-performance/held-protocol.mjs';
 const fixture=JSON.parse(readFileSync(new URL('../scripts/cold-native-memory-fusion-performance/actual-snapshot-fixtures.json',import.meta.url)));
-function live(n){const out=structuredClone(n);for(const key of Object.keys(slotLengths))out[key]=Uint32Array.from(n[key]);if(out.sliceBytes)out.sliceBytes=Uint8Array.from(out.sliceBytes);out.bridgeClockEntryAttempts=Object.fromEntries(clockReasons.map(k=>[k,k==='INIT'?1:0]));out.bridgeMemoryEntryAttempts=Object.fromEntries(memoryReasons.map(k=>[k,0]));return out;}
+function live(n){const out=structuredClone(n);for(const key of Object.keys(slotLengths))out[key]=Uint32Array.from(n[key]);if(out.sliceBytes)out.sliceBytes=Uint8Array.from(out.sliceBytes);out.bridgeClockEntryAttempts=Object.fromEntries(clockReasons.map(k=>[k,k==='INIT'?1n:0n]));out.bridgeMemoryEntryAttempts=Object.fromEntries(memoryReasons.map(k=>[k,0n]));return out;}
 test('candidate five typed slots preserve genuine baseline words and JSON evidence exactly',()=>{
  for(const n of [fixture.reset,fixture.finalInspect,fixture.resume]){const typed=live(n);validateTypedSlots(typed);assert.deepEqual(wholeNativeWords(plainSnapshot(typed)),wholeNativeWords(n));assert.deepEqual(JSON.parse(serializeEvidence(plainSnapshot(typed))),n);}
  validateInspectMetadata(plainSnapshot(live(fixture.reset)));validateInspectMetadata(plainSnapshot(live(fixture.finalInspect)));
@@ -44,10 +44,12 @@ test('retained fixture origin is genuine ordinary baseline; typed reconstruction
  const {createHash}=await import('node:crypto');const origin=JSON.parse(readFileSync(new URL('../scripts/cold-native-memory-fusion-performance/fixture-origin.json',import.meta.url)));const raw=readFileSync(new URL('../scripts/cold-native-memory-fusion-performance/actual-snapshot-fixtures.json',import.meta.url));assert.equal(createHash('sha256').update(raw).digest('hex'),origin.sourceSha256);assert.equal(origin.rawCaptureSha256,fixture.captureSha256);assert.match(origin.candidateTypeReconstruction,/manufactured/);assert.equal(origin.sourceRevision,'b01c922c2d634aba9367f6e2a70d109370e4adee');
 });
 
-test('fusion attempt evidence is distinct, bounded, monotonic and provider crosschecked',()=>{
- const reset=live(fixture.reset),final=live(fixture.finalInspect);final.bridgeMemoryEntryAttempts.fusedOuter=12;
+test('fusion attempt evidence is distinct, bounded, monotonic and provider crosschecked',async()=>{
+ const {createHash}=await import('node:crypto');const base=readFileSync(new URL('../scripts/bochs-cpu3-native-direct-board-adapter/napi.cc',import.meta.url));assert.equal(createHash('sha256').update(base).digest('hex'),'a131583191a71a4a675c66339440d5ce6b4ae1332d5b14bef10d7a8d47e36c40');assert.match(base.toString(),/napi_create_bigint_uint64\(env,values\[i\],&value\)/);
+ // BigInt reconstruction is derived from the pinned genuine NAPI helper, not live fusion execution.
+ const reset=live(fixture.reset),final=live(fixture.finalInspect);final.bridgeMemoryEntryAttempts.fusedOuter=12n;
  const provider={memoryOuterEntries:12,replyValidations:12,readEffects:5,writeEffects:7};validateBridgeEvidence(reset,final,provider);
- for(const mutate of [n=>delete n.bridgeClockEntryAttempts.RETURN,n=>n.bridgeClockEntryAttempts.RETURN=-1,n=>n.bridgeMemoryEntryAttempts.fusedOuter=1.5,n=>n.bridgeClockEntryAttempts.INIT=0,n=>n.bridgeMemoryEntryAttempts.extra=0]){const n=structuredClone(final);mutate(n);assert.throws(()=>validateBridgeEvidence(reset,n,provider));}
+ for(const mutate of [n=>delete n.bridgeClockEntryAttempts.RETURN,n=>n.bridgeClockEntryAttempts.RETURN=-1n,n=>n.bridgeMemoryEntryAttempts.fusedOuter=1.5,n=>n.bridgeClockEntryAttempts.INIT=0n,n=>n.bridgeMemoryEntryAttempts.extra=0n,n=>n.bridgeMemoryEntryAttempts.fusedOuter=12,n=>n.bridgeMemoryEntryAttempts.fusedOuter=BigInt(Number.MAX_SAFE_INTEGER)+1n]){const n=structuredClone(final);mutate(n);assert.throws(()=>validateBridgeEvidence(reset,n,provider));}
  for(const change of [{memoryOuterEntries:11},{replyValidations:11},{writeEffects:6},{readEffects:'5'}])assert.throws(()=>validateBridgeEvidence(reset,final,{...provider,...change}));
- const raw=JSON.parse(serializeEvidence(final));assert.equal(raw.bridgeMemoryEntryAttempts.fusedOuter,12);assert.ok(!('bridgeMemoryEntryAttempts' in plainSnapshot(final)));
+ const raw=JSON.parse(serializeEvidence(final));assert.equal(raw.bridgeMemoryEntryAttempts.fusedOuter,'12');assert.ok(!('bridgeMemoryEntryAttempts' in plainSnapshot(final)));
 });

@@ -32,18 +32,18 @@ export const memoryReasons=Object.freeze(['ordinaryRead','ordinaryWrite','fusedO
 export function validateBridgeAttempts(snapshot){
  for(const [field,keys] of [['bridgeClockEntryAttempts',clockReasons],['bridgeMemoryEntryAttempts',memoryReasons]]){
   assert.deepEqual(Object.keys(snapshot[field]).sort(),[...keys].sort(),'fixed bridge attempt map '+field);
-  for(const v of Object.values(snapshot[field]))assert.ok(Number.isSafeInteger(v)&&v>=0,'bounded bridge attempt count');
+  for(const v of Object.values(snapshot[field]))assert.ok(typeof v==='bigint'&&v>=0n&&v<=BigInt(Number.MAX_SAFE_INTEGER),'bounded native BigInt bridge attempt count');
  }
  return snapshot;
 }
 export function validateBridgeEvidence(reset,final,provider){
  validateBridgeAttempts(reset);validateBridgeAttempts(final);
  for(const field of ['bridgeClockEntryAttempts','bridgeMemoryEntryAttempts'])for(const key of Object.keys(reset[field]))assert.ok(final[field][key]>=reset[field][key],'monotonic attempt evidence');
- assert.deepEqual(reset.bridgeClockEntryAttempts,Object.fromEntries(clockReasons.map(k=>[k,k==='INIT'?1:0])));
- assert.deepEqual(reset.bridgeMemoryEntryAttempts,Object.fromEntries(memoryReasons.map(k=>[k,0])));
+ assert.deepEqual(reset.bridgeClockEntryAttempts,Object.fromEntries(clockReasons.map(k=>[k,k==='INIT'?1n:0n])));
+ assert.deepEqual(reset.bridgeMemoryEntryAttempts,Object.fromEntries(memoryReasons.map(k=>[k,0n])));
  assert.deepEqual(Object.keys(provider).sort(),['memoryOuterEntries','replyValidations','readEffects','writeEffects'].sort());
  for(const v of Object.values(provider))assert.ok(Number.isSafeInteger(v)&&v>=0);
- assert.equal(provider.memoryOuterEntries,final.bridgeMemoryEntryAttempts.fusedOuter);
+ assert.equal(BigInt(provider.memoryOuterEntries),final.bridgeMemoryEntryAttempts.fusedOuter);
  assert.equal(provider.replyValidations,provider.memoryOuterEntries);
  assert.equal(provider.readEffects+provider.writeEffects,provider.replyValidations);
  return {provider,reset:{clock:reset.bridgeClockEntryAttempts,memory:reset.bridgeMemoryEntryAttempts},final:{clock:final.bridgeClockEntryAttempts,memory:final.bridgeMemoryEntryAttempts},scope:'Actual outer entry attempts; clockTransfers.transfers is logical accepted transfers in this profile, not outer entries'};
