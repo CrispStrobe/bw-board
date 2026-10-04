@@ -512,6 +512,18 @@ native capacity remain unchanged. See the
 [discovery-memo evidence](docs/receipts/2026-10-04-wasm-discovery-memo1024/README.md).
 Production, app pins and physical acknowledgements remain unchanged; CP13 is open.
 
+Discovery census now measures the selected warmed motion guest with one
+shared ELF: **99.81%** of **61,542,607** negative lookups hit the existing
+64-slot memo; **94,901** collide and no counted generation events occur.
+Three captures agree on all **15 guest windows**; independent diagnostic
+build bytes and counter windows match. Native correctness and all 108
+integrations per engine pass. This is **frequency evidence, not RTx or
+removable-cost qualification**; it favors investigating the hot exact-hit
+path over another blind capacity increase. F0 RAM/GPIO still need a census.
+All three earlier failed gates are retained. See the
+[discovery-census evidence](docs/receipts/2026-10-04-wasm-discovery-census/README.md).
+Production, pins and physical acknowledgements remain unchanged; CP13 is open.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
