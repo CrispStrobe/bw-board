@@ -137,16 +137,32 @@ def read_message(connection,timeout=5):
   remaining=deadline-time.monotonic();require(remaining>0,'absolute worker message deadline');ready,_,_=select.select([connection],[],[],remaining);require(ready,'bounded worker message timeout');part=connection.recv(4096);require(part,'worker control EOF');raw+=part;require(len(raw)<=4096,'bounded worker control message')
  line,rest=raw.split(b'\n',1);require(not rest,'duplicate control frame');return json.loads(line)
 def send_message(connection,value):connection.sendall((json.dumps(value,separators=(',',':'))+'\n').encode())
+def checked_control_stderr(expected=None,offset=0):
+ path=OUT/'record.stderr';require(path.is_file() and path.stat().st_size<=8<<20,'bounded retained recorder stderr')
+ raw=path.read_bytes();require(not any(x in raw for x in (b"failed: can't find",b'failed: wrong command')),'perf selector refused despite ACK')
+ if expected is not None:require(expected in raw[offset:].splitlines(),'missing exact named selector success before ACK')
+ return {'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
 class RecorderControl:
  """Serialized source-owned perf commands; a timeout ends this session permanently."""
  def __init__(self,write_fd,read_fd,perf,worker_started=None):self.write_fd=write_fd;self.read_fd=read_fd;self.perf=perf;self.failed=False;self.records=[];self.worker_started=time.monotonic() if worker_started is None else worker_started
  def command(self,name,sequence):
-  require(not self.failed and name in ('disable','enable'),'closed live perf command');require(self.perf.poll() is None,'recorder alive')
-  before=time.monotonic_ns()
+  commands={('enable',-2):'enable',('disable',0):'disable cpu-clock',('enable',1):'enable cpu-clock',('disable',2):'disable cpu-clock'}
+  require(not self.failed and (name,sequence) in commands,'closed live perf command');require(self.perf.poll() is None,'recorder alive');command=commands[name,sequence]
+  before=time.monotonic_ns();record={'command':command,'sessionSequence':sequence,'controllerBeforeNs':str(before),'status':'ATTEMPT','rawAck':None};self.records.append(record)
   try:
-   require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK');os.write(self.write_fd,(name+'\n').encode());ready,_,_=select.select([self.read_fd],[],[],remaining_budget(self.worker_started,5));require(ready,'bounded perf ACK timeout');raw=os.read(self.read_fd,64);require(raw==b'ack\n','exact single perf ACK')
-   self.records.append({'command':name,'sessionSequence':sequence,'controllerBeforeNs':str(before),'controllerAfterNs':str(time.monotonic_ns()),'rawAck':raw.decode(),'scope':'perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session'})
-  except BaseException:self.failed=True;terminate(self.perf);raise
+   stderr_before=checked_control_stderr()['bytes']
+   require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK');os.write(self.write_fd,(command+'\n').encode());ready,_,_=select.select([self.read_fd],[],[],remaining_budget(self.worker_started,5));require(ready,'bounded perf ACK timeout');raw=os.read(self.read_fd,64);record['rawAck']=raw.decode(errors='replace');require(raw==b'ack\n','exact single perf ACK')
+   stderr=checked_control_stderr(None if sequence==-2 else ('Event cpu-clock '+('enabled' if name=='enable' else 'disabled')).encode(),stderr_before)
+   record.update(status='PASS',stderrAtAck=stderr,controllerAfterNs=str(time.monotonic_ns()),scope='perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session')
+  except BaseException as error:
+   self.failed=True;record.update(status='FAIL',error=repr(error),controllerAfterNs=str(time.monotonic_ns()))
+   try:
+    path=OUT/'record.stderr';require(path.is_file() and path.stat().st_size<=8<<20,'bounded retained failure stderr');raw=path.read_bytes();record['stderrAtFailure']={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'rawExcerpt':raw[:4096].decode(errors='replace'),'fullRawPath':str(path)}
+   except BaseException as secondary:record['stderrEvidenceError']=repr(secondary)
+   try:terminate(self.perf)
+   except BaseException as secondary:record['cleanupError']=repr(secondary)
+   raise
+
 class WindowState:
  def __init__(self,pid,uid,gid):self.pid=pid;self.uid=uid;self.gid=gid;self.nonce=secrets.token_hex(32);self.phase='NEW';self.sequence=0;self.records=[]
  def accept(self,message):
@@ -198,7 +214,7 @@ def main():
   listener.settimeout(remaining_budget(worker_started,15));connection,_=listener.accept();peer=struct.unpack('3i',connection.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12));require(peer==(worker.pid,owner.st_uid,owner.st_gid),'actual connected owner/PID')
   node_observed=observed_process(worker.pid);require(node_observed['imageSha256']==b['nodeSha256'] and node_observed['cmdline']==[x.encode() for x in wrapper[6:]],'observed unchanged Node CLI');node_observed['cmdline']=[x.decode() for x in node_observed['cmdline']];report['workerObserved']=node_observed
   ctl_read,ctl_write=os.pipe();ack_read,ack_write=os.pipe();fds=[ctl_read,ctl_write,ack_read,ack_write]
-  args=[perf_path,'record','--no-buildid','--no-buildid-cache','-e','cpu-clock','-F','99','--call-graph','dwarf,8192','--delay=-1','--control=fd:'+str(ctl_read)+','+str(ack_write),'--clockid','mono','-p',str(worker.pid),'-o',str(OUT/'perf.data')]
+  args=[perf_path,'record','--no-buildid','--no-buildid-cache','-e','cpu-clock','-e','dummy:u','-F','99','--call-graph','dwarf,8192','--delay=-1','--control=fd:'+str(ctl_read)+','+str(ack_write),'--clockid','mono','-p',str(worker.pid),'-o',str(OUT/'perf.data')]
   write(OUT/'record-invocation.json',{'command':args,'cpuSeconds':60,'wallSeconds':120,'fileBytes':64<<20,'coreBytes':0,'niceIncrement':10,'scope':'Existing process attach, initially disabled; no system-wide sampling'})
   perf_started=time.monotonic()
   with (OUT/'record.stdout').open('xb') as so,(OUT/'record.stderr').open('xb') as se:perf=subprocess.Popen(args,cwd=OUT,env=perf_env,stdout=so,stderr=se,start_new_session=True,preexec_fn=limits(60,64<<20),pass_fds=(ctl_read,ack_write));ACTIVE['record']=perf
@@ -207,8 +223,8 @@ def main():
    try:image=observed_process(perf.pid);break
    except FileNotFoundError:time.sleep(.01)
   require(image is not None and image['imageSha256']==b['perfElfSha256'],'observed executing perf inode before release');image['cmdline']=[x.decode(errors='replace') for x in image['cmdline']];report['perfObserved']=image
-  control=RecorderControl(ctl_write,ack_read,perf,worker_started);control.command('disable',0);state=WindowState(worker.pid,owner.st_uid,owner.st_gid);report['controlRecords']=control.records;report['workerControlRecords']=state.records;message=read_message(connection,remaining_budget(worker_started,5));state.accept(message);initial_threads=threads(worker.pid);report['attachedExistingTids']=initial_threads;send_message(connection,state.response('ready',{'disabledAck':True,'effectivePerfSha256':image['imageSha256'],'uid':owner.st_uid,'gid':owner.st_gid,'threadIds':initial_threads}))
-  state.accept(read_message(connection,remaining_budget(worker_started,5)));control.command('enable',1);send_message(connection,state.response('enabled'));tid_observations=[];report['observedExistingAndLaterTids']=tid_observations
+  control=RecorderControl(ctl_write,ack_read,perf,worker_started);report['controlRecords']=control.records;control.command('enable',-2);control.command('disable',0);report['trackingScope']='Global enable while worker blocked before provider/addon; then cpu-clock-only disable before READY. Dummy sideband remains enabled. Pre-ready waiting samples may exist; only conservative active ACK window is attributable.';state=WindowState(worker.pid,owner.st_uid,owner.st_gid);report['controlRecords']=control.records;report['workerControlRecords']=state.records;message=read_message(connection,remaining_budget(worker_started,5));state.accept(message);initial_threads=threads(worker.pid);report['attachedExistingTids']=initial_threads;send_message(connection,state.response('ready',{'disabledAck':True,'effectivePerfSha256':image['imageSha256'],'uid':owner.st_uid,'gid':owner.st_gid,'threadIds':initial_threads}))
+  state.accept(read_message(connection,remaining_budget(worker_started,5)));report['workerMapsBeforeActiveEnable']=(Path('/proc')/str(worker.pid)/'maps').read_text();control.command('enable',1);send_message(connection,state.response('enabled'));tid_observations=[];report['observedExistingAndLaterTids']=tid_observations
   while not select.select([connection],[],[],remaining_budget(worker_started,.01))[0]:
    require(worker.poll() is None and perf.poll() is None,'bounded active window');remaining_budget(perf_started);tid_observations.append({'controllerNs':str(time.monotonic_ns()),'tids':threads(worker.pid)})
   state.accept(read_message(connection,remaining_budget(worker_started,5)));control.command('disable',2);send_message(connection,state.response('disabled'));connection.close();connection=None

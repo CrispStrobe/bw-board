@@ -1,0 +1,37 @@
+{
+  "result": "ROOT_SOURCE_CONTROLS_AND_READONLY_IDENTITY_PASS",
+  "lane": "tracker",
+  "selectedNodeCases": 1,
+  "nestedPythonCases": 7,
+  "otherNodeCases": "unselected",
+  "sourcePaths": 92,
+  "gitAlternateWarnings": 0,
+  "nativeInstructions": 0,
+  "perfCalls": 0,
+  "packets": [
+    {
+      "path": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-controls-20261004",
+      "exit": {
+        "exitCode": 0,
+        "timeout": false,
+        "wallSeconds": 1.8088970482349396,
+        "error": null,
+        "cleanupError": null,
+        "finalizationError": null,
+        "pinsEqual": true
+      }
+    },
+    {
+      "path": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-frozen-auth-20261004",
+      "exit": {
+        "exitCode": 0,
+        "timeout": false,
+        "wallSeconds": 2.4379230067133904,
+        "error": null,
+        "cleanupError": null,
+        "finalizationError": null,
+        "pinsEqual": true
+      }
+    }
+  ]
+}
