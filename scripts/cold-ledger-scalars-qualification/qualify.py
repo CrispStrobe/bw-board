@@ -21,11 +21,11 @@ def identity(root,revision,files):
  checkout(root,revision,files);return {'revision':revision,'hashes':{p:r['sha256'] for p,r in sorted(files.items())}}
 def contract(c):
  require(c['status']=='ROOT_REVIEWED_LEDGER_SCALARS_QUALIFICATION_READY','pending refuses before setup/download/spawn')
- require(digest(json.dumps({k:v for k,v in c.items() if k!='status'},sort_keys=True,separators=(',',':')).encode())=='b71926a1f6624b82a0272fd9154727d54ae0b11a9bb09d85d4e1fd53079012e6','complete source-owned contract/map authority')
+ require(digest(json.dumps({k:v for k,v in c.items() if k!='status'},sort_keys=True,separators=(',',':')).encode())=='f9663a356637b7c54bd7983ec7bf450d709dfff040abcb2aa9798e80fd6b148c','complete source-owned contract/map authority')
  require(c['schema']=='bw.cold-ledger-scalars.qualification-source.v1' and c['guestEnabledByDefault'] is False,'single explicit semantic qualification')
  require(c['compiledRevision']==COMPILED and c['compiledFiles']==read_json(HERE/'frozen-members.json'),'exact genuine compiled151 map')
- require(c['worker']['revision']=='1c1722b38373fbadf1213624466877425e3e0b5d' and len(c['worker']['files'])==73,'source-reviewed scalar worker73 pending READY role')
- require(c['worker']['sourceSha256']=='957ebf1861051b61870115c3a3891dc4d5e57fb48189741cd3a86eb190de00b8','fixed actual worker identity')
+ require(c['worker']['revision']=='06581f3831aa765933b1d160a41ab37b1b652913' and len(c['worker']['files'])==73,'source-reviewed scalar worker73 pending READY role')
+ require(c['worker']['sourceSha256']=='3e0bb128aa00ea763125d2cc6f0af2ab7ac752de05a3485acc9432f89a799e9d','fixed actual worker identity')
  require(c['worker']['sourceSha256']==digest(json.dumps({'revision':c['worker']['revision'],'hashes':{p:r['sha256'] for p,r in sorted(c['worker']['files'].items())}},separators=(',',':')).encode()),'full worker canonical identity')
  require(c['worker']['binding']=='scripts/cold-native-memory-fusion-ledger-scalars-performance/capture-binding.json' and c['worker']['root']==str(N),'complete fixed worker descriptor')
  require(c['driver']['revision']=='11c0bdcade020117fc682e97db284c6ff8797842' and len(c['driver']['files'])==54,'held driver metadata role')

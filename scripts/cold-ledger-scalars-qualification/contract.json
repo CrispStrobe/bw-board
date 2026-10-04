@@ -610,8 +610,8 @@
     }
   },
   "worker": {
-    "revision": "1c1722b38373fbadf1213624466877425e3e0b5d",
-    "sourceSha256": "957ebf1861051b61870115c3a3891dc4d5e57fb48189741cd3a86eb190de00b8",
+    "revision": "06581f3831aa765933b1d160a41ab37b1b652913",
+    "sourceSha256": "3e0bb128aa00ea763125d2cc6f0af2ab7ac752de05a3485acc9432f89a799e9d",
     "entry": "scripts/cold-native-memory-fusion-ledger-scalars-performance/worker.mjs",
     "binding": "scripts/cold-native-memory-fusion-ledger-scalars-performance/capture-binding.json",
     "root": "/home/runner/work/bw-board/bw-board/scalar-worker",
@@ -705,8 +705,8 @@
         "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
       },
       "scripts/cold-native-memory-fusion-ledger-scalars-performance/README.md": {
-        "bytes": 1455,
-        "sha256": "0b223e6444522a738e4e4b2cef8e83281e854e7e3296e4a784f9ececbba75299"
+        "bytes": 1763,
+        "sha256": "bf27611306b7f446f1f3e3e09927608a25437453c4ef65a5b6e294c6ceb794ad"
       },
       "scripts/cold-native-memory-fusion-ledger-scalars-performance/actual-snapshot-fixtures.json": {
         "bytes": 9224,
@@ -741,8 +741,8 @@
         "sha256": "43bb5a988b9b31a6130c960bb8a779291d3fc371a07ca5e837c4f52c50a0408a"
       },
       "scripts/cold-native-memory-fusion-ledger-scalars-performance/scalar-overlay.json": {
-        "bytes": 939,
-        "sha256": "b6567bd0aece92e246c2832a0315dc3f92167f1160504d3c0096eda2e484de3b"
+        "bytes": 953,
+        "sha256": "6df04a563ae6c882071ad1846c6484a9481d4830a4740a63fb9d059da32a387a"
       },
       "scripts/cold-native-memory-fusion-ledger-scalars-performance/scalar-worker-derivation.json": {
         "bytes": 1878,
