@@ -1,0 +1,13 @@
+{
+  "pid": 3561427,
+  "exitCode": 1,
+  "timeout": false,
+  "wallSeconds": 20.331460183486342,
+  "error": null,
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "outerOnePass": false,
+  "nestedSixPass": false,
+  "scope": "One Node wrapper and six actual nested source cases; no materialization/configure/Bochs build/addon/CPU",
+  "status": "FAIL"
+}

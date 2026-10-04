@@ -1,0 +1,25 @@
+{
+  "pid": 3567878,
+  "exitCode": 0,
+  "timeout": false,
+  "rawWait4Status": 0,
+  "waitedPid": 3567878,
+  "wait4Rusage": {
+    "userSeconds": 18.171781,
+    "systemSeconds": 5.334143,
+    "maxRssKiB": 132000,
+    "minorFaults": 290175,
+    "majorFaults": 0,
+    "voluntaryContextSwitches": 6886,
+    "involuntaryContextSwitches": 3288,
+    "scope": "wait4 of launched Node; includes descendants reaped by that child, distinct from wall; no emulated CPU"
+  },
+  "wallSeconds": 22.795784736052155,
+  "error": null,
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "outerOnePass": true,
+  "nestedSixPass": true,
+  "scope": "One Node wrapper and six actual nested source cases; no materialization/configure/Bochs build/addon/CPU",
+  "status": "SOURCE_CONTROLS_PASS"
+}
