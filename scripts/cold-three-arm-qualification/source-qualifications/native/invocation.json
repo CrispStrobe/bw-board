@@ -7,15 +7,18 @@
   ],
   "cpu": 5,
   "wall": 15,
+  "nodeHeapMiB": 128,
   "file": 8388608,
   "core": 0,
   "nice": 10,
   "hooks": {
     "NODE_OPTIONS": "",
     "NODE_PATH": "",
-    "NODE_REPL_EXTERNAL_MODULE": "",
-    "NODE_EXTRA_CA_CERTS": "",
     "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
     "NODE_V8_COVERAGE": ""
-  }
+  },
+  "sourceCount": 56,
+  "scope": "PURE_SCHEMA_CONTROLS_NO_ADDON_FACTORY_GUEST_BUILD"
 }

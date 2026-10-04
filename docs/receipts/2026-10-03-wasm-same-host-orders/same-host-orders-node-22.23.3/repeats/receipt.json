@@ -1,0 +1,554 @@
+{
+  "schema": 1,
+  "diagnosticOnly": true,
+  "hostedOnly": true,
+  "harness": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+  "toolCommit": "b00bff0b266eacb7dc975225cf23120fb931ccac",
+  "startedAt": "2026-10-03T11:37:04.715Z",
+  "node": "v22.23.3",
+  "engines": {
+    "baseline": {
+      "run": "36915940413",
+      "core": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "wasm": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+      "glue": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+    },
+    "candidate": {
+      "run": "37117416202",
+      "core": "14a275f63daaf3cd4af4b1845e52678032553522",
+      "wasm": "7311d6240fc5ea92489adbcd5d396e13f30113652f70bb0515825fb7ef46d07d",
+      "glue": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351"
+    }
+  },
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "logicalCpus": 4,
+  "flags": [],
+  "buildInfo": {
+    "baseline": {
+      "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "wasmBindgen": "0.2.121",
+      "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+      "builtAt": "2026-10-01T19:57:59.544Z",
+      "targets": {
+        "nodejs": {
+          "labwired_wasm.js": {
+            "bytes": 135762,
+            "brotliBytes": 25386,
+            "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+          },
+          "labwired_wasm_bg.wasm": {
+            "bytes": 27556189,
+            "brotliBytes": 3056678,
+            "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+          }
+        },
+        "web": {
+          "labwired_wasm.js": {
+            "bytes": 138392,
+            "brotliBytes": 25941,
+            "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+          },
+          "labwired_wasm_bg.wasm": {
+            "bytes": 27556189,
+            "brotliBytes": 3056678,
+            "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+          }
+        }
+      },
+      "rawBytes": 136668412
+    },
+    "candidate": {
+      "ref": "14a275f63daaf3cd4af4b1845e52678032553522",
+      "wasmBindgen": "0.2.121",
+      "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+      "builtAt": "2026-10-03T10:52:00.092Z",
+      "targets": {
+        "nodejs": {
+          "labwired_wasm.js": {
+            "bytes": 135762,
+            "brotliBytes": 25396,
+            "sha256": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351"
+          },
+          "labwired_wasm_bg.wasm": {
+            "bytes": 27504678,
+            "brotliBytes": 3055662,
+            "sha256": "7311d6240fc5ea92489adbcd5d396e13f30113652f70bb0515825fb7ef46d07d"
+          }
+        },
+        "web": {
+          "labwired_wasm.js": {
+            "bytes": 138392,
+            "brotliBytes": 25940,
+            "sha256": "5a450ce5d2e526cc8c2a4109fde9bba8bc97108cecc434fd6c30e1aeb8e662d5"
+          },
+          "labwired_wasm_bg.wasm": {
+            "bytes": 27504678,
+            "brotliBytes": 3055662,
+            "sha256": "7311d6240fc5ea92489adbcd5d396e13f30113652f70bb0515825fb7ef46d07d"
+          }
+        }
+      },
+      "rawBytes": 136465149
+    }
+  },
+  "workflowRun": "37119884143",
+  "job": "diagnostic",
+  "orders": [
+    false,
+    true,
+    true,
+    false
+  ],
+  "pairs": [
+    {
+      "index": 0,
+      "reverse": false,
+      "startedAt": "2026-10-03T11:37:04.716Z",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "loadBefore": [
+        0.71,
+        0.19,
+        0.06
+      ],
+      "freeMemoryBefore": 15180517376,
+      "children": [
+        {
+          "label": "motion",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-motion-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-1/abba.json",
+            "--paired-glue"
+          ],
+          "exitCode": 0,
+          "signal": null
+        },
+        {
+          "label": "f0",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-f0-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-1/f0-abba",
+            "--paired-glue"
+          ],
+          "exitCode": 0,
+          "signal": null
+        }
+      ],
+      "receipts": {
+        "abba.json": {
+          "bytes": 33308,
+          "sha256": "55b72bd729042c2fc2511333c50abcde68be7b83bda9cfdf41ecbcaa76202144"
+        },
+        "f0-abba/abba.json": {
+          "bytes": 53759,
+          "sha256": "629b0211c3696c13216de805d4535bf91893c0f6f0d3518796bca979aa4d3496"
+        }
+      },
+      "summary": {
+        "motion": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.7990957718923821,
+            "minimumRtx": 0.7891320973758612,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.8058712503267589,
+            "minimumRtx": 0.79165046131784,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 1.0084789316533753
+        },
+        "f0": {
+          "ram": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 2.880653393586969,
+              "minimumRtx": 2.834385173671283,
+              "allWindowsMeet1x": true
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 2.8465604603317765,
+              "minimumRtx": 2.793552745093126,
+              "allWindowsMeet1x": true
+            },
+            "candidateMedianRatio": 0.9881648610238595
+          },
+          "gpio": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 0.6763376818088535,
+              "minimumRtx": 0.6328192046650907,
+              "allWindowsMeet1x": false
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 0.7072801466344298,
+              "minimumRtx": 0.6896278170185166,
+              "allWindowsMeet1x": false
+            },
+            "candidateMedianRatio": 1.045750023483567
+          }
+        }
+      },
+      "completedAt": "2026-10-03T11:38:11.057Z",
+      "loadAfter": [
+        0.97,
+        0.38,
+        0.14
+      ],
+      "freeMemoryAfter": 15679746048
+    },
+    {
+      "index": 1,
+      "reverse": true,
+      "startedAt": "2026-10-03T11:38:11.058Z",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "loadBefore": [
+        0.97,
+        0.38,
+        0.14
+      ],
+      "freeMemoryBefore": 15679746048,
+      "children": [
+        {
+          "label": "motion",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-motion-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-2/abba.json",
+            "--paired-glue",
+            "--reverse"
+          ],
+          "exitCode": 0,
+          "signal": null
+        },
+        {
+          "label": "f0",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-f0-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-2/f0-abba",
+            "--paired-glue",
+            "--reverse"
+          ],
+          "exitCode": 0,
+          "signal": null
+        }
+      ],
+      "receipts": {
+        "abba.json": {
+          "bytes": 33325,
+          "sha256": "ba31aa791824b72a6e113c2fcbdab34c2de70fefee2d59d00689b70660e99205"
+        },
+        "f0-abba/abba.json": {
+          "bytes": 53760,
+          "sha256": "b5804e7bc91a84c123c94c8afbd3a9f68588bf753dcb260edcaed13f4a387875"
+        }
+      },
+      "summary": {
+        "motion": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.8091647228790535,
+            "minimumRtx": 0.7986052487108105,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.8086890800937465,
+            "minimumRtx": 0.7828416920761816,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9994121805216438
+        },
+        "f0": {
+          "ram": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 2.841825640593542,
+              "minimumRtx": 2.7531589008758646,
+              "allWindowsMeet1x": true
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 2.8899832696924665,
+              "minimumRtx": 2.7447041235852874,
+              "allWindowsMeet1x": true
+            },
+            "candidateMedianRatio": 1.0169460182254062
+          },
+          "gpio": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 0.6337330550074727,
+              "minimumRtx": 0.6199373502100788,
+              "allWindowsMeet1x": false
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 0.6947466860766387,
+              "minimumRtx": 0.6671596135589754,
+              "allWindowsMeet1x": false
+            },
+            "candidateMedianRatio": 1.096276548283325
+          }
+        }
+      },
+      "completedAt": "2026-10-03T11:39:18.221Z",
+      "loadAfter": [
+        0.99,
+        0.51,
+        0.21
+      ],
+      "freeMemoryAfter": 15694557184
+    },
+    {
+      "index": 2,
+      "reverse": true,
+      "startedAt": "2026-10-03T11:39:18.222Z",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "loadBefore": [
+        0.99,
+        0.51,
+        0.21
+      ],
+      "freeMemoryBefore": 15694557184,
+      "children": [
+        {
+          "label": "motion",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-motion-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-3/abba.json",
+            "--paired-glue",
+            "--reverse"
+          ],
+          "exitCode": 0,
+          "signal": null
+        },
+        {
+          "label": "f0",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-f0-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-3/f0-abba",
+            "--paired-glue",
+            "--reverse"
+          ],
+          "exitCode": 0,
+          "signal": null
+        }
+      ],
+      "receipts": {
+        "abba.json": {
+          "bytes": 33350,
+          "sha256": "5c76e7507b5edb5150b5e3229164b001bdb3549014a67ff97d5929e735cfe8ee"
+        },
+        "f0-abba/abba.json": {
+          "bytes": 53757,
+          "sha256": "8eb2196308e4b92067f5c6829a053ab8ba3d48ead1fea530256e69cc399bc32c"
+        }
+      },
+      "summary": {
+        "motion": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.8165487293272949,
+            "minimumRtx": 0.7910219095531992,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.7944375606564547,
+            "minimumRtx": 0.7791931455912436,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9729211890525428
+        },
+        "f0": {
+          "ram": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 2.8097420213670055,
+              "minimumRtx": 2.764647988347295,
+              "allWindowsMeet1x": true
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 2.8604746056014747,
+              "minimumRtx": 2.843029764963658,
+              "allWindowsMeet1x": true
+            },
+            "candidateMedianRatio": 1.0180559581088469
+          },
+          "gpio": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 0.6521148664483114,
+              "minimumRtx": 0.6433390188547788,
+              "allWindowsMeet1x": false
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 0.7027122228906528,
+              "minimumRtx": 0.6952121904400871,
+              "allWindowsMeet1x": false
+            },
+            "candidateMedianRatio": 1.077589638030974
+          }
+        }
+      },
+      "completedAt": "2026-10-03T11:40:24.832Z",
+      "loadAfter": [
+        1.22,
+        0.68,
+        0.29
+      ],
+      "freeMemoryAfter": 15703228416
+    },
+    {
+      "index": 3,
+      "reverse": false,
+      "startedAt": "2026-10-03T11:40:24.832Z",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "loadBefore": [
+        1.22,
+        0.68,
+        0.29
+      ],
+      "freeMemoryBefore": 15703228416,
+      "children": [
+        {
+          "label": "motion",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-motion-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-4/abba.json",
+            "--paired-glue"
+          ],
+          "exitCode": 0,
+          "signal": null
+        },
+        {
+          "label": "f0",
+          "args": [
+            "/home/runner/work/bw-board/bw-board/harness/scripts/probe-labwired-f0-ab.mjs",
+            "--baseline",
+            "/home/runner/work/bw-board/bw-board/baseline/nodejs",
+            "--candidate",
+            "/home/runner/work/bw-board/bw-board/candidate/nodejs",
+            "--out",
+            "/home/runner/work/bw-board/bw-board/evidence/repeats/pair-4/f0-abba",
+            "--paired-glue"
+          ],
+          "exitCode": 0,
+          "signal": null
+        }
+      ],
+      "receipts": {
+        "abba.json": {
+          "bytes": 33307,
+          "sha256": "07761cc12a0c8d4354813d877385befe6baa96333f91240cc58f2f6655307311"
+        },
+        "f0-abba/abba.json": {
+          "bytes": 53773,
+          "sha256": "8f8736c3258b22fb3009d03cdefaf230ccf533a81a5b83a3ca2cda1e3d04f3c8"
+        }
+      },
+      "summary": {
+        "motion": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.8145511294633088,
+            "minimumRtx": 0.783937987394531,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.7738001781432062,
+            "minimumRtx": 0.7531207607208938,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 0.9499712788478331
+        },
+        "f0": {
+          "ram": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 2.840950957457548,
+              "minimumRtx": 2.701405093717579,
+              "allWindowsMeet1x": true
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 2.8644287375179953,
+              "minimumRtx": 2.7922061384602497,
+              "allWindowsMeet1x": true
+            },
+            "candidateMedianRatio": 1.0082640567936654
+          },
+          "gpio": {
+            "baseline": {
+              "samples": 10,
+              "medianRtx": 0.592038433444253,
+              "minimumRtx": 0.5617080565526479,
+              "allWindowsMeet1x": false
+            },
+            "candidate": {
+              "samples": 10,
+              "medianRtx": 0.7048412487622686,
+              "minimumRtx": 0.687065714135708,
+              "allWindowsMeet1x": false
+            },
+            "candidateMedianRatio": 1.1905329264888633
+          }
+        }
+      },
+      "completedAt": "2026-10-03T11:41:33.606Z",
+      "loadAfter": [
+        1.26,
+        0.8,
+        0.36
+      ],
+      "freeMemoryAfter": 15669805056
+    }
+  ],
+  "limitations": [
+    "One hosted VM per runtime; host load, JIT settling and thermal state are not controlled",
+    "Distinct runtime jobs do not establish Node-version causality or statistical significance",
+    "All selected engine-cycle floors are retained; no all-target/browser/hardware qualification or promotion"
+  ],
+  "completedAt": "2026-10-03T11:41:33.616Z"
+}

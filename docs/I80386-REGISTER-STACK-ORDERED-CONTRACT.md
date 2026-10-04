@@ -1,5 +1,7 @@
 # Bounded `50–5F` register stack ordering contract
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The owned-byte fixtures in
 `test/i80386-register-stack-ordered-contract.test.mjs` pin ordinary CPU
 effects for register PUSH/POP, independently of any trace observer or
@@ -28,5 +30,5 @@ pin the `POP SS` shadow behavior. Existing
 including full-frame preflight and memory destination fault order.
 
 This is an owned ordinary-CPU contract. It does not assert external 386
-equivalence, expand observer admission, change the 15M/5M disjoint Windows
+equivalence, expand observer admission, change the 15M/5M disjoint broader guest
 opportunity gate, or justify an executable trace.

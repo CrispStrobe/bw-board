@@ -1,5 +1,7 @@
 # Stock xv6 x86 on the experimental 386 AT
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The original stock 224 MiB `usertests` suite now completes on one emulated CPU with free Bochs firmware. The [full-suite result](I80386-XV6-HIGH-MEMORY.md) records the final pass at 7,203,922,011 guest steps and complete serial agreement with an independent QEMU run. Smaller profiles and earlier bounded probes below remain historical coverage, rather than full-suite runs.
 
 The stock SMP MIT xv6-public kernel at `eeb7b415dbcb12cc362d0783e41c3d1f44066b17`
@@ -109,8 +111,7 @@ crosses, allowing the functional CPU to handle the boundary. A complete xv6
 `forktest` rerun matched the previous guest report and final RAM hash; 864
 additional MOVSD iterations retired natively on this workload. The
 [MOVSD receipt](receipts/2026-09-27-i80386-native-rep-movsd.json) binds the
-source and rebuilt WASM. The larger Windows-specific comparison is recorded
-only in the private media repository.
+source and rebuilt WASM.
 
 The bounded runner also admits primed `REP STOSB` when ES points to a
 prevalidated writable RAM page. It stops before crossing that page or a chip

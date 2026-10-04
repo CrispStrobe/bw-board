@@ -1,0 +1,318 @@
+{
+  "buildRun": "37197590435",
+  "coreCommit": "30131a9068e7c4aff6540092bce0a019f3b5c021",
+  "wasmSha256": "d625858e2d698ec7d489f8cf9c0e64d4d63055c750f3e01e85dd4440adb13bce",
+  "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+  "toolCommit": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "diagnosticOnly": true,
+  "engineExecution": false,
+  "fullWat": {
+    "bytes": 201465976,
+    "sha256": "e15aeeba6a9d22223b64dd9d7e4e305367eb090b0e3e8a419924f2252b8063ba"
+  },
+  "functions": [
+    {
+      "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+      "labels": [
+        "step_batch"
+      ],
+      "header": "  (func $<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981 (type 52) (param i32 i32 i32 i32 i32 i32 i32 i32)",
+      "watBytes": 7674294,
+      "watSha256": "98c900779c6cf33548f2160242402a4691b96f485eee20dbf7b7b773b272dc63",
+      "typeReferences": [
+        "52",
+        "7",
+        "137",
+        "16",
+        "25",
+        "34",
+        "17",
+        "114",
+        "111"
+      ],
+      "directCalls": [
+        {
+          "target": "$alloc::sync::Arc<T_A>::drop_slow::h770402ae0a25b273",
+          "occurrences": 2
+        },
+        {
+          "target": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step::haf99ef0974e6e420",
+          "occurrences": 2
+        },
+        {
+          "target": "$std::sync::once_lock::OnceLock<T>::initialize::hec1e87274e093d75",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::highest_priority_pending::he02bc0a8797bd042",
+          "occurrences": 4
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_sub_overflow",
+          "occurrences": 11
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+          "occurrences": 395
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+          "occurrences": 256
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_add_overflow",
+          "occurrences": 7
+        },
+        {
+          "target": "$labwired_core::decoder::arm::decode_thumb_16::h200acc25918e8b0a",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::insert_decoded_entry::hfbb4ba7d287020c5",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::wfe_wake_pending::he5b8e70bbda587e3",
+          "occurrences": 7
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_bounds_check",
+          "occurrences": 74
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+          "occurrences": 28
+        },
+        {
+          "target": "$std::sync::once_lock::OnceLock<T>::initialize::hbb6dc119c50717e0",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+          "occurrences": 25
+        },
+        {
+          "target": "$std_a543996e6e7dbf1e_::io::stdio::_eprint",
+          "occurrences": 4
+        },
+        {
+          "target": "$core::ptr::drop_in_place<core::result::Result<u32_labwired_core::SimulationError>>::h802a717cef88641e",
+          "occurrences": 130
+        },
+        {
+          "target": "$tracing_core::callsite::DefaultCallsite::register::hd5152d7d1bf82d3d",
+          "occurrences": 10
+        },
+        {
+          "target": "$tracing::__macro_support::__is_enabled::he67456a0b89e6fe2",
+          "occurrences": 10
+        },
+        {
+          "target": "$tracing_core::dispatcher::get_default::h3bb30bf7be91db51",
+          "occurrences": 10
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::read_u16::h61c74c62937a40a7",
+          "occurrences": 11
+        },
+        {
+          "target": "$labwired_core::decoder::arm::decode_thumb_32::had0f6da31a53865c",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::wfi_wake_pending::h9c72240959632ad5",
+          "occurrences": 5
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_shr_overflow",
+          "occurrences": 8
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::branch_to::hf74d21b05bac1d74",
+          "occurrences": 9
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::read_u8::hcfd3e5d36d7d117c",
+          "occurrences": 9
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::write_u8::h1781dd0bc6a320fd",
+          "occurrences": 6
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::write_u16::hef7a44338ff522e1",
+          "occurrences": 6
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::exec::dsp::<impl_labwired_core::cpu::cortex_m::CortexM>::exec_dsp_multiply::h8393454645bb2971",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::semihost::handle::hf90ed37746982705",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::exec::vfp_generic::<impl_labwired_core::cpu::cortex_m::CortexM>::exec_vfp_generic::h52c5f5c278d57eff",
+          "occurrences": 2
+        },
+        {
+          "target": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::get_register::hfb5e0c1f36eca1da",
+          "occurrences": 28
+        },
+        {
+          "target": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::set_register::h0901773963ddb1a4",
+          "occurrences": 24
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_compare_nzcv::h068f824e545cd387",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_sqrt::hde42927fba5a8826",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_binop::haea7e7466aa79dd8",
+          "occurrences": 10
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::thumb_expand_imm::he7b7901ef0e32ce7",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::fidelity::record_undecoded::h52a6dc050ce074c2",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_fma::h9725fc9bd1d8f84c",
+          "occurrences": 8
+        },
+        {
+          "target": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::set_exception_pending::hc10a76bb8488f5a3",
+          "occurrences": 2
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_shl_overflow",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::emit_trace_event::h62df7f8b5911f587",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::escalate_precise_data_fault::h592244c4c70716d6",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::escalate_usage_fault::h1b1e0bdaf47c8fb5",
+          "occurrences": 4
+        },
+        {
+          "target": "$__rustc_b7974e8690430dd9_::__rdl_dealloc",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::branch_to::h016349acbeccfe07",
+          "occurrences": 9
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::semihost::handle::hc9d7f9a29bf0e608",
+          "occurrences": 1
+        }
+      ],
+      "memoryOps": {
+        "i32.load": 1115,
+        "i32.store": 722,
+        "i32.load8_u": 973,
+        "i64.load": 327,
+        "i64.store": 190,
+        "i32.load16_u": 99,
+        "i32.store8": 83,
+        "i32.store16": 46,
+        "i64.store32": 128,
+        "i32.load8_s": 2,
+        "i32.load16_s": 4,
+        "i64.load16_u": 6,
+        "i64.load32_u": 36,
+        "f64.store": 8,
+        "f32.load": 2,
+        "f32.store": 2
+      },
+      "localDeclarations": 1
+    },
+    {
+      "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+      "labels": [
+        "run_t16_cached_run"
+      ],
+      "header": "  (func $labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505 (type 26) (param i32 i32 i32) (result i32)",
+      "watBytes": 7252838,
+      "watSha256": "9bbe0129ce250b016cd09064e7ab89e06e053d0e0cdf58861c3a3e2298b6fa53",
+      "typeReferences": [
+        "26"
+      ],
+      "directCalls": [
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+          "occurrences": 2
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_shr_overflow",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+          "occurrences": 2
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_sub_overflow",
+          "occurrences": 1
+        }
+      ],
+      "memoryOps": {
+        "i32.load8_u": 73,
+        "i32.load": 1138,
+        "i32.load16_u": 19,
+        "i32.store": 662,
+        "i64.load": 28,
+        "i64.store": 14,
+        "i64.load32_u": 4,
+        "i32.store8": 2,
+        "i32.store16": 2
+      },
+      "localDeclarations": 1
+    }
+  ],
+  "types": [
+    "  (type (;7;) (func (param i32) (result i32)))",
+    "  (type (;16;) (func (param i32 i32)))",
+    "  (type (;17;) (func (param i32 i32) (result i32)))",
+    "  (type (;25;) (func (param i32 i32 i32)))",
+    "  (type (;26;) (func (param i32 i32 i32) (result i32)))",
+    "  (type (;34;) (func (param i32 i32 i32 i32)))",
+    "  (type (;52;) (func (param i32 i32 i32 i32 i32 i32 i32 i32)))",
+    "  (type (;111;) (func (param i32 i32 i64)))",
+    "  (type (;114;) (func (param i32 i32 i64 i32)))",
+    "  (type (;137;) (func (param i32 i64)))"
+  ],
+  "absentLabels": [
+    "execute_t16_fast_op",
+    "run_t16_cached_fast_paths",
+    "debug_halted"
+  ],
+  "limitations": [
+    "Static code and textual operation counts are not execution frequency or performance evidence",
+    "Functions may be inlined, folded or labelled with aliases; absent names do not prove absent work",
+    "Direct calls are references, not a complete transitive call graph",
+    "Memory offsets alone do not identify Rust fields or cache representation",
+    "No cost-removal, causality, runtime-tier or qualification claim"
+  ]
+}

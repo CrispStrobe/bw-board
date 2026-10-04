@@ -1,0 +1,134 @@
+{
+  "schema": "bw.cold-paired.first-failure-public-records.v1",
+  "records": {
+    "run.json": {
+      "bytes": 12571,
+      "sha256": "742950908683063e553721da170521edd5838804ff7d7fa1f93ae34f1f55ad72",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/run.json"
+    },
+    "artifacts.json": {
+      "bytes": 781,
+      "sha256": "0b567eb64aac1646d712186997d3ffccd69487095a7852f3a8b93ef90d006245",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/artifacts.json"
+    },
+    "members.json": {
+      "bytes": 6233,
+      "sha256": "2a1dd2806b73c3868c20cfd519402aa40f4cdee2ef5b615d1c2009564b25995f",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/members.json"
+    },
+    "initial-raw-outcome.json": {
+      "bytes": 398,
+      "sha256": "6961b5b3ba592b969132a133f58c1ad111451341644f89fea1c1ed4484b71f7f",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/initial-raw-outcome.json"
+    },
+    "independent-first-paired-audit.json": {
+      "bytes": 532,
+      "sha256": "720f54b9812ca0dfd80f78183ef78bf4a86f3234762a6d35a7325abdd7b6c24d",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/independent-first-paired-audit.json"
+    },
+    "independent-first-paired-audit-r2.py": {
+      "bytes": 2776,
+      "sha256": "5bbe10428f7ad6fbc36e2ab3e327a7a19fc4c8b528ed2934e1a956df89e4d854",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/independent-first-paired-audit-r2.py"
+    },
+    "selected/_temp/cold-paired-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-context/parent.stdout"
+    },
+    "selected/_temp/cold-paired-context/parent.stderr": {
+      "bytes": 1255,
+      "sha256": "d72eb87e1cb3a69e9f0789ae1185247f643b17e3a7629397c7159285793ab23f",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-context/parent.stderr"
+    },
+    "selected/_temp/cold-paired-performance/pairs/result.json": {
+      "bytes": 220805,
+      "sha256": "c8074f23c0afc2d7b98b1655eaef64fa66a8b192dcd03b5e6d6439153aad3941",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/result.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/request.json": {
+      "bytes": 269,
+      "sha256": "52c7272135a373290fa20fce61549332c5cbfbaa2c3ace6c8bab3c9673fb2931",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/request.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/binding.json": {
+      "bytes": 214081,
+      "sha256": "c5c63ad43cf7b92a65d4433e35ccade7abbf90fabc1cea6b158ece7d25998389",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/binding.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/initial-authentication.json": {
+      "bytes": 210296,
+      "sha256": "1ba70d9fa90a1dc03f3eb41218acb01fcbb3035a4ea6f6651d52f240e44ed1be",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/initial-authentication.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ-before.json": {
+      "bytes": 210296,
+      "sha256": "1ba70d9fa90a1dc03f3eb41218acb01fcbb3035a4ea6f6651d52f240e44ed1be",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ-before.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ-host.json": {
+      "bytes": 10281,
+      "sha256": "f3475ba51368a0179f2c49fc7dd084c99e6e92a9f3630a74eaa3ad9e384fb695",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ-host.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ-input.json": {
+      "bytes": 1312,
+      "sha256": "85f2347473aa6c16a48ee99ad9af0d36eef97f74009914a7c19b5f7ef5425dc3",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ-input.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/host-before.json": {
+      "bytes": 10284,
+      "sha256": "4174d9c35b5254ab29da710fd9c3cfd93de1efd6138ef5e7657316f2df44cd21",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/host-before.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/host-after.json": {
+      "bytes": 10280,
+      "sha256": "bb5fa9e93a7e870aed8753356cb293084f6538747d83407d73963c46242f416c",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/host-after.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/exit.json": {
+      "bytes": 419,
+      "sha256": "706d8619f08a979d63f207effc388fa51edeb88e94c1135c854b49a45e6529ca",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/exit.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/invocation.json": {
+      "bytes": 1022,
+      "sha256": "88653e456a48ef05cfa1fd9fb05930cac5b52b478118c4477bfc33e724d8e230",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/invocation.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/stdout"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/stderr": {
+      "bytes": 375,
+      "sha256": "461adb713775be5cfbfb66b7b68924513e005d0190898b2c3373dd30efa4ff67",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/stderr"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/terminal-validation.json": {
+      "bytes": 890,
+      "sha256": "a5ee88f93dadad43db9a7b4f9c93f90a571e1b4916e9ed3c5710c6ee6c47e214",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/terminal-validation.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/after-authentication.json": {
+      "bytes": 210296,
+      "sha256": "1ba70d9fa90a1dc03f3eb41218acb01fcbb3035a4ea6f6651d52f240e44ed1be",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/after-authentication.json"
+    },
+    "selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/receipt/receipt.json": {
+      "bytes": 1920446,
+      "sha256": "a08b45a239f7778a16469bbc4f295386e6bf433fb9a84c82f28c0ef2537aaa04",
+      "origin": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/selected/_temp/cold-paired-performance/pairs/pair-00-native-oneQ/receipt/receipt.json"
+    }
+  },
+  "externalRetention": {
+    "path": "/tmp/native-cold-paired-first-native-comparison-publication-20261003/official-artifact.zip",
+    "bytes": 38512612,
+    "sha256": "12ae584a54d7ce2db79ae7108d87d1792b4cb3a8eaf768fe810579c2ca41d589",
+    "officialArtifact": 11275214854,
+    "officialDownload": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11275214854/zip",
+    "members": 91
+  },
+  "scope": "One qualified nativeoneQ warmup child, incomplete firstwarmup pair, no measuredpairs/speed/gate/physical386/fullboot/WindowsDoom10x/adoption."
+}

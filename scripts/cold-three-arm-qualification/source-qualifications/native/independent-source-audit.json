@@ -1,8 +1,9 @@
 {
-  "status": "PASS_SOURCE_ONLY_NATIVE_WORKER_EIGHTH_MIGRATION",
-  "head": "8ed0366af9bf92823561d5130d0ad6274020c6da",
-  "sourceFiles": 55,
-  "controls": 8,
-  "wallSeconds": 1.7196677792817354,
-  "scope": "Exact eighth prerequisites and aggregate review validation; unchanged timed worker/protocol and strict pre-settle CPU vs settled board/RAM. R1 sparse missing module preserved. No native worker execution or benchmark."
+  "status": "PASS_SOURCE_ONLY_NATIVE_LIVE_SLICE_FIX",
+  "head": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+  "sourceFiles": 56,
+  "pureControls": 9,
+  "canonicalIdentitySha256": "9d70f04a099df42d4cac13796705a4da963c295d9d83cec8c1bc709d3cb60bf1",
+  "readonlyIdentity": true,
+  "scope": "Only live Uint8Array guard/test reconstruction changed outside timer. No guest/build/benchmark."
 }

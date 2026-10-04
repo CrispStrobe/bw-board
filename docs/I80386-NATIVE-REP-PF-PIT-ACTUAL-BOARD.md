@@ -1,5 +1,7 @@
 # Native actual-board compact REP / two-page-fault / PIT gate
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Qualified bounded checkpoint, 2026-10-01.** Public [capture](receipts/2026-10-01-i80386-native-rep-pf-pit-capture.json.gz), [result](receipts/2026-10-01-i80386-native-rep-pf-pit-result.json) and [independent audit](receipts/2026-10-01-i80386-native-rep-pf-pit-audit.json) preserve the evidence.
 
 ## Bounded result
@@ -40,7 +42,7 @@ Pagewalk callback parity is false. Native combines A/D bits on five first-write 
 
 Execution admission is immutable ROM only, generation0, fixed A20-on/mapping epoch0. RAM execution, self-modifying code, A20 transitions, VGA/MMIO, unsupported ports/spans, DMA/external host mutation, unexpected faults/REP forms, and Bochs RAM/PIO/timer fallback paths fail closed. Data and pagewalk writes are staged then published at their actual ordinary/REP/fault/IRQ/prefetch-pagewalk boundaries. Prefetch publication permits only audited pagewalk A/D writes. No synthetic cache/TLB flush occurs: immutable ROM execution needs no RAM executable-alias repair, and guest MOV CR3 owns translation invalidation. `COHERENCE` rows describe effect publication, not production RAM cache coherence.
 
-The baseline is the source-bound actual JavaScript board oracle, whose validator also performs a cached reexecution through the same JavaScript engine. That reexecution is useful reproducibility evidence, not a third independent CPU oracle. Independent source/ROM, physical backing, ordered bus/RPC, frame, pagewalk, clock, and chip audits add separate checks. This remains one bounded functional fixture: no general backend integration, x86 ISA completeness, Windows/Doom compatibility, RTx, browser speed, or 10× performance claim.
+The baseline is the source-bound actual JavaScript board oracle, whose validator also performs a cached reexecution through the same JavaScript engine. That reexecution is useful reproducibility evidence, not a third independent CPU oracle. Independent source/ROM, physical backing, ordered bus/RPC, frame, pagewalk, clock, and chip audits add separate checks. This remains one bounded functional fixture: no general backend integration, x86 ISA completeness, broader guest/broader game compatibility, RTx, browser speed, or 10× performance claim.
 
 ## Source pins
 
@@ -54,7 +56,6 @@ The baseline is the source-bound actual JavaScript board oracle, whose validator
 - All twelve transformed upstream files and copied ABI/runtime files are independently regenerated/authenticated in preflight. Exact historical import closure is checked, not a minimum-key subset. Final source inventory has 61 inputs, including the mandatory report test and genuine historical fixture.
 
 Earlier e7 diagnostic captures remain explicitly unqualified: execution completed but the then-current checker had a schema error and lacked subsequent semantic bindings. They are preserved as diagnostics and are not passing receipts. New gzip unvalidated sidecars preserve exact JSON bytes without altering full captures or raw artifacts.
-
 
 ## Replay and next gate
 

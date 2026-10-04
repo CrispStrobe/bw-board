@@ -1,0 +1,7 @@
+{
+  "schema": "labwired.lossless-utf8.v1",
+  "bytes": 990,
+  "sha256": "3ca9ca9191bd5927ed6fae76a195b5b8a52a6ce9fac17d241f6c33dc8d6f1567",
+  "encoding": "utf8",
+  "text": "diff --git a/crates/wasm/src/lib.rs b/crates/wasm/src/lib.rs\nindex d1a4fe23..f19fadb1 100644\n--- a/crates/wasm/src/lib.rs\n+++ b/crates/wasm/src/lib.rs\n@@ -1576,0 +1577,21 @@ impl WasmSimulator {\n+    /// Diagnostics only: does not clear caches, reset or mutate guest state.\n+    #[cfg(feature = \"t16-discovery-census\")]\n+    #[wasm_bindgen]\n+    pub fn begin_t16_discovery_census(&mut self) -> Result<(), JsValue> {\n+        if self.machine_mut_or_err()?.cpu.begin_t16_discovery_census() {\n+            Ok(())\n+        } else {\n+            Err(JsValue::from_str(\"T16 census requires Cortex-M\"))\n+        }\n+    }\n+\n+    #[cfg(feature = \"t16-discovery-census\")]\n+    #[wasm_bindgen]\n+    pub fn end_t16_discovery_census(&mut self) -> Result<String, JsValue> {\n+        self.machine_mut_or_err()?\n+            .cpu\n+            .end_t16_discovery_census()\n+            .map(|report| report.to_string())\n+            .ok_or_else(|| JsValue::from_str(\"T16 census requires Cortex-M\"))\n+    }\n+\n"
+}

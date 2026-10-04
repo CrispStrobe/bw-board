@@ -1,0 +1,528 @@
+{
+  "schema": 1,
+  "toolHead": "457980b9c84a7e7da95be165160b3e5e8f3198cc",
+  "toolRef": "perf/wasm-edge-layout-inspection-20261003",
+  "hostedOnly": true,
+  "diagnosticOnly": true,
+  "engineExecution": false,
+  "enginePromotion": false,
+  "localEngineDownloads": false,
+  "targets": [
+    {
+      "label": "baseline",
+      "run": 37123746233,
+      "buildRun": 36915940413,
+      "core": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "wasm": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+      "glue": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+      "words": 18,
+      "artifact": {
+        "id": 11273474159,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI3MzQ3NDE1OQ==",
+        "name": "compiled-edge-layout-inspection",
+        "size_in_bytes": 362708,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273474159",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273474159/zip",
+        "expired": false,
+        "digest": "sha256:3a133a73a51c9f81a8338a363495a31c4164f46e53cce2e31b03bfe155b29d4a",
+        "created_at": "2026-10-03T12:45:54Z",
+        "updated_at": "2026-10-03T12:45:54Z",
+        "expires_at": "2026-10-17T12:45:54Z",
+        "workflow_run": {
+          "id": 37123746233,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/wasm-edge-layout-inspection-20261003",
+          "head_sha": "457980b9c84a7e7da95be165160b3e5e8f3198cc"
+        }
+      },
+      "buttons": [
+        {
+          "address": 17082440,
+          "words": [
+            7563,
+            40,
+            8,
+            7700,
+            7701,
+            7702,
+            7703,
+            7704,
+            7705,
+            7706,
+            7567,
+            7705,
+            7707,
+            7708,
+            7709,
+            7710,
+            7711,
+            7712
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 16033864,
+          "rawBytesHex": "8b1d00002800000008000000141e0000151e0000161e0000171e0000181e0000191e00001a1e00008f1d0000191e00001b1e00001c1e00001d1e00001e1e00001f1e0000201e0000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 7563,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::button::Button>::hda4c9e6dab7f8447"
+            },
+            {
+              "offset": 4,
+              "value": 40,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 8,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 7700,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 16,
+              "value": 7701,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 20,
+              "value": 7702,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 24,
+              "value": 7703,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 28,
+              "value": 7704,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 32,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 36,
+              "value": 7706,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 40,
+              "value": 7567,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::sim_input::SimInput>::component_id::h580375269acce3db"
+            },
+            {
+              "offset": 44,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 48,
+              "value": 7707,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 7708,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 56,
+              "value": 7709,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 7710,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            },
+            {
+              "offset": 64,
+              "value": 7711,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 7712,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any_mut::hfdcd8af77354529d"
+            }
+          ]
+        }
+      ],
+      "fullWat": {
+        "bytes": 201474404,
+        "sha256": "a36ad9ffcd857f4905e875afce3f1bade2c21b581de519f71f659293b77f508d"
+      },
+      "selectedSha256": "d33d259897bba0ac7373deca9b106058106d39fa74d0dde5baf4a26919032e8b",
+      "completedAt": "2026-10-03T12:46:13.094Z"
+    },
+    {
+      "label": "middle",
+      "buildRun": 37117416202,
+      "core": "14a275f63daaf3cd4af4b1845e52678032553522",
+      "wasm": "7311d6240fc5ea92489adbcd5d396e13f30113652f70bb0515825fb7ef46d07d",
+      "glue": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351",
+      "words": 19,
+      "dispatchAttemptedAt": "2026-10-03T12:45:15.524Z",
+      "dispatchReturnedAt": "2026-10-03T12:45:17.055Z",
+      "run": 37123891458,
+      "artifact": {
+        "id": 11274700008,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI3NDcwMDAwOA==",
+        "name": "compiled-edge-layout-inspection",
+        "size_in_bytes": 362453,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274700008",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274700008/zip",
+        "expired": false,
+        "digest": "sha256:33d2888fef6de8eced7644b1a73bb48954e969884c467cd1f7152b333f6d37a8",
+        "created_at": "2026-10-03T12:58:55Z",
+        "updated_at": "2026-10-03T12:58:55Z",
+        "expires_at": "2026-10-17T12:58:54Z",
+        "workflow_run": {
+          "id": 37123891458,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/wasm-edge-layout-inspection-20261003",
+          "head_sha": "457980b9c84a7e7da95be165160b3e5e8f3198cc"
+        }
+      },
+      "buttons": [
+        {
+          "address": 17088128,
+          "words": [
+            8065,
+            40,
+            8,
+            8202,
+            8203,
+            8204,
+            8205,
+            8206,
+            8207,
+            8208,
+            8069,
+            8207,
+            8209,
+            8210,
+            8211,
+            8212,
+            8213,
+            8214,
+            8215
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 16039552,
+          "rawBytesHex": "811f000028000000080000000a2000000b2000000c2000000d2000000e2000000f20000010200000851f00000f20000011200000122000001320000014200000152000001620000017200000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 8065,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::button::Button>::hda4c9e6dab7f8447"
+            },
+            {
+              "offset": 4,
+              "value": 40,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 8,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 8202,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 16,
+              "value": 8203,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 20,
+              "value": 8204,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 24,
+              "value": 8205,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 28,
+              "value": 8206,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 32,
+              "value": 8207,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 36,
+              "value": 8208,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 40,
+              "value": 8069,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::sim_input::SimInput>::component_id::h580375269acce3db"
+            },
+            {
+              "offset": 44,
+              "value": 8207,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 48,
+              "value": 8209,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 8210,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::h6b78f695a1a53519"
+            },
+            {
+              "offset": 56,
+              "value": 8211,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 60,
+              "value": 8212,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 64,
+              "value": 8213,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            },
+            {
+              "offset": 68,
+              "value": 8214,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 72,
+              "value": 8215,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any_mut::hfdcd8af77354529d"
+            }
+          ]
+        }
+      ],
+      "fullWat": {
+        "bytes": 201144751,
+        "sha256": "e441aed06a5571e1f7ebb62326cb0322efb560f56af248d4f1bfb3b89daf45f3"
+      },
+      "selectedSha256": "bfd7323708bcd1df87bf039183e8e624ef3782ce9e21ff163a249cdbbbd48430",
+      "completedAt": "2026-10-03T12:59:16.961Z"
+    },
+    {
+      "label": "tail",
+      "buildRun": 37123103124,
+      "core": "226fe97835bb5bed06cbb377b3d218c661937a49",
+      "wasm": "81ede3127faf782c39d0dfcb797f7bc0bcc033c36a5aa1b45bbc80e9547cde18",
+      "glue": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351",
+      "words": 19,
+      "buildInfo": {
+        "ref": "226fe97835bb5bed06cbb377b3d218c661937a49",
+        "wasmBindgen": "0.2.121",
+        "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+        "builtAt": "2026-10-03T12:37:39.119Z",
+        "targets": {
+          "nodejs": {
+            "labwired_wasm.js": {
+              "bytes": 135762,
+              "brotliBytes": 25396,
+              "sha256": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27504678,
+              "brotliBytes": 3055678,
+              "sha256": "81ede3127faf782c39d0dfcb797f7bc0bcc033c36a5aa1b45bbc80e9547cde18"
+            }
+          },
+          "web": {
+            "labwired_wasm.js": {
+              "bytes": 138392,
+              "brotliBytes": 25940,
+              "sha256": "5a450ce5d2e526cc8c2a4109fde9bba8bc97108cecc434fd6c30e1aeb8e662d5"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27504678,
+              "brotliBytes": 3055678,
+              "sha256": "81ede3127faf782c39d0dfcb797f7bc0bcc033c36a5aa1b45bbc80e9547cde18"
+            }
+          }
+        },
+        "rawBytes": 136465313
+      },
+      "dispatchAttemptedAt": "2026-10-03T12:59:17.354Z",
+      "dispatchReturnedAt": "2026-10-03T12:59:18.824Z",
+      "run": 37124659076,
+      "artifact": {
+        "id": 11274720052,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI3NDcyMDA1Mg==",
+        "name": "compiled-edge-layout-inspection",
+        "size_in_bytes": 362442,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274720052",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274720052/zip",
+        "expired": false,
+        "digest": "sha256:5f011cf6d8c986f0fb3b5a77b08f8e0432163de7f6f4fed666d2b81b5f00485b",
+        "created_at": "2026-10-03T13:01:12Z",
+        "updated_at": "2026-10-03T13:01:12Z",
+        "expires_at": "2026-10-17T13:01:11Z",
+        "workflow_run": {
+          "id": 37124659076,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/wasm-edge-layout-inspection-20261003",
+          "head_sha": "457980b9c84a7e7da95be165160b3e5e8f3198cc"
+        }
+      },
+      "buttons": [
+        {
+          "address": 17088128,
+          "words": [
+            8065,
+            40,
+            8,
+            8202,
+            8203,
+            8204,
+            8205,
+            8206,
+            8207,
+            8208,
+            8069,
+            8207,
+            8209,
+            8210,
+            8211,
+            8212,
+            8213,
+            8214,
+            8215
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 16039552,
+          "rawBytesHex": "811f000028000000080000000a2000000b2000000c2000000d2000000e2000000f20000010200000851f00000f20000011200000122000001320000014200000152000001620000017200000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 8065,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::button::Button>::hda4c9e6dab7f8447"
+            },
+            {
+              "offset": 4,
+              "value": 40,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 8,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 8202,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 16,
+              "value": 8203,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 20,
+              "value": 8204,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 24,
+              "value": 8205,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 28,
+              "value": 8206,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 32,
+              "value": 8207,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 36,
+              "value": 8208,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 40,
+              "value": 8069,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::sim_input::SimInput>::component_id::h580375269acce3db"
+            },
+            {
+              "offset": 44,
+              "value": 8207,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 48,
+              "value": 8209,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 8210,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 56,
+              "value": 8211,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 8212,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            },
+            {
+              "offset": 64,
+              "value": 8213,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 8214,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any_mut::hfdcd8af77354529d"
+            },
+            {
+              "offset": 72,
+              "value": 8215,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::has_edge_service_addrs::h6b78f695a1a53519"
+            }
+          ]
+        }
+      ],
+      "fullWat": {
+        "bytes": 201144751,
+        "sha256": "801dad83dc30d29ec4f15b0b88045fcd5f238f015637cd1e840e764d141e5445"
+      },
+      "selectedSha256": "4ed1fafbedea7fe7b186c30737c7ea9bbf7a40069953076a9073a4cc1dcd9aee",
+      "completedAt": "2026-10-03T13:01:46.715Z"
+    }
+  ],
+  "startedAt": "2026-10-03T12:45:15.124Z",
+  "completedAt": "2026-10-03T13:01:46.740Z"
+}

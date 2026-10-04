@@ -1,0 +1,20 @@
+{
+  "status": "PASS_CODER_PRIVATE_JS_INT_IRET_SOURCE_AUDIT",
+  "testedHead": "40b8a5713fefc04ddb72175ee26f40afb7b60f35",
+  "sourceFiles": 51,
+  "controls": 7,
+  "instructions": 41,
+  "frames": 42,
+  "cuts": 14,
+  "pagesPerFrame": 10,
+  "wholePageBytesCheckedIncludingSettled": 1761280,
+  "bootStores": 20,
+  "frameStores": 3,
+  "adUpdates": 7,
+  "ramSha256": "0110baad6cfc99e56a04d07d0cf5cf9d8d7ab2e85f24721b980226cb79a674a6",
+  "capture": {
+    "bytes": 3996225,
+    "sha256": "45efeb75ae7362074150d8d1089181a502fcdc5649f9a0ecd1bfc751b21fe9aa"
+  },
+  "scope": "Actual private Bochs-model JS source only; no native build/admission/execution"
+}

@@ -1,5 +1,7 @@
 # Native cold free-BIOS checkpoint plan
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The next target is an actual reset of the unmodified free AT BIOS, stopping **before F000:E16**, after AA self-test and AB interface test. Direct entry at the keyboard routine omits the cold path. This is a plan, not a native BIOS boot result.
 
 One exploratory JavaScript census reached that boundary in 316,562 steps/completions, with IF clear and 16,475 byte port operations. ROM SHA-256 was `6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac`. Construction configuration fixed controller busy delay 12 and response delay 32 and disabled unsolicited BAT/ACK/mouse responses. The bounded child exited successfully in 1.255 seconds; receipts remain at `/tmp/native-cold-bios-js-census-actual-20261003`. The helper and ROM were pinned, but no complete source inventory was captured before and after execution. This is a JS budget/device census, not an authenticated native baseline or speed measurement.
@@ -14,4 +16,4 @@ At E16, actual master PIC state was IRR=1, ISR=0, IMR=0 and asserted interrupt o
 
 Use streaming ordered clock/port evidence and named snapshots at reset, after each REP site, before AA, after AA, after AB, and E16. Hundreds of thousands of full 166-word snapshots and boards in arrays would exceed the small heap budget. Keep raw reset states and explicit literal oracle-profile differences; do not call Bochs deviations hardware-correct. Keep whole RAM raw unless a specific guest-created reset witness requires a separately justified comparison policy.
 
-The separate authored AA/AB ROM is a bounded protocol slice, not qualification of these REP, stack, DMA/CMOS, line, BIOS-ROM, or cold-path requirements. Existing JavaScript Windows/Doom/xv6 results are also distinct from native-backend qualification.
+The separate authored AA/AB ROM is a bounded protocol slice, not qualification of these REP, stack, DMA/CMOS, line, BIOS-ROM, or cold-path requirements.

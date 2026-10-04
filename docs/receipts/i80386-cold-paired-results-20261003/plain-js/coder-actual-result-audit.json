@@ -1,0 +1,74 @@
+{
+  "status": "PASS_CODER_ACTUAL_18_RECEIPTS_AND_ARITHMETIC",
+  "summary": {
+    "comparison": "plain-JS-v-batched",
+    "primaryMetric": "executionProcessCpuSeconds",
+    "criteria": {
+      "primaryMetric": "executionProcessCpuSeconds",
+      "meanReductionAtLeast": 0.1,
+      "allSevenCandidateFaster": true
+    },
+    "baselineMeanExecutionCpuSeconds": 0.24268085714285714,
+    "candidateMeanExecutionCpuSeconds": 0.9989317142857143,
+    "meanCpuReduction": -3.1162361384675696,
+    "allSevenFavorable": false,
+    "quantitativeGatePass": false,
+    "rawRatios": [
+      {
+        "pair": 0,
+        "executionCpuCandidateOverBaseline": 4.184598285704663,
+        "executionWallCandidateOverBaseline": 7.765482887928589,
+        "wholeChildCpuCandidateOverBaseline": 4.274877232388628,
+        "wholeChildWallCandidateOverBaseline": 4.917935434558692
+      },
+      {
+        "pair": 1,
+        "executionCpuCandidateOverBaseline": 4.25021142926181,
+        "executionWallCandidateOverBaseline": 7.782943969324787,
+        "wholeChildCpuCandidateOverBaseline": 4.064966741292809,
+        "wholeChildWallCandidateOverBaseline": 4.764728836072475
+      },
+      {
+        "pair": 2,
+        "executionCpuCandidateOverBaseline": 4.177580141575565,
+        "executionWallCandidateOverBaseline": 7.476531907718891,
+        "wholeChildCpuCandidateOverBaseline": 4.094957885489872,
+        "wholeChildWallCandidateOverBaseline": 4.798300478098829
+      },
+      {
+        "pair": 3,
+        "executionCpuCandidateOverBaseline": 3.8993044983253475,
+        "executionWallCandidateOverBaseline": 7.040965293754573,
+        "wholeChildCpuCandidateOverBaseline": 3.6812886636980027,
+        "wholeChildWallCandidateOverBaseline": 4.236357950484825
+      },
+      {
+        "pair": 4,
+        "executionCpuCandidateOverBaseline": 4.698839939291106,
+        "executionWallCandidateOverBaseline": 8.086713479153586,
+        "wholeChildCpuCandidateOverBaseline": 4.222376689154815,
+        "wholeChildWallCandidateOverBaseline": 4.9100374713922825
+      },
+      {
+        "pair": 5,
+        "executionCpuCandidateOverBaseline": 3.9153285502790114,
+        "executionWallCandidateOverBaseline": 7.189336455337386,
+        "wholeChildCpuCandidateOverBaseline": 3.9630877446000956,
+        "wholeChildWallCandidateOverBaseline": 4.6260688955633595
+      },
+      {
+        "pair": 6,
+        "executionCpuCandidateOverBaseline": 3.7205230782466554,
+        "executionWallCandidateOverBaseline": 6.833588603707285,
+        "wholeChildCpuCandidateOverBaseline": 3.805106993844756,
+        "wholeChildWallCandidateOverBaseline": 4.497213789210293
+      }
+    ],
+    "scope": "Cold slice only; configured virtual RTx is not physical 386 calibration; no default adoption, full AT/Windows/Doom10x claim"
+  },
+  "wholeChildCpuMeans": {
+    "plain-JS": 0.9443828571428571,
+    "native-batched": 3.785945714285714
+  },
+  "scope": "Actual semantic receipts/schedule/arithmetic/finalauth; independent fullartifact audit separate"
+}

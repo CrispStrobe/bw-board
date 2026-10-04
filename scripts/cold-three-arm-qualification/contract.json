@@ -998,8 +998,8 @@
       }
     },
     "native": {
-      "revision": "8ed0366af9bf92823561d5130d0ad6274020c6da",
-      "sourceSha256": "a5b068e37cd05a08262dc6ac5ad4f11835427fcaa720b831440bab583212321f",
+      "revision": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+      "sourceSha256": "9d70f04a099df42d4cac13796705a4da963c295d9d83cec8c1bc709d3cb60bf1",
       "entry": "scripts/cold-native-performance/worker.mjs",
       "binding": "scripts/cold-native-performance/capture-binding.json",
       "files": {
@@ -1056,24 +1056,28 @@
           "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
         },
         "scripts/cold-native-performance/README.md": {
-          "bytes": 4476,
-          "sha256": "0b77b03e3fe72dcf5ec70b28120389eeabda6797a91c2b188507041677845325"
+          "bytes": 5090,
+          "sha256": "56bff3bbed8015428aabbc5d0887ded039d7716879b55e66b2524a5a11f8edd2"
+        },
+        "scripts/cold-native-performance/actual-snapshot-fixtures.json": {
+          "bytes": 9224,
+          "sha256": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080"
         },
         "scripts/cold-native-performance/admission.mjs": {
-          "bytes": 6895,
-          "sha256": "ce771bbe6ba102e5e7008dfa4156753292e006a56fbc0c3dba0111be2df9effc"
+          "bytes": 6959,
+          "sha256": "fd28224bfb91213440d04a5f790dc1f586a63f14521a2d21926b87904af53031"
         },
         "scripts/cold-native-performance/capture-binding.json": {
           "bytes": 577,
           "sha256": "5bc446815953759f4d088834c3c369aee35f526168acc94fd12b29596c105735"
         },
         "scripts/cold-native-performance/protocol.mjs": {
-          "bytes": 4395,
-          "sha256": "137ae341c72573e2cacf750e45633e2c214b105e84b1de85e82abc444c079e4a"
+          "bytes": 6166,
+          "sha256": "e15f481a5e0af0aec007dc4d48259b87aef9e86b7f7b6bbc31d047bde549b74b"
         },
         "scripts/cold-native-performance/worker.mjs": {
-          "bytes": 10720,
-          "sha256": "49b75208699f580dedeb5f1d963ce99f6eaf68ff36f6c476ba619fb15f34189b"
+          "bytes": 10747,
+          "sha256": "29ecdef2339de1aec89812208b8b38f71c80e7c02e814b8ebf6bbf1e5cf8e7f8"
         },
         "src/adc0809.js": {
           "bytes": 6267,
@@ -1220,43 +1224,43 @@
           "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
         },
         "test/i80386-cold-native-performance-source.test.mjs": {
-          "bytes": 10711,
-          "sha256": "900c319e27f0747c68a98d610b9e0c7694f08d6df4233fc4426696e23cbb2732"
+          "bytes": 13449,
+          "sha256": "6ceff4bee0415749ee893d583745ee62fe2a3a5b73d772790e1c8f0fc07048b5"
         }
       },
       "sourceQualification": {
-        "controls": 8,
+        "controls": 9,
         "records": {
           "before.json": {
-            "bytes": 227103,
-            "sha256": "2dc9d6f35b0b788095c12c9250391ab57b99478cc0ddedd4ed9d9128b303b603"
+            "bytes": 9255,
+            "sha256": "4409542bd7546e151ae8bb1473eb13b3f67c17f55af144ab87045bd41226c120"
           },
           "after.json": {
-            "bytes": 227103,
-            "sha256": "2dc9d6f35b0b788095c12c9250391ab57b99478cc0ddedd4ed9d9128b303b603"
+            "bytes": 9255,
+            "sha256": "4409542bd7546e151ae8bb1473eb13b3f67c17f55af144ab87045bd41226c120"
           },
           "invocation.json": {
-            "bytes": 423,
-            "sha256": "cc97186cb0c76e13faa2af821aeef174a4985cafb9477786e120475a6be2e6ef"
+            "bytes": 513,
+            "sha256": "7db977ccb7b20c226facf44bb3130b2b7af83fa260394cb6da3290578a834456"
           },
           "exit.json": {
             "bytes": 100,
-            "sha256": "4a734302fbdb73f105e56c5d2241543626a75e3104b3a3b00eea518b4248da07"
+            "sha256": "49cae61a03045bdad54d17096b71f97e08137f90ba5fd7ef4e0bda9753249a78"
           },
           "stdout": {
-            "bytes": 1940,
-            "sha256": "81421651d3da82b32c03f24a37f9c0a91d60bdefdde38099712511e375c22926"
+            "bytes": 2181,
+            "sha256": "1a2524a8e80ac274eaf92d92bc772836e3e5a4e6176783b031fd62b192200d12"
           },
           "stderr": {
             "bytes": 0,
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           "independent-source-audit.json": {
-            "bytes": 426,
-            "sha256": "8e90629730a1a1f6f8da78d0a939becf05a50fc0ad608fae42dae8d493281d4c"
+            "bytes": 388,
+            "sha256": "2e4187768b9a2c529b2d470ea9535bea36d11359af436edced1cede6e20940b7"
           }
         },
-        "origin": "/tmp/native-cold-native-worker-eighth-controls-r2-20261003",
+        "origin": "/tmp/native-cold-native-worker-live-slice-controls-20261003",
         "scope": "PURE source controls only; no arm execution or timing qualification"
       }
     }

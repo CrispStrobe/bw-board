@@ -1,0 +1,208 @@
+{
+  "runId": "37136931155",
+  "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+  "source": "565dce2b35c67c4661055443ce9bb5d47039249e",
+  "partialRun": true,
+  "publication": false,
+  "enginePromotion": false,
+  "freshMotion": {
+    "samples": [
+      {
+        "index": 0,
+        "cycles": 64000000,
+        "cpuHz": 64000000,
+        "wallSeconds": 1.0967619629999998,
+        "rtx": 0.9117748734325866,
+        "accelRaw": [
+          16384,
+          -8192,
+          4096
+        ],
+        "magRaw": [
+          200,
+          -100,
+          50
+        ],
+        "accelSamples": 112,
+        "magSamples": 112,
+        "scans": 2145
+      },
+      {
+        "index": 1,
+        "cycles": 64000000,
+        "cpuHz": 64000000,
+        "wallSeconds": 1.005579587,
+        "rtx": 0.9944513720523646,
+        "accelRaw": [
+          -4096,
+          2048,
+          -12288
+        ],
+        "magRaw": [
+          -200,
+          0,
+          400
+        ],
+        "accelSamples": 212,
+        "magSamples": 212,
+        "scans": 4053
+      },
+      {
+        "index": 2,
+        "cycles": 64000000,
+        "cpuHz": 64000000,
+        "wallSeconds": 1.003699873,
+        "rtx": 0.9963137655991314,
+        "accelRaw": [
+          16384,
+          -8192,
+          4096
+        ],
+        "magRaw": [
+          200,
+          -100,
+          50
+        ],
+        "accelSamples": 312,
+        "magSamples": 312,
+        "scans": 5960
+      },
+      {
+        "index": 3,
+        "cycles": 64000000,
+        "cpuHz": 64000000,
+        "wallSeconds": 1.0040690729999997,
+        "rtx": 0.9959474172550281,
+        "accelRaw": [
+          -4096,
+          2048,
+          -12288
+        ],
+        "magRaw": [
+          -200,
+          0,
+          400
+        ],
+        "accelSamples": 412,
+        "magSamples": 412,
+        "scans": 7867
+      },
+      {
+        "index": 4,
+        "cycles": 64000000,
+        "cpuHz": 64000000,
+        "wallSeconds": 1.0002821609999992,
+        "rtx": 0.9997179185923728,
+        "accelRaw": [
+          16384,
+          -8192,
+          4096
+        ],
+        "magRaw": [
+          200,
+          -100,
+          50
+        ],
+        "accelSamples": 512,
+        "magSamples": 512,
+        "scans": 9774
+      }
+    ],
+    "guestSha256": "ab2be40c244b5bfe5c2155df2c55cff727e6a34a6622ff48cca047432ea846ff",
+    "guestObservations": [
+      {
+        "accelRaw": [
+          16384,
+          -8192,
+          4096
+        ],
+        "accelSamples": 112,
+        "cpuHz": 64000000,
+        "cycles": 64000000,
+        "index": 0,
+        "magRaw": [
+          200,
+          -100,
+          50
+        ],
+        "magSamples": 112,
+        "scans": 2145
+      },
+      {
+        "accelRaw": [
+          -4096,
+          2048,
+          -12288
+        ],
+        "accelSamples": 212,
+        "cpuHz": 64000000,
+        "cycles": 64000000,
+        "index": 1,
+        "magRaw": [
+          -200,
+          0,
+          400
+        ],
+        "magSamples": 212,
+        "scans": 4053
+      },
+      {
+        "accelRaw": [
+          16384,
+          -8192,
+          4096
+        ],
+        "accelSamples": 312,
+        "cpuHz": 64000000,
+        "cycles": 64000000,
+        "index": 2,
+        "magRaw": [
+          200,
+          -100,
+          50
+        ],
+        "magSamples": 312,
+        "scans": 5960
+      },
+      {
+        "accelRaw": [
+          -4096,
+          2048,
+          -12288
+        ],
+        "accelSamples": 412,
+        "cpuHz": 64000000,
+        "cycles": 64000000,
+        "index": 3,
+        "magRaw": [
+          -200,
+          0,
+          400
+        ],
+        "magSamples": 412,
+        "scans": 7867
+      },
+      {
+        "accelRaw": [
+          16384,
+          -8192,
+          4096
+        ],
+        "accelSamples": 512,
+        "cpuHz": 64000000,
+        "cycles": 64000000,
+        "index": 4,
+        "magRaw": [
+          200,
+          -100,
+          50
+        ],
+        "magSamples": 512,
+        "scans": 9774
+      }
+    ],
+    "allWindowsMeet1x": false,
+    "medianRtx": 0.9959474172550281,
+    "minimumRtx": 0.9117748734325866
+  }
+}

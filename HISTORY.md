@@ -695,7 +695,7 @@ be read and adapted with attribution.
 | --- | --- | --- |
 | `dbalsom/arduino_8253` | **CONFLICTED — repo LICENSE says MIT; EVERY source file says GPL-3.0-or-later** (verified 2026-09-04, including `pit_emulator.h` itself; GitHub's own detector reports `NOASSERTION`) | **RULING REVERSED. Was "MIT — read + adapt with attribution", which was wrong and would have walked GPL-3 code into a BSD-3 bundle.** The more specific statement is the one attached to the code, so treat the emulator as GPL-3: ORACLE-ONLY, never adapted, never ported. **And it is not the oracle we thought.** It ships NO CAPTURED DATA — no traces, no fixtures, nothing diffable offline; the "corpus" is C++ that executes live against a real chip on the author's own bench and prints PASS/FAIL to a serial monitor. Its emulator does NOT implement the read-back command (a bare `// Do readback command` with no body), which is the one 8254-specific behaviour we would most want graded. It targets the **8253** (`PIT_8254 false`, `kModel8253`), and gate behaviour is wired to channel 2 only, so channels 0 and 1 were never checked against silicon. Getting a hardware-backed PIT oracle from this means BUILDING THE RIG. See E6.8.4e. |
 | dbalsom/martypc — `crates/lib/marty_core/src/devices/{pit,pic,serial}.rs` | MIT | PIT "highly accurate"; PIC "mostly complete, **missing priority rotation and nested modes**" — exactly the scope `i8259.js` built and skipped. `serial.rs` is an **INS8250, not an 8251** — not a USART reference. Read as reference; not vendored. |
-| `hotkeysoft/emulators` | MIT (confirmed 2026-09-04) | **This row was too narrow and is widened.** First listed only as an MIT cross-check for `Device8254`/`Device8259`/`Device8250` (it has an 8250, no 8251). It is a multi-machine C++ suite: 8086/8088/**80186/80286**, PC/XT, PC/AT, PCjr, Tandy 1000, **EGA on the real IBM EGA BIOS ROM**, four sound devices, and a **snapshot GUI**. Readable throughout; nothing vendorable (C++). See E6.8.14. |
+| `hotkeysoft/emulators` | MIT (confirmed 2026-09-04) | **This row was too narrow and is widened.** First listed only as an MIT cross-check for `Device8254`/`Device8259`/`Device8250` (it has an 8250, no 8251). It is a multi-machine C++ suite: 8086/8088/**80186/80286**, PC/XT, PC/AT, PCjr, Tandy 1000, **EGA register modeling**, four sound devices, and a **snapshot GUI**. Readable throughout; nothing vendorable (C++). See E6.8.14. |
 | `folkertvanheusden/DotXT` | **NO FORMAL LICENCE.** README says "Released in the public domain"; there is no LICENSE file and the API reports `license: null` (verified 2026-09-04) | **READ ONLY, DO NOT VENDOR, DO NOT PARAPHRASE CLOSELY.** A bare sentence is not a dedication — CC0 and the Unlicense exist because unilateral public-domain release is unrecognised in much of the EU. Has MDA, XT-IDE and an RTC we lack; its own `todo` records DIV/IDIV and disassembler defects, so it is not the route to them. |
 | `MichalPleban/cbm2-pc-emulator` | Apache-2.0 | Not an emulator at all — firmware bridging a REAL 8088 card to a REAL CBM-II. Nothing to take; recorded so it is not surveyed twice. See E6.8.14. |
 | **`sneakernets/DMXOPL`** | **MIT** (verified via API 2026-09-04) | **USABLE AS DATA.** An OPL patch set in `.op2`/`.wopl`, no code. Answers E6.8.11's third problem — an OPL with no instruments makes no sound. Ship with the MIT notice and credit. **Owed diligence before shipping:** nobody has diffed its FM parameters against id's original GENMIDI lump; the author's "original work" statement is a self-report. |
@@ -748,7 +748,6 @@ human must read it before anything is adopted.
 | Source | Licence | Ruling |
 | --- | --- | --- |
 | `dbalsom/cga_artifact_color` | MIT | THE RENDERER'S, not the card's — the card is port-only by design. `i8086-cga.js` names "NO COMPOSITE ARTEFACT COLOUR" as absent. This is that, in Rust, permissively licensed, decoding NTSC artefact colour from CGA output. Adapt WITH ATTRIBUTION when a mode-6 lesson wants it. |
-| `dbalsom/CGACompatibilityTester` | **no LICENSE** | **RUN IT, DO NOT COPY IT.** A register + VISUAL conformance tester (Turbo Pascal + asm). It is a PROGRAM THAT RUNS ON THE EMULATED MACHINE, so executing it distributes nothing. It is a JOINT oracle and splits across the seam: the register and 3DAh-timing checks land on `cga-card.js`, the artefact and visual checks need the renderer, so it is only fully runnable once the pixel path is wired to the card. Schedule it accordingly rather than as a card-only gate. All rights reserved for any other purpose. |
 | `dbalsom/fluxfox` + `fluxfox_fat` | MIT | Floppy image handling and a FAT implementation, in Rust. The missing piece for Tier C's µPD765 and disk images, and permissive. Port or reference; not a dependency. |
 | `dbalsom/8087_zoom` | Unlicense | Only if the 8087 escape (`D8`-`DF`, currently reads its operand and stops) ever becomes real. |
 
@@ -761,13 +760,15 @@ human must read it before anything is adopted.
 | `dbalsom/graphics-gremlin` | CC-BY-SA-4.0 | Open-source retro ISA video card (FPGA CGA/MDA). Share-alike — reference and inspiration; do not mix into BSD-3 source. |
 | `dbalsom/micro_8088` | GPL-3.0 | An XT-compatible processor board. REFUSED as source, same as GLaBIOS. The ARCHITECTURE may inspire a Tier A drawing; nothing may be copied. |
 
+The original unlicensed-program recommendations and proprietary firmware
+oracle context are retained in the
+[private survey archive](https://github.com/CrispStrobe/brickwright-firmware-private/blob/master/public-documentation-archive/2026-10-04/bw-board/HISTORY.md).
+
 **Testing ground**
 
 | Source | Licence | Ruling |
 | --- | --- | --- |
 | `nanochess/bootOS`, `nanochess/tinyasm` | BSD-2 (confirmed) | **Shippable WITH ATTRIBUTION.** `tinyasm` is an 8086 assembler small enough to read and port — R4's differential encoder. `bootOS` is a boot-sector operating system, direct material for `loadBoot()`. |
-| `nanochess/Invaders`, `Pillman`, `fbird`, `bootle`, `Toledo-Atomchess`, `book8088` | **no LICENSE file** | **RUN LOCALLY, DO NOT VENDOR** — all rights reserved by this project's own standing rule, whatever the READMEs imply. They are 512-byte programs exercising INT 10h/16h/1Ah and direct B800h writes, and `loadBoot()` already exists, so they are the cheapest Tier A/C exercise available. `book8088` is the companion to Toledo's *Programming Boot Sector Games* — a ready-made lesson sequence. **THE CHEAPEST HIGH-VALUE ACTION IN THIS LANE IS TO ASK HIM FOR AN EXPLICIT GRANT**: he already licenses `bootOS` and `tinyasm` BSD-2, so an emailed yes converts the best small-program corpus in existence from "run it" to "ship it". |
-| 8088 MPH, Area 5150 | demo scene, not licensed for reuse | **NAME THE CEILING RATHER THAN AIM AT IT.** These are the recognised gauntlet, and they need cycle-exact bus and DRAM-refresh behaviour that an instruction-stepped core does not model and should not. Writing down that this architecture deliberately cannot reach them is worth more than treating them as a goal. |
 
 **Learning from**
 
@@ -2258,7 +2259,8 @@ covering 8086/8088/**80186/80286** across PC/XT, PC/AT, PCjr and Tandy 1000,
 validated against the same TomHarte lineage we use (no published pass rate).
 Four things in it we do not have:
 
-- **EGA**, running the real IBM EGA BIOS ROM. A reference for the register
+- **EGA** register modeling. Proprietary firmware reproduction is retained in
+  [private notes](https://github.com/CrispStrobe/brickwright-firmware-private/blob/master/docs/LEGACY-PC-FIRMWARE.md). A reference for the register
   model, not code and not a ROM we could ship. Roadmap only.
 - **80286 far enough for POST, plus LOADALL.** Out of scope by §2, but the
   best available sighting of what "far enough" means.

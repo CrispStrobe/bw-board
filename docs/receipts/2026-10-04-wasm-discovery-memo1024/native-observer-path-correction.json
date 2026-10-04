@@ -1,0 +1,11 @@
+{
+  "scope": "Independent local receipt observer path correction, not a native test failure",
+  "expectedSource": "30131a9068e7c4aff6540092bce0a019f3b5c021",
+  "initialWrongPath": "/mnt/volume1/code/lego/labwired-same-host-20261003.R0T0cC/cached-register-frame-20261004",
+  "guardObservedSource": "098c99cf6b6a176a44c83b37ce77a1881909c767",
+  "initialOutcome": "Strict source equality assertion rejected stale previous-experiment path before any receipt write",
+  "correctedPath": "/mnt/storage/code/labwired-evidence/labwired-same-host-20261003.R0T0cC/discovery-memo1024-20261004",
+  "engineControllerAffected": false,
+  "nativeTestsRepeated": false,
+  "originalLogsModified": false
+}

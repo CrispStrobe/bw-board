@@ -1,5 +1,7 @@
 # Native strict-386 paging and host-event self-parity
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Status (2026-09-30): source-bound four-arm native self-parity passed and independently reproduced.** Executable, validator, runner, and tests are frozen at `6f9c400c9c313c03fd526fb22589294f6302e9d7`.
 
 This gate combines 4 KiB paging and a recoverable supervisor page fault with a host interrupt held pending under CLI. The guest repairs PTE5, reloads CR3, drops the error dword, returns with IRETD, and retries the failed write. Interrupt acknowledgement must wait until the STI successor completes. A second interrupt wakes HLT; a final interrupt remains masked under terminal CLI/HLT.
@@ -10,7 +12,7 @@ The free BPEV001 fixture is 2560 bytes, SHA256 1b4ea51b9e272f4c55930dac86aa3b813
 
 Qualification compares continuous and budgets 1, 2, and 257 with identical selected seeds, identical ordered recorded host journals, final selected CPU state and RAM, and zero fallback counters. Nine C ABI argument/reentry probes and seven exact SIGABRT fallback probes passed. Mutation tests reject lost pending IRQ, early handler/ACK, altered fault frame/tick/ordinal, missing repair/retry, and stale or malformed proof identity.
 
-This gate does not establish mapped ROM/MMIO/A20 behavior, real AT device arbitration, complete hidden/reset state, JavaScript board equivalence, WASM integration, Windows enhanced-mode compatibility, or a speed gain. The next concrete gate is typed host memory decoding and A20 transitions, followed by device scheduling and integration measurements.
+This gate does not establish mapped ROM/MMIO/A20 behavior, real AT device arbitration, complete hidden/reset state, JavaScript board equivalence, WASM integration, broader guest enhanced-mode compatibility, or a speed gain. The next concrete gate is typed host memory decoding and A20 transitions, followed by device scheduling and integration measurements.
 
 Observed source-bound arms:
 

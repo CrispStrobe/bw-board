@@ -1,0 +1,17 @@
+{
+  "schema": "bw.protected-stack.hosted-correctness.v1",
+  "status": "PASS",
+  "scope": "Exactly one bounded fixed protected DS/SS stack native/JS correctness child; no build, other guests, benchmark or adoption claim",
+  "workerStarted": true,
+  "originalProvenance": "Original build records retained unchanged; recreated filesystem is new materialization, not original build execution",
+  "workerAttempted": true,
+  "workerPid": 3645,
+  "progress": {
+    "n": 30,
+    "q": 30,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 30,
+    "zeroQ": 0
+  }
+}

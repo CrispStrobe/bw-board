@@ -1,0 +1,23 @@
+{
+  "scope": "PAGED_INT_IRET_BUILD_ONLY_NO_ADDON_LOAD_OR_GUEST",
+  "completed": true,
+  "result": "PAGED_INT_IRET_BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "sourceBeforeAfterEqual": true,
+  "guards": {
+    "head": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+    "status": "",
+    "upstreamHead": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "upstreamStatus": "",
+    "node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "helper": "e73048577893d858f4fde72c77964c5a09150bdd535c875cbea55997d969a973",
+    "workflow": "0e547d3bba5b3caa4a8346ce5081b4b5cdb0dac1e4fadd682b325ecdae81b510",
+    "header": "757bb6bf5ea89e173bad159bfc31d8a5840157694a9374f2c3276747ae061530"
+  },
+  "errors": {},
+  "nodeSha256Before": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "helperSha256Before": "e73048577893d858f4fde72c77964c5a09150bdd535c875cbea55997d969a973",
+  "workflowSha256Before": "0e547d3bba5b3caa4a8346ce5081b4b5cdb0dac1e4fadd682b325ecdae81b510",
+  "headerSha256Before": "757bb6bf5ea89e173bad159bfc31d8a5840157694a9374f2c3276747ae061530",
+  "preparedInputsBeforeAfterEqual": true,
+  "frozenInputsBeforeAfterEqual": true
+}

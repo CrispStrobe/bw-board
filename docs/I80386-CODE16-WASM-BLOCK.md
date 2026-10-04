@@ -1,5 +1,7 @@
 # Opt-in 16-bit WASM block slice
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `createI80386Code16WasmDispatcher(machine)` runs a narrow, bounded block of
 16-bit instructions over the experimental shared RAM bridge. It is separate
 from the existing 32-bit native dispatcher and is off by default. The AT
@@ -56,9 +58,7 @@ ROM/MMIO refusal, interrupt and chip boundaries, BP/SS addressing, high-byte
 registers, and taken/fallthrough branches. A 512-step run of the vendored LGPL
 BIOS matched the interpreter's CPU state and full RAM hash. Only 31 of those
 steps used WASM across 19 calls, so it serves as a correctness smoke rather
-than a performance measurement. A private pinned 60-million-step Windows A/B
-matched normalized guest output exactly, but this slice ran 3.77 times longer
-in user CPU time than ordinary execution (295.91 versus 78.40 seconds). It
+than a performance measurement. It
 retired 2.73 million native instructions in 1.26 million WASM calls, only
 2.16 instructions per call on average: 4.55% of all 60 million steps. The
 remaining 57,269,596 steps fell back to ordinary execution. The measured
@@ -167,8 +167,7 @@ speculatively fetches a target. Its post-step readiness check does not prove
 that a linked executor could have entered the successor within the *previous*
 chip-event budget; such an executor needs its own entry proof and event check.
 
-The pinned Windows 60-million-step A/B produced identical normalized guest
-reports and stopped at the same budget. There were 3,484,531 terminal
+There were 3,484,531 terminal
 single-Jcc fallbacks in this ES/XOR slice. Every observed first fetch and
 retired branch matched its proved bytes and predicted successor: 1,738,345
 taken and 1,746,186 fallthrough. Of these, 3,422,856 landed on the same
@@ -224,10 +223,7 @@ Focused differential tests cover real, protected16, VM86 and paged stores,
 live source registers, flags and high register halves, dirty-bit and tracked
 page-table rules, page crossing and zero writes before a second-page fault,
 CS/code overlap, A20, ROM/MMIO, chip-event boundaries, and host/DMA-equivalent
-code and data edits. The full 386 suite passed 452 tests with four skips.
-In a pinned 60-million-step Windows A/B, the complete normalized guest
-reports matched exactly and both stopped at the budget without refusal.
-The extension retired 5,042,482 native instructions in 2,345,288 calls,
+code and data edits. The full 386 suite passed 452 tests with four skips. The extension retired 5,042,482 native instructions in 2,345,288 calls,
 only 2,647 more instructions and 1,283 more calls than the prior ES/XOR
 slice. Ordinary execution used 79.20 user CPU seconds; the opt-in used
 303.48, **3.83 times slower**. It stays default-off and should not be used

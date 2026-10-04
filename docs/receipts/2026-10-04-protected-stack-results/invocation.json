@@ -1,0 +1,14 @@
+{
+  "runId": 37196612572,
+  "head": "bcef57ac54ff5c055b452752834f7002dc229203",
+  "workflowId": 374530833,
+  "attempt": 1,
+  "command": [
+    "/tmp/native-protected-stack-first-execution-publication-20261004/retain.py",
+    "37196612572"
+  ],
+  "python": "/opt/miniconda/bin/python3",
+  "helper": "/tmp/native-protected-stack-first-execution-publication-20261004/retain.py",
+  "helperSha256": "802ed023256765f4d5afc3b9f472e80f03ce18e7c177abe68d84a7784b99487a",
+  "scope": "Official evidence retention only; no worker, guest, restore, build, benchmark, retry or dispatch"
+}

@@ -1,5 +1,7 @@
 # Predeclared grouped 386 first-refusal diagnostic
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The [source-bound grouped-shadow result](I80386-GROUPED-SHADOW-ADMISSION-RESULT.md)
 missed its 15M overall / 5M protected16+VM86 disjoint ≥8-run opportunity
 screen. `AT_GROUPED_FIRST_REFUSAL_CONTEXT=1` adds a default-off diagnostic to
@@ -37,9 +39,7 @@ used to infer a speedup. If it fails, revisit grammar breadth and guard
 causes before further execution work. Any later expanded-admission replay
 must independently pass the unchanged 15M/5M disjoint ≥8-run screen.
 
-For a future Windows measurement, use one clean, pinned board revision and
-the same locally licensed BIOS/VGA/HDD bytes, geometry and input event list
-in two serial 60,000,000-step arms. Run an ordinary baseline with every
+Run an ordinary baseline with every
 cross-mode observer and dispatcher off. Run the observed arm with only
 `AT_GROUPED_FIRST_REFUSAL_CONTEXT=1`. Capture both private raw reports,
 host record and timing files. Then, from the pinned board checkout, run:

@@ -1,0 +1,71 @@
+{
+  "originalLog": "short-cached-budget-20261003/candidate-integration.txt",
+  "sha256": "49d49d41dcf8c3752aabe82a1dac115df0c52b50895533d6b911735302316b17",
+  "rows": [
+    {
+      "budget": 1,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    },
+    {
+      "budget": 7,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    },
+    {
+      "budget": 8,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    },
+    {
+      "budget": 16,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    },
+    {
+      "budget": 31,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    },
+    {
+      "budget": 64,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    },
+    {
+      "budget": 257,
+      "imageSha256": "60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f",
+      "storePc": 134217824,
+      "loadPc": 134217826,
+      "safeInterval": 1024,
+      "phases": 5,
+      "loops": 1572
+    }
+  ],
+  "scope": "Actual suite semantic observations, not fast-path census or RTx",
+  "verifiedAt": "2026-10-03T17:15:35.275Z"
+}

@@ -1,0 +1,16 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_RAM_CORRECTNESS_AUDIT",
+  "runId": 37142542286,
+  "artifactId": 11280788469,
+  "zipSha256": "b8fbf9f03ec36a6626c11cfcc18ecae72924873c0dd44c7bcb73613b2ad98b15",
+  "officialMembers": 96,
+  "nativeTicks": 19,
+  "quanta": 19,
+  "resumes": 19,
+  "boundaries": 21,
+  "nativeWordsPerBoundary": 166,
+  "rawPageBytesPerBoundary": 4096,
+  "cuts": 5,
+  "cleanup": "All three closed",
+  "scope": "All retained native166 words and represented JS counterparts, full board and host-provider4096-byte pages verified per boundary. Native cache coherence remains source-attested; not a separate native-memory dump. One correctness run, no performance/boot-generalization claim."
+}

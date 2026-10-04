@@ -1,5 +1,7 @@
 # Next native 386 gate: cold reset and actual board ownership
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Status (2026-10-01): the bounded native ROM checkpoint now passed; architectural reset parity and broader integration remain unfinished.** The [native actual-board qualification](I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md) executes before the first Bochs BIOS instruction and routes RAM, ROM/open bus, ports and clocks through `ExperimentalI80386ATMachine`. The prior successful-work proof remains a separate post-BIOS handoff with standalone PIT/PIC models. Neither is a speed result.
 
 The [actual JavaScript board oracle](I80386-JS-COLD-RESET-ORACLE.md) supplies the free baseline. The native checkpoint and independent reproduction agree with its instruction bytes, bus effects and board state while explicitly retaining reset-profile differences.
@@ -26,4 +28,4 @@ Continuous and successful-work budgets 1/2/257 passed the ROM checkpoint with ma
 
 Clang/wasm-ld 18.1.3 are present on the audit host; Emscripten and a standalone WASM runner were not found on PATH. Existing code16 WASM handles a bounded subset, not the Bochs CPU3 core. A future WASM build needs an identified toolchain, flags, licenses, runtime/memory model and source-bound parity receipts. Native subprocess RPC and per-quantum evidence are correctness apparatus; direct in-process/WASM callbacks and safe clock-debt batching are later optimization candidates.
 
-Only after the same real board workload matches CPU/RAM/device/fault order should paired same-host user-CPU runs measure speed and RTx. Windows enhanced mode, Doom, full AT boot and the 10× target remain unfinished. Strict CPU3 has no CR4/PSE; retain the separately labeled stock-xv6 compatibility route and require a 4 KiB/UP/PIC port for strict 386 xv6.
+Only after the same real board workload matches CPU/RAM/device/fault order should paired same-host user-CPU runs measure speed and RTx. broader guest enhanced mode, broader game, full AT boot and the 10× target remain unfinished. Strict CPU3 has no CR4/PSE; retain the separately labeled stock-xv6 compatibility route and require a 4 KiB/UP/PIC port for strict 386 xv6.

@@ -1,0 +1,6 @@
+def terminal(r,data,b,capture):
+ require(r['requiredStateExportProfile']==r['admittedStateExportProfile']=='bw.cold-native.copied-u32-state.v1','actual typed profile')
+ require(r['requiredMemoryFusionProfile']==r['admittedMemoryFusionProfile']=='bw.cold-native.memory-clock-fusion.v1','actual MEMORY fusion profile')
+ require(r['typedSnapshotOwnership']=='RESET_STABLE_AND_FINAL_LAST_RETURN_DISTINCT','actual snapshot independence')
+ validate_inspect_snapshot(r['reset']['native']);require(words(r['reset']['native'])==words(capture['cuts'][0]['native']),'raw reset166')
+ metrics=validate_worker_receipt(r,'native-batched',data,b,capture);validate_bridge_evidence(r);return metrics

@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "revision": "aa0782515fca12dceb4c28e4a3ea67b6bf885627",
+  "sourceCount": 80,
+  "parentSha256": "9cb5d760cf0d14c90449c6efb4fed0daf2cb7a9ec7c10b60c9df3a8e0bc25bec",
+  "fullPrePostEqual": true,
+  "frozenGitSourcesVerified": true,
+  "rawCoverage": "actual readonly identity equals frozen source map",
+  "exitCode": 0,
+  "timeout": false,
+  "rawExitWallSeconds": 2.2594524938613176,
+  "scope": "source/read-only/mock evidence only; no addon, emulated CPU or live profiler"
+}

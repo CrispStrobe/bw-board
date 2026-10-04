@@ -1,0 +1,651 @@
+{
+  "schema": 1,
+  "toolHead": "43b82467b25b7913df46dab4c15d177b7e0c3281",
+  "toolRef": "perf/wasm-edge-layout-inspection-20261003",
+  "hostedOnly": true,
+  "diagnosticOnly": true,
+  "engineExecution": false,
+  "enginePromotion": false,
+  "localEngineDownloads": false,
+  "targets": [
+    {
+      "label": "baseline",
+      "run": 37123288945,
+      "buildRun": 36915940413,
+      "core": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "wasm": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+      "glue": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+      "words": 18,
+      "artifact": {
+        "id": 11274122656,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI3NDEyMjY1Ng==",
+        "name": "compiled-edge-layout-inspection",
+        "size_in_bytes": 363082,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274122656",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274122656/zip",
+        "expired": false,
+        "digest": "sha256:254aed7f121b7b1292ba9c65173cc7edf44a5dce70de82e1f4bf4f519056f098",
+        "created_at": "2026-10-03T12:36:11Z",
+        "updated_at": "2026-10-03T12:36:11Z",
+        "expires_at": "2026-10-17T12:36:11Z",
+        "workflow_run": {
+          "id": 37123288945,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/wasm-edge-layout-inspection-20261003",
+          "head_sha": "43b82467b25b7913df46dab4c15d177b7e0c3281"
+        }
+      },
+      "buttons": [
+        {
+          "address": 1194952,
+          "words": [
+            7695,
+            7696,
+            7697,
+            7698,
+            7699,
+            7700,
+            7701,
+            7702,
+            7703,
+            7704,
+            7705,
+            7706,
+            7707,
+            7708,
+            7709,
+            7710,
+            7711,
+            7712
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 146376,
+          "rawBytesHex": "0f1e0000101e0000111e0000121e0000131e0000141e0000151e0000161e0000171e0000181e0000191e00001a1e00001b1e00001c1e00001d1e00001e1e00001f1e0000201e0000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 7695,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel>::h1e3f7ca86eb4635b_1_"
+            },
+            {
+              "offset": 4,
+              "value": 7696,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 7697,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 7698,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_core::fmt::Debug>::fmt::h98d18a211d0f36cc"
+            },
+            {
+              "offset": 16,
+              "value": 7699,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_labwired_core::peripherals::device::GpioObserver>::on_pin_change::h6ffb95720debcdc0"
+            },
+            {
+              "offset": 20,
+              "value": 7700,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 24,
+              "value": 7701,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 28,
+              "value": 7702,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 32,
+              "value": 7703,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 36,
+              "value": 7704,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 40,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 44,
+              "value": 7706,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 48,
+              "value": 7707,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 7708,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 56,
+              "value": 7709,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 7710,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            },
+            {
+              "offset": 64,
+              "value": 7711,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 7712,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any_mut::hfdcd8af77354529d"
+            }
+          ]
+        },
+        {
+          "address": 1206052,
+          "words": [
+            7695,
+            7694,
+            7697,
+            7696,
+            7699,
+            7698,
+            7701,
+            7700,
+            7703,
+            7702,
+            7705,
+            7704,
+            7707,
+            7706,
+            7709,
+            7708,
+            7711,
+            7710
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 157476,
+          "rawBytesHex": "0f1e00000e1e0000111e0000101e0000131e0000121e0000151e0000141e0000171e0000161e0000191e0000181e00001b1e00001a1e00001d1e00001c1e00001f1e00001e1e0000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 7695,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel>::h1e3f7ca86eb4635b_1_"
+            },
+            {
+              "offset": 4,
+              "value": 7694,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 7697,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 7696,
+              "symbol": "$<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel_as_core::fmt::Debug>::fmt::hb10c01af456b1029_1_"
+            },
+            {
+              "offset": 16,
+              "value": 7699,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_labwired_core::peripherals::device::GpioObserver>::on_pin_change::h6ffb95720debcdc0"
+            },
+            {
+              "offset": 20,
+              "value": 7698,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_core::fmt::Debug>::fmt::h98d18a211d0f36cc"
+            },
+            {
+              "offset": 24,
+              "value": 7701,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 28,
+              "value": 7700,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 32,
+              "value": 7703,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 36,
+              "value": 7702,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 40,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 44,
+              "value": 7704,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 48,
+              "value": 7707,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 7706,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 56,
+              "value": 7709,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 7708,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 64,
+              "value": 7711,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 7710,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            }
+          ]
+        },
+        {
+          "address": 17082440,
+          "words": [
+            7563,
+            40,
+            8,
+            7700,
+            7701,
+            7702,
+            7703,
+            7704,
+            7705,
+            7706,
+            7567,
+            7705,
+            7707,
+            7708,
+            7709,
+            7710,
+            7711,
+            7712
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 16033864,
+          "rawBytesHex": "8b1d00002800000008000000141e0000151e0000161e0000171e0000181e0000191e00001a1e00008f1d0000191e00001b1e00001c1e00001d1e00001e1e00001f1e0000201e0000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 7563,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::button::Button>::hda4c9e6dab7f8447"
+            },
+            {
+              "offset": 4,
+              "value": 40,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 8,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 7700,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 16,
+              "value": 7701,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 20,
+              "value": 7702,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 24,
+              "value": 7703,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 28,
+              "value": 7704,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 32,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 36,
+              "value": 7706,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 40,
+              "value": 7567,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::sim_input::SimInput>::component_id::h580375269acce3db"
+            },
+            {
+              "offset": 44,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 48,
+              "value": 7707,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 7708,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 56,
+              "value": 7709,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 7710,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            },
+            {
+              "offset": 64,
+              "value": 7711,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 7712,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any_mut::hfdcd8af77354529d"
+            }
+          ]
+        },
+        {
+          "address": 17355056,
+          "words": [
+            7695,
+            7694,
+            7697,
+            7696,
+            7699,
+            7698,
+            7701,
+            7700,
+            7703,
+            7702,
+            7705,
+            7704,
+            7707,
+            7706,
+            7709,
+            7708,
+            7711,
+            7710
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 16306480,
+          "rawBytesHex": "0f1e00000e1e0000111e0000101e0000131e0000121e0000151e0000141e0000171e0000161e0000191e0000181e00001b1e00001a1e00001d1e00001c1e00001f1e00001e1e0000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 7695,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel>::h1e3f7ca86eb4635b_1_"
+            },
+            {
+              "offset": 4,
+              "value": 7694,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 7697,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 7696,
+              "symbol": "$<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel_as_core::fmt::Debug>::fmt::hb10c01af456b1029_1_"
+            },
+            {
+              "offset": 16,
+              "value": 7699,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_labwired_core::peripherals::device::GpioObserver>::on_pin_change::h6ffb95720debcdc0"
+            },
+            {
+              "offset": 20,
+              "value": 7698,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_core::fmt::Debug>::fmt::h98d18a211d0f36cc"
+            },
+            {
+              "offset": 24,
+              "value": 7701,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 28,
+              "value": 7700,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 32,
+              "value": 7703,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 36,
+              "value": 7702,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 40,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 44,
+              "value": 7704,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 48,
+              "value": 7707,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 7706,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 56,
+              "value": 7709,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 7708,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 64,
+              "value": 7711,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 7710,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            }
+          ]
+        },
+        {
+          "address": 17404168,
+          "words": [
+            7695,
+            7694,
+            7697,
+            7696,
+            7699,
+            7698,
+            7701,
+            7700,
+            7703,
+            7702,
+            7705,
+            7704,
+            7707,
+            7706,
+            7709,
+            7708,
+            7711,
+            7710
+          ],
+          "segmentAddress": 1048576,
+          "segmentByteOffset": 16355592,
+          "rawBytesHex": "0f1e00000e1e0000111e0000101e0000131e0000121e0000151e0000141e0000171e0000161e0000191e0000181e00001b1e00001a1e00001d1e00001c1e00001f1e00001e1e0000",
+          "slots": [
+            {
+              "offset": 0,
+              "value": 7695,
+              "symbol": "$core::ptr::drop_in_place<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel>::h1e3f7ca86eb4635b_1_"
+            },
+            {
+              "offset": 4,
+              "value": 7694,
+              "symbol": null
+            },
+            {
+              "offset": 8,
+              "value": 7697,
+              "symbol": null
+            },
+            {
+              "offset": 12,
+              "value": 7696,
+              "symbol": "$<labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel_as_core::fmt::Debug>::fmt::hb10c01af456b1029_1_"
+            },
+            {
+              "offset": 16,
+              "value": 7699,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_labwired_core::peripherals::device::GpioObserver>::on_pin_change::h6ffb95720debcdc0"
+            },
+            {
+              "offset": 20,
+              "value": 7698,
+              "symbol": "$<labwired_core::peripherals::components::unipolar_stepper::UnipolarStepper_as_core::fmt::Debug>::fmt::h98d18a211d0f36cc"
+            },
+            {
+              "offset": 24,
+              "value": 7701,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::service::h093199c36e5875ee"
+            },
+            {
+              "offset": 28,
+              "value": 7700,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_core::fmt::Debug>::fmt::h817eb4bcbc6000bb"
+            },
+            {
+              "offset": 32,
+              "value": 7703,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d"
+            },
+            {
+              "offset": 36,
+              "value": 7702,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::next_edge_deadline_cycle::h391704229056a62f"
+            },
+            {
+              "offset": 40,
+              "value": 7705,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0"
+            },
+            {
+              "offset": 44,
+              "value": 7704,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::schedule_revision::h7039ebdddb89a9ec"
+            },
+            {
+              "offset": 48,
+              "value": 7707,
+              "symbol": "$<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice_as_labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d"
+            },
+            {
+              "offset": 52,
+              "value": 7706,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_sim_input::h7fb13f1b16fbfab2"
+            },
+            {
+              "offset": 56,
+              "value": 7709,
+              "symbol": "$labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106"
+            },
+            {
+              "offset": 60,
+              "value": 7708,
+              "symbol": "$labwired_core::bus::resident_device::BusResidentDevice::service_edge::hf16c1954ed723e43"
+            },
+            {
+              "offset": 64,
+              "value": 7711,
+              "symbol": "$<labwired_core::peripherals::components::button::Button_as_labwired_core::bus::resident_device::BusResidentDevice>::as_any::h8a1f6fe4c6e45d38"
+            },
+            {
+              "offset": 68,
+              "value": 7710,
+              "symbol": "$labwired_core::Peripheral::logs::h7d444eb76e55cca8"
+            }
+          ]
+        }
+      ],
+      "fullWat": {
+        "bytes": 201474404,
+        "sha256": "a36ad9ffcd857f4905e875afce3f1bade2c21b581de519f71f659293b77f508d"
+      },
+      "selectedSha256": "7b2744379bfc8eb834760a11d28dae2e28e48c28600ac64bf5b31a4666830f9b",
+      "completedAt": "2026-10-03T12:38:30.970Z"
+    },
+    {
+      "label": "middle",
+      "buildRun": 37117416202,
+      "core": "14a275f63daaf3cd4af4b1845e52678032553522",
+      "wasm": "7311d6240fc5ea92489adbcd5d396e13f30113652f70bb0515825fb7ef46d07d",
+      "glue": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351",
+      "words": 19,
+      "dispatchAttemptedAt": "2026-10-03T12:38:19.253Z",
+      "dispatchReturnedAt": "2026-10-03T12:38:20.787Z",
+      "run": 37123517754
+    }
+  ],
+  "startedAt": "2026-10-03T12:38:18.647Z"
+}

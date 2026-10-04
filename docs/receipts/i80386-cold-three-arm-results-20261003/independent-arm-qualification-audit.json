@@ -1,0 +1,33 @@
+{
+  "schema": "bw.cold-performance.arm-qualification.v1",
+  "status": "PASS",
+  "targetN": 316562,
+  "targetQ": 316562,
+  "qualifiedArms": [
+    "plain-JS",
+    "native-oneQ",
+    "native-batched"
+  ],
+  "workers": {
+    "plainJs": {
+      "revision": "0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83",
+      "sourceSha256": "9d648c4204e4892dbbb9a7008ea47fd682320063432b902dc1eb0a7c24d2fbd0"
+    },
+    "native": {
+      "revision": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+      "sourceSha256": "9d70f04a099df42d4cac13796705a4da963c295d9d83cec8c1bc709d3cb60bf1"
+    }
+  },
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "addonSha256": "40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "officialArtifact": {
+    "artifactId": 11274862662,
+    "runId": 37126251298,
+    "head": "fc0c71fb01daf11ad740632c1dff299be4310f29",
+    "zipBytes": 20168409,
+    "zipSha256": "0ded1f2c22d98e410b96ce6169110e78088df784eb2f7d472c0894a66867f2ca"
+  },
+  "auditChecks": 33583,
+  "scope": "Actual three fresh semantic arms, full terminal166/native NQ/board/RAMhash/PIO and final authentication; no paired timing/speed/adoption. WholeRAM bytes and intermediate states not retained."
+}

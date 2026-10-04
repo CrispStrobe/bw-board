@@ -1,0 +1,32 @@
+{
+  "status": "PASS_INDEPENDENT_FUSION_NEGATIVE_PAIRED_AUDIT",
+  "officialMembers": 267,
+  "children": 18,
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "baselineMeanExecutionCpuSeconds": 0.2990125714285714,
+  "candidateMeanExecutionCpuSeconds": 1.5367037142857143,
+  "meanReduction": -4.139261225519425,
+  "executionCpuSpeedRatio": 0.19458049632394978,
+  "favorablePairs": 0,
+  "gatePassed": false,
+  "semanticProof": "Nine native children reset/final/last-return166 and N/Q; nine JS representedCPU/Q; all18 fullboard/RAMhash/16475PIO/source-input-finalmaps exact",
+  "scope": "Fusion native is slower than plainJS in all seven measured pairs; keep plain baseline. No paired old-v-fusion benefit or removable-cost claim, no physical386/fullboot/adoption. Native ownership and memory-coherence assertions are source-attested; serialized data cannot independently prove live buffers.",
+  "runId": 37187325276,
+  "sourceRevision": "b3e29ad322ccb723d971a0841ad89777f7e07a73",
+  "sourceGitChecks": 351,
+  "hostCpuModels": [
+    "AMD EPYC 9V74 80-Core Processor"
+  ],
+  "logicalCpus": 4,
+  "fusionOverPlainExecutionCpu": 5.139261225519425,
+  "baselineMedianExecutionCpuSeconds": 0.299204,
+  "candidateMedianExecutionCpuSeconds": 1.536468,
+  "officialArtifact": {
+    "runId": 37187325276,
+    "headSha": "b3e29ad322ccb723d971a0841ad89777f7e07a73",
+    "artifactId": 11297715775,
+    "zipBytes": 42490189,
+    "zipSha256": "b56b9dabb5ac6849f2532f37ddf1bf9807164cdfbb9888813ad232053d45d546"
+  }
+}

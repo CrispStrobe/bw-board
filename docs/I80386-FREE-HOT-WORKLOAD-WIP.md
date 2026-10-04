@@ -1,5 +1,7 @@
 # Longer free 386 workload: checked JavaScript baseline
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This separately owned 64 KiB reset ROM retains the paging, two-fault, PIT/PIC,
 REP and eight RAM/A20 witnesses from the earlier fixture. It then masks the
 PIC through guest port output and executes 20,000 arithmetic iterations and
@@ -44,7 +46,7 @@ Next is a separately authenticated native hot profile with explicit total
 150,000-quanta/160,000-tick limits, while retaining the existing per-resume,
 page, typed-span and before-effect guards. Native/JS architectural and RAM
 parity, native budget/capture parity, bounded streamed evidence and timer/PIC
-checks precede comparable capture-disabled measurements. Windows, Doom,
+checks precede comparable capture-disabled measurements. broader guest, broader game,
 unrestricted native execution and production GUI integration remain separate
 unfinished work.
 

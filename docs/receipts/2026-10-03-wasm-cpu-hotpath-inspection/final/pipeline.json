@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "toolHead": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "toolRef": "perf/wasm-cpu-hotpath-inspection-20261003",
+  "hostedOnly": true,
+  "diagnosticOnly": true,
+  "engineExecution": false,
+  "enginePromotion": false,
+  "localEngineDownloads": false,
+  "targets": [
+    {
+      "label": "baseline",
+      "run": 37142446921,
+      "buildRun": 36915940413,
+      "core": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "wasm": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+      "glue": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+      "artifact": {
+        "id": 11280658765,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI4MDY1ODc2NQ==",
+        "name": "compiled-cpu-hotpath-inspection",
+        "size_in_bytes": 256671,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11280658765",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11280658765/zip",
+        "expired": false,
+        "digest": "sha256:3b5253f9298975cd551a5a8d55d65f755d46c062410f3d7894269063f2cd6c97",
+        "created_at": "2026-10-03T17:59:21Z",
+        "updated_at": "2026-10-03T17:59:21Z",
+        "expires_at": "2026-10-17T17:59:20Z",
+        "workflow_run": {
+          "id": 37142446921,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/wasm-cpu-hotpath-inspection-20261003",
+          "head_sha": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc"
+        }
+      },
+      "fullWat": {
+        "bytes": 201474404,
+        "sha256": "a36ad9ffcd857f4905e875afce3f1bade2c21b581de519f71f659293b77f508d"
+      },
+      "selectedSha256": "bcecbcf9a4f993f9a5460e027f452668937fac77e82dfeeb30da47309b1b9d6e",
+      "completedAt": "2026-10-03T17:59:30.847Z"
+    }
+  ],
+  "startedAt": "2026-10-03T17:59:25.786Z",
+  "completedAt": "2026-10-03T17:59:30.878Z"
+}

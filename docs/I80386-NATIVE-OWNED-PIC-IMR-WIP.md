@@ -1,5 +1,7 @@
 # Fixed PIC IMR read prototype (WIP)
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This is the historical source-preparation record. Subsequent [actual native results](I80386-NATIVE-OWNED-PIC-IMR-RESULTS.md) qualify the fixed fixture; the preparation statements below describe the earlier state.
 
 This opt-in prototype adds two real byte IN instructions to the free owned IN8 fixture: master PIC IMR at port `0x21` and slave PIC IMR at `0xa1`. Both return `0xff` while interrupts are masked. The original master mask is restored before the existing PIT, page-fault, IRQ, and REP workload. This is source-ready with an actual JavaScript reference; no native PIC addon build or native guest run has qualified it yet.
@@ -12,7 +14,7 @@ The single bounded JavaScript reference completed with 100,702 attempts and 100,
 
 The original capture SHA is `fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346`. A separately authenticated diagnostic retained the full 16 MiB RAM dump while preserving that capture and its journal byte for byte. It verified the JavaScript reset witness against its own recorded EDX/CR0, then zeroed only RAM `0x510..0x517` for the documented reset-profile comparison. Raw RAM SHA is `887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb`; canonical RAM SHA is `e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd`. Independent diagnostic review passed 241 checks. The diagnostic is distinct from the original runner identity.
 
-PIC polling remains excluded: reads of data ports can also consume a poll ACK, so the private provider refuses an armed target before the PIC read/ACK effects. Earlier native pre-PIO clock flushes may already have taken effect; refusal does not roll those effects back. Width, port, mapping, reply type, and phase checks remain bounded. This extension does not admit PIC command reads, keyboard reads, arbitrary BIOS boot, Windows, Doom, or a general AT guest.
+PIC polling remains excluded: reads of data ports can also consume a poll ACK, so the private provider refuses an armed target before the PIC read/ACK effects. Earlier native pre-PIO clock flushes may already have taken effect; refusal does not roll those effects back. Width, port, mapping, reply type, and phase checks remain bounded. This extension does not admit PIC command reads, keyboard reads, arbitrary BIOS boot, broader guest, broader game, or a general AT guest.
 
 The new workflow is build-only, fixed to the frozen source and public Bochs revision, with no caller-selected source or native execution. It preserves the intermediate IN8 derivation and records the final PIC runtime, source, tooling, configuration, exports, and addon hashes. It must complete source authentication and static admission before a future bounded native run. No speed result is claimed.
 

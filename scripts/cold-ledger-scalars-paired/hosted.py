@@ -1,0 +1,46 @@
+"""Manual one-comparison orchestrator. Pending prerequisite refuses all setup."""
+import sys
+sys.dont_write_bytecode=True
+import os,signal,json
+from pathlib import Path
+import importlib.util
+from authority import pending_guard
+from parent import require,main as paired_main,read_json,write,parent_identity,identity_sha,bounded_child,interrupted,host_context
+HERE=Path(__file__).resolve().parent
+ROOT=HERE.parents[1]
+def setup_bounds(contract):
+    bounds={'cpuSeconds':60,'wallSeconds':240,'heapMiB':128,'fileBytes':32<<20,'coreBytes':0,'niceIncrement':10}
+    size=contract['fusionQualificationArtifact']['zipBytes'];require(type(size) is int and 0<size<=bounds['fileBytes'],'genuine semantic ZIP fits setup file cap');return bounds
+
+def finish(out,identity,primary):
+    final_error=None;report={'status':'FAIL' if primary is not None else 'HOSTED_PAIRS_RETURNED','primaryError':None if primary is None else repr(primary)}
+    try:
+        after=parent_identity();write(out/'parent-source-after.json',after);require(after==identity,'outer parent source unchanged')
+    except BaseException as e:final_error=e;report['sourceFinalizationError']=repr(e)
+    try:write(out/'host-after-setup-or-pairs.json',host_context())
+    except BaseException as e:
+        report['hostAfterUnavailable']=repr(e)
+        if final_error is None:final_error=e
+    if final_error is not None:report['status']='FAIL'
+    write(out/'hosted-result.json',report)
+    if final_error is not None and primary is None:raise final_error
+def main(comparison,out):
+    contract,_=pending_guard() # No metadata subprocess, download or child before source authority.
+    require(comparison=='plain-JS-v-ledger-scalars-batched','one explicit comparison')
+    require(os.environ.get('GITHUB_EVENT_NAME')=='workflow_dispatch','manual-only source grant')
+    identity=parent_identity();require(identity['revision']==os.environ['GITHUB_SHA'],'exact actual dispatch HEAD')
+    out=Path(out);require(out==Path('/home/runner/work/_temp/cold-ledger-scalars-paired'),'fixed hosted output role');require(out.is_absolute() and out.resolve()==out and out.parent.is_dir() and not os.path.lexists(out),'exclusive hosted parent output');out.mkdir()
+    write(out/'parent-source.json',identity);write(out/'host-before-setup.json',host_context())
+    primary=None
+    try:
+        node=os.environ['BW_COLD_NODE'];setup=out/'setup';bounds=setup_bounds(contract)
+        result=bounded_child([sys.executable,'-B',str(HERE/'setup-entry.py'),str(setup),node],ROOT,out/'setup-child',bounds,permit_api_token=True)
+        require(result['exitCode']==0 and not result['timedOut'] and not result['interrupted'],'first setup failure; no pairs or retry')
+        proof=read_json(setup/'setup-result.json');require(proof['status']=='SETUP_STATIC_AUTHENTICATION_PASS_NO_ARMS_EXECUTED','actual closed setup proof')
+        request=out/'request.json';write(request,{'comparison':comparison,'output':str(out/'pairs'),'parentRevision':identity['revision'],'parentSourceSha256':identity_sha(identity['revision'],identity['hashes'])})
+        paired_main(request,setup/'derived-paired-binding.json')
+    except BaseException as error:primary=error;raise
+    finally:finish(out,identity,primary)
+if __name__=='__main__':
+    for s in (signal.SIGINT,signal.SIGTERM):signal.signal(s,interrupted)
+    require(len(sys.argv)==3,'one comparison and closed output');main(sys.argv[1],sys.argv[2])

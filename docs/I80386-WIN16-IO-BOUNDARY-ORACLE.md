@@ -5,7 +5,7 @@ enters a 16-bit protected code segment, writes `A5` to the PIC1 interrupt
 mask register at port `21`, then begins a three-instruction trace at
 `CS:EIP=0008:7C2E`. `MOV BX,1; CMP BX,1; JZ` takes the branch to a single
 `IN AL,DX`. This is a small architectural acceptance harness for a future
-event-aware block engine; it is not a measured speedup or a Windows media
+event-aware block engine; it is not a measured speedup or an external guest media
 trace. The [source-bound receipt](receipts/2026-09-28-i80386-win16-io-boundary-oracle.json)
 uses QEMU TCG 8.2.2 with a 486 software CPU as an independent reference,
 and steps the same bytes through `ExperimentalI80386` at the trace entry.

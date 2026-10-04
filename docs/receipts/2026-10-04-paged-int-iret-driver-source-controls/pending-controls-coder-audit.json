@@ -1,0 +1,37 @@
+{
+  "status": "CODER_SOURCE_CONTROLS_AND_READONLY_AUTH_PASS",
+  "head": "7db7dc2915ea83c3acfd3079e0e44e0360394c0b",
+  "sourcePaths": 80,
+  "sourceAndGitChecks": 160,
+  "actualCases": 8,
+  "skips": 0,
+  "actualIdentityPaths": 80,
+  "packets": {
+    "controls": {
+      "wallSeconds": 4.988798592239618,
+      "rawWaitStatus": 0,
+      "rusage": {
+        "maxRSSKiB": 95160,
+        "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+        "systemSeconds": 1.3236729999999999,
+        "userSeconds": 1.705463
+      },
+      "beforeAfterEqual": true,
+      "helperSha256": "3836a2e9f41f46a36d409a0a58e9b5cf546808258b87d8a616bf30d31b19f485"
+    },
+    "auth": {
+      "wallSeconds": 2.505129588767886,
+      "rawWaitStatus": 0,
+      "rusage": {
+        "maxRSSKiB": 63908,
+        "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+        "systemSeconds": 0.542327,
+        "userSeconds": 0.47241099999999997
+      },
+      "beforeAfterEqual": true,
+      "helperSha256": "aabbb3a6fdb369fede0fa6d822081be04d01b429880b7f8d107af1a8ed9a5ce6"
+    }
+  },
+  "identityCanonicalSha256": "10918f536fdfa577a475116202e6a5e1fafff5913984776f3b04bead0bc9c6ff",
+  "scope": "manufactured/read-only source controls; no oracle/provider construction, addon or emulated CPU"
+}

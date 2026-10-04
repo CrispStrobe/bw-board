@@ -1,0 +1,109 @@
+{
+  "schema": "bw.cold-three-arm.first-failure-public-records.v1",
+  "records": {
+    "run.json": {
+      "bytes": 12619,
+      "sha256": "2abaaf4e4a6117cdb95ea8283f6c0bbcb9c328fe84fe890d2193c9d1e62360ef",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/run.json"
+    },
+    "jobs.json": {
+      "bytes": 4394,
+      "sha256": "731e7324b6af9784b655cbe6cf02f9eca5c93eff404b3af7ef0a7773b4bc82a3",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/jobs.json"
+    },
+    "artifacts.json": {
+      "bytes": 793,
+      "sha256": "9e9ddb25b5461afb40f460c1e34cd1395df98e878256b7e70c7d97f1b2e90fd1",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/artifacts.json"
+    },
+    "first-failure-findings.json": {
+      "bytes": 4497,
+      "sha256": "53e3f4f1f47ae9f7d37baee7f2c4f917aedae4997fc7c820847f1d05867d4f2c",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/first-failure-findings.json"
+    },
+    "independent-first-qualification-audit.json": {
+      "bytes": 582,
+      "sha256": "34bd393155bb2a8b4889f445ef193267971ecb192824ea604782e8b6bb3fc3b5",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/independent-first-qualification-audit.json"
+    },
+    "zip-retention.json": {
+      "bytes": 33688,
+      "sha256": "cc50207c8632b3c5ded06040dc92ff2d85b0ea656f9cfeb17a7981bff828343f",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/zip-retention.json"
+    },
+    "selected/_temp/cold-three-arm-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-context/parent.stdout"
+    },
+    "selected/_temp/cold-three-arm-context/parent.stderr": {
+      "bytes": 1123,
+      "sha256": "ec3b943c4e8e625eed7ed5e7a4b7a9eed169b0ab0b1201ed58cbca2cd7aa7c0c",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-context/parent.stderr"
+    },
+    "selected/_temp/cold-three-arm-qualification/result.json": {
+      "bytes": 85379,
+      "sha256": "c90dcf0047826f7c948cb8965e0821f96bf86e75faf4e7fa3c6e0dc07cd8a2fc",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/result.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/plain-JS/exit.json": {
+      "bytes": 425,
+      "sha256": "08b0700835ad280addd7f3f94964ee6b8d33d836bef74078ea4971deeaa69435",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/plain-JS/exit.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/plain-JS/receipt/receipt.json": {
+      "bytes": 1472005,
+      "sha256": "9b772cc41b8ae2614f75fae1c13435838446c31b9bd400026f0b40679f584eaa",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/plain-JS/receipt/receipt.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/exit.json": {
+      "bytes": 417,
+      "sha256": "88ee3e738257540afca5b1ae2b72fda5c6911d57436e7f17579487bf15f5f3c9",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/exit.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/stderr": {
+      "bytes": 1335,
+      "sha256": "a6b94040ae53e07bac40ea85f152b0191ea813cebe8dac5dcab5fcc434e7f2bf",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/stderr"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/receipt/failure.json": {
+      "bytes": 62421,
+      "sha256": "3b4d87933be4d855afd8d3944db14f23f1c61ae0f54331a502cb9f631a6ed57c",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/receipt/failure.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/before-arms.json": {
+      "bytes": 210500,
+      "sha256": "8917ade7a660e799ec71ca5e154f73ee2156363eaa3edfb56fbfacaf842f3914",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/before-arms.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/after-arms.json": {
+      "bytes": 210500,
+      "sha256": "8917ade7a660e799ec71ca5e154f73ee2156363eaa3edfb56fbfacaf842f3914",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/after-arms.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/after-authentication.json": {
+      "bytes": 210500,
+      "sha256": "8917ade7a660e799ec71ca5e154f73ee2156363eaa3edfb56fbfacaf842f3914",
+      "origin": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/after-authentication.json"
+    },
+    "exact-head-checks-pass.json": {
+      "bytes": 3881,
+      "sha256": "d25a73cd650e48457431244d8935969a60b1d89e2c8eefda5aa38584abacd909",
+      "origin": "/tmp/native-cold-three-arm-ready-source-freeze-20261003/exact-head-checks-pass.json"
+    },
+    "pr300-merged.json": {
+      "bytes": 244,
+      "sha256": "e2492041ea1b43a4a4bc1476bf460ad57fcec567ba36f516d11ff71114348223",
+      "origin": "/tmp/native-cold-three-arm-ready-source-freeze-20261003/pr300-merged.json"
+    }
+  },
+  "officialZipRetainedExternally": {
+    "path": "/tmp/native-cold-three-arm-first-qualification-publication-20261003/official-artifact.zip",
+    "artifactId": 11273147920,
+    "runId": 37120409279,
+    "bytes": 19754059,
+    "sha256": "406be3268dd71ad3f42627ec72f4ecc6c56bd30fdf37b1e1aa4e8352a8c590bf",
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273147920/zip"
+  },
+  "noGuestRerun": true
+}

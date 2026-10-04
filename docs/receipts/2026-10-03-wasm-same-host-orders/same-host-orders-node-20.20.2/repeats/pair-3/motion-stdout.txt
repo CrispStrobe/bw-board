@@ -1,0 +1,9 @@
+Starting 1/4: candidate
+candidate: median 0.594117x, minimum 0.592046x
+Starting 2/4: baseline
+baseline: median 0.564384x, minimum 0.563571x
+Starting 3/4: baseline
+baseline: median 0.621324x, minimum 0.617329x
+Starting 4/4: candidate
+candidate: median 0.600107x, minimum 0.596369x
+{"baseline":{"samples":10,"medianRtx":0.5918027816148026,"minimumRtx":0.5635705926529315,"allWindowsMeet1x":false},"candidate":{"samples":10,"medianRtx":0.5976651638985535,"minimumRtx":0.5920461850113649,"allWindowsMeet1x":false},"candidateMedianRatio":1.00990597284412}
