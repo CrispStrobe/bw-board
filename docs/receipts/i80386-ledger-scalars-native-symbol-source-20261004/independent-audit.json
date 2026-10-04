@@ -1,0 +1,15 @@
+{
+  "status": "PASS_INDEPENDENT_SOURCE_MOCK_CONTROL_AUDIT",
+  "revision": "52ceafdd3b116fecf52d599d5bae3ff1c0371350",
+  "sourceFiles": 92,
+  "allCurrentEqualsGit": true,
+  "allBeforeAfterPinsEqual": true,
+  "nodeMethods": 7,
+  "nestedPythonMethods": 6,
+  "zeroFailuresSkips": true,
+  "exitCode": 0,
+  "timeout": false,
+  "wallSeconds": 1.9704451095312834,
+  "scope": "Retained pure/mock source controls only; no live perf/addon/guest; no readiness, sampling or cost-share proof",
+  "allCurrentToolHashesMatch": true
+}
