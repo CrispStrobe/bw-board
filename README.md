@@ -499,6 +499,19 @@ static register dispatch does not establish a speedup. See the
 [cached-frame evidence](docs/receipts/2026-10-04-wasm-cached-register-frame/README.md).
 Production, app pins and physical acknowledgements remain unchanged; CP13 is open.
 
+Increasing the WASM-only discovery miss memo from 64 to 1,024 slots is
+also **unmerged/unqualified**. Four ordinary pairs retain **240 windows**:
+motion **-4.76% to 1.19%**, RAM **-1.59% to -0.33%**,
+GPIO **-0.61% to 5.32%**. RAM medians are lower in all four pairs;
+motion/GPIO floors fail all four. Native **4,235 library tests + 16 GPIO
+integrations**, deterministic WASM builds and **108 actual integrations**
+pass; the fresh motion floor fails (**0.823477× median / 0.818431× min**).
+Larger capacity costs 960 tuples per WASM Cortex-M instance; hot thrashing
+was not measured. Original glue is identical, all keys/invalidations and
+native capacity remain unchanged. See the
+[discovery-memo evidence](docs/receipts/2026-10-04-wasm-discovery-memo1024/README.md).
+Production, app pins and physical acknowledgements remain unchanged; CP13 is open.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
