@@ -1,0 +1,30 @@
+{
+  "status": "CODER_AUDIT_PASS",
+  "head": "b12e8d50bd90dcb503dd186890ed11483cc2eca3",
+  "sourceCount": 81,
+  "currentGitAndBeforeAfterEqual": true,
+  "controls": "six selected PASS zero skips: held lifecycle inverse plus five manufactured transport fixtures",
+  "identity": {
+    "canonicalFormat": "JSON returned key order; compact separators",
+    "canonicalSha256": "928a345174367a9878cecd8de9f76f080bcd7262b7aaecaf4c5c331c19cc23ac",
+    "sourcePaths": 81
+  },
+  "rawExit": {
+    "childStarted": true,
+    "exitCode": 0,
+    "finalizationErrors": [],
+    "leaderReaped": true,
+    "pid": 3727552,
+    "primaryError": null,
+    "rawWaitStatus": 0,
+    "rusage": {
+      "maxRSSKiB": 187804,
+      "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+      "systemSeconds": 0.368023,
+      "userSeconds": 4.699433
+    },
+    "timeout": false,
+    "wallSeconds": 6.52008780092001
+  },
+  "scope": "No provider/oracle construction, addon/CPU/guest/build; transport controls only. The original first guest run remains FAIL with unknown instruction/parity/closure extent."
+}
