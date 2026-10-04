@@ -15,10 +15,12 @@ class Controls(TestCase):
   with patch.object(hosted,'read',return_value=pending),patch.object(hosted,'sources',side_effect=AssertionError('source/tool lookup forbidden')),patch.object(hosted,'bounded_child',side_effect=AssertionError('child forbidden')):
    with self.assertRaisesRegex(ValueError,'PENDING'):hosted.main('enabled')
   with self.assertRaisesRegex(ValueError,'PENDING'):policy.contract(pending)
- def test_complete_maps_bounds_and_diagnostic_pending(self):
+ def test_complete_maps_bounds_and_owned_ready_with_pending_denials(self):
   c=admission.read(admission.HERE/'contract.json');c['status']='ROOT_REVIEWED_NATIVE_SYMBOL_HOSTED_READY'
-  with self.assertRaisesRegex(ValueError,'diagnostic READY'):policy.contract(c)
-  for mutate in [lambda x:x['roles']['compiled']['files'].pop(next(iter(x['roles']['compiled']['files']))),lambda x:x['observerBounds'].update(fileBytes=128<<20),lambda x:x.update(enabledByDefault=True)]:
+  self.assertIs(policy.contract(c),c)
+  pending=json.loads(json.dumps(c));pending['status']='PENDING_ROOT_HOSTED_SOURCE_REVIEW'
+  with self.assertRaisesRegex(ValueError,'PENDING'):policy.contract(pending)
+  for mutate in [lambda x:x['roles']['diagnostic'].update(status='PENDING_ROOT_SOURCE_REVIEW'),lambda x:x['roles']['diagnostic'].update(revision='0'*40),lambda x:x['roles']['diagnostic'].update(sourceSha256='0'*64),lambda x:x['roles']['compiled']['files'].pop(next(iter(x['roles']['compiled']['files']))),lambda x:x['observerBounds'].update(fileBytes=128<<20),lambda x:x.update(enabledByDefault=True)]:
    bad=json.loads(json.dumps(c));mutate(bad)
    with self.assertRaisesRegex(ValueError,'complete source-owned'):policy.contract(bad)
  def test_setup_only_sha_alias_retains_actual_dispatch(self):

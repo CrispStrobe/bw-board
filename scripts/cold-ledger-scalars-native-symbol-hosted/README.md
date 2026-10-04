@@ -1,11 +1,13 @@
-# Hosted native-symbol observation: pending source
+# Hosted native-symbol observation: separate READY source
 
 This default-disabled manual workflow proposes one diagnostic using the freely
 licensed Bochs BIOS checkpoint. It imports fixed qualifier `c26ad670` only for
 setup/restoration, preserves compiled `85fc`/DSO `7de755f0`, and pins corrected
-source `88645607`. That diagnostic source is still PENDING. Both owned gates
-must become reviewed READY authority before checkout emission, download, tool,
-recorder or guest effects. No setup, sudo, perf, addon or guest has run here.
+source `1391d63e` with its reviewed mapping-tracker correction. Both owned
+contracts are source READY in this separate derivative; historical `39a7f2ad`
+and `88645607` remain PENDING. Actual capability, selector/control readiness,
+sideband, loss and unwind remain unproved; no setup, sudo, perf, addon or guest
+has run here. Dispatch remains default disabled and root-owned.
 
 The actual GitHub dispatch SHA authenticates the runtime source. Only the
 closed setup child receives a GITHUB_SHA alias equal to its fixed diagnostic
@@ -50,8 +52,35 @@ all six nested Python methods (`Ran 6 tests` / `OK`). The child exited 0 without
 timeout; source/tool before and after pins matched, with no cleanup or final
 pin errors. Thirteen owned paths and 390 exact frozen Git materialized source
 paths were authenticated; these source snapshots are distinct from runtime
-checkouts. This outcome proves mocked/source guards only. Neither PENDING gate
+checkouts. This outcome proves mocked/source guards only. At that historical tested revision neither PENDING gate
 was promoted, and no setup, sudo, recorder, addon or guest ran. This paragraph
 and compact receipts were added after the tested revision.
 
 [Retained source-control records](../../docs/receipts/i80386-ledger-scalars-native-symbol-hosted-source-20261004/index.json)
+
+This source-only authority migration binds the exact final 92-file diagnostic
+map and recomputed whole-contract hash. The metadata control validates the real
+owned READY contract, manufactures PENDING before-effects refusal and changed
+role/status/hash denials. Historical hosted mock evidence remains separate;
+the changed metadata control outcomes are recorded below. Worker/recorder controllers and
+setup-only dispatch alias mechanics are unchanged. The diagnostic tracker may
+produce pre-ready waiting samples; only its conservative active ACK window is
+admissible. Source READY does not qualify sampling or speed.
+
+The retained ordinary C-fixture capability used privileged UID 0 and exactly
+`-e cpu-clock` without `:u`; this recorder also requires root, while the worker
+is separately dropped to its ordinary owner. That receipt establishes no
+ordinary-user permission and no attach/delay/control/dummy sideband or Bochs
+unwind capability. Actual effective tool/options/permission and selector ACK
+checks still precede provider/addon release, preserving the first refusal.
+
+At tested hosted revision `16fc71d0`, both Node methods passed and retained
+all six nested Python mocks (`Ran 6 tests` / `OK`). A separate conditional
+read-only check returned the exact 13-owned + 390-role source maps. Both calls
+exited 0 without timeout/errors, with current/Git and tool pre/post pins equal;
+independent and root audits passed. Role files were exact frozen Git materialized
+source snapshots, not runtime checkouts. This outcome paragraph and compact
+records were added afterward; executable, test, authority and workflow bytes
+remain unchanged. No setup, sudo, recording, addon or guest ran.
+
+[Retained hosted READY source records](../../docs/receipts/i80386-ledger-scalars-native-symbol-hosted-ready-source-20261004/index.json)

@@ -2,7 +2,7 @@
 import hashlib,json
 def require(ok,message):
  if not ok:raise ValueError(message)
-AUTHORITY='8ec70ddbe5ba796cf4df72e03cf452526f6131b8c66faf1b4a0d65897beb0a3b'
+AUTHORITY='df3ebbf0b864fd13e7a9b15288b8c72246638b9f072db7b46b3e604b45d81441'
 def contract(c):
  require(c['status']=='ROOT_REVIEWED_NATIVE_SYMBOL_HOSTED_READY','PENDING before role emission/setup/tools/download/worker/recorder')
  require(hashlib.sha256(json.dumps({k:v for k,v in c.items() if k!='status'},sort_keys=True,separators=(',',':')).encode()).hexdigest()==AUTHORITY,'complete source-owned role/bounds authority')

@@ -1,0 +1,35 @@
+{
+  "result": "ROOT_HOSTED_READY_SOURCE_CONTROLS_AND_READONLY_MAPS_PASS",
+  "nodeCases": 2,
+  "pythonMockCases": 6,
+  "ownSourcePaths": 13,
+  "roleSnapshotPaths": 390,
+  "rolesAreRuntimeCheckouts": false,
+  "perfOrGuestCalls": 0,
+  "packets": [
+    {
+      "path": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-controls-20261004",
+      "exit": {
+        "exitCode": 0,
+        "timeout": false,
+        "wallSeconds": 5.478611618280411,
+        "error": null,
+        "cleanupError": null,
+        "finalizationError": null,
+        "pinsEqual": true
+      }
+    },
+    {
+      "path": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-frozen-auth-20261004",
+      "exit": {
+        "exitCode": 0,
+        "timeout": false,
+        "wallSeconds": 15.38112599030137,
+        "error": null,
+        "cleanupError": null,
+        "finalizationError": null,
+        "pinsEqual": true
+      }
+    }
+  ]
+}
