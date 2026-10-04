@@ -8,8 +8,9 @@ const ledger=()=>new Uint32Array([1,1,10,0,6000,0,1]);
 function fixture(clock=()=>ledger(),read=()=>new Uint8Array([9]),write=()=>{}){return memoryFusionCallbacks({callbacks:{clockTransfer:clock,readPhysical:read,writePhysical:write}});}
 function invoke(f,expected=ledger(),operand=null){return f.callbacks.fusedMemory(new Uint32Array([1]),3,0xf0000,1,operand,expected);}
 test('each exact word mismatch reaches its intended guard before effects',()=>{
+ // Word2 equality uses an inconsistent expected cycle tuple; actual reply stays domain-valid.
  for(let i=0;i<7;i++){let effects=0;const expected=ledger(),reply=ledger();
-  if(i===1){expected[1]=2;expected[2]=16;}else if(i===2){expected[2]=16;}else expected[i]++;
+  if(i===1){expected[1]=2;expected[2]=16;}else if(i===2){expected[2]=16;}else if(i===4){expected[4]=5999;}else if(i===6){expected[6]=0;}else expected[i]++;
   const f=fixture(()=>reply,()=>{effects++;},()=>{effects++;});
   assert.throws(()=>invoke(f,expected),e=>e.message.includes('MEMORY ledger word '+i));assert.equal(effects,0);
  }
