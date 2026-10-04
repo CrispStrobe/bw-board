@@ -1,7 +1,7 @@
 """One owned setup then observer child; no repeats, pairs, rebuild or decoder."""
 import sys
 sys.dont_write_bytecode=True
-import os,signal
+import os,signal,json
 from pathlib import Path
 from policy import contract,require
 from admission import HERE,ROOT,WS,OUT,PARENT,read,fingerprint,sources,own_source,git
@@ -31,6 +31,15 @@ def finish(report,primary,c,node,before,pins):
  check('hostAfter',host_context);write(PARENT/'result.json',report)
  if primary is None and final is not None:raise final
  return report
+def log_primary_failure(report,error):
+ log={'scope':'First observer failure; native/worker extent unknown without retained evidence','primary':repr(error)[:4096],'observerChild':report.get('observerChild')}
+ try:
+  path=PARENT/'observer-child/stderr'
+  if path.is_file():
+   with path.open('rb') as stream:log['observerStderrPrefix']=stream.read(4096).decode(errors='replace')
+ except BaseException as secondary:log['stderrReadError']=repr(secondary)[:4096]
+ print(json.dumps(log),file=sys.stderr,flush=True)
+
 def main(mode):
  require(mode in ('disabled','enabled'),'fixed mode')
  if mode=='disabled':print('Disabled: no setup/download/tool/recorder/addon/guest');return
@@ -53,7 +62,9 @@ def main(mode):
   require(observer['exitCode']==0 and not observer['timedOut'] and not observer['interrupted'],'first observer outcome failure, no retry')
   require(report['recorder']['terminalAudit']['status']=='HELD_FULL_TERMINAL_PARITY_PASS','actual complete terminal proof')
   report['status']='RAW_DIAGNOSTIC_CAPTURE_REQUIRES_INDEPENDENT_SYMBOL_LOSS_UNWIND_AUDIT'
- except BaseException as error:primary=error;report['error']=repr(error);raise
+ except BaseException as error:
+  primary=error;report['error']=repr(error)
+  log_primary_failure(report,error);raise
  finally:finish(report,primary,c,node,before,pins)
 if __name__=='__main__':
  for sig in (signal.SIGINT,signal.SIGTERM):signal.signal(sig,interrupted)

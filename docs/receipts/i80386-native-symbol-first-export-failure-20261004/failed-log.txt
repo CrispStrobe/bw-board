@@ -1,0 +1,48 @@
+native-symbol	One fixed setup and observation, no retry	﻿2026-10-04T23:21:46.8396865Z ##[group]Run export BW_COLD_NODE="$(command -v node)"
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8397335Z [36;1mexport BW_COLD_NODE="$(command -v node)"[0m
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8397640Z [36;1mpython3 -B runtime/scripts/cold-ledger-scalars-native-symbol-hosted/hosted.py enabled[0m
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8461544Z shell: /usr/bin/bash -e {0}
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8461726Z env:
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8461843Z   NODE_OPTIONS: 
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8461961Z   NODE_PATH: 
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8462073Z   LD_PRELOAD: 
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8462188Z   LD_AUDIT: 
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8462303Z   BW_HOT_NAPI_PROFILE: 
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8462439Z   NODE_V8_COVERAGE: 
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8462772Z   PYTHONDONTWRITEBYTECODE: 1
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8464458Z   GH_TOKEN: ***
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:21:46.8464583Z ##[endgroup]
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0001163Z Traceback (most recent call last):
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0001819Z   File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-ledger-scalars-native-symbol-hosted/hosted.py", line 60, in <module>
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0002378Z     require(len(sys.argv)==2,'one owned mode');main(sys.argv[1])
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0002655Z                                                ^^^^^^^^^^^^^^^^^
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0003092Z   File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-ledger-scalars-native-symbol-hosted/hosted.py", line 53, in main
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0003745Z     require(observer['exitCode']==0 and not observer['timedOut'] and not observer['interrupted'],'first observer outcome failure, no retry')
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0004421Z   File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-ledger-scalars-native-symbol-hosted/policy.py", line 4, in require
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0004898Z     if not ok:raise ValueError(message)
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0005106Z               ^^^^^^^^^^^^^^^^^^^^^^^^^
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0005358Z ValueError: first observer outcome failure, no retry
+native-symbol	One fixed setup and observation, no retry	2026-10-04T23:22:06.0190618Z ##[error]Process completed with exit code 1.
+native-symbol	Retain first outcome and raw recording	﻿2026-10-04T23:22:06.0248734Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0248978Z with:
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0249134Z   name: cold-ledger-scalars-native-symbol-37243459679-1
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0249511Z   path: /home/runner/work/_temp/cold-ledger-scalars-native-symbol
+native-symbol	Retain first outcome and raw recording	/home/runner/work/_temp/cold-ledger-scalars-native-symbol-parent
+native-symbol	Retain first outcome and raw recording	
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0249860Z   include-hidden-files: true
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250007Z   if-no-files-found: error
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250139Z   retention-days: 14
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250265Z   compression-level: 6
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250386Z   overwrite: false
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250503Z env:
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250610Z   NODE_OPTIONS: 
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250738Z   NODE_PATH: 
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250848Z   LD_PRELOAD: 
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0250955Z   LD_AUDIT: 
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0251064Z   BW_HOT_NAPI_PROFILE: 
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0251189Z   NODE_V8_COVERAGE: 
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0251319Z   PYTHONDONTWRITEBYTECODE: 1
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.0251452Z ##[endgroup]
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.1457785Z (node:8525) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.1458440Z (Use `node --trace-deprecation ...` to show where the warning was created)
+native-symbol	Retain first outcome and raw recording	2026-10-04T23:22:06.1508848Z ##[error]EACCES: permission denied, scandir '/home/runner/work/_temp/cold-ledger-scalars-native-symbol'

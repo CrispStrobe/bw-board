@@ -84,3 +84,8 @@ records were added afterward; executable, test, authority and workflow bytes
 remain unchanged. No setup, sudo, recording, addon or guest ran.
 
 [Retained hosted READY source records](../../docs/receipts/i80386-ledger-scalars-native-symbol-hosted-ready-source-20261004/index.json)
+
+
+The [first actual observation](https://github.com/CrispStrobe/bw-board/actions/runs/37243459679) failed. The hosted observer returned nonzero, and artifact upload then failed while enumerating the root-owned recorder directory (mode `0711`). No artifact was uploaded, so the original observer cause and worker/native execution extent are unknown. [Retained official failure evidence](../../docs/receipts/i80386-native-symbol-first-export-failure-20261004/index.json) preserves that outcome; no retry has run.
+
+This separate source correction leaves the live recorder directory, worker, timing loop, diagnostic role and native build unchanged. One fixed post-finalization exporter copies only the recorder and parent evidence roots into an exclusive readable tree. It rejects uncertain cleanup, links, special files and changed sources; the exact control socket is skipped with a record. Original bytes, modes and ownership remain intact. Partial copy manifests and bounded primary-error logs distinguish export failure from observation failure. Proposed controls exercise actual filesystem copying with manufactured inputs and mocked lifecycle/source authority, not root privileges or a recorder.

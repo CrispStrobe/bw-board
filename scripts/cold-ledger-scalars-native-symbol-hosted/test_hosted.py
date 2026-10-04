@@ -40,6 +40,9 @@ class Controls(TestCase):
    except RuntimeError as caught:self.assertIs(caught,guest)
    else:self.fail('original error lost')
    recorder.terminate.assert_called_once_with(child);self.assertEqual(alarm.call_args_list[0].args,(180,));self.assertEqual(alarm.call_args_list[-1].args,(0,));self.assertIs(finish.call_args.args[-1],guest)
+   child.poll.return_value=0;child.returncode=0;recorder.terminate.reset_mock();root.read.side_effect=[c,{'setupRecordPin':pin,'inputPin':pin}]
+   with self.assertRaises(RuntimeError):root.main()
+   recorder.terminate.assert_not_called();self.assertTrue(finish.call_args.args[0]['childCleanup']['record']['alreadyReaped'])
   with tempfile.TemporaryDirectory() as directory,patch.object(root,'PARENT',Path(directory)),patch.object(root,'fingerprint',side_effect=OSError('manufactured missing')):
    report={'status':'FAIL','error':repr(guest),'inputPinsBefore':{'/fixture/input':pin}};root.finish_root(report,{'roles':{'diagnostic':{'root':'/fixture','files':{'source.py':'a'*64}}}},{'dispatch':{'hashes':{}}},guest)
    self.assertEqual(set(report['finalizationErrors']),{'diagnostic/source.py','input:/fixture/input'});self.assertEqual(report['error'],repr(guest))
