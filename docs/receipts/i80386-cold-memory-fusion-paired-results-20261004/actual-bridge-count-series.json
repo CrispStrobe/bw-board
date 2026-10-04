@@ -1,0 +1,312 @@
+{
+  "status": "ALL_NINE_ACTUAL_FUSION_CHILD_MAPS_EQUAL",
+  "children": [
+    {
+      "pair": 0,
+      "phase": "warmup",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 1,
+      "phase": "warmup",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 2,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 3,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 4,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 5,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 6,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 7,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    },
+    {
+      "pair": 8,
+      "phase": "measured",
+      "provider": {
+        "memoryOuterEntries": 167123,
+        "replyValidations": 167123,
+        "readEffects": 75401,
+        "writeEffects": 91722
+      },
+      "nativeClockAttempts": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "nativeMemoryAttempts": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      },
+      "logicalClockTransfers": {
+        "transfers": "233122",
+        "commits": "200122",
+        "words": "633124"
+      }
+    }
+  ],
+  "scope": "Logical clock transfer counts are not JS entries. Native clock/memory outer counters are attempted entries only; no total bridge CPU or costshare claim."
+}
