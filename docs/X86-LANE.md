@@ -23,6 +23,8 @@ and host-predicate controls are separate work, and native guest execution is
 not yet qualified. Page-fault recovery/retry is the next correctness fixture.
 These small owned programs do not qualify the addon as a general OS loader.
 
+Two first evidence attempts remain failures. The [owned paged INT/IRET run](https://github.com/CrispStrobe/bw-board/actions/runs/37242883561) initialized the native addon, then failed while persisting an oversized receipt; no capture or divergence survived, so instruction execution, parity and closure are unknown. The [native-symbol observation](https://github.com/CrispStrobe/bw-board/actions/runs/37243459679) returned an observer failure and could not upload its root-owned output directory; no artifact exists, and the original observer cause and worker/native extent are unknown. Receipt-persistence and bounded post-cleanup evidence-export fixes are pending source qualification; neither actual run has been retried. See the [preserved profiling failure](receipts/i80386-native-symbol-first-export-failure-20261004/index.json) and [manufactured export controls](receipts/i80386-native-symbol-evidence-export-controls-20261004/index.json). These diagnostics use owned fixtures and freely licensed inputs, and provide no new speed or broader software-compatibility result.
+
 The latest [paired scalar benchmark](I80386-COLD-PAIRED-RESULTS.md)
 retained the JS baseline: on a GitHub-hosted AMD EPYC 7763 runner, the native
 candidate used 5.25 times the execution CPU time and 8.94 times the execution
