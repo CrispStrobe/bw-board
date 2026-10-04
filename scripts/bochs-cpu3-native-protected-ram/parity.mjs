@@ -17,7 +17,10 @@ export function validateMilestones(cuts){
  assert.deepEqual(cuts.map(c=>c.name),namedCuts.map(c=>c.name));let last=-1;
  for(const c of cuts){assert.ok(Number.isSafeInteger(c.q)&&c.q>=0&&c.q<=512&&c.q>last);last=c.q;assert.equal(c.q,c.javascript.q);validateMilestone(c.name,{cpu:c.javascript.cpu,gdtPage:Uint8Array.from(c.javascript.gdtPage),ramPage:Uint8Array.from(c.javascript.ramPage)});
   if(c.name!=='reset'){assert.equal(c.board.ram.bootStores,4);assert.deepEqual(c.board.generations,[[0,2],[0x7000,2]]);assert.deepEqual(c.board.ram.writes.map(w=>[w.raw,w.bytes,w.generation]),stores.map((w,i)=>[w.raw,[...w.bytes],i%2+1]));assert.deepEqual(c.pages.gdt,expectedGdtPage());assert.deepEqual(c.pages.code,expectedRamPage());}
-  if(c.javascript.cpu.cs===0x18){assert.ok(c.board.ram.admitted);assert.deepEqual(c.native.segments.slice(15,30),[1,24,3,0,0,1,1,0,1,11,0,65535,0,0,0],'independent fixed protected CS descriptor words');}
+  // The far jump installs CS/EIP but has not fetched its target instruction.
+  // This fixture first admits the RAM execute page while executing RAM MOV.
+  assert.equal(c.board.ram.admitted,c.name==='after-RAM-MOV','RAM execute admission at its actual fetch phase');
+  if(c.javascript.cpu.cs===0x18){assert.deepEqual(c.native.segments.slice(15,30),[1,24,3,0,0,1,1,0,1,11,0,65535,0,0,0],'independent fixed protected CS descriptor words');}
  }
  return {milestones:cuts.length,pageBytes:8192,gdtGeneration:2,codeGeneration:2};
 }

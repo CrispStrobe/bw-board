@@ -14,6 +14,7 @@ import {compareBoundary,protectedProgress,validateMilestones,wholeNativeWords} f
 import {validateInput,finalizeAuthentication} from '../scripts/bochs-cpu3-native-protected-ram/runner.mjs';
 import {compiledRevision,relativeImports,ownedBuildBinding,requireReadyBuild,validateBuildBinding} from '../scripts/bochs-cpu3-native-protected-ram/driver-auth.mjs';
 import {namedCuts,expectedRamPage,expectedGdtPage,stores} from '../scripts/bochs-cpu3-native-protected-ram/profile.mjs';
+import actualMilestones from './fixtures/i80386-protected-ram-first-failure-milestones.json' with {type:'json'};
 const copy=x=>structuredClone(x);
 function fixture(){
  const j={eax:0x1234,ecx:0,edx:0,ebx:0,esp:0,ebp:0,esi:0,edi:0,eip:0x7003,eflags:2,cr0:0x7ffffff1,cr2:0,cr3:0,cr4:0,cs:0x18,ds:0,ss:0,es:0,fs:0,gs:0,pc:0x7003,gdtr:{base:0x600,limit:0x1f},idtr:{base:0,limit:0xffff},ldtr:{selector:0,base:0,limit:0xffff,present:true,type:2},tr:{selector:0,base:0,limit:0xffff,present:true,type:11},segmentCaches:Array.from({length:6},()=>({base:0,limit:0xffff,default32:false,present:true})),debugRegisters:[0,0,0,0,0,0,0xffff1ff0,0x400],halted:false,shutdown:false,interruptShadow:0,nmiShadow:0,debugShadow:0};
@@ -40,10 +41,18 @@ test('independent progress refuses caps/fallback/IRQ/REP/HLT/missing fields',()=
  for(const change of [n=>n.nativeTicks=513,n=>n.successfulQuanta=513,n=>n.chargedQuanta=0,n=>n.activityState=1,n=>n.reason=4,n=>n.fallback={},n=>n.fallback.bochsRamWrites=1,n=>n.execution.irqDeliveries=1,n=>n.execution.repIterations=1,n=>delete n.execution.portCommits]){const n=copy(f.n);change(n);assert.throws(()=>protectedProgress({n:0,q:0},n));}
  const zero=copy(f.n);Object.assign(zero,{chargedNativeTicks:0,chargedQuanta:0,reason:7});assert.equal(protectedProgress({n:1,q:1},zero).dq,0);
 });
-function manufacturedCuts(){return namedCuts.map((c,i)=>{const f=fixture();f.js.q=i;Object.assign(f.js.cpu,{cs:c.cs,eip:c.eip,cr0:c.cr0,eax:c.ax??0});if(i===0){f.js.cpu.gdtr={base:0,limit:0xffff};f.js.gdtPage=new Uint8Array(4096);f.js.ramPage=new Uint8Array(4096);f.pages.gdt=new Uint8Array(4096);f.pages.code=new Uint8Array(4096);}return {name:c.name,q:i,native:f.n,board:f.board,javascript:f.js,pages:f.pages};});}
+function manufacturedCuts(){return namedCuts.map((c,i)=>{const f=fixture();f.board.ram.admitted=c.name==='after-RAM-MOV';f.js.q=i;Object.assign(f.js.cpu,{cs:c.cs,eip:c.eip,cr0:c.cr0,eax:c.ax??0});if(i===0){f.js.cpu.gdtr={base:0,limit:0xffff};f.js.gdtPage=new Uint8Array(4096);f.js.ramPage=new Uint8Array(4096);f.pages.gdt=new Uint8Array(4096);f.pages.code=new Uint8Array(4096);}return {name:c.name,q:i,native:f.n,board:f.board,javascript:f.js,pages:f.pages};});}
 test('manufactured milestone proof requires GDT/code pages, protected cache, stores/generations',()=>{
  const f=manufacturedCuts();assert.equal(validateMilestones(f).milestones,5);
- for(const change of [x=>x.pop(),x=>x.reverse(),x=>x[2].q=1,x=>x[2].javascript.cpu.cr0=0x7ffffff0,x=>x[4].javascript.cpu.eax=2,x=>x[3].javascript.cpu.segmentCaches[1].access=0x99,x=>x[1].pages.gdt[0x61d]=0x99,x=>x[1].javascript.gdtPage[4000]=1,x=>x[4].pages.code[0]=0,x=>x[2].board.ram.writes[3].generation=3,x=>x[3].board.generations[1][1]=4,x=>x[3].native.segments[24]=9]){const x=copy(f);change(x);assert.throws(()=>validateMilestones(x));}
+ // Replay only the actual retained milestone fields, not a CPU or native guest.
+ assert.equal(actualMilestones.origin.status,'FAIL');assert.equal(actualMilestones.origin.runId,37176270211);
+ const actual=copy(actualMilestones.cuts);for(const c of actual)for(const k of ['gdt','code'])c.pages[k]=Uint8Array.from(c.pages[k]);
+ assert.deepEqual(actual.map(c=>[c.name,c.q,c.board.ram.admitted]),[['reset',0,false],['after-LGDT',9,false],['PE-enabled',11,false],['entered-protected-RAM',12,false],['after-RAM-MOV',13,true]]);
+ // Exact old predicate from frozen e3b parity: assert.ok(admitted) at BOTH CS18 cuts.
+ assert.throws(()=>actual.filter(c=>c.javascript.cpu.cs===0x18).forEach(c=>assert.ok(c.board.ram.admitted)),/admitted/);
+ assert.equal(validateMilestones(actual).milestones,5);
+ for(const change of [x=>x[3].board.ram.admitted=true,x=>x[4].board.ram.admitted=false,x=>x[3].native.segments[24]=9]){const x=copy(actual);change(x);assert.throws(()=>validateMilestones(x));}
+ for(const change of [x=>x.pop(),x=>x.reverse(),x=>x[2].q=1,x=>x[2].javascript.cpu.cr0=0x7ffffff0,x=>x[4].javascript.cpu.eax=2,x=>x[3].javascript.cpu.segmentCaches[1].access=0x99,x=>x[1].pages.gdt[0x61d]=0x99,x=>x[1].javascript.gdtPage[4000]=1,x=>x[4].pages.code[0]=0,x=>x[2].board.ram.writes[3].generation=3,x=>x[3].board.generations[1][1]=4,x=>x[3].native.segments[24]=9,x=>x[3].board.ram.admitted=true,x=>x[4].board.ram.admitted=false,x=>x[2].board.ram.admitted=true]){const x=copy(f);change(x);assert.throws(()=>validateMilestones(x));}
 });
 test('owned audited build authority and manufactured pending/old addon refusals stay closed',()=>{
  const b=ownedBuildBinding();assert.equal(b.compiledRevision,compiledRevision);assert.deepEqual(requireReadyBuild(),b);assert.equal(b.addonSha256,'98c7d11961463ae8a4dfbd108cf94d1e745f09f5d7684afa3bc31792cdac203e');assert.equal(b.buildRun,37149215092);assert.equal(b.artifactId,11283630476);assert.throws(()=>validateInput({}));
