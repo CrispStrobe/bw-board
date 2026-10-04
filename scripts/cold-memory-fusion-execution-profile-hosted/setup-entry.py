@@ -3,7 +3,7 @@ import sys
 sys.dont_write_bytecode=True
 import json,traceback,hashlib
 from pathlib import Path
-from policy import contract,require
+from policy import contract,require,diagnostic_worker_role,terminal_projection
 from admission import HERE,Q,N,read,ordinary,fingerprint,sources
 c=contract(read(HERE/'contract.json'))
 require(len(sys.argv)==4 and sys.argv[1] in ('setup','validate'),'fixed internal setup/proof CLI')
@@ -18,15 +18,14 @@ held=q.contract(q.read_json(q.HERE/'contract.json'));report={'mode':mode,'status
 try:
  if mode=='setup':
   b,data=q.setup(held,node,out,report)
-  b['workers']['native']={**c['diagnosticWorker'],'files':{p:r['sha256'] for p,r in c['diagnosticWorker']['files'].items()}}
+  b['workers']['native']=diagnostic_worker_role(c)
   data.update(workerRevision=c['diagnosticWorker']['revision'],workerSourceSha256=c['diagnosticWorker']['sourceSha256'],output=str(out/'guest/receipt'))
   q.write(out/'derived-binding.json',b);q.write(out/'input.json',data);report['restoredBefore']=q.restored(held,node,out);report['inputPin']=fingerprint(out/'input.json');report['bindingPin']=fingerprint(out/'derived-binding.json');report['status']='SETUP_STATIC_ADMISSION_COMPLETE_NO_GUEST'
  else:
   setup=q.read_json(out/'setup-record.json');require(fingerprint(out/'input.json')==setup['inputPin'] and fingerprint(out/'derived-binding.json')==setup['bindingPin'],'derived inputs immutable')
   report['originalInputsAfter']=q.original_inputs(out);require(report['originalInputsAfter']==setup['inputsBeforeRestore'],'original build/capture/restore inputs unchanged');report['restoredAfter']=q.restored(held,node,out);require(report['restoredAfter']==setup['restoredBefore'],'restored/source final equality')
-  r=q.read_json(out/'guest/receipt/receipt.json');require(r['schema']=='bw.cold-native-memory-fusion.execution-profile.worker.v1' and r['status']=='EXECUTION_WINDOW_DIAGNOSTIC_PARITY_AND_PROFILE_CAPTURE_PASS','diagnostic outcome');require(r['terminalParityStatus']=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','terminal proof independent of profile')
+  r=q.read_json(out/'guest/receipt/receipt.json');semantic=terminal_projection(r)
   # Exact old semantic projection only; the authentic raw diagnostic receipt remains unchanged.
-  semantic={**r,'schema':'bw.cold-native-memory-fusion-performance.worker.v1','status':r['terminalParityStatus']}
   report['terminal']=q.terminal(semantic,q.read_json(out/'input.json'),q.read_json(out/'derived-binding.json'),q.read_json(out/'capture.json'))
   require(r['executionProfile']['status']=='PROFILE_CAPTURE_COMPLETE' and not r['executionProfile']['errors'],'actual sampler outcome');pin=r['executionProfile']['rawProfile'];require(pin['file']=='execution.cpuprofile' and fingerprint(out/'guest/receipt/execution.cpuprofile')=={'bytes':pin['bytes'],'sha256':pin['sha256']},'raw profile retained')
   report['status']='DIAGNOSTIC_PARITY_AND_RAW_PROFILE_CAPTURE_COMPLETE'

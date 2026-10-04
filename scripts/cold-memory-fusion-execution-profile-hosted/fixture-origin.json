@@ -1,0 +1,12 @@
+{
+  "schema": "bw.cold-memory-fusion.execution-profile.terminal-fixture-origin.v1",
+  "runId": 37199774878,
+  "artifactId": 11302433146,
+  "zipSha256": "4a82d0b9190480a929d514dca805805fdeaa062a45d5c4e8bb8bb5b4629125d3",
+  "receiptMember": "cold-memory-fusion-execution-profile/guest/receipt/receipt.json",
+  "rawReceiptSha256": "b7c6c58f367588173cf76465e16745287b696615d6da63600b12c2fdab5be927",
+  "projectionScope": "Retained real reset/final/last166, complete worker/compiled identities, final board/RAMhash and bridge maps, original input and original missing-binding role. Build proof projected to admitted addon hash. One genuine first PIO event per tape retained as a deliberately truncated pure fixture; not complete16475-PIO proof or new guest execution. Independent actual audit covers complete tape.",
+  "heldPolicyPath": "scripts/cold-memory-fusion-qualification/policy.py",
+  "heldPolicyRevision": "a200b3d6fe8d42a020e8c65f0f33dacb777e6317",
+  "heldPolicySha256": "8e4755def2cd3171a6b111fd5aedeb832ed301a855755e4d4ea29f92aa16dfaa"
+}

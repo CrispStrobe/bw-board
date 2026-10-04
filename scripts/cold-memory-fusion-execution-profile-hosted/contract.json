@@ -1419,7 +1419,9 @@
       }
     },
     "entry": "scripts/cold-native-memory-fusion-execution-profile/worker.mjs",
-    "authorityStatus": "ROOT_REVIEWED_EXECUTION_PROFILE_READY"
+    "authorityStatus": "ROOT_REVIEWED_EXECUTION_PROFILE_READY",
+    "binding": "scripts/cold-native-memory-fusion-execution-profile/capture-binding.json",
+    "root": "/home/runner/work/bw-board/bw-board/diagnostic-worker"
   },
   "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
   "bounds": {
