@@ -75,4 +75,10 @@ class ExportControls(TestCase):
  def test_primary_error_log_survives_unreadable_observer_stream(self):
   with patch.object(hosted,'PARENT',Path('/manufactured')),patch.object(hosted.Path,'is_file',return_value=True),patch.object(hosted.Path,'open',side_effect=PermissionError('unreadable original stream')),patch.object(hosted.sys,'stderr',io.StringIO()) as stream:
    error=RuntimeError('original observer failure');hosted.log_primary_failure({'observerChild':{'exitCode':1}},error);value=json.loads(stream.getvalue());self.assertIn('original observer failure',value['primary']);self.assertIn('unreadable',value['stderrReadError']);self.assertEqual(value['observerChild']['exitCode'],1)
+ def test_actual_main_missing_worker_and_no_out_retains_parent_evidence(self):
+  with tempfile.TemporaryDirectory() as t:
+   base=Path(t);out=base/'no-out';parent=base/'parent';parent.mkdir();(parent/'source-failure.json').write_text('{"error":"manufactured early source failure"}');export=base/'export'
+   def create(fd):os.mkdir(export.name,0o700,dir_fd=fd);return os.open(export.name,e.DIR_FLAGS,dir_fd=fd)
+   with patch.object(e,'BASE',base),patch.object(e,'OUT',out),patch.object(e,'PARENT',parent),patch.object(e,'EXPORT',export),patch.object(e,'ROOTS',(out,parent)),patch.object(e,'authenticate_dispatch',return_value={'revision':'manufactured'}),patch.object(e,'create_export',side_effect=create),patch.object(e,'live_process_evidence',return_value=(set(),[])),patch.object(e.os,'geteuid',return_value=0),patch.object(e.resource,'setrlimit'),patch.object(e.os,'nice'),patch.object(e.signal,'signal'),patch.object(e.signal,'alarm'),patch.object(e,'WS',base),patch.object(e.sys,'argv',['export-evidence.py']):e.main()
+   result=json.loads((export/'export-manifest.json').read_bytes());self.assertIsNone(result['ordinaryOwnerUid']);self.assertIn('Diagnostic checkout absent',result['ownerUnavailable']);self.assertEqual(result['status'],'READABLE_EVIDENCE_COPY_COMPLETE_NOT_OBSERVATION_SUCCESS');self.assertEqual((export/'parent/source-failure.json').read_bytes(),(parent/'source-failure.json').read_bytes());self.assertFalse(out.exists())
 if __name__=='__main__':main()

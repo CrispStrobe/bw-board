@@ -139,7 +139,10 @@ def main():
   for sig in (signal.SIGINT,signal.SIGTERM,signal.SIGALRM):signal.signal(sig,interrupted)
   signal.alarm(60);report['wallSeconds']=60
   source=authenticate_dispatch();report['dispatchSource']=source
-  owner=(WS/'symbol-worker').stat();require(owner.st_uid>0,'authenticated ordinary worker owner');report['ordinaryOwnerUid']=owner.st_uid
+  try:owner=(WS/'symbol-worker').stat()
+  except FileNotFoundError:
+   require(not OUT.exists(),'missing diagnostic owner with recorder output');report['ordinaryOwnerUid']=None;report['ownerUnavailable']='Diagnostic checkout absent; no recorder output, early source/setup failure only'
+  else:require(owner.st_uid>0,'authenticated ordinary worker owner');report['ordinaryOwnerUid']=owner.st_uid
   base=open_directory(BASE);dest=create_export(base)
   try:parent=open_directory(PARENT)
   except FileNotFoundError:
