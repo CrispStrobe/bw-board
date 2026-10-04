@@ -1,7 +1,7 @@
 {
-  "addonSha256": null,
-  "artifactId": null,
-  "buildRun": null,
+  "addonSha256": "f3e7406b0b8ce88fcb05be4b99cc0c7a6fab27fa12f1dff071d323ad707a37b7",
+  "artifactId": 11304715346,
+  "buildRun": 37204425504,
   "compiledFiles": {
     ".github/workflows/i80386-native-cold-bios-build.yml": "f7ff9624b5a75a27470d592f42f36c1539ce1f5f27d20e1a152ed93e898ae1a3",
     ".github/workflows/i80386-native-nonidentity-paging-build.yml": "3060d84c34ce672074c0dbbaddd0040505c94b5682328a4474a983495e6d8cee",
@@ -207,6 +207,12 @@
     "bochs/owned-nonidentity-paging-provider.mjs": "a362a5be1efc591c5bdf062c65fcf41288868436721bc10c805d852f45fcbb65"
   },
   "schema": "bw.nonidentity-paging.driver-build-binding.v1",
-  "staticAuthority": null,
-  "status": "PENDING_NONIDENTITY_PAGING_NATIVE_BUILD"
+  "staticAuthority": {
+    "artifactZipBytes": 7876937,
+    "artifactZipSha256": "4bea83a8bde6af8003391b65e702c9520d707fc15cb950c7787fb4836bb63ccf",
+    "buildReceiptSha256": "017023e42b6564a9556dade4d5b44227c87b1b35e66e61c6622bbfc374c105e8",
+    "independentAuditSha256": "e3b2e0442f476eb4173e197f89b51cb5579d3d41ec422cd7ae41ed6dc6fb27ba",
+    "preparedManifestSha256": "eb7ab61d7718fa8c8fac3eeb9c5287706848f06513e4bf621df7a6d846276d26"
+  },
+  "status": "ROOT_REVIEWED_NONIDENTITY_PAGING_NATIVE_BUILD"
 }
