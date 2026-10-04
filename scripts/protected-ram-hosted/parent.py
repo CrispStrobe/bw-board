@@ -16,7 +16,7 @@ R=Path('/home/runner/work/_temp/protected-ram-build-evidence')
 OUT=Path('/home/runner/work/_temp/protected-ram-execution')
 HOOKS=('NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE')
 COMPILED='be1b40aa0d9e1c3f29cf450db7a023e987b2d1c7'
-DRIVER='e3b363eae9ff7aeb82fe581cf422d6472752d840'
+DRIVER='f13b830829a36163118113c3952ee9698bb9b1dd'
 NODE_HASH='fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48'
 ADDON_HASH='98c7d11961463ae8a4dfbd108cf94d1e745f09f5d7684afa3bc31792cdac203e'
 def write(p,value):p.write_text(json.dumps(value,indent=2)+'\n')
@@ -28,7 +28,7 @@ def validate_contract(c,ready=True):
  require(c['compiledRevision']==COMPILED and c['driverRevision']==DRIVER and c['bochsRevision']=='0e45b736ef9792eb9b752b0a35db49eaf2faea47','fixed source roles')
  require(c['artifactId']==11283630476 and c['runId']==37149215092 and c['zipBytes']==7658134 and c['zipSha256']=='2cbbd3cfc3a9c0b918d2d03b522cfa502cd3da36a2e87b37150548c4e9f504bb','actual first build')
  require(c['nodeSha256']==NODE_HASH and c['addonSha256']==ADDON_HASH,'fresh addon/Node')
- for key,count in [('zipMembers',67),('compiledFiles',158),('preparedFiles',814),('driverFiles',65)]:
+ for key,count in [('zipMembers',67),('compiledFiles',158),('preparedFiles',814),('driverFiles',66)]:
   require(type(c[key]) is dict and len(c[key])==count,'complete '+key)
   for p,v in c[key].items():name(p);require(set(v)=={'bytes','sha256'} and type(v['bytes']) is int and 0<=v['bytes']<=16<<20 and type(v['sha256'])is str and len(v['sha256'])==64 and all(x in '0123456789abcdef'for x in v['sha256']),'member record')
  require(c['driverFiles']['scripts/bochs-cpu3-native-protected-ram/driver-auth.mjs'],'driver authority')
@@ -138,11 +138,11 @@ def main(enabled):
   with (T/'bochs/bw_direct.node').open('xb')as f:f.write(members[prefix+'bw_direct.node'])
   evidence={p[len(prefix):]:b for p,b in members.items()if p.startswith(prefix)and not p.endswith('.tar.gz')};exclusive_tree(R,evidence)
   auth=D/'scripts/bochs-cpu3-native-protected-ram/driver-auth.mjs';script='import {driverSourceIdentity} from '+json.dumps(auth.as_uri())+';console.log(JSON.stringify(driverSourceIdentity()));'
-  raw=bounded([str(node),'--max-old-space-size=128','--input-type=module','-e',script],D,'driver-identity',15,30).strip();identity=json.loads(raw);require(identity['revision']==DRIVER and identity['hashes']=={p:v['sha256']for p,v in c['driverFiles'].items()},'actual full65 driver authority')
+  raw=bounded([str(node),'--max-old-space-size=128','--input-type=module','-e',script],D,'driver-identity',15,30).strip();identity=json.loads(raw);require(identity['revision']==DRIVER and identity['hashes']=={p:v['sha256']for p,v in c['driverFiles'].items()},'actual full66 driver authority')
   input=json.loads(members[prefix+'static-input.json']);require(set(input)=={'addon','sha256','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256'},'original six input fields');require(input['addon']==str(T/'bochs/bw_direct.node')and input['sha256']==ADDON_HASH and input['preparedManifest']==str(R/'prepare.json')and input['buildReceipt']==str(R/'build-static-preflight.json'),'actual original static roles');require(input['preparedManifestSha256']==digest(ordinary(R/'prepare.json'))and input['buildReceiptSha256']==digest(ordinary(R/'build-static-preflight.json')),'original raw receipt hashes');script='import {canonicalConfiguration,authenticateBuild,sourceIdentity} from '+json.dumps((W/'scripts/bochs-cpu3-native-protected-ram/build-identity.mjs').as_uri())+';import fs from "node:fs";const m=JSON.parse(fs.readFileSync(process.argv[1]));authenticateBuild(JSON.parse(fs.readFileSync(process.argv[2])),sourceIdentity());process.stdout.write(canonicalConfiguration(m,process.argv[3]));'
   raw=bounded([str(node),'--max-old-space-size=128','--input-type=module','-e',script,str(R/'prepare.json'),str(R/'static-input.json'),str(OUT/'bochs.log')],W,'static-admission-config',15,30);(OUT/'protected-source.bochsrc').write_bytes(raw)
   input.update({'compiledRoot':str(W),'compiledRevision':COMPILED,'driverRevision':DRIVER,'driverSourceSha256':digest(json.dumps(identity,separators=(',',':'),ensure_ascii=False).encode()),'configuration':str(OUT/'protected-source.bochsrc'),'output':str(OUT/'guest'),'nativeTrace':False});write(OUT/'input.json',input)
-  artifacts_before=restored_snapshot(c);write(OUT/'restored-before.json',artifacts_before);write(OUT/'materialization.json',{'originalRun':c['runId'],'originalArtifact':c['artifactId'],'zipSha256':c['zipSha256'],'compiledCount':158,'preparedCount':814,'driverCount':65,'metadata':'Genuine new pristine checkout Git metadata copied; original records unchanged','addonLoaded':False})
+  artifacts_before=restored_snapshot(c);write(OUT/'restored-before.json',artifacts_before);write(OUT/'materialization.json',{'originalRun':c['runId'],'originalArtifact':c['artifactId'],'zipSha256':c['zipSha256'],'compiledCount':158,'preparedCount':814,'driverCount':66,'metadata':'Genuine new pristine checkout Git metadata copied; original records unchanged','addonLoaded':False})
   report['workerAttempted']=True
   def launched(pid):report['workerStarted']=True;report['workerPid']=pid;write(OUT/'worker-launch.json',{'pid':pid,'scope':'Node process launched, not a CPU execution claim'})
   bounded([str(node),'--max-old-space-size=128',str(D/'scripts/bochs-cpu3-native-protected-ram/runner.mjs'),str(OUT/'input.json')],D,'worker',on_launch=launched)

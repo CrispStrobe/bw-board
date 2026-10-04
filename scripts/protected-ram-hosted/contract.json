@@ -707,8 +707,8 @@
       "sha256": "14413e740b13d0fb0b78aea26054578a652c59237aca4ecf807937f7e78459f6"
     },
     "scripts/bochs-cpu3-native-protected-ram/DRIVER-SOURCE.md": {
-      "bytes": 2571,
-      "sha256": "1e0d215dbb5b42ad2fd89dc970c6de4a177bdc811a7fe7b8d273c366986530cb"
+      "bytes": 3474,
+      "sha256": "e691604891620b3950af69aee77109b25010a594b085d44840191a3c86e65d07"
     },
     "scripts/bochs-cpu3-native-protected-ram/cpu-comparison.mjs": {
       "bytes": 1412,
@@ -731,8 +731,8 @@
       "sha256": "3c9e04659e08b9692d0553f2a92b52cb7ea548b2080fa7fa93e992748bfb7fc8"
     },
     "scripts/bochs-cpu3-native-protected-ram/parity.mjs": {
-      "bytes": 3751,
-      "sha256": "98cdedc07977b462104a82d77188760d6461308a2bbd6eaf6f9ee4493a6cc6cf"
+      "bytes": 3987,
+      "sha256": "a286cf4a0ff1708b40400a92fa722d0e27b7bedfca0ba5a9f117b0169664623b"
     },
     "scripts/bochs-cpu3-native-protected-ram/profile.mjs": {
       "bytes": 4894,
@@ -894,12 +894,16 @@
       "bytes": 15069,
       "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
     },
+    "test/fixtures/i80386-protected-ram-first-failure-milestones.json": {
+      "bytes": 179608,
+      "sha256": "a95cfec40c102c87eeb7dce04b1c8d2bf7990bb7183f469bd47c34396a668883"
+    },
     "test/i80386-protected-ram-driver-source.test.mjs": {
-      "bytes": 11780,
-      "sha256": "15c7d517d0ffda19fa6933e77e387f85b1ab9abba00be6b9efc69fe15bd99023"
+      "bytes": 13015,
+      "sha256": "66059905c409152f8003035e937a89058bb944c0077412a655a7ce029c438ba6"
     }
   },
-  "driverRevision": "e3b363eae9ff7aeb82fe581cf422d6472752d840",
+  "driverRevision": "f13b830829a36163118113c3952ee9698bb9b1dd",
   "enabledByDefault": false,
   "helperPins": {
     "scripts/cold-native-diagnostic/resources.py": "7e968b306c522deee93169bb698c2a80dbb23af5380af2f1cadf4fcf3c1467dc",
