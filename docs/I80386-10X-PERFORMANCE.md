@@ -1,6 +1,9 @@
 # Experimental 80386 speed path
 
 
+The [scalar-ledger semantic qualification](I80386-COLD-LEDGER-SCALAR-QUALIFICATION.md) passed its first single-child checkpoint with independent audit. Its timing is informational; no paired speed gain or baseline adoption is established.
+
+
 The retained [execution-window Inspector diagnostic](I80386-COLD-EXECUTION-PROFILE-RESULTS.md) independently passed guest/profile checks despite an original post-child hosted metadata failure. Its main-isolate samples are diagnostic, not speed qualification; plain JS remains the baseline.
 
 [The private span CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md): 4.221876% nominal mean process-CPU reduction and five of seven favorable pairs, below the required ≥10% and all-seven criterion. All 18 semantic comparisons passed; keep unchanged `fe1`, with no adoption or physical-clock claim.

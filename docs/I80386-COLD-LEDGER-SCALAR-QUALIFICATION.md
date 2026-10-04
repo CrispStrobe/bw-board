@@ -1,0 +1,9 @@
+# Scalar-ledger semantic qualification, 2026-10-04
+
+The separately frozen scalar-ledger worker passed one [semantic qualification run](https://github.com/CrispStrobe/bw-board/actions/runs/37205324209). Source c26ad670 admitted worker 06581f38 (73 inputs), reusing compiled 85fc (151 inputs) and DSO 7de. Root, coder and independent audits verified all 56 official members and 298 frozen Git role paths, raw reset/final/last-return 166-word state, N/Q 316562, terminal board/RAM hash, 16,475 ordered PIO events, and scalar-overlay/bridge guards. Live buffer independence is source-attested; whole RAM bytes were not retained.
+
+The host was AMD EPYC 9V74 with four logical CPUs. Single execution self-report CPU 1.422549 s and wall 1.177677707 s are informational. They establish no paired improvement, physical 16 MHz calibration, full boot or Windows qualification. Plain JS remains the baseline. No retry or benchmark occurred; a fresh reviewed paired comparison is the next gate.
+
+Artifact 11304208460 is 18,501,813 bytes, SHA-256 `9c9e39393c3c67b35d496af838473c8af28cd11e055ccec0dfd2f1f5a2cf09ac`. Governing independent audit schema `bw.cold-ledger-scalars.qualification-audit.v1` has status PASS and SHA-256 `81948a5bcc32715cee07f90fc0b07e6d5400eb8d5ccc7a39baa407676101eecd`. [Compact indexed receipts](receipts/i80386-cold-ledger-scalars-qualification-20261004/index.json) preserve the audits, official descriptor, member hashes and raw host context. The full canonical packet is `/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004`; no ZIP, full PIO tape or source maps are duplicated here.
+
+[Upstream result comment](https://github.com/CrispStrobe/bw-board/pull/360#issuecomment-5980475378). The [execution-profile result](I80386-COLD-EXECUTION-PROFILE-RESULTS.md) motivated this copy reduction, but main-isolate samples do not resolve native C++ cost or imply a 10× emulator improvement.
