@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "scope": "Root independent ZIP CRC, raw guest outcome, boundary shape, terminal registers and DS/SS cache, zero fallback/fault/IRQ/HLT, closed ownership and exact before/after guards. Full represented counterpart and copied-page audit delegated independently. No OS or speed qualification.",
+  "zipSha256": "103f392ae223ebe5590f9611fc7f5c3cca1813e594c0bebd7d58faa3407ed1ed",
+  "captureSha256": "c94e9ce96528da9a04c85caa40d5fbfe939ead7ca68dc6c15a718cb600c35484",
+  "boundaryCount": 32,
+  "cutCount": 13,
+  "progress": {
+    "n": 30,
+    "q": 30,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 30,
+    "zeroQ": 0
+  },
+  "ramSha256": "45d6115ea87c30d9e4fa0c2a4a484451e1bd2ac34b3667e76db231b4abee2cdd",
+  "workerExit": 0
+}

@@ -31,6 +31,8 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 ## Current checkpoint (2026-10-04)
 
+The [fixed protected DS/SS and stack run](I80386-PROTECTED-STACK-RESULTS.md) independently passes 30 N/Q, 32 saved raw 166-word boundaries, 13 cuts and three complete copied pages. PUSH/POP and CALL/RET effects, strict descriptor phases and settled RAM hash agree. This is fixed-fixture correctness only; paging, full OS, speed and adoption remain open.
+
 The [MEMORY clock-fusion paired gate](I80386-COLD-PAIRED-RESULTS.md#memory-clock-fusion-candidate-keep-plain-js) keeps plain JS: same-host fusion used 5.139261× execution CPU and 8.873322× execution wall, losing all seven measured pairs while all 18 terminal proofs passed. Actual fused-effect and outer-entry counts remain separate from logical transfers; no old-native-versus-fusion gain, adoption or physical-386 calibration follows.
 
 The [typed-state paired gate](I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) also keeps plain JS: same-host typed batching used 4.063470× execution CPU and 6.888317× execution wall, losing all seven measured pairs. All 18 children passed fixed terminal proofs. This did not compare old native arrays against typed exports; no adoption or Windows/physical-386 speed claim follows.

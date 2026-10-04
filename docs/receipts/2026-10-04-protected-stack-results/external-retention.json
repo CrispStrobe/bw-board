@@ -1,0 +1,20 @@
+{
+  "officialZip": {
+    "path": "/tmp/native-protected-stack-first-execution-publication-20261004/official-artifact.zip",
+    "bytes": 9886658,
+    "sha256": "103f392ae223ebe5590f9611fc7f5c3cca1813e594c0bebd7d58faa3407ed1ed",
+    "reason": "Sole immutable external retention; no second raw archive/capture copied into Git"
+  },
+  "fullCapture": {
+    "path": "/tmp/native-protected-stack-first-execution-publication-20261004/selected/_temp/protected-stack-execution/guest/capture.json",
+    "bytes": 4476758,
+    "sha256": "c94e9ce96528da9a04c85caa40d5fbfe939ead7ca68dc6c15a718cb600c35484",
+    "reason": "Sole immutable external retention; no second raw archive/capture copied into Git"
+  },
+  "officialStaticBuildZip": {
+    "path": "/tmp/native-protected-stack-first-build-publication-20261004/official-artifact.zip",
+    "bytes": 7741154,
+    "sha256": "867489bb0b97f0f19cf660b72f00ebdcae4f6cc6c326711b2d6f1df855e26311",
+    "reason": "Sole immutable external retention; no second raw archive/capture copied into Git"
+  }
+}

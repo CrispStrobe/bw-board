@@ -1,0 +1,18 @@
+{
+  "status": "PASS_INDEPENDENT_PROTECTED_STACK_CORRECTNESS_AUDIT",
+  "runId": 37196612572,
+  "artifactId": 11301206742,
+  "officialMembers": 97,
+  "nativeTicks": 30,
+  "quanta": 30,
+  "resumes": 30,
+  "boundaries": 32,
+  "rawWordsPerBoundary": 166,
+  "wholePagesPerBoundary": 3,
+  "pageBytes": 4096,
+  "cuts": 13,
+  "ssValidPhase": "1 before first PUSH write,7 thereafter",
+  "cleanup": "All three closed",
+  "ramSha256": "45d6115ea87c30d9e4fa0c2a4a484451e1bd2ac34b3667e76db231b4abee2cdd",
+  "scope": "Fixed same-ring code16 DS/SS/PUSH/POP/CALL/RET. Strict representedCPU plus source-backed exact native CS/DS/SS rows; full board and three host-provider pages, settled RAM hash. Native inhibit/cache coherence remains source-attested; no paging/IRQ/fullboot/performance claim."
+}
