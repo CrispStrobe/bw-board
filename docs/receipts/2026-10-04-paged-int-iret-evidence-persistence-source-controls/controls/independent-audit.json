@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "revision": "b12e8d50bd90dcb503dd186890ed11483cc2eca3",
+  "sourceCount": 81,
+  "parentAndToolsVerified": true,
+  "fullCurrentGitPrePostEqual": true,
+  "coverage": "six focused lifecycle/transport manufactured cases; zero skips",
+  "rawWaitStatus": 0,
+  "exitCode": 0,
+  "leaderReaped": true,
+  "timeout": false,
+  "rawExitWallSeconds": 6.52008780092001,
+  "scope": "No factory, provider, addon or native CPU; original failed run remains unchanged"
+}

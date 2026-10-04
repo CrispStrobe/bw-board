@@ -1,0 +1,136 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "Six selected manufactured transport/source-inverse controls plus separate readonly81 identity at b12e; no guest or addon/CPU construction. Original first actual run remains FAIL.",
+  "files": {
+    "controls/parent.py": {
+      "bytes": 16439,
+      "sha256": "a17a8fdfcc20592b489187bbd92d5348c423874de2e82d587924cf2ef4fbb19d",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/parent.py"
+    },
+    "controls/before.json": {
+      "bytes": 19807,
+      "sha256": "c78254b052d9d79a17b043534b1f0053d75d72105079f73b09b8497741764428",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/before.json"
+    },
+    "controls/after.json": {
+      "bytes": 19807,
+      "sha256": "c78254b052d9d79a17b043534b1f0053d75d72105079f73b09b8497741764428",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/after.json"
+    },
+    "controls/invocation.json": {
+      "bytes": 1175,
+      "sha256": "36ad71622fce1d599c6407f9e8c59f62adc255f43e0b6491aa7b49990b1f1f44",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/invocation.json"
+    },
+    "controls/exit.json": {
+      "bytes": 403,
+      "sha256": "1047e84c13779a4a4f4075a534e43a936564b1ea3fd71af7b4d05a2c07ce8a09",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/exit.json"
+    },
+    "controls/stdout": {
+      "bytes": 1576,
+      "sha256": "f83e1085ff6ad6831b19a657640af41e50b3dc2b98ed209f5944be91ef2f31f5",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/stdout"
+    },
+    "controls/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/stderr"
+    },
+    "controls/result.json": {
+      "bytes": 288,
+      "sha256": "6825c44c67e3ed8b7acdd1054948a609c7a70a6bb59356a79bb2dc2ac0f0b7dc",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/result.json"
+    },
+    "controls/coder-audit.json": {
+      "bytes": 1101,
+      "sha256": "baaf8b521ea60ccb9990c992b3da82b9bd0cce74b7dca884c7d76f1472cdf47f",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/coder-audit.json"
+    },
+    "controls/independent-audit.json": {
+      "bytes": 474,
+      "sha256": "f38cc961e6f01e81f77d4629a7cc0130e8976b877d92a208dae6feee42f17e21",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-controls-20261004/independent-audit.json"
+    },
+    "auth/parent.py": {
+      "bytes": 18405,
+      "sha256": "32fb273e705e1b9f7deb1b75fb21753204f2139c0435c25f65ecd0ae1874caa8",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/parent.py"
+    },
+    "auth/before.json": {
+      "bytes": 20492,
+      "sha256": "2b88bb887359368685528cf8ffeb76f072a7257e34e113912f8587fb5d72869e",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/before.json"
+    },
+    "auth/after.json": {
+      "bytes": 20492,
+      "sha256": "2b88bb887359368685528cf8ffeb76f072a7257e34e113912f8587fb5d72869e",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/after.json"
+    },
+    "auth/invocation.json": {
+      "bytes": 1162,
+      "sha256": "7a791f5f8d7fecfd7bf1adc1568c40f8d2ea9e2751469303e501c7bcfe58b6c3",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/invocation.json"
+    },
+    "auth/exit.json": {
+      "bytes": 403,
+      "sha256": "40b1bfcf0cc90c9f6fc03570bdcb24ea83790ef794ca68f9c8916b10018eedec",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/exit.json"
+    },
+    "auth/stdout": {
+      "bytes": 8874,
+      "sha256": "ee47e2fec66b998d7cb19a68e030edeb7c50b02b5431ba3dcb874a90c4867722",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/stdout"
+    },
+    "auth/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/stderr"
+    },
+    "auth/result.json": {
+      "bytes": 286,
+      "sha256": "6a896b25f3e0d1a1affeb096c250cf68c943ce45ca7b04306cb87691cfb11af1",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/result.json"
+    },
+    "auth/coder-audit.json": {
+      "bytes": 1101,
+      "sha256": "7febe16d1324d5f6172b0dfadc4997809a3c61f704f2b2930f01f45405c5a045",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/coder-audit.json"
+    },
+    "auth/independent-audit.json": {
+      "bytes": 461,
+      "sha256": "4d1fbdf5dccf140fb57cd9827cf292a3d1dec1af0e69d0a3c0d176188015c552",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/independent-audit.json"
+    },
+    "auth/source-identity.json": {
+      "bytes": 9372,
+      "sha256": "411c7b7578008dc07e531d02c6d30370666082e0c457e5c39bf31b90bb169d10",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/source-identity.json"
+    },
+    "auth/source-identity-pin.json": {
+      "bytes": 181,
+      "sha256": "3b529db2c13b74aed677ef0338f2c310343a5270fec92b97d96b262736033ec5",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-auth-20261004/source-identity-pin.json"
+    },
+    "source-freeze.json": {
+      "bytes": 17070,
+      "sha256": "840c0ea57da32cfad57576fe82154c0133c896296ba5553c2dd84eb0a839bd82",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-freeze-20261004/source-freeze.json"
+    },
+    "proposal.json": {
+      "bytes": 1452,
+      "sha256": "7f18d4475cf7acff3e8ebdcc85e37b4f79581b14d5c1424205939dc392511d5b",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-freeze-20261004/proposal.json"
+    },
+    "root-actual-audit.json": {
+      "bytes": 714,
+      "sha256": "dc506fbeea23351c16fb70ac21660ba0cd6a5e90ee3b071879e841add5a81cd8",
+      "origin": "/tmp/native-paged-int-iret-evidence-persistence-source-freeze-20261004/root-actual-audit.json"
+    },
+    "coder-audit.py": {
+      "bytes": 2650,
+      "sha256": "8a954ee189b514ea4643f086ca6c90331df34ce221734728bb12442ed8e992ae",
+      "origin": "/tmp/audit-int-evidence-persistence-source-controls-20261004.py"
+    }
+  }
+}

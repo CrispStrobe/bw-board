@@ -1,0 +1,10 @@
+{
+  "schema": "bw.paged-int-iret.hosted-correctness.v1",
+  "status": "FAIL",
+  "scope": "One finite same-CPL 16-bit INT30/IRET differential child under nonidentity 4KiB paging. Raw166 retained; strict represented CPU/full boards/ten copied host-backed pages at declared comparable boundaries, unmatched PG-entry/prefetch records retained without page parity. Native six A/D updates and FLAGS-CS-IP stores remain independent of JS seven updates/IP-CS-FLAGS order. Whole-RAM hash only; cache/inhibit source-attested. No full OS, speed or physical386 claim.",
+  "workerStarted": true,
+  "originalProvenance": "Original build records retained unchanged; recreated filesystem is new materialization, not original build execution",
+  "workerAttempted": true,
+  "workerPid": 3562,
+  "error": "child failed; raw exit retained worker"
+}
