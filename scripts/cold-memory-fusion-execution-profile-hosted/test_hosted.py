@@ -25,7 +25,7 @@ class Controls(unittest.TestCase):
   with tempfile.TemporaryDirectory() as name:
    out=Path(name);(out/'derived-binding.json').write_text('{}');before=h.fingerprint(out/'derived-binding.json');(out/'derived-binding.json').write_text('{"altered":true}')
    with patch.object(h,'sources',return_value={}),patch.object(h,'host_context',return_value={}):
-    with self.assertRaisesRegex(ValueError,'derived binding final guard'):h.finish(out,{'status':'PASS'},None,{}, {},Path('/unused-node'),before,None)
+    with self.assertRaisesRegex(ValueError,'bindingAfter final guard'):h.finish(out,{'status':'PASS'},None,{}, {},Path('/unused-node'),before,None)
    self.assertEqual(json.loads((out/'result.json').read_text())['status'],'FAIL')
  def test_fixed_child_scope_and_token_refusal_before_launch(self):
   c=h.read(h.HERE/'contract.json');self.assertEqual(c['bounds']['fileBytes'],16<<20);self.assertEqual(c['setupBounds']['fileBytes'],32<<20);self.assertEqual(c['bounds']['cpuSeconds'],60);self.assertEqual(c['bounds']['wallSeconds'],120)
