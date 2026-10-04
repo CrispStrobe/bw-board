@@ -1,0 +1,86 @@
+{
+  "status": "PAIRED_CAPTURE_COMPLETE_QUANTITATIVE_FAIL_KEEP_BASELINE",
+  "children": 18,
+  "means": {
+    "plain-JS": {
+      "cpuSeconds": 0.4089694285714286,
+      "wallSeconds": 0.1986547262857143
+    },
+    "ledger-scalars-batched": {
+      "cpuSeconds": 2.1476405714285716,
+      "wallSeconds": 1.7766286681428571
+    }
+  },
+  "cpuRatio": 5.251347463624595,
+  "wallRatio": 8.943299267834327,
+  "model": [
+    "AMD EPYC 7763 64-Core Processor"
+  ],
+  "logicalCpus": 4,
+  "summary": {
+    "comparison": "plain-JS-v-ledger-scalars-batched",
+    "primaryMetric": "executionProcessCpuSeconds",
+    "criteria": {
+      "primaryMetric": "executionProcessCpuSeconds",
+      "meanReductionAtLeast": 0.1,
+      "allSevenCandidateFaster": true
+    },
+    "baselineMeanExecutionCpuSeconds": 0.4089694285714286,
+    "candidateMeanExecutionCpuSeconds": 2.1476405714285716,
+    "meanCpuReduction": -4.251347463624595,
+    "allSevenFavorable": false,
+    "quantitativeGatePass": false,
+    "rawRatios": [
+      {
+        "pair": 0,
+        "executionCpuCandidateOverBaseline": 5.268425805056076,
+        "executionWallCandidateOverBaseline": 8.9716958619955,
+        "wholeChildCpuCandidateOverBaseline": 4.411315963713558,
+        "wholeChildWallCandidateOverBaseline": 5.077561723905892
+      },
+      {
+        "pair": 1,
+        "executionCpuCandidateOverBaseline": 5.474511558611737,
+        "executionWallCandidateOverBaseline": 9.170076984773702,
+        "wholeChildCpuCandidateOverBaseline": 4.554135798413194,
+        "wholeChildWallCandidateOverBaseline": 5.189696542197653
+      },
+      {
+        "pair": 2,
+        "executionCpuCandidateOverBaseline": 5.472302242388962,
+        "executionWallCandidateOverBaseline": 9.426271965082442,
+        "wholeChildCpuCandidateOverBaseline": 4.671436593882026,
+        "wholeChildWallCandidateOverBaseline": 5.321831865099592
+      },
+      {
+        "pair": 3,
+        "executionCpuCandidateOverBaseline": 5.2211265453398275,
+        "executionWallCandidateOverBaseline": 9.1100371988229,
+        "wholeChildCpuCandidateOverBaseline": 4.484959092740163,
+        "wholeChildWallCandidateOverBaseline": 5.138576897845007
+      },
+      {
+        "pair": 4,
+        "executionCpuCandidateOverBaseline": 4.983903886650743,
+        "executionWallCandidateOverBaseline": 8.285140439029846,
+        "wholeChildCpuCandidateOverBaseline": 4.39961079211013,
+        "wholeChildWallCandidateOverBaseline": 5.049932498575005
+      },
+      {
+        "pair": 5,
+        "executionCpuCandidateOverBaseline": 5.363160969310629,
+        "executionWallCandidateOverBaseline": 9.17082801668105,
+        "wholeChildCpuCandidateOverBaseline": 4.404615089143058,
+        "wholeChildWallCandidateOverBaseline": 5.070497204844673
+      },
+      {
+        "pair": 6,
+        "executionCpuCandidateOverBaseline": 5.012722171561574,
+        "executionWallCandidateOverBaseline": 8.563970460748683,
+        "wholeChildCpuCandidateOverBaseline": 4.41732919829537,
+        "wholeChildWallCandidateOverBaseline": 5.131638240636885
+      }
+    ],
+    "scope": "Cold slice only; configured virtual RTx is not physical 386 calibration; no default adoption, full AT/Windows/Doom10x claim"
+  }
+}

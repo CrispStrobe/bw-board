@@ -8,6 +8,8 @@ Runs in browsers and Node.js as an ES-module package. The UI lives in
 [bw-circuit-ui](https://github.com/CrispStrobe/bw-circuit-ui); this repository
 owns shared engine behavior, component models and emulator/debugger integration.
 
+The [cold E16 scalar-ledger paired result](docs/I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS: scalar native used 5.251347× execution CPU against JS on the same host, with all seven measured pairs unfavorable and all 18 terminal proofs passing. Held fusion versus scalar was not measured; no copy-change gain, Windows/full-boot speed or adoption claim follows.
+
 The [cold E16 MEMORY clock-fusion paired result](docs/I80386-COLD-PAIRED-RESULTS.md#memory-clock-fusion-candidate-keep-plain-js) keeps plain JS: fusion used 5.139261× execution CPU on the same host, with all seven measured pairs unfavorable despite terminal parity in all 18 children. This is not an old-native-versus-fusion comparison or Windows/full-boot speed result.
 
 The [cold E16 typed-state paired result](docs/I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) keeps plain JS: typed batching was 4.063470× slower in execution CPU on the same host, with all seven measured pairs unfavorable. Terminal correctness passed; this is not a Windows/full-boot speed result.

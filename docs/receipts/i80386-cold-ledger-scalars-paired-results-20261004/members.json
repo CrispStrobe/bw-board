@@ -1,0 +1,1066 @@
+{
+  "cold-ledger-scalars-paired/host-after-setup-or-pairs.json": {
+    "bytes": 8924,
+    "sha256": "3c9383f80f06a8f2b0e6a5afd7e748602320f4ba641361165eec2a3af6c9dec4"
+  },
+  "cold-ledger-scalars-paired/host-before-setup.json": {
+    "bytes": 8912,
+    "sha256": "6f742004ddc391e4dde30ac2baa09a8d94599ca201a339ab6435d9989dc7e974"
+  },
+  "cold-ledger-scalars-paired/hosted-result.json": {
+    "bytes": 64,
+    "sha256": "5820364ed58c197abe0f97621ae16665b2cbf82164ab45ec480702be4f957e48"
+  },
+  "cold-ledger-scalars-paired/pairs/binding.json": {
+    "bytes": 231741,
+    "sha256": "ff71256b020fd3d0e18d21aada48a6d0e5cd293c412aba43b479346ecc0c7d45"
+  },
+  "cold-ledger-scalars-paired/pairs/host-after.json": {
+    "bytes": 8924,
+    "sha256": "f380ab425603b84dd6aac2aae06aa71188a25c50f98ec1fd7ec2b60485c5a786"
+  },
+  "cold-ledger-scalars-paired/pairs/host-before.json": {
+    "bytes": 8918,
+    "sha256": "64554ebbe4d8afdb406c8ebe0ac949bef3eaf3b7cec65dd9c6d43990bd8651a2"
+  },
+  "cold-ledger-scalars-paired/pairs/initial-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/exit.json": {
+    "bytes": 413,
+    "sha256": "386bdd7ec42608c7a2450b0cbed9d586072461eb49da2c4ba4847446207011a7"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "a5439b5c3184e8fd4d86115c599b51a9c8b8bc55f05a20cece624824787f15d9"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935355,
+    "sha256": "64e5e485abb7fb2e0f45664fdfa9b9e671a528a083dbe91abb78cab513a0038f"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 897,
+    "sha256": "d82790cefe5a0321af6845ba770f87f584ab1238a4aaf468f0c5828aaaf45bb5"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched-host.json": {
+    "bytes": 8913,
+    "sha256": "814adf71488bbc424b436277cdfd81ded1547ed66d0d9b1edf01b444bcab1063"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "b44feab3a9478d81986313d770fc9f8afc6e308f041cd7e9c0889e3b95f592a0"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/exit.json": {
+    "bytes": 418,
+    "sha256": "b5f5706c18d406ba08680414fe5c7389fe1a0a30ee31157c3518f7a19df2472a"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "40a97ca6d67a9b7b78c754909c21a0b1da70c8c56beb98c1949b0e92489ddde0"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/receipt/receipt.json": {
+    "bytes": 1472024,
+    "sha256": "e352441a2130fe8c38c9c32ec3469b72d77d0a36a991677319453c37f463b35e"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS/terminal-validation.json": {
+    "bytes": 887,
+    "sha256": "a660cce5d8873621d65084d5c989e154d5bd6a408aa8cc2d209101d40cdd677b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS-host.json": {
+    "bytes": 8918,
+    "sha256": "98b5145211ac78159c754ec754938aedcb6ba7648992e16cbb6839f882461b82"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-00-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "93a717f1aeffb2222c7b6b26ba9fabf94a1744fafa817aff2abb96414fd37aed"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/exit.json": {
+    "bytes": 413,
+    "sha256": "fee9a898f45227525b9a9cef9b2d5824af48809c20af6de603ecf607d2ad749e"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "5995ded5439597488fc513e38ce4d37033f493ba68d9965d31de6ec2dd750fbd"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935353,
+    "sha256": "e9088ba762525612d3973adce9ba4f404b3727dad46d0170114c4bb15d491f2c"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 897,
+    "sha256": "e0dd6cabd182304178194696c2cd1326134a7ca6bea9941d9e1c2a52d73f3fb2"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched-host.json": {
+    "bytes": 8924,
+    "sha256": "9ae61c778e7732e5bce6b49ee2e0903bb302889ac9907bcd77a9f52984b8abe2"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "87a3ef4fb76c99fc2375f5e1f278dc50d92a4cadc27354408b5c0fa76e87768e"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "c38c0d957074d4ab3bd35eb2092dbadf577b35f1a7e246d701cd96d20d9ee8f7"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "5b0c7476ad1548f08a87093707c69960f9d40669e0ee9d703d31191f6fbde705"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "962f78f98473f7d72f36e5b51f0e3a909209892e886c54fe19925e1ab6b091cb"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS/terminal-validation.json": {
+    "bytes": 885,
+    "sha256": "3f831444e6d6ae2e6c44656163d9f7ba1a4cdddf4e18ccee14ef7891af246d27"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS-host.json": {
+    "bytes": 8920,
+    "sha256": "5750c6726e62ac5b80fcc1cbf6802e6ae900ddc91e0dc9256a222031681d5115"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-01-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "9358b9006d633b4e1b3481181963137ff4fbd03d7c528ec5c06080be9a00ae32"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/exit.json": {
+    "bytes": 418,
+    "sha256": "af8de16ca27fba00a5647c0a95b51fbdd022b67333b6822aacde9098c0406b3c"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "78c50f5ea3d9e399b17c8be49fb77a9fc4743cca75f9aff7b56849048984e35f"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935355,
+    "sha256": "43fd4448fbfcbc955df65f09c8df31b406745fb89a8f75a284083a84d43458cb"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 902,
+    "sha256": "292599b81568a5058bcf8891ed4cfa1f2ce44486f4b81904d92d3a6f99467ed2"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched-host.json": {
+    "bytes": 8924,
+    "sha256": "7d12ff6db9e6aff06ff5517fcd87da81b8720343f2fc206258f078de45bc5933"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "df28fdc976f0cb00408e04c77cb05f69865b33f9fae731247a160b37ddfc15ab"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/exit.json": {
+    "bytes": 426,
+    "sha256": "18d6a1500410c7cbf1f75e17d81814b9786175abfea8ee0752ee128eafad631b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "0f6e22eb29d12baab5d1ac870bdeaf902fab5e8dd09a17917753910745105e70"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/receipt/receipt.json": {
+    "bytes": 1472024,
+    "sha256": "5e811eed2ff14280dd825a882af845a9b8011c6434313245ce29a2e02300f866"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS/terminal-validation.json": {
+    "bytes": 895,
+    "sha256": "7700589e73f575fddbc180368eafe9f04d02cd2ffbda986384505b6b12c6420f"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS-host.json": {
+    "bytes": 8923,
+    "sha256": "c5c3db370cdb56f9bee0f635db288f66b5de3676f8f0bf900c3cc18e47a4ce7a"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-02-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "7a0becee3874ce04ce3e8844bcc45e093c62db18fce2ee3de047243a803ad492"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/exit.json": {
+    "bytes": 426,
+    "sha256": "197f4f9763c1a2a382945eac70616029035906c51ef2ff4d72d6f89ddbf18809"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "7f8e2410218e20533f153f784673dfb52a21d72206abe94e69af469bd475db64"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935354,
+    "sha256": "bb7f0a4f854ace52a2014d60c358df3b1d3d809e03aee3275f21b2560001803c"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 910,
+    "sha256": "970fdb9d67acf3fb102ae95702295dfba9691d1df94dad6ddbb96972a3786cfe"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched-host.json": {
+    "bytes": 8926,
+    "sha256": "646a1fc8f0a4717cc5a3a270e5912628edf5f2eaaed0e1d555111e66fc1f12ef"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "3dfb99718c08e2da03aab7db231c263d0c207e0b184146e5ff91ab843553c2b8"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "386a6b4f1cc8cacec9b3d7eb0244363cbdf5abe0decc18ee7845cad02ad60ab2"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "e63ed64d8d0ead0eaed5a19ef59c25f8c574d9a034c6b0695d9486e299bec1a1"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "7b633d3e16bec7ca96d724363aa97d7cd628311f2ab853ea05b0b7e17a935edd"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/terminal-validation.json": {
+    "bytes": 885,
+    "sha256": "f4f6c8193519e020c15fff83b315c676cff81d834e407742a64bdfa78f80a5ab"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS-host.json": {
+    "bytes": 8927,
+    "sha256": "137d70af02ac55457001380362fbda9cc40d81d00e4b7d9e56b5bd5a37cb9b32"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-03-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "daf7c4e1231e5ae08bae1f9a639f88cdfc42a08cc64deb48a5d4f76afb5fb8cc"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/exit.json": {
+    "bytes": 417,
+    "sha256": "8d53a72adb55edb8508ee04596f301e6d7b515868e3dce5e472e7c7c4b6c1b93"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "79243b5c1743f24ca6f9d484db95a5a64beb37a3cad5e4c27e6203b7b53bf605"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935355,
+    "sha256": "6cbf92478e52919273e66318cd8c5a931ee8ce59eccca65216fcec20fd0f8037"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 902,
+    "sha256": "5d86d4fa38b0dee511d68d6f9c6a762fb25ec0d712f042ce3a8f58531f631efb"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched-host.json": {
+    "bytes": 8926,
+    "sha256": "778b7305fd77d52258e6b63a573d52da85ad7c2f847b3b10c45a299c0ce40041"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "17df652152a3e34f7d0a0bdaced7611891497922d44993fc4d7e68873fb90ddc"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/exit.json": {
+    "bytes": 415,
+    "sha256": "ff1b5c1379fd9c1127830be3521eb55e685b5afeb121e1925ec58ed5a58123a5"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "b72e52ceaa4da107ca9d85bff57e6b39d304611f5c3a688b6c863ef42ec816c1"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "907a26687bccf8e13edb315183e13930a2e17901b683795ec50ccd6e1233debd"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS/terminal-validation.json": {
+    "bytes": 884,
+    "sha256": "10f7a81bed8a323d525ce49376459749e986faa5ed2addb2021cb92d13bbb1c2"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS-host.json": {
+    "bytes": 8926,
+    "sha256": "10a8fa7e852be3a40a3286163d1016b30fb0e2485df3ae030027e25919ae94cc"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-04-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "869d099c9c824e6ba20bb67104103e36232bf45cc3f2717325232277ea7b4eb0"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/exit.json": {
+    "bytes": 417,
+    "sha256": "ff2009d68de49cb001e493b2fd304f4d885ecec5b5fea9eac2196f67f7fa4224"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935355,
+    "sha256": "da6f5d4f574d23ecf26e1ebd2a71c3b19143d64aa2338c219d9603e52b26f3bb"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "0cfe5e189119ae22ee44fa8f9ef0f8a30b0a713d1cb479f7ee1192001ebe7554"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 902,
+    "sha256": "0b0904c5a75c69c9e1d6f1ab5cf084ff1b9e9124804043a4add630f6691e8f27"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched-host.json": {
+    "bytes": 8925,
+    "sha256": "b6a33726b400c6fcca180d2e5d73b84475a95ec3b7931f3a92984d15d8d20f91"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "9494f1353ce74c91bbb252bd29516aa3d387c0421dd43160c135a29078563ae6"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "6a8025fe2c32026e3d35848122da5e0c1c1cf986885c00f47845cd2084a53876"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "11a7a90cac19d6bbe7bbb1ad80e56d6cf61acc7308220d0d7fbf625a207adc0a"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "0492111ea0be72c83b18a68954fbad5b11153814724083f7069ad208d88537ad"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS/terminal-validation.json": {
+    "bytes": 884,
+    "sha256": "6e53a44fcf4a32e5bdf6bf5363f18d6b080ec332bea05812c8f70039cb124f20"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS-host.json": {
+    "bytes": 8924,
+    "sha256": "7c740d396f8d444462701bda43802f3d4987c266d8311f395db32150ab7edb49"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-05-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "6e6ce073b751b0e7598c47939b24c582dbb24f83e42e56d4a9b5576b46698b51"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "391a72421d2e21e7c75bb39fbc171824e5a81fae021e150c23ee84505090a358"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/exit.json": {
+    "bytes": 437,
+    "sha256": "9d2c3d0cc8ff7816d711b24ef8b209d361d9fd2800db3a8661fd979996ce2d5f"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935355,
+    "sha256": "8b9ec8202eee2f1d9b969eae93f18105b72889781a476b463e3c644e68676a23"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 921,
+    "sha256": "e5a6aef15c9654e6b704d3c5d0fbfb046a07a2c89ac2f6e9d6e72ba3d1485761"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched-host.json": {
+    "bytes": 8924,
+    "sha256": "435f45904745ea46307bebbb5d95321832e68762a4b96626bc2ce3e70396a7b7"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "bbd71abe980cc43a8217be1e69487326428a148ad6c149655030e0da27237c28"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "e751a5e86c02ce5532b564c135df96fdae5bdf3d7c1065a96166c7aeb7ff04d5"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "c9046e43a389656d8df9f618fbcebe9ad96155d992b09abffab6cc0b345bcaf3"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "81e1208e3e034e22b0f29c621154fe694e5b18f20ac733bf2f52112a1b99025f"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS/terminal-validation.json": {
+    "bytes": 884,
+    "sha256": "db4bf34a78d4723e0638a270107b1c2cff5746a04adc1a3c6a4f5679628b34e3"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS-host.json": {
+    "bytes": 8924,
+    "sha256": "83329aa7f4b037b1c79b05aab2dfd7085287d1042af1df159b4e95f9f08bf0c2"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-06-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "895b10bff4329c4f8140b2c8daebbff7d7e77e09b9d9dd558773742304b1c54c"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/exit.json": {
+    "bytes": 417,
+    "sha256": "7b93355a174238b205d26f381e9af96bf59a2e315277d10051686183e3c32c57"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935355,
+    "sha256": "b002cd137428103cd0fc210863cda7e23498f77b21b3b1aeb215184fa7fdab59"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "995dddbdf2fd767f91f24d95142226f335aefc1640eaac3851d85335279403f4"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 902,
+    "sha256": "3ee2872416153508778a235daab6b9ac1e63fcaa48051b06fc62cb2b93fb3efe"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched-host.json": {
+    "bytes": 8927,
+    "sha256": "1eaa215238414c9cbe82fd9a94671375df07dc46a314a14e2616e966bfd64913"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "ef320d66e7bcd46146334ee44290b8bdd0b74badc6f7f0e1e7bcc0864e82b9f1"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "a0011653fde6e82ce5614b3b8856f056119ce98db6e54e9c430068ef252bb055"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "260fbdbc1316850f0b89d1db62344db75dd65c381c6f8498ae571b2fd73fb285"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "5800b2596270d74ec138f5a6ac0646561492a73d7e967a80a35993729ef200be"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS/terminal-validation.json": {
+    "bytes": 885,
+    "sha256": "a8ba28f1b39c708d1661285b32e768a090f3dc3442c1519f20f8f3f76cecb745"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS-host.json": {
+    "bytes": 8923,
+    "sha256": "1cb0c10dacfde6bf6d69656cddcd6388ad1a5872654c8414ff23f98ebd6fb263"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-07-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "444605648cc96c0173ca3dea3a39c1e585f44650c89f0c56128134119a9c613e"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/exit.json": {
+    "bytes": 426,
+    "sha256": "41325c49e8ac8c9a86e05bf986af1663872c8f4e4c5295f4bbb0def05fcd883e"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/invocation.json": {
+    "bytes": 1065,
+    "sha256": "decf2ce8ba221070a58b3c752b49e5784d63cabd0b3ced255cd5c5dfa9eb81cc"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/receipt/receipt.json": {
+    "bytes": 1935354,
+    "sha256": "7e1c8210bea429fc81e68b8052574a846595f1cb9d215c3e4d54c7dcfeaaee8d"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/stderr": {
+    "bytes": 381,
+    "sha256": "1bc0f1691e699a4d1e78b42e6cc8a35a228a47d2860836396e28efcda699979b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/terminal-validation.json": {
+    "bytes": 910,
+    "sha256": "728d9412d09330fe6e0a7f0686443516b13071b6fac28dabd58bb00faca4e50a"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched-input.json": {
+    "bytes": 1365,
+    "sha256": "1f28e1cfd5ca673fae6edd58877627ee0a11a9cfc96b9a2436ca149965c15540"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched-host.json": {
+    "bytes": 8925,
+    "sha256": "f483f75b21d2e8d8966fe5e5463f3883a0241c22778e3901651bed4f9a5bfae7"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/after-authentication.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/exit.json": {
+    "bytes": 436,
+    "sha256": "b4008db317a5093b3bb94fdbc6ab667ccce3d3215b00ffe169e321c0cbb23051"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/invocation.json": {
+    "bytes": 1022,
+    "sha256": "876e48fc9adb7245fe9d30fae1fc3a0f7f7cd8c70b58fb0eefb8bc352f1d8d88"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/receipt/receipt.json": {
+    "bytes": 1472025,
+    "sha256": "e3982394f356ed310b4aa10771a7d0809e8b73c00353c25e28a8cbff8b1b4891"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS/terminal-validation.json": {
+    "bytes": 905,
+    "sha256": "1f29c544a8f53e236c35fb56db24eb8eeacd50e9055560a4fbb2769c29c17f21"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS-host.json": {
+    "bytes": 8925,
+    "sha256": "3a8dd75896b54f124ae258e04d9a4155fd284e5b612c7e57321c255dfb551c04"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS-before.json": {
+    "bytes": 230079,
+    "sha256": "53c340abc597081a6aa372a10351ef7a30725bd12af6ca5101496f587fb5c39b"
+  },
+  "cold-ledger-scalars-paired/pairs/pair-08-plain-JS-input.json": {
+    "bytes": 531,
+    "sha256": "6006dbf7ec74b8c8edc84b4cbb81e05a876a6cb2d5d30899ef3e100a13b5cf4d"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-00-ledger-scalars-batched.json": {
+    "bytes": 3437,
+    "sha256": "2384b866c7e81671364b6e408d6e74b14e62851ff114f81b02199d0a3a31c873"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-00-plain-JS.json": {
+    "bytes": 2257,
+    "sha256": "6e9dd5482b479aa49b069c3cd7ea890ddef921ea4f01d7f283d12fbf8e0474ad"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-01-ledger-scalars-batched.json": {
+    "bytes": 4802,
+    "sha256": "adb63f26e28002d19d34ee2656c3ec8ea0b8258759d796a50be4448fe3f53657"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-01-plain-JS.json": {
+    "bytes": 5956,
+    "sha256": "f609b3dd8600a4b127916aab3cc1a4a8e7d9b672fd68927aca8396be38684104"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-02-ledger-scalars-batched.json": {
+    "bytes": 8489,
+    "sha256": "acb7d210a7f031fc2eaf3fa5cf5b4c633668d8d53d37197263a50c2a980ebf78"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-02-plain-JS.json": {
+    "bytes": 7304,
+    "sha256": "f1d2e2bc08e9d3590982e8a49a160d351ecca1a7f9b88f982191bc754d39c446"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-03-ledger-scalars-batched.json": {
+    "bytes": 9866,
+    "sha256": "bd37513e5bdc5b2998e0b958d34b8864b2624d8d50de02274dcf89e22114755a"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-03-plain-JS.json": {
+    "bytes": 11020,
+    "sha256": "1a701fd1c8507d7e07853f4cc7d5352bfe1151a0adcafc6b2de4bd5bd34eb616"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-04-ledger-scalars-batched.json": {
+    "bytes": 13542,
+    "sha256": "4bcd97b59e56f5823572dfac6848d9de2abf9cf91aa6616b07ce489b59ae8d22"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-04-plain-JS.json": {
+    "bytes": 12357,
+    "sha256": "2c368d2c2cb3d9a24ed538192bd2d275380d38c11acb2f20e01bdd900ac5aa3e"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-05-ledger-scalars-batched.json": {
+    "bytes": 14911,
+    "sha256": "6425b874a0ee6cca1e9125341f4d9425a56cb411d2bfc1f3623ae7c99b8d540e"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-05-plain-JS.json": {
+    "bytes": 16064,
+    "sha256": "d2e2c500d62e31c3b1525926c830dfd91fe268aef249f9b87b99b15279bb3adc"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-06-ledger-scalars-batched.json": {
+    "bytes": 18605,
+    "sha256": "dd2529c1b2d0c4018680ff2747a5211ff8d772b001457ff303d4eebeb2003193"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-06-plain-JS.json": {
+    "bytes": 17401,
+    "sha256": "b042099554ae86997564a9e6cbc3c138a017369dbf7019e53a96edddbc1d3b6f"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-07-ledger-scalars-batched.json": {
+    "bytes": 19974,
+    "sha256": "57e072a698a6d0eb983c4e8270d3fbc5e158ff49d0c3750fe29bab06c7d1f0e9"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-07-plain-JS.json": {
+    "bytes": 21128,
+    "sha256": "62a1c8beede0f86a8f3116f0e4cc489a117af11b5f85d53bdc7f61e3dac04f65"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-08-plain-JS.json": {
+    "bytes": 22486,
+    "sha256": "0bdaf634121a0b286889589c3da7d33403de5aafc8179dc2cb0456db025251de"
+  },
+  "cold-ledger-scalars-paired/pairs/progress-pair-08-ledger-scalars-batched.json": {
+    "bytes": 23679,
+    "sha256": "5ee591f822cc5bae7ec876a30316d7be7e9e62e790f83367d5aed785dc405c37"
+  },
+  "cold-ledger-scalars-paired/pairs/request.json": {
+    "bytes": 284,
+    "sha256": "b55a0aa572f86759fb68e55a26ea4ff6c05d077259929cf18074ae5329c00aa7"
+  },
+  "cold-ledger-scalars-paired/pairs/result.json": {
+    "bytes": 265028,
+    "sha256": "7e101301b20045681636ff521cbe6811bf11b6a43103692eb554bc4241c9069c"
+  },
+  "cold-ledger-scalars-paired/parent-source-after.json": {
+    "bytes": 2233,
+    "sha256": "03545a809cc0d3d7e742b6a2c10dee7b529e115c79294095cf0d88b3dfd6c295"
+  },
+  "cold-ledger-scalars-paired/parent-source.json": {
+    "bytes": 2233,
+    "sha256": "03545a809cc0d3d7e742b6a2c10dee7b529e115c79294095cf0d88b3dfd6c295"
+  },
+  "cold-ledger-scalars-paired/request.json": {
+    "bytes": 284,
+    "sha256": "b55a0aa572f86759fb68e55a26ea4ff6c05d077259929cf18074ae5329c00aa7"
+  },
+  "cold-ledger-scalars-paired/setup/before.json": {
+    "bytes": 8078,
+    "sha256": "3f740b49b356c04fb61812ae6c2ad11707d678509e062457a779d8517b950b0e"
+  },
+  "cold-ledger-scalars-paired/setup/bochs.log": {
+    "bytes": 7372,
+    "sha256": "a8fb75f20cb55f64a9875993d8799f27fc26f8142e4888bcd5fb55df1801cc60"
+  },
+  "cold-ledger-scalars-paired/setup/build-artifact/official-artifact.zip": {
+    "bytes": 7537808,
+    "sha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875"
+  },
+  "cold-ledger-scalars-paired/setup/build-artifact/official-metadata.json": {
+    "bytes": 757,
+    "sha256": "dcfa067d218a535a7a8b44f74ea48578cbe3687da932c263baaec4b03983df39"
+  },
+  "cold-ledger-scalars-paired/setup/capture-artifact/official-artifact.zip": {
+    "bytes": 10438346,
+    "sha256": "702c9eafeb7dbfd95d6d49b0df9b1d293491d8276d8a8857a543a80ce8abb1f2"
+  },
+  "cold-ledger-scalars-paired/setup/capture-artifact/official-metadata.json": {
+    "bytes": 745,
+    "sha256": "2b7968c863695f24663474806d6559b55e8b6ea6f3e099d8700a880a15e11ab4"
+  },
+  "cold-ledger-scalars-paired/setup/capture.json": {
+    "bytes": 3852756,
+    "sha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf"
+  },
+  "cold-ledger-scalars-paired/setup/configuration-child/exit.json": {
+    "bytes": 421,
+    "sha256": "1dc7116e70ad8742c9140dad3d02052f639d220d06174782112d77071b6615fc"
+  },
+  "cold-ledger-scalars-paired/setup/configuration-child/invocation.json": {
+    "bytes": 1256,
+    "sha256": "0246df8794f1c8b6b9eb2dff10b5a2687311fb0e8071ecda129e4811feaaee6a"
+  },
+  "cold-ledger-scalars-paired/setup/configuration-child/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/configuration-child/stdout": {
+    "bytes": 698,
+    "sha256": "cd4e627ec953ac4acdda2f94f74e4940f801c9745d5deeab6c851c6fbcbe5abd"
+  },
+  "cold-ledger-scalars-paired/setup/fusion-qualification-artifact/official-artifact.zip": {
+    "bytes": 18501813,
+    "sha256": "9c9e39393c3c67b35d496af838473c8af28cd11e055ccec0dfd2f1f5a2cf09ac"
+  },
+  "cold-ledger-scalars-paired/setup/fusion-qualification-artifact/official-metadata.json": {
+    "bytes": 771,
+    "sha256": "bc24d472341795f37ddc579d2aa715ea269f09d32ed4a725d1f69159c52513ce"
+  },
+  "cold-ledger-scalars-paired/setup/derived-paired-binding.json": {
+    "bytes": 231741,
+    "sha256": "ff71256b020fd3d0e18d21aada48a6d0e5cd293c412aba43b479346ecc0c7d45"
+  },
+  "cold-ledger-scalars-paired/setup/guest-source.bochsrc": {
+    "bytes": 516,
+    "sha256": "d4fc2a3feee90dcadeed07cfd4c5db187bd160fe64d828e54cddf2108a34380e"
+  },
+  "cold-ledger-scalars-paired/setup/independent-audit.json": {
+    "bytes": 1020,
+    "sha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2"
+  },
+  "cold-ledger-scalars-paired/setup/inputs-before-restore.json": {
+    "bytes": 1405,
+    "sha256": "9009ae7c5a2469c5b6c041a32860f515ad301b688e1306c6c88d198b1ba8e766"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/admission-command.json": {
+    "bytes": 526,
+    "sha256": "068bd8ae839b7028440680307db23c8a0b2afe0a5af64ee0e038cd6d14bfe2ce"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/admission.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/admission-exit.json": {
+    "bytes": 163,
+    "sha256": "2b7e078a2ae310f7c2009204afce55d13bff8cf7b4ca38bd9686ab3ef46aca56"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/driver-identity-command.json": {
+    "bytes": 311,
+    "sha256": "624861085cdb9932d50b96daf6d188337b22279cd5b8ffe717c25e6489a8b2d3"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/admission.stdout": {
+    "bytes": 17830,
+    "sha256": "9c623e2d2b9492ada642e6cde46b768d5d029c4f0ed94ca3b4619be9b4fbbfe2"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/driver-identity.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/driver-identity-exit.json": {
+    "bytes": 165,
+    "sha256": "9cc980ec4a7e505eebbf184d138cb46045ef09536e5ef111e3af6d2834989005"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/materialization-proof.json": {
+    "bytes": 38408,
+    "sha256": "ddbd0938528fd4900ea18d4f9e7c167d99f9b01d171f1c1619873dfe78089629"
+  },
+  "cold-ledger-scalars-paired/setup/materialization/driver-identity.stdout": {
+    "bytes": 5338,
+    "sha256": "0c9f6a233c8a205a95e3ec30dc3fa5c5bd2558f327dda454dcb71328eeec367e"
+  },
+  "cold-ledger-scalars-paired/setup/restore-child/exit.json": {
+    "bytes": 437,
+    "sha256": "f975b2d23c7b1f2446dee2729d5c085f6b25fde1f1cee47aac02260369740b3f"
+  },
+  "cold-ledger-scalars-paired/setup/restore-binding.json": {
+    "bytes": 8865,
+    "sha256": "8bdfbe56e0e86928240710c601fb0518e79a089a6bf98b620cbf52ff14bbc9a1"
+  },
+  "cold-ledger-scalars-paired/setup/restore-child/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/restore-child/invocation.json": {
+    "bytes": 822,
+    "sha256": "e5d0d1bf5f7696e2a92f35a100fcc087d4a4c82c8b79fc45be2ba504e6687751"
+  },
+  "cold-ledger-scalars-paired/setup/restore-child/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/restored-before.json": {
+    "bytes": 224087,
+    "sha256": "f21fc64f2c94713c4feae11c0c1e84675eb9ded9a8c7e5904841e5b70c895feb"
+  },
+  "cold-ledger-scalars-paired/setup/setup-result.json": {
+    "bytes": 316556,
+    "sha256": "53b1b55895f9ad89ca288034f94913303f2889770a2d9ad9f037b274936ccbad"
+  },
+  "cold-ledger-scalars-paired/setup/source-before-setup.json": {
+    "bytes": 35583,
+    "sha256": "1cb6fd4e8326752b1dabeb89d74f69a35f2ccbaf630efcdec63ba56572b37b9e"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-0/exit.json": {
+    "bytes": 404,
+    "sha256": "8a28b53b260253b3d74c8eae44235680d80baac2b5a387ad63843a0a179fdd3c"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-0/invocation.json": {
+    "bytes": 685,
+    "sha256": "1c488cc658ac9b62e85aa45f609229e185c6620562caa727d22ebec6e463e9f4"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-0/stderr": {
+    "bytes": 586,
+    "sha256": "3e70934f1909b0f5a846d62237fcc1509d733b9fb0321187024723dfc67176d3"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-0/stdout": {
+    "bytes": 100,
+    "sha256": "3b80b7b36a3514da069133c1b8d9741f9509ec0c833c5fbb09d331d66433dc41"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-1/exit.json": {
+    "bytes": 402,
+    "sha256": "247e3527762fda7a4d6d3a7eb9f591b5cf79b2064da1a93e975c4cd65ec3d639"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-1/invocation.json": {
+    "bytes": 768,
+    "sha256": "902227261bf31a70bbdd05aa0cd28a1ddf1687204c7a5babe83ee6f400e24851"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-1/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-1/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-2/exit.json": {
+    "bytes": 413,
+    "sha256": "b34e553fbd3a4e1d62340e6601d379e5960b78fd2e871ceee4e51cb75e80a52f"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-2/invocation.json": {
+    "bytes": 792,
+    "sha256": "f8dab6e6e97bb410c57ff25becab3de2071ab0165d68a61e0e64bfcb96469907"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-2/stderr": {
+    "bytes": 116,
+    "sha256": "5d9e7d35ab19a5b68b608b47b0b6b4a3d5e115caa23d7cebd4ee589da180975a"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-2/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-3/exit.json": {
+    "bytes": 434,
+    "sha256": "17cbbc46210f9c21bcaaf87d9be28b2aee6b14207e51b991431a6bc7d4102902"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-3/invocation.json": {
+    "bytes": 733,
+    "sha256": "f3ee87490bf72a83c840fef0afe31ec1f47e32531ccafbe94726b0a8ea7e2ff0"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-3/stderr": {
+    "bytes": 60,
+    "sha256": "188a01a344b2dffbbfed4263e3f63af7b9836ca545e76580cab3f3ef84b88e03"
+  },
+  "cold-ledger-scalars-paired/setup/upstream-3/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup-child/exit.json": {
+    "bytes": 418,
+    "sha256": "4725d092c42cbc0124a420d7308f4372ed311983b22c77d7a4dd2992bb1347bf"
+  },
+  "cold-ledger-scalars-paired/setup-child/invocation.json": {
+    "bytes": 990,
+    "sha256": "4cb84ac6ea28a7f8cb58880fb16774b4ca5a6544ddb44d281f78dbba39057712"
+  },
+  "cold-ledger-scalars-paired/setup-child/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired/setup-child/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired-parent/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-ledger-scalars-paired-parent/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

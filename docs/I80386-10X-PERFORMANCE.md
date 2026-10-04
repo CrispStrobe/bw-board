@@ -1,7 +1,7 @@
 # Experimental 80386 speed path
 
 
-The [scalar-ledger semantic qualification](I80386-COLD-LEDGER-SCALAR-QUALIFICATION.md) passed its first single-child checkpoint with independent audit. Its timing is informational; no paired speed gain or baseline adoption is established.
+The [scalar-ledger semantic qualification](I80386-COLD-LEDGER-SCALAR-QUALIFICATION.md) passed its first single-child checkpoint with independent audit. Its separate [paired comparison](I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) failed: scalar native used 5.251347× execution CPU and 8.943299× execution wall against JS on the same host, with all seven pairs unfavorable. Keep plain JS; no held-fusion-versus-scalar comparison was measured.
 
 
 The retained [execution-window Inspector diagnostic](I80386-COLD-EXECUTION-PROFILE-RESULTS.md) independently passed guest/profile checks despite an original post-child hosted metadata failure. Its main-isolate samples are diagnostic, not speed qualification; plain JS remains the baseline.
@@ -36,6 +36,8 @@ was run and no speed benefit is claimed.
 The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). Its separate [paired CPU gate has now failed](I80386-OWNED-SPAN-CPU-RESULTS.md); this establishes no adoption or broader AT admission.
 
 ## Current checkpoint (2026-10-04)
+
+The [scalar-ledger paired gate](I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS after all 18 terminal proofs passed and all seven measured CPU pairs lost. The next diagnosis must resolve native execution cost; further small ledger changes are not a path to the 10× target by themselves.
 
 The [fixed protected DS/SS and stack run](I80386-PROTECTED-STACK-RESULTS.md) independently passes 30 N/Q, 32 saved raw 166-word boundaries, 13 cuts and three complete copied pages. PUSH/POP and CALL/RET effects, strict descriptor phases and settled RAM hash agree. Its scope is fixed same-ring stack correctness; full OS, speed and adoption remain open.
 
