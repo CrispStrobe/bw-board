@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: e3b363eae9ff7aeb82fe581cf422d6472752d840
+          ref: f13b830829a36163118113c3952ee9698bb9b1dd
           path: protected-driver
           persist-credentials: false
           fetch-depth: 1

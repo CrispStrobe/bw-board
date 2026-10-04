@@ -20,7 +20,7 @@ class Controls(unittest.TestCase):
    launch.assert_not_called();raw=json.loads((Path(d)/'refused.exit.json').read_text());self.assertIsNone(raw['pid']);self.assertIsNone(raw['exitCode']);self.assertIn('spawn refusal',raw['error'])
  def test_fixed_artifact_sources_counts_node_and_addon(self):
   validate_contract(self.ready())
-  for change in [lambda c:c.update(enabledByDefault=True),lambda c:c.update(driverRevision='f'*40),lambda c:c.update(compiledRevision='e'*40),lambda c:c.update(addonSha256='d'*64),lambda c:c.update(nodeSha256='c'*64),lambda c:c.update(artifactId=1),lambda c:c.update(zipBytes=1),lambda c:c['preparedFiles'].pop(next(iter(c['preparedFiles']))),lambda c:c['driverFiles'].update({'../escape':{'bytes':0,'sha256':'a'*64}})]:
+  for change in [lambda c:c.update(enabledByDefault=True),lambda c:c.update(driverRevision='f'*40),lambda c:c.update(driverRevision='e3b363eae9ff7aeb82fe581cf422d6472752d840'),lambda c:c['driverFiles'].pop('test/fixtures/i80386-protected-ram-first-failure-milestones.json'),lambda c:c.update(compiledRevision='e'*40),lambda c:c.update(addonSha256='d'*64),lambda c:c.update(nodeSha256='c'*64),lambda c:c.update(artifactId=1),lambda c:c.update(zipBytes=1),lambda c:c['preparedFiles'].pop(next(iter(c['preparedFiles']))),lambda c:c['driverFiles'].update({'../escape':{'bytes':0,'sha256':'a'*64}})]:
    c=self.ready();change(c)
    with self.assertRaises(ValueError):validate_contract(c)
  def test_https_redirect_origin_domains(self):
