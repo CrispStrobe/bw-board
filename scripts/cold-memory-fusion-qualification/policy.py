@@ -1,4 +1,4 @@
-"""Held terminal evidence checks, narrowed to one typed native arm. Never spawn a guest."""
+"""Held terminal evidence checks, narrowed to one fusion native arm. Never spawn a guest."""
 import hashlib
 import json
 import math
@@ -75,7 +75,7 @@ def validate_worker_receipt(r,arm,expected_input,b,capture):
     else:
         require(r['schema']=='bw.cold-native-memory-fusion-performance.worker.v1' and r['status']=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','native actual parity success');require(expected_input['mode']==('oneQ' if arm=='native-oneQ' else 'batched'),'closed native mode')
         n=r['finalNative'];require(words(n)==words(finalcut['native']),'entire raw terminal166 CPU');require(counter(n['nativeTicks'])==b['targetN'] and counter(n['successfulQuanta'])==b['targetQ'],'actual native N/Q independent')
-        # inspect() retains the thirteen common fields; only resume() returns
+        # inspect() retains the fifteen common fusion fields; only resume() returns
         # activityState and charged deltas. Keep the actual final resume proof
         # separate instead of synthesizing an activity field on inspect().
         validate_inspect_snapshot(n)

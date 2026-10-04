@@ -113,7 +113,7 @@ def main(mode):
   report['toolingBefore']=tooling();require(report['toolingBefore']['revision']==os.environ['GITHUB_SHA'],'dispatch tooling head');write(out/'host-before.json',host_context());b,data=setup(c,node,out,report);before=restored(c,node,out);write(out/'before-guest.json',before);inp=out/'input.json';write(inp,data);inputpin=fingerprint(inp)
   child=bounded_child([str(node),'--max-old-space-size=128',str(N/c['worker']['entry']),str(inp)],N,out/'guest',c['bounds']);report['child']=child
   require(child['exitCode']==0 and not child['timedOut'] and not child['interrupted'],'first child failure; no retry')
-  r=read_json(out/'guest/receipt/receipt.json');require(r['inputSha256Before']==r['inputSha256After']==inputpin['sha256'],'actual input proof');report['informationalExecutionSelfReport']=terminal(r,data,b,read_json(out/'capture.json'));report['status']='TYPED_BATCHED_TERMINAL_PARITY_PASS_REQUIRES_INDEPENDENT_AUDIT'
+  r=read_json(out/'guest/receipt/receipt.json');require(r['inputSha256Before']==r['inputSha256After']==inputpin['sha256'],'actual input proof');report['informationalExecutionSelfReport']=terminal(r,data,b,read_json(out/'capture.json'));report['status']='MEMORY_FUSION_BATCHED_TERMINAL_PARITY_PASS_REQUIRES_INDEPENDENT_AUDIT'
  except BaseException as e:primary=e;report['error']=repr(e);raise
  finally:
   try:
