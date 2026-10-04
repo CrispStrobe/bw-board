@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-memory-fusion.qualification-source.v1",
-  "status": "PENDING_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_MEMORY_FUSION_QUALIFICATION_READY",
   "guestEnabledByDefault": false,
   "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
   "compiledFiles": {
