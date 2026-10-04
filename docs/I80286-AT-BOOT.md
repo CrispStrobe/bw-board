@@ -1,4 +1,4 @@
-# Experimental IBM AT BIOS boot profile
+# Experimental AT boot profile
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
@@ -65,29 +65,16 @@ which drives status bit 4 independently of the `ADh`/`AEh` interface state.
 The second DMA controller currently supports BIOS register diagnostics only;
 16-bit transfers, address shifting, and cascade behavior remain unsupported.
 
-## External BIOS evidence
+## Firmware provenance and references
 
-The repository does not distribute the BIOS. The bounded runner accepts the
-external IBM 5170 Rev1 image dated 1984-01-10, exactly 65,536 bytes with
-SHA-256 `74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f`.
-The pinned PCjs source revision is
-`c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70`; its ROM metadata identifies IBM
-parts 6181028 and 6181029 and traces the dump to minuszerodegrees.net.
-
-Run the receipt with Node 22:
-
-```sh
-AT_BIOS_ROM=/path/to/ATBIOS-REV1.rom node scripts/run-at-bios-post.mjs
-```
-
-The default two-million-instruction bound proves the real reset-vector fetch,
-the BIOS checkpoint-30 path, an 8042 warm reset, and return through the CMOS
-shutdown dispatch while preserving board state. It records source hashes and
-the exact ROM hash. This is POST progression evidence, not a claim that POST,
-disk boot, secondary-DMA transfers, or 80286 timing qualification is complete.
-`AT_POST_MUTATION=dma-checkpoint` and
-`AT_POST_MUTATION=reset-preservation` are strict negative controls: each must
-produce a failing receipt by corrupting one acceptance fact after execution.
+The historical proprietary ROM input pins, POST commands, negative controls
+and diagnostic progression are retained in the
+[private firmware notes](https://github.com/CrispStrobe/brickwright-firmware-private/blob/master/docs/LEGACY-PC-FIRMWARE.md)
+and exact original archive. They are not free BIOS examples. The free-software
+acceptance below retains its recorded external-firmware dependency; it does
+not establish that a freely licensed replacement BIOS was tested on this 286
+profile. The separate 386 GUI recipe uses bundled LGPL firmware when omitted
+by the user; see [the loading guide](X86-LOADING-GUIDE.md).
 
 Primary hardware references are the *IBM Personal Computer AT Technical
 Reference* (1984), system-board memory map and system-control schematics, and
@@ -109,29 +96,19 @@ calendar reinitialization cannot be inferred. The model migrates valid
 version-1 non-SET checkpoints; it refuses
 version-1 checkpoints captured during an unrepresentable SET transaction.
 
-Historical source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)
-records execution at `d8ff0734e9283aa1ca5662bce70d6c8ad10da713`.
-Both [negative controls](receipts/2026-09-19-at-bios-post-negative.json) reject
-the same source when an acceptance fact is corrupted. The controller self-test
-returns 55h; command-byte bit 2 controls the status system flag.
-
-The earlier 512KiB [30M-step diagnostic](receipts/2026-09-19-at-post43-diagnostic.json)
-mounts the hash-recorded DOS floppy and reaches genuine POST37/38 (keyboard
-reset), then POST40/41/43 and INT19, without displayed POST errors. It does not
-prove boot-sector execution: later samples enter the BIOS unexpected-hardware-
-interrupt handler. That result is superseded by the explicit 640KiB run below:
-the owned IO.SYS fixes SYSINIT at segment 9F84h, beyond the 512KiB RAM map.
-Port 80h values alone are insufficient: DMA page-register tests also write
-those values, so genuine checkpoints must include their firmware CS:IP.
+The controller self-test returns 55h; command-byte bit 2 controls the status
+system flag. Earlier firmware POST observations and their exact instruction
+addresses remain private. The owned IO.SYS places SYSINIT at segment 9F84h,
+beyond the 512KiB RAM map, so the accepted disk boot uses the 640KiB profile.
 
 ## Accepted DOS disk boot and persistence
 
 The [source-bound write/reboot evidence](../test/fixtures/at-dos-persistence-evidence.json)
 records two fresh machines requalified at `439560e3dc02c9c11eb36afbe374859126e11e47`. The fixture retains the earlier c5 execution revision, step counts, media hash and raw-report hashes as historical provenance.
 All 15 recorded CPU, device and harness hashes match the integrated stage.
-The BIOS starts at physical FFFFF0h, completes POST and INT19, and loads the
-mounted floppy through the FDC and DMA channel 2 into 0000:7C00. The machine
-then executes the owned boot/IO.SYS glue and external Microsoft MS-DOS2.00
+The recorded external firmware dependency is described privately above. The
+receipt requires a real FDC/DMA boot-sector transfer into 0000:7C00. The machine
+then executes the owned boot/IO.SYS glue and MIT-released Microsoft MS-DOS2.00
 kernel with Command2.02. No firmware service is intercepted by the host.
 
 The write run injects date/time Enter keys followed by

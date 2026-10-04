@@ -52,8 +52,7 @@ adapter was still pending. The current GUI loading guide above supersedes that
 old implementation status; it does not retroactively turn these CLI receipts
 into browser acceptance.
 
-The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
-DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
+The functional 286 AT profile boots MIT-released DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
 fresh boot. Unchanged official FreeDOS 1.4 also completes guest write and
 fresh-remount read acceptance. BIOS and media bytes remain external. See
 [AT boot evidence](I80286-AT-BOOT.md) and the
@@ -70,12 +69,9 @@ source-bound at `72f56ab1a5a4606e17d821bed2bb1e3ac36a998e`; see the
 [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json). The unchanged test386 capture now reaches a named
 paging accessed-bit disagreement; it has not passed the complete ROM.
 
-An isolated snapshot-copy comparison reduced median host time for the same
-million-step BIOS workload by 5.19 times. All six runs matched the recorded
-architectural state, POST trace and interrupts. This is a single-host workload
-result, not silicon timing or full-boot acceptance. The
-[benchmark receipt](receipts/2026-09-19-386-snapshot-performance.json) records
-exact source hashes, reconstruction, trial timings and report hashes.
+The earlier firmware workload benchmark and exact firmware reproduction
+context are retained in the
+[private firmware notes](https://github.com/CrispStrobe/brickwright-firmware-private/blob/master/docs/LEGACY-PC-FIRMWARE.md).
 
 ## Earlier milestone: common ISA, gates, tasks and existing binaries
 
@@ -337,3 +333,13 @@ Local DOS tools currently live outside the repository in
 public fixtures should identify their exact upstream revision and bytes. Guest
 media and test results are separate artifacts; receipts must not silently
 substitute a different executable, host service, CPU model or execution mode.
+
+The public historical MASM/LINK/EXE2BIN results here use the specific 1982
+tools in Microsoft's [MIT-licensed release](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/LICENSE):
+[MASM 1.10](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/MASM.EXE),
+[LINK 2.00](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/LINK.EXE)
+and [EXE2BIN](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/EXE2BIN.EXE).
+Their local bytes were checked against that official revision on 2026-10-04;
+the [provenance receipt](receipts/2026-10-04-msdos2-toolchain-provenance.json)
+retains the exact hashes, matching the historical guest receipt. This release
+license does not cover unrelated later assembler/compiler releases.
