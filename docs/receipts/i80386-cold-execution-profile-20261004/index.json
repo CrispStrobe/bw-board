@@ -24,6 +24,12 @@
       "origin": "/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004/official-metadata.json",
       "bytes": 312,
       "sha256": "cc55c4707d4555f8e11c79233c8e37fc64840bfd8cdcf71b157cb707955bc748"
+    },
+    {
+      "path": "execution.cpuprofile",
+      "origin": "/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004/selected/cold-memory-fusion-execution-profile/guest/receipt/execution.cpuprofile",
+      "bytes": 51339,
+      "sha256": "c978f0721edfcc13ee9483283414be59379a0aeb82ece9f5ea3650a9444d45d0"
     }
   ]
 }

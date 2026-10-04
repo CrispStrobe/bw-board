@@ -4,7 +4,7 @@
 
 The audit checked all 68 official artifact members and 377 frozen Git role paths, reset/final/last-return 166-word state, N/Q 316562, terminal board and RAM hash, and 16,475 ordered PIO events. Whole RAM bytes were not retained. Artifact 11302433146 is 18,704,852 bytes, SHA-256 `4a82d0b9190480a929d514dca805805fdeaa062a45d5c4e8bb8bb5b4629125d3`. Root independently validated the full 16,475-event terminal tape using the held policy and an in-memory metadata correction (`root-offline-terminal-audit.json`, SHA-256 `a8ffe06abfc3ef264cee649f86b31ddb88ac2d078404e39ecea3ae5515a93de5`). The sole local packet is `/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004`; its governing `independent-audit.json` SHA-256 is `238960a167df142cf66ff5c5b2a32a63d96c5987bf06e63012c315f664c011db`.
 
-[Compact indexed evidence](receipts/i80386-cold-execution-profile-20261004/index.json) retains the governing audit, root terminal audit, raw leaf bins and official artifact metadata.
+[Compact indexed evidence](receipts/i80386-cold-execution-profile-20261004/index.json) retains the governing audit, root terminal audit, raw leaf bins, the exact 51,339-byte execution.cpuprofile and official artifact metadata.
 
 The main-isolate profile contains 145 nodes and 1,793 samples, with a 1,972,190 µs span and 1,971,273 µs of sample deltas. Six retained markers bracket Inspector start, the unchanged execution timer, and Inspector stop. V8 and process marker clock domains remain separate. No sampler error was retained.
 
