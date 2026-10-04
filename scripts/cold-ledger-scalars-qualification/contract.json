@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-ledger-scalars.qualification-source.v1",
-  "status": "PENDING_SCALAR_WORKER_READY_REVIEW",
+  "status": "ROOT_REVIEWED_LEDGER_SCALARS_QUALIFICATION_READY",
   "guestEnabledByDefault": false,
   "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
   "compiledFiles": {
