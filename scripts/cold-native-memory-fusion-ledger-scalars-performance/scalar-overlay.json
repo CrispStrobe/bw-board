@@ -1,0 +1,13 @@
+{
+  "schema": "bw.cold-native.memory-clock-fusion.ledger-scalars.worker-overlay.v1",
+  "status": "PENDING_ROOT_SOURCE_REVIEW",
+  "profile": "bw.cold-native.memory-clock-fusion.ledger-scalars.v1",
+  "heldWorkerRevision": "735740cb52550bb71edde5aba326da6f3a01f473",
+  "providerRevision": "d8a2e22a00d92a66fe2ffa3aae2865603c3bd063",
+  "files": {
+    "scripts/bochs-cpu3-native-cold-memory-fusion-ledger-scalars/provider.mjs": "516176771bd9d11a02746fd09eaf01cfa7702721b77996b5e63d38f5871f9d09",
+    "scripts/bochs-cpu3-native-cold-memory-fusion-ledger-scalars/factory.mjs": "bbc059772b3d372602c59e8e911a29ca4fc58381f1083f7909618a8fafcf009b",
+    "scripts/bochs-cpu3-native-cold-memory-fusion-ledger-scalars/derivation.json": "478aee882890e1388057b1d3efa3125cff335d7f32a31c89d588b786dbd3af2e",
+    "scripts/bochs-cpu3-native-cold-memory-fusion-ledger-scalars/README.md": "7742d47fb6702cc6b78d1aca7ae711c8f376878c61054ee8b7e6540dea31b47b"
+  }
+}
