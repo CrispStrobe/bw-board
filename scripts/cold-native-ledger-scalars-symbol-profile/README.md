@@ -87,3 +87,19 @@ the receipts. These source-only results do not resolve disabled-recorder MMAP
 tracking, live control readiness, sampling quality or native CPU attribution.
 
 [Retained READY source records](../../docs/receipts/i80386-ledger-scalars-native-symbol-ready-source-20261004/index.json)
+
+The separate tracker source correction explicitly requests `cpu-clock` and
+non-sampling `dummy:u`. While the worker is blocked before provider/addon, global
+enable activates tracking, then named `disable cpu-clock` is acknowledged before
+READY. Active controls name only `cpu-clock`, preserving dummy mapping sideband.
+Raw stderr must reject unknown selector or malformed-command errors even with
+an ACK. Post-load maps are retained before active enable. Raw pre-ready waiting
+samples may exist: only the conservative active ACK window is admissible. This
+source correction has not run; prior metadata/query outcomes remain separate.
+
+[Retained offline source finding and primary-source hashes](../../docs/receipts/i80386-ledger-scalars-native-symbol-tracker-source-20261004/index.json).
+The finding follows Linux v6.17
+[tracking setup](https://github.com/torvalds/linux/blob/v6.17/tools/perf/builtin-record.c),
+[control selection](https://github.com/torvalds/linux/blob/v6.17/tools/perf/util/evlist.c),
+and [sideband state filtering](https://github.com/torvalds/linux/blob/v6.17/kernel/events/core.c).
+Actual installed behavior remains unproved until the separately granted recording.

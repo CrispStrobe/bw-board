@@ -1,0 +1,17 @@
+{
+  "scope": "Offline primary source finding; no capability/recording execution",
+  "records": [
+    {
+      "path": "finding.md",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-source-freeze-20261004/perf-mmap-source/finding.md",
+      "bytes": 1550,
+      "sha256": "35c11d43299be35b7d4f36e705e070bce0bb1ae16ef4e303b9a3d94635441e2a"
+    },
+    {
+      "path": "source-index.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-source-freeze-20261004/perf-mmap-source/source-index.json",
+      "bytes": 1642,
+      "sha256": "7876f3c81c3bb2f21e2a6f3d4aecb369ca9956ce006802764e7cccf66d535b51"
+    }
+  ]
+}

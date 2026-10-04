@@ -38,7 +38,7 @@ test('stop failure permits attainable terminal proof before observer completion 
  const {session}=manufactured((r,m)=>{if(m.type==='disable')throw Error('stop failed');});await session.prepare();await session.enable();let proof=false;
  try{assert.equal(1,1);}finally{await session.stop();}proof=true;assert.equal(proof,true);assert.throws(()=>session.assertComplete());assert.equal(session.report().status,'FAIL');
 });
-test('six Python controller methods use manufactured dependencies; raw nested tape retained',()=>{
+test('seven Python controller methods use manufactured dependencies; raw nested tape retained',()=>{
  const result=spawnSync('python3',['-I','-B','-c',"import sys,unittest;sys.dont_write_bytecode=True;sys.path.insert(0,sys.argv[1]);import test_recorder;unittest.main(module=test_recorder,argv=['control'],exit=True)",fileURLToPath(own)],{encoding:'utf8',timeout:15000,maxBuffer:2<<20,env:{PATH:'/usr/bin:/bin',PYTHONDONTWRITEBYTECODE:'1',LC_ALL:'C'}});
- if(result.stdout)process.stdout.write(result.stdout);if(result.stderr)process.stderr.write(result.stderr);assert.equal(result.status,0);assert.match(result.stderr,/Ran 6 tests/);assert.match(result.stderr,/OK/);
+ if(result.stdout)process.stdout.write(result.stdout);if(result.stderr)process.stderr.write(result.stderr);assert.equal(result.status,0);assert.match(result.stderr,/Ran 7 tests/);assert.match(result.stderr,/OK/);
 });
