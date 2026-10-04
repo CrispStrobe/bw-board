@@ -8,6 +8,8 @@ Runs in browsers and Node.js as an ES-module package. The UI lives in
 [bw-circuit-ui](https://github.com/CrispStrobe/bw-circuit-ui); this repository
 owns shared engine behavior, component models and emulator/debugger integration.
 
+The [cold E16 typed-state paired result](docs/I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) keeps plain JS: typed batching was 4.063470× slower in execution CPU on the same host, with all seven measured pairs unfavorable. Terminal correctness passed; this is not a Windows/full-boot speed result.
+
 ## Install and use
 
 Use Node.js 20 or newer. Consumers install the package at an exact Git revision:

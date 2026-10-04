@@ -31,6 +31,8 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 ## Current checkpoint (2026-10-03)
 
+The [typed-state paired gate](I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) also keeps plain JS: same-host typed batching used 4.063470× execution CPU and 6.888317× execution wall, losing all seven measured pairs. All 18 children passed fixed terminal proofs. This did not compare old native arrays against typed exports; no adoption or Windows/physical-386 speed claim follows.
+
 The [completed cold E16 paired gates](I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: native batching passed against native one-Q, but used 4.116236× execution CPU against plain JS and lost all seven measured pairs. The separately hosted results do not establish default adoption, physical386 RTx or Windows/full-boot speed.
 
 The [native cold BIOS E16 diagnostic](I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) now passes the fixed checkpoint: 316,562 completions, 400 REP elements and 16,475 ordered PIO events, with independent audit evidence. This is a correctness diagnostic, not full boot, speed qualification or adoption.

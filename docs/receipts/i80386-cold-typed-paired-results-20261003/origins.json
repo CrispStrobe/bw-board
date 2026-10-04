@@ -1,0 +1,11 @@
+{
+  "run.json": "/tmp/native-cold-typed-state-paired-actual-20261003/run.json",
+  "independent-typed-paired-audit.json": "/tmp/native-cold-typed-state-paired-actual-20261003/independent-typed-paired-audit.json",
+  "actual-18-child-series.json": "/tmp/native-cold-typed-state-paired-actual-20261003/actual-18-child-series.json",
+  "official-metadata.json": "/tmp/native-cold-typed-state-paired-actual-20261003/official-metadata.json",
+  "coder-actual-audit.json": "/tmp/native-cold-typed-state-paired-actual-20261003/coder-actual-audit.json",
+  "coder-audit.py": "/tmp/native-cold-typed-state-paired-actual-20261003/coder-audit.py",
+  "members.json": "/tmp/native-cold-typed-state-paired-actual-20261003/members.json",
+  "host-before.json": "/tmp/native-cold-typed-state-paired-actual-20261003/official-artifact.zip!cold-typed-paired/pairs/host-before.json",
+  "host-after.json": "/tmp/native-cold-typed-state-paired-actual-20261003/official-artifact.zip!cold-typed-paired/pairs/host-after.json"
+}
