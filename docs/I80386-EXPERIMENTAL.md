@@ -581,8 +581,7 @@ unsupported combination can boot firmware.
 The earlier four-clock profile passed PIT POST but its finite RTC polling
 loop could end before the update-in-progress window. The current six-clock
 profile passes a firmware-shaped regression that rejects the old charge and
-observes both UIP assertion and clearing. The real BIOS then advances beyond
-its date/time error prompt. This changes functional scheduling only; earlier
+observes both UIP assertion and clearing. This changes functional scheduling only; earlier
 source-bound four-clock diagnostics and benchmark timings retain their scope.
 
 The AT adapter advances board time by a declared six machine clocks for each
@@ -594,14 +593,11 @@ the next device deadline rather than receiving this flat instruction charge.
 An interrupt that wakes HLT charges the handler instruction it actually
 executes. Fault delivery with no completed instruction receives no flat charge.
 
-`scripts/run-i80386-at-bios-diagnostic.mjs` executes an externally supplied,
-hash-pinned IBM 5170 Rev1 ROM through this adapter. It admits a clean exact HEAD
-and hashes every tracked JavaScript source plus the harness before execution,
-then rejects source or HEAD changes afterward. Its result is always diagnostic:
-budget exhaustion, architectural shutdown, an explicit unsupported opcode, and
-a surfaced architectural fault are separate outcomes. HLT is left to the
-machine scheduler so a pending device interrupt can wake it; HLT alone is never
-reported as success. The runner does not claim POST or operating-system boot.
+Proprietary firmware diagnostic inputs, runner recipes and observed POST
+progression are retained in the
+[private firmware notes](https://github.com/CrispStrobe/brickwright-firmware-private/blob/master/docs/LEGACY-PC-FIRMWARE.md).
+Budget exhaustion, architectural shutdown, an unsupported opcode and a surfaced
+architectural fault remain separate outcomes; HLT alone is not boot success.
 
 An optional `ataImage` plus explicit geometry attaches the bounded
 `ExperimentalATA16` task-file device at 1F0h–1F7h/3F6h. Its data FIFO is one
@@ -613,21 +609,15 @@ WD1003/ATA compatibility claim remain outside this stage.
 The interrupt-pending, `nIEN`, software-reset and PIO block boundaries follow
 ATA-3 revision 7b sections 4.2.10, 5.2.7 and 8.2; device 1 remains explicitly
 absent rather than aliasing the writable master image.
-`PCAT80386_EXPERIMENTAL_4M_HDD` advertises one IBM BIOS drive type 1 in CMOS
+`PCAT80386_EXPERIMENTAL_4M_HDD` advertises one AT drive type 1 in CMOS
 (306 cylinders, 4 heads, 17 sectors). The bounded controller also implements
 the recalibrate, verify, initialize-parameters, seek and diagnostic commands
-used by the 1984 IBM AT fixed-disk BIOS. The source-bound
-[roundtrip receipt](receipts/2026-09-20-386-at-hdd-roundtrip.json) now records
-an accepted real-firmware sector round trip on combined source `72f56ab`.
-`scripts/run-i80386-at-hdd-roundtrip.mjs` supplies a deterministic owned FAT16
-superfloppy with the same type-1 geometry. Its boot sector asks the real IBM
-INT 13h path to write and reread the final physical sector, which lies outside
-the declared FAT volume, and emits a success marker only after comparing the
-returned bytes. The runner requires native 16-bit 1F0h accesses and records
-every BIOS/guest task-file command. Both worker and coordinator runs pass at
-70,579,183 steps: all 512 write bytes initialized, the read buffer poisoned,
-and all 512 returned bytes compared in guest code. This is an owned boot-program
-witness, not an HDD operating-system boot.
+used by the AT fixed-disk interface. The owned FAT16 superfloppy fixture tests
+a sector round trip outside its declared FAT volume: initialize all 512 write
+bytes, poison the read buffer, compare all returned bytes in guest code, and
+require native 16-bit 1F0h accesses. Its historical external-firmware execution
+and source-bound receipt are described privately above. This is an owned
+boot-program witness, not an HDD operating-system boot.
 
 The 386 also boots DOS2 through genuine reset, POST and INT19, writes
 `ATBOOT.TXT` through the shell, and reads its exact `at-boot-ok` plus CRLF bytes
@@ -643,9 +633,9 @@ revision `a6de5455456efa05d7fb6a8017067607201140e7`: 91 focused tests, 266
 admitted hardware samples, four owned PCjs comparisons and eight rejecting
 mutation controls. Exception and LOCK-prefix exclusions remain explicit.
 The unchanged diagnostic ROM reaches LLDT at CS00D0:EIP2AAC after 802,807
-instructions; `accepted` and `fullRomPass` remain false. The separate external
-IBM Rev1 BIOS probe now reaches SMSW at F000:060D after 1,100,307 instructions.
-Neither diagnostic is an accepted 386 OS boot. Fresh DOS2 RTC-dependent write/reboot receipts pass at `439560e`; hosted
+instructions; `accepted` and `fullRomPass` remain false. External firmware
+diagnostics are retained privately and do not establish an accepted OS boot.
+Fresh MIT DOS2 RTC-dependent write/reboot receipts pass at `439560e`; hosted
 qualification passed at candidate `3fa9afa`: CI `35472633235`, CPU
 `35472633257`, and native `35472633215`.
 
@@ -659,9 +649,9 @@ external parser cases). Candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` pas
 (5,527 pass, 272 skip),
 [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35473644021)
 and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35473644044).
-The exact external test386 reaches POST20 and refuses outer IRET. The genuine
-386 AT BIOS reaches POST2A, then enters its CLI/HLT error path at F000:0C93;
-the diagnostic budget result does not establish successful POST or boot.
+The exact external test386 reaches POST20 and refuses outer IRET. Firmware
+progression and failure addresses are retained privately; a diagnostic budget
+result does not establish successful POST or boot.
 Later privilege transitions and platform work require separate receipts.
 
 ## Ring, far-control and I/O continuation receipt

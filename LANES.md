@@ -1495,12 +1495,9 @@ unchanged registers from the published final-state delta. All 596 selected
 386EX cases pass; unchanged EAX and CR0.TS mutations are now rejected. All published CLTS inputs have TS already clear; the clearing transition is
 covered by directed tests only. ATA exposes a scheduled 256-functional-clock
 inter-sector BSY phase, independent of status polling, and rearms its device
-deadline after I/O. Coordinator fca2badd genuinely boots IBM BIOS/DOS2,
+deadline after I/O. Coordinator fca2badd boots MIT-released DOS2,
 writes and freshly reboots/reads the same12-byte file, and separately completes
-an owned two-sector INT13 write/read with distinct data and a poisoned buffer. Focused surface:286 pass,2 optional skips. broader game now enters its correctly
-relocated real-mode stub and reaches the unsupported8042 FF command; full MZ
-comparison retains18 differences, with the recorded subset near the startup
-stack; this is not zero-difference acceptance. No protected extender, game, broader guest, NPX or hardware timing acceptance. Receipt: `docs/receipts/2026-09-20-386-compiler-ata-multisector.json`. Exact `6cf8e4042a66ed7f4cf2372f5acab166b79bcd03` passed CI `35481716140`,
+an owned two-sector INT13 write/read with distinct data and a poisoned buffer. Focused surface:286 pass,2 optional skips. Licensed-application progression and comparison details are retained privately. No protected extender, game, broader guest, NPX or hardware timing acceptance. Receipt: `docs/receipts/2026-09-20-386-compiler-ata-multisector.json`. Exact `6cf8e4042a66ed7f4cf2372f5acab166b79bcd03` passed CI `35481716140`,
 CPU `35481716139`, native `35481716137`, then fast-forwarded master. Tag: `milestones/x86-386-compiler-ata-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
@@ -1559,7 +1556,7 @@ advanced master from `62160e7` to the exact qualified candidate. Tag:
 2026-09-19 DONE (qualified and landed) — Astra/Sol
 FreeDOS persistence and bounded 386 AT platform. Candidate and landing are
 `d128b384a9f9df986ae38db72bc7dae33a6b092e`; platform diagnostic source is `46f1d04`. Unchanged official
-FreeDOS 1.4 boots through IBM AT BIOS, declines installation, writes FDBOOT.TXT,
+FreeDOS 1.4 declines installation, writes FDBOOT.TXT,
 and reads its exact bytes after a fresh machine remount. The two actual source
 revisions and media hashes are retained in the tracked evidence fixture. The 386 adapter adds explicit functional four-clock instruction pacing and an
 opt-in 4MiB installed-RAM profile with matching CMOS sizes/checksum. Pacing tests
@@ -1635,7 +1632,7 @@ record and its documentation status to that exact candidate.
 
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol functional
 AT DOS disk boot and 386 paging/reset/ISA stage; candidate is the commit carrying
-this row. Two source-bound genuine-reset IBM Rev1 boots execute DOS 2.00 and
+this row. Two source-bound machine boots execute MIT-released DOS 2.00 and
 Command 2.02: keyboard ECHO/TYPE writes 12 exact bytes, fresh-remount TYPE reads
 them without recreating the file, both end at A>. Exact DMA boot transfer,
 input/output SHA linkage, all 15 CPU/device/harness source hashes, and rejecting
@@ -1670,9 +1667,8 @@ pass; the documented PCjs #GP RF omission is explicitly ungraded and Intel-teste
 cases are excluded by the three sample profiles, not counted as passes. Adds
 strict parser, stray-write comparison, rejecting frame/IF/RAM/write mutations,
 and hosted evidence jobs. AT keyboard scheduling, keylock state and host-command
-enable fixes let the unchanged external IBM Rev1 BIOS complete keyboard checks
-and reach POST43/INT19 without displayed POST errors. The 30M-step diagnostic
-later enters an unexpected-interrupt handler; full disk boot remains unproven. Fresh real DOS MASM/LINK/EXE2BIN guest succeeds on the separate BIOS-service
+enable fixes correct the keyboard protocol. Exact proprietary firmware
+progression and diagnostic reproduction are retained in the private archive. The MIT-released DOS2 MASM/LINK/EXE2BIN guest succeeds on the separate BIOS-service
 machine. Combined focused CPU/AT/DOS: 35/35; device/checkpoint: 55/55. Receipts
 bind actual inputs and source hashes. Full hosted CI, 286 fast/Harris corpora,
 native contracts and new bounded 386 jobs gate landing. Continuation claim above
@@ -1690,9 +1686,8 @@ LabWired benchmark changes; qualified x86, workflow and test blobs are unchanged
 exact candidate is the commit carrying this row. The active continuation claim
 above remains for firmware disk boot, 386 and versioned application acceptance. Adds opt-in hardware reset and AT boot profile, warm CPU reset preserving board
 state, timed 8042 responses, primary/secondary DMA register diagnostics, refresh
-status and seeded CMOS. Unmodified external IBM AT Rev1 reaches its protected
-memory test from physical FFFFF0; this is diagnostic progression, not full POST
-or DOS boot. Adds 286 contributory-fault escalation, #DF task entry, shutdown/
+status and seeded CMOS. Exact proprietary firmware diagnostic progression
+is retained in the private archive. Adds 286 contributory-fault escalation, #DF task entry, shutdown/
 NMI/reset recovery, TF/SS/STI boundaries and inactive-NPX exception handling. Root audit corrected reset-cache identity and fault/trap transition defects. Focused combined CPU/AT/DOS regression: 159/159; six owned PCjs comparisons pass,
 seven external images have zero unexpected differences under the published
 known-reference-difference contract. Current-source BIOS and DOS receipts and

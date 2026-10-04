@@ -5,30 +5,54 @@ External licensed-guest notes and historical context are retained in the [privat
 2026-09-19. Astra coordinates, audits and lands; up to two Sol agents implement
 in separate worktrees. FPGA and SPICE/ASC schematic import/export belong to other lanes.
 
-## Active continuation: AT boot through applications
+## Current checkpoint (2026-10-04)
 
-Two Sol workers now own AT platform integration and the new
-386 core; Astra audits, integrates and maintains source-bound evidence.
+Use [the loading guide](X86-LOADING-GUIDE.md) for the distinct direct-program,
+functional AT, wired Harris and fixed native diagnostic paths. Lite now exposes
+local FreeDOS floppy/HDD and DOSBox HDD forms, VGA widgets and Controller
+fullscreen controls. That GUI source audit is separate from a new guest run.
+ZIP/package extraction, ISO/CD-ROM loading and CLI disk writeback/export remain
+unfinished. The language/device matrix still needs explicit 286/386 coverage;
+its native-language notation does not identify a CPU backend.
 
-The latest qualified implementation is `74c47bbe250bb96c7a65f17539c2bbae935025ad`,
-tag `milestones/x86-windows-persistence-doom-demo-20260920`, merged to master. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35490696573),
+The native 386 lane has bounded protected-stack and nonidentity-paging parity
+results; see [protected stack](I80386-PROTECTED-STACK-RESULTS.md) and
+[nonidentity paging](I80386-NONIDENTITY-PAGING-RESULTS.md). The paged INT/IRET
+fixture has passed its actual 41-step JS reference capture. Its native source
+and host-predicate controls are separate work, and native guest execution is
+not yet qualified. Page-fault recovery/retry is the next correctness fixture.
+These small owned programs do not qualify the addon as a general OS loader.
+
+The latest [paired scalar benchmark](I80386-COLD-PAIRED-RESULTS.md)
+retained the JS baseline: on a GitHub-hosted AMD EPYC 7763 runner, the native
+candidate used 5.25 times the execution CPU time and 8.94 times the execution
+wall time. Configured virtual time divided by mean wall time was 1.594 RTx
+for JS and 0.178 RTx for native. Those are fixed-workload measurements, not
+physical 16 MHz 386DX calibration or VPS/Kaggle comparisons. Native-symbol
+profiling is being prepared to explain the cost before another optimization;
+the tenfold target remains unfinished.
+
+The earlier milestone sections below preserve their original source-bound
+results. Their “next” statements describe those historical checkpoints.
+Licensed guest reproduction notes and their original Markdown remain in the
+private archive linked above.
+
+## Historical AT boot through applications (2026-09-20)
+
+The historical qualified implementation was `74c47bbe250bb96c7a65f17539c2bbae935025ad`,
+merged to master. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35490696573),
 [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35490696554)
 and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35490696525)
 passed. The
 [application receipt](receipts/2026-09-20-x86-application-persistence.json)
 records exact source/input hashes and the retained failed diagnostics. These are bounded experimental milestones.
 
-The experimental application path is presently CLI-driven. broader guest and broader game
-frames can be rendered to PPM/PNG from their JSON reports, but the browser
-application has not yet been wired to instantiate this 386 AT profile or draw
-its VGA surface interactively. The next sensible GUI increment is a thin
-browser adapter that accepts externally supplied ROM/media bytes, exposes an
-explicit experimental-profile switch, and reuses the strict frame decoder;
-it must remain separate from the production machine defaults and from hosted
-application acceptance.
+At this checkpoint, application acceptance was CLI-driven and a browser AT
+adapter was still pending. The current GUI loading guide above supersedes that
+old implementation status; it does not retroactively turn these CLI receipts
+into browser acceptance.
 
-The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
-DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
+The functional 286 AT profile boots MIT-released DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
 fresh boot. Unchanged official FreeDOS 1.4 also completes guest write and
 fresh-remount read acceptance. BIOS and media bytes remain external. See
 [AT boot evidence](I80286-AT-BOOT.md) and the
@@ -45,12 +69,9 @@ source-bound at `72f56ab1a5a4606e17d821bed2bb1e3ac36a998e`; see the
 [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json). The unchanged test386 capture now reaches a named
 paging accessed-bit disagreement; it has not passed the complete ROM.
 
-An isolated snapshot-copy comparison reduced median host time for the same
-million-step BIOS workload by 5.19 times. All six runs matched the recorded
-architectural state, POST trace and interrupts. This is a single-host workload
-result, not silicon timing or full-boot acceptance. The
-[benchmark receipt](receipts/2026-09-19-386-snapshot-performance.json) records
-exact source hashes, reconstruction, trial timings and report hashes.
+The earlier firmware workload benchmark and exact firmware reproduction
+context are retained in the
+[private firmware notes](https://github.com/CrispStrobe/brickwright-firmware-private/blob/master/docs/LEGACY-PC-FIRMWARE.md).
 
 ## Earlier milestone: common ISA, gates, tasks and existing binaries
 
@@ -312,3 +333,13 @@ Local DOS tools currently live outside the repository in
 public fixtures should identify their exact upstream revision and bytes. Guest
 media and test results are separate artifacts; receipts must not silently
 substitute a different executable, host service, CPU model or execution mode.
+
+The public historical MASM/LINK/EXE2BIN results here use the specific 1982
+tools in Microsoft's [MIT-licensed release](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/LICENSE):
+[MASM 1.10](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/MASM.EXE),
+[LINK 2.00](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/LINK.EXE)
+and [EXE2BIN](https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/EXE2BIN.EXE).
+Their local bytes were checked against that official revision on 2026-10-04;
+the [provenance receipt](receipts/2026-10-04-msdos2-toolchain-provenance.json)
+retains the exact hashes, matching the historical guest receipt. This release
+license does not cover unrelated later assembler/compiler releases.
