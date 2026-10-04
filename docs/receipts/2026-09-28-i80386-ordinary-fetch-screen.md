@@ -1,7 +1,8 @@
 # Ordinary 80386 fetch-page cursor pre-coding screen
 
-This is an opportunity screen, not a speed result. It uses ordinary one-step
-execution of Windows 3.11 for exactly 60,000,000 guest steps. Board base is
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+This is an opportunity screen, not a speed result. Board base is
 `aafffc245c4c2cc286bb8a226ca5a8efa0962bc2`; no native blocks or code16
 WASM were enabled. The media-free observer and reducer are
 `scripts/observe-i80386-fetch-cursor.mjs`,
@@ -9,15 +10,9 @@ WASM were enabled. The media-free observer and reducer are
 `scripts/summarize-i80386-ordinary-fetch-profile.mjs`. Their SHA-256 values
 at measurement were respectively `77c2d478e2037be9a3d250a81d07677b9a62495d860c11aff7f2b7aeef77202f`,
 `09118eb72ad18a2f358a1c12820a18ab0a125e155d1980a43c8322f34c92bb28`,
-and `749efad06df10e6ba0517412360f8eb52c297f931ea53d78c90377ab652773b9`.
-The private predeclaration is `windows/2026-09-28/windows311-ordinary-fetch-screen-plan.md`
+and `749efad06df10e6ba0517412360f8eb52c297f931ea53d78c90377ab652773b9`. The private predeclaration is `windows/2026-09-28/windows311-ordinary-fetch-screen-plan.md`
 at private commit `be24422787d00b8a25a461ef80eec188d78972be`.
 
-Pinned input SHA-256 values: AT BIOS
-`6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac`,
-VGA BIOS `76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1`,
-Windows HDD `a6d869d0e1352143a60b917d1e3ba7720fe48c7931a088ed82f4302a6b76e9d9`,
-DOSBox CHS config `7d976cdb4aa8f74dc072a575d1e4bf1ec76ec3858a7ca9018d11e1edfda750d8`.
 Node was v20.20.2 on a 4-vCPU KVM Skylake VPS. Host load at start was
 5.68/6.62/7.31. The V8 profile used `--cpu-prof-interval=5000`; its raw
 profile SHA-256 is `a70bc7ce7feff8edcdc53f53332549d8b5ee554528a81ce483209df8e265d179`.
@@ -76,7 +71,4 @@ reports, timing and pinned media provenance are under
 The next experiment may cache only a physical page base, never instruction
 bytes, behind an explicit opt-in. It must preserve each board fetch, segment
 and instruction-length checks, page-walk A/D and fault behavior, permission
-changes, A20, page-table/DMA/host writes, and chip/IRQ boundaries. The
-predeclared retention test is full Windows 60M plus lean xv6 guest/RAM parity
-and three serial AB/BA/AB Windows user-CPU pairs with at least 10% mean gain
-and every pair favorable. Passing this screen does not imply that gate will pass.
+changes, A20, page-table/DMA/host writes, and chip/IRQ boundaries. Passing this screen does not imply that gate will pass.

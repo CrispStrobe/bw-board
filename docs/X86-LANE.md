@@ -1,34 +1,24 @@
 # x86 emulation lane
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 2026-09-19. Astra coordinates, audits and lands; up to two Sol agents implement
-in separate worktrees. The user assigned 8086/8088 through 80286, eventual
-80386DX, protected mode, performance and real software including Doom and
-Windows. FPGA and SPICE/ASC schematic import/export belong to other lanes.
+in separate worktrees. FPGA and SPICE/ASC schematic import/export belong to other lanes.
 
 ## Active continuation: AT boot through applications
 
-The user authorized continued implementation toward genuine AT boot, 386DX,
-Windows and Doom. The [acceptance roadmap](X86-COMPATIBILITY-ROADMAP.md) fixes
-observable milestones and distinguishes the first Windows target from broader
-compatibility. Two Sol workers now own AT platform integration and the new
+Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
 The latest qualified implementation is `74c47bbe250bb96c7a65f17539c2bbae935025ad`,
-tag `milestones/x86-windows-persistence-doom-demo-20260920`, merged to master.
-Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35490696573),
+tag `milestones/x86-windows-persistence-doom-demo-20260920`, merged to master. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35490696573),
 [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35490696554)
 and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35490696525)
-passed. Windows 3.0 boots to Program Manager, launches File Manager and Notepad,
-saves an owned text file and opens it after fresh reset/remount. Original Doom
-1.9 reaches E1M1 with keyboard-driven movement/firing, and loads/renders an
-owned 24-tic demo, completes it and returns to DOS. The
+passed. The
 [application receipt](receipts/2026-09-20-x86-application-persistence.json)
-records exact source/input hashes and the retained failed diagnostics.
-These are bounded experimental milestones. Windows enhanced mode, Doom
-save/load/sound/all levels and complete physical 386 equivalence remain
-separate targets; the current Windows input has no WIN386.EXE.
+records exact source/input hashes and the retained failed diagnostics. These are bounded experimental milestones.
 
-The experimental application path is presently CLI-driven. Windows and Doom
+The experimental application path is presently CLI-driven. broader guest and broader game
 frames can be rendered to PPM/PNG from their JSON reports, but the browser
 application has not yet been wired to instantiate this 386 AT profile or draw
 its VGA surface interactively. The next sensible GUI increment is a thin
@@ -54,7 +44,6 @@ writes and verifies all 512 bytes of a sector through BIOS INT13. These are
 source-bound at `72f56ab1a5a4606e17d821bed2bb1e3ac36a998e`; see the
 [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json). The unchanged test386 capture now reaches a named
 paging accessed-bit disagreement; it has not passed the complete ROM.
-Windows and Doom remain unexecuted acceptance targets.
 
 An isolated snapshot-copy comparison reduced median host time for the same
 million-step BIOS workload by 5.19 times. All six runs matched the recorded
@@ -110,9 +99,7 @@ No new wired speed result or production fast-core change is claimed.
 
 Next separate acceptance work is complete exception/trap/double-fault recovery,
 NPX boundaries and broader protected OS software, plus AT BIOS/reset/disk/DMA
-integration. The 386DX register/address/operand and paging model is still a
-separate implementation, followed by versioned Windows and Doom application
-runs. None of those results follows automatically from these eight programs.
+integration. None of those results follows automatically from these eight programs.
 
 The sections below retain the milestone history; their “next” paragraphs refer
 to the state at each earlier increment.
@@ -160,7 +147,7 @@ candidate and harness revisions remain available after integration.
 Qualification now includes hash-pinned real DOS toolchain execution and the
 protected PCjs bootstrap, alongside the full real-mode 286 corpora and native
 contracts. These are separate acceptance results, not a full protected-mode or
-Windows/Doom compatibility claim. The next CPU milestone is broader protected
+broader guest/broader game compatibility claim. The next CPU milestone is broader protected
 instruction/address coverage followed by remaining exception and privilege machinery;
 the next machine milestone is PC/AT memory and A20 behavior.
 
@@ -237,8 +224,8 @@ machinery against independent architectural cases. The machine needs a
 complete AT keyboard/reset path, cascaded interrupt controllers and RTC
 before a PC/AT compatibility claim. Retain small owned reproducers for each
 new capability, and introduce existing protected-mode binaries once their
-required instruction and machine contracts are covered. 386DX, Windows and
-Doom remain later acceptance targets, not results of this increment.
+required instruction and machine contracts are covered. 386DX, broader guest and
+broader game remain later acceptance targets, not results of this increment.
 
 ## Restart, privilege and AT device increment (2026-09-19)
 
@@ -278,10 +265,8 @@ revision. The independently evolving lanes remain on their own scopes.
 
 Next acceptance targets are the remaining common protected instructions
 (including multiply/divide and far procedure transfers), call gates and task
-switching with fault tests, then a reproducible existing protected-mode binary.
-The AT side still needs keyboard protocol/reset and BIOS/disk/DMA integration.
-Choose and inventory an exact existing binary before broadening its required
-contracts. 386DX, Windows and Doom remain later milestones; this increment does
+switching with fault tests, then a reproducible existing protected-mode binary. The AT side still needs keyboard protocol/reset and BIOS/disk/DMA integration. Choose and inventory an exact existing binary before broadening its required
+contracts. 386DX, broader guest and broader game remain later milestones; this increment does
 not establish compatibility with them.
 
 ## Milestones and acceptance
@@ -290,22 +275,14 @@ not establish compatibility with them.
 | --- | --- | --- |
 | Real 286 DOS software | Boot the pinned DOS kernel/shell, create a file, reboot, read and overwrite it; execute the supplied assembler/linker tools and run their output | BIOS-assisted functional machine versus wired peripheral execution |
 | 286 protected execution | Owned guest enters through LGDT/LMSW/far transfer; uses independently cached code/data/stack descriptors and high physical memory; explicit negative permission/limit cases | Ring transitions, gates, tasks and full exception delivery until individually implemented |
-| Complete 286 protection | Privilege checks, LDT/TSS, gates, interrupt/exception delivery and restart, task switching; independent architectural comparisons and regression guests | PC/AT devices and actual Windows compatibility |
 | PC/AT machine | Configurable extended RAM, A20/reset behavior, interrupt controllers, RTC/keyboard/disk/video integration; guest-visible checks | Device timing versus functional state |
 | 386DX architecture | 32-bit registers/operands/addresses, prefixes, expanded descriptors and control registers, paging and virtual-8086 mode; explicit exception tests | No automatic compatibility claim from an ISA label |
-| Applications | Versioned executable/media manifests; startup, interaction, persistence and repeatable output for each Windows release or game | A splash screen alone is not acceptance |
-| Doom | Run the chosen DOS executable and extender in the emulated machine; reach gameplay and complete a repeatable demo with framebuffer/output checks | Recompiling a host-native port does not prove DOS/386 emulation |
+| Applications | Versioned executable/media manifests; startup, interaction, persistence and repeatable output for each broader guest release or game | A splash screen alone is not acceptance |
+| broader game | Run the chosen DOS executable and extender in the emulated machine; reach gameplay and complete a repeatable demo with framebuffer/output checks | Recompiling a host-native port does not prove DOS/386 emulation |
 
-Windows is a family of targets: record the exact release and execution mode
-before making a compatibility claim. Start with small owned protected guests,
+Start with small owned protected guests,
 then increasingly demanding existing binaries. Keep first failures and their
 minimal reproductions rather than weakening the acceptance criterion.
-
-The [Intel 80286 programmer's reference](https://bitsavers.org/components/intel/80286/210498-005_80286_and_80287_Programmers_Reference_Manual_1987.pdf)
-is the architectural basis for the protection work; independent emulator
-comparisons complement it. [id Software's source-release README](https://github.com/id-Software/DOOM/blob/master/README.TXT)
-describes a Linux source release, so building that release alone cannot stand
-in for the DOS executable milestone.
 
 ## Performance work
 

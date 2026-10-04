@@ -1,10 +1,10 @@
 # Code16 after first-byte admission: next measurement gate
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This plan is pinned to board revision
 `aafffc245c4c2cc286bb8a226ca5a8efa0962bc2`, which merged the
-[retained first-byte admission change](I80386-CODE16-WINDOW-ADMISSION.md).
-Its measured two-pair opt-in mean was 259.56 seconds of user CPU for the
-private 60-million-step Windows 3.11 input. That remains much slower than
+[retained first-byte admission change](I80386-CODE16-WINDOW-ADMISSION.md). That remains much slower than
 the earlier ordinary 78.52-second checkpoint. The next question is whether
 a **broader event-aware code16 executor** has enough reachable work to
 justify implementation after the first-byte copy cost was removed.
@@ -142,21 +142,16 @@ physical page-table and code writes, and host code mutation. These are
 observer correctness checks, not proof that a future executor may safely
 implement the same grammar.
 
-The single pinned 60M Windows 3.11 census finished at source
-`e1fd5c60a30e8c5a8dcc3d13ddc96a49fa45ad95`; its
-[media-neutral receipt](receipts/2026-09-28-i80386-code16-event-run-observer.json)
-retains every mode's full run-length histogram and refusal counts. The four
+The four
 vCPU KVM Intel Xeon Skylake host used Node 20.20.2. Wall/user/system CPU
 seconds were 497.76/497.82/3.32. These are observer overhead, not an
 executor speed measurement. The input pins and all selected reported guest
 fields match both the retained opt-in 60M report and an older ordinary 60M
 report. The ordinary CPU, AT board, and base board source blobs match the
-retained opt-in report; opt-in executor modules and the runner differ.
-An exhaustive normalized JSON diff against that opt-in report has only
+retained opt-in report; opt-in executor modules and the runner differ. An exhaustive normalized JSON diff against that opt-in report has only
 14 expected provenance, observer, input-option, and opt-in diagnostic field
 paths, with zero other differences. The reducer records those paths without
-publishing their guest values.
-Neither report includes full RAM, disk state, or hidden CPU state.
+publishing their guest values. Neither report includes full RAM, disk state, or hidden CPU state.
 
 The run made 60,000,000 ordinary step calls. Exactly 59,971,215 retired an
 instruction; 28,785 no-retirement calls are outside the completed-step
@@ -229,9 +224,7 @@ joined one neighboring run, at least **95.2%** would have to be perfect
 bridges to meet mean four; any isolated additions, unsafe mappings, or
 event cuts tighten that requirement. The current opt-in `first26` census
 cannot fill the gap because it omits ES forms already handled by its WASM
-slice. Thus the retained full-run form census is a better decision screen
-than a new first-5M-step prefix sample: an early boot sample would miss the
-later Windows mode mix and cannot certify a 60M disjoint-run gate. The
+slice. The
 defensible decision is to defer the ES-only observer extension. If a future
 broader grammar merits another measurement, use a source-bound full-run
 shadow census in a free VPS window; a 5M run can validate instrumentation

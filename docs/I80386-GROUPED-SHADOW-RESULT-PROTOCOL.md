@@ -1,11 +1,11 @@
 # Compact publication protocol for grouped-shadow admission
 
-The [grouped-shadow observer](I80386-GROUPED-SHADOW-ADMISSION.md) measures
-disjoint eligible retired ordinals in completed ordinary Windows execution.
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 Its opt-in observed arm is paired with an observer-off baseline at one pinned
 board revision and identical media/input pins. The source-bound paired reducer
 must pass before any result is published. This file defines a compact public
-view; it does not contain a Windows result or start a guest run.
+view; it does not contain a broader guest result or start a guest run.
 
 First produce the full private source-bound candidate with
 `scripts/summarize-i80386-grouped-shadow-admission.mjs`. Then run the

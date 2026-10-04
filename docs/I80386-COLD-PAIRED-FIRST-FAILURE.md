@@ -1,5 +1,7 @@
 # First cold-BIOS paired-parent failure
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The first native one-Q versus batched paired attempt stopped after one native one-Q warmup child passed terminal parity. The parent then failed while constructing a progress-file path. Native batched never started, no complete warmup pair finished and zero measured pairs ran. This is a parent bookkeeping failure; it supplies no paired speed result and does not change the independently audited [three-arm semantic qualification](I80386-COLD-THREE-ARM-RESULTS.md).
 
 The separately authorized [manual run 37127759276](https://github.com/CrispStrobe/bw-board/actions/runs/37127759276), attempt 1, used frozen parent `16de8898d45adf8ccf2a1a89285fe787199c76c1` and the `native-oneQ-v-batched` comparison. Its two-warmup-pair/seven-alternating-measured-pair protocol stopped on the first parent exception. No retry, second comparison, altered limits or rebuilt addon followed.
@@ -14,4 +16,4 @@ The worker remains `b01c922c2d634aba9367f6e2a70d109370e4adee` (56 source inputs)
 
 [The compact byte-exact records and origins](receipts/i80386-cold-paired-first-failure-20261003/index.json) preserve the raw partial result, child receipt, exit, streams, source authentication, host context and independent audit. The official artifact `11275214854` is 38,512,612 bytes, SHA-256 `12ae584a54d7ce2db79ae7108d87d1792b4cb3a8eaf768fe810579c2ca41d589`. Its single external ZIP remains `/tmp/native-cold-paired-first-native-comparison-publication-20261003/official-artifact.zip`, bound to its [official download](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11275214854/zip). No ZIP is committed or downloaded again.
 
-A source correction and regression controls are preparation for a separately reviewed future run; they cannot repair or complete this failed run. There is no paired speed verdict, physical 386 RTx calibration, full AT boot, Windows/Doom 10× result or adoption. Six configured board clocks per Q remain functional accounting.
+A source correction and regression controls are preparation for a separately reviewed future run; they cannot repair or complete this failed run. There is no paired speed verdict, physical 386 RTx calibration, full AT boot, broader guest/broader game 10× result or adoption. Six configured board clocks per Q remain functional accounting.

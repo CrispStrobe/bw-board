@@ -1,5 +1,7 @@
 # Experimental 386 AT command-line console
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `scripts/run-i80386-at-console.mjs` runs the opt-in 386 AT with externally
 supplied BIOS, VGA ROM, and hard-disk bytes. It reports serial output, the
 current 25-row VGA text RAM, CPU state, and hashes of all four VGA planes. An
@@ -31,16 +33,11 @@ executor for BIOS, I/O, unsupported instructions, interrupts, and other
 boundaries. Scripted keyboard, serial, and mouse events are still delivered
 at their specified guest step; live input is checked at its usual 1024-step
 boundary. The report records `inputs.nativeBlocks` and hashes the native
-implementation sources. This option requires WebAssembly support in Node.
-The dispatcher now bypasses native admission entirely for 16-bit code. A
-private Windows 3.11 diagnostic reached paged protected mode and matched the
-ordinary executor at a 60-million-step checkpoint, but native blocks covered
-only a small fraction of that mixed 16/32-bit run and the opt-in path remained
-slower overall. Keep ordinary execution as the default for Windows workloads.
-The bounded native path can now execute primed `REP MOVSD` in validated RAM.
-Its source and destination page checks preserve the ordinary executor at a
-page or event boundary. This improved coverage in a local Windows diagnostic,
+implementation sources. This option requires WebAssembly support in Node. The dispatcher now bypasses native admission entirely for 16-bit code. The bounded native path can now execute primed `REP MOVSD` in validated RAM. Its source and destination page checks preserve the ordinary executor at a
+page or event boundary. This improved coverage in a local broader guest diagnostic,
 but did not reverse that workload's overall performance result.
+
+Add `--native-blocks` (or `AT_NATIVE_BLOCKS=1`) to opt into the shared-RAM WebAssembly dispatcher. It admits a subset of validated protected32 RAM instructions and uses functional execution at BIOS, I/O, unsupported instructions and event/debug boundaries. Full snapshots and input schedules keep their existing contracts. This is separate from the Bochs native addon, whose loaders remain fixed diagnostic fixtures. Ordinary JavaScript stays the default.
 
 The optional events file is an ordered JSON array. Same-step events retain
 array order. Keyboard `code` is a Set-1 scan byte, serial `code` is one byte,
@@ -68,19 +65,20 @@ existing BIOS profiles and checkpoint shape retain the absent-mouse behavior.
 
 The event receipt records whether the device accepted each event. Its source
 and external media hashes make the run reproducible. This is an input/control
-path, not a Windows 3.1 enhanced-mode acceptance claim.
+path, not a broader guest enhanced-mode acceptance claim.
 
 ## Live terminal
+
+Add `--live` (or `AT_CONSOLE_LIVE=1`) in a TTY to draw the guest in an alternate terminal screen. The runner yields between 50,000-instruction chunks. Typing sends Set-1 make/break pairs; Enter, Backspace, Tab, Escape, arrows, shifted characters, Ctrl+letter and terminal Alt+printable chords are mapped. Ctrl+] quits and Ctrl+L redraws. An xterm-compatible terminal with SGR mouse reporting supplies pointer input; the guest must enable the auxiliary mouse. Recognized VGA graphics modes use the validated renderers; other modes show text RAM. Full VGA snapshots remain available.
 
 Add `--live` (or `AT_CONSOLE_LIVE=1`) to draw the guest continuously in an
 alternate terminal screen. The runner yields between 50,000-instruction
 chunks so terminal input reaches the guest while it runs. Typing sends Set-1
 make/break pairs; Enter, Backspace, Tab, Escape, arrows, shifted letters and
 symbols, Ctrl+letter, and terminal Alt+printable chords are mapped. Ctrl+] quits
-cleanly; Ctrl+L redraws.
-An xterm-compatible terminal with SGR mouse reporting can send pointer clicks
-and motion; live mode attaches the opt-in mouse. The live view tries the validated VGA renderers (Windows
-640×350 and 640×480 planar, and Doom 320×200 unchained), then shows text RAM if the mode is
+cleanly; Ctrl+L redraws. An xterm-compatible terminal with SGR mouse reporting can send pointer clicks
+and motion; live mode attaches the opt-in mouse. The live view tries the validated VGA renderers (broader guest
+640×350 and 640×480 planar, and broader game 320×200 unchained), then shows text RAM if the mode is
 not recognized. A full VGA snapshot remains available in every mode. Live
 mode requires a TTY. The report includes live input attempts and a `user-quit`
 stop reason when applicable.
@@ -99,7 +97,7 @@ Relative image paths resolve beside the config. The accepted form follows the
 
 ```ini
 [autoexec]
-imgmount 2 "Windows 3.1.img" -t hdd -fs none -size 512,17,4,615
+imgmount 2 "freedos.img" -t hdd -fs none -size 512,17,4,615
 boot -l c
 ```
 

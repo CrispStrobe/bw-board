@@ -1,5 +1,7 @@
 # 80386 native clock witness and fenced H4 diagnostic — WIP
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The unchanged H4 engine now has an authenticated diagnostic capture of **all 439 resume entry/return pairs**, six selected checkpoint inspections, IRQ staging, terminal settlement and close. Its 1,326 fence rows preserve exact host callback ordinals and independent native-tick/successful-quantum ledgers. Full exposed CPU, board and RAM match held H4; all 1,649,067 canonical native trace rows and the entire ordered host journal match accepted H1. This is evidence for the diagnostic and offline validator. **No native batching ABI or performance optimization is implemented.**
 
 The earlier native trace and host journal have no resume entry/return fences. Their 8,322 uninterrupted clock runs cannot establish legal batch spans or recover the 439 resume cuts. The new capture supplies these missing diagnostic boundaries; it does not prove private bridge ownership, legal batch count, wider guest admission or a speed gain. The [H4 baseline](I80386-NATIVE-HOT-PACKED-SCALAR-WIP.md) and [10× work](I80386-10X-PERFORMANCE.md) retain their existing scope.
@@ -26,7 +28,7 @@ The [source-owned contract](../scripts/bochs-cpu3-native-clock-batch-witness/con
 
 The offline model uses `ceil((deadline-debt)/6)` successful units after chip settlement, independent N/Q caps and explicit ordered flush barriers. PIO publishes preceding debt and rearms before charging its current successful quantum. Memory/PAGE, IRQ acknowledgement, inspection/snapshot, fault/IRQ/HLT, return, stage IRQ, settlement and close remain observable boundaries. Model attempt/REP completion annotations are explicit synthetic inputs and are not inferred from historical clock rows. These model tests do not establish an actual native batching implementation or legal execution spans.
 
-A later implementation requires separately reviewed ownership, actual ordered expansion/state proof, source-bound build and a predeclared unprofiled CPU gate. No 10×, physical RTx, Windows/Doom, full AT or production native CLI/GUI qualification follows from this tranche.
+A later implementation requires separately reviewed ownership, actual ordered expansion/state proof, source-bound build and a predeclared unprofiled CPU gate. No 10×, physical RTx, broader guest/broader game, full AT or production native CLI/GUI qualification follows from this tranche.
 
 ## Receipts
 

@@ -1,5 +1,7 @@
 # Native 386 cold entry on the actual AT board
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Qualified 2026-10-01:** the isolated Bochs CPU3 bridge executes the free reset ROM while `ExperimentalI80386ATMachine` owns memory, ports and device clocks. Continuous execution and successful-work budgets 1/2/257 agree, including an independent fresh reproduction. Architectural reset parity remains **false** because the recorded reset profiles differ.
 
 The bridge activates after hardware reset and before the first native CPU loop. Its first actual prefetch is raw physical `FFFFFFF0`, decoded by the board to `00FFFFF0`; the reset jump then executes at `000F0100`. No Bochs BIOS instructions, copied native RAM seed or JavaScript CPU instructions supply the result. The JavaScript CPU's `step()` is guarded against execution. The [MIT ROM source](../test/fixtures/i80386-free-cold-reset.S) needs no disk or licensed software.
@@ -60,4 +62,4 @@ This first bridge admits only stable ROM execution, fixed A20 ON, generation zer
 
 The separate [RAM/SMC/A20 checkpoint](I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md) now qualifies executable RAM, self-modifying code, alias write stamps and committed mapping invalidation. Next run the existing REP/two-page-fault/PIT fixture through the actual board before broader BIOS boot and a production backend seam. Direct in-process/WASM callbacks and safe device-debt batching follow correctness qualification and matching-workload measurements.
 
-The qualification host is a four-vCPU Intel Xeon Skylake/IBRS VPS, Node 20.20.2 and g++ 13.3.0. No speed or RTx measurement was made. Windows enhanced mode, full AT boot and the 10× target remain unfinished; these ROM captures do not extend Windows/Doom acceptance. Strict CPU3 has no CR4/PSE; stock xv6 remains on the separately labeled compatibility route, while strict 386 xv6 needs the 4 KiB/UP/PIC port.
+The qualification host is a four-vCPU Intel Xeon Skylake/IBRS VPS, Node 20.20.2 and g++ 13.3.0. No speed or RTx measurement was made. broader guest enhanced mode, full AT boot and the 10× target remain unfinished; these ROM captures do not extend broader guest/broader game acceptance. Strict CPU3 has no CR4/PSE; stock xv6 remains on the separately labeled compatibility route, while strict 386 xv6 needs the 4 KiB/UP/PIC port.

@@ -1,8 +1,8 @@
 # Code16 WASM sampled-cost attribution: inconclusive
 
-The [public receipt](receipts/2026-09-28-i80386-code16-sampled-cost.json)
-reduces one sampled-timer run of the pinned private Windows 3.11
-60-million-step workload. All 31 execution-source blobs on current master
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+All 31 execution-source blobs on current master
 matched the [earlier ordinary/code16 A/B](receipts/2026-09-28-i80386-code16-windows-current.json)
 source inventory before the
 temporary [probe patch](receipts/2026-09-28-i80386-code16-cost-probe.patch)

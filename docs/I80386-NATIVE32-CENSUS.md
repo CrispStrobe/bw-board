@@ -1,5 +1,7 @@
 # Opt-in protected 32-bit native eligibility census
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 Set `AT_NATIVE32_CENSUS=1` on a noninteractive ordinary
 `scripts/run-i80386-at-console.mjs` run. The report gains `native32Census`.
 The option cannot be combined with native execution, code16 experiments, or
@@ -33,9 +35,6 @@ pre-step decoder result. ModR/M form keys use `m0`–`m3`; group opcodes 81,
 opcode key; `prefixBytesOnRetiredSteps` records their aggregate prefix count.
 
 Use a pinned private guest report and compare all ordinary guest outputs
-after removing only the census field, source hashes, and revision. A candidate
-execution family needs at least 1.5 million observed same-entry retirements
-on the 60-million-step Windows fixture before implementation is considered.
-That threshold chooses work to test; it does not predict a speedup. A later
+after removing only the census field, source hashes, and revision. That threshold chooses work to test; it does not predict a speedup. A later
 executable trial must prove exact faults, memory and code coherence, chip
 events, and full guest parity while retiring multiple instructions per call.

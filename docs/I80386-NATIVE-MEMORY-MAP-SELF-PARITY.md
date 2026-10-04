@@ -1,5 +1,7 @@
 # Native CPU3 typed memory and A20 self-parity
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Status (2026-09-30): source-bound native self-parity passed and independently reproduced.** Combined executable/validator/runner/test source is frozen at `753a5e0aa184f2c87b4041068fa8e700cafcf7db`.
 
 A separate owned adapter now decodes low/extended RAM, a source-pinned free BIOS ROM, one synthetic MMIO register, and declared open-bus holes. Physical callbacks apply the effective A20 gate before decode. This also covers raw PDE/PTE accesses and A/D writes, which bypassed the original Bochs memory layer in the previous adapter. Ordinary translated data can arrive already masked; the journal preserves the actual callback input rather than inventing a pre-mask address.
@@ -21,7 +23,7 @@ All arms share 1,927 native ticks and 7,259 complete recorded events: 5,279 type
 
 The aliased page-walk counters are 4 PDE reads, 1 PTE5 read, 1 PDE A update, and 1 PTE5 A/D update. Low final PDE/PTE values are `0x00111023`/`0x00005063`; high shadows remain `0x00b02002`/`0x00505002`. The successful data store is `0x11223344`, low/high sentinels `0x52`/`0xa7`, and ROM byte `0xea` remains unchanged. There is no fault, IRQ or HLT claim in this fixture.
 
-This gate qualifies one owned static mapping, selected CPU/RAM state and byte-level physical callback effects. It does not qualify full hidden/reset state, real VGA/PIC/DMA/ATA, JavaScript board parity, WASM integration, Windows enhanced mode, or a 10× speed gain. The next concrete slice is host-owned PIT/PIC scheduling and HLT timer wake, with explicit native-step versus board/device clock accounting.
+This gate qualifies one owned static mapping, selected CPU/RAM state and byte-level physical callback effects. It does not qualify full hidden/reset state, real VGA/PIC/DMA/ATA, JavaScript board parity, WASM integration, broader guest enhanced mode, or a 10× speed gain. The next concrete slice is host-owned PIT/PIC scheduling and HLT timer wake, with explicit native-step versus board/device clock accounting.
 
 Source and artifact pins:
 

@@ -1,5 +1,7 @@
 # 80386 dynamic-memory slow-exit contract spike
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This is an opt-in, standalone experiment. The ordinary 386 AT machine and its
 existing native dispatcher do not call it. It tests whether a WASM block can
 follow a data-dependent address without predicting that address or admitting a
@@ -60,5 +62,4 @@ MMIO exits, CR3/generation staleness, and a chip-deadline exit. A bounded
 benchmark or an xv6 speed claim. Integration still needs a producer that
 mirrors relevant cached translations without expensive per-entry scanning,
 registers all code pages, and preserves the existing native dispatcher's
-interrupt and chip scheduling gates. Full xv6 and Windows guest/RAM parity and
-paired user-CPU A/B are required before a performance claim or default change.
+interrupt and chip scheduling gates.

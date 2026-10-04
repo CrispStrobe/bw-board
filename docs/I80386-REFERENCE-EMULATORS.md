@@ -1,5 +1,7 @@
 # 80386 reference emulators: performance and oracle roles
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The experimental Brickwright 386 is a JavaScript instruction interpreter behind
 an AT device adapter. Its optional WebAssembly blocks cover a subset of
 instructions, and the interpreter still handles exits and board events. On the
@@ -12,7 +14,7 @@ figures cannot be compared to an emulator's guest-MHz display as physical RTx.
 
 No same-host, same-firmware, same-disk, same-stop-condition benchmark has been
 run against the projects below. Their published features do not prove that each
-is faster on our xv6 or Windows workload. There are nevertheless concrete
+is faster on our xv6 or broader guest workload. There are nevertheless concrete
 techniques and independent-behavior checks worth using:
 
 | Engine | Relevant mechanism | Role here |
@@ -49,9 +51,7 @@ preserves the guest-state comparison. It is not a claimed 10× result.
    state, descriptor/TSS memory, exception vector/error code and selected RAM
    page hashes. A divergence is triaged against the Intel 386 manual; agreement
   between two emulators is evidence, not proof.
-3. Start with cases that exercise our current risk: page-crossing writes and
-   fault rollback, task gate/NT IRET, VM86 entry/return, A20/ROM aliases, and
-   Windows enhanced-mode I/O faults. Use a tiny serial or I/O checkpoint so
+3. Use a tiny serial or I/O checkpoint so
    each engine can stop at the same guest event. Record binary, config, ROM,
    disk and tool hashes; do not publish third-party or private media bytes.
 4. Benchmark speed only after matching firmware, media, host, guest stop event,

@@ -1,5 +1,7 @@
 # Experimental 16-bit block decoder and coverage probe
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `decodeI80386Code16Block(window, maxInstructions)` accepts only a window from
 `prevalidateI80386Code16Window`. It revalidates the mode, mapping and every
 captured byte before decoding. It has no guest execution path. Its default and
@@ -23,11 +25,7 @@ not authorize execution. A future runner would need a fresh window check at
 entry and after writes, exact starting CS:EIP, fault and target validation,
 stack proof for stack forms, and event boundaries.
 
-`createI80386Code16Coverage()` is an opt-in read-only observer for an ordinary
-single-step guest run. `XV6_CODE16_COVERAGE=1` enables it in the stock xv6
-probe; `AT_CODE16_COVERAGE=1` enables it in the media-neutral AT console and
-Windows 3.1x probes. The AT console rejects the option with native blocks.
-It reports:
+The AT console rejects the option with native blocks. It reports:
 
 - 16-bit step calls, admitted windows, and supported first opcodes, split by
   real, protected 16-bit and VM86 mode;

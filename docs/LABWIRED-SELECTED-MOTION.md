@@ -1,5 +1,7 @@
 # Selected micro:bit motion boundary — 2026-10-01
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This slice is based on BW `7ca77580`, confirmed unchanged when networking
 returned. The initial implementation session could not reach GitHub. The
 follow-up pushed PR #184 and built current LabWired source `4d944d2d` in
@@ -96,12 +98,9 @@ All four functional motion tests passed; the candidate also passed Lite's four
 generic real-WASM input tests with zero skips. No artifact/default/pin promotion.
 
 `scripts/probe-labwired-motion-ab.mjs --baseline <original-nodejs-dir>
---candidate <candidate-nodejs-dir> --out <new-receipt.json>` repeats the diagnostic.
-By default it requires identical original glue, distinct binaries, five correctly timed samples per
-run, actual functional success, two tests, zero skips and consistent exit status.
-Failed RTx samples are preserved rather than removed or relabelled as green.
-The probe returns success for a *completed diagnostic*, not for qualification;
-consult each run's `allWindowsMeet1x`. Parser mutation tests are synthetic log
+--candidate <candidate-nodejs-dir> --out <new-receipt.json>` repeats the diagnostic. By default it requires identical original glue, distinct binaries, five correctly timed samples per
+run, actual functional success, two tests, zero skips and consistent exit status. Failed RTx samples are preserved rather than removed or relabelled as green. The probe returns success for a *completed diagnostic*, not for qualification;
+consult each run's `allbroader guestMeet1x`. Parser mutation tests are synthetic log
 tests only, not engine evidence. Candidate bytes were produced with
 `npm exec --yes --package=binaryen@132.0.0 -- wasm-opt <original.wasm> -O3 -o <candidate.wasm>`;
 the receipt binds both binary hashes, tool integrity, CPU, Node and complete logs.
@@ -113,9 +112,8 @@ BUILD-INFO source declarations and original glue/WASM hashes are checked before
 execution; runner, toolchains, BUILD-INFO files and complete A/B/B/A results are
 retained even on failure. It has read-only repository permissions and no publish
 step. A successful *diagnostic* run does not mean its RTx windows passed: inspect
-`allWindowsMeet1x`. The independent determinism, integration and all-five >=1x
-qualification workflow remains unchanged. Differing glue fails by default.
-An explicit `--paired-glue` probe option (`allow_paired_glue: true` in CI) instead
+`allbroader guestMeet1x`. The independent determinism, integration and all-five >=1x
+qualification workflow remains unchanged. Differing glue fails by default. An explicit `--paired-glue` probe option (`allow_paired_glue: true` in CI) instead
 compares each original build with its own unmodified glue, recording that policy
 and both original hashes. This does not certify JS/ABI equivalence: the actual
 functional guest assertions must still pass for both engines. For candidate

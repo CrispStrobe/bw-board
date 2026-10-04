@@ -1,5 +1,7 @@
 # Experimental VGA memory pipeline
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `src/experimental/vga-memory.js` implements the CPU-visible VGA memory
 pipeline behind the register latches in `src/vga-card.js`. The explicit
 experimental 386 VGA AT profile connects it at A0000h through BFFFFh while
@@ -60,7 +62,7 @@ This module does not interpret CRTC or attribute-controller display fetches,
 render pixels, arbitrate CPU and display memory cycles, model snow/timing, or
 model VGA ROM shadow-write chipset behavior. It also does not yet model VGA
 write buffering or vendor extensions. The existing mode-13h renderer remains
-a separate linear renderer and is not evidence for Mode X, Windows, or Doom.
+a separate linear renderer and is not evidence for Mode X, broader guest, or broader game.
 
 The external firmware input is SeaVGABIOS/SeaBIOS release 1.16.3 at
 commit `a6ed6b701f0a57db0569ab98b0661c12a6ec3ff8`; the local build produced
@@ -70,12 +72,9 @@ then runs a host-installed real-mode diagnostic guest. That guest requests
 mode 13h through INT 10h and round-trips two bytes through A0000h; the host
 probe verifies BDA mode 13h and chain-4 register state. This proves the bounded firmware
 service and CPU-memory path; it is not a complete AT boot, pixel-rendering,
-Mode X, Windows, or Doom graphics result.
+Mode X, broader guest, or broader game graphics result.
 
-A later original Doom 1.9 run supplies a separate graphics result: the captured
-unchained planes at step 319,000,000 decode to a recognizable 320x200 title
-screen using the observed CRTC start/stride and DAC palette. The
+The
 [graphics receipt](receipts/2026-09-20-386-doom-graphics.json) retains exact
-source and image hashes and the missing historical DAC-mask qualification.
-This does not promote the earlier mode-13h probe or establish arbitrary VGA
+source and image hashes and the missing historical DAC-mask qualification. This does not promote the earlier mode-13h probe or establish arbitrary VGA
 modes, keyboard interaction, or gameplay.
