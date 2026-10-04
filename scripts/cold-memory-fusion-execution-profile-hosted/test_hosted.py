@@ -18,8 +18,10 @@ class Controls(unittest.TestCase):
  def test_finalization_preserves_primary_and_raw_failure(self):
   with tempfile.TemporaryDirectory() as name:
    out=Path(name);primary=RuntimeError('original guest');report={'status':'FAIL','error':repr(primary)}
+   (out/'derived-binding.json').write_text('{}');binding_before=h.fingerprint(out/'derived-binding.json');(out/'derived-binding.json').write_text('{"altered":true}')
    with patch.object(h,'sources',side_effect=RuntimeError('source after')),patch.object(h,'host_context',side_effect=RuntimeError('host after')):
-    got=h.finish(out,report,primary,{}, {},Path('/unused-node'),None,None)
+    got=h.finish(out,report,primary,{}, {},Path('/unused-node'),binding_before,None)
+   self.assertIn('bindingAfter',got);self.assertEqual([e['phase'] for e in got['finalizationErrors']],['sourceAfter','bindingAfter']);self.assertNotEqual(got['bindingAfter'],binding_before)
    self.assertEqual(got['error'],repr(primary));self.assertIn('source after',got['finalizationError']);self.assertIn('host after',got['hostAfterUnavailable']);self.assertEqual(json.loads((out/'result.json').read_text())['status'],'FAIL')
  def test_binding_final_only_mutation_is_not_suppressed(self):
   with tempfile.TemporaryDirectory() as name:

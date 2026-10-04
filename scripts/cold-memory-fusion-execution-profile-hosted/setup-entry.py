@@ -32,11 +32,13 @@ try:
   report['status']='DIAGNOSTIC_PARITY_AND_RAW_PROFILE_CAPTURE_COMPLETE'
 except BaseException as e:primary=e;report['error']=repr(e);raise
 finally:
- try:
-  report['sourceAfter']=sources(c,node);require(report['sourceAfter']==source_before,'all role source final equality')
-  if 'inputsBeforeRestore' in report:report['inputsAfter']=q.original_inputs(out);require(report['inputsAfter']==report['inputsBeforeRestore'],'original setup inputs unchanged')
- except BaseException as e:
-  report['status']='FAIL';report['finalizationError']=repr(e)
-  if primary is None:primary=e
+ report['finalizationErrors']=[];finalerror=None
+ guards=[('sourceAfter',lambda:sources(c,node),source_before)]
+ if 'inputsBeforeRestore' in report:guards.append(('inputsAfter',lambda:q.original_inputs(out),report['inputsBeforeRestore']))
+ for name,reader,expected in guards:
+  try:report[name]=reader();require(report[name]==expected,name+' final equality')
+  except BaseException as e:
+   report[name+'Unavailable']=repr(e);report['status']='FAIL';report['finalizationErrors'].append({'phase':name,'error':repr(e)})
+   if finalerror is None:finalerror=e;report['finalizationError']=repr(e)
  q.write(out/('setup-record.json' if mode=='setup' else 'validation-record.json'),report)
- if report.get('finalizationError') and report.get('error') is None:raise primary
+ if finalerror is not None and primary is None:raise finalerror
