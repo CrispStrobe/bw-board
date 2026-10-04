@@ -15,6 +15,19 @@ This guide separates the available loaders. Use your own fixtures or freely lice
 
 The `--native-blocks` console option selects `src/experimental/i80386-native-dispatch.js`; it is separate from the Bochs Node addon. `--code16-wasm` selects a distinct code16 WebAssembly dispatcher. Neither option grants the fixed native addon a general OS-loading interface.
 
+## Wired and hybrid Harris paths
+
+The Harris 80286 board has reference and compiled connectivity backends. `netBackend: 'compiled'` changes actual-net representation and scheduling; it is still wired circuit execution. The native-memory hybrid bridge uses JS instruction semantics with native bus/net periods; it remains a separate experimental path with limited peripheral admission. These are not selected by `run-dos.mjs --variant 80286`, which uses the independent functional DOS-service core. There is no wired 80386 target in the current 386 AT loaders.
+
+For the owned Harris circuit demonstration, run:
+
+```sh
+node scripts/run-harris-boot-cpu.mjs --experimental
+node scripts/run-harris-boot-cpu.mjs --experimental --loop
+```
+
+These commands construct the fixed circuit and owned ROM; they are not arbitrary disk-image loaders. The source-pinned wired DOS boot route is documented in [compiled Harris connectivity](HARRIS-COMPILED-NETS.md), using the officially released MIT DOS 2.0 inputs. Native-memory hybrid construction and its admitted scope are in [the hybrid implementation](HARRIS-HYBRID-CPU-IMPLEMENTATION.md). GUI circuit execution requires the corresponding circuit reference; no DOSBox import switches a functional machine into that board.
+
 ## CLI: direct DOS programs
 
 From the repository root, supply a freely licensed program you already have:

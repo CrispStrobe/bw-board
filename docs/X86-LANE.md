@@ -84,7 +84,7 @@ and [receipt](receipts/2026-09-19-protected286-external-images.json).
 
 Local combined validation: 120 protected/image/AT tests passed; 31 current
 BASIC/C/menu/toolchain tests passed; 15 DOS tests passed, with one optional
-Turbo C test skipped because TCC.EXE is absent. Real Microsoft DOS/MASM/LINK/
+external compiler test skipped because external compiler executable is absent. Real Microsoft DOS/MASM/LINK/
 EXE2BIN execution remains green. Six owned PCjs comparisons passed; the external
 comparison has zero unexpected differences. Five external result mutations
 (video, task return, input hash, sector and saved task state) were each rejected
