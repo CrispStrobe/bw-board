@@ -470,6 +470,20 @@ source/build/test proofs and original compiled-code comparison are retained:
 Smaller code does not establish faster execution; production engine, app pins
 and physical acknowledgements remain unchanged. CP13 remains open.
 
+The subsequent WASM low/high-register split avoids global outlining's RAM
+collapse, but remains **unmerged/unqualified**. Across four ordinary pairs,
+motion changes **-5.70% to 16.38%**, RAM **-1.20% to 4.54%**,
+GPIO **-3.74% to 10.66%**. Both Node20 orders gain motion/GPIO;
+both Node22 orders lose motion. Separate runner VMs do not prove version
+causality. Motion/GPIO floors fail all four pairs; RAM passes. Native **4,235
+library tests + 16 GPIO integrations**, independent WASM determinism and **108
+actual integrations** pass; the fresh motion floor fails (**0.779280×
+median / 0.741677× min**). All **240 windows**, gains/losses/minima,
+source proofs and original compiled-code comparison are retained in the
+[low/high split archive](docs/receipts/2026-10-04-wasm-register-low-high-split/README.md).
+Smaller dispatch tables do not establish a general speedup. Production, app
+pins and physical acknowledgements remain unchanged; CP13 remains open.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
