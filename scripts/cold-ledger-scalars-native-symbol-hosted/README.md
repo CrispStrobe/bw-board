@@ -28,7 +28,7 @@ Proposed source controls are two Node methods including six forwarded Python
 PURE/MOCK methods: pending refusal, closed-map/bounds denials, production-used
 setup alias, multi-failure final guards, original recorder error plus watchdog
 cleanup, count-bound held lifecycle inverse and default-disabled workflow.
-No controls have run. Proposed bounds are pinned Node22.23.3 heap128MiB,
+The bounded source run described below used pinned Node22.23.3 heap128MiB,
 CPU10/wall30/file8MiB/core0/nice10, six blank hooks, full own/role/tool prepost
 pins and raw nested streams. Any future READY role/map migration is separate.
 
@@ -44,3 +44,14 @@ hrtime/perf-clock equivalence is demonstrated, only the conservative ACK window
 is admissible. This is DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION;
 opaque JIT/native frames and observer cost cannot establish native percentages,
 removable cost, physical calibration or speed gains.
+
+The one approved source run at `2bf89ff1` passed both Node methods and retained
+all six nested Python methods (`Ran 6 tests` / `OK`). The child exited 0 without
+timeout; source/tool before and after pins matched, with no cleanup or final
+pin errors. Thirteen owned paths and 390 exact frozen Git materialized source
+paths were authenticated; these source snapshots are distinct from runtime
+checkouts. This outcome proves mocked/source guards only. Neither PENDING gate
+was promoted, and no setup, sudo, recorder, addon or guest ran. This paragraph
+and compact receipts were added after the tested revision.
+
+[Retained source-control records](../../docs/receipts/i80386-ledger-scalars-native-symbol-hosted-source-20261004/index.json)
