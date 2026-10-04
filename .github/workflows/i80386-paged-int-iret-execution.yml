@@ -1,0 +1,95 @@
+name: Paged INT/IRET one correctness run (manual, disabled by default)
+on:
+  workflow_dispatch:
+    inputs:
+      enable_paged_int_iret_execution:
+        description: Root-reviewed first paged INT/IRET execution only
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: i80386-paged-int-iret-single-correctness
+  cancel-in-progress: false
+jobs:
+  correctness:
+    if: inputs.enable_paged_int_iret_execution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONSTARTUP: ''
+      PYTHONINSPECT: ''
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: paged-int-iret-wrapper
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Record source context and require reviewed fixed bindings
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/paged-int-iret-execution-context"
+          python3 -B - <<'PY' > "$RUNNER_TEMP/paged-int-iret-execution-context/source.stdout" 2> "$RUNNER_TEMP/paged-int-iret-execution-context/source.stderr"
+          import json,sys,os
+          sys.path.insert(0,'paged-int-iret-wrapper/scripts/paged-int-iret-hosted')
+          from parent import validate_contract,HERE
+          validate_contract(json.load(open(HERE/'contract.json')))
+          print(json.dumps({k:os.environ.get(k)for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_EVENT_NAME','RUNNER_OS']}))
+          PY
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 4a4ec3c92a67c4db6d3bd361f9456d2be144a13c
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 3f4a65de3cc4f99f62bf8f1d1c632499f3b69dd6
+          path: paged-int-iret-driver
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: bochs-emu/Bochs
+          ref: 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          path: paged-int-iret-pristine
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Restore exact build and run one bounded correctness child
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export BW_PAGED_INT_IRET_NODE="$(command -v node)"
+          python3 -B paged-int-iret-wrapper/scripts/paged-int-iret-hosted/parent.py enabled > "$RUNNER_TEMP/paged-int-iret-execution-context/parent.stdout" 2> "$RUNNER_TEMP/paged-int-iret-execution-context/parent.stderr"
+      - name: Retain first failure and all raw maps and streams
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: paged-int-iret-one-correctness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/paged-int-iret-execution
+            ${{ runner.temp }}/paged-int-iret-execution-context
+            ${{ runner.temp }}/paged-int-iret-build-evidence
+            ${{ github.workspace }}/paged-int-iret-wrapper/scripts/paged-int-iret-hosted
+            ${{ github.workspace }}/paged-int-iret-wrapper/scripts/cold-native-restore/archive.py
+            ${{ github.workspace }}/paged-int-iret-wrapper/scripts/cold-native-diagnostic/resources.py
+            ${{ github.workspace }}/paged-int-iret-wrapper/scripts/protected-ram-hosted/parent.py
+            ${{ github.workspace }}/paged-int-iret-wrapper/scripts/protected-stack-hosted/parent.py
+            ${{ github.workspace }}/paged-int-iret-wrapper/scripts/nonidentity-paging-hosted/parent.py
+            ${{ github.workspace }}/paged-int-iret-wrapper/.github/workflows/i80386-paged-int-iret-execution.yml
+          include-hidden-files: true
+          if-no-files-found: error

@@ -1,0 +1,56 @@
+{
+  "head": "f259485ac5de4696b35768809cb96f6769eb0eaf",
+  "status": "",
+  "files": {
+    "scripts/paged-int-iret-hosted/parent.py": {
+      "bytes": 3365,
+      "sha256": "befb26a0702409135bef08368636e3356e07380e4d0a08904ad170691ec70b6d"
+    },
+    "scripts/paged-int-iret-hosted/contract.json": {
+      "bytes": 182637,
+      "sha256": "06a78291a7a2f881d3ccec1a1411aac42cfa4df0136588137454fdf5fe5d5c49"
+    },
+    "scripts/paged-int-iret-hosted/test_source.py": {
+      "bytes": 4856,
+      "sha256": "5c2ebd311016bb5094e8d6e8bcbe3e7381610413c17f6c3cf4911bbf4c847960"
+    },
+    "scripts/paged-int-iret-hosted/README.md": {
+      "bytes": 2703,
+      "sha256": "a025429a5735c53fd80767655f93c504ddd0d314e420c289533dc056448bbf03"
+    },
+    ".github/workflows/i80386-paged-int-iret-execution.yml": {
+      "bytes": 4277,
+      "sha256": "9ec299fae9daf2aa5b5caa1eede93b86b87b6ad0ed279480daa5ec11edd0b671"
+    },
+    "test/i80386-paged-int-iret-hosted-source.test.mjs": {
+      "bytes": 438,
+      "sha256": "6c957bf15678e05b72dcce37243881630d9368e0fcb717828bdbdb64149fde77"
+    },
+    "scripts/cold-native-diagnostic/resources.py": {
+      "bytes": 2662,
+      "sha256": "7e968b306c522deee93169bb698c2a80dbb23af5380af2f1cadf4fcf3c1467dc"
+    },
+    "scripts/cold-native-restore/archive.py": {
+      "bytes": 3772,
+      "sha256": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139"
+    },
+    "scripts/nonidentity-paging-hosted/parent.py": {
+      "bytes": 2986,
+      "sha256": "6e4e1a3cf315c577ec4e6f73480c47558bcac6a6e3265c5fb4769907af23d1c4"
+    },
+    "scripts/protected-ram-hosted/parent.py": {
+      "bytes": 17086,
+      "sha256": "0723a9d6e6d171d4ea17e684be97e7413f235afff381e6e6a8fbb5bbdd57ec40"
+    },
+    "scripts/protected-stack-hosted/parent.py": {
+      "bytes": 2940,
+      "sha256": "2ebfb2e1c550beca26860c1aa55b2da0159b04f6326b87868722d42ffbe80173"
+    }
+  },
+  "toolingCount": 11,
+  "statusContract": "ROOT_REVIEWED_PAGED_INT_IRET_SOURCE_READY",
+  "enabledByDefault": false,
+  "actualControls": false,
+  "actualRestoration": false,
+  "actualGuest": false
+}
