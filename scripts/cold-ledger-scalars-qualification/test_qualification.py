@@ -41,6 +41,12 @@ class Controls(unittest.TestCase):
   source=(q.HERE/'qualify.py').read_text();self.assertEqual(source.count("str(N/c['worker']['entry'])"),1);self.assertIn("'mode':'batched'",source);self.assertIn("report['inputsAfter']==report['inputsBeforeRestore']",source)
 
 class TerminalProjectionControls(unittest.TestCase):
+ def test_final_guards_retain_each_failure_and_readable_evidence(self):
+  source=ValueError('source original');binding=ValueError('binding changed');report={'status':'PASS','error':'primary guest'}
+  def fail():raise source
+  def reject(value):raise binding
+  first=q.final_guards(report,[('sourceAfter',fail,lambda v:None),('bindingAfter',lambda:{'sha256':'changed'},reject),('inputAfter',lambda:{'sha256':'retained'},lambda v:None)])
+  self.assertIs(first,source);self.assertEqual(report['status'],'FAIL');self.assertEqual(report['error'],'primary guest');self.assertEqual(set(report['finalizationErrors']),{'sourceAfter','bindingAfter'});self.assertEqual(report['bindingAfter']['sha256'],'changed');self.assertEqual(report['inputAfter']['sha256'],'retained')
  def test_actual_terminal_projection_reaches_held_validator(self):
   f=q.read_json(q.HERE/'terminal-fixture.json');c=q.read_json(q.HERE/'contract.json');r=copy.deepcopy(f['receiptProjection']);b=copy.deepcopy(f['originalDerivedBinding']);data=copy.deepcopy(f['input'])
   w=c['worker'];role={**w,'files':{p:v['sha256'] for p,v in w['files'].items()}};b['workers']['native']=role

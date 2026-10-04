@@ -27,6 +27,7 @@ def contract(c):
  require(c['worker']['revision']=='1c1722b38373fbadf1213624466877425e3e0b5d' and len(c['worker']['files'])==73,'source-reviewed scalar worker73 pending READY role')
  require(c['worker']['sourceSha256']=='957ebf1861051b61870115c3a3891dc4d5e57fb48189741cd3a86eb190de00b8','fixed actual worker identity')
  require(c['worker']['sourceSha256']==digest(json.dumps({'revision':c['worker']['revision'],'hashes':{p:r['sha256'] for p,r in sorted(c['worker']['files'].items())}},separators=(',',':')).encode()),'full worker canonical identity')
+ require(c['worker']['binding']=='scripts/cold-native-memory-fusion-ledger-scalars-performance/capture-binding.json' and c['worker']['root']==str(N),'complete fixed worker descriptor')
  require(c['driver']['revision']=='11c0bdcade020117fc682e97db284c6ff8797842' and len(c['driver']['files'])==54,'held driver metadata role')
  require(c['targetN']==c['targetQ']==316562 and c['nodeSha256']==NODE_SHA,'held target/Node')
  require(c['bounds']=={'cpuSeconds':60,'wallSeconds':120,'heapMiB':128,'fileBytes':16<<20,'coreBytes':0,'niceIncrement':10},'unchanged child bounds')
@@ -106,6 +107,14 @@ def terminal(r,data,b,capture):
  require(r['typedSnapshotOwnership']=='RESET_STABLE_AND_FINAL_LAST_RETURN_DISTINCT','actual snapshot independence')
  validate_inspect_snapshot(r['reset']['native']);require(words(r['reset']['native'])==words(capture['cuts'][0]['native']),'raw reset166')
  metrics=validate_worker_receipt(semantic_projection(r,b),'native-batched',data,b,capture);validate_bridge_evidence(r);return metrics
+def final_guards(report,guards):
+ first=None
+ for name,read,validate in guards:
+  try:report[name]=read();validate(report[name])
+  except BaseException as e:
+   report.setdefault('finalizationErrors',{})[name]=repr(e);report['status']='FAIL'
+   if first is None:first=e
+ return first
 def main(mode):
  require(mode in ('disabled','enabled'),'explicit mode')
  if mode=='disabled':print('Disabled; no setup/download/addon/guest');return
@@ -128,11 +137,7 @@ def main(mode):
   if before is not None:
    guards.extend([('afterGuest',lambda:restored(c,node,out),lambda value:require(value==before,'restored final guard')),('inputAfter',lambda:fingerprint(out/'input.json'),lambda value:require(value==inputpin,'input final guard'))])
   else:guards.append(('partialRestoredFiles',lambda:{str(p):fingerprint(p) for root in (T,R) if root.exists() for p in root.rglob('*') if p.is_file() and '.git' not in p.parts},lambda value:None))
-  for name,read,validate in guards:
-   try:report[name]=read();validate(report[name])
-   except BaseException as e:
-    report.setdefault('finalizationErrors',{})[name]=repr(e);report['status']='FAIL'
-    if finalerror is None:finalerror=e
+  finalerror=final_guards(report,guards)
   try:write(out/'host-after.json',host_context())
   except BaseException as e:
    report['hostAfterUnavailable']=repr(e);report['status']='FAIL'
