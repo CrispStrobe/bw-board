@@ -1,0 +1,11 @@
+# Single cold MEMORY fusion qualification source preparation
+
+This separate manual workflow is disabled by default and its source-owned contract is ROOT_REVIEWED_MEMORY_FUSION_QUALIFICATION_READY following root and independent source review. A manufactured PENDING status still refuses before any checkout-role emission, download, restore or child spawn. No fusion addon or CPU has been executed.
+
+The adapter reuses the exact fd151720 single typed qualification lifecycle and restore guards with declared identity/profile/role substitutions. It requires genuine compiled85fc source151, new fusion DSO7de, private fusion worker735740cb/source63 and original11c metadata-only driver54. The historical eighth capture remains the terminal authority, without claiming its original addon included fusion metadata.
+
+One batched child retains raw reset/final/last-resume166 and exact live copied-buffer ownership proof, independent N/Q, whole terminal board/RAM-hash and complete PIO. The extra native bridge-attempt maps and private provider validation/effect counts are retained and crosschecked outside timing; they cannot establish cost shares or a speed benefit. No intermediate cuts are fabricated. Original qualifiers, workers and compiled artifacts remain unchanged.
+
+Source controls have a retained split outcome: the initial five-method Python suite at63e78af9 passed four methods and raised one fixture KeyError because an ownership-denial fixture omitted the mandatory fusion profile. Test-only fix2f78df84 supplied that profile and added a distinct wrong-profile refusal; the single affected method then passed. Both bounded Node-wrapper packets retain all80 current/Git source and tool before/after pins. This is not a final five-method rerun. Packets: /tmp/native-cold-memory-fusion-qualification-{pure-controls,affected-controls}-20261004. Independent source/control audit passed. Hosting, restoration, addon loading and actual qualification remain unexecuted. No pairs, rebuild or automatic retry is included.
+
+The READY suffix changes only contract.status and this factual note; tested production, test and restore bytes are unchanged. The enable_guest input remains false by default. A single actual qualification requires a separate root dispatch after exact-head CI and merge; none has been dispatched by this source lane.
