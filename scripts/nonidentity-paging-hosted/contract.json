@@ -4341,7 +4341,7 @@
   "runId": 37204425504,
   "schema": "bw.nonidentity-paging.hosted-one-run.v1",
   "scope": "One fixed native/JS paging correctness child; raw166 retained, represented CPU and board/seven pages compared only at declared comparable cuts. PG-entry/zero-Q phases remain unmatched; no callback-order, OS, speed or adoption claim.",
-  "status": "SOURCE_REVIEW_PENDING",
+  "status": "ROOT_REVIEWED_NONIDENTITY_PAGING_SOURCE_READY",
   "zipBytes": 7876937,
   "zipMembers": {
     "nonidentity-paging-build-context/build-helper.py": {
