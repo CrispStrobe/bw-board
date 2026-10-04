@@ -1,0 +1,266 @@
+{
+  "members": {
+    "cold-memory-fusion-build-context/build-helper.py": {
+      "sha256": "c6dbc16e8e8c84dcaae810130ed24726132c1f37e07e4c63d2cd1a78ddaba39a",
+      "bytes": 12936
+    },
+    "cold-memory-fusion-build-context/context.txt": {
+      "sha256": "b51b762bdf1551b955a813040eb0b673f64af007bfbc1c9070368606b7093842",
+      "bytes": 4189
+    },
+    "cold-memory-fusion-build-context/parent.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-context/parent.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-context/workflow.yml": {
+      "sha256": "29e153f72deef9ba895460ba57391340cbd9520f1a37e0be6507ed8680637086",
+      "bytes": 3970
+    },
+    "cold-memory-fusion-build-evidence/architecture.exit.json": {
+      "sha256": "5c218b6c96c611bc425d6c1884019c9a764f486a7aba192a4735e56e68ba4355",
+      "bytes": 393
+    },
+    "cold-memory-fusion-build-evidence/architecture.invocation.json": {
+      "sha256": "5870685b09a31e091a2722b203d17f618bc0ff12cae48cd7394eb70f3c92f37b",
+      "bytes": 396
+    },
+    "cold-memory-fusion-build-evidence/architecture.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/architecture.stdout": {
+      "sha256": "aaf631698ae5160ceb04a97681a14887fdcab47cd6e0f163c87485b3b1340b62",
+      "bytes": 7
+    },
+    "cold-memory-fusion-build-evidence/artifact-inventory.json": {
+      "sha256": "b775965c396e730075bf2df11180832ce34fd3dceaa43408414913d4954d2fc2",
+      "bytes": 8250
+    },
+    "cold-memory-fusion-build-evidence/build-context.json": {
+      "sha256": "9d9433d73bc9a262fe0dde2f2611c72d411ae787417164c68ea95468fef136c0",
+      "bytes": 21564
+    },
+    "cold-memory-fusion-build-evidence/build-static-preflight.json": {
+      "sha256": "2fbd4993125be0f2e8308434deb6fd82a0b1e07bc0508893f302d4b834f610f4",
+      "bytes": 19995
+    },
+    "cold-memory-fusion-build-evidence/bw_direct.node": {
+      "sha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+      "bytes": 2070080
+    },
+    "cold-memory-fusion-build-evidence/compiler.exit.json": {
+      "sha256": "5f906671f119e5fbcf924049cfb0f8b6616fc61dfb5c103ce65dd39f7c574dce",
+      "bytes": 398
+    },
+    "cold-memory-fusion-build-evidence/compiler.invocation.json": {
+      "sha256": "1f9d072a03335b4221889aaa44ccc75ec9ab19e5810a11c3464913341f320f96",
+      "bytes": 401
+    },
+    "cold-memory-fusion-build-evidence/compiler.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/compiler.stdout": {
+      "sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8",
+      "bytes": 246
+    },
+    "cold-memory-fusion-build-evidence/config.h": {
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+      "bytes": 28122
+    },
+    "cold-memory-fusion-build-evidence/configure.exit.json": {
+      "sha256": "3d7d5ff20371db1183683ebbb0570dd36ef8a654336485e892569766a8832c0c",
+      "bytes": 655
+    },
+    "cold-memory-fusion-build-evidence/configure.invocation.json": {
+      "sha256": "952add22b47f1f476120a3e72e18f3d5aec7fd87e4cbac1829f3e896abd8b176",
+      "bytes": 676
+    },
+    "cold-memory-fusion-build-evidence/configure.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/configure.stdout": {
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da",
+      "bytes": 13400
+    },
+    "cold-memory-fusion-build-evidence/final-status.json": {
+      "sha256": "b0d441bffcf69d87759ec492c68580b97ffae2b2762a1fb85e9909b5ff0446c5",
+      "bytes": 1172
+    },
+    "cold-memory-fusion-build-evidence/frozen-source.tar.gz": {
+      "sha256": "d8ae0de435de0021c40f54978db13c57a0fbaeb4251d3dea41e4bfd8e5c4c743",
+      "bytes": 620828
+    },
+    "cold-memory-fusion-build-evidence/identity-after.exit.json": {
+      "sha256": "82e3f86e523aa34940c0eb8bc3ed32775ac0350cd09fb723091f126820006a4a",
+      "bytes": 638
+    },
+    "cold-memory-fusion-build-evidence/identity-after.invocation.json": {
+      "sha256": "e0798442cbeaa15969fa536a19a10f7e679d9e0aa1fab3992c91b1369870d106",
+      "bytes": 640
+    },
+    "cold-memory-fusion-build-evidence/identity-after.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/identity-after.stdout": {
+      "sha256": "891e35d51b0ff74f421f8fc9b83d0f56c64f2a2095165a21713a80170d59e490",
+      "bytes": 16819
+    },
+    "cold-memory-fusion-build-evidence/identity-before.exit.json": {
+      "sha256": "419a8d7c64088300057cf0ecb17cb5d38d7d983ea3d667dec43aed91a5315c6b",
+      "bytes": 638
+    },
+    "cold-memory-fusion-build-evidence/identity-before.invocation.json": {
+      "sha256": "a220f6a61295a95828c1c012d0130f17f5d7e1ab803337bdde7b3c44b05ad4fa",
+      "bytes": 640
+    },
+    "cold-memory-fusion-build-evidence/identity-before.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/identity-before.stdout": {
+      "sha256": "891e35d51b0ff74f421f8fc9b83d0f56c64f2a2095165a21713a80170d59e490",
+      "bytes": 16819
+    },
+    "cold-memory-fusion-build-evidence/make.exit.json": {
+      "sha256": "9115f3d6c1bbd5e988372cab5b0ec8d58b67c617907555f20a0a5839f75657ff",
+      "bytes": 480
+    },
+    "cold-memory-fusion-build-evidence/make.invocation.json": {
+      "sha256": "fb7da356d4b81497335c67346a7db58dc68e43d2a4d25632d3b74e6a90cf9dee",
+      "bytes": 498
+    },
+    "cold-memory-fusion-build-evidence/make.stderr": {
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e",
+      "bytes": 7894
+    },
+    "cold-memory-fusion-build-evidence/make.stdout": {
+      "sha256": "ce3eb4ef8b8dadd85900bc56ec72d2f0e7246c0ef75d9688619bc69f0aa7c78e",
+      "bytes": 36500
+    },
+    "cold-memory-fusion-build-evidence/nm.exit.json": {
+      "sha256": "b43a92083fb904848466ab51d9dacc76885c7eb52aeb80a5c6f5791def99853c",
+      "bytes": 501
+    },
+    "cold-memory-fusion-build-evidence/nm.invocation.json": {
+      "sha256": "b394ccf251bd2d04a9b5b5f0acb87acde7bee2fae305a94e54928a063351380f",
+      "bytes": 501
+    },
+    "cold-memory-fusion-build-evidence/nm.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/platform.exit.json": {
+      "sha256": "6728e9377754fef1c9eb1b23e0e98499cf7870a553c02394db1f092924705d95",
+      "bytes": 394
+    },
+    "cold-memory-fusion-build-evidence/nm.stdout": {
+      "sha256": "adc0ebe1722c7fad4283950f926f759fd2b33e17bd684426781b8bb9db518b1f",
+      "bytes": 188074
+    },
+    "cold-memory-fusion-build-evidence/platform.invocation.json": {
+      "sha256": "cd9ce402c6f04520aeed3233f8dd40f230bd6f2d8f89e290f80628ec0fcc61c4",
+      "bytes": 396
+    },
+    "cold-memory-fusion-build-evidence/platform.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/platform.stdout": {
+      "sha256": "6ecb75ce9d770bd2cfb6898b267dd8f29398821b25cb233675e182e0323ba0d2",
+      "bytes": 113
+    },
+    "cold-memory-fusion-build-evidence/prepare.exit.json": {
+      "sha256": "4b317e6fbbc7221ae5e3efdbfb611b762da406a1bc60fe8c06c33df00301f1c4",
+      "bytes": 605
+    },
+    "cold-memory-fusion-build-evidence/prepare.invocation.json": {
+      "sha256": "08e446019b13a0569af8c37860dac98e48c49d298a3f0cd203bd5d9c420b82b2",
+      "bytes": 607
+    },
+    "cold-memory-fusion-build-evidence/prepare.json": {
+      "sha256": "d768ba0ba149fa3f23e42eb7f1b9fa6eca5ec26b570aaa1c103ff3534efeccb1",
+      "bytes": 31688
+    },
+    "cold-memory-fusion-build-evidence/prepare.stderr": {
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4",
+      "bytes": 664
+    },
+    "cold-memory-fusion-build-evidence/prepare.stdout": {
+      "sha256": "d768ba0ba149fa3f23e42eb7f1b9fa6eca5ec26b570aaa1c103ff3534efeccb1",
+      "bytes": 31688
+    },
+    "cold-memory-fusion-build-evidence/prepared-after-build.json": {
+      "sha256": "871422e7b145949c3e0fdf18ab79a2613d6cd6b72f0768762225800f3a95e72a",
+      "bytes": 81821
+    },
+    "cold-memory-fusion-build-evidence/prepared-before-build.json": {
+      "sha256": "8c89e55ad6616c20f906f8cbd11086a827b34a06cc9b7420819c618db2f59a15",
+      "bytes": 78832
+    },
+    "cold-memory-fusion-build-evidence/prepared-source.tar.gz": {
+      "sha256": "b2c0fc79d49e1fd8f5ae97f893bbcdea27821381e20a2def14cc453dfabff62a",
+      "bytes": 5331799
+    },
+    "cold-memory-fusion-build-evidence/readelf.exit.json": {
+      "sha256": "fcc324645425344f832f0109ea99acea9fcb3241da36d5f2e46e57666e33562e",
+      "bytes": 482
+    },
+    "cold-memory-fusion-build-evidence/readelf.invocation.json": {
+      "sha256": "cecb4784d6a7958398eba9971bdf312ee5ff6e055646eeb7211f1cfb9570f973",
+      "bytes": 484
+    },
+    "cold-memory-fusion-build-evidence/readelf.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/readelf.stdout": {
+      "sha256": "cb8cccde9b682c11ce67ba730c1efd71da108b03da48fdaa481727d2ecdcff50",
+      "bytes": 1539
+    },
+    "cold-memory-fusion-build-evidence/source-after.json": {
+      "sha256": "60a38a7dede649169a1ada51475edbaf18054881fe03a68f6d49144124c9aaf3",
+      "bytes": 1388831
+    },
+    "cold-memory-fusion-build-evidence/source-before.json": {
+      "sha256": "60a38a7dede649169a1ada51475edbaf18054881fe03a68f6d49144124c9aaf3",
+      "bytes": 1388831
+    },
+    "cold-memory-fusion-build-evidence/static-admission.exit.json": {
+      "sha256": "0ca39856a46a6c9d519f4d6ee9b0c262d619847260ce80ba7715af7635435254",
+      "bytes": 816
+    },
+    "cold-memory-fusion-build-evidence/static-admission.invocation.json": {
+      "sha256": "8c2d50a9c8ee18d2e242585abd39c5d9f993a76acd42be1c5230a570a36d5f7a",
+      "bytes": 822
+    },
+    "cold-memory-fusion-build-evidence/static-admission.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-memory-fusion-build-evidence/static-admission.stdout": {
+      "sha256": "faf007f617b61ad82a48dbb2d8d2ffe2ff6d7d18f710d0b02aa65dd4f65feee5",
+      "bytes": 992
+    },
+    "cold-memory-fusion-build-evidence/static-input.json": {
+      "sha256": "872a1bee109d8fa180f965124ca9c77a1117422ad3a1d78c75e0bc07b9a0e2ae",
+      "bytes": 567
+    },
+    "cold-memory-fusion-build-evidence/upstream-COPYING": {
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2",
+      "bytes": 26428
+    },
+    "cold-memory-fusion-build-evidence/upstream-LICENSE": {
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884",
+      "bytes": 301
+    }
+  },
+  "zipSha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875",
+  "zipBytes": 7537808
+}
