@@ -57,3 +57,5 @@ real temporary receipt writes. They do not prove live perf readiness/control,
 permissions, inherited sampling, Bochs unwind, clock equivalence or guest
 execution. Authority remains PENDING. This README-only outcome suffix follows
 the tested source; no final-head suite or live diagnostic is claimed.
+Compact [raw controls and independent audit](../../docs/receipts/i80386-ledger-scalars-native-symbol-source-20261004/index.json)
+retain the actual invocation, exit and forwarded test tape.
