@@ -1,0 +1,81 @@
+name: Cold BIOS MEMORY clock fusion single semantic qualification
+on:
+  workflow_dispatch:
+    inputs:
+      enable_guest:
+        type: boolean
+        default: false
+        required: true
+        description: Enable exactly one separately reviewed fusion batched semantic child
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-memory-fusion-qualification-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  fusion-batched:
+    if: ${{ inputs.enable_guest == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: runtime
+          persist-credentials: false
+      - name: Admit closed source and emit exact checkout roles
+        id: roles
+        run: |
+          python3 -B runtime/scripts/cold-memory-fusion-qualification/emit-roles.py >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.compiled }}
+          path: publication
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.compiledFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.driverFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.worker }}
+          path: fusion-worker
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.workerFiles }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: One fusion batched qualification, no pairs or rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export BW_COLD_NODE="$(command -v node)"
+          export BW_FUSION_QUALIFICATION_OUTPUT="$RUNNER_TEMP/cold-memory-fusion-qualification"
+          mkdir "$RUNNER_TEMP/cold-memory-fusion-qualification-parent"
+          python3 -B runtime/scripts/cold-memory-fusion-qualification/qualify.py enabled > "$RUNNER_TEMP/cold-memory-fusion-qualification-parent/stdout" 2> "$RUNNER_TEMP/cold-memory-fusion-qualification-parent/stderr"
+      - name: Preserve first outcome
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-memory-fusion-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-memory-fusion-qualification
+            ${{ runner.temp }}/cold-memory-fusion-qualification-parent
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
