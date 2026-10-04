@@ -69,3 +69,11 @@ population; exit 0, no timeout, 15.522151 seconds including after-authentication
 The remaining methods were unselected; the initial seven/six packet and CI
 failure remain separate. No runtime change, full-suite rerun or guest replay
 was performed for this correction.
+
+This separate source derivative promotes only the owned diagnostic metadata to
+READY and makes its metadata control validate that owned status while retaining
+a manufactured PENDING refusal and fixed-pin mutation denials. Historical
+`88645607` remains PENDING. Worker, timer/while, recorder, admission and compiled
+inputs are unchanged. No controls, identity query, live readiness, sampling or
+guest call has run at this new revision. Source READY is not sampling capability
+or speed qualification; hosted authority remains separately gated.

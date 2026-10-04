@@ -19,8 +19,8 @@ test('count-bound complete worker inverse preserves exact held timer and while',
  const begin='  const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();',end='receipt.lastReturnedNative=native;}';
  const block=s=>s.slice(s.indexOf(begin),s.indexOf(end)+end.length);assert.ok(block(held).includes('while(progress.q<targetQ)'));assert.equal(block(candidate),block(held));
 });
-test('owned source metadata is pending; manufactured READY cannot change fixed pins',()=>{
- const pending=JSON.parse(read('profile-binding.json'));assert.throws(()=>validateDiagnosticMetadata(pending),/PENDING/);const ready={...pending,status:'ROOT_REVIEWED_NATIVE_SYMBOL_DIAGNOSTIC_READY'};validateDiagnosticMetadata(ready);
+test('owned READY source metadata retains manufactured PENDING refusal and fixed pins',()=>{
+ const ready=JSON.parse(read('profile-binding.json'));validateDiagnosticMetadata(ready);const pending={...ready,status:'PENDING_ROOT_SOURCE_REVIEW'};assert.throws(()=>validateDiagnosticMetadata(pending),/PENDING/);
  for(const [key,value] of [['baseWorkerRevision','0'.repeat(40)],['output','/tmp/caller'],['addonSha256','0'.repeat(64)],['defaultEnabled',true]])assert.throws(()=>validateDiagnosticMetadata({...ready,[key]:value}));
 });
 test('manufactured disabled-ready ACK precedes enable and stop retains separate clocks',async()=>{

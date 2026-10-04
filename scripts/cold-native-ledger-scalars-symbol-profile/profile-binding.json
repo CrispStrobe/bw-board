@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-ledger-scalars.native-symbol.source.v1",
-  "status": "PENDING_ROOT_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_NATIVE_SYMBOL_DIAGNOSTIC_READY",
   "baseWorkerRevision": "06581f3831aa765933b1d160a41ab37b1b652913",
   "baseSourceSha256": "3e0bb128aa00ea763125d2cc6f0af2ab7ac752de05a3485acc9432f89a799e9d",
   "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
