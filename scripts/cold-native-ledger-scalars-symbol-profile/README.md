@@ -59,3 +59,13 @@ execution. Authority remains PENDING. This README-only outcome suffix follows
 the tested source; no final-head suite or live diagnostic is claimed.
 Compact [raw controls and independent audit](../../docs/receipts/i80386-ledger-scalars-native-symbol-source-20261004/index.json)
 retain the actual invocation, exit and forwarded test tape.
+
+The first full source CI at `21e7d7a3` failed the repository's sibling-checkout
+lint on this test's relative URL. Test-only `e36e5f6a` resolves the same held
+bytes from an explicit repository URL, preserving the complete inverse. Three
+selected checks then passed: that inverse, the actual lint and its census floor.
+All 1,073 input/tool pins were unchanged, including the complete 982-file scan
+population; exit 0, no timeout, 15.522151 seconds including after-authentication.
+The remaining methods were unselected; the initial seven/six packet and CI
+failure remain separate. No runtime change, full-suite rerun or guest replay
+was performed for this correction.
