@@ -1,0 +1,28 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-cold-ledger-scalars-symbol-profile-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-cold-ledger-scalars-native-symbol-source-20261004",
+  "revision": "52ceafdd3b116fecf52d599d5bae3ff1c0371350",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; nested six PURE mocked Python cases"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "scope": "Seven Node methods including raw six-Python wrapper; no live perf/Inspector/addon/CPU/guest/build"
+}
