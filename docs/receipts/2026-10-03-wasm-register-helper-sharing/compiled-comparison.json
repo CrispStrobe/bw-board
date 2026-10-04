@@ -1,0 +1,227 @@
+{
+  "tool": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "baseline": {
+    "source": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "run": 37142446921,
+    "wasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+    "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+    "functions": [
+      {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+        "watBytes": 7673574,
+        "nonWhitespaceBytes": 495684,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256
+        }
+      },
+      {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+        "watBytes": 7252781,
+        "nonWhitespaceBytes": 169856,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "18": 107,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "source": "0d32815a28b1cf7e27a87ba760ec7acd34cb4086",
+    "run": 37146586058,
+    "wasmSha256": "9533e446a5464a5fb61f3754f6e19ef0e757dc6845293355e60a3928dcd799ae",
+    "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+    "functions": [
+      {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "8a3bb25a4d53a21d51a5af62fd4ca30e1f9c83bb14155bf5499113523a332457",
+        "watBytes": 8032654,
+        "nonWhitespaceBytes": 529282,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "11": 2,
+          "12": 2,
+          "14": 2,
+          "15": 2,
+          "16": 13,
+          "17": 10,
+          "18": 6,
+          "22": 2,
+          "84": 3,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 541,
+          "write_reg": 334
+        }
+      },
+      {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "ea6501d78f6a5d0ac60f3a71f5bd5ce19f9692bb517db32d8b1ccfbc57657d6e",
+        "watBytes": 229287,
+        "nonWhitespaceBytes": 32357,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 74,
+          "write_reg": 40
+        }
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "labels": [
+        "step_batch"
+      ],
+      "baseline": {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+        "watBytes": 7673574,
+        "nonWhitespaceBytes": 495684,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256
+        }
+      },
+      "candidate": {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "8a3bb25a4d53a21d51a5af62fd4ca30e1f9c83bb14155bf5499113523a332457",
+        "watBytes": 8032654,
+        "nonWhitespaceBytes": 529282,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "11": 2,
+          "12": 2,
+          "14": 2,
+          "15": 2,
+          "16": 13,
+          "17": 10,
+          "18": 6,
+          "22": 2,
+          "84": 3,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 541,
+          "write_reg": 334
+        }
+      },
+      "eighteenTargetTablesDelta": -2
+    },
+    {
+      "labels": [
+        "run_t16_cached_run"
+      ],
+      "baseline": {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+        "watBytes": 7252781,
+        "nonWhitespaceBytes": 169856,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "18": 107,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2
+        }
+      },
+      "candidate": {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "ea6501d78f6a5d0ac60f3a71f5bd5ce19f9692bb517db32d8b1ccfbc57657d6e",
+        "watBytes": 229287,
+        "nonWhitespaceBytes": 32357,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 74,
+          "write_reg": 40
+        }
+      },
+      "eighteenTargetTablesDelta": -107
+    }
+  ],
+  "engineExecution": false,
+  "enginePromotion": false,
+  "limitations": [
+    "Static code shape only; no hit-frequency or runtime-cost claim",
+    "Formatted/non-whitespace text sizes are not binary/code-cache sizes",
+    "18-target table counts do not identify every table as a register access",
+    "Actual ordinary paired measurements, not these counts, decide performance"
+  ]
+}
