@@ -62,7 +62,7 @@ This source-only authority migration binds the exact final 92-file diagnostic
 map and recomputed whole-contract hash. The metadata control validates the real
 owned READY contract, manufactures PENDING before-effects refusal and changed
 role/status/hash denials. Historical hosted mock evidence remains separate;
-these changed metadata controls have not run. Worker/recorder controllers and
+the changed metadata control outcomes are recorded below. Worker/recorder controllers and
 setup-only dispatch alias mechanics are unchanged. The diagnostic tracker may
 produce pre-ready waiting samples; only its conservative active ACK window is
 admissible. Source READY does not qualify sampling or speed.
@@ -73,3 +73,14 @@ is separately dropped to its ordinary owner. That receipt establishes no
 ordinary-user permission and no attach/delay/control/dummy sideband or Bochs
 unwind capability. Actual effective tool/options/permission and selector ACK
 checks still precede provider/addon release, preserving the first refusal.
+
+At tested hosted revision `16fc71d0`, both Node methods passed and retained
+all six nested Python mocks (`Ran 6 tests` / `OK`). A separate conditional
+read-only check returned the exact 13-owned + 390-role source maps. Both calls
+exited 0 without timeout/errors, with current/Git and tool pre/post pins equal;
+independent and root audits passed. Role files were exact frozen Git materialized
+source snapshots, not runtime checkouts. This outcome paragraph and compact
+records were added afterward; executable, test, authority and workflow bytes
+remain unchanged. No setup, sudo, recording, addon or guest ran.
+
+[Retained hosted READY source records](../../docs/receipts/i80386-ledger-scalars-native-symbol-hosted-ready-source-20261004/index.json)
