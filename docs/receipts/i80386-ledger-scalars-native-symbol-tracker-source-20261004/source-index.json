@@ -1,0 +1,41 @@
+{
+  "scope": "Offline upstream v6.17 source only; no local perf invocation",
+  "records": [
+    {
+      "file": "tools_perf_util_parse-events.c",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.17/tools/perf/util/parse-events.c",
+      "bytes": 80163,
+      "sha256": "9e8830cc7ebcd96d7febe0a5640f96646fb233a6a33572da4987aead5ef8b684"
+    },
+    {
+      "file": "tools_perf_builtin-record.c",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.17/tools/perf/builtin-record.c",
+      "bytes": 119495,
+      "sha256": "8ca6ed8ad924d6eb15156658f0546df5431cc8f60d335b2f2e2276fba9e0d20c"
+    },
+    {
+      "file": "tools_perf_util_evsel.h",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.17/tools/perf/util/evsel.h",
+      "bytes": 18645,
+      "sha256": "a0a3d01206c55a08272df3d2187a25ed8df7fbdeb216a5aea887b066e31396f0"
+    },
+    {
+      "file": "tools_perf_util_evsel.c",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.17/tools/perf/util/evsel.c",
+      "bytes": 106417,
+      "sha256": "adbacd3a4de179928362590a0c26fadaeac91abc3ea490befb59c8ff6950e790"
+    },
+    {
+      "file": "kernel_events_core.c",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.17/kernel/events/core.c",
+      "bytes": 368640,
+      "sha256": "6501f5aede0337b133db1dba35bf63529a7609c2e986c6742f20229467368024"
+    },
+    {
+      "file": "tools_perf_util_evlist.c",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.17/tools/perf/util/evlist.c",
+      "bytes": 61449,
+      "sha256": "244dbf35af885ddbbe6deeef7a28906192bd0c5841ac7fc1b0eb5bc80ffd3366"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "testedRevision": "f791950482ab50b657fa957205533dbc0e629ca3",
+  "selectedMetadataTAP": "1 PASS/0 FAIL/0 SKIP; remaining methods unselected",
+  "actualReadonlyIdentityPaths": 92,
+  "canonicalSourceSha256": "e2929e283c312c60d4edd31cc8ecb968d183246a0e4d616cf1c4f23664120287",
+  "metadataWallSeconds": 1.7753858603537083,
+  "readonlyWallSeconds": 2.8776732310652733,
+  "sourceToolPrePostEqual": true,
+  "scope": "Read-only retained packet audit;no rerun/provider/factory/addon/perf/setup/guest/build. READY source not capability proof."
+}
