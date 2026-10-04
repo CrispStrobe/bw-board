@@ -1,0 +1,23 @@
+{
+  "status": "PASS_INDEPENDENT_SPLIT_SOURCE_CONTROL_AUDIT",
+  "revision": "55d94f2894a7860c20b61b9d55e95c6797c8641c",
+  "sourceFiles": 194,
+  "currentEqualsGit": true,
+  "sourceToolBeforeAfterEqual": true,
+  "currentToolHashesVerified": true,
+  "initialControls": {
+    "passes": 4,
+    "failures": 1,
+    "cause": "compiler frontend lookup failed before fixture compilation; GCC_EXEC_PREFIX empty"
+  },
+  "affectedControls": {
+    "tests": 1,
+    "passes": 1,
+    "failures": 0,
+    "skips": 0,
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 1.5361183434724808
+  },
+  "scope": "Actual tiny generated-C compile/execution after helper env fix; earlier noCPU provider/mutation passes retained, no five-suite rerun; no Bochs build/addon/native CPU"
+}

@@ -1,0 +1,13 @@
+{
+  "pid": 3538449,
+  "exitCode": 1,
+  "timeout": false,
+  "wallSeconds": 0.7859826628118753,
+  "error": null,
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "tests": 5,
+  "passes": 4,
+  "failures": 1,
+  "skips": 0
+}
