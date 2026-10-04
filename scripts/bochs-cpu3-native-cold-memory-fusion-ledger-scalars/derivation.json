@@ -1,0 +1,6 @@
+{
+  "heldRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+  "heldProviderSha256": "953a748eeea70ed8cff43791bbb7c00145339974fd52ce3fb966e9671dc57bf3",
+  "heldFactorySha256": "ffd1b52eb21783edf321481fce89bce434f029f67c8778c489109cd37c8f6612",
+  "scope": "Separate fixed private JS provider profile only; native MEMORY transport/ABI4 unchanged. Not admitted by any worker yet."
+}
