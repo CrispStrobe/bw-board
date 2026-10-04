@@ -12,6 +12,42 @@
       "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-source-freeze-20261004/perf-mmap-source/source-index.json",
       "bytes": 1642,
       "sha256": "7876f3c81c3bb2f21e2a6f3d4aecb369ca9956ce006802764e7cccf66d535b51"
+    },
+    {
+      "path": "controls-exit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-controls-20261004/exit.json",
+      "bytes": 168,
+      "sha256": "6a323ebcf97cbd07d745454a41852248113cc1a37388724f3fe7ea2cdb1aef93"
+    },
+    {
+      "path": "controls-controls.tap",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-controls-20261004/stdout",
+      "bytes": 478,
+      "sha256": "e356ee1d3763e52f09853d3f2655cbb509a58d65f2c57ffee6dab8ca568d2930"
+    },
+    {
+      "path": "frozen-auth-exit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-frozen-auth-20261004/exit.json",
+      "bytes": 168,
+      "sha256": "30e3eb5e963f6ed3cfa6f8bc4eb5ed57f2a3453e28347a004b74eb5a3299b819"
+    },
+    {
+      "path": "controls-independent-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-controls-20261004/independent-audit.json",
+      "bytes": 494,
+      "sha256": "817b29349668da645d2cfe30b8ccbf0035f11448107c69e873e775b13eb62a17"
+    },
+    {
+      "path": "identity-independent-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-tracker-frozen-auth-20261004/independent-audit.json",
+      "bytes": 494,
+      "sha256": "0b9f9888489274e9e85770004894bb1c5e59fee2b143e47f27d49cfae3427c8d"
+    },
+    {
+      "path": "root-audit.json",
+      "origin": "/tmp/native-tracker-source-root-audit-20261004.json",
+      "bytes": 954,
+      "sha256": "0e2f043886fce8e7c7deb8ea51e502116d01c3dbbdace7c74804ae749953c749"
     }
   ]
 }

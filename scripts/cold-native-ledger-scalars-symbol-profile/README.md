@@ -70,7 +70,7 @@ The remaining methods were unselected; the initial seven/six packet and CI
 failure remain separate. No runtime change, full-suite rerun or guest replay
 was performed for this correction.
 
-This separate source derivative promotes only the owned diagnostic metadata to
+At the separate READY metadata revision, the derivative promotes only the owned diagnostic metadata to
 READY and makes its metadata control validate that owned status while retaining
 a manufactured PENDING refusal and fixed-pin mutation denials. Historical
 `88645607` remains PENDING. Worker, timer/while, recorder, admission and compiled
@@ -96,7 +96,7 @@ Raw stderr must reject unknown selector or malformed-command errors even with
 an ACK, and each named command must append its exact cpu-clock success line
 before that ACK; unrelated or extended lines cannot substitute. Post-load maps are retained before active enable. Raw pre-ready waiting
 samples may exist: only the conservative active ACK window is admissible. This
-source correction has not run; prior metadata/query outcomes remain separate.
+source correction has not run live; prior metadata/query outcomes remain separate.
 
 [Retained offline source finding and primary-source hashes](../../docs/receipts/i80386-ledger-scalars-native-symbol-tracker-source-20261004/index.json).
 The finding follows Linux v6.17
@@ -104,3 +104,14 @@ The finding follows Linux v6.17
 [control selection](https://github.com/torvalds/linux/blob/v6.17/tools/perf/util/evlist.c),
 and [sideband state filtering](https://github.com/torvalds/linux/blob/v6.17/kernel/events/core.c).
 Actual installed behavior remains unproved until the separately granted recording.
+
+At tested tracker revision `b2fa9309`, one selected Node wrapper passed and
+retained all seven actual nested Python mock methods (`Ran 7 tests` / `OK`).
+The other Node methods were unselected, not a repeated full suite. A separate
+conditional read-only query returned the exact 92-file source identity. Both
+calls exited 0 without timeout/errors, with full current/Git source and tool
+pins unchanged before/after. These mocks cover fixed tracker commands, exact
+named selector success, false ACK/stderr refusal, partial control evidence and
+primary/lifecycle guards; they do not establish installed perf sideband behavior,
+permissions, control readiness, unwind or sampling quality. This outcome prose
+and compact records follow the tested executable revision.
