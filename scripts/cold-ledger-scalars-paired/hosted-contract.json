@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-ledger-scalars.paired-source.v1",
-  "status": "PENDING_ROOT_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_ACTUAL_LEDGER_SCALARS_QUALIFICATION_READY",
   "qualifierRevision": "c26ad6701c9fa13f983dd84c2764c2f073371f57",
   "qualifierRoot": "/home/runner/work/bw-board/bw-board/qualifier",
   "qualifierFiles": {
