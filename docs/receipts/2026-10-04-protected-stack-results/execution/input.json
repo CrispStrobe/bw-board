@@ -1,0 +1,15 @@
+{
+  "addon": "/home/runner/work/_temp/protected-stack-build-prepared/bochs/bw_direct.node",
+  "sha256": "4076aca36f5d7e79eb7cdd829746fd35edd852cd407d5c6eab905f7c1799b439",
+  "preparedManifest": "/home/runner/work/_temp/protected-stack-build-evidence/prepare.json",
+  "preparedManifestSha256": "0df633530a66aecc5d7d0936a4ce1168e24c71b79714751a7840c0cfd81f1a34",
+  "buildReceipt": "/home/runner/work/_temp/protected-stack-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "c96201414a7d747389ec65f11560aa9b3b5bd4e76db935c8f64c70b83dd5324d",
+  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication",
+  "compiledRevision": "d065cbb7da787b4b46adab83958237a69c0b51de",
+  "driverRevision": "f9c525b0a74f2b13eacdc0bdb6db1138da731120",
+  "driverSourceSha256": "b75661f3cb9ccb7a3529ed0202532f8a6f9d11d92b9b37d69eabc1545759f08b",
+  "configuration": "/home/runner/work/_temp/protected-stack-execution/protected-source.bochsrc",
+  "output": "/home/runner/work/_temp/protected-stack-execution/guest",
+  "nativeTrace": false
+}

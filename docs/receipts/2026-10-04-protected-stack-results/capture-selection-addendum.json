@@ -1,0 +1,9 @@
+{
+  "member": "_temp/protected-stack-execution/guest/capture.json",
+  "bytes": 4476758,
+  "sha256": "c94e9ce96528da9a04c85caa40d5fbfe939ead7ca68dc6c15a718cb600c35484",
+  "selected": false,
+  "additionalSelected": true,
+  "purpose": "Actual31 boundary fullthreepages capture slightly exceeds default4MiB smallmember selector; extracted once from soleauthenticatedZIP under8MiB explicitcap",
+  "originalRetentionUnchanged": true
+}
