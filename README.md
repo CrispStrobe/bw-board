@@ -484,6 +484,19 @@ source proofs and original compiled-code comparison are retained in the
 Smaller dispatch tables do not establish a general speedup. Production, app
 pins and physical acknowledgements remain unchanged; CP13 remains open.
 
+The bounded cached low-register frame is also **unmerged/unqualified**.
+Four ordinary pairs retain **240 windows**: motion **-6.25% to 1.33%**,
+RAM **-1.23% to 0.47%**, GPIO **-5.14% to 1.61%**.
+Motion/GPIO floors pass only Node22 ABBA and fail the other three pairs;
+RAM passes all four. Native **4,235 library tests + 16 GPIO integrations**,
+independent WASM determinism and **108 actual integrations** pass, but the
+fresh motion floor fails (**0.792109× median / 0.787231× min**).
+Original glue differs and is explicitly hash-bound in paired receipts;
+these compare complete built artifacts, not isolated WASM effects. Smaller
+static register dispatch does not establish a speedup. See the
+[cached-frame evidence](docs/receipts/2026-10-04-wasm-cached-register-frame/README.md).
+Production, app pins and physical acknowledgements remain unchanged; CP13 is open.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every

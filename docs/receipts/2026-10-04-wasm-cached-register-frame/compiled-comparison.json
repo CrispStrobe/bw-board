@@ -1,0 +1,269 @@
+{
+  "tool": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "baseline": {
+    "source": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "run": 37142446921,
+    "wasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+    "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+    "functions": [
+      {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+        "watBytes": 7673574,
+        "nonWhitespaceBytes": 495684,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      },
+      {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+        "watBytes": 7252781,
+        "nonWhitespaceBytes": 169856,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "18": 107,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "source": "098c99cf6b6a176a44c83b37ce77a1881909c767",
+    "run": 37183521683,
+    "wasmSha256": "eaebf1fb256f289f8b352612748a2768d485ce64995d85741edb0e337ef09b1c",
+    "glueSha256": "785e741ac0d05a73f81ef4da867c8934bb71fd203e88479d98874b6fa9dc2be9",
+    "functions": [
+      {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "6ac514b8d171ba1e66903c39be977e984ca63d4991db55a68c4bab9cedbf33cd",
+        "watBytes": 7673572,
+        "nonWhitespaceBytes": 495682,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      },
+      {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "49af0538c575bf1950515791484087f3054011128f47feac56f880bc2a4cf5c5",
+        "watBytes": 1655885,
+        "nonWhitespaceBytes": 120130,
+        "branchTableTargetHistogram": {
+          "10": 97,
+          "16": 1,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 3,
+          "write_reg": 9,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "labels": [
+        "step_batch"
+      ],
+      "baseline": {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+        "watBytes": 7673574,
+        "nonWhitespaceBytes": 495684,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      },
+      "candidate": {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "6ac514b8d171ba1e66903c39be977e984ca63d4991db55a68c4bab9cedbf33cd",
+        "watBytes": 7673572,
+        "nonWhitespaceBytes": 495682,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      },
+      "eighteenTargetTablesDelta": 0
+    },
+    {
+      "labels": [
+        "run_t16_cached_run"
+      ],
+      "baseline": {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+        "watBytes": 7252781,
+        "nonWhitespaceBytes": 169856,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "18": 107,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      },
+      "candidate": {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "49af0538c575bf1950515791484087f3054011128f47feac56f880bc2a4cf5c5",
+        "watBytes": 1655885,
+        "nonWhitespaceBytes": 120130,
+        "branchTableTargetHistogram": {
+          "10": 97,
+          "16": 1,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 3,
+          "write_reg": 9,
+          "read_reg_pc4": 0,
+          "read_reg_frame": 0,
+          "write_reg_frame": 0,
+          "read_reg_frame_pc4": 0,
+          "execute_t16_fast_op_frame": 0
+        }
+      },
+      "eighteenTargetTablesDelta": -107
+    }
+  ],
+  "engineExecution": false,
+  "enginePromotion": false,
+  "limitations": [
+    "Static code shape only; no hit-frequency or runtime-cost claim",
+    "Formatted/non-whitespace text sizes are not binary/code-cache sizes",
+    "18-target table counts do not identify every table as a register access",
+    "Actual ordinary paired measurements, not these counts, decide performance"
+  ]
+}
