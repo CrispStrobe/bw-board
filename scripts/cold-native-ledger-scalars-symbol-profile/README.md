@@ -3,7 +3,7 @@
 This separate diagnostic keeps the qualified ledger-scalar worker's exact
 execution timer and while loop, mandatory 166-word return materialization,
 compiled revision `85fc1599` and DSO `7de755f0` unchanged. The default backend
-remains plain JavaScript. Its owned authority is PENDING; no setup, recorder,
+remains plain JavaScript. Its separate owned authority is source READY; no setup, recorder,
 capability command, addon or guest has been executed for this source proposal.
 The freely licensed Bochs BIOS supplies the finite checkpoint workload.
 
@@ -55,7 +55,7 @@ source paths and recorded tool pins were unchanged before/after. The packet is
 manufactured transport/process controls and count-bound source inverses, with
 real temporary receipt writes. They do not prove live perf readiness/control,
 permissions, inherited sampling, Bochs unwind, clock equivalence or guest
-execution. Authority remains PENDING. This README-only outcome suffix follows
+execution. At that historical revision authority remained PENDING. This README-only outcome suffix follows
 the tested source; no final-head suite or live diagnostic is claimed.
 Compact [raw controls and independent audit](../../docs/receipts/i80386-ledger-scalars-native-symbol-source-20261004/index.json)
 retain the actual invocation, exit and forwarded test tape.
