@@ -11,14 +11,16 @@ const nums=a=>a.map(String).join(',');
 const positions=(rows,pe)=>rows.map(i=>`(eip==${i.ip}&&length==${i.bytes.length}&&pe==${pe(i)})`).join('||');
 export const pagingDomainExpression=`!cs32&&!interrupts&&!mappingPending&&a20==1&&start==base+eip&&start<=4294967295&&((selector==0xf000&&((base==0xffff0000&&!pe&&eip==65520&&length==5)||(base==0xf0000&&(${positions(romInstructions,i=>i.ip>=afterPe?1:0)}))))||(selector==24&&base==0&&pe==1&&(${positions(ramInstructions,()=>1)})))`;
 const table=Object.values(entries);
-const walkCases=walkOwners.map((x,i)=>`if(liveCs==${x.liveCs}&&liveIp==${x.liveIp}${x.attempt?`&&cs==${x.attempt.cs}&&eip==${x.attempt.ip}`:''})return ${i+1};`).join('\n');
+const walkCases=walkOwners.map((x,i)=>`if(liveCs==${x.liveCs}&&liveIp==${x.liveIp}${x.attempt?`&&cs==${x.attempt.cs}&&eip==${x.attempt.ip}`:''}){return ${i+1};}`).join('\n');
 export const policyHelpers=`static unsigned bw_paging_boot=0;
 static uint32_t bw_paging_values[5]={${nums(table.map(e=>e.value))}};
 static const uint32_t bw_paging_address[5]={${nums(table.map(e=>e.raw))}};
 static int bw_paging_entry(uint32_t raw){for(unsigned i=0;i<5;++i)if(raw==bw_paging_address[i])return (int)i;return -1;}
-static unsigned bw_paging_owner(unsigned liveCs,uint32_t liveIp,unsigned cs,uint32_t eip){${walkCases}return 0;}
+static unsigned bw_paging_owner(unsigned liveCs,uint32_t liveIp,unsigned cs,uint32_t eip){${walkCases}
+ return 0;}
 static bool bw_paging_walk(unsigned kind,uint32_t raw,unsigned length,unsigned liveCs,uint32_t liveIp,unsigned cs,uint32_t eip){
- if(length!=4||bw_paging_boot!=16)return false;unsigned phase=bw_paging_owner(liveCs,liveIp,cs,eip);if(!phase)return false;
+ if(length!=4||bw_paging_boot!=16){return false;}
+ unsigned phase=bw_paging_owner(liveCs,liveIp,cs,eip);if(!phase){return false;}
  const uint32_t leaf=phase==1?0x23c0:phase==2?0x2000:phase==3?0x201c:0x2024;
  return (kind==1||kind==3)?raw==0x1000:(kind==2||kind==4)&&raw==leaf;
 }
@@ -28,7 +30,8 @@ static bool bw_paging_ad(uint32_t raw,const uint8_t *data,unsigned length){
  return after!=before&&(after==(before|0x20U)||(raw==0x2024&&before==0xb023&&after==0xb063));
 }
 static uint8_t bw_protected_ram_byte(unsigned offset,uint32_t generation){
- if(offset>=4096||generation!=4)bw_slice_fail("paging-code-generation");static const uint8_t bytes[16]={${nums(ramProgram)}};return offset<16?bytes[offset]:0;
+ if(offset>=4096||generation!=4){bw_slice_fail("paging-code-generation");}
+ static const uint8_t bytes[16]={${nums(ramProgram)}};return offset<16?bytes[offset]:0;
 }
 static bool bw_paging_store(uint32_t raw,uint32_t want,unsigned length,const uint8_t *data,uint32_t generation,unsigned cs,uint32_t eip,unsigned walk,unsigned liveCs,uint32_t liveIp){
  if(raw!=want||!length)return false;
@@ -45,7 +48,8 @@ static bool bw_paging_store(uint32_t raw,uint32_t want,unsigned length,const uin
 }
 static void bw_paging_commit(uint32_t raw,const uint8_t *data,unsigned walk){if(walk){const int i=bw_paging_entry(raw);if(i<0)bw_slice_fail("paging-commit-entry");bw_paging_values[i]=bw_paging_dword(data);}else if(bw_paging_boot<16)++bw_paging_boot;}
 static bool bw_paging_read(uint32_t raw,uint32_t want,unsigned length,unsigned kind,unsigned cs,uint32_t eip,unsigned walk,unsigned liveCs,uint32_t liveIp){
- if(raw!=want||!length)return false;if(walk)return kind==1&&(walk==1||walk==2)&&bw_paging_walk(walk,raw,length,liveCs,liveIp,cs,eip);
+ if(raw!=want||!length){return false;}
+ if(walk){return kind==1&&(walk==1||walk==2)&&bw_paging_walk(walk,raw,length,liveCs,liveIp,cs,eip);}
  ${nativeOrdinaryReads.map(r=>r.cs===24?`if(cs==${r.cs}&&eip==${r.ip}&&kind==${r.kind}&&raw==${r.raw}&&length==${r.length})return true;`:`if(cs==${r.cs}&&eip==${r.ip}&&kind==${r.kind}&&raw>=${r.raw}&&raw<${r.raw+r.length}&&length<=${r.raw+r.length}-raw)return true;`).join('\n')}
  return false;
 }
