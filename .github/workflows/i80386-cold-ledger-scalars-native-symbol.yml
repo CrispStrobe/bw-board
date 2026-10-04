@@ -1,0 +1,92 @@
+name: Native-symbol execution-window diagnostic
+on:
+  workflow_dispatch:
+    inputs:
+      enable_profile:
+        type: boolean
+        default: false
+        required: true
+        description: One separately reviewed diagnostic, not a benchmark
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-native-symbol-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native-symbol:
+    if: ${{ inputs.enable_profile == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: runtime
+          persist-credentials: false
+      - name: Admit owned authority before downstream checkouts
+        id: roles
+        run: python3 -B runtime/scripts/cold-ledger-scalars-native-symbol-hosted/emit-roles.py >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.diagnostic }}
+          path: symbol-worker
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.diagnosticFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.qualifier }}
+          path: qualifier
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.qualifierFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.compiled }}
+          path: publication
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.compiledFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.driverFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.scalar }}
+          path: scalar-worker
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.scalarFiles }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: One fixed setup and observation, no retry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export BW_COLD_NODE="$(command -v node)"
+          python3 -B runtime/scripts/cold-ledger-scalars-native-symbol-hosted/hosted.py enabled
+      - name: Retain first outcome and raw recording
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-ledger-scalars-native-symbol-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-ledger-scalars-native-symbol
+            ${{ runner.temp }}/cold-ledger-scalars-native-symbol-parent
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
