@@ -1,8 +1,10 @@
 # Owned native IN8 extension: WIP evidence
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The corrected frozen R3 source `fe1eff2039520536350922a2164c8bbe29404c68` now passes both actual production CAPOFF and CAPON cells using the authenticated CI-built ABI4 addon. Each completed 445 resumes, six selected cuts and terminal settlement; both real PIT reads return `[50, 18]`. Independent guest audits passed: 390 CAPOFF checks and 520,820 CAPON checks. This result is fixed-fixture compatibility evidence, not a speed gate or full AT qualification.
 
-This bounded compatibility experiment adds byte reads from PIT port `0x40` and PIC data ports `0x21` and `0xa1` to the private ABI4 runner. The fixture executes two actual IN reads from PIT port `0x40` only. PIC data-port admission is implemented and source-tested; native PIC reads are not qualified by this guest. PIC polling is denied before PIC read or ACK effects. The earlier native pre-PIO clock flush may already have taken effect; denial does not roll back that flush. It does not qualify BIOS boot, full AT devices, Windows, Doom, or GUI execution, and has no CPU speed gate.
+This bounded compatibility experiment adds byte reads from PIT port `0x40` and PIC data ports `0x21` and `0xa1` to the private ABI4 runner. The fixture executes two actual IN reads from PIT port `0x40` only. PIC data-port admission is implemented and source-tested; native PIC reads are not qualified by this guest. PIC polling is denied before PIC read or ACK effects. The earlier native pre-PIO clock flush may already have taken effect; denial does not roll back that flush. It does not qualify BIOS boot, full AT devices, broader guest, broader game, or GUI execution, and has no CPU speed gate.
 
 The first source revision `370cb30f` built addon `66196536`, but the first native control failed during initialization before any callback: the native ROM admission still named the previous fixture. That attempt is retained as a failed initialization, not a completed control suite.
 

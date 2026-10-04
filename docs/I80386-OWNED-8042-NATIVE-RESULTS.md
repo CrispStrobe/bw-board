@@ -1,6 +1,8 @@
 # Fixed 8042 native self-test results
 
-The first hosted build and separate native OFF/ON executions pass the fixed `AA`/status/`55`/`FF`/`K`/HLT handshake. This qualifies this small real-mode fixture only. It establishes no performance result, general BIOS/AT boot, Windows or Doom admission; unchanged compiled fe1 remains the speed baseline.
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+The first hosted build and separate native OFF/ON executions pass the fixed `AA`/status/`55`/`FF`/`K`/HLT handshake. This qualifies this small real-mode fixture only. It establishes no performance result, general BIOS/AT boot, broader guest or broader game admission; unchanged compiled fe1 remains the speed baseline.
 
 [PR #266](https://github.com/CrispStrobe/bw-board/pull/266) source head `5b182d4147020931a4c19c380a088a1587d7d31c` binds 107 current/Git source inputs. The first and only [hosted qualification run](https://github.com/CrispStrobe/bw-board/actions/runs/37093346761), PR event/attempt 1, builds pinned Bochs `0e45b736ef9792eb9b752b0a35db49eaf2faea47` and a new 2,065,368-byte addon, SHA-256 `bf361a26ce7a20652a1f76f061cd08b7b1a2cc876a3dfbe096620585f2a33db0`. It preserves the original compiled addon and earlier candidates. Source/build/configuration authentication precedes addon loading.
 

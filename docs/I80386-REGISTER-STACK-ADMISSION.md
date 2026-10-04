@@ -1,5 +1,7 @@
 # Register-stack observed admission
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This diagnostic adds a separate, default-off observed grammar named
 `bw.i80386-register-stack-admission.v1`. The earlier
 `bw.i80386-expanded-grouped-admission.v1` grammar and report remain unchanged.
@@ -25,19 +27,14 @@ does not claim a linear-to-physical mapping proof. The existing single safe
 data-page, code-page, translation identity, event horizon, fault, write, and
 device cuts still apply before an ordinal can join a run.
 
-The report keeps the historical disjoint-run accounting. The predeclared
-Windows opportunity gate is **15,000,000** total ordinals in runs of at least
-eight and **5,000,000** protected16 or VM86 ordinals in such runs, within a
-60,000,000-step paired run. The source-bound reducer
+The report keeps the historical disjoint-run accounting. The source-bound reducer
 `scripts/summarize-i80386-register-stack-result.mjs` verifies source hashes,
 whole reported state parity outside the diagnostic flag and observer, and
 run partitions. Guest media and raw serial evidence remain private. A passing
 opportunity gate would describe observed trace coverage, not speed or an
 executable trace.
 
-The completed [Windows and xv6 result](I80386-REGISTER-STACK-ADMISSION-RESULT.md)
-shows 9,616,345 unique Windows ordinals in runs of at least eight overall and
-8,514,517 in protected16+VM86. The **overall 15M gate fails**. The separate
+The **overall 15M gate fails**. The separate
 stock xv6 pair found 967,663 such ordinals, all protected32, with no xv6 pass
 threshold. These are source-bound ordinary-step observations, not execution or
 speed results.

@@ -1,19 +1,18 @@
 # Draft: a guarded cross-mode trace engine for the 80386
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Status:** design for audit only. No runtime implementation or speed claim.
 Board evidence base: `5f4d53831568cf15c00a1a4e1e4b03ed785e60cb`; published against board main `1032537d14173ecb9af95180dfd73d5ce0a1befa`.
 
-The ordinary Windows 60M profile assigns 4,491/13,718 disjoint V8 self
+The ordinary broader guest 60M profile assigns 4,491/13,718 disjoint V8 self
 samples (32.74%) to `step` and `_stepInstruction`, but those functions include
-required execution, not removable overhead. The opt-in fetch-page cursor
-covered only 34.26M/147.71M fetch bytes and made one uninstrumented Windows
-pair 8.21% slower. The code16 event-run observer found only 13.02M of 44.69M
+required execution, not removable overhead. The code16 event-run observer found only 13.02M of 44.69M
 completed 16-bit ordinals (29.12%) in syntactically eligible runs of at least
 four; that observer excluded 32-bit execution and did not prove executable
 traces. Register-only native successor chaining also failed its necessary
 1.5M-call gate on xv6 (0.558M optimistic calls). These receipts rule out another
-narrow opcode, fetch, or straight-line chaining patch as the next 10× step.
-Sources: [ordinary core profile](receipts/2026-09-28-i80386-ordinary-core-other-audit.md),
+narrow opcode, fetch, or straight-line chaining patch as the next 10× step. Sources: [ordinary core profile](receipts/2026-09-28-i80386-ordinary-core-other-audit.md),
 [fetch cursor no-go](receipts/2026-09-28-i80386-fetch-page-cursor-no-go.md),
 [code16 event-run observer](receipts/2026-09-28-i80386-code16-event-run-observer.json),
 [native successor census](receipts/2026-09-28-i80386-native-successor-census.json).
@@ -57,28 +56,21 @@ boundary; otherwise I/O is a slow exit. An eight-instruction polling loop is
 useful only if this exit/re-entry cost is small enough. This is a different
 cost model from static code16 event runs that stopped at each I/O access.
 
-**Measured opportunity screen:** the [source-bound 60M Windows receipt](receipts/2026-09-28-i80386-cross-mode-potential-trace.json) passes the predeclared 30M/5M gate with 38.84M disjoint long-run ordinals overall and 21.74M protected16/VM86. This result uses a very optimistic ordinary-successful-execution grammar and assumes unproved I/O continuation; it does not establish an executable trace or speed gain. The original experiment specification follows.
+This result uses a very optimistic ordinary-successful-execution grammar and assumes unproved I/O continuation; it does not establish an executable trace or speed gain. The original experiment specification follows.
 
-**Predeclared measurement (now completed):** make an execution-neutral
-observer on the current 60M Windows source that follows *actual retired*
-CS:EIP and mode transitions. Build disjoint potential traces using the full
+Build disjoint potential traces using the full
 currently modeled opcode grammar, conditional branch outcomes, one physical
 code page, and an explicit I/O-helper assumption. Count retired steps in runs
 of at least eight, call/exit frequency, code-page and translation revocations,
 fault/IRQ/chip exits, and per-mode shares; label every unproved I/O continuation
 an optimistic upper bound. Pair observed/unobserved complete guest JSON and
 input/source hashes. **Predeclared gate:** at least 30M unique retired instruction ordinals within the 60M-step-call
-Windows budget in disjoint ≥8-instruction potential traces, including at least 5M
-protected16/VM86 steps, with no double counting or event-boundary inference.
-That is roughly half the step-call budget and only a necessary opportunity screen: it would
+broader guest budget in disjoint ≥8-instruction potential traces, including at least 5M
+protected16/VM86 steps, with no double counting or event-boundary inference. That is roughly half the step-call budget and only a necessary opportunity screen: it would
 still require more than 20% cost reduction on covered steps for a 10% total
 gain, before entry and helper overhead. If it fails, do not build a backend.
 
-With that screen passed, next prove a small branch + RAM load + port-I/O loop against ordinary
-state and exact device/fault order, then run an opt-in full Windows 60M and
-lean xv6 parity pair. Only after parity would three serial AB/BA/AB user-CPU
-pairs test a predeclared ≥10% mean Windows improvement with every pair
-favorable. The path remains opt-in until those gates pass. None of these
+The path remains opt-in until those gates pass. None of these
 upstream designs or current receipts predicts a 10× result for our board.
 
 **License and provenance:** this document uses published *ideas only*; it

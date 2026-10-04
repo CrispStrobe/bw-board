@@ -1,5 +1,7 @@
 # Native CPU3 PIT/PIC device self-parity
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Status (2026-09-30): source-bound native device self-parity passed and independently reproduced.** Executable, host-model, runner, validator and test source is frozen at `5501fa3e0f7572c4747aa7ce093136ecccdcbb61`.
 
 The free BDEV001 guest programs PIT channel 0 and a single master PIC through real guest OUT instructions. The host directly instantiates the existing JavaScript `I8254` and `I8259` models. PIT OUT0 drives PIC IR0; the PIC supplies vector `0x20` only when the native CPU accepts INTA. The guest installs a protected interrupt gate, executes STI and its successor, halts before the timer edge, checks the saved interrupt frame in its handler, sends EOI, and returns with IRETD before emitting its marker and entering a masked terminal HLT.
@@ -56,4 +58,4 @@ node scripts/run-bochs-cpu3-native-device-events-compare.mjs --capture /new/nati
 node --test test/i80386-native-device-events.test.mjs test/i80386-native-device-events-report.test.mjs
 ```
 
-Earlier adapters/builds/receipts remain unchanged. This gate covers one actual PIT0/single-PIC model connection, not dual PIC/APIC, DMA/RTC/VGA/ATA, full JavaScript AT event parity, native/WASM board integration, Windows enhanced mode, Doom, or the 10× speed target. Next, define and prove successful-quantum/device-time behavior through REP, fault retry and an active timer edge before integrating and measuring the backend. Strict CPU3 cannot run stock xv6's CR4/PSE bootstrap. A strict 386 xv6 variant needs 4 KiB paging and a compatible PIC/UP platform; the existing stock-xv6 JavaScript compatibility route remains separately identified.
+Earlier adapters/builds/receipts remain unchanged. This gate covers one actual PIT0/single-PIC model connection, not dual PIC/APIC, DMA/RTC/VGA/ATA, full JavaScript AT event parity, native/WASM board integration, broader guest enhanced mode, broader game, or the 10× speed target. Next, define and prove successful-quantum/device-time behavior through REP, fault retry and an active timer edge before integrating and measuring the backend. Strict CPU3 cannot run stock xv6's CR4/PSE bootstrap. A strict 386 xv6 variant needs 4 KiB paging and a compatible PIC/UP platform; the existing stock-xv6 JavaScript compatibility route remains separately identified.

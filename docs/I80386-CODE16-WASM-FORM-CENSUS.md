@@ -1,5 +1,7 @@
 # Code16 WASM form census
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 Set `AT_CODE16_WASM=1 AT_CODE16_WASM_DIAGNOSTICS=1
 AT_CODE16_WASM_FORM_CENSUS=1` on the experimental AT console to describe
 refused instruction bytes. The option is off by default and requires the
@@ -25,8 +27,7 @@ executed address can be the branch target. Counts are dispatcher calls, not
 distinct static instructions or retired instruction coverage. The observer
 does not infer the behavior of a full instruction from its first byte alone.
 
-In a private pinned 60-million-step Windows ordinary/opt-in pair, the full
-normalized guest reports matched. The form census counted:
+The form census counted:
 
 | Refused first byte | Calls | Leading decoded forms |
 | --- | ---: | --- |

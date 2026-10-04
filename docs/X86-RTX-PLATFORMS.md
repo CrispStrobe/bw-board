@@ -1,5 +1,7 @@
 # Media-free x86 platform benchmark
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `node scripts/bench-x86-platforms.mjs --steps 1000000 --passes 3` runs the
 same five-instruction real-mode loop on the 8086 and experimental 386 cores,
 and through their board machine paths. It uses no BIOS, DOS, disk, or network.
@@ -23,8 +25,7 @@ machine measured 47.19× and 29.84× XT; the 386 core and AT machine measured
 The 8086 factor uses estimated instruction cycles. The 386 executor has no
 measured 80386 instruction timing: its core assigns one cycle per instruction,
 and the board charges six synthetic scheduling cycles. The 386 factors are
-throughput under those configured charges. This real-mode loop says nothing
-about 32-bit protected-mode, paging, or DOS/Windows boot speed.
+throughput under those configured charges.
 
 The `X86 platform throughput` GitHub workflow can be started with
 `gh workflow run x86-rtx-platforms.yml --ref <branch>`. Download its JSON and

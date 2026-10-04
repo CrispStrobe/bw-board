@@ -1,42 +1,10 @@
 # Experimental 80386 executor
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `src/experimental/i80386.js` is an opt-in functional executor with a native
 32-bit register and instruction-pointer model. It does not select or replace
 the production 8086/186/286 CPU.
-
-The original Doom 1.9 shareware executable now reaches a recognizable title
-screen after genuine AT reset, SeaVGABIOS and FreeDOS boot. A frozen 320-million
-step run completed without a CPU/device refusal; the captured unchained VGA
-planes decode to 320 by 200 pixels with 240 distinct colors. The
-[source-bound graphics receipt](receipts/2026-09-20-386-doom-graphics.json)
-records the image hashes and the historical snapshot's missing DAC-mask field.
-A separate controlled run injects Esc and three Enter keys through the 8042,
-then reaches a rendered E1M1 level with pistol and HUD. A subsequent controlled
-Up/Ctrl sequence visibly moves the player and fires the pistol, reducing ammo
-from 50 to 48; the [gameplay receipt](receipts/2026-09-20-386-doom-gameplay.json)
-records source-bound frames and inputs. The
-[combined-source replay](receipts/2026-09-20-386-doom-combined-gameplay.json)
-repeats movement and firing with the final Windows keyboard/disk changes.
-The original executable also loads and renders an
-[owned 24-tic demo](receipts/2026-09-20-386-doom-short-demo.json), emits its timing
-completion line and returns to DOS. The original full demo1 timedemo remains
-incomplete at 500M instructions; save/load, sound and longer gameplay remain
-separate acceptance targets.
-
-The Windows 3.0 / PC DOS 3.2 disk boots through HIMEM and SMARTDrive after the
-[opcode82 and ATA-reset fixes](receipts/2026-09-20-386-dos-loader-reset.json).
-After correcting HIMEM segment-limit retention, keyboard F3 acknowledgements
-and the bounded ATA intersector delay, it reaches Program Manager. A real
-Set-1 Enter make/break pair launches File Manager and displays the C:\WINDOWS
-tree and free space. The [Windows milestone](I80386-WINDOWS300.md) records
-source-bound desktop and application runs. The diagnostic runner retains
-`windowsBootAccepted:false`; separately decoded and visually audited frames
-establish this bounded milestone. Other Windows releases, enhanced mode, and
-complete 386 protection/debug behavior remain unaccepted. A separate
-[Notepad persistence run](receipts/2026-09-20-windows300-editor-persistence.json)
-creates OWNED.TXT through the Windows UI, saves its exact 17 bytes to the cloned
-HDD, then reboots and opens it in Notepad. The writer and reader use separately
-bound source revisions and linked media hashes. See also the [VGA scope](VGA-MEMORY-EXPERIMENT.md).
 
 The pinned stock SMP-capable xv6 x86 kernel, built for 4 MiB or 14 MiB with
 `-march=i386` for compiler output, boots to `init: starting sh` on the matching
@@ -55,12 +23,12 @@ regular 386 GUI target with `await createDebugTarget('i80386',
 `enableNativeBlocks()` for callers that construct it directly. Normal GUI
 `runFor()` slices use bounded blocks only when the debugger has no per-step
 breakpoint, watchpoint, event subscriber, or pending step; all other slices
-retain ordinary stepping. Single-step always uses the functional executor.
-The [AT console](I80386-AT-CONSOLE.md) exposes the same dispatcher with
+retain ordinary stepping. Single-step always uses the functional executor. The [AT console](I80386-AT-CONSOLE.md) exposes the same dispatcher with
 `--native-blocks`. It is off by default and currently admits only a subset of
-validated paged 32-bit RAM instructions. The real-mode Windows boot path thus
-mostly remains on the ordinary executor. The xv6 `forktest` native receipt
+validated paged 32-bit RAM instructions. The xv6 `forktest` native receipt
 measured about 1.3× end-to-end speedup, well short of the 10× goal.
+
+The functional JavaScript AT is the general experimental guest path. The separately qualified Bochs addon still has fixed-fixture admission and no general image-loading GUI backend. See [CLI and GUI loading](X86-LOADING-GUIDE.md) and [browser media](I80386-BROWSER-ADAPTER.md).
 
 The configured AT keyboard extension accepts F3h and a seven-bit rate/delay
 parameter with separate delayed, keyboard-originated FAh acknowledgements.
@@ -91,7 +59,7 @@ hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
 LIDT, MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
 After protected-mode code clears PE, a real-mode segment reload updates its
 visible selector and base while retaining the hidden limit and default-size
-attributes. This permits HIMEM's high-address copies after its GP handler
+attributes. This permits high-address copies after a protected-mode handler
 establishes large DS/ES limits. VM86 reloads remain a separate 64KiB path.
 The functional cache's present/null admission flags are normalized on a real
 reload; this is not a claim to preserve every internal cache flag literally.
@@ -666,8 +634,7 @@ The 386 also boots DOS2 through genuine reset, POST and INT19, writes
 after a fresh machine remount. Coordinator source `72f56ab` takes 25,652,224
 write steps and 25,567,232 reboot steps; the saved image hash matches the
 worker run. The tracked fixture binds all executed sources and rejects five
-tampered evidence cases. See the [DOS/HDD receipt](receipts/2026-09-20-386-at-dos-hdd.json).
-386 FreeDOS, Windows and Doom acceptance remain open.
+tampered evidence cases.
 
 ## REP and ISA continuation receipt
 
@@ -726,7 +693,6 @@ A one-million-step BIOS CPU profile attributes 70.3% of sampled self time to
 instruction-state copying and 5.1% to garbage collection. This identifies an
 optimization candidate; no speedup or fault-recovery simplification is claimed.
 
-
 ## Full-size diagnostic boundary
 
 The pinned 128 KiB capture configuration includes task tests omitted from the
@@ -740,4 +706,4 @@ paged task CALL/IRET program is separately compared against pinned PCjs.
 The [286-format TSS receipt](receipts/2026-09-20-386-task16.json) records the
 independent CALL/IRET comparison, its rejecting controls, exact mixed-format
 save-byte tests, and a fresh source-bound DOS write/reboot regression. These
-are bounded executor checks; they do not establish Windows compatibility.
+are bounded executor checks; they do not establish broader guest compatibility.

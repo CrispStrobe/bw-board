@@ -1,5 +1,7 @@
 # Static WASM 386 block spike
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The bundled 6,287-byte WASM module executes prevalidated register-only MOV,
 CMP, TEST, immediate MOV/CMP/ADD/OR/AND/SHL/SHR, NOP, JZ, JNZ and JMP operations
 plus physical RAM loads and LEA
@@ -116,9 +118,7 @@ The next useful implementation step is to expand and streamline the opt-in
 3. At each call, cap the block by `_chipDeadline - _chipDebt`, pending IRQ/NMI,
    interrupt shadows, and single-step debug state. Return to the regular
    board loop after every exit and verify exact guest state.
-4. Re-measure full xv6 `forktest` and Windows desktop transitions against
-   JavaScript-only runs. Include state equality and paired user-CPU time.
-   A microkernel throughput number would not establish emulator speed.
+4. Include state equality and paired user-CPU time. A microkernel throughput number would not establish emulator speed.
 
 Given the measured run lengths, step 1 must cover the common memory MOV/LEA,
 short branches, REP STOS and ALU forms before a production bridge is worth

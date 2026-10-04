@@ -1,5 +1,7 @@
 # Experimental IBM AT BIOS boot profile
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 `PCAT80286_BOOT` is a bounded IBM 5170-shaped profile for the experimental
 protected 80286 backend. It uses the 80286 hardware reset state: visible
 `CS:IP=F000:FFF0`, a reset-only hidden CS base of `FF0000h`, and a first fetch
@@ -122,7 +124,6 @@ the owned IO.SYS fixes SYSINIT at segment 9F84h, beyond the 512KiB RAM map.
 Port 80h values alone are insufficient: DMA page-register tests also write
 those values, so genuine checkpoints must include their firmware CS:IP.
 
-
 ## Accepted DOS disk boot and persistence
 
 The [source-bound write/reboot evidence](../test/fixtures/at-dos-persistence-evidence.json)
@@ -146,11 +147,10 @@ second machine's input:
 The ordinary evidence test checks reset, 640KiB RAM, source binding, DMA
 address/count/terminal-count state, boot-sector hash, keyboard consumption,
 file bytes, final prompt and linked media. It rejects mutations to file
-contents, output, DMA completion, keyboard evidence and reboot media identity.
-The raw reports are represented by their hashes and retained grading fields;
+contents, output, DMA completion, keyboard evidence and reboot media identity. The raw reports are represented by their hashes and retained grading fields;
 ROM and disk images remain external. This qualifies the named DOS boot and
 persistence workload on this functional AT profile. It does not qualify all
-AT peripherals, Windows, Doom, or physical bus/cycle timing.
+AT peripherals, broader guest, broader game, or physical bus/cycle timing.
 
 ## FreeDOS 1.4 diagnostic
 
@@ -188,22 +188,9 @@ source-bound harness revisions; the reboot receipt binds the current pure
 acceptance grader and rejects key, cursor, DMA, file, output and media-link
 mutations. No installer partition, format or copy action executes.
 
-## Next platform boundaries
+## Profile boundaries
 
-A Doom-class target needs a separate opt-in machine profile with at least 4MiB
-installed RAM and matching CMOS/BIOS memory evidence; the accepted 286 profile
-remains 640KiB conventional plus 512KiB extended. The repository has no
-AT-compatible hard-disk controller, while the executable and WAD exceed floppy
-capacity. A real sector-I/O path therefore needs an ATA/WD1003-style controller
-at 1F0h with IRQ14, bootable FAT media, and native 16-bit data-register I/O;
-splitting that access across adjacent byte ports would incorrectly hit 1F1h.
-
-The existing VGA device supplies register, DAC, retrace and linear mode-13h
-behavior. It does not interpret planar memory or unchained page flipping, and
-the IBM CGA BIOS does not initialize a VGA card. A later Doom platform needs a
-licensed external VGA ROM/INT10 path plus the planar/Mode-X behavior required
-by the selected unchanged binary. These are concrete missing platform pieces,
-not capabilities implied by the current 386 CPU or AT adapter.
+The 286 profile documented here uses floppy/FDC media. It does not inherit the separate experimental 386 AT profile's ATA hard disk, larger memory or VGA behavior. Select the appropriate board and media loader explicitly; see [the loading guide](X86-LOADING-GUIDE.md). Earlier missing-platform observations in the private historical archive describe their dated source, rather than current repository-wide capabilities.
 
 The combined [platform receipt](receipts/2026-09-19-at-freedos-386-platform.json)
 records the FreeDOS evidence audit, functional 386 pacing checks and the

@@ -1,5 +1,7 @@
 # First cold-BIOS three-arm qualification failure
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The first hosted three-arm qualification stopped after plain JS passed and native one-Q failed during reset validation, before any native resume. Native batched never started. This is a source/schema integration failure; the separately audited eighth diagnostic reset→before F000:E16 correctness result remains unchanged. There is no three-arm qualification or speed result.
 
 [PR #300](https://github.com/CrispStrobe/bw-board/pull/300) merged normally at `6910c8e4013eb5dfd131a05a1b8817f739de264c` after all eleven enabled push and PR checks passed at source `be5cf520924d3b543fa2da20a2e1fdc6b6c6db82`. The separately authorized [manual run 37120409279](https://github.com/CrispStrobe/bw-board/actions/runs/37120409279), attempt 1, used that frozen source and stopped on its first failure. No rerun or altered limits followed.
@@ -14,4 +16,4 @@ The proposed qualifier correction keeps the final inspect schema literal and req
 
 The official artifact is `11273147920`, 19,754,059 bytes, SHA-256 `406be3268dd71ad3f42627ec72f4ecc6c56bd30fdf37b1e1aa4e8352a8c590bf`. Its single retained ZIP has 180 entries and was safely extracted once. [The compact raw records and byte-exact origin index](receipts/i80386-cold-three-arm-first-failure-20261003/index.json) retain exits, failure/result receipts, actual source/artifact maps and the independent audit. The external lossless ZIP remains at `/tmp/native-cold-three-arm-first-qualification-publication-20261003/official-artifact.zip`; the index binds its [official download](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273147920/zip).
 
-Independent audit verified the first-failure sequence, the plain-JS terminal evidence, all 180 retained artifact members and unchanged before/after source/artifact maps. No native build, three-arm PASS audit, paired performance gate, broader AT boot, Windows/Doom 10× or adoption is claimed by this failure note.
+Independent audit verified the first-failure sequence, the plain-JS terminal evidence, all 180 retained artifact members and unchanged before/after source/artifact maps. No native build, three-arm PASS audit, paired performance gate, broader AT boot, broader guest/broader game 10× or adoption is claimed by this failure note.
