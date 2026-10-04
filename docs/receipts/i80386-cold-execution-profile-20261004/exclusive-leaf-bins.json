@@ -1,0 +1,436 @@
+[
+  {
+    "functionName": "run",
+    "url": "file:///home/runner/work/bw-board/bw-board/diagnostic-worker/scripts/cold-native-memory-fusion-execution-profile/worker.mjs",
+    "lineNumber": 18,
+    "samples": 604,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "close",
+    "url": "",
+    "lineNumber": -1,
+    "samples": 522,
+    "scope": "opaque/special raw label; no native function inference"
+  },
+  {
+    "functionName": "copyLedger",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-memory-fusion/provider.mjs",
+    "lineNumber": 4,
+    "samples": 158,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "clockTransfer",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 48,
+    "samples": 97,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "fusedMemory",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-memory-fusion/provider.mjs",
+    "lineNumber": 25,
+    "samples": 49,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-direct-board/board.mjs",
+    "lineNumber": 22,
+    "samples": 38,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "(garbage collector)",
+    "url": "",
+    "lineNumber": -1,
+    "samples": 30,
+    "scope": "opaque/special raw label; no native function inference"
+  },
+  {
+    "functionName": "",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 44,
+    "samples": 22,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_call",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-hot-direct/board.mjs",
+    "lineNumber": 5,
+    "samples": 17,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "writePhysical",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-hot-direct/board.mjs",
+    "lineNumber": 7,
+    "samples": 17,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "(program)",
+    "url": "",
+    "lineNumber": -1,
+    "samples": 14,
+    "scope": "opaque/special raw label; no native function inference"
+  },
+  {
+    "functionName": "checkState",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 43,
+    "samples": 13,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "objectComparisonStart",
+    "url": "node:internal/util/comparisons",
+    "lineNumber": 266,
+    "samples": 13,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "span",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs",
+    "lineNumber": 65,
+    "samples": 11,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_class",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs",
+    "lineNumber": 51,
+    "samples": 11,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "call",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 40,
+    "samples": 11,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 24,
+    "samples": 10,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 47,
+    "samples": 10,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_write386",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/experimental/i80386-at-machine.js",
+    "lineNumber": 198,
+    "samples": 9,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "strictEqual",
+    "url": "node:assert",
+    "lineNumber": 383,
+    "samples": 9,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "validateMemoryReply",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-memory-fusion/provider.mjs",
+    "lineNumber": 11,
+    "samples": 8,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "readPhysical",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-direct-board/board.mjs",
+    "lineNumber": 31,
+    "samples": 7,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "quantum",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 20,
+    "samples": 7,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_in386",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/experimental/i80386-at-machine.js",
+    "lineNumber": 257,
+    "samples": 6,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_out",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8086-machine.js",
+    "lineNumber": 1287,
+    "samples": 6,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "onPortAccess",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 9,
+    "samples": 6,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_advanceChips",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8086-machine.js",
+    "lineNumber": 1488,
+    "samples": 5,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "innerDeepEqual",
+    "url": "node:internal/util/comparisons",
+    "lineNumber": 233,
+    "samples": 5,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "objEquiv",
+    "url": "node:internal/util/comparisons",
+    "lineNumber": 954,
+    "samples": 5,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "span",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-direct-board/board.mjs",
+    "lineNumber": 15,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "end",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 70,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "state",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 42,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 29,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "keyCheck",
+    "url": "node:internal/util/comparisons",
+    "lineNumber": 432,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "boundedCount",
+    "url": "file:///home/runner/work/bw-board/bw-board/diagnostic-worker/scripts/bochs-cpu3-native-cold-bios/parity.mjs",
+    "lineNumber": 12,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "readPhysical",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-hot-direct/board.mjs",
+    "lineNumber": 6,
+    "samples": 4,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "ok",
+    "url": "node:assert",
+    "lineNumber": 213,
+    "samples": 3,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_out386",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/experimental/i80386-at-machine.js",
+    "lineNumber": 291,
+    "samples": 3,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_in",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8086-machine.js",
+    "lineNumber": 1269,
+    "samples": 3,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "getOwnNonIndexProperties",
+    "url": "",
+    "lineNumber": -1,
+    "samples": 3,
+    "scope": "opaque/special raw label; no native function inference"
+  },
+  {
+    "functionName": "nextWakeMs",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8254.js",
+    "lineNumber": 146,
+    "samples": 3,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_wakeHorizon",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8086-machine.js",
+    "lineNumber": 1515,
+    "samples": 3,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "advance",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8254.js",
+    "lineNumber": 338,
+    "samples": 3,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_class",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-direct-board/board.mjs",
+    "lineNumber": 14,
+    "samples": 2,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "advance",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/mc146818.js",
+    "lineNumber": 178,
+    "samples": 2,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "begin",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 69,
+    "samples": 2,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "coldOutAllowed",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-profile.mjs",
+    "lineNumber": 7,
+    "samples": 2,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "nativeTick",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 19,
+    "samples": 2,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "post",
+    "url": "node:inspector",
+    "lineNumber": 117,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "admitExecutePage",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 21,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_updateHrq",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8237.js",
+    "lineNumber": 485,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "uint",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs",
+    "lineNumber": 10,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "write",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8254.js",
+    "lineNumber": 93,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "stageLine",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 16,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_catchUpChips",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8086-machine.js",
+    "lineNumber": 1484,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "deepStrictEqual",
+    "url": "node:assert",
+    "lineNumber": 333,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 46,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "validateReturn",
+    "url": "file:///home/runner/work/bw-board/bw-board/diagnostic-worker/scripts/cold-native-memory-fusion-execution-profile/held-protocol.mjs",
+    "lineNumber": 11,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "_dec",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/i8254.js",
+    "lineNumber": 240,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "innerOk",
+    "url": "node:internal/assert/utils",
+    "lineNumber": 54,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "#controller",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs",
+    "lineNumber": 23,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  },
+  {
+    "functionName": "nextWake",
+    "url": "file:///home/runner/work/bw-board/bw-board/publication/src/at-8042-a20.js",
+    "lineNumber": 129,
+    "samples": 1,
+    "scope": "resolved source callsite"
+  }
+]

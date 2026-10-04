@@ -1,0 +1,29 @@
+{
+  "scope": "Selected compact receipts; original official ZIP remains unchanged and external. No replay.",
+  "files": [
+    {
+      "path": "independent-audit.json",
+      "origin": "/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004/independent-audit.json",
+      "bytes": 889,
+      "sha256": "238960a167df142cf66ff5c5b2a32a63d96c5987bf06e63012c315f664c011db"
+    },
+    {
+      "path": "root-offline-terminal-audit.json",
+      "origin": "/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004/root-offline-terminal-audit.json",
+      "bytes": 373,
+      "sha256": "a8ffe06abfc3ef264cee649f86b31ddb88ac2d078404e39ecea3ae5515a93de5"
+    },
+    {
+      "path": "exclusive-leaf-bins.json",
+      "origin": "/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004/exclusive-leaf-bins.json",
+      "bytes": 13641,
+      "sha256": "bd214ca0304b6639510b8c3cfc225435562cc397a3a11e62e22dcf36d7a6af43"
+    },
+    {
+      "path": "official-metadata.json",
+      "origin": "/tmp/native-cold-memory-fusion-execution-profile-first-diagnostic-publication-20261004/official-metadata.json",
+      "bytes": 312,
+      "sha256": "cc55c4707d4555f8e11c79233c8e37fc64840bfd8cdcf71b157cb707955bc748"
+    }
+  ]
+}
