@@ -1,5 +1,5 @@
 """Pure manufactured controls. No download, restore, addon or guest."""
-import copy,json,unittest
+import copy,json,unittest,tempfile
 from unittest.mock import patch
 import qualify as q
 class Controls(unittest.TestCase):
@@ -19,9 +19,9 @@ class Controls(unittest.TestCase):
   for e in reversed(d['edits']):self.assertEqual(s[e['start']:e['end']],e['next']);s=s[:e['start']]+e['old']+s[e['end']:]
   self.assertEqual(q.digest(s.encode()),d['baseSha256'])
  def test_return_metadata_and_ownership_denials(self):
-  fixtures=q.read_json(q.ROOT/'scripts/cold-native-memory-fusion-performance/actual-snapshot-fixtures.json')
+  fixtures=q.read_json(q.HERE/'terminal-fixture.json')
   # Only genuine ordinary snapshot metadata projections; no typed execution.
-  n=copy.deepcopy(fixtures['finalInspect']);n.update(bridgeClockEntryAttempts={k:str(int(k=='INIT')) for k in q.METADATA_COUNTER_FIELDS['bridgeClockEntryAttempts']},bridgeMemoryEntryAttempts={k:'0' for k in q.METADATA_COUNTER_FIELDS['bridgeMemoryEntryAttempts']});q.validate_inspect_snapshot(n)
+  n=copy.deepcopy(fixtures['receiptProjection']['finalNative']);n.update(bridgeClockEntryAttempts={k:str(int(k=='INIT')) for k in q.METADATA_COUNTER_FIELDS['bridgeClockEntryAttempts']},bridgeMemoryEntryAttempts={k:'0' for k in q.METADATA_COUNTER_FIELDS['bridgeMemoryEntryAttempts']});q.validate_inspect_snapshot(n)
   # Fusion metadata is manufactured; ordinary raw words above remain genuine.
   for field in ['bridgeClockEntryAttempts','bridgeMemoryEntryAttempts']:
    bad=copy.deepcopy(n);bad[field].pop(next(iter(bad[field])))
@@ -39,4 +39,28 @@ class Controls(unittest.TestCase):
  def test_manual_single_child_contract(self):
   text=(q.ROOT/'.github/workflows/i80386-cold-ledger-scalars-qualification.yml').read_text();self.assertIn('workflow_dispatch:',text);self.assertNotIn('pull_request:',text);self.assertNotIn('push:',text);self.assertIn('default: false',text)
   source=(q.HERE/'qualify.py').read_text();self.assertEqual(source.count("str(N/c['worker']['entry'])"),1);self.assertIn("'mode':'batched'",source);self.assertIn("report['inputsAfter']==report['inputsBeforeRestore']",source)
+
+class TerminalProjectionControls(unittest.TestCase):
+ def test_actual_terminal_projection_reaches_held_validator(self):
+  f=q.read_json(q.HERE/'terminal-fixture.json');c=q.read_json(q.HERE/'contract.json');r=copy.deepcopy(f['receiptProjection']);b=copy.deepcopy(f['originalDerivedBinding']);data=copy.deepcopy(f['input'])
+  w=c['worker'];role={**w,'files':{p:v['sha256'] for p,v in w['files'].items()}};b['workers']['native']=role
+  # Only new worker/profile/source metadata is manufactured. Raw retained CPU,
+  # board, counters and one-event PIO projection remain genuine; not a new run.
+  data.update(workerRevision=w['revision'],workerSourceSha256=w['sourceSha256']);r['input']=data
+  identity={'revision':w['revision'],'hashes':dict(sorted(role['files'].items()))};r['workerBefore']=r['workerAfter']=identity
+  r['prerequisite']['bindingSha256']=role['files'][w['binding']]
+  r.update(schema='bw.cold-native-memory-fusion-ledger-scalars-performance.worker.v1',status='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS',requiredScalarProviderProfile=c['scalarProviderProfile'],scalarOverlay={'profile':c['scalarProviderProfile'],'bindingSha256':role['files']['scripts/cold-native-memory-fusion-ledger-scalars-performance/scalar-overlay.json']})
+  q.terminal(r,data,b,f['captureProjection'])
+  for kind in ['state','activity','scalar','overlay','pio','bridge']:
+   bad=copy.deepcopy(r)
+   if kind=='state':bad['finalNative']['state'][0]^=1
+   elif kind=='activity':bad['lastReturnedNative']['activityState']=1
+   elif kind=='scalar':bad['requiredScalarProviderProfile']='wrong'
+   elif kind=='overlay':bad['scalarOverlay']['bindingSha256']='0'*64
+   elif kind=='pio':bad['ports'][0]['value']^=1
+   else:bad['bridgeAttemptCounts']['provider']['replyValidations']-=1
+   with self.assertRaises(ValueError):q.terminal(bad,data,b,f['captureProjection'])
+  missing=copy.deepcopy(b);missing['workers']['native'].pop('binding')
+  with self.assertRaises(KeyError):q.terminal(r,data,missing,f['captureProjection'])
+
 if __name__=='__main__':unittest.main()
