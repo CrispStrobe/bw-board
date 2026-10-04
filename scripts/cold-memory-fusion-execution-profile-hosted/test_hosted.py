@@ -10,11 +10,15 @@ class Controls(unittest.TestCase):
   c=copy.deepcopy(h.read(h.HERE/'contract.json'));c['status']='PENDING_SOURCE_REVIEW_NO_EXECUTION'
   with patch.object(h,'read',return_value=c),patch.object(h,'sources',side_effect=AssertionError('source effects')),patch.object(h,'bounded_child',side_effect=AssertionError('child effects')):
    with self.assertRaisesRegex(ValueError,'pending refuses'):h.main('enabled')
- def test_ready_status_cannot_override_pending_worker(self):
+ def test_ready_binding_and_manufactured_worker_mutation_refusals(self):
   c=copy.deepcopy(h.read(h.HERE/'contract.json'));c['status']='ROOT_REVIEWED_EXECUTION_PROFILE_HOSTED_READY'
-  with self.assertRaisesRegex(ValueError,'worker authority remains pending'):p.contract(c)
-  c['diagnosticWorker']['authorityStatus']='ROOT_REVIEWED_EXECUTION_PROFILE_READY'
-  with self.assertRaisesRegex(ValueError,'full source-owned authority'):p.contract(c)
+  self.assertEqual(p.contract(c),c,'valid exact frozen READY role accepted')
+  changed=copy.deepcopy(c);changed['diagnosticWorker']['authorityStatus']='PENDING_SOURCE_REVIEW_NO_EXECUTION'
+  with self.assertRaisesRegex(ValueError,'full source-owned authority'):p.contract(changed)
+  changed=copy.deepcopy(c);changed['diagnosticWorker']['revision']='0'*40
+  with self.assertRaisesRegex(ValueError,'full source-owned authority'):p.contract(changed)
+  changed=copy.deepcopy(c);changed['diagnosticWorker']['sourceSha256']='0'*64
+  with self.assertRaisesRegex(ValueError,'full source-owned authority'):p.contract(changed)
  def test_finalization_preserves_primary_and_raw_failure(self):
   with tempfile.TemporaryDirectory() as name:
    out=Path(name);primary=RuntimeError('original guest');report={'status':'FAIL','error':repr(primary)}

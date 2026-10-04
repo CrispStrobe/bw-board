@@ -1171,8 +1171,8 @@
     }
   },
   "diagnosticWorker": {
-    "revision": "456aba0c62a2eda4e7efbc9e5c1cc9ce5b73ff15",
-    "sourceSha256": "3bdd1cec5bc8034455e1ecb0bf10d1d4da4e75ea397361e371be11d86b7cfade",
+    "revision": "bd8f2be4284f0666b7ace61675c19ee237e7ea24",
+    "sourceSha256": "d655a68051c56d6eea281cb660e478cec25b3cd4dfa6106deff92c26e3363152",
     "files": {
       "package.json": {
         "sha256": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee"
@@ -1217,13 +1217,13 @@
         "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
       },
       "scripts/cold-native-memory-fusion-execution-profile/README.md": {
-        "sha256": "4e972e9e2a994fdfb1a6dbbe09a210087bbdedd686eb716a2dc3fe540c324a97"
+        "sha256": "e44f64ec8c8d80fe81bc3a8805a5299874507dbe7654950f21056d7df5b9c12d"
       },
       "scripts/cold-native-memory-fusion-execution-profile/actual-snapshot-fixtures.json": {
         "sha256": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080"
       },
       "scripts/cold-native-memory-fusion-execution-profile/admission.mjs": {
-        "sha256": "ad4059f034758035fc0ac73cc565fb3dee38ae44d783d3d8aeb062576a77c6c5"
+        "sha256": "3a4307c6162cb12589eaa15944719c505528e6eab59b1e27231ee247af21bd52"
       },
       "scripts/cold-native-memory-fusion-execution-profile/base-source-context.json": {
         "sha256": "4bb80fdd5c98e68d1422272163a9d2e77d4b2f56964c8f588c50b089de648465"
@@ -1238,7 +1238,7 @@
         "sha256": "891e35d51b0ff74f421f8fc9b83d0f56c64f2a2095165a21713a80170d59e490"
       },
       "scripts/cold-native-memory-fusion-execution-profile/diagnostic-binding.json": {
-        "sha256": "277599f06cc4c0c3e20ddc0560d726eb9da741e60c80915af43c505eb10d372c"
+        "sha256": "8af4d0bf6f7dd1c30807f8ec7a8e1c0a8a4d73131fb539bee7bf71b054cf1fe7"
       },
       "scripts/cold-native-memory-fusion-execution-profile/fixture-origin.json": {
         "sha256": "0e1fc839935a3e4e2d3f1e4d6d6d85ed12e9ced5e2633317babca59b9cdf48a1"
@@ -1412,14 +1412,14 @@
         "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
       },
       "test/i80386-cold-memory-fusion-execution-profile-source.test.mjs": {
-        "sha256": "6762906b227af9508e268a91cea4945a4f8aa525ddcabcf1daa41b015aeb230a"
+        "sha256": "0483f0d329f6609396b73dbeb3ca04d4b4341ee191b0ea215e74c7ea92294fc4"
       },
       "test/i80386-cold-native-memory-fusion-worker-source.test.mjs": {
         "sha256": "0d087d1a4d8795bc9787cba507cad952eff819fe6c0642af89955eb147ec627c"
       }
     },
     "entry": "scripts/cold-native-memory-fusion-execution-profile/worker.mjs",
-    "authorityStatus": "PENDING_SOURCE_REVIEW_NO_EXECUTION"
+    "authorityStatus": "ROOT_REVIEWED_EXECUTION_PROFILE_READY"
   },
   "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
   "bounds": {

@@ -1,6 +1,6 @@
 # Hosted execution-window diagnostic source draft
 
-PENDING source authority refuses before downstream checkout, download, Inspector or guest execution. The diagnostic worker remains immutable 456/81 and PENDING; its later READY promotion requires a separately reviewed revision/map and an affected pending/refusal control, not relabelling the earlier controls.
+PENDING source authority refuses before downstream checkout, download, Inspector or guest execution. The separately reviewed diagnostic worker is now bound at bd8f2be4/81 (canonical d655a680), with historical 456/81 preserved PENDING. Its READY preparation has one affected metadata control plus a separate read-only identity query; the original five-control sampler suite remains distinct. The hosted authority remains PENDING until final review.
 
 The separately pinned a200/17 checkout supplies setup() only, never its main(). Its held compiled85fc/151, metadata11c/54 and worker735/63 remain separate from the diagnostic worker. One fresh Node22.23.3 batched child retains the original CPU60/wall120/heap128/file16MiB/core0/nice10 bounds. The setup-only archive allowance is32MiB and the API token is restricted to that exact setup child; it is stripped from the guest and validation child.
 
