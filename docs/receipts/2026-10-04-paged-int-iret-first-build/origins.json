@@ -1,0 +1,93 @@
+{
+  "root-static-audit.json": {
+    "path": "/tmp/native-paged-int-iret-first-build-root-audit-20261004.json",
+    "bytes": 1492,
+    "sha256": "a05351a5f0186de82fc5e0976fc6fca2b6f82490991e337c01bc091dbf3205cd"
+  },
+  "independent-static-audit.json": {
+    "path": "/tmp/native-paged-int-iret-first-build-independent-audit-20261004.json",
+    "bytes": 1810,
+    "sha256": "bb123e88d360607c5d649e935bf79effd985a33342bfb92892f1bec927d09d01"
+  },
+  "independent-static-audit.py": {
+    "path": "/tmp/audit-paged-int-iret-first-build-20261004.py",
+    "bytes": 6414,
+    "sha256": "d31bcbd66a6858725959bc42ae11edf28c1b7c17a4b16e291d72e9916882ac23"
+  },
+  "final-status.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/final-status.json",
+    "bytes": 1182,
+    "sha256": "ce782d31320d7d8a2ee1f0a011eb487bb631996b690b32528d0a88a6e4e399af"
+  },
+  "build-static-preflight.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/build-static-preflight.json",
+    "bytes": 27420,
+    "sha256": "cefafcb47bc0358d3ffc692dad4d04cd5fbc7ec54d10c4cf28fa9c3276d879f4"
+  },
+  "static-input.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/static-input.json",
+    "bytes": 555,
+    "sha256": "c8df20a8a682ad9fe2b33f6a7d57ad90f20f24cf4148c216963615e05b60b985"
+  },
+  "make.invocation.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/make.invocation.json",
+    "bytes": 494,
+    "sha256": "f0b19a9aad8c472c54ab7b64588eb3ddc8fc11ef0441f59be911c8e822e0f13f"
+  },
+  "make.exit.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/make.exit.json",
+    "bytes": 480,
+    "sha256": "b0bba2f9a9afe39430c8325853a41a4ef85b89bc036dc47ae3f71fe99c2e326a"
+  },
+  "make.stderr": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/make.stderr",
+    "bytes": 7894,
+    "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+  },
+  "make.stdout": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/make.stdout",
+    "bytes": 36428,
+    "sha256": "1804de4678894502d4758897cc50454be44e64d15bc52184400bc680a0623d2f"
+  },
+  "prepare.exit.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/prepare.exit.json",
+    "bytes": 598,
+    "sha256": "2602182d6838bba43042ddbd4cde4ba49f493b73e5fa2d686fe44a0691d779a9"
+  },
+  "configure.exit.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/configure.exit.json",
+    "bytes": 656,
+    "sha256": "65ef763977b9030b0af6e60448c3a5d99f9b917b27593fed4f8ba598064de110"
+  },
+  "static-admission.exit.json": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/static-admission.exit.json",
+    "bytes": 815,
+    "sha256": "3f429d6b3a6f3f6a233330e88f0abbfea5fa7f76aaf245709fba637eb904ca3a"
+  },
+  "static-admission.stdout": {
+    "archive": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "member": "paged-int-iret-build-evidence/static-admission.stdout",
+    "bytes": 1201,
+    "sha256": "fff55110ddc6085c465100bc3c3bdfd57673178b369d2e859ec3afdec7eefa92"
+  },
+  "official-run.json": {
+    "path": "/tmp/native-paged-int-iret-first-build-results-proposal-20261004/official-run.json",
+    "bytes": 12629,
+    "sha256": "2843be2d91c97ed60ce5b32087ede687322cc665f66cfb44ec95ee90f7857b90"
+  },
+  "official-artifact.json": {
+    "path": "/tmp/native-paged-int-iret-first-build-results-proposal-20261004/official-artifact.json",
+    "bytes": 749,
+    "sha256": "e2131bbb41abc29b77be0efc924c49bdd362360047984aacbd340679eb6a85aa"
+  }
+}

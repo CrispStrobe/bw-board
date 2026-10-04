@@ -1,0 +1,31 @@
+{
+  "result": "ROOT_STATIC_ARTIFACT_AUDIT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "runId": 37218196080,
+  "head": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+  "zipSha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+  "members": 70,
+  "inventoryMembersVerified": 59,
+  "currentGitSourcePinsVerified": 208,
+  "preparedFilesVerified": 790,
+  "addonSha256": "92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f",
+  "addonBytes": 2074512,
+  "abi": 4,
+  "exits": {
+    "paged-int-iret-build-evidence/architecture.exit.json": 0.002783783000012363,
+    "paged-int-iret-build-evidence/compiler.exit.json": 0.003256676000006564,
+    "paged-int-iret-build-evidence/configure.exit.json": 7.6814449000000025,
+    "paged-int-iret-build-evidence/identity-after.exit.json": 0.716853962000016,
+    "paged-int-iret-build-evidence/identity-before.exit.json": 0.7169485820000006,
+    "paged-int-iret-build-evidence/make.exit.json": 24.80553899399999,
+    "paged-int-iret-build-evidence/nm.exit.json": 0.03341461299999082,
+    "paged-int-iret-build-evidence/platform.exit.json": 0.002953429000001506,
+    "paged-int-iret-build-evidence/prepare.exit.json": 6.378688091000001,
+    "paged-int-iret-build-evidence/readelf.exit.json": 0.06373104899998339,
+    "paged-int-iret-build-evidence/static-admission.exit.json": 1.4179481080000187
+  },
+  "readonlyAuditParserCorrections": [
+    "exit field exitCode",
+    "ABI define BW_DIRECT_ABI_VERSION"
+  ],
+  "guestOrBuildReplayed": false
+}
