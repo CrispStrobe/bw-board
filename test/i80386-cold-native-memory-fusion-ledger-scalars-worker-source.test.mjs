@@ -13,6 +13,7 @@ test('owned pending scalar profile refuses; manufactured ready metadata is close
 });
 test('held timer loop and strict terminal protocol remain exact',()=>{
  const d=JSON.parse(read(base+'scalar-worker-derivation.json')),old=read('scripts/cold-native-memory-fusion-performance/worker.mjs'),candidate=read(base+'worker.mjs');
+ let inverse=old;for(const e of d.workerEdits){assert.equal(inverse.split(e.before).length-1,e.count);inverse=inverse.replace(e.before,e.after);}assert.equal(inverse,candidate);
  const sha=s=>createHash('sha256').update(s).digest('hex');assert.equal(sha(old),d.heldWorkerSha256);
  const begin='  const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();',end='  // Evidence, settlement';
  const loop=s=>s.slice(s.indexOf(begin),s.indexOf(end));assert.equal(loop(candidate),loop(old));assert.equal(sha(loop(candidate)),d.timerLoopSha256);
