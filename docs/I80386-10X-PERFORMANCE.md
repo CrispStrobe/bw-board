@@ -1,5 +1,8 @@
 # Experimental 80386 speed path
 
+
+The retained [execution-window Inspector diagnostic](I80386-COLD-EXECUTION-PROFILE-RESULTS.md) independently passed guest/profile checks despite an original post-child hosted metadata failure. Its main-isolate samples are diagnostic, not speed qualification; plain JS remains the baseline.
+
 [The private span CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md): 4.221876% nominal mean process-CPU reduction and five of seven favorable pairs, below the required ≥10% and all-seven criterion. All 18 semantic comparisons passed; keep unchanged `fe1`, with no adoption or physical-clock claim.
 
 [Private span native parity](I80386-OWNED-SPAN-PARITY-RESULTS.md) passes three fresh hosted cells against unchanged compiled fe1/103: whole stored166-word snapshots, boards/RAM, ON journal and both full1,649,271-row canonical traces. Runtime116 remains distinct from compiled103. The subsequent [paired CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md); the span candidate is not adopted.
