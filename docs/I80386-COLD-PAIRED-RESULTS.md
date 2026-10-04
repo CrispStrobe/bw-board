@@ -1,6 +1,23 @@
 # Cold BIOS E16 paired CPU results
 
-Keep the plain-JS baseline. The latest MEMORY clock-fusion candidate used 5.139261× execution CPU against JS and lost all seven measured pairs. Earlier native and typed-state comparisons remain separately recorded below. These are fixed free-BIOS checkpoint results, not Windows/full-boot speed results or default adoption.
+Keep the plain-JS baseline. The latest scalar-ledger candidate used 5.251347× execution CPU against JS and lost all seven measured pairs. Earlier fusion, native and typed-state comparisons remain separately recorded below. These are fixed free-BIOS checkpoint results, not Windows/full-boot speed results or default adoption.
+
+## Scalar-ledger candidate: keep plain JS
+
+[Run 37207816332](https://github.com/CrispStrobe/bw-board/actions/runs/37207816332), frozen parent `06c9f951`, compared scalar worker `06581f38` (73 inputs) with unchanged plain-JS worker `0f1ec8cc` (49 inputs). Native retained compiled `85fc1599` (151 inputs), DSO `7de755f0` and the fixed scalar-provider profile; JS retained its original capture authority. Two warmup pairs and seven alternating measured pairs completed 18 fresh children on one AMD EPYC 7763 host, four logical CPUs, CPUs 0–3 and Node 22.23.3.
+
+| Measured window | Plain JS mean / median | Scalar batched mean / median |
+| --- | ---: | ---: |
+| Execution CPU | 0.408969429 / 0.405736000 s | 2.147640571 / 2.149350000 s |
+| Execution wall | 0.198654726 / 0.194742055 s | 1.776628668 / 1.770912784 s |
+| Whole-child CPU (wait4) | 1.472503286 / 1.467099000 s | 6.592419286 / 6.586229000 s |
+| Whole-child wall | 1.138358731 / 1.135216654 s | 5.850786676 / 5.833671460 s |
+
+Scalar native used **5.251347× execution CPU** and **8.943299× execution wall**, losing all seven measured pairs. The unchanged ≥10% mean CPU reduction/all-seven gate fails; keep plain JS. This comparison did **not** measure held fusion versus scalar, so it establishes no improvement or regression caused by copy removal. Absolute timings must not be combined with earlier hosts. The configured virtual seconds divided by mean execution wall are 1.593529 for JS and 0.178181 for scalar (six clocks per Q at 6 MHz); these are not physical 16-MHz 386 calibration.
+
+The [independent audit](receipts/i80386-cold-ledger-scalars-paired-results-20261004/independent-scalar-paired-audit.json) and [root cross-check](receipts/i80386-cold-ledger-scalars-paired-results-20261004/root-cross-check.json) verify all 266 official members, 364 source-role paths and all 18 terminal proofs. Nine native children retain raw reset/final/last-return 166-word CPU states and N/Q 316,562; nine JS children retain represented CPU/Q. All 18 match terminal board, RAM hash and the complete 16,475-event ordered PIO tape. Live buffer/scalar ownership remains authenticated-source attested; whole RAM bytes were not retained. Each native child retains 167,123 validated fused effects (75,401 reads + 91,722 writes), with bridge attempts distinct from accepted logical transfers. This is fixed E16 correctness, not Windows/full boot, a 10× result or adoption.
+
+The [compact index](receipts/i80386-cold-ledger-scalars-paired-results-20261004/index.json), [18-child timing series](receipts/i80386-cold-ledger-scalars-paired-results-20261004/actual-18-child-series.json) and [host context](receipts/i80386-cold-ledger-scalars-paired-results-20261004/host-before.json) retain exact small origins. Official artifact `11305955756` is 42,577,961 bytes, SHA-256 `0edf476f7c835a253c299f4e0f7e3bc73c4a7d0438470659003b5458e37b7075`; the sole local ZIP and official expiry remain recorded. [Upstream result](https://github.com/CrispStrobe/bw-board/pull/365#issuecomment-5980884433). No retry occurred.
 
 ## MEMORY clock-fusion candidate: keep plain JS
 
