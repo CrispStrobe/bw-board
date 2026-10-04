@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "revision": "aa0782515fca12dceb4c28e4a3ea67b6bf885627",
+  "sourceCount": 80,
+  "parentSha256": "1890aae2b5a7f4a67343f8a5d102c5c0d59c4ad3b8df836a2e7549a4f1a6145b",
+  "fullPrePostEqual": true,
+  "frozenGitSourcesVerified": true,
+  "rawCoverage": "2 affected Node cases",
+  "exitCode": 0,
+  "timeout": false,
+  "rawExitWallSeconds": 3.7636923044919968,
+  "scope": "source/read-only/mock evidence only; no addon, emulated CPU or live profiler"
+}

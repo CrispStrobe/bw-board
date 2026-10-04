@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: checked held lifecycle, CPU/provider inverse and real multiline closure reject unknown source
+ok 1 - checked held lifecycle, CPU/provider inverse and real multiline closure reject unknown source
+  ---
+  duration_ms: 52.579128
+  type: 'test'
+  ...
+# Subtest: comparable CPU, strict CS/DS/SS first-frame cache and ten wholepages deny mutations
+ok 2 - comparable CPU, strict CS/DS/SS first-frame cache and ten wholepages deny mutations
+  ---
+  duration_ms: 97.207483
+  type: 'test'
+  ...
+# Subtest: PG entry and zero-Q keep unequal raw boards/pages unmatched while CPU and shadows stay strict
+ok 3 - PG entry and zero-Q keep unequal raw boards/pages unmatched while CPU and shadows stay strict
+  ---
+  duration_ms: 3.47142
+  type: 'test'
+  ...
+# Subtest: bounded independent N/Q refuses missing fallback/counters/fault/IRQ/REP/HLT
+ok 4 - bounded independent N/Q refuses missing fallback/counters/fault/IRQ/REP/HLT
+  ---
+  duration_ms: 6.87441
+  type: 'test'
+  ...
+# Subtest: manufactured fourteen cuts and independent native frame/AD tape deny chronology and page corruption
+ok 5 - manufactured fourteen cuts and independent native frame/AD tape deny chronology and page corruption
+  ---
+  duration_ms: 166.799194
+  type: 'test'
+  ...
+# Subtest: owned PENDING compiled208 authority refuses before input/factory, old DSOs and missing source
+ok 6 - owned PENDING compiled208 authority refuses before input/factory, old DSOs and missing source
+  ---
+  duration_ms: 63.117561
+  type: 'test'
+  ...
+# Subtest: all-outcome input/config/source/tool checks retain primary error and deny final mutation
+ok 7 - all-outcome input/config/source/tool checks retain primary error and deny final mutation
+  ---
+  duration_ms: 2.549049
+  type: 'test'
+  ...
+# Subtest: driver identity authenticates exact clean imported closure and actual static binding in owned alternate fixture
+ok 8 - driver identity authenticates exact clean imported closure and actual static binding in owned alternate fixture
+  ---
+  duration_ms: 2334.088907
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3151.114284

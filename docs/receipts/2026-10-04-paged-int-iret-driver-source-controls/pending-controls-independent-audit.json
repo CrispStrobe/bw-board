@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "revision": "7db7dc2915ea83c3acfd3079e0e44e0360394c0b",
+  "sourceCount": 80,
+  "checks": [
+    "retained before/after exact equality",
+    "frozen Git bytes for all 80 paths",
+    "executed parent and tool hashes",
+    "raw exit0/status0/reaped/no timeout/no errors",
+    "eight genuine TAP passes"
+  ],
+  "scope": "manufactured/read-only source evidence; no factory, addon or emulated instructions",
+  "rawExitWallSeconds": 4.988798592239618
+}

@@ -1,0 +1,17 @@
+{
+  "childStarted": true,
+  "exitCode": 0,
+  "finalizationErrors": [],
+  "leaderReaped": true,
+  "pid": 3680408,
+  "primaryError": null,
+  "rawWaitStatus": 0,
+  "rusage": {
+    "maxRSSKiB": 95160,
+    "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+    "systemSeconds": 1.3236729999999999,
+    "userSeconds": 1.705463
+  },
+  "timeout": false,
+  "wallSeconds": 4.988798592239618
+}
