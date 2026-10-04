@@ -188,18 +188,9 @@ source-bound harness revisions; the reboot receipt binds the current pure
 acceptance grader and rejects key, cursor, DMA, file, output and media-link
 mutations. No installer partition, format or copy action executes.
 
-## Next platform boundaries
+## Profile boundaries
 
-The repository has no
-AT-compatible hard-disk controller, while the executable and WAD exceed floppy
-capacity. A real sector-I/O path therefore needs an ATA/WD1003-style controller
-at 1F0h with IRQ14, bootable FAT media, and native 16-bit data-register I/O;
-splitting that access across adjacent byte ports would incorrectly hit 1F1h.
-
-The existing VGA device supplies register, DAC, retrace and linear mode-13h
-behavior. It does not interpret planar memory or unchained page flipping, and
-the IBM CGA BIOS does not initialize a VGA card. These are concrete missing platform pieces,
-not capabilities implied by the current 386 CPU or AT adapter.
+The 286 profile documented here uses floppy/FDC media. It does not inherit the separate experimental 386 AT profile's ATA hard disk, larger memory or VGA behavior. Select the appropriate board and media loader explicitly; see [the loading guide](X86-LOADING-GUIDE.md). Earlier missing-platform observations in the private historical archive describe their dated source, rather than current repository-wide capabilities.
 
 The combined [platform receipt](receipts/2026-09-19-at-freedos-386-platform.json)
 records the FreeDOS evidence audit, functional 386 pacing checks and the

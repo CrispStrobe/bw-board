@@ -26,17 +26,6 @@ AT_CONSOLE_VGA_OUTPUT=/path/to/vga.json \
 node scripts/run-i80386-at-console.mjs
 ```
 
-Add `--native-blocks` (or set `AT_NATIVE_BLOCKS=1`) to opt in to the
-experimental shared-RAM WebAssembly block runner. It batches only admitted
-32-bit protected-mode RAM instructions and falls back to the functional
-executor for BIOS, I/O, unsupported instructions, interrupts, and other
-boundaries. Scripted keyboard, serial, and mouse events are still delivered
-at their specified guest step; live input is checked at its usual 1024-step
-boundary. The report records `inputs.nativeBlocks` and hashes the native
-implementation sources. This option requires WebAssembly support in Node. The dispatcher now bypasses native admission entirely for 16-bit code. The bounded native path can now execute primed `REP MOVSD` in validated RAM. Its source and destination page checks preserve the ordinary executor at a
-page or event boundary. This improved coverage in a local broader guest diagnostic,
-but did not reverse that workload's overall performance result.
-
 Add `--native-blocks` (or `AT_NATIVE_BLOCKS=1`) to opt into the shared-RAM WebAssembly dispatcher. It admits a subset of validated protected32 RAM instructions and uses functional execution at BIOS, I/O, unsupported instructions and event/debug boundaries. Full snapshots and input schedules keep their existing contracts. This is separate from the Bochs native addon, whose loaders remain fixed diagnostic fixtures. Ordinary JavaScript stays the default.
 
 The optional events file is an ordered JSON array. Same-step events retain
@@ -70,18 +59,6 @@ path, not a broader guest enhanced-mode acceptance claim.
 ## Live terminal
 
 Add `--live` (or `AT_CONSOLE_LIVE=1`) in a TTY to draw the guest in an alternate terminal screen. The runner yields between 50,000-instruction chunks. Typing sends Set-1 make/break pairs; Enter, Backspace, Tab, Escape, arrows, shifted characters, Ctrl+letter and terminal Alt+printable chords are mapped. Ctrl+] quits and Ctrl+L redraws. An xterm-compatible terminal with SGR mouse reporting supplies pointer input; the guest must enable the auxiliary mouse. Recognized VGA graphics modes use the validated renderers; other modes show text RAM. Full VGA snapshots remain available.
-
-Add `--live` (or `AT_CONSOLE_LIVE=1`) to draw the guest continuously in an
-alternate terminal screen. The runner yields between 50,000-instruction
-chunks so terminal input reaches the guest while it runs. Typing sends Set-1
-make/break pairs; Enter, Backspace, Tab, Escape, arrows, shifted letters and
-symbols, Ctrl+letter, and terminal Alt+printable chords are mapped. Ctrl+] quits
-cleanly; Ctrl+L redraws. An xterm-compatible terminal with SGR mouse reporting can send pointer clicks
-and motion; live mode attaches the opt-in mouse. The live view tries the validated VGA renderers (broader guest
-640×350 and 640×480 planar, and broader game 320×200 unchained), then shows text RAM if the mode is
-not recognized. A full VGA snapshot remains available in every mode. Live
-mode requires a TTY. The report includes live input attempts and a `user-quit`
-stop reason when applicable.
 
 ```sh
 # With the same BIOS/VGA/HDD environment shown above:

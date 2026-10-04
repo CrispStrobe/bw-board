@@ -2,15 +2,6 @@
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-All 31 execution-source blobs on current master
-matched the [earlier ordinary/code16 A/B](receipts/2026-09-28-i80386-code16-windows-current.json)
-source inventory before the
-temporary [probe patch](receipts/2026-09-28-i80386-code16-cost-probe.patch)
-changed only the code16 dispatcher. The private input identifiers, step
-count, selected reported guest fields and all six exact code16 retirement
-counters match the earlier run. The selected fields do not include full RAM,
-disk state or complete hidden CPU state.
-
 The uninstrumented ordinary run took **78.52 user CPU seconds**; the earlier
 uninstrumented code16 diagnostic took **392.05**. This instrumented run took
 **371.36 user CPU seconds** and **469.32 wall seconds**. These are separate

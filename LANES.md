@@ -1452,37 +1452,6 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (qualified and landed) — Astra/Sol application persistence and demo completion. Independent FAT and frame
-audits verify the file, source revisions and writer/reader image linkage. The key harness rejects malformed scripts and parent-media provenance before
-execution and records every accepted event. A separate
-ordinary 110-byte owned demo file loads through DOS, renders E1M1, completes
-24 gametics and returns to C:\>; full demo1 remains incomplete at 500M. No original EXE/WAD/media bytes are committed. The optional FAT file builder
-validates names/capacity and independently reproduces both pinned image hashes. Focused 452 pass,2 optional skips; actionlint and diff checks pass. Receipt: `docs/receipts/2026-09-20-x86-application-persistence.json`. broader guest enhanced mode, broader game save/load/sound/all levels and complete physical
-386 behavior remain outside these bounded application milestones. Initial candidate9d64209a failed the sampled386 zero-skip assertion because
-the coordinator put an optional external-report test in that subset. The
-forward workflow correction removes that optional entry and retains the
-zero-skip assertion; actual-report acceptance and mutations passed locally. General CI also caught missing census registration for the optional report. The new doom-short-report fixture row makes absence explicit; census14/14 pass. Exact 74c47bbe passed CI35490696573, CPU35490696554 and native35490696525,
-then fast-forwarded master. Tag: milestones/x86-windows-persistence-doom-demo-20260920.
-
-Autonomous ATA intersector pacing now covers the observed broader guest chained IRQ0
-service with 8192 functional cycles; no arbitrary-handler or mechanical timing
-claim. Strict observed planar decoding
-independently reproduces the audited frame hashes. Fresh DOS write/reboot
-and BIOS two-sector write/read pass at863cc769 with exact input/source hashes. Focused tests:399 pass,2 optional skips; shared platform/checkpoint/VGA49 pass. The full test386 diagnostic retains its documented VM86 16-bit gate/manual
-disagreement; it is not a full-ROM pass. Actionlint and diff checks pass. Receipt: `docs/receipts/2026-09-20-x86-windows-doom-gameplay.json`. Exact8172a3bf passed CI35488705735, CPU35488705876 and native35488705795,
-then fast-forwarded master. Tag: milestones/x86-windows300-doom-gameplay-20260920.
-
-Real DS/ES reloads retain large hidden limits
-following PE exit; pinned PCjs agrees on a guest bootstrap and 65,540-byte copy,
-while the pre-fix executor faults. Result, cache and budget controls reject. The configured AT keyboard extension models F3 parameter/ACK state and exact
-ACK deadlines, scan suppression, reset and checkpoint restoration; automatic
-repeat generation remains outside scope. broader guest reaches a real graphical disk-error
-dialog, not the desktop. Six fresh DOS/FreeDOS write/reboot executions at frozen
-30475e6f reproduce their original command sequences, counts and output images. Focused checks: 462 pass, 2 optional skips; actionlint and diff checks pass. Exact 36e459d0fa62c3c89264d0a32d1a2f819cb1b3ba passed CI 35487847024,
-CPU 35487846991 and native 35487846948, then fast-forwarded master. Tag: milestones/x86-unreal-keyboard-doom-level-20260920. Receipt:
-`docs/receipts/2026-09-20-x86-unreal-keyboard-doom-level.json`. The ongoing parent claim covers the next broader guest disk-transfer fix and broader game
-movement/firing acceptance; other lanes remain outside scope.
-
 2026-09-20 DONE (qualified and landed) — Astra/Sol DOS loader fixes. Pinned PCjs agrees on CMP memory and ADC
 carry/flags/high-register preservation; result and budget controls reject. The next actual PBR failure was BIOS INT13 reset returning AH05 because ATA SRST
 reported error0 instead of diagnostic01. Cold and software reset now publish01;
@@ -1517,21 +1486,6 @@ skips. VM86 task entry, debug trap, page-straddling TSS images, broader guest an
 full compatibility remain outside this increment. Receipt:
 `docs/receipts/2026-09-20-386-task16.json`. Exact `b74387f5d5b20cda2978a816eb48e6a9f737084c` passed CI `35483322404`,
 CPU `35483322421`, native `35483322406`, then fast-forwarded master. Tag: `milestones/x86-386-task16-20260920`.
-
-2026-09-20 DONE (qualified and landed) — Astra/Sol 386 protected entry and VGA services. Preserves visible real-mode CS and starts CPL0 when MOV CR0/LMSW enables PE;
-checks direct/conforming, segment, interrupt, return and task paths. Adds INTO
-with pinned-PCjs next-IP/frame agreement and two rejecting negative controls.
-8042 FF is a no-line pulse. Adds opt-in planar VGA memory and external C000h
-option-ROM mapping; SeaVGABIOS option POST and INT10 mode13 execute in the
-emulator, followed by an owned two-byte VRAM comparison. The INT10 guest is
-installed by the diagnostic harness after POST, not booted as an operating
-system. Grading requires actual service entry, mode state and guest marker. All six DOS/FreeDOS write-and-fresh-reboot regressions have been genuinely
-rerun with matching historical guest steps and media bytes. broader game's original
-shareware executable reaches DPMI allocation, WAD loading and R_Init within
-150 million machine steps; no game frame, broader guest, complete VGA addressing,
-ROM shadow-write or timing acceptance. The 16-bit TSS continuation is separate. Focused affected surface: 317 pass, 2 optional skips. Receipt:
-`docs/receipts/2026-09-20-386-protected-entry-vga.json`. Exact `43ad9762fd426dc148ca5ef68c1ab0297b208c20` passed CI `35482976575`,
-CPU `35482976574`, native `35482976578`, then fast-forwarded master. Tag: `milestones/x86-386-protected-entry-vga-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 compiler instructions and autonomous multi-sector ATA. Adds ENTER/LEAVE,

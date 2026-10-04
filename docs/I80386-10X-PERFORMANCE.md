@@ -34,6 +34,8 @@ The [private span native parity packet](../scripts/owned-span-parity-ci/README.m
 
 ## Current checkpoint (2026-10-04)
 
+The [stock xv6 full usertests result](receipts/2026-09-29-xv6-stock-224m-full-suite.json) completed 7,203,922,011 guest steps within its pinned 10-billion-step budget. That configured compatibility result uses later PSE/APIC extensions and does not qualify strict 386DX or the newer Bochs addon.
+
 The 10× target and calibration against a physical 16 MHz 386DX remain open. The latest same-host scalar-ledger gate ran on an AMD EPYC 7763 exposing four logical CPUs: mean execution CPU was 0.408969 s for JS and 2.147641 s for native; mean elapsed time was 0.198655 s and 1.776629 s. With this fixture's configured six clocks per Q at 6 MHz, virtual-time/mean-wall RTx was 1.593529× and 0.178181×. This is a ratio of means for a finite fixture, not physical-hardware calibration or a general guest benchmark.
 
 Next: identify native costs hidden behind the Node boundary using an acknowledged, bounded recording window; then optimize the largest measured cost and repeat paired correctness/performance checks. In parallel, qualify paged software interrupt/IRET frames, followed by a separately owned page-fault repair/retry fixture. Native full-OS loading remains experimental. Public guest regressions use FreeDOS, ELKS, xv6 and owned fixtures; stock xv6's PSE bootstrap remains a later-CPU extension rather than strict 386DX proof.
@@ -538,45 +540,6 @@ PDE-dependent PTE read, and a nine-step loop with dependent reads and a
 write. Current entry-only code/data windows cannot admit these without
 losing translation coherence or precise later-instruction faults. That
 initial audit stopped without executable work or CPU-time A/B.
-
-The console
-report omits full RAM, disk state and complete hidden CPU state. The opt-in
-path retired 5.04 million steps in 2.35 million block calls, averaging
-2.15 steps/call;
-ordinary and opt-in user CPU were 78.52 and 392.05 seconds on a four-vCPU
-Xeon Skylake host. Its **4.99× CPU cost** is a no-go for the current
-diagnostic configuration. The [public aggregate receipt](receipts/2026-09-28-i80386-code16-windows-current.json)
-retains source hashes, modes and exit reasons without private media IDs or
-guest text. The bounded next step is an event-aware multi-instruction trace
-architecture, not another isolated 16-bit opcode addition. An [owned protected-16 branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md)
-now pins the first acceptance boundary: a taken JZ reaches an `IN` with zero
-device reads, then ordinary execution performs one read. QEMU supplies the
-pre/post CPU-state checkpoints; Bochs CPU-level 3 independently emits the
-same output marker. This is an oracle harness, not an executable block-engine
-speed result. A separate [owned executable trace spike](I80386-CODE16-OWNED-IO-TRACE.md)
-now retires its three protected-16 instructions in one opt-in call and
-returns `io-required` before `IN`. Focused parity and refusal tests cover
-ordinary resume, a chip-event horizon, branch fallthrough and code mutation. The fixture is too narrow to imply a broader guest speedup and remains outside
-the default execution paths. That distortion prevents a whole-run phase attribution or a retained
-optimization. The opt-in diagnostic remains roughly five times the
-ordinary user CPU in the prior uninstrumented pair. A [follow-on V8 profile/control receipt](I80386-CODE16-WASM-COST-ATTRIBUTION.md#follow-on-v8-cpu-profile)
-at the same 60M input finds 47.35% of all opt-in self samples in the
-code-window module plus `decodeBlock`, with selected reported guest fields
-and exact opt-in counts matching. This clears a predeclared screen for a
-cheaper code-window/cache admission prototype, **not** a removable-cost or
-speed claim. Host load rose sharply during the serial runs; no executor
-change was made. Any retained prototype still needs alternating unprofiled
-full-run parity/timing pairs and a 10% mean user-CPU gain without regressions. The [bounded first-byte admission prototype](I80386-CODE16-WINDOW-ADMISSION.md)
-then passed that gate: two 60M broader guest pairs cut opt-in mean user CPU from
-370.94 to 259.56 seconds (30.03%), with no individual regression and all
-reported guest fields equal after expected source/revision normalization. The [next code16 gate](I80386-CODE16-NEXT-GATE.md) predeclares a post-change
-V8 profile screen and a disjoint, event-aware trace-coverage observer before
-another executable prototype. No new runtime change follows from the
-first-byte result alone. The single post-change 5 ms V8 profile found 34,905 of 52,168 all-process
-self samples (66.91%) in the disjoint non-window dispatcher and ordinary
-fallback bins. This clears the predeclared sample screen, but the samples
-are not removable CPU time. The separate four-step/25%-unique-step observer
-gate remains unmet and no broader executor was added.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM

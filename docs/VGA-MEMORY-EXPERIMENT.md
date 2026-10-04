@@ -73,8 +73,3 @@ mode 13h through INT 10h and round-trips two bytes through A0000h; the host
 probe verifies BDA mode 13h and chain-4 register state. This proves the bounded firmware
 service and CPU-memory path; it is not a complete AT boot, pixel-rendering,
 Mode X, broader guest, or broader game graphics result.
-
-The
-[graphics receipt](receipts/2026-09-20-386-doom-graphics.json) retains exact
-source and image hashes and the missing historical DAC-mask qualification. This does not promote the earlier mode-13h probe or establish arbitrary VGA
-modes, keyboard interaction, or gameplay.

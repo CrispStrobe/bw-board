@@ -6,29 +6,6 @@ External licensed-guest notes and historical context are retained in the [privat
 32-bit register and instruction-pointer model. It does not select or replace
 the production 8086/186/286 CPU.
 
-A frozen 320-million
-step run completed without a CPU/device refusal; the captured unchained VGA
-planes decode to 320 by 200 pixels with 240 distinct colors. The
-[source-bound graphics receipt](receipts/2026-09-20-386-doom-graphics.json)
-records the image hashes and the historical snapshot's missing DAC-mask field. A separate controlled run injects Esc and three Enter keys through the 8042,
-then reaches a rendered E1M1 level with pistol and HUD. A subsequent controlled
-Up/Ctrl sequence visibly moves the player and fires the pistol, reducing ammo
-from 50 to 48; the [gameplay receipt](receipts/2026-09-20-386-doom-gameplay.json)
-records source-bound frames and inputs. The original executable also loads and renders an
-[owned 24-tic demo](receipts/2026-09-20-386-doom-short-demo.json), emits its timing
-completion line and returns to DOS. The original full demo1 timedemo remains
-incomplete at 500M instructions; save/load, sound and longer gameplay remain
-separate acceptance targets.
-
-After correcting HIMEM segment-limit retention, keyboard F3 acknowledgements
-and the bounded ATA intersector delay, it reaches Program Manager. A real
-Set-1 Enter make/break pair launches File Manager and displays the C:\WINDOWS
-tree and free space. The diagnostic runner retains
-`windowsBootAccepted:false`; separately decoded and visually audited frames
-establish this bounded milestone. Other broader guest releases, enhanced mode, and
-complete 386 protection/debug behavior remain unaccepted. The writer and reader use separately
-bound source revisions and linked media hashes. See also the [VGA scope](VGA-MEMORY-EXPERIMENT.md).
-
 The pinned stock SMP-capable xv6 x86 kernel, built for 4 MiB or 14 MiB with
 `-march=i386` for compiler output, boots to `init: starting sh` on the matching
 4 MiB or ROM-safe 15 MiB AT profile. COM1 input executes `echo`
@@ -51,7 +28,7 @@ retain ordinary stepping. Single-step always uses the functional executor. The [
 validated paged 32-bit RAM instructions. The xv6 `forktest` native receipt
 measured about 1.3× end-to-end speedup, well short of the 10× goal.
 
-The functional JavaScript AT is the general experimental guest path. Its existing optional shared-RAM WebAssembly blocks are available through `createDebugTarget('i80386', {nativeBlocks: true, ...})` and CLI `--native-blocks`; unsupported instructions, event boundaries and debugging retain ordinary stepping. Single-step uses the functional executor. The separately qualified Bochs addon still has fixed-fixture admission and no general image-loading GUI backend. See [CLI and GUI loading](X86-LOADING-GUIDE.md) and [browser media](I80386-BROWSER-ADAPTER.md).
+The functional JavaScript AT is the general experimental guest path. The separately qualified Bochs addon still has fixed-fixture admission and no general image-loading GUI backend. See [CLI and GUI loading](X86-LOADING-GUIDE.md) and [browser media](I80386-BROWSER-ADAPTER.md).
 
 The configured AT keyboard extension accepts F3h and a seven-bit rate/delay
 parameter with separate delayed, keyboard-originated FAh acknowledgements.
@@ -82,7 +59,7 @@ hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
 LIDT, MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
 After protected-mode code clears PE, a real-mode segment reload updates its
 visible selector and base while retaining the hidden limit and default-size
-attributes. This permits HIMEM's high-address copies after its GP handler
+attributes. This permits high-address copies after a protected-mode handler
 establishes large DS/ES limits. VM86 reloads remain a separate 64KiB path.
 The functional cache's present/null admission flags are normalized on a real
 reload; this is not a claim to preserve every internal cache flag literally.
