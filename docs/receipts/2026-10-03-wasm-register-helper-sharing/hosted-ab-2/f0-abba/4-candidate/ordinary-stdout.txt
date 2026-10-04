@@ -1,0 +1,58 @@
+F0_WASM_GUEST {"workload":"ram","elfSha256":"3f1c28a62cf9cc4c5884c41d9c37f16c9405fb0be1bd2dc95025058f39bd42d1","imageSha256":"70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4"}
+F0_WASM_SAMPLE {"workload":"ram","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6331849070000001,"rtx":1.5793174931126397,"iterations":5400000,"checksum":5399872,"input":0,"mirror":5399999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6215842359999999,"rtx":1.6087924083068286,"iterations":10200000,"checksum":10199872,"input":0,"mirror":10199999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.601438897,"rtx":1.6626792929224197,"iterations":15000000,"checksum":14999872,"input":0,"mirror":14999999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6318975949999999,"rtx":1.5825349042513768,"iterations":19800000,"checksum":19799872,"input":0,"mirror":19799999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6323560439999997,"rtx":1.5813875892992975,"iterations":24600000,"checksum":24599872,"input":0,"mirror":24599999,"output":null}
+F0_WASM_GUEST {"workload":"gpio","elfSha256":"29a5d5a4c9185d27f061109c34f972d8370b9728109380e0619163e181478b2e","imageSha256":"cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"}
+F0_WASM_SAMPLE {"workload":"gpio","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":2.0093004509999997,"rtx":0.4976856495017032,"iterations":3000000,"checksum":2999872,"input":0,"mirror":2999999,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.800542977,"rtx":0.5553880205992995,"iterations":5526315,"checksum":5526484,"input":2,"mirror":5526315,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.9955632049999994,"rtx":0.5011116648645565,"iterations":8192982,"checksum":8192809,"input":0,"mirror":8192981,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.8339696779999994,"rtx":0.5452652854601887,"iterations":10719298,"checksum":10719421,"input":2,"mirror":10719297,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":2.0037261420000014,"rtx":0.499070196789397,"iterations":13385965,"checksum":13385747,"input":0,"mirror":13385964,"output":0}
+TAP version 13
+# Subtest: F0 ram: active guest and RAM/MMIO observations
+ok 1 - F0 ram: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 178.743203
+  ...
+# Subtest: F0 ram: all five 48M-cycle windows meet 1x
+ok 2 - F0 ram: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 3207.71929
+  ...
+# Subtest: F0 gpio: active guest and RAM/MMIO observations
+ok 3 - F0 gpio: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 248.899448
+  ...
+# Subtest: F0 gpio: all five 48M-cycle windows meet 1x
+not ok 4 - F0 gpio: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 9901.031774
+  location: '/home/runner/work/bw-board/bw-board/test/labwired-f0-timing.test.mjs:95:5'
+  failureType: 'testCodeFailure'
+  error: 'every window must meet 1x: [0.4976856495017032,0.5553880205992995,0.5011116648645565,0.5452652854601887,0.499070196789397]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-f0-timing.test.mjs:120:20)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13567.690574

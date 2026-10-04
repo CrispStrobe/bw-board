@@ -1,0 +1,99 @@
+{
+  "source": "0d32815a28b1cf7e27a87ba760ec7acd34cb4086",
+  "nativeRun": 37144959430,
+  "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+  "toolRef": "test/wasm-live-word-dispatch-20261002",
+  "hostedOnly": true,
+  "publication": false,
+  "appPinChanges": false,
+  "startedAt": "2026-10-03T18:39:27.026Z",
+  "nativeCorrectness": {
+    "conclusion": "success",
+    "headSha": "0d32815a28b1cf7e27a87ba760ec7acd34cb4086",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T18:50:27Z",
+        "conclusion": "success",
+        "databaseId": 111266882610,
+        "name": "correctness",
+        "startedAt": "2026-10-03T18:38:39Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T18:38:43Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T18:38:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T18:39:00Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T18:38:43Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T18:39:00Z",
+            "conclusion": "success",
+            "name": "Preserve main merge-base for unchanged bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T18:39:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T18:39:08Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T18:39:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T18:50:23Z",
+            "conclusion": "success",
+            "name": "Cached execution and observation regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T18:39:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T18:50:23Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T18:50:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T18:50:23Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T18:50:23Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37144959430/job/111266882610"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37144959430"
+  },
+  "dispatchAttemptedAt": "2026-10-03T18:50:59.067Z",
+  "buildInputs": {
+    "ref": "0d32815a28b1cf7e27a87ba760ec7acd34cb4086",
+    "publish": false,
+    "qualify_motion": true
+  },
+  "dispatchCommandCompletedAt": "2026-10-03T18:51:01.021Z",
+  "buildRun": {
+    "createdAt": "2026-10-03T18:51:00Z",
+    "databaseId": 37145743957,
+    "headSha": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+    "status": "in_progress",
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37145743957"
+  }
+}

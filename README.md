@@ -457,6 +457,19 @@ merge gates are retained in the
 [CPU hotpath inspection archive](docs/receipts/2026-10-03-wasm-cpu-hotpath-inspection/README.md).
 No engine, app pin or physical acknowledgement changed.
 
+The shared-register-helper experiment is now measured and remains **unmerged/unqualified**.
+WASM-only outlining removes 107 static eighteen-target tables from the cached
+loop, but ordinary paired RAM throughput regresses; motion/GPIO retain sub-1×
+windows. Median changes: motion **-8.67% to 5.43%**, RAM **-49.69% to -41.85%**,
+GPIO **-14.15% to 2.54%**. Native **4,234 library tests + 16 GPIO integrations**,
+independent WASM determinism and **108 actual integrations** pass. The separate
+fresh motion floor passes (**1.451189× median / 1.371520× min**),
+but is not a paired speedup or all-target qualification. All **240 windows**,
+source/build/test proofs and original compiled-code comparison are retained:
+[shared-register results and evidence](docs/receipts/2026-10-03-wasm-register-helper-sharing/README.md).
+Smaller code does not establish faster execution; production engine, app pins
+and physical acknowledgements remain unchanged. CP13 remains open.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
