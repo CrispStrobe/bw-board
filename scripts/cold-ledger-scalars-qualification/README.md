@@ -1,0 +1,9 @@
+# Scalar-ledger single-child qualification source
+
+ROOT_REVIEWED_LEDGER_SCALARS_QUALIFICATION_READY; manual workflow remains default false. Fixed worker descriptor includes its binding pathname and root. Compiled 85fc / 151 inputs / DSO 7de, metadata driver 11c / 54 and the immutable E16 capture remain unchanged. Fixed READY-source worker 06581f38 has 73 authenticated inputs, separately queried with canonical identity `3e0bb128aa00ea763125d2cc6f0af2ab7ac752de05a3485acc9432f89a799e9d`; its immutable source ref is published. No scalar guest has run.
+
+One batched child only, no paired timing or rebuild. Explicit semantic projection checks the new source-owned scalar profile and overlay, then delegates full terminal 166-word state, ordered PIO, board/RAM hash and bridge evidence to unchanged held policy. Independent final guards retain every readable source/input/restored boundary and named errors without replacing the primary failure.
+
+Historical seven-method controls passed at 92ef4e67 with all 20 source/tool before/after pins equal and raw nested Python streams retained. After binding the exact READY worker, only the two affected closed-map and terminal-projection methods ran at 56014075: both passed with unchanged pins, exit 0, no timeout and retained Ran 2 / OK streams. This status/prose-only final source is not a rerun of the unchanged seven-method suite. Packets are `/tmp/native-cold-ledger-scalars-qualification-pure-controls-20261004` and `/tmp/native-cold-ledger-scalars-qualification-ready-binding-controls-20261004`.
+
+The pure terminal fixture retains genuine raw CPU/board/counter projections but manufactures the new worker authority and deliberately retains one PIO event. It proves validator guards, not a new scalar guest or full-tape execution. Actual setup, restore, addon load, guest parity and timing remain unexecuted for this qualification; a separate root dispatch after source CI is required.
