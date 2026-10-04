@@ -1,0 +1,52 @@
+"""Manufactured controller controls only. No perf, compile, addon or guest."""
+import sys
+sys.dont_write_bytecode=True
+import unittest,json,tempfile
+from pathlib import Path
+from unittest.mock import patch,Mock
+import recorder as r
+class Controls(unittest.TestCase):
+ def test_pending_precedes_every_effect(self):
+  with patch.object(r.subprocess,'Popen',side_effect=AssertionError('real child forbidden')),patch.object(r,'fingerprint',side_effect=AssertionError('tool access forbidden')):
+   with self.assertRaisesRegex(ValueError,'PENDING'):r.source_guard()
+ def test_order_nonce_pid_and_markers(self):
+  s=r.WindowState(42,1001,1001)
+  def msg(kind,seq,nonce):return {'schema':r.SCHEMA,'type':kind,'seq':seq,'pid':42,'session':nonce}
+  hello=msg('hello',0,None);self.assertEqual(s.accept(hello),'hello');s.response('ready',{})
+  for bad in [hello,{**msg('enable',1,s.nonce),'pid':43},msg('enable',1,'0'*64),{**msg('enable',1,s.nonce),'seq':True}]:
+   with self.assertRaises(ValueError):s.accept(bad)
+  s.accept(msg('enable',1,s.nonce));s.response('enabled')
+  bad={**msg('disable',2,s.nonce),'beginNs':'10','endNs':'9'}
+  with self.assertRaisesRegex(ValueError,'ordered'):s.accept(bad)
+  s.accept({**bad,'endNs':'11'});s.response('disabled')
+  with self.assertRaises(ValueError):s.accept(msg('enable',3,s.nonce))
+ def test_ack_failure_is_permanent_and_cleans_owned_child(self):
+  child=Mock();child.poll.return_value=None;c=r.RecorderControl(10,11,child)
+  with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write') as write,patch.object(r.os,'read',return_value=b'ack\nack\n'),patch.object(r,'terminate') as stop:
+   with self.assertRaisesRegex(ValueError,'single'):c.command('enable',1)
+   stop.assert_called_once_with(child);write.assert_called_once_with(10,b'enable\n')
+  self.assertTrue(c.failed)
+  with self.assertRaisesRegex(ValueError,'closed'):c.command('disable',2)
+ def test_independent_final_guards_and_terminal_projection(self):
+  report={'status':'RAW_RECORDING','error':'original guest/controller error'}
+  def broken():raise OSError('source unavailable')
+  r.final_guards(report,[('source',broken,{}),('binding',lambda:'mutated','original'),('input',lambda:'same','same')])
+  self.assertEqual(set(report['finalizationErrors']),{'source','binding'});self.assertEqual(report['after']['binding'],'mutated');self.assertEqual(report['after']['input'],'same');self.assertEqual(report['error'],'original guest/controller error');self.assertEqual(report['status'],'FAIL')
+  raw={'schema':'bw.cold-native-ledger-scalars-symbol-profile.worker.v1','status':'FAIL','guestStatus':'NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','observerScope':'DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION','sampler':{'status':'FAIL'}}
+  projected=r.terminal_projection(raw);self.assertEqual(raw['status'],'FAIL');self.assertEqual(projected['status'],raw['guestStatus']);self.assertEqual(projected['sampler'],raw['sampler'])
+  with self.assertRaises(ValueError):r.terminal_projection({**raw,'guestStatus':'FAIL'})
+ def test_owner_environment_and_launch_failure_receipt(self):
+  env=r.child_environment({'HOME':'/home/runner','PATH':'/usr/bin:/bin','USER':'runner'})
+  self.assertEqual(env['HOME'],'/home/runner');self.assertEqual(env['GIT_CONFIG_COUNT'],'2');self.assertEqual(env['GIT_CONFIG_GLOBAL'],'/dev/null');self.assertEqual(env['GIT_CONFIG_NOSYSTEM'],'1')
+  self.assertEqual([env['GIT_CONFIG_VALUE_0'],env['GIT_CONFIG_VALUE_1']],[str(r.WORKER),str(r.COMPILED)])
+  self.assertTrue(all(env[h]=='' for h in r.HOOKS));self.assertEqual(r.recorder_environment()['HOME'],str(r.OUT/'perf-home'));self.assertEqual(r.recorder_environment()['PERF_CONFIG'],'/dev/null')
+  with self.assertRaises(ValueError):r.child_environment({'HOME':'/home/runner','PATH':'/bin','GH_TOKEN':'secret'})
+  with tempfile.TemporaryDirectory() as directory,patch.object(r,'OUT',Path(directory)),patch.object(r.subprocess,'Popen',side_effect=OSError('manufactured launch refusal')):
+   with self.assertRaisesRegex(OSError,'manufactured'):r.launch('fixture',['never-executed'],{},5,8<<20)
+   record=json.loads((Path(directory)/'fixture-launch-error.json').read_text());self.assertFalse(record['childCreated']);self.assertIsNone(record['exitCode'])
+ def test_cleanup_reaps_after_group_kill(self):
+  child=Mock(pid=77);empty=Mock();empty.iterdir.return_value=[]
+  with patch.object(r,'Path',return_value=empty),patch.object(r.os,'killpg') as killpg:
+   r.terminate(child)
+  self.assertEqual(killpg.call_args_list[-1].args,(77,r.signal.SIGKILL));child.wait.assert_called_once_with(timeout=5)
+if __name__=='__main__':unittest.main()
