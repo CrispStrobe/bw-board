@@ -17,7 +17,7 @@ The main-isolate profile contains 145 nodes and 1,793 samples, with a 1,972,190 
 | fusedMemory | 49 |
 | garbage collector | 30 |
 
-The opaque `close` label is not evidence of API cleanup: sampling stops before the worker closes the API. These are main-isolate caller samples; native C++ cost remains unresolved. Counts are neither execution CPU percentages nor removable-cost estimates.
+The opaque `close` label is not evidence of API cleanup: sampling stops before the worker closes the API. Its parent/callsite evidence points to the worker resume line, while the NAPI initializer shares one invoke callback across five exported functions. That plausibly explains an ambiguous native label, but resolves no C++ function cost. These are main-isolate caller samples; native C++ cost remains unresolved. Counts are neither execution CPU percentages nor removable-cost estimates.
 
 The host was AMD EPYC 7763 with four logical CPUs. Observer-active execution self-report was CPU 2.344743 s and wall 1.947205319 s; whole-child wait4 CPU was 7.815283 s and parent wall 6.982537718 s. Those windows include different work and do not qualify speed. The established unprofiled paired result keeps plain JS as baseline; this diagnostic changes no adoption decision and provides no physical 16 MHz calibration.
 
