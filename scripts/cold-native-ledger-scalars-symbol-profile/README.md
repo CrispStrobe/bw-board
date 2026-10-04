@@ -93,7 +93,8 @@ non-sampling `dummy:u`. While the worker is blocked before provider/addon, globa
 enable activates tracking, then named `disable cpu-clock` is acknowledged before
 READY. Active controls name only `cpu-clock`, preserving dummy mapping sideband.
 Raw stderr must reject unknown selector or malformed-command errors even with
-an ACK. Post-load maps are retained before active enable. Raw pre-ready waiting
+an ACK, and each named command must append its exact cpu-clock success line
+before that ACK; unrelated or extended lines cannot substitute. Post-load maps are retained before active enable. Raw pre-ready waiting
 samples may exist: only the conservative active ACK window is admissible. This
 source correction has not run; prior metadata/query outcomes remain separate.
 

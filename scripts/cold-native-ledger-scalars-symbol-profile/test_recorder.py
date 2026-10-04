@@ -24,7 +24,7 @@ class Controls(unittest.TestCase):
   with self.assertRaises(ValueError):s.accept(msg('enable',3,s.nonce))
  def test_ack_failure_is_permanent_and_cleans_owned_child(self):
   child=Mock();child.poll.return_value=None;c=r.RecorderControl(10,11,child)
-  with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write') as write,patch.object(r.os,'read',return_value=b'ack\nack\n'),patch.object(r,'terminate') as stop:
+  with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write') as write,patch.object(r.os,'read',return_value=b'ack\nack\n'),patch.object(r,'checked_control_stderr',return_value={'bytes':0}),patch.object(r,'terminate') as stop:
    with self.assertRaisesRegex(ValueError,'single'):c.command('enable',1)
    stop.assert_called_once_with(child);write.assert_called_once_with(10,b'enable cpu-clock\n')
   self.assertTrue(c.failed)
@@ -32,14 +32,17 @@ class Controls(unittest.TestCase):
  def test_tracking_named_commands_and_unknown_selector_ack_refusal(self):
   with tempfile.TemporaryDirectory() as directory,patch.object(r,'OUT',Path(directory)):
    stderr=Path(directory)/'record.stderr';stderr.write_bytes(b'');child=Mock();child.poll.return_value=None;c=r.RecorderControl(10,11,child)
-   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]*4),patch.object(r.os,'write') as write,patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
+   def success(fd,payload):
+    if payload!=b'enable\n':
+     with stderr.open('ab') as f:f.write(b'Event cpu-clock '+(b'enabled' if payload==b'enable cpu-clock\n' else b'disabled')+b'\n')
+   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]*4),patch.object(r.os,'write',side_effect=success) as write,patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
     for name,seq in [('enable',-2),('disable',0),('enable',1),('disable',2)]:c.command(name,seq)
     self.assertEqual([x.args[1] for x in write.call_args_list],[b'enable\n',b'disable cpu-clock\n',b'enable cpu-clock\n',b'disable cpu-clock\n']);stop.assert_not_called()
    self.assertEqual([x['command'] for x in c.records],['enable','disable cpu-clock','enable cpu-clock','disable cpu-clock'])
-   for raw in [b"failed: can't find 'cpu-clock' event\n",b'failed: wrong command\n']:
-    stderr.write_bytes(raw);bad=r.RecorderControl(10,11,child)
-    with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write'),patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
-     with self.assertRaisesRegex(ValueError,'selector refused'):bad.command('disable',0)
+   for raw in [b"failed: can't find 'cpu-clock' event\n",b'failed: wrong command\n',b'Event unrelated disabled\n',b'Event cpu-clock disabled extra\n']:
+    stderr.write_bytes(b'');bad=r.RecorderControl(10,11,child)
+    with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write',side_effect=lambda *args:stderr.write_bytes(raw)),patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
+     with self.assertRaisesRegex(ValueError,'selector refused|exact named selector'):bad.command('disable',0)
      stop.assert_called_once_with(child)
     self.assertTrue(bad.failed);self.assertEqual(bad.records,[])
     with self.assertRaisesRegex(ValueError,'closed'):bad.command('enable',1)

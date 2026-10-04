@@ -137,9 +137,10 @@ def read_message(connection,timeout=5):
   remaining=deadline-time.monotonic();require(remaining>0,'absolute worker message deadline');ready,_,_=select.select([connection],[],[],remaining);require(ready,'bounded worker message timeout');part=connection.recv(4096);require(part,'worker control EOF');raw+=part;require(len(raw)<=4096,'bounded worker control message')
  line,rest=raw.split(b'\n',1);require(not rest,'duplicate control frame');return json.loads(line)
 def send_message(connection,value):connection.sendall((json.dumps(value,separators=(',',':'))+'\n').encode())
-def checked_control_stderr():
+def checked_control_stderr(expected=None,offset=0):
  path=OUT/'record.stderr';require(path.is_file() and path.stat().st_size<=8<<20,'bounded retained recorder stderr')
  raw=path.read_bytes();require(not any(x in raw for x in (b"failed: can't find",b'failed: wrong command')),'perf selector refused despite ACK')
+ if expected is not None:require(expected in raw[offset:].splitlines(),'missing exact named selector success before ACK')
  return {'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
 class RecorderControl:
  """Serialized source-owned perf commands; a timeout ends this session permanently."""
@@ -149,8 +150,9 @@ class RecorderControl:
   require(not self.failed and (name,sequence) in commands,'closed live perf command');require(self.perf.poll() is None,'recorder alive');command=commands[name,sequence]
   before=time.monotonic_ns()
   try:
+   stderr_before=checked_control_stderr()['bytes']
    require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK');os.write(self.write_fd,(command+'\n').encode());ready,_,_=select.select([self.read_fd],[],[],remaining_budget(self.worker_started,5));require(ready,'bounded perf ACK timeout');raw=os.read(self.read_fd,64);require(raw==b'ack\n','exact single perf ACK')
-   stderr=checked_control_stderr()
+   stderr=checked_control_stderr(None if sequence==-2 else ('Event cpu-clock '+('enabled' if name=='enable' else 'disabled')).encode(),stderr_before)
    self.records.append({'command':command,'stderrAtAck':stderr,'sessionSequence':sequence,'controllerBeforeNs':str(before),'controllerAfterNs':str(time.monotonic_ns()),'rawAck':raw.decode(),'scope':'perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session'})
   except BaseException:self.failed=True;terminate(self.perf);raise
 class WindowState:
