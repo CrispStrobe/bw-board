@@ -1,0 +1,20 @@
+{
+  "officialZip": {
+    "path": "/tmp/native-nonidentity-paging-first-execution-publication-20261004/official-artifact.zip",
+    "bytes": 10355796,
+    "sha256": "cd972db5688862feb09001c0b68ec407d69ffa3c46f13de3b30befc52168ee02",
+    "reason": "Sole immutable external retention; no raw archive/capture duplicated in Git"
+  },
+  "fullCapture": {
+    "path": "/tmp/native-nonidentity-paging-first-execution-publication-20261004/selected/_temp/nonidentity-paging-execution/guest/capture.json",
+    "bytes": 14200595,
+    "sha256": "47c25b774a615d0c47d9281e05acb8d7c3f8757b83ffbfe4205a4d454aa1672e",
+    "reason": "Sole immutable external retention; no raw archive/capture duplicated in Git"
+  },
+  "officialStaticBuildZip": {
+    "path": "/tmp/native-nonidentity-paging-first-build-publication-20261004/official-artifact.zip",
+    "bytes": 7876937,
+    "sha256": "4bea83a8bde6af8003391b65e702c9520d707fc15cb950c7787fb4836bb63ccf",
+    "reason": "Sole immutable external retention; no raw archive/capture duplicated in Git"
+  }
+}

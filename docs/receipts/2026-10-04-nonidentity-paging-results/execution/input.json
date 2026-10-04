@@ -1,0 +1,15 @@
+{
+  "addon": "/home/runner/work/_temp/nonidentity-paging-build-prepared/bochs/bw_direct.node",
+  "sha256": "f3e7406b0b8ce88fcb05be4b99cc0c7a6fab27fa12f1dff071d323ad707a37b7",
+  "preparedManifest": "/home/runner/work/_temp/nonidentity-paging-build-evidence/prepare.json",
+  "preparedManifestSha256": "eb7ab61d7718fa8c8fac3eeb9c5287706848f06513e4bf621df7a6d846276d26",
+  "buildReceipt": "/home/runner/work/_temp/nonidentity-paging-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "017023e42b6564a9556dade4d5b44227c87b1b35e66e61c6622bbfc374c105e8",
+  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication",
+  "compiledRevision": "0333f5aca42bf60fa37c64bb574aee7084f9251c",
+  "driverRevision": "8df2dd7d6b88648b3fcedb6dd559e0dfc5daeb54",
+  "driverSourceSha256": "f0c950e7958b52e19ca5e4df3d1813e5acc92d8c5808a44b7d9142637864e3c1",
+  "configuration": "/home/runner/work/_temp/nonidentity-paging-execution/protected-source.bochsrc",
+  "output": "/home/runner/work/_temp/nonidentity-paging-execution/guest",
+  "nativeTrace": false
+}

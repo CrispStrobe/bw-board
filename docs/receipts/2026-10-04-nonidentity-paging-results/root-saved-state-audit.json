@@ -1,0 +1,24 @@
+{
+  "status": "PASS_ROOT_FULL_SAVED_PAGING_STATE",
+  "runId": 37207113095,
+  "boundaries": 36,
+  "comparableBoundaries": 34,
+  "unmatchedBoundaries": 2,
+  "milestones": {
+    "milestones": 11,
+    "comparableCuts": 9,
+    "unmatchedCuts": 2,
+    "pageBytesPerRecordedBoundary": 28672
+  },
+  "progress": {
+    "n": 34,
+    "q": 34,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 34,
+    "zeroQ": 0
+  },
+  "nativeMemoryEvents": 39,
+  "finalRamSha256": "b36573f67cf2de4454d97a8c2a04b1fa5980ad47c7207da9f42fb07b5b33cf43",
+  "scope": "Offline revalidation of genuine saved states through unchanged driver policy; byte domains checked before typed-page hydration; no addon or CPU execution"
+}
