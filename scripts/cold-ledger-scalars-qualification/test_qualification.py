@@ -38,7 +38,7 @@ class Controls(unittest.TestCase):
    with self.assertRaises(ValueError):q.terminal(r,{}, {}, {})
  def test_manual_single_child_contract(self):
   text=(q.ROOT/'.github/workflows/i80386-cold-ledger-scalars-qualification.yml').read_text();self.assertIn('workflow_dispatch:',text);self.assertNotIn('pull_request:',text);self.assertNotIn('push:',text);self.assertIn('default: false',text)
-  source=(q.HERE/'qualify.py').read_text();self.assertEqual(source.count("str(N/c['worker']['entry'])"),1);self.assertIn("'mode':'batched'",source);self.assertIn("report['inputsAfter']==report['inputsBeforeRestore']",source)
+  source=(q.HERE/'qualify.py').read_text();self.assertEqual(source.count("str(N/c['worker']['entry'])"),1);self.assertIn("'mode':'batched'",source);self.assertIn("('inputsAfter',lambda:original_inputs(out),lambda value:require(value==report['inputsBeforeRestore']",source)
 
 class TerminalProjectionControls(unittest.TestCase):
  def test_final_guards_retain_each_failure_and_readable_evidence(self):
