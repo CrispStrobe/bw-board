@@ -27,7 +27,7 @@ test('manufactured disabled-ready ACK precedes enable and stop retains separate 
  const {session,requests}=manufactured();await session.prepare();assert.equal(session.begin,null);await session.enable();await session.stop();session.assertComplete();assert.deepEqual(requests.map(r=>[r.type,r.seq]),[['hello',0],['enable',1],['disable',2]]);assert.ok(BigInt(session.end)>=BigInt(session.begin));assert.match(session.report().clockScope,/separate/);
 });
 test('wrong sequence, PID, proof, nonce and extra ACK fields refuse before enable',async()=>{
- for(const change of [r=>r.seq++,r=>r.pid++,r=>r.proof.disabledAck=false,r=>r.session='bad',r=>r.extra=true]){const {session,requests}=manufactured(change);await assert.rejects(session.prepare());assert.equal(requests.length,1);await session.stop();assert.equal(session.report().status,'FAIL');assert.equal(session.report().errors[0].phase,'prepare');}
+ for(const change of [r=>r.seq++,r=>r.pid++,r=>r.proof.disabledAck=false,r=>r.session='bad',r=>r.extra=true]){const {session,requests}=manufactured(change);await assert.rejects(session.prepare());assert.equal(requests.length,1);await assert.rejects(session.enable());assert.equal(requests.length,1,'failed readiness cannot send enable');await session.stop();assert.equal(session.report().status,'FAIL');assert.equal(session.report().errors[0].phase,'prepare');assert.equal(session.report().errors[1].phase,'enable');}
 });
 test('actual mocked guest throw retains original Error through stop and disconnect failure',async()=>{
  const guest=Error('original guest'),{session}=manufactured((r,m)=>{if(m.type==='disable')throw Error('manufactured stop failure');},()=>{throw Error('manufactured disconnect failure');});await session.prepare();await session.enable();let caught;
