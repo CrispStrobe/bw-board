@@ -12,8 +12,8 @@ The main-isolate profile contains 145 nodes and 1,793 samples, with a 1,972,190 
 | --- | ---: |
 | run | 604 |
 | opaque `close` (no URL, line −1) | 522 |
-| copyLedger, two source locations | 157 |
-| clockTransfer, two source locations | 97 |
+| copyLedger, three call-tree nodes at one source location | 158 |
+| clockTransfer, two call-tree contexts | 97 |
 | fusedMemory | 49 |
 | garbage collector | 30 |
 

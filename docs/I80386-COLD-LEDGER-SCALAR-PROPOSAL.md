@@ -2,7 +2,7 @@
 
 Source-only proposal; no controls, build, guest or timing execution is authorized by this document.
 
-The frozen fusion provider copies seven expected words before clock transfer, copies that private expectation again during reply validation, and copies the actual accepted reply. For 167,123 fused effects this is 501,369 seven-word copies. The retained main-isolate profile has 157 exclusive copyLedger samples; this identifies visible work, not its removable CPU share.
+The frozen fusion provider copies seven expected words before clock transfer, copies that private expectation again during reply validation, and copies the actual accepted reply. For 167,123 fused effects this is 501,369 seven-word copies. The retained main-isolate profile has 158 exclusive copyLedger samples across three call-tree nodes at one source location; this identifies visible work, not its removable CPU share.
 
 Derive a separate private provider/factory profile from exact compiled source 85fc1599, preserving DSO 7de755f0, ABI4, the fixed native expected transport and every non-MEMORY barrier. Before any callback, validate the expected Uint32Array shape/prototype/dedicated ordinary nonresizable buffer and capture its seven uint32 values into private scalar locals. Capture write operands before clock transfer as today. No caller factory, import hook or mutable expectation authority is introduced.
 
