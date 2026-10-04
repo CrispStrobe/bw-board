@@ -9,7 +9,7 @@ function fixture(clock=()=>ledger(),read=()=>new Uint8Array([9]),write=()=>{}){r
 function invoke(f,expected=ledger(),operand=null){return f.callbacks.fusedMemory(new Uint32Array([1]),3,0xf0000,1,operand,expected);}
 test('each exact word mismatch reaches its intended guard before effects',()=>{
  for(let i=0;i<7;i++){let effects=0;const expected=ledger(),reply=ledger();
-  if(i===1){expected[1]=2;expected[2]=16;reply[2]=16;}else if(i===2){expected[2]=16;}else expected[i]++;
+  if(i===1){expected[1]=2;expected[2]=16;}else if(i===2){expected[2]=16;}else expected[i]++;
   const f=fixture(()=>reply,()=>{effects++;},()=>{effects++;});
   assert.throws(()=>invoke(f,expected),e=>e.message.includes('MEMORY ledger word '+i));assert.equal(effects,0);
  }
