@@ -1,0 +1,28 @@
+/** Pure source and mocked Session controls only; no live Inspector or machine. */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {createExecutionSampler,validateCpuProfile} from '../scripts/cold-native-memory-fusion-execution-profile/profile-controller.mjs';
+import {authenticateDiagnosticAuthority} from '../scripts/cold-native-memory-fusion-execution-profile/admission.mjs';
+const dir=new URL('../scripts/cold-native-memory-fusion-execution-profile/',import.meta.url);
+const read=p=>readFileSync(new URL(p,dir),'utf8');
+const hash=s=>createHash('sha256').update(s).digest('hex');
+const frame=(functionName,url='')=>({functionName,url,scriptId:'0',lineNumber:-1,columnNumber:-1});
+function profile(){return {startTime:100,endTime:3100,nodes:[{id:1,callFrame:frame('(root)'),children:[2,3]},{id:2,callFrame:frame('(garbage collector)')},{id:3,callFrame:frame('callback','file:///owned/provider.mjs')}],samples:[2,3],timeDeltas:[1000,1000]};}
+function mock(fail=[]){const calls=[];let now=0;const session={connect(){calls.push('connect');if(fail.includes('connect'))throw Error('connect');},async post(name,args){calls.push([name,args]);if(fail.includes(name))throw Error(name);if(name==='Profiler.stop')return {profile:profile()};},disconnect(){calls.push('disconnect');if(fail.includes('disconnect'))throw Error('disconnect');}};let retained=0;const sampler=createExecutionSampler(session,{monotonic:()=>String(++now),cpu:()=>({user:now,system:0})},raw=>{retained++;assert.deepEqual(raw,profile());if(fail.includes('retain'))throw Error('retain');return {file:'execution.cpuprofile',bytes:100,sha256:'a'.repeat(64)};});return {calls,sampler,retained:()=>retained};}
+test('exact held worker inverse and byte-identical execution loop',()=>{
+ const d=JSON.parse(read('worker-derivation.json'));let s=read('worker.mjs');for(const e of [...d.edits].reverse()){assert.ok(e.after);assert.equal(s.split(e.after).length,2,'unique counted derivative seam');s=s.replace(e.after,e.before);}assert.equal(hash(s),d.baseWorkerSha256);assert.equal(d.baseWorkerSha256,'abcf0dbd77fccaff8d186e07943b84d0c7cdd96f3ad6ea6a4a02c88ac55234d0');const loop=s.slice(s.indexOf('  const startCpu='),s.indexOf('  // Evidence, settlement'));assert.equal(hash(loop),d.timedLoopSha256);assert.ok(read('worker.mjs').includes(loop));assert.ok(!loop.includes('sampler'));
+});
+test('fixed local Session sequence and separate markers, idempotent cleanup',async()=>{const m=mock();await m.sampler.start();m.sampler.mark('execution-timer-before');m.sampler.mark('execution-timer-after');await m.sampler.stop();await m.sampler.stop();m.sampler.assertComplete();assert.deepEqual(m.calls,['connect',['Profiler.enable',undefined],['Profiler.setSamplingInterval',{interval:1000}],['Profiler.start',undefined],['Profiler.stop',undefined],['Profiler.disable',undefined],'disconnect']);assert.equal(m.retained(),1);assert.equal(m.sampler.record.sampleEvidence.exclusiveLeaves[0].attribution,'opaque-or-special-frame');});
+test('sampler start, stop, retention and cleanup errors retained without replacing guest error',async()=>{
+ for(const phase of ['connect','Profiler.enable','Profiler.setSamplingInterval','Profiler.start','Profiler.stop','retain','Profiler.disable','disconnect']){const m=mock([phase]);try{await m.sampler.start();}catch(e){assert.match(String(e),/connect|Profiler/);}await m.sampler.stop();assert.equal(m.sampler.record.status,'FAIL');assert.ok(m.sampler.record.errors.length);assert.throws(()=>m.sampler.assertComplete());assert.equal(m.calls.filter(x=>x==='disconnect').length,1);}
+ const m=mock(['Profiler.stop','Profiler.disable','disconnect']);await m.sampler.start();const original=Error('original guest');let caught=null;
+ try{try{throw original;}finally{m.sampler.mark('execution-timer-after');await m.sampler.stop();}}catch(e){caught=e;}
+ assert.equal(caught,original,'cleanup preserves actual primary guest Error identity');assert.deepEqual(m.sampler.record.errors.map(e=>e.phase),['stop-or-retain-or-validate','disable','disconnect']);
+ const successfulGuest=mock(['Profiler.stop']);await successfulGuest.sampler.start();let proof=false,closed=false;
+ try{successfulGuest.sampler.mark('execution-timer-before');}finally{successfulGuest.sampler.mark('execution-timer-after');await successfulGuest.sampler.stop();}
+ proof=true;closed=true;assert.equal(proof,true);assert.equal(closed,true);assert.throws(()=>successfulGuest.sampler.assertComplete(),/diagnostic sampler failed/);assert.equal(successfulGuest.sampler.record.errors[0].phase,'stop-or-retain-or-validate');
+});
+test('raw node/sample clock graph domains and opaque frames remain explicit',()=>{assert.equal(validateCpuProfile(profile()).samples,2);for(const mutate of [p=>p.samples.push(99),p=>p.timeDeltas[0]=-1,p=>p.timeDeltas[0]=9999,p=>p.nodes[1].id=1,p=>p.nodes[1].children=[1],p=>p.nodes.push({id:4,callFrame:frame('unreachable')})]){const p=profile();mutate(p);assert.throws(()=>validateCpuProfile(p));}});
+test('source-owned pending authority refuses before any compiled imports',()=>{assert.equal(JSON.parse(read('diagnostic-binding.json')).status,'PENDING_SOURCE_REVIEW_NO_EXECUTION');assert.throws(()=>authenticateDiagnosticAuthority({}),/execution profile remains pending/);const s=read('worker.mjs');assert.ok(s.indexOf('authenticateDiagnosticAuthority(input)')<s.indexOf('identity=await import'));assert.ok(s.indexOf('sampler.assertComplete()')>s.indexOf('afterChecks();receipt.processCpu'));});
