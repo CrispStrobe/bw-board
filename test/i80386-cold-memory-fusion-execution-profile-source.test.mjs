@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {createExecutionSampler,validateCpuProfile} from '../scripts/cold-native-memory-fusion-execution-profile/profile-controller.mjs';
-import {authenticateDiagnosticAuthority} from '../scripts/cold-native-memory-fusion-execution-profile/admission.mjs';
+import {validateDiagnosticStatus} from '../scripts/cold-native-memory-fusion-execution-profile/admission.mjs';
 const dir=new URL('../scripts/cold-native-memory-fusion-execution-profile/',import.meta.url);
 const read=p=>readFileSync(new URL(p,dir),'utf8');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -25,4 +25,4 @@ test('sampler start, stop, retention and cleanup errors retained without replaci
  proof=true;closed=true;assert.equal(proof,true);assert.equal(closed,true);assert.throws(()=>successfulGuest.sampler.assertComplete(),/diagnostic sampler failed/);assert.equal(successfulGuest.sampler.record.errors[0].phase,'stop-or-retain-or-validate');
 });
 test('raw node/sample clock graph domains and opaque frames remain explicit',()=>{assert.equal(validateCpuProfile(profile()).samples,2);for(const mutate of [p=>p.samples.push(99),p=>p.timeDeltas[0]=-1,p=>p.timeDeltas[0]=9999,p=>p.nodes[1].id=1,p=>p.nodes[1].children=[1],p=>p.nodes.push({id:4,callFrame:frame('unreachable')})]){const p=profile();mutate(p);assert.throws(()=>validateCpuProfile(p));}});
-test('source-owned pending authority refuses before any compiled imports',()=>{assert.equal(JSON.parse(read('diagnostic-binding.json')).status,'PENDING_SOURCE_REVIEW_NO_EXECUTION');assert.throws(()=>authenticateDiagnosticAuthority({}),/execution profile remains pending/);const s=read('worker.mjs');assert.ok(s.indexOf('authenticateDiagnosticAuthority(input)')<s.indexOf('identity=await import'));assert.ok(s.indexOf('sampler.assertComplete()')>s.indexOf('afterChecks();receipt.processCpu'));});
+test('owned ready metadata and manufactured pending refusal precede compiled imports',()=>{const owned=JSON.parse(read('diagnostic-binding.json'));assert.equal(owned.status,'ROOT_REVIEWED_EXECUTION_PROFILE_READY');validateDiagnosticStatus(owned);const pending=structuredClone(owned);pending.status='PENDING_SOURCE_REVIEW_NO_EXECUTION';assert.throws(()=>validateDiagnosticStatus(pending),/execution profile remains pending/);for(const key of ['samplingIntervalMicroseconds','targetN','targetQ']){const changed=structuredClone(owned);changed[key]++;assert.throws(()=>validateDiagnosticStatus(changed));}const s=read('worker.mjs');assert.ok(s.indexOf('authenticateDiagnosticAuthority(input)')<s.indexOf('identity=await import'));assert.ok(s.indexOf('sampler.assertComplete()')>s.indexOf('afterChecks();receipt.processCpu'));});

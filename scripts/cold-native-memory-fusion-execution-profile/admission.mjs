@@ -74,8 +74,7 @@ export function validateCandidateBuildAudit(a,b){
 export function authenticateDiagnosticAuthority(input){
  const dir=resolve(sourceRoot,'scripts/cold-native-memory-fusion-execution-profile');
  const b=JSON.parse(ordinaryBytes(resolve(dir,'diagnostic-binding.json'),16384));
- assert.equal(b.schema,'bw.cold-memory-fusion.execution-profile-authority.v1');
- assert.equal(b.status,'ROOT_REVIEWED_EXECUTION_PROFILE_READY','execution profile remains pending');
+ validateDiagnosticStatus(b);
  assert.equal(b.baseWorkerRevision,'735740cb52550bb71edde5aba326da6f3a01f473');
  assert.equal(b.baseWorkerSourceSha256,'f2a2a7c6f19366e2b11b9b9667ecff08dd22253f2914a24a2faa98f7c07d1649');
  assert.equal(b.compiledRevision,compiledRevision);assert.equal(input.sha256,b.addonSha256);assert.equal(input.nodeSha256,b.nodeSha256);assert.equal(input.mode,'batched');assert.equal(b.samplingIntervalMicroseconds,1000);assert.equal(b.targetN,316562);assert.equal(b.targetQ,316562);
@@ -83,4 +82,11 @@ export function authenticateDiagnosticAuthority(input){
  for(const [p,h]of Object.entries(base.hashes)){assert.equal(sha(ordinaryBytes(resolve(sourceRoot,p))),h);assert.equal(sha(git(['show',base.revision+':'+p])),h);}
  for(const [name,file,hash]of [['qualificationAudit','qualification-audit.json','978c54cff9bfceb2c704010869ad355318381b51c03837f650b1afb8f308c927'],['pairedAudit','paired-audit.json','cf6af0f01fe98a022798740992881043d0e583308433689c2a26d250933d6c07']]){assert.deepEqual(b[name],{file,sha256:hash});assert.equal(sha(ordinaryBytes(resolve(dir,file))),hash);}
  return b;
+}
+
+/** Pure metadata check only; it creates no execution token or caller authority. */
+export function validateDiagnosticStatus(b){
+ assert.equal(b.schema,'bw.cold-memory-fusion.execution-profile-authority.v1');
+ assert.equal(b.status,'ROOT_REVIEWED_EXECUTION_PROFILE_READY','execution profile remains pending');
+ assert.equal(b.samplingIntervalMicroseconds,1000);assert.equal(b.targetN,316562);assert.equal(b.targetQ,316562);
 }

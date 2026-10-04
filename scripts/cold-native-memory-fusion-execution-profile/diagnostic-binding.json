@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-memory-fusion.execution-profile-authority.v1",
-  "status": "PENDING_SOURCE_REVIEW_NO_EXECUTION",
+  "status": "ROOT_REVIEWED_EXECUTION_PROFILE_READY",
   "baseWorkerRevision": "735740cb52550bb71edde5aba326da6f3a01f473",
   "baseWorkerSourceSha256": "f2a2a7c6f19366e2b11b9b9667ecff08dd22253f2914a24a2faa98f7c07d1649",
   "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
