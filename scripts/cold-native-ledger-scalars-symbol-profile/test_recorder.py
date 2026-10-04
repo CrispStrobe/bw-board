@@ -6,6 +6,8 @@ from pathlib import Path
 from unittest.mock import patch,Mock
 import recorder as r
 class Controls(unittest.TestCase):
+ def setUp(self):
+  forbidden=patch.object(r.subprocess,'Popen',side_effect=AssertionError('real child forbidden'));forbidden.start();self.addCleanup(forbidden.stop)
  def test_pending_precedes_every_effect(self):
   with patch.object(r.subprocess,'Popen',side_effect=AssertionError('real child forbidden')),patch.object(r,'fingerprint',side_effect=AssertionError('tool access forbidden')):
    with self.assertRaisesRegex(ValueError,'PENDING'):r.source_guard()
@@ -49,4 +51,20 @@ class Controls(unittest.TestCase):
   with patch.object(r,'Path',return_value=empty),patch.object(r.os,'killpg') as killpg:
    r.terminate(child)
   self.assertEqual(killpg.call_args_list[-1].args,(77,r.signal.SIGKILL));child.wait.assert_called_once_with(timeout=5)
+  # Exercise the production root cleanup handler, including an attainable
+  # manufactured proof written while the worker gets EOF and bounded grace.
+  with tempfile.TemporaryDirectory() as directory,patch.object(r,'OUT',Path(directory)):
+   events=[];worker=Mock();worker.poll.side_effect=[None,0];worker.returncode=0;perf=Mock();perf.poll.return_value=None;perf.returncode=-9;connection=Mock();connection.close.side_effect=lambda:events.append('control EOF')
+   raw={'schema':'bw.cold-native-ledger-scalars-symbol-profile.worker.v1','status':'FAIL','guestStatus':'NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','observerScope':'DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION'}
+   def proof(timeout):
+    self.assertLessEqual(timeout,10);events.append('attainable terminal proof');(Path(directory)/'manufactured-proof.json').write_text(json.dumps(raw))
+   worker.wait.side_effect=proof;report={'status':'FAIL','error':'original recorder failure'}
+   with patch.object(r,'ACTIVE',{'record':perf,'worker':worker}),patch.object(r,'terminate',side_effect=lambda p:events.append('stop recorder' if p is perf else 'kill worker')):
+    r.finish_children(report,connection,worker,r.time.monotonic()-1)
+   self.assertEqual(events,['stop recorder','control EOF','attainable terminal proof']);self.assertEqual(report['error'],'original recorder failure');self.assertEqual(r.terminal_projection(json.loads((Path(directory)/'manufactured-proof.json').read_text()))['status'],raw['guestStatus'])
+   timed=Mock();timed.poll.return_value=None;timed.wait.side_effect=r.subprocess.TimeoutExpired('manufactured',10);timed.returncode=-9
+   with patch.object(r,'ACTIVE',{'worker':timed}),patch.object(r,'terminate') as stop:
+    # New exclusive path for this second manufactured cleanup outcome.
+    with patch.object(r,'write') as write:r.finish_children({},None,timed,r.time.monotonic()-1)
+    stop.assert_called_once_with(timed);write.assert_called_once()
 if __name__=='__main__':unittest.main()

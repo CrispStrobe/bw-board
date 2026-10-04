@@ -44,12 +44,13 @@ export class WindowSession{
   assert.ok(decimal(response.controllerMonotonicNs));this.records.push({type,seq,workerBeforeNs:before,workerAfterNs:this.clock(),response});return response;
  }
  async prepare(){
-  assert.equal(this.state,'NEW');const ready=await this.request('hello','ready');
+  try{assert.equal(this.state,'NEW');const ready=await this.request('hello','ready');
   assert.deepEqual(Object.keys(ready.proof).sort(),['disabledAck','effectivePerfSha256','uid','gid','threadIds'].sort());
   assert.equal(ready.proof.disabledAck,true);assert.equal(ready.proof.effectivePerfSha256,perfImageSha256);assert.equal(ready.proof.uid,process.getuid());assert.equal(ready.proof.gid,process.getgid());
   assert.ok(Array.isArray(ready.proof.threadIds)&&ready.proof.threadIds.includes(process.pid)&&ready.proof.threadIds.every(x=>Number.isSafeInteger(x)&&x>0));this.state='DISABLED_READY';
+  }catch(error){this.errors.push({phase:'prepare',error:String(error)});throw error;}
  }
- async enable(){assert.equal(this.state,'DISABLED_READY');await this.request('enable','enabled');this.state='ENABLED';this.begin=this.clock();}
+ async enable(){try{assert.equal(this.state,'DISABLED_READY');await this.request('enable','enabled');this.state='ENABLED';this.begin=this.clock();}catch(error){this.errors.push({phase:'enable',error:String(error)});throw error;}}
  async stop(){
   if(this.state==='STOPPED')return;
   this.end=this.clock();

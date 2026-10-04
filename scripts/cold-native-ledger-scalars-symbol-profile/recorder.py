@@ -91,6 +91,30 @@ def final_guards(report,guards):
  for name,read,expected in guards:
   try:report.setdefault('after',{})[name]=read();require(report['after'][name]==expected,name+' unchanged')
   except BaseException as error:report.setdefault('finalizationErrors',{})[name]=repr(error);report['status']='FAIL'
+def finish_children(report,connection,worker,worker_started):
+ # Recorder failure must not race otherwise attainable outside-loop proof.
+ for name,child in list(ACTIVE.items()):
+  if child is worker:continue
+  try:
+   if child.poll() is None:terminate(child)
+   write(OUT/(name+'-final-exit.json'),{'exitCode':child.returncode})
+  except BaseException as error:report.setdefault('cleanupErrors',{})[name]=repr(error)
+ if connection is not None:
+  try:connection.close()
+  except BaseException as error:report.setdefault('cleanupErrors',{})['controlSocket']=repr(error)
+ if worker is not None:
+  grace=max(0,min(10,120-(time.monotonic()-worker_started)))
+  report['workerProofGraceSeconds']=grace
+  try:
+   if worker.poll() is None and grace>0:
+    try:worker.wait(timeout=grace)
+    except subprocess.TimeoutExpired:pass
+   if worker.poll() is None:terminate(worker)
+   write(OUT/'worker-final-exit.json',{'exitCode':worker.returncode})
+  except BaseException as error:
+   report.setdefault('cleanupErrors',{})['worker']=repr(error)
+   try:terminate(worker)
+   except BaseException as secondary:report.setdefault('cleanupErrors',{})['workerReap']=repr(secondary)
 def terminal_projection(receipt):
  require(receipt['schema']=='bw.cold-native-ledger-scalars-symbol-profile.worker.v1' and receipt.get('guestStatus')=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','attainable completed guest proof, independent of observer status')
  require(receipt['observerScope']=='DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION','fixed observer scope')
@@ -144,7 +168,7 @@ def main():
  require(OUT.is_dir() and not OUT.is_symlink() and OUT.stat().st_uid==owner.st_uid,'new owned diagnostic output only');os.chown(OUT,0,0);os.chmod(OUT,0o711)
  account=pwd.getpwuid(owner.st_uid);require(setup['environment']['HOME']==account.pw_dir,'ordinary owner HOME');env=child_environment(setup['environment'])
  require(setup['worker']['root']==str(WORKER) and setup['worker']['entry']=='scripts/cold-native-ledger-scalars-symbol-profile/worker.mjs','fixed diagnostic role')
- before=None;primary=None;report={'status':'FAIL','scope':'DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION; conservative acknowledged window only'};listener=None;connection=None;fds=[];worker=None;perf=None;tool_pins={}
+ before=None;primary=None;report={'status':'FAIL','scope':'DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION; conservative acknowledged window only'};listener=None;connection=None;fds=[];worker=None;perf=None;tool_pins={};worker_started=None
  def snapshot():
   return {'worker':git_identity(WORKER,setup['worker']['revision'],setup['worker']['files']),'compiled':git_identity(COMPILED,b['compiledRevision'],setup['compiledFiles']),'immutable':{p:fingerprint(p) for p in setup['pinnedFiles']},'setup':fingerprint(SETUP),'input':fingerprint(OUT/'input.json')}
  try:
@@ -164,14 +188,13 @@ def main():
    except BaseException:terminate(child);raise
    write(OUT/(name+'-exit.json'),{'exitCode':child.returncode})
    if name=='version':require(child.returncode==0,'effective version command success')
-  require((OUT/'version.stdout').read_bytes()==(HERE/'capability-version.stdout').read_bytes(),'same effective version output');help_raw=(OUT/'help.stdout').read_bytes()+(OUT/'help.stderr').read_bytes();require(all(x in help_raw for x in (b'--control',b'--delay',b'--clockid',b'--call-graph')),'actual option support before worker')
+  require((OUT/'version.stdout').read_bytes()==(HERE/'capability-version.stdout').read_bytes(),'same effective version output');help_raw=(OUT/'help.stdout').read_bytes()+(OUT/'help.stderr').read_bytes();require(all(x in help_raw for x in (b'--control',b'--delay',b'--clockid',b'--call-graph',b'--no-buildid',b'--no-buildid-cache')),'all actual option support before worker')
   parent=OUT/'worker-output';require(not parent.exists(),'exclusive worker parent');parent.mkdir();os.chown(parent,owner.st_uid,owner.st_gid)
   listener=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);listener.bind(str(OUT/'control.sock'));os.chown(OUT/'control.sock',owner.st_uid,owner.st_gid);os.chmod(OUT/'control.sock',0o600);listener.listen(1);listener.settimeout(15)
-  wrapper=[sys.executable,'-I','-B',str(HERE/'worker-entry.py'),str(owner.st_uid),str(owner.st_gid),node,'--max-old-space-size=128',str(WORKER/setup['worker']['entry']),str(OUT/'input.json')];worker=launch('worker',wrapper,env,60,16<<20)
+  wrapper=[sys.executable,'-I','-B',str(HERE/'worker-entry.py'),str(owner.st_uid),str(owner.st_gid),node,'--max-old-space-size=128',str(WORKER/setup['worker']['entry']),str(OUT/'input.json')];worker_started=time.monotonic();worker=launch('worker',wrapper,env,60,16<<20)
   connection,_=listener.accept();peer=struct.unpack('3i',connection.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12));require(peer==(worker.pid,owner.st_uid,owner.st_gid),'actual connected owner/PID')
   node_observed=observed_process(worker.pid);require(node_observed['imageSha256']==b['nodeSha256'] and node_observed['cmdline']==[x.encode() for x in wrapper[6:]],'observed unchanged Node CLI');node_observed['cmdline']=[x.decode() for x in node_observed['cmdline']];report['workerObserved']=node_observed
   ctl_read,ctl_write=os.pipe();ack_read,ack_write=os.pipe();fds=[ctl_read,ctl_write,ack_read,ack_write]
-  require(all(x in help_raw for x in (b'--no-buildid',b'--no-buildid-cache')),'actual bounded postprocessing options')
   args=[perf_path,'record','--no-buildid','--no-buildid-cache','-e','cpu-clock','-F','99','--call-graph','dwarf,8192','--delay=-1','--control=fd:'+str(ctl_read)+','+str(ack_write),'--clockid','mono','-p',str(worker.pid),'-o',str(OUT/'perf.data')]
   write(OUT/'record-invocation.json',{'command':args,'cpuSeconds':60,'wallSeconds':120,'fileBytes':64<<20,'coreBytes':0,'niceIncrement':10,'scope':'Existing process attach, initially disabled; no system-wide sampling'})
   with (OUT/'record.stdout').open('xb') as so,(OUT/'record.stderr').open('xb') as se:perf=subprocess.Popen(args,cwd=OUT,env=perf_env,stdout=so,stderr=se,start_new_session=True,preexec_fn=limits(60,64<<20),pass_fds=(ctl_read,ack_write));ACTIVE['record']=perf
@@ -192,12 +215,8 @@ def main():
   require(perf.returncode==0 and worker.returncode==0,'first recorder/worker failure; no retry');report['status']='RAW_DISABLED_ENABLE_DISABLE_RECORDING_REQUIRES_TERMINAL_AND_SAMPLE_AUDIT'
  except BaseException as error:primary=error;report['error']=repr(error);raise
  finally:
-  for name,child in list(ACTIVE.items()):
-   try:
-    if child.poll() is None:terminate(child)
-    write(OUT/(name+'-final-exit.json'),{'exitCode':child.returncode})
-   except BaseException as error:report.setdefault('cleanupErrors',{})[name]=repr(error)
-  for value in (connection,listener):
+  finish_children(report,connection,worker,worker_started)
+  for value in (listener,):
    if value is not None:
     try:value.close()
     except BaseException as error:report.setdefault('cleanupErrors',{})['socket']=repr(error)
