@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "revision": "f259485ac5de4696b35768809cb96f6769eb0eaf",
+  "toolingCount": 11,
+  "compiledCount": 208,
+  "driverCount": 80,
+  "fullCurrentGitPrePostEqual": true,
+  "parentAndToolsVerified": true,
+  "coverage": "one Node test forwarding six named manufactured Python cases; zero skips",
+  "rawExitCode": 0,
+  "rawWaitStatus": 0,
+  "leaderReaped": true,
+  "timeout": false,
+  "rawExitWallSeconds": 4.057660823687911,
+  "scope": "source/mock evidence only; no download/restoration/factory/addon/emulated CPU"
+}
