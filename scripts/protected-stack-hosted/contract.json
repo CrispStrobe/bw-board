@@ -4248,7 +4248,7 @@
   "runId": 37186044543,
   "schema": "bw.protected-stack.hosted-one-run.v1",
   "scope": "Exactly one bounded fixed protected DS/SS stack native/JS correctness child; no build, other guests, benchmark or adoption claim",
-  "status": "SOURCE_REVIEW_PENDING",
+  "status": "ROOT_REVIEWED_PROTECTED_STACK_SOURCE_READY",
   "zipBytes": 7741154,
   "zipMembers": {
     "protected-stack-build-context/build-helper.py": {
