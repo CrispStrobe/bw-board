@@ -1,0 +1,35 @@
+{
+  "revision": "9f3042810d59fa6911e33c5cc480a6c405c5a618",
+  "namespace": "scripts/cold-typed-state-paired",
+  "files": {
+    "parent.py": {
+      "heldSha256": "05e0d4f3822663dbf49919fc249cebb16f75d9ced016218bca7bd59f8ed09b0e",
+      "draftSha256": "6f1e15fc674d2636bade7f4d55db36275c71a05f85618e9484de423c6c565ae9"
+    },
+    "policy.py": {
+      "heldSha256": "945f9c1664b7a37d3f529d9ea629e629a35b2c7ad14c592c60b394924693e3ba",
+      "draftSha256": "28222f0a7421e23e2be5fa185519e548b62e190b28994ea05a17566e66b4b12d"
+    },
+    "hosted.py": {
+      "heldSha256": "ca3421028e8c09319d02fbcfc0b3885b0a5cf05aa9180aa7d934f5249569b26c",
+      "draftSha256": "5ae4ab0b25dc7dafa74603c9dfeea18a794c3717c4b66cc165e285a4abcd88f6"
+    },
+    "setup-entry.py": {
+      "heldSha256": "72ee6d6b72143d8f766afc16c7b14bcf5f672b5b0d6da3b4c4ca98a9e535ffdc",
+      "draftSha256": "b928e618eda001e5ccf24d01c7be32f17b7db027f3951fc256c28bc475675f27"
+    },
+    "test_policy.py": {
+      "heldSha256": "5a527360dfb9f2fe386353ac83deeb13be1e266f527cf4e357267f45ffaed38e",
+      "draftSha256": "2534cf2db26e21e36af4bba566808ef56c9d4176fcf6b0d1cf414e6284ffacdf"
+    },
+    "authority.py": {
+      "heldSha256": "3b2b0eaa2daaaaa2602e1830b7a8b6d9c48b6bc1b1e2363a6229677035ec447b",
+      "draftSha256": "df9a37511924a6ec6315c7f587ddfc00abcdf701f5894d4c48404323a19dbe59"
+    }
+  },
+  "scope": "Exact held schedule, alternating order and summary arithmetic retained; source adapters and outside-timer fusion proof are new and require review.",
+  "mechanics": {
+    "pair_schedule": "2b9c50712646eaed20d42eee20cb2748c20f759b126d832de3895d6aa9a0d8f7",
+    "summarize_pairs": "9cf7d239fe0c085d1d55651d4be2bc0ef49770b0ccb11ec8f8be471cb65a2eb1"
+  }
+}
