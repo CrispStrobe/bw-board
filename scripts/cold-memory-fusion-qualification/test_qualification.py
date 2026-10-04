@@ -34,7 +34,7 @@ class Controls(unittest.TestCase):
    with self.assertRaises(ValueError):q.validate_bridge_evidence(bad)
   bad=copy.deepcopy(n);bad['activityState']=0
   with self.assertRaises(ValueError):q.validate_inspect_snapshot(bad)
-  for r in [{'requiredStateExportProfile':'wrong','admittedStateExportProfile':'wrong'},{'requiredStateExportProfile':'bw.cold-native.copied-u32-state.v1','admittedStateExportProfile':'bw.cold-native.copied-u32-state.v1','typedSnapshotOwnership':'wrong'}]:
+  for r in [{'requiredStateExportProfile':'wrong','admittedStateExportProfile':'wrong'},{'requiredStateExportProfile':'bw.cold-native.copied-u32-state.v1','admittedStateExportProfile':'bw.cold-native.copied-u32-state.v1','requiredMemoryFusionProfile':'bw.cold-native.memory-clock-fusion.v1','admittedMemoryFusionProfile':'bw.cold-native.memory-clock-fusion.v1','typedSnapshotOwnership':'wrong'},{'requiredStateExportProfile':'bw.cold-native.copied-u32-state.v1','admittedStateExportProfile':'bw.cold-native.copied-u32-state.v1','requiredMemoryFusionProfile':'wrong','admittedMemoryFusionProfile':'wrong'}]:
    with self.assertRaises(ValueError):q.terminal(r,{}, {}, {})
  def test_manual_single_child_contract(self):
   text=(q.ROOT/'.github/workflows/i80386-cold-memory-fusion-qualification.yml').read_text();self.assertIn('workflow_dispatch:',text);self.assertNotIn('pull_request:',text);self.assertNotIn('push:',text);self.assertIn('default: false',text)
