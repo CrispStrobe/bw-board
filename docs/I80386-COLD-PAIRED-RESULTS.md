@@ -1,6 +1,25 @@
 # Cold BIOS E16 paired CPU results
 
-Keep the plain-JS baseline. Native batching passed against native one-Q, but failed against plain JS: it used 4.116236× the execution CPU and lost all seven measured pairs. This is a fixed free-BIOS checkpoint result, not a Windows/full-boot speed result or default adoption.
+Keep the plain-JS baseline. The latest MEMORY clock-fusion candidate used 5.139261× execution CPU against JS and lost all seven measured pairs. Earlier native and typed-state comparisons remain separately recorded below. These are fixed free-BIOS checkpoint results, not Windows/full-boot speed results or default adoption.
+
+## MEMORY clock-fusion candidate: keep plain JS
+
+[Run 37187325276](https://github.com/CrispStrobe/bw-board/actions/runs/37187325276), frozen parent `b3e29ad3`, compares fusion worker `735740cb` (63 inputs) against unchanged plain-JS worker `0f1ec8cc` (49 inputs). The candidate uses compiled `85fc1599` (151 inputs), DSO `7de755f0`, copied-U32 and MEMORY-fusion profiles. The plain worker retains its original compiled `7632e6a0` capture authority. Two warmup pairs and seven alternating measured pairs completed all 18 fresh children on one AMD EPYC 9V74 host: four logical CPUs, allowed CPUs 0–3, Node 22.23.3 and the recorded process cgroup context.
+
+| Measured window | Plain JS mean / median | Fusion batched mean / median |
+| --- | ---: | ---: |
+| Execution CPU | 0.299012571 / 0.299204000 s | 1.536703714 / 1.536468000 s |
+| Execution wall | 0.143191210 / 0.142665389 s | 1.270581774 / 1.270506532 s |
+| Whole-child CPU (wait4) | 1.106678857 / 1.105710000 s | 5.076957714 / 5.058220000 s |
+| Whole-child wall | 0.856981945 / 0.856461744 s | 4.516555877 / 4.495399807 s |
+
+Fusion used **5.139261× execution CPU** and **8.873322× execution wall**, losing all seven measured pairs. The unchanged ≥10% mean CPU reduction/all-seven gate fails; keep JS. This did not measure old native exports against fusion, and absolute timings must not be combined with earlier hosts. Configured six-MHz virtual RTx is not a physical 16-MHz 386 calibration.
+
+The [independent actual audit](receipts/i80386-cold-memory-fusion-paired-results-20261004/independent-fusion-paired-audit.json) verifies all 267 artifact members, 351 role paths and 18 terminal proofs. Nine native children retain raw reset/final/last-return 166-word CPU and N/Q 316,562; nine JS children retain represented CPU/Q. All 18 match terminal board, RAM hash and the complete 16,475-event ordered PIO tape. Live copied-buffer ownership and comparison execution remain source-attested; whole RAM bytes were not retained. This is the fixed E16 scope, not Windows/full boot or adoption.
+
+All nine fusion children retain identical counter maps: 167,123 validated fused memory effects (75,401 reads + 91,722 writes), 65,999 clock outer entry attempts and 183,907 memory outer entry attempts. The legacy `clockTransfers.transfers` value 233,122 counts accepted logical transfers in this profile, not JS entries. These counts establish neither CPU shares nor an old-native-versus-fusion speed gain.
+
+The [receipt index](receipts/i80386-cold-memory-fusion-paired-results-20261004/index.json), [complete 18-child timing series](receipts/i80386-cold-memory-fusion-paired-results-20261004/actual-18-child-series.json), [counter series](receipts/i80386-cold-memory-fusion-paired-results-20261004/actual-bridge-count-series.json) and [external retention record](receipts/i80386-cold-memory-fusion-paired-results-20261004/external-retention.json) preserve exact small evidence. The sole official artifact is `11297715775`, 42,490,189 bytes, SHA256 `b56b9dabb5ac6849f2532f37ddf1bf9807164cdfbb9888813ad232053d45d546`; its expiry and canonical local ZIP are recorded. [Upstream result comment](https://github.com/CrispStrobe/bw-board/pull/345#issuecomment-5977941393). No retry occurred.
 
 ## Copied Uint32Array candidate: keep plain JS
 

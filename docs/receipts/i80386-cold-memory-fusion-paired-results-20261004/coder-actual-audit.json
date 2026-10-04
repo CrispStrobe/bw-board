@@ -1,0 +1,152 @@
+{
+  "status": "PASS_CODER_ACTUAL_MEMORY_FUSION_PAIRED_AUDIT",
+  "runId": 37187325276,
+  "head": "b3e29ad322ccb723d971a0841ad89777f7e07a73",
+  "artifactId": 11297715775,
+  "zipBytes": 42490189,
+  "zipSha256": "b56b9dabb5ac6849f2532f37ddf1bf9807164cdfbb9888813ad232053d45d546",
+  "members": 267,
+  "currentGitProofInputs": 351,
+  "roleProofScope": "280 parent/build/workers plus 54 metadata-driver and 17 qualifier paths. Setup success source-attests final driver/upstream guards; retained helper before/after and all restored/input pins independently equal. No unretained full after-driver map fabricated.",
+  "children": 18,
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "quantitativeGatePassed": false,
+  "favorablePairs": 0,
+  "candidateOverBaselineMeanExecutionCpu": 5.139261225519425,
+  "candidateOverBaselineMeanExecutionWall": 8.873322443286016,
+  "metrics": {
+    "plain-JS": {
+      "executionCpu": {
+        "mean": 0.2990125714285714,
+        "median": 0.299204,
+        "series": [
+          0.286807,
+          0.297931,
+          0.306284,
+          0.305289,
+          0.300543,
+          0.299204,
+          0.29703
+        ]
+      },
+      "executionWall": {
+        "mean": 0.14319120957142856,
+        "median": 0.142665389,
+        "series": [
+          0.136282676,
+          0.142665389,
+          0.147412105,
+          0.149193366,
+          0.141994691,
+          0.140598842,
+          0.144191398
+        ]
+      },
+      "wholeChildCpu": {
+        "mean": 1.1066788571428572,
+        "median": 1.10571,
+        "series": [
+          1.1001599999999998,
+          1.10571,
+          1.112778,
+          1.109156,
+          1.103304,
+          1.097486,
+          1.118158
+        ]
+      },
+      "wholeChildWall": {
+        "mean": 0.8569819445714221,
+        "median": 0.8564617440000006,
+        "series": [
+          0.8560084119999942,
+          0.8564617440000006,
+          0.8585094689999551,
+          0.8575331110000093,
+          0.8559820329999752,
+          0.8584846329999891,
+          0.8558942100000309
+        ]
+      }
+    },
+    "fusion-batched": {
+      "executionCpu": {
+        "mean": 1.5367037142857143,
+        "median": 1.536468,
+        "series": [
+          1.520423,
+          1.534677,
+          1.552218,
+          1.536468,
+          1.524337,
+          1.539998,
+          1.548805
+        ]
+      },
+      "executionWall": {
+        "mean": 1.2705817735714284,
+        "median": 1.270506532,
+        "series": [
+          1.252501099,
+          1.270506532,
+          1.285997908,
+          1.268778062,
+          1.260070455,
+          1.274942683,
+          1.281275676
+        ]
+      },
+      "wholeChildCpu": {
+        "mean": 5.076957714285714,
+        "median": 5.05822,
+        "series": [
+          5.024400999999999,
+          5.164199,
+          5.117929999999999,
+          5.049035,
+          5.051297,
+          5.05822,
+          5.073622
+        ]
+      },
+      "wholeChildWall": {
+        "mean": 4.516555877285717,
+        "median": 4.4953998070000125,
+        "series": [
+          4.469511633000025,
+          4.595180921999997,
+          4.545630663999987,
+          4.494859636000001,
+          4.49432582899999,
+          4.4953998070000125,
+          4.520982650000008
+        ]
+      }
+    }
+  },
+  "hardware": {
+    "cpuModels": [
+      "AMD EPYC 9V74 80-Core Processor"
+    ],
+    "logicalCpus": 4,
+    "allowedCpuSet": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "processCgroup": {
+      "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service",
+      "files": {
+        "cpu.max": "max 100000\n",
+        "cpu.stat": "usage_usec 17526152\nuser_usec 10937602\nsystem_usec 6588550\nnice_usec 3320000\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+        "memory.max": "max\n",
+        "memory.current": "987107328\n",
+        "cpuset.cpus.effective": "0-3\n"
+      }
+    }
+  },
+  "scope": "Samehost primary plain-JS versus fusion-batched only. Native nine reset/final/last-return166/NQ; JS nine represented CPU/Q; all18 board/RAMhash/PIO/source-input-final proof. Live typed ownership is executed-source-attested. No old-native-versus-fusion measurement, physical386 calibration, fullboot or adoption."
+}
