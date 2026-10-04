@@ -1,12 +1,12 @@
 {
   "schema": "bw.cold-ledger-scalars.native-symbol.hosted-source.v1",
-  "status": "PENDING_ROOT_HOSTED_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_NATIVE_SYMBOL_HOSTED_READY",
   "enabledByDefault": false,
   "scope": "DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION",
   "roles": {
     "diagnostic": {
       "root": "/home/runner/work/bw-board/bw-board/symbol-worker",
-      "revision": "88645607220941b2ffadb2dc4e81085c4e3ff6dc",
+      "revision": "1391d63e745231fb4921e2d1dd6ec18677987b50",
       "files": {
         "package.json": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee",
         "roms/free-at-bios/BIOS-bochs-legacy": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
@@ -30,7 +30,7 @@
         "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e",
         "scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs": "381f1c233bddd27c73dc19cb144c3308d4b4b8fe5ae0b4bf952351fbc5945757",
         "scripts/bochs-cpu3-native-owned-8042/profile.mjs": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546",
-        "scripts/cold-native-ledger-scalars-symbol-profile/README.md": "0b6c4d0b7273f558cbf2b3d3941fa5d2f646657b6f13b296d6292fa77ae67a93",
+        "scripts/cold-native-ledger-scalars-symbol-profile/README.md": "97fd096cd411ef7ae8080cf4f06db6c1512bcbcc4fc37f376683688c5a0ec82e",
         "scripts/cold-native-ledger-scalars-symbol-profile/admission.mjs": "69da55b7465b58d09ff03c0c766e5b75f93075cd5fae73f52d63d7be79154cf2",
         "scripts/cold-native-ledger-scalars-symbol-profile/capability-artifacts.json": "c424a1fef38170aeb41f665378dc1707ab443411cf5a91120891eb00a2c5dac6",
         "scripts/cold-native-ledger-scalars-symbol-profile/capability-audit.json": "97187580ff9b412bdef2dc8799d2b900eb7a5ca5dc78ce37b4257615ea9c8c9e",
@@ -38,12 +38,12 @@
         "scripts/cold-native-ledger-scalars-symbol-profile/capability-version.stdout": "c3e20cd8f7c7ec7e2abfbaec586a6c12a2b9ff25d645ad0df87816bf02b9e01b",
         "scripts/cold-native-ledger-scalars-symbol-profile/held-source-context.json": "b285a114e3a25eeb72dcea358e8acf9aa0418db8831b3ac6f17f9145d4c096e1",
         "scripts/cold-native-ledger-scalars-symbol-profile/paired-audit.json": "4f9b86de87093d69dbfbbc57d2dd56ce9dc2249578f003e97e44b02ff1311a46",
-        "scripts/cold-native-ledger-scalars-symbol-profile/profile-binding.json": "ae86c20c554c5a8c605dc025a825a075baa6556c44757f7e42e4fbca5d11fad2",
+        "scripts/cold-native-ledger-scalars-symbol-profile/profile-binding.json": "8447667b3eeb06751493db7ce2d6e3f9b329c0f23ec54f385fe5314a281f903e",
         "scripts/cold-native-ledger-scalars-symbol-profile/qualification-audit.json": "81948a5bcc32715cee07f90fc0b07e6d5400eb8d5ccc7a39baa407676101eecd",
         "scripts/cold-native-ledger-scalars-symbol-profile/qualifier-source-context.json": "3eccfa0968edb9f15fc6823f84e8b829b02a514dca5bce091441a6011d7230e2",
-        "scripts/cold-native-ledger-scalars-symbol-profile/recorder.py": "ff56e20c6327a1a9ada501f9ef6a188ae81bddac55a37b78bf9d1aa8028de404",
+        "scripts/cold-native-ledger-scalars-symbol-profile/recorder.py": "332b8e17336fd289e454b82c0688a0e2294a728a2b9cf73619327fa2ef45046d",
         "scripts/cold-native-ledger-scalars-symbol-profile/setup.py": "9a272dc7dde57ce290ccedd931048b2d9e91d59fcc18b7dbc5bba709197539b0",
-        "scripts/cold-native-ledger-scalars-symbol-profile/test_recorder.py": "fadbe7746c86e2657bfe0e3b17c992d67fc5b1ddd3996c7a3b333e599b0970d5",
+        "scripts/cold-native-ledger-scalars-symbol-profile/test_recorder.py": "0587faeada78b2029c15e9eedf9ec046ded93cfbbcadec1ad2c657e27fa60141",
         "scripts/cold-native-ledger-scalars-symbol-profile/window-session.mjs": "21bd33297a01b01abc3af9a6680e3178edbff65a6937982c6337669551024f89",
         "scripts/cold-native-ledger-scalars-symbol-profile/worker-derivation.json": "741f921418d57011914027e63659e89162ef0a052f1f52d795c9b29be6495ec0",
         "scripts/cold-native-ledger-scalars-symbol-profile/worker-entry.py": "e5d50da22cce8e1b9a93b1dc6065a49ab1f6a12edd3fe61a30a75028ddefca2e",
@@ -98,12 +98,12 @@
         "src/upd765.js": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4",
         "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
         "src/ym3812.js": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04",
-        "test/i80386-cold-ledger-scalars-symbol-profile-source.test.mjs": "bb8b38bfe5fcad49c223d32aaf49d74c5b55b6f171a928a8185b1e93cd37591e",
+        "test/i80386-cold-ledger-scalars-symbol-profile-source.test.mjs": "66584f3ea56af1b1cfbf699f53e27e6fae128e943a9b8728218d66a05b04c7e8",
         "test/i80386-cold-native-memory-fusion-ledger-scalars-worker-source.test.mjs": "99657314f7a6391db8d231de63edc49828e6bae4a6544c8a393ff4b4bd55f3eb"
       },
-      "sourceSha256": "0b3468e7de46ac61a6666d8fdec2a3c8165f8a7d4514fe53cbc2f622bd2b684b",
+      "sourceSha256": "4a4eba4c9e1c8dca4803e46f56282eeb53d7cf1df90a570d469d19376e70efd3",
       "entry": "scripts/cold-native-ledger-scalars-symbol-profile/worker.mjs",
-      "status": "PENDING_ROOT_SOURCE_REVIEW"
+      "status": "ROOT_REVIEWED_NATIVE_SYMBOL_DIAGNOSTIC_READY"
     },
     "qualifier": {
       "root": "/home/runner/work/bw-board/bw-board/qualifier",
