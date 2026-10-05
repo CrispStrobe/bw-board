@@ -32,6 +32,26 @@
       "bytes": 803,
       "sha256": "58868dbdf39c13b380092cf0a98eac8f1e986ddac3cf0cf9ffedadc06b4df540",
       "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/independent-audit.json"
+    },
+    "parent.py": {
+      "bytes": 5355,
+      "sha256": "628f519cdc3f2f0fcf7a962ecd85083b225238e870c64b2138b5b78315c182fb",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/parent.py"
+    },
+    "context.json": {
+      "bytes": 38684,
+      "sha256": "ff34a514d1d9a126a4658c600adad95666dc1efb0f62d92014997bfa51a41f68",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/context.json"
+    },
+    "before.json": {
+      "bytes": 38608,
+      "sha256": "5267a299c0b9701b2c3718308c80b6a208f4c6b151db4a5163d06d82579878dc",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/before.json"
+    },
+    "after.json": {
+      "bytes": 38608,
+      "sha256": "5267a299c0b9701b2c3718308c80b6a208f4c6b151db4a5163d06d82579878dc",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/after.json"
     }
   }
 }
