@@ -1,5 +1,7 @@
 # Direct native 386 board adapter: work in progress
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This experiment replaces the qualified CPU3 bridge's per-access FIFO protocol
 with synchronous Node callbacks. The actual AT machine continues to own RAM,
 ROM decoding, PIO, A20, PIC, PIT and successful-work clocks. The JavaScript CPU
@@ -70,9 +72,8 @@ matches the complete reference CPU, counters, board and RAM state.
 
 This 194-tick guest is a correctness fixture. Fresh processes do not warm the
 JavaScript JIT or native core. Its latency does not establish physical 16 MHz
-386 RTx, a tenfold speedup, or Windows and Doom compatibility. No comparable
-GitHub CI or Kaggle execution measurement exists for this adapter yet.
-The next steps are measured callback/scheduler profiling, a longer freely
+386 RTx, a tenfold speedup, or broader guest and broader game compatibility. No comparable
+GitHub CI or Kaggle execution measurement exists for this adapter yet. The next steps are measured callback/scheduler profiling, a longer freely
 owned guest, and source-bound qualification before production integration.
 
 A first [actual callback profile](receipts/2026-10-01-i80386-native-direct-r3-profile.json)

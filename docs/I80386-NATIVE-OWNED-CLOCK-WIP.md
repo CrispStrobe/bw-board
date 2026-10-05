@@ -1,5 +1,7 @@
 # Native 386 clock batching — experimental ABI3
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The separate native ABI3 candidate executes the fixed free protected-mode ROM against an actual private board. Its first complete capture matches **all 1,649,067 canonical native CPU rows and all 209,839 chronological logical board events** from H4, including six full CPU/board checkpoints, settled PIT/PIC state and the whole RAM hash. This is actual native CPU execution, extending the earlier [host-only ownership replay](I80386-NATIVE-OWNED-CLOCK-REPLAY-WIP.md).
 
 Actual counters show **9,204 clock transfers: 8,738 nonempty commits plus 466 state queries**, carrying exactly 201,366 ordered native-tick/successful-work words. Native tick and successful work remain independent (100,684 N versus 100,682 Q). These are measured crossings for this ROM; crossing reduction alone is not a throughput or RTx result.
@@ -28,7 +30,7 @@ The predeclared process-CPU gate **failed**. Across seven measured pairs, H4 ave
 
 The protocol used two discarded warmup pairs and seven measured alternating H4/ABI3 pairs, with a fresh child for each run and both journals/profilers disabled. The window includes all parent/worker threads, IPC, callbacks, GC, resumes/snapshots and six checkpoints; it excludes startup, settlement and final report serialization. The gate required at least 10% lower mean process CPU and all seven pairs favorable, with full logical parity in every child. The broader [10× target](I80386-10X-PERFORMANCE.md) remains open. Two subsequent attribution cells identify the next candidate below; they do not repeat or supersede the failed speed gate.
 
-This remains a bounded diagnostic, not a general native backend or GUI/browser implementation. Worker termination cannot cancel arbitrary C++ or contain a native abort: CLI/tests need a fresh child process with heap/file/core/wall limits. Full AT boot, native xv6/Windows/Doom, production CLI/GUI integration and physical 16 MHz 386DX RTx are not qualified by this fixture.
+This remains a bounded diagnostic, not a general native backend or GUI/browser implementation. Worker termination cannot cancel arbitrary C++ or contain a native abort: CLI/tests need a fresh child process with heap/file/core/wall limits. Full AT boot, native xv6/broader guest/broader game, production CLI/GUI integration and physical 16 MHz 386DX RTx are not qualified by this fixture.
 
 `node scripts/prepare-bochs-cpu3-native-owned-clock.mjs --prepare /new/tree` requires `BOCHS_386_ROOT` pointing to the clean pinned Bochs source. Preparation does not build or run. `node scripts/run-i80386-native-owned-clock.mjs /absolute/input.json` is a diagnostic child entry, requiring authenticated prepared/build receipts, the fixed-ROM JS reference and existing BIOS/config paths; invoke it through bounded process containment, not directly in a long-lived application. Source/receipt identities must match the checkout used for compilation.
 

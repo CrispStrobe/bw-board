@@ -1,5 +1,7 @@
 # Ordinary 80386 fetch-page cursor: discarded prototype
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The pre-coding screen in `2026-09-28-i80386-ordinary-fetch-screen.md`
 passed, but this narrow implementation failed its measured retention gate.
 No executable cursor or CLI switch remains in the final board tree.
@@ -36,12 +38,9 @@ earlier 98.49% page/context opportunity was an upper bound for *all* bytes,
 not coverage of this implementation. Diagnostic timing is excluded from the
 speed result.
 
-One serial **uninstrumented** Windows 60M baseline/candidate pair ran at
-exact revision `a5d723c6`, Node v20.20.2, on the same 4-vCPU KVM Skylake
-VPS. Host load before the pair was 6.19/6.36/6.54. Both reports have identical
+Host load before the pair was 6.19/6.36/6.54. Both reports have identical
 source inventories, input hashes, 60M budget and null refusal; complete guest
-JSON matches after removing only the opt-in input and diagnostic-stat fields.
-The baseline took **74.66 user CPU seconds** (1.21 system, 67.44 wall); the
+JSON matches after removing only the opt-in input and diagnostic-stat fields. The baseline took **74.66 user CPU seconds** (1.21 system, 67.44 wall); the
 candidate took **80.79 user CPU seconds** (1.68 system, 73.94 wall), **8.21%
 more user CPU**. The predeclared retention gate required at least 10% mean
 improvement and every pair favorable. This unfavorable first pair closes the

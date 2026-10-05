@@ -1,5 +1,7 @@
 # Cold BIOS three-arm semantic qualification — source preparation
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This manual workflow prepares exactly one fresh plain-JS worker, native one-Q
 worker and native batched worker, in that order. It performs no build, mixed
 oracle rerun, warmup pairs or measured performance gate. The original
@@ -47,11 +49,8 @@ The original diagnostic retained final RAM hashes, not complete backing bytes.
 
 Execution-phase CPU/wall self-reports and whole-child wait4 evidence are retained
 separately for investigation only. Cgroup host counters are aggregate and are
-not attributable to one child. These three children cannot establish a paired
-speed improvement, physical 386 RTx, broader AT boot, Windows/Doom 10×, or default
-adoption. A successful raw qualification remains subject to independent audit;
-the parent neither requires nor fabricates an armQualificationAudit to run itself.
-That genuine later audit is a prerequisite for the separate 18-child paired gates.
+not attributable to one child. A successful raw qualification remains subject to independent audit;
+the parent neither requires nor fabricates an armQualificationAudit to run itself. That genuine later audit is a prerequisite for the separate 18-child paired gates.
 
 The terminal policy distinguishes the genuine 13-field inspect result from
 the last resume result: resume supplies the active-state field, independent N/Q

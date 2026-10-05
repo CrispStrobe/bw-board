@@ -1,0 +1,59 @@
+{
+  "revision": "06581f3831aa765933b1d160a41ab37b1b652913",
+  "heldPath": "scripts/cold-native-memory-fusion-ledger-scalars-performance/worker.mjs",
+  "heldSha256": "64f337ff153fef0c54020d595bd7aeaa38a7ee5b236bc68b649c89b725c57af4",
+  "candidateSha256": "b662a814db1ea66c80d53bc88981f32432e2abc4911a2784c06b2377860541c4",
+  "seams": [
+    {
+      "held": "import assert from 'node:assert/strict';",
+      "candidate": "import assert from 'node:assert/strict';\nimport {createOwnedWindowSession} from './window-session.mjs';",
+      "count": 1
+    },
+    {
+      "held": "schema:'bw.cold-native-memory-fusion-ledger-scalars-performance.worker.v1'",
+      "candidate": "schema:'bw.cold-native-ledger-scalars-symbol-profile.worker.v1',observerScope:'DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION'",
+      "count": 1
+    },
+    {
+      "held": "lastZero=null,resetRetained=null;",
+      "candidate": "lastZero=null,resetRetained=null,sampler=null;",
+      "count": 1
+    },
+    {
+      "held": "  const providers=await import",
+      "candidate": "  sampler=createOwnedWindowSession();await sampler.prepare();receipt.recorderReady=sampler.report();\n  const providers=await import",
+      "count": 1
+    },
+    {
+      "held": "  const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();",
+      "candidate": "  await sampler.enable();\n  try{\n  const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();",
+      "count": 1
+    },
+    {
+      "held": "  // Evidence, settlement, comparisons, authentication and close are outside",
+      "candidate": "  }finally{await sampler.stop();receipt.sampler=sampler.report();}\n  // Evidence, settlement, comparisons, authentication and close are outside",
+      "count": 1
+    },
+    {
+      "held": "receipt.status='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS';write('receipt.json');",
+      "candidate": "receipt.guestStatus='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS';sampler.assertComplete();receipt.status='DIAGNOSTIC_NATIVE_SYMBOL_WINDOW_TERMINAL_PARITY_PASS';write('receipt.json');",
+      "count": 1
+    },
+    {
+      "held": "  receipt.error=String(error);if(native)",
+      "candidate": "  if(sampler){await sampler.stop();receipt.sampler=sampler.report();}receipt.error=String(error);if(native)",
+      "count": 1
+    },
+    {
+      "held": "from './protocol.mjs'",
+      "candidate": "from '../cold-native-memory-fusion-ledger-scalars-performance/protocol.mjs'",
+      "count": 1
+    },
+    {
+      "held": "from './snapshot.mjs'",
+      "candidate": "from '../cold-native-memory-fusion-ledger-scalars-performance/snapshot.mjs'",
+      "count": 1
+    }
+  ],
+  "scope": "Ten count1 source seams; exact entire timer/while and full-state materialization retained. Session operations surround existing timer block; no measured-loop instrumentation."
+}

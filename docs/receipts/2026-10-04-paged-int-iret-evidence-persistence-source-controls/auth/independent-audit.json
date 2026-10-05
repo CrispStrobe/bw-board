@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "revision": "b12e8d50bd90dcb503dd186890ed11483cc2eca3",
+  "sourceCount": 81,
+  "parentAndToolsVerified": true,
+  "fullCurrentGitPrePostEqual": true,
+  "coverage": "actual returned81 identity equals frozen context",
+  "rawWaitStatus": 0,
+  "exitCode": 0,
+  "leaderReaped": true,
+  "timeout": false,
+  "rawExitWallSeconds": 2.411032184958458,
+  "scope": "No factory, provider, addon or native CPU; original failed run remains unchanged"
+}

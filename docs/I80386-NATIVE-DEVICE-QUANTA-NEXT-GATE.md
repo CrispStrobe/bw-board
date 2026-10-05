@@ -1,5 +1,7 @@
 # Native 386 successful-work clock gate
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Original status: implementation contract.** The [subsequent successful-work proof](I80386-NATIVE-DEVICE-QUANTA-SELF-PARITY.md) now passes and has been independently reproduced. This remains the design record; full board/WASM integration and performance qualification are unfinished.
 The [ordinary-instruction PIT/PIC proof](I80386-NATIVE-DEVICE-SELF-PARITY.md)
 landed in PR #181, merge `bad619572be8c8ac9488696ce825383284f01f30`.
@@ -82,4 +84,4 @@ lost committed REP progress, delayed active timer cuts, premature IRQ ACK,
 and plausible but incorrect device clock state. Independently reproduce the
 final source-bound proof before publishing receipts. A self-parity result
 still does not establish full AT reset/board parity, general REP I/O, trap
-accounting, WASM integration, Windows compatibility, or the 10×/RTx target.
+accounting, WASM integration, broader guest compatibility, or the 10×/RTx target.

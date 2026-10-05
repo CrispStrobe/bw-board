@@ -1,0 +1,14 @@
+{
+  "zip": {
+    "path": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+    "bytes": 8097621,
+    "sha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+    "artifactId": 11309320742,
+    "members": 70
+  },
+  "prepareManifest": {
+    "member": "paged-int-iret-build-evidence/prepare.json",
+    "bytes": 1052065,
+    "sha256": "bc37a25c7eae18c5ef9e586de3df8317bd7375e3062e70dfda6e87dd610a28f2"
+  }
+}

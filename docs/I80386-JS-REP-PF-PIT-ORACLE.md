@@ -1,8 +1,10 @@
 # Actual JavaScript AT board: protected-mode REP, faults and PIT
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Qualified free baseline, 2026-10-01. Native integration remains WIP.** A new MIT 64 KiB ROM starts at physical `FFFFFFF0`, enters protected mode and 4 KiB paging, recovers from two page faults, and services an actual PIT/PIC interrupt after an STI successor. It finishes with 135 successful work quanta, two failed attempts, and 814 functional board clocks. These are the existing six-clock functional convention plus one four-clock reset, not physical 386DX timing or RTx.
 
-The [actual capture](receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-capture.json.gz), [result](receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-result.json), and [audit](receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-audit.json) are public. A separate fresh capture is byte-identical. All 48 focused tests pass without skips. This qualifies the actual JavaScript compatibility profile, not a native execution path, strict-386 profile, full AT boot, Windows enhanced mode or Doom.
+The [actual capture](receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-capture.json.gz), [result](receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-result.json), and [audit](receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-audit.json) are public. A separate fresh capture is byte-identical. All 48 focused tests pass without skips. This qualifies the actual JavaScript compatibility profile, not a native execution path, strict-386 profile, full AT boot, broader guest enhanced mode or broader game.
 
 ## Cold guest and protected memory
 

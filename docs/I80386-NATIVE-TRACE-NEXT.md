@@ -1,5 +1,7 @@
 # Protected32 native trace: next bounded experiment
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 Source at `140afc7aec2ae126400ebf7fde080ad56a7c06ff` (PR #90 merged).
 This is a design and standalone branch-side-exit proof, not a dispatcher or
 performance change.
@@ -78,6 +80,5 @@ coding dispatcher integration. These are necessary opportunity gates, not
 native eligibility or a speed prediction. Then require focused branch,
 deadline, code-write, page-remap, A20, privilege, IRQ and fault differential
 tests; full xv6 guest/RAM parity; and three serial paired user-CPU A/B runs
-with at least 5% lower mean and all pairs favorable. Measure Windows mode
-effects separately. No full-run census or A/B was run for this design while
+with at least 5% lower mean and all pairs favorable. No full-run census or A/B was run for this design while
 the VPS timing window was occupied.

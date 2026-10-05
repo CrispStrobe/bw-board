@@ -1,6 +1,8 @@
 /** Manufactured diagnostic snapshots only; no factory/instruction/addon execution. */
 import test from 'node:test';
 import {gunzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
+import {receiptChunks,persistEvidence,evidenceLimits} from '../scripts/bochs-cpu3-native-paged-int-iret/evidence.mjs';
 import {regularBytes} from '../scripts/bochs-cpu3-native-paged-int-iret/driver-auth.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
@@ -75,4 +77,40 @@ test('driver identity authenticates exact clean imported closure and actual stat
  const seeds=['scripts/bochs-cpu3-native-paged-int-iret/runner.mjs','scripts/bochs-cpu3-native-paged-int-iret/DRIVER-SOURCE.md','scripts/bochs-cpu3-native-paged-int-iret/driver-build-binding.json','scripts/bochs-cpu3-native-cold-bios/board-provider.mjs','test/i80386-paged-int-iret-driver-source.test.mjs','scripts/bochs-cpu3-native-nonidentity-paging/runner.mjs','src/experimental/i80386.js','scripts/bochs-cpu3-native-paged-int-iret/actual-first-build-prepare.json.gz','package.json','roms/free-at-bios/LICENSE','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin'];
  function visit(p){if(paths.has(p))return;paths.add(p);const b=readFileSync(resolve(root,p)),g=execFileSync('git',['show',revision+':'+p],{cwd:root,maxBuffer:16<<20});assert.equal(sha(b),sha(g));if(/\.(js|mjs)$/.test(p))for(const q of relativeImports(b))visit(resolve(root,dirname(p),q).slice(root.length));}for(const p of seeds)visit(p);
  const d=mkdtempSync(join(tmpdir(),'paging-driver-clean-')),clean=join(d,'source');try{mkdirSync(clean);execFileSync('git',['init','--quiet',clean]);const objects=execFileSync('git',['rev-parse','--path-format=absolute','--git-path','objects'],{cwd:root,encoding:'utf8'}).trim();writeFileSync(join(clean,'.git/objects/info/alternates'),objects+'\n');const shallow=execFileSync('git',['rev-parse','--path-format=absolute','--git-path','shallow'],{cwd:root,encoding:'utf8'}).trim();try{writeFileSync(join(clean,'.git/shallow'),readFileSync(shallow));}catch(e){if(e.code!=='ENOENT')throw e;}execFileSync('git',['update-ref','HEAD',revision],{cwd:clean});execFileSync('git',['sparse-checkout','init','--no-cone'],{cwd:clean});execFileSync('git',['sparse-checkout','set','--no-cone','--stdin'],{cwd:clean,input:[...paths].sort().map(p=>'/'+p).join('\n')+'\n'});execFileSync('git',['checkout','--quiet','--detach',revision],{cwd:clean});const raw=execFileSync(process.execPath,['--max-old-space-size=128','--input-type=module','-e',"import {driverSourceIdentity,ownedBuildBinding} from './scripts/bochs-cpu3-native-paged-int-iret/driver-auth.mjs';console.log(JSON.stringify({source:driverSourceIdentity(),pending:ownedBuildBinding().status}))"],{cwd:clean,encoding:'utf8',timeout:10000,maxBuffer:2<<20});const v=JSON.parse(raw);assert.equal(v.source.revision,revision);assert.deepEqual(Object.keys(v.source.hashes).sort(),[...paths].sort());assert.ok(v.source.hashes['src/machine-checkpoint.js']);assert.ok(v.source.hashes['scripts/bochs-cpu3-native-paged-int-iret/driver-build-binding.json']);assert.equal(v.pending,'ROOT_REVIEWED_PAGED_INT_IRET_NATIVE_BUILD');}finally{rmSync(d,{recursive:true,force:true});}
+});
+
+// Manufactured transport controls only; no provider/oracle construction or CPU instructions.
+test('lossless evidence chunks retain original JSON typed-array and bigint semantics',()=>{
+ const r={schema:'manufactured',status:'FAIL',omitted:undefined,boundaries:[{raw:Uint32Array.from([0,0xffffffff]),q:2n,optional:undefined},null,undefined],object:{a:Uint8Array.from([0,255]),b:3n}};
+ const expected=JSON.stringify(r,(_,x)=>typeof x==='bigint'?x.toString():ArrayBuffer.isView(x)?Array.from(x):x)+'\n';assert.equal([...receiptChunks(r)].join(''),expected);
+});
+test('lossless evidence greater than old16MiB cap roundtrips all repeated pages and raw166',async()=>{
+ const d=mkdtempSync(join(tmpdir(),'int-evidence-large-'));try{
+  const pages=Object.fromEntries(Array.from({length:10},(_,i)=>['page'+i,new Uint8Array(4096).fill(255)]));
+  const raw=Array.from({length:166},(_,i)=>i),record={native:raw,board:{ram:{pages}},nativeHostPages:pages,javascript:{pages}};
+  const r={schema:'manufactured-large-transport-fixture',status:'PASS',progress:{n:41,q:41,resumes:41},boundaries:Array(40).fill(record),cuts:[],cleanup:{native:'closed',provider:'closed',javascript:'closed'}};
+  const result=await persistEvidence(r,d);assert.equal(result.primary,null);assert.equal(result.storageError,null);assert.equal(result.outcomeError,null);assert.ok(result.body.decodedBytes>16<<20);assert.ok(result.body.decodedBytes<=evidenceLimits.decodedBytes);assert.ok(result.body.storedBytes<16<<20);
+  const packed=readFileSync(join(d,result.body.filename));assert.equal(sha(packed),result.body.storedSha256);const bytes=gunzipSync(packed,{maxOutputLength:evidenceLimits.decodedBytes});assert.equal(bytes.length,result.body.decodedBytes);assert.equal(sha(bytes),result.body.decodedSha256);
+  const h=createHash('sha256');for(const chunk of receiptChunks(r))h.update(chunk);assert.equal(h.digest('hex'),sha(bytes));const decoded=JSON.parse(bytes);assert.equal(decoded.boundaries.length,40);for(const b of decoded.boundaries){assert.deepEqual(b.native,raw);for(const p of [b.board.ram.pages,b.nativeHostPages,b.javascript.pages])for(const page of Object.values(p)){assert.equal(page.length,4096);assert.ok(page.every(v=>v===255));}}
+  const out=JSON.parse(readFileSync(join(d,'outcome.json')));assert.equal(out.status,'PASS');assert.equal(out.bodyComplete,true);assert.deepEqual(out.body,result.body);
+ }finally{rmSync(d,{recursive:true,force:true});}
+});
+test('evidence persistence failure retains primary raw state cleanup and authentication errors',async()=>{
+ const d=mkdtempSync(join(tmpdir(),'int-evidence-error-'));try{
+  const primary=Error('manufactured original parity divergence'),r={status:'FAIL',error:String(primary),progress:{n:39,q:39,resumes:39},cleanup:{native:'closed',providerError:'manufactured cleanup error'},finalAuthenticationError:'manufactured final auth error',finalReadErrors:{configurationAfter:'manufactured read error'},lastSuccessfullyReturnedNative:{state:Array(20).fill(1),extra:Array(20).fill(2),segments:Array(90).fill(3),system:Array(30).fill(4),debug:Array(6).fill(5),nativeTicks:39n,successfulQuanta:39n}};r.boundaries=[r];
+  const result=await persistEvidence(r,d,primary);assert.equal(result.primary,primary);assert.ok(result.storageError);const out=JSON.parse(readFileSync(join(d,'outcome.json')));assert.equal(out.status,'FAIL');assert.equal(out.bodyComplete,false);assert.equal(out.primaryError.text,String(primary));assert.equal(out.finalAuthenticationError.text,r.finalAuthenticationError);assert.equal(out.cleanup.native.text,'closed');assert.equal(out.cleanup.providerError.text,r.cleanup.providerError);assert.equal(out.finalReadErrors.configurationAfter.text,'manufactured read error');assert.equal(out.lastNative.segments.length,90);assert.equal(out.lastNative.nativeTicks,'39');assert.ok(out.persistenceError);
+ }finally{rmSync(d,{recursive:true,force:true});}
+});
+test('evidence decoded cap and exclusive output denial cannot leave a PASS outcome',async()=>{
+ const d=mkdtempSync(join(tmpdir(),'int-evidence-cap-'));try{
+  const r={status:'PASS',boundaries:Array(140).fill('x'.repeat(500000))};const result=await persistEvidence(r,d);assert.match(String(result.storageError),/decoded receipt cap/);assert.equal(r.status,'FAIL');assert.equal(JSON.parse(readFileSync(join(d,'outcome.json'))).status,'FAIL');assert.equal(result.body,null);
+  const d2=join(d,'exclusive');mkdirSync(d2);writeFileSync(join(d2,'capture.json.gz'),'owned existing bytes',{flag:'wx'});const v={status:'PASS',boundaries:[]},second=await persistEvidence(v,d2);assert.ok(second.storageError);assert.equal(readFileSync(join(d2,'capture.json.gz'),'utf8'),'owned existing bytes');assert.equal(JSON.parse(readFileSync(join(d2,'outcome.json'))).status,'FAIL');
+ }finally{rmSync(d,{recursive:true,force:true});}
+});
+
+test('evidence huge primary excerpts retain hashes and cannot advertise PASS on persistence failure',async()=>{
+ const d=mkdtempSync(join(tmpdir(),'int-evidence-huge-error-'));try{
+  const primary=Error('manufactured giant divergence '+ 'λ'.repeat(200000)),secondary='manufactured giant cleanup '+ 'y'.repeat(200000),r={status:'PASS',error:String(primary),cleanup:{nativeError:secondary},finalReadErrors:{configurationAfter:secondary},progress:{n:12,q:12,resumes:12}};r.boundaries=[r];
+  const result=await persistEvidence(r,d,primary);assert.equal(result.primary,primary);assert.ok(result.storageError);assert.equal(r.status,'FAIL');const b=readFileSync(join(d,'outcome.json'));assert.ok(b.length<evidenceLimits.outcomeBytes);const o=JSON.parse(b);assert.equal(o.status,'FAIL');assert.equal(o.parityStatus,'FAIL');assert.equal(o.primaryError.truncated,true);assert.equal(o.primaryError.utf8Bytes,Buffer.byteLength(String(primary)));assert.equal(o.primaryError.sha256,sha(Buffer.from(String(primary))));assert.ok(Buffer.byteLength(o.primaryError.text)<=4096);assert.equal(o.cleanup.nativeError.sha256,sha(Buffer.from(secondary)));assert.equal(o.finalReadErrors.configurationAfter.truncated,true);assert.ok(o.persistenceError);
+ }finally{rmSync(d,{recursive:true,force:true});}
 });

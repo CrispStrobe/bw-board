@@ -1,5 +1,7 @@
 # Next native 386 gates after host-event self-parity
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Status (2026-10-01): design record with bounded gates now qualified below.** Audited candidate `be8865164da0b384a0de5db5f6f809fb9b4c9d13` is now part of main through merge `11ea6ee3691b405be2d5f39dc5066ac2f93d62c2`. The [published event proof](I80386-NATIVE-CPU-EVENT-SELF-PARITY.md) binds its executable/validator source to `d144cb5bdd25a08da9b97133b71bb12e11a8e3fb`. The following gate design records are in order; gates 1 and 2 have now passed their bounded proofs. The ordinary PIT/PIC and REP/fault successful-work slices of gate 3 now pass; cold-reset and actual board ownership remain next. Preserve the published v1/v2 source, binaries, fixtures, and receipts; use new files/builds and freeze each source before qualification.
 
 ## 1. Combine paging, fault retry, and a pending IRQ
@@ -53,4 +55,4 @@ Board PIO settles chip debt before relevant accesses; `_serviceInterrupts` arbit
 
 Strict CPU3 has no CR4/PSE. Stock xv6's current bootstrap therefore remains outside this strict route, even though the existing JavaScript compatibility profile runs it. A strict 386 target needs a 4 KiB bootstrap port, or a separately identified later-ISA compatibility core; do not silently relax strict386 semantics.
 
-After these boundaries pass, integrate the native/WASM core with the board, qualify real free/private guest workloads, then measure identical workload/source/hardware configurations. The 10× objective remains unfinished. The new gates establish neither RTx nor a Windows enhanced-mode or Doom performance result.
+After these boundaries pass, integrate the native/WASM core with the board, qualify real free/private guest workloads, then measure identical workload/source/hardware configurations. The 10× objective remains unfinished.

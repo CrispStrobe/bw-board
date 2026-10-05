@@ -1,0 +1,14 @@
+{
+  "runId": 37207113095,
+  "head": "51229463dccfc922a6b76ac8ecab3a74ea75f704",
+  "workflowId": 374624584,
+  "attempt": 1,
+  "command": [
+    "/tmp/retain-native-nonidentity-paging-first-execution-20261004.py",
+    "37207113095"
+  ],
+  "python": "/opt/miniconda/bin/python3",
+  "helper": "/tmp/retain-native-nonidentity-paging-first-execution-20261004.py",
+  "helperSha256": "10ee9e8c68e9db38a2d0f16671a0c3840b68a3aa1ce4203a3ee2ac892a44e039",
+  "scope": "Official evidence retention only; no worker, guest, restore, build, benchmark, retry or dispatch"
+}

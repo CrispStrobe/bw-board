@@ -1,5 +1,7 @@
 # Owned bulk-clock CPU result: keep the baseline
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The private clock aggregation candidate **does not pass its adoption gate**. The single complete hosted experiment measured 5.4576% less mean process CPU, with five of seven favorable pairs. The required threshold was at least 10% less mean CPU and all seven pairs favorable. Keep frozen baseline `fe1eff2039520536350922a2164c8bbe29404c68`; candidate `7b83f0ef631ba7c1cf3dc3513f5f569f00fc49f4` remains experimental. No favorable retry is proposed.
 
 | Process CPU, measured execution window | Baseline | Candidate |
@@ -17,4 +19,4 @@ The earlier VPS gate timed out in a discarded warmup and completed zero measured
 
 The [lossless receipt archive](receipts/2026-10-02-owned-clock-bulk-ghci/manifest.json) retains all 18 captures, inputs, exit records, streams, guest configuration/logs, summary, pre/post admission evidence, actual context and official metadata. Official result artifact `11232663641` has ZIP SHA256 `18ecd75342d8d2c6d417f6412cd349043682a8ffe4d2a3628aae4270c7c9a6f9`; the complete ZIP remains locally retained, with GitHub retention of 14 days. Binary/source archives are not copied into these notes.
 
-This metric is process CPU for a fixed protected-mode/PIT fixture. It does not establish physical 16 MHz 386DX RTx, native AT boot, Windows/Doom compatibility, or a 10× gain. It cannot be multiplied by the earlier MAIN gain or the separately rejected allocation experiment. The next performance item is a separate profile of the baseline to identify the dominant costs, followed by a distinct candidate with its own semantic and ordered CPU evidence.
+This metric is process CPU for a fixed protected-mode/PIT fixture. It does not establish physical 16 MHz 386DX RTx, native AT boot, broader guest/broader game compatibility, or a 10× gain. It cannot be multiplied by the earlier MAIN gain or the separately rejected allocation experiment. The next performance item is a separate profile of the baseline to identify the dominant costs, followed by a distinct candidate with its own semantic and ordered CPU evidence.

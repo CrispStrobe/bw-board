@@ -1,6 +1,8 @@
 # 80386 native scalar property keys — H3 WIP
 
-Reusing eight property-key handles per resume reduced median whole-adapter execution time from **488.240 ms to 449.993 ms (7.83% lower)** in seven alternating pairs on the shared VPS. Six pairs improved and one regressed. All canonical native trace rows and the ordered host callback journal match the accepted H1 workload exactly. This is a bounded workload improvement; the approximately 10× performance target and full Windows/Doom compatibility remain unfinished.
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+Reusing eight property-key handles per resume reduced median whole-adapter execution time from **488.240 ms to 449.993 ms (7.83% lower)** in seven alternating pairs on the shared VPS. Six pairs improved and one regressed. All canonical native trace rows and the ordered host callback journal match the accepted H1 workload exactly. This is a bounded workload improvement; the approximately 10× performance target and full broader guest/broader game compatibility remain unfinished.
 
 ## Behavior and lifetime
 
@@ -66,7 +68,7 @@ Mapping calls and field extraction remain a larger target than argument construc
 
 Actual captures, process provenance, audits and build manifests are indexed in [the H3 artifact index](receipts/2026-10-01-i80386-native-hot-h3-artifact-index.json). Bundled process provenance preserves original bytes as base64 with their hashes. Large raw traces and build binaries remain local; audit hashes bind them. Receipt scripts intentionally identify original local inputs and require path adaptation for replay elsewhere.
 
-Full AT boot, Windows 3.1 enhanced mode, Doom and native CLI/GUI integration remain unfinished. Original JavaScript execution paths and the native backend's bounded guest admission are unchanged.
+Full AT boot, broader guest enhanced mode, broader game and native CLI/GUI integration remain unfinished. Original JavaScript execution paths and the native backend's bounded guest admission are unchanged.
 
 ## Follow-up packed protocol
 

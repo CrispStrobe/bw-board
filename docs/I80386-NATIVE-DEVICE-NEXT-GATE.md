@@ -1,5 +1,7 @@
 # Next native device gate: PIT/PIC timer wake
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Original status: source audit and implementation contract.** The [subsequent bounded PIT/PIC proof](I80386-NATIVE-DEVICE-SELF-PARITY.md) now passes and has been independently reproduced. This design record remains the clock/ownership contract; broader AT/WASM integration and REP/fault quanta remain unfinished. After the owned typed-memory/A20 gate, the smallest device slice is one guest-programmed PIT channel 0 wired to master PIC IRQ0. This precedes full AT devices and the native/WASM board integration.
 
 The guest should initialize a master 8259 at ports `0x20`/`0x21`, program one 8254 counter at `0x40`/`0x43`, install a protected interrupt gate, execute STI and its successor, then HLT. Host device time advances to the timer edge while native CPU ticks stay fixed. The PIC owns IRR/ISR/INT and supplies the actual vector only when Bochs accepts INTA. The handler sends EOI and returns with IRETD before a distinct fixture marker.
@@ -12,4 +14,4 @@ Keep the first timer fixture free of REP and faults so ordinary successful steps
 
 The current IRQ line setter rejects reentry during resume. Stage line changes at externally visible PIO, deadline and HLT cuts. The ACK callback may change PIC state; use the IRQ-delivered cut before handler entry to apply its resulting line level between resumes. Never recursively call the line setter from a callback. If broader within-slice device notification becomes necessary, introduce an explicit staged-line mechanism with its own proof.
 
-This first gate covers one legacy PIC timer source. Dual PIC, APIC, DMA, RTC, VGA/ATA and complete AT scheduling remain later. Pinned CPU3 remains strict 386: unmodified stock xv6 uses CR4/PSE and APIC extensions available on the existing JavaScript compatibility route, not this strict core. A strict 386 xv6 target needs a 4 KiB bootstrap port or a separately identified later-ISA backend. Windows enhanced mode, Doom and the 10× target require integration and real workload measurements after the boundaries pass.
+This first gate covers one legacy PIC timer source. Dual PIC, APIC, DMA, RTC, VGA/ATA and complete AT scheduling remain later. Pinned CPU3 remains strict 386: unmodified stock xv6 uses CR4/PSE and APIC extensions available on the existing JavaScript compatibility route, not this strict core. A strict 386 xv6 target needs a 4 KiB bootstrap port or a separately identified later-ISA backend.

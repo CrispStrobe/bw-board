@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: checked held lifecycle, CPU/provider inverse and real multiline closure reject unknown source
+ok 1 - checked held lifecycle, CPU/provider inverse and real multiline closure reject unknown source
+  ---
+  duration_ms: 42.208021
+  type: 'test'
+  ...
+# Subtest: lossless evidence chunks retain original JSON typed-array and bigint semantics
+ok 2 - lossless evidence chunks retain original JSON typed-array and bigint semantics
+  ---
+  duration_ms: 0.979375
+  type: 'test'
+  ...
+# Subtest: lossless evidence greater than old16MiB cap roundtrips all repeated pages and raw166
+ok 3 - lossless evidence greater than old16MiB cap roundtrips all repeated pages and raw166
+  ---
+  duration_ms: 2874.02133
+  type: 'test'
+  ...
+# Subtest: evidence persistence failure retains primary raw state cleanup and authentication errors
+ok 4 - evidence persistence failure retains primary raw state cleanup and authentication errors
+  ---
+  duration_ms: 6.997348
+  type: 'test'
+  ...
+# Subtest: evidence decoded cap and exclusive output denial cannot leave a PASS outcome
+ok 5 - evidence decoded cap and exclusive output denial cannot leave a PASS outcome
+  ---
+  duration_ms: 1608.752624
+  type: 'test'
+  ...
+# Subtest: evidence huge primary excerpts retain hashes and cannot advertise PASS on persistence failure
+ok 6 - evidence huge primary excerpts retain hashes and cannot advertise PASS on persistence failure
+  ---
+  duration_ms: 48.610631
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4823.39043

@@ -6,7 +6,7 @@ import {validateScalarOverlay} from '../scripts/cold-native-memory-fusion-ledger
 const root=new URL('../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');
 const base='scripts/cold-native-memory-fusion-ledger-scalars-performance/';
 test('owned pending scalar profile refuses; manufactured ready metadata is closed',()=>{
- const b=JSON.parse(read(base+'scalar-overlay.json'));assert.throws(()=>validateScalarOverlay(b),/pending/);
+ const b=JSON.parse(read(base+'scalar-overlay.json'));const pending=structuredClone(b);pending.status='PENDING_ROOT_SOURCE_REVIEW';assert.throws(()=>validateScalarOverlay(pending),/pending/);
  const ready=structuredClone(b);ready.status='ROOT_REVIEWED_SCALAR_WORKER_SOURCE_READY';assert.equal(validateScalarOverlay(ready),ready);
  for(const key of ['profile','providerRevision','heldWorkerRevision']){const bad=structuredClone(ready);bad[key]='changed';assert.throws(()=>validateScalarOverlay(bad));}
  const bad=structuredClone(ready);bad.files[Object.keys(bad.files)[0]]='0'.repeat(64);assert.throws(()=>validateScalarOverlay(bad));

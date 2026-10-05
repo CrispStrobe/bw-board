@@ -1,0 +1,35 @@
+{
+  "head": "b12e8d50bd90dcb503dd186890ed11483cc2eca3",
+  "worktree": "/tmp/bw-native-paged-int-iret-evidence-persistence-20261004",
+  "branch": "lane/386-paged-int-iret-evidence-persistence-20261004",
+  "freeze": "/tmp/native-paged-int-iret-evidence-persistence-source-freeze-20261004/source-freeze.json",
+  "sourceCount": 81,
+  "controls": {
+    "parent": "/tmp/run-native-paged-int-iret-evidence-persistence-source-controls-20261004.py",
+    "sha256": "a17a8fdfcc20592b489187bbd92d5348c423874de2e82d587924cf2ef4fbb19d",
+    "command": [
+      "/tmp/node-v22.23.3-linux-x64/bin/node",
+      "--max-old-space-size=128",
+      "--test",
+      "--test-name-pattern",
+      "checked held lifecycle|lossless evidence|evidence persistence|evidence decoded|evidence huge",
+      "test/i80386-paged-int-iret-driver-source.test.mjs"
+    ],
+    "expectedNamedCases": 6
+  },
+  "conditionalReadonlyIdentity": {
+    "parent": "/tmp/run-native-paged-int-iret-evidence-persistence-source-auth-20261004.py",
+    "sha256": "32fb273e705e1b9f7deb1b75fb21753204f2139c0435c25f65ecd0ae1874caa8",
+    "condition": "all six controls PASS, same unchanged frozen source"
+  },
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileMiB": 16,
+    "coreBytes": 0,
+    "nice": 10,
+    "blankHooks": 6
+  },
+  "scope": "Manufactured transport fixtures + held source lifecycle inverse only; no provider/oracle construction, CPU/addon/build/guest."
+}

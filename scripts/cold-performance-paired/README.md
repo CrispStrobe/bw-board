@@ -1,5 +1,7 @@
 # Consolidated cold-slice paired parent — source draft, execution blocked
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This parent prepares two separate comparisons: native-only one-Q versus native
 batching, and plain functional Bochs-profile JS versus native batching. It never
 uses the mixed native/JS diagnostic timing as a performance baseline. Frozen workers `b01c922c` (56 inputs) and `0f1ec8cc` (49 inputs) bind the
@@ -49,8 +51,7 @@ subtraction from mixed diagnostic timing is used.
 Configured virtual RTx is `(6*targetQ/6000000)/executionWallSeconds`, excluding
 the reset's four startup board clocks. Its frequency derives from the actual
 inherited AT board configuration. This is functional six-clock virtual pacing,
-not measured physical80386 timing. Neither comparison establishes default
-adoption, full AT/Windows/Doom10x or broad CPU-model parity.
+not measured physical80386 timing.
 
 The inherited fixture controls and one new hosted pending-audit refusal are written: pending refusal, exact schedule, all166 and
 counter mutations, full board/RAM/PIO/JS scope, metric separation, file-role guards

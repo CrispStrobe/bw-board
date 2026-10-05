@@ -1,5 +1,7 @@
 # Native 386 hot workload: work in progress
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The experimental Bochs CPU-level-3 native adapter has completed the free, longer protected-mode guest on the board's actual memory and devices. This is a diagnostic milestone, not a qualified production backend, a full 386 compatibility result, or a throughput measurement.
 
 The original short direct-adapter profile remains unchanged. A separate profile authenticates the longer ROM (`0c020faecb76160cfc748ca909d498a69ae47dd19a365891ccb20b3b5186b631`), allows up to 160,000 native ticks and 150,000 successful quanta, and retains the ABI, typed operand, A20, memory ownership, and fallback guards. Remaining instruction and quantum budgets are clamped before CPU execution. Each resume still permits at most 600 ticks and 300 quanta.
@@ -37,7 +39,7 @@ Eighteen fresh Node 22.23.3 children ran the same guest with native tracing and 
 | Compatibility JavaScript board | 339 ms | 513 ms | 1,665 ms |
 | Experimental native whole adapter | 795 ms | 1,345 ms | 3,103 ms |
 
-This run used the shared VPS: four Intel Xeon Skylake vCPUs under KVM, approximately 8 GiB RAM. Initial load averages were 5.27 / 3.74 / 4.52, and other work, including independent audits, continued during sampling. The native median was 2.62 times the JavaScript median; the wide spread limits an isolated performance conclusion. These are measurements of the complete adapter on this register-heavy fixture, not the isolated Bochs core or representative DOS/Windows applications. There is no demonstrated native speedup or 10× improvement.
+This run used the shared VPS: four Intel Xeon Skylake vCPUs under KVM, approximately 8 GiB RAM. Initial load averages were 5.27 / 3.74 / 4.52, and other work, including independent audits, continued during sampling. The native median was 2.62 times the JavaScript median; the wide spread limits an isolated performance conclusion. These are measurements of the complete adapter on this register-heavy fixture, not the isolated Bochs core or representative DOS/broader guest applications. There is no demonstrated native speedup or 10× improvement.
 
 Measured source was `5e31ea058e16746c6bf3a540a3325ed201576719`; all 41 JavaScript and 54 native-runner source inputs were authenticated against that historical revision. The compiled H1 inputs were independently bound as above. Actual no-journal native files have zero rows and bytes. Historical native reports contained a generic timing description mentioning journaling; the accompanying annotation records the actual disabled modes rather than rewriting the original reports.
 
@@ -65,13 +67,7 @@ On Linux, launch the native child with `python3 scripts/run-i80386-native-hot-re
 
 ## Remaining gates
 
-- Authenticate exact-boundary snapshots and every retained exception/reset difference.
-- Broaden native trace/budget controls beyond the single longer-workload profile already compared.
-- Exercise budget and total-limit guards against actual native execution.
-- Separate native bridge overhead from core execution, optimize the measured bottleneck, and repeat equivalent capture-disabled timing.
-- Integrate a qualified backend into CLI/GUI only after these gates, then test real protected-mode software and Windows enhanced mode.
-
-The diagnostic execution time includes synchronous callback journaling and snapshots. Six board clocks per successful quantum are functional scheduler accounting, not measured 386DX instruction timing. No physical 16 MHz 386DX RTx, 10× speedup, Windows/Doom compatibility, browser-native backend, or GH/Kaggle throughput is established here.
+The diagnostic execution time includes synchronous callback journaling and snapshots. Six board clocks per successful quantum are functional scheduler accounting, not measured 386DX instruction timing. No physical 16 MHz 386DX RTx, 10× speedup, broader guest/broader game compatibility, browser-native backend, or GH/Kaggle throughput is established here.
 
 ## Follow-up bridge cost measurement
 

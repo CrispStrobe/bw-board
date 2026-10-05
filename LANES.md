@@ -1,3 +1,5 @@
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 2026-10-03 Finite bounded transient stream — DONE candidate, Codex bwcx `/root`.
 Isolated /tmp/bwcx-board-stream-bounded-20261003, branch
 lane/transient-bounded-stream-20261003, exact base
@@ -1440,8 +1442,7 @@ Harris `35467635420` are green at `7ef25d725087baa4fa75768617b1395e5891ba6e`.
 No channel law, other junction family, solver, tolerance, CUI, x86, workflow,
 or private payload changed.
 
-2026-09-19 CLAIM — Astra coordinator, two Sol implementers: AT boot and CPU
-exception continuation toward 386DX, Windows and Doom. Integration worktree
+Integration worktree
 `/mnt/volume1/code/wt/astra-x86-tasks`, branch `lane/astra-x86-at-boot`, base
 `220b22b9db5326732c86f549877259d8acbcbb9d`. Owns x86 experimental CPU,
 AT reset/device/boot integration, focused guest tests/harnesses, qualification
@@ -1451,181 +1452,68 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-20 DONE (qualified and landed) — Astra/Sol application persistence and demo completion.
-Windows3.0 Notepad creates and saves OWNED.TXT via real keyboard input, then
-opens its exact 17 bytes after fresh reset/remount. Independent FAT and frame
-audits verify the file, source revisions and writer/reader image linkage.
-The key harness rejects malformed scripts and parent-media provenance before
-execution and records every accepted event. Original Doom1.9 repeats E1M1
-movement/fire on the final Windows CPU/device implementation. A separate
-ordinary 110-byte owned demo file loads through DOS, renders E1M1, completes
-24 gametics and returns to C:\>; full demo1 remains incomplete at 500M.
-No original EXE/WAD/media bytes are committed. The optional FAT file builder
-validates names/capacity and independently reproduces both pinned image hashes.
-Focused 452 pass,2 optional skips; actionlint and diff checks pass.
-Receipt: `docs/receipts/2026-09-20-x86-application-persistence.json`.
-Windows enhanced mode, Doom save/load/sound/all levels and complete physical
-386 behavior remain outside these bounded application milestones.
-Initial candidate9d64209a failed the sampled386 zero-skip assertion because
-the coordinator put an optional external-report test in that subset. The
-forward workflow correction removes that optional entry and retains the
-zero-skip assertion; actual-report acceptance and mutations passed locally.
-General CI also caught missing census registration for the optional report.
-The new doom-short-report fixture row makes absence explicit; census14/14 pass.
-Exact 74c47bbe passed CI35490696573, CPU35490696554 and native35490696525,
-then fast-forwarded master. Tag: milestones/x86-windows-persistence-doom-demo-20260920.
-
-2026-09-20 DONE (qualified and landed) — Astra/Sol Windows desktop and Doom interaction.
-Autonomous ATA intersector pacing now covers the observed Windows chained IRQ0
-service with 8192 functional cycles; no arbitrary-handler or mechanical timing
-claim. Original Windows3.0 reaches Program Manager, and real Set-1 Enter opens
-File Manager with C:\WINDOWS and free space. Strict observed planar decoding
-independently reproduces the audited frame hashes. Original Doom1.9 E1M1
-movement and pistol fire are accepted at exact9eeca326; a combined-source
-replay is still running and supplies no acceptance yet. Fresh DOS write/reboot
-and BIOS two-sector write/read pass at863cc769 with exact input/source hashes.
-Focused tests:399 pass,2 optional skips; shared platform/checkpoint/VGA49 pass.
-The full test386 diagnostic retains its documented VM86 16-bit gate/manual
-disagreement; it is not a full-ROM pass. Actionlint and diff checks pass.
-Receipt: `docs/receipts/2026-09-20-x86-windows-doom-gameplay.json`.
-Exact8172a3bf passed CI35488705735, CPU35488705876 and native35488705795,
-then fast-forwarded master. Tag: milestones/x86-windows300-doom-gameplay-20260920.
-Parent claim continues through Windows edit/save/reopen and completed Doom demo;
-experimental defaults and other lanes remain unchanged.
-
-2026-09-20 DONE (qualified and landed) — Astra/Sol hidden segment caches, keyboard F3,
-and original Doom level entry. Real DS/ES reloads retain large hidden limits
-following PE exit; pinned PCjs agrees on a guest bootstrap and 65,540-byte copy,
-while the pre-fix executor faults. Result, cache and budget controls reject.
-The configured AT keyboard extension models F3 parameter/ACK state and exact
-ACK deadlines, scan suppression, reset and checkpoint restoration; automatic
-repeat generation remains outside scope. Original Doom reaches E1M1 graphics
-through a single Esc/Enter sequence. Windows reaches a real graphical disk-error
-dialog, not the desktop. Six fresh DOS/FreeDOS write/reboot executions at frozen
-30475e6f reproduce their original command sequences, counts and output images.
-Focused checks: 462 pass, 2 optional skips; actionlint and diff checks pass.
-Exact 36e459d0fa62c3c89264d0a32d1a2f819cb1b3ba passed CI 35487847024,
-CPU 35487846991 and native 35487846948, then fast-forwarded master.
-Tag: milestones/x86-unreal-keyboard-doom-level-20260920. Receipt:
-`docs/receipts/2026-09-20-x86-unreal-keyboard-doom-level.json`.
-The ongoing parent claim covers the next Windows disk-transfer fix and Doom
-movement/firing acceptance; other lanes remain outside scope.
-
-2026-09-20 DONE (qualified and landed) — Astra/Sol DOS loader fixes.
-The original PC DOS MBR exercises byte Group1 opcode82; the executor now handles
-it with byte semantics even under66. Pinned PCjs agrees on CMP memory and ADC
-carry/flags/high-register preservation; result and budget controls reject.
-The next actual PBR failure was BIOS INT13 reset returning AH05 because ATA SRST
+2026-09-20 DONE (qualified and landed) — Astra/Sol DOS loader fixes. Pinned PCjs agrees on CMP memory and ADC
+carry/flags/high-register preservation; result and budget controls reject. The next actual PBR failure was BIOS INT13 reset returning AH05 because ATA SRST
 reported error0 instead of diagnostic01. Cold and software reset now publish01;
 IRQ and transfer-cancellation checks remain green. The untouched external disk
-reaches HIMEM and SMARTDrive after the fix. Windows desktop remains unaccepted.
-Fresh source-bound DOS write/reboot and284 focused tests pass (2 optional skips).
-Doom report serialization now survives short CGA/VGA smoke runs; atomic progress
-snapshots and opt-in detailed tracing avoid losing long runs to final-report errors.
-The previous320M VGA execution lost its report and supplies no acceptance.
-Receipt: `docs/receipts/2026-09-20-386-dos-loader-reset.json`.
-Ongoing Windows/Doom work retains the parent claim and does not touch other lanes.
-Exact a6a5b483bf87d281cc64bdee0152ff676816a1ed passed CI 35485712895,
-CPU 35485712931 and native 35485712883, then fast-forwarded master.
-Tag: milestones/x86-dos-loader-ata-reset-20260920.
+reaches HIMEM and SMARTDrive after the fix. broader guest desktop remains unaccepted. Fresh source-bound DOS write/reboot and284 focused tests pass (2 optional skips). The previous320M VGA execution lost its report and supplies no acceptance. Receipt: `docs/receipts/2026-09-20-386-dos-loader-reset.json`. Ongoing broader guest/broader game work retains the parent claim and does not touch other lanes. Exact a6a5b483bf87d281cc64bdee0152ff676816a1ed passed CI 35485712895,
+CPU 35485712931 and native 35485712883, then fast-forwarded master. Tag: milestones/x86-dos-loader-ata-reset-20260920.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol VM86 TSS.
 32-bit tasks now enter VM86, use user paging, and return from protected task-gate
 handlers through NT IRET. Independent QEMU TCG 486 execution exposed and fixed
 an actual far-JMP EIP overwrite; both engines now emit the exact owned guest
 sequence BHV. Result and budget mutations reject. The separate pinned-PCjs
-reset remains a failing reference disagreement, not accepted oracle evidence.
-Root replayed DOS write and fresh reboot at frozen 79617dfc with identical
-media and instruction counts. VGA Doom reaches R_Init through genuine reset,
-SeaVGABIOS, FreeDOS and original EXE/WAD; a separate 500M-step CGA run continues
-without refusal. Neither establishes rendered gameplay. Windows input has been
-verified and execution is under investigation in the CPU lane. Receipt:
+reset remains a failing reference disagreement, not accepted oracle evidence. Root replayed DOS write and fresh reboot at frozen 79617dfc with identical
+media and instruction counts. Neither establishes rendered gameplay. Receipt:
 `docs/receipts/2026-09-20-386-vm-task.json`. Debug task traps and page-straddling
-TSS remain bounded refusals. Ongoing Windows/Doom work retains the parent claim.
-Exact e40abd64a7c283401ac58433d633eb0d3b2549c6 passed CI35484387534,
-CPU35484387526 and native35484387522, then fast-forwarded master.
-Tag: milestones/x86-386-vm-task-20260920. The 500M Doom trace also records
+TSS remain bounded refusals. Exact e40abd64a7c283401ac58433d633eb0d3b2549c6 passed CI35484387534,
+CPU35484387526 and native35484387522, then fast-forwarded master. Tag: milestones/x86-386-vm-task-20260920. The 500M broader game trace also records
 sound, HUD and status-bar initialization before the screen clears at299M;
 this advances the observed initialization frontier but does not prove graphics.
 
-2026-09-20 DONE (qualified and landed) — Astra/Sol 286-format TSS support in the 386.
-Adds 16-bit task images to direct CALL/JMP, task gates and nested IRET;
+2026-09-20 DONE (qualified and landed) — Astra/Sol 286-format TSS support in the 386. Adds 16-bit task images to direct CALL/JMP, task gates and nested IRET;
 implements 286 privilege-stack fields and word task error frames. Mixed-format
 switches preserve exactly the appropriate outgoing dynamic bytes and retain
-static fields, including CR3/LDT; an incoming 286 image leaves CR3 selected.
-Directed tests distinguish precommit incoming-image faults from postcommit
+static fields, including CR3/LDT; an incoming 286 image leaves CR3 selected. Directed tests distinguish precommit incoming-image faults from postcommit
 selector page faults, and verify IOPL denial without port callbacks. Pinned
 PCjs agrees on an all-286 CALL/IRET round trip with exact HLT/busy/backlink
 state; result and truncated-budget mutations reject. Upper general-register
 halves and FS/GS follow explicitly bounded deterministic policies and are not
 hardware-graded by this oracle. Fresh frozen-source 386 DOS write/reboot tests
 pass with unchanged steps and media bytes. Focused surface:326 pass,2 optional
-skips. VM86 task entry, debug trap, page-straddling TSS images, Windows and
+skips. VM86 task entry, debug trap, page-straddling TSS images, broader guest and
 full compatibility remain outside this increment. Receipt:
-`docs/receipts/2026-09-20-386-task16.json`.
-Exact `b74387f5d5b20cda2978a816eb48e6a9f737084c` passed CI `35483322404`,
-CPU `35483322421`, native `35483322406`, then fast-forwarded master.
-Tag: `milestones/x86-386-task16-20260920`.
-
-2026-09-20 DONE (qualified and landed) — Astra/Sol 386 protected entry and VGA services.
-Preserves visible real-mode CS and starts CPL0 when MOV CR0/LMSW enables PE;
-checks direct/conforming, segment, interrupt, return and task paths. Adds INTO
-with pinned-PCjs next-IP/frame agreement and two rejecting negative controls.
-8042 FF is a no-line pulse. Adds opt-in planar VGA memory and external C000h
-option-ROM mapping; SeaVGABIOS option POST and INT10 mode13 execute in the
-emulator, followed by an owned two-byte VRAM comparison. The INT10 guest is
-installed by the diagnostic harness after POST, not booted as an operating
-system. Grading requires actual service entry, mode state and guest marker.
-All six DOS/FreeDOS write-and-fresh-reboot regressions have been genuinely
-rerun with matching historical guest steps and media bytes. Doom's original
-shareware executable reaches DPMI allocation, WAD loading and R_Init within
-150 million machine steps; no game frame, Windows, complete VGA addressing,
-ROM shadow-write or timing acceptance. The 16-bit TSS continuation is separate.
-Focused affected surface: 317 pass, 2 optional skips. Receipt:
-`docs/receipts/2026-09-20-386-protected-entry-vga.json`.
-Exact `43ad9762fd426dc148ca5ef68c1ab0297b208c20` passed CI `35482976575`,
-CPU `35482976574`, native `35482976578`, then fast-forwarded master.
-Tag: `milestones/x86-386-protected-entry-vga-20260920`.
+`docs/receipts/2026-09-20-386-task16.json`. Exact `b74387f5d5b20cda2978a816eb48e6a9f737084c` passed CI `35483322404`,
+CPU `35483322421`, native `35483322406`, then fast-forwarded master. Tag: `milestones/x86-386-task16-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 compiler instructions and autonomous multi-sector ATA. Adds ENTER/LEAVE,
 BT/BTS/BTR/BTC, BSF/BSR, BCD adjustment and privileged CLTS; VM86 ENTER
 checks page-write permission. Corrects the physical comparator to reconstruct
 unchanged registers from the published final-state delta. All 596 selected
-386EX cases pass; unchanged EAX and CR0.TS mutations are now rejected.
-All published CLTS inputs have TS already clear; the clearing transition is
+386EX cases pass; unchanged EAX and CR0.TS mutations are now rejected. All published CLTS inputs have TS already clear; the clearing transition is
 covered by directed tests only. ATA exposes a scheduled 256-functional-clock
 inter-sector BSY phase, independent of status polling, and rearms its device
-deadline after I/O. Coordinator fca2badd genuinely boots IBM BIOS/DOS2,
+deadline after I/O. Coordinator fca2badd boots MIT-released DOS2,
 writes and freshly reboots/reads the same12-byte file, and separately completes
-an owned two-sector INT13 write/read with distinct data and a poisoned buffer.
-Focused surface:286 pass,2 optional skips. Doom now enters its correctly
-relocated real-mode stub and reaches the unsupported8042 FF command; full MZ
-comparison retains18 differences, with the recorded subset near the startup
-stack; this is not zero-difference acceptance.
-No protected extender, game, Windows, NPX or hardware timing acceptance.
-Receipt: `docs/receipts/2026-09-20-386-compiler-ata-multisector.json`.
-Exact `6cf8e4042a66ed7f4cf2372f5acab166b79bcd03` passed CI `35481716140`,
-CPU `35481716139`, native `35481716137`, then fast-forwarded master.
-Tag: `milestones/x86-386-compiler-ata-20260920`.
+an owned two-sector INT13 write/read with distinct data and a poisoned buffer. Focused surface:286 pass,2 optional skips. Licensed-application progression and comparison details are retained privately. No protected extender, game, broader guest, NPX or hardware timing acceptance. Receipt: `docs/receipts/2026-09-20-386-compiler-ata-multisector.json`. Exact `6cf8e4042a66ed7f4cf2372f5acab166b79bcd03` passed CI `35481716140`,
+CPU `35481716139`, native `35481716137`, then fast-forwarded master. Tag: `milestones/x86-386-compiler-ata-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
-386 32-bit task switching, RET immediate and explicit AT floppy media rates.
-The commit containing this row freezes audited TSS CALL/JMP/NT IRET, task
+386 32-bit task switching, RET immediate and explicit AT floppy media rates. The commit containing this row freezes audited TSS CALL/JMP/NT IRET, task
 gates, exact CR3 mapping, original selector-fault classes and postcommit page
-faults; task-gate unused fields are ignored and EXT never alters #PF bits.
-The pinned PCjs CALL/IRET oracle and both targeted negative controls pass;
+faults; task-gate unused fields are ignored and EXT never alters #PF bits. The pinned PCjs CALL/IRET oracle and both targeted negative controls pass;
 268 focused checks pass with two optional skips. Real DOS2 write/reboot on
 both CPUs and unchanged FreeDOS on functional286 were rerun against changed
 sources; all six runs preserve earlier step counts and disk hashes. The
 explicit 1.2MB floppy profile fixes BIOS 360K misclassification through CCR
 checks, without changing legacy profile behavior. FreeDOS386 reaches its
-shell and HDD DIR; the DOOM command is invoked but extender/game execution
+shell and HDD DIR; the broader game command is invoked but extender/game execution
 is not yet attributed or accepted. Receipt:
 `docs/receipts/2026-09-20-386-task-media-rate.json`. Original ROM128 stops on
-its 16-bit VM86-gate expectation before task tests. No full CPU, Windows,
-Doom, x87 or timing acceptance; compiler/BCD continuation remains separate.
-Initial hosted CI/native passed, while CPU qualification caught one stale
+its 16-bit VM86-gate expectation before task tests. No full CPU, broader guest,
+broader game, x87 or timing acceptance; compiler/BCD continuation remains separate. Initial hosted CI/native passed, while CPU qualification caught one stale
 BIOS-service DOS toolchain receipt. A fresh run on d90d3a95 preserves all
 1,111,040 steps and output bytes; its source-bound receipt is refreshed with
 the historical run retained, and the affected tests pass 10/10. Exact corrected
@@ -1641,34 +1529,26 @@ XLAT and CBW/CWDE/CWD/CDQ. Coordinator replay on combined source
 DOS shell write and fresh-machine TYPE persistence (25,652,224 / 25,567,232
 steps; identical media hash to the worker). Separate BIOS HDD boot-program
 acceptance passes at 70,579,183 steps with native 16-bit PIO and all 512 read
-bytes poisoned then compared by the guest. This is not an HDD OS boot.
-Focused 386 checks: 204 pass, two optional skips, zero failures; actionlint
-passes. Fixture source hashes and five tamper controls prevent stale DOS proof.
-Receipt: `docs/receipts/2026-09-20-386-at-dos-hdd.json`. Windows, Doom,
-386 FreeDOS, task switching, x87 and full CPU compatibility remain unaccepted.
-Exact candidate CI `35479044402` passed (5,630 pass, 272 skips, zero failures),
+bytes poisoned then compared by the guest. This is not an HDD OS boot. Focused 386 checks: 204 pass, two optional skips, zero failures; actionlint
+passes. Fixture source hashes and five tamper controls prevent stale DOS proof. Receipt: `docs/receipts/2026-09-20-386-at-dos-hdd.json`. broader guest, broader game,
+386 FreeDOS, task switching, x87 and full CPU compatibility remain unaccepted. Exact candidate CI `35479044402` passed (5,630 pass, 272 skips, zero failures),
 CPU `35479044552` and native `35479044390` passed. Latest NMOS upstream
 changes are preserved. Guarded normal push advanced master from `4a39744`
 to that exact qualified candidate; tag `milestones/x86-386-at-dos-hdd-20260920`.
 
 2026-09-20 DONE (qualified and landed) — Astra/Sol
 386 VM86, BIOS/compiler ISA and experimental disk continuation. Candidate and
-landing: `88d960eecb566db3939710b844ca03a36e5ea8c1`; receipt preserves actual execution SHAs.
-VM86 entry/interrupt/IRETD, BOUND, VERR/VERW, ARPL, LAR/LSL, immediate IMUL,
-SETcc, double shifts, TEST, AAM/AAD and interruptible INS/OUTS are implemented.
-Coordinator audit corrected VM privileges, original selector-query semantics,
+landing: `88d960eecb566db3939710b844ca03a36e5ea8c1`; receipt preserves actual execution SHAs. VM86 entry/interrupt/IRETD, BOUND, VERR/VERW, ARPL, LAR/LSL, immediate IMUL,
+SETcc, double shifts, TEST, AAM/AAD and interruptible INS/OUTS are implemented. Coordinator audit corrected VM privileges, original selector-query semantics,
 real REP interrupt/fault witnesses, ATA command/IRQ/reset behavior and complete
 BIOS disk readback grading. Snapshot-only BIOS median speedup is 5.19x on the
 recorded host; functional pacing six passes the RTC UIP regression. Focused
 checks: 191 pass, two optional skips, zero failures. New hardware profiles
-add 81 bounded 386EX cases to the prior362; hosted exact candidate refreshes all.
-Pinned PCjs VM86 and selector comparisons pass declared fields; targeted
+add 81 bounded 386EX cases to the prior362; hosted exact candidate refreshes all. Pinned PCjs VM86 and selector comparisons pass declared fields; targeted
 negative controls reject. BIOS progresses through processor checks and RTC
 polling but no386DOS boot is yet accepted. ATA BIOS roundtrip and open VGA ROM
-remain prepared inputs. Receipt: `docs/receipts/2026-09-20-386-vm-isa-platform.json`.
-No tasking, full386DX, x87, Windows, Doom or silicon timing claim. Expand-down
-and absent-NPX work continue separately after this freeze.
-Exact candidate CI `35477928736` passed (5,614 pass,272skip,zero fail),
+remain prepared inputs. Receipt: `docs/receipts/2026-09-20-386-vm-isa-platform.json`. No tasking, full386DX, x87, broader guest, broader game or silicon timing claim. Expand-down
+and absent-NPX work continue separately after this freeze. Exact candidate CI `35477928736` passed (5,614 pass,272skip,zero fail),
 CPU `35477928733` and native `35477928839` passed. Guarded normal push
 advanced master from `62160e7` to the exact qualified candidate. Tag:
 `milestones/x86-386-vm-isa-platform-20260920`.
@@ -1676,18 +1556,16 @@ advanced master from `62160e7` to the exact qualified candidate. Tag:
 2026-09-19 DONE (qualified and landed) — Astra/Sol
 FreeDOS persistence and bounded 386 AT platform. Candidate and landing are
 `d128b384a9f9df986ae38db72bc7dae33a6b092e`; platform diagnostic source is `46f1d04`. Unchanged official
-FreeDOS 1.4 boots through IBM AT BIOS, declines installation, writes FDBOOT.TXT,
+FreeDOS 1.4 declines installation, writes FDBOOT.TXT,
 and reads its exact bytes after a fresh machine remount. The two actual source
-revisions and media hashes are retained in the tracked evidence fixture.
-The 386 adapter adds explicit functional four-clock instruction pacing and an
+revisions and media hashes are retained in the tracked evidence fixture. The 386 adapter adds explicit functional four-clock instruction pacing and an
 opt-in 4MiB installed-RAM profile with matching CMOS sizes/checksum. Pacing tests
 exercise real IRQ wake, idle and architectural fault delivery. Twelve focused
 checks pass. A 6M-step source-bound BIOS diagnostic proves increasing 64KiB test
 addresses, not full 386 POST or DOS boot. Receipt:
 `docs/receipts/2026-09-19-at-freedos-386-platform.json`. No VM86, tasking,
-Windows, Doom or silicon timing claim. Snapshot copying is a measured future
-performance target, not a speedup included in this stage.
-Exact candidate CI `35476376757` passed (5,559 pass, 272 skip, zero fail),
+broader guest, broader game or silicon timing claim. Snapshot copying is a measured future
+performance target, not a speedup included in this stage. Exact candidate CI `35476376757` passed (5,559 pass, 272 skip, zero fail),
 CPU `35476376774` and native `35476376827` passed. Guarded normal push
 advanced master from `14d5908` to this exact candidate. Tag:
 `milestones/x86-freedos-386-platform-20260919`.
@@ -1695,20 +1573,17 @@ advanced master from `14d5908` to this exact candidate. Tag:
 2026-09-19 DONE (qualified and landed) — Astra/Sol
 386 ring, far-control and I/O continuation. Candidate and landing are
 `14d59084f14fdde5dba158e5ac2a3b25884e56e0`; executed source is
-`f87a3b42cdd90b1866f9204273c1c1720d212bbb`.
-Adds inner-ring interrupt stacks, outer IRET, protected far CALL/JMP/RETF,
+`f87a3b42cdd90b1866f9204273c1c1720d212bbb`. Adds inner-ring interrupt stacks, outer IRET, protected far CALL/JMP/RETF,
 16/32-bit call gates with copied parameters, conforming targets and TSS scalar
 I/O permissions. Coordinator audit corrected fault ordering, mixed stack
 widths, execute-only pointer admission, null-SS exception types and inclusive
-bitmap bounds. Focused 386 tests: 133 pass, two optional skips, zero fail.
-Pinned PCjs protection comparison passes its declared checks; conforming
+bitmap bounds. Focused 386 tests: 133 pass, two optional skips, zero fail. Pinned PCjs protection comparison passes its declared checks; conforming
 stack selection and saved RF remain explicit reference differences. Eight
 negative controls reject. Unchanged test386 reaches POST21/VM86 IRET after
 805,601 steps, not full-ROM acceptance. Source-bound receipt:
-`docs/receipts/2026-09-19-386-protection.json`. No full 386DX, Windows, Doom,
+`docs/receipts/2026-09-19-386-protection.json`. No full 386DX, broader guest, broader game,
 physical bus or timing claim. FreeDOS persistence, functional device pacing,
-VM86 and larger-memory platform work remain outside this freeze.
-Exact candidate CI `35475646953` passed (5,554 pass, 272 skip, zero fail),
+VM86 and larger-memory platform work remain outside this freeze. Exact candidate CI `35475646953` passed (5,554 pass, 272 skip, zero fail),
 CPU `35475646987` passed and native `35475647084` passed. Guarded normal
 push advanced master from `c0711d2` to the exact qualified candidate. Tag:
 `milestones/x86-386-protection-20260919`.
@@ -1722,14 +1597,11 @@ real-stack wrapping change; only selector-specific word transfers remain.
 mutations reject, including exact completion/budget and busy-bit controls.
 111 focused CPU/adapter/parser tests pass across the recorded runs after a
 stale unloaded-LDT expectation was corrected to #GP(4). SGDT's high byte and
-POP fault/EA rules document PCjs support and hardware-evidence limits.
-Unchanged test386 reaches POST20 then unsupported outer IRET. The separate
+POP fault/EA rules document PCjs support and hardware-evidence limits. Unchanged test386 reaches POST20 then unsupported outer IRET. The separate
 386 BIOS reaches POST2A but enters firmware CLI/HLT error handling; neither
 is acceptance. Source-bound receipt: `docs/receipts/2026-09-19-386-system-stack.json`.
 286 DOS2 persistence retains unchanged dependency hashes. Ring transitions,
-FreeDOS shell acceptance and further platform fixes remain outside this freeze.
-No full 386DX, Windows, Doom, physical bus or timing claim.
-Candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` passed CI
+FreeDOS shell acceptance and further platform fixes remain outside this freeze. No full 386DX, broader guest, broader game, physical bus or timing claim. Candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` passed CI
 `35473644024` (5,527 pass, 272 skip, zero fail), CPU `35473644021`
 (full fast/Harris corpora, 362 bounded 386 samples and PCjs), and native
 `35473644044`. The landing preserves upstream `a95a4c6`'s unrelated analog
@@ -1739,23 +1611,20 @@ the qualified candidate. This follows the lean ledger-only integration rule.
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol
 386 REP/ISA and RTC continuation. Frozen integration worktree
 `/mnt/volume1/code/wt/astra-x86-rep-rtc-land`, branch
-`lane/astra-x86-rep-rtc-land`; candidate is the commit containing this row.
-Adds restartable REP, XCHG, near indirect/far real control, far-pointer loads,
+`lane/astra-x86-rep-rtc-land`; candidate is the commit containing this row. Adds restartable REP, XCHG, near indirect/far real control, far-pointer loads,
 complete basic ALU families, PUSHA/POPA, moffs and rotates. Root audit corrected
 PUSHAD saved ESP and nonzero full-circle rotate carry; 386EX POPAD upper-ESP
 behavior and undefined-OF sample exclusions are explicit. Source `a6de545`
 passes 91 focused CPU/adapter tests, 266 bounded physical samples, four PCjs
 comparisons and eight rejecting controls. Exact pinned test386 reaches LLDT
 at POST09 setup (POST08 last emitted), not full-ROM acceptance. The separate
-opt-in 386 AT adapter proves bus/reset/IRQ/NMI/HLT wiring, not an OS boot.
-RTC calendar writes/SET/modes/checkpoints now admit the observed FreeDOS BIOS
+opt-in 386 AT adapter proves bus/reset/IRQ/NMI/HLT wiring, not an OS boot. RTC calendar writes/SET/modes/checkpoints now admit the observed FreeDOS BIOS
 writes. Untouched FreeDOS reaches the FreeCom startup display at 40M steps;
 no shell acceptance. Fresh DOS2 write/fresh-remount TYPE at `439560e` both
 pass with identical 12-byte output and linked image SHA, all 15 executed source
 hashes matching this tree; earlier c5 evidence remains historical. AT/device/
 acceptance focused tests pass. Later system-register and 386 BIOS runner work
-stays outside this freeze. No full 386DX, Windows, Doom or timing claim.
-Candidate `3fa9afacbca4fb8b9ba02c59ab9003f8f56bf03d` passed CI
+stays outside this freeze. No full 386DX, broader guest, broader game or timing claim. Candidate `3fa9afacbca4fb8b9ba02c59ab9003f8f56bf03d` passed CI
 `35472633235` (5,507 pass, 272 skip, zero fail), CPU qualification
 `35472633257` (full fast/Harris corpora, 266 bounded 386 samples and PCjs
 oracles), and native `35472633215`. The landing adds only this qualification
@@ -1763,7 +1632,7 @@ record and its documentation status to that exact candidate.
 
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol functional
 AT DOS disk boot and 386 paging/reset/ISA stage; candidate is the commit carrying
-this row. Two source-bound genuine-reset IBM Rev1 boots execute DOS 2.00 and
+this row. Two source-bound machine boots execute MIT-released DOS 2.00 and
 Command 2.02: keyboard ECHO/TYPE writes 12 exact bytes, fresh-remount TYPE reads
 them without recreating the file, both end at A>. Exact DMA boot transfer,
 input/output SHA linkage, all 15 CPU/device/harness source hashes, and rejecting
@@ -1776,73 +1645,56 @@ segment-selector admission and scalar strings. 90 fixed hardware samples pass;
 resolved 66/8C upper-word behavior with 386EX capture and fixed selector null/TI
 and conforming-read checks. PCjs bootstrap/fault/paging/group3 comparisons pass
 with rejecting mutations and the recorded saved-RF oracle limitation. Focused
-CPU/acceptance tests 48/48, DOS toolchain 7/7 and platform/acceptance 11/11 pass.
-Unchanged external test386 reaches POST00..04, then explicitly refuses REP;
+CPU/acceptance tests 48/48, DOS toolchain 7/7 and platform/acceptance 11/11 pass. Unchanged external test386 reaches POST00..04, then explicitly refuses REP;
 `fullRomPass:false`. REP continuation stays outside this freeze. Latest upstream
 MOS changes are preserved. Hosted exact-head CI/CPU/native qualification gates
-landing. No full 386DX, Windows, Doom, complete peripherals or timing claim.
-Pre-landing audit superseded candidate `a59f7a0`: LGDT/LIDT bypassed the
+landing. No full 386DX, broader guest, broader game, complete peripherals or timing claim. Pre-landing audit superseded candidate `a59f7a0`: LGDT/LIDT bypassed the
 execute-only source-segment read check. The exact old LGDT counterexample
 performed six forbidden reads; fixed source `bf3fea0` raises #GP(0) before
 all operand reads and preserves GDTR. A crossing-page regression checks
 ascending operand reads and CR2. Queued runs `35470133473`, `35470133428`,
-and `35470133415` were canceled as superseded, not counted as passes.
-The corrected candidate refreshes all bounded 386 receipts and qualifications.
-Corrected candidate `155b779aebbe7c4718edc73091673e392336976d` passed hosted
+and `35470133415` were canceled as superseded, not counted as passes. The corrected candidate refreshes all bounded 386 receipts and qualifications. Corrected candidate `155b779aebbe7c4718edc73091673e392336976d` passed hosted
 CI `35471008880` (5,462 pass, 272 skip, zero fail), CPU `35471008892`
 (fast/Harris full corpora and bounded 386 oracle/sample jobs), and native
 `35471008891`. The landing contains only that qualified candidate and this
 qualification record; later REP/RTC/386-adapter work remains separate.
 
 2026-09-19 DONE (qualified; landed at `28911b2`) — Astra/Sol bounded 386
-and AT keyboard POST milestone; exact candidate is the commit carrying this row.
-Adds opt-in native 32-bit execution, prefixes/SIB/aliases/stack widths, same-ring
+and AT keyboard POST milestone; exact candidate is the commit carrying this row. Adds opt-in native 32-bit execution, prefixes/SIB/aliases/stack widths, same-ring
 interrupt and trap gates, restartable admitted faults, IRET, RF/SS/NMI boundaries,
 and 386 double-fault classification. Pinned PCjs bootstrap/frame comparisons
-pass; the documented PCjs #GP RF omission is explicitly ungraded and Intel-tested.
-Exactly 84 admitted real-mode hardware samples pass; 888/2600/3111 exception
+pass; the documented PCjs #GP RF omission is explicitly ungraded and Intel-tested. Exactly 84 admitted real-mode hardware samples pass; 888/2600/3111 exception
 cases are excluded by the three sample profiles, not counted as passes. Adds
 strict parser, stray-write comparison, rejecting frame/IF/RAM/write mutations,
 and hosted evidence jobs. AT keyboard scheduling, keylock state and host-command
-enable fixes let the unchanged external IBM Rev1 BIOS complete keyboard checks
-and reach POST43/INT19 without displayed POST errors. The 30M-step diagnostic
-later enters an unexpected-interrupt handler; full disk boot remains unproven.
-Fresh real DOS MASM/LINK/EXE2BIN guest succeeds on the separate BIOS-service
+enable fixes correct the keyboard protocol. Exact proprietary firmware
+progression and diagnostic reproduction are retained in the private archive. The MIT-released DOS2 MASM/LINK/EXE2BIN guest succeeds on the separate BIOS-service
 machine. Combined focused CPU/AT/DOS: 35/35; device/checkpoint: 55/55. Receipts
 bind actual inputs and source hashes. Full hosted CI, 286 fast/Harris corpora,
 native contracts and new bounded 386 jobs gate landing. Continuation claim above
-remains active for AT disk diagnosis, paging, privilege and application work.
-No full 386DX, Windows, Doom or physical-timing claim; external media stays external.
-Initial candidate `f6f85cc` passed CPU qualification `35467798134` and native
+remains active for AT disk diagnosis, paging, privilege and application work. No full 386DX, broader guest, broader game or physical-timing claim; external media stays external. Initial candidate `f6f85cc` passed CPU qualification `35467798134` and native
 qualification `35467798125`; CI `35467798130` had one failure: the new optional
-MOO parser test lacked its external-input census row (5429 pass, 272 skip).
-The corrected candidate registers the exact pinned corpus with explicit-env
+MOO parser test lacked its external-input census row (5429 pass, 272 skip). The corrected candidate registers the exact pinned corpus with explicit-env
 discovery matching both consumers. Focused census checks and required-input
 present/absent checks pass. Corrected candidate `d284b40` passed CI
 `35468118560` (5430 pass, 272 skip, zero fail), CPU `35468118562` (fast and
 Harris each 1,477,997 pass, three revoked; bounded 386 jobs green), and native
 `35468118561`. Landing `28911b2` preserves upstream `eaa56d0` README/isolated
-LabWired benchmark changes; qualified x86, workflow and test blobs are unchanged.
-Tag `milestones/x86-386-core-at-keyboard-20260919` records that qualification.
-Continuation below/above retains later AT disk boot, paging and ISA work.
+LabWired benchmark changes; qualified x86, workflow and test blobs are unchanged. Tag `milestones/x86-386-core-at-keyboard-20260919` records that qualification. Continuation below/above retains later AT disk boot, paging and ISA work.
 
 2026-09-19 DONE (qualified and landed at `3cd5927`) — Astra/Sol AT reset and 286 recovery milestone;
 exact candidate is the commit carrying this row. The active continuation claim
-above remains for firmware disk boot, 386 and versioned application acceptance.
-Adds opt-in hardware reset and AT boot profile, warm CPU reset preserving board
+above remains for firmware disk boot, 386 and versioned application acceptance. Adds opt-in hardware reset and AT boot profile, warm CPU reset preserving board
 state, timed 8042 responses, primary/secondary DMA register diagnostics, refresh
-status and seeded CMOS. Unmodified external IBM AT Rev1 reaches its protected
-memory test from physical FFFFF0; this is diagnostic progression, not full POST
-or DOS boot. Adds 286 contributory-fault escalation, #DF task entry, shutdown/
-NMI/reset recovery, TF/SS/STI boundaries and inactive-NPX exception handling.
-Root audit corrected reset-cache identity and fault/trap transition defects.
-Focused combined CPU/AT/DOS regression: 159/159; six owned PCjs comparisons pass,
+status and seeded CMOS. Exact proprietary firmware diagnostic progression
+is retained in the private archive. Adds 286 contributory-fault escalation, #DF task entry, shutdown/
+NMI/reset recovery, TF/SS/STI boundaries and inactive-NPX exception handling. Root audit corrected reset-cache identity and fault/trap transition defects. Focused combined CPU/AT/DOS regression: 159/159; six owned PCjs comparisons pass,
 seven external images have zero unexpected differences under the published
 known-reference-difference contract. Current-source BIOS and DOS receipts and
 final affected checks (32/32), checkpoint regression (38/38) and both rejecting
 BIOS grader mutations accompany this candidate. Full hosted CI, real-mode fast/
 Harris corpora and native contracts are the landing gate. No complete AT, 386,
-Windows, Doom or physical-timing claim. External BIOS/media remain external.
+broader guest, broader game or physical-timing claim. External BIOS/media remain external.
 
 2026-09-19 DONE — bwcx: exact explicit-NPN Ebers–Moll small-signal AC,
 isolated worktree `/mnt/volume1/code/wt/bwb-npn-ac-level1`, branch
@@ -2015,7 +1867,6 @@ drain-source conductance reproduces `Id*(1 + LAMBDA*Vds)` exactly.
 On the cascode bench, cumulative: V(out) 0.0188 V -> 11.4037 V against
 ngspice's 11.40361, and V(casc) 4.8032 against 4.803472.
 
-
 2026-09-14 Full Ebers-Moll for the BJT, and the generic PNP — LANDED, lego-ac.
 
 **`stampNPN` and `stampPNP` now reach an exponential path.** Not a translated
@@ -2054,7 +1905,6 @@ resolve to instead of a part number that is not the device on the bench.
 one, so the choice is stated in the one authority rather than as a literal in
 the stamp.
 
-
 2026-09-13 `deviceCompanions`: a part with no card must not vanish — lego-ac.
 **Corrected the same day after review: it returns `{converged, timeNs, records}`,
 not a bare list, and it is a SNAPSHOT of the board's live solve — not a DC
@@ -2064,7 +1914,6 @@ instantaneous solve (a charged capacitor is a conductance and a source, not an
 open), and convergence was neither checked nor reported. A consumer must not be
 able to take the records without the two facts that qualify them, so the two
 facts are in the return.
-
 
 `BoardImpl.deviceCompanions(partId)` returns the companion elements the board's
 CURRENT solve stamped for a part — the same records the generic terminal-current
@@ -2097,7 +1946,6 @@ judged.
 
 Cost: the accessor copies its records, so a caller cannot edit what the solve
 stamped.
-
 
 2026-09-13 Two sources on one terminal, and a board that fights its own rail
 — LANDED, lego-ac. Both found by the ngspice corpus sweep, neither by a test.
@@ -2148,7 +1996,6 @@ junction was tried and REVERTED. Now comment-stripped, and sliced to the next
 top-level `function` instead of a fixed 4,000 characters — `stampNPN` is 3,620
 long, so the window was already reading its neighbour and would have named the
 wrong function in its own failure message.
-
 
 2026-09-13 Junction authority: zener split, half-read bulk, device-scaled knee
 — LANDED, lego-ac. Follow-on to the vf-convention entry below, and mostly a
@@ -2205,7 +2052,6 @@ Derivation and reproduction for every number:
 `test/measurements/JUNCTION-AUTHORITY-2026-09-13.md` and
 `test/measurements/repro/`.
 
-
 2026-09-13 E1.3b vf convention + per-kind bulk resistance — LANDED, lego-ac.
 `vf` now means the DATASHEET total drop at the rated current in BOTH junction
 paths; it previously meant the knee in the piecewise one, so the two paths
@@ -2240,7 +2086,6 @@ Derivation, every table and its falsifier:
 re-derived against ngspice where a deck was representable; the single exception
 (the loaded-pot wiper, 1.8485) is labelled CHARACTERISED not oracled in its own
 file and needs a deck before it can be defended.
-
 
 2026-09-12 R2 cooperative hybrid execution — IMPLEMENTED/LOCALLY QUALIFIED, Codex root. User explicitly
 requested continued performance coding and remote default-branch merge after
@@ -2901,15 +2746,15 @@ rather than each against the master it branched from.
 | ADP7118 real LDO electrical model | `/root` (Codex bwcx) | `/tmp/wt-bwcx-adp7118-board`, branch `lane/adp7118-real-ldo` | `src/devices/power.js`, one focused `test/adp7118.test.mjs`, any directly required device-current metadata, and this row. Add a dedicated ADP7118 SOIC-8 contract with the datasheet pin multiplicity (VOUT 1/2, SENSE/ADJ 3, GND 4, EN 5, SS 6, VIN 7/8), fixed and adjustable DC regulation, 200 mV typical dropout at 200 mA, EN/UVLO hysteresis, bounded quiescent/shutdown current, and 360 mA typical current limiting. Prove duplicate-pin continuity, feedback authority, enable/UVLO boundaries, overload behavior, signed supply current/KCL and caller-consequence mutations. Explicitly leave soft-start timing, noise/PSRR, thermal shutdown and package exposed-pad parasitics unmodelled in this DC slice. No generic `vreg` behavior, solver/Board/parser, other device, face/UI/package/pin, workflow, corpus payload or tolerance change. | `a1a3ad893e6c8b0a5d423b3aa667c51bf1dc8397` | **DONE candidate 2026-09-27.** Nine focused physical/DC cases pass: fixed and adjustable feedback, duplicate package leads, rated-load dropout, current limit, EN and UVLO hysteresis, rated VIN boundary, quiescent/shutdown current and eight-terminal KCL. The adjacent regulator/source/current surface passes 20/20. Four isolated mutations independently red the EN authority, SENSE/ADJ feedback, current ceiling and duplicate VOUT bond. Soft-start timing, noise/PSRR, thermal shutdown and exposed-pad parasitics remain explicitly outside this slice. Exact-head hosted qualification remains the landing gate. |
 | exact Level-1 NMOS source-tied-bulk DC operating point | `/root` (Codex) | `/mnt/volume1/code/wt/bwb-nmos-source-bulk-op`, branch `lane/nmos-source-bulk-operating-point` | `src/board.js`, the source-tied current-reader branch in `src/mna.js`, new focused `test/nmos-source-bulk-operating-point.test.mjs`, and this row. Extend the strict public NMOS OP admission from proven grounded bulk to the already implemented exact source-tied-bulk case only: explicit `model:'level1'`, finite `vth`, positive finite `kp/w/l`, nonnegative finite `lambda`, `bulkOnSource:true`, inert model name, and all three connected terminals. Prove the drain-bulk junction, signed currents/KCL, state non-mutation, and exact ngspice agreement at both normal and forward-biased drain-bulk conditions; mutation removing source-bulk admission or drain-junction current reading must red. Current master already contains the cutoff lane's qualified one-sided C1 implementation; this touches only its disjoint bulk-current reader block and no existing cutoff test. No CUI/parser/pin, GAMMA/PHI/body-effect Jacobian, third/floating bulk, PMOS, default/gallery MOS, tolerance, workflow, corpus payload, AC/transient, or unrelated solver change. | `4e95b488ca00784aa23a7bf3c2ce029f987a3167` | **DONE candidate 2026-09-19.** Private exact census at `97a25ed` measured 363 self-contained v2 rows with precisely this model/geometry/topology; the other 500 GAMMA/PHI rows and 57 missing/malformed models remain separate/refused. Focused source/ground bulk, body-effect and junction surface is 46/46 green against live ngspice. Removing source-bulk admission reds the ordinary-channel witness; dropping the drain-junction return current reds the forward-bias KCL witness. Existing grounded-bulk metadata and behavior remain green. |
 | Level-1 NMOS exact cutoff with one-sided C1 threshold transition | `/root` (Codex bwcx) | `/mnt/volume1/code/wt/bwb-nmos-threshold-cutoff-v2`, branch `lane/nmos-threshold-cutoff-v2`, replayed from current master `10a95eec` after the earlier candidate lost its implementation in an unrelated merge | `src/mna.js`, `test/nmos-operating-point.test.mjs`, `test/mosfet-body-effect.test.mjs`, and this row only. The exact 1,670-row ADI-v5 model-default replay left 174 numerical failures; a representative nominal cutoff had VGS=VTO yet the symmetric blend manufactured 156.25 nA (`K=0.1`, effective overdrive 1.25 mV). The no-`ksubthres` path now uses a one-sided cubic that is exactly zero at/below threshold and joins the exact square law C1 at the existing 5 mV boundary; declared VDMOS soft-plus is unchanged. No CUI/corpus/pin, PMOS contract broadening, tolerance, iteration budget, generic convergence, workflow or unrelated solver change. | `613cefbd2ab98f69359e61bef81627809bf8a8a4` | **DONE candidate 2026-09-19.** The replayed three production/test blobs are byte-identical to exact-head-qualified candidate `d8360bbe` and the focused Level-1/body-effect/VDMOS/latch surface passes 34/34 on the new base. Restoring the symmetric blend, corrupting its analytic slope, or bypassing declared VDMOS soft-plus each reds the named consequence. A provenance-qualified replay of all 174 former failures closes 53 circuits; all 174 native/oracle stages pass, with 53 comparisons green and 121 retaining 138 smaller numerical failures (1,243/1,381 observations pass, largest residual 0.343 mV) at unchanged tolerances. Raw CIFS receipt `adi-v5-nmos-threshold-174-v2.jsonl`, SHA-256 `a3ea4e6c...`, run `2a363a48...`. Those 121 are a separately measured strict-oracle-convergence mechanism, not hidden in this fix. The replay head requires one fresh exact-head qualification before guarded landing. |
-| protected 286 ISA, call gates, task switching and existing binary | Astra coordinator / two Sol workers, astra-x86-tasks | `/mnt/volume1/code/wt/astra-x86-tasks` and isolated workers | Remaining common protected instructions and far procedures; call gates and 286 task switches with architectural fault tests; pinned independent oracle and existing protected-mode binary execution. Tests, harnesses, receipts and qualification. No analog/FPGA/UI/package changes; preserve other lanes. | `aa8b3a8df82bea8e66f2e90bc7d3d6e9d17bac29` | **DONE 2026-09-19**; common ISA/far procedures, call gates, staged 286 task switches and eight unchanged external images implemented and audited. Local: 166 passed, one optional Turbo C skip; six owned PCjs comparisons; seven external comparisons with exact documented oracle differences and zero unexpected mismatches; five external mutations rejected. Combined source and receipts frozen for hosted qualification before landing; links retained in milestone tag. No full AT/386/Windows/Doom or speed claim. |
+| protected 286 ISA, call gates, task switching and existing binary | Astra coordinator / two Sol workers, astra-x86-tasks | `/mnt/volume1/code/wt/astra-x86-tasks` and isolated workers | Remaining common protected instructions and far procedures; call gates and 286 task switches with architectural fault tests; pinned independent oracle and existing protected-mode binary execution. Tests, harnesses, receipts and qualification. No analog/FPGA/UI/package changes; preserve other lanes. | `aa8b3a8df82bea8e66f2e90bc7d3d6e9d17bac29` | **DONE 2026-09-19**; common ISA/far procedures, call gates, staged 286 task switches and eight unchanged external images implemented and audited. Local: 166 passed, one optional external compiler skip; six owned PCjs comparisons; seven external comparisons with exact documented oracle differences and zero unexpected mismatches; five external mutations rejected. Combined source and receipts frozen for hosted qualification before landing; links retained in milestone tag. No full AT/386/broader guest/broader game or speed claim. |
 | protected 286 restart, privilege and AT devices | Astra coordinator / up to two Sol agents, astra-x86-protection-at | `/mnt/volume1/code/wt/astra-x86-protection-at` and isolated worker trees | Restartable protected strings and common ISA; protected system registers, LDT/TSS and bounded privilege transitions; fuller opt-in AT keyboard/interrupt/RTC contracts. Owned guests, pinned PCjs, exact-source receipts and hosted qualification. Preserve production core throughput, upstream DOS/input work and other lanes. No FPGA, analog, UI/package pins or unproved full AT/386/application claim. | `69f052d16a0a17959234918e4539f8daaea5d861` | **DONE 2026-09-19**; implementation and audit complete: restartable strings/common ISA, bounded LDT/TSS privilege transitions, AT keyboard/PIC/RTC, exact restore and interrupt arbitration. 93 focused tests passed; five pinned PCjs guests passed; strict REP/privilege mutations rejected; DOS toolchain and source-bound receipts refreshed. Frozen combined head is subject to hosted qualification before landing; run links retained in milestone tag. Full task switching/AT boot/386 remain outside this increment. |
-| protected 286 instruction breadth and AT memory/A20 | Astra coordinator / two Sol agents, astra-x86-memory-isa | `/mnt/volume1/code/wt/astra-x86-memory-isa` plus separate CPU and machine worker trees | Experimental protected decoder: 16-bit ModR/M, arithmetic/flags and bounded control flow, independent PCjs guests. Machine: explicit extended-memory/A20 capability, guarded word access, checkpoint/reset contracts and owned guest checks; scoped qualification/docs/receipts. Preserve default machine behavior and existing DOS/input work. No FPGA, analog/SPICE/ASC, UI/package pins or full PC/AT/386 claim. | `028a387a48b119f023b13aaad7ebe324f72839b1` | **DONE 2026-09-19**; two Sol implementations integrated and audited: protected ModR/M/arithmetic/control, CPU-only A20 and bounded 8042, high-memory machine guest, explicit protected-checkpoint refusal. Source-bound ISA/AT/IDT/DOS receipts refreshed; exact-head hosted qualification required before guarded landing. No speed, full AT, Windows/Doom or Lite-pin claim. |
+| protected 286 instruction breadth and AT memory/A20 | Astra coordinator / two Sol agents, astra-x86-memory-isa | `/mnt/volume1/code/wt/astra-x86-memory-isa` plus separate CPU and machine worker trees | Experimental protected decoder: 16-bit ModR/M, arithmetic/flags and bounded control flow, independent PCjs guests. Machine: explicit extended-memory/A20 capability, guarded word access, checkpoint/reset contracts and owned guest checks; scoped qualification/docs/receipts. Preserve default machine behavior and existing DOS/input work. No FPGA, analog/SPICE/ASC, UI/package pins or full PC/AT/386 claim. | `028a387a48b119f023b13aaad7ebe324f72839b1` | **DONE 2026-09-19**; two Sol implementations integrated and audited: protected ModR/M/arithmetic/control, CPU-only A20 and bounded 8042, high-memory machine guest, explicit protected-checkpoint refusal. Source-bound ISA/AT/IDT/DOS receipts refreshed; exact-head hosted qualification required before guarded landing. No speed, full AT, broader guest/broader game or Lite-pin claim. |
 | strict NMOS drain/source DC-preflight connectivity | `/root` (Codex bwcx) | `/mnt/volume1/code/wt/bwb-nmos-ds-preflight`, branch `lane/nmos-ds-preflight` | `src/board.js`, focused NMOS operating-point tests, and this row only. For the already admitted explicit grounded-bulk Level-1 NMOS domain, make floating-net preflight reflect only the drain/source conductance that `stampNMOS` always stamps (`MOS_GDS_FLOOR` even in cutoff). Prove Wilson mirror, cascode amplifier and cascode mirror families reach the existing solver and match ngspice; preserve unconnected-gate refusal and never treat gate/body as conductive. Replay the identical 678-row private selection downstream after Board qualification. No equation/current/sparse change, PMOS/fourth-terminal admission, GMIN/tolerance relaxation, default/gallery MOS behavior, CUI/parser/package, workflow or raw corpus payload. | `6a367af05115ade4caf9e0e1479a19bff9f666e6` | **DONE candidate 2026-09-19.** Floating-net preflight now adds exactly the drain/source edge already guaranteed by the admitted Level-1 stamp; gate/body remain insulating. Self-authored two- and three-device cascode chains and a Wilson mirror reach the unchanged solver and match ngspice node voltages within 1 microvolt, while a connected singleton gate still refuses by name. Focused OP/current/sparse surface is 31/31. Removing the drain/source edge makes the channel-chain witness red; adding a gate/source edge makes the singleton-gate witness red. Prior exact replay measured the affected boundary as 173 false structural refusals across those three families plus 12 genuine unconnected-gate refusals; the identical downstream replay remains the post-Board adoption evidence gate, with unchanged tolerances. |
-| protected 286 same-ring IDT delivery | Astra coordinator / two Sol agents, astra-x86-idt-sept19 | `/mnt/volume1/code/wt/astra-x86-idt` plus separate worker trees | Opt-in protected CPU only: ring-0 interrupt/trap gates, INT/IRET and supported fault delivery with atomic stack preflight; focused negative tests and independent pinned-PCjs guest comparisons; x86 qualification branch/job and scoped docs/receipts. No production decoder hot-path changes, privilege/task switching, FPGA, SPICE/ASC, UI or package pins. | `4e080099a908f77f1f97da0b4088db48bc47d259` | **DONE 2026-09-19 in the commit containing this row; exact-head hosted qualification remains the landing gate.** Optional same-ring interrupt/trap gates, INT/IRET and #UD/#NP/#SS/#GP delivery implemented with atomic frame preflight, correct flags/error/restart state and explicit unsupported boundaries. Protected tests 21/21; combined focused checks 41/41 and merged DOS/gamepad/CLI checks 15/15. Pinned PCjs agrees on interrupt/trap entry and IRET plus owned #GP handler return to HLT; three comparator negative controls reject exact affected cases. Known selector-RPL and stack-wrap oracle limitations remain explicit and ungraded. DOS source receipt refreshed after upstream machine changes; source-bound IDT receipt and roadmap included. No full-protection/386/Windows/Doom claim. |
+| protected 286 same-ring IDT delivery | Astra coordinator / two Sol agents, astra-x86-idt-sept19 | `/mnt/volume1/code/wt/astra-x86-idt` plus separate worker trees | Opt-in protected CPU only: ring-0 interrupt/trap gates, INT/IRET and supported fault delivery with atomic stack preflight; focused negative tests and independent pinned-PCjs guest comparisons; x86 qualification branch/job and scoped docs/receipts. No production decoder hot-path changes, privilege/task switching, FPGA, SPICE/ASC, UI or package pins. | `4e080099a908f77f1f97da0b4088db48bc47d259` | **DONE 2026-09-19 in the commit containing this row; exact-head hosted qualification remains the landing gate.** Optional same-ring interrupt/trap gates, INT/IRET and #UD/#NP/#SS/#GP delivery implemented with atomic frame preflight, correct flags/error/restart state and explicit unsupported boundaries. Protected tests 21/21; combined focused checks 41/41 and merged DOS/gamepad/CLI checks 15/15. Pinned PCjs agrees on interrupt/trap entry and IRET plus owned #GP handler return to HLT; three comparator negative controls reject exact affected cases. Known selector-RPL and stack-wrap oracle limitations remain explicit and ungraded. DOS source receipt refreshed after upstream machine changes; source-bound IDT receipt and roadmap included. No full-protection/386/broader guest/broader game claim. |
 | strict explicit Level-1 NMOS public DC operating-point domain | `/root` (Codex bwcx) | `/mnt/volume1/code/wt/bwb-nmos-op-domain`, branch `lane/nmos-operating-point-domain` | `src/board.js`, `src/mna.js`, `src/sparse.js`, one focused NMOS operating-point test, focused sparse-refactor coverage, affected exact-scope/current assertions, and this row. Admit only three connected terminals plus explicit `model:'level1'`, finite `vth`, positive finite `kp`/`w`/`l`, nonnegative finite `lambda`, `bulkAtGround:true`, and inert model-name metadata. Preserve default/gallery MOS behavior and all live state. Prove node voltages, signed currents/KCL against self-authored ngspice Level-1 active/triode benches, strict extra-field/bulk/connectivity refusals, and caller-consequence mutations. The measured numerical repairs are bounded: use the smoothing derivative as channel-length-modulation activation so it is exactly one outside the threshold blend, and preserve structural zero fill during sparse numeric reuse so a later nonlinear stamp cannot create an unrepresented LU fill. Qualification later replays exactly the 678 historical ADI-v4 NMOS rows at unchanged comparison tolerances. No PMOS/fourth-terminal invention, CUI/parser/package, workflow, default model, global tolerance, raw corpus payload, or unrelated solver work. | `348bde0937bae6744b9e9266bbaea4961afd76a8` | **DONE 2026-09-19.** Census: 678 rows / 1338 M cards use one explicit grounded-bulk Level-1 NMOS; the 136-row PMOS/fourth-bulk family remains excluded. The active ngspice bench exposed and now closes two independent pre-existing defects: the old overdrive ratio suppressed stated LAMBDA (drain 4.032979 V versus 4.032561 V), and zero-valued first-iteration fill made sparse refactor violate a source row by 6.964 mA. Focused semiconductor/sparse surface is 158/158; exact boundary subset 36/36. Isolated mutants for removing NMOS routing, restoring the old LAMBDA taper, and restoring zero-fill omission all fail by named consequence. The full local repository run reached 5,484 pass / 164 documented skip / 1 unrelated or as-yet-unattributed failure after 6m44s; hosted exact-head qualification is authoritative for that final failure name. |
 | strict explicit-NPN public DC operating-point domain | `/root` (Codex bwcx) | `/mnt/volume1/code/wt/bwb-bjt-op-domain`, branch `lane/bjt-operating-point-domain` | `src/board.js`, one focused NPN operating-point test, and the existing operating-point, diode-scope and OP/live-current whole-domain assertions plus this row. Admit only three connected terminals and explicit `model:'shockley'`, finite `is>0`, `beta>0`, optional finite `br>0`/`n>0`/`vaf>0`, plus inert source-model naming metadata; preserve the default/gallery knee path and all live state. Self-authored active/saturated, signed terminal currents/KCL, exact ngspice conditions, strict refusals and caller-consequence mutations are required. Qualification then replays the exact 851-row historical ADI v4 NPN family at unchanged comparison tolerances. No PNP/MOS, CUI/parser/package, workflow, default interactive model, global tolerance, or unrelated solver work. | `2064764995455109ca56dced3939e036462dfaf4` | **DONE candidate 2026-09-19.** The strict public domain admits only explicit complete NPN cards. At calibrated ngspice 42 `TEMP=TNOM=26.826895261366076`, its active and saturated nodes, signed terminal currents and KCL agree at nanovolt/picoamp scale while `operatingPoint()` leaves all live state untouched. The default interactive knee path is unchanged and no `src/mna.js` change was needed. Focused Board tests are 25/25 green. Removing NPN routing, admitting undeclared `IKF`, or skipping collector connectivity each makes the focused contract red independently. Hosted red `35443181470` exposed two stale whole-domain sentinels; the forward repair updates the literal scope and adds a genuinely biased NPN branch to the OP/live signed-current matrix rather than only changing its expected list. Exact-head hosted qualification and the separately pinned 851-row downstream replay remain landing gates; comparison tolerances will not be widened. |
 | strict zener public DC operating-point domain | `/root` (Codex bwcx) | `/mnt/volume1/code/wt/bwb-zener-op-domain`, branch `lane/zener-operating-point-domain` | `src/board.js`, `src/mna.js`, focused zener operating-point/breakdown tests, and this row. Admit only explicit complete Shockley zener cards: use the existing Shockley forward junction and characterised breakdown law in both stamp and current reader, while preserving the legacy no-model/gallery piecewise path byte-for-behaviour. Preserve observational state, explicit refusals, and unchanged tolerances. Qualification includes the fixed 470-row ADI v4 historical zener family through the downstream private runner. No CUI/parser/package/workflow or other semiconductor family. | `4926e93cd0133dd038b929f8506318d0da320b3b` | DONE candidate 2026-09-19: 44/44 focused checks pass, including live ngspice forward/breakdown, signed-current KCL, strict refusals and unchanged legacy knee; allowlist, forward-stamp and current-reader mutations each red independently. Exact-head hosted qualification and the separately pinned 470-row downstream replay remain landing gates. |
-| x86 continuation: real DOS software and 286 protection | Astra coordinator / two Sol agents, astra-x86-next-sept19 | `/mnt/volume1/code/wt/astra-x86-next` with separate agent worktrees | x86 CPU/machine and guest harness only: extend real DOS tests to fast 286, exercise local tool binaries, implement audited bounded protected-mode milestones, measured Harris performance follow-ups, exact-source receipts and roadmap. Excludes FPGA, analog/SPICE/ASC/import/export and their workflows. No downstream pin until upstream qualification. | `acb68f2` | **DONE 2026-09-19 in the commit containing this row; hosted qualification is the landing gate.** Real DOS persistence and MASM/LINK/EXE2BIN guest build/run on fast286; bounded opt-in protected decoder with pinned PCjs bootstrap comparison, independent caches and explicit unsupported boundaries; 286 HMA word-alias fix; native unchanged-writer suppression with 33/33 focused contracts and 25/25 mutation rejection. Local combined DOS/CPU tests and PCjs comparison pass. Timing remains inconclusive. Exact-source receipts, pinned guest/oracle CI and staged roadmap in docs/X86-LANE.md; full protection, PC/AT, 386DX, Windows and Doom remain future milestones. |
+| x86 continuation: real DOS software and 286 protection | Astra coordinator / two Sol agents, astra-x86-next-sept19 | `/mnt/volume1/code/wt/astra-x86-next` with separate agent worktrees | x86 CPU/machine and guest harness only: extend real DOS tests to fast 286, exercise local tool binaries, implement audited bounded protected-mode milestones, measured Harris performance follow-ups, exact-source receipts and roadmap. Excludes FPGA, analog/SPICE/ASC/import/export and their workflows. No downstream pin until upstream qualification. | `acb68f2` | **DONE 2026-09-19 in the commit containing this row; hosted qualification is the landing gate.** Real DOS persistence and MASM/LINK/EXE2BIN guest build/run on fast286; bounded opt-in protected decoder with pinned PCjs bootstrap comparison, independent caches and explicit unsupported boundaries; 286 HMA word-alias fix; native unchanged-writer suppression with 33/33 focused contracts and 25/25 mutation rejection. Local combined DOS/CPU tests and PCjs comparison pass. Timing remains inconclusive.
 | bw-board PR #11 integration | `/root` (2026-09-19) | `/mnt/volume1/code/wt/bwb-pr11-zener-20260919` | Audit current PR #11 checks, mergeability, and land `lane/zener-ibv-default-and-ideality`; no unrelated source changes | `b9efb2e` (`origin/master`) | DONE; PR #11 merged at `b9efb2e`; focused zener test 10/10 and hosted gates green |
 
 The earlier Lite PR #194 and Harris/native rows from the preceding claim commit
@@ -3187,7 +3032,6 @@ Paterson guest increment: source `f2eeb5964bc1285a6c8f3b1c297d2998833cc56f`, pai
 | §E6.8 — the finished-emulator gap survey (emu86, PCjs, XTCE-Blue) | lego-a4 | 2026-09-04 | `4560d78` on `feat/i8086-support-chips`, merged to `feat/i8086-tier` at `fca6b9a`. **Note for the record:** the section was written into a shared tree and swept into another agent's commit by a `git add -A` — see rule 3. No work was lost; the attribution in that commit message is not the whole story. Two premises corrected same-day by `lego-47`; both corrections are recorded in place in §E6.8 rather than edited out. |
 | coverage-and-boards — the three self-booting 8086 example firmwares + board fixes | this session (sim2 / `8086 coverage testing materials`) | 2026-09-04 | On `feat/i8086-support-chips`: **`4133114`** TIMERDEMO8086 — the interrupt example (INT 8 tick painting a live counter; first end-to-end proof a running program takes & services a hardware interrupt here: 8254 OUT0 → 8259 IR0 → CPU INT 8 → ISR → B800 → EOI); **`cffca33`** CGADEMO8086 screen example + PCXT8086 CGA video-RAM fix (B8000-BFFFF, matching XTDISK); **`eb8109a`** PCXT8086 `dma:'dma1'` load-bearing-wire comment. On bw-circuit-ui `feat/i8086-ui`: **`afee1de`** Machine-Loader offers all three firmwares, loaded high via `romAt = 0x100000 − length`. E7 step 2 + the EXTRACTOR-IRQ-GAP correction landed in ROADMAP the same push as this row (rule 2). |
 
-
 ## DONE — recent implementation candidates
 
 | lane | owner/session | worktree | exact scope | base SHA | status |
@@ -3384,15 +3228,13 @@ fallbacks and no JS CPU steps. Eleven API contracts, 12 native abort guards and
 16 transport abort cases pass; 79 focused tests pass with zero skips. Final/root
 captures differ only in log-directory provenance and agree in complete
 native/board/RPC/rejection semantics. A failed first compilation was retained;
-the corrected native candidate was freshly prepared and built as r2.
-Receipts/limits: docs/I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md. The initial
+the corrected native candidate was freshly prepared and built as r2. Receipts/limits: docs/I80386-NATIVE-COLD-RESET-ACTUAL-BOARD.md. The initial
 actual dbc63803 report is retained separately for 40 mandatory baseline/mutation
 tests. Archived source hashes remain immutable as this WIP evolves. Scope
 excludes analog/FPGA/schematics and licensed media. Architectural reset parity,
 RAM execution/self-modification/A20 transitions, actual-board REP/PF/PIT,
-production CLI/GUI/WASM native backend, Windows enhanced/full AT/10×/RTx remain
+production CLI/GUI/WASM native backend, broader guest enhanced/full AT/10×/RTx remain
 unfinished. Next owned item is a free executable-RAM/A20/cache-coherence gate.
-
 
 ### 2026-10-01: 386 actual-board executable-RAM baseline
 
@@ -3400,21 +3242,20 @@ Astra coordinated two Sol agents after PR189 landed at `19df0798b556c65af154137b
 
 ### 2026-10-01: native actual-board RAM, SMC and A20 checkpoint
 
-Astra coordinated two Sol agents: new native ABI/cache/host/checker and mandatory actual-capture mutation tests. Measured source `93020e30a16fe6327ab5edc99a55c7688d897bae` authenticates 58 inputs. Four native budgets and a separate fresh reproduction pass 75 instructions/454 functional board clocks, with actual board-owned bus/chip state, both live A20 aliases updated, and explicit committed instruction-cache/TLB/prefetch flushes. Report baseline plus 78 semantic mutations pass; host 5 and census 12 pass. Eleven API probes, sixteen native guards and twenty transport rejections pass. Root independently audits each capture's 201 artifacts, historical source, raw clocks/order, physical backing/cache generations, CPU and whole-board checkpoints. Full JS/native byte order is false: exactly eight far CALL CS/IP word-order differences remain captured and narrowly checked. Reset parity remains false. Failed call-order and cumulative-SLICE drafts are retained unqualified. Public qualification and receipts: `docs/I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md`. Next: actual-board REP/two-PF/PIT, then production backend and paired speed measurement. No new RTx/full AT/Windows/Doom claim.
+Astra coordinated two Sol agents: new native ABI/cache/host/checker and mandatory actual-capture mutation tests. Measured source `93020e30a16fe6327ab5edc99a55c7688d897bae` authenticates 58 inputs. Four native budgets and a separate fresh reproduction pass 75 instructions/454 functional board clocks, with actual board-owned bus/chip state, both live A20 aliases updated, and explicit committed instruction-cache/TLB/prefetch flushes. Report baseline plus 78 semantic mutations pass; host 5 and census 12 pass. Eleven API probes, sixteen native guards and twenty transport rejections pass. Root independently audits each capture's 201 artifacts, historical source, raw clocks/order, physical backing/cache generations, CPU and whole-board checkpoints. Full JS/native byte order is false: exactly eight far CALL CS/IP word-order differences remain captured and narrowly checked. Reset parity remains false. Failed call-order and cumulative-SLICE drafts are retained unqualified. Public qualification and receipts: `docs/I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md`. Next: actual-board REP/two-PF/PIT, then production backend and paired speed measurement. No new RTx/full AT/broader guest/broader game claim.
 
 ### 2026-10-01: compact actual-board protected REP/PF/PIT JavaScript baseline
 
-Astra coordinated one Sol coding agent and one independent source/capture auditor. Qualified measured source `7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247` authenticates 41 inputs. New free linked ROM starts at FFFFFFF0, guest-creates sparse tables and writable GDT, executes protected16/data32/address16 REP across a page boundary, recovers two PFs with no failed-work charge, handles zero/final REP, and services actual cascaded PIC IRQ0 after STI successor. 135 successful quanta/137 attempts/814 functional clocks. Actual PIT edge at Q72/cycle436/CX3/DI4ffc before second REP fetch; PF Q73/Q90 and IRQ Q108. All48 focused tests pass without skips. Fresh root capture is byte-identical; independent linked-ROM, historical-source, backing, delivery-frame, REP progress and rational mode0 PIT audits pass. Notes/receipts: `docs/I80386-JS-REP-PF-PIT-ORACLE.md`. Failed link/timer/RF drafts remain retained diagnostics. Native integration remains unfinished and must add REP-element and no-Q delivery cache commits without discarding pagewalk effects. No native guest qualification, strict-reset/raw-CR0 parity, Windows/Doom/full AT or performance claim.
-
+Astra coordinated one Sol coding agent and one independent source/capture auditor. Qualified measured source `7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247` authenticates 41 inputs. New free linked ROM starts at FFFFFFF0, guest-creates sparse tables and writable GDT, executes protected16/data32/address16 REP across a page boundary, recovers two PFs with no failed-work charge, handles zero/final REP, and services actual cascaded PIC IRQ0 after STI successor. 135 successful quanta/137 attempts/814 functional clocks. Actual PIT edge at Q72/cycle436/CX3/DI4ffc before second REP fetch; PF Q73/Q90 and IRQ Q108. All48 focused tests pass without skips. Fresh root capture is byte-identical; independent linked-ROM, historical-source, backing, delivery-frame, REP progress and rational mode0 PIT audits pass. Notes/receipts: `docs/I80386-JS-REP-PF-PIT-ORACLE.md`. Failed link/timer/RF drafts remain retained diagnostics. Native integration remains unfinished and must add REP-element and no-Q delivery cache commits without discarding pagewalk effects. No native guest qualification, strict-reset/raw-CR0 parity, broader guest/broader game/full AT or performance claim.
 
 ### 2026-10-01: native actual-board protected REP/two-PF/PIT checkpoint
 
-Astra coordinated two Sol agents and independently reproduced the source-frozen gate at `cb5c818dd393c03ac562a65b0951f55aef804371`: 61 committed inputs, four budgets, 135 successful work quanta/137 attempts/814 functional clocks, two recovered page faults and actual PIC IRQ20 after the STI successor. All 54 mandatory actual-report tests and five host tests pass without skips; 19 native guards, 18 transport rejections and 11 API probes pass. Root authenticates 206 external files per capture, source inventory, physical backing/generations/ROM/RPC, and exact native/host/RPC semantics; a separate raw audit verifies frames/RF/REP/SLICE chronology. BWS11 streams match exactly; complete JSON differs in retained path artifacts. ROM-only/fixed-A20 scope and raw reset/frame/read/pagewalk differences remain explicit. Notes and public receipts: `docs/I80386-NATIVE-REP-PF-PIT-ACTUAL-BOARD.md`. Next combine this protected fixture with executable RAM/SMC/A20, then production backend and paired performance measurements. No full AT/Windows/Doom/RTx claim.
+Astra coordinated two Sol agents and independently reproduced the source-frozen gate at `cb5c818dd393c03ac562a65b0951f55aef804371`: 61 committed inputs, four budgets, 135 successful work quanta/137 attempts/814 functional clocks, two recovered page faults and actual PIC IRQ20 after the STI successor. All 54 mandatory actual-report tests and five host tests pass without skips; 19 native guards, 18 transport rejections and 11 API probes pass. Root authenticates 206 external files per capture, source inventory, physical backing/generations/ROM/RPC, and exact native/host/RPC semantics; a separate raw audit verifies frames/RF/REP/SLICE chronology. BWS11 streams match exactly; complete JSON differs in retained path artifacts. ROM-only/fixed-A20 scope and raw reset/frame/read/pagewalk differences remain explicit. Notes and public receipts: `docs/I80386-NATIVE-REP-PF-PIT-ACTUAL-BOARD.md`. Next combine this protected fixture with executable RAM/SMC/A20, then production backend and paired performance measurements. No full AT/broader guest/broader game/RTx claim.
 
 ### 2026-10-01: combined protected paging/RAM/SMC/A20 JavaScript baseline
 
-Astra coordinated one Sol coder and one independent auditor. Qualified source `15f010c92b5227622b76da815bd47000e28a988c` authenticates41 inputs. Free cold-reset ROM creates two RAM code pages/descriptors/PTEs, enters protected16 code, preserves partial/zero/final REP plus two faults and actual PIT/STI-successor IRQ, and executes eight protected CALL/MOV/RETF entries across SMC and actual8042 A20 OFF/ON. 192Q/194attempts/1156functional clocks; all37 focused tests pass without skips. Fresh root pair byte-identical; independent linked-ROM/backing/frame/cache/translation/PIT audits pass. Explicit fastA20 profile true with latch0/no92PIO; 36 actual invalidations are source-owned behavior, not architecture/nativeTLB parity. Defaultfalse and uncommitted pilots remain diagnostics. Notes and receipts: `docs/I80386-JS-COMBINED-PAGING-RAM-ORACLE.md`. Next combined native gate; no performance/full AT/Windows/Doom claim.
+Astra coordinated one Sol coder and one independent auditor. Qualified source `15f010c92b5227622b76da815bd47000e28a988c` authenticates41 inputs. Free cold-reset ROM creates two RAM code pages/descriptors/PTEs, enters protected16 code, preserves partial/zero/final REP plus two faults and actual PIT/STI-successor IRQ, and executes eight protected CALL/MOV/RETF entries across SMC and actual8042 A20 OFF/ON. 192Q/194attempts/1156functional clocks; all37 focused tests pass without skips. Fresh root pair byte-identical; independent linked-ROM/backing/frame/cache/translation/PIT audits pass. Explicit fastA20 profile true with latch0/no92PIO; 36 actual invalidations are source-owned behavior, not architecture/nativeTLB parity. Defaultfalse and uncommitted pilots remain diagnostics. Notes and receipts: `docs/I80386-JS-COMBINED-PAGING-RAM-ORACLE.md`. Next combined native gate; no performance/full AT/broader guest/broader game claim.
 
 ### 2026-10-01: combined native paging/RAM/REP actual-board checkpoint
 
-Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/Windows/Doom/RTx claim.
+Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/broader guest/broader game/RTx claim.

@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-native.memory-clock-fusion.ledger-scalars.worker-overlay.v1",
-  "status": "PENDING_ROOT_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_SCALAR_WORKER_SOURCE_READY",
   "profile": "bw.cold-native.memory-clock-fusion.ledger-scalars.v1",
   "heldWorkerRevision": "735740cb52550bb71edde5aba326da6f3a01f473",
   "providerRevision": "d8a2e22a00d92a66fe2ffa3aae2865603c3bd063",

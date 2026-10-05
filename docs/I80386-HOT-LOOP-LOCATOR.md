@@ -1,5 +1,7 @@
 # Observed backward-Jcc hot-loop locator
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 Set `AT_HOT_LOOP_LOCATOR=1` for the ordinary, noninteractive AT console or
 `XV6_HOT_LOOP_LOCATOR=1` for the ordinary xv6 probe. The option is incompatible
 with native dispatchers and other fetch observers. It adds `hotLoopLocator` to
@@ -34,10 +36,9 @@ partition into completed steps, no-retirement calls, and aborted calls. The
 candidate table is bounded to 4,096 entries and the output to the top 64 per mode;
 eviction is reported, so individual candidate counts are lower bounds after
 eviction while aggregate traversal counters remain exact. Candidate keys
-include guest addresses and observed branch bytes. Keep a commercial Windows
-raw report private; publish only aggregate mode histograms and counts.
+include guest addresses and observed branch bytes.
 
 This diagnostic locates a candidate for a later guarded trace prototype. A
-reproducible >=8-step Windows 16-bit loop and xv6 protected-32 loop would be
+reproducible >=8-step broader guest 16-bit loop and xv6 protected-32 loop would be
 an engineering target, not a proof or speed claim. Its instrumented runtime
 is not a performance A/B.

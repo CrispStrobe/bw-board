@@ -1,5 +1,7 @@
 # bw-board
 
+For CLI and GUI software-loading workflows, supported disk/config formats and x86 backend boundaries, see [the x86 loading guide](docs/X86-LOADING-GUIDE.md).
+
 The circuit simulation and emulated-board engine for Brickwright. It connects
 firmware pin activity to a netlist, solves electrical behavior, updates device
 models and exposes readings for a circuit editor or command-line instruments.
@@ -8,11 +10,11 @@ Runs in browsers and Node.js as an ES-module package. The UI lives in
 [bw-circuit-ui](https://github.com/CrispStrobe/bw-circuit-ui); this repository
 owns shared engine behavior, component models and emulator/debugger integration.
 
-The [cold E16 scalar-ledger paired result](docs/I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS: scalar native used 5.251347× execution CPU against JS on the same host, with all seven measured pairs unfavorable and all 18 terminal proofs passing. Held fusion versus scalar was not measured; no copy-change gain, Windows/full-boot speed or adoption claim follows.
+The [cold E16 scalar-ledger paired result](docs/I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS: scalar native used 5.251347× execution CPU against JS on the same host, with all seven measured pairs unfavorable and all 18 terminal proofs passing. Held fusion versus scalar was not measured; no copy-change gain, general OS/full-boot speed or adoption claim follows.
 
-The [cold E16 MEMORY clock-fusion paired result](docs/I80386-COLD-PAIRED-RESULTS.md#memory-clock-fusion-candidate-keep-plain-js) keeps plain JS: fusion used 5.139261× execution CPU on the same host, with all seven measured pairs unfavorable despite terminal parity in all 18 children. This is not an old-native-versus-fusion comparison or Windows/full-boot speed result.
+The [cold E16 MEMORY clock-fusion paired result](docs/I80386-COLD-PAIRED-RESULTS.md#memory-clock-fusion-candidate-keep-plain-js) keeps plain JS: fusion used 5.139261× execution CPU on the same host, with all seven measured pairs unfavorable despite terminal parity in all 18 children. This is not an old-native-versus-fusion comparison or general OS/full-boot speed result.
 
-The [cold E16 typed-state paired result](docs/I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) keeps plain JS: typed batching was 4.063470× slower in execution CPU on the same host, with all seven measured pairs unfavorable. Terminal correctness passed; this is not a Windows/full-boot speed result.
+The [cold E16 typed-state paired result](docs/I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) keeps plain JS: typed batching was 4.063470× slower in execution CPU on the same host, with all seven measured pairs unfavorable. Terminal correctness passed; this is not a general OS/full-boot speed result.
 
 ## Install and use
 
@@ -109,7 +111,7 @@ The [private span paired CPU gate](docs/I80386-OWNED-SPAN-CPU-RESULTS.md) failed
 
 The [native cold BIOS E16 diagnostic](docs/I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) reached the fixed checkpoint with independent correctness evidence. This is neither full boot nor a speed or adoption result.
 
-The [cold BIOS paired CPU results](docs/I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: batching improves the native one-Q route but uses 4.12× its execution CPU against plain JS on a separate gate. No default adoption or Windows speed claim follows.
+The [cold BIOS paired CPU results](docs/I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: batching improves the native one-Q route but uses 4.12× its execution CPU against plain JS on a separate gate. No default adoption or general OS speed claim follows.
 
 ## LabWired WASM performance (2026-10-01)
 
