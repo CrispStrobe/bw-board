@@ -10,6 +10,13 @@
  *   IN1=IN2 → brake (both outputs same)
  *   Enable=L → coast (outputs high-Z)
  *
+ * The L293D's output CLAMP DIODES (the "D": one from each output up to VCC,
+ * one from ground up to each output) are real solver diodes, added by the
+ * board beside this model (BoardImpl._expandBridgeClampDiodes): a disabled
+ * output is high-Z here, and the motor winding's current, which cannot stop
+ * when EN drops, commutates through them. params.clampDiodes = false gives
+ * the bare L298-style output, which needs external diodes.
+ *
  * @module
  */
 

@@ -50,7 +50,8 @@ setDeviceControl(partId: string, verb: string, value: number|string|Array): bool
 | | pixel | [x, y, r, g, b] | one pixel RGB565 |
 | | fill | [x0,y0,x1,y1,r,g,b] | filled rectangle |
 | servo | angle | number | targetAngle (0–180); slew stays the model's. On a servo an MCU pin drives, ALSO the 50 Hz pulse this servo decodes to that angle, on that pin (setPwm) — so the horn moves by the same decode as an emulated timer's pulses (2026-09-29, Lite B5) |
-| dc_motor | speed | 0–100 | N % duty (clamped) on the MCU pin that drives the motor, via setPwm (2026-09-29, Lite B5) |
+| dc_motor | speed | 0–100 | N % duty (clamped) on the MCU pin that drives the motor, via setPwm (2026-09-29, Lite B5); across an H-bridge channel, on the active IN pin with EN held high (2026-10-05, Lite B7) |
+| | direction | forward / reverse / brake / coast | the L293D truth table on the H-bridge channel across the motor's leads (2026-10-05, Lite B7; see below) |
 | relay | state | 0/1 | force energized (user intent; pending timer cleared) |
 | neopixel | neopixel | [i, r, g, b] | pixels[i] ← RGB |
 | | clearNeopixels | any | all pixels off |
@@ -65,9 +66,13 @@ real on/off intervals, exactly as under `analogWrite`. Several candidate pins
 narrow to the one on an enable (EN/ENA/PWM) net; still several, or none, is
 refused by name ("driven by several MCU pins (...)", "no MCU pin drives it").
 
-`direction` on `dc_motor` is still refused: it needs the two IN pins of an
-H-bridge and a mapping of forward/reverse/brake/coast onto them, which no
-model here carries yet.
+`direction` on `dc_motor` (2026-10-05, Lite B7; spec-updates/set-pwm.md,
+"Motor direction through an H-bridge"): the board finds the `h_bridge`
+channel whose two outputs carry the motor's two leads and the MCU pins on its
+IN pins and EN, and sets forward / reverse / brake / coast by the L293D truth
+table, oriented by the motor's own `a` lead. A motor on one MCU pin turns one
+way (forward accepted, reverse and brake refused by name); a bridge whose
+inputs are not both MCU pins cannot be steered; coast needs an MCU pin on EN.
 
 Drawing verbs set the display on: a learner who prints wants to see it;
 the register-level I2C/SPI paths are untouched and remain authoritative
