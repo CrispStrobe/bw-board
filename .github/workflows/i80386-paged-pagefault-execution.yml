@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: 4d83ce63b035ec04eef6b0fc9c1d8ce7a7456250
+          ref: c7859eab6184f3dd3fc1de6a86144f3039a7f23a
           path: paged-pagefault-driver
           persist-credentials: false
           fetch-depth: 1

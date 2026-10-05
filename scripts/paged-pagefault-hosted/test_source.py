@@ -8,31 +8,34 @@ from parent import derive_int_parent,_INT_PARENT,_INT_PARENT_SHA,derive_fault_co
 from archive import digest,zip_members,tar_members
 from evidence import read_capture,read_outcome,DECODED_CAP,STORED_CAP
 class Controls(unittest.TestCase):
- def proposal(self):
-  c=json.loads((HERE/'contract.json').read_text());validate_contract(c,ready=False);return c
- def test_pending_refuses_before_restoration_or_child(self):
-  c=self.proposal()
-  for status in ['PENDING_FRESH_PF_STATIC_BUILD_AND_READY_DRIVER','ROOT_REVIEWED_PAGED_PAGEFAULT_SOURCE_READY']:
-   c['status']=status
+ def ready(self):
+  c=json.loads((HERE/'contract.json').read_text());validate_contract(c);return c
+ def test_pending_or_null_authority_refuses_before_restoration_or_child(self):
+  for pending in (True,False):
+   c=self.ready()
+   if pending:c['status']='PENDING_FRESH_PF_STATIC_BUILD_AND_READY_DRIVER'
+   else:
+    for key in ('artifactId','runId','zipBytes','zipSha256','addonSha256'):c[key]=None
+    c['zipMembers']={};c['preparedFiles']={}
    with patch('parent.ordinary',return_value=json.dumps(c).encode()),patch('parent.download')as download,patch('parent.exclusive_tree')as restore,patch('parent.bounded')as child:
-    with self.assertRaisesRegex(ValueError,'reviewed fresh PF'):main('enabled')
+    with self.assertRaises(ValueError):main('enabled')
     download.assert_not_called();restore.assert_not_called();child.assert_not_called()
  def test_exact_held_lifecycle_and_fault_context_inverse(self):
   self.assertEqual(digest(_INT_PARENT.read_bytes()),_INT_PARENT_SHA)
   outer=derive_int_parent(_INT_PARENT.read_bytes());self.assertIn('derive_fault_context(derive_transport(',outer)
   expanded=derive_fault_context(derive_transport(derive_stack_parent(_HELD_STACK_PARENT.read_bytes())))
-  self.assertIn("'compiledCount':243",expanded);self.assertIn("'driverCount':105",expanded)
+  self.assertIn("'compiledCount':243",expanded);self.assertIn("'driverCount':106",expanded)
   self.assertIn("('n','q','faults','attemptOrdinal')]==[57,56,1,57]",expanded)
   self.assertIn('readback-before-HLT',expanded);self.assertIn("capture,worker_outcome=read_capture(OUT/'guest')",expanded)
   self.assertIn("report['workerOutcome']=read_outcome(OUT/'guest')",expanded)
   for derive,arg in [(derive_int_parent,b'unknown'),(derive_fault_context,'unknown')]:
    with self.assertRaises(AssertionError):derive(arg)
- def test_closed_pending_source_roles_refuse_invented_artifact(self):
-  self.proposal()
-  mutations=[lambda c:c.update(enabledByDefault=True),lambda c:c.update(driverRevision='f'*40),lambda c:c.update(compiledRevision='e'*40),lambda c:c.update(addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f'),lambda c:c.update(artifactId=11309320742),lambda c:c.update(runId=37218196080),lambda c:c.update(nodeSha256='c'*64),lambda c:c['compiledFiles'].pop(next(iter(c['compiledFiles']))),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json'),lambda c:c['driverFiles'].update({'../escape':{'bytes':0,'sha256':'a'*64}})]
+ def test_closed_fresh_source_roles_refuse_old_or_invented_artifact(self):
+  self.ready()
+  mutations=[lambda c:c.update(enabledByDefault=True),lambda c:c.update(driverRevision='f'*40),lambda c:c.update(compiledRevision='e'*40),lambda c:c.update(addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f'),lambda c:c.update(artifactId=11309320742),lambda c:c.update(runId=37218196080),lambda c:c.update(nodeSha256='c'*64),lambda c:c['compiledFiles'].pop(next(iter(c['compiledFiles']))),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json'),lambda c:c['driverFiles'].update({'../escape':{'bytes':0,'sha256':'a'*64}}),lambda c:c['staticAuthority'].update(preparedManifestSha256='0'*64),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz'),lambda c:c['zipMembers']['paged-pagefault-build-evidence/prepare.json'].update(bytes=2097152)]
   for mutate in mutations:
-   c=self.proposal();mutate(c)
-   with self.assertRaises(ValueError):validate_contract(c,ready=False)
+   c=self.ready();mutate(c)
+   with self.assertRaises(ValueError):validate_contract(c)
  def test_current_git_and_dirty_checkout_are_refused(self):
   with tempfile.TemporaryDirectory()as d:
    root=Path(d);(root/'file').write_bytes(b'owned');record={'file':{'bytes':5,'sha256':digest(b'owned')}}
