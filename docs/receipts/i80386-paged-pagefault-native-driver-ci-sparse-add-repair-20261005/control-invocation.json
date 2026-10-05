@@ -1,0 +1,46 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^frozen source identity includes real fault policy and held multiline checkpoint import$",
+    "test/i80386-paged-pagefault-native-runtime-driver.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-native-runtime-driver-20261005",
+  "head": "e939567e10556ae55028208c372267a64abc0e67",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "sourceCount": 105,
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "scope": "ONE affected CI portable sparse-add identity case: exact clean owned sparse checkout identity plus manufactured tracked/untracked dirty fixture refusal and unchanged caller Git status. No factories/compiler/addon/CPU/native build.",
+  "preparedSourceProvenance": {
+    "path": "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json",
+    "sha256": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+  },
+  "sourceFreeze": {
+    "path": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-source-freeze-20261005/source-freeze.json",
+    "sha256": "eb3e134ef0270062a0749f8cf5da37d4cc0a0afe1775de5c7476f68a9b522dc9"
+  }
+}

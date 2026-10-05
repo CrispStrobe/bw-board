@@ -1,0 +1,66 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "Preserved CI sparse-add option refusal plus one affected portable fixture identity control; production unchanged, no CPU",
+  "records": [
+    {
+      "path": "control-parent.py",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/parent.py",
+      "bytes": 6697,
+      "sha256": "315a5b26db80ce71f2d222b1b37c9d17e7954e19461a399cc1ded30e4f9542cc"
+    },
+    {
+      "path": "control-before.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/before.json",
+      "bytes": 18338,
+      "sha256": "6fa5ef87d6a705ddb47dd590ed3c6c580993a5a5ad4d25fdc9c9f0c667cba808"
+    },
+    {
+      "path": "control-after.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/after.json",
+      "bytes": 18338,
+      "sha256": "6fa5ef87d6a705ddb47dd590ed3c6c580993a5a5ad4d25fdc9c9f0c667cba808"
+    },
+    {
+      "path": "control-invocation.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/invocation.json",
+      "bytes": 1676,
+      "sha256": "0b5b85e59cae8dc9ec9b88310ad2969263246e73891db3a4dbb545c8f10f6b51"
+    },
+    {
+      "path": "control-exit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/exit.json",
+      "bytes": 569,
+      "sha256": "2e4bd560896ae4608195d0e09f339c305e2309166e6693ca6e5ecacaf5ecb7d8"
+    },
+    {
+      "path": "control-stdout",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/stdout",
+      "bytes": 366,
+      "sha256": "ca963fe2d4550ffd71483fcccf5214225bb74d837ad256d1ad739cf31812df3f"
+    },
+    {
+      "path": "control-stderr",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "failed-ci-origin.json",
+      "origin": "/tmp/pf-ci-sparse-add-failure-20261005/origin.json",
+      "bytes": 465,
+      "sha256": "d1a95750e2d2ddcbc4379654632df416e2f970ffcd4e4fe9b937755bf9544f08"
+    },
+    {
+      "path": "failed-ci-identity-failure.txt",
+      "origin": "/tmp/pf-ci-sparse-add-failure-20261005/identity-failure.txt",
+      "bytes": 6062,
+      "sha256": "9c7136333e02ab4316bb17acc5bc4b1aa160d10abb0f831784f4c068ad22fb31"
+    },
+    {
+      "path": "independent-audit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-sparse-add-controls-20261005/independent-audit.json",
+      "bytes": 612,
+      "sha256": "25a6b409fd932f04460fb53e9a75d888f48a8677c786a1ebfeba69529b1c91aa"
+    }
+  ]
+}
