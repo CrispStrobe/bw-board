@@ -1,0 +1,19 @@
+{
+  "origin": "/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004/selected/cold-ledger-scalars-qualification/guest/receipt/receipt.json",
+  "originBytes": 1935333,
+  "originSha256": "1876c3ee80679b5b54cf3bc4cd6b3396d3d0c6fe556a632913cc983918fa46b0",
+  "field": "lastReturnedNative",
+  "projectedKeys": [
+    "sliceBytes",
+    "reason",
+    "activityState",
+    "chargedNativeTicks",
+    "chargedQuanta",
+    "nativeTicks",
+    "successfulQuanta",
+    "mappingEpoch",
+    "boardA20"
+  ],
+  "fixtureSha256": "481fbddaec53aadc78c4fdb13413452621ed0200d6d3e573bd720eb8e73913c7",
+  "scope": "Exact nine-field projection from genuine previously qualified scalar terminal return; not new compact-native execution. Board/JS/onePIO composition fixtures remain manufactured."
+}
