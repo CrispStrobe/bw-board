@@ -1,0 +1,21 @@
+{
+  "revision": "07a1cdb4db7d10d70ecd7caee1ac6b81ce4abd2f",
+  "hashes": {
+    "scripts/bochs-cpu3-native-property-key-cache/README.md": "49dfd6b012069dae6f3ccdcecf6e7c548ed7c209d3efd2e53df5184db77905ce",
+    "scripts/bochs-cpu3-native-property-key-cache/held-napi.cc": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+    "scripts/bochs-cpu3-native-property-key-cache/keys.inc": "e3232eda391e1d1e2dd96c8f8fc9e7b997ba13df509c6f63882c27db0043fe4c",
+    "scripts/bochs-cpu3-native-property-key-cache/keys.json": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409",
+    "scripts/bochs-cpu3-native-property-key-cache/mock.cc": "215645bd1d07854d2c353dd25c30f1794dc0abf59b92f227ed22ada1f102cc15",
+    "scripts/bochs-cpu3-native-property-key-cache/napi.mjs": "dc507cb0300d9bbdb18fc8b94ff7cc4cd34d2c45c1ba62f046915ef74b5a54f1",
+    "test/i80386-native-property-key-cache-source.test.mjs": "0eeb5245dc2a4f9f1a8deacb6800669e709ce7019b465ed135eb30e633d5580d"
+  },
+  "expectedHelperSha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+  "nodeHeaderFiles": {
+    "/tmp/node-v22.23.3-linux-x64/include/node/node_api.h": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a",
+    "/tmp/node-v22.23.3-linux-x64/include/node/node_api_types.h": "088766b3cf1f0cd9b292c361ad30f7a04e7cc6db35a20ca52c572c1adf9635e7",
+    "/tmp/node-v22.23.3-linux-x64/include/node/js_native_api.h": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8",
+    "/tmp/node-v22.23.3-linux-x64/include/node/js_native_api_types.h": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156"
+  },
+  "headerProvenanceScope": "Locally pinned fixed22.23.3 installation headers; official archive authentication required before build",
+  "sourceOnly": true
+}
