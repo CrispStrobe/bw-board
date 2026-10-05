@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "revision": "428839a2ed79b43056a72ba3059a699ab988d7ba",
+  "auditedSourcePaths": 96,
+  "actualRuntimePaths": 92,
+  "returnedIdentitySha256": "71e2caa4b1689f2ab88cad9758eb1bb4281f1563d057104b098e7760158af3b6",
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.494606737047434,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 1.1573861837387085,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.49982,
+      "systemSeconds": 0.699307,
+      "maxRSSKiB": 64028
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "scope": "ONE_READONLY_ACTUAL_IDENTITY_QUERY_NO_SETUP_ADDON_GUEST_PERF"
+}
