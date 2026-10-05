@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import {Worker} from 'node:worker_threads';
 const contract=JSON.parse(readFileSync(new URL('./contract.json',import.meta.url),'utf8'));
 if(contract.status!=='ROOT_REVIEWED_REAL_NAPI_FIXTURE_READY'||!contract.addonSha256||!contract.generatedHelperSha256||!contract.buildReceiptSha256)throw Error('PENDING real-NAPI fixture authority; no addon load');
-const path=new URL(contract.addonPath,import.meta.url);
+if(contract.addonPath!=='./owned-build/key_fixture.node')throw Error('fixed addon path required');
+const path=new URL('./owned-build/key_fixture.node',import.meta.url);
 assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'),contract.addonSha256);
 const api=createRequire(import.meta.url)(path.pathname);
 const original=new Error('getter original'),setterError=new Error('setter original');
@@ -31,18 +32,19 @@ try{
  // Allocation pressure and GC are behavior checks, not leak accounting.
  assert.equal(api.readBytes({bytes:23}),23);
 }catch(e){primary=e;}finally{if(prepared)try{api.release();}catch(e){cleanupErrors.push({phase:'main-release',message:e.message});}}
-if(!primary&&!cleanupErrors.length)assert.throws(()=>api.readBytes({bytes:1}),/keys unavailable/);
+
 const active=new Set();
 function launch(role){
  const worker=new Worker(new URL('./env-worker.mjs',import.meta.url),{workerData:role});active.add(worker);
- const messages=[];let wake=null,workerError=null;
+ const messages=[];let wake=null,workerError=null,exited=false;
  worker.on('message',value=>{messages.push(value);if(wake){wake();wake=null;}});
- const exit=new Promise(resolve=>{worker.once('error',e=>{workerError=e;if(wake){wake();wake=null;}});worker.once('exit',code=>{active.delete(worker);resolve({code,error:workerError?.message??null});if(wake){wake();wake=null;}});});
- return {worker,exit,async expect(value){while(!messages.length){if(workerError)throw workerError;await new Promise(resolve=>{wake=resolve;});}assert.equal(messages.shift(),value);},async cleanExit(){const outcome=await exit;assert.equal(outcome.code,0);assert.equal(outcome.error,null);}};
+ const exit=new Promise(resolve=>{worker.once('error',e=>{workerError=e;if(wake){wake();wake=null;}});worker.once('exit',code=>{exited=true;active.delete(worker);resolve({code,error:workerError?.message??null});if(wake){wake();wake=null;}});});
+ return {worker,exit,async expect(value){while(!messages.length){if(workerError)throw workerError;if(exited)throw Error('worker EOF before expected message');await new Promise(resolve=>{wake=resolve;});}assert.equal(messages.shift(),value);},async cleanExit(){const outcome=await exit;assert.equal(outcome.code,0);assert.equal(outcome.error,null);}};
 }
 const envRecords=[];
 try{
  if(primary||cleanupErrors.length)throw primary??new Error('main release failed');
+ assert.throws(()=>api.readBytes({bytes:1}),/keys unavailable/);
  for(const command of ['release','teardown']){
   const owner=launch('owner');await owner.expect('owner-prepared');
   const foreign=launch('foreign');await foreign.expect('foreign-denied');await foreign.cleanExit();
