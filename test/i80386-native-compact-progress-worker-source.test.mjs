@@ -6,7 +6,7 @@ import {validateCandidateBinding} from '../scripts/cold-native-compact-progress-
 import {validateProgressProfile,validateProgressReturn} from '../scripts/cold-native-compact-progress-performance/protocol.mjs';
 const own=new URL('../scripts/cold-native-compact-progress-performance/',import.meta.url);
 test('closed pending compact binding refuses before caller artifact effects',()=>{
- const b=JSON.parse(readFileSync(new URL('capture-binding.json',own)));assert.equal(b.status,'PENDING_INDEPENDENT_COMPACT_BUILD');assert.equal(b.candidateBuild.addonSha256,null);let touched=0;const input={get compiledRevision(){touched++;throw Error('caller effect');}};assert.throws(()=>validateCandidateBinding(b,input),/PENDING compact artifact/);assert.equal(touched,0);
+ const b=JSON.parse(readFileSync(new URL('capture-binding.json',own)));assert.equal(b.status,'INDEPENDENT_COMPACT_BUILD_READY');b.status='PENDING_INDEPENDENT_COMPACT_BUILD';let touched=0;const input={get compiledRevision(){touched++;throw Error('caller effect');}};assert.throws(()=>validateCandidateBinding(b,input),/PENDING compact artifact/);assert.equal(touched,0);
 });
 test('actual compact progress guards reject fallback/full snapshots and mutations',()=>{
  const api={progressExportProfile:'bw.cold-native.compact-progress.v1',resumeProgress(){},inspect(){}};validateProgressProfile(api);assert.throws(()=>validateProgressProfile({...api,resumeProgress:undefined}));assert.throws(()=>validateProgressProfile({...api,progressExportProfile:'old'}));

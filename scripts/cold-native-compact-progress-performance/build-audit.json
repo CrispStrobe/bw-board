@@ -1,3 +1,32 @@
 {
-  "status": "PENDING_INDEPENDENT_COMPACT_BUILD_AUDIT"
+  "status": "INDEPENDENT_COMPACT_STATIC_BUILD_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "runId": 37260140804,
+  "artifactId": 11323824722,
+  "artifactBytes": 7770614,
+  "artifactSha256": "bbe77a630e6789beac60424cf85f254d0156acc310bcf2b3e277932120760ba0",
+  "sourceInputs": 163,
+  "sourceTarGitEqual": true,
+  "preBuildInputs": 780,
+  "preparedTarInputs": 810,
+  "preInputsPreserved": true,
+  "tarEqualsPostWithoutAddon": true,
+  "preparedHashes": {
+    "bochs/cpu/bw_slice_runtime.inc": "c313c842c4b405e859191b05f4e2f4b9bc535b7a581c2fa2fd17f016fd67e445",
+    "bochs/cpu/bw_slice_abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "bochs/bochs-cpu3-native-direct-board/abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "e2dd44b17846cd20163d38b78fae4f7cf86b33806f06eb73b976fd4a828d0e68"
+  },
+  "addonSha256": "0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d",
+  "addonBytes": 2070080,
+  "requiredExports": [
+    "bw_direct_initialize",
+    "bw_direct_resume",
+    "bw_direct_set_irq_line",
+    "bw_direct_inspect",
+    "bw_direct_close",
+    "napi_register_module_v1",
+    "bw_memory_fusion"
+  ],
+  "profile": "bw.cold-native.compact-progress.v1",
+  "scope": "Stream sole ZIP and nested tar, compare immutable Git/source maps and static tapes; no extraction, helper execution, compiler, addon load or guest. Build used host libnode-dev18 headers separately from real-helper Node22 header qualification."
 }

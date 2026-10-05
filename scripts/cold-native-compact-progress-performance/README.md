@@ -1,6 +1,6 @@
 # Compact progress performance worker source
 
-PENDING actual compact build/audit binding. No provider construction/addon/guest/benchmark has run. The owned binding has null new artifact identities and refuses before compiled module import/provider/addon load. Existing historical capture authority remains distinct.
+Actual compact static build/audit is bound; genuine guest qualification remains PENDING. No provider construction/addon/guest/benchmark has run. The owned binding authenticates exact e480/163 inputs, generated NAPI e2dd, DSO032304 and governing independent static audit. The separate source-owned qualifier and paired authority remain PENDING, and no guest is enabled by static admission alone. Existing historical capture authority remains distinct.
 
 The worker explicitly requires the compact profile and calls resumeProgress, never resume fallback. It retains actual full reset, zero-progress event cuts, last-resume inspect and final inspect166; compact returns cannot satisfy full snapshot validators. The zero-progress architectural signature still uses an actual full inspect inside the timed loop and is counted honestly. Other full evidence, settlement/hash/PIO comparison and ownership checks occur outside timing. The original scalar/166 diagnostic worker is untouched.
 

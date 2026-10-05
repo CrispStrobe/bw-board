@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-native-compact-progress.capture-binding.v1",
-  "status": "PENDING_INDEPENDENT_COMPACT_BUILD",
+  "status": "INDEPENDENT_COMPACT_BUILD_READY",
   "captureAuthority": {
     "schema": "bw.cold-native-performance.capture-binding.v1",
     "status": "INDEPENDENTLY_AUDITED_CAPTURE_READY",
@@ -13,16 +13,22 @@
     "targetQ": 316562
   },
   "candidateBuild": {
-    "sourceRevision": null,
-    "sourceContextSha256": null,
-    "sourceInputs": null,
+    "sourceRevision": "e4807d0647ab1e151755811ff8ef53d493ebf6ff",
+    "sourceContextSha256": "532d9675cb1d462098ecaf50e12118c38840d38bc169f2d20029d2130cd1a608",
+    "sourceInputs": 163,
     "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
     "memoryFusionProfile": "bw.cold-native.memory-clock-fusion.v1",
     "progressExportProfile": "bw.cold-native.compact-progress.v1",
-    "napiSha256": null,
-    "addonSha256": null,
-    "addonBytes": null,
-    "officialArtifact": null,
-    "independentBuildAuditSha256": null
+    "napiSha256": "e2dd44b17846cd20163d38b78fae4f7cf86b33806f06eb73b976fd4a828d0e68",
+    "addonSha256": "0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d",
+    "addonBytes": 2070080,
+    "officialArtifact": {
+      "id": 11323824722,
+      "sizeInBytes": 7770614,
+      "sha256": "bbe77a630e6789beac60424cf85f254d0156acc310bcf2b3e277932120760ba0",
+      "runId": 37260140804,
+      "headSha": "e4807d0647ab1e151755811ff8ef53d493ebf6ff"
+    },
+    "independentBuildAuditSha256": "acfca07a36c90628f712fdbd414d268c70eabb91fb4272dbb2dc5ea77a44760b"
   }
 }

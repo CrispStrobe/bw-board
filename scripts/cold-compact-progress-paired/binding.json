@@ -1,0 +1,19 @@
+{
+  "schema": "bw.cold-compact-progress.paired-binding.v1",
+  "status": "PENDING_AUTHENTICATED_COMPACT_SETUP",
+  "protocol": {
+    "warmupPairs": 2,
+    "measuredPairs": 7,
+    "alternating": true,
+    "firstBaseline": true
+  },
+  "criteria": {
+    "primaryMetric": "executionProcessCpuSeconds",
+    "meanReductionAtLeast": 0.1,
+    "allSevenCandidateFaster": true
+  },
+  "compiledRevision": null,
+  "compiledFiles": null,
+  "workers": null,
+  "nativeInput": null
+}
