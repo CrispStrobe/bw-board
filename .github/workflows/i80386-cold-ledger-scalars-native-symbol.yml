@@ -79,14 +79,16 @@ jobs:
         run: |
           export BW_COLD_NODE="$(command -v node)"
           python3 -B runtime/scripts/cold-ledger-scalars-native-symbol-hosted/hosted.py enabled
+      - name: Export first evidence after hosted finalization
+        if: always()
+        run: |
+          timeout --signal=TERM --kill-after=5s 65s sudo -n -- /usr/bin/env -i PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 GITHUB_SHA="${{ github.sha }}" /usr/bin/python3 -I -B runtime/scripts/cold-ledger-scalars-native-symbol-hosted/export-evidence.py
       - name: Retain first outcome and raw recording
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: cold-ledger-scalars-native-symbol-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/cold-ledger-scalars-native-symbol
-            ${{ runner.temp }}/cold-ledger-scalars-native-symbol-parent
+          path: ${{ runner.temp }}/cold-ledger-scalars-native-symbol-export
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

@@ -1,0 +1,17 @@
+{
+  "result": "ROOT_FIRST_PROFILE_FAILURE_RETAINED_NO_ARTIFACT",
+  "run": 37243459679,
+  "sourceHead": "e823dc3dfbcd6e8f98e918eeeff1ab77c21e008d",
+  "attempt": 1,
+  "officialArtifactCount": 0,
+  "visibleFailure": "Observer exited unsuccessfully; uploader could not enumerate root-owned mode0711 output",
+  "originalObserverCause": "unknown: observer streams were not exported",
+  "setupExtent": "Source-attested setup child passed before observer launch",
+  "workerLaunch": "unknown",
+  "nativeGuestExtent": "unknown",
+  "rawRecording": "unknown and unavailable",
+  "samplingQualified": false,
+  "hotspots": "unavailable",
+  "retryPerformed": false,
+  "officialLogSha256": "5e5284ab640b40ffdcd6f9c7689b67ab26db6a076f3caca645768dbe20e27eaf"
+}

@@ -1,7 +1,7 @@
 """Owned root watchdog around fixed recorder; no caller tool/source arguments."""
 import sys
 sys.dont_write_bytecode=True
-import os,signal,importlib.util
+import os,signal,importlib.util,json
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from policy import contract,require
@@ -42,13 +42,17 @@ def main():
   require(recorder.ROOT==WS/'symbol-worker','fixed recorder source role')
   for sig in (signal.SIGINT,signal.SIGTERM,signal.SIGALRM):signal.signal(sig,recorder.interrupted)
   signal.alarm(c['rootWatchdogSeconds']);report['watchdogSeconds']=c['rootWatchdogSeconds'];recorder.main();report['status']='RAW_RECORDER_OUTCOME_REQUIRES_INDEPENDENT_TERMINAL_SAMPLE_AUDIT'
- except BaseException as error:primary=error;report['error']=repr(error);raise
+ except BaseException as error:
+  primary=error;report['error']=repr(error);print(json.dumps({'scope':'Original root recorder exception, no inferred guest extent','primary':repr(error)[:4096]}),file=sys.stderr,flush=True);raise
  finally:
   signal.alarm(0)
+  for sig in (signal.SIGINT,signal.SIGTERM):signal.signal(sig,signal.SIG_IGN)
   if recorder is not None:
    for name,child in list(recorder.ACTIVE.items()):
     try:
-     if child.poll() is None:recorder.terminate(child)
+     live=child.poll() is None
+     if live:recorder.terminate(child)
+     report.setdefault('childCleanup',{})[name]={'pid':child.pid,'exitCode':child.returncode,'groupCleanupAttempted':live,'alreadyReaped':not live}
     except BaseException as error:report.setdefault('cleanupErrors',{})[name]=repr(error)
   finish_root(report,c,before,primary)
 if __name__=='__main__':require(len(sys.argv)==1,'no caller root authority');main()

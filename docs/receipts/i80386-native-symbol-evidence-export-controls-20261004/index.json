@@ -1,0 +1,37 @@
+{
+  "scope": "One source-only selected Node wrapper with eight named Python filesystem/lifecycle methods, no live privileged exporter or recorder",
+  "testedRevision": "d35b10efabd2d66eb491a3620db1cc7b427b6223",
+  "parentSha256": "9295560a4221b61d624d7926f6dca823c4c2572d7d32e7bcd916bc94f1d180fc",
+  "records": {
+    "stdout": {
+      "bytes": 2332,
+      "sha256": "3fbdb705e288ceecdb25d64fdc6e570300a8338a6bc4d5ee0df8c8c81c671c60",
+      "origin": "/tmp/native-cold-native-symbol-evidence-export-pure-controls-20261004/stdout"
+    },
+    "exit.json": {
+      "bytes": 559,
+      "sha256": "d4572fa23db2f88658dd20780ae80d22ab9d37a051485635cfeefd6f07621898",
+      "origin": "/tmp/native-cold-native-symbol-evidence-export-pure-controls-20261004/exit.json"
+    },
+    "invocation.json": {
+      "bytes": 1182,
+      "sha256": "f16077e3bf95e9e47ae11e55c1cede979d47e42ea8316043e1e70da01e888e29",
+      "origin": "/tmp/native-cold-native-symbol-evidence-export-pure-controls-20261004/invocation.json"
+    },
+    "root-actual-audit.json": {
+      "bytes": 519,
+      "sha256": "c7099127b50150f1c80045b95148b085dabea0e93ddf03cd37053e3d9b32f7d5",
+      "origin": "/tmp/native-cold-native-symbol-evidence-export-pure-controls-20261004/root-actual-audit.json"
+    },
+    "agent-actual-audit.json": {
+      "bytes": 1107,
+      "sha256": "abd14fa74d2f7519ce5ea1e4dba38a0f4f90b7d958e38575c4e99823f7cae4d7",
+      "origin": "/tmp/native-cold-native-symbol-evidence-export-pure-controls-20261004/agent-actual-audit.json"
+    },
+    "independent-audit.json": {
+      "bytes": 612,
+      "sha256": "3f8ccb5ef6ea5c2b5806e908bb30ec439bfdb450b08f48a3d801725414f8b9c6",
+      "origin": "/tmp/native-cold-native-symbol-evidence-export-pure-controls-20261004/independent-audit.json"
+    }
+  }
+}
