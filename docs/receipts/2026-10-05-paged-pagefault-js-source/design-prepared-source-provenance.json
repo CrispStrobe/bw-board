@@ -1,0 +1,54 @@
+{
+  "status": "READ_ONLY_PREPARED_SOURCE_REVIEW",
+  "staticZipPath": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+  "staticZipSha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+  "tarMember": "paged-int-iret-build-evidence/prepared-source.tar.gz",
+  "selectedPreparedSources": {
+    "bochs/cpu/exception.cc": {
+      "bytes": 37313,
+      "sha256": "5701d81b89fda61a6c357e63fff653718f6eb6115e3a23d7b23ade15e5d9eb08",
+      "tarMember": "bochs/cpu/exception.cc"
+    },
+    "bochs/cpu/iret.cc": {
+      "bytes": 19845,
+      "sha256": "afd03e8eef2e9e90470314c807161ebb2ad44397b29c3f775dec7a866b2dbdae",
+      "tarMember": "bochs/cpu/iret.cc"
+    },
+    "bochs/cpu/paging.cc": {
+      "bytes": 98546,
+      "sha256": "e72fcf4f21a32b5618eeeb2e783f4faef8feea4f2d1f0dc8b3cb6515858e4f5d",
+      "tarMember": "bochs/cpu/paging.cc"
+    },
+    "bochs/cpu/cpu.cc": {
+      "bytes": 26033,
+      "sha256": "16a7b2a3640f2fb3d8df92f8916f8d5bc628e6ed8a7658c07b8db1c101ec80d9",
+      "tarMember": "bochs/cpu/cpu.cc"
+    },
+    "bochs/cpu/access.cc": {
+      "bytes": 16709,
+      "sha256": "1ac261289fd31feded2b4e123f6aedf795277298e5adea946edabb94089bd526",
+      "tarMember": "bochs/cpu/access.cc"
+    },
+    "bochs/cpu/crregs.cc": {
+      "bytes": 52371,
+      "sha256": "f39cb6b7b1f7b030690104dcd31e839651a6d343784d8a072e5b337d17fcd374",
+      "tarMember": "bochs/cpu/crregs.cc"
+    },
+    "bochs/cpu/access.h": {
+      "bytes": 12524,
+      "sha256": "c9f74122f4039120d26e21bf301f0ee03da6c4c80544627e6887557cdb537a65",
+      "tarMember": "bochs/cpu/access.h"
+    },
+    "bochs/cpu/access2.cc": {
+      "bytes": 48083,
+      "sha256": "3f3097d09db1d56eed0b22d23ddab3852389227ab0f2dab4ca75119c24b96a37",
+      "tarMember": "bochs/cpu/access2.cc"
+    },
+    "bochs/cpu/cpu.h": {
+      "bytes": 285397,
+      "sha256": "9b686170fbf233886af05be619192192a6864a0cd003402067de027708f496cf",
+      "tarMember": "bochs/cpu/cpu.h"
+    }
+  },
+  "scope": "Nine selected source files, streamed existing TAR; no full tree, build, addon or guest."
+}

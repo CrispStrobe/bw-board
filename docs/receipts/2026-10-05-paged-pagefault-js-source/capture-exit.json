@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "mode": "oracle",
+  "pid": 3774698,
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "reaped": true,
+  "timeout": false,
+  "primaryError": null,
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "rusage": {
+    "userSeconds": 1.128464,
+    "systemSeconds": 0.133273,
+    "maxRssKiB": 105324,
+    "scope": "wait4 leader plus descendants already reaped by it; not cgroup attribution"
+  },
+  "rawExitWallSeconds": 2.5929788909852505,
+  "tests": 1,
+  "passes": 1,
+  "failures": 0,
+  "skips": 0,
+  "capture": {
+    "bytes": 5913156,
+    "sha256": "6ea098a534da4681cdbb3bcaadf6918a9ed4a882ab230d87ff16c394e00803c7",
+    "attemptOrdinal": 57,
+    "q": 56,
+    "frames": 58,
+    "cuts": 19,
+    "ramSha256": "041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94"
+  },
+  "cleanupGroupKill": "already absent",
+  "finalAuthInclusiveWallSeconds": 4.2498714830726385
+}

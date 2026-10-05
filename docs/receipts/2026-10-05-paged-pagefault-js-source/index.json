@@ -1,0 +1,135 @@
+{
+  "schema": "bw.paged-pagefault.js-source-origin-index.v1",
+  "testedSource": "75be9c4aaa9fe08ff2adbffa47ff8cc1335b19d2",
+  "scope": "Compact exact source/control/audit records and labelled saved JS selections; no native PF proof",
+  "records": {
+    "first-parent.py": {
+      "bytes": 7814,
+      "sha256": "c51a54787599c980be0036c61ad09483eb693f5fa0b4ae95cb9324a06e30c5bc",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/parent.py"
+    },
+    "first-invocation.json": {
+      "bytes": 1336,
+      "sha256": "21616b21be9273d576f84c594bd80f021d323bd5ea54575447af324c4548dc1f",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/invocation.json"
+    },
+    "first-before.json": {
+      "bytes": 8315,
+      "sha256": "382fa05bf66f667478facc51f624dd3761311f7c5ee2eb2045edcf3d2b0c73d7",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/before.json"
+    },
+    "first-after.json": {
+      "bytes": 8315,
+      "sha256": "382fa05bf66f667478facc51f624dd3761311f7c5ee2eb2045edcf3d2b0c73d7",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/after.json"
+    },
+    "first-stdout": {
+      "bytes": 3503,
+      "sha256": "a0ce7c4cab4866230c6a1aed2a0598cd4d122f4345c3969f81189979aaec563a",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/stdout"
+    },
+    "first-stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/stderr"
+    },
+    "first-exit.json": {
+      "bytes": 629,
+      "sha256": "34741e2ea4de1cda2774f51e36044e2216cd1d5d1903a0a6062c92601b7308d4",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/exit.json"
+    },
+    "first-independent-audit.json": {
+      "bytes": 1298,
+      "sha256": "407d861a24ba6ce44df3d216c3c315e250045a36e9e7df707225bc9a3582350d",
+      "origin": "/tmp/native-paged-pagefault-source-controls-20261005/independent-audit.json"
+    },
+    "capture-parent.py": {
+      "bytes": 11435,
+      "sha256": "4ac6e9d3e0dea1e80ef024716ab74deec6b2ce6db6a2cbe5fd57020ed5b1231c",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/parent.py"
+    },
+    "capture-invocation.json": {
+      "bytes": 2987,
+      "sha256": "765767b8e0c51a38867f81c48922f12cccc37416249427dddf27d508eebfaa48",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/invocation.json"
+    },
+    "capture-before.json": {
+      "bytes": 8449,
+      "sha256": "b64bdc817d8989d9352b4eb38aa166c3dff70137ab17f9658bfd1f6423c670b0",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/before.json"
+    },
+    "capture-after.json": {
+      "bytes": 8449,
+      "sha256": "b64bdc817d8989d9352b4eb38aa166c3dff70137ab17f9658bfd1f6423c670b0",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/after.json"
+    },
+    "capture-stdout": {
+      "bytes": 1866,
+      "sha256": "b15142955e4ffd04ab1a4c9d8437f932be0f73f596aa131f71c8434efee3e2cb",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/stdout"
+    },
+    "capture-stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/stderr"
+    },
+    "capture-exit.json": {
+      "bytes": 885,
+      "sha256": "714051a478cc12c1529a2adaa2c5247f9deb72f17b92792ee3081ad325ef3f73",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/exit.json"
+    },
+    "capture-independent-audit.json": {
+      "bytes": 1072,
+      "sha256": "caa066ba03f818078fb489863ce6dcc835b56aa87f6b7292d9fe9c8c00da4255",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/independent-audit.json"
+    },
+    "coder-saved-capture-audit.json": {
+      "bytes": 1020,
+      "sha256": "29cc15c8bd7eae42633c95f1f4ae17300bcdedae04804e70f806bc257c151984",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/coder-saved-capture-audit.json"
+    },
+    "compact-selected-fields.json": {
+      "bytes": 228116,
+      "sha256": "86b58a813640e13f2bc0f3a8546b2cc4d38039fef0e5d07a2e3baf2bb5e66edc",
+      "origin": "/tmp/native-paged-pagefault-source-oracle-20261005/compact-selected-fields.json"
+    },
+    "source-freeze.json": {
+      "bytes": 8273,
+      "sha256": "ff47b27ea2a546c29ff81f6bb64af8cd9662647b2722c1cfbd0267043f3991e8",
+      "origin": "/tmp/native-paged-pagefault-source-freeze-20261005/source-freeze.json"
+    },
+    "capture-only-proposal.json": {
+      "bytes": 1334,
+      "sha256": "f5b4ae617719af044925760fee65a058bcffa3d9876afdfa0c6bc76cc6f6ae68",
+      "origin": "/tmp/native-paged-pagefault-source-freeze-20261005/capture-only-proposal.json"
+    },
+    "design-plan.json": {
+      "bytes": 19219,
+      "sha256": "63154664dd688db0581e49621fb93883030b48977c10f08f1fb7bfdafaddd7e7",
+      "origin": "/tmp/native-paged-pagefault-recovery-design-20261005/plan.json"
+    },
+    "design-plan.md": {
+      "bytes": 6134,
+      "sha256": "8ab0b1011f8068088946db7f0848f1adb64907e66ae42feba6f85a11c83a7196",
+      "origin": "/tmp/native-paged-pagefault-recovery-design-20261005/plan.md"
+    },
+    "design-prepared-source-provenance.json": {
+      "bytes": 2058,
+      "sha256": "1958278fbbfa20417db127876a53bc146cce033efe367dda41fb3b6e483106f3",
+      "origin": "/tmp/native-paged-pagefault-recovery-design-20261005/prepared-source-provenance.json"
+    },
+    "design-source-selection-correction.json": {
+      "bytes": 276,
+      "sha256": "01c68f23a862e582aa2a5870ad5b37c9826ad5d3385b0595d3e9649daf2c9551",
+      "origin": "/tmp/native-paged-pagefault-recovery-design-20261005/source-selection-correction.json"
+    }
+  },
+  "externalCapture": {
+    "path": "/tmp/native-paged-pagefault-source-oracle-20261005/js-control.json",
+    "bytes": 5913156,
+    "sha256": "6ea098a534da4681cdbb3bcaadf6918a9ed4a882ab230d87ff16c394e00803c7"
+  },
+  "historicalFirstOutcome": "Wrapper FAIL expected6; actualseven childPASS including genuine program without fullcapture. Preserved unchanged.",
+  "actualCaptureOutcome": "ONE separately root-approved positively selected JS case PASS; no unchanged six-case rerun.",
+  "archiveContainsFullCapture": false
+}

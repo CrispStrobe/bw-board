@@ -1,0 +1,17 @@
+TAP version 13
+# {"scope":"tiny actual private JS PF source control","attempts":57,"q":56,"cuts":[{"name":"reset","q":0,"attemptOrdinal":0,"faultSerial":0},{"name":"after-LGDT","q":36,"attemptOrdinal":36,"faultSerial":0},{"name":"after-LIDT","q":37,"attemptOrdinal":37,"faultSerial":0},{"name":"CR3-ready","q":39,"attemptOrdinal":39,"faultSerial":0},{"name":"PE-enabled","q":41,"attemptOrdinal":41,"faultSerial":0},{"name":"DS-ready","q":43,"attemptOrdinal":43,"faultSerial":0},{"name":"SS-loaded","q":44,"attemptOrdinal":44,"faultSerial":0},{"name":"SP-ready","q":45,"attemptOrdinal":45,"faultSerial":0},{"name":"PG-enabled","q":47,"attemptOrdinal":47,"faultSerial":0},{"name":"entered-paged-code","q":48,"attemptOrdinal":48,"faultSerial":0},{"name":"before-faulting-store","q":49,"attemptOrdinal":49,"faultSerial":0},{"name":"entered-PF-handler","q":49,"attemptOrdinal":50,"faultSerial":1},{"name":"PTE-repaired","q":50,"attemptOrdinal":51,"faultSerial":1},{"name":"CR3-read","q":51,"attemptOrdinal":52,"faultSerial":1},{"name":"CR3-reloaded","q":52,"attemptOrdinal":53,"faultSerial":1},{"name":"error-discarded","q":53,"attemptOrdinal":54,"faultSerial":1},{"name":"returned-for-retry","q":54,"attemptOrdinal":55,"faultSerial":1},{"name":"retry-committed","q":55,"attemptOrdinal":56,"faultSerial":1},{"name":"readback-before-HLT","q":56,"attemptOrdinal":57,"faultSerial":1}],"stores":37,"updates":11,"ramSha256":"041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94"}
+# Subtest: bounded actual private JS page fault repair CR3 reload IRET and once-only retry retains genuine effects
+ok 1 - bounded actual private JS page fault repair CR3 reload IRET and once-only retry retains genuine effects
+  ---
+  duration_ms: 771.092863
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1025.056613
