@@ -1,0 +1,15 @@
+{
+  "status": "PASS_SOURCE_MOCK_ONLY",
+  "testedRevision": "83a081650397d5e1e95845b3aa65402f12b49ece",
+  "sourceCurrentGitPairs": 7,
+  "fullBeforeAfterEqual": true,
+  "rawNodeTests": 3,
+  "pass": 3,
+  "fail": 0,
+  "skip": 0,
+  "generatedHelperMockCompiledAndRan": true,
+  "limitations": [
+    "No real NAPI/GC/addon/Bochs/guest/parity/speed proof",
+    "Initial 7aed three inverse failures preserved separately"
+  ]
+}

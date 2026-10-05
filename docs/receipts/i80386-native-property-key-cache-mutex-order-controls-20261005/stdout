@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: exact complete counted inverse and fixed indexed key callsites
+ok 1 - exact complete counted inverse and fixed indexed key callsites
+  ---
+  duration_ms: 20.858984
+  type: 'test'
+  ...
+# Subtest: generated lifecycle and held callbacks/core-state wiring stay explicit
+ok 2 - generated lifecycle and held callbacks/core-state wiring stay explicit
+  ---
+  duration_ms: 14.618889
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 206.042915
