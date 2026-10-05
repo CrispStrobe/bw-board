@@ -816,6 +816,16 @@ export function inferNetlist(stc, opts) {
   nets.push(vccNet);
   nets.push(gndNet);
 
+  // A PART's pins are the chip's pins too. The MCU's terminals were taken
+  // from PIN declarations alone, so a net wired to a PART's pin named a
+  // terminal the chip did not have: on a board-specific MCU part the drive
+  // never reached the net (an HC-SR04 TRIG that stayed at 0 V).
+  for (const n of nets) {
+    for (const t of n.terminals) {
+      if (t.part === 'MCU' && !mcuTerminals.includes(t.terminal)) mcuTerminals.push(t.terminal);
+    }
+  }
+
   return { parts, nets, notes };
 }
 
