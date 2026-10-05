@@ -1,0 +1,823 @@
+{
+  "scope": "READONLY_FULL_HELD_TERMINAL_ONLY_NO_TOOL_GUEST_OR_SAMPLING_QUALIFICATION",
+  "status": "PASS_FULL_HELD_TERMINAL_NOT_OBSERVER_OR_SAMPLE_SUCCESS",
+  "samplingQuality": "PENDING_RAW_EVENT_SYMBOL_WINDOW_AUDIT",
+  "containerPreaudit": {
+    "checks": {
+      "export_manifest_and_complete_source_copy_hashes": "PASS",
+      "dispatch_and390_roles": "PASS",
+      "dispatch_and390_roles_after": "PASS",
+      "root_source_and_inputs": "PASS",
+      "raw_ack_fragment_evidence_not_readiness": "PASS",
+      "retained_control_readiness_and_selector_evidence": "PASS",
+      "actual_tool_and_worker_images": "PASS",
+      "recorder_terminal_attestation": "PASS",
+      "raw166_NQ_and_retained_full_PIO_extent": "PASS",
+      "genuine_reset_final166_board_RAMhash_full16475PIO": "PASS",
+      "bridge_attempt_maps_effect_counts_and_source_ownership": "PASS"
+    },
+    "errors": [],
+    "members": {
+      "cold-ledger-scalars-native-symbol/before.json": {
+        "bytes": 222059,
+        "sha256": "074a1b8f324d00488681343464248192b8edb8996d69564f03aae4172a346df1",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/help-final-exit.json": {
+        "bytes": 22,
+        "sha256": "594255e4105ac959a3acab9d732fdb2b40b4c7490d05938d4a59b3e97ab2b223",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/help-exit.json": {
+        "bytes": 22,
+        "sha256": "594255e4105ac959a3acab9d732fdb2b40b4c7490d05938d4a59b3e97ab2b223",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/help-invocation.json": {
+        "bytes": 262,
+        "sha256": "5da17c8c485a2b58effcafbad4c119a780b61fb8237717728099efa771c695a6",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/help.stderr": {
+        "bytes": 7473,
+        "sha256": "63af32e5ee42e747881fd24c58ae8f9c7ec429a97b88241c13450b40cf546fb1",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/input.json": {
+        "bytes": 1370,
+        "sha256": "7368b727e0a0a11543652910ade2d36a2e3ae6b3072f996b21bd3e1271047ed3",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/help.stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/perf.data": {
+        "bytes": 1478129,
+        "sha256": "408be969a04e31496b418c707f948391a81211ec691a7cb097d1e100eea99b3d",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/record-exit.json": {
+        "bytes": 20,
+        "sha256": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/record-final-exit.json": {
+        "bytes": 20,
+        "sha256": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/record-invocation.json": {
+        "bytes": 617,
+        "sha256": "a42dc9ab742b9346da14c1ed62bde3bd0b4a812b717d16a84c38f407d547234a",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/record.stderr": {
+        "bytes": 266,
+        "sha256": "ed38d326165ce1e2bc074f626c32ead0b0880e0e2aeafcaa2bbced5d8d97cde5",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/record.stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/result.json": {
+        "bytes": 302108,
+        "sha256": "b980902199cd050cd6b39c2285b4a9857b26e895ab77d4ef1676ba232bff57fa",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/bochs.log": {
+        "bytes": 7372,
+        "sha256": "efed59868eb071f81c15fce9b92ca0268e9e6a2203df24d0f2c6e359428aca0b",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/build-artifact/official-artifact.zip": {
+        "bytes": 7537808,
+        "sha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/build-artifact/official-metadata.json": {
+        "bytes": 757,
+        "sha256": "dcfa067d218a535a7a8b44f74ea48578cbe3687da932c263baaec4b03983df39",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/capture-artifact/official-artifact.zip": {
+        "bytes": 10438346,
+        "sha256": "702c9eafeb7dbfd95d6d49b0df9b1d293491d8276d8a8857a543a80ce8abb1f2",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/capture-artifact/official-metadata.json": {
+        "bytes": 745,
+        "sha256": "2b7968c863695f24663474806d6559b55e8b6ea6f3e099d8700a880a15e11ab4",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/capture.json": {
+        "bytes": 3852756,
+        "sha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/configuration-child/exit.json": {
+        "bytes": 421,
+        "sha256": "eb7a647e1f744f2e1ef90fa840f687b975fbfd3802d0b954d34c8457c717fc29",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/configuration-child/invocation.json": {
+        "bytes": 1270,
+        "sha256": "4367186046359c45f896e485c6f6241a32ce4ce57244f2dd36f642aa200375d0",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/configuration-child/stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/configuration-child/stdout": {
+        "bytes": 705,
+        "sha256": "a716725d57634111b234f804dfd1148547364ab3f6365b9a5ddb2a69692c6c45",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/guest-source.bochsrc": {
+        "bytes": 523,
+        "sha256": "34a15ed9f46fe1c5eccb18da86801b7f7b796b6247f8bd027424db92e87be125",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/inputs-before-restore.json": {
+        "bytes": 1454,
+        "sha256": "35eb60f1e7fbde8f73e5972ef9ad3bf9849721c5998d44a52746aaa44f6494df",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/independent-audit.json": {
+        "bytes": 1020,
+        "sha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/admission-command.json": {
+        "bytes": 526,
+        "sha256": "068bd8ae839b7028440680307db23c8a0b2afe0a5af64ee0e038cd6d14bfe2ce",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/admission-exit.json": {
+        "bytes": 164,
+        "sha256": "e12418ab94e722f0f76ae8ec7d877723efccf7bb4521329072096885ae3f7537",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/admission.stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/driver-identity-command.json": {
+        "bytes": 311,
+        "sha256": "624861085cdb9932d50b96daf6d188337b22279cd5b8ffe717c25e6489a8b2d3",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/admission.stdout": {
+        "bytes": 17830,
+        "sha256": "9c623e2d2b9492ada642e6cde46b768d5d029c4f0ed94ca3b4619be9b4fbbfe2",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/driver-identity-exit.json": {
+        "bytes": 165,
+        "sha256": "697faed17632cc29d8a1b19301f736259457c66048d04d27309bfb3e9d828323",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/driver-identity.stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/driver-identity.stdout": {
+        "bytes": 5338,
+        "sha256": "0c9f6a233c8a205a95e3ec30dc3fa5c5bd2558f327dda454dcb71328eeec367e",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/materialization/materialization-proof.json": {
+        "bytes": 38415,
+        "sha256": "c027ae2b0199742af05e0ad0b6186a8122de4714a390aef928c19aa7e2a0d2b3",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/restore-binding.json": {
+        "bytes": 8879,
+        "sha256": "3864b644c40d07e9150bee24f83611e4e5b5ef053e65da18218a005a2a7a314a",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/restore-child/exit.json": {
+        "bytes": 428,
+        "sha256": "b4b87b3d7cd0c26b500b65074a10de17be7b1e5f943a77ed1c35dde3470e391d",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/restore-child/invocation.json": {
+        "bytes": 829,
+        "sha256": "ecc4b808e9a0f0f5622d2ae617eb282f7790580d1853052018f525fd5280c2a9",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/restore-child/stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/restored-before.json": {
+        "bytes": 224157,
+        "sha256": "44db87816bc354da22414b1e361d60fac5ccef0dcd3a4fd745ccfffe224693d3",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/restore-child/stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/setup-result.json": {
+        "bytes": 319454,
+        "sha256": "a0e00a5766e11e497ea584d74c6efc67eadd83b377b56f2a7fa2037026d13aab",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/source-before-setup.json": {
+        "bytes": 35583,
+        "sha256": "1cb6fd4e8326752b1dabeb89d74f69a35f2ccbaf630efcdec63ba56572b37b9e",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-0/exit.json": {
+        "bytes": 404,
+        "sha256": "e8bfcf457a075b0169a574486a1af4760606720f72a1c9616341b5f5e36b67ea",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-0/invocation.json": {
+        "bytes": 685,
+        "sha256": "1c488cc658ac9b62e85aa45f609229e185c6620562caa727d22ebec6e463e9f4",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-0/stderr": {
+        "bytes": 586,
+        "sha256": "3e70934f1909b0f5a846d62237fcc1509d733b9fb0321187024723dfc67176d3",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-0/stdout": {
+        "bytes": 100,
+        "sha256": "3b80b7b36a3514da069133c1b8d9741f9509ec0c833c5fbb09d331d66433dc41",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-1/exit.json": {
+        "bytes": 403,
+        "sha256": "9d983014ebbade0e12773680f3b0c17fdb10e6c267bcdb056ebb0cb27f50f417",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-1/invocation.json": {
+        "bytes": 768,
+        "sha256": "902227261bf31a70bbdd05aa0cd28a1ddf1687204c7a5babe83ee6f400e24851",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-1/stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-1/stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-2/exit.json": {
+        "bytes": 423,
+        "sha256": "bd78364a08cbad32bacf79711d0d45bf646aa1f290e87e61b6c944a2e43684c5",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-2/invocation.json": {
+        "bytes": 792,
+        "sha256": "f8dab6e6e97bb410c57ff25becab3de2071ab0165d68a61e0e64bfcb96469907",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-2/stderr": {
+        "bytes": 116,
+        "sha256": "5d9e7d35ab19a5b68b608b47b0b6b4a3d5e115caa23d7cebd4ee589da180975a",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-2/stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-3/exit.json": {
+        "bytes": 411,
+        "sha256": "b46e247bb11bf7edef241b6c4e15758c7c9de308a4068c8f93775e2a31ba8a55",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-3/stderr": {
+        "bytes": 60,
+        "sha256": "188a01a344b2dffbbfed4263e3f63af7b9836ca545e76580cab3f3ef84b88e03",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-3/stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup/upstream-3/invocation.json": {
+        "bytes": 733,
+        "sha256": "f3ee87490bf72a83c840fef0afe31ec1f47e32531ccafbe94726b0a8ea7e2ff0",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/setup-record.json": {
+        "bytes": 256805,
+        "sha256": "3d7a72d8a2933e00bbd273f1f66039b1105ec141bf56e14860b4615ec407cc5f",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/version-final-exit.json": {
+        "bytes": 20,
+        "sha256": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/version-exit.json": {
+        "bytes": 20,
+        "sha256": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/version-invocation.json": {
+        "bytes": 255,
+        "sha256": "5b99d02afb7544ddf9bcc87ea939e57ce44198ec3e5f42f00e11c3d14531406c",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/version.stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/version.stdout": {
+        "bytes": 21,
+        "sha256": "c3e20cd8f7c7ec7e2abfbaec586a6c12a2b9ff25d645ad0df87816bf02b9e01b",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker-exit.json": {
+        "bytes": 20,
+        "sha256": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker-final-exit.json": {
+        "bytes": 20,
+        "sha256": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker-invocation.json": {
+        "bytes": 655,
+        "sha256": "70d74b9966f4008c7c0f0d6a274e187ada0f976c36d98b68b2d1764f4611fd25",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker-output/launch.json": {
+        "bytes": 358,
+        "sha256": "0ed9944c02d246854495b5184e8330464af230d957d250354d3abfcde2e2ab59",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker-output/receipt/receipt.json": {
+        "bytes": 1943875,
+        "sha256": "1aadff236231740d5990366f773d0473c9fafc955a8bd6755a11e2d6fd5d62f0",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker.stderr": {
+        "bytes": 395,
+        "sha256": "41f5869a8c6cb2129a706fbef331d5d80682abd20ef1e66a17826e0b6da91cc7",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol/worker.stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/host-before.json": {
+        "bytes": 9803,
+        "sha256": "5eadaa6b52e0c1a523b94ac33b09ff66a3e9882328c22f733ff61003e115a085",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/observer-child/exit.json": {
+        "bytes": 432,
+        "sha256": "b40dc51a5c5453b44a129a8c6d8f314ddf7601d360309a9d01c864b1190ad416",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/observer-child/invocation.json": {
+        "bytes": 1139,
+        "sha256": "5f5c3d57a52e73b483fbe60d9d27c2912a24514ad52e069f25b640a104e6b09c",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/observer-child/stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/observer-child/stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/result.json": {
+        "bytes": 730348,
+        "sha256": "2743edb673cb31045b80d4a445ba69b84cca414f6b60f55bf0b7cfd9d87397b5",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/root-entry-result.json": {
+        "bytes": 98908,
+        "sha256": "a433934fbc71427f27ba0a03a0f28998e44b0a36a3a27923a6e0734d36c47af8",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/setup-child/invocation.json": {
+        "bytes": 979,
+        "sha256": "d15fa5fa7daa342d203081c69dfcdd01bf9f83521a248938484a77f7f8e883e7",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/setup-child/exit.json": {
+        "bytes": 432,
+        "sha256": "a3aadf87c0a7316f735b53e5623ff3c5df3aa682b95f5829dea31a7986ceca45",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/setup-child/stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/setup-child/stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/setup-summary.json": {
+        "bytes": 401,
+        "sha256": "39fd41e16064e3e82b6e7bc88201cd75ed9ef7d0897d4743027dd58e48861c17",
+        "complete": true
+      },
+      "cold-ledger-scalars-native-symbol-parent/source-before.json": {
+        "bytes": 50186,
+        "sha256": "fd653565d2327105c9dc54a12ffaf6304570c3978c37970f2281dbb5ceb7b55a",
+        "complete": true
+      },
+      "export-manifest.json": {
+        "bytes": 57145,
+        "sha256": "44cb978a40bcae7e08aec2ca0c2a1cddb11f17489d4b53bcdf7db30c6c5a38b7",
+        "complete": true
+      }
+    },
+    "officialArtifact": {
+      "runId": 37249319996,
+      "artifactId": 11320875527,
+      "headSha": "6204e54ab675720e51781cafedd63e83690c348f",
+      "zipBytes": 19019152,
+      "zipSha256": "d4c5f8b0a756c3bb2e980ffaf64e4189501e8d376ff540a70b239742a3688fc5"
+    },
+    "declaredMemberCount": 87,
+    "declaredTotalBytes": 27665322,
+    "exportManifestPresent": true,
+    "exportOutcome": "READABLE_EVIDENCE_COPY_COMPLETE_NOT_OBSERVATION_SUCCESS",
+    "exportLifecycle": {
+      "cleanupGate": {
+        "setup-child": {
+          "pid": 3789,
+          "reaped": true,
+          "groupAbsent": true,
+          "exit": {
+            "pid": 3789,
+            "exitCode": 0,
+            "rawWaitStatus": 0,
+            "timedOut": false,
+            "wallSeconds": 10.663684282000006,
+            "terminatedPids": [],
+            "interrupted": null,
+            "rusage": {
+              "ru_utime": 3.537529,
+              "ru_stime": 2.3497500000000002,
+              "ru_maxrss": 307132,
+              "ru_minflt": 605382,
+              "ru_majflt": 1,
+              "ru_inblock": 280,
+              "ru_oublock": 163368,
+              "ru_nvcsw": 10781,
+              "ru_nivcsw": 496
+            },
+            "cpuSeconds": 5.887279
+          }
+        },
+        "observer-child": {
+          "pid": 6666,
+          "reaped": true,
+          "groupAbsent": true,
+          "exit": {
+            "pid": 6666,
+            "exitCode": 0,
+            "rawWaitStatus": 0,
+            "timedOut": false,
+            "wallSeconds": 6.348455434999998,
+            "terminatedPids": [],
+            "interrupted": null,
+            "rusage": {
+              "ru_utime": 4.162702,
+              "ru_stime": 2.4813929999999997,
+              "ru_maxrss": 275532,
+              "ru_minflt": 524705,
+              "ru_majflt": 23,
+              "ru_inblock": 36512,
+              "ru_oublock": 8080,
+              "ru_nvcsw": 12197,
+              "ru_nivcsw": 449
+            },
+            "cpuSeconds": 6.644095
+          }
+        }
+      },
+      "activeEvidenceUsers": [],
+      "activeEvidenceUsersAfter": [],
+      "ordinaryOwnerUid": 1001,
+      "ownerUnavailable": null,
+      "earlyFailure": null,
+      "missingRoots": null,
+      "skipped": [
+        {
+          "path": "cold-ledger-scalars-native-symbol/control.sock",
+          "reason": "Known ephemeral control socket, not archive evidence",
+          "stat": [
+            66305,
+            9177106,
+            49536,
+            1,
+            1001,
+            1001,
+            0,
+            1791161714941718179,
+            1791161714941718179
+          ]
+        }
+      ],
+      "streamedBytes": 27608177,
+      "entryCount": 102
+    },
+    "exportErrors": {},
+    "completeExportedFileCount": 86,
+    "partialExportedFiles": [],
+    "exportScope": "Readable copies are evidence transport, never observation or sampling success",
+    "firstOutcome": {
+      "hosted": "RAW_DIAGNOSTIC_CAPTURE_REQUIRES_INDEPENDENT_SYMBOL_LOSS_UNWIND_AUDIT",
+      "recorder": "RAW_DISABLED_ENABLE_DISABLE_RECORDING_REQUIRES_TERMINAL_AND_SAMPLE_AUDIT",
+      "root": "RAW_RECORDER_OUTCOME_REQUIRES_INDEPENDENT_TERMINAL_SAMPLE_AUDIT",
+      "hostedErrors": {},
+      "recorderErrors": {},
+      "rootErrors": {}
+    },
+    "observationOutcome": "RETAINED_OUTCOME_REQUIRES_INDEPENDENT_SEMANTIC_AND_SAMPLE_AUDIT",
+    "lifecycle": {
+      "setupChild": {
+        "pid": 3789,
+        "exitCode": 0,
+        "rawWaitStatus": 0,
+        "timedOut": false,
+        "wallSeconds": 10.663684282000006,
+        "terminatedPids": [],
+        "interrupted": null,
+        "rusage": {
+          "ru_utime": 3.537529,
+          "ru_stime": 2.3497500000000002,
+          "ru_maxrss": 307132,
+          "ru_minflt": 605382,
+          "ru_majflt": 1,
+          "ru_inblock": 280,
+          "ru_oublock": 163368,
+          "ru_nvcsw": 10781,
+          "ru_nivcsw": 496
+        },
+        "cpuSeconds": 5.887279
+      },
+      "observerChild": {
+        "pid": 6666,
+        "exitCode": 0,
+        "rawWaitStatus": 0,
+        "timedOut": false,
+        "wallSeconds": 6.348455434999998,
+        "terminatedPids": [],
+        "interrupted": null,
+        "rusage": {
+          "ru_utime": 4.162702,
+          "ru_stime": 2.4813929999999997,
+          "ru_maxrss": 275532,
+          "ru_minflt": 524705,
+          "ru_majflt": 23,
+          "ru_inblock": 36512,
+          "ru_oublock": 8080,
+          "ru_nvcsw": 12197,
+          "ru_nivcsw": 449
+        },
+        "cpuSeconds": 6.644095
+      }
+    },
+    "controlRecords": [
+      {
+        "command": "enable",
+        "sessionSequence": -2,
+        "controllerBeforeNs": "57513112373",
+        "status": "PASS",
+        "rawAck": "ack\n\u0000",
+        "ackFragments": [
+          "61636b0a00"
+        ],
+        "stderrAtAck": {
+          "bytes": 31,
+          "sha256": "126db7d02b27ee560433bc308cfa2125a01d8456659bd0db33d2e870f0cc53da"
+        },
+        "controllerAfterNs": "57797058658",
+        "scope": "perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session"
+      },
+      {
+        "command": "disable cpu-clock",
+        "sessionSequence": 0,
+        "controllerBeforeNs": "57797070528",
+        "status": "PASS",
+        "rawAck": "ack\n\u0000",
+        "ackFragments": [
+          "61636b0a00"
+        ],
+        "stderrAtAck": {
+          "bytes": 56,
+          "sha256": "60f257195a793aed31ee68fd7073127baeca752d95f5a3e2881ed5d1106fdade"
+        },
+        "controllerAfterNs": "57797449268",
+        "scope": "perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session"
+      },
+      {
+        "command": "enable cpu-clock",
+        "sessionSequence": 1,
+        "controllerBeforeNs": "57823439975",
+        "status": "PASS",
+        "rawAck": "ack\n\u0000",
+        "ackFragments": [
+          "61636b0a00"
+        ],
+        "stderrAtAck": {
+          "bytes": 80,
+          "sha256": "c6078ba882f6276dda35d6250e892b834576e519945eb43ef00e821078d16618"
+        },
+        "controllerAfterNs": "57823963934",
+        "scope": "perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session"
+      },
+      {
+        "command": "disable cpu-clock",
+        "sessionSequence": 2,
+        "controllerBeforeNs": "59202736281",
+        "status": "PASS",
+        "rawAck": "ack\n\u0000",
+        "ackFragments": [
+          "61636b0a00"
+        ],
+        "stderrAtAck": {
+          "bytes": 105,
+          "sha256": "75ff58cc134e2495d367b4cf6c08127eed777a60523a5f5bffa0a0eec6c57b9e"
+        },
+        "controllerAfterNs": "59203349726",
+        "scope": "perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session"
+      }
+    ],
+    "trackingScope": "Global enable while worker blocked before provider/addon; then cpu-clock-only disable before READY. Dummy sideband remains enabled. Pre-ready waiting samples may exist; only conservative active ACK window is attributable.",
+    "clockProof": "UNPROVEN_SAME_CLOCK; no execution-only timestamp clipping or percentages",
+    "actualObservedTids": [
+      6955,
+      6956,
+      6957,
+      6958,
+      6959,
+      6960,
+      6961
+    ],
+    "laterTidObservations": 135,
+    "postLoadMapsRetained": true,
+    "threadScope": "Observations do not prove raw sample inheritance or coverage",
+    "workerFilePresence": {
+      "receipt": true,
+      "failure": false
+    },
+    "workerOutcome": {
+      "receipt": true,
+      "failure": false,
+      "status": "DIAGNOSTIC_NATIVE_SYMBOL_WINDOW_TERMINAL_PARITY_PASS",
+      "guestStatus": "NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS"
+    },
+    "sampler": {
+      "schema": "bw.cold-ledger-scalars.native-symbol.window.v1",
+      "status": "CONTROL_WINDOW_CLOSED_UNQUALIFIED_CLOCK_DOMAIN",
+      "records": [
+        {
+          "type": "hello",
+          "seq": 0,
+          "workerBeforeNs": "57398915943",
+          "workerAfterNs": "57798555009",
+          "response": {
+            "schema": "bw.cold-ledger-scalars.native-symbol.control.v1",
+            "type": "ready",
+            "seq": 0,
+            "pid": 6955,
+            "session": "9d608a261343fd9b07aa5785dbda3870839a01b39f6cf7f7114dc7de5e0f561b",
+            "controllerMonotonicNs": "57797586382",
+            "proof": {
+              "disabledAck": true,
+              "effectivePerfSha256": "5fb08c90293471b24086be829f4da4707ecc83101945868101964be48267ab71",
+              "uid": 1001,
+              "gid": 1001,
+              "threadIds": [
+                6955,
+                6956,
+                6957,
+                6958,
+                6959,
+                6960,
+                6961
+              ]
+            }
+          }
+        },
+        {
+          "type": "enable",
+          "seq": 1,
+          "workerBeforeNs": "57823049579",
+          "workerAfterNs": "57824732375",
+          "response": {
+            "schema": "bw.cold-ledger-scalars.native-symbol.control.v1",
+            "type": "enabled",
+            "seq": 1,
+            "pid": 6955,
+            "session": "9d608a261343fd9b07aa5785dbda3870839a01b39f6cf7f7114dc7de5e0f561b",
+            "controllerMonotonicNs": "57823971704"
+          }
+        },
+        {
+          "type": "disable",
+          "seq": 2,
+          "workerBeforeNs": "59202484137",
+          "workerAfterNs": "59203573159",
+          "response": {
+            "schema": "bw.cold-ledger-scalars.native-symbol.control.v1",
+            "type": "disabled",
+            "seq": 2,
+            "pid": 6955,
+            "session": "9d608a261343fd9b07aa5785dbda3870839a01b39f6cf7f7114dc7de5e0f561b",
+            "controllerMonotonicNs": "59203354318"
+          }
+        }
+      ],
+      "errors": [],
+      "beginOutsideTimerNs": "57824736620",
+      "endOutsideTimerNs": "59202477948",
+      "clockScope": "Node hrtime markers are separate from recorder ACK/event-transition times; conservative control interval only until same-clock proof",
+      "scope": "DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION; no native costshare or removable-cost claim"
+    },
+    "executionTiming": {
+      "cpuMicroseconds": {
+        "user": 1717120,
+        "system": 24303
+      },
+      "wallNanoseconds": "1377651210",
+      "scope": "Native-only loop: actual stage/IRQ/begin/resume/end, owned PIO/device/deadline work, mandatory166 materialization, cheap budget/progress guards and counters; no JS oracle/hash/disk/snapshot copying"
+    },
+    "scopeCaveat": "Execution timings observed under profiler; not benchmark or native CPU share",
+    "rawRecording": {
+      "bytes": 1478129,
+      "sha256": "408be969a04e31496b418c707f948391a81211ec691a7cb097d1e100eea99b3d",
+      "complete": true
+    },
+    "qualityDecision": "NO_SAMPLING_QUALIFICATION_FROM_CONTAINER_EXPORT_OR_WORKFLOW_SUCCESS",
+    "firstOutcomePreserved": true
+  },
+  "containerExit": 0,
+  "originalWorkerStatus": "DIAGNOSTIC_NATIVE_SYMBOL_WINDOW_TERMINAL_PARITY_PASS",
+  "originalGuestStatus": "NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS",
+  "rawReceiptSha256": "1aadff236231740d5990366f773d0473c9fafc955a8bd6755a11e2d6fd5d62f0",
+  "overallOutcome": {
+    "hosted": "RAW_DIAGNOSTIC_CAPTURE_REQUIRES_INDEPENDENT_SYMBOL_LOSS_UNWIND_AUDIT",
+    "recorder": "RAW_DISABLED_ENABLE_DISABLE_RECORDING_REQUIRES_TERMINAL_AND_SAMPLE_AUDIT",
+    "root": "RAW_RECORDER_OUTCOME_REQUIRES_INDEPENDENT_TERMINAL_SAMPLE_AUDIT",
+    "hostedErrors": {},
+    "recorderErrors": {},
+    "rootErrors": {}
+  },
+  "projection": "ONLY_SCHEMA_AND_STATUS_IN_MEMORY_ORIGINAL_UNCHANGED",
+  "metrics": {
+    "cpuSeconds": 1.741423,
+    "cpuMicrosecondsSum": 1741423,
+    "wallSeconds": 1.37765121,
+    "configuredVirtualSeconds": 0.316562,
+    "configuredVirtualRTx": 0.22978385073243612
+  },
+  "heldSourceAfter": {
+    ".github/workflows/i80386-cold-ledger-scalars-qualification.yml": "cc6129f2f8d9cb196f0474538b855b81658acd28718adf14cab254fa1f566e6c",
+    "scripts/cold-ledger-scalars-qualification/README.md": "f127e232227747ac7ab84a534fe0e60676e0d17a799c0417a4398658ec84b887",
+    "scripts/cold-ledger-scalars-qualification/admission.py": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3",
+    "scripts/cold-ledger-scalars-qualification/archive.py": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139",
+    "scripts/cold-ledger-scalars-qualification/contract.json": "7444a16e48185bfdcae1a02b538f75a922dc7e8134b4aa9d37eb842014ba305f",
+    "scripts/cold-ledger-scalars-qualification/emit-roles.py": "0330355c9dfd807e4322e2bd2200830d3c5e658bfe586a9f315356785f0df213",
+    "scripts/cold-ledger-scalars-qualification/fixture-origin.json": "d1bd0ec7a90f3ef4a01c28ea89101421090cce178359acbe01df7e8f11d2c936",
+    "scripts/cold-ledger-scalars-qualification/frozen-members.json": "f52ebff3b42f8a1bb38856621d67e4babecd82b8f97e47e892acaf7a029edda1",
+    "scripts/cold-ledger-scalars-qualification/held-terminal.txt": "22c6aca0a38aaaffacabd45a3e89e5afb58046fce3ae7145d808ca27d3da793f",
+    "scripts/cold-ledger-scalars-qualification/independent-eighth-attempt-audit.json": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+    "scripts/cold-ledger-scalars-qualification/lifecycle.py": "97aae841d5effd5a7e47b1a81cd0eb2e4c60ebec654ddee490c9ae8d3624b86d",
+    "scripts/cold-ledger-scalars-qualification/official-members.json": "9d4e3ab3107d2e2b1087cae6594ca907db103b616865ba29f5d7a42674015019",
+    "scripts/cold-ledger-scalars-qualification/policy.py": "8e4755def2cd3171a6b111fd5aedeb832ed301a855755e4d4ea29f92aa16dfaa",
+    "scripts/cold-ledger-scalars-qualification/prepared-members.json": "e2c908bca248a45cb12fca2eb081762d6134a937ff5947794da367fe98134d81",
+    "scripts/cold-ledger-scalars-qualification/qualify.py": "05e9ebdfc4446fed76e9fc028da7beca188f80f0c1321b05b1b1bcac3060efac",
+    "scripts/cold-ledger-scalars-qualification/restore-derivation.json": "6adcc94863ad54eaa3e8502b2cb4cc9f578daba93acf8ae2258d192e6802177e",
+    "scripts/cold-ledger-scalars-qualification/restore.py": "b2ebc54577d450f9cbec3f61b83dd3832ae599033a044507fdc95c2c26aeb152",
+    "scripts/cold-ledger-scalars-qualification/terminal-fixture.json": "fe6aa1aab644e40dd34b46a032c017925ecaf9c991ad5743800c8323bbddbaa1",
+    "scripts/cold-ledger-scalars-qualification/test_qualification.py": "f3da1c74f44717fb36ad8c5728daa2d71dcbe257db8678359fb85390528f4917",
+    "test/i80386-cold-ledger-scalars-qualification-source.test.mjs": "a5762efab0d1d4ca76dd4f9cd114446029a84c186db1306ef977c56908cb7af2"
+  }
+}
