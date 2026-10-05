@@ -1,0 +1,25 @@
+{
+  "status": "CORRECTED_OBSERVER_COMPLETE_FULL_TERMINAL_PARITY_PASS_RAW_SAMPLING_QUALITY_PENDING",
+  "runId": 37249319996,
+  "artifactId": 11320875527,
+  "headSha": "6204e54ab675720e51781cafedd63e83690c348f",
+  "diagnosticRevision": "53257a07d013615b5ae6fc9b86652ef39e345c5d",
+  "exportedCompleteFiles": 86,
+  "containerChecks": 11,
+  "N": 316562,
+  "Q": 316562,
+  "fullOrderedPIO": 16475,
+  "perfData": {
+    "bytes": 1478129,
+    "sha256": "408be969a04e31496b418c707f948391a81211ec691a7cb097d1e100eea99b3d",
+    "complete": true
+  },
+  "rawAckFiveBytesAllFour": true,
+  "samplingQuality": "PENDING_RAW_MMAP_TASK_LOSS_SYMBOL_UNWIND_CLOCK_AUDIT",
+  "timingScope": "Under observer; not paired benchmark or speed improvement",
+  "earlierFailures": [
+    37243459679,
+    37245948328
+  ],
+  "earlierFailuresUnchanged": true
+}

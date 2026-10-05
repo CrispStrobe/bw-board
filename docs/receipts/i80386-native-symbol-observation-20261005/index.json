@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "path": "observation-official-zip-metadata.json",
+      "bytes": 220,
+      "sha256": "079d38339f1ec0ad825fb3eaed83f6ece258cc430577974550407166e292733e",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-observation-20261005/official-zip-metadata.json"
+    },
+    {
+      "path": "observation-root-first-outcome-audit.json",
+      "bytes": 824,
+      "sha256": "6961551dc56e448e08add7b0dc671f8bd94edaceb732b17b969e0470715f4351",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-observation-20261005/root-first-outcome-audit.json"
+    },
+    {
+      "path": "observation-root-full-held-terminal-audit.json",
+      "bytes": 34167,
+      "sha256": "26efa7ef544bc90c365658457e1f126d644b3dc9e829e8aca77819184af55684",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-observation-20261005/root-full-held-terminal-audit.json"
+    },
+    {
+      "path": "observation-independent-audit.json",
+      "bytes": 833,
+      "sha256": "ba72886351a6c150220935286629bd5363fc9f0b5d9b6dc87294d851f956ecdf",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-observation-20261005/independent-audit.json"
+    },
+    {
+      "path": "offline-independent-audit.json",
+      "bytes": 1603,
+      "sha256": "bdaf1336de2ca93fb0a9e37fc66ac520d29bd73621e788f4f4248c6ec2b76cee",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-offline-leaf-actual-20261005/independent-audit.json"
+    },
+    {
+      "path": "offline-leaf.stdout",
+      "bytes": 101692,
+      "sha256": "4d0e474f4627928683c55a8675a12c9d442f31492f091180d038e28707a91ee5",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-offline-leaf-actual-20261005/leaf.stdout"
+    },
+    {
+      "path": "offline-result.json",
+      "bytes": 3531,
+      "sha256": "f4e8b65fde0f49977ca8691f0f835284f792e23c77c6e89f7fe0d939cfa0dd90",
+      "origin": "/tmp/native-cold-native-symbol-post-ack-offline-leaf-actual-20261005/result.json"
+    }
+  ]
+}
