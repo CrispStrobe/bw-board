@@ -1,0 +1,40 @@
+{
+  "status": "INDEPENDENT_SIX_MANUFACTURED_NATIVE_PF_POLICY_CONTROLS_PASS_NOT_NATIVE_EXECUTION",
+  "revision": "3b53baa55233813244947ac482403bab6d974f00",
+  "sourceCount": 45,
+  "sourceCurrentGitAndToolsPrepostEqual": true,
+  "selectedNames": [
+    "manufactured ABI4 slice agrees with exact offsets and 166 words without direct owner telemetry",
+    "single manufactured FAULT requires paused owner genuine-format frame and no failed operand effect",
+    "zero-charge prefetch remains unmatched and cannot smuggle FAULT or attempted instruction",
+    "manufactured finite repair CR3 reload error discard IRET retry ledger rejects duplicate and early writes",
+    "genuine saved JS 58-frame projection anchors zero-Q fault and handler phases without native order claims",
+    "pending source policy confers no old DSO authority and malformed starting state or page refuses"
+  ],
+  "scope": "Manufactured native ABI/counter/frame/page/phase/refusal cases plus source-bound genuine JS projection; no factory/provider/CPU/compiler/addon.",
+  "projectionAudit": "Previously independently verified58 savedJS selectedframes/pagehashes/cuts/delivery/reload against genuine6ea capture.",
+  "exit": {
+    "status": "PASS",
+    "pid": 3787899,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "reaped": true,
+    "timeout": false,
+    "primaryError": null,
+    "finalizationErrors": [],
+    "pinsEqual": true,
+    "rusage": {
+      "userSeconds": 1.012366,
+      "systemSeconds": 0.093869,
+      "maxRssKiB": 84828,
+      "scope": "wait4 leader plus descendants reaped by it; not cgroup attribution"
+    },
+    "rawExitWallSeconds": 2.833481589332223,
+    "tests": 6,
+    "passes": 6,
+    "failures": 0,
+    "skips": 0,
+    "groupCleanup": "already absent",
+    "finalAuthInclusiveWallSeconds": 4.148121589794755
+  }
+}

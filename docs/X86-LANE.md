@@ -25,6 +25,9 @@ by hash. The separate [private JS page-fault recovery/retry source control](I803
 now retains a genuine error frame, CR3 reload, IRET and once-only store retry:
 57 attempts, 56 completed Q and ten full copied pages. Native page-fault
 admission and differential execution remain the next separate correctness step.
+A [finite native PF ownership/ledger source policy](I80386-PAGED-PAGEFAULT-NATIVE-POLICY-SOURCE.md)
+passed six manufactured controls; its native runtime, fresh build and guest
+execution remain pending.
 These small owned programs do not qualify the addon as a general OS loader.
 
 Two first evidence attempts remain failures. The [owned paged INT/IRET run](https://github.com/CrispStrobe/bw-board/actions/runs/37242883561) initialized the native addon, then failed while persisting an oversized receipt; no capture or divergence survived, so instruction execution, parity and closure are unknown. The [native-symbol observation](https://github.com/CrispStrobe/bw-board/actions/runs/37243459679) returned an observer failure and could not upload its root-owned output directory; no artifact exists, and the original observer cause and worker/native extent are unknown. Those first failures remain unchanged. A separately source-qualified INT/IRET observation now passed with lossless compressed evidence; see the result above. The evidence-export attempt is a separate profiling checkpoint. See the [preserved profiling failure](receipts/i80386-native-symbol-first-export-failure-20261004/index.json) and [manufactured export controls](receipts/i80386-native-symbol-evidence-export-controls-20261004/index.json). These diagnostics use owned fixtures and freely licensed inputs, and provide no new speed or broader software-compatibility result.
