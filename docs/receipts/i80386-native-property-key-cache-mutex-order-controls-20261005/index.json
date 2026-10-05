@@ -1,0 +1,52 @@
+{
+  "records": [
+    {
+      "path": "context.json",
+      "bytes": 2196,
+      "sha256": "2adc0bc7f77150f6fde987821a320774af7ac89b72a53428710fa81e90d66c63",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/context.json"
+    },
+    {
+      "path": "parent.py",
+      "bytes": 5361,
+      "sha256": "5e7b90df9d83908e95895344d3829ed9defce2230da0211ef831f98b4728bd6c",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/parent.py"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 1119,
+      "sha256": "3454d7217b9aa6ddbb7221df7d32fc0e2a3eb95ed0ace86ccd48785e1a7698df",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/invocation.json"
+    },
+    {
+      "path": "exit.json",
+      "bytes": 495,
+      "sha256": "2f1d2eb4d58560247046ae6b4fc7c41ce9431e47d04cc807746b67b2775a4ce8",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/exit.json"
+    },
+    {
+      "path": "stdout",
+      "bytes": 527,
+      "sha256": "1bd7404449a93af7940576a2ab2fc19afe30f8b431f5bd84e7619c83e7f509e2",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/stdout"
+    },
+    {
+      "path": "before.json",
+      "bytes": 2318,
+      "sha256": "46c46be2bcf9c378d7cde02b97e0ad4caea26e03847f241bb8b321626c8bd4c5",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/before.json"
+    },
+    {
+      "path": "after.json",
+      "bytes": 2318,
+      "sha256": "46c46be2bcf9c378d7cde02b97e0ad4caea26e03847f241bb8b321626c8bd4c5",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/after.json"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 1077,
+      "sha256": "d564d1a5a6b8b75b065eee7806f436cad9722c2482370267d93a33299feb44fc",
+      "origin": "/tmp/native-cold-property-key-cache-mutex-order-controls-20261005/independent-audit.json"
+    }
+  ]
+}
