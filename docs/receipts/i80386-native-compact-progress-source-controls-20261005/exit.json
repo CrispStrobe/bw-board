@@ -1,0 +1,18 @@
+{
+  "exitCode": 0,
+  "timeout": false,
+  "wallSeconds": 2.505141858011484,
+  "wallScope": "parent including final authentication",
+  "childExitWallSeconds": 1.5435954984277487,
+  "rawWait4Status": 0,
+  "leaderRusage": {
+    "userSeconds": 1.242229,
+    "systemSeconds": 0.229841,
+    "maxRSSKiB": 96416
+  },
+  "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+  "error": null,
+  "cleanupError": null,
+  "finalizationError": null,
+  "pinsEqual": true
+}
