@@ -68,6 +68,16 @@ export function createStm32F0Adapter (opts = {}) {
     onPinChange: publish,
     onSerialByte: (b) => { if (serialListener) serialListener(b); },
     // ADC channel n is the PA n pad: the board's solved node voltage.
+    // A level a DEVICE changes on its own reaches IDR when the program reads
+    // it, not at the slice end (board.dueDeviceDeadline; the AVR PINx hook).
+    onInputRead: () => {
+      if (!board || !board.dueDeviceDeadline || inInputSync) return;
+      const t = machine.timeNs();
+      if (!board.dueDeviceDeadline(t)) return;
+      board.advanceTo(t);
+      stats.advanceToCount++;
+      syncInputs();
+    },
     onAnalogRead: (ch) => {
       if (!board || !board.readAnalog || ch > 7) return 0;
       const v = board.readAnalog(`PA${ch}`);

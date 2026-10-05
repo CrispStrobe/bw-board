@@ -978,6 +978,9 @@ export class BoardImpl {
     if (!this._pwmEdge && this.drivenPwm.size > 0) this.drivenPwm.delete(pin);
     const prev = this.pinStates.get(pin);
     this.pinStates.set(pin, { mode, driveHigh, as: asGiven });
+    // A device sees an edge at its next update; until then the edge is owed
+    // to it (see dueDeviceDeadline).
+    if (!prev || prev.mode !== mode || prev.driveHigh !== driveHigh) this._unseenEdge = true;
     if (!this._hasQualifiedPin && this._resolveQualified(pin)) this._hasQualifiedPin = true;
 
     // Digital fast path: when the driven net's only consumers are pure
@@ -1350,6 +1353,27 @@ export class BoardImpl {
     context.work[counter]++;
   }
 
+  /**
+   * Whether a device has something to do by `tNs` that an input read would
+   * see: a scheduled wake inside (now, tNs] — an HC-SR04 echo ending, a
+   * DS18B20 releasing its slot — or a pin edge no device has processed yet
+   * (a 1-Wire slave answers the master's falling edge).
+   *
+   * CPU adapters push input levels into their peripherals at slice
+   * boundaries and after their own writes. A level a DEVICE changes on its
+   * own inside a slice was invisible until the slice ended: a 2 ms echo
+   * read as one 10 ms slice (171 cm for 37), and a presence pulse 30 us
+   * after reset was never seen at all. An adapter asks this before handing
+   * the CPU an input, and advances the board to the CPU's time when true.
+   * @param {bigint} tNs
+   */
+  dueDeviceDeadline(tNs) {
+    if (typeof tNs !== 'bigint' || tNs <= this.timeNs) return false;
+    if (this._deviceStates.size === 0) return false;
+    if (this._unseenEdge) return true;
+    return this._earliestDeviceDeadline(this.timeNs, tNs) !== null;
+  }
+
   /** @param {bigint} tNs */
   advanceTo(tNs) {
     const context = this._boundedAdvanceContext;
@@ -1543,6 +1567,7 @@ export class BoardImpl {
           if (!this._updateDevices()) break;
           this._solve();
         }
+        this._unseenEdge = false;
 
         // Feed the scope at every sub-step, not only at the advance's
         // end: a digital channel records its transition AT the wake that

@@ -277,6 +277,29 @@ export function createAvr8jsAdapter(opts = {}) {
     });
   }
 
+  // A level a DEVICE changes on its own (an echo ending, a 1-Wire slave's
+  // slot) must reach the PIN register when the program reads it, not at the
+  // slice end: every PINx read first brings the board up to the CPU's time
+  // when a device has something due (board.dueDeviceDeadline). SBIS/SBIC and
+  // IN all read through cpu.readData, so one hook per port covers them.
+  function catchUpInputs() {
+    if (!board || !board.dueDeviceDeadline || inInputSync) return;
+    const t = BigInt(Math.round((cpu.cycles / clockHz) * 1e9));
+    if (!board.dueDeviceDeadline(t)) return;
+    board.advanceTo(t);
+    stats.advanceToCount++;
+    syncInputs();
+  }
+  for (const key of Object.keys(ioPorts)) {
+    const pinAddr = chip.ports[key] && chip.ports[key].PIN;
+    if (pinAddr === undefined) continue;
+    const prior = cpu.readHooks[pinAddr];
+    cpu.readHooks[pinAddr] = (addr) => {
+      catchUpInputs();
+      return prior ? prior(addr) : cpu.data[addr];
+    };
+  }
+
   /** Sync input pins from board → CPU (buttons, external signals). */
   let inInputSync = false;
   function syncInputs() {

@@ -226,6 +226,13 @@ export function createEmu8051Adapter(wasm, opts = {}) {
 
       readPinCbPtr = wasm.addFunction((port, bit, _ud) => {
         if (!board) return 0;
+        // A level a DEVICE changes on its own (an echo ending, a 1-Wire
+        // slave's slot) is current at the read only if the board has caught
+        // up with the core (board.dueDeviceDeadline).
+        if (board.dueDeviceDeadline) {
+          const t = getCurrentTimeNs();
+          if (board.dueDeviceDeadline(t)) { board.advanceTo(t); stats.advanceToCount++; }
+        }
         const level = board.readPin(`P${port}.${bit}`) ? 1 : 0;
         recordInput('emu8051.pin', `pin:${port}.${bit}`, {port, bit, level});
         return level;
