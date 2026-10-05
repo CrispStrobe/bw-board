@@ -599,6 +599,9 @@ export function inferNetlist(stc, opts) {
 
   // ─── Parts declarations (shift registers, etc.) ────────────────────────
 
+  // I2C lines that already carry their pull-up (one per net, however many
+  // I2C parts share it).
+  const i2cPulled = new Set();
   if (stc.parts) {
     for (const part of stc.parts) {
       const safeName = part.name.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -729,6 +732,41 @@ export function inferNetlist(stc, opts) {
         }
         vccNet.terminals.push({ part: usId, terminal: 'vcc' });
         gndNet.terminals.push({ part: usId, terminal: 'gnd' });
+      } else if (['ds3231', 'at24c02', 'i2c'].includes(part.type || part.kind)) {
+        // PART clock = DS3231 SDA <pin> SCL <pin>, PART memory = AT24C02 ...,
+        // PART bus = I2C ... — I2C parts SHARE their two pins, so each line is
+        // one net (found by its MCU terminal, created once), and each carries
+        // one 4.7 kOhm pull-up: SDA and SCL are open drain on every device.
+        const type = part.type || part.kind;
+        let devId = null;
+        if (type !== 'i2c') {
+          devId = `${type === 'ds3231' ? 'RTC' : 'EEPROM'}_${safeName}`;
+          // The AT24C02 is the real DIP-8: A0-A2 strapped low (address 0x50)
+          // and WP low (writes allowed), as the learning boards wire it.
+          const eeprom = type === 'at24c02';
+          parts.push({ id: devId, kind: type, declName: part.name, params: {},
+            terminals: eeprom ? ['a0', 'a1', 'a2', 'gnd', 'sda', 'scl', 'wp', 'vcc'] : ['vcc', 'gnd', 'sda', 'scl'] });
+          vccNet.terminals.push({ part: devId, terminal: 'vcc' });
+          gndNet.terminals.push({ part: devId, terminal: 'gnd' });
+          if (eeprom) for (const t of ['a0', 'a1', 'a2', 'wp']) gndNet.terminals.push({ part: devId, terminal: t });
+        }
+        for (const role of ['sda', 'scl']) {
+          if (!part[role]) continue;
+          const term = pinName(part[role]);
+          let net = nets.find((n) => n.terminals.some((t) => t.part === 'MCU' && t.terminal === term));
+          if (!net) {
+            net = { id: `net_i2c_${role}_${term.replace(/[^a-zA-Z0-9_]/g, '_')}`, terminals: [{ part: 'MCU', terminal: term }] };
+            nets.push(net);
+          }
+          if (devId) net.terminals.push({ part: devId, terminal: role });
+          if (!i2cPulled.has(net.id)) {
+            i2cPulled.add(net.id);
+            const rId = `R_${role}_pullup_${net.id.replace(/^net_/, '')}`;
+            parts.push({ id: rId, kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] });
+            net.terminals.push({ part: rId, terminal: 'b' });
+            vccNet.terminals.push({ part: rId, terminal: 'a' });
+          }
+        }
       } else if (part.type === 'ds18b20' || part.kind === 'ds18b20') {
         // PART probe = DS18B20 ON <pin> — 1-Wire is open drain, so the bus
         // needs its pull-up: the datasheet's 4.7 kOhm from DQ to VCC. Without
