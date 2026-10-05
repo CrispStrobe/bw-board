@@ -1,0 +1,4606 @@
+{
+  "schema": "bw.saved-logical-projection.v1",
+  "origin": {
+    "officialZipSha256": "01fe2bd1bd151ad25328d294b7e50f24f7d27c2538994c896964980e578bab69",
+    "zipMember": "_temp/paged-int-iret-execution/guest/capture.json.gz",
+    "storedSha256": "1a8ab0e64d714b0c7868fe91ad1ff50bae1daf74d1a88ba73ff4e16fc7b40024",
+    "decodedSha256": "8c4a059a86cf393a8dbba7254da2d9db52f6a1dc267a38ff5cd82dccef5d7c3d"
+  },
+  "scope": "Lossless JSON-pointer projection only; repeated full snapshots/pages remain solely in official compressed body.",
+  "fields": {
+    "progress": {
+      "n": 41,
+      "q": 41,
+      "dn": 1,
+      "dq": 1,
+      "resumes": 41,
+      "zeroQ": 0
+    },
+    "finalNative": {
+      "state": [
+        2147532527,
+        0,
+        0,
+        0,
+        57344,
+        0,
+        0,
+        0,
+        28677,
+        2,
+        4294967281,
+        0,
+        4096,
+        24,
+        16,
+        16,
+        1536,
+        31,
+        12288,
+        391
+      ],
+      "extra": [
+        4294909936,
+        1024,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        0,
+        3904
+      ],
+      "segments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        1,
+        24,
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        2,
+        16,
+        2,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        3,
+        16,
+        2,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0
+      ],
+      "system": [
+        6,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        2,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        7,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0
+      ],
+      "debug": [
+        0,
+        0,
+        0,
+        0,
+        4294909936,
+        1024
+      ],
+      "nativeTicks": "41",
+      "successfulQuanta": "41",
+      "mappingEpoch": 0,
+      "boardA20": 1,
+      "clockTransfers": {
+        "transfers": "83",
+        "commits": "41",
+        "words": "82"
+      },
+      "callbacks": {
+        "physicalReads": "23",
+        "physicalWrites": "29",
+        "executePages": "12",
+        "nativeTickCallbacks": "41",
+        "quantumCallbacks": "41"
+      },
+      "fallback": {
+        "bochsRamReads": "0",
+        "bochsRamWrites": "0",
+        "bochsDirectPointers": "0",
+        "bochsPio": "0",
+        "bochsTimer": "0"
+      },
+      "execution": {
+        "attempts": "41",
+        "completed": "41",
+        "repIterations": "0",
+        "repPartial": "0",
+        "faults": "0",
+        "portCommits": "0",
+        "irqDeliveries": "0",
+        "haltIdleCuts": "0"
+      }
+    },
+    "lastReturnedNative": {
+      "state": [
+        2147532527,
+        0,
+        0,
+        0,
+        57344,
+        0,
+        0,
+        0,
+        28677,
+        2,
+        4294967281,
+        0,
+        4096,
+        24,
+        16,
+        16,
+        1536,
+        31,
+        12288,
+        391
+      ],
+      "extra": [
+        4294909936,
+        1024,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        0,
+        3904
+      ],
+      "segments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        1,
+        24,
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        2,
+        16,
+        2,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        3,
+        16,
+        2,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0
+      ],
+      "system": [
+        6,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        2,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        7,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0
+      ],
+      "debug": [
+        0,
+        0,
+        0,
+        0,
+        4294909936,
+        1024
+      ],
+      "nativeTicks": "41",
+      "successfulQuanta": "41",
+      "mappingEpoch": 0,
+      "boardA20": 1,
+      "clockTransfers": {
+        "transfers": "83",
+        "commits": "41",
+        "words": "82"
+      },
+      "callbacks": {
+        "physicalReads": "23",
+        "physicalWrites": "29",
+        "executePages": "12",
+        "nativeTickCallbacks": "41",
+        "quantumCallbacks": "41"
+      },
+      "fallback": {
+        "bochsRamReads": "0",
+        "bochsRamWrites": "0",
+        "bochsDirectPointers": "0",
+        "bochsPio": "0",
+        "bochsTimer": "0"
+      },
+      "execution": {
+        "attempts": "41",
+        "completed": "41",
+        "repIterations": "0",
+        "repPartial": "0",
+        "faults": "0",
+        "portCommits": "0",
+        "irqDeliveries": "0",
+        "haltIdleCuts": "0"
+      },
+      "sliceBytes": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        41,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        41,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        41,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        41,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        24,
+        0,
+        0,
+        0,
+        5,
+        112,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "reason": 1,
+      "activityState": 0,
+      "chargedNativeTicks": 1,
+      "chargedQuanta": 1
+    },
+    "nativeMemoryEvents": [
+      {
+        "direction": "write",
+        "ordinal": 0,
+        "kind": "boot",
+        "raw": 1552,
+        "bytes": [
+          255,
+          255,
+          0,
+          0
+        ],
+        "generation": 1,
+        "nativeTicks": 4,
+        "successfulQuanta": 4,
+        "cycles": 28
+      },
+      {
+        "direction": "write",
+        "ordinal": 1,
+        "kind": "boot",
+        "raw": 1556,
+        "bytes": [
+          0,
+          147,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 5,
+        "successfulQuanta": 5,
+        "cycles": 34
+      },
+      {
+        "direction": "write",
+        "ordinal": 2,
+        "kind": "boot",
+        "raw": 1560,
+        "bytes": [
+          255,
+          255,
+          0,
+          0
+        ],
+        "generation": 3,
+        "nativeTicks": 6,
+        "successfulQuanta": 6,
+        "cycles": 40
+      },
+      {
+        "direction": "write",
+        "ordinal": 3,
+        "kind": "boot",
+        "raw": 1564,
+        "bytes": [
+          0,
+          155,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 7,
+        "successfulQuanta": 7,
+        "cycles": 46
+      },
+      {
+        "direction": "write",
+        "ordinal": 4,
+        "kind": "boot",
+        "raw": 40960,
+        "bytes": [
+          184,
+          17,
+          17,
+          205
+        ],
+        "generation": 1,
+        "nativeTicks": 8,
+        "successfulQuanta": 8,
+        "cycles": 52
+      },
+      {
+        "direction": "write",
+        "ordinal": 5,
+        "kind": "boot",
+        "raw": 40964,
+        "bytes": [
+          48,
+          244,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 9,
+        "successfulQuanta": 9,
+        "cycles": 58
+      },
+      {
+        "direction": "write",
+        "ordinal": 6,
+        "kind": "boot",
+        "raw": 40968,
+        "bytes": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "generation": 3,
+        "nativeTicks": 10,
+        "successfulQuanta": 10,
+        "cycles": 64
+      },
+      {
+        "direction": "write",
+        "ordinal": 7,
+        "kind": "boot",
+        "raw": 40972,
+        "bytes": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 11,
+        "successfulQuanta": 11,
+        "cycles": 70
+      },
+      {
+        "direction": "write",
+        "ordinal": 8,
+        "kind": "boot",
+        "raw": 40976,
+        "bytes": [
+          184,
+          239,
+          190,
+          207
+        ],
+        "generation": 5,
+        "nativeTicks": 12,
+        "successfulQuanta": 12,
+        "cycles": 76
+      },
+      {
+        "direction": "write",
+        "ordinal": 9,
+        "kind": "boot",
+        "raw": 4096,
+        "bytes": [
+          3,
+          32,
+          0,
+          0
+        ],
+        "generation": 1,
+        "nativeTicks": 13,
+        "successfulQuanta": 13,
+        "cycles": 82
+      },
+      {
+        "direction": "write",
+        "ordinal": 10,
+        "kind": "boot",
+        "raw": 8192,
+        "bytes": [
+          3,
+          0,
+          0,
+          0
+        ],
+        "generation": 1,
+        "nativeTicks": 14,
+        "successfulQuanta": 14,
+        "cycles": 88
+      },
+      {
+        "direction": "write",
+        "ordinal": 11,
+        "kind": "boot",
+        "raw": 8204,
+        "bytes": [
+          3,
+          48,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 15,
+        "successfulQuanta": 15,
+        "cycles": 94
+      },
+      {
+        "direction": "write",
+        "ordinal": 12,
+        "kind": "boot",
+        "raw": 8220,
+        "bytes": [
+          3,
+          160,
+          0,
+          0
+        ],
+        "generation": 3,
+        "nativeTicks": 16,
+        "successfulQuanta": 16,
+        "cycles": 100
+      },
+      {
+        "direction": "write",
+        "ordinal": 13,
+        "kind": "boot",
+        "raw": 8244,
+        "bytes": [
+          3,
+          192,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 17,
+        "successfulQuanta": 17,
+        "cycles": 106
+      },
+      {
+        "direction": "write",
+        "ordinal": 14,
+        "kind": "boot",
+        "raw": 9152,
+        "bytes": [
+          3,
+          0,
+          15,
+          0
+        ],
+        "generation": 5,
+        "nativeTicks": 18,
+        "successfulQuanta": 18,
+        "cycles": 112
+      },
+      {
+        "direction": "write",
+        "ordinal": 15,
+        "kind": "boot",
+        "raw": 12672,
+        "bytes": [
+          16,
+          112,
+          24,
+          0
+        ],
+        "generation": 1,
+        "nativeTicks": 19,
+        "successfulQuanta": 19,
+        "cycles": 118
+      },
+      {
+        "direction": "write",
+        "ordinal": 16,
+        "kind": "boot",
+        "raw": 12676,
+        "bytes": [
+          0,
+          134,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 20,
+        "successfulQuanta": 20,
+        "cycles": 124
+      },
+      {
+        "direction": "write",
+        "ordinal": 17,
+        "kind": "boot",
+        "raw": 28672,
+        "bytes": [
+          244,
+          204,
+          204,
+          204
+        ],
+        "generation": 1,
+        "nativeTicks": 21,
+        "successfulQuanta": 21,
+        "cycles": 130
+      },
+      {
+        "direction": "write",
+        "ordinal": 18,
+        "kind": "boot",
+        "raw": 36864,
+        "bytes": [
+          173,
+          222,
+          239,
+          190
+        ],
+        "generation": 1,
+        "nativeTicks": 22,
+        "successfulQuanta": 22,
+        "cycles": 136
+      },
+      {
+        "direction": "write",
+        "ordinal": 19,
+        "kind": "boot",
+        "raw": 53248,
+        "bytes": [
+          204,
+          204,
+          204,
+          204
+        ],
+        "generation": 1,
+        "nativeTicks": 23,
+        "successfulQuanta": 23,
+        "cycles": 142
+      },
+      {
+        "direction": "read",
+        "ordinal": 20,
+        "raw": 984064,
+        "bytes": [
+          31,
+          0
+        ],
+        "generation": 0,
+        "nativeTicks": 24,
+        "successfulQuanta": 24
+      },
+      {
+        "direction": "read",
+        "ordinal": 21,
+        "raw": 984066,
+        "bytes": [
+          0,
+          6,
+          0,
+          0
+        ],
+        "generation": 0,
+        "nativeTicks": 24,
+        "successfulQuanta": 24
+      },
+      {
+        "direction": "read",
+        "ordinal": 22,
+        "raw": 984070,
+        "bytes": [
+          135,
+          1
+        ],
+        "generation": 0,
+        "nativeTicks": 25,
+        "successfulQuanta": 25
+      },
+      {
+        "direction": "read",
+        "ordinal": 23,
+        "raw": 984072,
+        "bytes": [
+          0,
+          48,
+          0,
+          0
+        ],
+        "generation": 0,
+        "nativeTicks": 25,
+        "successfulQuanta": 25
+      },
+      {
+        "direction": "read",
+        "ordinal": 24,
+        "raw": 1552,
+        "bytes": [
+          255,
+          255,
+          0,
+          0,
+          0,
+          147,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 31,
+        "successfulQuanta": 31
+      },
+      {
+        "direction": "read",
+        "ordinal": 25,
+        "raw": 1552,
+        "bytes": [
+          255,
+          255,
+          0,
+          0,
+          0,
+          147,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 32,
+        "successfulQuanta": 32
+      },
+      {
+        "direction": "read",
+        "ordinal": 26,
+        "raw": 4096,
+        "bytes": [
+          3,
+          32,
+          0,
+          0
+        ],
+        "generation": 1,
+        "nativeTicks": 36,
+        "successfulQuanta": 36
+      },
+      {
+        "direction": "read",
+        "ordinal": 27,
+        "raw": 9152,
+        "bytes": [
+          3,
+          0,
+          15,
+          0
+        ],
+        "generation": 5,
+        "nativeTicks": 36,
+        "successfulQuanta": 36
+      },
+      {
+        "direction": "write",
+        "ordinal": 28,
+        "kind": "ad",
+        "raw": 4096,
+        "bytes": [
+          35,
+          32,
+          0,
+          0
+        ],
+        "before": 8195,
+        "after": 8227,
+        "generation": 2,
+        "nativeTicks": 36,
+        "successfulQuanta": 36,
+        "cycles": 220
+      },
+      {
+        "direction": "write",
+        "ordinal": 29,
+        "kind": "ad",
+        "raw": 9152,
+        "bytes": [
+          35,
+          0,
+          15,
+          0
+        ],
+        "before": 983043,
+        "after": 983075,
+        "generation": 6,
+        "nativeTicks": 36,
+        "successfulQuanta": 36,
+        "cycles": 220
+      },
+      {
+        "direction": "read",
+        "ordinal": 30,
+        "raw": 4096,
+        "bytes": [
+          35,
+          32,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 36,
+        "successfulQuanta": 36
+      },
+      {
+        "direction": "read",
+        "ordinal": 31,
+        "raw": 8192,
+        "bytes": [
+          3,
+          0,
+          0,
+          0
+        ],
+        "generation": 6,
+        "nativeTicks": 36,
+        "successfulQuanta": 36
+      },
+      {
+        "direction": "write",
+        "ordinal": 32,
+        "kind": "ad",
+        "raw": 8192,
+        "bytes": [
+          35,
+          0,
+          0,
+          0
+        ],
+        "before": 3,
+        "after": 35,
+        "generation": 7,
+        "nativeTicks": 36,
+        "successfulQuanta": 36,
+        "cycles": 220
+      },
+      {
+        "direction": "read",
+        "ordinal": 33,
+        "raw": 1560,
+        "bytes": [
+          255,
+          255,
+          0,
+          0,
+          0,
+          155,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 36,
+        "successfulQuanta": 36
+      },
+      {
+        "direction": "read",
+        "ordinal": 34,
+        "raw": 4096,
+        "bytes": [
+          35,
+          32,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 37,
+        "successfulQuanta": 37
+      },
+      {
+        "direction": "read",
+        "ordinal": 35,
+        "raw": 8220,
+        "bytes": [
+          3,
+          160,
+          0,
+          0
+        ],
+        "generation": 7,
+        "nativeTicks": 37,
+        "successfulQuanta": 37
+      },
+      {
+        "direction": "write",
+        "ordinal": 36,
+        "kind": "ad",
+        "raw": 8220,
+        "bytes": [
+          35,
+          160,
+          0,
+          0
+        ],
+        "before": 40963,
+        "after": 40995,
+        "generation": 8,
+        "nativeTicks": 37,
+        "successfulQuanta": 37,
+        "cycles": 226
+      },
+      {
+        "direction": "read",
+        "ordinal": 37,
+        "raw": 4096,
+        "bytes": [
+          35,
+          32,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 38,
+        "successfulQuanta": 38
+      },
+      {
+        "direction": "read",
+        "ordinal": 38,
+        "raw": 8204,
+        "bytes": [
+          3,
+          48,
+          0,
+          0
+        ],
+        "generation": 8,
+        "nativeTicks": 38,
+        "successfulQuanta": 38
+      },
+      {
+        "direction": "write",
+        "ordinal": 39,
+        "kind": "ad",
+        "raw": 8204,
+        "bytes": [
+          35,
+          48,
+          0,
+          0
+        ],
+        "before": 12291,
+        "after": 12323,
+        "generation": 9,
+        "nativeTicks": 38,
+        "successfulQuanta": 38,
+        "cycles": 232
+      },
+      {
+        "direction": "read",
+        "ordinal": 40,
+        "raw": 12672,
+        "bytes": [
+          16,
+          112,
+          24,
+          0,
+          0,
+          134,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 38,
+        "successfulQuanta": 38
+      },
+      {
+        "direction": "read",
+        "ordinal": 41,
+        "raw": 1560,
+        "bytes": [
+          255,
+          255,
+          0,
+          0,
+          0,
+          155,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 38,
+        "successfulQuanta": 38
+      },
+      {
+        "direction": "read",
+        "ordinal": 42,
+        "raw": 4096,
+        "bytes": [
+          35,
+          32,
+          0,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 38,
+        "successfulQuanta": 38
+      },
+      {
+        "direction": "read",
+        "ordinal": 43,
+        "raw": 8244,
+        "bytes": [
+          3,
+          192,
+          0,
+          0
+        ],
+        "generation": 9,
+        "nativeTicks": 38,
+        "successfulQuanta": 38
+      },
+      {
+        "direction": "write",
+        "ordinal": 44,
+        "kind": "ad",
+        "raw": 8244,
+        "bytes": [
+          99,
+          192,
+          0,
+          0
+        ],
+        "before": 49155,
+        "after": 49251,
+        "generation": 10,
+        "nativeTicks": 38,
+        "successfulQuanta": 38,
+        "cycles": 232
+      },
+      {
+        "direction": "write",
+        "ordinal": 45,
+        "kind": "frame",
+        "raw": 53246,
+        "bytes": [
+          2,
+          0
+        ],
+        "generation": 1,
+        "nativeTicks": 38,
+        "successfulQuanta": 38,
+        "cycles": 232
+      },
+      {
+        "direction": "write",
+        "ordinal": 46,
+        "kind": "frame",
+        "raw": 53244,
+        "bytes": [
+          24,
+          0
+        ],
+        "generation": 2,
+        "nativeTicks": 38,
+        "successfulQuanta": 38,
+        "cycles": 232
+      },
+      {
+        "direction": "write",
+        "ordinal": 47,
+        "kind": "frame",
+        "raw": 53242,
+        "bytes": [
+          5,
+          112
+        ],
+        "generation": 3,
+        "nativeTicks": 38,
+        "successfulQuanta": 38,
+        "cycles": 232
+      },
+      {
+        "direction": "read",
+        "ordinal": 48,
+        "raw": 53246,
+        "bytes": [
+          2,
+          0
+        ],
+        "generation": 3,
+        "nativeTicks": 40,
+        "successfulQuanta": 40
+      },
+      {
+        "direction": "read",
+        "ordinal": 49,
+        "raw": 53244,
+        "bytes": [
+          24,
+          0
+        ],
+        "generation": 3,
+        "nativeTicks": 40,
+        "successfulQuanta": 40
+      },
+      {
+        "direction": "read",
+        "ordinal": 50,
+        "raw": 53242,
+        "bytes": [
+          5,
+          112
+        ],
+        "generation": 3,
+        "nativeTicks": 40,
+        "successfulQuanta": 40
+      },
+      {
+        "direction": "read",
+        "ordinal": 51,
+        "raw": 1560,
+        "bytes": [
+          255,
+          255,
+          0,
+          0,
+          0,
+          155,
+          0,
+          0
+        ],
+        "generation": 4,
+        "nativeTicks": 40,
+        "successfulQuanta": 40
+      }
+    ],
+    "nativeOwnedEffects": {
+      "bootWrites": 20,
+      "frameWrites": 3,
+      "nativeAdWrites": 6,
+      "callbackOrder": "independent native tape; not JS tape equality"
+    },
+    "nativeMemoryEvidence": {
+      "events": 52,
+      "coverage": "real successful callback chronology; C tags/live PC not exposed by provider, no JS ordering assertion"
+    },
+    "javascriptDeliveries": [
+      {
+        "q": 39,
+        "vector": 48,
+        "returnEip": 28677,
+        "errorCode": null,
+        "software": true,
+        "cs": 24,
+        "eip": 28688,
+        "esp": 57338,
+        "eflags": 2
+      }
+    ],
+    "javascriptMemoryEffects": {
+      "stores": [
+        {
+          "cs": 61440,
+          "ip": 262,
+          "raw": 1552,
+          "bytes": [
+            255,
+            255,
+            0,
+            0
+          ],
+          "q": 5
+        },
+        {
+          "cs": 61440,
+          "ip": 271,
+          "raw": 1556,
+          "bytes": [
+            0,
+            147,
+            0,
+            0
+          ],
+          "q": 6
+        },
+        {
+          "cs": 61440,
+          "ip": 280,
+          "raw": 1560,
+          "bytes": [
+            255,
+            255,
+            0,
+            0
+          ],
+          "q": 7
+        },
+        {
+          "cs": 61440,
+          "ip": 289,
+          "raw": 1564,
+          "bytes": [
+            0,
+            155,
+            0,
+            0
+          ],
+          "q": 8
+        },
+        {
+          "cs": 61440,
+          "ip": 298,
+          "raw": 40960,
+          "bytes": [
+            184,
+            17,
+            17,
+            205
+          ],
+          "q": 9
+        },
+        {
+          "cs": 61440,
+          "ip": 307,
+          "raw": 40964,
+          "bytes": [
+            48,
+            244,
+            0,
+            0
+          ],
+          "q": 10
+        },
+        {
+          "cs": 61440,
+          "ip": 316,
+          "raw": 40968,
+          "bytes": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "q": 11
+        },
+        {
+          "cs": 61440,
+          "ip": 325,
+          "raw": 40972,
+          "bytes": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "q": 12
+        },
+        {
+          "cs": 61440,
+          "ip": 334,
+          "raw": 40976,
+          "bytes": [
+            184,
+            239,
+            190,
+            207
+          ],
+          "q": 13
+        },
+        {
+          "cs": 61440,
+          "ip": 343,
+          "raw": 4096,
+          "bytes": [
+            3,
+            32,
+            0,
+            0
+          ],
+          "q": 14
+        },
+        {
+          "cs": 61440,
+          "ip": 352,
+          "raw": 8192,
+          "bytes": [
+            3,
+            0,
+            0,
+            0
+          ],
+          "q": 15
+        },
+        {
+          "cs": 61440,
+          "ip": 361,
+          "raw": 8204,
+          "bytes": [
+            3,
+            48,
+            0,
+            0
+          ],
+          "q": 16
+        },
+        {
+          "cs": 61440,
+          "ip": 370,
+          "raw": 8220,
+          "bytes": [
+            3,
+            160,
+            0,
+            0
+          ],
+          "q": 17
+        },
+        {
+          "cs": 61440,
+          "ip": 379,
+          "raw": 8244,
+          "bytes": [
+            3,
+            192,
+            0,
+            0
+          ],
+          "q": 18
+        },
+        {
+          "cs": 61440,
+          "ip": 388,
+          "raw": 9152,
+          "bytes": [
+            3,
+            0,
+            15,
+            0
+          ],
+          "q": 19
+        },
+        {
+          "cs": 61440,
+          "ip": 397,
+          "raw": 12672,
+          "bytes": [
+            16,
+            112,
+            24,
+            0
+          ],
+          "q": 20
+        },
+        {
+          "cs": 61440,
+          "ip": 406,
+          "raw": 12676,
+          "bytes": [
+            0,
+            134,
+            0,
+            0
+          ],
+          "q": 21
+        },
+        {
+          "cs": 61440,
+          "ip": 415,
+          "raw": 28672,
+          "bytes": [
+            244,
+            204,
+            204,
+            204
+          ],
+          "q": 22
+        },
+        {
+          "cs": 61440,
+          "ip": 424,
+          "raw": 36864,
+          "bytes": [
+            173,
+            222,
+            239,
+            190
+          ],
+          "q": 23
+        },
+        {
+          "cs": 61440,
+          "ip": 433,
+          "raw": 53248,
+          "bytes": [
+            204,
+            204,
+            204,
+            204
+          ],
+          "q": 24
+        },
+        {
+          "cs": 24,
+          "ip": 28675,
+          "raw": 53242,
+          "bytes": [
+            5,
+            112
+          ],
+          "q": 39
+        },
+        {
+          "cs": 24,
+          "ip": 28675,
+          "raw": 53244,
+          "bytes": [
+            24,
+            0
+          ],
+          "q": 39
+        },
+        {
+          "cs": 24,
+          "ip": 28675,
+          "raw": 53246,
+          "bytes": [
+            2,
+            0
+          ],
+          "q": 39
+        }
+      ],
+      "updates": [
+        {
+          "kind": "directory-accessed",
+          "cs": 61440,
+          "ip": 491,
+          "raw": 4096,
+          "before": 8195,
+          "after": 8227,
+          "q": 37
+        },
+        {
+          "kind": "ROM-fetch-accessed",
+          "cs": 61440,
+          "ip": 491,
+          "raw": 9152,
+          "before": 983043,
+          "after": 983075,
+          "q": 37
+        },
+        {
+          "kind": "descriptor-read-accessed",
+          "cs": 61440,
+          "ip": 491,
+          "raw": 8192,
+          "before": 3,
+          "after": 35,
+          "q": 37
+        },
+        {
+          "kind": "code-fetch-accessed",
+          "cs": 24,
+          "ip": 28672,
+          "raw": 8220,
+          "before": 40963,
+          "after": 40995,
+          "q": 38
+        },
+        {
+          "kind": "IDT-read-accessed",
+          "cs": 24,
+          "ip": 28675,
+          "raw": 8204,
+          "before": 12291,
+          "after": 12323,
+          "q": 39
+        },
+        {
+          "kind": "stack-accessed",
+          "cs": 24,
+          "ip": 28675,
+          "raw": 8244,
+          "before": 49155,
+          "after": 49187,
+          "q": 39
+        },
+        {
+          "kind": "stack-dirty",
+          "cs": 24,
+          "ip": 28675,
+          "raw": 8244,
+          "before": 49187,
+          "after": 49251,
+          "q": 39
+        }
+      ],
+      "accesses": [
+        {
+          "q": 1,
+          "cs": 61440,
+          "eip": 65520,
+          "raw": 4294967280,
+          "value": 234
+        },
+        {
+          "q": 1,
+          "cs": 61440,
+          "eip": 65520,
+          "raw": 4294967281,
+          "value": 0
+        },
+        {
+          "q": 1,
+          "cs": 61440,
+          "eip": 65520,
+          "raw": 4294967282,
+          "value": 1
+        },
+        {
+          "q": 1,
+          "cs": 61440,
+          "eip": 65520,
+          "raw": 4294967283,
+          "value": 0
+        },
+        {
+          "q": 1,
+          "cs": 61440,
+          "eip": 65520,
+          "raw": 4294967284,
+          "value": 240
+        },
+        {
+          "q": 2,
+          "cs": 61440,
+          "eip": 256,
+          "raw": 983296,
+          "value": 250
+        },
+        {
+          "q": 3,
+          "cs": 61440,
+          "eip": 257,
+          "raw": 983297,
+          "value": 184
+        },
+        {
+          "q": 3,
+          "cs": 61440,
+          "eip": 257,
+          "raw": 983298,
+          "value": 0
+        },
+        {
+          "q": 3,
+          "cs": 61440,
+          "eip": 257,
+          "raw": 983299,
+          "value": 0
+        },
+        {
+          "q": 4,
+          "cs": 61440,
+          "eip": 260,
+          "raw": 983300,
+          "value": 142
+        },
+        {
+          "q": 4,
+          "cs": 61440,
+          "eip": 260,
+          "raw": 983301,
+          "value": 216
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983302,
+          "value": 102
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983303,
+          "value": 199
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983304,
+          "value": 6
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983305,
+          "value": 16
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983306,
+          "value": 6
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983307,
+          "value": 255
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983308,
+          "value": 255
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983309,
+          "value": 0
+        },
+        {
+          "q": 5,
+          "cs": 61440,
+          "eip": 262,
+          "raw": 983310,
+          "value": 0
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983311,
+          "value": 102
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983312,
+          "value": 199
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983313,
+          "value": 6
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983314,
+          "value": 20
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983315,
+          "value": 6
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983316,
+          "value": 0
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983317,
+          "value": 147
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983318,
+          "value": 0
+        },
+        {
+          "q": 6,
+          "cs": 61440,
+          "eip": 271,
+          "raw": 983319,
+          "value": 0
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983320,
+          "value": 102
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983321,
+          "value": 199
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983322,
+          "value": 6
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983323,
+          "value": 24
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983324,
+          "value": 6
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983325,
+          "value": 255
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983326,
+          "value": 255
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983327,
+          "value": 0
+        },
+        {
+          "q": 7,
+          "cs": 61440,
+          "eip": 280,
+          "raw": 983328,
+          "value": 0
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983329,
+          "value": 102
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983330,
+          "value": 199
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983331,
+          "value": 6
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983332,
+          "value": 28
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983333,
+          "value": 6
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983334,
+          "value": 0
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983335,
+          "value": 155
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983336,
+          "value": 0
+        },
+        {
+          "q": 8,
+          "cs": 61440,
+          "eip": 289,
+          "raw": 983337,
+          "value": 0
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983338,
+          "value": 102
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983339,
+          "value": 199
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983340,
+          "value": 6
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983341,
+          "value": 0
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983342,
+          "value": 160
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983343,
+          "value": 184
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983344,
+          "value": 17
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983345,
+          "value": 17
+        },
+        {
+          "q": 9,
+          "cs": 61440,
+          "eip": 298,
+          "raw": 983346,
+          "value": 205
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983347,
+          "value": 102
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983348,
+          "value": 199
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983349,
+          "value": 6
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983350,
+          "value": 4
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983351,
+          "value": 160
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983352,
+          "value": 48
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983353,
+          "value": 244
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983354,
+          "value": 0
+        },
+        {
+          "q": 10,
+          "cs": 61440,
+          "eip": 307,
+          "raw": 983355,
+          "value": 0
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983356,
+          "value": 102
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983357,
+          "value": 199
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983358,
+          "value": 6
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983359,
+          "value": 8
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983360,
+          "value": 160
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983361,
+          "value": 0
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983362,
+          "value": 0
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983363,
+          "value": 0
+        },
+        {
+          "q": 11,
+          "cs": 61440,
+          "eip": 316,
+          "raw": 983364,
+          "value": 0
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983365,
+          "value": 102
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983366,
+          "value": 199
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983367,
+          "value": 6
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983368,
+          "value": 12
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983369,
+          "value": 160
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983370,
+          "value": 0
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983371,
+          "value": 0
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983372,
+          "value": 0
+        },
+        {
+          "q": 12,
+          "cs": 61440,
+          "eip": 325,
+          "raw": 983373,
+          "value": 0
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983374,
+          "value": 102
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983375,
+          "value": 199
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983376,
+          "value": 6
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983377,
+          "value": 16
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983378,
+          "value": 160
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983379,
+          "value": 184
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983380,
+          "value": 239
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983381,
+          "value": 190
+        },
+        {
+          "q": 13,
+          "cs": 61440,
+          "eip": 334,
+          "raw": 983382,
+          "value": 207
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983383,
+          "value": 102
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983384,
+          "value": 199
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983385,
+          "value": 6
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983386,
+          "value": 0
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983387,
+          "value": 16
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983388,
+          "value": 3
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983389,
+          "value": 32
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983390,
+          "value": 0
+        },
+        {
+          "q": 14,
+          "cs": 61440,
+          "eip": 343,
+          "raw": 983391,
+          "value": 0
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983392,
+          "value": 102
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983393,
+          "value": 199
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983394,
+          "value": 6
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983395,
+          "value": 0
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983396,
+          "value": 32
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983397,
+          "value": 3
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983398,
+          "value": 0
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983399,
+          "value": 0
+        },
+        {
+          "q": 15,
+          "cs": 61440,
+          "eip": 352,
+          "raw": 983400,
+          "value": 0
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983401,
+          "value": 102
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983402,
+          "value": 199
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983403,
+          "value": 6
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983404,
+          "value": 12
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983405,
+          "value": 32
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983406,
+          "value": 3
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983407,
+          "value": 48
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983408,
+          "value": 0
+        },
+        {
+          "q": 16,
+          "cs": 61440,
+          "eip": 361,
+          "raw": 983409,
+          "value": 0
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983410,
+          "value": 102
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983411,
+          "value": 199
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983412,
+          "value": 6
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983413,
+          "value": 28
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983414,
+          "value": 32
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983415,
+          "value": 3
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983416,
+          "value": 160
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983417,
+          "value": 0
+        },
+        {
+          "q": 17,
+          "cs": 61440,
+          "eip": 370,
+          "raw": 983418,
+          "value": 0
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983419,
+          "value": 102
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983420,
+          "value": 199
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983421,
+          "value": 6
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983422,
+          "value": 52
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983423,
+          "value": 32
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983424,
+          "value": 3
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983425,
+          "value": 192
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983426,
+          "value": 0
+        },
+        {
+          "q": 18,
+          "cs": 61440,
+          "eip": 379,
+          "raw": 983427,
+          "value": 0
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983428,
+          "value": 102
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983429,
+          "value": 199
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983430,
+          "value": 6
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983431,
+          "value": 192
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983432,
+          "value": 35
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983433,
+          "value": 3
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983434,
+          "value": 0
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983435,
+          "value": 15
+        },
+        {
+          "q": 19,
+          "cs": 61440,
+          "eip": 388,
+          "raw": 983436,
+          "value": 0
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983437,
+          "value": 102
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983438,
+          "value": 199
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983439,
+          "value": 6
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983440,
+          "value": 128
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983441,
+          "value": 49
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983442,
+          "value": 16
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983443,
+          "value": 112
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983444,
+          "value": 24
+        },
+        {
+          "q": 20,
+          "cs": 61440,
+          "eip": 397,
+          "raw": 983445,
+          "value": 0
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983446,
+          "value": 102
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983447,
+          "value": 199
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983448,
+          "value": 6
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983449,
+          "value": 132
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983450,
+          "value": 49
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983451,
+          "value": 0
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983452,
+          "value": 134
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983453,
+          "value": 0
+        },
+        {
+          "q": 21,
+          "cs": 61440,
+          "eip": 406,
+          "raw": 983454,
+          "value": 0
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983455,
+          "value": 102
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983456,
+          "value": 199
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983457,
+          "value": 6
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983458,
+          "value": 0
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983459,
+          "value": 112
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983460,
+          "value": 244
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983461,
+          "value": 204
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983462,
+          "value": 204
+        },
+        {
+          "q": 22,
+          "cs": 61440,
+          "eip": 415,
+          "raw": 983463,
+          "value": 204
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983464,
+          "value": 102
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983465,
+          "value": 199
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983466,
+          "value": 6
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983467,
+          "value": 0
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983468,
+          "value": 144
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983469,
+          "value": 173
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983470,
+          "value": 222
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983471,
+          "value": 239
+        },
+        {
+          "q": 23,
+          "cs": 61440,
+          "eip": 424,
+          "raw": 983472,
+          "value": 190
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983473,
+          "value": 102
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983474,
+          "value": 199
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983475,
+          "value": 6
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983476,
+          "value": 0
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983477,
+          "value": 208
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983478,
+          "value": 204
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983479,
+          "value": 204
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983480,
+          "value": 204
+        },
+        {
+          "q": 24,
+          "cs": 61440,
+          "eip": 433,
+          "raw": 983481,
+          "value": 204
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 983482,
+          "value": 46
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 983483,
+          "value": 15
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 983484,
+          "value": 1
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 983485,
+          "value": 22
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 983486,
+          "value": 0
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 983487,
+          "value": 4
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 984064,
+          "value": 31
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 984065,
+          "value": 0
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 984066,
+          "value": 0
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 984067,
+          "value": 6
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 984068,
+          "value": 0
+        },
+        {
+          "q": 25,
+          "cs": 61440,
+          "eip": 442,
+          "raw": 984069,
+          "value": 0
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 983488,
+          "value": 46
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 983489,
+          "value": 15
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 983490,
+          "value": 1
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 983491,
+          "value": 30
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 983492,
+          "value": 6
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 983493,
+          "value": 4
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 984070,
+          "value": 135
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 984071,
+          "value": 1
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 984072,
+          "value": 0
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 984073,
+          "value": 48
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 984074,
+          "value": 0
+        },
+        {
+          "q": 26,
+          "cs": 61440,
+          "eip": 448,
+          "raw": 984075,
+          "value": 0
+        },
+        {
+          "q": 27,
+          "cs": 61440,
+          "eip": 454,
+          "raw": 983494,
+          "value": 102
+        },
+        {
+          "q": 27,
+          "cs": 61440,
+          "eip": 454,
+          "raw": 983495,
+          "value": 184
+        },
+        {
+          "q": 27,
+          "cs": 61440,
+          "eip": 454,
+          "raw": 983496,
+          "value": 0
+        },
+        {
+          "q": 27,
+          "cs": 61440,
+          "eip": 454,
+          "raw": 983497,
+          "value": 16
+        },
+        {
+          "q": 27,
+          "cs": 61440,
+          "eip": 454,
+          "raw": 983498,
+          "value": 0
+        },
+        {
+          "q": 27,
+          "cs": 61440,
+          "eip": 454,
+          "raw": 983499,
+          "value": 0
+        },
+        {
+          "q": 28,
+          "cs": 61440,
+          "eip": 460,
+          "raw": 983500,
+          "value": 15
+        },
+        {
+          "q": 28,
+          "cs": 61440,
+          "eip": 460,
+          "raw": 983501,
+          "value": 34
+        },
+        {
+          "q": 28,
+          "cs": 61440,
+          "eip": 460,
+          "raw": 983502,
+          "value": 216
+        },
+        {
+          "q": 29,
+          "cs": 61440,
+          "eip": 463,
+          "raw": 983503,
+          "value": 102
+        },
+        {
+          "q": 29,
+          "cs": 61440,
+          "eip": 463,
+          "raw": 983504,
+          "value": 184
+        },
+        {
+          "q": 29,
+          "cs": 61440,
+          "eip": 463,
+          "raw": 983505,
+          "value": 1
+        },
+        {
+          "q": 29,
+          "cs": 61440,
+          "eip": 463,
+          "raw": 983506,
+          "value": 0
+        },
+        {
+          "q": 29,
+          "cs": 61440,
+          "eip": 463,
+          "raw": 983507,
+          "value": 0
+        },
+        {
+          "q": 29,
+          "cs": 61440,
+          "eip": 463,
+          "raw": 983508,
+          "value": 0
+        },
+        {
+          "q": 30,
+          "cs": 61440,
+          "eip": 469,
+          "raw": 983509,
+          "value": 15
+        },
+        {
+          "q": 30,
+          "cs": 61440,
+          "eip": 469,
+          "raw": 983510,
+          "value": 34
+        },
+        {
+          "q": 30,
+          "cs": 61440,
+          "eip": 469,
+          "raw": 983511,
+          "value": 192
+        },
+        {
+          "q": 31,
+          "cs": 61440,
+          "eip": 472,
+          "raw": 983512,
+          "value": 184
+        },
+        {
+          "q": 31,
+          "cs": 61440,
+          "eip": 472,
+          "raw": 983513,
+          "value": 16
+        },
+        {
+          "q": 31,
+          "cs": 61440,
+          "eip": 472,
+          "raw": 983514,
+          "value": 0
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 983515,
+          "value": 142
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 983516,
+          "value": 216
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1552,
+          "value": 255
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1553,
+          "value": 255
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1554,
+          "value": 0
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1555,
+          "value": 0
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1556,
+          "value": 0
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1557,
+          "value": 147
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1558,
+          "value": 0
+        },
+        {
+          "q": 32,
+          "cs": 61440,
+          "eip": 475,
+          "raw": 1559,
+          "value": 0
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 983517,
+          "value": 142
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 983518,
+          "value": 208
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1552,
+          "value": 255
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1553,
+          "value": 255
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1554,
+          "value": 0
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1555,
+          "value": 0
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1556,
+          "value": 0
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1557,
+          "value": 147
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1558,
+          "value": 0
+        },
+        {
+          "q": 33,
+          "cs": 61440,
+          "eip": 477,
+          "raw": 1559,
+          "value": 0
+        },
+        {
+          "q": 34,
+          "cs": 61440,
+          "eip": 479,
+          "raw": 983519,
+          "value": 188
+        },
+        {
+          "q": 34,
+          "cs": 61440,
+          "eip": 479,
+          "raw": 983520,
+          "value": 0
+        },
+        {
+          "q": 34,
+          "cs": 61440,
+          "eip": 479,
+          "raw": 983521,
+          "value": 224
+        },
+        {
+          "q": 35,
+          "cs": 61440,
+          "eip": 482,
+          "raw": 983522,
+          "value": 102
+        },
+        {
+          "q": 35,
+          "cs": 61440,
+          "eip": 482,
+          "raw": 983523,
+          "value": 184
+        },
+        {
+          "q": 35,
+          "cs": 61440,
+          "eip": 482,
+          "raw": 983524,
+          "value": 1
+        },
+        {
+          "q": 35,
+          "cs": 61440,
+          "eip": 482,
+          "raw": 983525,
+          "value": 0
+        },
+        {
+          "q": 35,
+          "cs": 61440,
+          "eip": 482,
+          "raw": 983526,
+          "value": 0
+        },
+        {
+          "q": 35,
+          "cs": 61440,
+          "eip": 482,
+          "raw": 983527,
+          "value": 128
+        },
+        {
+          "q": 36,
+          "cs": 61440,
+          "eip": 488,
+          "raw": 983528,
+          "value": 15
+        },
+        {
+          "q": 36,
+          "cs": 61440,
+          "eip": 488,
+          "raw": 983529,
+          "value": 34
+        },
+        {
+          "q": 36,
+          "cs": 61440,
+          "eip": 488,
+          "raw": 983530,
+          "value": 192
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4096,
+          "value": 3
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4097,
+          "value": 32
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4098,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4099,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 9152,
+          "value": 3
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 9153,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 9154,
+          "value": 15
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 9155,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 983531,
+          "value": 234
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 983532,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 983533,
+          "value": 112
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 983534,
+          "value": 24
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 983535,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4096,
+          "value": 35
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4097,
+          "value": 32
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4098,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 4099,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 8192,
+          "value": 3
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 8193,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 8194,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 8195,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1560,
+          "value": 255
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1561,
+          "value": 255
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1562,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1563,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1564,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1565,
+          "value": 155
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1566,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1567,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1560,
+          "value": 255
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1561,
+          "value": 255
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1562,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1563,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1564,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1565,
+          "value": 155
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1566,
+          "value": 0
+        },
+        {
+          "q": 37,
+          "cs": 61440,
+          "eip": 491,
+          "raw": 1567,
+          "value": 0
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 4096,
+          "value": 35
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 4097,
+          "value": 32
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 4098,
+          "value": 0
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 4099,
+          "value": 0
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 8220,
+          "value": 3
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 8221,
+          "value": 160
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 8222,
+          "value": 0
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 8223,
+          "value": 0
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 40960,
+          "value": 184
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 40961,
+          "value": 17
+        },
+        {
+          "q": 38,
+          "cs": 24,
+          "eip": 28672,
+          "raw": 40962,
+          "value": 17
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 40963,
+          "value": 205
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 40964,
+          "value": 48
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4096,
+          "value": 35
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4097,
+          "value": 32
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4098,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4099,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8204,
+          "value": 3
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8205,
+          "value": 48
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8206,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8207,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12672,
+          "value": 16
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12673,
+          "value": 112
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12674,
+          "value": 24
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12675,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12676,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12677,
+          "value": 134
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12678,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 12679,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1560,
+          "value": 255
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1561,
+          "value": 255
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1562,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1563,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1564,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1565,
+          "value": 155
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1566,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 1567,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4096,
+          "value": 35
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4097,
+          "value": 32
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4098,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 4099,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8244,
+          "value": 3
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8245,
+          "value": 192
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8246,
+          "value": 0
+        },
+        {
+          "q": 39,
+          "cs": 24,
+          "eip": 28675,
+          "raw": 8247,
+          "value": 0
+        },
+        {
+          "q": 40,
+          "cs": 24,
+          "eip": 28688,
+          "raw": 40976,
+          "value": 184
+        },
+        {
+          "q": 40,
+          "cs": 24,
+          "eip": 28688,
+          "raw": 40977,
+          "value": 239
+        },
+        {
+          "q": 40,
+          "cs": 24,
+          "eip": 28688,
+          "raw": 40978,
+          "value": 190
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 40979,
+          "value": 207
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 53242,
+          "value": 5
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 53243,
+          "value": 112
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 53244,
+          "value": 24
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 53245,
+          "value": 0
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 53246,
+          "value": 2
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 53247,
+          "value": 0
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1560,
+          "value": 255
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1561,
+          "value": 255
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1562,
+          "value": 0
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1563,
+          "value": 0
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1564,
+          "value": 0
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1565,
+          "value": 155
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1566,
+          "value": 0
+        },
+        {
+          "q": 41,
+          "cs": 24,
+          "eip": 28691,
+          "raw": 1567,
+          "value": 0
+        }
+      ]
+    },
+    "cleanup": {
+      "native": "closed",
+      "provider": "closed",
+      "javascript": "closed"
+    },
+    "milestones": {
+      "milestones": 14,
+      "comparableCuts": 12,
+      "unmatchedCuts": 2,
+      "pageBytesPerRecordedBoundary": 40960
+    }
+  },
+  "finalJavascriptCpu": {
+    "eax": 2147532527,
+    "ecx": 0,
+    "edx": 0,
+    "ebx": 0,
+    "esp": 57344,
+    "ebp": 0,
+    "esi": 0,
+    "edi": 0,
+    "eip": 28677,
+    "eflags": 2,
+    "cr0": 4294967281,
+    "cr2": 0,
+    "cr3": 4096,
+    "cs": 24,
+    "ds": 16,
+    "ss": 16,
+    "es": 0,
+    "fs": 0,
+    "gs": 0,
+    "cr4": 0,
+    "pc": 28677,
+    "gdtr": {
+      "limit": 31,
+      "base": 1536
+    },
+    "idtr": {
+      "limit": 391,
+      "base": 12288
+    },
+    "ldtr": {
+      "selector": 0,
+      "base": 0,
+      "limit": 65535,
+      "present": true,
+      "type": 2
+    },
+    "tr": {
+      "selector": 0,
+      "base": 0,
+      "limit": 65535,
+      "present": true,
+      "type": 11
+    },
+    "segmentCaches": {
+      "0": {
+        "base": 0,
+        "limit": 65535,
+        "default32": false,
+        "present": true,
+        "code": false,
+        "writable": true
+      },
+      "1": {
+        "base": 0,
+        "limit": 65535,
+        "default32": false,
+        "code": true,
+        "readable": true,
+        "writable": false,
+        "access": 155,
+        "address": 1560,
+        "dpl": 0,
+        "conforming": false,
+        "present": true
+      },
+      "2": {
+        "base": 0,
+        "limit": 65535,
+        "default32": false,
+        "present": true,
+        "code": false,
+        "expandDown": false,
+        "readable": true,
+        "writable": true,
+        "access": 147,
+        "address": 1552
+      },
+      "3": {
+        "base": 0,
+        "limit": 65535,
+        "default32": false,
+        "present": true,
+        "code": false,
+        "expandDown": false,
+        "readable": true,
+        "writable": true,
+        "access": 147,
+        "address": 1552
+      },
+      "4": {
+        "base": 0,
+        "limit": 65535,
+        "default32": false,
+        "present": true,
+        "code": false,
+        "writable": true
+      },
+      "5": {
+        "base": 0,
+        "limit": 65535,
+        "default32": false,
+        "present": true,
+        "code": false,
+        "writable": true
+      }
+    },
+    "debugRegisters": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4294909936,
+      1024
+    ],
+    "halted": false,
+    "shutdown": false,
+    "interruptShadow": 0,
+    "nmiShadow": 0,
+    "debugShadow": 0,
+    "cycles": 41
+  },
+  "ramSha256": "0110baad6cfc99e56a04d07d0cf5cf9d8d7ab2e85f24721b980226cb79a674a6",
+  "cuts": [
+    {
+      "name": "reset",
+      "q": 0,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "after-LGDT",
+      "q": 25,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "after-LIDT",
+      "q": 26,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "CR3-ready",
+      "q": 28,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "PE-enabled",
+      "q": 30,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "DS-ready",
+      "q": 32,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "SS-loaded",
+      "q": 33,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "SP-ready",
+      "q": 34,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "PG-enabled",
+      "q": 36,
+      "comparison": {
+        "status": "UNMATCHED_PHASE",
+        "coverage": "representedCPU/NQ only; raw boards/ten pages retained without equality claim"
+      }
+    },
+    {
+      "name": "entered-paged-code",
+      "q": 37,
+      "comparison": {
+        "status": "UNMATCHED_PHASE",
+        "coverage": "representedCPU/NQ only; raw boards/ten pages retained without equality claim"
+      }
+    },
+    {
+      "name": "before-INT",
+      "q": 38,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "entered-handler",
+      "q": 39,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "after-handler-MOV",
+      "q": 40,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    },
+    {
+      "name": "returned-from-IRET-before-HLT",
+      "q": 41,
+      "comparison": {
+        "status": "COMPARABLE_PARITY_PASS",
+        "coverage": "representedCPU/source-backedCSDS/fullSS cache/fullboard/ten unmodified4096-byte pages/owned independent effects"
+      }
+    }
+  ]
+}

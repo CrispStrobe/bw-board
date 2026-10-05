@@ -1,0 +1,34 @@
+{
+  "status": "INDEPENDENT_SAVED_FULL_INT_IRET_LOGICAL_AUDIT_PASS",
+  "runId": 37247392133,
+  "artifactId": 11319662434,
+  "driverRevision": "98fb8216aa5bd0fa046cc6388f7ff6c1b22f5750",
+  "logicalBytes": 23559031,
+  "returnedRaw166Boundaries": 43,
+  "comparableBoundaries": 41,
+  "unmatchedBoundaries": 2,
+  "cuts": 14,
+  "comparableCuts": 12,
+  "unmatchedCuts": 2,
+  "returnedPageBytesChecked": 1761280,
+  "resumes": 41,
+  "n": 41,
+  "q": 41,
+  "zeroQ": 0,
+  "callbacks": 52,
+  "nativeOwnedWrites": {
+    "bootWrites": 20,
+    "frameWrites": 3,
+    "nativeAdWrites": 6,
+    "callbackOrder": "independent native tape; not JS tape equality"
+  },
+  "settledRamSha256": "0110baad6cfc99e56a04d07d0cf5cf9d8d7ab2e85f24721b980226cb79a674a6",
+  "closed": {
+    "native": "closed",
+    "provider": "closed",
+    "javascript": "closed"
+  },
+  "sourceInputBuildConfigurationNodeGuards": "all six required pairs present and equal",
+  "heldParityPipeline": "reviewed cc0059/2e37 exit0; unchanged parity source functions, no CPU calls",
+  "scope": "SoleZIP CRC/hash-bound lossless body and saved JS frames independently crosschecked. Unmatched phases retain raw pages but receive no full parity PASS. Source-attested cache, copied host RAM; whole RAM hash only. Original first failure preserved; no guest replay."
+}
