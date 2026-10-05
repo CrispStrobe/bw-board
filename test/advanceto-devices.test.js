@@ -129,13 +129,18 @@ describe('advanceTo runs device updates: ultrasonic echo', () => {
     board.setPin('P1.0', 'pushpull', true);
     board.advanceTo(10_000n); // 10µs trigger
     board.setPin('P1.0', 'pushpull', false);
+    board.advanceTo(10_001n); // the module sees the trigger end
 
-    // Echo should be HIGH now (measuring)
+    // The datasheet sequence: the 8-cycle 40 kHz burst (200 µs) first, ECHO
+    // after it. Every step below is advanceTo alone -- no pin activity.
+    board.advanceTo(150_000n);
+    assert.ok(board.nodeVoltage('net_echo') < 1.0, 'echo still LOW while the burst goes out');
+    board.advanceTo(215_000n);
     const echoV = board.nodeVoltage('net_echo');
     assert.ok(echoV > 3.0, `echo should be HIGH during measurement, got ${echoV.toFixed(3)}V`);
 
-    // Advance past echo duration (580µs) with NO pin activity
-    board.advanceTo(700_000n); // 700µs > 580µs
+    // Advance past the echo (210 + 580 µs) with NO pin activity
+    board.advanceTo(800_000n);
 
     // Echo should be LOW now
     const echoV2 = board.nodeVoltage('net_echo');
