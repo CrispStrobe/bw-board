@@ -1,0 +1,3 @@
+# Compact addon static build source
+
+PENDING source review. This separate default-disabled workflow derives the held fusion runtime unchanged and compact generated NAPI with distinct manifest/receipt/context profile and schemas. ABI4/config/CPU features/seven C exports stay held; progress is a new JS export. No key-cache mix-in. The source inventory includes the compact generator and build/admission helper/workflow/tests plus inherited transitive closure. No addon load or guest occurs in this workflow; exact generated source/export wiring must be audited independently of C symbols. Existing fusion receipts without the compact profile are refused. No build/control has been run.
