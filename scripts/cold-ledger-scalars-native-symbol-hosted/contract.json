@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-ledger-scalars.native-symbol.hosted-source.v1",
-  "status": "PENDING_ROOT_HOSTED_SOURCE_REVIEW",
+  "status": "ROOT_REVIEWED_NATIVE_SYMBOL_HOSTED_READY",
   "enabledByDefault": false,
   "scope": "DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION",
   "roles": {

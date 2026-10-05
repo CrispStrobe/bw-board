@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "path": "stdout",
+      "bytes": 434,
+      "sha256": "55597b0e5ec64e61a3fc8bfa4c760876b30180ee786d65607f5c2a37220d0013",
+      "origin": "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/stdout"
+    },
+    {
+      "path": "exit.json",
+      "bytes": 496,
+      "sha256": "57ca28b1c625e579e47258cb64309ea8aa3bd41aea043368af93c21d49e026df",
+      "origin": "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/exit.json"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 967,
+      "sha256": "62ee54867bf78b0406965cd49280cb1dc485da44360efa279d18fcea5ac102ce",
+      "origin": "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/invocation.json"
+    },
+    {
+      "path": "root-actual-audit.json",
+      "bytes": 862,
+      "sha256": "0f22f20bf5dd0d41e7c29b03579d4112760bc02b1a69ab37a7194e19378f22fc",
+      "origin": "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/root-actual-audit.json"
+    },
+    {
+      "path": "agent-actual-audit.json",
+      "bytes": 372,
+      "sha256": "931608cb72f448c05e95aef63d363f364eb95e31b57b19083b5d78ac5588f72e",
+      "origin": "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/agent-actual-audit.json"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 588,
+      "sha256": "349bae466bb82d1ce2a9c672d9993dcfc2ab0257aa5d0cc6cdafb09e99458cef",
+      "origin": "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/independent-audit.json"
+    }
+  ]
+}
