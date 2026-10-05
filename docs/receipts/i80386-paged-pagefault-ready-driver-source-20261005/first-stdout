@@ -1,0 +1,364 @@
+TAP version 13
+# Subtest: fresh PF build authority and manufactured pending old addon refusals before factories
+ok 1 - fresh PF build authority and manufactured pending old addon refusals before factories
+  ---
+  duration_ms: 33.085207
+  type: 'test'
+  ...
+# Subtest: new runtime and provider preserve exact held derivatives and unknown source refuses
+not ok 2 - new runtime and provider preserve exact held derivatives and unknown source refuses
+  ---
+  duration_ms: 60.898019
+  type: 'test'
+  location: '/tmp/bw-native-paged-pagefault-ready-driver-source-20261005/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:41:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    exact executing reviewed PF lifecycle
+    + actual - expected
+    ... Skipped lines
+    
+    + '/** Closed fixed paged PF recovery differential driver; fresh static-only build authority. No execution on import. */\n' +
+    - '/** Closed fixed paged PF recovery differential driver; build authority pending. No execution on import. */\n' +
+        "import assert from 'node:assert/strict';\n" +
+        "import {mkdirSync,lstatSync,realpathSync} from 'node:fs';\n" +
+        "import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';\n" +
+        "import {resolve,isAbsolute} from 'node:path';\n" +
+        "import {fileURLToPath,pathToFileURL} from 'node:url';\n" +
+    ...
+        "  receipt.lastReturnedNative=native;assert.equal(native.activityState,0);native=api.inspect();assert.deepEqual(wholeNativeWords(native),wholeNativeWords(receipt.lastReturnedNative),'paused inspect unchanged166');assert.equal(Number(native.nativeTicks),progress.n);assert.equal(Number(native.successfulQuanta),progress.q);receipt.finalNative=native;compare('final-inspect');receipt.milestones=validateMilestones(receipt.cuts);receipt.faultRecovery=finishFaultLedger(faultLedger);receipt.progress={...progress,resumes,zeroQ};assert.deepEqual([progress.n,progress.q,progress.faults],[57,56,1],'source-derived finite ordinary/fault extent');\n" +
+    +   "  receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects("... 2757 more characters
+    -   "  receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects(receipt.na"... 2747 more characters
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    /** Closed fixed paged PF recovery differential driver; build authority pending. No execution on import. */
+    import assert from 'node:assert/strict';
+    import {mkdirSync,lstatSync,realpathSync} from 'node:fs';
+    import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';
+    import {resolve,isAbsolute} from 'node:path';
+    import {fileURLToPath,pathToFileURL} from 'node:url';
+    import {createRequire} from 'node:module';
+    import {createPagedPageFaultOracle} from './reference.mjs';
+    import {nativeCr0Source as cr0WriteSource} from '../bochs-cpu3-native-protected-ram/cpu-profile.mjs';
+    import {resetSource} from '../bochs-cpu3-native-ram-bootstrap/reference.mjs';
+    import {createDriverPageFaultProvider,deriveDriverProvider} from './driver-provider.mjs';
+    import {nativePageFaultProfile} from './provider-profile.mjs';
+    import {namedCuts,layout} from './profile.mjs';
+    import {compareBoundary,pageFaultProgress,validateMilestones,pageFaultParityPolicy,pageFaultNativeSources,wholeNativeWords,validateFinalPages,validateMemoryTape,validateNativeEffects,stepReferenceForReturn,startOrAdvanceFaultLedger,finishFaultLedger} from './parity.mjs';
+    import {compiledRevision,driverSourceIdentity,authenticatePageFaultCompiled,regularBytes,sha,requireReadyBuild} from './driver-auth.mjs';
+    const ramRomSha256=nativePageFaultProfile.romSha256;
+    // Logical JSON serialization is retained by the transport helper.
+    export function validateInput(v){
+     const ready=requireReadyBuild();const names=['compiledRoot','compiledRevision','driverRevision','driverSourceSha256','addon','sha256','configuration','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256','output','nativeTrace'];assert.deepEqual(Object.keys(v).sort(),names.sort());
+     assert.equal(v.compiledRevision,compiledRevision);assert.equal(v.sha256,ready.addonSha256);assert.equal(v.preparedManifestSha256,ready.staticAuthority.preparedManifestSha256);assert.equal(v.buildReceiptSha256,ready.staticAuthority.buildReceiptSha256);assert.equal(v.nativeTrace,false,'first fixed trace-OFF correctness child');assert.match(v.driverRevision,/^[a-f0-9]{40}$/);
+     for(const key of names.filter(k=>!['compiledRevision','driverRevision','nativeTrace'].includes(k))){assert.equal(typeof v[key],'string');if(key.endsWith('Sha256')||key==='sha256')assert.match(v[key],/^[a-f0-9]{64}$/);else assert.ok(isAbsolute(v[key])&&resolve(v[key])===v[key]&&v[key].length<=4096&&!/[\0\r\n]/.test(v[key]));}return v;
+    }
+    export function finalizeAuthentication(receipt,primary,before,after,readFailure=null){
+     try{if(readFailure)throw readFailure;const keys=['input','driver','compiled','build','configuration','node'];assert.deepEqual(Object.keys(before).sort(),keys.sort());assert.deepEqual(Object.keys(after).sort(),keys.sort());for(const key of keys){assert.notEqual(before[key],undefined,'available initial '+key);assert.notEqual(after[key],undefined,'available final '+key);assert.deepEqual(after[key],before[key],'final '+key);}}
+     catch(e){receipt.finalAuthenticationError=String(e);receipt.status='FAIL';return primary??e;}return primary;
+    }
+    async function run(input,inputPath){
+     validateInput(input);verifyHeldLifecycle();assert.equal(realpathSync(process.argv[1]),realpathSync(fileURLToPath(import.meta.url)));assert.equal(process.version,'v22.23.3');assert.deepEqual(process.execArgv,['--max-old-space-size=128']);for(const key of ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE'])assert.ok(!process.env[key]);
+     const parent=resolve(input.output,'..');assert.ok(lstatSync(parent).isDirectory());assert.equal(realpathSync(parent),parent);mkdirSync(input.output,{recursive:false});
+     const receipt={schema:'bw.paged-pagefault.native-js-correctness.v1',status:'FAIL',input,buildRun:requireReadyBuild().buildRun,policy:pageFaultParityPolicy,resetSource,cr0WriteSource,pageFaultNativeSources,providerAdapter:(()=>{const a=deriveDriverProvider();return {parentSha256:a.parentSha256,sha256:sha(a.bytes)};})(),boundaries:[],cuts:[],cleanup:{}};receipt.inputSha256Before=sha(regularBytes(inputPath,16384));assert.deepEqual(JSON.parse(regularBytes(inputPath,16384)),input);
+     // Small outcome is written before capped lossless full evidence; storage never replaces primary.
+     const write=()=>persistEvidence(receipt,input.output,primary);
+     let provider,oracle,api,identity,compiled,primary=null,native,progress={n:0,q:0,faults:0,attemptOrdinal:0},resumes=0,zeroQ=0,faultLedger=null;
+     const compare=(kind,classification='PREFETCH_RAW_UNMATCHED')=>{const board=provider.checkpoint(),js=oracle.checkpoint(),pages=provider.ramPages();receipt.lastComparison={kind,classification,native,board,javascript:js,nativeHostPages:pages};const comparison=compareBoundary(native,board,js,pages,kind,classification);receipt.lastComparison.comparison=comparison;receipt.boundaries.push(receipt.lastComparison);const name=oracle.milestone();if(name&&!receipt.cuts.some(c=>c.name===name)){assert.equal(name,namedCuts[receipt.cuts.length]?.name,'ordered actual cuts');receipt.cuts.push({name,q:js.q,attemptOrdinal:js.attemptOrdinal,faultSerial:js.faultSerial,classification,native,board,javascript:js,pages,comparison});}};
+     try{
+      receipt.driverBefore=driverSourceIdentity();assert.equal(receipt.driverBefore.revision,input.driverRevision);assert.equal(sha(Buffer.from(JSON.stringify(receipt.driverBefore))),input.driverSourceSha256);receipt.node=realpathSync(process.execPath);receipt.nodeBefore=sha(regularBytes(receipt.node,128<<20));
+      const b=regularBytes(input.preparedManifest,4<<20);assert.equal(sha(b),input.preparedManifestSha256);const manifest=JSON.parse(b);receipt.compiledBefore=authenticatePageFaultCompiled(input.compiledRoot,manifest);
+      identity=await import(pathToFileURL(resolve(input.compiledRoot,'scripts/bochs-cpu3-native-paged-pagefault/build-identity.mjs')).href);compiled=identity.sourceIdentity();assert.deepEqual(compiled,receipt.compiledBefore);
+      receipt.build=identity.authenticateBuild(input,compiled);receipt.configuration=identity.authenticateConfiguration(input.configuration,manifest);assert.equal(sha(regularBytes(input.addon)),requireReadyBuild().addonSha256);assert.equal(sha(regularBytes(resolve(manifest.preparedTree,resetSource.path))),resetSource.sha256,'attested Bochs reset initialization source');assert.equal(sha(regularBytes(resolve(manifest.preparedTree,cr0WriteSource.path))),cr0WriteSource.sha256,'attested Bochs CPU3 CR0 assignment source');
+      for(const source of pageFaultNativeSources)assert.equal(sha(regularBytes(resolve(manifest.preparedTree,source.path))),source.sha256,'attested protected descriptor source '+source.path);
+      assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-provider.mjs'],receipt.providerAdapter.parentSha256);assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-ROM.bin'],ramRomSha256);
+      provider=await createDriverPageFaultProvider();oracle=await createPagedPageFaultOracle();assert.equal(sha(provider.rom),ramRomSha256);api=createRequire(import.meta.url)(input.addon);assert.equal(api.abiVersion,4);for(const name of ['create','resume','setIRQ','inspect','close'])assert.equal(typeof api[name],'function');
+      native=api.create(input.configuration,provider.rom,provider.callbacks,false);assert.equal(Number(native.nativeTicks),0);assert.equal(Number(native.successfulQuanta),0);wholeNativeWords(native);compare('reset');
+      while(oracle.milestone()!=='readback-before-HLT'){
+       assert.ok(resumes<512&&zeroQ<=8,'bounded finite actual fault protocol');const stage=provider.stage();assert.deepEqual(stage,oracle.stage(),'actual PIC line');assert.equal(stage.asserted,false,'fixture IRQ outside scope');if(stage.changed){native=api.setIRQ(stage.asserted);compare('line');}
+       // Preserve both phase records; staged pages must not be hidden by a board hash.
+       receipt.stages??=[];receipt.stages.push({q:progress.q,attemptOrdinal:progress.attemptOrdinal,native:provider.checkpoint(),nativeHostPages:provider.ramPages(),javascript:oracle.checkpoint(),comparison:'UNMATCHED_STAGE_RECORD'});const beforeNative=native,beforePages=provider.ramPages();provider.begin();let resumeError=null;
+       try{native=api.resume(1,1,0xffffffffffffffffn);}catch(e){resumeError=e;receipt.resumeError=String(e);throw e;}finally{try{provider.end();}catch(e){receipt.endError=String(e);if(!resumeError)throw e;}}
+       resumes++;const next=pageFaultProgress(progress,native);faultLedger=startOrAdvanceFaultLedger(faultLedger,beforeNative,native,beforePages,provider.ramPages());receipt.faultLedger=faultLedger;receipt.lastReferenceStep=stepReferenceForReturn(oracle,next);if(next.classification==='PREFETCH_RAW_UNMATCHED')zeroQ++;assert.ok(zeroQ<=8);progress=next;compare('resume',next.classification);
+      }
+      receipt.lastReturnedNative=native;assert.equal(native.activityState,0);native=api.inspect();assert.deepEqual(wholeNativeWords(native),wholeNativeWords(receipt.lastReturnedNative),'paused inspect unchanged166');assert.equal(Number(native.nativeTicks),progress.n);assert.equal(Number(native.successfulQuanta),progress.q);receipt.finalNative=native;compare('final-inspect');receipt.milestones=validateMilestones(receipt.cuts);receipt.faultRecovery=finishFaultLedger(faultLedger);receipt.progress={...progress,resumes,zeroQ};assert.deepEqual([progress.n,progress.q,progress.faults],[57,56,1],'source-derived finite ordinary/fault extent');
+      receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects(receipt.nativeFinal.state,receipt.javascriptFinal,true);receipt.nativeMemoryEvents=provider.memoryEvents();receipt.nativeMemoryEvidence=validateMemoryTape(receipt.nativeMemoryEvents,receipt.nativeFinal.state);receipt.javascriptDeliveries=receipt.javascriptFinal.deliveries;assert.equal(receipt.javascriptDeliveries.length,1);receipt.javascriptReloads=receipt.javascriptFinal.reloads;assert.equal(receipt.javascriptReloads.length,1);receipt.javascriptAttempts=receipt.javascriptFinal.attempts;receipt.javascriptMemoryEffects={stores:receipt.javascriptFinal.stores,updates:receipt.javascriptFinal.updates,accesses:receipt.javascriptFinal.accesses};assert.deepEqual(provider.records(),[],'no PIO');receipt.status='PASS';
+     }catch(e){primary=e;receipt.error=String(e);receipt.progress={...progress,resumes,zeroQ};if(native)receipt.lastSuccessfullyReturnedNative=native;for(const [key,fn]of [['partialProvider',()=>({state:provider.checkpoint(),pages:provider.ramPages(),ports:provider.records(),memoryEvents:provider.memoryEvents()})],['partialJavascript',()=>oracle.checkpoint()]])try{receipt[key]=fn();}catch(partial){receipt[key+'Unavailable']=String(partial);}}
+     finally{
+      // Cleanup and post-authentication never replace the first divergence.
+      for(const [key,object]of [['native',api],['provider',provider],['javascript',oracle]])if(object)try{object.close();receipt.cleanup[key]='closed';}catch(e){receipt.cleanup[key+'Error']=String(e);if(!primary)primary=e;}
+      let readFailure=null;receipt.finalReadErrors={};const probe=(key,fn)=>{try{receipt[key]=fn();}catch(e){receipt.finalReadErrors[key]=String(e);readFailure??=e;}};
+      probe('inputSha256After',()=>sha(regularBytes(inputPath,16384)));probe('driverAfter',driverSourceIdentity);probe('nodeAfter',()=>sha(regularBytes(receipt.node,128<<20)));
+      if(identity){probe('compiledAfter',()=>identity.sourceIdentity());probe('buildAfter',()=>identity.authenticateBuild(input,compiled??receipt.compiledAfter));probe('configurationAfter',()=>identity.authenticateConfiguration(input.configuration,identity.boundedJson(input.preparedManifest,input.preparedManifestSha256)));}
+      primary=finalizeAuthentication(receipt,primary,{input:receipt.inputSha256Before,driver:receipt.driverBefore,compiled:receipt.compiledBefore,build:receipt.build,configuration:receipt.configuration,node:receipt.nodeBefore},{input:receipt.inputSha256After,driver:receipt.driverAfter,compiled:receipt.compiledAfter,build:receipt.buildAfter,configuration:receipt.configurationAfter,node:receipt.nodeAfter},readFailure);
+      if(primary)receipt.status='FAIL';const persistence=await write();primary=persistence.primary;
+     }
+     if(primary)throw primary;return receipt;
+    }
+    // Closed CLI entry follows initialized source-verification declarations.
+    
+  actual: |-
+    /** Closed fixed paged PF recovery differential driver; fresh static-only build authority. No execution on import. */
+    import assert from 'node:assert/strict';
+    import {mkdirSync,lstatSync,realpathSync} from 'node:fs';
+    import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';
+    import {resolve,isAbsolute} from 'node:path';
+    import {fileURLToPath,pathToFileURL} from 'node:url';
+    import {createRequire} from 'node:module';
+    import {createPagedPageFaultOracle} from './reference.mjs';
+    import {nativeCr0Source as cr0WriteSource} from '../bochs-cpu3-native-protected-ram/cpu-profile.mjs';
+    import {resetSource} from '../bochs-cpu3-native-ram-bootstrap/reference.mjs';
+    import {createDriverPageFaultProvider,deriveDriverProvider} from './driver-provider.mjs';
+    import {nativePageFaultProfile} from './provider-profile.mjs';
+    import {namedCuts,layout} from './profile.mjs';
+    import {compareBoundary,pageFaultProgress,validateMilestones,pageFaultParityPolicy,pageFaultNativeSources,wholeNativeWords,validateFinalPages,validateMemoryTape,validateNativeEffects,stepReferenceForReturn,startOrAdvanceFaultLedger,finishFaultLedger} from './parity.mjs';
+    import {compiledRevision,driverSourceIdentity,authenticatePageFaultCompiled,regularBytes,sha,requireReadyBuild} from './driver-auth.mjs';
+    const ramRomSha256=nativePageFaultProfile.romSha256;
+    // Logical JSON serialization is retained by the transport helper.
+    export function validateInput(v){
+     const ready=requireReadyBuild();const names=['compiledRoot','compiledRevision','driverRevision','driverSourceSha256','addon','sha256','configuration','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256','output','nativeTrace'];assert.deepEqual(Object.keys(v).sort(),names.sort());
+     assert.equal(v.compiledRevision,compiledRevision);assert.equal(v.sha256,ready.addonSha256);assert.equal(v.preparedManifestSha256,ready.staticAuthority.preparedManifestSha256);assert.equal(v.buildReceiptSha256,ready.staticAuthority.buildReceiptSha256);assert.equal(v.nativeTrace,false,'first fixed trace-OFF correctness child');assert.match(v.driverRevision,/^[a-f0-9]{40}$/);
+     for(const key of names.filter(k=>!['compiledRevision','driverRevision','nativeTrace'].includes(k))){assert.equal(typeof v[key],'string');if(key.endsWith('Sha256')||key==='sha256')assert.match(v[key],/^[a-f0-9]{64}$/);else assert.ok(isAbsolute(v[key])&&resolve(v[key])===v[key]&&v[key].length<=4096&&!/[\0\r\n]/.test(v[key]));}return v;
+    }
+    export function finalizeAuthentication(receipt,primary,before,after,readFailure=null){
+     try{if(readFailure)throw readFailure;const keys=['input','driver','compiled','build','configuration','node'];assert.deepEqual(Object.keys(before).sort(),keys.sort());assert.deepEqual(Object.keys(after).sort(),keys.sort());for(const key of keys){assert.notEqual(before[key],undefined,'available initial '+key);assert.notEqual(after[key],undefined,'available final '+key);assert.deepEqual(after[key],before[key],'final '+key);}}
+     catch(e){receipt.finalAuthenticationError=String(e);receipt.status='FAIL';return primary??e;}return primary;
+    }
+    async function run(input,inputPath){
+     validateInput(input);verifyHeldLifecycle();assert.equal(realpathSync(process.argv[1]),realpathSync(fileURLToPath(import.meta.url)));assert.equal(process.version,'v22.23.3');assert.deepEqual(process.execArgv,['--max-old-space-size=128']);for(const key of ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE'])assert.ok(!process.env[key]);
+     const parent=resolve(input.output,'..');assert.ok(lstatSync(parent).isDirectory());assert.equal(realpathSync(parent),parent);mkdirSync(input.output,{recursive:false});
+     const receipt={schema:'bw.paged-pagefault.native-js-correctness.v1',status:'FAIL',input,buildRun:requireReadyBuild().buildRun,policy:pageFaultParityPolicy,resetSource,cr0WriteSource,pageFaultNativeSources,providerAdapter:(()=>{const a=deriveDriverProvider();return {parentSha256:a.parentSha256,sha256:sha(a.bytes)};})(),boundaries:[],cuts:[],cleanup:{}};receipt.inputSha256Before=sha(regularBytes(inputPath,16384));assert.deepEqual(JSON.parse(regularBytes(inputPath,16384)),input);
+     // Small outcome is written before capped lossless full evidence; storage never replaces primary.
+     const write=()=>persistEvidence(receipt,input.output,primary);
+     let provider,oracle,api,identity,compiled,primary=null,native,progress={n:0,q:0,faults:0,attemptOrdinal:0},resumes=0,zeroQ=0,faultLedger=null;
+     const compare=(kind,classification='PREFETCH_RAW_UNMATCHED')=>{const board=provider.checkpoint(),js=oracle.checkpoint(),pages=provider.ramPages();receipt.lastComparison={kind,classification,native,board,javascript:js,nativeHostPages:pages};const comparison=compareBoundary(native,board,js,pages,kind,classification);receipt.lastComparison.comparison=comparison;receipt.boundaries.push(receipt.lastComparison);const name=oracle.milestone();if(name&&!receipt.cuts.some(c=>c.name===name)){assert.equal(name,namedCuts[receipt.cuts.length]?.name,'ordered actual cuts');receipt.cuts.push({name,q:js.q,attemptOrdinal:js.attemptOrdinal,faultSerial:js.faultSerial,classification,native,board,javascript:js,pages,comparison});}};
+     try{
+      receipt.driverBefore=driverSourceIdentity();assert.equal(receipt.driverBefore.revision,input.driverRevision);assert.equal(sha(Buffer.from(JSON.stringify(receipt.driverBefore))),input.driverSourceSha256);receipt.node=realpathSync(process.execPath);receipt.nodeBefore=sha(regularBytes(receipt.node,128<<20));
+      const b=regularBytes(input.preparedManifest,4<<20);assert.equal(sha(b),input.preparedManifestSha256);const manifest=JSON.parse(b);receipt.compiledBefore=authenticatePageFaultCompiled(input.compiledRoot,manifest);
+      identity=await import(pathToFileURL(resolve(input.compiledRoot,'scripts/bochs-cpu3-native-paged-pagefault/build-identity.mjs')).href);compiled=identity.sourceIdentity();assert.deepEqual(compiled,receipt.compiledBefore);
+      receipt.build=identity.authenticateBuild(input,compiled);receipt.configuration=identity.authenticateConfiguration(input.configuration,manifest);assert.equal(sha(regularBytes(input.addon)),requireReadyBuild().addonSha256);assert.equal(sha(regularBytes(resolve(manifest.preparedTree,resetSource.path))),resetSource.sha256,'attested Bochs reset initialization source');assert.equal(sha(regularBytes(resolve(manifest.preparedTree,cr0WriteSource.path))),cr0WriteSource.sha256,'attested Bochs CPU3 CR0 assignment source');
+      for(const source of pageFaultNativeSources)assert.equal(sha(regularBytes(resolve(manifest.preparedTree,source.path))),source.sha256,'attested protected descriptor source '+source.path);
+      assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-provider.mjs'],receipt.providerAdapter.parentSha256);assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-ROM.bin'],ramRomSha256);
+      provider=await createDriverPageFaultProvider();oracle=await createPagedPageFaultOracle();assert.equal(sha(provider.rom),ramRomSha256);api=createRequire(import.meta.url)(input.addon);assert.equal(api.abiVersion,4);for(const name of ['create','resume','setIRQ','inspect','close'])assert.equal(typeof api[name],'function');
+      native=api.create(input.configuration,provider.rom,provider.callbacks,false);assert.equal(Number(native.nativeTicks),0);assert.equal(Number(native.successfulQuanta),0);wholeNativeWords(native);compare('reset');
+      while(oracle.milestone()!=='readback-before-HLT'){
+       assert.ok(resumes<512&&zeroQ<=8,'bounded finite actual fault protocol');const stage=provider.stage();assert.deepEqual(stage,oracle.stage(),'actual PIC line');assert.equal(stage.asserted,false,'fixture IRQ outside scope');if(stage.changed){native=api.setIRQ(stage.asserted);compare('line');}
+       // Preserve both phase records; staged pages must not be hidden by a board hash.
+       receipt.stages??=[];receipt.stages.push({q:progress.q,attemptOrdinal:progress.attemptOrdinal,native:provider.checkpoint(),nativeHostPages:provider.ramPages(),javascript:oracle.checkpoint(),comparison:'UNMATCHED_STAGE_RECORD'});const beforeNative=native,beforePages=provider.ramPages();provider.begin();let resumeError=null;
+       try{native=api.resume(1,1,0xffffffffffffffffn);}catch(e){resumeError=e;receipt.resumeError=String(e);throw e;}finally{try{provider.end();}catch(e){receipt.endError=String(e);if(!resumeError)throw e;}}
+       resumes++;const next=pageFaultProgress(progress,native);faultLedger=startOrAdvanceFaultLedger(faultLedger,beforeNative,native,beforePages,provider.ramPages());receipt.faultLedger=faultLedger;receipt.lastReferenceStep=stepReferenceForReturn(oracle,next);if(next.classification==='PREFETCH_RAW_UNMATCHED')zeroQ++;assert.ok(zeroQ<=8);progress=next;compare('resume',next.classification);
+      }
+      receipt.lastReturnedNative=native;assert.equal(native.activityState,0);native=api.inspect();assert.deepEqual(wholeNativeWords(native),wholeNativeWords(receipt.lastReturnedNative),'paused inspect unchanged166');assert.equal(Number(native.nativeTicks),progress.n);assert.equal(Number(native.successfulQuanta),progress.q);receipt.finalNative=native;compare('final-inspect');receipt.milestones=validateMilestones(receipt.cuts);receipt.faultRecovery=finishFaultLedger(faultLedger);receipt.progress={...progress,resumes,zeroQ};assert.deepEqual([progress.n,progress.q,progress.faults],[57,56,1],'source-derived finite ordinary/fault extent');
+      receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects(receipt.nativeFinal.state,receipt.javascriptFinal,true);receipt.nativeMemoryEvents=provider.memoryEvents();receipt.nativeMemoryEvidence=validateMemoryTape(receipt.nativeMemoryEvents,receipt.nativeFinal.state);receipt.javascriptDeliveries=receipt.javascriptFinal.deliveries;assert.equal(receipt.javascriptDeliveries.length,1);receipt.javascriptReloads=receipt.javascriptFinal.reloads;assert.equal(receipt.javascriptReloads.length,1);receipt.javascriptAttempts=receipt.javascriptFinal.attempts;receipt.javascriptMemoryEffects={stores:receipt.javascriptFinal.stores,updates:receipt.javascriptFinal.updates,accesses:receipt.javascriptFinal.accesses};assert.deepEqual(provider.records(),[],'no PIO');receipt.status='PASS';
+     }catch(e){primary=e;receipt.error=String(e);receipt.progress={...progress,resumes,zeroQ};if(native)receipt.lastSuccessfullyReturnedNative=native;for(const [key,fn]of [['partialProvider',()=>({state:provider.checkpoint(),pages:provider.ramPages(),ports:provider.records(),memoryEvents:provider.memoryEvents()})],['partialJavascript',()=>oracle.checkpoint()]])try{receipt[key]=fn();}catch(partial){receipt[key+'Unavailable']=String(partial);}}
+     finally{
+      // Cleanup and post-authentication never replace the first divergence.
+      for(const [key,object]of [['native',api],['provider',provider],['javascript',oracle]])if(object)try{object.close();receipt.cleanup[key]='closed';}catch(e){receipt.cleanup[key+'Error']=String(e);if(!primary)primary=e;}
+      let readFailure=null;receipt.finalReadErrors={};const probe=(key,fn)=>{try{receipt[key]=fn();}catch(e){receipt.finalReadErrors[key]=String(e);readFailure??=e;}};
+      probe('inputSha256After',()=>sha(regularBytes(inputPath,16384)));probe('driverAfter',driverSourceIdentity);probe('nodeAfter',()=>sha(regularBytes(receipt.node,128<<20)));
+      if(identity){probe('compiledAfter',()=>identity.sourceIdentity());probe('buildAfter',()=>identity.authenticateBuild(input,compiled??receipt.compiledAfter));probe('configurationAfter',()=>identity.authenticateConfiguration(input.configuration,identity.boundedJson(input.preparedManifest,input.preparedManifestSha256)));}
+      primary=finalizeAuthentication(receipt,primary,{input:receipt.inputSha256Before,driver:receipt.driverBefore,compiled:receipt.compiledBefore,build:receipt.build,configuration:receipt.configuration,node:receipt.nodeBefore},{input:receipt.inputSha256After,driver:receipt.driverAfter,compiled:receipt.compiledAfter,build:receipt.buildAfter,configuration:receipt.configurationAfter,node:receipt.nodeAfter},readFailure);
+      if(primary)receipt.status='FAIL';const persistence=await write();primary=persistence.primary;
+     }
+     if(primary)throw primary;return receipt;
+    }
+    // Closed CLI entry follows initialized source-verification declarations.
+    
+  operator: 'strictEqual'
+  stack: |-
+    verifyHeldLifecycle (file:///tmp/bw-native-paged-pagefault-ready-driver-source-20261005/scripts/bochs-cpu3-native-paged-pagefault/runner.mjs:72:145)
+    TestContext.<anonymous> (file:///tmp/bw-native-paged-pagefault-ready-driver-source-20261005/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:45:210)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: frozen source identity includes real fault policy and held multiline checkpoint import
+ok 3 - frozen source identity includes real fault policy and held multiline checkpoint import
+  ---
+  duration_ms: 3981.347747
+  type: 'test'
+  ...
+# Subtest: genuine first PF manifest exceeds held cap and is admitted by bounded four MiB source seam
+not ok 4 - genuine first PF manifest exceeds held cap and is admitted by bounded four MiB source seam
+  ---
+  duration_ms: 38.380657
+  type: 'test'
+  location: '/tmp/bw-native-paged-pagefault-ready-driver-source-20261005/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:97:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    exact executing reviewed PF lifecycle
+    + actual - expected
+    ... Skipped lines
+    
+    + '/** Closed fixed paged PF recovery differential driver; fresh static-only build authority. No execution on import. */\n' +
+    - '/** Closed fixed paged PF recovery differential driver; build authority pending. No execution on import. */\n' +
+        "import assert from 'node:assert/strict';\n" +
+        "import {mkdirSync,lstatSync,realpathSync} from 'node:fs';\n" +
+        "import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';\n" +
+        "import {resolve,isAbsolute} from 'node:path';\n" +
+        "import {fileURLToPath,pathToFileURL} from 'node:url';\n" +
+    ...
+        "  receipt.lastReturnedNative=native;assert.equal(native.activityState,0);native=api.inspect();assert.deepEqual(wholeNativeWords(native),wholeNativeWords(receipt.lastReturnedNative),'paused inspect unchanged166');assert.equal(Number(native.nativeTicks),progress.n);assert.equal(Number(native.successfulQuanta),progress.q);receipt.finalNative=native;compare('final-inspect');receipt.milestones=validateMilestones(receipt.cuts);receipt.faultRecovery=finishFaultLedger(faultLedger);receipt.progress={...progress,resumes,zeroQ};assert.deepEqual([progress.n,progress.q,progress.faults],[57,56,1],'source-derived finite ordinary/fault extent');\n" +
+    +   "  receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects("... 2757 more characters
+    -   "  receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects(receipt.na"... 2747 more characters
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    /** Closed fixed paged PF recovery differential driver; build authority pending. No execution on import. */
+    import assert from 'node:assert/strict';
+    import {mkdirSync,lstatSync,realpathSync} from 'node:fs';
+    import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';
+    import {resolve,isAbsolute} from 'node:path';
+    import {fileURLToPath,pathToFileURL} from 'node:url';
+    import {createRequire} from 'node:module';
+    import {createPagedPageFaultOracle} from './reference.mjs';
+    import {nativeCr0Source as cr0WriteSource} from '../bochs-cpu3-native-protected-ram/cpu-profile.mjs';
+    import {resetSource} from '../bochs-cpu3-native-ram-bootstrap/reference.mjs';
+    import {createDriverPageFaultProvider,deriveDriverProvider} from './driver-provider.mjs';
+    import {nativePageFaultProfile} from './provider-profile.mjs';
+    import {namedCuts,layout} from './profile.mjs';
+    import {compareBoundary,pageFaultProgress,validateMilestones,pageFaultParityPolicy,pageFaultNativeSources,wholeNativeWords,validateFinalPages,validateMemoryTape,validateNativeEffects,stepReferenceForReturn,startOrAdvanceFaultLedger,finishFaultLedger} from './parity.mjs';
+    import {compiledRevision,driverSourceIdentity,authenticatePageFaultCompiled,regularBytes,sha,requireReadyBuild} from './driver-auth.mjs';
+    const ramRomSha256=nativePageFaultProfile.romSha256;
+    // Logical JSON serialization is retained by the transport helper.
+    export function validateInput(v){
+     const ready=requireReadyBuild();const names=['compiledRoot','compiledRevision','driverRevision','driverSourceSha256','addon','sha256','configuration','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256','output','nativeTrace'];assert.deepEqual(Object.keys(v).sort(),names.sort());
+     assert.equal(v.compiledRevision,compiledRevision);assert.equal(v.sha256,ready.addonSha256);assert.equal(v.preparedManifestSha256,ready.staticAuthority.preparedManifestSha256);assert.equal(v.buildReceiptSha256,ready.staticAuthority.buildReceiptSha256);assert.equal(v.nativeTrace,false,'first fixed trace-OFF correctness child');assert.match(v.driverRevision,/^[a-f0-9]{40}$/);
+     for(const key of names.filter(k=>!['compiledRevision','driverRevision','nativeTrace'].includes(k))){assert.equal(typeof v[key],'string');if(key.endsWith('Sha256')||key==='sha256')assert.match(v[key],/^[a-f0-9]{64}$/);else assert.ok(isAbsolute(v[key])&&resolve(v[key])===v[key]&&v[key].length<=4096&&!/[\0\r\n]/.test(v[key]));}return v;
+    }
+    export function finalizeAuthentication(receipt,primary,before,after,readFailure=null){
+     try{if(readFailure)throw readFailure;const keys=['input','driver','compiled','build','configuration','node'];assert.deepEqual(Object.keys(before).sort(),keys.sort());assert.deepEqual(Object.keys(after).sort(),keys.sort());for(const key of keys){assert.notEqual(before[key],undefined,'available initial '+key);assert.notEqual(after[key],undefined,'available final '+key);assert.deepEqual(after[key],before[key],'final '+key);}}
+     catch(e){receipt.finalAuthenticationError=String(e);receipt.status='FAIL';return primary??e;}return primary;
+    }
+    async function run(input,inputPath){
+     validateInput(input);verifyHeldLifecycle();assert.equal(realpathSync(process.argv[1]),realpathSync(fileURLToPath(import.meta.url)));assert.equal(process.version,'v22.23.3');assert.deepEqual(process.execArgv,['--max-old-space-size=128']);for(const key of ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE'])assert.ok(!process.env[key]);
+     const parent=resolve(input.output,'..');assert.ok(lstatSync(parent).isDirectory());assert.equal(realpathSync(parent),parent);mkdirSync(input.output,{recursive:false});
+     const receipt={schema:'bw.paged-pagefault.native-js-correctness.v1',status:'FAIL',input,buildRun:requireReadyBuild().buildRun,policy:pageFaultParityPolicy,resetSource,cr0WriteSource,pageFaultNativeSources,providerAdapter:(()=>{const a=deriveDriverProvider();return {parentSha256:a.parentSha256,sha256:sha(a.bytes)};})(),boundaries:[],cuts:[],cleanup:{}};receipt.inputSha256Before=sha(regularBytes(inputPath,16384));assert.deepEqual(JSON.parse(regularBytes(inputPath,16384)),input);
+     // Small outcome is written before capped lossless full evidence; storage never replaces primary.
+     const write=()=>persistEvidence(receipt,input.output,primary);
+     let provider,oracle,api,identity,compiled,primary=null,native,progress={n:0,q:0,faults:0,attemptOrdinal:0},resumes=0,zeroQ=0,faultLedger=null;
+     const compare=(kind,classification='PREFETCH_RAW_UNMATCHED')=>{const board=provider.checkpoint(),js=oracle.checkpoint(),pages=provider.ramPages();receipt.lastComparison={kind,classification,native,board,javascript:js,nativeHostPages:pages};const comparison=compareBoundary(native,board,js,pages,kind,classification);receipt.lastComparison.comparison=comparison;receipt.boundaries.push(receipt.lastComparison);const name=oracle.milestone();if(name&&!receipt.cuts.some(c=>c.name===name)){assert.equal(name,namedCuts[receipt.cuts.length]?.name,'ordered actual cuts');receipt.cuts.push({name,q:js.q,attemptOrdinal:js.attemptOrdinal,faultSerial:js.faultSerial,classification,native,board,javascript:js,pages,comparison});}};
+     try{
+      receipt.driverBefore=driverSourceIdentity();assert.equal(receipt.driverBefore.revision,input.driverRevision);assert.equal(sha(Buffer.from(JSON.stringify(receipt.driverBefore))),input.driverSourceSha256);receipt.node=realpathSync(process.execPath);receipt.nodeBefore=sha(regularBytes(receipt.node,128<<20));
+      const b=regularBytes(input.preparedManifest,4<<20);assert.equal(sha(b),input.preparedManifestSha256);const manifest=JSON.parse(b);receipt.compiledBefore=authenticatePageFaultCompiled(input.compiledRoot,manifest);
+      identity=await import(pathToFileURL(resolve(input.compiledRoot,'scripts/bochs-cpu3-native-paged-pagefault/build-identity.mjs')).href);compiled=identity.sourceIdentity();assert.deepEqual(compiled,receipt.compiledBefore);
+      receipt.build=identity.authenticateBuild(input,compiled);receipt.configuration=identity.authenticateConfiguration(input.configuration,manifest);assert.equal(sha(regularBytes(input.addon)),requireReadyBuild().addonSha256);assert.equal(sha(regularBytes(resolve(manifest.preparedTree,resetSource.path))),resetSource.sha256,'attested Bochs reset initialization source');assert.equal(sha(regularBytes(resolve(manifest.preparedTree,cr0WriteSource.path))),cr0WriteSource.sha256,'attested Bochs CPU3 CR0 assignment source');
+      for(const source of pageFaultNativeSources)assert.equal(sha(regularBytes(resolve(manifest.preparedTree,source.path))),source.sha256,'attested protected descriptor source '+source.path);
+      assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-provider.mjs'],receipt.providerAdapter.parentSha256);assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-ROM.bin'],ramRomSha256);
+      provider=await createDriverPageFaultProvider();oracle=await createPagedPageFaultOracle();assert.equal(sha(provider.rom),ramRomSha256);api=createRequire(import.meta.url)(input.addon);assert.equal(api.abiVersion,4);for(const name of ['create','resume','setIRQ','inspect','close'])assert.equal(typeof api[name],'function');
+      native=api.create(input.configuration,provider.rom,provider.callbacks,false);assert.equal(Number(native.nativeTicks),0);assert.equal(Number(native.successfulQuanta),0);wholeNativeWords(native);compare('reset');
+      while(oracle.milestone()!=='readback-before-HLT'){
+       assert.ok(resumes<512&&zeroQ<=8,'bounded finite actual fault protocol');const stage=provider.stage();assert.deepEqual(stage,oracle.stage(),'actual PIC line');assert.equal(stage.asserted,false,'fixture IRQ outside scope');if(stage.changed){native=api.setIRQ(stage.asserted);compare('line');}
+       // Preserve both phase records; staged pages must not be hidden by a board hash.
+       receipt.stages??=[];receipt.stages.push({q:progress.q,attemptOrdinal:progress.attemptOrdinal,native:provider.checkpoint(),nativeHostPages:provider.ramPages(),javascript:oracle.checkpoint(),comparison:'UNMATCHED_STAGE_RECORD'});const beforeNative=native,beforePages=provider.ramPages();provider.begin();let resumeError=null;
+       try{native=api.resume(1,1,0xffffffffffffffffn);}catch(e){resumeError=e;receipt.resumeError=String(e);throw e;}finally{try{provider.end();}catch(e){receipt.endError=String(e);if(!resumeError)throw e;}}
+       resumes++;const next=pageFaultProgress(progress,native);faultLedger=startOrAdvanceFaultLedger(faultLedger,beforeNative,native,beforePages,provider.ramPages());receipt.faultLedger=faultLedger;receipt.lastReferenceStep=stepReferenceForReturn(oracle,next);if(next.classification==='PREFETCH_RAW_UNMATCHED')zeroQ++;assert.ok(zeroQ<=8);progress=next;compare('resume',next.classification);
+      }
+      receipt.lastReturnedNative=native;assert.equal(native.activityState,0);native=api.inspect();assert.deepEqual(wholeNativeWords(native),wholeNativeWords(receipt.lastReturnedNative),'paused inspect unchanged166');assert.equal(Number(native.nativeTicks),progress.n);assert.equal(Number(native.successfulQuanta),progress.q);receipt.finalNative=native;compare('final-inspect');receipt.milestones=validateMilestones(receipt.cuts);receipt.faultRecovery=finishFaultLedger(faultLedger);receipt.progress={...progress,resumes,zeroQ};assert.deepEqual([progress.n,progress.q,progress.faults],[57,56,1],'source-derived finite ordinary/fault extent');
+      receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects(receipt.nativeFinal.state,receipt.javascriptFinal,true);receipt.nativeMemoryEvents=provider.memoryEvents();receipt.nativeMemoryEvidence=validateMemoryTape(receipt.nativeMemoryEvents,receipt.nativeFinal.state);receipt.javascriptDeliveries=receipt.javascriptFinal.deliveries;assert.equal(receipt.javascriptDeliveries.length,1);receipt.javascriptReloads=receipt.javascriptFinal.reloads;assert.equal(receipt.javascriptReloads.length,1);receipt.javascriptAttempts=receipt.javascriptFinal.attempts;receipt.javascriptMemoryEffects={stores:receipt.javascriptFinal.stores,updates:receipt.javascriptFinal.updates,accesses:receipt.javascriptFinal.accesses};assert.deepEqual(provider.records(),[],'no PIO');receipt.status='PASS';
+     }catch(e){primary=e;receipt.error=String(e);receipt.progress={...progress,resumes,zeroQ};if(native)receipt.lastSuccessfullyReturnedNative=native;for(const [key,fn]of [['partialProvider',()=>({state:provider.checkpoint(),pages:provider.ramPages(),ports:provider.records(),memoryEvents:provider.memoryEvents()})],['partialJavascript',()=>oracle.checkpoint()]])try{receipt[key]=fn();}catch(partial){receipt[key+'Unavailable']=String(partial);}}
+     finally{
+      // Cleanup and post-authentication never replace the first divergence.
+      for(const [key,object]of [['native',api],['provider',provider],['javascript',oracle]])if(object)try{object.close();receipt.cleanup[key]='closed';}catch(e){receipt.cleanup[key+'Error']=String(e);if(!primary)primary=e;}
+      let readFailure=null;receipt.finalReadErrors={};const probe=(key,fn)=>{try{receipt[key]=fn();}catch(e){receipt.finalReadErrors[key]=String(e);readFailure??=e;}};
+      probe('inputSha256After',()=>sha(regularBytes(inputPath,16384)));probe('driverAfter',driverSourceIdentity);probe('nodeAfter',()=>sha(regularBytes(receipt.node,128<<20)));
+      if(identity){probe('compiledAfter',()=>identity.sourceIdentity());probe('buildAfter',()=>identity.authenticateBuild(input,compiled??receipt.compiledAfter));probe('configurationAfter',()=>identity.authenticateConfiguration(input.configuration,identity.boundedJson(input.preparedManifest,input.preparedManifestSha256)));}
+      primary=finalizeAuthentication(receipt,primary,{input:receipt.inputSha256Before,driver:receipt.driverBefore,compiled:receipt.compiledBefore,build:receipt.build,configuration:receipt.configuration,node:receipt.nodeBefore},{input:receipt.inputSha256After,driver:receipt.driverAfter,compiled:receipt.compiledAfter,build:receipt.buildAfter,configuration:receipt.configurationAfter,node:receipt.nodeAfter},readFailure);
+      if(primary)receipt.status='FAIL';const persistence=await write();primary=persistence.primary;
+     }
+     if(primary)throw primary;return receipt;
+    }
+    // Closed CLI entry follows initialized source-verification declarations.
+    
+  actual: |-
+    /** Closed fixed paged PF recovery differential driver; fresh static-only build authority. No execution on import. */
+    import assert from 'node:assert/strict';
+    import {mkdirSync,lstatSync,realpathSync} from 'node:fs';
+    import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';
+    import {resolve,isAbsolute} from 'node:path';
+    import {fileURLToPath,pathToFileURL} from 'node:url';
+    import {createRequire} from 'node:module';
+    import {createPagedPageFaultOracle} from './reference.mjs';
+    import {nativeCr0Source as cr0WriteSource} from '../bochs-cpu3-native-protected-ram/cpu-profile.mjs';
+    import {resetSource} from '../bochs-cpu3-native-ram-bootstrap/reference.mjs';
+    import {createDriverPageFaultProvider,deriveDriverProvider} from './driver-provider.mjs';
+    import {nativePageFaultProfile} from './provider-profile.mjs';
+    import {namedCuts,layout} from './profile.mjs';
+    import {compareBoundary,pageFaultProgress,validateMilestones,pageFaultParityPolicy,pageFaultNativeSources,wholeNativeWords,validateFinalPages,validateMemoryTape,validateNativeEffects,stepReferenceForReturn,startOrAdvanceFaultLedger,finishFaultLedger} from './parity.mjs';
+    import {compiledRevision,driverSourceIdentity,authenticatePageFaultCompiled,regularBytes,sha,requireReadyBuild} from './driver-auth.mjs';
+    const ramRomSha256=nativePageFaultProfile.romSha256;
+    // Logical JSON serialization is retained by the transport helper.
+    export function validateInput(v){
+     const ready=requireReadyBuild();const names=['compiledRoot','compiledRevision','driverRevision','driverSourceSha256','addon','sha256','configuration','preparedManifest','preparedManifestSha256','buildReceipt','buildReceiptSha256','output','nativeTrace'];assert.deepEqual(Object.keys(v).sort(),names.sort());
+     assert.equal(v.compiledRevision,compiledRevision);assert.equal(v.sha256,ready.addonSha256);assert.equal(v.preparedManifestSha256,ready.staticAuthority.preparedManifestSha256);assert.equal(v.buildReceiptSha256,ready.staticAuthority.buildReceiptSha256);assert.equal(v.nativeTrace,false,'first fixed trace-OFF correctness child');assert.match(v.driverRevision,/^[a-f0-9]{40}$/);
+     for(const key of names.filter(k=>!['compiledRevision','driverRevision','nativeTrace'].includes(k))){assert.equal(typeof v[key],'string');if(key.endsWith('Sha256')||key==='sha256')assert.match(v[key],/^[a-f0-9]{64}$/);else assert.ok(isAbsolute(v[key])&&resolve(v[key])===v[key]&&v[key].length<=4096&&!/[\0\r\n]/.test(v[key]));}return v;
+    }
+    export function finalizeAuthentication(receipt,primary,before,after,readFailure=null){
+     try{if(readFailure)throw readFailure;const keys=['input','driver','compiled','build','configuration','node'];assert.deepEqual(Object.keys(before).sort(),keys.sort());assert.deepEqual(Object.keys(after).sort(),keys.sort());for(const key of keys){assert.notEqual(before[key],undefined,'available initial '+key);assert.notEqual(after[key],undefined,'available final '+key);assert.deepEqual(after[key],before[key],'final '+key);}}
+     catch(e){receipt.finalAuthenticationError=String(e);receipt.status='FAIL';return primary??e;}return primary;
+    }
+    async function run(input,inputPath){
+     validateInput(input);verifyHeldLifecycle();assert.equal(realpathSync(process.argv[1]),realpathSync(fileURLToPath(import.meta.url)));assert.equal(process.version,'v22.23.3');assert.deepEqual(process.execArgv,['--max-old-space-size=128']);for(const key of ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE'])assert.ok(!process.env[key]);
+     const parent=resolve(input.output,'..');assert.ok(lstatSync(parent).isDirectory());assert.equal(realpathSync(parent),parent);mkdirSync(input.output,{recursive:false});
+     const receipt={schema:'bw.paged-pagefault.native-js-correctness.v1',status:'FAIL',input,buildRun:requireReadyBuild().buildRun,policy:pageFaultParityPolicy,resetSource,cr0WriteSource,pageFaultNativeSources,providerAdapter:(()=>{const a=deriveDriverProvider();return {parentSha256:a.parentSha256,sha256:sha(a.bytes)};})(),boundaries:[],cuts:[],cleanup:{}};receipt.inputSha256Before=sha(regularBytes(inputPath,16384));assert.deepEqual(JSON.parse(regularBytes(inputPath,16384)),input);
+     // Small outcome is written before capped lossless full evidence; storage never replaces primary.
+     const write=()=>persistEvidence(receipt,input.output,primary);
+     let provider,oracle,api,identity,compiled,primary=null,native,progress={n:0,q:0,faults:0,attemptOrdinal:0},resumes=0,zeroQ=0,faultLedger=null;
+     const compare=(kind,classification='PREFETCH_RAW_UNMATCHED')=>{const board=provider.checkpoint(),js=oracle.checkpoint(),pages=provider.ramPages();receipt.lastComparison={kind,classification,native,board,javascript:js,nativeHostPages:pages};const comparison=compareBoundary(native,board,js,pages,kind,classification);receipt.lastComparison.comparison=comparison;receipt.boundaries.push(receipt.lastComparison);const name=oracle.milestone();if(name&&!receipt.cuts.some(c=>c.name===name)){assert.equal(name,namedCuts[receipt.cuts.length]?.name,'ordered actual cuts');receipt.cuts.push({name,q:js.q,attemptOrdinal:js.attemptOrdinal,faultSerial:js.faultSerial,classification,native,board,javascript:js,pages,comparison});}};
+     try{
+      receipt.driverBefore=driverSourceIdentity();assert.equal(receipt.driverBefore.revision,input.driverRevision);assert.equal(sha(Buffer.from(JSON.stringify(receipt.driverBefore))),input.driverSourceSha256);receipt.node=realpathSync(process.execPath);receipt.nodeBefore=sha(regularBytes(receipt.node,128<<20));
+      const b=regularBytes(input.preparedManifest,4<<20);assert.equal(sha(b),input.preparedManifestSha256);const manifest=JSON.parse(b);receipt.compiledBefore=authenticatePageFaultCompiled(input.compiledRoot,manifest);
+      identity=await import(pathToFileURL(resolve(input.compiledRoot,'scripts/bochs-cpu3-native-paged-pagefault/build-identity.mjs')).href);compiled=identity.sourceIdentity();assert.deepEqual(compiled,receipt.compiledBefore);
+      receipt.build=identity.authenticateBuild(input,compiled);receipt.configuration=identity.authenticateConfiguration(input.configuration,manifest);assert.equal(sha(regularBytes(input.addon)),requireReadyBuild().addonSha256);assert.equal(sha(regularBytes(resolve(manifest.preparedTree,resetSource.path))),resetSource.sha256,'attested Bochs reset initialization source');assert.equal(sha(regularBytes(resolve(manifest.preparedTree,cr0WriteSource.path))),cr0WriteSource.sha256,'attested Bochs CPU3 CR0 assignment source');
+      for(const source of pageFaultNativeSources)assert.equal(sha(regularBytes(resolve(manifest.preparedTree,source.path))),source.sha256,'attested protected descriptor source '+source.path);
+      assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-provider.mjs'],receipt.providerAdapter.parentSha256);assert.equal(manifest.actualPreparedHashes['bochs/owned-paged-pagefault-ROM.bin'],ramRomSha256);
+      provider=await createDriverPageFaultProvider();oracle=await createPagedPageFaultOracle();assert.equal(sha(provider.rom),ramRomSha256);api=createRequire(import.meta.url)(input.addon);assert.equal(api.abiVersion,4);for(const name of ['create','resume','setIRQ','inspect','close'])assert.equal(typeof api[name],'function');
+      native=api.create(input.configuration,provider.rom,provider.callbacks,false);assert.equal(Number(native.nativeTicks),0);assert.equal(Number(native.successfulQuanta),0);wholeNativeWords(native);compare('reset');
+      while(oracle.milestone()!=='readback-before-HLT'){
+       assert.ok(resumes<512&&zeroQ<=8,'bounded finite actual fault protocol');const stage=provider.stage();assert.deepEqual(stage,oracle.stage(),'actual PIC line');assert.equal(stage.asserted,false,'fixture IRQ outside scope');if(stage.changed){native=api.setIRQ(stage.asserted);compare('line');}
+       // Preserve both phase records; staged pages must not be hidden by a board hash.
+       receipt.stages??=[];receipt.stages.push({q:progress.q,attemptOrdinal:progress.attemptOrdinal,native:provider.checkpoint(),nativeHostPages:provider.ramPages(),javascript:oracle.checkpoint(),comparison:'UNMATCHED_STAGE_RECORD'});const beforeNative=native,beforePages=provider.ramPages();provider.begin();let resumeError=null;
+       try{native=api.resume(1,1,0xffffffffffffffffn);}catch(e){resumeError=e;receipt.resumeError=String(e);throw e;}finally{try{provider.end();}catch(e){receipt.endError=String(e);if(!resumeError)throw e;}}
+       resumes++;const next=pageFaultProgress(progress,native);faultLedger=startOrAdvanceFaultLedger(faultLedger,beforeNative,native,beforePages,provider.ramPages());receipt.faultLedger=faultLedger;receipt.lastReferenceStep=stepReferenceForReturn(oracle,next);if(next.classification==='PREFETCH_RAW_UNMATCHED')zeroQ++;assert.ok(zeroQ<=8);progress=next;compare('resume',next.classification);
+      }
+      receipt.lastReturnedNative=native;assert.equal(native.activityState,0);native=api.inspect();assert.deepEqual(wholeNativeWords(native),wholeNativeWords(receipt.lastReturnedNative),'paused inspect unchanged166');assert.equal(Number(native.nativeTicks),progress.n);assert.equal(Number(native.successfulQuanta),progress.q);receipt.finalNative=native;compare('final-inspect');receipt.milestones=validateMilestones(receipt.cuts);receipt.faultRecovery=finishFaultLedger(faultLedger);receipt.progress={...progress,resumes,zeroQ};assert.deepEqual([progress.n,progress.q,progress.faults],[57,56,1],'source-derived finite ordinary/fault extent');
+      receipt.nativeFinal=provider.settleCheckpoint();receipt.javascriptFinal=oracle.settle();receipt.nativeFinal.pages=provider.ramPages();assert.deepEqual(receipt.nativeFinal.state.board,receipt.javascriptFinal.board,'full settled board');validateFinalPages(receipt.nativeFinal.pages);for(const key of Object.keys(layout))assert.deepEqual(receipt.nativeFinal.pages[key],receipt.javascriptFinal.pages[key],'whole direct final '+key+' page');assert.equal(receipt.nativeFinal.ramSha256,receipt.javascriptFinal.ramSha256,'whole raw physical RAM hash');receipt.nativeOwnedEffects=validateNativeEffects(receipt.nativeFinal.state,receipt.javascriptFinal,true);receipt.nativeMemoryEvents=provider.memoryEvents();receipt.nativeMemoryEvidence=validateMemoryTape(receipt.nativeMemoryEvents,receipt.nativeFinal.state);receipt.javascriptDeliveries=receipt.javascriptFinal.deliveries;assert.equal(receipt.javascriptDeliveries.length,1);receipt.javascriptReloads=receipt.javascriptFinal.reloads;assert.equal(receipt.javascriptReloads.length,1);receipt.javascriptAttempts=receipt.javascriptFinal.attempts;receipt.javascriptMemoryEffects={stores:receipt.javascriptFinal.stores,updates:receipt.javascriptFinal.updates,accesses:receipt.javascriptFinal.accesses};assert.deepEqual(provider.records(),[],'no PIO');receipt.status='PASS';
+     }catch(e){primary=e;receipt.error=String(e);receipt.progress={...progress,resumes,zeroQ};if(native)receipt.lastSuccessfullyReturnedNative=native;for(const [key,fn]of [['partialProvider',()=>({state:provider.checkpoint(),pages:provider.ramPages(),ports:provider.records(),memoryEvents:provider.memoryEvents()})],['partialJavascript',()=>oracle.checkpoint()]])try{receipt[key]=fn();}catch(partial){receipt[key+'Unavailable']=String(partial);}}
+     finally{
+      // Cleanup and post-authentication never replace the first divergence.
+      for(const [key,object]of [['native',api],['provider',provider],['javascript',oracle]])if(object)try{object.close();receipt.cleanup[key]='closed';}catch(e){receipt.cleanup[key+'Error']=String(e);if(!primary)primary=e;}
+      let readFailure=null;receipt.finalReadErrors={};const probe=(key,fn)=>{try{receipt[key]=fn();}catch(e){receipt.finalReadErrors[key]=String(e);readFailure??=e;}};
+      probe('inputSha256After',()=>sha(regularBytes(inputPath,16384)));probe('driverAfter',driverSourceIdentity);probe('nodeAfter',()=>sha(regularBytes(receipt.node,128<<20)));
+      if(identity){probe('compiledAfter',()=>identity.sourceIdentity());probe('buildAfter',()=>identity.authenticateBuild(input,compiled??receipt.compiledAfter));probe('configurationAfter',()=>identity.authenticateConfiguration(input.configuration,identity.boundedJson(input.preparedManifest,input.preparedManifestSha256)));}
+      primary=finalizeAuthentication(receipt,primary,{input:receipt.inputSha256Before,driver:receipt.driverBefore,compiled:receipt.compiledBefore,build:receipt.build,configuration:receipt.configuration,node:receipt.nodeBefore},{input:receipt.inputSha256After,driver:receipt.driverAfter,compiled:receipt.compiledAfter,build:receipt.buildAfter,configuration:receipt.configurationAfter,node:receipt.nodeAfter},readFailure);
+      if(primary)receipt.status='FAIL';const persistence=await write();primary=persistence.primary;
+     }
+     if(primary)throw primary;return receipt;
+    }
+    // Closed CLI entry follows initialized source-verification declarations.
+    
+  operator: 'strictEqual'
+  stack: |-
+    verifyHeldLifecycle (file:///tmp/bw-native-paged-pagefault-ready-driver-source-20261005/scripts/bochs-cpu3-native-paged-pagefault/runner.mjs:72:145)
+    TestContext.<anonymous> (file:///tmp/bw-native-paged-pagefault-ready-driver-source-20261005/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:100:308)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4398.304225

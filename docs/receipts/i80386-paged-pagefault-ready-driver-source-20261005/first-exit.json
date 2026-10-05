@@ -1,0 +1,20 @@
+{
+  "status": "FAIL",
+  "pid": 3895882,
+  "exitCode": 1,
+  "rawWaitStatus": 256,
+  "reaped": true,
+  "timeout": false,
+  "primaryError": "AssertionError()",
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "rusage": {
+    "userSeconds": 2.030643,
+    "systemSeconds": 2.70355,
+    "maxRssKiB": 93956,
+    "scope": "wait4 leader plus descendants reaped by it; not cgroup attribution"
+  },
+  "rawExitWallSeconds": 7.298999346792698,
+  "groupCleanup": "already absent",
+  "finalAuthInclusiveWallSeconds": 9.550514442846179
+}

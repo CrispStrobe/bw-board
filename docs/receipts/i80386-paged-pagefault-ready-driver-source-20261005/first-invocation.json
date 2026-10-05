@@ -1,0 +1,46 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^(?:fresh PF build authority and manufactured pending old addon refusals before factories|new runtime and provider preserve exact held derivatives and unknown source refuses|frozen source identity includes real fault policy and held multiline checkpoint import|genuine first PF manifest exceeds held cap and is admitted by bounded four MiB source seam)$",
+    "test/i80386-paged-pagefault-native-runtime-driver.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-ready-driver-source-20261005",
+  "head": "c7859eab6184f3dd3fc1de6a86144f3039a7f23a",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "sourceCount": 106,
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "scope": "Four affected fresh READY source cases: closed build authority, actual checked runtime/provider/lifecycle derivatives, clean owned identity and dirty refusal, genuine original manifest cap. Historical five other cases are not selected. No factories/compiler/addon/CPU/native build.",
+  "preparedSourceProvenance": {
+    "path": "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json",
+    "sha256": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+  },
+  "sourceFreeze": {
+    "path": "/tmp/native-paged-pagefault-ready-driver-source-freeze-20261005/source-freeze.json",
+    "sha256": "7290d64c4a4a844b8dd1e8190c322fb43e602348e92bc252ecbc38bdf26bd8b6"
+  }
+}
