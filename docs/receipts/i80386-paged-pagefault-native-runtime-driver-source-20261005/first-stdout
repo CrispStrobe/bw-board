@@ -1,0 +1,72 @@
+TAP version 13
+# Subtest: pending distinct PF build refuses before input getters factories or old addon authority
+ok 1 - pending distinct PF build refuses before input getters factories or old addon authority
+  ---
+  duration_ms: 7.489579
+  type: 'test'
+  ...
+# Subtest: new runtime and provider preserve exact held derivatives and unknown source refuses
+ok 2 - new runtime and provider preserve exact held derivatives and unknown source refuses
+  ---
+  duration_ms: 53.799666
+  type: 'test'
+  ...
+# Subtest: delivery and failed operand owners cannot be confused with generic prefetch
+ok 3 - delivery and failed operand owners cannot be confused with generic prefetch
+  ---
+  duration_ms: 13.888407
+  type: 'test'
+  ...
+# Subtest: FAULT N1 Q0 steps the genuine-reference interface exactly once while prefetch does not
+ok 4 - FAULT N1 Q0 steps the genuine-reference interface exactly once while prefetch does not
+  ---
+  duration_ms: 98.958459
+  type: 'test'
+  ...
+# Subtest: comparable wholeboards ten pages and native cache rows remain strict with unmatched prefetch raw
+not ok 5 - comparable wholeboards ten pages and native cache rows remain strict with unmatched prefetch raw
+  ---
+  duration_ms: 4.940794
+  type: 'test'
+  location: '/tmp/bw-native-paged-pagefault-native-runtime-driver-20261005/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:60:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/bw-native-paged-pagefault-native-runtime-driver-20261005/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:62:172)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: native frame and A D tapes are independent yet cannot smuggle extra writes or lost callbacks
+ok 6 - native frame and A D tapes are independent yet cannot smuggle extra writes or lost callbacks
+  ---
+  duration_ms: 4.071967
+  type: 'test'
+  ...
+# Subtest: all-outcome authentication retains primary failure independently of missing or changed guards
+ok 7 - all-outcome authentication retains primary failure independently of missing or changed guards
+  ---
+  duration_ms: 1.111764
+  type: 'test'
+  ...
+# Subtest: frozen source identity includes real fault policy and held multiline checkpoint import
+ok 8 - frozen source identity includes real fault policy and held multiline checkpoint import
+  ---
+  duration_ms: 1598.293802
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2082.98617

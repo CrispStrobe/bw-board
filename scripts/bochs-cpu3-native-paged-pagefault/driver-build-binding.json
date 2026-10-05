@@ -1,0 +1,14 @@
+{
+  "schema": "bw.paged-pagefault.driver-build-binding.v1",
+  "status": "PENDING_NATIVE_FAULT_RUNTIME_BUILD_AND_EXECUTION",
+  "profile": "fixed-paged-cpl0-pf14-repair-cr3-iret-retry-native-source-v1",
+  "abiVersion": 4,
+  "compiledRevision": null,
+  "compiledSourceSha256": null,
+  "compiledFiles": {},
+  "generated": {},
+  "addonSha256": null,
+  "buildRun": null,
+  "artifactId": null,
+  "staticAuthority": null
+}

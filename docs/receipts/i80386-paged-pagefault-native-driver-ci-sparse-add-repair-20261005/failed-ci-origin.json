@@ -1,0 +1,13 @@
+{
+  "run": 37260713414,
+  "head": "de1eba87b217192f2b6256b67b6fc8bf5e7bf6c0",
+  "rawPath": "/tmp/pf-ci-37260713414-failed.log",
+  "rawBytes": 1109522,
+  "rawSha256": "dc06f4b59d7312dc3569f6ad6cf45237d8d3a8e89005294e87e0a468daff9538",
+  "excerptLines": [
+    7578,
+    7613
+  ],
+  "actualFailure": "git sparse-checkout add --no-cone /package-lock.json rejected option",
+  "classification": "test-only owned-fixture command; runtime controls passed before failure"
+}

@@ -1,0 +1,29 @@
+test	Test	2026-10-05T03:25:06.9738723Z not ok 3334 - frozen source identity includes real fault policy and held multiline checkpoint import
+test	Test	2026-10-05T03:25:06.9739696Z   ---
+test	Test	2026-10-05T03:25:06.9740151Z   duration_ms: 55.050377
+test	Test	2026-10-05T03:25:06.9740586Z   type: 'test'
+test	Test	2026-10-05T03:25:06.9741574Z   location: '/home/runner/work/bw-board/bw-board/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:72:1'
+test	Test	2026-10-05T03:25:06.9743022Z   failureType: 'testCodeFailure'
+test	Test	2026-10-05T03:25:06.9743558Z   error: |-
+test	Test	2026-10-05T03:25:06.9744012Z     clean frozen PF driver
+test	Test	2026-10-05T03:25:06.9744540Z     + actual - expected
+test	Test	2026-10-05T03:25:06.9745009Z     
+test	Test	2026-10-05T03:25:06.9745568Z     + 'M package-lock.json\n?? blinkenrocket-firmware/'
+test	Test	2026-10-05T03:25:06.9746179Z     - ''
+test	Test	2026-10-05T03:25:06.9746598Z     
+test	Test	2026-10-05T03:25:06.9747015Z   code: 'ERR_ASSERTION'
+test	Test	2026-10-05T03:25:06.9747674Z   name: 'AssertionError'
+test	Test	2026-10-05T03:25:06.9748211Z   expected: ''
+test	Test	2026-10-05T03:25:06.9748648Z   actual: |-
+test	Test	2026-10-05T03:25:06.9749089Z     M package-lock.json
+test	Test	2026-10-05T03:25:06.9749618Z     ?? blinkenrocket-firmware/
+test	Test	2026-10-05T03:25:06.9750135Z   operator: 'strictEqual'
+test	Test	2026-10-05T03:25:06.9750610Z   stack: |-
+test	Test	2026-10-05T03:25:06.9751696Z     driverSourceIdentity (file:///home/runner/work/bw-board/bw-board/scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs:22:9)
+test	Test	2026-10-05T03:25:06.9753523Z     TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:73:17)
+test	Test	2026-10-05T03:25:06.9754790Z     Test.runInAsyncScope (node:async_hooks:214:14)
+test	Test	2026-10-05T03:25:06.9755515Z     Test.run (node:internal/test_runner/test:1047:25)
+test	Test	2026-10-05T03:25:06.9756387Z     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+test	Test	2026-10-05T03:25:06.9757252Z     Test.postRun (node:internal/test_runner/test:1173:19)
+test	Test	2026-10-05T03:25:06.9758168Z     Test.run (node:internal/test_runner/test:1101:12)
+test	Test	2026-10-05T03:25:06.9759066Z     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)

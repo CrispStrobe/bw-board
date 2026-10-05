@@ -1,0 +1,46 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^comparable wholeboards ten pages and native cache rows remain strict with unmatched prefetch raw$",
+    "test/i80386-paged-pagefault-native-runtime-driver.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-native-runtime-driver-20261005",
+  "head": "50bb03655bea26cd8b8b89bfb31ab2079643b54b",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "sourceCount": 105,
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "scope": "ONE affected manufactured independent-page negative-fixture case; seven other actual cases remain historical at65069876. No factories, CPU instructions, addon, compiler or native build",
+  "preparedSourceProvenance": {
+    "path": "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json",
+    "sha256": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+  },
+  "sourceFreeze": {
+    "path": "/tmp/native-paged-pagefault-native-runtime-driver-source-freeze-r3-20261005/source-freeze.json",
+    "sha256": "948855b42480511f11e48f0974c2e57484f70c97082aade69bc8696db4b9e20f"
+  }
+}

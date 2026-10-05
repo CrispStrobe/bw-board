@@ -1,0 +1,23 @@
+{
+  "head": "970cedff40cbf68e26332e501645da4f888f51cd",
+  "records": [
+    {
+      "run": 37258852677,
+      "origin": "/tmp/pf-pr392-ci-37258852677-failed.log",
+      "bytes": 4372355,
+      "sha256": "c1110fba7f2148ab3197a969b494202c64db8b58877103c3256ff8ba8b505e12",
+      "excerptFirstLine": 29580,
+      "excerptLines": 29,
+      "scope": "Hosted identity case refuses intentionally setup-dirty CIcaller; no new native build/addon/guest qualification"
+    },
+    {
+      "run": 37258850009,
+      "origin": "/tmp/pf-pr392-ci-37258850009-failed.log",
+      "bytes": 4371065,
+      "sha256": "334286c6a829bb9aad5bb1c03a305aa9753988eef9ebd2293a8a8b641f3f3d16",
+      "excerptFirstLine": 29579,
+      "excerptLines": 29,
+      "scope": "Hosted identity case refuses intentionally setup-dirty CIcaller; no new native build/addon/guest qualification"
+    }
+  ]
+}
