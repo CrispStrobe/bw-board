@@ -1,0 +1,92 @@
+{
+  "schema": "bw.paged-pagefault.hosted-ready.source-receipts.v1",
+  "scope": "ONE six named direct Python manufactured source controls at c6d5; no Node/provider/factory/restore/addon/guest. Final publication adds only README and inert records; no final-head retest.",
+  "testedHead": "c6d5c7b26a7e8091f82e5bcd5f2e26e0f2b5a6fa",
+  "driverAncestor": "49e4c890b65e2ae7ec54cfa0c991050254a34c26",
+  "records": [
+    {
+      "path": "parent.py",
+      "bytes": 94671,
+      "sha256": "e5db7742dcf1ff695ddc6cfe076835e18f340f0ce45e3a2c887fa56ac0c16f50",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/parent.py",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 1565,
+      "sha256": "a7e07a65f4182aa6c441d299b882120d4a28d12920d7a3018711bcdc91e49bdf",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/invocation.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/stdout",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "stderr",
+      "bytes": 908,
+      "sha256": "e904409c7290cf0cf1c19adaa129cbb003ee838e63e5942d0cb07cacb4ffd1f4",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/stderr",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "exit.json",
+      "bytes": 402,
+      "sha256": "e02a7e4b0f45d500b5ec9a73e342f0bb8e9fd28e57d43788105d15291ca9d80b",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/exit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "result.json",
+      "bytes": 344,
+      "sha256": "98794ecc4c1daa93cd3e41258a3c3d0cedb03609dd22f83387855ec542866931",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/result.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "before.json",
+      "bytes": 92635,
+      "sha256": "331bd224b0a3059f883efc7b87f3c2b65ed005a0f300686b85c3107b93041b9a",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/before.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "after.json",
+      "bytes": 92635,
+      "sha256": "331bd224b0a3059f883efc7b87f3c2b65ed005a0f300686b85c3107b93041b9a",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/after.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "paths.json",
+      "bytes": 637,
+      "sha256": "111744d323a193e35780168fbc82db435b7834ccb9702e887bf74c739e520ac6",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/paths.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "root-audit.json",
+      "bytes": 755,
+      "sha256": "22fefd24f35d7b04aca28a38c995b1fda12f3dece47cc801fcb1476e9dd58ca4",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/root-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 789,
+      "sha256": "0101534a98e5f8285afc737db7a2a2fee1caa9fcf00b657ad10e0a5b06cc11b2",
+      "origin": "/tmp/native-paged-pagefault-hosted-ready-source-controls-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    }
+  ],
+  "externalArtifact": {
+    "path": "/tmp/native-paged-pagefault-static-build-37262460989.zip",
+    "runId": 37262460989,
+    "artifactId": 11324707742,
+    "bytes": 8578008,
+    "sha256": "c74915df6046cb6c6a92b4830dfe9b6cf8b2110f57717d8a9142bee99c6bbac8"
+  }
+}

@@ -1,0 +1,15 @@
+[
+  ".github/workflows/i80386-paged-pagefault-execution.yml",
+  "scripts/cold-native-diagnostic/resources.py",
+  "scripts/cold-native-restore/archive.py",
+  "scripts/nonidentity-paging-hosted/parent.py",
+  "scripts/paged-int-iret-hosted/parent.py",
+  "scripts/paged-pagefault-hosted/README.md",
+  "scripts/paged-pagefault-hosted/contract.json",
+  "scripts/paged-pagefault-hosted/evidence.py",
+  "scripts/paged-pagefault-hosted/parent.py",
+  "scripts/paged-pagefault-hosted/test_source.py",
+  "scripts/protected-ram-hosted/parent.py",
+  "scripts/protected-stack-hosted/parent.py",
+  "test/i80386-paged-pagefault-hosted-source.test.mjs"
+]
