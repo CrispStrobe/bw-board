@@ -29,7 +29,7 @@ export function derivePropertyKeyNapi(){
  replace('napi_set_named_property(env,','set_key(',count,'runtime snapshot setters');
  replace('if(!ok(napi_create_reference(env,argv[2],1,&board)))return fail("board reference rejected");','if(!prepare_keys(e))return fail("private property keys rejected");if(!ok(napi_create_reference(env,argv[2],1,&board))){release_keys();return fail("board reference rejected");}',1,'prepare before board effects');
  replace('if(!capture_cached(argv[2])){napi_delete_reference(env,board);','if(!capture_cached(argv[2])){release_keys();napi_delete_reference(env,board);',1,'capture failure releases keys');
- replace('closed=true;release_cached();','closed=true;release_cached();release_keys();',2,'failed initialization and successful close');
+ replace('closed=true;release_cached();','closed=true;release_cached();if(!release_keys())return fail("private key cleanup rejected");',2,'failed initialization and successful close');
  replace('if(!lock.owns_lock()||busy||','if((key_env&&e!=key_env)||!lock.owns_lock()||busy||',1,'environment guard before active env assignment');
  replace('napi_value init(napi_env e,napi_value exports){','napi_value init(napi_env e,napi_value exports){napi_value keyProfile;if(napi_create_string_utf8(e,"'+PROPERTY_KEY_PROFILE+'",NAPI_AUTO_LENGTH,&keyProfile)!=napi_ok||napi_set_named_property(e,exports,"propertyKeyProfile",keyProfile)!=napi_ok)return nullptr;',1,'separate profile');
  let inverse=s;for(const edit of [...edits].reverse()){if(inverse.split(edit.next).length-1!==edit.count)throw Error('inverse '+edit.label);inverse=inverse.split(edit.next).join(edit.old);}if(hash(inverse)!==HELD_NAPI_SHA)throw Error('full inverse');

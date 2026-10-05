@@ -2,17 +2,24 @@
 static napi_ref key_container=nullptr;
 static napi_env key_env=nullptr;
 static bool key_cleanup_registered=false;
+static bool key_cleanup_failed=false;
 enum class Key:uint32_t{bytes,decoded,kind,effect,generation,mappingEpoch,boardA20,sha256,clock,memory,state,extra,segments,system,debug,nativeTicks,successfulQuanta,clockTransfers,bridgeClockEntryAttempts,bridgeMemoryEntryAttempts,callbacks,fallback,execution,sliceBytes,reason,activityState,chargedNativeTicks,chargedQuanta,transfers,commits,words,unknown,INIT,ENTRY,MEMORY,PAGE,PRE_PIO,POST_PIO,ACK,FAULT,IRQ,HLT,RETURN,ordinaryRead,ordinaryWrite,fusedOuter,physicalReads,physicalWrites,executePages,nativeTickCallbacks,quantumCallbacks,bochsRamReads,bochsRamWrites,bochsDirectPointers,bochsPio,bochsTimer,attempts,completed,repIterations,repPartial,faults,portCommits,irqDeliveries,haltIdleCuts,count};
 static const char *const property_keys[]={"bytes","decoded","kind","effect","generation","mappingEpoch","boardA20","sha256","clock","memory","state","extra","segments","system","debug","nativeTicks","successfulQuanta","clockTransfers","bridgeClockEntryAttempts","bridgeMemoryEntryAttempts","callbacks","fallback","execution","sliceBytes","reason","activityState","chargedNativeTicks","chargedQuanta","transfers","commits","words","unknown","INIT","ENTRY","MEMORY","PAGE","PRE_PIO","POST_PIO","ACK","FAULT","IRQ","HLT","RETURN","ordinaryRead","ordinaryWrite","fusedOuter","physicalReads","physicalWrites","executePages","nativeTickCallbacks","quantumCallbacks","bochsRamReads","bochsRamWrites","bochsDirectPointers","bochsPio","bochsTimer","attempts","completed","repIterations","repPartial","faults","portCommits","irqDeliveries","haltIdleCuts"};
 static void cleanup_keys(void*);
-static void release_keys(){
- if(key_cleanup_registered){napi_remove_env_cleanup_hook(key_env,cleanup_keys,nullptr);key_cleanup_registered=false;}
- if(key_container){napi_delete_reference(key_env,key_container);key_container=nullptr;}
- key_env=nullptr;
+static bool release_keys(){
+ if(key_cleanup_registered){
+  if(!ok(napi_remove_env_cleanup_hook(key_env,cleanup_keys,nullptr))){key_cleanup_failed=true;return false;}
+  key_cleanup_registered=false;
+ }
+ if(key_container){
+  if(!ok(napi_delete_reference(key_env,key_container))){key_cleanup_failed=true;return false;}
+  key_container=nullptr;
+ }
+ key_env=nullptr;return true;
 }
-static void cleanup_keys(void*){key_cleanup_registered=false;release_keys();}
+static void cleanup_keys(void*){key_cleanup_registered=false;if(!release_keys())key_cleanup_failed=true;}
 static bool prepare_keys(napi_env e){
- if(key_container||key_env)return false;
+ if(key_container||key_env||key_cleanup_failed)return false;
  napi_value a,k;key_env=e;
  if(!ok(napi_create_array_with_length(e,sizeof(property_keys)/sizeof(*property_keys),&a))){release_keys();return false;}
  for(uint32_t i=0;i<sizeof(property_keys)/sizeof(*property_keys);i++){
