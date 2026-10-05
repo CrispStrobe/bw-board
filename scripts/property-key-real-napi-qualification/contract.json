@@ -1,0 +1,16 @@
+{
+  "schema": "bw.property-key.real-napi-qualification.source.v1",
+  "status": "PENDING_ROOT_REVIEWED_HELPER_LIFECYCLE_AND_BUILD",
+  "sourceOnly": true,
+  "candidateRevision": "72fde42d17713f4f328c632d3a14088aae7ab726",
+  "heldGeneratedNapiSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+  "nodeVersion": "22.23.3",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "addonPath": "./owned-build/key_fixture.node",
+  "addonSha256": null,
+  "generatedHelperSha256": null,
+  "buildReceiptSha256": null,
+  "guestEnabled": false,
+  "performanceQualification": false,
+  "teardownConcurrencyQualified": false
+}
