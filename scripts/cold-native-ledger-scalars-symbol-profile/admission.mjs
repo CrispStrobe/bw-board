@@ -25,7 +25,7 @@ export function authenticatePrerequisite(input){
 }
 export function nativeWorkerSourceIdentity(){
  const base=held.nativeWorkerSourceIdentity(),context=JSON.parse(read('held-source-context.json'));assert.deepEqual(base.hashes,context.hashes,'all original73 source inputs unchanged');
- const ownNames=['worker.mjs','admission.mjs','window-session.mjs','recorder.py','setup.py','worker-entry.py','qualifier-source-context.json','test_recorder.py','profile-binding.json','held-source-context.json','qualification-audit.json','paired-audit.json','capability-result.json','capability-audit.json','capability-artifacts.json','capability-version.stdout','worker-derivation.json','README.md'];
+ const ownNames=['worker.mjs','admission.mjs','window-session.mjs','recorder.py','setup.py','worker-entry.py','qualifier-source-context.json','test_recorder.py','profile-binding.json','held-source-context.json','qualification-audit.json','paired-audit.json','capability-result.json','capability-audit.json','capability-artifacts.json','capability-version.stdout','worker-derivation.json','ack-framing-source/FINDING.md','ack-framing-source/index.json','ack-framing-source/tools_perf_util_evlist.c','ack-framing-source/tools_perf_util_evlist.h','README.md'];
  const paths=[...ownNames.map(n=>own+'/'+n),'test/i80386-cold-ledger-scalars-symbol-profile-source.test.mjs'];const hashes={...base.hashes};
  for(const p of paths){const bytes=held.ordinaryBytes(resolve(held.sourceRoot,p));assert.equal(held.sha(bytes),held.sha(execFileSync('git',['show',base.revision+':'+p],{cwd:held.sourceRoot,timeout:10000,maxBuffer:8<<20})),'diagnostic current/Git '+p);hashes[p]=held.sha(bytes);}
  return {revision:base.revision,hashes:Object.fromEntries(Object.keys(hashes).sort().map(p=>[p,hashes[p]]))};
