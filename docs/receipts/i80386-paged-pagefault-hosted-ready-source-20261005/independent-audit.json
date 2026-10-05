@@ -1,0 +1,21 @@
+{
+  "status": "INDEPENDENT_PAGED_PAGEFAULT_HOSTED_SIX_SOURCE_CONTROLS_PASS_NO_GUEST",
+  "head": "c6d5c7b26a7e8091f82e5bcd5f2e26e0f2b5a6fa",
+  "ownSourceCount": 13,
+  "roleCounts": {
+    "compiledFiles": 243,
+    "driverFiles": 106
+  },
+  "fullCurrentGitAndBeforeAfterEqual": true,
+  "pythonNamedTests": 6,
+  "passes": 6,
+  "skips": 0,
+  "stdoutBytes": 0,
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "leaderReaped": true,
+  "rawExitWallSeconds": 5.90627377666533,
+  "wallScope": "raw exit before final authentication; not execution-only",
+  "parentSha256": "e5db7742dcf1ff695ddc6cfe076835e18f340f0ce45e3a2c887fa56ac0c16f50",
+  "scope": "Saved packet only. Six manufactured source/archive/decoder/lifecycle cases; no Node invocation, restore, download, worker, factory, addon or native CPU."
+}

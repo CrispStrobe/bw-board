@@ -1,11 +1,16 @@
 {
-  "schema": "bw.paged-pagefault.driver-build-binding.v1",
-  "status": "ROOT_REVIEWED_PAGED_PAGEFAULT_NATIVE_BUILD",
-  "profile": "fixed-paged-cpl0-pf14-repair-cr3-iret-retry-native-source-v1",
-  "abiVersion": 4,
-  "compiledRevision": "5df525f72790876d35e49d936bac1f1284fa81e7",
-  "compiledSourceSha256": "73b16ea6d2f49f55d30c513ba033b272a40a76bfa4f94e34c2ceee3266046993",
-  "compiledFiles": {
+  "schema": "bw.native-paged-pagefault-build-receipt.v1",
+  "status": "BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "pagedPageFaultProfile": {
+    "kind": "fixed-paged-cpl0-pf14-repair-cr3-iret-retry-native-source-v1",
+    "maxAttempts": 512,
+    "maxQuanta": 512,
+    "romSha256": "50d473eae24ad9b71630731ed5cc02db97055df46f692dce49e7f2de04565172",
+    "status": "PENDING_NEW_NATIVE_FAULT_RUNTIME_BUILD_AND_EXECUTION",
+    "maxNativeTicks": 512
+  },
+  "sourceRevision": "5df525f72790876d35e49d936bac1f1284fa81e7",
+  "sourceHashes": {
     ".github/workflows/i80386-native-cold-bios-build.yml": "f7ff9624b5a75a27470d592f42f36c1539ce1f5f27d20e1a152ed93e898ae1a3",
     ".github/workflows/i80386-native-nonidentity-paging-build.yml": "3060d84c34ce672074c0dbbaddd0040505c94b5682328a4474a983495e6d8cee",
     ".github/workflows/i80386-native-paged-int-iret-build.yml": "0e547d3bba5b3caa4a8346ce5081b4b5cdb0dac1e4fadd682b325ecdae81b510",
@@ -250,7 +255,10 @@
     "test/i80386-ram-bootstrap-build-source.test.mjs": "0f81dc72b1373cd4d36ae3721cef3f8e1aaf45c89deb57944bc614d953ed68ed",
     "test/i80386-ram-bootstrap-source.test.mjs": "945350e50d71b9b126476954ab783bc36fc839514dd3c941eb627fa212acce66"
   },
-  "generated": {
+  "preparedManifestPath": "/home/runner/work/_temp/paged-pagefault-build-evidence/prepare.json",
+  "preparedTree": "/home/runner/work/_temp/paged-pagefault-build-prepared",
+  "preparedManifestSha256": "b1268ecffc11ae4704f3df95bb92fa3bbf60a18111e74383f99ff8ce58503d53",
+  "preparedHashes": {
     "bochs/cpu/bw_slice_runtime.inc": "1e632f2d639f47c5f3e4b33d3c945fb142fa3364f6e383b8959d5ab705f96369",
     "bochs/cpu/bw_slice_abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
     "bochs/bochs-cpu3-native-direct-board/abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
@@ -258,15 +266,28 @@
     "bochs/owned-paged-pagefault-provider.mjs": "55acb3bccfb95c60e9818c7be9a45d78918a7b7cec2d8ec5a4fef7064117e53e",
     "bochs/owned-paged-pagefault-ROM.bin": "50d473eae24ad9b71630731ed5cc02db97055df46f692dce49e7f2de04565172"
   },
+  "addonPath": "/home/runner/work/_temp/paged-pagefault-build-prepared/bochs/bw_direct.node",
   "addonSha256": "14bc8ef0e06030203ec642537846eb78388f857f8728cb201942f6eb9daf35c0",
-  "buildRun": 37262460989,
-  "artifactId": 11324707742,
-  "staticAuthority": {
-    "artifactZipSha256": "c74915df6046cb6c6a92b4830dfe9b6cf8b2110f57717d8a9142bee99c6bbac8",
-    "artifactZipBytes": 8578008,
-    "preparedManifestSha256": "b1268ecffc11ae4704f3df95bb92fa3bbf60a18111e74383f99ff8ce58503d53",
-    "buildReceiptSha256": "ab8f0ea6a07ca27508413dd01932b4ae7c88bdca22db17670e2dcc42fd31dd2c",
-    "independentAuditSha256": "855dc0b9a95a3f803b798d166705c9894da4a65dcfa40f28bd3612f931ff8ab2",
-    "rootAuditSha256": "1edc6c22c9225241be5555c298d8eb5d117251f92a5cb03f52d73d7e1abf1b7e"
-  }
+  "addonBytes": 2074824,
+  "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+  "requiredFeatures": {
+    "BX_CPU_LEVEL": 3,
+    "BX_SUPPORT_SMP": 0,
+    "BX_DEBUGGER": 0,
+    "BX_USE_IDLE_HACK": 0,
+    "BX_SUPPORT_REPEAT_SPEEDUPS": 0,
+    "BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS": 0,
+    "BX_SUPPORT_FPU": 1,
+    "BX_PLUGINS": 0
+  },
+  "requiredExports": [
+    "bw_direct_initialize",
+    "bw_direct_resume",
+    "bw_direct_set_irq_line",
+    "bw_direct_inspect",
+    "bw_direct_close",
+    "napi_register_module_v1"
+  ],
+  "contextPath": "/home/runner/work/_temp/paged-pagefault-build-evidence/build-context.json",
+  "contextSha256": "542a0f642898bfa77c18174a5d0200e9ba0df4bf2e2286edbf703c87524c8046"
 }

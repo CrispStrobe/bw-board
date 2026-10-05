@@ -1,0 +1,53 @@
+{
+  "status": "INDEPENDENT_PAGED_PAGEFAULT_STATIC_BUILD_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "sourceRevision": "5df525f72790876d35e49d936bac1f1284fa81e7",
+  "runId": 37262460989,
+  "officialArtifact": {
+    "id": 11324707742,
+    "sizeInBytes": 8578008,
+    "sha256": "c74915df6046cb6c6a92b4830dfe9b6cf8b2110f57717d8a9142bee99c6bbac8"
+  },
+  "zipMembers": 71,
+  "sourceInputs": 243,
+  "frozenTarGitEqual": true,
+  "preparedBeforeCount": 792,
+  "preparedTarCount": 822,
+  "preparedBeforePreserved": true,
+  "preparedTarEqualsPostExceptAddon": true,
+  "preparedHashes": {
+    "bochs/cpu/bw_slice_runtime.inc": "1e632f2d639f47c5f3e4b33d3c945fb142fa3364f6e383b8959d5ab705f96369",
+    "bochs/cpu/bw_slice_abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "bochs/bochs-cpu3-native-direct-board/abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "e4f4e55d139971ba073aa0ff422a6f6f1206587b80fccc88e5f6aba10f8cf1a7",
+    "bochs/owned-paged-pagefault-provider.mjs": "55acb3bccfb95c60e9818c7be9a45d78918a7b7cec2d8ec5a4fef7064117e53e",
+    "bochs/owned-paged-pagefault-ROM.bin": "50d473eae24ad9b71630731ed5cc02db97055df46f692dce49e7f2de04565172"
+  },
+  "addonSha256": "14bc8ef0e06030203ec642537846eb78388f857f8728cb201942f6eb9daf35c0",
+  "addonBytes": 2074824,
+  "requiredExports": [
+    "bw_direct_initialize",
+    "bw_direct_resume",
+    "bw_direct_set_irq_line",
+    "bw_direct_inspect",
+    "bw_direct_close",
+    "napi_register_module_v1"
+  ],
+  "allStepExitsZero": true,
+  "allSourceFinalGuardsEqual": true,
+  "scope": "Shared authenticated ZIP read only; no download, extraction, source import, helper execution, addon load or guest. Native PF phase hypotheses remain unexecuted.",
+  "abiVersion": 4,
+  "configFeatures": {
+    "BX_CPU_LEVEL": 3,
+    "BX_SUPPORT_SMP": 0,
+    "BX_DEBUGGER": 0,
+    "BX_USE_IDLE_HACK": 0,
+    "BX_SUPPORT_REPEAT_SPEEDUPS": 0,
+    "BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS": 0,
+    "BX_SUPPORT_FPU": 1,
+    "BX_PLUGINS": 0
+  },
+  "configurationVerified": true,
+  "helperWorkflowPinsEqual": true,
+  "nodeVersion": "v22.23.3",
+  "compilerVersion": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+}

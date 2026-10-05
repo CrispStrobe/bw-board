@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "head": "c6d5c7b26a7e8091f82e5bcd5f2e26e0f2b5a6fa",
+  "sourceFiles": 13,
+  "compiledFiles": 243,
+  "driverFiles": 106,
+  "namedCases": 6,
+  "skips": 0,
+  "beforeAfterEqual": true,
+  "exit": {
+    "childStarted": true,
+    "exitCode": 0,
+    "finalizationErrors": [],
+    "leaderReaped": true,
+    "pid": 3904855,
+    "primaryError": null,
+    "rawWaitStatus": 0,
+    "rusage": {
+      "maxRSSKiB": 29056,
+      "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+      "systemSeconds": 0.061534,
+      "userSeconds": 0.508417
+    },
+    "timeout": false,
+    "wallSeconds": 5.90627377666533
+  },
+  "scope": "Manufactured direct Python controls only; no guest, addon, restore or benchmark execution."
+}
