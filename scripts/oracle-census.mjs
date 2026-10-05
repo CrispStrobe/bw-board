@@ -330,6 +330,21 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'picobb-uf2', kind: 'fixture',
+        what: 'PicoBB — BBC BASIC for the Raspberry Pi Pico, a built Zlib .uf2 that lives in '
+            + 'brickwright-media-lab (projects/picobb-rp2040/). The rp2040 media-bundle acceptance '
+            + '(runRp2040Bundle) boots it on rp2040js and runs its UART0 REPL. The firmware is a '
+            + 'built artifact, never vendored here — so the acceptance skips when absent while the '
+            + 'parseUF2 units and the runner mechanics (a bad bundle failing by name) always run.',
+        env: 'PICOBB_UF2',
+        paths: [],
+        gates: ['test/rp2040-media-bundle.test.mjs'],
+        obtain: 'brickwright-media-lab projects/picobb-rp2040/fetch.sh, or set $PICOBB_UF2 to the .uf2',
+        ciAvailable: false,
+        ci: 'no — the UF2 is a built Zlib artifact kept in the media lab, not vendored; routine CI '
+            + 'skips the acceptance and runs the parseUF2 units + runner mechanics.',
+    },
+    {
         id: 'ngspice', kind: 'oracle',
         what: 'The reference NUMERIC circuit simulator. lcapy is symbolic and exact but cannot '
             + 'model a junction; ngspice models devices, so the two are complementary rather '
