@@ -195,6 +195,7 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   /** @type {number | null} registered function pointer for cleanup */
   let pinCbPtr = null;
   let readPinCbPtr = null;
+  let serialCbPtr = null;
   let readAnalogCbPtr = null;
   let advanceCbPtr = null;
 
@@ -650,9 +651,31 @@ export function createEmu8051Adapter(wasm, opts = {}) {
       }
     },
 
+    /** UART1 transmit: `cb(byte)` for every byte the firmware writes to SBUF
+     *  (the same surface as the avr8js/rp2040js/stm32 adapters' onSerial). */
+    onSerial(cb) {
+      if (!wasm._emu_set_serial_callback || !wasm.addFunction) return false;
+      if (serialCbPtr && wasm.removeFunction) wasm.removeFunction(serialCbPtr);
+      serialCbPtr = wasm.addFunction((byte) => { if (cb) cb(byte & 0xff); }, 'vii');
+      wasm._emu_set_serial_callback(serialCbPtr);
+      return true;
+    },
+
+    /** Bytes arriving on RXD (a serial monitor's "send"). An emulator with a
+     *  receive FIFO (emu_serial_rx_pending) hands them over one per
+     *  character time as the firmware takes them; an older build overwrites
+     *  SBUF, so only the last of a burst would be read. */
+    sendSerial(byteOrBytes) {
+      if (!wasm._emu_serial_write) return false;
+      const bytes = typeof byteOrBytes === 'number' ? [byteOrBytes] : Array.from(byteOrBytes);
+      for (const b of bytes) wasm._emu_serial_write(b & 0xff);
+      return true;
+    },
+
     /** Clean up registered function pointers. */
     destroy() {
       if (wasm.removeFunction) {
+        if (serialCbPtr) wasm.removeFunction(serialCbPtr);
         if (pinCbPtr) wasm.removeFunction(pinCbPtr);
         if (readPinCbPtr) wasm.removeFunction(readPinCbPtr);
         if (readAnalogCbPtr) wasm.removeFunction(readAnalogCbPtr);

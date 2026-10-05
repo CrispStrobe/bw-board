@@ -113,6 +113,10 @@ const METHODS = {
   loadHex:          { effect: 'forward', call: a => a.loadHex(':00000001FF\n') },
   getPinHistory:    { effect: 'forward', call: a => a.getPinHistory() },
   getTimeHistory:   { effect: 'forward', call: a => a.getTimeHistory() },
+  // Serial (2026-10-05): TX observation and RX bytes into SBUF -- neither
+  // touches the clock.
+  onSerial:         { effect: 'forward', call: a => a.onSerial(() => {}) },
+  sendSerial:       { effect: 'forward', call: a => a.sendSerial([0x41, 0x0d]) },
   destroy:          { effect: 'forward', call: a => a.destroy() }
 };
 
