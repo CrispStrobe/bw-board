@@ -1,0 +1,13 @@
+{
+  "status": "INDEPENDENT_SAVED_ACK_IMPORT_SOURCE_CONTROLS_PASS",
+  "revision": "6b6d620897c4d4a755b16b26284db781cb121bb2",
+  "sourcePaths": 96,
+  "fullBeforeAfterEqual": true,
+  "selectedNodeMethods": 1,
+  "forwardedPythonMethods": 10,
+  "unselectedNodeMethods": "not rerun",
+  "rawWaitStatus": 0,
+  "childExitWallSeconds": 0.64007967710495,
+  "parentFinalAuthenticationInclusiveWallSeconds": 2.0739923529326916,
+  "scope": "Saved mocked source controls only; no replay/live perf/addon/guest."
+}

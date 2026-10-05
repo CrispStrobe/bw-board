@@ -1,0 +1,22 @@
+{
+  "runId": 37245948328,
+  "headSha": "7d41d5c7a56c9e566fdf56d76a1bee3ee10efecc",
+  "artifactId": 11318748078,
+  "status": "FAILED_PRE_READINESS",
+  "export": "83_COMPLETE_FILES_AUTHENTICATED",
+  "actualRawAck": "ack\n\u0000",
+  "primary": "exact single perf ACK rejected perf frame",
+  "secondary": "terminal validator admission import collision",
+  "workerResumes": 0,
+  "resetOrFinalNativeRetained": false,
+  "activeWindow": false,
+  "samplingQualified": false,
+  "historicalRun37243459679Cause": "UNKNOWN_NOT_RETROACTIVELY_INFERRED",
+  "preauditScope": "Read-only source/container checks; expected terminal checks failed on incomplete worker",
+  "sourceChecks": {
+    "export_manifest_and_complete_source_copy_hashes": "PASS",
+    "dispatch_and390_roles": "PASS",
+    "dispatch_and390_roles_after": "PASS",
+    "root_source_and_inputs": "PASS"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "records": [
+    {
+      "path": "stdout",
+      "bytes": 1733,
+      "sha256": "d217aed7f2c58b304a4b576173306f6033e88a4f935439b76ba78a8102fbb9e5",
+      "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/stdout"
+    },
+    {
+      "path": "exit.json",
+      "bytes": 494,
+      "sha256": "88c93fc691f3f65d942fd635ccfd412fb22813a19b7a57ef1949a760078c0ae4",
+      "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/exit.json"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 930,
+      "sha256": "0e94744d9e75873987def2d2d2701974e82377dfaba08cae152b3d3d5f68fd21",
+      "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/invocation.json"
+    },
+    {
+      "path": "root-actual-audit.json",
+      "bytes": 1890,
+      "sha256": "9c6cccc0e303698c92a688b679ce5d1b80373158a9f829a272124f4dc3895843",
+      "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/root-actual-audit.json"
+    },
+    {
+      "path": "agent-actual-audit.json",
+      "bytes": 931,
+      "sha256": "7a6a21351f1a6669f57e98debb353a7425db5fe0feba2eaedd75405f45f6e74b",
+      "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/agent-actual-audit.json"
+    },
+    {
+      "path": "official-zip-metadata.json",
+      "bytes": 220,
+      "sha256": "47d1c9407a0be9fe7fd4554879c2dd636bce4bad432e5ef0846d6bfd3ea62642",
+      "origin": "/tmp/native-cold-native-symbol-post-export-observation-20261005/official-zip-metadata.json"
+    },
+    {
+      "path": "root-first-outcome-audit.json",
+      "bytes": 855,
+      "sha256": "db1d006ea9878cd9c003c098a84cfbc57b21abd1cbe30065ceb5a29d2b63a6b0",
+      "origin": "/tmp/native-cold-native-symbol-post-export-observation-20261005/root-first-outcome-audit.json"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 498,
+      "sha256": "783dc0ae2f404de1d7aa2593f0057c26247e8477a5e0ab681441b5a6d4a7ca0d",
+      "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/independent-audit.json"
+    },
+    {
+      "path": "runtime-identity-stdout",
+      "bytes": 10760,
+      "sha256": "e2036758b7df336c2047fe987fd6b37cd98fc09d56c5cc013c47bc57c86b15b3",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/stdout"
+    },
+    {
+      "path": "runtime-identity-exit.json",
+      "bytes": 494,
+      "sha256": "f5a6488e83d98a6debaffdcf5e26917654fe19d3fc31732c2a1f516678e3b1c5",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/exit.json"
+    },
+    {
+      "path": "runtime-identity-invocation.json",
+      "bytes": 947,
+      "sha256": "b3c8da8173b311fa268b06edd8c7f43bc741d23ebe3ae5cc9313eb59c796947a",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/invocation.json"
+    },
+    {
+      "path": "runtime-identity-root-actual-audit.json",
+      "bytes": 847,
+      "sha256": "61d8fecb967dc146e58689a8a922fd92be95481fbe327a5778654f44a48bb32c",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/root-actual-audit.json"
+    },
+    {
+      "path": "runtime-identity-agent-actual-audit.json",
+      "bytes": 336,
+      "sha256": "8518935cc98f59da11935ee91cc01eaf4327bcf1c17dff47937094ec13d30625",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/agent-actual-audit.json"
+    },
+    {
+      "path": "runtime-identity-independent-audit.json",
+      "bytes": 485,
+      "sha256": "fa05fdc589763c8cfe34f434897f5c57786a340f49e9e7c4c8757f06d3189efa",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/independent-audit.json"
+    }
+  ]
+}
