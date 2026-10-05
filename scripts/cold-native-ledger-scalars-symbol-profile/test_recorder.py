@@ -65,7 +65,7 @@ class Controls(unittest.TestCase):
     with self.assertRaises(ValueError):c.command('enable',-2)
    self.assertTrue(c.failed);self.assertIsNotNone(c.records[0]['rawAck'])
   c=r.RecorderControl(10,11,child,0)
-  with patch.object(r.time,'monotonic',side_effect=[1,1,1,1,7]),patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write'),patch.object(r.os,'read',return_value=b'a'),patch.object(r,'checked_control_stderr',return_value={'bytes':0}),patch.object(r,'terminate'):
+  with patch.object(r.time,'monotonic',side_effect=[1,1,1,1,7,7]),patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write'),patch.object(r.os,'read',return_value=b'a'),patch.object(r,'checked_control_stderr',return_value={'bytes':0}),patch.object(r,'terminate'):
    with self.assertRaisesRegex(ValueError,'timeout'):c.command('enable',-2)
   self.assertEqual(c.records[0]['rawAck'],'a');self.assertTrue(c.failed)
  def test_stale_and_trailing_ack_refuse(self):
