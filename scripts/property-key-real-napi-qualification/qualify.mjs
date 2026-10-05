@@ -1,15 +1,9 @@
 // Owned test addon only; no production worker/backend import.
-import {readFileSync} from 'node:fs';
-import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import {Worker} from 'node:worker_threads';
-const contract=JSON.parse(readFileSync(new URL('./contract.json',import.meta.url),'utf8'));
-if(contract.status!=='ROOT_REVIEWED_REAL_NAPI_FIXTURE_READY'||!contract.addonSha256||!contract.generatedHelperSha256||!contract.buildReceiptSha256)throw Error('PENDING real-NAPI fixture authority; no addon load');
-if(contract.addonPath!=='./owned-build/key_fixture.node')throw Error('fixed addon path required');
-const path=new URL('./owned-build/key_fixture.node',import.meta.url);
-assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'),contract.addonSha256);
-const api=createRequire(import.meta.url)(path.pathname);
+import {authenticatedFixturePath} from './auth.mjs';
+const api=createRequire(import.meta.url)(authenticatedFixturePath());
 const original=new Error('getter original'),setterError=new Error('setter original');
 let reads=0,writes=[];
 const errorRecord=e=>({name:e?.name??'Error',message:e?.message??String(e),stack:e?.stack??null});

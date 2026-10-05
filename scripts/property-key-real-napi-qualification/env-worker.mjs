@@ -1,14 +1,8 @@
 import {parentPort,workerData} from 'node:worker_threads';
-import {readFileSync} from 'node:fs';
-import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
-const c=JSON.parse(readFileSync(new URL('./contract.json',import.meta.url),'utf8'));
-if(c.status!=='ROOT_REVIEWED_REAL_NAPI_FIXTURE_READY'||!c.addonSha256)throw Error('PENDING worker fixture authority');
+import {authenticatedFixturePath} from './auth.mjs';
 if(!['owner','foreign','fresh'].includes(workerData))throw Error('fixed worker role required');
-if(c.addonPath!=='./owned-build/key_fixture.node')throw Error('fixed addon path required');
-const path=new URL('./owned-build/key_fixture.node',import.meta.url);
-if(createHash('sha256').update(readFileSync(path)).digest('hex')!==c.addonSha256)throw Error('fixed worker addon hash');
-const api=createRequire(import.meta.url)(path.pathname);
+const api=createRequire(import.meta.url)(authenticatedFixturePath());
 if(workerData==='foreign'){
  let denied=false;try{api.prepare();}catch(e){denied=/env\/thread\/reentry refused/.test(e.message);}
  if(!denied)throw Error('foreign env was not denied');parentPort.postMessage('foreign-denied');parentPort.close();
