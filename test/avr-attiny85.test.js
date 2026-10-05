@@ -55,13 +55,13 @@ function stubBoard() {
 
 // ── Pin map ─────────────────────────────────────────────────────────────────
 
-test('ATtiny85 pin map: 6 pins P0-P5, all port B', () => {
-  assert.deepEqual(TINY.pins.P0, { port: 'B', bit: 0 });
-  assert.deepEqual(TINY.pins.P1, { port: 'B', bit: 1 });
-  assert.deepEqual(TINY.pins.P2, { port: 'B', bit: 2 });
-  assert.deepEqual(TINY.pins.P3, { port: 'B', bit: 3 });
-  assert.deepEqual(TINY.pins.P4, { port: 'B', bit: 4 });
-  assert.deepEqual(TINY.pins.P5, { port: 'B', bit: 5 });
+test('ATtiny85 pin map: 6 pins PB0-PB5, all port B (the chip\'s own names, as its board terminals use)', () => {
+  assert.deepEqual(TINY.pins.PB0, { port: 'B', bit: 0 });
+  assert.deepEqual(TINY.pins.PB1, { port: 'B', bit: 1 });
+  assert.deepEqual(TINY.pins.PB2, { port: 'B', bit: 2 });
+  assert.deepEqual(TINY.pins.PB3, { port: 'B', bit: 3 });
+  assert.deepEqual(TINY.pins.PB4, { port: 'B', bit: 4 });
+  assert.deepEqual(TINY.pins.PB5, { port: 'B', bit: 5 });
   assert.equal(Object.keys(TINY.pins).length, 6);
 });
 
@@ -86,7 +86,7 @@ test('ATtiny85 blink: P0 (PB0) toggles push-pull at 8 MHz', () => {
   // 16000 / 770 ≈ 20.8 toggles. Allow margin.
   a.advanceNs(2_000_000);
 
-  const p0 = b.calls.filter(c => c.name === 'P0' && c.mode === 'pushpull');
+  const p0 = b.calls.filter(c => c.name === 'PB0' && c.mode === 'pushpull');
   assert.ok(p0.length > 0, 'P0 driven push-pull');
   let toggles = 0;
   for (let i = 1; i < p0.length; i++) if (p0[i].high !== p0[i - 1].high) toggles++;
@@ -128,7 +128,7 @@ test('ATtiny85 Timer0 PWM on P0 (OC0A): edges propagate', () => {
 
   a.advanceNs(25_000_000);
 
-  const p0 = b.calls.filter(c => c.name === 'P0');
+  const p0 = b.calls.filter(c => c.name === 'PB0');
   let toggles = 0;
   for (let i = 1; i < p0.length; i++) if (p0[i].high !== p0[i - 1].high) toggles++;
   // ~12 PWM periods × 2 transitions = ~24
@@ -137,12 +137,12 @@ test('ATtiny85 Timer0 PWM on P0 (OC0A): edges propagate', () => {
 
 // ── ADC channel mapping ─────────────────────────────────────────────────────
 
-test('ATtiny85 ADC: channel 0 → P5, channel 1 → P2', () => {
+test('ATtiny85 ADC: channel 0 → PB5, channel 1 → PB2', () => {
   const map = TINY.adcChannelToPin;
-  assert.equal(map[0], 'P5');
-  assert.equal(map[1], 'P2');
-  assert.equal(map[2], 'P4');
-  assert.equal(map[3], 'P3');
+  assert.equal(map[0], 'PB5');
+  assert.equal(map[1], 'PB2');
+  assert.equal(map[2], 'PB4');
+  assert.equal(map[3], 'PB3');
 });
 
 // ── Unknown chip rejects ────────────────────────────────────────────────────
@@ -150,4 +150,18 @@ test('ATtiny85 ADC: channel 0 → P5, channel 1 → P2', () => {
 test('unknown chip throws', () => {
   assert.throws(() => createAvr8jsAdapter({ chip: 'atmega_nope' }),
     /Unknown AVR chip/);
+});
+
+// The generated firmware's millisecond tick enables COMPA with TIMSK bit 4
+// (OCIE0A, datasheet and avr-libc). With A and B swapped in the chip model the
+// interrupt was raised as COMPB, vector 11, which a program with only a COMPA
+// handler fills with __bad_interrupt: the chip reset once a millisecond. The
+// bits, and a CTC compare that lands on vector 10, are held here.
+test('ATtiny85 Timer0: OCIE0A/OCF0A are bit 4, OCIE0B/OCF0B bit 3', () => {
+  const t0 = TINY.timers[0];
+  assert.equal(t0.OCIEA, 1 << 4);
+  assert.equal(t0.OCFA, 1 << 4);
+  assert.equal(t0.OCIEB, 1 << 3);
+  assert.equal(t0.OCFB, 1 << 3);
+  assert.equal(t0.compAInterrupt, 0x0A, 'TIMER0_COMPA_vect is _VECTOR(10)');
 });

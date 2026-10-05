@@ -178,11 +178,11 @@ describe('USI bridge: AT24C02 EEPROM write+read via USI-TWI master', () => {
       [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
        { id: 'EE', kind: 'at24c02', params: {}, terminals: ['vcc', 'gnd', 'sda', 'scl'] },
-       { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P0', 'P2'] }],
+       { id: 'MCU', kind: 'mcu', params: {}, terminals: ['PB0', 'PB2'] }],
       [{ id: 'vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'EE', terminal: 'vcc' }] },
        { id: 'gnd', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'EE', terminal: 'gnd' }] },
-       { id: 'sda', terminals: [{ part: 'MCU', terminal: 'P0' }, { part: 'EE', terminal: 'sda' }] },
-       { id: 'scl', terminals: [{ part: 'MCU', terminal: 'P2' }, { part: 'EE', terminal: 'scl' }] }],
+       { id: 'sda', terminals: [{ part: 'MCU', terminal: 'PB0' }, { part: 'EE', terminal: 'sda' }] },
+       { id: 'scl', terminals: [{ part: 'MCU', terminal: 'PB2' }, { part: 'EE', terminal: 'scl' }] }],
     );
     return board;
   }
@@ -259,11 +259,11 @@ describe('USI bridge: SSD1306 OLED commands via USI-TWI master', () => {
       [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
        { id: 'OLED', kind: 'ssd1306', params: {}, terminals: ['vcc', 'gnd', 'sda', 'scl'] },
-       { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P0', 'P2'] }],
+       { id: 'MCU', kind: 'mcu', params: {}, terminals: ['PB0', 'PB2'] }],
       [{ id: 'vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'OLED', terminal: 'vcc' }] },
        { id: 'gnd', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'OLED', terminal: 'gnd' }] },
-       { id: 'sda', terminals: [{ part: 'MCU', terminal: 'P0' }, { part: 'OLED', terminal: 'sda' }] },
-       { id: 'scl', terminals: [{ part: 'MCU', terminal: 'P2' }, { part: 'OLED', terminal: 'scl' }] }],
+       { id: 'sda', terminals: [{ part: 'MCU', terminal: 'PB0' }, { part: 'OLED', terminal: 'sda' }] },
+       { id: 'scl', terminals: [{ part: 'MCU', terminal: 'PB2' }, { part: 'OLED', terminal: 'scl' }] }],
     );
     return board;
   }
