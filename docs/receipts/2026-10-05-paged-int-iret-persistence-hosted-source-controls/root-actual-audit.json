@@ -1,0 +1,10 @@
+{
+  "result": "ROOT_HOSTED_COMPRESSED_READER_SOURCE_CONTROLS_PASS",
+  "sourceHead": "36c46523f1d037832a33a75f7982df7180819ff2",
+  "affectedPythonMethods": 4,
+  "roleSourcePaths": 301,
+  "nodeInvoked": false,
+  "memoryScope": "No Python heap cap; fixed Node image only authenticated",
+  "rawExitScopeWallSeconds": 3.7390944994986057,
+  "nativeInstructionsRun": 0
+}
