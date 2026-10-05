@@ -6,10 +6,22 @@
 #include <map>
 #include <stdexcept>
 #include <cstdint>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 using napi_env=void*;
 struct Value{std::string text;std::vector<Value*> elements;std::map<std::string,Value*> props;};
 using napi_value=Value*;using napi_ref=Value*;using napi_status=int;
 constexpr int napi_ok=0,napi_generic_failure=1;constexpr size_t NAPI_AUTO_LENGTH=-1;
+// Test-only acquisition handshake; production retains std::recursive_mutex.
+struct ObservedRecursiveMutex{
+ std::recursive_mutex actual;std::mutex state;std::condition_variable condition;bool observe=false,attempted=false;
+ void lock(){ {std::lock_guard<std::mutex> guard(state);if(observe){attempted=true;condition.notify_all();}}actual.lock();}
+ void unlock(){actual.unlock();}
+ void observe_next(){std::lock_guard<std::mutex> guard(state);observe=true;attempted=false;}
+ void wait_attempt(){std::unique_lock<std::mutex> guard(state);condition.wait(guard,[&]{return attempted;});}
+};
+static ObservedRecursiveMutex invocation_mutex;
 static napi_env env=(void*)1;static int calls=0,fail_at=0,deletes=0,adds=0,removes=0,gets=0,sets=0;
 static bool throwing=false,remove_failure=false,delete_failure=false;
 static void(*saved_hook)(void*)=nullptr;static std::vector<Value*> allocations;
@@ -45,6 +57,13 @@ int main(){
  auto saved=env;env=(void*)2;before=gets;assert(!get(o,Key::bytes,&r)&&gets==before);env=saved;
  release_keys();assert(deletes==1&&removes==1&&!key_container&&!key_env);release_keys();assert(deletes==1);
  assert(prepare_keys(env));assert(saved_hook);auto hook=saved_hook;saved_hook=nullptr;hook(nullptr);assert(deletes==2&&removes==1);release_keys();assert(deletes==2);
+ // Owner holds actual recursive mutex; handshake originates in lock() itself.
+ assert(prepare_keys(env));auto concurrent_hook=saved_hook;saved_hook=nullptr;
+ invocation_mutex.lock();invocation_mutex.observe_next();int deleted_before=deletes;
+ std::thread cleanup_thread([&]{concurrent_hook(nullptr);});
+ invocation_mutex.wait_attempt();assert(key_container&&key_env&&key_cleanup_registered&&deletes==deleted_before);
+ invocation_mutex.unlock();cleanup_thread.join();assert(!key_container&&!key_env&&!key_cleanup_registered&&deletes==deleted_before+1);
+ cleanup_keys(nullptr);assert(deletes==deleted_before+1); // idempotent no outstanding reference
  // Every allocation/reference/hook step fails independently; no published container leaks.
  int steps=2*(sizeof(property_keys)/sizeof(*property_keys))+3;
  for(int i=1;i<=steps;i++){calls=0;fail_at=i;assert(!prepare_keys(env));assert(!key_container&&!key_env&&!key_cleanup_registered);}

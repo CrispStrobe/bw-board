@@ -17,7 +17,7 @@ static bool release_keys(){
  }
  key_env=nullptr;return true;
 }
-static void cleanup_keys(void*){key_cleanup_registered=false;if(!release_keys())key_cleanup_failed=true;}
+static void cleanup_keys(void*){std::lock_guard<decltype(invocation_mutex)> lock(invocation_mutex);key_cleanup_registered=false;if(!release_keys())key_cleanup_failed=true;}
 static bool prepare_keys(napi_env e){
  if(key_container||key_env||key_cleanup_failed)return false;
  napi_value a,k;key_env=e;

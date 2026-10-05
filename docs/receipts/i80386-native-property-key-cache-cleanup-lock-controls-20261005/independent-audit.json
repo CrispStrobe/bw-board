@@ -1,0 +1,30 @@
+{
+  "status": "INDEPENDENT_CLEANUP_MUTEX_TWO_AFFECTED_SOURCE_MOCK_CONTROLS_PASS",
+  "revision": "0e3fcaeb5a90f8e166e151dbaf9db3f33f906f0d",
+  "sourceCount": 7,
+  "sourceToolsPrepostEqual": true,
+  "selectedNames": [
+    "actual generated key helper mock: values, errors, domains and lifecycle",
+    "generated lifecycle and held callbacks/core-state wiring stay explicit"
+  ],
+  "scope": "Actual generated helper compiled/run with mock NAPI and deterministic real-recursive-mutex handshake; static generated lifecycle. Not actual addon/GC/Bochs/native guest.",
+  "historicalCoverage": "Initial7aed3FAIL;83a3PASS;cd2742structuralPASS remain separate.",
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.147109216079116,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 1.3629255704581738,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 1.123941,
+      "systemSeconds": 0.220236,
+      "maxRSSKiB": 92932
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  }
+}

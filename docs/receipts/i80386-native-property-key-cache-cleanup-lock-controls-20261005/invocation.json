@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^actual generated key helper mock|^generated lifecycle and held",
+    "test/i80386-native-property-key-cache-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-property-key-cache-source-20261005",
+  "revision": "0e3fcaeb5a90f8e166e151dbaf9db3f33f906f0d",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "compilerMemoryLimit": "not imposed; tiny C++ mock compiler inherits CPU/file limits; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "absentCompilerOverrides": [
+    "CPATH",
+    "CPLUS_INCLUDE_PATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH"
+  ],
+  "scope": "Two selected Node cases: generated key-helper concurrency/lifecycle mock compiled/run and static lifecycle wiring; inverse checked by fixed generator in each. Remaining inverse-only case unselected. No NAPI/addon/Bochs/guest/profile/build"
+}
