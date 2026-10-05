@@ -229,7 +229,13 @@ export class CortexM0Machine {
         let wake = target;
         for (const p of this.peripherals) {
           if (typeof p.nextWakeNs === 'function') {
-            const w = this.timeNsInternal + BigInt(Math.max(1, Math.round(p.nextWakeNs(this))));
+            // Infinity is "no horizon" (a stopped timer, an idle UART), and
+            // BigInt(Infinity) throws: the first peripheral to sit idle while
+            // the core parked -- TIM14 with no tone playing -- crashed every
+            // advance. It simply does not constrain the jump.
+            const n = p.nextWakeNs(this);
+            if (!Number.isFinite(n)) continue;
+            const w = this.timeNsInternal + BigInt(Math.max(1, Math.round(n)));
             if (w < wake) wake = w;
           }
         }

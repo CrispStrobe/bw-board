@@ -22,7 +22,7 @@ export class Stm32Rcc {
     this.base = 0x40021000;
     this.size = 0x400;
     this.ahbenr = 0;   // 0x14: GPIOA bit17, GPIOB 18, GPIOC 19
-    this.apb1enr = 0;  // 0x1C: TIM3 bit1
+    this.apb1enr = 0;  // 0x1C: TIM3 bit1, TIM14 bit8
     this.apb2enr = 0;  // 0x18: USART1 bit14
     /** accesses to peripherals whose clock was off — the teaching signal */
     this.gatedAccesses = [];
@@ -49,6 +49,7 @@ export class Stm32Rcc {
 
   gpioEnabled (portIndex) { return (this.ahbenr >>> (17 + portIndex)) & 1; }
   tim3Enabled () { return (this.apb1enr >>> 1) & 1; }
+  tim14Enabled () { return (this.apb1enr >>> 8) & 1; }
   usart1Enabled () { return (this.apb2enr >>> 14) & 1; }
   adcEnabled () { return (this.apb2enr >>> 9) & 1; }
 
@@ -331,6 +332,85 @@ export class Stm32Tim3 {
   }
 }
 
+// ── TIM14 (RM0360 §17: 16-bit up-counter, update interrupt) ───────────
+// The F030's spare timer: TIM3 is the generated code's 1 ms tick, so a
+// program that needs a second, faster time base -- a tone's half-period --
+// gets TIM14. Only what such a program uses is modelled: CR1.CEN, DIER.UIE,
+// SR.UIF (rc_w0), EGR.UG, CNT, PSC, ARR; the update fires when CNT passes ARR
+// and raises NVIC line 19 while UIE is set. Counting is arithmetic (whole
+// periods per advance), so a 2 kHz tone costs nothing per count.
+export class Stm32Tim14 {
+  /** @param {{rcc: Stm32Rcc, clockHz: number, irq?: number}} opts */
+  constructor ({ rcc, clockHz, irq = 19 }) {
+    this.base = 0x40002000;
+    this.size = 0x400;
+    this.rcc = rcc;
+    this.clockHz = clockHz;
+    this.irq = irq;
+    this.cr1 = 0; this.dier = 0; this.sr = 0;
+    this.psc = 0; this.arr = 0xffff; this.cnt = 0;
+    this._accNs = 0;
+  }
+
+  _enabled () {
+    if (this.rcc.tim14Enabled()) return true;
+    this.rcc.noteGated('TIM14 accessed with its RCC clock off');
+    return false;
+  }
+
+  read (off) {
+    if (!this._enabled()) return 0;
+    switch (off) {
+      case 0x00: return this.cr1;
+      case 0x0c: return this.dier;
+      case 0x10: return this.sr;
+      case 0x24: return this.cnt;
+      case 0x28: return this.psc;
+      case 0x2c: return this.arr;
+      default: return 0;
+    }
+  }
+
+  write (off, v) {
+    if (!this._enabled()) return;
+    switch (off) {
+      case 0x00: this.cr1 = v >>> 0; break;
+      case 0x0c: this.dier = v >>> 0; break;
+      case 0x10: this.sr &= v >>> 0; break;            // rc_w0
+      case 0x14: if (v & 1) { this.cnt = 0; this._accNs = 0; } break; // EGR.UG
+      case 0x24: this.cnt = v & 0xffff; break;
+      case 0x28: this.psc = v & 0xffff; break;
+      case 0x2c: this.arr = v & 0xffff; break;
+      default: break;
+    }
+  }
+
+  _running () { return (this.cr1 & 1) === 1 && this.rcc.tim14Enabled(); }
+  _tickNs () { return 1e9 / (this.clockHz / (this.psc + 1)); }
+
+  advanceNs (deltaNs, machine) {
+    if (this._running()) {
+      const tickNs = this._tickNs();
+      this._accNs += Number(deltaNs);
+      const ticks = Math.floor(this._accNs / tickNs);
+      if (ticks > 0) {
+        this._accNs -= ticks * tickNs;
+        const period = this.arr + 1;
+        const total = this.cnt + ticks;
+        if (total >= period) this.sr |= 1;          // UIF: at least one update
+        this.cnt = total % period;
+      }
+    }
+    machine.setIrq(this.irq, (this.sr & this.dier & 1) !== 0);
+  }
+
+  nextWakeNs () {
+    if (!this._running() || !(this.dier & 1)) return Infinity;
+    if (this.sr & 1) return 1;
+    return Math.max(1, ((this.arr - this.cnt) + 1) * this._tickNs() - this._accNs);
+  }
+}
+
 // ── ADC (RM0360 §12: ISR/CR/CHSELR/DR, 12-bit) ────────────────────────
 // The sample comes from the BOARD's solved node voltage via onAnalogRead
 // (channel n = PA n), scaled against vref. Conversion completes at
@@ -439,7 +519,7 @@ export class Stm32Usart1 {
 
 /**
  * Assemble the F030 board onto a CortexM0Machine: RCC, GPIOA/B, TIM3,
- * USART1. Returns the peripheral instances for adapters and tests.
+ * TIM14, ADC, USART1. Returns the peripheral instances for adapters and tests.
  */
 export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRead, onInputRead } = {}) {
   const rcc = new Stm32Rcc();
@@ -448,8 +528,9 @@ export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRea
   // TIM3's compare channels drive pads directly (a pin in AF mode is
   // owned by its peripheral) — same publish stream as the GPIO's.
   const tim3 = new Stm32Tim3({ rcc, clockHz: machine.clockHz, onPinChange });
+  const tim14 = new Stm32Tim14({ rcc, clockHz: machine.clockHz });
   const adc = new Stm32Adc({ rcc, onAnalogRead });
   const usart1 = new Stm32Usart1({ rcc, onByte: onSerialByte });
-  for (const p of [rcc, gpioA, gpioB, tim3, adc, usart1]) machine.addPeripheral(p);
-  return { rcc, gpioA, gpioB, tim3, adc, usart1 };
+  for (const p of [rcc, gpioA, gpioB, tim3, tim14, adc, usart1]) machine.addPeripheral(p);
+  return { rcc, gpioA, gpioB, tim3, tim14, adc, usart1 };
 }
