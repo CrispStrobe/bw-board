@@ -62,18 +62,18 @@ This CLI resolves `mount` paths relative to the configuration directory and sele
 The console requires external files and their SHA-256 hashes. Example paths below are placeholders for your freely licensed BIOS, VGA BIOS and prepared FreeDOS raw HDD:
 
 ```sh
-AT_BIOS_ROM=/absolute/path/bios.bin AT_BIOS_SHA256=BIOS_SHA256 \
-VGA_BIOS_ROM=/absolute/path/vgabios.bin VGA_BIOS_SHA256=VGA_SHA256 \
+AT_BIOS_ROM=media/bios.bin AT_BIOS_SHA256=BIOS_SHA256 \
+VGA_BIOS_ROM=media/vgabios.bin VGA_BIOS_SHA256=VGA_SHA256 \
 AT_HDD_SHA256=HDD_SHA256 \
 node scripts/run-i80386-at-console.mjs \
-  --hdd-image /absolute/path/freedos.img --geometry 615,4,17 --steps 1000000
+  --hdd-image media/freedos.img --geometry 615,4,17 --steps 1000000
 ```
 
 Replace every hash placeholder with the actual 64-digit hash. The system BIOS must be 64 KiB and the CLI VGA ROM must be 16–64 KiB. The HDD byte length must equal cylinders × heads × sectors × 512. The geometry limits are 1–1024 cylinders, 1–16 heads and 1–63 sectors. `--live` enables the terminal; `--steps` sets the instruction budget.
 
 For interaction, add `--live` to the same command and run it in a terminal with TTY input and output. Typed keys go to the guest; **Ctrl-]** quits and **Ctrl-L** redraws. The display uses ANSI text or supported VGA graphics, scaled to the terminal. Mouse movement/buttons use xterm SGR mouse reporting when the terminal supports it; guest software must also enable its mouse interface. Terminal state is restored on exit. This is terminal interaction, not a separate SDL window.
 
-Disk writes change the emulated disk in memory. This runner does not write them back to the original image or offer a saved-disk export option. `AT_CONSOLE_REPORT=/absolute/path/new-report.json` saves the final execution report, including the disk hash, but does not save changed disk bytes.
+Disk writes change the emulated disk in memory. This runner does not write them back to the original image or offer a saved-disk export option. `AT_CONSOLE_REPORT=media/new-report.json` saves the final execution report, including the disk hash, but does not save changed disk bytes.
 
 The console's **different** DOSBox parser accepts one HDD declaration, for example:
 
