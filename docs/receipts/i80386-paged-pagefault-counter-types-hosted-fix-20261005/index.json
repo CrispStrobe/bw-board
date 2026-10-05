@@ -1,0 +1,92 @@
+{
+  "schema": "bw.paged-pagefault.counter-types.hosted-fix-receipts.v1",
+  "scope": "Two affected direct Python checked-inverse/new driver107 authority cases only; four other hosted methods historical. No Node/restore/worker/provider/addon/CPU/build.",
+  "testedHead": "3d5929fe79487d9ff9551a846ba35374737f261c",
+  "immutableDriverAncestor": "028344c43d4a7fad2d10a4654e8a37897c11d787",
+  "records": [
+    {
+      "path": "parent.py",
+      "bytes": 94583,
+      "sha256": "3d447cc7d755f1f24d03c0588afc2948cf0fb2d03ca6d851359a62678ef8d679",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/parent.py",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 1325,
+      "sha256": "507fb3f8d53a07e2e068abf09ac12b0546535c7bb5606b903475386f9f8f8342",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/invocation.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/stdout",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "stderr",
+      "bytes": 382,
+      "sha256": "5f7ef038c3c6c689957212baef8f1d217fc5f8ac576c41e37d82bc62167fabef",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/stderr",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "exit.json",
+      "bytes": 413,
+      "sha256": "283640df5068919e1cbbda43d0356038fee1ad6878f273a51f081d9a26ef163e",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/exit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "result.json",
+      "bytes": 366,
+      "sha256": "c3104e7e03764fa9d8e67378806e20ff23d78d0be4f326f2e3513e64d43aa79f",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/result.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "before.json",
+      "bytes": 92951,
+      "sha256": "8a6a487a75a583f6528ed91ccf81b50481cfa71611a138696a6645494b619686",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/before.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "after.json",
+      "bytes": 92951,
+      "sha256": "8a6a487a75a583f6528ed91ccf81b50481cfa71611a138696a6645494b619686",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/after.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "paths.json",
+      "bytes": 637,
+      "sha256": "111744d323a193e35780168fbc82db435b7834ccb9702e887bf74c739e520ac6",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/paths.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "root-audit.json",
+      "bytes": 748,
+      "sha256": "4ccd2305076129613ede7e71b9fa9e5c330d31fd2c7541c909616025c36c2ebc",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/root-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "driver-root-final-audit.json",
+      "bytes": 393,
+      "sha256": "d31dc9d086c6f67e9e94d4bf8bcdda14780566bf5ad133428c20535b923805b8",
+      "origin": "/tmp/native-paged-pagefault-counter-types-driver-publication-root-audit-20261005.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 905,
+      "sha256": "3ddea84098f701dba316a7164b225825650bac0ef9dd22a29ce4f3c80239dbc8",
+      "origin": "/tmp/native-paged-pagefault-counter-types-hosted-source-controls-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    }
+  ]
+}
