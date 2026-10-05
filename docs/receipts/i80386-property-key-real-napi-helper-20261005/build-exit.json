@@ -1,0 +1,289 @@
+{
+  "scope": "BUILD_ONLY_NO_ADDON_LOAD_NO_GUEST",
+  "steps": [
+    {
+      "name": "materialize",
+      "argv": [
+        "/tmp/node-v22.23.3-linux-x64/bin/node",
+        "--max-old-space-size=128",
+        "scripts/property-key-real-napi-qualification/prepare.mjs"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input",
+      "cpuLimitSeconds": 10,
+      "rawWait4Status": 0,
+      "pid": 3798120,
+      "exitCode": 0,
+      "childWallSeconds": 1.0796421840786934,
+      "rusage": {
+        "user": 0.6078589999999999,
+        "system": 0.48629599999999995,
+        "maxRSSKiB": 179564
+      }
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "/usr/bin/x86_64-linux-gnu-g++-13",
+        "-std=c++17",
+        "-O0",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-shared",
+        "-pthread",
+        "-DNODE_GYP_MODULE_NAME=key_fixture",
+        "-DNAPI_VERSION=9",
+        "-Iinclude/node",
+        "fixture.cc",
+        "-o",
+        "key_fixture.node"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build",
+      "cpuLimitSeconds": 8,
+      "rawWait4Status": 0,
+      "pid": 3798153,
+      "exitCode": 0,
+      "childWallSeconds": 0.5791111439466476,
+      "rusage": {
+        "user": 0.473386,
+        "system": 0.09959,
+        "maxRSSKiB": 64768
+      }
+    },
+    {
+      "name": "nm",
+      "argv": [
+        "/usr/bin/x86_64-linux-gnu-nm",
+        "-D",
+        "--defined-only",
+        "key_fixture.node"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build",
+      "cpuLimitSeconds": 8,
+      "rawWait4Status": 0,
+      "pid": 3798158,
+      "exitCode": 0,
+      "childWallSeconds": 0.7814370561391115,
+      "rusage": {
+        "user": 0.033222999999999996,
+        "system": 0.121028,
+        "maxRSSKiB": 52480
+      }
+    },
+    {
+      "name": "readelf",
+      "argv": [
+        "/usr/bin/x86_64-linux-gnu-readelf",
+        "-h",
+        "-d",
+        "-s",
+        "key_fixture.node"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build",
+      "cpuLimitSeconds": 8,
+      "rawWait4Status": 0,
+      "pid": 3798161,
+      "exitCode": 0,
+      "childWallSeconds": 0.01585795171558857,
+      "rusage": {
+        "user": 0.005527,
+        "system": 0.005527,
+        "maxRSSKiB": 14752
+      }
+    }
+  ],
+  "buildInputsBefore": {
+    "fixture.cc": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+    "generated-helper.inc": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+    "source-receipt.json": "abaae6e7730e4388ce23220e2ea99f92a30d72cac7a97877e8607a0258c587d5",
+    "include/node/node_api.h": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a",
+    "include/node/js_native_api.h": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8",
+    "include/node/js_native_api_types.h": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156",
+    "include/node/node_api_types.h": "088766b3cf1f0cd9b292c361ad30f7a04e7cc6db35a20ca52c572c1adf9635e7"
+  },
+  "buildInputsAfter": {
+    "fixture.cc": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+    "generated-helper.inc": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+    "source-receipt.json": "abaae6e7730e4388ce23220e2ea99f92a30d72cac7a97877e8607a0258c587d5",
+    "include/node/node_api.h": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a",
+    "include/node/js_native_api.h": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8",
+    "include/node/js_native_api_types.h": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156",
+    "include/node/node_api_types.h": "088766b3cf1f0cd9b292c361ad30f7a04e7cc6db35a20ca52c572c1adf9635e7"
+  },
+  "status": "BUILD_STATIC_PASS_NOT_ADDON_QUALIFICATION",
+  "stagedInputsAfter": {
+    "scripts/property-key-real-napi-qualification/SOURCE.md": {
+      "present": true,
+      "sha256": "737f2628f8384366cf59b5aa3ab102ff2dcfa3eb91db391df6e1e3ba4e45b1a7",
+      "expectedSha256": "737f2628f8384366cf59b5aa3ab102ff2dcfa3eb91db391df6e1e3ba4e45b1a7"
+    },
+    "scripts/property-key-real-napi-qualification/auth.mjs": {
+      "present": true,
+      "sha256": "c2c24bc2b4676f009c155142bbd5a2de3b8545a461140c1845c584d08d32e6ca",
+      "expectedSha256": "c2c24bc2b4676f009c155142bbd5a2de3b8545a461140c1845c584d08d32e6ca"
+    },
+    "scripts/property-key-real-napi-qualification/build-proposal.json": {
+      "present": true,
+      "sha256": "93de37e7eeac886435ca6d5aec14cce00b3ef2e14be52ffa498f5412f53dc33a",
+      "expectedSha256": "93de37e7eeac886435ca6d5aec14cce00b3ef2e14be52ffa498f5412f53dc33a"
+    },
+    "scripts/property-key-real-napi-qualification/candidate-source-context.json": {
+      "present": true,
+      "sha256": "a8d5faf0f09350ff8191b365e58af507f64f55d4743a810d3736ea45d7ca29b2",
+      "expectedSha256": "a8d5faf0f09350ff8191b365e58af507f64f55d4743a810d3736ea45d7ca29b2"
+    },
+    "scripts/property-key-real-napi-qualification/contract.json": {
+      "present": true,
+      "sha256": "d38808cc4e8ebb3d59e136db3fd8be03b1eadf26b2db714528904ef92aec3954",
+      "expectedSha256": "d38808cc4e8ebb3d59e136db3fd8be03b1eadf26b2db714528904ef92aec3954"
+    },
+    "scripts/property-key-real-napi-qualification/env-worker.mjs": {
+      "present": true,
+      "sha256": "446fead0045ab309ff970ed0094d5e0a74f50039640945ff16274a470ca56563",
+      "expectedSha256": "446fead0045ab309ff970ed0094d5e0a74f50039640945ff16274a470ca56563"
+    },
+    "scripts/property-key-real-napi-qualification/fixture.cc": {
+      "present": true,
+      "sha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+      "expectedSha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759"
+    },
+    "scripts/property-key-real-napi-qualification/prepare.mjs": {
+      "present": true,
+      "sha256": "7112ec857c829f5658e6373b49d6074c37f8ea2911b17dc67acba3a9a55a851a",
+      "expectedSha256": "7112ec857c829f5658e6373b49d6074c37f8ea2911b17dc67acba3a9a55a851a"
+    },
+    "scripts/property-key-real-napi-qualification/provenance/header-audit.json": {
+      "present": true,
+      "sha256": "520a1fee4fd5b6534cfda9404821792f6b160ceb2bc32c0132750f550785ecab",
+      "expectedSha256": "520a1fee4fd5b6534cfda9404821792f6b160ceb2bc32c0132750f550785ecab"
+    },
+    "scripts/property-key-real-napi-qualification/provenance/official-SHASUMS256.txt": {
+      "present": true,
+      "sha256": "4fe99a2ba9d552a6f51c13ed68fb11104cfa5df601aec616be689253a8139e7a",
+      "expectedSha256": "4fe99a2ba9d552a6f51c13ed68fb11104cfa5df601aec616be689253a8139e7a"
+    },
+    "scripts/property-key-real-napi-qualification/provenance/primary-source-index.json": {
+      "present": true,
+      "sha256": "42ad66a87ff76a8ad404529fb108e4ddae01e20da7fdaf512c92b56c8c497e12",
+      "expectedSha256": "42ad66a87ff76a8ad404529fb108e4ddae01e20da7fdaf512c92b56c8c497e12"
+    },
+    "scripts/property-key-real-napi-qualification/qualify.mjs": {
+      "present": true,
+      "sha256": "2c6b9ea4ad66374ef8249aaf0305624e8d687f15cae032fa3867413369eef4e7",
+      "expectedSha256": "2c6b9ea4ad66374ef8249aaf0305624e8d687f15cae032fa3867413369eef4e7"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/README.md": {
+      "present": true,
+      "sha256": "49dfd6b012069dae6f3ccdcecf6e7c548ed7c209d3efd2e53df5184db77905ce",
+      "expectedSha256": "49dfd6b012069dae6f3ccdcecf6e7c548ed7c209d3efd2e53df5184db77905ce"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/held-napi.cc": {
+      "present": true,
+      "sha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+      "expectedSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/keys.inc": {
+      "present": true,
+      "sha256": "e3232eda391e1d1e2dd96c8f8fc9e7b997ba13df509c6f63882c27db0043fe4c",
+      "expectedSha256": "e3232eda391e1d1e2dd96c8f8fc9e7b997ba13df509c6f63882c27db0043fe4c"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/keys.json": {
+      "present": true,
+      "sha256": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409",
+      "expectedSha256": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/mock.cc": {
+      "present": true,
+      "sha256": "215645bd1d07854d2c353dd25c30f1794dc0abf59b92f227ed22ada1f102cc15",
+      "expectedSha256": "215645bd1d07854d2c353dd25c30f1794dc0abf59b92f227ed22ada1f102cc15"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/napi.mjs": {
+      "present": true,
+      "sha256": "dc507cb0300d9bbdb18fc8b94ff7cc4cd34d2c45c1ba62f046915ef74b5a54f1",
+      "expectedSha256": "dc507cb0300d9bbdb18fc8b94ff7cc4cd34d2c45c1ba62f046915ef74b5a54f1"
+    },
+    "test/i80386-native-property-key-cache-source.test.mjs": {
+      "present": true,
+      "sha256": "0eeb5245dc2a4f9f1a8deacb6800669e709ce7019b465ed135eb30e633d5580d",
+      "expectedSha256": "0eeb5245dc2a4f9f1a8deacb6800669e709ce7019b465ed135eb30e633d5580d"
+    },
+    "scripts/property-key-real-napi-qualification/source-preparation-authority.json": {
+      "present": true,
+      "sha256": "6b0e219be8bbde9fa9a994f6eca0d9db242613edfcdaef7883cdb41426138cf7",
+      "expectedSha256": "6b0e219be8bbde9fa9a994f6eca0d9db242613edfcdaef7883cdb41426138cf7"
+    }
+  },
+  "materializedInputsAfter": {
+    "generated-helper.inc": {
+      "present": true,
+      "sha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+      "expectedSha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1"
+    },
+    "fixture.cc": {
+      "present": true,
+      "sha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+      "expectedSha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759"
+    },
+    "source-receipt.json": {
+      "present": true,
+      "sha256": "abaae6e7730e4388ce23220e2ea99f92a30d72cac7a97877e8607a0258c587d5",
+      "expectedSha256": "abaae6e7730e4388ce23220e2ea99f92a30d72cac7a97877e8607a0258c587d5"
+    },
+    "include/node/node_api.h": {
+      "present": true,
+      "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a",
+      "expectedSha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+    },
+    "include/node/node_api_types.h": {
+      "present": true,
+      "sha256": "088766b3cf1f0cd9b292c361ad30f7a04e7cc6db35a20ca52c572c1adf9635e7",
+      "expectedSha256": "088766b3cf1f0cd9b292c361ad30f7a04e7cc6db35a20ca52c572c1adf9635e7"
+    },
+    "include/node/js_native_api.h": {
+      "present": true,
+      "sha256": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8",
+      "expectedSha256": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8"
+    },
+    "include/node/js_native_api_types.h": {
+      "present": true,
+      "sha256": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156",
+      "expectedSha256": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156"
+    }
+  },
+  "addonAfter": {
+    "present": true,
+    "bytes": 38792,
+    "sha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53"
+  },
+  "primaryError": null,
+  "cleanupErrors": [],
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "aggregateWaitedChildCpuSeconds": 1.8324359999999995,
+  "parentWallSeconds": 4.430043576285243,
+  "sourceStatus": "Original PENDING unchanged",
+  "bounds": {
+    "buildWallSeconds": 30,
+    "cleanupReapSeconds": 5,
+    "finalAuthenticationSeconds": 5,
+    "aggregateWaitedChildCpuSeconds": 10,
+    "NodeHeapMiB": 128,
+    "fileMiB": 16,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "rusageScope": "wait4 subprocesses and waited descendants; tool build accounting only",
+  "receipt": {
+    "schema": "bw.property-key.fixture-build.v1",
+    "status": "BUILD_STATIC_PASS",
+    "candidateRevision": "07a1cdb4db7d10d70ecd7caee1ac6b81ce4abd2f",
+    "sourceRevision": "6f021f61523c2544dabffb3d5eeaf377a4e2583d",
+    "helperSha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+    "fixtureSha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+    "addonSha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53",
+    "addonBytes": 38792,
+    "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "staticInspection": "Raw nm/readelf retained; no addon load",
+    "toolchainScope": "Pinned images; system C++ headers/startup objects/libraries are host inputs, not complete Bochs closure"
+  },
+  "buildReceiptSha256": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6"
+}
