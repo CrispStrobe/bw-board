@@ -115,3 +115,7 @@ named selector success, false ACK/stderr refusal, partial control evidence and
 primary/lifecycle guards; they do not establish installed perf sideband behavior,
 permissions, control readiness, unwind or sampling quality. This outcome prose
 and compact records follow the tested executable revision.
+
+The separate observation [37245948328](https://github.com/CrispStrobe/bw-board/actions/runs/37245948328) failed before provider/addon release. Export authenticated 83 evidence files; exact `ack` + LF + NUL was refused by the old LF-only parser. Worker prepare retained ECONNRESET, zero resumes and no reset/final/last proof. Secondary terminal validation selected the wrong admission module. Original artifacts remain unchanged; no native execution or sampling quality is established. The earlier artifact-less run retains its unknown observer/native extent.
+
+At frozen `6b6d620897c4d4a755b16b26284db781cb121bb2`, one selected Node wrapper forwarded ten named Python mocks: all passed, zero skipped, exit 0, with all 96 current/Git source and tool pins unchanged. These controls qualify exact framing/refusal, isolated held imports and manufactured lifecycle behavior only. Remaining Node cases were unselected. This README and compact [receipts](../../docs/receipts/i80386-native-symbol-ack-frame-controls-20261005/index.json) follow the controls; live perf readiness, terminal parity and sampling quality remain unproved. Hosted authority still points to historical1391 until separately reviewed rebinding after this source merges.

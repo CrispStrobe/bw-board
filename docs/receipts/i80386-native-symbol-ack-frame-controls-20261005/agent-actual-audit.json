@@ -1,0 +1,28 @@
+{
+  "status": "PASS_SOURCE_MOCK_CONTROLS_ONLY",
+  "revision": "6b6d620897c4d4a755b16b26284db781cb121bb2",
+  "sourceFiles": 96,
+  "selectedNodeCases": 1,
+  "namedPythonMethods": 10,
+  "scope": "Manufactured perf transport/module dependencies only; no live perf, addon or guest",
+  "pinsEqual": true,
+  "rawExit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.0739923529326916,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.64007967710495,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.549835,
+      "systemSeconds": 0.092628,
+      "maxRSSKiB": 53468
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "rawStdoutSha256": "d217aed7f2c58b304a4b576173306f6033e88a4f935439b76ba78a8102fbb9e5"
+}
