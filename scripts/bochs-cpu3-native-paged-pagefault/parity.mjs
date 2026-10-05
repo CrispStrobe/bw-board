@@ -21,7 +21,7 @@ export const pageFaultParityPolicy=Object.freeze({
  pages:'Ten unmodified4096-byte physical host-provider copies/full board at comparable cuts and final settle; no masks. WholeRAM hash-only, native fetch/cache/inhibit ownership source-attested.',
  scope:'Owned strict386 CPL0 code16 PF14/error2, ordinary PTE repair and same-value CR3reload/error-discard/IRET/exactly-once retry. No INVLPG/PSE/CR4/IRQ/REP/PIO/HLT/OS/speed claim; fresh profile build pending.',
 });
-const count=v=>{assert.equal(typeof v,'string');assert.match(v,/^(0|[1-9][0-9]*)$/);const n=Number(v);assert.ok(Number.isSafeInteger(n)&&n>=0&&n<=512);return n;};
+const count=v=>{if(typeof v==='string'){assert.match(v,/^(0|[1-9][0-9]*)$/);v=BigInt(v);}else assert.equal(typeof v,'bigint');assert.ok(v>=0n&&v<=512n);return Number(v);};
 const row=(index,s,valid,type)=>[index,s,s>>>3,0,0,valid,1,0,1,type,0,65535,0,0,0];
 export function validateDescriptorRows(n,js,board){wholeNativeWords(n);const c=js.cpu;
  if(c.cs===selector)assert.deepEqual(n.segments.slice(15,30),row(1,selector,1,11),'strict protected CS row');
