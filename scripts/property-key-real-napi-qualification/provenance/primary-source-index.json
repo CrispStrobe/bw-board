@@ -1,0 +1,19 @@
+{
+  "url": "https://raw.githubusercontent.com/nodejs/node/v22.23.3/doc/api/n-api.md",
+  "origin": "/tmp/node-v22.23.3-n-api-primary-20261005.md",
+  "bytes": 243278,
+  "sha256": "f4e571545040fec91db9e05671ab483e072617758bf33fa903effbfc904113e2",
+  "reviewedSections": {
+    "referenceLifetime": "1740\u20131770",
+    "createDeleteReference": "1794\u20131836",
+    "cleanupHookRegistrationRemoval": "1916\u20131964",
+    "environmentFinalization": "2036\u20132050"
+  },
+  "summary": [
+    "Positive-count object references keep the private container alive; delete when no longer needed.",
+    "Deleting a reference is permitted with a pending JS exception.",
+    "Duplicate same-hook/argument registration or unmatched removal can abort; exact registration state is mandatory.",
+    "Teardown may occur with JS disabled; manual cleanup hooks precede finalizers.",
+    "The helper cleanup path only deletes its reference under its owning env and mutex; it calls no JS."
+  ]
+}

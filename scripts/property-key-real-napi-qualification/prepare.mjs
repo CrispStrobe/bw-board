@@ -19,6 +19,8 @@ const s=derivePropertyKeyNapi().bytes.toString(),start=s.indexOf('// Private key
 if(start<0||end<=start)throw Error('fixed helper bounds');const helper=s.slice(start,end);
 if(hash(helper)!==context.expectedHelperSha256)throw Error('fixed generated helper mismatch');
 const out=new URL('./owned-build/',own);mkdirSync(out); // exclusive
+const include=new URL('include/node/',out);mkdirSync(include,{recursive:true});
+for(const [path,sha] of Object.entries(context.nodeHeaderFiles)){const bytes=readFileSync(path);if(hash(bytes)!==sha)throw Error('header changed before copy');const name=path.slice(path.lastIndexOf('/')+1);if(!['node_api.h','node_api_types.h','js_native_api.h','js_native_api_types.h'].includes(name))throw Error('fixed header name');writeFileSync(new URL(name,include),bytes,{flag:'wx'});}
 writeFileSync(new URL('generated-helper.inc',out),helper,{flag:'wx'});
 writeFileSync(new URL('fixture.cc',out),readFileSync(new URL('fixture.cc',own)),{flag:'wx'});
 writeFileSync(new URL('source-receipt.json',out),JSON.stringify({schema:'bw.property-key.fixture-source.v1',candidateRevision:context.revision,helperSha256:hash(helper),fixtureSha256:hash(readFileSync(new URL('fixture.cc',own))),scope:'source only; no compile/addon execution'})+'\n',{flag:'wx'});

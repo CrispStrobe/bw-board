@@ -20,12 +20,12 @@ try{
  finally{if(prior)Object.defineProperty(Array.prototype,'0',prior);else delete Array.prototype[0];}
  assert.equal(indexedAssignments,0);
 
- const prototype={get bytes(){reads++;return reads;}};
+ const prototype={get bytes(){assert.equal(this,target);reads++;return reads;}};
  const target=Object.create(prototype);assert.equal(api.readBytes(target),1);assert.equal(api.readBytes(target),2);
  Object.defineProperty(target,'bytes',{get(){throw original;},configurable:true});assert.throws(()=>api.readBytes(target),e=>e===original);
- const object={set state(v){writes.push(v);}};api.writeState(object,7);api.writeState(object,8);assert.deepEqual(writes,[7,8]);
+ const object={set state(v){assert.equal(this,object);writes.push(v);}};api.writeState(object,7);api.writeState(object,8);assert.deepEqual(writes,[7,8]);
  const rejected={set state(v){throw setterError;}};assert.throws(()=>api.writeState(rejected,9),e=>e===setterError);
- const traps=[];const proxy=new Proxy({bytes:17},{get(t,k,r){traps.push(k);return Reflect.get(t,k,r);}});assert.equal(api.readBytes(proxy),17);assert.deepEqual(traps,['bytes']);
+ const traps=[];const proxy=new Proxy({bytes:17},{get(t,k,r){assert.equal(r,proxy);traps.push(k);return Reflect.get(t,k,r);}});assert.equal(api.readBytes(proxy),17);assert.deepEqual(traps,['bytes']);
  const reentry={get bytes(){assert.throws(()=>api.readBytes(proxy),/reentry refused/);return 19;}};assert.equal(api.readBytes(reentry),19);
  if(typeof globalThis.gc!=='function')throw Error('fixed fixture command requires --expose-gc');
  for(let i=0;i<8;i++){globalThis.gc();assert.equal(api.readBytes(proxy),17);}
@@ -35,7 +35,7 @@ try{
 
 const active=new Set();
 function launch(role){
- const worker=new Worker(new URL('./env-worker.mjs',import.meta.url),{workerData:role});active.add(worker);
+ const worker=new Worker(new URL('./env-worker.mjs',import.meta.url),{workerData:role,execArgv:[],resourceLimits:{maxOldGenerationSizeMb:128,stackSizeMb:4}});active.add(worker);
  const messages=[];let wake=null,workerError=null,exited=false;
  worker.on('message',value=>{messages.push(value);if(wake){wake();wake=null;}});
  const exit=new Promise(resolve=>{worker.once('error',e=>{workerError=e;if(wake){wake();wake=null;}});worker.once('exit',code=>{exited=true;active.delete(worker);resolve({code,error:workerError?.message??null});if(wake){wake();wake=null;}});});
@@ -53,5 +53,5 @@ try{
  }
 }catch(e){if(!primary)primary=e;else cleanupErrors.push({phase:'env-fixture',message:e.message});}
 finally{for(const worker of active)try{await worker.terminate();}catch(e){cleanupErrors.push({phase:'worker-cleanup',message:e.message});}}
-const report={status:primary||cleanupErrors.length?'FAIL':'REAL_NAPI_BEHAVIOR_PASS',primaryError:primary?.message??null,cleanupErrors,reads,writes,envRecords,scope:'helper getter/setter/proxy/reentry/GC and owned env lifetimes only; no guest, leak accounting or speed'};
+const report={status:primary||cleanupErrors.length?'FAIL':'REAL_NAPI_BEHAVIOR_PASS',primaryError:primary?.message??null,cleanupErrors,reads,writes,envRecords,scope:'Exact generated key helper plus fixture failure/busy/thread/env glue only; not held invoke/fail paths or full addon; no guest, leak accounting or speed'};
 console.log(JSON.stringify(report));if(primary)throw primary;if(cleanupErrors.length)throw Error('fixture cleanup failed');

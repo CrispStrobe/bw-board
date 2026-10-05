@@ -16,6 +16,7 @@
     "/tmp/node-v22.23.3-linux-x64/include/node/js_native_api.h": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8",
     "/tmp/node-v22.23.3-linux-x64/include/node/js_native_api_types.h": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156"
   },
-  "headerProvenanceScope": "Locally pinned fixed22.23.3 installation headers; official archive authentication required before build",
-  "sourceOnly": true
+  "headerProvenanceScope": "Four headers byte-equal to checksum-authenticated official Node22.23.3 Linux-x64 archive; separate header archive unnecessary",
+  "sourceOnly": true,
+  "officialHeaderAuditSha256": "520a1fee4fd5b6534cfda9404821792f6b160ceb2bc32c0132750f550785ecab"
 }
