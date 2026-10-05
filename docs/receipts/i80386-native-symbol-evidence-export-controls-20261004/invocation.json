@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=seven evidence-export filesystem and failure controls plus owned root cleanup mock",
+    "test/i80386-cold-ledger-scalars-native-symbol-hosted-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-cold-native-symbol-evidence-export-source-20261004",
+  "revision": "d35b10efabd2d66eb491a3620db1cc7b427b6223",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; nested eight Python manufactured filesystem/lifecycle methods inherit CPU/file/core/nice bounds"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "scope": "One selected Node wrapper forwards seven exporter methods plus changed root lifecycle method (eight Python methods); remaining Node methods unselected. 15 owned runtime/test paths plus4 first-failure archive paths and390 materialized frozen role sources. No setup/sudo/perf/download/addon/guest/build"
+}

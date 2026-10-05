@@ -1,0 +1,94 @@
+name: MEMORY fusion execution-window main-isolate diagnostic
+on:
+  workflow_dispatch:
+    inputs:
+      enable_profile:
+        type: boolean
+        default: false
+        required: true
+        description: Enable one separately reviewed diagnostic child, not a timing qualification
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-memory-fusion-execution-profile-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  execution-profile:
+    if: ${{ inputs.enable_profile == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: runtime
+          persist-credentials: false
+      - name: Admit owned authority before downstream checkouts
+        id: roles
+        run: python3 -B runtime/scripts/cold-memory-fusion-execution-profile-hosted/emit-roles.py >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.qualifier }}
+          path: qualification-source
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.qualifierFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.compiled }}
+          path: publication
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.compiledFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.driverFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.heldWorker }}
+          path: fusion-worker
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.heldWorkerFiles }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.roles.outputs.diagnostic }}
+          path: diagnostic-worker
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ steps.roles.outputs.diagnosticFiles }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: One diagnostic child, no probes or retries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export BW_COLD_NODE="$(command -v node)"
+          export BW_FUSION_PROFILE_OUTPUT="$RUNNER_TEMP/cold-memory-fusion-execution-profile"
+          mkdir "$RUNNER_TEMP/cold-memory-fusion-execution-profile-parent"
+          python3 -B runtime/scripts/cold-memory-fusion-execution-profile-hosted/hosted.py enabled > "$RUNNER_TEMP/cold-memory-fusion-execution-profile-parent/stdout" 2> "$RUNNER_TEMP/cold-memory-fusion-execution-profile-parent/stderr"
+      - name: Preserve first outcome and raw profile
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-memory-fusion-execution-profile-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-memory-fusion-execution-profile
+            ${{ runner.temp }}/cold-memory-fusion-execution-profile-parent
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

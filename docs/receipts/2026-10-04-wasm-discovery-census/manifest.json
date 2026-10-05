@@ -1,0 +1,370 @@
+{
+  "schema": "labwired.discovery-census-archive.v1",
+  "base": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "engine": "1b044ea97d2a72c43f1b15a147d64a479620f0ee",
+  "tool": "82e5661fffbfcc8c12ecc8845475d4214c1f10e4",
+  "runIds": {
+    "initial": 37200722140,
+    "build": 37201401969,
+    "firstCapture": 37203284967,
+    "shared": 37203818623
+  },
+  "diagnosticOnly": true,
+  "qualification": false,
+  "enginePromotion": false,
+  "publication": false,
+  "physicalAcknowledgementChanges": false,
+  "originalFailuresPreserved": true,
+  "files": [
+    {
+      "path": "runs/initial/job-111431679082-log.utf8.json.utf8.json",
+      "bytes": 960569,
+      "sha256": "595d945c75a1839b5e28e2b7d012b00c17169e0f6dd8a78e7fdee826777bfec4"
+    },
+    {
+      "path": "runs/initial/observation.json.utf8.json",
+      "bytes": 4555,
+      "sha256": "7cd6e0c816d2e6e48c1a0c244af18463b93e0a9990d4d1efc009011d7ad65883"
+    },
+    {
+      "path": "runs/initial/source-contract.json.utf8.json",
+      "bytes": 2480,
+      "sha256": "b6c3d6677e0edbc1b9c85fcb1813019835e1e68291011d5f7118360d9727fb3a"
+    },
+    {
+      "path": "runs/build/job-111433671651-log.utf8.json.utf8.json",
+      "bytes": 1119361,
+      "sha256": "d0f80baec0c088906687b98bac87acc72050c0508fbb70d5ab0cdecfa676baa2"
+    },
+    {
+      "path": "runs/build/job-111437100440-log.utf8.json.utf8.json",
+      "bytes": 142720,
+      "sha256": "e2ca1540801915b765818678517a038b355eacaaaea4f357f9ef28f8aae3c095"
+    },
+    {
+      "path": "runs/build/job-111437100461-log.utf8.json.utf8.json",
+      "bytes": 142752,
+      "sha256": "bc92f880451e552c31d0fa5d3cd9695c4d899857eff5c5b52968f05a7ed16ee3"
+    },
+    {
+      "path": "runs/build/job-111437100502-log.utf8.json.utf8.json",
+      "bytes": 142719,
+      "sha256": "38bb606be1db99afeec456763932ec3efb22be827e726a56b2a4505a66333d9c"
+    },
+    {
+      "path": "runs/build/observation-resumed.json.utf8.json",
+      "bytes": 21377,
+      "sha256": "d2464e44e9492c87d7a9d627f9f49eac73675b2181dfe29939895b4caab3081d"
+    },
+    {
+      "path": "runs/build/observation.json.utf8.json",
+      "bytes": 13465,
+      "sha256": "3a90d24b4eaffa14d7049d99425dece0e6a5c3377b0a26b5195257bfd0259108"
+    },
+    {
+      "path": "runs/build/source-contract.json.utf8.json",
+      "bytes": 2850,
+      "sha256": "b179de202ae1de99cb8f565d02057d10942740f2795a551d90ba1fc760a960ad"
+    },
+    {
+      "path": "runs/firstCapture/job-111439162509-log.utf8.json.utf8.json",
+      "bytes": 41887,
+      "sha256": "78f90b648140f7482010a388322804c7410e72f5b457fdd20431939b2d05a832"
+    },
+    {
+      "path": "runs/firstCapture/job-111439162647-log.utf8.json.utf8.json",
+      "bytes": 46977,
+      "sha256": "0aa793a8d557c1add06b1da5ce5ffeebfe8cab56b7857aca1a3902c149a6bcc0"
+    },
+    {
+      "path": "runs/firstCapture/job-111439162650-log.utf8.json.utf8.json",
+      "bytes": 46965,
+      "sha256": "3204f90b73f2dd117f8f3d37d266cbcbddbf6de33b04b7c386ec43980d77a6bf"
+    },
+    {
+      "path": "runs/firstCapture/job-111439659525-log.utf8.json.utf8.json",
+      "bytes": 23878,
+      "sha256": "9e60fab3d433070fd6186568d7e6bd690eec65e69ada50d764d117e2aa417f27"
+    },
+    {
+      "path": "runs/firstCapture/observation.json.utf8.json",
+      "bytes": 20957,
+      "sha256": "f0646bb439413db20026fce69b69d4f820bda1738d42e12ef0bee4f59fc7440c"
+    },
+    {
+      "path": "runs/shared/job-111440752730-log.utf8.json.utf8.json",
+      "bytes": 35412,
+      "sha256": "d70ac4d460c45ec5514551191f76010e2b0d9df014447d53365e567c72a6edc7"
+    },
+    {
+      "path": "runs/shared/job-111440831113-log.utf8.json.utf8.json",
+      "bytes": 53682,
+      "sha256": "fcd28e6e69485ac875a2ab3ddda39870c46dfbf2c254b44032e6c6adf6daa5a9"
+    },
+    {
+      "path": "runs/shared/job-111440831130-log.utf8.json.utf8.json",
+      "bytes": 58768,
+      "sha256": "a82b779eaafafacca3c25c61b4fd7900abbee46d53d9e9dd611ac085062772a4"
+    },
+    {
+      "path": "runs/shared/job-111440831165-log.utf8.json.utf8.json",
+      "bytes": 58761,
+      "sha256": "0e2d4aec8eb0ad81e4dfaf075c187eae09b471b46a290590469192bb86123174"
+    },
+    {
+      "path": "runs/shared/job-111440978777-log.utf8.json.utf8.json",
+      "bytes": 29256,
+      "sha256": "f21f12fe42cf90e403c2c8309a9ba4a8142afd697042e7e26bbb4dfee32b9ad3"
+    },
+    {
+      "path": "runs/shared/observation.json.utf8.json",
+      "bytes": 26426,
+      "sha256": "be59f2d08f090a8b1b9b603fabf850695c81980431d4018b9ff5a5e006748912"
+    },
+    {
+      "path": "source/base/crates/core/src/cpu/cortex_m.rs.utf8.json",
+      "bytes": 194259,
+      "sha256": "8a8d33bb2b770a456c982f61893715d8b2c75271f20be071c548fc0a78923f7a"
+    },
+    {
+      "path": "source/base/crates/core/src/cpu/cortex_m/t16_discovery_tests.rs.utf8.json",
+      "bytes": 26818,
+      "sha256": "8c5a4c0ab726b306a053d45a4d4cf9702693e7ecc6bf994771c3468a61b0b3bd"
+    },
+    {
+      "path": "source/base/crates/core/src/lib.rs.utf8.json",
+      "bytes": 213140,
+      "sha256": "cbfabe6badd6c35c21d7e1d2cfb4c2db064b1b01886a374971d5480e5f4a5647"
+    },
+    {
+      "path": "source/base/crates/wasm/src/lib.rs.utf8.json",
+      "bytes": 179862,
+      "sha256": "f35a05d0ad250a24083695dfdce1283286fb3125c72e163b338b0312898bf3fb"
+    },
+    {
+      "path": "source/base/crates/core/Cargo.toml.utf8.json",
+      "bytes": 16932,
+      "sha256": "04fe9200d7442f630644d6ac6fff791ae865e740ce5425d9bab58b93a065eecb"
+    },
+    {
+      "path": "source/base/crates/wasm/Cargo.toml.utf8.json",
+      "bytes": 3016,
+      "sha256": "25164ddffcfc33f1df47131530a4125d0d901f415313332b6b97729f5abafbfb"
+    },
+    {
+      "path": "source/initial/crates/core/src/cpu/cortex_m.rs.utf8.json",
+      "bytes": 197009,
+      "sha256": "cda40e227c8b6bfe6e94aed9c6f6f0345091aeb5f5d095cf9f3a1de55ae9effc"
+    },
+    {
+      "path": "source/initial/crates/core/src/cpu/cortex_m/t16_discovery_tests.rs.utf8.json",
+      "bytes": 30456,
+      "sha256": "c5f4e04d8879d8ccca1c4a3d7ed580029be729bc8e2e0a7db62709695956ef7e"
+    },
+    {
+      "path": "source/initial/crates/core/src/lib.rs.utf8.json",
+      "bytes": 213140,
+      "sha256": "cbfabe6badd6c35c21d7e1d2cfb4c2db064b1b01886a374971d5480e5f4a5647"
+    },
+    {
+      "path": "source/initial/crates/wasm/src/lib.rs.utf8.json",
+      "bytes": 181118,
+      "sha256": "193aa21559e814ead3a7ace92a2c67ec4abd68b9c596334c09ff600167e85c46"
+    },
+    {
+      "path": "source/initial/crates/core/Cargo.toml.utf8.json",
+      "bytes": 17031,
+      "sha256": "b81ff877bce873479b18fa974feec461dafd29a520f2219577582867e2e5115d"
+    },
+    {
+      "path": "source/initial/crates/wasm/Cargo.toml.utf8.json",
+      "bytes": 3109,
+      "sha256": "fa1898d60e4e49cf10b33ad4891e861f74d919d6ff99b26b18c8fb33ee3135f9"
+    },
+    {
+      "path": "source/engine/crates/core/src/cpu/cortex_m.rs.utf8.json",
+      "bytes": 197371,
+      "sha256": "3caba2fe0b0a9d628e175e89a1861899f26e16e4f82e78aa0ecb3af338238037"
+    },
+    {
+      "path": "source/engine/crates/core/src/cpu/cortex_m/t16_discovery_tests.rs.utf8.json",
+      "bytes": 31036,
+      "sha256": "f7799b8d0deaf3bdb9c7094cf6212581847893c305b7146154e1af30ecef3253"
+    },
+    {
+      "path": "source/engine/crates/core/src/lib.rs.utf8.json",
+      "bytes": 213824,
+      "sha256": "162925856b402bb455612184201bc477ed429746e91c8524c3f46d82e09e7a98"
+    },
+    {
+      "path": "source/engine/crates/wasm/src/lib.rs.utf8.json",
+      "bytes": 180665,
+      "sha256": "ae280fe14a169051de1cc93d757eab22ed2f42e3b0715e26da772365847c8cbf"
+    },
+    {
+      "path": "source/engine/crates/core/Cargo.toml.utf8.json",
+      "bytes": 17031,
+      "sha256": "b81ff877bce873479b18fa974feec461dafd29a520f2219577582867e2e5115d"
+    },
+    {
+      "path": "source/engine/crates/wasm/Cargo.toml.utf8.json",
+      "bytes": 3109,
+      "sha256": "fa1898d60e4e49cf10b33ad4891e861f74d919d6ff99b26b18c8fb33ee3135f9"
+    },
+    {
+      "path": "source/engine/.github/scripts/build-t16-census.mjs.utf8.json",
+      "bytes": 12972,
+      "sha256": "21d955595056669f16001589bb2ca7d0e7bec441f00773ad2a914b7b7bb4556a"
+    },
+    {
+      "path": "source/engine/.github/scripts/capture-t16-census.mjs.utf8.json",
+      "bytes": 5046,
+      "sha256": "a4385de877f8bc69811ae9bf7f1c32dd7550e0ffac6156d232cbd39f3bf15a4b"
+    },
+    {
+      "path": "source/engine/.github/workflows/wasm-discovery-census.yml.utf8.json",
+      "bytes": 5710,
+      "sha256": "08f6af8e77089a7f0a0bf4a12f25f4421ba04d24e3f57f4596b39801abcb11f7"
+    },
+    {
+      "path": "source/engine/crates/core/src/cpu/cortex_m/t16_discovery_census.rs.utf8.json",
+      "bytes": 4600,
+      "sha256": "25df79a6d88ffde130e86f7f08acad68e339b34ae702396881858005da1430b2"
+    },
+    {
+      "path": "source/tool/.github/scripts/build-t16-census-guest.mjs.utf8.json",
+      "bytes": 1787,
+      "sha256": "d2a87fcfda0bdf611c9596809269b11aef3ca7bb2130c0ca9290a4c0b1098fb9"
+    },
+    {
+      "path": "source/tool/.github/scripts/capture-t16-census.mjs.utf8.json",
+      "bytes": 4661,
+      "sha256": "acf89124c7fbcef5b5540c90d914178cbaf45d9dc6833948022d5b8471c88516"
+    },
+    {
+      "path": "source/tool/.github/scripts/prepare-t16-census-capture.mjs.utf8.json",
+      "bytes": 4152,
+      "sha256": "91c559515f1e04e1a7abd55e98016eb0946a4f04e21e5bf59203007fcf092966"
+    },
+    {
+      "path": "source/tool/.github/scripts/t16-census-harness.mjs.utf8.json",
+      "bytes": 2320,
+      "sha256": "0f721ea86f95022b47b8c3fda172cff326065735cf5ee3c83fede32ecb93c460"
+    },
+    {
+      "path": "source/tool/.github/scripts/t16-census-harness.fixture.txt.utf8.json",
+      "bytes": 7484,
+      "sha256": "36a7de36f6848a5dffe4acc5bcd48b8447b56e9356ece02f21cb031c9392fc38"
+    },
+    {
+      "path": "source/tool/.github/scripts/t16-census-harness.test.mjs.utf8.json",
+      "bytes": 2539,
+      "sha256": "e38e8c32eff3851a2d6d00285c52a5f64d3675c87d149a60cfb5e30a60852664"
+    },
+    {
+      "path": "source/tool/.github/scripts/verify-t16-census.mjs.utf8.json",
+      "bytes": 3322,
+      "sha256": "a2b715c82d2b2b5c40656c0b6f74ff46d884540d1a98eebc3bd0bca01b9cd0ae"
+    },
+    {
+      "path": "source/tool/.github/workflows/wasm-discovery-census-capture.yml.utf8.json",
+      "bytes": 5015,
+      "sha256": "712b009633ec30a1da012a730e9f68ccbd998fa51c8c2febf543c50aa5b043ff"
+    },
+    {
+      "path": "controllers/observe-discovery-census.mjs.utf8.json",
+      "bytes": 3487,
+      "sha256": "ed408cf0ae90d7d8038f8aafa676acca0ae2db5b11d030643969d141c4ad3e8b"
+    },
+    {
+      "path": "controllers/observe-discovery-census-r2.mjs.utf8.json",
+      "bytes": 3490,
+      "sha256": "7e6139f845204c62d8be0a0d24c155e8094471346146bd4ec609d14199e3263b"
+    },
+    {
+      "path": "controllers/observe-discovery-census-r2-resumed.mjs.utf8.json",
+      "bytes": 3823,
+      "sha256": "5ba501bc5898623381c2a21b14c225995d49395e0f5216a3e74e81648d8a56cb"
+    },
+    {
+      "path": "controllers/observe-discovery-census-capture.mjs.utf8.json",
+      "bytes": 3574,
+      "sha256": "53d667011d90c4ad12b7a21101e158d95602c029fba82ed501922f130a255fc1"
+    },
+    {
+      "path": "controllers/observe-discovery-census-shared-guest.mjs.utf8.json",
+      "bytes": 3579,
+      "sha256": "7e90732317844206b4a1afd7637d4734cfe3d1aae4cc3c5d33fc2323c29a3a6c"
+    },
+    {
+      "path": "controllers/prove-discovery-census-source.mjs.utf8.json",
+      "bytes": 3498,
+      "sha256": "bf19df220277129552400ac3b60b2ef035d48f3dda123db95f7ced5be2d22def"
+    },
+    {
+      "path": "controllers/prove-discovery-census-r2-source.mjs.utf8.json",
+      "bytes": 3589,
+      "sha256": "5494fccb106afaaed7e8a4f0dc678234745946e449a680f6f10a1747f0fd2d25"
+    },
+    {
+      "path": "source/patches/initial/crates/core/src/cpu/cortex_m.rs.diff.utf8.json",
+      "bytes": 3975,
+      "sha256": "c7de70cc0175470975f75cdd32e970e57df8cbac5673d41f01a269a4b3eb00c6"
+    },
+    {
+      "path": "source/patches/initial/crates/core/src/cpu/cortex_m/t16_discovery_tests.rs.diff.utf8.json",
+      "bytes": 4198,
+      "sha256": "35ec8f25709aa8c853c1d75609bf0e43ab9945cbf3a65abb7335ce0872c58368"
+    },
+    {
+      "path": "source/patches/initial/crates/core/src/lib.rs.diff.utf8.json",
+      "bytes": 174,
+      "sha256": "3f49749d426f4cf4c032ca7b652f5f5fc4dce17e6331db3740d4c7737704a85c"
+    },
+    {
+      "path": "source/patches/initial/crates/wasm/src/lib.rs.diff.utf8.json",
+      "bytes": 1665,
+      "sha256": "36ed0457f9ccdc835b9b1379e571bbb8de2ce625b54da59bd154e6bf8b33aa7f"
+    },
+    {
+      "path": "source/patches/initial/crates/core/Cargo.toml.diff.utf8.json",
+      "bytes": 464,
+      "sha256": "31ab97aa76bcb4e32241bea61b50f0209843c51e5d902b3cb428fb3ab4046b06"
+    },
+    {
+      "path": "source/patches/initial/crates/wasm/Cargo.toml.diff.utf8.json",
+      "bytes": 473,
+      "sha256": "79166b251cd032a7f9c10b18f9066e9044c602f0c47700b1e51357dcfe8c5ced"
+    },
+    {
+      "path": "source/patches/engine/crates/core/src/cpu/cortex_m.rs.diff.utf8.json",
+      "bytes": 4392,
+      "sha256": "9b6b93169341ba6006491d523d9f0f31f1143d1b99fc12003a1712366fcf13aa"
+    },
+    {
+      "path": "source/patches/engine/crates/core/src/cpu/cortex_m/t16_discovery_tests.rs.diff.utf8.json",
+      "bytes": 4790,
+      "sha256": "d422f756d2d8e1338448952619805941f0f677888e62649022013949c18779a8"
+    },
+    {
+      "path": "source/patches/engine/crates/core/src/lib.rs.diff.utf8.json",
+      "bytes": 1124,
+      "sha256": "b3fb5a721a605d0c0a58067baac9fba2806b4508b73f5630b8901f5849b945ad"
+    },
+    {
+      "path": "source/patches/engine/crates/wasm/src/lib.rs.diff.utf8.json",
+      "bytes": 1200,
+      "sha256": "6d86712e77ace27ae5f3f3dc5255273627ea4bcefdc9696a330ceb41b0631c20"
+    },
+    {
+      "path": "source/patches/engine/crates/core/Cargo.toml.diff.utf8.json",
+      "bytes": 464,
+      "sha256": "31ab97aa76bcb4e32241bea61b50f0209843c51e5d902b3cb428fb3ab4046b06"
+    },
+    {
+      "path": "source/patches/engine/crates/wasm/Cargo.toml.diff.utf8.json",
+      "bytes": 473,
+      "sha256": "79166b251cd032a7f9c10b18f9066e9044c602f0c47700b1e51357dcfe8c5ced"
+    }
+  ]
+}

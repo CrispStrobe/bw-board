@@ -1,0 +1,1 @@
+{"source":"5fed1f735dd48c899395a74f0565451c38a03716","ordinary":{"ram":{"medianRtx":2.9798386855984007,"minimumRtx":2.9564077354207354,"allWindowsMeet1x":true},"gpio":{"medianRtx":0.6094569671626096,"minimumRtx":0.6054352578536564,"allWindowsMeet1x":false}}}

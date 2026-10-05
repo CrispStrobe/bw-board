@@ -1,0 +1,132 @@
+{
+  "schema": "bw.cold-three-arm.first-failure-findings.v1",
+  "status": "PRESERVED_FIRST_QUALIFICATION_FAILURE_INDEPENDENTLY_AUDITED",
+  "runId": 37120409279,
+  "attempt": 1,
+  "head": "be5cf520924d3b543fa2da20a2e1fdc6b6c6db82",
+  "artifactId": 11273147920,
+  "zipSha256": "406be3268dd71ad3f42627ec72f4ecc6c56bd30fdf37b1e1aa4e8352a8c590bf",
+  "plainJS": {
+    "status": "PLAIN_JS_ARM_EXECUTION_AND_FINAL_PARITY_PASS",
+    "q": 316562,
+    "ports": 16475,
+    "rawRamSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
+    "exit": {
+      "pid": 5728,
+      "exitCode": 0,
+      "rawWaitStatus": 0,
+      "timedOut": false,
+      "wallSeconds": 1.1338148459999786,
+      "terminatedPids": [],
+      "interrupted": null,
+      "rusage": {
+        "ru_utime": 1.017889,
+        "ru_stime": 0.44287099999999996,
+        "ru_maxrss": 223232,
+        "ru_minflt": 68239,
+        "ru_majflt": 0,
+        "ru_inblock": 0,
+        "ru_oublock": 2880,
+        "ru_nvcsw": 1089,
+        "ru_nivcsw": 80
+      },
+      "cpuSeconds": 1.46076
+    }
+  },
+  "nativeOneQ": {
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 0\n",
+    "resumes": 0,
+    "actualAddonProviderInitialized": true,
+    "nativeInstructionsResumed": false,
+    "nativeAndProviderClosedAfterFailure": [
+      true,
+      true
+    ],
+    "partialPorts": 0,
+    "exit": {
+      "pid": 6731,
+      "exitCode": 1,
+      "rawWaitStatus": 256,
+      "timedOut": false,
+      "wallSeconds": 3.269691850999976,
+      "terminatedPids": [],
+      "interrupted": null,
+      "rusage": {
+        "ru_utime": 1.436196,
+        "ru_stime": 2.135478,
+        "ru_maxrss": 258616,
+        "ru_minflt": 357257,
+        "ru_majflt": 0,
+        "ru_inblock": 0,
+        "ru_oublock": 152,
+        "ru_nvcsw": 4360,
+        "ru_nivcsw": 222
+      },
+      "cpuSeconds": 3.571674
+    }
+  },
+  "nativeBatchedSpawned": false,
+  "cause": {
+    "file": "scripts/cold-native-performance/protocol.mjs",
+    "revision": "8ed0366af9bf92823561d5130d0ad6274020c6da",
+    "line": 18,
+    "assertion": "n.activityState === 0",
+    "actualSchema": "Retained final cut and live reset ABI4 snapshots omit activityState",
+    "manufacturedControlGap": "Pure fixtures supplied activityState:0; actual absent-field schema not exercised"
+  },
+  "immutableBeforeAfterEqual": true,
+  "sourceFixApplied": false,
+  "rerun": false,
+  "benchmark": false,
+  "threeArmQualificationPassed": false,
+  "rawRecords": {
+    "run.json": {
+      "bytes": 12619,
+      "sha256": "2abaaf4e4a6117cdb95ea8283f6c0bbcb9c328fe84fe890d2193c9d1e62360ef"
+    },
+    "jobs.json": {
+      "bytes": 4394,
+      "sha256": "731e7324b6af9784b655cbe6cf02f9eca5c93eff404b3af7ef0a7773b4bc82a3"
+    },
+    "artifacts.json": {
+      "bytes": 793,
+      "sha256": "9e9ddb25b5461afb40f460c1e34cd1395df98e878256b7e70c7d97f1b2e90fd1"
+    },
+    "zip-retention.json": {
+      "bytes": 33688,
+      "sha256": "cc50207c8632b3c5ded06040dc92ff2d85b0ea656f9cfeb17a7981bff828343f"
+    },
+    "independent-first-qualification-audit.json": {
+      "bytes": 582,
+      "sha256": "34bd393155bb2a8b4889f445ef193267971ecb192824ea604782e8b6bb3fc3b5"
+    },
+    "selected/_temp/cold-three-arm-context/parent.stderr": {
+      "bytes": 1123,
+      "sha256": "ec3b943c4e8e625eed7ed5e7a4b7a9eed169b0ab0b1201ed58cbca2cd7aa7c0c"
+    },
+    "selected/_temp/cold-three-arm-qualification/result.json": {
+      "bytes": 85379,
+      "sha256": "c90dcf0047826f7c948cb8965e0821f96bf86e75faf4e7fa3c6e0dc07cd8a2fc"
+    },
+    "selected/_temp/cold-three-arm-qualification/plain-JS/exit.json": {
+      "bytes": 425,
+      "sha256": "08b0700835ad280addd7f3f94964ee6b8d33d836bef74078ea4971deeaa69435"
+    },
+    "selected/_temp/cold-three-arm-qualification/plain-JS/receipt/receipt.json": {
+      "bytes": 1472005,
+      "sha256": "9b772cc41b8ae2614f75fae1c13435838446c31b9bd400026f0b40679f584eaa"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/exit.json": {
+      "bytes": 417,
+      "sha256": "88ee3e738257540afca5b1ae2b72fda5c6911d57436e7f17579487bf15f5f3c9"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/stderr": {
+      "bytes": 1335,
+      "sha256": "a6b94040ae53e07bac40ea85f152b0191ea813cebe8dac5dcab5fcc434e7f2bf"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/receipt/failure.json": {
+      "bytes": 62421,
+      "sha256": "3b4d87933be4d855afd8d3944db14f23f1c61ae0f54331a502cb9f631a6ed57c"
+    }
+  }
+}

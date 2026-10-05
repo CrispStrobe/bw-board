@@ -1,0 +1,45 @@
+{
+  "total_count": 2,
+  "artifacts": [
+    {
+      "id": 11273102588,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI3MzEwMjU4OA==",
+      "name": "same-host-orders-node-22.23.3",
+      "size_in_bytes": 124403,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273102588",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273102588/zip",
+      "expired": false,
+      "digest": "sha256:471eb04e29e4e675c7cbd97a5cd64479d43ea9718da529553becb7a0d86dcb34",
+      "created_at": "2026-10-03T11:41:35Z",
+      "updated_at": "2026-10-03T11:41:35Z",
+      "expires_at": "2026-10-17T11:41:33Z",
+      "workflow_run": {
+        "id": 37119884143,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-same-host-orders-20261003",
+        "head_sha": "b00bff0b266eacb7dc975225cf23120fb931ccac"
+      }
+    },
+    {
+      "id": 11272614051,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI3MjYxNDA1MQ==",
+      "name": "same-host-orders-node-20.20.2",
+      "size_in_bytes": 124242,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11272614051",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11272614051/zip",
+      "expired": false,
+      "digest": "sha256:1f72daf9e72ebc80a9299668d41fcb139df2f914743d33a88d2be7791cd554f7",
+      "created_at": "2026-10-03T11:43:42Z",
+      "updated_at": "2026-10-03T11:43:42Z",
+      "expires_at": "2026-10-17T11:43:41Z",
+      "workflow_run": {
+        "id": 37119884143,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-same-host-orders-20261003",
+        "head_sha": "b00bff0b266eacb7dc975225cf23120fb931ccac"
+      }
+    }
+  ]
+}

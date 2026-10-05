@@ -1,0 +1,28 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-cold-ledger-scalars-native-symbol-hosted-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-cold-ledger-scalars-native-symbol-hosted-source-20261004",
+  "revision": "2bf89ff132eb8813292d8b46eecb43643aec2093",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; nested six Python mocks inherit CPU/file/core/nice bounds"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "scope": "Two Node methods forwarding six Python PURE/MOCK controls; 13 owned and390 materialized frozen role source paths; no setup/sudo/perf/download/addon/guest/build"
+}

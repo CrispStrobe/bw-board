@@ -1,0 +1,1070 @@
+{
+  "cold-memory-fusion-paired/host-after-setup-or-pairs.json": {
+    "bytes": 9532,
+    "sha256": "458d2711e35af6e67d55492ac77a5d7bb1bca7214ab96cb6ebf9e31a160ae9ed"
+  },
+  "cold-memory-fusion-paired/hosted-result.json": {
+    "bytes": 64,
+    "sha256": "5820364ed58c197abe0f97621ae16665b2cbf82164ab45ec480702be4f957e48"
+  },
+  "cold-memory-fusion-paired/host-before-setup.json": {
+    "bytes": 9515,
+    "sha256": "194e54895a8ea47235f184c2cedaf708022256f606f3ad4774ba35a73ea68b1b"
+  },
+  "cold-memory-fusion-paired/pairs/binding.json": {
+    "bytes": 229322,
+    "sha256": "a3d33bcc675e78ba27e37a2f18d81e43928fd8cf48fd9d09e1c2602d2a9b3d67"
+  },
+  "cold-memory-fusion-paired/pairs/host-after.json": {
+    "bytes": 9532,
+    "sha256": "6d1df4ede3ea831636129e200c720bd2132c215f2f80757e89b22301c5c3afc1"
+  },
+  "cold-memory-fusion-paired/pairs/host-before.json": {
+    "bytes": 9521,
+    "sha256": "1a474f331a0e854fb2807efe347e2dd3064b153976e5dd55ef88a7cebdc14097"
+  },
+  "cold-memory-fusion-paired/pairs/initial-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/exit.json": {
+    "bytes": 416,
+    "sha256": "9c26e68687ee79eb3fa893afaf0293cfa58419d524f74d1ccf988347700a3ef9"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "1b5b747ce76ce081fee2507669236340a7e71bfb335de21b96e0d4fae13142dd"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "9f1be0e908d0ef927f5e41d9399637021dfb55656736d4f286efcb8cd637823c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched/terminal-validation.json": {
+    "bytes": 892,
+    "sha256": "745a0e0ec307c3b2e64a02c04fa007a4668ec9a0f3625bd62d36a069daaaca51"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched-host.json": {
+    "bytes": 9523,
+    "sha256": "3dbcf70b3bb8a78e7f2df36af5f35e35a54dabe08f5f5d60c16a2a254920f9e0"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "e6513b72521bcbeaeb5917aeb41ed9b02a5050c33cfcc91800e02fd9878a6281"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/exit.json": {
+    "bytes": 425,
+    "sha256": "219d9c573dc4778b9fd42a34645d038155c6575fefce570a772a498a27024b37"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "c3c659396e34aac6d3a352935bcadd09130df5b35f81daa90f1f1cad12197161"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "fe17dcc5af492adcf9528ec6c60a2f8da2b42a46a48366c7ce5d057f5cc7e01f"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS/terminal-validation.json": {
+    "bytes": 892,
+    "sha256": "a10eb5c36d1f14e2bd4d2daf6e21c47e49627541dd8aaaa127adeb249222cab1"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS-host.json": {
+    "bytes": 9522,
+    "sha256": "15c9f2a42313aa348d770393152c837d339ce37c43330aad6f329d601ae75feb"
+  },
+  "cold-memory-fusion-paired/pairs/pair-00-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "e6596d855404946f4dd15a0081ca5b491eb3ca200655d7e5183b070ecf45e7c1"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/exit.json": {
+    "bytes": 426,
+    "sha256": "e575be275681628a117ea63e1750e4584a2d12943cd85e2aa92655271ee3573d"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "59f12376062fc28e56aeb83fd18c289f2343b6c40b300da8b2ae137a59945a10"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "3c1c80b0ed841c3e2efca1f21902d525edd4a0d42219e657b3a5aadbb377d15b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched/terminal-validation.json": {
+    "bytes": 901,
+    "sha256": "f7646a21d326a4e288167c6986d702e41b07d3d876d6a4747177502d2319a8c3"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "e595e004fcc72e95fe20c9a38792ec5087227709d3e205c03191afeae07f2ba2"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-fusion-batched-host.json": {
+    "bytes": 9525,
+    "sha256": "d0edea149202e7f98cda63c9fa0c32c476aa0cfdff6f9068e347d1e173d6c545"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/exit.json": {
+    "bytes": 426,
+    "sha256": "e0e2d677e6edcffe7b7a91fea745d1f31e49c5117109817b617f1bd3e1d24e54"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/receipt/receipt.json": {
+    "bytes": 1472021,
+    "sha256": "5f8504df95f23f29a2cc0c744f8fb9138244d9383ff25acb65016b2889520610"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "3af5a4da18fb54dc08b0a54806d5e64aa393fe8aad0df3b10f9faaa3ad5d56f8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS/terminal-validation.json": {
+    "bytes": 893,
+    "sha256": "52a01896433987d0b85e30b2cf1ef889a4192a00fd9fa129f86ccd0d623e7a8d"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "bf0c7f031868902693577a4a7d4641d557ef84d3f77c509c2119bc1a04883710"
+  },
+  "cold-memory-fusion-paired/pairs/pair-01-plain-JS-host.json": {
+    "bytes": 9524,
+    "sha256": "d7d73ba3ab73cd63e51795bbcdb0bd986c2cad2d97effd850e5d5a79030804af"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/exit.json": {
+    "bytes": 436,
+    "sha256": "d9c1e0290859c2bae4512b4c7a1a5d2fda8eb3e7e05321441a2aa218ba2fb77e"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "8db331a5736bb3b8cee6c72047de44e04716b7c551d96f46e28e985167fbe3a8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "0735b67800f9247801f5271872868a51ae63402fa64e53297fedacf50e24ae1c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched/terminal-validation.json": {
+    "bytes": 912,
+    "sha256": "e1474a1bf1dbc8d07854c0fa6240fc7e9987fafb0846094d72a69d2403cd3258"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "4381ef6472ce5d7f9afc1535034193cd68ca4ae51933abe31f44292d1d6a9b31"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-fusion-batched-host.json": {
+    "bytes": 9527,
+    "sha256": "042e9e2e3b120b21778da8a43728b89a82e1f589861a6aae4b976af204ea0f17"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/exit.json": {
+    "bytes": 437,
+    "sha256": "beab906b6b4b7b6e36542bd252d07a0d0dbf3229df865549b752872dd77e5fa2"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "c89d847221623bf686763ffd6dba2efcc6c02520042cb3c0b211fad8f904eaf2"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "0f4536294c11cd5ae952e81ace4c1edef75a2d19c7321409126fe65c5d75df52"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS/terminal-validation.json": {
+    "bytes": 905,
+    "sha256": "4691a47334dc03c56e304088496f6e7dfbe46d259c7e19b0e9d984cd859fff66"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS-host.json": {
+    "bytes": 9527,
+    "sha256": "1a140056872d3d0ec72c6f1c7166f780dd2bedaaa309a809dcc15f7238e61bed"
+  },
+  "cold-memory-fusion-paired/pairs/pair-02-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "a54d6027688b122b1e90903ccdebe72987e98637b65336aaa51a93eaee0043fd"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/exit.json": {
+    "bytes": 427,
+    "sha256": "2fe969c341b5503200a5601481514826dc2b4acc10dcf331f07f4ab999e5a95f"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "5d2db2fd1f664ae995ad65107bc416d45ae603d14e76de8f8749177cc669622e"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931976,
+    "sha256": "625d22c9708fa639a210804fc103557c9a4bc6046d2398d03b097558a19f5342"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched/terminal-validation.json": {
+    "bytes": 903,
+    "sha256": "db2af91b93fceba482ddf40560074bcea4e1fa4d7b42c840f0d0668a185eadd0"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched-host.json": {
+    "bytes": 9527,
+    "sha256": "d4bcf29da475608f0d4dbbd8b66415f9f569a08bbb83115b52775ce9813b0fe1"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "1202f8904af505e64c17bf6d1c20b1e572c7ae5fc8054f262afad82ca0e5736c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/exit.json": {
+    "bytes": 426,
+    "sha256": "b515506d44ef6358c5db85229423f74b6a336b6b22d9dd007531a64aa9286e0b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "3b4b907aae5bb3c39b7dd514513f096b06ae1763495e95312077c6b114ffa2fc"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "491c55774d7582029ba1b69b985704ce71711d319d874eeb4f1582561f200b16"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS/terminal-validation.json": {
+    "bytes": 894,
+    "sha256": "99cfbef7ba9fbf0b9062cb14ec8a06d42bb83be8780f83b80e3680ff7e5836d1"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS-host.json": {
+    "bytes": 9530,
+    "sha256": "503ed3aab31a1b96c2378bcb8f85df3e9bad1f8e8a12e88ef4dc9da5c7bda0bf"
+  },
+  "cold-memory-fusion-paired/pairs/pair-03-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "2c404c568dd9b3a87d86656f6183221c6b484152d941394729c9d5d580b38591"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/exit.json": {
+    "bytes": 426,
+    "sha256": "d84525bf6fa4d9c6c43432e5fa9c055981414b940d107ee87b30805a901c24ba"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "634afe48f3331663c832f8970c3d268099409dbb915311e8f3568559a64f66ad"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "45f2c928cbc32154574d8ad320e0e26698d179ae0e968b2f1092af6bd47c4312"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched/terminal-validation.json": {
+    "bytes": 902,
+    "sha256": "0894c9fb9817061688dd0043cc2cb1bb5214f0fa9146467b56c836e362ee1c26"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched-host.json": {
+    "bytes": 9525,
+    "sha256": "d85ca2da6ce6904a38c2e97b2c54534a097d926f8d8b395434b047773faa2bfb"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "6b0977321bc2de3754b7e096badeed6373d2cfe073f7302a5d5a89370d780a65"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "63eda4daf42ffe8e2b5293ade6afe5f4f63438b395bd8f7846baaeae2038f5e8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/receipt/receipt.json": {
+    "bytes": 1472021,
+    "sha256": "fe6e8df31451714eac4b0f36f7bb4a455b74fef973ebaec2eb5a171273b28ddc"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "dd55e0a952f3c12ceaa2e9476a78fbbb9c430d2975eb67a6e6a96d0a6c1026e6"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS/terminal-validation.json": {
+    "bytes": 884,
+    "sha256": "59cdc53bba81af7f0513681d211260b629a4302f801b088c1c283e64449738a9"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS-host.json": {
+    "bytes": 9530,
+    "sha256": "53b33b33cf79b8f3e66536e848cca0d4ae39ea02569bff012ff62981fee87d9c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-04-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "90e01b47e34dbe2aae001cbaf496339ce8d61977a8f9ea636429f2e2e0369cc8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/exit.json": {
+    "bytes": 417,
+    "sha256": "d1493d8947b900632e6ba690f9ab2bcf51947093becc9ef69e3d2b9fa2a32bd2"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "5baf99d7420887662bd2fd4f1dd62fc914096ec98e87b62764f6130d4f932ace"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "073dc96e484b8f2b9dd0c0138ae7c2c4d77348849d0dd404ce21327aa5e3c6e5"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched/terminal-validation.json": {
+    "bytes": 892,
+    "sha256": "34e5ee979cb1172b81966b815d3e3ecece85f64de194e827ed436828c39c39e6"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched-host.json": {
+    "bytes": 9530,
+    "sha256": "575f3a446b50a38d7406b57032a80558cf089b296c043ca704c78c6db2bd76e8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "2399d741d2b1b291887b74a22498b8acf69c7189766d45a0953b2cb6462b63db"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/exit.json": {
+    "bytes": 427,
+    "sha256": "d190fcfe82d6fb59a0b8b4dfd105749386d1873c396735281fbd953d11b9d811"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "12808c534d6dcbc3561e9c50681c7000eadcd1aa9aba758a472e277295dadf74"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "13fcdcd06c36470efa07649cb183b8d25dbb7504e1dc3b3b29c7dacaf125b89f"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS/terminal-validation.json": {
+    "bytes": 895,
+    "sha256": "300e26fd5a78f637d20718dc0eca5710353dfec53bb68cb2401e36fdd445c68d"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS-host.json": {
+    "bytes": 9530,
+    "sha256": "3cbe8252cd937ef8e86848144b46c5df363c122fa76a2f376ce66eabbecd747a"
+  },
+  "cold-memory-fusion-paired/pairs/pair-05-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "d708d68c5199de906058d177d408b68e47f341106fc6cf94867f955333056e8b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/exit.json": {
+    "bytes": 416,
+    "sha256": "7a720400b1753e22e6297ac572991c4186a30b1856ce3f35ccc1fb3da0b62a08"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "4764a184f91c65c8f12ae7265489f0d9da2612cbf9ce66bb4077c082f709c593"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "d42179b4231823c409388654e807f7e8f085489acc0bf790b72e77d80a2066b8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched/terminal-validation.json": {
+    "bytes": 892,
+    "sha256": "40809034bb371c5fab62ed7f075f33c43f86d4818ee76832fe400f0354df71e8"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched-host.json": {
+    "bytes": 9526,
+    "sha256": "82fe64358dd5127f37d65b9d281982096dec930dffb2bdb9f2385c67513ce11b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "a0b1889790a0511aa626c39d1b93f3ccbc4fd9aa17dd4a6f0c21741f5d59e960"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/exit.json": {
+    "bytes": 416,
+    "sha256": "4ecf53e0cee8aa02daf52e53c05d95c879560685fa1d46ade5cf2f875225ba38"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "093a869595398da7730c64fed4101145c459b6089fd92dbe49aa0ebc890c0596"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "3c3160906e70a23f7ecb2d56b78c2a9ff11e538dc1c73595353c6a7b69950285"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS/terminal-validation.json": {
+    "bytes": 883,
+    "sha256": "0ddc5dd724b958175dafb9cbb8c74b7ab26ed7f12e99962fe60fee900caf9bf7"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS-host.json": {
+    "bytes": 9526,
+    "sha256": "83b0e32b373020ccc2379a6c76b7768b4821533e43c4b6ecac047965759f7747"
+  },
+  "cold-memory-fusion-paired/pairs/pair-06-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "7c94dc36a548e3bbf8518a1f4fe25b88409d6d9d0dd4be0e972f3435cb12c29c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/exit.json": {
+    "bytes": 415,
+    "sha256": "067a57f5f99d06653fb29806775891df398a4f99acaa3e7c18ac5cc0e26fa6fe"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "f3dec87bffee4f9e3345a3dc0efda2b3147f55d806efa595d49dc4fd3e04cbd2"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "245127bb8880a1e5221b1e0dbeab674a200026caff209f695a1730e039422001"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched/terminal-validation.json": {
+    "bytes": 890,
+    "sha256": "e1c6574d2fe0a2a100e9cf15ed212975ebbbc6dfe54e0e45351f0bca86efe5b2"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched-host.json": {
+    "bytes": 9531,
+    "sha256": "308ff7dd6dbc2b785abed20b67ec9ce9f21392e1e95c2a248ac535f9ca936848"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "2dbbffca599701698736ce4504ae1ca58d3b563e98d4b76fbdde2d26d3c8155b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/exit.json": {
+    "bytes": 425,
+    "sha256": "a145b286224013e0e746136d9dd1bb8f723c9401ae6fc6e4489a07bd52c75f27"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "3640d013bf9c80ec6b8400d948ed74567f1bff25b3e4a0fbb086cd8b022a5c95"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "7cb7ad1698f764b652c74d39bc0dad42916d4a3a46f3afc8aa12754dbf4d988c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS/terminal-validation.json": {
+    "bytes": 893,
+    "sha256": "e3f6bcd49bfcfaaba0da8c5042cb9293b487fb23ebb7f18717a05196d711001a"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS-host.json": {
+    "bytes": 9529,
+    "sha256": "ba0eff842dfe130fb262ca50d646f5dad217c116cd99a704becd8421a77103fd"
+  },
+  "cold-memory-fusion-paired/pairs/pair-07-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "4fdcb059e58316fc20e490911f3dfc6a265ba082003eac2e492d18dfc44f9e39"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/exit.json": {
+    "bytes": 417,
+    "sha256": "516c022037c052dff3938087b3404b3c297a39526dfc144724ec13157ea90382"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/invocation.json": {
+    "bytes": 1041,
+    "sha256": "c41b5f6e80de6e11608c40f8d52ccb0e5c9440360f3feecbbac1711bfe2eb649"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/receipt/receipt.json": {
+    "bytes": 1931977,
+    "sha256": "f20d82bd360aa5deae7fca49a2ae5f54da5a8098aa2593d9895bfa15ee8009cc"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/stderr": {
+    "bytes": 379,
+    "sha256": "ce8e88684363d51843b09d96f4cb77d9e92e936bd00efe8475fdd3009c2cc06c"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched/terminal-validation.json": {
+    "bytes": 893,
+    "sha256": "1c58dc954c20a640b370226b81c0a345cd85f08a4c0018b258291348746dee48"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched-host.json": {
+    "bytes": 9530,
+    "sha256": "0e669646adf7b9c28e4f8bcd3b8c0ee5e316f7363c98b022f4e2cd7646be2e6e"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-fusion-batched-input.json": {
+    "bytes": 1353,
+    "sha256": "454afcd22a57b4ad0bffbb969f4022b5b75e8ab253b32d6d535b18b8eed17630"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/after-authentication.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/exit.json": {
+    "bytes": 427,
+    "sha256": "69fd4dc3180c059ce4f3c6645bafa5b171c3d69285c2a4224cb1bdebf527cbee"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/invocation.json": {
+    "bytes": 1021,
+    "sha256": "7cd5f1d3a8e84a36899438cb4001375dfe57aed61ebe0db37a997f013ae77fd7"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/receipt/receipt.json": {
+    "bytes": 1472022,
+    "sha256": "c0ebc9704dd941c1380b97600e3912076ef698c6877db6e00ba4ecdc8594592b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS/terminal-validation.json": {
+    "bytes": 894,
+    "sha256": "457dc4dee196984ab42dd13ca53a2a3fd6bb02d3f03a982a33cacef69e214452"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS-host.json": {
+    "bytes": 9530,
+    "sha256": "258fef8c6bd0a86353c4b3393eea679a7296fbeb16e20a9db8e14ec69a4e2c0b"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS-before.json": {
+    "bytes": 227679,
+    "sha256": "31c0939e10c7b6e0867ca89004b36e9e45ba03363cd08176240029542ad72b19"
+  },
+  "cold-memory-fusion-paired/pairs/pair-08-plain-JS-input.json": {
+    "bytes": 528,
+    "sha256": "f29ed41e413814039c04440b95da5741ce3a40886c5460a3a00f157eb3a2ff50"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-00-fusion-batched.json": {
+    "bytes": 3403,
+    "sha256": "252c84f5a117d6c8200f7e8162c8800133a3b889edc28b32c30498f1e0ac2205"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-00-plain-JS.json": {
+    "bytes": 2236,
+    "sha256": "86265933ea155fc11c3deef009772d3a3bd0f48105291e38e7dc05e5da206468"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-01-fusion-batched.json": {
+    "bytes": 4756,
+    "sha256": "ae22a3e8a47dc0df27b9bd9ce2845242e0390fc4bd4fc87c9896fe15abeef814"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-01-plain-JS.json": {
+    "bytes": 5918,
+    "sha256": "897f9b3f57dce97334a58b97fb41fbc57cc0d0cd0ef6b0d3f12aaddd6e12f868"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-02-fusion-batched.json": {
+    "bytes": 8455,
+    "sha256": "249b53ce0b48e9ec716a58e0a73ae63c89b02b98d67925ad789b31291e5dfa91"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-02-plain-JS.json": {
+    "bytes": 7268,
+    "sha256": "806352b2461dbbbfc11bcb80418524d603df02bccbc5ad497935e8fe5578ec5b"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-03-fusion-batched.json": {
+    "bytes": 9809,
+    "sha256": "5ed7009d8e1974bf162a4d142353b00ae6338767692131bf2d9ba191648b17d8"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-03-plain-JS.json": {
+    "bytes": 10972,
+    "sha256": "741088261b5dc385c12f0b12176d99c2b555069fa19453b85e652a883d570ecc"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-04-fusion-batched.json": {
+    "bytes": 13478,
+    "sha256": "fb66240c4a5f702595a7ae58deeea621e4f6d9a5aba530d6324eb80e810d783b"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-04-plain-JS.json": {
+    "bytes": 12301,
+    "sha256": "da56e9f1ffa63f7322815ca219dc0cf87caf826f09c494fb13b7824aa9e28cdf"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-05-fusion-batched.json": {
+    "bytes": 14821,
+    "sha256": "85004db9195f239f8d7aafeb9a7d991441b0411e7c8b27b1052e3b26996b6071"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-05-plain-JS.json": {
+    "bytes": 15985,
+    "sha256": "fe9a38dd3c46633d25e77f6ca8772613f6d16360d5d33598ca64aaea1f3df19f"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-06-fusion-batched.json": {
+    "bytes": 18480,
+    "sha256": "a5d3fba337fb836368cfcddb9684bb26929ccfcb3baa4845725a1db992a1d530"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-06-plain-JS.json": {
+    "bytes": 17313,
+    "sha256": "dc9c2fd775865a6a834e969411830bab5fe2d9f5a5d449cdf927f813fc7307af"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-07-fusion-batched.json": {
+    "bytes": 19821,
+    "sha256": "656e305200e4b8494f4ba6a413cb20beab2b0fb8e78606cdf4ad6ef0f59d3fb7"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-07-plain-JS.json": {
+    "bytes": 20983,
+    "sha256": "ef55ae6f4494c8d20ced2bab83e9210ef646b2d6c53482dee9bc8578b8dc88b7"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-08-fusion-batched.json": {
+    "bytes": 23490,
+    "sha256": "18891fff6257a9f750b0e3a746ddd205115db437946a5d2f16eea6ec9c59af8d"
+  },
+  "cold-memory-fusion-paired/pairs/progress-pair-08-plain-JS.json": {
+    "bytes": 22322,
+    "sha256": "d1a7ac89d1834f6fd7f518d5406fa2aee3a9e10b2f453864344014ecebe5779f"
+  },
+  "cold-memory-fusion-paired/pairs/request.json": {
+    "bytes": 275,
+    "sha256": "9d89c9f171b95f97259e6730ed9bac244a3864c76ffe57e56089f2f44e5695af"
+  },
+  "cold-memory-fusion-paired/pairs/result.json": {
+    "bytes": 262389,
+    "sha256": "f0faa66790df58becd28694f1c2a9801cc39da29a98e37929873e6381fbdffba"
+  },
+  "cold-memory-fusion-paired/parent-source-after.json": {
+    "bytes": 2217,
+    "sha256": "11a14216ab2a9609f9ce3a68fc2b9e4309a4312d6aae330c31a88b5803aa97e4"
+  },
+  "cold-memory-fusion-paired/parent-source.json": {
+    "bytes": 2217,
+    "sha256": "11a14216ab2a9609f9ce3a68fc2b9e4309a4312d6aae330c31a88b5803aa97e4"
+  },
+  "cold-memory-fusion-paired/request.json": {
+    "bytes": 275,
+    "sha256": "9d89c9f171b95f97259e6730ed9bac244a3864c76ffe57e56089f2f44e5695af"
+  },
+  "cold-memory-fusion-paired/setup/before.json": {
+    "bytes": 7644,
+    "sha256": "e9fec7fd2f591b64c31f7ff480421c77439fb56b22ee5cc4e797edce2dc0b496"
+  },
+  "cold-memory-fusion-paired/setup/after.json": {
+    "bytes": 7644,
+    "sha256": "e9fec7fd2f591b64c31f7ff480421c77439fb56b22ee5cc4e797edce2dc0b496"
+  },
+  "cold-memory-fusion-paired/setup/bochs.log": {
+    "bytes": 7372,
+    "sha256": "16ca33d8eb4297f13330001621864ca56008770ee6aebc8093fc08385acde7f9"
+  },
+  "cold-memory-fusion-paired/setup/build-artifact/official-artifact.zip": {
+    "bytes": 7537808,
+    "sha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875"
+  },
+  "cold-memory-fusion-paired/setup/build-artifact/official-metadata.json": {
+    "bytes": 757,
+    "sha256": "dcfa067d218a535a7a8b44f74ea48578cbe3687da932c263baaec4b03983df39"
+  },
+  "cold-memory-fusion-paired/setup/capture-artifact/official-metadata.json": {
+    "bytes": 745,
+    "sha256": "2b7968c863695f24663474806d6559b55e8b6ea6f3e099d8700a880a15e11ab4"
+  },
+  "cold-memory-fusion-paired/setup/capture-artifact/official-artifact.zip": {
+    "bytes": 10438346,
+    "sha256": "702c9eafeb7dbfd95d6d49b0df9b1d293491d8276d8a8857a543a80ce8abb1f2"
+  },
+  "cold-memory-fusion-paired/setup/capture.json": {
+    "bytes": 3852756,
+    "sha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf"
+  },
+  "cold-memory-fusion-paired/setup/configuration-child/exit.json": {
+    "bytes": 420,
+    "sha256": "edacbb52cf1c2d721b985bc5cee59cc362c9cb9e8d35fb4054bd4829f2cf2ee8"
+  },
+  "cold-memory-fusion-paired/setup/configuration-child/invocation.json": {
+    "bytes": 1254,
+    "sha256": "3f71923f1429c69b844216a6213e6962a49cd070ac1b2e25b1fc2fad140425a4"
+  },
+  "cold-memory-fusion-paired/setup/configuration-child/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/configuration-child/stdout": {
+    "bytes": 697,
+    "sha256": "db245179354d835e078c8ce51c7bda99fba9e7b607cff6c9bfec7ecd850a1e15"
+  },
+  "cold-memory-fusion-paired/setup/derived-paired-binding.json": {
+    "bytes": 229322,
+    "sha256": "a3d33bcc675e78ba27e37a2f18d81e43928fd8cf48fd9d09e1c2602d2a9b3d67"
+  },
+  "cold-memory-fusion-paired/setup/fusion-qualification-artifact/official-metadata.json": {
+    "bytes": 769,
+    "sha256": "531dbd98ff51660ab8f2cc84d4b15f65e88073b9d8fe0640a20833cb47a0a242"
+  },
+  "cold-memory-fusion-paired/setup/fusion-qualification-artifact/official-artifact.zip": {
+    "bytes": 18498695,
+    "sha256": "3ac39db8078412044bd0f39239daf2e32f0b413ed485f68f1e981deab0984b9d"
+  },
+  "cold-memory-fusion-paired/setup/guest-source.bochsrc": {
+    "bytes": 515,
+    "sha256": "dd1a0e9945b6940afd7117a5529d2fff7afb1133e645eaff4fdb2ff99bdc926e"
+  },
+  "cold-memory-fusion-paired/setup/independent-audit.json": {
+    "bytes": 1020,
+    "sha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2"
+  },
+  "cold-memory-fusion-paired/setup/inputs-before-restore.json": {
+    "bytes": 1398,
+    "sha256": "2426a01c8184ab336cc53bc257053d9e72170ffcb80cd480ba96d4292a313fa0"
+  },
+  "cold-memory-fusion-paired/setup/materialization/admission-command.json": {
+    "bytes": 526,
+    "sha256": "068bd8ae839b7028440680307db23c8a0b2afe0a5af64ee0e038cd6d14bfe2ce"
+  },
+  "cold-memory-fusion-paired/setup/materialization/admission.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/materialization/admission-exit.json": {
+    "bytes": 164,
+    "sha256": "3c447a69694dbad5ada979f8991bf4c77c22c29b314a73d7a1d968a5ccef284f"
+  },
+  "cold-memory-fusion-paired/setup/materialization/admission.stdout": {
+    "bytes": 17830,
+    "sha256": "9c623e2d2b9492ada642e6cde46b768d5d029c4f0ed94ca3b4619be9b4fbbfe2"
+  },
+  "cold-memory-fusion-paired/setup/materialization/driver-identity-command.json": {
+    "bytes": 311,
+    "sha256": "624861085cdb9932d50b96daf6d188337b22279cd5b8ffe717c25e6489a8b2d3"
+  },
+  "cold-memory-fusion-paired/setup/materialization/driver-identity-exit.json": {
+    "bytes": 165,
+    "sha256": "046780bacf9fdb1007979f199d7ee27279b5f0c18722d70c8eef16fe3cd5226c"
+  },
+  "cold-memory-fusion-paired/setup/materialization/driver-identity.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/materialization/driver-identity.stdout": {
+    "bytes": 5338,
+    "sha256": "0c9f6a233c8a205a95e3ec30dc3fa5c5bd2558f327dda454dcb71328eeec367e"
+  },
+  "cold-memory-fusion-paired/setup/materialization/materialization-proof.json": {
+    "bytes": 38407,
+    "sha256": "fc5c5a2af4f730bce635514be2ff165d15ece1758d3d5829d972537de69f4cce"
+  },
+  "cold-memory-fusion-paired/setup/restore-binding.json": {
+    "bytes": 8863,
+    "sha256": "56b14546192e6fb7bd73e49795820ebedb32a967a89d52d14bcd3994781f8bb4"
+  },
+  "cold-memory-fusion-paired/setup/restore-child/exit.json": {
+    "bytes": 417,
+    "sha256": "c87081d042239d6b7df7ed72643e4f052d3a21740ecbb8357b879ac7481f3b85"
+  },
+  "cold-memory-fusion-paired/setup/restore-child/invocation.json": {
+    "bytes": 820,
+    "sha256": "a9e4fa240f4b0e750c07c1e13a87dd1f9eb4d127f22c7b4cf35856d8386a01c0"
+  },
+  "cold-memory-fusion-paired/setup/restore-child/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/restore-child/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/restored-before.json": {
+    "bytes": 221989,
+    "sha256": "81e622e778c78745ae4d695c23aaa7bbc11ad4d8a4dd6c77de6bb345a111db74"
+  },
+  "cold-memory-fusion-paired/setup/setup-result.json": {
+    "bytes": 35865,
+    "sha256": "4bd2b93def87c1c99153130a5f2bb35f5d2817bf821d79f740738289b2b3ebd4"
+  },
+  "cold-memory-fusion-paired/setup/source-before-setup.json": {
+    "bytes": 33521,
+    "sha256": "a35465a672427f5ddbf72c3f85ffaaf3abb6a65872e383ba45df6f5993bca536"
+  },
+  "cold-memory-fusion-paired/setup/upstream-0/exit.json": {
+    "bytes": 409,
+    "sha256": "65cc4dd97cbacc4d5752da89122ddf899c9763de2ecaeb7bab5b019fd908381e"
+  },
+  "cold-memory-fusion-paired/setup/upstream-0/invocation.json": {
+    "bytes": 685,
+    "sha256": "1c488cc658ac9b62e85aa45f609229e185c6620562caa727d22ebec6e463e9f4"
+  },
+  "cold-memory-fusion-paired/setup/upstream-0/stdout": {
+    "bytes": 100,
+    "sha256": "3b80b7b36a3514da069133c1b8d9741f9509ec0c833c5fbb09d331d66433dc41"
+  },
+  "cold-memory-fusion-paired/setup/upstream-1/exit.json": {
+    "bytes": 403,
+    "sha256": "9b2e099c2653cdc142941a9f313c0e2de8455912d38e8b4a0f450239c4a1a96f"
+  },
+  "cold-memory-fusion-paired/setup/upstream-0/stderr": {
+    "bytes": 586,
+    "sha256": "3e70934f1909b0f5a846d62237fcc1509d733b9fb0321187024723dfc67176d3"
+  },
+  "cold-memory-fusion-paired/setup/upstream-1/invocation.json": {
+    "bytes": 768,
+    "sha256": "902227261bf31a70bbdd05aa0cd28a1ddf1687204c7a5babe83ee6f400e24851"
+  },
+  "cold-memory-fusion-paired/setup/upstream-1/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/upstream-1/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/upstream-2/exit.json": {
+    "bytes": 433,
+    "sha256": "2f8502d3da696df05070e37256d52e1532a2b072b1b74ebecdfbd1ac9216a615"
+  },
+  "cold-memory-fusion-paired/setup/upstream-2/stderr": {
+    "bytes": 116,
+    "sha256": "5d9e7d35ab19a5b68b608b47b0b6b4a3d5e115caa23d7cebd4ee589da180975a"
+  },
+  "cold-memory-fusion-paired/setup/upstream-2/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup/upstream-2/invocation.json": {
+    "bytes": 792,
+    "sha256": "f8dab6e6e97bb410c57ff25becab3de2071ab0165d68a61e0e64bfcb96469907"
+  },
+  "cold-memory-fusion-paired/setup/upstream-3/exit.json": {
+    "bytes": 410,
+    "sha256": "eac3881a1c81e53fa614eb7b59e4ed6fc40e0a41485c00f91c1c39fa716d5b14"
+  },
+  "cold-memory-fusion-paired/setup/upstream-3/invocation.json": {
+    "bytes": 733,
+    "sha256": "f3ee87490bf72a83c840fef0afe31ec1f47e32531ccafbe94726b0a8ea7e2ff0"
+  },
+  "cold-memory-fusion-paired/setup/upstream-3/stderr": {
+    "bytes": 60,
+    "sha256": "188a01a344b2dffbbfed4263e3f63af7b9836ca545e76580cab3f3ef84b88e03"
+  },
+  "cold-memory-fusion-paired/setup/upstream-3/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup-child/exit.json": {
+    "bytes": 425,
+    "sha256": "daca500e58eedd1e5e75c80c1d4b7424aeb411354d722c3b4de17b73ee470550"
+  },
+  "cold-memory-fusion-paired/setup-child/invocation.json": {
+    "bytes": 988,
+    "sha256": "a414bbf53ec99403c9cc4d8c92c6c8a568321df5a67f57b11b73e1bd2c86bf62"
+  },
+  "cold-memory-fusion-paired/setup-child/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired/setup-child/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired-parent/stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cold-memory-fusion-paired-parent/stdout": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

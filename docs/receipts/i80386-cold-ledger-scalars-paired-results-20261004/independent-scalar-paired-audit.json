@@ -1,0 +1,20 @@
+{
+  "status": "PASS_INDEPENDENT_PLAIN_JS_V_BATCHED_NEGATIVE_PAIRED_AUDIT",
+  "officialMembers": 266,
+  "children": 18,
+  "sourceRolePaths": 364,
+  "host": "AMD EPYC 7763, four logical CPUs",
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "baselineMeanExecutionCpuSeconds": 0.4089694285714286,
+  "candidateMeanExecutionCpuSeconds": 2.1476405714285716,
+  "meanReduction": -4.251347463624595,
+  "executionCpuSpeedRatio": 0.19042731545129526,
+  "favorablePairs": 0,
+  "gatePassed": false,
+  "baselineMeanExecutionWallSeconds": 0.1986547262857143,
+  "candidateMeanExecutionWallSeconds": 1.7766286681428571,
+  "candidateOverBaselineCpu": 5.251347463624595,
+  "semanticProof": "Nine native children reset/final/last-return166 and N/Q; nine JS representedCPU/Q; all18 fullboard/RAMhash/16475PIO/source-input-finalmaps exact",
+  "scope": "PlainJS beats nativebatched in all7 measured pairs. No old-versus-scalar or cross-host gain inference. No physical386/fullboot/adoption."
+}

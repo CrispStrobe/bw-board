@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/runner/work/bw-board/bw-board/paired/scripts/cold-performance-paired/hosted.py", line 40, in <module>
+    require(len(sys.argv)==3,'one comparison and closed output');main(sys.argv[1],sys.argv[2])
+                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/paired/scripts/cold-performance-paired/hosted.py", line 29, in main
+    paired_main(request,setup/'derived-paired-binding.json')
+  File "/home/runner/work/bw-board/bw-board/paired/scripts/cold-performance-paired/parent.py", line 178, in main
+    record['arms'][arm]={'execution':metrics,'wholeChild':lifecycle,'rawReceipt':str(ns/'receipt'/'receipt.json'),'rawReceiptSha256':fingerprint(ns/'receipt'/'receipt.json')['sha256']};write(ns/'terminal-validation.json',record['arms'][arm]);write(out/'progress-'+ns.name+'.json',report)
+                                                                                                                                                                                                                                                        ~~~~~~~~~~~~~~~^~~~~~~~
+TypeError: unsupported operand type(s) for +: 'PosixPath' and 'str'

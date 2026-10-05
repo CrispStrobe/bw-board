@@ -1,6 +1,8 @@
 # Private uniform-page span: native parity results
 
-All three fresh hosted native parity cells pass independent audit for the original closed IN8 free-ROM fixture. This qualifies the private candidate's semantics for this fixture. It supplies no performance result, adoption, or broader AT/Windows/Doom admission.
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+All three fresh hosted native parity cells pass independent audit for the original closed IN8 free-ROM fixture. This qualifies the private candidate's semantics for this fixture. It supplies no performance result, adoption, or broader AT/broader guest/broader game admission.
 
 The [source controls](I80386-OWNED-SPAN-SOURCE-RESULTS.md) freeze the provider at `8e35080d29b32e9fcee5f8fbc5800209c74df2e7` (110 inputs). The separate [runtime integration](I80386-OWNED-SPAN-RUNTIME-PREPARATION.md) is `bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1` (116 inputs). The compiled identity remains `fe1eff2039520536350922a2164c8bbe29404c68` (103 unchanged inputs), with original addon SHA256 `8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841`. The provider proof removes per-byte span validation only for admitted uniform pages; original read/write/PAGE methods and memory effects remain unchanged. It combines neither dispatch nor bulk-clock experiments.
 

@@ -1,0 +1,135 @@
+name: Cold native batched external perf profile (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      enable_profile:
+        description: Separately reviewed one whole-worker perf profile
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-native-batched-perf-profile
+  cancel-in-progress: false
+jobs:
+  pairs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: profiler
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_profile
+        with:
+          ref: d9fbe713c7a2d878b3311ac14620d055b6e16ae9
+          path: paired
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Require genuine reviewed three-arm audit before setup
+        if: inputs.enable_profile
+        id: pins
+        run: |
+          python3 -B - <<'PYCODE'
+          import sys,os
+          sys.path.insert(0,'paired/scripts/cold-performance-paired')
+          import importlib.util
+          spec=importlib.util.spec_from_file_location('guard','paired/scripts/cold-performance-paired/setup-entry.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          c,a=m.pending_guard()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              for k,v in [('qualifier',c['qualifierRevision']),('compiled',c['compiledRevision']),('driver',c['driverRevision']),*[(k,v['revision']) for k,v in c['workers'].items()]]:f.write(k+'='+v+'\n')
+          PYCODE
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.qualifier }}
+          path: runtime
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.compiled }}
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.native }}
+          path: native-worker
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        with:
+          ref: ${{ steps.pins.outputs.plainJs }}
+          path: plain-worker
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        with:
+          node-version: 22.23.3
+      - name: Restore authenticated artifacts without arms
+        if: inputs.enable_profile && steps.pins.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          BW_HOT_NAPI_PROFILE: ''
+          NODE_V8_COVERAGE: ''
+          PYTHONPATH: ''
+          PYTHONSTARTUP: ''
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/cold-native-profile-context"
+          python3 -B profiler/scripts/cold-native-perf-profile/setup.py "$(command -v node)" > "$RUNNER_TEMP/cold-native-profile-context/setup.stdout" 2> "$RUNNER_TEMP/cold-native-profile-context/setup.stderr"
+      - name: Exactly one unchanged batched worker under whole-process perf
+        if: inputs.enable_profile && success()
+        env:
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          BW_HOT_NAPI_PROFILE: ''
+          NODE_V8_COVERAGE: ''
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          sudo -n -- /usr/bin/python3 -I -B profiler/scripts/cold-native-perf-profile/profile.py "$RUNNER_TEMP/cold-native-perf-profile" "$(command -v node)" "$GITHUB_SHA" > "$RUNNER_TEMP/cold-native-profile-context/profile.stdout" 2> "$RUNNER_TEMP/cold-native-profile-context/profile.stderr"
+      - name: Retain first failure or whole-process profile evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-native-perf-profile-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-paired-performance
+            ${{ runner.temp }}/cold-native-profile-context
+            ${{ runner.temp }}/cold-native-perf-profile
+            ${{ github.workspace }}/profiler/scripts/cold-native-perf-profile
+            ${{ github.workspace }}/paired/scripts/cold-performance-paired
+            ${{ github.workspace }}/profiler/.github/workflows/i80386-cold-native-perf-profile.yml
+          include-hidden-files: true
+          if-no-files-found: error

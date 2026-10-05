@@ -1,0 +1,349 @@
+﻿2026-10-03T12:48:11.5278417Z Current runner version: '2.337.0'
+2026-10-03T12:48:11.5305716Z ##[group]Runner Image Provisioner
+2026-10-03T12:48:11.5307090Z Hosted Compute Agent
+2026-10-03T12:48:11.5307987Z Version: 20260901.588
+2026-10-03T12:48:11.5308975Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+2026-10-03T12:48:11.5310087Z Build Date: 2026-09-01T19:56:44Z
+2026-10-03T12:48:11.5310786Z Worker ID: {67578737-a1a7-4e5e-934e-bf26957d13cb}
+2026-10-03T12:48:11.5311544Z Azure Region: eastus2
+2026-10-03T12:48:11.5312129Z ##[endgroup]
+2026-10-03T12:48:11.5313939Z ##[group]Operating System
+2026-10-03T12:48:11.5314757Z Ubuntu
+2026-10-03T12:48:11.5315278Z 24.04.5
+2026-10-03T12:48:11.5315853Z LTS
+2026-10-03T12:48:11.5316374Z ##[endgroup]
+2026-10-03T12:48:11.5316955Z ##[group]Runner Image
+2026-10-03T12:48:11.5317596Z Image: ubuntu-24.04
+2026-10-03T12:48:11.5318159Z Version: 20260927.320.1
+2026-10-03T12:48:11.5319448Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-03T12:48:11.5321063Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+2026-10-03T12:48:11.5322075Z ##[endgroup]
+2026-10-03T12:48:11.5323173Z ##[group]GITHUB_TOKEN Permissions
+2026-10-03T12:48:11.5326434Z Contents: write
+2026-10-03T12:48:11.5327050Z Metadata: read
+2026-10-03T12:48:11.5327618Z ##[endgroup]
+2026-10-03T12:48:11.5329728Z Secret source: Actions
+2026-10-03T12:48:11.5330666Z Cache mode: write
+2026-10-03T12:48:11.5331667Z Prepare workflow directory
+2026-10-03T12:48:11.5658175Z Prepare all required actions
+2026-10-03T12:48:11.5706896Z Getting action download info
+2026-10-03T12:48:11.8241414Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-03T12:48:11.9221228Z Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-10-03T12:48:12.0076855Z Download action repository 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-10-03T12:48:12.2056279Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-10-03T12:48:12.4201904Z Complete job name: motion
+2026-10-03T12:48:12.4969838Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-10-03T12:48:12.4971221Z with:
+2026-10-03T12:48:12.4971920Z   repository: CrispStrobe/bw-board
+2026-10-03T12:48:12.4978988Z   token: ***
+2026-10-03T12:48:12.4979457Z   ssh-strict: true
+2026-10-03T12:48:12.4979883Z   ssh-user: git
+2026-10-03T12:48:12.4980318Z   persist-credentials: true
+2026-10-03T12:48:12.4980794Z   clean: true
+2026-10-03T12:48:12.4981272Z   sparse-checkout-cone-mode: true
+2026-10-03T12:48:12.4981782Z   fetch-depth: 1
+2026-10-03T12:48:12.4982201Z   fetch-tags: false
+2026-10-03T12:48:12.4982634Z   show-progress: true
+2026-10-03T12:48:12.4983065Z   lfs: false
+2026-10-03T12:48:12.4983485Z   submodules: false
+2026-10-03T12:48:12.4984344Z   set-safe-directory: true
+2026-10-03T12:48:12.4984861Z   allow-unsafe-pr-checkout: false
+2026-10-03T12:48:12.4985775Z ##[endgroup]
+2026-10-03T12:48:12.6066981Z Syncing repository: CrispStrobe/bw-board
+2026-10-03T12:48:12.6069753Z ##[group]Getting Git version info
+2026-10-03T12:48:12.6071034Z Working directory is '/home/runner/work/bw-board/bw-board'
+2026-10-03T12:48:12.6072855Z [command]/usr/bin/git version
+2026-10-03T12:48:12.6212199Z git version 2.55.0
+2026-10-03T12:48:12.6236491Z ##[endgroup]
+2026-10-03T12:48:12.6252341Z Temporarily overriding HOME='/home/runner/work/_temp/18953c7b-d254-49f2-89a0-a30a4e36bbed' before making global git config changes
+2026-10-03T12:48:12.6254607Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-03T12:48:12.6259602Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+2026-10-03T12:48:12.6316497Z Deleting the contents of '/home/runner/work/bw-board/bw-board'
+2026-10-03T12:48:12.6322646Z ##[group]Initializing the repository
+2026-10-03T12:48:12.6327187Z [command]/usr/bin/git init /home/runner/work/bw-board/bw-board
+2026-10-03T12:48:12.6474424Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-03T12:48:12.6475865Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-03T12:48:12.6477640Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-03T12:48:12.6478874Z hint: call:
+2026-10-03T12:48:12.6479958Z hint:
+2026-10-03T12:48:12.6481090Z hint: 	git config --global init.defaultBranch <name>
+2026-10-03T12:48:12.6482154Z hint:
+2026-10-03T12:48:12.6483089Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-03T12:48:12.6484896Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-03T12:48:12.6486171Z hint:
+2026-10-03T12:48:12.6486888Z hint: 	git branch -m <name>
+2026-10-03T12:48:12.6487673Z hint:
+2026-10-03T12:48:12.6488801Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-03T12:48:12.6490482Z Initialized empty Git repository in /home/runner/work/bw-board/bw-board/.git/
+2026-10-03T12:48:12.6493205Z [command]/usr/bin/git remote add origin https://github.com/CrispStrobe/bw-board
+2026-10-03T12:48:12.6545546Z ##[endgroup]
+2026-10-03T12:48:12.6546854Z ##[group]Disabling automatic garbage collection
+2026-10-03T12:48:12.6549123Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-03T12:48:12.6583343Z ##[endgroup]
+2026-10-03T12:48:12.6584794Z ##[group]Setting up auth
+2026-10-03T12:48:12.6590514Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-03T12:48:12.6627758Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-03T12:48:12.7022801Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-03T12:48:12.7060073Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-03T12:48:12.7285426Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-03T12:48:12.7319890Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-03T12:48:12.7543953Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-03T12:48:12.7585047Z ##[endgroup]
+2026-10-03T12:48:12.7586297Z ##[group]Fetching the repository
+2026-10-03T12:48:12.7594918Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d1f2c8ebfc5e4e76d5fc81f930588c13de13e974:refs/remotes/origin/test/wasm-live-word-dispatch-20261002
+2026-10-03T12:48:14.0127259Z From https://github.com/CrispStrobe/bw-board
+2026-10-03T12:48:14.0129742Z  * [new ref]         d1f2c8ebfc5e4e76d5fc81f930588c13de13e974 -> origin/test/wasm-live-word-dispatch-20261002
+2026-10-03T12:48:14.0139608Z ##[endgroup]
+2026-10-03T12:48:14.0141808Z ##[group]Determining the checkout info
+2026-10-03T12:48:14.0149583Z ##[endgroup]
+2026-10-03T12:48:14.0150808Z [command]/usr/bin/git sparse-checkout disable
+2026-10-03T12:48:14.0192881Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-03T12:48:14.0226872Z ##[group]Checking out the ref
+2026-10-03T12:48:14.0231804Z [command]/usr/bin/git checkout --progress --force -B test/wasm-live-word-dispatch-20261002 refs/remotes/origin/test/wasm-live-word-dispatch-20261002
+2026-10-03T12:48:14.6332381Z Switched to a new branch 'test/wasm-live-word-dispatch-20261002'
+2026-10-03T12:48:14.6338256Z branch 'test/wasm-live-word-dispatch-20261002' set up to track 'origin/test/wasm-live-word-dispatch-20261002'.
+2026-10-03T12:48:14.6366506Z ##[endgroup]
+2026-10-03T12:48:14.6413127Z [command]/usr/bin/git log -1 --format=%H
+2026-10-03T12:48:14.6440234Z d1f2c8ebfc5e4e76d5fc81f930588c13de13e974
+2026-10-03T12:48:14.6785286Z ##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+2026-10-03T12:48:14.6785850Z with:
+2026-10-03T12:48:14.6786135Z   node-version: 22
+2026-10-03T12:48:14.6786438Z   always-auth: false
+2026-10-03T12:48:14.6786748Z   check-latest: false
+2026-10-03T12:48:14.6789600Z   token: ***
+2026-10-03T12:48:14.6789895Z ##[endgroup]
+2026-10-03T12:48:14.8189416Z Found in cache @ /opt/hostedtoolcache/node/22.23.3/x64
+2026-10-03T12:48:14.8194406Z (node:2310) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-03T12:48:14.8195394Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-03T12:48:14.8197239Z ##[group]Environment details
+2026-10-03T12:48:15.2072588Z node: v22.23.3
+2026-10-03T12:48:15.2073612Z npm: 10.9.9
+2026-10-03T12:48:15.2074496Z yarn: 1.22.22
+2026-10-03T12:48:15.2075713Z ##[endgroup]
+2026-10-03T12:48:15.2268786Z ##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+2026-10-03T12:48:15.2269268Z with:
+2026-10-03T12:48:15.2269485Z   name: labwired-wasm-a
+2026-10-03T12:48:15.2269716Z   path: lw
+2026-10-03T12:48:15.2269922Z   merge-multiple: false
+2026-10-03T12:48:15.2270170Z   repository: CrispStrobe/bw-board
+2026-10-03T12:48:15.2270434Z   run-id: 37123103124
+2026-10-03T12:48:15.2270653Z ##[endgroup]
+2026-10-03T12:48:15.3751492Z Downloading single artifact
+2026-10-03T12:48:15.3925158Z (node:2341) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-03T12:48:15.3926845Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-03T12:48:15.4803267Z Preparing to download the following artifacts:
+2026-10-03T12:48:15.4805349Z - labwired-wasm-a (ID: 11273543513, Size: 10055291, Expected Digest: sha256:cccc264ef09baf58b9351e8d5a5eda13e91451af1efe28c89601e24dfb732040)
+2026-10-03T12:48:15.6026248Z Redirecting to blob download url: https://productionresultssa5.blob.core.windows.net/actions-results/7fd7d98f-b764-4d2a-a2dd-9017589064f8/workflow-job-run-447857d0-ad06-5f6e-babe-c7ea657c103d/artifacts/1bca951d666cf3b0cfc5fd51668238c848d1c3b393365a14975a1fe724170225.zip
+2026-10-03T12:48:15.6028418Z Starting download of artifact to: /home/runner/work/bw-board/bw-board/lw
+2026-10-03T12:48:15.6653581Z (node:2341) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-10-03T12:48:16.0825333Z SHA256 digest of downloaded artifact is cccc264ef09baf58b9351e8d5a5eda13e91451af1efe28c89601e24dfb732040
+2026-10-03T12:48:16.0826942Z Artifact download completed successfully.
+2026-10-03T12:48:16.0827880Z Total of 1 artifact(s) downloaded
+2026-10-03T12:48:16.0830924Z Download artifact has finished successfully
+2026-10-03T12:48:16.0987087Z ##[group]Run sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+2026-10-03T12:48:16.0988104Z [36;1msudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi[0m
+2026-10-03T12:48:16.1258452Z shell: /usr/bin/bash -e {0}
+2026-10-03T12:48:16.1258774Z ##[endgroup]
+2026-10-03T12:48:25.3901589Z Selecting previously unselected package binutils-arm-none-eabi.
+2026-10-03T12:48:25.4184926Z (Reading database ... 
+2026-10-03T12:48:25.4185770Z (Reading database ... 5%
+2026-10-03T12:48:25.4186516Z (Reading database ... 10%
+2026-10-03T12:48:25.4187326Z (Reading database ... 15%
+2026-10-03T12:48:25.4187876Z (Reading database ... 20%
+2026-10-03T12:48:25.4188632Z (Reading database ... 25%
+2026-10-03T12:48:25.4189407Z (Reading database ... 30%
+2026-10-03T12:48:25.4189964Z (Reading database ... 35%
+2026-10-03T12:48:25.4190466Z (Reading database ... 40%
+2026-10-03T12:48:25.4191571Z (Reading database ... 45%
+2026-10-03T12:48:25.4191943Z (Reading database ... 50%
+2026-10-03T12:48:25.4247571Z (Reading database ... 55%
+2026-10-03T12:48:25.5258885Z (Reading database ... 60%
+2026-10-03T12:48:25.7340583Z (Reading database ... 65%
+2026-10-03T12:48:25.9379297Z (Reading database ... 70%
+2026-10-03T12:48:26.1230559Z (Reading database ... 75%
+2026-10-03T12:48:26.2391695Z (Reading database ... 80%
+2026-10-03T12:48:26.3820877Z (Reading database ... 85%
+2026-10-03T12:48:26.4702144Z (Reading database ... 90%
+2026-10-03T12:48:26.5506679Z (Reading database ... 95%
+2026-10-03T12:48:26.5508241Z (Reading database ... 100%
+2026-10-03T12:48:26.5509138Z (Reading database ... 202296 files and directories currently installed.)
+2026-10-03T12:48:26.5548897Z Preparing to unpack .../binutils-arm-none-eabi_2.42-1ubuntu1+23_amd64.deb ...
+2026-10-03T12:48:26.5578040Z Unpacking binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+2026-10-03T12:48:26.6542285Z Selecting previously unselected package gcc-arm-none-eabi.
+2026-10-03T12:48:26.6666437Z Preparing to unpack .../gcc-arm-none-eabi_15%3a13.2.rel1-2_amd64.deb ...
+2026-10-03T12:48:26.6685614Z Unpacking gcc-arm-none-eabi (15:13.2.rel1-2) ...
+2026-10-03T12:48:28.1227426Z Setting up binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+2026-10-03T12:48:28.1250359Z Setting up gcc-arm-none-eabi (15:13.2.rel1-2) ...
+2026-10-03T12:48:28.1273307Z Processing triggers for man-db (2.12.0-4build2) ...
+2026-10-03T12:48:28.1295450Z Not building database; man-db/auto-update is not 'true'.
+2026-10-03T12:48:28.1306221Z Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+2026-10-03T12:48:28.7840304Z 
+2026-10-03T12:48:28.7841206Z Running kernel seems to be up-to-date.
+2026-10-03T12:48:28.7841685Z 
+2026-10-03T12:48:28.7842024Z No services need to be restarted.
+2026-10-03T12:48:28.7842425Z 
+2026-10-03T12:48:28.7842756Z No containers need to be restarted.
+2026-10-03T12:48:28.7843192Z 
+2026-10-03T12:48:28.7843618Z No user sessions are running outdated binaries.
+2026-10-03T12:48:28.7844443Z 
+2026-10-03T12:48:28.7845122Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+2026-10-03T12:48:29.6494797Z ##[group]Run echo '{"type":"commonjs"}' > lw/nodejs/package.json
+2026-10-03T12:48:29.6495547Z [36;1mecho '{"type":"commonjs"}' > lw/nodejs/package.json[0m
+2026-10-03T12:48:29.6495902Z [36;1m{[0m
+2026-10-03T12:48:29.6496112Z [36;1m  lscpu[0m
+2026-10-03T12:48:29.6496328Z [36;1m  node --version[0m
+2026-10-03T12:48:29.6496587Z [36;1m  arm-none-eabi-gcc --version[0m
+2026-10-03T12:48:29.6496941Z [36;1m  sha256sum test/fixtures/labwired/microbit-motion/*[0m
+2026-10-03T12:48:29.6497303Z [36;1m} > motion-runner.txt[0m
+2026-10-03T12:48:29.6497558Z [36;1mcat lw/BUILD-INFO.json[0m
+2026-10-03T12:48:29.6562936Z shell: /usr/bin/bash -e {0}
+2026-10-03T12:48:29.6563208Z ##[endgroup]
+2026-10-03T12:48:29.6764037Z {
+2026-10-03T12:48:29.6764769Z   "ref": "226fe97835bb5bed06cbb377b3d218c661937a49",
+2026-10-03T12:48:29.6765431Z   "wasmBindgen": "0.2.121",
+2026-10-03T12:48:29.6767617Z   "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+2026-10-03T12:48:29.6768951Z   "builtAt": "2026-10-03T12:37:03.184Z",
+2026-10-03T12:48:29.6769286Z   "targets": {
+2026-10-03T12:48:29.6769535Z     "nodejs": {
+2026-10-03T12:48:29.6769793Z       "labwired_wasm.js": {
+2026-10-03T12:48:29.6770083Z         "bytes": 135762,
+2026-10-03T12:48:29.6770374Z         "brotliBytes": 25396,
+2026-10-03T12:48:29.6770910Z         "sha256": "aa623d1543276fb7ea3dc4bd4efe66bc109202e8d863737c6ac5106313560351"
+2026-10-03T12:48:29.6771406Z       },
+2026-10-03T12:48:29.6771683Z       "labwired_wasm_bg.wasm": {
+2026-10-03T12:48:29.6771988Z         "bytes": 27504678,
+2026-10-03T12:48:29.6772293Z         "brotliBytes": 3055678,
+2026-10-03T12:48:29.6772870Z         "sha256": "81ede3127faf782c39d0dfcb797f7bc0bcc033c36a5aa1b45bbc80e9547cde18"
+2026-10-03T12:48:29.6773582Z       }
+2026-10-03T12:48:29.6774075Z     },
+2026-10-03T12:48:29.6774314Z     "web": {
+2026-10-03T12:48:29.6774571Z       "labwired_wasm.js": {
+2026-10-03T12:48:29.6774867Z         "bytes": 138392,
+2026-10-03T12:48:29.6775144Z         "brotliBytes": 25940,
+2026-10-03T12:48:29.6775585Z         "sha256": "5a450ce5d2e526cc8c2a4109fde9bba8bc97108cecc434fd6c30e1aeb8e662d5"
+2026-10-03T12:48:29.6775999Z       },
+2026-10-03T12:48:29.6776226Z       "labwired_wasm_bg.wasm": {
+2026-10-03T12:48:29.6776492Z         "bytes": 27504678,
+2026-10-03T12:48:29.6776751Z         "brotliBytes": 3055678,
+2026-10-03T12:48:29.6777187Z         "sha256": "81ede3127faf782c39d0dfcb797f7bc0bcc033c36a5aa1b45bbc80e9547cde18"
+2026-10-03T12:48:29.6777598Z       }
+2026-10-03T12:48:29.6777788Z     }
+2026-10-03T12:48:29.6777970Z   },
+2026-10-03T12:48:29.6778168Z   "rawBytes": 136465313
+2026-10-03T12:48:29.6778386Z }
+2026-10-03T12:48:29.6832873Z ##[group]Run set -euo pipefail
+2026-10-03T12:48:29.6833182Z [36;1mset -euo pipefail[0m
+2026-10-03T12:48:29.6833603Z [36;1mnode test/labwired-microbit-motion.test.mjs 2>&1 | tee motion-results.txt[0m
+2026-10-03T12:48:29.6834505Z [36;1mtests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' motion-results.txt | tail -1)[0m
+2026-10-03T12:48:29.6835001Z [36;1mfails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' motion-results.txt | tail -1)[0m
+2026-10-03T12:48:29.6835487Z [36;1mskips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' motion-results.txt | tail -1)[0m
+2026-10-03T12:48:29.6835966Z [36;1m[ "${tests:-0}" -ge 2 ] && [ "${fails:-1}" = 0 ] && [ "${skips:-1}" = 0 ][0m
+2026-10-03T12:48:29.6836421Z [36;1m[ "$(grep -c '^MICROBIT_WASM_SAMPLE ' motion-results.txt)" -eq 5 ][0m
+2026-10-03T12:48:29.6895133Z shell: /usr/bin/bash -e {0}
+2026-10-03T12:48:29.6895394Z env:
+2026-10-03T12:48:29.6895691Z   LABWIRED_WASM: /home/runner/work/bw-board/bw-board/lw/nodejs
+2026-10-03T12:48:29.6896088Z   LABWIRED_MOTION_REQUIRED: 1
+2026-10-03T12:48:29.6896350Z   LABWIRED_REQUIRE_MOTION_RTX: 1
+2026-10-03T12:48:29.6896606Z ##[endgroup]
+2026-10-03T12:48:30.3908673Z MICROBIT_WASM_GUEST_SHA256=6038f4d3cb506aca5a2b2a84cecd631c7d4cea9d4cb8ef707468335368397cfe
+2026-10-03T12:48:31.6254718Z MICROBIT_WASM_SAMPLE {"index":0,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.233611276,"rtx":0.8106281285321195,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":112,"magSamples":112,"scans":2145}
+2026-10-03T12:48:32.8550613Z MICROBIT_WASM_SAMPLE {"index":1,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.229080047,"rtx":0.8136166577928345,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":212,"magSamples":212,"scans":4053}
+2026-10-03T12:48:34.0896893Z MICROBIT_WASM_SAMPLE {"index":2,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.2340224640000006,"rtx":0.8103580195441236,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":312,"magSamples":312,"scans":5960}
+2026-10-03T12:48:35.3421810Z MICROBIT_WASM_SAMPLE {"index":3,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.251843994,"rtx":0.7988215822362288,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":412,"magSamples":412,"scans":7867}
+2026-10-03T12:48:36.6100324Z MICROBIT_WASM_SAMPLE {"index":4,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.2672517119999993,"rtx":0.7891092121089204,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":512,"magSamples":512,"scans":9774}
+2026-10-03T12:48:36.6127300Z TAP version 13
+2026-10-03T12:48:36.6138496Z # Subtest: selected micro:bit motion guest on actual WASM
+2026-10-03T12:48:36.6139950Z     # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons
+2026-10-03T12:48:36.6147754Z     ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons
+2026-10-03T12:48:36.6148776Z       ---
+2026-10-03T12:48:36.6149251Z       duration_ms: 381.382062
+2026-10-03T12:48:36.6149738Z       type: 'test'
+2026-10-03T12:48:36.6150118Z       ...
+2026-10-03T12:48:36.6154158Z     # Subtest: all five 64M-cycle windows meet the unchanged 1x floor
+2026-10-03T12:48:36.6160357Z     not ok 2 - all five 64M-cycle windows meet the unchanged 1x floor
+2026-10-03T12:48:36.6161536Z       ---
+2026-10-03T12:48:36.6162000Z       duration_ms: 6412.510883
+2026-10-03T12:48:36.6162506Z       type: 'test'
+2026-10-03T12:48:36.6163449Z       location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:108:5'
+2026-10-03T12:48:36.6164754Z       failureType: 'testCodeFailure'
+2026-10-03T12:48:36.6166049Z       error: 'all windows must meet 1x: [0.8106281285321195,0.8136166577928345,0.8103580195441236,0.7988215822362288,0.7891092121089204]'
+2026-10-03T12:48:36.6167183Z       code: 'ERR_ASSERTION'
+2026-10-03T12:48:36.6167705Z       name: 'AssertionError'
+2026-10-03T12:48:36.6168152Z       expected: true
+2026-10-03T12:48:36.6168519Z       actual: false
+2026-10-03T12:48:36.6188035Z       operator: '=='
+2026-10-03T12:48:36.6188528Z       stack: |-
+2026-10-03T12:48:36.6189913Z         TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:131:20)
+2026-10-03T12:48:36.6191044Z         Test.runInAsyncScope (node:async_hooks:214:14)
+2026-10-03T12:48:36.6191777Z         Test.run (node:internal/test_runner/test:1047:25)
+2026-10-03T12:48:36.6192322Z         Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+2026-10-03T12:48:36.6192870Z         Test.postRun (node:internal/test_runner/test:1173:19)
+2026-10-03T12:48:36.6193337Z         Test.run (node:internal/test_runner/test:1101:12)
+2026-10-03T12:48:36.6193699Z         async Promise.all (index 0)
+2026-10-03T12:48:36.6194403Z         async Suite.run (node:internal/test_runner/test:1442:7)
+2026-10-03T12:48:36.6194952Z         async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+2026-10-03T12:48:36.6195368Z       ...
+2026-10-03T12:48:36.6195580Z     1..2
+2026-10-03T12:48:36.6195925Z not ok 1 - selected micro:bit motion guest on actual WASM
+2026-10-03T12:48:36.6196251Z   ---
+2026-10-03T12:48:36.6196456Z   duration_ms: 6795.088327
+2026-10-03T12:48:36.6196704Z   type: 'suite'
+2026-10-03T12:48:36.6197161Z   location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:93:1'
+2026-10-03T12:48:36.6197680Z   failureType: 'subtestsFailed'
+2026-10-03T12:48:36.6197949Z   error: '1 subtest failed'
+2026-10-03T12:48:36.6198191Z   code: 'ERR_TEST_FAILURE'
+2026-10-03T12:48:36.6198412Z   ...
+2026-10-03T12:48:36.6198600Z 1..1
+2026-10-03T12:48:36.6198781Z # tests 2
+2026-10-03T12:48:36.6198967Z # suites 1
+2026-10-03T12:48:36.6199155Z # pass 1
+2026-10-03T12:48:36.6199346Z # fail 1
+2026-10-03T12:48:36.6199533Z # cancelled 0
+2026-10-03T12:48:36.6199730Z # skipped 0
+2026-10-03T12:48:36.6199925Z # todo 0
+2026-10-03T12:48:36.6200130Z # duration_ms 6805.727351
+2026-10-03T12:48:36.6336133Z ##[error]Process completed with exit code 1.
+2026-10-03T12:48:36.6405500Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-03T12:48:36.6405942Z with:
+2026-10-03T12:48:36.6406189Z   name: selected-motion-nodejs-qualification
+2026-10-03T12:48:36.6406601Z   path: motion-results.txt
+motion-runner.txt
+lw/BUILD-INFO.json
+
+2026-10-03T12:48:36.6406968Z   if-no-files-found: error
+2026-10-03T12:48:36.6407209Z   compression-level: 6
+2026-10-03T12:48:36.6407435Z   overwrite: false
+2026-10-03T12:48:36.6407656Z   include-hidden-files: false
+2026-10-03T12:48:36.6407901Z ##[endgroup]
+2026-10-03T12:48:36.8014813Z (node:2807) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-03T12:48:36.8015677Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-03T12:48:36.8077226Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-10-03T12:48:36.8081629Z The least common ancestor is /home/runner/work/bw-board/bw-board. This will be the root directory of the artifact
+2026-10-03T12:48:36.8083653Z With the provided path, there will be 3 files uploaded
+2026-10-03T12:48:36.8085430Z Artifact name is valid!
+2026-10-03T12:48:36.8086528Z Root directory input is valid!
+2026-10-03T12:48:37.0003493Z Beginning upload of artifact content to blob storage
+2026-10-03T12:48:37.0229294Z (node:2807) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-03T12:48:37.0482629Z Uploaded bytes 3462
+2026-10-03T12:48:37.0609647Z Finished uploading artifact content to blob storage!
+2026-10-03T12:48:37.0611230Z SHA256 digest of uploaded artifact zip is d029f43c69fe7ea1fb475c9423566eb73eb280934939ea7a4c5feab4889881aa
+2026-10-03T12:48:37.0612841Z Finalizing artifact upload
+2026-10-03T12:48:37.2819060Z Artifact selected-motion-nodejs-qualification.zip successfully finalized. Artifact ID 11273884430
+2026-10-03T12:48:37.2821526Z Artifact selected-motion-nodejs-qualification has been successfully uploaded! Final size is 3462 bytes. Artifact ID is 11273884430
+2026-10-03T12:48:37.2827744Z Artifact download URL: https://github.com/CrispStrobe/bw-board/actions/runs/37123103124/artifacts/11273884430
+2026-10-03T12:48:37.3023482Z Post job cleanup.
+2026-10-03T12:48:37.3880908Z [command]/usr/bin/git version
+2026-10-03T12:48:37.3924958Z git version 2.55.0
+2026-10-03T12:48:37.3966293Z Temporarily overriding HOME='/home/runner/work/_temp/7ab9b65a-7e51-4ca6-838c-1821e1d6ef9f' before making global git config changes
+2026-10-03T12:48:37.3968030Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-03T12:48:37.3971699Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+2026-10-03T12:48:37.4014820Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-03T12:48:37.4046717Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-03T12:48:37.4305264Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-03T12:48:37.4334391Z http.https://github.com/.extraheader
+2026-10-03T12:48:37.4346073Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-03T12:48:37.4382120Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-03T12:48:37.4666024Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-03T12:48:37.4713192Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-03T12:48:37.5128040Z Cleaning up orphan processes
+2026-10-03T12:48:37.5416579Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

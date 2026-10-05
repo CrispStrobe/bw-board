@@ -1,0 +1,87 @@
+{
+  "official-run.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/run.json",
+    "bytes": 12605,
+    "sha256": "17413825a9681f97e5cea8a60d02e5e6b786d8184c4d75634b3a880f7320c27e"
+  },
+  "official-jobs.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/jobs.json",
+    "bytes": 3955,
+    "sha256": "e78cb11d9255cbca5f1b275d2c9f6e2f2a29a09bfb2d446614bd5ff17bec94ae"
+  },
+  "official-artifacts.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/artifacts.json",
+    "bytes": 785,
+    "sha256": "61d5d88dbad323fec81fa3b18bc9489f2e1c3c07edc78326609fb38064973bb8"
+  },
+  "official-retention.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/zip-retention.json",
+    "bytes": 17312,
+    "sha256": "37e5f8a10b793facb197ac411b2740ed99630173b521a098376430d5d9fd9b7d"
+  },
+  "independent-audit.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/independent-audit.json",
+    "bytes": 702,
+    "sha256": "a7ad6c1624fff84fba9bfd4c0fb0344cb4e4108774c5738a2c34f911d881c375"
+  },
+  "independent-audit.py": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/independent-audit.py",
+    "bytes": 3928,
+    "sha256": "914e8b70881529e126832b6637c291d79e67109cc1165535d5f355f94e29c433"
+  },
+  "coder-actual-audit.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/coder-actual-audit.json",
+    "bytes": 823,
+    "sha256": "eb549a9903db9087fcd35c79636a775bbd236cc23affecd2a0865716d50730f5"
+  },
+  "guest-capture.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/guest/capture.json",
+    "bytes": 992606,
+    "sha256": "85670aff7afdc34205c11b0ac46d7414e7cc8b4290d8c7052cf8e6fc4ed4841f"
+  },
+  "worker.exit.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/worker.exit.json",
+    "bytes": 1454,
+    "sha256": "115a623006302871218b0785741b59278166fa23d2ece0fba31b277af9b118f5"
+  },
+  "worker.invocation.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/worker.invocation.json",
+    "bytes": 620,
+    "sha256": "fee16e6084e3da5b32eab95d9404d9e3b69aa96dfd6c71b112517be0d183a706"
+  },
+  "final-status.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/final-status.json",
+    "bytes": 481,
+    "sha256": "f857cdcb37645c0d878e69ce1010fa20da6a228c46932f82c870a8e122cbbb2b"
+  },
+  "materialization.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/materialization.json",
+    "bytes": 339,
+    "sha256": "a184d810cb6d4327e7d82397d1cbc54cf666317c665e01cb5587a9ad23dae09c"
+  },
+  "input.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/input.json",
+    "bytes": 1025,
+    "sha256": "c477bd08e9bc46d741dd9658ea24a71113063f8c1c8f773b08c68d68d8ea597c"
+  },
+  "fixed-before.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/fixed-before.json",
+    "bytes": 23714,
+    "sha256": "6a871c38ce445e0644e159197511541feab43b768a5650ae72b5dbcf6d0fb4d0"
+  },
+  "fixed-after.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/fixed-after.json",
+    "bytes": 23714,
+    "sha256": "6a871c38ce445e0644e159197511541feab43b768a5650ae72b5dbcf6d0fb4d0"
+  },
+  "restored-before.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/restored-before.json",
+    "bytes": 138335,
+    "sha256": "7fd5f4ce83ed2150f79d96bd1090aa743d622c2d335d604d0c31d716b03cdfae"
+  },
+  "restored-after.json": {
+    "path": "/tmp/native-ram-bootstrap-first-execution-publication-20261003/selected/_temp/ram-bootstrap-execution/restored-after.json",
+    "bytes": 138335,
+    "sha256": "7fd5f4ce83ed2150f79d96bd1090aa743d622c2d335d604d0c31d716b03cdfae"
+  }
+}

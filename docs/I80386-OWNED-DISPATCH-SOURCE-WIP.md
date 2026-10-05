@@ -1,5 +1,7 @@
 # Private per-word clock dispatch candidate: source only
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The single baseline profile identified the owned clock dispatch stack as a useful place for a small experiment. Its samples do not establish a speedup or CPU cost percentage. The profiling results are being published separately in PR #249.
 
 This candidate binds the factory-owned original `nativeTick` and `quantum` methods once at setup, then calls them directly for each ordered word when `compactSink === null`. It removes the provider replay loop's temporary argument arrays and `Reflect.apply` calls. The board methods, capture-ON loop, entire preflight, independent caps, mapping and device deadlines, callback phases, and ordinary full snapshots remain unchanged.
@@ -24,7 +26,7 @@ Controls compare the actual baseline and candidate factories for ordinary/REP/fa
 
 A separate runner/admission integration is being prepared. It must authenticate the complete frozen runtime map separately from the original compiled identity and addon. Then three bounded native parity cells must pass: capture-OFF, capture-ON with host journal, and native trace ON with host journal OFF. The third cell tests canonical CPU chronology while exercising the null-sink dispatch branch. Only after those controls can a fresh alternating paired CPU gate assess this candidate. The previous negative gates must not be retried or combined with this result.
 
-No native addon, guest, build, Inspector profile, or performance gate ran for this candidate during this source preparation. There is no speed or RTx claim, full AT qualification, Windows/Doom qualification, or adoption.
+No native addon, guest, build, Inspector profile, or performance gate ran for this candidate during this source preparation. There is no speed or RTx claim, full AT qualification, broader guest/broader game qualification, or adoption.
 
 ## Receipts
 

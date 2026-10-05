@@ -1,6 +1,8 @@
 # 80386 native packed scalar protocol — H4 WIP
 
-The packed scalar candidate lowered mean execution process CPU cost from **580.047 ms to 502.477 ms (13.37%)**, with all seven measured pairs favorable. It passed the predeclared 10% mean-reduction criterion. All 1,649,067 canonical native trace rows and the complete ordered host callback journal match accepted H1 exactly. These results apply to the bounded free-ROM workload and this shared VPS. The 10× goal, full Windows/Doom compatibility and production native CLI/GUI integration remain open.
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+The packed scalar candidate lowered mean execution process CPU cost from **580.047 ms to 502.477 ms (13.37%)**, with all seven measured pairs favorable. It passed the predeclared 10% mean-reduction criterion. All 1,649,067 canonical native trace rows and the complete ordered host callback journal match accepted H1 exactly. These results apply to the bounded free-ROM workload and this shared VPS.
 
 ## Protocol and validation
 
@@ -63,7 +65,7 @@ The CPU result supports this candidate on this workload. It is not an isolated p
 
 The new opt-in driver is `scripts/run-i80386-native-hot-packed-scalar.mjs`; the preparer is `scripts/prepare-bochs-cpu3-native-hot-packed-scalar.mjs`. Both require the current bounded free-ROM policy and an authenticated addon. The existing CLI/GUI execution choices are unchanged. Actual local inputs, manifests, source pins and commands are preserved in [the artifact index](receipts/2026-10-01-i80386-native-hot-h4-artifact-index.json). Receipt scripts retain original paths as provenance and need path adaptation on another machine. Process bundles losslessly preserve input/exit/stdout/stderr bytes using base64. Large successful raw traces and compiled binaries remain local and SHA-bound.
 
-Next concrete work is to measure and reduce remaining bridge costs under the packed protocol, then widen admission using separately proved free guests and real disk/device paths. Conditional argument construction and reuse of immutable scalar keys/values are narrow candidates; reducing original board operations requires a new device/event proof. Arbitrary AT boot, Windows enhanced mode, Doom and production native UI integration are still unqualified.
+Next concrete work is to measure and reduce remaining bridge costs under the packed protocol, then widen admission using separately proved free guests and real disk/device paths. Conditional argument construction and reuse of immutable scalar keys/values are narrow candidates; reducing original board operations requires a new device/event proof. Arbitrary AT boot, broader guest enhanced mode, broader game and production native UI integration are still unqualified.
 
 The [H5 conditional argument follow-up](I80386-NATIVE-HOT-CONDITIONAL-ARGS-WIP.md) preserved bounded semantics but failed its predeclared CPU gate: mean CPU increased 0.20115%, with only three of seven pairs favorable. H5 remains experimental and H4 remains the baseline.
 

@@ -1,0 +1,21 @@
+{
+  "schema": "bw.cold-memory-fusion.execution-profile-authority.v1",
+  "status": "ROOT_REVIEWED_EXECUTION_PROFILE_READY",
+  "baseWorkerRevision": "735740cb52550bb71edde5aba326da6f3a01f473",
+  "baseWorkerSourceSha256": "f2a2a7c6f19366e2b11b9b9667ecff08dd22253f2914a24a2faa98f7c07d1649",
+  "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+  "addonSha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "samplingIntervalMicroseconds": 1000,
+  "targetN": 316562,
+  "targetQ": 316562,
+  "qualificationAudit": {
+    "file": "qualification-audit.json",
+    "sha256": "978c54cff9bfceb2c704010869ad355318381b51c03837f650b1afb8f308c927"
+  },
+  "pairedAudit": {
+    "file": "paired-audit.json",
+    "sha256": "cf6af0f01fe98a022798740992881043d0e583308433689c2a26d250933d6c07"
+  },
+  "scope": "One main-isolate execution-adjacent diagnostic; no speed qualification or nativeCPU percentage"
+}

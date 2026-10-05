@@ -1186,7 +1186,31 @@ export class BoardImpl {
 
   /** One-shot, opt-in whole-capture work limit; ordinary advanceTo is unchanged. */
   advanceToBounded(tNs, limits) {
-    if (this._boundedAdvanceContext) throw new Error('advanceToBounded refuses reentrant capture');
+    return this._advanceToBoundedCapture(tNs, limits);
+  }
+
+  /** Finite synchronous stream; observations are provisional until final receipt. */
+  advanceToBoundedStream(tNs, limits, options) {
+    if (!options || typeof options !== 'object' || Array.isArray(options)
+      || Object.keys(options).length !== 2
+      || Object.keys(options).some(key => key !== 'stepNs' && key !== 'onStep')) {
+      throw new Error('advanceToBoundedStream requires stepNs and synchronous onStep');
+    }
+    const {stepNs, onStep} = options;
+    if (typeof tNs !== 'bigint' || tNs <= 0n || tNs > BigInt(Number.MAX_SAFE_INTEGER)
+      || typeof stepNs !== 'bigint' || stepNs <= 0n || typeof onStep !== 'function'
+      || (tNs - 1n) / stepNs + 1n > 200n) {
+      throw new Error('advanceToBoundedStream requires positive time/step and at most 200 observations');
+    }
+    return this._advanceToBoundedCapture(tNs, limits, {stepNs, onStep});
+  }
+
+  _advanceToBoundedCapture(tNs, limits, stream = null) {
+    if (this._boundedAdvanceContext) {
+      const error = new Error('advanceToBounded refuses reentrant capture');
+      if (this._boundedAdvanceContext.stream) this._boundedAdvanceContext.failure ||= error;
+      throw error;
+    }
     if (this.timeNs !== 0n || this._lastBoundedAdvance || this._transientAnalysisWork.advances) {
       throw new Error('advanceToBounded requires a fresh Board at time zero');
     }
@@ -1206,10 +1230,35 @@ export class BoardImpl {
       throw new Error('advanceToBounded requires bounded maxAttempts/maxSolves/maxAdvances');
     }
     const context = { limits: Object.freeze(selected), work: { attempts: 0, solves: 0, advances: 0 } };
+    if (stream) context.stream = true;
     this._boundedAdvanceContext = context;
     let failure = null;
     try {
-      this.advanceTo(tNs);
+      if (!stream) this.advanceTo(tNs);
+      else {
+        let index = 0;
+        for (let target = stream.stepNs; ; target += stream.stepNs) {
+          const endpoint = target < tNs ? target : tNs;
+          this.advanceTo(endpoint);
+          if (context.failure) throw context.failure;
+          if (this.timeNs !== endpoint) throw new Error('bounded stream did not reach requested chunk endpoint');
+          context.observing = true;
+          context.observerCalls = (context.observerCalls || 0) + 1;
+          let result;
+          try {
+            result = stream.onStep(Object.freeze({index, timeNs: endpoint,
+              qualified: false, work: Object.freeze({...context.work})}));
+          } finally { context.observing = false; }
+          if (result && typeof result.then === 'function') {
+            Promise.resolve(result).catch(() => {});
+            throw new Error('bounded stream requires a synchronous observer');
+          }
+          if (context.failure) throw context.failure;
+          if (this.timeNs !== endpoint) throw new Error('bounded stream observer changed capture time');
+          index++;
+          if (endpoint === tNs) break;
+        }
+      }
       if (context.failure) throw context.failure;
       if (this._deviceSubstepOverflow || this._transientAttemptOverflow) {
         throw new Error('advanceToBounded refuses incomplete device/transient work');
@@ -1224,6 +1273,8 @@ export class BoardImpl {
     } finally {
       this._lastBoundedAdvance = Object.freeze({ limits: context.limits,
         work: Object.freeze({ ...context.work }), requestedTimeNs: tNs.toString(),
+        ...(stream ? {stream: Object.freeze({stepNs: stream.stepNs.toString(),
+          observerCalls: context.observerCalls || 0})} : {}),
         completed: failure === null, failure });
       this._boundedAdvanceContext = null;
     }
@@ -1246,6 +1297,12 @@ export class BoardImpl {
 
   /** @param {bigint} tNs */
   advanceTo(tNs) {
+    const context = this._boundedAdvanceContext;
+    if (context?.observing) {
+      const error = new Error('bounded stream observer cannot advance capture time');
+      context.failure ||= error;
+      throw error;
+    }
     // A DRIVEN PWM IS REAL SWITCHING. With none (every emulator route, which
     // publishes its own timer edges), this is the plain advance. With one, the
     // advance is split at each of its edges, and each edge is a real setPin at

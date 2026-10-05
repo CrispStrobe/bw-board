@@ -1,5 +1,7 @@
 # Native 386 closed main-thread diagnostic — WIP
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 The fixed free protected-mode ROM now runs with the existing ABI3 addon and actual private provider inside a fresh child process on its main thread. This separate topology removes internal Worker IPC and per-resume JSON replies while preserving all **439 full native snapshots** and **six exact Q checkpoints**. It is a new ownership/provenance proof, not adoption of the earlier [Worker candidate](I80386-NATIVE-OWNED-CLOCK-WIP.md), whose CPU gate failed.
 
 Capture OFF matches every original CPU/device snapshot, settled board and whole RAM with an empty journal. Capture ON matches **all 1,649,067 canonical CPU rows and 209,839 ordered host rows**, including the exact journal SHA `bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1`. Snapshot comparison removes only newly added physical clock-transfer counters on native snapshots and converts the complete 160-byte slice representation losslessly. Native N 100,684/Q 100,682, two faults, one IRQ and two HLT cuts remain unchanged.
@@ -20,7 +22,7 @@ The single predeclared gate has two discarded warmup pairs and seven alternating
 
 The first parent preflight failed before any native child because compiled H4's 32-file source map was incorrectly assumed to be a subset of its 61-file runtime closure. The failed parent receipt is retained. The repaired second attempt authenticates these maps independently and uses the identical predeclared plan; it is not a retry of a negative CPU result.
 
-The passed gate qualifies this isolated main-thread fixed-ROM candidate against H4; it does not retroactively change the failed Worker or transport results. Full AT boot, native xv6/Windows/Doom, general CLI/GUI/browser integration, physical 16 MHz 386 RTx and the broader 10× target remain unqualified by this fixed fixture.
+The passed gate qualifies this isolated main-thread fixed-ROM candidate against H4; it does not retroactively change the failed Worker or transport results. Full AT boot, native xv6/broader guest/broader game, general CLI/GUI/browser integration, physical 16 MHz 386 RTx and the broader 10× target remain unqualified by this fixed fixture.
 
 The next bounded work is to profile the new main-thread native callback and clock-replay costs before choosing another optimization, then separately broaden freely licensed AT guest support. Existing Worker attribution does not quantify CPU shares in the new topology.
 

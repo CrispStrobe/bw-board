@@ -1,5 +1,7 @@
 # bw-board
 
+For CLI and GUI software-loading workflows, supported disk/config formats and x86 backend boundaries, see [the x86 loading guide](docs/X86-LOADING-GUIDE.md).
+
 The circuit simulation and emulated-board engine for Brickwright. It connects
 firmware pin activity to a netlist, solves electrical behavior, updates device
 models and exposes readings for a circuit editor or command-line instruments.
@@ -7,6 +9,12 @@ models and exposes readings for a circuit editor or command-line instruments.
 Runs in browsers and Node.js as an ES-module package. The UI lives in
 [bw-circuit-ui](https://github.com/CrispStrobe/bw-circuit-ui); this repository
 owns shared engine behavior, component models and emulator/debugger integration.
+
+The [cold E16 scalar-ledger paired result](docs/I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS: scalar native used 5.251347× execution CPU against JS on the same host, with all seven measured pairs unfavorable and all 18 terminal proofs passing. Held fusion versus scalar was not measured; no copy-change gain, general OS/full-boot speed or adoption claim follows.
+
+The [cold E16 MEMORY clock-fusion paired result](docs/I80386-COLD-PAIRED-RESULTS.md#memory-clock-fusion-candidate-keep-plain-js) keeps plain JS: fusion used 5.139261× execution CPU on the same host, with all seven measured pairs unfavorable despite terminal parity in all 18 children. This is not an old-native-versus-fusion comparison or general OS/full-boot speed result.
+
+The [cold E16 typed-state paired result](docs/I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) keeps plain JS: typed batching was 4.063470× slower in execution CPU on the same host, with all seven measured pairs unfavorable. Terminal correctness passed; this is not a general OS/full-boot speed result.
 
 ## Install and use
 
@@ -102,6 +110,8 @@ The [private per-word dispatch experiment](docs/I80386-OWNED-DISPATCH-SOURCE-WIP
 The [private span paired CPU gate](docs/I80386-OWNED-SPAN-CPU-RESULTS.md) failed its ≥10%/all-seven criterion despite full fixed-fixture parity in all 18 children; the candidate is not adopted.
 
 The [native cold BIOS E16 diagnostic](docs/I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) reached the fixed checkpoint with independent correctness evidence. This is neither full boot nor a speed or adoption result.
+
+The [cold BIOS paired CPU results](docs/I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: batching improves the native one-Q route but uses 4.12× its execution CPU against plain JS on a separate gate. No default adoption or general OS speed claim follows.
 
 ## LabWired WASM performance (2026-10-01)
 
@@ -399,6 +409,124 @@ not a paired speedup. This candidate remains **unmerged/unqualified**;
 production, app pins and physical acknowledgements are unchanged. All **240
 paired timing windows**, gains, losses and original verdicts are retained:
 [live boolean eligibility results and complete receipts](docs/receipts/2026-10-03-wasm-edge-eligibility-bool/README.md).
+
+The follow-up runs **four ordinary pairs on one hosted VM per runtime**,
+balancing ABBA/BAAB/BAAB/ABBA, with the same frozen harness and original
+engine/glue bytes. Across **480 new timing windows**, GPIO medians improve
+in all eight pairs (**+1.61% to +19.05%**), but motion changes **−5.00% to
++0.99%** and RAM **−1.18% to +1.81%**. Candidate medians span
+**0.574467×–0.808689× motion**, **0.567689×–0.707280× GPIO**, and
+**2.813353×–2.889983× RAM**. Motion/GPIO fail the unchanged every-window
+≥1× floor in all eight pairs; RAM passes all eight. The persistent mixed
+tradeoff leaves the candidate **unmerged/unqualified** and CP13 open.
+Separate runtime VMs do not establish Node-version causality or statistical
+significance. No production engine, app pin or physical acknowledgement
+changed. All pairs, minima, regressions and original job logs are retained:
+[repeated same-host results and complete receipts](docs/receipts/2026-10-03-wasm-same-host-orders/README.md).
+
+The next isolated experiment moves the same boolean method to the trait's
+end. Exact compiled inspection confirms the Button's old `service_edge` slot
+is restored, but all four frozen-harness pairs still show **motion losses
+of 0.31–0.67%** and worse minima. GPIO gains **2.62–19.14%**; RAM changes
+**−1.28% to +3.06%**. Candidate motion/GPIO medians span
+**0.626131×–0.961721× / 0.593837×–0.777377×**, with both floors failing
+all four pairs. Native **4,239 tests + 16 GPIO integrations**, independent
+WASM determinism and **108 actual integrations** pass, but the separate fresh
+motion floor fails (**0.810358× median / 0.789109× min**). This source stays
+**unmerged/unqualified**. Restored compiled layout is not a performance
+explanation or permission to ignore regressions. All **240 timing windows**,
+initial/corrected raw disassembly and original gates are retained:
+[tail-method experiment and complete evidence](docs/receipts/2026-10-03-wasm-edge-eligibility-bool-tail/README.md).
+
+The subsequent WASM-only short-budget experiment admits the existing checked
+cached executor below eight remaining instructions, without loop discovery.
+It also stays **unmerged/unqualified**: all four ordinary pairs show RAM
+median losses (**0.60–1.27%**) and worse minima; motion changes **−6.90% to
++1.43%**, GPIO **−6.74% to +1.98%**. Candidate motion/GPIO medians span
+**0.576022×–0.818331× / 0.534285×–0.620955×**; both floors fail all four
+pairs, while RAM passes. Native **4,235 tests + 16 GPIO integrations**,
+independent WASM determinism and **108 actual integrations** pass, including
+real same-PC RAM/MMIO/RAM guest cases at budgets 1 and 7. The separate fresh
+motion floor still fails (**0.995947× median / 0.911775× min**). All **240
+windows**, losses, original source/build/test logs and guest proofs are bound
+in the [short-budget results archive](docs/receipts/2026-10-03-wasm-short-cached-budget/README.md).
+Native dispatch, engine/app pins and physical acknowledgements are unchanged;
+CP13 remains open.
+
+Static inspection of the unchanged production CPU hotpaths is now complete.
+The apparent multi-megabyte WAT bodies are mostly indentation, **not binary
+size or runtime cost**. Cached-run has 107 static 18-target branch tables,
+consistent with repeated generic register dispatch but not proof of dynamic
+cost. This motivates testing shared register helpers, not claiming a speedup.
+Original selected code, all three bounded-capture failures and exact tool
+merge gates are retained in the
+[CPU hotpath inspection archive](docs/receipts/2026-10-03-wasm-cpu-hotpath-inspection/README.md).
+No engine, app pin or physical acknowledgement changed.
+
+The shared-register-helper experiment is now measured and remains **unmerged/unqualified**.
+WASM-only outlining removes 107 static eighteen-target tables from the cached
+loop, but ordinary paired RAM throughput regresses; motion/GPIO retain sub-1×
+windows. Median changes: motion **-8.67% to 5.43%**, RAM **-49.69% to -41.85%**,
+GPIO **-14.15% to 2.54%**. Native **4,234 library tests + 16 GPIO integrations**,
+independent WASM determinism and **108 actual integrations** pass. The separate
+fresh motion floor passes (**1.451189× median / 1.371520× min**),
+but is not a paired speedup or all-target qualification. All **240 windows**,
+source/build/test proofs and original compiled-code comparison are retained:
+[shared-register results and evidence](docs/receipts/2026-10-03-wasm-register-helper-sharing/README.md).
+Smaller code does not establish faster execution; production engine, app pins
+and physical acknowledgements remain unchanged. CP13 remains open.
+
+The subsequent WASM low/high-register split avoids global outlining's RAM
+collapse, but remains **unmerged/unqualified**. Across four ordinary pairs,
+motion changes **-5.70% to 16.38%**, RAM **-1.20% to 4.54%**,
+GPIO **-3.74% to 10.66%**. Both Node20 orders gain motion/GPIO;
+both Node22 orders lose motion. Separate runner VMs do not prove version
+causality. Motion/GPIO floors fail all four pairs; RAM passes. Native **4,235
+library tests + 16 GPIO integrations**, independent WASM determinism and **108
+actual integrations** pass; the fresh motion floor fails (**0.779280×
+median / 0.741677× min**). All **240 windows**, gains/losses/minima,
+source proofs and original compiled-code comparison are retained in the
+[low/high split archive](docs/receipts/2026-10-04-wasm-register-low-high-split/README.md).
+Smaller dispatch tables do not establish a general speedup. Production, app
+pins and physical acknowledgements remain unchanged; CP13 remains open.
+
+The bounded cached low-register frame is also **unmerged/unqualified**.
+Four ordinary pairs retain **240 windows**: motion **-6.25% to 1.33%**,
+RAM **-1.23% to 0.47%**, GPIO **-5.14% to 1.61%**.
+Motion/GPIO floors pass only Node22 ABBA and fail the other three pairs;
+RAM passes all four. Native **4,235 library tests + 16 GPIO integrations**,
+independent WASM determinism and **108 actual integrations** pass, but the
+fresh motion floor fails (**0.792109× median / 0.787231× min**).
+Original glue differs and is explicitly hash-bound in paired receipts;
+these compare complete built artifacts, not isolated WASM effects. Smaller
+static register dispatch does not establish a speedup. See the
+[cached-frame evidence](docs/receipts/2026-10-04-wasm-cached-register-frame/README.md).
+Production, app pins and physical acknowledgements remain unchanged; CP13 is open.
+
+Increasing the WASM-only discovery miss memo from 64 to 1,024 slots is
+also **unmerged/unqualified**. Four ordinary pairs retain **240 windows**:
+motion **-4.76% to 1.19%**, RAM **-1.59% to -0.33%**,
+GPIO **-0.61% to 5.32%**. RAM medians are lower in all four pairs;
+motion/GPIO floors fail all four. Native **4,235 library tests + 16 GPIO
+integrations**, deterministic WASM builds and **108 actual integrations**
+pass; the fresh motion floor fails (**0.823477× median / 0.818431× min**).
+Larger capacity costs 960 tuples per WASM Cortex-M instance; hot thrashing
+was not measured. Original glue is identical, all keys/invalidations and
+native capacity remain unchanged. See the
+[discovery-memo evidence](docs/receipts/2026-10-04-wasm-discovery-memo1024/README.md).
+Production, app pins and physical acknowledgements remain unchanged; CP13 is open.
+
+Discovery census now measures the selected warmed motion guest with one
+shared ELF: **99.81%** of **61,542,607** negative lookups hit the existing
+64-slot memo; **94,901** collide and no counted generation events occur.
+Three captures agree on all **15 guest windows**; independent diagnostic
+build bytes and counter windows match. Native correctness and all 108
+integrations per engine pass. This is **frequency evidence, not RTx or
+removable-cost qualification**; it favors investigating the hot exact-hit
+path over another blind capacity increase. F0 RAM/GPIO still need a census.
+All three earlier failed gates are retained. See the
+[discovery-census evidence](docs/receipts/2026-10-04-wasm-discovery-census/README.md).
+Production, pins and physical acknowledgements remain unchanged; CP13 is open.
 
 ## Limits
 

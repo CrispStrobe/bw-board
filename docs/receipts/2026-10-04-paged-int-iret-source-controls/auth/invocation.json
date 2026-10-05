@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {intIretSourceIdentity} from './scripts/bochs-cpu3-native-paged-int-iret/reference.mjs';console.log(JSON.stringify(intIretSourceIdentity()));"
+  ],
+  "cwd": "/tmp/bw-native-paged-int-iret-source-20261004",
+  "metadataOnly": true,
+  "scope": "READONLY_PAGING_SOURCE_IDENTITY_NO_FACTORY_ORACLE_CPU",
+  "blankVariables": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  }
+}

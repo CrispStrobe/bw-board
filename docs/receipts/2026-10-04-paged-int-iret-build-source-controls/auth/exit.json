@@ -1,0 +1,13 @@
+{
+  "pid": 3569284,
+  "exitCode": 0,
+  "timeout": false,
+  "wallSeconds": 3.084534488618374,
+  "error": null,
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "actualSourceCount": 208,
+  "canonicalSourceSha256": "c458aee2729802dc28c21371df3a58d4845da03a421726686f448f5ae6350d7f",
+  "scope": "Separate actual read-only source/generated plan; no materialization/configure/Bochs build/addon/CPU",
+  "status": "READONLY_SOURCE_AUTH_PASS"
+}

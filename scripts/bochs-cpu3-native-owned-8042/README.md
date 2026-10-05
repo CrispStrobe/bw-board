@@ -1,5 +1,7 @@
 # Fixed 8042 self-test source proposal
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 This separate opt-in source profile admits one fixed `AA` self-test handshake through byte `OUT64`, `IN64` and `IN60`. It is not native integrated. The private provider accepts no caller board, configuration or hooks; the exported source facade supports diagnostic controls only.
 
 The actual controller starts with fixed 12-cycle busy and 32-cycle response delays, no unsolicited keyboard schedule and no mouse. Status reads do not advance time. Data consumes the owned `55` response once, then returns empty `FF`. Admission checks follow actual chip catchup and precede device consumption. The copied lease, ordered clock preflight and mandatory post-PIO query remain in place, including at zero debt. Original memory operations and `D1`/`OUT60` values `1` and `3` remain unchanged. A private paused chip-flush phase permits only unchanged A20 publication; actual mapping changes still require the original active owner guard.
@@ -8,4 +10,4 @@ The bounded source run passed **106 assertions**: full controller/PIC state unde
 
 The initial source control failed before PIO because the inherited default board scheduled an unsolicited keyboard BAT. The corrected constructor creates a fresh actual machine with the explicit fixed configuration before any command; it does not clear or reconfigure a live controller. The corrected run exited zero with unchanged source/Node hashes under CPU 10 seconds, wall 30 seconds and heap 128 MiB bounds. The single repository test imports these same controls so normal CI exercises them.
 
-Next is a separately reviewed C initializer and ROM/profile admission, followed by fresh native checkpoint, whole-state and chronology qualification. No native addon build or native guest execution, performance gate, broader AT/Windows/Doom admission or speed result is established here. See [the integration plan](derivation-plan.md).
+Next is a separately reviewed C initializer and ROM/profile admission, followed by fresh native checkpoint, whole-state and chronology qualification. No native addon build or native guest execution, performance gate, broader AT/broader guest/broader game admission or speed result is established here. See [the integration plan](derivation-plan.md).

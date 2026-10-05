@@ -1,5 +1,7 @@
 # Observed broad-block potential census
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 Set `AT_BROAD_BLOCK_CENSUS=1` for the ordinary, noninteractive
 `run-i80386-at-console.mjs` path or `XV6_BROAD_BLOCK_CENSUS=1` for the ordinary
 `probe-xv6-stock.mjs` path. Both reports gain a `broadBlockCensus` object.
@@ -42,9 +44,7 @@ completed ordinary steps do **not** prove operand width, memory access,
 page-crossing data safety, flags, faults, or native execution correctness.
 `addedSteps` partitions into `addedForms`; selected run histogram lengths
 sum to selected `potentialSteps`, and Jcc attempts partition into joins plus
-refusals. The predeclared gate is at least **50% selected potential completed
-steps** and **mean selected linked run length at least four**, each on both
-pinned Windows 60M and lean xv6 forktest. A pass would only justify a later
+refusals. A pass would only justify a later
 proof and serial paired user-CPU A/B; it is not a speed claim.
 
 The linked view reports branch outcomes and joins as taken, fallthrough, or
@@ -52,10 +52,7 @@ ambiguous when both addresses coincide. It counts observed successor pages
 as same or cross, including outcome-specific counts, and records the first
 link refusal reason. Its histogram, >=4 and >=8 run tails, and step shares
 use completed ordinary step calls. `jccAttempts` partitions into joins and
-refusals; linked histogram lengths sum to linked potential steps. The
-predeclared tactical gate is **at least 50% potential completed-step coverage
-and mean linked run length at least four on both pinned Windows 60M and lean
-xv6 forktest**. Passing is only grounds for an executable experiment, not a
+refusals; linked histogram lengths sum to linked potential steps. Passing is only grounds for an executable experiment, not a
 speed or safety claim.
 
 To diagnose the **observed first opcode at unsupported cuts**, add

@@ -1,0 +1,408 @@
+{
+  "buildRun": "37145743957",
+  "coreCommit": "0d32815a28b1cf7e27a87ba760ec7acd34cb4086",
+  "wasmSha256": "9533e446a5464a5fb61f3754f6e19ef0e757dc6845293355e60a3928dcd799ae",
+  "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+  "toolCommit": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "diagnosticOnly": true,
+  "engineExecution": false,
+  "fullWat": {
+    "bytes": 186872785,
+    "sha256": "d063d432f3b45b6e086f2520ee628bf5b30d6253ba16d4165a96b6082879179b"
+  },
+  "functions": [
+    {
+      "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+      "labels": [
+        "step_batch"
+      ],
+      "header": "  (func $<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981 (type 52) (param i32 i32 i32 i32 i32 i32 i32 i32)",
+      "watBytes": 8032654,
+      "watSha256": "8a3bb25a4d53a21d51a5af62fd4ca30e1f9c83bb14155bf5499113523a332457",
+      "typeReferences": [
+        "52",
+        "7",
+        "137",
+        "16",
+        "25",
+        "34",
+        "17",
+        "114",
+        "111"
+      ],
+      "directCalls": [
+        {
+          "target": "$alloc::sync::Arc<T_A>::drop_slow::h770402ae0a25b273",
+          "occurrences": 2
+        },
+        {
+          "target": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step::haf99ef0974e6e420",
+          "occurrences": 2
+        },
+        {
+          "target": "$std::sync::once_lock::OnceLock<T>::initialize::hec1e87274e093d75",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::highest_priority_pending::he02bc0a8797bd042",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+          "occurrences": 541
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+          "occurrences": 334
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_sub_overflow",
+          "occurrences": 13
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_add_overflow",
+          "occurrences": 7
+        },
+        {
+          "target": "$labwired_core::decoder::arm::decode_thumb_16::h200acc25918e8b0a",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::insert_decoded_entry::hfbb4ba7d287020c5",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::t16_block_entry_admitted::he2afe3658cc02021",
+          "occurrences": 2
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_shr_overflow",
+          "occurrences": 10
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_bounds_check",
+          "occurrences": 75
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::wfe_wake_pending::he5b8e70bbda587e3",
+          "occurrences": 7
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+          "occurrences": 28
+        },
+        {
+          "target": "$std::sync::once_lock::OnceLock<T>::initialize::hbb6dc119c50717e0",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+          "occurrences": 25
+        },
+        {
+          "target": "$std_a543996e6e7dbf1e_::io::stdio::_eprint",
+          "occurrences": 4
+        },
+        {
+          "target": "$core::ptr::drop_in_place<core::result::Result<u32_labwired_core::SimulationError>>::h802a717cef88641e",
+          "occurrences": 130
+        },
+        {
+          "target": "$tracing_core::callsite::DefaultCallsite::register::hd5152d7d1bf82d3d",
+          "occurrences": 10
+        },
+        {
+          "target": "$tracing::__macro_support::__is_enabled::he67456a0b89e6fe2",
+          "occurrences": 10
+        },
+        {
+          "target": "$tracing_core::dispatcher::get_default::h3bb30bf7be91db51",
+          "occurrences": 10
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::read_u16::h61c74c62937a40a7",
+          "occurrences": 11
+        },
+        {
+          "target": "$labwired_core::decoder::arm::decode_thumb_32::had0f6da31a53865c",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::wfi_wake_pending::h9c72240959632ad5",
+          "occurrences": 5
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::branch_to::hf74d21b05bac1d74",
+          "occurrences": 9
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::read_u8::hcfd3e5d36d7d117c",
+          "occurrences": 9
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::write_u8::h1781dd0bc6a320fd",
+          "occurrences": 6
+        },
+        {
+          "target": "$labwired_core::bus::accessors::<impl_labwired_core::Bus_for_labwired_core::bus::SystemBus>::write_u16::hef7a44338ff522e1",
+          "occurrences": 6
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::exec::dsp::<impl_labwired_core::cpu::cortex_m::CortexM>::exec_dsp_multiply::h8393454645bb2971",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::semihost::handle::hf90ed37746982705",
+          "occurrences": 1
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::exec::vfp_generic::<impl_labwired_core::cpu::cortex_m::CortexM>::exec_vfp_generic::h52c5f5c278d57eff",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_compare_nzcv::h068f824e545cd387",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_sqrt::hde42927fba5a8826",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_binop::haea7e7466aa79dd8",
+          "occurrences": 10
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::thumb_expand_imm::he7b7901ef0e32ce7",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::fidelity::record_undecoded::h52a6dc050ce074c2",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::vfp_fma::h9725fc9bd1d8f84c",
+          "occurrences": 8
+        },
+        {
+          "target": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::set_exception_pending::hc10a76bb8488f5a3",
+          "occurrences": 2
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_shl_overflow",
+          "occurrences": 4
+        },
+        {
+          "target": "$labwired_core::emit_trace_event::h62df7f8b5911f587",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::escalate_precise_data_fault::h592244c4c70716d6",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::escalate_usage_fault::h1b1e0bdaf47c8fb5",
+          "occurrences": 4
+        },
+        {
+          "target": "$__rustc_b7974e8690430dd9_::__rdl_dealloc",
+          "occurrences": 2
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::branch_to::h016349acbeccfe07",
+          "occurrences": 9
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::semihost::handle::hc9d7f9a29bf0e608",
+          "occurrences": 1
+        }
+      ],
+      "memoryOps": {
+        "i32.load": 1140,
+        "i32.store": 744,
+        "i32.load8_u": 992,
+        "i64.load": 359,
+        "i64.store": 190,
+        "i32.load16_u": 102,
+        "i32.store8": 106,
+        "memory.copy": 4,
+        "i64.load32_u": 40,
+        "i32.store16": 48,
+        "i64.store32": 128,
+        "i32.load8_s": 2,
+        "i32.load16_s": 4,
+        "i64.load16_u": 6,
+        "f64.store": 8,
+        "f32.load": 2,
+        "f32.store": 2
+      },
+      "localDeclarations": 1
+    },
+    {
+      "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+      "labels": [
+        "run_t16_cached_run"
+      ],
+      "header": "  (func $labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505 (type 26) (param i32 i32 i32) (result i32)",
+      "watBytes": 229287,
+      "watSha256": "ea6501d78f6a5d0ac60f3a71f5bd5ce19f9692bb517db32d8b1ccfbc57657d6e",
+      "typeReferences": [
+        "26"
+      ],
+      "directCalls": [
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+          "occurrences": 40
+        },
+        {
+          "target": "$labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+          "occurrences": 74
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_shr_overflow",
+          "occurrences": 2
+        },
+        {
+          "target": "$core_c5930c85a12de822_::panicking::panic_const::panic_const_sub_overflow",
+          "occurrences": 1
+        }
+      ],
+      "memoryOps": {
+        "i32.load8_u": 9,
+        "i64.load": 3,
+        "i32.load": 47,
+        "i32.load16_u": 3,
+        "i32.store": 34,
+        "i64.store": 14,
+        "i32.store8": 2,
+        "i32.store16": 2
+      },
+      "localDeclarations": 1
+    }
+  ],
+  "types": [
+    "  (type (;7;) (func (param i32) (result i32)))",
+    "  (type (;16;) (func (param i32 i32)))",
+    "  (type (;17;) (func (param i32 i32) (result i32)))",
+    "  (type (;25;) (func (param i32 i32 i32)))",
+    "  (type (;26;) (func (param i32 i32 i32) (result i32)))",
+    "  (type (;34;) (func (param i32 i32 i32 i32)))",
+    "  (type (;52;) (func (param i32 i32 i32 i32 i32 i32 i32 i32)))",
+    "  (type (;111;) (func (param i32 i32 i64)))",
+    "  (type (;114;) (func (param i32 i32 i64 i32)))",
+    "  (type (;137;) (func (param i32 i64)))"
+  ],
+  "absentLabels": [
+    "execute_t16_fast_op",
+    "run_t16_cached_fast_paths",
+    "debug_halted"
+  ],
+  "limitations": [
+    "Static code and textual operation counts are not execution frequency or performance evidence",
+    "Functions may be inlined, folded or labelled with aliases; absent names do not prove absent work",
+    "Direct calls are references, not a complete transitive call graph",
+    "Memory offsets alone do not identify Rust fields or cache representation",
+    "No cost-removal, causality, runtime-tier or qualification claim"
+  ],
+  "totalBodyBytes": 8261941,
+  "bodyFiles": [
+    {
+      "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+      "chunks": [
+        {
+          "path": "body-0-0.txt",
+          "bytes": 524288,
+          "sha256": "83bab4a3f39ada1c969d57d56b3c60861e458137b4e6acfc936478f66211fc77"
+        },
+        {
+          "path": "body-0-1.txt",
+          "bytes": 524288,
+          "sha256": "6487756cdcf735d27ffd0c1a7e3f074db329878534892b63e00e7a78b8545b5b"
+        },
+        {
+          "path": "body-0-2.txt",
+          "bytes": 524288,
+          "sha256": "9786276406785b5ecf8771c1a5d0f09bbb6878b7608c44e33b012151c7ffed14"
+        },
+        {
+          "path": "body-0-3.txt",
+          "bytes": 524288,
+          "sha256": "c5683d5dac2046aa0d658a484b7cb56474daabc1281b168c69342ea3fc61c63a"
+        },
+        {
+          "path": "body-0-4.txt",
+          "bytes": 524288,
+          "sha256": "c85188cc38e897cd6292b52f7bb5b6661ba20d66eb7e588908dd2a090d13f111"
+        },
+        {
+          "path": "body-0-5.txt",
+          "bytes": 524288,
+          "sha256": "8a19a8ddcdcce6c0c992c9b362cca9105e7c03733f5be0c424963588a5b9a8cf"
+        },
+        {
+          "path": "body-0-6.txt",
+          "bytes": 524288,
+          "sha256": "6de7c5624a795eee90aa6894fbf7b453dacb21c52bfcd1ace1f8ccb7e416ff1c"
+        },
+        {
+          "path": "body-0-7.txt",
+          "bytes": 524288,
+          "sha256": "1b83214d1df049cbafc2d0929f0a19a3bfaf36f20841465efeb9572b97407c84"
+        },
+        {
+          "path": "body-0-8.txt",
+          "bytes": 524288,
+          "sha256": "f673d664026bdee554118fdbc7b7151f39d78aee8818cfe28c87d38723177014"
+        },
+        {
+          "path": "body-0-9.txt",
+          "bytes": 524288,
+          "sha256": "d4cf24ca7650b98260ae4f8a03c793e2b82ccd5c0762b431f135253fb76dc196"
+        },
+        {
+          "path": "body-0-10.txt",
+          "bytes": 524288,
+          "sha256": "b260a2a14a9c22f25248a83e65fdaf77a6679e4251ff1dd993e555e318c91326"
+        },
+        {
+          "path": "body-0-11.txt",
+          "bytes": 524288,
+          "sha256": "ecf626701f03603332ab6cda779f051fd298a8165786526c0d16586fc48ebc2f"
+        },
+        {
+          "path": "body-0-12.txt",
+          "bytes": 524288,
+          "sha256": "cc2da4f85e86ec45fedded9d90cbbaecc30f6d29f65f52acf6b7df3f9a36fafd"
+        },
+        {
+          "path": "body-0-13.txt",
+          "bytes": 524288,
+          "sha256": "514711a9ff3aaa992e6482c0c889bb94d348d65ce49f93d2eac936ecae42435f"
+        },
+        {
+          "path": "body-0-14.txt",
+          "bytes": 524288,
+          "sha256": "0d43baffd0e6aee428081aa04052f129bf684cbf98fcb9e0f3245b667cb5cf80"
+        },
+        {
+          "path": "body-0-15.txt",
+          "bytes": 168334,
+          "sha256": "dfea174bf294a9c01c71c573fc1e7c54163533cff9e20f0f71522c9e67b77ae0"
+        }
+      ]
+    },
+    {
+      "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+      "chunks": [
+        {
+          "path": "body-1-0.txt",
+          "bytes": 229287,
+          "sha256": "ea6501d78f6a5d0ac60f3a71f5bd5ce19f9692bb517db32d8b1ccfbc57657d6e"
+        }
+      ]
+    }
+  ]
+}

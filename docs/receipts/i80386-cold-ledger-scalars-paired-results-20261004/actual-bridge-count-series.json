@@ -1,0 +1,254 @@
+[
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-00-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-01-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-02-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-03-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-04-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-05-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-06-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-07-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  },
+  {
+    "member": "cold-ledger-scalars-paired/pairs/pair-08-ledger-scalars-batched/receipt/receipt.json",
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "nativeClock": {
+      "unknown": "0",
+      "INIT": "1",
+      "ENTRY": "16524",
+      "MEMORY": "0",
+      "PAGE": "4",
+      "PRE_PIO": "16471",
+      "POST_PIO": "16475",
+      "ACK": "0",
+      "FAULT": "0",
+      "IRQ": "0",
+      "HLT": "0",
+      "RETURN": "16524"
+    },
+    "nativeMemory": {
+      "ordinaryRead": "16548",
+      "ordinaryWrite": "236",
+      "fusedOuter": "167123"
+    }
+  }
+]

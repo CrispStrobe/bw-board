@@ -1,0 +1,13 @@
+[
+  "scripts/paged-int-iret-hosted/parent.py",
+  "scripts/paged-int-iret-hosted/contract.json",
+  "scripts/paged-int-iret-hosted/test_source.py",
+  "scripts/paged-int-iret-hosted/README.md",
+  ".github/workflows/i80386-paged-int-iret-execution.yml",
+  "test/i80386-paged-int-iret-hosted-source.test.mjs",
+  "scripts/cold-native-diagnostic/resources.py",
+  "scripts/cold-native-restore/archive.py",
+  "scripts/nonidentity-paging-hosted/parent.py",
+  "scripts/protected-ram-hosted/parent.py",
+  "scripts/protected-stack-hosted/parent.py"
+]

@@ -1,0 +1,26 @@
+import pathlib,json,zipfile,hashlib
+R=pathlib.Path(__file__).parent;Z=R/'official-artifact.zip';h=lambda b:hashlib.sha256(b).hexdigest();digest='0ded1f2c22d98e410b96ce6169110e78088df784eb2f7d472c0894a66867f2ca';checks=0
+def ck(v,msg):
+ global checks
+ assert v,msg
+ checks+=1
+ck(Z.stat().st_size==20168409 and h(Z.read_bytes())==digest,'ZIP');z=zipfile.ZipFile(Z);ck(len(z.infolist())==192,'members')
+for i in z.infolist():
+ ck(not i.filename.startswith('/') and '..' not in pathlib.PurePosixPath(i.filename).parts,'path');s=hashlib.sha256();size=0
+ with z.open(i) as f:
+  for b in iter(lambda:f.read(1<<20),b''):s.update(b);size+=len(b)
+ ck(size==i.file_size,'size');p=R/'selected'/i.filename
+ if p.is_file():ck(h(p.read_bytes())==s.hexdigest(),'selected exact')
+r=R/'selected/_temp/cold-three-arm-qualification';load=lambda p:json.loads((r/p).read_text());d=load('result.json');ck(d['status']=='THREE_ARM_SEMANTIC_CHILDREN_PASS_REQUIRES_INDEPENDENT_AUDIT' and 'finalizationError' not in d,'parent');ck(load('before-arms.json')==load('after-arms.json'),'final maps');ck(d['sourceBeforeArtifactRestore']==d['sourceAfterArtifactRestore'],'setup source');ck(d['immutableInputsBeforeRestore']==d['immutableInputsAfterRestore'],'setup inputs');c=load('capture.json');ck(h((r/'capture.json').read_bytes())=='b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf','capture');order=['plain-JS','native-oneQ','native-batched'];ck(list(d['arms'])==order,'order');workers={}
+for arm in order:
+ a=d['arms'][arm];f=load(arm+'/receipt/receipt.json');e=load(arm+'/exit.json');ck(e['exitCode']==0 and not e['timedOut'] and not e['interrupted'],'child');ck(load(arm+'/after-authentication.json')==load(arm+'-before.json'),'arm maps');inp=(r/(arm+'-input.json')).read_bytes();ck(f['inputSha256Before']==f['inputSha256After']==h(inp),'input');ck(f['nodeSha256Before']==f['nodeSha256After']=='fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48','Node')
+ if arm=='plain-JS':
+  ck(f['status']=='PLAIN_JS_ARM_EXECUTION_AND_FINAL_PARITY_PASS','JSstatus');ck(f['result']['final']==c['javascriptFinal'],'JSterminal');ck(f['result']['beforeSettle']['cpu']==c['cuts'][-1]['javascript']['cpu'],'JSphase');ck(f['result']['ports']==c['javascriptPorts'],'JSports');ck(f['sourceBefore']==f['sourceAfter'],'JSsource');identity=f['sourceBefore'];workers['plainJs']={'revision':identity['revision'],'sourceSha256':h(json.dumps(identity,separators=(',',':')).encode())}
+ else:
+  ck(f['status']=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','native status');ck(f['workerBefore']==f['workerAfter'] and f['compiledBefore']==f['compiledAfter'] and f['buildBefore']==f['buildAfter'],'native source/build');ck(f['closed']=={'native':True,'provider':True},'closed');n=f['finalNative'];last=f['lastReturnedNative'];expected=c['cuts'][-1]['native'];ck(len(n)==13 and len(last)==18,'schemas');
+  for k in ['state','extra','segments','system','debug']:ck(n[k]==last[k]==expected[k],'raw166')
+  ck(last['activityState']==0 and last['reason'] in [1,3,7] and len(last['sliceBytes'])==160 and all(type(v)is int and 0<=v<=255 for v in last['sliceBytes']),'return');ck(int(n['nativeTicks'])==int(n['successfulQuanta'])==f['progress']['n']==f['progress']['q']==316562,'NQ');ck(last['chargedNativeTicks']==f['progress']['dn'] and last['chargedQuanta']==f['progress']['dq'],'charges');ck(f['finalBoard']['state']['board']==c['javascriptFinal']['board'] and f['finalBoard']['ramSha256']==c['javascriptFinal']['ramSha256'],'boardRAM');ck(len(f['ports'])==16475,'portcount')
+  for x,j in zip(f['ports'],c['javascriptPorts']):ck(all(x[k]==j[k] for k in ['ordinal','dir','port','value','cycles']) and x['nativeTicks']==x['successfulQuanta']==j['q']-1,'PIO')
+  ck(all(int(v)==0 for v in n['fallback'].values()) and all(int(n['execution'][k])==0 for k in ['faults','irqDeliveries','haltIdleCuts']),'no fallback/faultIRQHLT');identity=f['workerBefore'];workers['native']={'revision':identity['revision'],'sourceSha256':h(json.dumps(identity,separators=(',',':')).encode())}
+ck(workers['native']=={'revision':'b01c922c2d634aba9367f6e2a70d109370e4adee','sourceSha256':'9d70f04a099df42d4cac13796705a4da963c295d9d83cec8c1bc709d3cb60bf1'},'native identity');ck(workers['plainJs']=={'revision':'0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83','sourceSha256':'9d648c4204e4892dbbb9a7008ea47fd682320063432b902dc1eb0a7c24d2fbd0'},'JS identity')
+out={'schema':'bw.cold-performance.arm-qualification.v1','status':'PASS','targetN':316562,'targetQ':316562,'qualifiedArms':order,'workers':workers,'captureSha256':'b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf','addonSha256':'40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0','nodeSha256':'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48','officialArtifact':{'artifactId':11274862662,'runId':37126251298,'head':'fc0c71fb01daf11ad740632c1dff299be4310f29','zipBytes':20168409,'zipSha256':digest},'auditChecks':checks,'scope':'Actual three fresh semantic arms, full terminal166/native NQ/board/RAMhash/PIO and final authentication; no paired timing/speed/adoption. WholeRAM bytes and intermediate states not retained.'};(R/'independent-arm-qualification-audit.json').write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out))

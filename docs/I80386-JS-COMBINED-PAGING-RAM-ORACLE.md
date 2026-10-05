@@ -1,5 +1,7 @@
 # Actual-board JS: protected paging, RAM execution, SMC and A20
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
 **Qualified bounded baseline, 2026-10-01.** A free MIT cold-reset ROM combines the [REP/two-page-fault/PIT case](I80386-JS-REP-PF-PIT-ORACLE.md) with eight protected-mode entries into guest-created RAM code, self-modification and actual 8042 A20 OFF/ON. It completes 192 successful work quanta, 194 attempts and 1156 functional board clocks. These are functional charges, not 192 retired instructions or measured physical 386 timing.
 
 The [capture](receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-capture.json.gz), [result](receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-result.json) and [independent audit](receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-audit.json) are public. This is the JavaScript compatibility profile (`strict386=false`). The separately qualified native [ROM-executed REP/PF/PIT gate](I80386-NATIVE-REP-PF-PIT-ACTUAL-BOARD.md) and [real-mode RAM/SMC/A20 gate](I80386-NATIVE-RAM-COHERENCE-ACTUAL-BOARD.md) remain separate scopes; their combined native execution is next.
@@ -52,4 +54,4 @@ node --test --test-concurrency=1 test/i80386-combined-paging-ram-oracle.test.mjs
 
 Use a clean committed checkout, GNU binutils and Node20. Assembly uses `as --32`, then `ld -m elf_i386 -Ttext 0 -e setup`. The early default-profile pilot did not install the specialized A20 hook; later explicit-profile pilots still had uncommitted sources. Those diagnostics remain preserved and are not the source-bound publication. A first root CLI invocation omitted the required output argument and failed before execution; its usage log is retained separately.
 
-Next qualify this same combined guest through a separate native bridge before production backend and paired guest-workload speed measurements. Full AT boot, strict-386 xv6, Windows enhanced mode, Doom and the 10× target are not established by this bounded baseline.
+Next qualify this same combined guest through a separate native bridge before production backend and paired guest-workload speed measurements. Full AT boot, strict-386 xv6, broader guest enhanced mode, broader game and the 10× target are not established by this bounded baseline.

@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "checks": 91452,
+  "runId": 37142542286,
+  "artifactId": 11280788469,
+  "captureSha256": "85670aff7afdc34205c11b0ac46d7414e7cc8b4290d8c7052cf8e6fc4ed4841f",
+  "nativeN": 19,
+  "successfulQ": 19,
+  "savedBoundaries": 21,
+  "rawNativeWords": 3486,
+  "namedCuts": 5,
+  "codeGenerations": [
+    4,
+    5
+  ],
+  "rawPageBytesEveryBoundary": 4096,
+  "wholeRamSha256": "7babb51b15e2511dfe5548c5369dcb0cd606a3fab960c30577ee6b6aa6c7eacb",
+  "coverage": "All documented represented CPU fields plus full actual board and direct4096-byte host-provider RAM every boundary. Native-only hidden words retained, not compared against invented JS counterparts. Native cache guard/coherence is source-attested. Final wholeRAM is a paired hash, not a separately retained full memory dump.",
+  "noSpeedOrOSClaim": true
+}

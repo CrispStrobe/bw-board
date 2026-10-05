@@ -1,10 +1,9 @@
 # Code16 first-byte admission: retained opt-in prototype
 
-The [source-bound receipt](receipts/2026-09-28-i80386-code16-first-byte-admission.json)
-records two alternating, unprofiled 60-million-step Windows 3.11 opt-in
-A/B pairs. The baseline was `ade888dae14b8cc8b6fe555a25e8dbd954c1cbe2`;
-the measured candidate was `f6aac9189c6fc6715ee1340b220ccfc0a4ee0695`.
-The private media, ROMs, geometry and replay input were identical and are
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+The baseline was `ade888dae14b8cc8b6fe555a25e8dbd954c1cbe2`;
+the measured candidate was `f6aac9189c6fc6715ee1340b220ccfc0a4ee0695`. The private media, ROMs, geometry and replay input were identical and are
 not published. Both paths used diagnostics and form census. This changes
 only the opt-in code16 WASM dispatcher; the ordinary CPU path remains the
 same.
@@ -32,7 +31,7 @@ no individual regression. The four-vCPU virtual Intel Xeon Skylake host had
 heavy, changing load (one-minute averages at run boundaries ranged from
 4.71 to 11.94), making wall-time comparisons unsuitable. This is an
 opt-in-path gain. Its 259.56-second mean is still about **3.31 times** the
-earlier 78.52-second ordinary Windows checkpoint; that older run is a
+earlier 78.52-second ordinary broader guest checkpoint; that older run is a
 different session, so this ratio is context, not a contemporaneous A/B.
 
 All four reports completed 60 million steps with exactly 39,761,006

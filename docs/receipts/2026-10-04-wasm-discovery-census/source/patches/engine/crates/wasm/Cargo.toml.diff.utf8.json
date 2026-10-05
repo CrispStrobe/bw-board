@@ -1,0 +1,7 @@
+{
+  "schema": "labwired.lossless-utf8.v1",
+  "bytes": 284,
+  "sha256": "c022e3094d11cb5a48dc00592084d94b16ea734865c86bca655d531d02cd553f",
+  "encoding": "utf8",
+  "text": "diff --git a/crates/wasm/Cargo.toml b/crates/wasm/Cargo.toml\nindex ec296341..d688cab1 100644\n--- a/crates/wasm/Cargo.toml\n+++ b/crates/wasm/Cargo.toml\n@@ -10,0 +11,4 @@ crate-type = [\"cdylib\"]\n+[features]\n+default = []\n+t16-discovery-census = [\"labwired-core/t16-discovery-census\"]\n+\n"
+}

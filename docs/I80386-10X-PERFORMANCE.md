@@ -1,5 +1,11 @@
 # Experimental 80386 speed path
 
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+The [scalar-ledger semantic qualification](I80386-COLD-LEDGER-SCALAR-QUALIFICATION.md) passed its first single-child checkpoint with independent audit. Its separate [paired comparison](I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) failed: scalar native used 5.251347× execution CPU and 8.943299× execution wall against JS on the same host, with all seven pairs unfavorable. Keep plain JS; no held-fusion-versus-scalar comparison was measured.
+
+The retained [execution-window Inspector diagnostic](I80386-COLD-EXECUTION-PROFILE-RESULTS.md) independently passed guest/profile checks despite an original post-child hosted metadata failure. Its main-isolate samples are diagnostic, not speed qualification; plain JS remains the baseline.
+
 [The private span CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md): 4.221876% nominal mean process-CPU reduction and five of seven favorable pairs, below the required ≥10% and all-seven criterion. All 18 semantic comparisons passed; keep unchanged `fe1`, with no adoption or physical-clock claim.
 
 [Private span native parity](I80386-OWNED-SPAN-PARITY-RESULTS.md) passes three fresh hosted cells against unchanged compiled fe1/103: whole stored166-word snapshots, boards/RAM, ON journal and both full1,649,271-row canonical traces. Runtime116 remains distinct from compiled103. The subsequent [paired CPU gate failed](I80386-OWNED-SPAN-CPU-RESULTS.md); the span candidate is not adopted.
@@ -18,20 +24,39 @@ The separate [ordered AA/AB interface-test qualification](I80386-OWNED-8042-INTE
 
 The [private uniform-page span preparation](receipts/2026-10-02-owned-span-source-preparation/README.md) records the stage before differential controls ran against unchanged fe1. The subsequent [hosted source controls passed](I80386-OWNED-SPAN-SOURCE-RESULTS.md); this source-only evidence establishes no adoption, speed result or broader AT admission.
 
-
 The [single complete hosted bulk-clock gate](I80386-OWNED-CLOCK-BULK-RESULTS.md) does not qualify adoption: 5.4576% lower mean process CPU and five of seven favorable pairs, against the required 10% and seven of seven. All 18 child semantics pass independent audit. Keep fe1; this is fixed-fixture CPU accounting on a GitHub runner exposing four logical AMD EPYC 7763 CPUs, not physical 386DX RTx or a cumulative gain.
 
-The [2026-09-29 plain RAM read shortcut trial](I80386-PLAIN-RAM-READ-NEGATIVE.md)
-stopped after its second 60-million-step Windows pair reversed the first
-pair's timing result. All four complete reports matched after removing only
+All four complete reports matched after removing only
 the opt-in flag, but the predeclared retention gate failed. No xv6 timing pair
 was run and no speed benefit is claimed.
 
 The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). Its separate [paired CPU gate has now failed](I80386-OWNED-SPAN-CPU-RESULTS.md); this establishes no adoption or broader AT admission.
 
-## Current checkpoint (2026-10-03)
+## Current checkpoint (2026-10-04)
+
+The [stock xv6 full usertests result](receipts/2026-09-29-xv6-stock-224m-full-suite.json) completed 7,203,922,011 guest steps within its pinned 10-billion-step budget. That configured compatibility result uses later PSE/APIC extensions and does not qualify strict 386DX or the newer Bochs addon.
+
+The 10× target and calibration against a physical 16 MHz 386DX remain open. The latest same-host scalar-ledger gate ran on an AMD EPYC 7763 exposing four logical CPUs: mean execution CPU was 0.408969 s for JS and 2.147641 s for native; mean elapsed time was 0.198655 s and 1.776629 s. With this fixture's configured six clocks per Q at 6 MHz, virtual-time/mean-wall RTx was 1.593529× and 0.178181×. This is a ratio of means for a finite fixture, not physical-hardware calibration or a general guest benchmark.
+
+Next: identify native costs hidden behind the Node boundary using an acknowledged, bounded recording window; then optimize the largest measured cost and repeat paired correctness/performance checks. In parallel, qualify paged software interrupt/IRET frames, followed by a separately owned page-fault repair/retry fixture. Native full-OS loading remains experimental. Public guest regressions use FreeDOS, ELKS, xv6 and owned fixtures; stock xv6's PSE bootstrap remains a later-CPU extension rather than strict 386DX proof.
+
+The [scalar-ledger paired gate](I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS after all 18 terminal proofs passed and all seven measured CPU pairs lost. The next diagnosis must resolve native execution cost; further small ledger changes are not a path to the 10× target by themselves.
+
+The [fixed protected DS/SS and stack run](I80386-PROTECTED-STACK-RESULTS.md) independently passes 30 N/Q, 32 saved raw 166-word boundaries, 13 cuts and three complete copied pages. PUSH/POP and CALL/RET effects, strict descriptor phases and settled RAM hash agree. Its scope is fixed same-ring stack correctness; full OS, speed and adoption remain open.
+
+The [fixed nonidentity paging run](I80386-NONIDENTITY-PAGING-RESULTS.md) independently passes 34 N/Q, 36 saved raw 166-word boundaries, seven complete physical pages and explicit code/data A/D effects. It preserves two declared unmatched transition phases and qualifies only this finite strict-386 path; exception frames, full OS, speed and adoption remain open.
+
+The [MEMORY clock-fusion paired gate](I80386-COLD-PAIRED-RESULTS.md#memory-clock-fusion-candidate-keep-plain-js) keeps plain JS: same-host fusion used 5.139261× execution CPU and 8.873322× execution wall, losing all seven measured pairs while all 18 terminal proofs passed. Actual fused-effect and outer-entry counts remain separate from logical transfers; no old-native-versus-fusion gain, adoption or physical-386 calibration follows.
+
+The [typed-state paired gate](I80386-COLD-PAIRED-RESULTS.md#copied-uint32array-candidate-keep-plain-js) also keeps plain JS: same-host typed batching used 4.063470× execution CPU and 6.888317× execution wall, losing all seven measured pairs. All 18 children passed fixed terminal proofs. This did not compare old native arrays against typed exports; no adoption or broader guest/physical-386 speed claim follows.
+
+The [completed cold E16 paired gates](I80386-COLD-PAIRED-RESULTS.md) keep the plain-JS baseline: native batching passed against native one-Q, but used 4.116236× execution CPU against plain JS and lost all seven measured pairs. The separately hosted results do not establish default adoption, physical386 RTx or broader guest/full-boot speed.
 
 The [native cold BIOS E16 diagnostic](I80386-NATIVE-COLD-BIOS-E16-RESULTS.md) now passes the fixed checkpoint: 316,562 completions, 400 REP elements and 16,475 ordered PIO events, with independent audit evidence. This is a correctness diagnostic, not full boot, speed qualification or adoption.
+
+The [three-arm semantic qualification](I80386-COLD-THREE-ARM-RESULTS.md) now independently passes plain JS, native one-Q and native batched at the same E16 checkpoint and complete 16,475-event PIO tape. Batched reaches 316,562 N/Q in 16,524 resumes; one-Q uses 316,562. The earlier [inspect-schema](I80386-COLD-THREE-ARM-FIRST-FAILURE.md) and [live-slice type](I80386-COLD-THREE-ARM-CORRECTED-FAILURE.md) failures remain retained. This is terminal/PIO semantic qualification with unchanged source, not a paired speed result or broader guest/broader game 10× claim.
+
+The [first cold-BIOS paired attempt](I80386-COLD-PAIRED-FIRST-FAILURE.md) stopped after one qualified native one-Q warmup child: the parent failed constructing its progress-file path. Batched never started and no measured pairs ran. The source correction does not establish a paired speed result; the independently qualified three-arm checkpoint remains unchanged.
 
 The [undefined-OF diagnostic](I80386-NATIVE-COLD-BIOS-UNDEFINED-OF.md) records the historical sixth attempt, which stopped after 4,709 completions before the reviewed ownership policy was added. The [first 124-input build](I80386-NATIVE-COLD-BIOS-BUILD-RESULTS.md) remains historical static evidence.
 
@@ -39,10 +64,7 @@ The [fixed 8042 native self-test](I80386-OWNED-8042-NATIVE-RESULTS.md) and subse
 
 ## Previous checkpoint (2026-10-02)
 
-The 10× goal and physical 16 MHz 386DX calibration remain open. The existing
-JavaScript AT executor has bounded [Windows 3.11 enhanced-mode evidence](I80386-WINDOWS-ENHANCED-PROBE.md),
-[Doom input/demo evidence](I80386-DOOM.md), and the stock xv6 full-suite result
-linked below. Those results do not qualify the newer full-CPU native experiment.
+The 10× goal and physical 16 MHz 386DX calibration remain open. Those results do not qualify the newer full-CPU native experiment.
 
 The [private main-thread native diagnostic](I80386-NATIVE-OWNED-MAIN-WIP.md)
 passed a single predeclared gate: 26.3289% lower mean process CPU than its
@@ -62,8 +84,7 @@ admitted PIT/PIC reads. The pinned CI rebuild and fresh production capture-OFF/O
 comparison passed the bounded fixture: 445 resumes, both PIT witness bytes,
 complete native mode parity, and 1,649,271 canonical rows. Independent ON audit
 passed 520,820 checks. The documented reset-profile/RAM policy retains raw
-states and hashes; this extension has no speed gate. General native AT boot, xv6, Windows, Doom and
-GUI admission remain separate work. No cumulative speedup is calculated from
+states and hashes; this extension has no speed gate. No cumulative speedup is calculated from
 these different sources, fixtures, or executors.
 
 ## Previous checkpoint (2026-09-30)
@@ -75,9 +96,7 @@ it is a compatibility result, not a throughput comparison. The rejected
 [plain RAM read trial](I80386-PLAIN-RAM-READ-NEGATIVE.md) adds no retained
 speed change. Neither result calibrates speed against a physical 386DX.
 
-The [ordinary Windows profile](receipts/2026-09-27-i80386-ordinary-windows-profile-attribution.json)
-attributes 79.65% of V8 self samples to the 386 CPU core and 31.64% to
-`step` plus `_stepInstruction`. Separate entry-mode CPU sampling in the
+Separate entry-mode CPU sampling in the
 same receipt attributes about 70% of measured user CPU to real,
 protected16 and VM86 calls, and about 30% to protected32. These are
 different instruments and cannot be multiplied into a speed estimate. A
@@ -87,22 +106,15 @@ finds 46.82% of all-process samples in ordinary CPU fallback but only 5.50%
 in the direct fetch/decode functions, below the predeclared 15% screen for
 a narrow fetch/decode cache.
 
-The later [register-stack observer result](I80386-REGISTER-STACK-ADMISSION-RESULT.md)
-reached 9,616,345 disjoint Windows ordinals in runs of at least eight and
-8,514,517 in protected16+VM86. It **failed** the unchanged 15M overall / 5M
+It **failed** the unchanged 15M overall / 5M
 mode gate. The ordinary stock xv6 `forktest` pair reached 967,663 long-run
-ordinals, all protected32, with no xv6 pass threshold. The Windows parent
-exited after both reports but before its historical host manifest; a separate
-read-only recovery audit verified the source and full report parity. No
+ordinals, all protected32, with no xv6 pass threshold. No
 comparative host timing follows from that recovery.
-
-The bounded event-aware trace route was evaluated in this order:
 
 1. Build on the completed owned contracts from the
    [branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md), the merged
    [`8E` ES load fixture](I80386-8E-SEGMENT-LOAD-CONTRACT.md), and the
-   [ordered CALL/RET and `FF /2` fixture](I80386-CALL-RETURN-ORDERED-CONTRACT.md).
-   The [combined ES, CALL/RET, and I/O contract](I80386-COMBINED-ORDERED-STATE-CONTRACT.md)
+   [ordered CALL/RET and `FF /2` fixture](I80386-CALL-RETURN-ORDERED-CONTRACT.md). The [combined ES, CALL/RET, and I/O contract](I80386-COMBINED-ORDERED-STATE-CONTRACT.md)
    from [PR #151](https://github.com/CrispStrobe/bw-board/pull/151) also
    pins owned commit, fault, and chip/IRQ ordering. The
    [selected register-stack contract](I80386-REGISTER-STACK-ORDERED-CONTRACT.md)
@@ -110,16 +122,11 @@ The bounded event-aware trace route was evaluated in this order:
    additional `50–5F` stack effects across modes. Broader branch, device,
    fault, and mapping combinations remain unproved. Preserve code/page-table
    writes and chip/IRQ cuts in any revised grammar.
-2. The [expanded Windows result](I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
-   reached 6.10 million disjoint ordinals in runs of at least eight overall,
-   below its 15-million gate, although protected16+VM86 reached 5.59 million
-   and passed its 5-million threshold. The selected `50–5F` register-stack
+2. The selected `50–5F` register-stack
    extension then reached 9.62 million overall and 8.51 million in those
    modes at a later revision, still failing the overall gate. The separate
    stock xv6 census rose from 317,206 to 967,663 long-run ordinals, all
-   protected32, with no xv6 pass threshold. Opcode frequency and local
-   bridges cannot close the measured disjoint Windows gap by assumption.
-3. Attribute the affected path to nonoverlapping, all-process CPU samples
+   protected32, with no xv6 pass threshold. Attribute the affected path to nonoverlapping, all-process CPU samples
    before treating step coverage as a speed opportunity. That follow-on
    profile screen has no completed result for this grammar. The
    [ordinary-core audit](receipts/2026-09-28-i80386-ordinary-core-other-audit.md)
@@ -127,9 +134,7 @@ The bounded event-aware trace route was evaluated in this order:
    functions are not savings estimates.
 4. Only if those screens pass, build an opt-in executor with dynamic
    per-instruction translation and fault checkpoints, exact event exits, and
-   ordinary fallback. Require complete Windows and xv6 guest-state parity,
-   including RAM and disk hashes, focused mutation tests, and serial
-   alternating unprofiled CPU-time pairs before any retention or speed claim.
+   ordinary fallback.
 
 The register-stack grammar also failed the overall gate. No CPU-cost gate has
 passed and no broader trace executor is justified by this evidence. A separate
@@ -164,17 +169,14 @@ different-source samples should not be spliced into an invented cumulative
 RTx figure. The [cross-platform benchmark](X86-RTX-PLATFORMS.md) now has
 VPS, Kaggle CPU-host, and [GitHub-hosted](receipts/2026-09-28-x86-platform-gh.json)
 receipts. The GitHub runner's AMD EPYC 7763 measured 4.05 million 386-core
-and 2.24 million 386-AT instructions/s on its fixed real-mode benchmark.
-The three hosts ran identical benchmark source files, but these short
-media-free probes are not xv6 or Windows workloads. Their reported 386
+and 2.24 million 386-AT instructions/s on its fixed real-mode benchmark. The three hosts ran identical benchmark source files, but these short
+media-free probes are not xv6 or broader guest workloads. Their reported 386
 factors use configured virtual time and explicitly are not physical-386 RTx.
 
 The [reference-emulator audit](I80386-REFERENCE-EMULATORS.md) identifies the
 useful design gap: QEMU TCG translates and chains host-code blocks; Bochs
 caches decoded traces; this board still pays much of the JavaScript decode,
-translation, event, and JS↔WASM dispatch cost. The next retained change must
-show a meaningful paired full-xv6 user-CPU gain, identical complete guest
-state, and FreeDOS/Windows plus protected-mode requalification. A
+translation, event, and JS↔WASM dispatch cost. A
 [full-xv6 native fallback census](receipts/2026-09-28-i80386-native-entry-negative.json)
 found 16.43 million native instructions in 4.00 million calls and 7.91 million
 JavaScript steps. Raising the block budget and caching program transfers
@@ -187,9 +189,7 @@ so they cannot alone deliver 10×. A subsequent
 [grouped 32-bit trial](receipts/2026-09-28-i80386-native-coverage-no-go.json)
 retired 579,024 more xv6 instructions natively yet gained only 0.22% mean
 user CPU across three pairs, with one reversal; its executable changes were
-discarded. The [current Windows code16 diagnostic](I80386-CODE16-WINDOWS-CURRENT.md)
-matched selected reported guest fields but took 392.05 versus 78.52 user CPU
-seconds, about 4.99× longer. Neither result supports another narrow opcode
+discarded. Neither result supports another narrow opcode
 addition. The [bounded dynamic-memory slow-exit contract](I80386-DYNAMIC-MEMORY-SLOW-EXIT.md)
 now demonstrates two narrow memory forms without wiring them into the normal
 dispatcher. A [full-xv6 fallback-span census](receipts/2026-09-28-i80386-dynamic-span-no-go.json)
@@ -200,17 +200,14 @@ the complete guest report and RAM hash unchanged; no grouped executor was
 retained or speedup claimed. Separately, an [owned protected-16 executable
 trace](I80386-CODE16-OWNED-IO-TRACE.md) retires three fixture instructions
 in one call and exits before a device read, with ordinary-state parity and
-QEMU/Bochs witnesses. It is outside the AT dispatcher and has no Windows
+QEMU/Bochs witnesses. It is outside the AT dispatcher and has no broader guest
 speed result. A [V8 short-span profile](receipts/2026-09-28-i80386-short-span-cost-model.json)
-then motivated packing each decoded protected-32 native block's IR once.
-The [retained packed-entry change](receipts/2026-09-28-i80386-packed-entry-performance.json)
+then motivated packing each decoded protected-32 native block's IR once. The [retained packed-entry change](receipts/2026-09-28-i80386-packed-entry-performance.json)
 cut mean full-xv6 user CPU from 18.26 to 16.40 seconds across three serial
 pairs, a **10.19% reduction** on the opt-in native path. Every pair favored
 the candidate; all six complete guest reports, native statistics and RAM
-hashes matched. This is one VPS/workload result, not Windows performance or
-physical 386DX RTx. A later [Windows sampled-timer probe](I80386-CODE16-WASM-COST-ATTRIBUTION.md)
-was too intrusive for absolute phase attribution; a later experiment used
-low-rate V8 profiling. The measurements below continue the dated ledger.
+hashes matched. This is one VPS/workload result, not broader guest performance or
+physical 386DX RTx. The measurements below continue the dated ledger.
 
 The direct stock-xv6 `forktest` A/B from `2feb23a3` to `bc539d33` took 39.655
 versus 29.575 user-CPU seconds for 24,338,279 guest steps (1.341×). The later
@@ -218,17 +215,13 @@ IOAPIC pending-mask experiment measured another 1.078× on the same workload.
 These are bounded measurements, not evidence of the requested 10× overall
 speedup. Reproduction details and hashes are in the dated receipts.
 
-On 2026-09-28, a guarded 25-instruction mappages trace preserved xv6 and a
-bounded Windows report, but repeated admission slowed paired xv6 user CPU by
-16.0% and 19.8%. It still executed every instruction through the ordinary
+It still executed every instruction through the ordinary
 interpreter, so that prototype is a no-go. Two smaller CPU changes were
 retained instead. Coalescing a four-byte immediate fetch only from ordinary
 same-page RAM improved paired xv6 user CPU by 10.7% and 5.2%; direct register
 field access improved it by 8.4% and 5.4% on the resulting board. Each pair
 retired the same 24,338,279 guest steps with identical serial output and final
-RAM hash. The Windows 60-million-step diagnostic matched its preceding source
-except provenance fields; both free-BIOS and browser-target FreeDOS receipts
-were rerun for 45.8 million steps after each source change. The full 386 suite
+RAM hash. The full 386 suite
 passed 494 tests with four skips after each qualification. Raw reports, timings,
 profiles, and negative results are kept under
 `brickwright-firmware-private/performance/2026-09-28`. These are bounded xv6
@@ -326,10 +319,7 @@ at exact device/event boundaries; one crossing per byte or instruction would
 erase the benefit. The repository's `src/riscv-cc-wasm.js` already shows a
 bundled module loader. A 386 module would need the site's explicit Wasm CSP
 allowance and a CLI loading path; it must not use runtime JavaScript code
-generation. Benchmark the full
-Windows transition and xv6 guest-state equality after each stage, including
-self-modifying code, host/DMA writes, CR3 remaps, and precise later-instruction
-faults. These are design requirements, not a claim that the 10× goal is solved.
+generation. These are design requirements, not a claim that the 10× goal is solved.
 
 A [static WASM block spike](I80386-WASM-BLOCK-SPIKE.md) now proves the toolchain
 and an event-budgeted multi-instruction call, but its register-only instruction
@@ -464,8 +454,6 @@ screen and milestones. This is an observed roughly 1.3× end-to-end gain for
 the opt-in xv6 probe on this host, still far from 10×. Production CLI and GUI
 stepping do not use this backend yet.
 
-The [16-bit Windows decoder census](receipts/2026-09-27-i80386-code16-block-decode.json)
-found 44.72 million 16-bit steps in a 60-million-step Windows 3.11 run.
 The code window admitted 44.67 million, but the diagnostic decoder recognized
 the first opcode at only 19.14 million steps. Conservative observation credited
 18.05 million retired steps in disjoint decoded blocks, including 10.83 million
@@ -481,10 +469,7 @@ instructions per native call. The 10× target remains open.
 
 An [opt-in entry-mode CPU sampler](I80386-MODE-CPU-PROFILE.md) now measures
 process CPU over completed AT-console step calls, flushing its clock at each
-mode change. In two 60-million-step runs of the same external Windows 3.11
-workload, real, protected 16-bit and VM86 entry modes together accounted for
-69.8% and 70.2% of attributed user CPU; protected 32-bit accounted for 30.2%
-and 29.8%. No clock window mixed modes. The four paired control/profile runs
+mode change. No clock window mixed modes. The four paired control/profile runs
 had identical normalized guest output; the sampler added 2.41–2.86 user CPU
 seconds, or about 3.4% on average. These mode shares include board and runner
 work and are not strict retired-instruction costs. Even if 16-bit mode became
@@ -494,9 +479,7 @@ raw reports, timing files and source hashes live in the private fixture repo.
 
 The [opt-in code16 WASM block slice](I80386-CODE16-WASM-BLOCK.md) can execute
 read-only `8A`/`8B` memory loads and a few register, immediate and branch
-forms. It matched all normalized guest output in a pinned 60-million-step
-Windows 3.11 A/B, but retired only 2.73 million instructions in 1.26 million
-WASM calls. It took 295.91 user CPU seconds against 78.40 for ordinary
+forms. It took 295.91 user CPU seconds against 78.40 for ordinary
 execution, a 3.77× slowdown, and remains off by default. A later opt-in
 [refusal census](receipts/2026-09-27-i80386-code16-wasm-diagnostics.json)
 accounted for all 57.27 million fallback calls: unsupported first opcode
@@ -507,62 +490,37 @@ calls, not unique retired instructions or CPU-time shares. The immediate
 priority is to identify complete prefixed and stack/control instruction
 forms and find a way to keep useful blocks running across branches.
 
-The read-only [protected-32 native eligibility census](I80386-NATIVE32-CENSUS.md)
-observed 15.28 million protected-32 entries in the same Windows workload.
 The existing decoder returned null at 10.06 million entries; another 3.06
 million produced only a single-instruction candidate. Of 1.81 million
 retired `8B` instructions, 0.96 million had a single-instruction candidate,
-0.59 million a multi-instruction candidate, and 0.26 million no candidate.
-No newly missing narrow opcode family reached the preset 1.5-million
+0.59 million a multi-instruction candidate, and 0.26 million no candidate. No newly missing narrow opcode family reached the preset 1.5-million
 retirement threshold. This census preserves the ordinary guest report and
 does not measure native speed. Its counts favor broad grouped-form coverage
 and cheaper entry/continuation over a small isolated opcode addition.
 
-Later [ordinary Windows V8 attribution](receipts/2026-09-27-i80386-ordinary-windows-profile-attribution.json)
-put 79.65% of samples in the 386 CPU and 10.19% in the AT board;
-`step` plus `_stepInstruction` accounted for 31.64%. An independent
+An independent
 [native-dispatch profile](receipts/2026-09-27-i80386-native-dispatch-profile-negative.json)
 put all native-specific self samples at only 8.90% of its measured run,
 below the preset 10% threshold for a narrow entry/cache patch. These
 different profiles cannot be multiplied into a speedup estimate.
 
 The code16 slice later added ES-prefixed reads and a proved, terminal
-plain-RAM word store. The [store A/B](receipts/2026-09-27-i80386-code16-wasm-terminal-store.json)
-preserved the complete normalized 60-million-step Windows guest report,
-but gained only 2,647 native instructions over the prior ES/read slice.
-It took 303.48 versus 79.20 user CPU seconds, a 3.83× slowdown. This
+plain-RAM word store. It took 303.48 versus 79.20 user CPU seconds, a 3.83× slowdown. This
 write contract is useful correctness groundwork, not a faster path.
 
 Three execution-neutral probes then measured the possible length of broader
-blocks before implementing them. The [unlinked broad-grammar census](receipts/2026-09-27-i80386-broad-block-potential-census.json)
-found 44.94 million syntactically potential Windows steps in 22.06 million
-runs (2.04 steps/run), and 21.60 million xv6 steps in 8.58 million runs
-(2.52). Following only [actual conditional-Jcc successors](receipts/2026-09-27-i80386-broad-jcc-linked-potential.json)
-raised those means to 2.56 and 3.58. An [opcode-refusal histogram](receipts/2026-09-28-i80386-broad-refusal-opcodes.json)
-identified concentrated missing forms: Windows protected16 `3A`/`3C`
-accounted for 64.34% of unsupported Jcc successors, while xv6 protected32
-`25`/`F6 /0` accounted for 88.82%. `FF` mixed indirect control flow and
-other operations and cannot be admitted as one form.
+blocks before implementing them. Following only [actual conditional-Jcc successors](receipts/2026-09-27-i80386-broad-jcc-linked-potential.json)
+raised those means to 2.56 and 3.58.
 
 A parallel [selected-form syntax scenario](receipts/2026-09-28-i80386-selected-forms-potential.json)
 then included read-only byte compares/tests, accumulator immediate ALU,
-`F6/F7 /0` TEST and `0F B6/B7` MOVZX in the observed grammar. Windows
-rose to 48.47 million potential steps in 15.13 million linked runs, or
-**3.20 steps/run**; xv6 reached 23.72 million in 4.17 million, or **5.69**.
-Both full guest reports and the preexisting census views matched exactly.
-The predeclared gate required at least 50% potential coverage and four
-steps/run on *both* workloads. Windows fails, so no executable path follows
+`F6/F7 /0` TEST and `0F B6/B7` MOVZX in the observed grammar. Both full guest reports and the preexisting census views matched exactly. The predeclared gate required at least 50% potential coverage and four
+steps/run on *both* workloads. broader guest fails, so no executable path follows
 from this selected set. These are optimistic syntax counts, not code/data
 proofs, CPU-time shares or measured acceleration.
 
-The next speed experiment must address Windows' short protected16 and
-protected32 runs and the expensive per-call admission boundary together.
 Adding another isolated opcode to the current code16 WASM dispatcher is not
-supported by these measurements. The selected-form receipt already bounds a
-proposed eight-step hot-trace gate: only 3.45 million of 10.04 million
-Windows protected16 steps (34.35%) and 3.03 million of 15.28 million
-protected32 steps (19.83%) occur in potential runs of at least eight.
-Identity/replay checks can only reduce those shares, so a proposed 50%
+supported by these measurements. Identity/replay checks can only reduce those shares, so a proposed 50%
 per-mode hot-trace gate fails without another full probe. A path toward 10×
 must instead handle more control, stack, segment and string boundaries per
 entry, or cut entry cost enough that short runs become worthwhile. Any
@@ -570,86 +528,18 @@ executable prototype must preserve guest state and beat ordinary execution
 in serial paired full-workload CPU-time tests. The 10× target remains open.
 
 An opt-in [observed backward-Jcc locator](I80386-HOT-LOOP-LOCATOR.md) then
-measured actual branch recurrence without changing execution. Its
-[aggregate receipt](receipts/2026-09-28-i80386-hot-loop-locator.json) has
-exact guest-state parity for pinned Windows 60M and lean xv6; two Windows
-reports are byte-identical. Long traversal sums overlap at nested branches
-and are not disjoint executable coverage. The strongest retained Windows
-protected16 site with at least eight steps repeats 6,580 times for 52,640
-steps, just 0.524% of protected16 completed steps and 0.0878% of all 60M
-step calls. Windows evicted 6,052 candidate records, so retained per-site
-counts are lower bounds. The strongest xv6 protected32 exact-identity site
+measured actual branch recurrence without changing execution. Long traversal sums overlap at nested branches
+and are not disjoint executable coverage. The strongest xv6 protected32 exact-identity site
 repeats 8,961 times at 25 steps. Neither single site can deliver a whole-run
 10× gain.
 
 Targeted ordinary-step body traces exposed why those sites cannot yet be
-batched. The [Windows protected16 audit](I80386-WIN16-HOT-SITE-AUDIT.md)
-found a COM1 line-status `IN` on every eight-step traversal; the read has
-UART and IRQ side effects, and chip/event and I/O privilege boundaries must
-remain exact. The [xv6 proof audit](receipts/2026-09-28-i80386-xv6-hot-loop-prototype-no-go.json)
+batched. The [xv6 proof audit](receipts/2026-09-28-i80386-xv6-hot-loop-prototype-no-go.json)
 found a 25-step page-table-writing `mappages` loop, an 18-step loop with a
 PDE-dependent PTE read, and a nine-step loop with dependent reads and a
 write. Current entry-only code/data windows cannot admit these without
 losing translation coherence or precise later-instruction faults. That
 initial audit stopped without executable work or CPU-time A/B.
-The next architectural work is dynamic per-instruction translation and fault
-checkpoints, immediate page-table-write coherence, and bounded event-aware
-batching; any implementation still needs full Windows/xv6 parity and paired
-CPU-time evidence before a speed claim.
-
-A [current-source Windows code16 follow-up](I80386-CODE16-WINDOWS-CURRENT.md)
-paired ordinary and opt-in diagnostic runs at `e7434073` for the same 60
-million guest steps and matching selected reported guest fields. The console
-report omits full RAM, disk state and complete hidden CPU state. The opt-in
-path retired 5.04 million steps in 2.35 million block calls, averaging
-2.15 steps/call;
-ordinary and opt-in user CPU were 78.52 and 392.05 seconds on a four-vCPU
-Xeon Skylake host. Its **4.99× CPU cost** is a no-go for the current
-diagnostic configuration. The [public aggregate receipt](receipts/2026-09-28-i80386-code16-windows-current.json)
-retains source hashes, modes and exit reasons without private media IDs or
-guest text. The bounded next step is an event-aware multi-instruction trace
-architecture, not another isolated 16-bit opcode addition.
-An [owned protected-16 branch-to-I/O fixture](I80386-WIN16-IO-BOUNDARY-ORACLE.md)
-now pins the first acceptance boundary: a taken JZ reaches an `IN` with zero
-device reads, then ordinary execution performs one read. QEMU supplies the
-pre/post CPU-state checkpoints; Bochs CPU-level 3 independently emits the
-same output marker. This is an oracle harness, not an executable block-engine
-speed result.
-A separate [owned executable trace spike](I80386-CODE16-OWNED-IO-TRACE.md)
-now retires its three protected-16 instructions in one opt-in call and
-returns `io-required` before `IN`. Focused parity and refusal tests cover
-ordinary resume, a chip-event horizon, branch fallthrough and code mutation.
-The fixture is too narrow to imply a Windows speedup and remains outside
-the default execution paths.
-A [sampled code16 WASM cost probe](I80386-CODE16-WASM-COST-ATTRIBUTION.md)
-preserved the selected Windows guest fields and exact retirement counts,
-but its 256× sampled-time extrapolation exceeded observed wall time.
-That distortion prevents a whole-run phase attribution or a retained
-optimization. The opt-in diagnostic remains roughly five times the
-ordinary user CPU in the prior uninstrumented pair.
-A [follow-on V8 profile/control receipt](I80386-CODE16-WASM-COST-ATTRIBUTION.md#follow-on-v8-cpu-profile)
-at the same 60M input finds 47.35% of all opt-in self samples in the
-code-window module plus `decodeBlock`, with selected reported guest fields
-and exact opt-in counts matching. This clears a predeclared screen for a
-cheaper code-window/cache admission prototype, **not** a removable-cost or
-speed claim. Host load rose sharply during the serial runs; no executor
-change was made. Any retained prototype still needs alternating unprofiled
-full-run parity/timing pairs and a 10% mean user-CPU gain without regressions.
-The [bounded first-byte admission prototype](I80386-CODE16-WINDOW-ADMISSION.md)
-then passed that gate: two 60M Windows pairs cut opt-in mean user CPU from
-370.94 to 259.56 seconds (30.03%), with no individual regression and all
-reported guest fields equal after expected source/revision normalization.
-It remains opt-in and about 3.31× slower than the earlier ordinary Windows
-checkpoint; the default CPU path is unchanged.
-The [next code16 gate](I80386-CODE16-NEXT-GATE.md) predeclares a post-change
-V8 profile screen and a disjoint, event-aware trace-coverage observer before
-another executable prototype. No new runtime change follows from the
-first-byte result alone.
-The single post-change 5 ms V8 profile found 34,905 of 52,168 all-process
-self samples (66.91%) in the disjoint non-window dispatcher and ordinary
-fallback bins. This clears the predeclared sample screen, but the samples
-are not removable CPU time. The separate four-step/25%-unique-step observer
-gate remains unmet and no broader executor was added.
 
 A follow-on [dependent-read observation](receipts/2026-09-28-i80386-dependent-read-xv6-observation.json)
 admitted 51,150 of 51,200 reached second-read attempts using cached RAM

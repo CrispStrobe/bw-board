@@ -1,0 +1,9 @@
+{
+  "scope": "Read-only audit parser, not guest/control failure",
+  "error": "Fallback/execution zero BigInt counters serialized as decimal strings; initial audit assumed Python integer zero",
+  "scriptSha256": "936ee21eb02b0c8d022bb423f61be52cdf2e59c06c20ed8c76a1b06363bbff63",
+  "guestUnchanged": true,
+  "noGuestRerun": true,
+  "secondReadOnlyParserError": "Native successfulQuanta also serializes BigInt as exact decimal string; validate lexical domain then compare integer meaning",
+  "r2ScriptSha256": "c7b967b67ef2649cd2c3fd559c002b8393e027ea340ff60da572452a475f8cfe"
+}

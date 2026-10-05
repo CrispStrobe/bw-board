@@ -1,15 +1,13 @@
 # Expanded cross-mode grouped shadow admission: predeclared diagnostic
 
-The [source-pinned Windows and stock xv6 results](I80386-EXPANDED-GROUPED-ADMISSION-RESULT.md)
-are complete. Windows passed whole-report parity but failed the 15M overall
-disjoint-run opportunity gate; xv6 is a separate coverage census. The
+External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
+
+The
 combined [owned state-ordering fixture](I80386-COMBINED-ORDERED-STATE-CONTRACT.md)
 and [selected register-stack fixture](I80386-REGISTER-STACK-ORDERED-CONTRACT.md)
 do not establish an executor or CPU-cost gate.
 
-`AT_EXPANDED_GROUPED_SHADOW_ADMISSION=1` selects a separate, default-off
-Windows 386 AT observer. `XV6_EXPANDED_GROUPED_SHADOW_ADMISSION=1` selects the
-same observer for the ordinary stock xv6 probe. Neither flag changes guest
+Neither flag changes guest
 execution: every step still uses the ordinary CPU and AT board. Native blocks,
 code16 execution, other observers and shared-RAM execution are incompatible
 with this measurement. The observer records only instruction bytes and bus
@@ -40,13 +38,10 @@ would otherwise compare equal. No stack forms beyond the three named near
 control forms are admitted. Any source and stack traffic spanning data pages
 is refused.
 
-Before a private measurement, pin one committed board revision, complete
-executable source hashes, firmware/media hashes, input geometry, options,
-and the 60,000,000-step Windows budget. Run one ordinary baseline and one
-ordinary observed arm serially on the same Windows input. For xv6, run a
+For xv6, run a
 separate ordinary lean stock 4 MiB `forktest` baseline/observed pair with
 `XV6_RAM_HASH=1` and the same firmware, images, command, expected serial
-marker and step ceiling. Do not combine Windows and xv6 ordinals. The
+marker and step ceiling. Do not combine broader guest and xv6 ordinals. The
 source-bound reducer is invoked as
 `node scripts/summarize-i80386-expanded-grouped-result.mjs windows observed.json baseline.json`
 or with `xv6` in place of `windows`. It verifies committed source bytes,
@@ -57,12 +52,10 @@ full instruction snapshot, CPU-cycle and board-cycle parity. Private raw
 reports retain media identifiers and guest text; publish only the compact
 reduction.
 
-The Windows opportunity gate is unchanged: at least **15,000,000 unique
-eligible retired ordinals in disjoint runs of eight or more overall** and
-**5,000,000 in protected16 plus VM86**. Report all four modes, run-length
+Report all four modes, run-length
 histograms, refusals and typed-but-global-cut counts. The separate xv6
 census reports the same partitions but has no predeclared pass threshold;
-it cannot compensate for a failed Windows gate. Observer CPU time is
+it cannot compensate for a failed broader guest gate. Observer CPU time is
 instrumentation cost, not a speed result. Passing the optimistic syntax and
 bus-shape screen would still require combined fault/event/mapping proofs,
 an overlap-safe CPU-cost gate, and later paired uninstrumented execution

@@ -1,0 +1,53 @@
+{
+  "schema": "bw.cold-memory-fusion.execution-profile-inverse.v1",
+  "baseRevision": "735740cb52550bb71edde5aba326da6f3a01f473",
+  "baseWorkerSha256": "abcf0dbd77fccaff8d186e07943b84d0c7cdd96f3ad6ea6a4a02c88ac55234d0",
+  "timedLoopSha256": "5fd249f8f0cce6ef48c17c917696f8df53e75658ffa1409f1edf537b14b9e785",
+  "edits": [
+    {
+      "before": "",
+      "after": "import {createExecutionSampler,diagnosticProfile} from './profile-controller.mjs';\n",
+      "baseLine": 2
+    },
+    {
+      "before": "import {authenticateCompiledCheckout,compiledRevision,resetSource} from './admission.mjs';\n",
+      "after": "import {authenticateCompiledCheckout,authenticateDiagnosticAuthority,compiledRevision,resetSource} from './admission.mjs';\n",
+      "baseLine": 7
+    },
+    {
+      "before": " const receipt={schema:'bw.cold-native-memory-fusion-performance.worker.v1',requiredStateExportProfile:stateExportProfile,requiredMemoryFusionProfile:memoryFusionProfile,status:'FAIL',input,scope:'SOURCE_ONLY_NATIVE_ARM_UNQUALIFIED; no speed/adoption/general AT/Windows/Doom claim',clockModel:'Configured functional six board clocks per Q; no physical RTx calibration',resetSource,coverage:'Mandatory full166 API materialization on every return remains timed; reset/final/first-failure166 retained, discarded intermediates not independently reconstructible',returns:{resumes:0,irqSnapshots:0,zeroQ:0,reasons:{1:0,3:0,7:0},maxChargedN:0,maxChargedQ:0}};\n",
+      "after": " const receipt={schema:'bw.cold-native-memory-fusion.execution-profile.worker.v1',diagnosticProfile,requiredStateExportProfile:stateExportProfile,requiredMemoryFusionProfile:memoryFusionProfile,status:'FAIL',input,scope:'SOURCE_ONLY_NATIVE_ARM_UNQUALIFIED; no speed/adoption/general AT/Windows/Doom claim',clockModel:'Configured functional six board clocks per Q; no physical RTx calibration',resetSource,coverage:'Mandatory full166 API materialization on every return remains timed; reset/final/first-failure166 retained, discarded intermediates not independently reconstructible',returns:{resumes:0,irqSnapshots:0,zeroQ:0,reasons:{1:0,3:0,7:0},maxChargedN:0,maxChargedQ:0}};\n",
+      "baseLine": 19
+    },
+    {
+      "before": "",
+      "after": " let sampler=null;\n",
+      "baseLine": 21
+    },
+    {
+      "before": "  prerequisite=authenticatePrerequisite(input);const targetQ=authorizedTarget(prerequisite.token);receipt.prerequisite={binding:prerequisite.binding,bindingSha256:prerequisite.bindingSha256,captureSha256:prerequisite.captureSha256,independentAuditSha256:prerequisite.independentAuditSha256};\n",
+      "after": "  receipt.diagnosticAuthority=authenticateDiagnosticAuthority(input);prerequisite=authenticatePrerequisite(input);const targetQ=authorizedTarget(prerequisite.token);receipt.prerequisite={binding:prerequisite.binding,bindingSha256:prerequisite.bindingSha256,captureSha256:prerequisite.captureSha256,independentAuditSha256:prerequisite.independentAuditSha256};\n",
+      "baseLine": 31
+    },
+    {
+      "before": "",
+      "after": "  const {Session}=await import('node:inspector/promises');\n  sampler=createExecutionSampler(new Session(),{monotonic:()=>process.hrtime.bigint().toString(),cpu:()=>process.cpuUsage()},profile=>{const bytes=Buffer.from(JSON.stringify(profile)+'\\n');assert.ok(bytes.length<=8<<20);writeFileSync(resolve(input.output,'execution.cpuprofile'),bytes,{flag:'wx'});return {file:'execution.cpuprofile',bytes:bytes.length,sha256:sha(bytes)};});receipt.executionProfile=sampler.record;\n  await sampler.start();assert.ok(sampler.mark('execution-timer-before'));\n  try{\n",
+      "baseLine": 35
+    },
+    {
+      "before": "",
+      "after": "  }finally{sampler.mark('execution-timer-after');await sampler.stop();}\n",
+      "baseLine": 44
+    },
+    {
+      "before": "  receipt.bridgeAttemptCounts=validateBridgeEvidence(receipt.reset.native,native,provider.bridgeEntryCounts());api.close();provider.close();closed=true;receipt.closed={native:true,provider:true};afterChecks();receipt.processCpuMicrosecondsAtReceipt=process.cpuUsage();receipt.processUptimeSecondsAtReceipt=process.uptime();receipt.wholeChildEvidence='Separate parent wait4/rusage CPU/wall, host context, lifecycle limits and raw exit required';receipt.status='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS';write('receipt.json');\n",
+      "after": "  receipt.bridgeAttemptCounts=validateBridgeEvidence(receipt.reset.native,native,provider.bridgeEntryCounts());api.close();provider.close();closed=true;receipt.closed={native:true,provider:true};afterChecks();receipt.processCpuMicrosecondsAtReceipt=process.cpuUsage();receipt.processUptimeSecondsAtReceipt=process.uptime();receipt.wholeChildEvidence='Separate parent wait4/rusage CPU/wall, host context, lifecycle limits and raw exit required';receipt.terminalParityStatus='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS';sampler.assertComplete();receipt.status='EXECUTION_WINDOW_DIAGNOSTIC_PARITY_AND_PROFILE_CAPTURE_PASS';write('receipt.json');\n",
+      "baseLine": 47
+    },
+    {
+      "before": "",
+      "after": "  if(sampler)await sampler.stop();\n",
+      "baseLine": 49
+    }
+  ]
+}

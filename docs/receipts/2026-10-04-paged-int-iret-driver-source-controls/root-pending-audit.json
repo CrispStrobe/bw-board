@@ -1,0 +1,67 @@
+{
+  "result": "ROOT_DRIVER_SOURCE_CONTROLS_AND_ACTUAL_IDENTITY_PASS",
+  "cases": 8,
+  "sourcePaths": 80,
+  "addonLoads": 0,
+  "cpuInstructions": 0,
+  "packets": [
+    {
+      "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004",
+      "result": {
+        "beforeAfterEqual": true,
+        "finalizationErrors": [],
+        "mode": "eight-source-controls",
+        "primaryError": null,
+        "scope": "manufactured/read-only source proof; no factory/provider/addon/emulated instruction",
+        "sourceCount": 80,
+        "status": "SOURCE_CONTROLS_PASS"
+      },
+      "exit": {
+        "childStarted": true,
+        "exitCode": 0,
+        "finalizationErrors": [],
+        "leaderReaped": true,
+        "pid": 3680408,
+        "primaryError": null,
+        "rawWaitStatus": 0,
+        "rusage": {
+          "maxRSSKiB": 95160,
+          "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+          "systemSeconds": 1.3236729999999999,
+          "userSeconds": 1.705463
+        },
+        "timeout": false,
+        "wallSeconds": 4.988798592239618
+      }
+    },
+    {
+      "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004",
+      "result": {
+        "beforeAfterEqual": true,
+        "finalizationErrors": [],
+        "mode": "conditional-readonly-identity",
+        "primaryError": null,
+        "scope": "manufactured/read-only source proof; no factory/provider/addon/emulated instruction",
+        "sourceCount": 80,
+        "status": "READONLY_SOURCE_AUTH_PASS"
+      },
+      "exit": {
+        "childStarted": true,
+        "exitCode": 0,
+        "finalizationErrors": [],
+        "leaderReaped": true,
+        "pid": 3680934,
+        "primaryError": null,
+        "rawWaitStatus": 0,
+        "rusage": {
+          "maxRSSKiB": 63908,
+          "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+          "systemSeconds": 0.542327,
+          "userSeconds": 0.47241099999999997
+        },
+        "timeout": false,
+        "wallSeconds": 2.505129588767886
+      }
+    }
+  ]
+}
