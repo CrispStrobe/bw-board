@@ -1,7 +1,7 @@
 """Closed root-owned disabled/enable/disable recorder; PENDING refuses all effects."""
 import sys
 sys.dont_write_bytecode=True
-import os,json,hashlib,subprocess,resource,signal,socket,struct,select,time,secrets,pwd
+import os,json,hashlib,subprocess,resource,signal,socket,struct,select,time,secrets,pwd,importlib
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
@@ -122,15 +122,34 @@ def terminal_projection(receipt):
  require(receipt['schema']=='bw.cold-native-ledger-scalars-symbol-profile.worker.v1' and receipt.get('guestStatus')=='NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS','attainable completed guest proof, independent of observer status')
  require(receipt['observerScope']=='DIAGNOSTIC_OBSERVER_ACTIVE_NOT_SPEED_QUALIFICATION','fixed observer scope')
  projected=dict(receipt);projected['schema']='bw.cold-native-memory-fusion-ledger-scalars-performance.worker.v1';projected['status']=receipt['guestStatus'];return projected
+def isolated_terminal(qdir,receipt,data,binding,capture):
+ # Only the held qualifier's six local modules are isolated; stdlib is untouched.
+ require(qdir.is_absolute() and qdir==qdir.resolve() and qdir.is_dir(),'canonical held qualifier module root')
+ names=('archive','admission','restore','policy','lifecycle','qualify')
+ prior={name:sys.modules[name] for name in names if name in sys.modules};path=list(sys.path)
+ try:
+  for name in names:sys.modules.pop(name,None)
+  sys.path.insert(0,str(qdir))
+  q=importlib.import_module('qualify')
+  for name in names:
+   module=sys.modules.get(name)
+   require(module is not None and Path(module.__file__).resolve()==qdir/(name+'.py'),'held isolated module '+name)
+  return q.terminal(receipt,data,binding,capture)
+ finally:
+  sys.path[:]=path
+  for name in names:
+   sys.modules.pop(name,None)
+   if name in prior:sys.modules[name]=prior[name]
+
 def terminal_audit(setup):
  # Metadata-only import of the exact held terminal validator; never q.main/setup.
  qroot=WS/'qualifier';context=setup['qualifierSourceContext']
  require(fingerprint(HERE/'qualifier-source-context.json')['sha256']==load(HERE/'profile-binding.json')['qualifierSourceContextSha256'],'fixed terminal-validator source context')
  for name,h in context['hashes'].items():require(fingerprint(qroot/name)['sha256']==h,'terminal validator current bytes '+name)
- sys.path.insert(0,str(qroot/'scripts/cold-ledger-scalars-qualification'));import qualify as q
+ qdir=qroot/'scripts/cold-ledger-scalars-qualification'
  receipt_dir=Path(load(OUT/'input.json')['output']);success=receipt_dir/'receipt.json';failure=receipt_dir/'failure.json';require(success.exists()!=failure.exists(),'one original worker outcome')
  receipt=load(success if success.exists() else failure);data=load(OUT/'input.json');capture=load(Path(data['capture']))
- return {'status':'HELD_FULL_TERMINAL_PARITY_PASS','rawReceipt':fingerprint(success if success.exists() else failure),'metrics':q.terminal(terminal_projection(receipt),data,setup['nativeBinding'],capture),'scope':'Raw receipt unchanged; only diagnostic schema/status projected for held semantic validation'}
+ return {'status':'HELD_FULL_TERMINAL_PARITY_PASS','rawReceipt':fingerprint(success if success.exists() else failure),'metrics':isolated_terminal(qdir,terminal_projection(receipt),data,setup['nativeBinding'],capture),'scope':'Raw receipt unchanged; only diagnostic schema/status projected for held semantic validation'}
 def read_message(connection,timeout=5):
  deadline=time.monotonic()+timeout;raw=b''
  while b'\n' not in raw:
@@ -151,7 +170,15 @@ class RecorderControl:
   before=time.monotonic_ns();record={'command':command,'sessionSequence':sequence,'controllerBeforeNs':str(before),'status':'ATTEMPT','rawAck':None};self.records.append(record)
   try:
    stderr_before=checked_control_stderr()['bytes']
-   require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK');os.write(self.write_fd,(command+'\n').encode());ready,_,_=select.select([self.read_fd],[],[],remaining_budget(self.worker_started,5));require(ready,'bounded perf ACK timeout');raw=os.read(self.read_fd,64);record['rawAck']=raw.decode(errors='replace');require(raw==b'ack\n','exact single perf ACK')
+   require(not select.select([self.read_fd],[],[],0)[0],'stale or duplicate perf ACK')
+   os.write(self.write_fd,(command+'\n').encode());deadline=time.monotonic()+remaining_budget(self.worker_started,5)
+   raw=b'';record['ackFragments']=[]
+   while len(raw)<5:
+    left=min(deadline-time.monotonic(),remaining_budget(self.worker_started));require(left>0,'bounded perf ACK timeout')
+    ready,_,_=select.select([self.read_fd],[],[],left);require(ready,'bounded perf ACK timeout')
+    fragment=os.read(self.read_fd,64);record['ackFragments'].append(fragment.hex());raw+=fragment;record['rawAck']=raw.decode(errors='replace')
+    require(fragment,'perf ACK EOF');require(len(raw)<=5 and b'ack\n\0'.startswith(raw),'exact single perf ACK')
+   require(raw==b'ack\n\0','exact single perf ACK');require(not select.select([self.read_fd],[],[],0)[0],'trailing or duplicate perf ACK')
    stderr=checked_control_stderr(None if sequence==-2 else ('Event cpu-clock '+('enabled' if name=='enable' else 'disabled')).encode(),stderr_before)
    record.update(status='PASS',stderrAtAck=stderr,controllerAfterNs=str(time.monotonic_ns()),scope='perf ACK has no sequence field; this authenticated single-writer channel is serialized, any failure permanently ends session')
   except BaseException as error:

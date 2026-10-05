@@ -35,25 +35,72 @@ class Controls(unittest.TestCase):
    def success(fd,payload):
     if payload!=b'enable\n':
      with stderr.open('ab') as f:f.write(b'Event cpu-clock '+(b'enabled' if payload==b'enable cpu-clock\n' else b'disabled')+b'\n')
-   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]*4),patch.object(r.os,'write',side_effect=success) as write,patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
+   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[]),([],[],[])]*4),patch.object(r.os,'write',side_effect=success) as write,patch.object(r.os,'read',return_value=b'ack\n\0'),patch.object(r,'terminate') as stop:
     for name,seq in [('enable',-2),('disable',0),('enable',1),('disable',2)]:c.command(name,seq)
     self.assertEqual([x.args[1] for x in write.call_args_list],[b'enable\n',b'disable cpu-clock\n',b'enable cpu-clock\n',b'disable cpu-clock\n']);stop.assert_not_called()
    self.assertEqual([x['command'] for x in c.records],['enable','disable cpu-clock','enable cpu-clock','disable cpu-clock'])
    for raw in [b"failed: can't find 'cpu-clock' event\n",b'failed: wrong command\n',b'Event unrelated disabled\n',b'Event cpu-clock disabled extra\n']:
     stderr.write_bytes(b'');bad=r.RecorderControl(10,11,child)
-    with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write',side_effect=lambda *args:stderr.write_bytes(raw)),patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate') as stop:
+    with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[]),([],[],[])]),patch.object(r.os,'write',side_effect=lambda *args:stderr.write_bytes(raw)),patch.object(r.os,'read',return_value=b'ack\n\0'),patch.object(r,'terminate') as stop:
      with self.assertRaisesRegex(ValueError,'selector refused|exact named selector'):bad.command('disable',0)
      stop.assert_called_once_with(child)
-    self.assertTrue(bad.failed);self.assertEqual(len(bad.records),1);self.assertEqual(bad.records[0]['status'],'FAIL');self.assertEqual(bad.records[0]['rawAck'],'ack\n');self.assertIn(raw.decode(),bad.records[0]['stderrAtFailure']['rawExcerpt'])
+    self.assertTrue(bad.failed);self.assertEqual(len(bad.records),1);self.assertEqual(bad.records[0]['status'],'FAIL');self.assertEqual(bad.records[0]['rawAck'],'ack\n\0');self.assertIn(raw.decode(),bad.records[0]['stderrAtFailure']['rawExcerpt'])
     with self.assertRaisesRegex(ValueError,'closed'):bad.command('enable',1)
    stderr.write_bytes(b'');startup=r.RecorderControl(10,11,child);report={'controlRecords':startup.records}
    def startup_reply(fd,payload):
     if payload==b'disable cpu-clock\n':stderr.write_bytes(b"failed: can't find 'cpu-clock' event\n")
-   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]*2),patch.object(r.os,'write',side_effect=startup_reply),patch.object(r.os,'read',return_value=b'ack\n'),patch.object(r,'terminate',side_effect=OSError('secondary cleanup failure')):
+   with patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[]),([],[],[])]*2),patch.object(r.os,'write',side_effect=startup_reply),patch.object(r.os,'read',return_value=b'ack\n\0'),patch.object(r,'terminate',side_effect=OSError('secondary cleanup failure')):
     startup.command('enable',-2)
     with self.assertRaisesRegex(ValueError,'selector refused'):startup.command('disable',0)
-   self.assertEqual([x['status'] for x in report['controlRecords']],['PASS','FAIL']);self.assertEqual(report['controlRecords'][1]['rawAck'],'ack\n');self.assertIn('secondary cleanup',report['controlRecords'][1]['cleanupError'])
+   self.assertEqual([x['status'] for x in report['controlRecords']],['PASS','FAIL']);self.assertEqual(report['controlRecords'][1]['rawAck'],'ack\n\0');self.assertIn('secondary cleanup',report['controlRecords'][1]['cleanupError'])
    text=(Path(r.__file__)).read_text();self.assertIn("'-e','cpu-clock','-e','dummy:u'",text);self.assertIn("control.command('enable',-2);control.command('disable',0)",text);self.assertNotIn("command('enable dummy",text)
+ def test_fragmented_exact_ack_and_absolute_timeout(self):
+  child=Mock();child.poll.return_value=None
+  c=r.RecorderControl(10,11,child,0)
+  with patch.object(r.time,'monotonic',return_value=1),patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[]),([11],[],[]),([11],[],[]),([],[],[])]),patch.object(r.os,'write'),patch.object(r.os,'read',side_effect=[b'ac',b'k\n',b'\0']),patch.object(r,'checked_control_stderr',return_value={'bytes':0}):c.command('enable',-2)
+  self.assertEqual(c.records[0]['rawAck'],'ack\n\0');self.assertEqual(c.records[0]['ackFragments'],['6163','6b0a','00'])
+  for fragments in ([b'ack\n',b''],[b'ack\nX'],[b'ack\n\0ack\n\0']):
+   c=r.RecorderControl(10,11,child,0)
+   with patch.object(r.time,'monotonic',return_value=1),patch.object(r.select,'select',side_effect=[([],[],[])]+[([11],[],[])]*len(fragments)),patch.object(r.os,'write'),patch.object(r.os,'read',side_effect=fragments),patch.object(r,'checked_control_stderr',return_value={'bytes':0}),patch.object(r,'terminate'):
+    with self.assertRaises(ValueError):c.command('enable',-2)
+   self.assertTrue(c.failed);self.assertIsNotNone(c.records[0]['rawAck'])
+  c=r.RecorderControl(10,11,child,0)
+  with patch.object(r.time,'monotonic',side_effect=[1,1,1,1,7]),patch.object(r.select,'select',side_effect=[([],[],[]),([11],[],[])]),patch.object(r.os,'write'),patch.object(r.os,'read',return_value=b'a'),patch.object(r,'checked_control_stderr',return_value={'bytes':0}),patch.object(r,'terminate'):
+   with self.assertRaisesRegex(ValueError,'timeout'):c.command('enable',-2)
+  self.assertEqual(c.records[0]['rawAck'],'a');self.assertTrue(c.failed)
+ def test_stale_and_trailing_ack_refuse(self):
+  child=Mock();child.poll.return_value=None
+  for selections,reads in [([([11],[],[])],[]),([([],[],[]),([11],[],[]),([11],[],[])],[b'ack\n\0'])]:
+   c=r.RecorderControl(10,11,child)
+   with patch.object(r.select,'select',side_effect=selections),patch.object(r.os,'write'),patch.object(r.os,'read',side_effect=reads),patch.object(r,'checked_control_stderr',return_value={'bytes':0}),patch.object(r,'terminate'):
+    with self.assertRaisesRegex(ValueError,'stale|trailing'):c.command('enable',-2)
+   self.assertTrue(c.failed)
+ def test_isolated_held_modules_restore_collision_and_exception(self):
+  from types import ModuleType
+  names=('archive','admission','restore','policy','lifecycle','qualify');held=Path('/fixed/qualifier')
+  prior={name:ModuleType('hosted_'+name) for name in names};original_path=list(sys.path)
+  def imported(name):
+   for n in names:
+    m=ModuleType(n);m.__file__=str(held/(n+'.py'));sys.modules[n]=m
+   sys.modules['qualify'].terminal=Mock(return_value={'actual':'held terminal result'})
+   return sys.modules['qualify']
+  with patch.dict(sys.modules,prior),patch.object(Path,'is_dir',return_value=True):
+   with patch.object(r.importlib,'import_module',side_effect=imported):self.assertEqual(r.isolated_terminal(held,{}, {}, {}, {}),{'actual':'held terminal result'})
+   self.assertTrue(all(sys.modules[n] is prior[n] for n in names));self.assertEqual(sys.path,original_path)
+   def failed(name):imported(name);raise ImportError('manufactured held failure')
+   with patch.object(r.importlib,'import_module',side_effect=failed):
+    with self.assertRaisesRegex(ImportError,'manufactured'):r.isolated_terminal(held,{}, {}, {}, {})
+   self.assertTrue(all(sys.modules[n] is prior[n] for n in names));self.assertEqual(sys.path,original_path)
+   def terminal_failure(name):
+    q=imported(name);q.terminal.side_effect=ValueError('held semantic refusal');return q
+   with patch.object(r.importlib,'import_module',side_effect=terminal_failure):
+    with self.assertRaisesRegex(ValueError,'semantic refusal'):r.isolated_terminal(held,{}, {}, {}, {})
+   self.assertTrue(all(sys.modules[n] is prior[n] for n in names));self.assertEqual(sys.path,original_path)
+  saved={n:sys.modules.pop(n) for n in names if n in sys.modules}
+  try:
+   with patch.object(Path,'is_dir',return_value=True),patch.object(r.importlib,'import_module',side_effect=imported):r.isolated_terminal(held,{}, {}, {}, {})
+   self.assertTrue(all(n not in sys.modules for n in names))
+  finally:sys.modules.update(saved)
  def test_independent_final_guards_and_terminal_projection(self):
   report={'status':'RAW_RECORDING','error':'original guest/controller error'}
   def broken():raise OSError('source unavailable')
