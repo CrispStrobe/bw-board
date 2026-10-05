@@ -1,0 +1,87 @@
+{
+  "schema": "bw.compact-progress.paired-binding-fix-origins.v1",
+  "testedRevision": "35d1f7bef9339e75410bbea22cd1f5a43f084cc3",
+  "scope": "One affected production binding assembly control; original preguest hosted failure preserved, no benchmark",
+  "records": {
+    "parent.py": {
+      "bytes": 5403,
+      "sha256": "7ba14c4ad4356f7e45d8d70884b53f391c8338583c8a89b7abaa0bf292506ece",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/parent.py"
+    },
+    "context.json": {
+      "bytes": 47631,
+      "sha256": "cba5f3ac49268a9e84f3cb2d23e3e7e39aa70e9c894c4d38d2465e2b875c8148",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/context.json"
+    },
+    "before.json": {
+      "bytes": 47374,
+      "sha256": "9895bdfdb06af22767424a3bedc991bb5e1bd02b88d1da44522d665882fa751e",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/before.json"
+    },
+    "after.json": {
+      "bytes": 47374,
+      "sha256": "9895bdfdb06af22767424a3bedc991bb5e1bd02b88d1da44522d665882fa751e",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/after.json"
+    },
+    "invocation.json": {
+      "bytes": 1230,
+      "sha256": "9d5123131aa4a9eada092d0c93c79f56c1ca9be2a7bc86644f1d800f00a0b36d",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/invocation.json"
+    },
+    "exit.json": {
+      "bytes": 495,
+      "sha256": "78f5e48ab707db65f5614c5446fb25bf6e7ab4f0a6ebbef9761be51dafc484d5",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/exit.json"
+    },
+    "stdout": {
+      "bytes": 607,
+      "sha256": "ab01f33e952ee31187d3b17f1c78e3e2fbdf140a24466342d14318eb6778753e",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/stdout"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/stderr"
+    },
+    "root-audit.json": {
+      "bytes": 868,
+      "sha256": "9a6107cd541120ab48e0cbb57aac39ce1bc7ef2ac27a47f1338db908b8aa47d7",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/root-audit.json"
+    },
+    "first-run.json": {
+      "bytes": 13975,
+      "sha256": "2f0b505280997dd90438b92b1239243418fb8f96f893f8202273a34c46f2d5bd",
+      "origin": "/tmp/native-cold-compact-progress-paired-audit-20261005/run.json"
+    },
+    "first-artifacts.json": {
+      "bytes": 982,
+      "sha256": "6bf0c21d45154bbb8becf105770fe22b1659e15594671d7be4e90d05a6b1e8a6",
+      "origin": "/tmp/native-cold-compact-progress-paired-audit-20261005/artifacts.json"
+    },
+    "first-hosted-result.json": {
+      "bytes": 64,
+      "sha256": "1923069c0406e011bdc4ade5eee75c28963105ef8c1de5b19588a219c5ffcd7d",
+      "origin": "/tmp/native-cold-compact-progress-paired-audit-20261005/hosted-result.json"
+    },
+    "first-setup-result.json": {
+      "bytes": 322842,
+      "sha256": "853f99dbee8a0de0200fd4699fd272f8d1236448d5835e0e8cf4830a780b5909",
+      "origin": "/tmp/native-cold-compact-progress-paired-audit-20261005/setup-setup-result.json"
+    },
+    "first-root-audit.json": {
+      "bytes": 752,
+      "sha256": "d3016e9de6bbbed90d42b0609a316da842ac5d2e8bc47265d9024f8400b11506",
+      "origin": "/tmp/native-cold-compact-progress-paired-audit-20261005/root-first-failure-audit.json"
+    },
+    "first-independent-audit.json": {
+      "bytes": 887,
+      "sha256": "9f6ce94b992c4da1ae8d7490da5effb5525cca82cacb6469fa9b3c2922738eb8",
+      "origin": "/tmp/native-cold-compact-progress-paired-audit-20261005/independent-first-failure-audit.json"
+    },
+    "independent-audit.json": {
+      "bytes": 1182,
+      "sha256": "167bb062d9df6ad35050b8ede95bc2f3d34a24722b5d3d458f8198906988cac6",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-controls-20261005/independent-audit.json"
+    }
+  }
+}
