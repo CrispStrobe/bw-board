@@ -1,0 +1,455 @@
+{
+  "schema": "bw.native-paged-pagefault-recovery.design.v1",
+  "status": "SOURCE_DESIGN_ONLY_AWAITING_ROOT_REVIEW",
+  "priorPublishedCheckpoint": {
+    "pr": 384,
+    "url": "https://github.com/CrispStrobe/bw-board/pull/384",
+    "sourceRevision": "4b89e004cdc44ab3c0f67ecfd08f0aced534bc86",
+    "rootReportedMerged": true,
+    "actualIntRun": 37247392133,
+    "actualIntN": 41,
+    "actualIntQ": 41,
+    "scope": "Qualified finite same-CPL INT/IRET only; new PF profile not executed."
+  },
+  "authorization": {
+    "current": "Read-only source/design only",
+    "newSourceImplementation": false,
+    "javascriptInstructionsExecuted": false,
+    "nativePreparationExecuted": false,
+    "nativeBuildExecuted": false,
+    "addonLoaded": false,
+    "guestExecuted": false
+  },
+  "futureNamespace": "scripts/bochs-cpu3-native-paged-pagefault",
+  "isa": {
+    "profile": "strict386",
+    "codeBits": 16,
+    "cpl": 0,
+    "pageBytes": 4096,
+    "pse": false,
+    "cr4": 0,
+    "invalidation": "MOV EDX,CR3; MOV CR3,EDX, with unchanged CR3=0x1000",
+    "forbidden": [
+      "INVLPG",
+      "privilege transition",
+      "IRQ",
+      "REP",
+      "HLT execution"
+    ],
+    "intelReference": {
+      "url": "https://cdrdv2-public.intel.com/874240/325462-090-sdm-vol-1-2abcd-3abcd-4.pdf",
+      "section": "INVLPG, IA-32 Architecture Compatibility, Vol. 2A 3-485",
+      "finding": "Intel documents INVLPG as unsupported before Intel486. CR3 reload is used here.",
+      "rootProvidedPriorRevisionUrl": "https://cdrdv2-public.intel.com/868137/325462-089-sdm-vol-1-2abcd-3abcd-4.pdf"
+    }
+  },
+  "layout": {
+    "physicalWholePages": {
+      "gdt": "0x0000",
+      "directory": "0x1000",
+      "table": "0x2000",
+      "idt": "0x3000",
+      "poisonCodeAlias": "0x7000",
+      "poisonDataAlias": "0x8000",
+      "code": "0xA000",
+      "data": "0xB000",
+      "stack": "0xC000",
+      "poisonStackAlias": "0xD000"
+    },
+    "linearMappings": {
+      "0x0000": "0x0000",
+      "0x2000": "0x2000",
+      "0x3000": "0x3000",
+      "0x7000": "0xA000",
+      "0x8000": "initially nonpresent, later 0xB000",
+      "0xD000": "0xC000",
+      "0xF0000": "0xF0000 identity transition ROM"
+    },
+    "initialTableEntries": {
+      "0x1000": "0x2003",
+      "0x2000": "0x0003",
+      "0x2008": "0x2003",
+      "0x200C": "0x3003",
+      "0x201C": "0xA003",
+      "0x2020": "0x0000",
+      "0x2034": "0xC003",
+      "0x23C0": "0xF0003"
+    },
+    "gate": {
+      "vector": 14,
+      "linearAddress": "0x3070",
+      "bytesHex": "2070180000860000",
+      "type": 6,
+      "dpl": 0,
+      "present": true,
+      "targetCs": "0x18",
+      "targetIp": "0x7020",
+      "idtrBase": "0x3000",
+      "idtrLimit": "0x0077"
+    },
+    "descriptors": {
+      "cs": "existing accessed code16 access 0x9B, base0/limitFFFF",
+      "dsAndSs": "existing accessed writable data16 access 0x93, base0/limitFFFF"
+    },
+    "dataInitialHex": "78569ABC",
+    "dataFinalHex": "34129ABC",
+    "poisonDataAliasHex": "ADDEEFBE",
+    "initialEsp": "0xE000",
+    "initialCr3": "0x1000"
+  },
+  "program": [
+    {
+      "ip": "0x7000",
+      "bytesHex": "B83412",
+      "instruction": "MOV AX,0x1234",
+      "next": "0x7003"
+    },
+    {
+      "ip": "0x7003",
+      "bytesHex": "A30080",
+      "instruction": "MOV [0x8000],AX",
+      "firstAttempt": "#PF vector14/error2/CR2=8000; no data operand commit",
+      "retry": "exactly one committed write after handler repair/reload/IRET",
+      "next": "0x7006"
+    },
+    {
+      "ip": "0x7006",
+      "bytesHex": "8B0E0080",
+      "instruction": "MOV CX,[0x8000]",
+      "next": "0x700A"
+    },
+    {
+      "ip": "0x700A",
+      "bytesHex": "F4",
+      "instruction": "HLT marker only; stop before executing"
+    },
+    {
+      "ip": "0x7020",
+      "bytesHex": "66C706202003B00000",
+      "instruction": "MOV dword [0x2020],0xB003",
+      "next": "0x7029"
+    },
+    {
+      "ip": "0x7029",
+      "bytesHex": "0F20DA",
+      "instruction": "MOV EDX,CR3",
+      "next": "0x702C"
+    },
+    {
+      "ip": "0x702C",
+      "bytesHex": "0F22DA",
+      "instruction": "MOV CR3,EDX",
+      "next": "0x702F"
+    },
+    {
+      "ip": "0x702F",
+      "bytesHex": "83C402",
+      "instruction": "ADD SP,2",
+      "next": "0x7032",
+      "flagsAfter": "0x86; instruction-defined arithmetic flags, no mask"
+    },
+    {
+      "ip": "0x7032",
+      "bytesHex": "CF",
+      "instruction": "IRET",
+      "next": "0x7003"
+    }
+  ],
+  "encodingProofBeforeControls": {
+    "codeBufferBytes": 52,
+    "codeDwordBootStores": 13,
+    "candidateStructuralBootStores": 31,
+    "structuralStoreComponents": {
+      "gdt": 4,
+      "code": 13,
+      "pageEntries": 8,
+      "gate": 2,
+      "initialData": 1,
+      "poisonAliases": 3
+    },
+    "required": "Source generation must prove every byte, displacement, ROM instruction owner and all boot stores. These structural design counts are not observed instruction or native counts."
+  },
+  "faultFrame": {
+    "error": 2,
+    "cr2": "0x8000",
+    "restartCs": "0x18",
+    "restartIp": "0x7003",
+    "flagsLow16": "0x0002",
+    "linearStart": "0xDFF8",
+    "physicalStart": "0xCFF8",
+    "bytesHex": "0200037018000200",
+    "nativeExpectedPushOrder": [
+      {
+        "physical": "0xCFFE",
+        "word": "0x0002",
+        "role": "FLAGS"
+      },
+      {
+        "physical": "0xCFFC",
+        "word": "0x0018",
+        "role": "CS"
+      },
+      {
+        "physical": "0xCFFA",
+        "word": "0x7003",
+        "role": "restart IP"
+      },
+      {
+        "physical": "0xCFF8",
+        "word": "0x0002",
+        "role": "error"
+      }
+    ],
+    "javascript": "Genuine _deliverFault/_deliverProtected creates real translated frame; independent ascending frame commits retained, never synthetically overwrite frame or insist native push chronology equals JS.",
+    "handlerDiscard": "Actual ADD SP,2 discards error at CFF8; ESP DFFA before IRET.",
+    "iretReads": "Real IP/CS/FLAGS reads from CFFA/CFFC/CFFE; backend order independently recorded.",
+    "returnedState": "ESP E000, CS18:EIP7003; retry same instruction exactly once."
+  },
+  "faultAccounting": {
+    "sourceConclusion": "No ABI blocker: existing source contains fault-delivery latch, exception longjmp fence and FAULT reason. Current finite cold/INT profile denies this path and must remain unchanged.",
+    "nativeFaultReturn": {
+      "reason": "FAULT=2",
+      "deltaN": 1,
+      "deltaQ": 0,
+      "requiredFaultCountDelta": 1,
+      "vector": 14,
+      "error": 2,
+      "cr2": "0x8000",
+      "beforeFirstHandlerInstruction": true
+    },
+    "javascriptFaultAttempt": {
+      "action": "Exactly one genuine oracle step from 18:7003, faulting store; original step restores instruction registers, delivers real fault and returns0.",
+      "completedQuantumDelta": 0,
+      "configuredBoardCycleDelta": 0,
+      "cr2SurvivesRestart": true
+    },
+    "newDriverRequirement": "Invoke this genuine zero-completion JS fault attempt only for strict unique FAULT metadata and expected owner; do not treat generic zero-Q returns as guest completion/delivery. Track attempt ordinal, completed Q, N, fault serial and committed operand effects separately.",
+    "milestoneIdentity": "Ordered phase/attempt/CS:EIP, with explicit N/Q; before-fault and handler entry may share Q. No guessed or forced equal completed-Q chronology.",
+    "refusal": "Any second PF/DF/other vector, wrong CR2/error/restart owner, handler execution before delivered return, or duplicate committed retry fails closed."
+  },
+  "expectedFinalState": {
+    "eax": "0x80001234",
+    "ecx": "0x00001234",
+    "edx": "0x00001000",
+    "esp": "0x0000E000",
+    "cs": "0x18",
+    "eip": "0x700A",
+    "eflags": "0x00000002",
+    "cr2": "0x00008000",
+    "cr3": "0x00001000",
+    "cr4": 0,
+    "noHalt": true
+  },
+  "pageEffects": {
+    "finalEntries": {
+      "0x1000": "0x2023",
+      "0x2000": "0x0023",
+      "0x2008": "0x2063",
+      "0x200C": "0x3023",
+      "0x201C": "0xA023",
+      "0x2020": "0xB063",
+      "0x2034": "0xC063",
+      "0x23C0": "0xF0023"
+    },
+    "ordinaryHandlerPteWrite": "Only 18:7020 may install B003 at physical2020 after one fault and real frame; leaf zero remains until actual instruction executes.",
+    "ordinaryDataCommit": "Only retry 18:7003 after repair+CR3 reload+IRET writes1234 at physicalB000, exactly once; initial failed attempt leaves B000 bytes78569ABC.",
+    "adPolicy": "Exact permitted entry addresses/bit transitions and source-owned operation phases; code/IDT/GDT/ROM leaves are never dirtied. Handler PT write dirties table leaf2008; retried data write dirties2020; frame stores dirty2034. Native combined A/D and JS split A/D must remain independently recorded.",
+    "actualAdCountOrGenerationClaim": null,
+    "aliases": "Poison7000/8000/D000 remain byte-exact and are never used for actual translated fetch/data/stack access."
+  },
+  "cacheAndShadow": {
+    "dsNativeExpectation": "Loaded valid1; first store agen_write32 calls write_virtual_checks before paging, which sets ROK|WOK => valid7 even on the first faulting store. This is a source hypothesis to check strictly in the first new native capture, not an observed new fixture result.",
+    "dsSourceChain": [
+      "cpu.h:5341-5360 (agen_write32)",
+      "access.h:190-193 (segment check precedes write_linear_word)",
+      "access.cc:82-102 (ROK|WOK)",
+      "access2.cc:53-77 (translation after segment check)"
+    ],
+    "ssNativeExpectation": "valid1 until first genuine frame write, then strict valid7, source-backed; descriptor index and valid are distinct row fields.",
+    "csNativeExpectation": "Strict protected valid1 and complete native-only descriptor row; no broad allowances.",
+    "shadow": "Retain actual native inhibit source phase and JS MOVSS returned1/1/0 followed MOVSP0/0/0 independently; do not blanket assert JSshadow0.",
+    "cr3Reload": "Source SetCR3 flushes even unchanged value, invalidating prefetch/stack/TLB caches. Does not reset segment valid cache. Recovery does not establish stale-positive translation invalidation because nonpresent translations may not be cached."
+  },
+  "comparisonContract": {
+    "retain": "Every native raw166, complete slice160 return metadata, independent N/Q/resume/attempt/fault counters, actual fullboards and ten complete copied provider pages, callback tapes and first divergence.",
+    "comparable": "Strict every JS-represented CPU field, full actual board and all ten unmodified physical pages at explicitly reviewed comparable instruction/fault-delivery cuts. Native-only cache rows checked separately against source-owned expectations; never call raw166 all-cross-engine parity.",
+    "unmatched": "PG enable, paged entry/prefetch and generic zero-Q phase boundaries remain explicitly unmatched raw full records; represented phase-independent CPU only where justified, no RAM equality indirectly through board hashes.",
+    "firstFailure": "Retain first real boundary/page/CPU/refusal mismatch; source review before correction, never masks, callback-order forcing or retrospectively matching unmatched cuts.",
+    "finalEvidence": "Ordinary before-HLT stop; fullpages/fullboard, exactlyone fault/repair/retry/write, zeroPIO/IRQ/fallback, all three closed, complete source/input/config/tool prepost; whole RAM hash labelled hash-only.",
+    "evidenceTransport": "Reuse qualified bounded lossless gzip64MiB decoded/16MiB stored plus independent outcome sidecar, exclusive paths and original primary error preservation."
+  },
+  "futureSourceSlices": [
+    {
+      "slice": 1,
+      "paths": [
+        "profile.mjs",
+        "reference.mjs",
+        "SOURCE.md",
+        "test/i80386-paged-pagefault-source.test.mjs"
+      ],
+      "scope": "Fixed owned source/encoding/private genuine JS fault oracle only; reviewed before any controls."
+    },
+    {
+      "slice": 2,
+      "scope": "Native policy exact derivative: unique fault owner + gate/table/frame/handler/operand/walk domains; preserve hashes/counts/full inverse and existing clock delivery fences. Tiny source C predicate/private callback controls require separate review."
+    },
+    {
+      "slice": 3,
+      "scope": "Distinct preparation/context/profile/build schema and full current/Git/generated closure; fresh independently statically audited DSO. No old DSO admission."
+    },
+    {
+      "slice": 4,
+      "scope": "Fault-aware native/JS driver + disabled one-child hosted wrapper, source controls/CI/root one dispatch after approval."
+    }
+  ],
+  "proposedFirstSliceControls": {
+    "notAuthorizedYet": true,
+    "manufacturedAndSourceCases": [
+      "Exact instruction bytes/addresses/ROM store owners",
+      "Gate/error/frame layout and wrong descriptor/error/owner denial",
+      "Exact repair/retry store/AD/page policy and poison-alias denial",
+      "Private factory no-arg/reset and forbidden delivery/PIO closure",
+      "Actual source identity current/Git closure",
+      "Fault-attempt vs completed-Q ledger and duplicate fault/retry denial"
+    ],
+    "separateActualJavascriptCase": "After source/root review, one bounded genuine private JS program through PF handler and retry, recording every attempt/returned0/completed-Q/raw CPU/fullboard/ten pages/store/AD/delivery/IRET read record. Max512 attempts; actual counts determined by capture, not this plan.",
+    "proposedBounds": {
+      "cpuSeconds": 10,
+      "wallSeconds": 30,
+      "nodeHeapMiB": 128,
+      "fileMiB": 16,
+      "coreBytes": 0,
+      "nice": 10,
+      "nodeHooks": "existing six blank",
+      "compilerOverrides": "absent",
+      "beforeAfter": "Exact frozen source/tool/wrapper/Node/environment pins"
+    },
+    "nativeCpuOrAddon": false
+  },
+  "provenance": {
+    "preparedSource": {
+      "status": "READ_ONLY_PREPARED_SOURCE_REVIEW",
+      "staticZipPath": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+      "staticZipSha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+      "tarMember": "paged-int-iret-build-evidence/prepared-source.tar.gz",
+      "selectedPreparedSources": {
+        "bochs/cpu/exception.cc": {
+          "bytes": 37313,
+          "sha256": "5701d81b89fda61a6c357e63fff653718f6eb6115e3a23d7b23ade15e5d9eb08",
+          "tarMember": "bochs/cpu/exception.cc"
+        },
+        "bochs/cpu/iret.cc": {
+          "bytes": 19845,
+          "sha256": "afd03e8eef2e9e90470314c807161ebb2ad44397b29c3f775dec7a866b2dbdae",
+          "tarMember": "bochs/cpu/iret.cc"
+        },
+        "bochs/cpu/paging.cc": {
+          "bytes": 98546,
+          "sha256": "e72fcf4f21a32b5618eeeb2e783f4faef8feea4f2d1f0dc8b3cb6515858e4f5d",
+          "tarMember": "bochs/cpu/paging.cc"
+        },
+        "bochs/cpu/cpu.cc": {
+          "bytes": 26033,
+          "sha256": "16a7b2a3640f2fb3d8df92f8916f8d5bc628e6ed8a7658c07b8db1c101ec80d9",
+          "tarMember": "bochs/cpu/cpu.cc"
+        },
+        "bochs/cpu/access.cc": {
+          "bytes": 16709,
+          "sha256": "1ac261289fd31feded2b4e123f6aedf795277298e5adea946edabb94089bd526",
+          "tarMember": "bochs/cpu/access.cc"
+        },
+        "bochs/cpu/crregs.cc": {
+          "bytes": 52371,
+          "sha256": "f39cb6b7b1f7b030690104dcd31e839651a6d343784d8a072e5b337d17fcd374",
+          "tarMember": "bochs/cpu/crregs.cc"
+        },
+        "bochs/cpu/access.h": {
+          "bytes": 12524,
+          "sha256": "c9f74122f4039120d26e21bf301f0ee03da6c4c80544627e6887557cdb537a65",
+          "tarMember": "bochs/cpu/access.h"
+        },
+        "bochs/cpu/access2.cc": {
+          "bytes": 48083,
+          "sha256": "3f3097d09db1d56eed0b22d23ddab3852389227ab0f2dab4ca75119c24b96a37",
+          "tarMember": "bochs/cpu/access2.cc"
+        },
+        "bochs/cpu/cpu.h": {
+          "bytes": 285397,
+          "sha256": "9b686170fbf233886af05be619192192a6864a0cd003402067de027708f496cf",
+          "tarMember": "bochs/cpu/cpu.h"
+        }
+      },
+      "scope": "Nine selected source files, streamed existing TAR; no full tree, build, addon or guest."
+    },
+    "heldFrozenSources": {
+      "src/experimental/i80386.js": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 133968,
+        "sha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed",
+        "sourceReferences": [
+          "387-465: actual page fault/translation",
+          "1995-2072: instruction restoration excludes CR2",
+          "2399-2487: genuine protected fault delivery",
+          "2749-2792: faulting step returns zero",
+          "3630-3652: CR3 write invalidates JS translation cache"
+        ]
+      },
+      "src/experimental/i80386-at-machine.js": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 26851,
+        "sha256": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0",
+        "sourceReferences": [
+          "394-407: successful-instruction delta controls board charge"
+        ]
+      },
+      "scripts/bochs-cpu3-native-direct-board/runtime.inc": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 47814,
+        "sha256": "1c0e7b6f58016e875a4e8d53e4dc0427ef519f7b0c64797bdff750089bd8f9c4",
+        "sourceReferences": [
+          "423-433: fault latch and delivered N+1/Q+0 guard",
+          "690: FAULT return reason selection"
+        ]
+      },
+      "scripts/bochs-cpu3-native-owned-clock/clock.inc": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 3247,
+        "sha256": "861080333e8e656005d1919bc55191710f98d9af6ef375642ec50efebc0ff0ab",
+        "sourceReferences": [
+          "31-45: N word advances only N; successful Q word advances six configured cycles"
+        ]
+      },
+      "scripts/bochs-cpu3-native-owned-in8/abi.h": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 7038,
+        "sha256": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+        "sourceReferences": [
+          "54-106: slice fault metadata and return reasons",
+          "128: Q0 word denotes ordinary successful quantum"
+        ]
+      },
+      "scripts/bochs-cpu3-native-cold-bios/runtime.mjs": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 6815,
+        "sha256": "4577806b3a1cea0e1fb02df73843576fb5a2e0aec616a64a3d015c28f57e600a",
+        "sourceReferences": [
+          "39: inherited cold profile refuses all faults"
+        ]
+      },
+      "scripts/bochs-cpu3-native-paged-int-iret/reference.mjs": {
+        "revision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+        "bytes": 8177,
+        "sha256": "8230aa965693c51508259b281d01ce4e110f439ff54e1c7c6c395fe6bb534dbb",
+        "sourceReferences": [
+          "27-28: current private INT oracle forbids faults; remains unchanged"
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "No new PF instructions or native guest have executed. No actual native count/generation/walk chronology is claimed.",
+    "Genuine FAULT entry and handler cache/AD phase parity remain first-run obligations.",
+    "Copied host-provider pages and source-attested cache ownership are not a separate native memory dump.",
+    "Finite same-ring fixed program only; no full OS, physical386 speed, performance or default adoption claim."
+  ]
+}
