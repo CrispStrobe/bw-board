@@ -12,6 +12,7 @@ assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'),contr
 const api=createRequire(import.meta.url)(path.pathname);
 const original=new Error('getter original'),setterError=new Error('setter original');
 let reads=0,writes=[];
+const errorRecord=e=>({name:e?.name??'Error',message:e?.message??String(e),stack:e?.stack??null});
 let primary=null;const cleanupErrors=[];let prepared=false;
 try{
  // Avoid inherited numeric-setter interception without exposing the container.
@@ -31,14 +32,14 @@ try{
  for(let i=0;i<8;i++){globalThis.gc();assert.equal(api.readBytes(proxy),17);}
  // Allocation pressure and GC are behavior checks, not leak accounting.
  assert.equal(api.readBytes({bytes:23}),23);
-}catch(e){primary=e;}finally{if(prepared)try{api.release();}catch(e){cleanupErrors.push({phase:'main-release',message:e.message});}}
+}catch(e){primary=e;}finally{if(prepared)try{api.release();}catch(e){cleanupErrors.push({phase:'main-release',error:errorRecord(e)});}}
 
 const active=new Set();
 function launch(role){
  const worker=new Worker(new URL('./env-worker.mjs',import.meta.url),{workerData:role,execArgv:[],resourceLimits:{maxOldGenerationSizeMb:128,stackSizeMb:4}});active.add(worker);
  const messages=[];let wake=null,workerError=null,exited=false;
  worker.on('message',value=>{messages.push(value);if(wake){wake();wake=null;}});
- const exit=new Promise(resolve=>{worker.once('error',e=>{workerError=e;if(wake){wake();wake=null;}});worker.once('exit',code=>{exited=true;active.delete(worker);resolve({code,error:workerError?.message??null});if(wake){wake();wake=null;}});});
+ const exit=new Promise(resolve=>{worker.once('error',e=>{workerError=e;if(wake){wake();wake=null;}});worker.once('exit',code=>{exited=true;active.delete(worker);resolve({code,error:workerError?errorRecord(workerError):null});if(wake){wake();wake=null;}});});
  return {worker,exit,async expect(value){while(!messages.length){if(workerError)throw workerError;if(exited)throw Error('worker EOF before expected message');await new Promise(resolve=>{wake=resolve;});}assert.equal(messages.shift(),value);},async cleanExit(){const outcome=await exit;assert.equal(outcome.code,0);assert.equal(outcome.error,null);}};
 }
 const envRecords=[];
@@ -51,7 +52,7 @@ try{
   owner.worker.postMessage(command);if(command==='release')await owner.expect('owner-released');await owner.cleanExit();
   const fresh=launch('fresh');await fresh.expect('fresh-released');await fresh.cleanExit();envRecords.push({command,foreignDenied:true,freshPreparedAndReleased:true});
  }
-}catch(e){if(!primary)primary=e;else cleanupErrors.push({phase:'env-fixture',message:e.message});}
-finally{for(const worker of active)try{await worker.terminate();}catch(e){cleanupErrors.push({phase:'worker-cleanup',message:e.message});}}
-const report={status:primary||cleanupErrors.length?'FAIL':'REAL_NAPI_BEHAVIOR_PASS',primaryError:primary?.message??null,cleanupErrors,reads,writes,envRecords,scope:'Exact generated key helper plus fixture failure/busy/thread/env glue only; not held invoke/fail paths or full addon; no guest, leak accounting or speed'};
+}catch(e){if(!primary)primary=e;else cleanupErrors.push({phase:'env-fixture',error:errorRecord(e)});}
+finally{for(const worker of active)try{await worker.terminate();}catch(e){cleanupErrors.push({phase:'worker-cleanup',error:errorRecord(e)});}}
+const report={status:primary||cleanupErrors.length?'FAIL':'REAL_NAPI_BEHAVIOR_PASS',primaryError:primary?errorRecord(primary):null,cleanupErrors,reads,writes,envRecords,scope:'Exact generated key helper plus fixture failure/busy/thread/env glue only; not held invoke/fail paths or full addon; no guest, leak accounting or speed'};
 console.log(JSON.stringify(report));if(primary)throw primary;if(cleanupErrors.length)throw Error('fixture cleanup failed');
