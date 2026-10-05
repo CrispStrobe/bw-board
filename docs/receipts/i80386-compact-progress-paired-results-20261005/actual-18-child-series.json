@@ -1,0 +1,182 @@
+[
+  {
+    "pair": 0,
+    "phase": "warmup",
+    "arm": "plain-JS",
+    "executionCpu": 0.297921,
+    "executionWall": 0.14007491,
+    "wholeChildCpu": 1.1025770000000001,
+    "wholeChildWall": 0.8574325730000041,
+    "pid": 7132
+  },
+  {
+    "pair": 0,
+    "phase": "warmup",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.272273,
+    "executionWall": 1.023639495,
+    "wholeChildCpu": 5.019465,
+    "wholeChildWall": 4.470470054999993,
+    "pid": 8057
+  },
+  {
+    "pair": 1,
+    "phase": "warmup",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.26052,
+    "executionWall": 1.014275322,
+    "wholeChildCpu": 5.135904,
+    "wholeChildWall": 4.571676824999997,
+    "pid": 10048
+  },
+  {
+    "pair": 1,
+    "phase": "warmup",
+    "arm": "plain-JS",
+    "executionCpu": 0.296343,
+    "executionWall": 0.141362463,
+    "wholeChildCpu": 1.1023619999999998,
+    "wholeChildWall": 0.8585171759999923,
+    "pid": 12038
+  },
+  {
+    "pair": 2,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.284613,
+    "executionWall": 0.137457772,
+    "wholeChildCpu": 1.104304,
+    "wholeChildWall": 0.8570771840000049,
+    "pid": 12963
+  },
+  {
+    "pair": 2,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.327075,
+    "executionWall": 1.072633827,
+    "wholeChildCpu": 5.120915999999999,
+    "wholeChildWall": 4.5721304009999955,
+    "pid": 13890
+  },
+  {
+    "pair": 3,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.272553,
+    "executionWall": 1.025094355,
+    "wholeChildCpu": 5.002137,
+    "wholeChildWall": 4.449614797999999,
+    "pid": 15881
+  },
+  {
+    "pair": 3,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.311465,
+    "executionWall": 0.15003993,
+    "wholeChildCpu": 1.131756,
+    "wholeChildWall": 0.884141814000003,
+    "pid": 17873
+  },
+  {
+    "pair": 4,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.295149,
+    "executionWall": 0.142821946,
+    "wholeChildCpu": 1.133734,
+    "wholeChildWall": 0.8823228840000041,
+    "pid": 18803
+  },
+  {
+    "pair": 4,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.294638,
+    "executionWall": 1.036266268,
+    "wholeChildCpu": 5.093838999999999,
+    "wholeChildWall": 4.523150170000008,
+    "pid": 19728
+  },
+  {
+    "pair": 5,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.374062,
+    "executionWall": 1.090498604,
+    "wholeChildCpu": 5.147705,
+    "wholeChildWall": 4.550409063999993,
+    "pid": 21718
+  },
+  {
+    "pair": 5,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.293912,
+    "executionWall": 0.140137156,
+    "wholeChildCpu": 1.109694,
+    "wholeChildWall": 0.8584408510000117,
+    "pid": 23711
+  },
+  {
+    "pair": 6,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.30875,
+    "executionWall": 0.141380683,
+    "wholeChildCpu": 1.13036,
+    "wholeChildWall": 0.8618000169999931,
+    "pid": 24636
+  },
+  {
+    "pair": 6,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.297106,
+    "executionWall": 1.040960706,
+    "wholeChildCpu": 5.057048,
+    "wholeChildWall": 4.498764688999998,
+    "pid": 25561
+  },
+  {
+    "pair": 7,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.29892,
+    "executionWall": 1.037385678,
+    "wholeChildCpu": 5.0761780000000005,
+    "wholeChildWall": 4.498169994999998,
+    "pid": 27552
+  },
+  {
+    "pair": 7,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.290291,
+    "executionWall": 0.140490035,
+    "wholeChildCpu": 1.1119080000000001,
+    "wholeChildWall": 0.8575176919999876,
+    "pid": 29544
+  },
+  {
+    "pair": 8,
+    "phase": "measured",
+    "arm": "plain-JS",
+    "executionCpu": 0.29388,
+    "executionWall": 0.141632066,
+    "wholeChildCpu": 1.1225699999999998,
+    "wholeChildWall": 0.8574393529999895,
+    "pid": 30469
+  },
+  {
+    "pair": 8,
+    "phase": "measured",
+    "arm": "compact-progress-batched",
+    "executionCpu": 1.273373,
+    "executionWall": 1.024611437,
+    "wholeChildCpu": 5.044065,
+    "wholeChildWall": 4.498951162999987,
+    "pid": 31394
+  }
+]

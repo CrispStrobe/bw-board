@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 11327261646,
+      "node_id": "MDg6QXJ0aWZhY3QxMTMyNzI2MTY0Ng==",
+      "name": "cold-compact-progress-paired-37267527701-1",
+      "size_in_bytes": 43100871,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11327261646",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11327261646/zip",
+      "expired": false,
+      "digest": "sha256:d162ded8f4ad21e71a5f0728167d57a7cde368e9ce80896b916f6d2c758a4864",
+      "created_at": "2026-10-05T05:25:50Z",
+      "updated_at": "2026-10-05T05:25:50Z",
+      "expires_at": "2026-10-19T05:25:48Z",
+      "workflow_run": {
+        "id": 37267527701,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "lane/386-native-compact-progress-paired-binding-fix-20261005",
+        "head_sha": "56669aa8f214e0011f89824befafe12e4e034383"
+      }
+    }
+  ]
+}

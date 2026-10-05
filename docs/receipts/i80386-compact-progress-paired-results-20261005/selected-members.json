@@ -1,0 +1,22 @@
+{
+  "zipPath": "/tmp/native-cold-compact-progress-paired-binding-fix-37267527701.zip",
+  "zipBytes": 43100871,
+  "zipSha256": "d162ded8f4ad21e71a5f0728167d57a7cde368e9ce80896b916f6d2c758a4864",
+  "members": {
+    "host-before.json": {
+      "member": "cold-compact-progress-paired/pairs/host-before.json",
+      "bytes": 9524,
+      "sha256": "822d48bad66c8f1d46b83fab13124ec17802d568b57b6bb6dba417070032d6ad"
+    },
+    "host-after.json": {
+      "member": "cold-compact-progress-paired/pairs/host-after.json",
+      "bytes": 9532,
+      "sha256": "cbce458643fb073107f7b4d3f6a7f20f49cb321be44304f110aa39515374f95e"
+    },
+    "paired-result.json": {
+      "member": "cold-compact-progress-paired/pairs/result.json",
+      "bytes": 270768,
+      "sha256": "62efa22c15f73dd927362e7443dd1a2ab12fb4977d191df64e11a6824a6bcd5b"
+    }
+  }
+}
