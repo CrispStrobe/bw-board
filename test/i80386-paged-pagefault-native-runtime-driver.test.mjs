@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {resolve,dirname,join} from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+import {execFileSync} from 'node:child_process';
 import {derivePagedPageFaultRuntime,transformPagedPageFaultRuntime,runtimeParentSha256} from '../scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs';
 import {derivePagedPageFaultProvider,transformPagedPageFaultProvider,providerParentSha256} from '../scripts/bochs-cpu3-native-paged-pagefault/provider-derivation.mjs';
 import {deriveDriverProvider} from '../scripts/bochs-cpu3-native-paged-pagefault/driver-provider.mjs';
 import {nativeWalkOwner,nativeWalkAllowed,validatePageFaultWrite,nativeFrameStores,entries,nativeAdUpdate} from '../scripts/bochs-cpu3-native-paged-pagefault/provider-profile.mjs';
-import {validateBuildBinding,requireReadyBuild,driverSourceIdentity} from '../scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs';
+import {validateBuildBinding,requireReadyBuild,driverSourceIdentity,relativeImports} from '../scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs';
 import {validateInput,derivePageFaultLifecycle,verifyHeldLifecycle,finalizeAuthentication} from '../scripts/bochs-cpu3-native-paged-pagefault/runner.mjs';
 import {pageFaultProgress,stepReferenceForReturn,compareBoundary,inspectFields,startOrAdvanceFaultLedger,validateDescriptorRows,validateNativeEffects,validateMemoryTape} from '../scripts/bochs-cpu3-native-paged-pagefault/parity.mjs';
 import {bootStores,frameStores,adTransitions,expectedPages,layout,selector,dataSelector,codeCache,dataCache,repairStore,retryStore} from '../scripts/bochs-cpu3-native-paged-pagefault/profile.mjs';
@@ -69,6 +73,20 @@ test('native frame and A D tapes are independent yet cannot smuggle extra writes
 test('all-outcome authentication retains primary failure independently of missing or changed guards',()=>{
  const before=Object.fromEntries(['input','driver','compiled','build','configuration','node'].map(k=>[k,k])),receipt={status:'PASS'},primary=Error('first divergence');assert.equal(finalizeAuthentication(receipt,primary,before,{...before,input:'changed'}),primary);assert.equal(receipt.status,'FAIL');assert.match(receipt.finalAuthenticationError,/final input/);const missing={...before};delete missing.configuration;assert.ok(finalizeAuthentication({status:'PASS'},null,before,missing));assert.equal(finalizeAuthentication({status:'PASS'},null,before,{...before}),null);
 });
-test('frozen source identity includes real fault policy and held multiline checkpoint import',()=>{
- const identity=driverSourceIdentity();assert.ok(identity.hashes['scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs']);assert.ok(identity.hashes['scripts/bochs-cpu3-native-paged-pagefault/native-fault-policy.mjs']);assert.ok(identity.hashes['src/machine-checkpoint.js']);assert.ok(identity.hashes['scripts/bochs-cpu3-native-paged-int-iret/evidence.mjs']);assert.ok(identity.hashes['src/experimental/i80386.js']);
+test('frozen source identity includes real fault policy and held multiline checkpoint import',async()=>{
+ const root=fileURLToPath(new URL('../',import.meta.url)),head=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),paths=new Map();
+ // Same explicit dynamic seeds as the held production identity. Authenticate caller bytes even when unrelated CI setup is dirty.
+ const seeds=['scripts/bochs-cpu3-native-paged-pagefault/runner.mjs','scripts/bochs-cpu3-native-paged-pagefault/NATIVE-DRIVER-SOURCE.md','scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json','scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs','scripts/bochs-cpu3-native-paged-pagefault/saved-js-fault-phases.json','test/i80386-paged-pagefault-native-runtime-driver.test.mjs','scripts/bochs-cpu3-native-paged-int-iret/runner.mjs','scripts/bochs-cpu3-native-cold-bios/board-provider.mjs','scripts/bochs-cpu3-native-direct-board/runtime.inc','scripts/bochs-cpu3-native-owned-clock/clock.inc','scripts/bochs-cpu3-native-owned-clock/abi.h','src/experimental/i80386.js','package.json','roms/free-at-bios/LICENSE','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin'];
+ function visit(name){if(paths.has(name))return;const path=resolve(root,name);assert.ok(path.startsWith(root));const b=readFileSync(path),g=execFileSync('git',['show',head+':'+name],{cwd:root,maxBuffer:32<<20});assert.equal(sha256(b),sha256(g),'caller current/Git '+name);paths.set(name,sha256(b));if(/\.(mjs|js)$/.test(name))for(const relative of relativeImports(b))visit(resolve(dirname(path),relative).slice(root.length));}
+ for(const name of seeds)visit(name);
+ const callerStatus=execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}),d=mkdtempSync(join(tmpdir(),'paged-pf-driver-identity-')),clean=join(d,'source');
+ try{
+  mkdirSync(clean);execFileSync('git',['init','--quiet',clean],{timeout:10000});const objects=execFileSync('git',['rev-parse','--path-format=absolute','--git-path','objects'],{cwd:root,encoding:'utf8'}).trim();writeFileSync(join(clean,'.git/objects/info/alternates'),objects+'\n');
+  const shallow=execFileSync('git',['rev-parse','--path-format=absolute','--git-path','shallow'],{cwd:root,encoding:'utf8'}).trim();try{writeFileSync(join(clean,'.git/shallow'),readFileSync(shallow));}catch(e){if(e.code!=='ENOENT')throw e;}
+  execFileSync('git',['update-ref','HEAD',head],{cwd:clean,timeout:10000});execFileSync('git',['sparse-checkout','init','--no-cone'],{cwd:clean,timeout:10000});execFileSync('git',['sparse-checkout','set','--no-cone','--stdin'],{cwd:clean,input:[...paths.keys()].sort().map(p=>'/'+p).join('\n')+'\n',timeout:10000});execFileSync('git',['checkout','--quiet','--detach',head],{cwd:clean,timeout:10000});
+  const owned=await import(pathToFileURL(join(clean,'scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs')).href),identity=owned.driverSourceIdentity();assert.equal(identity.revision,head);assert.deepEqual(identity.hashes,Object.fromEntries([...paths].sort(([a],[b])=>a.localeCompare(b))));
+  assert.ok(identity.hashes['scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs']);assert.ok(identity.hashes['scripts/bochs-cpu3-native-paged-pagefault/native-fault-policy.mjs']);assert.ok(identity.hashes['src/machine-checkpoint.js']);assert.ok(identity.hashes['scripts/bochs-cpu3-native-paged-int-iret/evidence.mjs']);assert.ok(identity.hashes['src/experimental/i80386.js']);
+  // Manufacture the observed CI dirt only in the owned fixture; the production guard must still refuse it.
+  execFileSync('git',['sparse-checkout','add','--no-cone','/package-lock.json'],{cwd:clean,timeout:10000});const lock=join(clean,'package-lock.json');writeFileSync(lock,readFileSync(lock).toString()+'\n');mkdirSync(join(clean,'blinkenrocket-firmware'));writeFileSync(join(clean,'blinkenrocket-firmware/fixture'),'owned CI setup marker');assert.throws(()=>owned.driverSourceIdentity(),/clean frozen PF driver/);
+ }finally{rmSync(d,{recursive:true,force:true});assert.equal(execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}),callerStatus,'caller Git status unchanged');}
 });
