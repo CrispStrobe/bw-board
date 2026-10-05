@@ -325,12 +325,12 @@ export const ATMEGA2560 = {
 // Interrupt vectors are 1-word (flash < 8 KB), so address = vectorNum - 1.
 
 const ATTINY85_PINS = {
-  P0: { port: 'B', bit: 0 }, // PB0: MOSI/OC0A
-  P1: { port: 'B', bit: 1 }, // PB1: MISO/OC0B/OC1A
-  P2: { port: 'B', bit: 2 }, // PB2: SCK/ADC1/T0/INT0
-  P3: { port: 'B', bit: 3 }, // PB3: ADC3/OC1B
-  P4: { port: 'B', bit: 4 }, // PB4: ADC2
-  P5: { port: 'B', bit: 5 }, // PB5: RESET/ADC0 (usually reset)
+  PB0: { port: 'B', bit: 0 }, // PB0: MOSI/OC0A
+  PB1: { port: 'B', bit: 1 }, // PB1: MISO/OC0B/OC1A
+  PB2: { port: 'B', bit: 2 }, // PB2: SCK/ADC1/T0/INT0
+  PB3: { port: 'B', bit: 3 }, // PB3: ADC3/OC1B
+  PB4: { port: 'B', bit: 4 }, // PB4: ADC2
+  PB5: { port: 'B', bit: 5 }, // PB5: RESET/ADC0 (usually reset)
 };
 
 // ATtiny85 PORTB at different addresses than ATmega328P
@@ -342,9 +342,14 @@ const attiny85PortBConfig = {
 const ATTINY85_PORTS = { B: attiny85PortBConfig };
 
 // ATtiny85 Timer0 (8-bit, AVRTimer-compatible)
-// TIFR/TIMSK bit assignments for Timer0 (shared register with Timer1):
-//   TIFR(0x58): bit1=TOV0, bit3=OCF0A, bit4=OCF0B
-//   TIMSK(0x59): bit1=TOIE0, bit3=OCIE0A, bit4=OCIE0B
+// TIFR/TIMSK bit assignments for Timer0 (shared register with Timer1),
+// datasheet §11.9.7/§11.9.8 and avr-libc iotnx5.h:
+//   TIFR(0x58): bit1=TOV0, bit3=OCF0B, bit4=OCF0A
+//   TIMSK(0x59): bit1=TOIE0, bit3=OCIE0B, bit4=OCIE0A
+// A and B were swapped here, so a COMPA interrupt enabled by real firmware
+// (TIMSK = 1 << OCIE0A, bit 4) was raised as COMPB: every ATtiny85 program
+// with a millisecond tick entered __bad_interrupt and reset once a
+// millisecond (measured: reset at vector 11 every 8056 cycles at 8 MHz).
 // Interrupt vectors (1-word, word address = vectorNum - 1):
 //   Timer0 OVF=V6→0x05, Timer0 COMPA=V11→0x0A, Timer0 COMPB=V12→0x0B
 const attiny85Timer0 = {
@@ -357,8 +362,8 @@ const attiny85Timer0 = {
   compPortB: attiny85PortBConfig.PORT, compPinB: 1,  // OC0B = PB1
   compPortC: 0, compPinC: 0,
   externalClockPort: attiny85PortBConfig.PORT, externalClockPin: 2,
-  TOV: 1 << 1, OCFA: 1 << 3, OCFB: 1 << 4, OCFC: 0,
-  TOIE: 1 << 1, OCIEA: 1 << 3, OCIEB: 1 << 4, OCIEC: 0,
+  TOV: 1 << 1, OCFA: 1 << 4, OCFB: 1 << 3, OCFC: 0,
+  TOIE: 1 << 1, OCIEA: 1 << 4, OCIEB: 1 << 3, OCIEC: 0,
 };
 
 // ATtiny85 Timer1 uses ATtinyTimer1 (separate class in avr8js), not AVRTimer.
@@ -381,7 +386,7 @@ const ATTINY85_ADC = {
 };
 
 // ADC channel → pin name (non-trivial mapping on ATtiny85)
-const ATTINY85_ADC_MAP = { 0: 'P5', 1: 'P2', 2: 'P4', 3: 'P3' };
+const ATTINY85_ADC_MAP = { 0: 'PB5', 1: 'PB2', 2: 'PB4', 3: 'PB3' };
 
 // USI register addresses (ATtiny85 datasheet §15.11)
 // Data-space addresses: USIDR=0x2F, USISR=0x2E, USICR=0x2D
