@@ -4,8 +4,8 @@ import {createEmu8051DebugTarget} from '../src/emu8051-debug.js';
 import {createEmu8051Adapter} from '../src/emu8051-adapter.js';
 import {createDebugTarget} from '../src/debug-target-factory.js';
 
-const CHECKPOINT_SIZE = 443483;
-const makeWasm = ({version = 1, buildId = 0x80510101, size = CHECKPOINT_SIZE,
+const CHECKPOINT_SIZE = 443557;   // layout 0x80510102 (emu8051-stc #2: the UART1 receive FIFO)
+const makeWasm = ({version = 1, buildId = 0x80510102, size = CHECKPOINT_SIZE,
   history = false, historyStart = 0} = {}) => {
   let heap = new Uint8Array(CHECKPOINT_SIZE + 1024);
   let time = 100n;
@@ -67,7 +67,7 @@ test('exact ABI advertises checkpoint/restore, copies bytes, and never claims re
   const fixture = makeWasm();
   const target = createEmu8051DebugTarget(fixture.wasm);
   assert.deepEqual(target.capabilities().recording, ['checkpoint', 'restore']);
-  assert.equal(target.capabilities().extensions.checkpoint.buildId, 0x80510101);
+  assert.equal(target.capabilities().extensions.checkpoint.buildId, 0x80510102);
   assert.equal(target.capabilities().reverse, undefined);
 
   const snapshot = target.captureCheckpoint();
@@ -163,7 +163,7 @@ test('detached adapter state is restored while its input epoch always branches',
 
 test('missing or wrong identity stays fail-closed and never calls native restore', () => {
   for (const options of [{version: 2}, {version: -1}, {version: 2 ** 32 + 1},
-    {buildId: 0x80510102}, {buildId: NaN}, {size: 0}, {size: CHECKPOINT_SIZE + 1}]) {
+    {buildId: 0x80510101 /* the pre-FIFO layout */}, {buildId: NaN}, {size: 0}, {size: CHECKPOINT_SIZE + 1}]) {
     const fixture = makeWasm(options);
     const target = createEmu8051DebugTarget(fixture.wasm);
     assert.deepEqual(target.capabilities().recording, []);

@@ -105,7 +105,10 @@ jobs:
           # The current exact ref advances that known-good baseline to the
           # independently proven checkpoint-v1 master and its committed WASM.
           # The environment gate below makes loss of that capability red.
-          ref: 398c31cad1dd9db4b914a00c34a79b796982e514
+          # 2026-10-05: 398c31ca -> 68ef757a (emu8051-stc #1 STC89 12T timers,
+          # #2 UART1 receive FIFO; checkpoint layout 0x80510101 -> 0x80510102,
+          # 443483 -> 443557 bytes, moved in src/emu8051-debug.js with it).
+          ref: 68ef757aab3adc606796df4602f4724b627a500b
           # Actions refuses a path outside the workspace, so the sibling lands
           # INSIDE it and the test looks in both places.
           path: emu8051-stc
