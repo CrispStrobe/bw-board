@@ -61,6 +61,19 @@
  */
 const pinName = (p) => p.where ? String(p.where) : `P${p.port}.${p.bit}`;
 
+// Sensor MODULES named by the pin. Both are anchored at the start of the name
+// so an unrelated word that merely contains the letters (`dynamic`, `empire`)
+// keeps the meaning it already had.
+const PIR_NAME = /^(pir|motion|presence)/i;
+const SOUND_NAME = /^(sound|noise|clap|mic|loud)/i;
+
+// An LED named for a colour is shown in that colour (the catalog's led
+// variants). Display only: the forward voltage stays the generic 2.0 V every
+// generated LED already uses, so no bench reads a different current. Three
+// LEDs named red/yellow/green used to arrive as three red ones.
+const LED_COLORS = ['green', 'yellow', 'blue', 'white'];
+const ledColor = (name) => LED_COLORS.find((c) => new RegExp(c, 'i').test(name)) ?? 'red';
+
 export function inferNetlist(stc, opts) {
   /** @type {Part[]} */
   const parts = [];
@@ -80,6 +93,18 @@ export function inferNetlist(stc, opts) {
   // VCC and GND nets (shared by multiple parts)
   const vccNet = { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] };
   const gndNet = { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] };
+
+  // A three-wire sensor module powered from the rails whose output terminal
+  // drives the pin directly (PIR `out`, sound module `ao`/`do`).
+  const wireModule = (kind, prefix, pinId, safeName, declName, outTerminal) => {
+    const id = `${prefix}_${safeName}`;
+    const def = kind === 'pir' ? ['vcc', 'gnd', 'out'] : ['vcc', 'gnd', 'ao', 'do'];
+    parts.push({ id, kind, declName, params: {}, terminals: def });
+    nets.push({ id: `net_${safeName}_pin`,
+      terminals: [{ part: 'MCU', terminal: pinId }, { part: id, terminal: outTerminal }] });
+    vccNet.terminals.push({ part: id, terminal: 'vcc' });
+    gndNet.terminals.push({ part: id, terminal: 'gnd' });
+  };
 
   // Pins that belong to a synthesized STRUCTURE get no generic LED/button:
   //  - I2C/SPI bus pins carry a display, not an LED per line (the Pico
@@ -331,7 +356,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led', declName: pin.name,
-            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { vf: 2.0, color: ledColor(pin.name) }, terminals: ['anode', 'cathode'],
           });
           // VCC → R.a
           vccNet.terminals.push({ part: rId, terminal: 'a' });
@@ -361,7 +386,7 @@ export function inferNetlist(stc, opts) {
           });
           parts.push({
             id: ledId, kind: 'led', declName: pin.name,
-            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+            params: { vf: 2.0, color: ledColor(pin.name) }, terminals: ['anode', 'cathode'],
           });
           // MCU pin → R.a
           nets.push({
@@ -401,6 +426,14 @@ export function inferNetlist(stc, opts) {
         // divider shape as the resistive sensors above. Precedence lives ONLY
         // in the ternary below, so there is no second guard to drift from it.
         const isPiezo = /piezo|knock/i.test(pin.name);
+        // A sound module's AO pin is a driven voltage (level * VCC), not a
+        // resistance: it needs no divider leg. Only when no resistive sensor
+        // claimed the name, so `micLight` stays the LDR the older rule made it.
+        const isSoundAo = !isLdr && !isNtc && !isPiezo && SOUND_NAME.test(pin.name);
+        if (isSoundAo) {
+          wireModule('sound_module', 'SOUND', pinId, safeName, pin.name, 'ao');
+          break;
+        }
         if (isLdr || isNtc || isPiezo) {
           const sId = `${isLdr ? 'LDR' : isNtc ? 'NTC' : 'PIEZO'}_${safeName}`;
           const rId = `R_DIV_${safeName}`;
@@ -447,6 +480,18 @@ export function inferNetlist(stc, opts) {
         // lesson, and lite gates on exactly that: `PIN tilt = D8 INPUT` sitting
         // on a button is the same species as an LDR pin sitting on a knob.
         const isTilt = /tilt/i.test(pin.name);
+        // A PIR and a sound module's DO are ACTIVE outputs that drive the pin
+        // high on detection. They need no pull-up and no contact to ground:
+        // a pull-up would hold the idle line at VCC and read as permanent
+        // motion. Tilt keeps precedence — it is the older rule.
+        if (!isTilt && PIR_NAME.test(pin.name)) {
+          wireModule('pir', 'PIR', pinId, safeName, pin.name, 'out');
+          break;
+        }
+        if (!isTilt && SOUND_NAME.test(pin.name)) {
+          wireModule('sound_module', 'SOUND', pinId, safeName, pin.name, 'do');
+          break;
+        }
         // Button pin → GND, plus a 10kΩ pull-up to VCC
         const rpuId = `R_PU_${safeName}`;
         const btnId = `${isTilt ? 'TILT' : 'BTN'}_${safeName}`;
