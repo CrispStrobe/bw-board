@@ -1,0 +1,77 @@
+{
+  "schema": "bw.exact-origin-source-control-records.v1",
+  "scope": "Retained six manufactured/source controls at 3b53; no actual native PF instruction, provider, compiler, addon or build. Full genuine JS capture is external and unchanged; native fixture snapshots are manufactured.",
+  "records": [
+    {
+      "path": "parent.py",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/parent.py",
+      "bytes": 6898,
+      "sha256": "89c32aaaa40b3349f0a41f455fd9f1a48f1a30b3d0c1e739abab3d6a7b9397d9"
+    },
+    {
+      "path": "invocation.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/invocation.json",
+      "bytes": 1454,
+      "sha256": "8a5f304a57ad3244201ec6e43903d6acbe1930b4c4d6e4af238737bbaaad9b06"
+    },
+    {
+      "path": "before.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/before.json",
+      "bytes": 7616,
+      "sha256": "1ab2e2f6e878eb69b54e315968a52cceead7cef04f0a55e014c4a0c9bb159eda"
+    },
+    {
+      "path": "after.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/after.json",
+      "bytes": 7616,
+      "sha256": "1ab2e2f6e878eb69b54e315968a52cceead7cef04f0a55e014c4a0c9bb159eda"
+    },
+    {
+      "path": "stdout",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/stdout",
+      "bytes": 1716,
+      "sha256": "ad209c5687577c9bf9a1e046507fcf759836f065791768cc5a505be63762403f"
+    },
+    {
+      "path": "stderr",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "exit.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/exit.json",
+      "bytes": 569,
+      "sha256": "58d8d45cff645ab0575a7f562123c975305a00d80103316916bb34fa09ce232f"
+    },
+    {
+      "path": "independent-audit.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-controls-20261005/independent-audit.json",
+      "bytes": 1808,
+      "sha256": "f2c2ab1e013ac2a946e3242948223b78165437fac3e3f5c7083fa5dae6273530"
+    },
+    {
+      "path": "tested-source-freeze.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-freeze-20261005/source-freeze.json",
+      "bytes": 7234,
+      "sha256": "094022a74f64efac5098d24bfe9da65ab873e778a0f2081437bd8f627a6bbb87"
+    },
+    {
+      "path": "control-proposal.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-freeze-20261005/control-proposal.json",
+      "bytes": 1763,
+      "sha256": "3a77c89d0a79a35e6561afeb44e496f00db1e3bcb7b4d13eb18c3b32961909f5"
+    },
+    {
+      "path": "prepared-source-provenance.json",
+      "origin": "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json",
+      "bytes": 1073,
+      "sha256": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+    }
+  ],
+  "externalGenuineJsCapture": {
+    "path": "/tmp/native-paged-pagefault-source-oracle-20261005/js-control.json",
+    "bytes": 5913156,
+    "sha256": "6ea098a534da4681cdbb3bcaadf6918a9ed4a882ab230d87ff16c394e00803c7"
+  }
+}
