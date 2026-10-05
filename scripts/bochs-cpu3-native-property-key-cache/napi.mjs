@@ -26,7 +26,7 @@ export function derivePropertyKeyNapi(){
  }
  // Leave export initialization unchanged; only snapshot/counter/resume setters use keys.
  const init=s.indexOf('napi_value init('), prefix=s.slice(0,init), count=prefix.split('napi_set_named_property(env,').length-1;
- replace('napi_set_named_property(env,','set_key(',count,'runtime snapshot setters');
+ replace('napi_set_named_property(env,','set_key(/* fixed key call */',count,'runtime snapshot setters');
  replace('if(!ok(napi_create_reference(env,argv[2],1,&board)))return fail("board reference rejected");','if(!prepare_keys(e))return fail("private property keys rejected");if(!ok(napi_create_reference(env,argv[2],1,&board))){release_keys();return fail("board reference rejected");}',1,'prepare before board effects');
  replace('if(!capture_cached(argv[2])){napi_delete_reference(env,board);','if(!capture_cached(argv[2])){release_keys();napi_delete_reference(env,board);',1,'capture failure releases keys');
  replace('closed=true;release_cached();napi_delete_reference(env,board);board=nullptr;return fail("native initialize rejected");','closed=true;release_cached();bool keys_released=release_keys();napi_delete_reference(env,board);board=nullptr;return fail(keys_released?"native initialize rejected":"native initialize rejected; private key cleanup rejected");',1,'initialization primary error retained with cleanup error');
