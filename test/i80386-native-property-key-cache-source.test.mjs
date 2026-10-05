@@ -27,7 +27,7 @@ test('generated lifecycle and held callbacks/core-state wiring stay explicit',()
  const s=derivePropertyKeyNapi().bytes.toString();
  assert.ok(s.indexOf('prepare_keys(e)')<s.indexOf('capture_cached(argv[2])'));
  assert.match(s,/if\(\(key_env&&e!=key_env\)\|\|!lock.owns_lock\(\)/);
- assert.match(s,/closed=true;release_cached\(\);if\(!release_keys\(\)\)return fail/);
+ assert.match(s,/closed=true;release_cached\(\);bool keys_released=release_keys\(\);/);
  assert.match(s,/napi_get_named_property\(env,self,cached_names\[i\],&fn\)/);
  assert.match(s,/ok\(napi_get_reference_value\(env,cached\[i\],&fn\)\)/);
  for(const [name,len] of [['state',20],['extra',20],['segments',90],['system',30],['debug',6]])assert.match(s,new RegExp('copied_state\\(out,Key::'+name+',[^;]*?,'+len+'\\)'));

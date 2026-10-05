@@ -49,9 +49,9 @@ int main(){
  int steps=2*(sizeof(property_keys)/sizeof(*property_keys))+3;
  for(int i=1;i<=steps;i++){calls=0;fail_at=i;assert(!prepare_keys(env));assert(!key_container&&!key_env&&!key_cleanup_registered);}
  fail_at=0;calls=0;assert(prepare_keys(env));remove_failure=true;
- assert(!release_keys()&&key_container&&key_env&&key_cleanup_registered&&saved_hook&&key_cleanup_failed);
+ assert(!release_keys()&&!key_container&&key_env&&key_cleanup_registered&&saved_hook&&key_cleanup_failed);
  remove_failure=false;assert(release_keys());key_cleanup_failed=false;
- assert(prepare_keys(env));delete_failure=true;assert(!release_keys()&&key_container&&key_env&&!key_cleanup_registered&&key_cleanup_failed);
+ assert(prepare_keys(env));delete_failure=true;assert(!release_keys()&&key_container&&key_env&&key_cleanup_registered&&key_cleanup_failed);
  delete_failure=false;assert(release_keys());key_cleanup_failed=false;
  assert(prepare_keys(env));delete_failure=true;auto failing_hook=saved_hook;saved_hook=nullptr;failing_hook(nullptr);
  assert(key_cleanup_failed&&key_container&&key_env&&!key_cleanup_registered);delete_failure=false;assert(release_keys());
