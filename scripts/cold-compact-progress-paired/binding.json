@@ -356,5 +356,17 @@
     }
   },
   "nativeInput": null,
-  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication"
+  "compiledRoot": "/home/runner/work/bw-board/bw-board/publication",
+  "targetQ": 316562,
+  "targetN": 316562,
+  "configuredClockHz": 6000000,
+  "functionalCyclesPerQ": 6,
+  "bounds": {
+    "cpuSeconds": 60,
+    "wallSeconds": 120,
+    "heapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  }
 }

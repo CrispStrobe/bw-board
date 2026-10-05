@@ -1,0 +1,19 @@
+{
+  "status": "INDEPENDENT_COMPACT_PAIRED_FIRST_FAILURE_CONFIRMED_BEFORE_COMPARISON_CHILDREN",
+  "runId": 37265269904,
+  "artifactBytes": 37068489,
+  "artifactSha256": "32379ea76e219c04272b950a99843193fd7560aa2b0ae001b9db3a8a74cba198",
+  "zipMembers": 61,
+  "primaryError": "KeyError('targetQ')",
+  "derivedBindingMissing": [
+    "targetN",
+    "targetQ"
+  ],
+  "setupStaticAuthentication": "PASS_NO_ARMS_EXECUTED",
+  "parentSourceBeforeAfterEqual": true,
+  "setupSourceRoleOriginalInputRestoredFinalGuardsEqual": true,
+  "sourceInputsCheckedAgainstGit": 374,
+  "pairChildMembers": 0,
+  "timingOrQuantitativeResult": null,
+  "scope": "Same sole ZIP read only; genuine first failure preserved. Failure in binding validation before pair output/child launch; no comparison parity or performance extent. Setup-only readonly/static children exited0. No imports/download/extraction/replay."
+}

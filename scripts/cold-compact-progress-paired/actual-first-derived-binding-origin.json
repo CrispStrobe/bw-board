@@ -1,0 +1,17 @@
+{
+  "runId": 37265269904,
+  "artifactId": 11326327099,
+  "zipBytes": 37068489,
+  "zipSha256": "32379ea76e219c04272b950a99843193fd7560aa2b0ae001b9db3a8a74cba198",
+  "member": "cold-compact-progress-paired/setup/derived-paired-binding.json",
+  "memberBytes": 235741,
+  "memberSha256": "13783a69441f543b361063f32f999c9e3e01dbf411cfc74708342e4251c05854",
+  "scope": "Exact first failed setup-produced binding; no pair or guest launched. Original bytes retained unchanged.",
+  "qualifierContract": {
+    "revision": "95c3ae6cb0504c3e86007a28bf25ad31dbbd5d4c",
+    "path": "scripts/cold-compact-progress-qualification/contract.json",
+    "bytes": 49772,
+    "sha256": "bf94cbb78e5af2d303f32e0cc5527f00dedc4f140ef72963536ffecfda28e095",
+    "scope": "Exact authenticated setup-only qualifier contract; source metadata, no replay"
+  }
+}

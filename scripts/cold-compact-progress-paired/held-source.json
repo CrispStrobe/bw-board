@@ -489,127 +489,175 @@
     },
     "setup-entry.py": {
       "heldSha256": "58850ae53ad250768e2e28abdb4cff6255f52d6526f8c94bb1084d88d21753c7",
-      "candidateSha256": "32c2f385eed51bddc091ca0b901745aac7797af99e0e231d5e419fd3e4726f15",
+      "candidateSha256": "6e78c0c6a24eb419f8f2923851e066ecf559b79d90b9a14967fadb2343a507b2",
       "edits": [
         {
-          "start": 1316,
-          "end": 1329,
+          "start": 154,
+          "end": 169,
+          "old": "",
+          "next": ",importlib.util"
+        },
+        {
+          "start": 637,
+          "end": 2059,
+          "old": "",
+          "next": "\ndef assemble_binding(c,qc,setup,data,node,audit_path,pins):\n # Fixed owned template and pure validator; unique module name avoids the held\n # qualifier's already-loaded local policy module. No caller template/import.\n binding=json.loads((HERE/'binding.json').read_bytes());require(binding['workers']==c['workers'],'fixed paired worker maps')\n require(binding['targetN']==qc['targetN']==c['targetN'] and binding['targetQ']==qc['targetQ']==c['targetQ'],'fixed authenticated qualifier/capture target ledger')\n binding.update(status='ROOT_REVIEWED_READY_FOR_SEPARATELY_GRANTED_PAIRS',capture={'path':data['capture'],'sha256':qc['captureArtifact']['captureSha256']},independentAudit={'path':data['independentAudit'],'sha256':qc['independentAudit']['sha256']},armQualificationAudit={'path':str(audit_path),'sha256':c['compactQualificationAudit']['sha256']},node={'path':str(node),'version':'v22.23.3','sha256':c['nodeSha256']},nativeInput=setup['nativeInput'],pinnedFiles=pins)\n spec=importlib.util.spec_from_file_location('owned_compact_paired_binding_validator',Path(__file__).resolve().parent/'policy.py');validator=importlib.util.module_from_spec(spec);spec.loader.exec_module(validator)\n require(Path(validator.__file__).resolve()==(Path(__file__).resolve().parent/'policy.py').resolve(),'fixed pure binding validator file')\n validator.validate_ready_binding(binding) # All fields before any success write.\n return binding"
+        },
+        {
+          "start": 2753,
+          "end": 2766,
           "old": "l",
           "next": "compact-progr"
         },
         {
-          "start": 1330,
-          "end": 1330,
+          "start": 2767,
+          "end": 2767,
           "old": "dger-",
           "next": ""
         },
         {
-          "start": 1331,
-          "end": 1331,
+          "start": 2768,
+          "end": 2768,
           "old": "calar",
           "next": ""
         },
         {
-          "start": 1903,
-          "end": 1916,
+          "start": 3340,
+          "end": 3353,
           "old": "l",
           "next": "compact-progr"
         },
         {
-          "start": 1917,
-          "end": 1917,
+          "start": 3354,
+          "end": 3354,
           "old": "dger-",
           "next": ""
         },
         {
-          "start": 1918,
-          "end": 1918,
+          "start": 3355,
+          "end": 3355,
           "old": "calar",
           "next": ""
         },
         {
-          "start": 2375,
-          "end": 2376,
+          "start": 3812,
+          "end": 3813,
           "old": "fusi",
           "next": "c"
         },
         {
-          "start": 2377,
-          "end": 2382,
+          "start": 3814,
+          "end": 3819,
           "old": "n",
           "next": "mpact"
         },
         {
-          "start": 2412,
-          "end": 2413,
+          "start": 3849,
+          "end": 3850,
           "old": "fusi",
           "next": "c"
         },
         {
-          "start": 2414,
-          "end": 2419,
+          "start": 3851,
+          "end": 3856,
           "old": "n",
           "next": "mpact"
         },
         {
-          "start": 2503,
-          "end": 2504,
+          "start": 3940,
+          "end": 3941,
           "old": "fusi",
           "next": "c"
         },
         {
-          "start": 2505,
-          "end": 2510,
+          "start": 3942,
+          "end": 3947,
           "old": "n",
           "next": "mpact"
         },
         {
-          "start": 2573,
-          "end": 2574,
+          "start": 4010,
+          "end": 4011,
           "old": "fusi",
           "next": "c"
         },
         {
-          "start": 2575,
-          "end": 2580,
+          "start": 4012,
+          "end": 4017,
           "old": "n",
           "next": "mpact"
         },
         {
-          "start": 2631,
-          "end": 2632,
+          "start": 4068,
+          "end": 4069,
           "old": "fusi",
           "next": "c"
         },
         {
-          "start": 2633,
-          "end": 2638,
+          "start": 4070,
+          "end": 4075,
           "old": "n",
           "next": "mpact"
         },
         {
-          "start": 3450,
-          "end": 3451,
+          "start": 4470,
+          "end": 4470,
+          "old": "binding=q.read_json(HERE/'binding.json');require(binding['workers']==c['workers'],'fixed paired worker maps')\n  binding.update(status='ROOT_REVIEWED_READY_FOR_SEPARATELY_GRANTED_PAIRS',capture={'path':data['capture'],'sha256':qc['captureArtifact']['captureSha256']},independentAudit={'path':data['independentAudit'],'sha256':qc['independentAudit']['sha256']},armQualificationAudit={'path':str(audit_path),'sha256':c['fusionQualificationAudit']['sha256']},node={'path':str(node),'version':'v22.23.3','sha256':c['nodeSha256']},nativeInput=setup['nativeInput'])\n  ",
+          "next": ""
+        },
+        {
+          "start": 4558,
+          "end": 4559,
           "old": "fusi",
           "next": "c"
         },
         {
-          "start": 3452,
-          "end": 3457,
+          "start": 4560,
+          "end": 4565,
           "old": "n",
           "next": "mpact"
         },
         {
-          "start": 3683,
-          "end": 3684,
-          "old": "fusi",
-          "next": "c"
+          "start": 4757,
+          "end": 4768,
+          "old": "['p",
+          "next": "=assemble_b"
         },
         {
-          "start": 3685,
-          "end": 3690,
-          "old": "n",
-          "next": "mpact"
+          "start": 4770,
+          "end": 4772,
+          "old": "",
+          "next": "di"
+        },
+        {
+          "start": 4773,
+          "end": 4781,
+          "old": "",
+          "next": "g(c,qc,s"
+        },
+        {
+          "start": 4782,
+          "end": 4786,
+          "old": "",
+          "next": "tup,"
+        },
+        {
+          "start": 4787,
+          "end": 4799,
+          "old": "F",
+          "next": "ata,node,aud"
+        },
+        {
+          "start": 4800,
+          "end": 4807,
+          "old": "les']=",
+          "next": "t_path,"
+        },
+        {
+          "start": 4811,
+          "end": 4812,
+          "old": "",
+          "next": ")"
         }
       ]
     }
