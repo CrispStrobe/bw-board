@@ -24,7 +24,7 @@ class Controls(unittest.TestCase):
   self.assertEqual(digest(_INT_PARENT.read_bytes()),_INT_PARENT_SHA)
   outer=derive_int_parent(_INT_PARENT.read_bytes());self.assertIn('derive_fault_context(derive_transport(',outer)
   expanded=derive_fault_context(derive_transport(derive_stack_parent(_HELD_STACK_PARENT.read_bytes())))
-  self.assertIn("'compiledCount':243",expanded);self.assertIn("'driverCount':106",expanded)
+  self.assertIn("'compiledCount':243",expanded);self.assertIn("'driverCount':107",expanded)
   self.assertIn("('n','q','faults','attemptOrdinal')]==[57,56,1,57]",expanded)
   self.assertIn('readback-before-HLT',expanded);self.assertIn("capture,worker_outcome=read_capture(OUT/'guest')",expanded)
   self.assertIn("report['workerOutcome']=read_outcome(OUT/'guest')",expanded)
@@ -32,7 +32,7 @@ class Controls(unittest.TestCase):
    with self.assertRaises(AssertionError):derive(arg)
  def test_closed_fresh_source_roles_refuse_old_or_invented_artifact(self):
   self.ready()
-  mutations=[lambda c:c.update(enabledByDefault=True),lambda c:c.update(driverRevision='f'*40),lambda c:c.update(compiledRevision='e'*40),lambda c:c.update(addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f'),lambda c:c.update(artifactId=11309320742),lambda c:c.update(runId=37218196080),lambda c:c.update(nodeSha256='c'*64),lambda c:c['compiledFiles'].pop(next(iter(c['compiledFiles']))),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json'),lambda c:c['driverFiles'].update({'../escape':{'bytes':0,'sha256':'a'*64}}),lambda c:c['staticAuthority'].update(preparedManifestSha256='0'*64),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz'),lambda c:c['zipMembers']['paged-pagefault-build-evidence/prepare.json'].update(bytes=2097152)]
+  mutations=[lambda c:c.update(enabledByDefault=True),lambda c:c.update(driverRevision='f'*40),lambda c:c.update(driverRevision='49e4c890b65e2ae7ec54cfa0c991050254a34c26'),lambda c:c.update(compiledRevision='e'*40),lambda c:c.update(addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f'),lambda c:c.update(artifactId=11309320742),lambda c:c.update(runId=37218196080),lambda c:c.update(nodeSha256='c'*64),lambda c:c['compiledFiles'].pop(next(iter(c['compiledFiles']))),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json'),lambda c:c['driverFiles'].update({'../escape':{'bytes':0,'sha256':'a'*64}}),lambda c:c['staticAuthority'].update(preparedManifestSha256='0'*64),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz'),lambda c:c['driverFiles'].pop('scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-reset-failure.json.gz'),lambda c:c['driverFiles']['scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-reset-failure.json.gz'].update(sha256='0'*64),lambda c:c['zipMembers']['paged-pagefault-build-evidence/prepare.json'].update(bytes=2097152)]
   for mutate in mutations:
    c=self.ready();mutate(c)
    with self.assertRaises(ValueError):validate_contract(c)

@@ -3,7 +3,7 @@
   "status": "ROOT_REVIEWED_PAGED_PAGEFAULT_SOURCE_READY",
   "enabledByDefault": false,
   "compiledRevision": "5df525f72790876d35e49d936bac1f1284fa81e7",
-  "driverRevision": "49e4c890b65e2ae7ec54cfa0c991050254a34c26",
+  "driverRevision": "028344c43d4a7fad2d10a4654e8a37897c11d787",
   "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
   "artifactId": 11324707742,
   "runId": 37262460989,
@@ -4741,20 +4741,24 @@
       "sha256": "fd0c289171e1ff08f1978d3fd687954e9706c052870f89abefc53c080e4e1ea1"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/NATIVE-DRIVER-SOURCE.md": {
-      "bytes": 11516,
-      "sha256": "f85d0dea742848e003093c76607ec9a135571c8bfdeaffd68aef4f28f8216aad"
+      "bytes": 13100,
+      "sha256": "cc61fada6cd08339e1e517f44f1c47d8694cf7673216f01aa0dd1e096c28d956"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz": {
       "bytes": 298502,
       "sha256": "fda019035d9bc8df07cc1578abb9cb4ecbd79be4f556ab01bc6d0bf9707a66b8"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-reset-failure.json.gz": {
+      "bytes": 32925,
+      "sha256": "be7b1b76d32a243bdc582633351f92ae80749bd118d07b7cdef1b03babbdd7fb"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/cpu-comparison.mjs": {
       "bytes": 1510,
       "sha256": "0cfada8bf3b4797dd9257f81b3c55b049595c4cd52518880794b22ceeca526b0"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs": {
-      "bytes": 7348,
-      "sha256": "025f56d99a748e240620fb77c998303decfa6bb0b85f32df1083a70bf2136bda"
+      "bytes": 7430,
+      "sha256": "b4a50e57e7375996a96bb2a9676bbd79aede2b6d68a496bed478aa4129fffd27"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json": {
       "bytes": 31438,
@@ -4765,12 +4769,12 @@
       "sha256": "19eec174322e618fa268a8c9627c19407e21d66fdfbb5654e20889436e05986f"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/native-fault-policy.mjs": {
-      "bytes": 11129,
-      "sha256": "b67e9a6c4fdee124d737e6907d71f1e905b9b9231fa2777b11630a21fae597a8"
+      "bytes": 11193,
+      "sha256": "3205a3c3846ca339d7c868475bda195adcb60c172d50d4e11691a9b55f3aa6b2"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/parity.mjs": {
-      "bytes": 12603,
-      "sha256": "188d02fc77cab045eed177d6f531b8378fe9a5c18581f9f40beafdbbbc2b6c44"
+      "bytes": 12612,
+      "sha256": "ce8d34b36f49d094df052c829579b622d7a29b10c363db9e56e1088f41bb9778"
     },
     "scripts/bochs-cpu3-native-paged-pagefault/profile.mjs": {
       "bytes": 11384,
@@ -4981,8 +4985,8 @@
       "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
     },
     "test/i80386-paged-pagefault-native-runtime-driver.test.mjs": {
-      "bytes": 22100,
-      "sha256": "8eb9008d9ad6d6ac39690772da01cfb30ce79cfdbf07e7d1cf1bf95faeda4e49"
+      "bytes": 25523,
+      "sha256": "9831778106441f2a532d78ca345eabb391f5fa1021186a8028fc101257788390"
     }
   },
   "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
