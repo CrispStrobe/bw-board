@@ -12,6 +12,7 @@ import {bootStores,frameStores,adTransitions,expectedPages,layout,selector,dataS
 import {sha256} from '../scripts/bochs-cpu3-native-owned-clock/derive.mjs';
 const clone=structuredClone;
 const pending=JSON.parse(readFileSync(new URL('../scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json',import.meta.url)));
+let derivedProviderForSourceControls;
 // All native/board/JS snapshots in this file are manufactured. No provider/oracle factory or CPU is called.
 function fixture(fault=false){
  const q=49,N=q+Number(fault),cpu={eax:0x80001234,ecx:0,edx:0,ebx:0,esp:fault?0xdff8:0xe000,ebp:0,esi:0,edi:0,eip:fault?0x7020:0x7003,eflags:2,cr0:0xfffffff1,cr2:fault?0x8000:0,cr3:0x1000,cr4:0,cs:selector,ds:dataSelector,ss:dataSelector,es:0,fs:0,gs:0,gdtr:{base:0x600,limit:31},idtr:{base:0x3000,limit:0x77},debugRegisters:Array(8).fill(0),halted:false,shutdown:false,interruptShadow:0,nmiShadow:0,debugShadow:0,pc:fault?0x7020:0x7003};
@@ -31,7 +32,7 @@ test('pending distinct PF build refuses before input getters factories or old ad
  for(const change of [b=>b.status='ROOT_REVIEWED_PF_BUILD',b=>b.addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f',b=>b.abiVersion=5,b=>b.compiledFiles['fake']='0'.repeat(64)]){const b=clone(pending);change(b);assert.throws(()=>validateBuildBinding(b));}
 });
 test('new runtime and provider preserve exact held derivatives and unknown source refuses',()=>{
- const r=derivePagedPageFaultRuntime(),p=derivePagedPageFaultProvider(),a=deriveDriverProvider(p.bytes);assert.equal(r.baseSha256,runtimeParentSha256);assert.equal(p.baseSha256,providerParentSha256);assert.equal(a.parentSha256,sha256(p.bytes));
+ const r=derivePagedPageFaultRuntime(),p=derivePagedPageFaultProvider(),a=deriveDriverProvider(p.bytes);derivedProviderForSourceControls=p.bytes;assert.equal(r.baseSha256,runtimeParentSha256);assert.equal(p.baseSha256,providerParentSha256);assert.equal(a.parentSha256,sha256(p.bytes));
  for(const [bytes,transform]of [[Buffer.from('unknown runtime'),transformPagedPageFaultRuntime],[Buffer.from('unknown provider'),transformPagedPageFaultProvider],[Buffer.from('unknown adapter'),deriveDriverProvider]])assert.throws(()=>transform(bytes));
  const source=r.bytes.toString();assert.ok(source.indexOf('static void bw_pf_observe_tlb(void);')<source.indexOf('void bw_slice_note_tlb_flush(void)'));assert.ok(source.indexOf('static bool bw_pf_fault_allowed(')<source.indexOf('void bw_slice_note_fault('));assert.match(source,/fault-delivery-clock/);assert.match(source,/fixed-PF-delivered-frame-state/);assert.match(source,/PF-completed-owner-phase/);assert.ok(!source.includes('bw_slice_fail("cold-BIOS-no-fault")'));
  const held=readFileSync(new URL('../scripts/bochs-cpu3-native-paged-int-iret/runner.mjs',import.meta.url));assert.ok(derivePageFaultLifecycle(held).toString().includes('stepReferenceForReturn(oracle,next)'));verifyHeldLifecycle();
@@ -45,6 +46,16 @@ test('FAULT N1 Q0 steps the genuine-reference interface exactly once while prefe
  const f=fixture(true),r=returned(f.n,2,1,0),p=pageFaultProgress({n:49,q:49,faults:0},r);assert.deepEqual([p.classification,p.n,p.q,p.attemptOrdinal],['EXACT_SINGLE_FAULT_DELIVERY',50,49,50]);let calls=0;const oracle={step(){calls++;return {attemptOrdinal:50,q:49,completed:0,faultDelivered:true};}};stepReferenceForReturn(oracle,p);assert.equal(calls,1);
  stepReferenceForReturn(oracle,{classification:'PREFETCH_RAW_UNMATCHED'});assert.equal(calls,1);assert.throws(()=>stepReferenceForReturn({step(){return {attemptOrdinal:50,q:50,completed:1,faultDelivered:false};}},p));assert.throws(()=>pageFaultProgress({n:50,q:49,faults:1},r));const bad=clone(r);new DataView(bad.sliceBytes.buffer).setUint32(120,0,true);assert.throws(()=>pageFaultProgress({n:49,q:49,faults:0},bad));
  const b=fixture(false),prefetch=returned(b.n,1,0,0);assert.equal(pageFaultProgress({n:49,q:49,faults:0},prefetch).classification,'PREFETCH_RAW_UNMATCHED');assert.equal(startOrAdvanceFaultLedger(null,b.n,r,b.pages,f.pages).faultSerial,1);const pages=clone(f.pages);pages.data[0]=0x34;assert.throws(()=>startOrAdvanceFaultLedger(null,b.n,r,b.pages,pages));
+ // Actual production bodies, extracted from authenticated generated source, run on a manufactured clock-only board.
+ // No SourcePagedPageFaultBoard constructor, actual machine/provider factory or CPU is used.
+ const source=(derivedProviderForSourceControls??derivePagedPageFaultProvider().bytes).toString(),stateStart=source.indexOf(' const state=()=>'),stateEnd=source.indexOf(' const callback=',stateStart),clockStart=source.indexOf('  clockTransfer(words,reason){'),clockEnd=source.indexOf('\n });\n return Object.freeze',clockStart);assert.ok(stateStart>=0&&stateEnd>stateStart&&clockStart>=0&&clockEnd>clockStart);
+ const tick=source.match(/^ nativeTick\(\)\{.*\}$/m),quantum=source.match(/^ quantum\(kind\)\{.*\}$/m);assert.ok(tick&&quantum);assert.equal(source.split(tick[0]).length-1,1);assert.equal(source.split(quantum[0]).length-1,1);
+ const machine={cycles:4+6*49,_chipDebt:6*49,_chipDeadline:6000,_a20Enabled:true},board={nativeTicks:49,successfulQuanta:49,mappingEpoch:0,machine,_call(k,args,fn){return fn();}};
+ Object.assign(board,Function('assert','coldBoardProfile','return ({'+tick[0]+','+quantum[0]+'});')(assert,{maxNativeTicks:512,maxQuanta:512}));
+ const call=(k,args=[])=>Reflect.apply(board[k],board,args),clock=Function('assert','board','call','coldBoardProfile',`let lease=true,closed=false,initialized=true,entry=false,postPio=false,mappingPending=false,active=false,n=0,q=0;${source.slice(stateStart,stateEnd)}return ({${source.slice(clockStart,clockEnd)}}).clockTransfer;`)(assert,board,call,{maxNativeTicks:512,maxQuanta:512});
+ assert.deepEqual([...clock(Uint32Array.of(1),8)],[50,49,298,294,6000,0,1],'N-only fault leaves Q/device clock unchanged');
+ for(let i=0;i<7;i++){const state=clock(Uint32Array.of(1,2),4);assert.deepEqual([...state],[51+i,50+i,4+6*(50+i),6*(50+i),6000,0,1],'following instructions preserve exactly one permanent N-Q offset');}
+ const prior=clone({n:board.nativeTicks,q:board.successfulQuanta,cycles:machine.cycles,debt:machine._chipDebt});assert.throws(()=>clock(Uint32Array.of(1,9),4));assert.deepEqual({n:board.nativeTicks,q:board.successfulQuanta,cycles:machine.cycles,debt:machine._chipDebt},prior,'whole tape preflight rejects before any effect');
 });
 test('comparable wholeboards ten pages and native cache rows remain strict with unmatched prefetch raw',()=>{
  const f=fixture(true),n=returned(f.n,2,1,0);assert.equal(compareBoundary(n,f.board,f.js,f.pages,'resume','EXACT_SINGLE_FAULT_DELIVERY').status,'COMPARABLE_PARITY_PASS');
