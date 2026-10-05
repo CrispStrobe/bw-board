@@ -1,0 +1,15 @@
+{
+  "status": "INDEPENDENT_COMPACT_PAIRED_SIX_PURE_SOURCE_CONTROLS_PASS_NO_COMPARISON",
+  "revision": "530376bb144e649b23d2174eb098aefaf96653b6",
+  "ownSourceCount": 18,
+  "roleSourceCount": 357,
+  "completeBeforeAfterEqual": true,
+  "frozenSourceAndRoleGitPreflightReviewed": true,
+  "parentSha256": "45ae7f5e8e7db5a6376a670f82e1fb571edee668d3b9c8609111087ad73b1d20",
+  "outerNodeTests": 1,
+  "pythonTests": 6,
+  "skips": 0,
+  "childExitWallSeconds": 0.9199504628777504,
+  "finalAuthInclusiveWallSeconds": 4.9710939563810825,
+  "scope": "Saved raw one Node wrapper/six named Python controls; manufactured comparison children and CPU/board/PIO surrounding genuine terminal9. No setup/download/restore/addon/provider/guest/performance comparison."
+}

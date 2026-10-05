@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-compact-progress.paired-source.v1",
-  "status": "PENDING_ROOT_REVIEWED_ACTUAL_COMPACT_QUALIFICATION",
+  "status": "ROOT_REVIEWED_ACTUAL_COMPACT_QUALIFICATION_READY",
   "compiledRevision": "e4807d0647ab1e151755811ff8ef53d493ebf6ff",
   "compiledFiles": {
     ".github/workflows/i80386-native-cold-bios-build.yml": "f7ff9624b5a75a27470d592f42f36c1539ce1f5f27d20e1a152ed93e898ae1a3",
