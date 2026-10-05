@@ -152,4 +152,30 @@ class PureControls(unittest.TestCase):
                 changed=copy.deepcopy(r);ports=changed['result']['ports'] if arm=='plain-JS' else changed['ports'];ports[0][field]+=1
                 with self.assertRaises(ValueError):policy.validate_worker_receipt(changed,arm,data,b,c)
 
+    def test_retained_setup_binding_reaches_production_assembly_and_admission(self):
+        import importlib.util
+        here=Path(__file__).parent;original=json.loads((here/'actual-first-derived-binding.json').read_bytes());before=copy.deepcopy(original)
+        origin=json.loads((here/'actual-first-derived-binding-origin.json').read_bytes())
+        self.assertEqual(policy.sha((here/'actual-first-derived-binding.json').read_bytes()),origin['memberSha256'])
+        with self.assertRaisesRegex(KeyError,'targetQ'):policy.validate_ready_binding(original)
+        c=json.loads((here/'hosted-contract.json').read_bytes());qcbytes=(here/'actual-qualifier-contract.json').read_bytes()
+        self.assertEqual(policy.sha(qcbytes),c['qualifierFiles']['scripts/cold-compact-progress-qualification/contract.json']);qc=json.loads(qcbytes)
+        spec=importlib.util.spec_from_file_location('retained_binding_assembly_control',here/'setup-entry.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        data={'capture':original['capture']['path'],'independentAudit':original['independentAudit']['path']}
+        repaired=module.assemble_binding(c,qc,{'nativeInput':original['nativeInput']},data,Path(original['node']['path']),here/c['compactQualificationAudit']['file'],original['pinnedFiles'])
+        self.assertIs(policy.validate_ready_binding(repaired),repaired);self.assertEqual(original,before)
+        added={'targetN','targetQ','configuredClockHz','functionalCyclesPerQ','bounds'};self.assertEqual(set(repaired)-set(original),added)
+        self.assertEqual(repaired['targetN'],qc['targetN']);self.assertEqual(repaired['targetQ'],qc['targetQ']);self.assertEqual(repaired['configuredClockHz'],6000000);self.assertEqual(repaired['functionalCyclesPerQ'],6)
+        self.assertEqual(repaired['capture']['sha256'],qc['captureArtifact']['captureSha256']);self.assertEqual(repaired['independentAudit']['sha256'],qc['independentAudit']['sha256'])
+        for key in set(repaired):
+            bad=copy.deepcopy(repaired);bad.pop(key)
+            with self.assertRaises((KeyError,ValueError)):policy.validate_ready_binding(bad)
+        for change in [lambda b:b.update(targetQ=True),lambda b:b['bounds'].update(cpuSeconds=61),lambda b:b['nativeInput'].update(compiledRevision='0'*40),lambda b:b['pinnedFiles'][b['nativeInput']['addon']].update(sha256='0'*64)]:
+            bad=copy.deepcopy(repaired);change(bad)
+            with self.assertRaises(ValueError):policy.validate_ready_binding(bad)
+        badqc=copy.deepcopy(qc);badqc['targetQ']-=1
+        with self.assertRaisesRegex(ValueError,'target ledger'):module.assemble_binding(c,badqc,{'nativeInput':original['nativeInput']},data,Path(original['node']['path']),here/c['compactQualificationAudit']['file'],original['pinnedFiles'])
+        self.assertIs(sys.modules['policy'],policy) # Fixed unique load preserves the existing policy namespace.
+        source=(here/'setup-entry.py').read_text();self.assertLess(source.index('binding=assemble_binding('),source.index("q.write(out/'derived-paired-binding.json'"))
+
 if __name__=="__main__":unittest.main(verbosity=2)
