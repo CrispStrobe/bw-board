@@ -1,0 +1,111 @@
+{
+  "status": "INDEPENDENT_TINY_REAL_NAPI_FIXTURE_STATIC_BUILD_PASS_NO_ADDON_LOAD",
+  "sourceRevision": "6f021f61523c2544dabffb3d5eeaf377a4e2583d",
+  "originalPinsEqual": true,
+  "stagedAndMaterializedInputsFinalEqual": true,
+  "steps": [
+    {
+      "name": "materialize",
+      "argv": [
+        "/tmp/node-v22.23.3-linux-x64/bin/node",
+        "--max-old-space-size=128",
+        "scripts/property-key-real-napi-qualification/prepare.mjs"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input",
+      "cpuLimitSeconds": 10,
+      "rawWait4Status": 0,
+      "pid": 3798120,
+      "exitCode": 0,
+      "childWallSeconds": 1.0796421840786934,
+      "rusage": {
+        "user": 0.6078589999999999,
+        "system": 0.48629599999999995,
+        "maxRSSKiB": 179564
+      }
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "/usr/bin/x86_64-linux-gnu-g++-13",
+        "-std=c++17",
+        "-O0",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-shared",
+        "-pthread",
+        "-DNODE_GYP_MODULE_NAME=key_fixture",
+        "-DNAPI_VERSION=9",
+        "-Iinclude/node",
+        "fixture.cc",
+        "-o",
+        "key_fixture.node"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build",
+      "cpuLimitSeconds": 8,
+      "rawWait4Status": 0,
+      "pid": 3798153,
+      "exitCode": 0,
+      "childWallSeconds": 0.5791111439466476,
+      "rusage": {
+        "user": 0.473386,
+        "system": 0.09959,
+        "maxRSSKiB": 64768
+      }
+    },
+    {
+      "name": "nm",
+      "argv": [
+        "/usr/bin/x86_64-linux-gnu-nm",
+        "-D",
+        "--defined-only",
+        "key_fixture.node"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build",
+      "cpuLimitSeconds": 8,
+      "rawWait4Status": 0,
+      "pid": 3798158,
+      "exitCode": 0,
+      "childWallSeconds": 0.7814370561391115,
+      "rusage": {
+        "user": 0.033222999999999996,
+        "system": 0.121028,
+        "maxRSSKiB": 52480
+      }
+    },
+    {
+      "name": "readelf",
+      "argv": [
+        "/usr/bin/x86_64-linux-gnu-readelf",
+        "-h",
+        "-d",
+        "-s",
+        "key_fixture.node"
+      ],
+      "cwd": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build",
+      "cpuLimitSeconds": 8,
+      "rawWait4Status": 0,
+      "pid": 3798161,
+      "exitCode": 0,
+      "childWallSeconds": 0.01585795171558857,
+      "rusage": {
+        "user": 0.005527,
+        "system": 0.005527,
+        "maxRSSKiB": 14752
+      }
+    }
+  ],
+  "addonBytes": 38792,
+  "addonSha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53",
+  "buildReceiptSha256": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6",
+  "strongExports": [
+    "napi_register_module_v1",
+    "node_api_module_get_api_version_v1"
+  ],
+  "needed": [
+    "libstdc++.so.6",
+    "libgcc_s.so.1",
+    "libc.so.6"
+  ],
+  "rpath": false,
+  "scope": "Helper plus fixed fixture glue only; no addon load, actual NAPI behavior/GC/teardown or emulator/guest qualification."
+}

@@ -1,0 +1,186 @@
+{
+  "scope": "ONE_REAL_NAPI_HELPER_BEHAVIOR_NO_GUEST",
+  "steps": [
+    {
+      "name": "qualify",
+      "argv": [
+        "/tmp/node-v22.23.3-linux-x64/bin/node",
+        "--max-old-space-size=128",
+        "--expose-gc",
+        "scripts/property-key-real-napi-qualification/qualify.mjs"
+      ],
+      "cwd": "/tmp/property-key-real-napi-run-proposal-20261005/input",
+      "cpuLimitSeconds": 10,
+      "rawWait4Status": 0,
+      "pid": 3800322,
+      "exitCode": 0,
+      "childWallSeconds": 4.569381590932608,
+      "rusage": {
+        "user": 3.725708,
+        "system": 1.038459,
+        "maxRSSKiB": 314224
+      }
+    }
+  ],
+  "behaviorReport": {
+    "status": "REAL_NAPI_BEHAVIOR_PASS",
+    "primaryError": null,
+    "cleanupErrors": [],
+    "reads": 2,
+    "writes": [
+      7,
+      8
+    ],
+    "envRecords": [
+      {
+        "command": "release",
+        "foreignDenied": true,
+        "freshPreparedAndReleased": true
+      },
+      {
+        "command": "teardown",
+        "foreignDenied": true,
+        "freshPreparedAndReleased": true
+      }
+    ],
+    "scope": "Exact generated key helper plus fixture failure/busy/thread/env glue only; not held invoke/fail paths or full addon; no guest, leak accounting or speed"
+  },
+  "status": "REAL_NAPI_HELPER_BEHAVIOR_PASS_NOT_GUEST",
+  "stagedInputsAfter": {
+    "scripts/property-key-real-napi-qualification/SOURCE.md": {
+      "present": true,
+      "sha256": "737f2628f8384366cf59b5aa3ab102ff2dcfa3eb91db391df6e1e3ba4e45b1a7",
+      "expectedSha256": "737f2628f8384366cf59b5aa3ab102ff2dcfa3eb91db391df6e1e3ba4e45b1a7"
+    },
+    "scripts/property-key-real-napi-qualification/auth.mjs": {
+      "present": true,
+      "sha256": "c2c24bc2b4676f009c155142bbd5a2de3b8545a461140c1845c584d08d32e6ca",
+      "expectedSha256": "c2c24bc2b4676f009c155142bbd5a2de3b8545a461140c1845c584d08d32e6ca"
+    },
+    "scripts/property-key-real-napi-qualification/build-proposal.json": {
+      "present": true,
+      "sha256": "93de37e7eeac886435ca6d5aec14cce00b3ef2e14be52ffa498f5412f53dc33a",
+      "expectedSha256": "93de37e7eeac886435ca6d5aec14cce00b3ef2e14be52ffa498f5412f53dc33a"
+    },
+    "scripts/property-key-real-napi-qualification/candidate-source-context.json": {
+      "present": true,
+      "sha256": "a8d5faf0f09350ff8191b365e58af507f64f55d4743a810d3736ea45d7ca29b2",
+      "expectedSha256": "a8d5faf0f09350ff8191b365e58af507f64f55d4743a810d3736ea45d7ca29b2"
+    },
+    "scripts/property-key-real-napi-qualification/contract.json": {
+      "present": true,
+      "sha256": "c01e09436d064848b3918358142daa640d3f051dd52da63ca14c8b6e42978ea1",
+      "expectedSha256": "c01e09436d064848b3918358142daa640d3f051dd52da63ca14c8b6e42978ea1"
+    },
+    "scripts/property-key-real-napi-qualification/env-worker.mjs": {
+      "present": true,
+      "sha256": "446fead0045ab309ff970ed0094d5e0a74f50039640945ff16274a470ca56563",
+      "expectedSha256": "446fead0045ab309ff970ed0094d5e0a74f50039640945ff16274a470ca56563"
+    },
+    "scripts/property-key-real-napi-qualification/fixture.cc": {
+      "present": true,
+      "sha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+      "expectedSha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759"
+    },
+    "scripts/property-key-real-napi-qualification/prepare.mjs": {
+      "present": true,
+      "sha256": "7112ec857c829f5658e6373b49d6074c37f8ea2911b17dc67acba3a9a55a851a",
+      "expectedSha256": "7112ec857c829f5658e6373b49d6074c37f8ea2911b17dc67acba3a9a55a851a"
+    },
+    "scripts/property-key-real-napi-qualification/provenance/header-audit.json": {
+      "present": true,
+      "sha256": "520a1fee4fd5b6534cfda9404821792f6b160ceb2bc32c0132750f550785ecab",
+      "expectedSha256": "520a1fee4fd5b6534cfda9404821792f6b160ceb2bc32c0132750f550785ecab"
+    },
+    "scripts/property-key-real-napi-qualification/provenance/official-SHASUMS256.txt": {
+      "present": true,
+      "sha256": "4fe99a2ba9d552a6f51c13ed68fb11104cfa5df601aec616be689253a8139e7a",
+      "expectedSha256": "4fe99a2ba9d552a6f51c13ed68fb11104cfa5df601aec616be689253a8139e7a"
+    },
+    "scripts/property-key-real-napi-qualification/provenance/primary-source-index.json": {
+      "present": true,
+      "sha256": "42ad66a87ff76a8ad404529fb108e4ddae01e20da7fdaf512c92b56c8c497e12",
+      "expectedSha256": "42ad66a87ff76a8ad404529fb108e4ddae01e20da7fdaf512c92b56c8c497e12"
+    },
+    "scripts/property-key-real-napi-qualification/qualify.mjs": {
+      "present": true,
+      "sha256": "2c6b9ea4ad66374ef8249aaf0305624e8d687f15cae032fa3867413369eef4e7",
+      "expectedSha256": "2c6b9ea4ad66374ef8249aaf0305624e8d687f15cae032fa3867413369eef4e7"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/README.md": {
+      "present": true,
+      "sha256": "49dfd6b012069dae6f3ccdcecf6e7c548ed7c209d3efd2e53df5184db77905ce",
+      "expectedSha256": "49dfd6b012069dae6f3ccdcecf6e7c548ed7c209d3efd2e53df5184db77905ce"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/held-napi.cc": {
+      "present": true,
+      "sha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+      "expectedSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/keys.inc": {
+      "present": true,
+      "sha256": "e3232eda391e1d1e2dd96c8f8fc9e7b997ba13df509c6f63882c27db0043fe4c",
+      "expectedSha256": "e3232eda391e1d1e2dd96c8f8fc9e7b997ba13df509c6f63882c27db0043fe4c"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/keys.json": {
+      "present": true,
+      "sha256": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409",
+      "expectedSha256": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/mock.cc": {
+      "present": true,
+      "sha256": "215645bd1d07854d2c353dd25c30f1794dc0abf59b92f227ed22ada1f102cc15",
+      "expectedSha256": "215645bd1d07854d2c353dd25c30f1794dc0abf59b92f227ed22ada1f102cc15"
+    },
+    "scripts/bochs-cpu3-native-property-key-cache/napi.mjs": {
+      "present": true,
+      "sha256": "dc507cb0300d9bbdb18fc8b94ff7cc4cd34d2c45c1ba62f046915ef74b5a54f1",
+      "expectedSha256": "dc507cb0300d9bbdb18fc8b94ff7cc4cd34d2c45c1ba62f046915ef74b5a54f1"
+    },
+    "test/i80386-native-property-key-cache-source.test.mjs": {
+      "present": true,
+      "sha256": "0eeb5245dc2a4f9f1a8deacb6800669e709ce7019b465ed135eb30e633d5580d",
+      "expectedSha256": "0eeb5245dc2a4f9f1a8deacb6800669e709ce7019b465ed135eb30e633d5580d"
+    }
+  },
+  "materializedInputsAfter": {
+    "generated-helper.inc": {
+      "present": true,
+      "sha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+      "expectedSha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1"
+    },
+    "build-receipt.json": {
+      "present": true,
+      "sha256": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6",
+      "expectedSha256": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6"
+    },
+    "key_fixture.node": {
+      "present": true,
+      "sha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53",
+      "expectedSha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53"
+    }
+  },
+  "addonAfter": {
+    "present": true,
+    "bytes": 38792,
+    "sha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53"
+  },
+  "primaryError": null,
+  "cleanupErrors": [],
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "aggregateWaitedChildCpuSeconds": 4.7641670000000005,
+  "parentWallSeconds": 6.479210328310728,
+  "sourceStatus": "Original PENDING and build packet unchanged; copied READY fields only",
+  "bounds": {
+    "qualificationWallSeconds": 30,
+    "cleanupReapSeconds": 5,
+    "finalAuthenticationSeconds": 5,
+    "aggregateWaitedChildCpuSeconds": 10,
+    "NodeHeapMiB": 128,
+    "fileMiB": 16,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "rusageScope": "wait4 subprocesses and waited descendants; helper qualification process accounting only"
+}

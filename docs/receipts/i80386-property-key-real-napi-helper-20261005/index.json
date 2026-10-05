@@ -1,0 +1,52 @@
+{
+  "records": [
+    {
+      "path": "build-exit.json",
+      "bytes": 12901,
+      "sha256": "51c2424a11c6a775ee238e579751394b7b3eb53ac3d519d5b870b0c058b654c4",
+      "origin": "/tmp/property-key-real-napi-build-proposal-20261005/exit.json"
+    },
+    {
+      "path": "build-independent-audit.json",
+      "bytes": 3231,
+      "sha256": "baa9e1cb108c1ef4be4ab6f0ac6b1583664ece6838ec8f8c694ca806e58626dd",
+      "origin": "/tmp/property-key-real-napi-build-proposal-20261005/independent-audit.json"
+    },
+    {
+      "path": "build-receipt.json",
+      "bytes": 771,
+      "sha256": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6",
+      "origin": "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build/build-receipt.json"
+    },
+    {
+      "path": "build-symbols.txt",
+      "bytes": 2081,
+      "sha256": "789a72436094871ff2afbfdb26da02c1f3a07423d1f3337762ce719d50a576c6",
+      "origin": "/tmp/property-key-real-napi-build-proposal-20261005/nm.stdout"
+    },
+    {
+      "path": "qualification-exit.json",
+      "bytes": 8072,
+      "sha256": "10bdf054ae05c096ead156b9090131d6e3871d07d2e4f0d74302be84ec0d3626",
+      "origin": "/tmp/property-key-real-napi-run-proposal-20261005/exit.json"
+    },
+    {
+      "path": "qualification-report.json",
+      "bytes": 429,
+      "sha256": "343273ddd8b6e0d353ec55931b46b34dd977000c7b6bf95e400b394a47a95a7f",
+      "origin": "/tmp/property-key-real-napi-run-proposal-20261005/qualify.stdout"
+    },
+    {
+      "path": "qualification-input-intent.json",
+      "bytes": 2861,
+      "sha256": "2fcc9ab06b68ad0297d2356b7215028a5f634b55c9dbeb1c6b9f06d74329e413",
+      "origin": "/tmp/property-key-real-napi-run-proposal-20261005/input-intent.json"
+    },
+    {
+      "path": "qualification-independent-audit.json",
+      "bytes": 1745,
+      "sha256": "2be918a3166c20ebceb92623c2d9e148b331a0131f570961717148714f48dffb",
+      "origin": "/tmp/property-key-real-napi-run-proposal-20261005/independent-audit.json"
+    }
+  ]
+}
