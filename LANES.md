@@ -1,5 +1,35 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-05 Motor direction through an H-bridge; the L293D's clamp diodes — DONE candidate, Claude (Lite task B7).
+Worktree `/mnt/volume1/code/wt/b7-actuators-board`, branch `lane/b7-actuators`,
+base `378abf89`. Owns this row, `setDeviceControl`'s motor `direction` verb and
+the H-bridge speed route (`_motorDirection`/`_motorBridge`/`_applyBridge`/
+`_motorIntentOf` beside B5's `_motorSpeed` in `src/board.js`), the solver-view
+`_expandBridgeClampDiodes` beside `_expandMotorWindings`, the signed velocity /
+`direction` state in `src/devices/dc-motor.js`, the doc header of
+`src/devices/h-bridge.js`, `spec-updates/set-pwm.md` + `set-device-control.md`,
+and `test/h-bridge-direction.test.mjs`. Measured first on an L293D bench (MCU
+EN/IN1/IN2 -> h_bridge -> dc_motor): `direction` refused, so `set motor speed`
+alone left IN1/IN2 undriven (a brake) at omega 0; dc_motor clamped omega at 0, so
+driven backwards it sat still and no motor ever reported a direction; a disabled
+output was open, so one EN-low on a spinning motor took 347 s of wall time per
+100 ms and a 500 Hz PWM on EN 66 s per 40 ms. Now: forward/reverse/brake/coast by
+the L293D truth table oriented by the motor's `a` lead; speed a PWM on the active
+IN with EN held high (207-273 integrator attempts per 10 ms at 50 %, against
+6712-7005 for the same duty on EN); a program that steers the inputs itself keeps
+them and its speed goes to EN; one-pin motors accept forward and refuse reverse/
+brake by name, unsteerable bridges and a coast with EN tied refused by name;
+`velocity` signed, `omega` = |velocity| (forward bit-identical to master on PWM,
+coast and the NPN + diode bench), `direction` forward/reverse/stopped; four
+solver diodes per two connected outputs (first ms after EN-low: 20000-attempt
+backstop -> ~150). A switched clamp inside the model was tried and rejected (it
+cannot turn off at zero current: accuracy unmet at every release). 16 new tests;
+mutations: verb not dispatched reds 8, clamp-at-0 5, no diodes 4, swapped leads
+ignored 1, speed always on EN 6. Adjacent motor/PWM/device-control suites 306/306
+(3 skipped as on master). Named, unchanged: gearmotor/dc_motor_encoder still
+clamp at 0; a diode turn-off latches `minimum-step-accuracy-unmet`, as the NPN +
+flyback bench already does (0.19 s wall per ms of PWM there).
+
 2026-10-03 Finite bounded transient stream — DONE candidate, Codex bwcx `/root`.
 Isolated /tmp/bwcx-board-stream-bounded-20261003, branch
 lane/transient-bounded-stream-20261003, exact base

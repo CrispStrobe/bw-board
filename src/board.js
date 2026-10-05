@@ -180,6 +180,13 @@ const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
  * with no window-phase error (see setPwm for the bound at other carriers).
  * It is also within 2 % of the Arduino Uno's 490 Hz analogWrite carrier.
  */
+/** The verbs `set motor direction` takes (the devices blocks' dirMenu). */
+const MOTOR_DIRECTIONS = new Set(['forward', 'reverse', 'brake', 'coast']);
+/** An h_bridge's two channels: EN, the two IN pins, the outputs they drive. */
+const H_BRIDGE_CHANNELS = [
+  { en: 'en1', ins: ['in1', 'in2'], outs: ['out1', 'out2'] },
+  { en: 'en2', ins: ['in3', 'in4'], outs: ['out3', 'out4'] },
+];
 const DEFAULT_PWM_HZ = 500;
 /**
  * A DMM's integration window: 100 ms, five 20 ms mains cycles — the reading
@@ -451,6 +458,53 @@ export class BoardImpl {
       outParts.push({
         id: hidId, kind: 'inductor', params: { henrys: L }, terminals: ['a', 'b'],
       });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /**
+   * Give each h_bridge (L293D) its output clamp diodes as real SOLVER diodes:
+   * per connected output, one from the output up to the bridge's VCC net and
+   * one from its GND net up to the output. No new nets — the diodes sit on
+   * the nets the bridge's own terminals are on — and, like the motor
+   * windings above, they live only in the solver view, so DRC, exporters and
+   * the drawn netlist keep seeing one L293D.
+   *
+   * Why: a disabled output is an open circuit, and a motor's winding current
+   * cannot stop. With nowhere to go but GMIN it made the transient grind —
+   * one EN-low on a spinning motor took 347 s of wall time to advance 100 ms,
+   * a 500 Hz PWM on EN 66 s per 40 ms (test/h-bridge-direction.test.mjs) —
+   * while the L293D the part depicts carries exactly these diodes (the CUI's
+   * DRC exempts it from the flyback check for that reason). A switched
+   * clamp inside the device model was tried first and rejected: it cannot
+   * turn off smoothly at zero current, so the step controller reported
+   * 'minimum-step-accuracy-unmet' at every release. `params.clampDiodes:
+   * false` leaves a bare L298-style bridge, which needs external diodes.
+   */
+  static _expandBridgeClampDiodes(parts, nets) {
+    const bridges = parts.filter((p) => p.kind === 'h_bridge' && p.params?.clampDiodes !== false);
+    if (!bridges.length) return { parts, nets };
+    const netOf = new Map();
+    for (const n of nets) for (const t of n.terminals) netOf.set(`${t.part}\0${t.terminal}`, n);
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const byId = new Map(outNets.map((n) => [n.id, n]));
+    for (const br of bridges) {
+      const vccNet = netOf.get(`${br.id}\0vcc`);
+      const gndNet = netOf.get(`${br.id}\0gnd`);
+      for (const out of ['out1', 'out2', 'out3', 'out4']) {
+        const outNet = netOf.get(`${br.id}\0${out}`);
+        if (!outNet) continue;
+        const add = (suffix, anodeNet, cathodeNet) => {
+          if (!anodeNet || !cathodeNet || anodeNet === cathodeNet) return;
+          const id = `${br.id}_clamp_${out}_${suffix}`;
+          outParts.push({ id, kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] });
+          byId.get(anodeNet.id).terminals.push({ part: id, terminal: 'anode' });
+          byId.get(cathodeNet.id).terminals.push({ part: id, terminal: 'cathode' });
+        };
+        add('hi', outNet, vccNet);
+        add('lo', gndNet, outNet);
+      }
     }
     return { parts: outParts, nets: outNets };
   }
@@ -768,7 +822,8 @@ export class BoardImpl {
     // user drew: topology consumers (DRC, corpus invariants, exporters)
     // must keep seeing the diode on the net the motor pin is wired to,
     // not one hop into the motor's insides.
-    const solveView = BoardImpl._expandMotorWindings(parts, nets);
+    const windingView = BoardImpl._expandMotorWindings(parts, nets);
+    const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
     const macroView = BoardImpl._expandOpampMacros(solveView.parts, solveView.nets, this.vcc);
     this._solveParts = macroView.parts;
     this._solveNets = macroView.nets;
@@ -2775,6 +2830,7 @@ export class BoardImpl {
     // emulated timers, which every consumer already reads (spec-updates/
     // set-pwm.md, "Actuator intent").
     if (part.kind === 'dc_motor' && verb === 'speed') return this._motorSpeed(part, value);
+    if (part.kind === 'dc_motor' && verb === 'direction') return this._motorDirection(part, value);
     const model = getDevice(part.kind);
     const state = this._deviceStates.get(partId);
     if (part.kind === 'servo' && verb === 'angle' && state) this._servoPulse(part, state, value);
@@ -2902,11 +2958,179 @@ export class BoardImpl {
       this._recordRefusedControl(part.id, 'speed', `${value} is not a speed`);
       return false;
     }
+    const duty = Math.max(0, Math.min(100, pct));
+    const bridge = this._motorBridge(part);
+    if (bridge) {
+      const intent = this._motorIntentOf(part.id);
+      intent.duty = duty;
+      const ok = this._applyBridge(part, bridge, intent, 'speed');
+      if (ok) this._notifyChange('deviceControl', { partId: part.id, verb: 'speed' });
+      return ok;
+    }
     const pin = this._drivingPin(part, ['a', 'b'], 'speed');
     if (!pin) return false;
-    const ok = this.setPwm(pin, Math.max(0, Math.min(100, pct)));
+    const ok = this.setPwm(pin, duty);
     if (ok) this._notifyChange('deviceControl', { partId: part.id, verb: 'speed' });
     return ok;
+  }
+
+  /**
+   * `set motor direction to D` (forward | reverse | brake | coast).
+   *
+   * A direction is a property of the DRIVER, not of the motor: only a motor
+   * whose two leads sit on one H-bridge channel's outputs can be reversed.
+   * The board finds that channel (an `h_bridge`, which the L293D and KiCad's
+   * L298 map onto), the MCU pins on its IN pins and, if driven, its EN pin,
+   * and sets them by the L293D truth table — forward drives the input whose
+   * output carries the motor's `a` lead high and the other low, reverse the
+   * opposite, brake both high (EN high), coast drops EN. The speed is a PWM
+   * on the active input with the other low and EN held high (sign-magnitude
+   * drive, braking between pulses), so a direction change moves the PWM to
+   * the other input. A program that drives the inputs itself and only sets a
+   * speed keeps its inputs, and the speed is a PWM on EN (B5's route).
+   *
+   * What it cannot drive is refused by name, never guessed: a motor on ONE
+   * MCU pin (a single transistor, or the pin itself) turns one way only, so
+   * reverse and brake are refused there and forward is accepted as already
+   * true; a bridge whose IN pins are not both MCU pins cannot be steered;
+   * coast needs an MCU pin on EN (with EN tied high, both inputs low is a
+   * brake, not a coast).
+   */
+  _motorDirection(part, value) {
+    const dir = String(value).trim().toLowerCase();
+    if (!MOTOR_DIRECTIONS.has(dir)) {
+      this._recordRefusedControl(part.id, 'direction',
+        `"${value}" is not a direction (forward, reverse, brake or coast)`);
+      return false;
+    }
+    const bridge = this._motorBridge(part);
+    if (!bridge) {
+      const pins = this._mcuPinsDriving(part, ['a', 'b']);
+      if (pins.length === 1) {
+        if (dir === 'forward') return true;
+        this._recordRefusedControl(part.id, 'direction',
+          `driven by one MCU pin (${pins[0].pin}) through a single switch, which turns it one way only; ` +
+          `${dir} needs an H-bridge (an L293D) between the pins and the motor`);
+        return false;
+      }
+      this._recordRefusedControl(part.id, 'direction', pins.length
+        ? `driven by several MCU pins (${pins.map((p) => p.pin).join(', ')}) but not through one H-bridge channel`
+        : 'no MCU pin drives it');
+      return false;
+    }
+    const intent = this._motorIntentOf(part.id);
+    const prev = intent.dir;
+    intent.dir = dir;
+    const ok = this._applyBridge(part, bridge, intent, 'direction');
+    if (!ok) intent.dir = prev;
+    else this._notifyChange('deviceControl', { partId: part.id, verb: 'direction' });
+    return ok;
+  }
+
+  /** The motor's last commanded speed and direction (the bridge's state). */
+  _motorIntentOf(partId) {
+    if (!this._motorIntents) this._motorIntents = new Map();
+    let intent = this._motorIntents.get(partId);
+    if (!intent) { intent = { duty: null, dir: null }; this._motorIntents.set(partId, intent); }
+    return intent;
+  }
+
+  /**
+   * The H-bridge channel whose two outputs carry this motor's two leads, with
+   * the MCU pin on each of its control inputs (null where none drives it), or
+   * null when the motor is not across one channel. `inA` is the input whose
+   * output is on the motor's `a` lead, so forward is always inA high.
+   */
+  _motorBridge(part) {
+    const netOf = new Map();
+    for (const net of this.nets) {
+      for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+    }
+    const netA = netOf.get(`${part.id}\0a`);
+    const netB = netOf.get(`${part.id}\0b`);
+    if (!netA || !netB || netA === netB) return null;
+    for (const bridge of this.parts) {
+      if (bridge.kind !== 'h_bridge') continue;
+      for (const ch of H_BRIDGE_CHANNELS) {
+        const o1 = netOf.get(`${bridge.id}\0${ch.outs[0]}`);
+        const o2 = netOf.get(`${bridge.id}\0${ch.outs[1]}`);
+        let inA, inB;
+        if (o1 === netA && o2 === netB) [inA, inB] = ch.ins;
+        else if (o1 === netB && o2 === netA) [inB, inA] = ch.ins;
+        else continue;
+        const one = (terminal) => {
+          const hits = this._mcuPinsDriving(bridge, [terminal], 1);
+          return hits.length === 1 ? hits[0].pin : null;
+        };
+        return {
+          bridge, terminals: { en: ch.en, inA, inB },
+          pins: { en: one(ch.en), inA: one(inA), inB: one(inB) },
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Put a motor's speed and direction onto its H-bridge's MCU pins (see
+   * _motorDirection for the table). Returns false, with the reason recorded,
+   * when the pins this needs are not MCU pins.
+   */
+  _applyBridge(part, bridge, intent, verb) {
+    const { pins, terminals, bridge: br } = bridge;
+    const dir = intent.dir ?? 'forward';
+    const duty = intent.duty;
+    const name = (t) => `${br.id}.${t.toUpperCase()}`;
+    const level = (pin, high) => this.setPin(pin, 'pushpull', high);
+    const steer = pins.inA && pins.inB;
+    if (verb === 'direction' && !steer) {
+      const missing = [['inA', terminals.inA], ['inB', terminals.inB]]
+        .filter(([k]) => !pins[k]).map(([, t]) => name(t));
+      this._recordRefusedControl(part.id, 'direction',
+        `${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} not driven by an MCU pin, so the bridge cannot be steered`);
+      return false;
+    }
+    if (dir === 'coast') {
+      if (!pins.en) {
+        this._recordRefusedControl(part.id, verb,
+          `${name(terminals.en)} is not driven by an MCU pin, so the bridge cannot release the motor (both inputs low brakes it)`);
+        return false;
+      }
+      level(pins.en, false);
+      return true;
+    }
+    if (dir === 'brake') {
+      if (!steer) return this._refuseUnsteered(part, verb, bridge);
+      if (pins.en) level(pins.en, true);
+      level(pins.inA, true);
+      level(pins.inB, true);
+      return true;
+    }
+    const active = dir === 'reverse' ? pins.inB : pins.inA;
+    const idle = dir === 'reverse' ? pins.inA : pins.inB;
+    // A program that drives the inputs itself and never named a direction
+    // keeps them: the speed then goes where B5 put it, a PWM on EN.
+    const programSteers = intent.dir === null && steer
+      && (this.pinStates.has(active.toLowerCase()) || this.pinStates.has(idle.toLowerCase()));
+    if (programSteers || !steer) {
+      if (!pins.en) return this._refuseUnsteered(part, verb, bridge);
+      return duty !== null ? this.setPwm(pins.en, duty) : true;
+    }
+    // Sign-magnitude: EN held on, the speed a PWM on the active input, the
+    // other input low, so between pulses both outputs sit low and the
+    // winding current recirculates through the low side (a brake), never
+    // through the clamp diodes. Measured on the L293D bench, 10 ms at 50 %:
+    // 207-273 integrator attempts (0.2-0.3 s) this way, 6712-7005 (4.8-5.5 s)
+    // with the same duty on EN, where every pulse commutates the diodes.
+    if (pins.en) level(pins.en, true);
+    level(idle, false);
+    return this.setPwm(active, duty ?? 100);
+  }
+
+  _refuseUnsteered(part, verb, bridge) {
+    this._recordRefusedControl(part.id, verb,
+      `neither ${bridge.bridge.id}.EN nor both of its inputs are driven by MCU pins`);
+    return false;
   }
 
   /**

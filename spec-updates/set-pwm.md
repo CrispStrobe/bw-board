@@ -78,6 +78,46 @@ MicroPython driver, CODAL's setServoValue); at the old 1000..2000 default a
 The servo state names where its angle came from: `signal` = 'pulse' | 'control'
 | null.
 
+## Motor direction through an H-bridge (2026-10-05, Lite B7)
+
+`setDeviceControl(motor, 'direction', D)`, D = forward | reverse | brake |
+coast, was refused ("has no simulator action for this"), and could not have
+worked: the dc_motor model clamped omega at 0, so a motor driven backwards sat
+still. Now:
+
+- **The motor turns both ways.** `velocity` is the signed rad/s (+ = current
+  a -> b), `omega` stays the speed `|velocity|` (every reader of it reads what
+  it read before; forward motion is bit-identical, measured on PWM, coasting
+  and the NPN + diode bench), and `direction` is 'forward' | 'reverse' |
+  'stopped' (below 0.01 rad/s). A step that would carry it through zero stops
+  it at zero; load torque opposes the motion and cannot start it backwards.
+- **Direction is the driver's.** The board finds the `h_bridge` channel whose
+  outputs carry the motor's two leads (the L293D, and KiCad's L298, map onto
+  it), the MCU pins on its IN pins and EN, and applies the L293D truth table
+  oriented by the motor's own `a` lead: forward drives that input high and the
+  other low, reverse the opposite, brake both high with EN high, coast drops
+  EN. `speed` on such a motor is a PWM on the ACTIVE input with the other low
+  and EN held high (sign-magnitude, braking between pulses) — measured 20-30x
+  cheaper to integrate than the same duty on EN, where every pulse commutates
+  the clamp diodes. A program that drives the inputs itself and only sets a
+  speed keeps its inputs, and the speed is a PWM on EN (B5's route).
+- **Refused by name, not guessed:** a motor on one MCU pin (a single
+  transistor, or the pin itself) turns one way — forward is accepted as
+  already true, reverse and brake are refused; a bridge whose inputs are not
+  both MCU pins cannot be steered; coast with EN tied high (both inputs low
+  is a brake there); any other word.
+- **The L293D's clamp diodes are solver diodes** (`_expandBridgeClampDiodes`,
+  beside the motor-winding expansion; solver view only). A disabled output was
+  an open circuit and the winding's current had nowhere to go: one EN-low on a
+  spinning motor took 347 s of wall time to advance 100 ms, a 500 Hz PWM on EN
+  66 s per 40 ms. `params.clampDiodes: false` keeps a bare L298-style bridge.
+
+Not covered: `gearmotor` and `dc_motor_encoder` still clamp at 0 (the devices
+blocks address `dc_motor` only); a diode turn-off still latches the
+integrator's `minimum-step-accuracy-unmet`, exactly as the gallery's
+NPN + flyback-diode bench does; that bench integrates at about 0.19 s of wall
+time per ms of PWM, which no route here changes.
+
 ## What a meter shows (2026-09-29, Lite B5)
 
 `meterVoltage(netA, netB?)` and `meterCurrent(part, terminal)` are what a DMM
