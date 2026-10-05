@@ -2,6 +2,8 @@
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+The latest [compact-progress paired result](I80386-COLD-PAIRED-RESULTS.md#compact-progress-candidate-keep-plain-js) retains the plain-JS baseline. All eighteen semantic proofs passed, but native used 4.397239× execution CPU and 7.371981× execution wall, losing all seven measured pairs on one GitHub AMD EPYC 9V74 host with four logical CPUs. No old-scalar-versus-compact comparison was run; reducing the return schema has no measured causal gain here.
+
 The [scalar-ledger semantic qualification](I80386-COLD-LEDGER-SCALAR-QUALIFICATION.md) passed its first single-child checkpoint with independent audit. Its separate [paired comparison](I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) failed: scalar native used 5.251347× execution CPU and 8.943299× execution wall against JS on the same host, with all seven pairs unfavorable. Keep plain JS; no held-fusion-versus-scalar comparison was measured.
 
 The retained [execution-window Inspector diagnostic](I80386-COLD-EXECUTION-PROFILE-RESULTS.md) independently passed guest/profile checks despite an original post-child hosted metadata failure. Its main-isolate samples are diagnostic, not speed qualification; plain JS remains the baseline.
@@ -32,15 +34,13 @@ was run and no speed benefit is claimed.
 
 The [private span native parity packet](../scripts/owned-span-parity-ci/README.md) now has [actual three-cell results](I80386-OWNED-SPAN-PARITY-RESULTS.md). Its separate [paired CPU gate has now failed](I80386-OWNED-SPAN-CPU-RESULTS.md); this establishes no adoption or broader AT admission.
 
-## Current checkpoint (2026-10-04)
+## Current checkpoint (2026-10-05)
 
 The [stock xv6 full usertests result](receipts/2026-09-29-xv6-stock-224m-full-suite.json) completed 7,203,922,011 guest steps within its pinned 10-billion-step budget. That configured compatibility result uses later PSE/APIC extensions and does not qualify strict 386DX or the newer Bochs addon.
 
-The 10× target and calibration against a physical 16 MHz 386DX remain open. The latest same-host scalar-ledger gate ran on an AMD EPYC 7763 exposing four logical CPUs: mean execution CPU was 0.408969 s for JS and 2.147641 s for native; mean elapsed time was 0.198655 s and 1.776629 s. With this fixture's configured six clocks per Q at 6 MHz, virtual-time/mean-wall RTx was 1.593529× and 0.178181×. This is a ratio of means for a finite fixture, not physical-hardware calibration or a general guest benchmark.
+The 10× target and physical 16-MHz 386DX calibration remain open. The latest same-host compact gate measured mean execution CPU of 0.296865714 s for JS and 1.305389571 s for native, with mean elapsed time 0.141994227 s and 1.046778696 s. Six functional clocks per Q at 6 MHz give configured virtual-time/mean-wall ratios of 2.229400498 and 0.302415402. These finite-fixture ratios are not hardware calibration or broader guest benchmarks.
 
-Next: identify native costs hidden behind the Node boundary using an acknowledged, bounded recording window; then optimize the largest measured cost and repeat paired correctness/performance checks. In parallel, qualify paged software interrupt/IRET frames, followed by a separately owned page-fault repair/retry fixture. Native full-OS loading remains experimental. Public guest regressions use FreeDOS, ELKS, xv6 and owned fixtures; stock xv6's PSE bootstrap remains a later-CPU extension rather than strict 386DX proof.
-
-The [scalar-ledger paired gate](I80386-COLD-PAIRED-RESULTS.md#scalar-ledger-candidate-keep-plain-js) keeps plain JS after all 18 terminal proofs passed and all seven measured CPU pairs lost. The next diagnosis must resolve native execution cost; further small ledger changes are not a path to the 10× target by themselves.
+Next source design: native-owned RAM or a bounded effect journal to reduce crossings, while retaining deadline, IRQ, HLT, fault, PIO, A20/mapping and code-write fences. Preserve the existing diagnostic166 comparator, then qualify requested full CPU/board/RAM/ordered-PIO parity and once-only effects before a fresh same-host performance gate. The measured 167,123 memory callbacks are a count, not a cost-share attribution or promised improvement. Native full-OS loading remains experimental; public guest regressions use freely licensed software and owned fixtures.
 
 The [fixed protected DS/SS and stack run](I80386-PROTECTED-STACK-RESULTS.md) independently passes 30 N/Q, 32 saved raw 166-word boundaries, 13 cuts and three complete copied pages. PUSH/POP and CALL/RET effects, strict descriptor phases and settled RAM hash agree. Its scope is fixed same-ring stack correctness; full OS, speed and adoption remain open.
 

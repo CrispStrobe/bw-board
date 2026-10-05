@@ -2,7 +2,36 @@
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-Keep the plain-JS baseline. The latest scalar-ledger candidate used 5.251347× execution CPU against JS and lost all seven measured pairs. Earlier fusion, native and typed-state comparisons remain separately recorded below. These are fixed free-BIOS checkpoint results, not broader guest/full-boot speed results or default adoption.
+Keep the plain-JS baseline. The latest compact-progress candidate used 4.397239× execution CPU against JS and lost all seven measured pairs. Earlier fusion, native and typed-state comparisons remain separately recorded below. These are fixed free-BIOS checkpoint results, not broader guest/full-boot speed results or default adoption.
+
+## Compact progress candidate: keep plain JS
+
+[Run 37267527701](https://github.com/CrispStrobe/bw-board/actions/runs/37267527701), frozen parent `56669aa8`, completed two warmup pairs and seven alternating measured pairs: eighteen fresh children on a GitHub-hosted AMD EPYC 9V74 runner exposing four logical CPUs (0–3), with Node 22.23.3. The compact worker `5a967d70` (73 inputs) explicitly used `resumeProgress`; compiled `e4807d06` (163 inputs) and DSO `0323040b` remained distinct from unchanged plain-JS worker `0f1ec8cc` (49 inputs).
+
+| Measured window | Plain JS mean / median | Compact native mean / median |
+| --- | ---: | ---: |
+| Execution CPU | 0.296865714 / 0.293912000 s | 1.305389571 / 1.297106000 s |
+| Execution wall | 0.141994227 / 0.141380683 s | 1.046778696 / 1.037385678 s |
+| Whole-child CPU (wait4) | 1.120618000 / 1.122570000 s | 5.077412571 / 5.076178000 s |
+| Whole-child wall | 0.865534256 / 0.858440851 s | 4.513027183 / 4.498951163 s |
+
+Compact native used **4.397239× execution CPU** and **7.371981× execution wall** against JS; all seven measured CPU pairs were unfavorable. The unchanged ≥10% mean CPU reduction/all-seven gate fails. Keep plain JS. This run did not compare old scalar native against compact native, so it establishes no causal gain or regression from compact returns. Do not combine absolute timings across hosts. Configured virtual seconds divided by mean execution wall were **2.229400498** for JS and **0.302415402** for compact native: 316,562 Q × six clocks/Q at 6 MHz gives 0.316562 configured seconds, not physical 16-MHz calibration or VPS/Kaggle performance.
+
+| Measured pair | JS execution CPU | Compact execution CPU | JS execution wall | Compact execution wall |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 0.284613000 | 1.327075000 | 0.137457772 | 1.072633827 |
+| 1 | 0.311465000 | 1.272553000 | 0.150039930 | 1.025094355 |
+| 2 | 0.295149000 | 1.294638000 | 0.142821946 | 1.036266268 |
+| 3 | 0.293912000 | 1.374062000 | 0.140137156 | 1.090498604 |
+| 4 | 0.308750000 | 1.297106000 | 0.141380683 | 1.040960706 |
+| 5 | 0.290291000 | 1.298920000 | 0.140490035 | 1.037385678 |
+| 6 | 0.293880000 | 1.273373000 | 0.141632066 | 1.024611437 |
+
+The [independent audit](receipts/i80386-compact-progress-paired-results-20261005/independent-actual-audit.json), [root audit](receipts/i80386-compact-progress-paired-results-20261005/root-actual-audit.json) and [standalone coder audit](receipts/i80386-compact-progress-paired-results-20261005/coder-actual-audit.json) verify all 266 members, 377 recorded source paths and all eighteen terminal proofs. Nine native children retain raw reset/requested-last/final166, strict compact-nine metadata and the decoded 160-byte slice ABI; nine JS children retain represented CPU/Q. All eighteen match final board, whole RAM hash and the complete ordered 16,475-event PIO tape. Each native child retains 167,123 fused memory effects (75,401 reads + 91,722 writes) and closed native/provider lifecycles. Whole RAM bytes and intermediate full CPU states were not retained; live ownership is authenticated-source attested. This remains the owned/free-BIOS E16 checkpoint, not general guest admission, full boot or a tenfold gain.
+
+The [index](receipts/i80386-compact-progress-paired-results-20261005/index.json) retains exact official metadata, all [eighteen timing records](receipts/i80386-compact-progress-paired-results-20261005/actual-18-child-series.json), host context and member hashes. Artifact `11327261646` is 43,100,871 bytes, SHA-256 `d162ded8f4ad21e71a5f0728167d57a7cde368e9ce80896b916f6d2c758a4864`; its sole external ZIP location is recorded in [retention metadata](receipts/i80386-compact-progress-paired-results-20261005/actual-artifact-input.json). The [first pre-guest binding failure](receipts/i80386-compact-progress-paired-binding-fix-20261005/index.json) remains unchanged: restoration passed but the original parent refused a descriptor missing five fields. The corrected source received one separate reviewed dispatch; no successful comparison was replayed.
+
+Next design: give native execution source-owned RAM or a bounded memory-effect journal, with fences for device deadlines, IRQ, HLT, faults, PIO, A20/mapping changes and code writes. Preserve the existing diagnostic166 comparator and requested full terminal CPU/board/RAM/PIO proofs; qualify ownership and once-only effect ordering before any same-host gate. The 167,123 callback count motivates this investigation but does not measure its cost share or predict a speedup.
 
 ## Scalar-ledger candidate: keep plain JS
 

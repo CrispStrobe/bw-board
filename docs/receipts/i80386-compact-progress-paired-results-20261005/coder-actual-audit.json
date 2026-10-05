@@ -1,0 +1,158 @@
+{
+  "status": "PASS_CODER_ACTUAL_COMPACT_PROGRESS_PAIRED_AUDIT",
+  "runId": 37267527701,
+  "head": "56669aa8f214e0011f89824befafe12e4e034383",
+  "artifactId": 11327261646,
+  "zipBytes": 43100871,
+  "zipSha256": "d162ded8f4ad21e71a5f0728167d57a7cde368e9ce80896b916f6d2c758a4864",
+  "members": 266,
+  "currentGitProofInputs": 377,
+  "roleProofScope": "305 parent/build/workers plus 54 metadata-driver and 18 qualifier paths. Independent retained setup after-maps and all restored/input pins equal.",
+  "children": 18,
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "quantitativeGatePassed": false,
+  "favorablePairs": 0,
+  "candidateOverBaselineMeanExecutionCpu": 4.397239251994649,
+  "candidateOverBaselineMeanExecutionWall": 7.371980675536277,
+  "metrics": {
+    "plain-JS": {
+      "executionCpu": {
+        "mean": 0.2968657142857143,
+        "median": 0.293912,
+        "series": [
+          0.284613,
+          0.311465,
+          0.295149,
+          0.293912,
+          0.30875,
+          0.290291,
+          0.29388
+        ]
+      },
+      "executionWall": {
+        "mean": 0.14199422685714286,
+        "median": 0.141380683,
+        "series": [
+          0.137457772,
+          0.15003993,
+          0.142821946,
+          0.140137156,
+          0.141380683,
+          0.140490035,
+          0.141632066
+        ]
+      },
+      "wholeChildCpu": {
+        "mean": 1.120618,
+        "median": 1.1225699999999998,
+        "series": [
+          1.104304,
+          1.131756,
+          1.133734,
+          1.109694,
+          1.13036,
+          1.1119080000000001,
+          1.1225699999999998
+        ]
+      },
+      "wholeChildWall": {
+        "mean": 0.8655342564285705,
+        "median": 0.8584408510000117,
+        "series": [
+          0.8570771840000049,
+          0.884141814000003,
+          0.8823228840000041,
+          0.8584408510000117,
+          0.8618000169999931,
+          0.8575176919999876,
+          0.8574393529999895
+        ]
+      }
+    },
+    "compact-progress-batched": {
+      "executionCpu": {
+        "mean": 1.3053895714285715,
+        "median": 1.297106,
+        "series": [
+          1.327075,
+          1.272553,
+          1.294638,
+          1.374062,
+          1.297106,
+          1.29892,
+          1.273373
+        ]
+      },
+      "executionWall": {
+        "mean": 1.0467786964285715,
+        "median": 1.037385678,
+        "series": [
+          1.072633827,
+          1.025094355,
+          1.036266268,
+          1.090498604,
+          1.040960706,
+          1.037385678,
+          1.024611437
+        ]
+      },
+      "wholeChildCpu": {
+        "mean": 5.077412571428571,
+        "median": 5.0761780000000005,
+        "series": [
+          5.120915999999999,
+          5.002137,
+          5.093838999999999,
+          5.147705,
+          5.057048,
+          5.0761780000000005,
+          5.044065
+        ]
+      },
+      "wholeChildWall": {
+        "mean": 4.513027182857139,
+        "median": 4.498951162999987,
+        "series": [
+          4.5721304009999955,
+          4.449614797999999,
+          4.523150170000008,
+          4.550409063999993,
+          4.498764688999998,
+          4.498169994999998,
+          4.498951162999987
+        ]
+      }
+    }
+  },
+  "configuredFunctionalVirtualSeconds": 0.316562,
+  "configuredVirtualOverMeanExecutionWall": {
+    "plain-JS": 2.229400497518014,
+    "compact-progress-batched": 0.3024154017272753
+  },
+  "virtualRatioScope": "Six configured functional cycles per Q at 6MHz; not physical 386 calibration or measured hardware RTx",
+  "hardware": {
+    "cpuModels": [
+      "AMD EPYC 9V74 80-Core Processor"
+    ],
+    "logicalCpus": 4,
+    "allowedCpuSet": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "processCgroup": {
+      "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service",
+      "files": {
+        "cpu.max": "max 100000\n",
+        "cpu.stat": "usage_usec 19254990\nuser_usec 12424363\nsystem_usec 6830627\nnice_usec 3509000\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+        "memory.max": "max\n",
+        "memory.current": "1131634688\n",
+        "cpuset.cpus.effective": "0-3\n"
+      }
+    }
+  },
+  "scope": "Samehost primary plain-JS versus compact-progress-batched only. Native nine reset/requested-last/final166 plus actual compact9/NQ; JS nine represented CPU/Q; all18 board/RAMhash/PIO/source-input-final proof. Live typed ownership is executed-source-attested. No held-scalar-versus-compact measurement, physical386 calibration, fullboot or adoption."
+}
