@@ -47,6 +47,42 @@
       "bytes": 498,
       "sha256": "783dc0ae2f404de1d7aa2593f0057c26247e8477a5e0ab681441b5a6d4a7ca0d",
       "origin": "/tmp/native-cold-native-symbol-ack-frame-controls-20261005/independent-audit.json"
+    },
+    {
+      "path": "runtime-identity-stdout",
+      "bytes": 10760,
+      "sha256": "e2036758b7df336c2047fe987fd6b37cd98fc09d56c5cc013c47bc57c86b15b3",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/stdout"
+    },
+    {
+      "path": "runtime-identity-exit.json",
+      "bytes": 494,
+      "sha256": "f5a6488e83d98a6debaffdcf5e26917654fe19d3fc31732c2a1f516678e3b1c5",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/exit.json"
+    },
+    {
+      "path": "runtime-identity-invocation.json",
+      "bytes": 947,
+      "sha256": "b3c8da8173b311fa268b06edd8c7f43bc741d23ebe3ae5cc9313eb59c796947a",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/invocation.json"
+    },
+    {
+      "path": "runtime-identity-root-actual-audit.json",
+      "bytes": 847,
+      "sha256": "61d8fecb967dc146e58689a8a922fd92be95481fbe327a5778654f44a48bb32c",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/root-actual-audit.json"
+    },
+    {
+      "path": "runtime-identity-agent-actual-audit.json",
+      "bytes": 336,
+      "sha256": "8518935cc98f59da11935ee91cc01eaf4327bcf1c17dff47937094ec13d30625",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/agent-actual-audit.json"
+    },
+    {
+      "path": "runtime-identity-independent-audit.json",
+      "bytes": 485,
+      "sha256": "fa05fdc589763c8cfe34f434897f5c57786a340f49e9e7c4c8757f06d3189efa",
+      "origin": "/tmp/native-cold-native-symbol-ack-runtime-frozen-auth-20261005/independent-audit.json"
     }
   ]
 }

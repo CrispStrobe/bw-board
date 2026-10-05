@@ -1,0 +1,8 @@
+{
+  "status": "PASS_READONLY_SOURCE_IDENTITY_ONLY",
+  "auditedSourceInputs": 96,
+  "runtimeSourceInputs": 92,
+  "revision": "428839a2ed79b43056a72ba3059a699ab988d7ba",
+  "returnedIdentitySha256": "71e2caa4b1689f2ab88cad9758eb1bb4281f1563d057104b098e7760158af3b6",
+  "scope": "Source metadata only; no provider/setup/addon/perf/guest"
+}
