@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "head": "028344c43d4a7fad2d10a4654e8a37897c11d787",
+  "testedHead": "e0aebea784e4daf1bb4cfcb69edeea2d2aec9ada",
+  "currentGitSources": 107,
+  "exactOrigins": 18,
+  "changedSourceInputs": [
+    "scripts/bochs-cpu3-native-paged-pagefault/NATIVE-DRIVER-SOURCE.md"
+  ],
+  "scope": "Publication only; earlier selected2 controls PASS, original actual resetFAIL preserved."
+}

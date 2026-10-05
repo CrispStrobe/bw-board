@@ -1,0 +1,26 @@
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'
+00000000000i[      ] reading configuration from /home/runner/work/_temp/paged-pagefault-execution/protected-source.bochsrc
+00000000000i[      ] installing nogui module as the Bochs GUI
+00000000000i[      ] using log file /home/runner/work/_temp/paged-pagefault-execution/bochs.log
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'bigint' !== 'string'
+
+    at count (file:///home/runner/work/bw-board/bw-board/paged-pagefault-driver/scripts/bochs-cpu3-native-paged-pagefault/native-fault-policy.mjs:13:26)
+    at rawNativeWords (file:///home/runner/work/bw-board/bw-board/paged-pagefault-driver/scripts/bochs-cpu3-native-paged-pagefault/native-fault-policy.mjs:19:185)
+    at wholeNativeWords (file:///home/runner/work/bw-board/bw-board/paged-pagefault-driver/scripts/bochs-cpu3-native-paged-pagefault/parity.mjs:7:34)
+    at run (file:///home/runner/work/bw-board/bw-board/paged-pagefault-driver/scripts/bochs-cpu3-native-paged-pagefault/runner.mjs:43:171)
+    at async file:///home/runner/work/bw-board/bw-board/paged-pagefault-driver/scripts/bochs-cpu3-native-paged-pagefault/runner.mjs:73:135 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'bigint',
+  expected: 'string',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.23.3

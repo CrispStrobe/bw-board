@@ -1,0 +1,151 @@
+{
+  "schema": "bw.paged-pagefault.counter-types.fix-receipts.v1",
+  "scope": "Original first actual reset-metadata FAIL preserved; two selected saved-evidence/source controls only. No guest replay/build/addon.",
+  "testedHead": "e0aebea784e4daf1bb4cfcb69edeea2d2aec9ada",
+  "records": [
+    {
+      "path": "first-run.json",
+      "bytes": 13956,
+      "sha256": "b93f44e74c6977edff1851fb679dc09cbe15226c96d108c5f37c8692b0b27fbe",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/run.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-artifacts.json",
+      "bytes": 966,
+      "sha256": "06ee9b858f4664d1ef4c45b8e4be04fc1e431f5350d0eeb27bcfb19c2cdef6b8",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/artifacts.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-members.json",
+      "bytes": 17438,
+      "sha256": "207b8d864d1f4778e86547a0470824276a2885e82b85f13341e45b0ad313ef80",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/members.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-guest-outcome.json",
+      "bytes": 3624,
+      "sha256": "26ed840b214d4307a387b614bf734df669f7f0e3238eedccd1dfbb408f3b5f9b",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/guest-outcome.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-worker.exit.json",
+      "bytes": 1444,
+      "sha256": "ae3bab2f0dbff4b02a1696a135f79305e513caa993540ed2d8376228eca9a43e",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/worker.exit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-final-status.json",
+      "bytes": 7785,
+      "sha256": "5f2b443e7ae282b3a2e03766d9e4bde8f4daa15e4c617ba9164d62678cd9e0d8",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/final-status.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-root-first-failure-audit.json",
+      "bytes": 931,
+      "sha256": "1ca9a9bd93856f34c2e3c704cda7c01eb142cf92fd676be6b284044ebd40ccb3",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/root-first-failure-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-independent-audit.json",
+      "bytes": 1056,
+      "sha256": "6ceffd8a8072920ca94a3634c38afb60f4f6a051f26dae4c2efaaf007459a7d4",
+      "origin": "/tmp/native-paged-pagefault-first-execution-audit-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-parent.py",
+      "bytes": 8234,
+      "sha256": "bd1017ad4249436338351fc2c456a47a6441043916bee5eeae0ee095bc602682",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/parent.py",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-invocation.json",
+      "bytes": 1909,
+      "sha256": "d1c844b9657e33758e065696ff715a11cf6474caeda914b2f01c5d8636442706",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/invocation.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-stdout",
+      "bytes": 631,
+      "sha256": "24f28a47da854d8d4f456801ce310e854220a7f9d0a7eba27e440714ab69b3d3",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/stdout",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/stderr",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-exit.json",
+      "bytes": 569,
+      "sha256": "e2efd907d98e25dffe7950b6ec1c05c9f5d23de8a7cc8bd9296e257a38eb2e2c",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/exit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-before.json",
+      "bytes": 20066,
+      "sha256": "71a1ce8b5a85ae22676569725f3054d461a6f78ddfe04a731dd032246883dd01",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/before.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-after.json",
+      "bytes": 20066,
+      "sha256": "71a1ce8b5a85ae22676569725f3054d461a6f78ddfe04a731dd032246883dd01",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/after.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "counter-root-audit.json",
+      "bytes": 943,
+      "sha256": "21682e872b96baef30325cb01ffd61c0980de61415ec9d13750a3cc17e4ebfdc",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/root-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-worker.stderr",
+      "bytes": 1440,
+      "sha256": "279c58c082b831ec5dba155b2a7ad7763acc6c98550fc77b9cf8fa3939d75462",
+      "originZip": "/tmp/native-paged-pagefault-first-execution-37266253433.zip",
+      "originMember": "_temp/paged-pagefault-execution/worker.stderr",
+      "relation": "byte-exact official ZIP member"
+    },
+    {
+      "path": "counter-independent-audit.json",
+      "bytes": 1119,
+      "sha256": "c69612f70fc706fa1b4e59d3d06f147e3bb89937864db950e4f03e3d7323eddb",
+      "origin": "/tmp/native-paged-pagefault-counter-types-source-controls-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    }
+  ],
+  "externalArchive": {
+    "path": "/tmp/native-paged-pagefault-first-execution-37266253433.zip",
+    "runId": 37266253433,
+    "artifactId": 11325808399,
+    "bytes": 11282682,
+    "sha256": "3da1d6b9b3ce457ef2355e265fad9a5bea65dda583552b5fdb5f376f0f1d255e",
+    "members": 102
+  },
+  "genuineRegressionFixture": {
+    "path": "../../../scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-reset-failure.json.gz",
+    "bytes": 32925,
+    "sha256": "be7b1b76d32a243bdc582633351f92ae80749bd118d07b7cdef1b03babbdd7fb",
+    "originZipMember": "_temp/paged-pagefault-execution/guest/first-divergence.json.gz",
+    "decodedBytes": 354506,
+    "decodedSha256": "d9f3c4e9cf2544cbf9d7be9b53b5d4553cd1d346e141a98622db28ffbd72778a",
+    "relation": "exact original gzip member; no regenerated state or guest replay"
+  }
+}

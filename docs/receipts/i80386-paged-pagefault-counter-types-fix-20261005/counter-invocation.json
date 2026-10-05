@@ -1,0 +1,46 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^(?:frozen source identity includes real fault policy and held multiline checkpoint import|genuine saved reset restores live BigInt metadata without weakening canonical bounds or raw words)$",
+    "test/i80386-paged-pagefault-native-runtime-driver.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-counter-types-fix-20261005",
+  "head": "e0aebea784e4daf1bb4cfcb69edeea2d2aec9ada",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "sourceCount": 107,
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "scope": "Two focused cases: affected clean driver107 identity and genuine saved reset reconstruction to live BigInt uint64 metadata with complete reset CPU/board/ten-page comparison, strict invalid domains and manufactured returned metadata. Original actual reset failure preserved. Other driver cases historical, not a full-suite rerun. No provider/oracle factory, compiler, addon, CPU or build.",
+  "preparedSourceProvenance": {
+    "path": "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json",
+    "sha256": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+  },
+  "sourceFreeze": {
+    "path": "/tmp/native-paged-pagefault-counter-types-source-freeze-20261005/source-freeze.json",
+    "sha256": "867187780e8b8067c634f07f19b32efb6e17c26e41f999bdfd0a9950b35eda96"
+  }
+}

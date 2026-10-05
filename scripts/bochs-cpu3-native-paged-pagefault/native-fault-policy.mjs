@@ -10,7 +10,7 @@ const transferKeys=['transfers','commits','words'];
 const inspectKeys=['state','extra','segments','system','debug','nativeTicks','successfulQuanta','mappingEpoch','boardA20','fallback','execution','callbacks','clockTransfers'];
 function keys(v,want){assert.ok(v&&typeof v==='object'&&!Array.isArray(v));assert.deepEqual(Object.keys(v).sort(),[...want].sort());}
 function integer(v,max=0xffffffff){assert.ok(Number.isSafeInteger(v)&&v>=0&&v<=max);return v;}
-function count(v){assert.equal(typeof v,'string');assert.match(v,/^(0|[1-9][0-9]*)$/);const n=Number(v);return integer(n,1_000_000);}
+function count(v){if(typeof v==='string'){assert.match(v,/^(0|[1-9][0-9]*)$/);v=BigInt(v);}else assert.equal(typeof v,'bigint');assert.ok(v>=0n&&v<=1_000_000n);return integer(Number(v),1_000_000);}
 function bytes(v,size){assert.ok(v instanceof Uint8Array||Array.isArray(v));assert.equal(v.length,size);for(const b of v)integer(b,255);return Uint8Array.from(v);}
 export function rawNativeWords(n,returned=false){
  keys(n,[...inspectKeys,...(returned?['sliceBytes','reason','activityState','chargedNativeTicks','chargedQuanta']:[])]);
