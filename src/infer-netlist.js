@@ -714,6 +714,40 @@ export function inferNetlist(stc, opts) {
         });
         vccNet.terminals.push({ part: dispId, terminal: 'vcc' });
         gndNet.terminals.push({ part: dispId, terminal: 'gnd' });
+      } else if (part.type === 'hcsr04' || part.kind === 'hcsr04') {
+        // PART sonar = HCSR04 TRIG <pin> ECHO <pin> — the four-pin ultrasonic
+        // module. Its distance is the bench's stimulus (param `distance`, cm).
+        const usId = `SONAR_${safeName}`;
+        parts.push({ id: usId, kind: 'ultrasonic', declName: part.name,
+          params: { distance: 100 }, terminals: ['vcc', 'gnd', 'trig', 'echo'] });
+        for (const role of ['trig', 'echo']) {
+          if (!part[role]) continue;
+          nets.push({ id: `net_${safeName}_${role}`, terminals: [
+            { part: 'MCU', terminal: pinName(part[role]) },
+            { part: usId, terminal: role },
+          ] });
+        }
+        vccNet.terminals.push({ part: usId, terminal: 'vcc' });
+        gndNet.terminals.push({ part: usId, terminal: 'gnd' });
+      } else if (part.type === 'ds18b20' || part.kind === 'ds18b20') {
+        // PART probe = DS18B20 ON <pin> — 1-Wire is open drain, so the bus
+        // needs its pull-up: the datasheet's 4.7 kOhm from DQ to VCC. Without
+        // it nothing ever pulls the line high and every read slot is a 0.
+        const tId = `THERMO_${safeName}`;
+        const rId = `R_${safeName}_pullup`;
+        parts.push({ id: tId, kind: 'ds18b20', declName: part.name,
+          params: { temperature: 25 }, terminals: ['vcc', 'gnd', 'dq'] });
+        parts.push({ id: rId, kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] });
+        if (part.dq) {
+          nets.push({ id: `net_${safeName}_dq`, terminals: [
+            { part: 'MCU', terminal: pinName(part.dq) },
+            { part: tId, terminal: 'dq' },
+            { part: rId, terminal: 'b' },
+          ] });
+        }
+        vccNet.terminals.push({ part: tId, terminal: 'vcc' });
+        vccNet.terminals.push({ part: rId, terminal: 'a' });
+        gndNet.terminals.push({ part: tId, terminal: 'gnd' });
       } else {
         notes.push(`Unknown part kind '${part.type || part.kind}' for part ${part.name}`);
       }
