@@ -1,0 +1,25 @@
+TAP version 13
+# mock.cc:46:12: warning: 'int napi_get_named_property(napi_env, napi_value, const char*, Value**)' defined but not used [-Wunused-function]
+#    46 | static int napi_get_named_property(napi_env,napi_value o,const char* k,napi_value* out){return lookup(o,k,out);}
+#       |            ^~~~~~~~~~~~~~~~~~~~~~~
+# Subtest: actual generated key helper mock: values, errors, domains and lifecycle
+ok 1 - actual generated key helper mock: values, errors, domains and lifecycle
+  ---
+  duration_ms: 1058.975191
+  type: 'test'
+  ...
+# Subtest: generated lifecycle and held callbacks/core-state wiring stay explicit
+ok 2 - generated lifecycle and held callbacks/core-state wiring stay explicit
+  ---
+  duration_ms: 13.853188
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1250.057828
