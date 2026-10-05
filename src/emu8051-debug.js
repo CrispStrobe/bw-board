@@ -140,9 +140,11 @@ const NS_PER_S = 1_000_000_000n;
 /** PIN_HISTORY_SIZE in the pinned native ABI. */
 const PIN_HISTORY_CAPACITY = 4096;
 const CHECKPOINT_VERSION = 1;
-const CHECKPOINT_BUILD_ID = 0x80510101;
-/** Exact sizeof(emu_checkpoint_v1) for build 0x80510101. */
-const CHECKPOINT_SIZE = 443483;
+// 0x80510102 (2026-10-05): the UART1 receive FIFO joined the state
+// (emu8051-stc #2); 0x80510101 / 443483 before it.
+const CHECKPOINT_BUILD_ID = 0x80510102;
+/** Exact sizeof(emu_checkpoint_v1) for build 0x80510102. */
+const CHECKPOINT_SIZE = 443557;
 const CHECKPOINT_NATIVE_ERRORS = Object.freeze({
     [-1]: 'not-initialized', [-2]: 'null-buffer', [-3]: 'wrong-length',
     [-4]: 'malformed', [-5]: 'unsupported-version', [-6]: 'incompatible-build',
