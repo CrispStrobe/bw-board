@@ -1,0 +1,50 @@
+{
+  "status": "PAGED_INT_IRET_SAVED_EVIDENCE_AUDIT_PASS",
+  "runId": 37247392133,
+  "artifactId": 11319662434,
+  "headSha": "d46b68c201628a05f5f9934ada7fdddd3a57e683",
+  "memberCount": 101,
+  "decodedBodyBytes": 23559031,
+  "storedBodyBytes": 509752,
+  "logical": {
+    "status": "SAVED_FULL_LOGICAL_PARITY_AUDIT_PASS",
+    "sourceDriver": "98fb8216aa5bd0fa046cc6388f7ff6c1b22f5750",
+    "sourcePaths": 81,
+    "progress": {
+      "n": 41,
+      "q": 41,
+      "dn": 1,
+      "dq": 1,
+      "resumes": 41,
+      "zeroQ": 0
+    },
+    "raw166ReturnedBoundaries": 43,
+    "comparable": 41,
+    "unmatched": 2,
+    "stagesRecordedUnmatched": 41,
+    "finalCoverage": {
+      "cuts": 14,
+      "comparableCuts": 12,
+      "unmatchedCuts": 2,
+      "nativeOwnedWrites": {
+        "bootWrites": 20,
+        "frameWrites": 3,
+        "nativeAdWrites": 6,
+        "callbackOrder": "independent native tape; not JS tape equality"
+      },
+      "callbacks": 52,
+      "ramSha256": "0110baad6cfc99e56a04d07d0cf5cf9d8d7ab2e85f24721b980226cb79a674a6",
+      "closure": {
+        "native": "closed",
+        "provider": "closed",
+        "javascript": "closed"
+      }
+    },
+    "primaryError": null,
+    "finalAuthenticationError": null,
+    "scope": "Unchanged held parity functions applied to saved records only; no CPU/factory/runner/addon calls. Native callback order is independent. Unmatched raw records never receive full-page parity PASS; copied host RAM and source-attested native cache; whole RAM hash-only."
+  },
+  "scope": "ONE_FINITE_OWNED_CPL0_16BIT_GATE_NONIDENTITY_PAGING_INT30_IRET_FIXTURE; no pagefault, IRQ, privilege transition, full AT or real-software/performance claim",
+  "priorFailedRun": 37242883561,
+  "priorPrimaryCauseBeyondPersistence": "UNKNOWN_UNCHANGED"
+}

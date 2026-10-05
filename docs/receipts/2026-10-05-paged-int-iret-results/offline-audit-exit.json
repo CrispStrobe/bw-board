@@ -1,0 +1,10 @@
+{
+  "exitCode": 0,
+  "wallSeconds": 9.860401714220643,
+  "scriptPinsEqual": true,
+  "after": {
+    "audit-transport.py": "cc0059f0f556bf581cd2d4ba43b5d787aa5ea5a7545d0832f433da7ea500ebf0",
+    "audit-logical.mjs": "2e37f0c1d6931c8fa90c4379fb5f3040eb58dbb77442ac28be89c0ad6d78b013",
+    "official-request.json": "114858b3262165ab5ae2d1f0b75b3a25922b226fb88c5123150b34fdc710c99c"
+  }
+}
