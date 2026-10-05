@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
+import {gunzipSync} from 'node:zlib';
 import {resolve,dirname,join} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {execFileSync} from 'node:child_process';
@@ -9,7 +10,7 @@ import {derivePagedPageFaultRuntime,transformPagedPageFaultRuntime,runtimeParent
 import {derivePagedPageFaultProvider,transformPagedPageFaultProvider,providerParentSha256} from '../scripts/bochs-cpu3-native-paged-pagefault/provider-derivation.mjs';
 import {deriveDriverProvider} from '../scripts/bochs-cpu3-native-paged-pagefault/driver-provider.mjs';
 import {nativeWalkOwner,nativeWalkAllowed,validatePageFaultWrite,nativeFrameStores,entries,nativeAdUpdate} from '../scripts/bochs-cpu3-native-paged-pagefault/provider-profile.mjs';
-import {validateBuildBinding,requireReadyBuild,driverSourceIdentity,relativeImports} from '../scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs';
+import {validateBuildBinding,requireReadyBuild,requireReadyBinding,driverSourceIdentity,relativeImports,regularBytes} from '../scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs';
 import {validateInput,derivePageFaultLifecycle,verifyHeldLifecycle,finalizeAuthentication} from '../scripts/bochs-cpu3-native-paged-pagefault/runner.mjs';
 import {pageFaultProgress,stepReferenceForReturn,compareBoundary,inspectFields,startOrAdvanceFaultLedger,validateDescriptorRows,validateNativeEffects,validateMemoryTape} from '../scripts/bochs-cpu3-native-paged-pagefault/parity.mjs';
 import {bootStores,frameStores,adTransitions,expectedPages,layout,selector,dataSelector,codeCache,dataCache,repairStore,retryStore} from '../scripts/bochs-cpu3-native-paged-pagefault/profile.mjs';
@@ -31,9 +32,11 @@ function fixture(fault=false){
  return {n,js,pages,board};
 }
 function returned(n,reason=1,dn=1,dq=1){n=clone(n);Object.assign(n,{reason,activityState:0,chargedNativeTicks:dn,chargedQuanta:dq,sliceBytes:new Uint8Array(160)});const v=new DataView(n.sliceBytes.buffer),u=(o,x)=>v.setUint32(o,x,true);for(const [o,x]of [[0,reason],[4,1],[8,1],[12,dn],[16,1],[20,dq]])u(o,x);for(const [i,k]of ['nativeTicks','successfulQuanta',...Object.keys(n.execution)].entries())v.setBigUint64(24+8*i,BigInt(i<2?n[k]:n.execution[k]),true);v.setUint16(104,n.state[13],true);u(108,n.state[8]);if(reason===2)for(const [o,x]of [[112,1],[116,14],[120,2],[124,0x8000]])u(o,x);return n;}
-test('pending distinct PF build refuses before input getters factories or old addon authority',()=>{
- assert.equal(validateBuildBinding(pending),pending);assert.throws(requireReadyBuild,/pending/);assert.throws(()=>validateInput(new Proxy({},{get(){throw Error('input getter reached');}})),/pending/);
- for(const change of [b=>b.status='ROOT_REVIEWED_PF_BUILD',b=>b.addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f',b=>b.abiVersion=5,b=>b.compiledFiles['fake']='0'.repeat(64)]){const b=clone(pending);change(b);assert.throws(()=>validateBuildBinding(b));}
+test('fresh PF build authority and manufactured pending old addon refusals before factories',()=>{
+ assert.equal(validateBuildBinding(pending),pending);assert.equal(requireReadyBuild().addonSha256,'14bc8ef0e06030203ec642537846eb78388f857f8728cb201942f6eb9daf35c0');
+ const unbuilt={...clone(pending),status:'PENDING_NATIVE_FAULT_RUNTIME_BUILD_AND_EXECUTION',compiledRevision:null,compiledSourceSha256:null,compiledFiles:{},generated:{},addonSha256:null,buildRun:null,artifactId:null,staticAuthority:null};assert.equal(validateBuildBinding(unbuilt),unbuilt);assert.throws(()=>requireReadyBinding(unbuilt),/pending/);
+ for(const change of [b=>b.status='ROOT_REVIEWED_PF_BUILD',b=>b.addonSha256='92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f',b=>b.abiVersion=5,b=>b.compiledFiles['fake']='0'.repeat(64),b=>b.staticAuthority.preparedManifestSha256='0'.repeat(64)]){const b=clone(pending);change(b);assert.throws(()=>validateBuildBinding(b));}
+ const input={compiledRoot:'/owned/compiled',compiledRevision:pending.compiledRevision,driverRevision:'f'.repeat(40),driverSourceSha256:'c'.repeat(64),addon:'/owned/addon',sha256:pending.addonSha256,configuration:'/owned/config',preparedManifest:'/owned/prepare',preparedManifestSha256:pending.staticAuthority.preparedManifestSha256,buildReceipt:'/owned/receipt',buildReceiptSha256:pending.staticAuthority.buildReceiptSha256,output:'/owned/output',nativeTrace:false};assert.equal(validateInput(input),input);assert.throws(()=>validateInput({...input,sha256:'92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f'}));
 });
 test('new runtime and provider preserve exact held derivatives and unknown source refuses',()=>{
  const r=derivePagedPageFaultRuntime(),p=derivePagedPageFaultProvider(),a=deriveDriverProvider(p.bytes);derivedProviderForSourceControls=p.bytes;assert.equal(r.baseSha256,runtimeParentSha256);assert.equal(p.baseSha256,providerParentSha256);assert.equal(a.parentSha256,sha256(p.bytes));
@@ -76,7 +79,7 @@ test('all-outcome authentication retains primary failure independently of missin
 test('frozen source identity includes real fault policy and held multiline checkpoint import',async()=>{
  const root=fileURLToPath(new URL('../',import.meta.url)),head=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),paths=new Map();
  // Same explicit dynamic seeds as the held production identity. Authenticate caller bytes even when unrelated CI setup is dirty.
- const seeds=['scripts/bochs-cpu3-native-paged-pagefault/runner.mjs','scripts/bochs-cpu3-native-paged-pagefault/NATIVE-DRIVER-SOURCE.md','scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json','scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs','scripts/bochs-cpu3-native-paged-pagefault/saved-js-fault-phases.json','test/i80386-paged-pagefault-native-runtime-driver.test.mjs','scripts/bochs-cpu3-native-paged-int-iret/runner.mjs','scripts/bochs-cpu3-native-cold-bios/board-provider.mjs','scripts/bochs-cpu3-native-direct-board/runtime.inc','scripts/bochs-cpu3-native-owned-clock/clock.inc','scripts/bochs-cpu3-native-owned-clock/abi.h','src/experimental/i80386.js','package.json','roms/free-at-bios/LICENSE','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin'];
+ const seeds=['scripts/bochs-cpu3-native-paged-pagefault/runner.mjs','scripts/bochs-cpu3-native-paged-pagefault/NATIVE-DRIVER-SOURCE.md','scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json','scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs','scripts/bochs-cpu3-native-paged-pagefault/saved-js-fault-phases.json','scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz','test/i80386-paged-pagefault-native-runtime-driver.test.mjs','scripts/bochs-cpu3-native-paged-int-iret/runner.mjs','scripts/bochs-cpu3-native-cold-bios/board-provider.mjs','scripts/bochs-cpu3-native-direct-board/runtime.inc','scripts/bochs-cpu3-native-owned-clock/clock.inc','scripts/bochs-cpu3-native-owned-clock/abi.h','src/experimental/i80386.js','package.json','roms/free-at-bios/LICENSE','roms/free-at-bios/BIOS-bochs-legacy','roms/free-at-bios/vgabios-lgpl.bin'];
  function visit(name){if(paths.has(name))return;const path=resolve(root,name);assert.ok(path.startsWith(root));const b=readFileSync(path),g=execFileSync('git',['show',head+':'+name],{cwd:root,maxBuffer:32<<20});assert.equal(sha256(b),sha256(g),'caller current/Git '+name);paths.set(name,sha256(b));if(/\.(mjs|js)$/.test(name))for(const relative of relativeImports(b))visit(resolve(dirname(path),relative).slice(root.length));}
  for(const name of seeds)visit(name);
  const callerStatus=execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}),d=mkdtempSync(join(tmpdir(),'paged-pf-driver-identity-')),clean=join(d,'source');
@@ -89,4 +92,10 @@ test('frozen source identity includes real fault policy and held multiline check
   // Manufacture the observed CI dirt only in the owned fixture; the production guard must still refuse it.
   execFileSync('git',['sparse-checkout','add','/package-lock.json'],{cwd:clean,timeout:10000});const lock=join(clean,'package-lock.json');writeFileSync(lock,readFileSync(lock).toString()+'\n');mkdirSync(join(clean,'blinkenrocket-firmware'));writeFileSync(join(clean,'blinkenrocket-firmware/fixture'),'owned CI setup marker');assert.throws(()=>owned.driverSourceIdentity(),/clean frozen PF driver/);
  }finally{rmSync(d,{recursive:true,force:true});assert.equal(execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}),callerStatus,'caller Git status unchanged');}
+});
+
+test('genuine first PF manifest exceeds held cap and is admitted by bounded four MiB source seam',()=>{
+ const fixture=readFileSync(new URL('../scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz',import.meta.url));assert.ok(fixture.length<(1<<20));const raw=gunzipSync(fixture,{maxOutputLength:4<<20});assert.equal(raw.length,2135534);assert.equal(sha256(raw),'b1268ecffc11ae4704f3df95bb92fa3bbf60a18111e74383f99ff8ce58503d53');assert.ok(raw.length>(2<<20));
+ const d=mkdtempSync(join(tmpdir(),'paged-pf-manifest-cap-'));try{const p=join(d,'prepare.json');writeFileSync(p,raw);assert.throws(()=>regularBytes(p,2<<20));assert.deepEqual(regularBytes(p,4<<20),raw);const manifest=JSON.parse(regularBytes(p,4<<20));assert.equal(manifest.schema,'bw.paged-pagefault.prepared.v1');assert.equal(manifest.boardRevision,'5df525f72790876d35e49d936bac1f1284fa81e7');assert.equal(Object.keys(manifest.sourceHashes).length,243);assert.deepEqual(manifest.actualPreparedHashes,pending.generated);}finally{rmSync(d,{recursive:true,force:true});}
+ const held=readFileSync(new URL('../scripts/bochs-cpu3-native-paged-int-iret/runner.mjs',import.meta.url)),derived=derivePageFaultLifecycle(held).toString();assert.ok(derived.includes('regularBytes(input.preparedManifest,4<<20)'));assert.ok(!derived.includes('regularBytes(input.preparedManifest,2<<20)'));verifyHeldLifecycle();
 });
