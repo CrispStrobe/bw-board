@@ -6,7 +6,7 @@ def require(ok,message):
  if not ok:raise ValueError(message)
 def validate_authority(c):
  require(c['status']=='ROOT_REVIEWED_ACTUAL_COMPACT_QUALIFICATION_READY','PENDING compact artifact/proof: no checkout/download/spawn')
- require(hashlib.sha256(json.dumps({k:v for k,v in c.items() if k!='status'},sort_keys=True,separators=(',',':')).encode()).hexdigest()=='7203e018a476b7b49a26b10a98e66a777b7f3abd7936ca33b334adff30ada33e','entire source-owned authority; no caller substitutions')
+ require(hashlib.sha256(json.dumps({k:v for k,v in c.items() if k!='status'},sort_keys=True,separators=(',',':')).encode()).hexdigest()=='725d7c589cc311a0d5382013bac3baadbaf2868711e6621951e40c8fd2f5f6f3','entire source-owned authority; no caller substitutions')
  require(c['schema']=='bw.cold-compact-progress.paired-source.v1' and c['progressExportProfile']=='bw.cold-native.compact-progress.v1','fixed distinct compact authority')
  require(c['targetN']==c['targetQ']==316562,'fixed held extent')
  a=c['compactQualificationAudit'];require(type(a) is dict and set(a)=={'file','sha256'} and Path(a['file']).name==a['file'],'closed genuine proof role')
@@ -16,6 +16,10 @@ def validate_authority(c):
  require(proof['sourceInputs']==308 and proof['sourceRoleCounts']=={'tooling':18,'compiled':163,'driver':54,'worker':73} and proof['allSourceGitAndFinalGuardsEqual'],'actual complete source/final guards')
  require(proof['nativeTicks']==proof['successfulQuanta']==316562 and proof['rawResetFinalLastInspectionWords']==166 and proof['actualCompactReturnFields']==9 and proof['requestedLastFinalRaw166Equal'],'actual compact/requested full terminal proof')
  require(proof['fullTerminalBoardEqual'] and proof['wholeRamHashEqual'] and proof['orderedPioEvents']==16475 and proof['closed']=={'native':True,'provider':True} and proof['allChildrenExitZero'],'complete actual terminal parity and closure')
+ rootpin=c['compactQualificationRootAudit'];require(set(rootpin)=={'file','sha256'} and Path(rootpin['file']).name==rootpin['file'],'closed root audit')
+ rootpath=HERE/rootpin['file'];require(rootpath.is_file() and not rootpath.is_symlink() and digest(rootpath)==rootpin['sha256'],'genuine root audit bytes');root=json.loads(rootpath.read_bytes())
+ require(root['status']=='PASS_INDEPENDENT_ROOT_COMPACT_PROGRESS_SEMANTIC_AUDIT' and root['sourceRevision']==c['qualifierRevision'] and root['sourceGitEqual'] and root['allFinalGuardsEqual'],'genuine exact dispatch/root guard audit')
+ require((root['runId'],root['artifactId'],root['artifactBytes'],root['artifactSha256'])==(artifact['runId'],artifact['artifactId'],artifact['zipBytes'],artifact['zipSha256']),'root same official artifact')
  return c,p
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()

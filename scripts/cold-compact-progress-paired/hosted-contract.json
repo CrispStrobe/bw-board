@@ -454,5 +454,9 @@
     "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
     "src/ym3812.js": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04",
     "test/i80386-cold-bios-parity-source.test.mjs": "1a93e20e117c21d323f902eec68a0c034e2a08d75b2293fc0ccaf8a629097144"
+  },
+  "compactQualificationRootAudit": {
+    "file": "root-compact-qualification-audit.json",
+    "sha256": "05964eeb25dd287e01ec1126294636aaf3a3017f9aba5048d227c222ab797209"
   }
 }
