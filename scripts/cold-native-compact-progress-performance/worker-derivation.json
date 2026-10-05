@@ -34,7 +34,7 @@
     },
     {
       "old": "  }finally{receipt.executionTiming={cpuMicroseconds:process.cpuUsage(startCpu),wallNanoseconds:(process.hrtime.bigint()-startWall).toString(),scope:'Native-only loop: actual stage/IRQ/begin/resume/end, owned PIO/device/deadline work, mandatory166 materialization, cheap budget/progress guards and counters; no JS oracle/hash/disk/snapshot copying'};receipt.progress=progress;receipt.lastReturnedNative=native;}\n",
-      "next": "  }finally{receipt.executionTiming={cpuMicroseconds:process.cpuUsage(startCpu),wallNanoseconds:(process.hrtime.bigint()-startWall).toString(),scope:'Native-only loop: actual stage/IRQ/begin/resume/end, owned PIO/device/deadline work, compact progress construction; full inspect only on actual zero-progress events, cheap budget/progress guards and counters; no JS oracle/hash/disk/snapshot copying'};receipt.progress=progress;receipt.lastReturnedProgress=native;}\n",
+      "next": "  }finally{receipt.executionTiming={cpuMicroseconds:process.cpuUsage(startCpu),wallNanoseconds:(process.hrtime.bigint()-startWall).toString(),scope:'Native-only loop: actual stage/IRQ/begin/resume/end, owned PIO/device/deadline work, compact progress construction; full inspect only on actual zero-progress events, cheap budget/progress guards and counters; full inspect at IRQ staging/actual zero events, none on ordinary resumes; no JS oracle/hash/disk or snapshot serialization; terminal copying/comparisons outside timing'};receipt.progress=progress;receipt.lastReturnedProgress=native;}\n",
       "count": 1
     },
     {
