@@ -1,0 +1,64 @@
+{
+  "records": [
+    {
+      "path": "initial-exit.json",
+      "bytes": 497,
+      "sha256": "69832e9f2231eed43fa1bc90544d81e1d2d649befbc7791dd99fcd504c233c28",
+      "origin": "/tmp/native-cold-compact-progress-build-worker-controls-20261005/exit.json"
+    },
+    {
+      "path": "initial-invocation.json",
+      "bytes": 1223,
+      "sha256": "188149f660a577cb812220241629c60159c884b555a19f9372c1d3bce72488c8",
+      "origin": "/tmp/native-cold-compact-progress-build-worker-controls-20261005/invocation.json"
+    },
+    {
+      "path": "initial-stdout",
+      "bytes": 2765,
+      "sha256": "af7e211594ac853b5ed30e4ce71528cf8d4d494d32ec73412282aac27a39a3eb",
+      "origin": "/tmp/native-cold-compact-progress-build-worker-controls-20261005/stdout"
+    },
+    {
+      "path": "initial-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-compact-progress-build-worker-controls-20261005/stderr"
+    },
+    {
+      "path": "initial-independent-audit.json",
+      "bytes": 1143,
+      "sha256": "ff1eaa0f847cec74e549c98849bd13986e66a25f6dff61db28b15a5bf760f7ff",
+      "origin": "/tmp/native-cold-compact-progress-build-worker-controls-20261005/independent-audit.json"
+    },
+    {
+      "path": "affected-exit.json",
+      "bytes": 497,
+      "sha256": "a14d530fbfe9b182347af6b39d625dfa88bd8a24b608dda2eca061ac3e5b00e5",
+      "origin": "/tmp/native-cold-compact-progress-terminal-fixture-controls-20261005/exit.json"
+    },
+    {
+      "path": "affected-invocation.json",
+      "bytes": 1260,
+      "sha256": "ef7c633a20c4058a8365d1ae5e435d16cfe66337314947e5dda56c69f3552103",
+      "origin": "/tmp/native-cold-compact-progress-terminal-fixture-controls-20261005/invocation.json"
+    },
+    {
+      "path": "affected-stdout",
+      "bytes": 360,
+      "sha256": "0799bc19496138d877ed5afdc35483c666acc0f425b20cebb09e99bb3a6be9f3",
+      "origin": "/tmp/native-cold-compact-progress-terminal-fixture-controls-20261005/stdout"
+    },
+    {
+      "path": "affected-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-compact-progress-terminal-fixture-controls-20261005/stderr"
+    },
+    {
+      "path": "affected-independent-audit.json",
+      "bytes": 1084,
+      "sha256": "8c5fa56466c1b015befec9bc96be28bfed4ccb6571b39b6f63e2d761bf9c1593",
+      "origin": "/tmp/native-cold-compact-progress-terminal-fixture-controls-20261005/independent-audit.json"
+    }
+  ]
+}

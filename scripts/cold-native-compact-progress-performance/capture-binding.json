@@ -1,0 +1,28 @@
+{
+  "schema": "bw.cold-native-compact-progress.capture-binding.v1",
+  "status": "PENDING_INDEPENDENT_COMPACT_BUILD",
+  "captureAuthority": {
+    "schema": "bw.cold-native-performance.capture-binding.v1",
+    "status": "INDEPENDENTLY_AUDITED_CAPTURE_READY",
+    "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+    "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+    "driverSourceSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+    "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+    "independentAuditSha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+    "independentAuditApproved": true,
+    "targetQ": 316562
+  },
+  "candidateBuild": {
+    "sourceRevision": null,
+    "sourceContextSha256": null,
+    "sourceInputs": null,
+    "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+    "memoryFusionProfile": "bw.cold-native.memory-clock-fusion.v1",
+    "progressExportProfile": "bw.cold-native.compact-progress.v1",
+    "napiSha256": null,
+    "addonSha256": null,
+    "addonBytes": null,
+    "officialArtifact": null,
+    "independentBuildAuditSha256": null
+  }
+}
