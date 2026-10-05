@@ -266,6 +266,13 @@ export function createRp2040jsAdapter(opts = {}) {
 
     /** Receive every byte the program transmits on UART0 (print output). */
     onSerial(cb) { serialListener = cb; },
+    /** Bytes arriving on UART0 RX (a serial monitor's "send"), the AVR
+     *  adapter's sendSerial: into the UART's own 32-byte receive FIFO. */
+    sendSerial(byteOrBytes) {
+      const bytes = typeof byteOrBytes === 'number' ? [byteOrBytes] : Array.from(byteOrBytes);
+      for (const b of bytes) rp2040.uart[0].feedByte(b & 0xff);
+      return true;
+    },
 
     attachBoard(b) {
       board = b;

@@ -142,6 +142,12 @@ export function createStm32F0Adapter (opts = {}) {
     resetToProgram,
     onSerial (cb) { serialListener = cb; },
     feedSerial (byte) { peripherals.usart1.feed(byte); },
+    /** The adapters' common receive surface (avr8js/rp2040js sendSerial). */
+    sendSerial (byteOrBytes) {
+      const bytes = typeof byteOrBytes === 'number' ? [byteOrBytes] : Array.from(byteOrBytes);
+      for (const b of bytes) peripherals.usart1.feed(b & 0xff);
+      return true;
+    },
     stats,
   };
 }
