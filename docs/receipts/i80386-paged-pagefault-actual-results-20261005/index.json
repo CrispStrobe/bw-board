@@ -22,33 +22,52 @@
     "coder-audit.json": {
       "size": 30947,
       "sha256": "bf05b0f887b15dadc3ea4b33ec825937e245795d6ef03c409ea908aa6c8ce939",
-      "origin": "/tmp/native-paged-pagefault-counter-types-execution-audit-20261005/coder-audit.json"
+      "origin": {
+        "kind": "saved-evidence-audit",
+        "author": "coder",
+        "sourceArtifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+      }
     },
     "root-actual-audit.json": {
       "size": 1034,
       "sha256": "e3044c634ba378056e52d869449b0964164813bea6a6ab07638e8fcdf688fc67",
-      "origin": "/tmp/native-paged-pagefault-counter-types-execution-audit-20261005/root-actual-audit.json"
+      "origin": {
+        "kind": "saved-evidence-audit",
+        "author": "coordinator",
+        "sourceArtifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+      }
     },
     "independent-audit.json": {
       "size": 1303,
       "sha256": "50b3fb42b6382b0404ed5052ae52ca246c6ab6234e8a563f289c4e87c3dcf122",
-      "origin": "/tmp/native-paged-pagefault-counter-types-execution-audit-20261005/independent-audit.json"
+      "origin": {
+        "kind": "saved-evidence-audit",
+        "author": "independent-reviewer",
+        "sourceArtifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+      }
     },
     "run.json": {
       "size": 14697,
       "sha256": "33319fd616a3d16dff7415a3c21c632a047a351b8db3ebb8ae0a5f513f203209",
-      "origin": "/tmp/native-paged-pagefault-counter-types-execution-audit-20261005/run.json"
+      "origin": {
+        "kind": "official-api-snapshot",
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37269581753"
+      }
     },
     "artifacts.json": {
       "size": 977,
       "sha256": "f529c5e206a17d0198465798e84b135f400030e0c3694b912686be28c476c5fa",
-      "origin": "/tmp/native-paged-pagefault-counter-types-execution-audit-20261005/artifacts.json"
+      "origin": {
+        "kind": "official-api-snapshot",
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37269581753/artifacts"
+      }
     },
     "outcome.json": {
       "size": 3512,
       "sha256": "08198b948298da791addb686fe6aeae4d1763b649dfcbe4534427f8ace12c7e5",
       "origin": {
-        "zip": "/tmp/native-paged-pagefault-counter-types-execution-37269581753.zip",
+        "kind": "official-artifact-member",
+        "artifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992",
         "member": "_temp/paged-pagefault-execution/guest/outcome.json"
       }
     },
@@ -56,7 +75,8 @@
       "size": 1447,
       "sha256": "3417baec4229d058d6c81668cf285ceedc3966e415b032d7336733e914472978",
       "origin": {
-        "zip": "/tmp/native-paged-pagefault-counter-types-execution-37269581753.zip",
+        "kind": "official-artifact-member",
+        "artifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992",
         "member": "_temp/paged-pagefault-execution/worker.exit.json"
       }
     }
