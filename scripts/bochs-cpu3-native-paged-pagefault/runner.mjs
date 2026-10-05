@@ -1,4 +1,4 @@
-/** Closed fixed paged PF recovery differential driver; fresh static-only build authority. No execution on import. */
+/** Closed fixed paged PF recovery differential driver; build authority pending. No execution on import. */
 import assert from 'node:assert/strict';
 import {mkdirSync,lstatSync,realpathSync} from 'node:fs';
 import {persistEvidence} from '../bochs-cpu3-native-paged-int-iret/evidence.mjs';
