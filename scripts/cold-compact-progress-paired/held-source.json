@@ -1,0 +1,621 @@
+{
+  "baseRevision": "95c3ae6cb0504c3e86007a28bf25ad31dbbd5d4c",
+  "files": {
+    "parent.py": {
+      "heldSha256": "e7dfac8932aae175ff864caa3730d236a9961d49a6918785d39be10be95f814b",
+      "candidateSha256": "83bf23db5badff0dd534050b1cb3744fbd45b06f65f717338f829bed75d5428a",
+      "edits": [
+        {
+          "start": 2308,
+          "end": 2308,
+          "old": "'test/i80386-cold-ledger-scalars-paired-source.test.mjs','.github/workflows/i80386-cold-ledger-scalars-paired.yml'",
+          "next": ""
+        },
+        {
+          "start": 8964,
+          "end": 8966,
+          "old": "",
+          "next": "co"
+        },
+        {
+          "start": 8967,
+          "end": 8977,
+          "old": "",
+          "next": "pact-progr"
+        },
+        {
+          "start": 8978,
+          "end": 8978,
+          "old": "mory-fu",
+          "next": ""
+        },
+        {
+          "start": 8979,
+          "end": 8979,
+          "old": "ion-ledger-scalar",
+          "next": ""
+        },
+        {
+          "start": 9242,
+          "end": 9243,
+          "old": "CA",
+          "next": "I"
+        },
+        {
+          "start": 9245,
+          "end": 9249,
+          "old": "I",
+          "next": "EPEN"
+        },
+        {
+          "start": 9250,
+          "end": 9258,
+          "old": "",
+          "next": "ENT_COMP"
+        },
+        {
+          "start": 9259,
+          "end": 9260,
+          "old": "",
+          "next": "C"
+        },
+        {
+          "start": 9261,
+          "end": 9261,
+          "old": "E",
+          "next": ""
+        },
+        {
+          "start": 9267,
+          "end": 9267,
+          "old": "_STATIC_AUDIT",
+          "next": ""
+        },
+        {
+          "start": 9535,
+          "end": 9646,
+          "old": "",
+          "next": "len(b['compiledFiles']) and lock['candidateBuild']['progressExportProfile']=='bw.cold-native.compact-progress.v"
+        },
+        {
+          "start": 9647,
+          "end": 9648,
+          "old": "51",
+          "next": "'"
+        },
+        {
+          "start": 12095,
+          "end": 12096,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 12097,
+          "end": 12102,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 12181,
+          "end": 12182,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 12183,
+          "end": 12188,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 13907,
+          "end": 13920,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 13921,
+          "end": 13921,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 13922,
+          "end": 13922,
+          "old": "calar",
+          "next": ""
+        }
+      ]
+    },
+    "policy.py": {
+      "heldSha256": "ce97a7637b939d4e50f4cea3de487acf81637e93fa1a60649aa944fb269ff36c",
+      "candidateSha256": "4147c79e6a5a7b858bafc541317f57d33ea2ccf23f84affc05e8c6fc5dd94668",
+      "edits": [
+        {
+          "start": 186,
+          "end": 199,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 200,
+          "end": 200,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 201,
+          "end": 201,
+          "old": "calar",
+          "next": ""
+        },
+        {
+          "start": 225,
+          "end": 238,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 239,
+          "end": 239,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 240,
+          "end": 240,
+          "old": "calar",
+          "next": ""
+        },
+        {
+          "start": 555,
+          "end": 625,
+          "old": "",
+          "next": "# Source-owned unbound artifact; no old DSO can authorize this draft.\n"
+        },
+        {
+          "start": 635,
+          "end": 637,
+          "old": "",
+          "next": "e4"
+        },
+        {
+          "start": 638,
+          "end": 649,
+          "old": "5fc",
+          "next": "07d0647ab1e"
+        },
+        {
+          "start": 651,
+          "end": 667,
+          "old": "",
+          "next": "1755811ff8ef53d4"
+        },
+        {
+          "start": 668,
+          "end": 671,
+          "old": "9a",
+          "next": "3eb"
+        },
+        {
+          "start": 672,
+          "end": 672,
+          "old": "0ee71e32208da9d3",
+          "next": ""
+        },
+        {
+          "start": 673,
+          "end": 675,
+          "old": "caac86daa3b8c",
+          "next": "ff"
+        },
+        {
+          "start": 1746,
+          "end": 1759,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 1760,
+          "end": 1760,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 1761,
+          "end": 1761,
+          "old": "calar",
+          "next": ""
+        },
+        {
+          "start": 2106,
+          "end": 2143,
+          "old": "",
+          "next": "hexpin(b['compiledRevision'],40) and "
+        },
+        {
+          "start": 2180,
+          "end": 2194,
+          "old": "",
+          "next": "exact compact "
+        },
+        {
+          "start": 2202,
+          "end": 2202,
+          "old": "151",
+          "next": ""
+        },
+        {
+          "start": 2719,
+          "end": 2721,
+          "old": "51",
+          "next": "63"
+        },
+        {
+          "start": 2791,
+          "end": 2799,
+          "old": "",
+          "next": "act comp"
+        },
+        {
+          "start": 2803,
+          "end": 2803,
+          "old": "151",
+          "next": ""
+        },
+        {
+          "start": 10257,
+          "end": 10257,
+          "old": "s",
+          "next": ""
+        },
+        {
+          "start": 10258,
+          "end": 10261,
+          "old": "",
+          "next": "omp"
+        },
+        {
+          "start": 10262,
+          "end": 10264,
+          "old": "lar",
+          "next": "ct"
+        },
+        {
+          "start": 10323,
+          "end": 10325,
+          "old": "",
+          "next": "co"
+        },
+        {
+          "start": 10326,
+          "end": 10336,
+          "old": "",
+          "next": "pact-progr"
+        },
+        {
+          "start": 10337,
+          "end": 10337,
+          "old": "mory-fu",
+          "next": ""
+        },
+        {
+          "start": 10338,
+          "end": 10338,
+          "old": "ion-ledger-scalar",
+          "next": ""
+        },
+        {
+          "start": 10426,
+          "end": 10427,
+          "old": "s",
+          "next": "a"
+        },
+        {
+          "start": 10428,
+          "end": 10430,
+          "old": "",
+          "next": "tu"
+        },
+        {
+          "start": 10432,
+          "end": 10437,
+          "old": "",
+          "next": " comp"
+        },
+        {
+          "start": 10438,
+          "end": 10440,
+          "old": "r",
+          "next": "ct"
+        },
+        {
+          "start": 10465,
+          "end": 10625,
+          "old": "",
+          "next": "')\n    require(r['requiredProgressExportProfile']==r['admittedProgressExportProfile']=='bw.cold-native.compact-progress.v1','actual compact profile; no fallback"
+        },
+        {
+          "start": 10745,
+          "end": 10745,
+          "old": "JS ",
+          "next": ""
+        },
+        {
+          "start": 10748,
+          "end": 10749,
+          "old": "f",
+          "next": "v"
+        },
+        {
+          "start": 10750,
+          "end": 10751,
+          "old": "l",
+          "next": "d"
+        },
+        {
+          "start": 10752,
+          "end": 10753,
+          "old": "",
+          "next": "r"
+        },
+        {
+          "start": 10923,
+          "end": 10925,
+          "old": "",
+          "next": "co"
+        },
+        {
+          "start": 10926,
+          "end": 10936,
+          "old": "",
+          "next": "pact-progr"
+        },
+        {
+          "start": 10937,
+          "end": 10937,
+          "old": "mory-fu",
+          "next": ""
+        },
+        {
+          "start": 10938,
+          "end": 10938,
+          "old": "ion-ledger-scalar",
+          "next": ""
+        },
+        {
+          "start": 10989,
+          "end": 10996,
+          "old": "scala",
+          "next": "provide"
+        },
+        {
+          "start": 11007,
+          "end": 11953,
+          "old": "",
+          "next": "\n    last=r['lastReturnedProgress'];require(set(last)=={'sliceBytes','reason','activityState','chargedNativeTicks','chargedQuanta','nativeTicks','successfulQuanta','mappingEpoch','boardA20'},'strict compact9 last; no full snapshot masquerade')\n    cut=r['lastResumeInspect'];final=r['finalNative'];inspect_metadata(cut,True);inspect_metadata(final,True)\n    for key in ('nativeTicks','successfulQuanta','mappingEpoch','boardA20'):require(last[key]==cut[key]==final[key],'actual progress/full-cut ledger '+key)\n    for key in ('bridgeClockEntryAttempts','bridgeMemoryEntryAttempts'):require(cut[key]==final[key],'actual requested full-cut bridge maps')\n    require(words(cut)==words(final),'actual requested full last/final166')\n    require(r['typedSnapshotOwnership']=='RESET_STABLE_AND_REQUESTED_LAST_FINAL_INSPECT_DISTINCT','compact requested snapshot ownership')\n    # In-memory held validator composition only; raw compact receipt unmodified."
+        },
+        {
+          "start": 12049,
+          "end": 12275,
+          "old": "",
+          "next": "projected['typedSnapshotOwnership']='RESET_STABLE_AND_FINAL_LAST_RETURN_DISTINCT';projected['lastReturnedNative']={**cut,**{k:last[k] for k in ('sliceBytes','reason','activityState','chargedNativeTicks','chargedQuanta')}}\n    "
+        },
+        {
+          "start": 12379,
+          "end": 12379,
+          "old": "s",
+          "next": ""
+        },
+        {
+          "start": 12380,
+          "end": 12383,
+          "old": "",
+          "next": "omp"
+        },
+        {
+          "start": 12384,
+          "end": 12386,
+          "old": "lar",
+          "next": "ct"
+        },
+        {
+          "start": 16214,
+          "end": 16222,
+          "old": "",
+          "next": "act comp"
+        },
+        {
+          "start": 16226,
+          "end": 16226,
+          "old": "151",
+          "next": ""
+        }
+      ]
+    },
+    "hosted.py": {
+      "heldSha256": "9440857e8eee3e6d40efda26fb48577c2405a40274e2c1d0e06bcdf490e25778",
+      "candidateSha256": "15823d04c4c0babacd4b6c5fca9204d3e2e4ef4d881e5299005245c5af135127",
+      "edits": [
+        {
+          "start": 576,
+          "end": 577,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 578,
+          "end": 583,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 1673,
+          "end": 1686,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 1687,
+          "end": 1687,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 1688,
+          "end": 1688,
+          "old": "calar",
+          "next": ""
+        },
+        {
+          "start": 2005,
+          "end": 2018,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 2019,
+          "end": 2019,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 2020,
+          "end": 2020,
+          "old": "calar",
+          "next": ""
+        }
+      ]
+    },
+    "setup-entry.py": {
+      "heldSha256": "58850ae53ad250768e2e28abdb4cff6255f52d6526f8c94bb1084d88d21753c7",
+      "candidateSha256": "32c2f385eed51bddc091ca0b901745aac7797af99e0e231d5e419fd3e4726f15",
+      "edits": [
+        {
+          "start": 1316,
+          "end": 1329,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 1330,
+          "end": 1330,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 1331,
+          "end": 1331,
+          "old": "calar",
+          "next": ""
+        },
+        {
+          "start": 1903,
+          "end": 1916,
+          "old": "l",
+          "next": "compact-progr"
+        },
+        {
+          "start": 1917,
+          "end": 1917,
+          "old": "dger-",
+          "next": ""
+        },
+        {
+          "start": 1918,
+          "end": 1918,
+          "old": "calar",
+          "next": ""
+        },
+        {
+          "start": 2375,
+          "end": 2376,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 2377,
+          "end": 2382,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 2412,
+          "end": 2413,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 2414,
+          "end": 2419,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 2503,
+          "end": 2504,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 2505,
+          "end": 2510,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 2573,
+          "end": 2574,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 2575,
+          "end": 2580,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 2631,
+          "end": 2632,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 2633,
+          "end": 2638,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 3450,
+          "end": 3451,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 3452,
+          "end": 3457,
+          "old": "n",
+          "next": "mpact"
+        },
+        {
+          "start": 3683,
+          "end": 3684,
+          "old": "fusi",
+          "next": "c"
+        },
+        {
+          "start": 3685,
+          "end": 3690,
+          "old": "n",
+          "next": "mpact"
+        }
+      ]
+    }
+  },
+  "mechanics": {
+    "pair_schedule": "2b9c50712646eaed20d42eee20cb2748c20f759b126d832de3895d6aa9a0d8f7",
+    "summarize_pairs": "9cf7d239fe0c085d1d55651d4be2bc0ef49770b0ccb11ec8f8be471cb65a2eb1"
+  }
+}
