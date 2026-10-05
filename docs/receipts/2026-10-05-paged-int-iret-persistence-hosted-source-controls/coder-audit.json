@@ -1,0 +1,27 @@
+{
+  "status": "CODER_AUDIT_PASS",
+  "testedHead": "36c46523f1d037832a33a75f7982df7180819ff2",
+  "ownSourceCount": 12,
+  "compiledCount": 208,
+  "driverCount": 81,
+  "sourceCurrentGitAndBeforeAfterEqual": true,
+  "coverage": "four affected direct Python methods; five unchanged historical methods not repeated; no Node invoked",
+  "rawExit": {
+    "childStarted": true,
+    "exitCode": 0,
+    "finalizationErrors": [],
+    "leaderReaped": true,
+    "pid": 3738565,
+    "primaryError": null,
+    "rawWaitStatus": 0,
+    "rusage": {
+      "maxRSSKiB": 28928,
+      "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+      "systemSeconds": 0.057064,
+      "userSeconds": 0.465522
+    },
+    "timeout": false,
+    "wallSeconds": 3.7390944994986057
+  },
+  "scope": "Manufactured decoder/source fixtures only; no restore/download/worker/factory/addon/CPU. Original first execution remains FAIL; native instruction/parity/closure extent unknown."
+}

@@ -943,8 +943,8 @@
       "sha256": "14413e740b13d0fb0b78aea26054578a652c59237aca4ecf807937f7e78459f6"
     },
     "scripts/bochs-cpu3-native-paged-int-iret/DRIVER-SOURCE.md": {
-      "bytes": 7920,
-      "sha256": "9732645e8eaf8d3dfd35a5830603a2b8cd39669fd765c4bac3bea8f5a106248e"
+      "bytes": 10242,
+      "sha256": "8b21f02fa5fd5ab73e82d075e0b2afe195d2d30fd4f4c278411a5decdbc14f1d"
     },
     "scripts/bochs-cpu3-native-paged-int-iret/actual-first-build-prepare.json.gz": {
       "bytes": 130083,
@@ -965,6 +965,10 @@
     "scripts/bochs-cpu3-native-paged-int-iret/driver-provider.mjs": {
       "bytes": 3222,
       "sha256": "370d2fe94b392433cdf524c967da0232e2a4116c4d6f4711457969d78b3a2fb3"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/evidence.mjs": {
+      "bytes": 5513,
+      "sha256": "a64b90d66ab74b90815c1d8eb3db6fab35d1ba750c36341cbf5f67ab7854bf05"
     },
     "scripts/bochs-cpu3-native-paged-int-iret/parity.mjs": {
       "bytes": 10343,
@@ -987,8 +991,8 @@
       "sha256": "8230aa965693c51508259b281d01ce4e110f439ff54e1c7c6c395fe6bb534dbb"
     },
     "scripts/bochs-cpu3-native-paged-int-iret/runner.mjs": {
-      "bytes": 15024,
-      "sha256": "d52f106945338676e23fc4f3610536c66025d3a9403f222d1b9027097319a74f"
+      "bytes": 16011,
+      "sha256": "82ae77509a498e7b5ff3f20e85a308456801db149856c46504f2982eef54d47a"
     },
     "scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs": {
       "bytes": 1979,
@@ -1155,11 +1159,11 @@
       "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
     },
     "test/i80386-paged-int-iret-driver-source.test.mjs": {
-      "bytes": 18589,
-      "sha256": "64ac49ea7f6aae4c100e050ad7a6dcfcdca690c20c9b6808cde84f12991d6463"
+      "bytes": 24844,
+      "sha256": "f7ff2c99700f3a10bbe3ca14322924ec7cdc3f999ee84ac1bd98d052ffef4afe"
     }
   },
-  "driverRevision": "3f4a65de3cc4f99f62bf8f1d1c632499f3b69dd6",
+  "driverRevision": "98fb8216aa5bd0fa046cc6388f7ff6c1b22f5750",
   "enabledByDefault": false,
   "helperPins": {
     "scripts/cold-native-diagnostic/resources.py": "7e968b306c522deee93169bb698c2a80dbb23af5380af2f1cadf4fcf3c1467dc",
@@ -4453,7 +4457,7 @@
   },
   "runId": 37218196080,
   "schema": "bw.paged-int-iret.hosted-one-run.v1",
-  "scope": "One finite same-CPL 16-bit INT30/IRET differential child under nonidentity 4KiB paging. Raw166 retained; strict represented CPU/full boards/ten copied host-backed pages at declared comparable boundaries, unmatched PG-entry/prefetch records retained without page parity. Native six A/D updates and FLAGS-CS-IP stores remain independent of JS seven updates/IP-CS-FLAGS order. Whole-RAM hash only; cache/inhibit source-attested. No full OS, speed or physical386 claim.",
+  "scope": "One fixed trace-OFF paged INT/IRET differential child; complete lossless gzip evidence and independent outcome. Source/fixture only; no performance or broader software qualification.",
   "status": "ROOT_REVIEWED_PAGED_INT_IRET_SOURCE_READY",
   "zipBytes": 8097621,
   "zipMembers": {

@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: 3f4a65de3cc4f99f62bf8f1d1c632499f3b69dd6
+          ref: 98fb8216aa5bd0fa046cc6388f7ff6c1b22f5750
           path: paged-int-iret-driver
           persist-credentials: false
           fetch-depth: 1
