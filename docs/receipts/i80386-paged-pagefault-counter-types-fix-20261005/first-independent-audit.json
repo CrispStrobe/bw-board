@@ -1,0 +1,26 @@
+{
+  "status": "INDEPENDENT_PF_FIRST_EXECUTION_RESET_METADATA_FAILURE_CONFIRMED",
+  "runId": 37266253433,
+  "artifactId": 11325808399,
+  "artifactBytes": 11282682,
+  "artifactSha256": "3da1d6b9b3ce457ef2355e265fad9a5bea65dda583552b5fdb5f376f0f1d255e",
+  "zipMembers": 102,
+  "primaryFailure": "Live reset metadata rejects bigint as string",
+  "nativeInitialized": true,
+  "nativeTicks": 0,
+  "successfulQuanta": 0,
+  "attempts": 0,
+  "resumes": 0,
+  "comparativeBoundaries": 0,
+  "rawRetainedResetWords": 166,
+  "cleanup": {
+    "native": "closed",
+    "provider": "closed",
+    "javascript": "closed"
+  },
+  "sourceBuildConfigurationInputAndRestorationFinalGuardsEqual": true,
+  "losslessFailureBodySha256": "d9f3c4e9cf2544cbf9d7be9b53b5d4553cd1d346e141a98622db28ffbd72778a",
+  "bodyDecodedBytes": 354506,
+  "bodyStoredBytes": 32925,
+  "scope": "Same official ZIP read only. Native initialized and closed; zero instruction/attempt/resume extent. No PF delivery/recovery parity or speed claim; original actual FAIL preserved. No imports, replay or load."
+}
