@@ -165,6 +165,23 @@ export function createRp2040jsAdapter(opts = {}) {
     }
   }
 
+  // A level a DEVICE changes on its own (an echo ending, a 1-Wire slave's
+  // slot) reaches GPIO_IN when the program reads it, not at the slice end:
+  // a read first brings the board up to the core's time when a device has
+  // something due (board.dueDeviceDeadline) -- the AVR adapter's PINx hook.
+  const sioRead = rp2040.sio.readUint32.bind(rp2040.sio);
+  rp2040.sio.readUint32 = (offset) => {
+    if (offset === 0x004 && board && board.dueDeviceDeadline) {        // GPIO_IN
+      const t = timeNs();
+      if (board.dueDeviceDeadline(t)) {
+        board.advanceTo(t);
+        stats.advanceToCount++;
+        syncInputs();
+      }
+    }
+    return sioRead(offset);
+  };
+
   // ADC: answer a conversion with the BOARD's node voltage on that
   // channel's pin. rp2040js's default handler reads channelValues[] and
   // completes after the 2 µs sample time via a clock alarm — refresh the

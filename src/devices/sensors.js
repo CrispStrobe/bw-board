@@ -27,9 +27,15 @@ import { registerDevice } from '../devices.js';
 export function registerSensors() {
 
   // ─── Ultrasonic (HC-SR04) ──────────────────────────────────────────
-  // Trigger: receive a 10µs pulse, then echo goes HIGH for duration
-  // proportional to distance. At 343 m/s: time_µs = distance_cm * 58.
-  // For simulation: control sets the distance, echo drives accordingly.
+  // The module's own sequence (HC-SR04 datasheet): a TRIG pulse of at least
+  // 10 µs; when it ENDS the module sends 8 cycles of 40 kHz (200 µs) and
+  // only then raises ECHO, which stays high for the round trip — at
+  // 343 m/s, 58 µs per cm. It ignores TRIG while a measurement runs.
+  //
+  // Until 2026-10-05 ECHO rose at the TRIG RISING edge. A fast core never
+  // noticed; a 12T 8051 spends ~400 µs between its trigger and its first
+  // look at ECHO, so it saw the pulse already running and read 29 cm for
+  // 37. The burst delay is what gives every core time to get ready.
   registerDevice('ultrasonic', {
     terminals: ['vcc', 'gnd', 'trig', 'echo'],
 
@@ -37,7 +43,9 @@ export function registerSensors() {
       return {
         drives: { echo: { vTh: 0, rTh: 50 } },
         _trigHigh: false,
+        _echoStartNs: 0n,
         _echoEndNs: 0n,
+        _pending: false,
         _measuring: false,
       };
     },
@@ -45,21 +53,27 @@ export function registerSensors() {
     update(part, state, read, tNs) {
       const vcc = read('vcc') || 5.0;
       const threshold = vcc * 0.5;
-      const trigV = read('trig');
-      const trigHigh = trigV > threshold;
+      const trigHigh = read('trig') > threshold;
 
       let changed = false;
 
-      // Detect trigger rising edge → start measurement
-      if (trigHigh && !state._trigHigh) {
+      // Trigger FALLING edge → burst, then the echo (unless one is running).
+      if (!trigHigh && state._trigHigh && !state._pending && !state._measuring) {
         const distanceCm = part.params?.distance ?? 100; // default 1m
-        const echoUs = distanceCm * 58; // microseconds
-        state._echoEndNs = tNs + BigInt(Math.round(echoUs * 1000));
+        state._echoStartNs = tNs + 200_000n;              // 8 cycles at 40 kHz
+        state._echoEndNs = state._echoStartNs + BigInt(Math.round(distanceCm * 58 * 1000));
+        state._pending = true;
+        state._wakeNs = state._echoStartNs;
+      }
+      state._trigHigh = trigHigh;
+
+      if (state._pending && tNs >= state._echoStartNs) {
+        state._pending = false;
         state._measuring = true;
+        state._wakeNs = 0n;
         state.drives.echo = { vTh: vcc, rTh: 50 };
         changed = true;
       }
-      state._trigHigh = trigHigh;
 
       // End echo pulse when time is up
       if (state._measuring && tNs >= state._echoEndNs) {

@@ -68,8 +68,11 @@ export class Stm32Gpio {
    * @param {Stm32Rcc} opts.rcc
    * @param {(pin: string, mode: string, driveHigh: boolean) => void} [opts.onPinChange]
    */
-  constructor ({ base, portIndex, portLetter, rcc, onPinChange }) {
+  constructor ({ base, portIndex, portLetter, rcc, onPinChange, onInputRead }) {
     this.base = base;
+    // Called before IDR is read, so an adapter can bring the board up to the
+    // core's time when a device changed a level on its own (an echo ending).
+    this.onInputRead = onInputRead || null;
     this.size = 0x400;
     this.portIndex = portIndex;
     this.portLetter = portLetter;
@@ -96,6 +99,7 @@ export class Stm32Gpio {
       case 0x04: return this.otyper;
       case 0x0c: return this.pupdr;
       case 0x10: { // IDR: outputs read back ODR; a driven input reads the
+        if (this.onInputRead) this.onInputRead();
         // pad; an UNDRIVEN input reads its pull (up=1, down/none=0) — the
         // pull-up button idiom depends on exactly this
         let v = 0;
@@ -517,10 +521,10 @@ export class Stm32Usart1 {
  * Assemble the F030 board onto a CortexM0Machine: RCC, GPIOA/B, TIM3,
  * TIM14, ADC, USART1. Returns the peripheral instances for adapters and tests.
  */
-export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRead } = {}) {
+export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRead, onInputRead } = {}) {
   const rcc = new Stm32Rcc();
-  const gpioA = new Stm32Gpio({ base: 0x48000000, portIndex: 0, portLetter: 'A', rcc, onPinChange });
-  const gpioB = new Stm32Gpio({ base: 0x48000400, portIndex: 1, portLetter: 'B', rcc, onPinChange });
+  const gpioA = new Stm32Gpio({ base: 0x48000000, portIndex: 0, portLetter: 'A', rcc, onPinChange, onInputRead });
+  const gpioB = new Stm32Gpio({ base: 0x48000400, portIndex: 1, portLetter: 'B', rcc, onPinChange, onInputRead });
   // TIM3's compare channels drive pads directly (a pin in AF mode is
   // owned by its peripheral) — same publish stream as the GPIO's.
   const tim3 = new Stm32Tim3({ rcc, clockHz: machine.clockHz, onPinChange });

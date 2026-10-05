@@ -316,6 +316,13 @@ export function registerDallasParts() {
                 state.drives.dq = wantLow ? { vTh: 0, rTh: R_OUT } : { vTh: 0, rTh: R_OFF };
                 changed = true;
             }
+            // The next edge of a timed drive, on the board's canonical wake
+            // (spec-updates/scheduled-device-events.md): the presence pulse
+            // starts 30 us after the reset and ends at 150 us, a 0 bit is
+            // released 45 us into its slot. Unscheduled, they happened only
+            // when something else advanced the board.
+            const edges = [state._presenceFrom, state._presenceTo, state._releaseAt].filter((t) => t > tNs);
+            state._wakeNs = edges.length ? edges.reduce((a, b) => (b < a ? b : a)) : 0n;
             return changed;
         },
 
