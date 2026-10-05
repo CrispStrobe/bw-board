@@ -5,7 +5,7 @@ External licensed-guest notes and historical context are retained in the [privat
 2026-09-19. Astra coordinates, audits and lands; up to two Sol agents implement
 in separate worktrees. FPGA and SPICE/ASC schematic import/export belong to other lanes.
 
-## Current checkpoint (2026-10-04)
+## Current checkpoint (2026-10-05)
 
 Use [the loading guide](X86-LOADING-GUIDE.md) for the distinct direct-program,
 functional AT, wired Harris and fixed native diagnostic paths. Lite now exposes
@@ -31,9 +31,7 @@ retained the JS baseline: on a GitHub-hosted AMD EPYC 7763 runner, the native
 candidate used 5.25 times the execution CPU time and 8.94 times the execution
 wall time. Configured virtual time divided by mean wall time was 1.594 RTx
 for JS and 0.178 RTx for native. Those are fixed-workload measurements, not
-physical 16 MHz 386DX calibration or VPS/Kaggle comparisons. Native-symbol
-profiling is being prepared to explain the cost before another optimization;
-the tenfold target remains unfinished.
+physical 16 MHz 386DX calibration or VPS/Kaggle comparisons. A corrected [native-symbol observation](I80386-NATIVE-SYMBOL-OBSERVATION.md) now has terminal parity and 165 decoded CPU-clock leaves (136 main-thread, 29 background). Its Xeon 8573C host differs from the paired EPYC host; unresolved frames and unproven clock alignment prevent native cost-share or execution-only claims. Callback/property and allocation source analysis is next; the tenfold target remains unfinished.
 
 The earlier milestone sections below preserve their original source-bound
 results. Their “next” statements describe those historical checkpoints.

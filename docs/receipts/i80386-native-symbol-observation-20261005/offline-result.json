@@ -1,0 +1,72 @@
+{
+  "status": "OFFLINE_LEAF_COMPLETE",
+  "scope": "Different local decoder6.8.12, offline leaf-only interpretation of frozen6.17 recording; no new samples/guest/Node/addon execution",
+  "rawPerfSha256": "408be969a04e31496b418c707f948391a81211ec691a7cb097d1e100eea99b3d",
+  "decode": {
+    "exitCode": 0,
+    "timedOut": false,
+    "wallSeconds": 1.0018527153879404,
+    "executingImages": {
+      "/usr/lib/linux-tools-6.8.0-124/perf": "7ca531e9192adff04c0cda4de8bc7da9206d41376c327bab94634d58ce0619e0"
+    },
+    "error": null,
+    "cleanupError": null
+  },
+  "effectiveDecoder": {
+    "version": {
+      "/usr/lib/linux-tools-6.8.0-124/perf": "7ca531e9192adff04c0cda4de8bc7da9206d41376c327bab94634d58ce0619e0"
+    },
+    "leaf": {
+      "/usr/lib/linux-tools-6.8.0-124/perf": "7ca531e9192adff04c0cda4de8bc7da9206d41376c327bab94634d58ce0619e0"
+    },
+    "scope": "Executing ELF observed through proc inode; missing version observation explicit"
+  },
+  "afterEvidence": {
+    "originalSourceToolInputs": {
+      "/tmp/native-cold-native-symbol-post-ack-20261005.zip": {
+        "bytes": 19019152,
+        "sha256": "d4c5f8b0a756c3bb2e980ffaf64e4189501e8d376ff540a70b239742a3688fc5"
+      },
+      "/tmp/native-cold-memory-fusion-first-build-publication-20261004/official-artifact.zip": {
+        "bytes": 7537808,
+        "sha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875"
+      },
+      "/tmp/node-v22.23.3-linux-x64/bin/node": {
+        "bytes": 124827920,
+        "sha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+      },
+      "/usr/bin/perf": {
+        "bytes": 1622,
+        "sha256": "2d0953085bf720a25efbe24f853e97d27b1f12f18a398255ff82cbafde254dad"
+      },
+      "/usr/lib/linux-tools-6.8.0-124/perf": {
+        "bytes": 11684768,
+        "sha256": "7ca531e9192adff04c0cda4de8bc7da9206d41376c327bab94634d58ce0619e0"
+      },
+      "/tmp/native-cold-native-symbol-post-ack-offline-leaf-source-20261005/decode.py": {
+        "bytes": 11745,
+        "sha256": "65658b2b82231264637088f6af516e2f234bb707f1e84d3417628479ca56ad84"
+      },
+      "/tmp/native-cold-native-symbol-post-ack-observation-20261005/official-zip-metadata.json": {
+        "bytes": 220,
+        "sha256": "079d38339f1ec0ad825fb3eaed83f6ece258cc430577974550407166e292733e"
+      },
+      "/tmp/native-cold-native-symbol-post-ack-observation-20261005/root-artifact-preaudit.json": {
+        "bytes": 29501,
+        "sha256": "9b02ea09e7aa9a67471122cd0422f6109642205f02f12dea55f4dfd4ee4a6ae9"
+      },
+      "/tmp/native-cold-native-symbol-post-ack-observation-20261005/root-full-held-terminal-audit.json": {
+        "bytes": 34167,
+        "sha256": "26efa7ef544bc90c365658457e1f126d644b3dc9e829e8aca77819184af55684"
+      }
+    },
+    "controlledCopies": {
+      "/tmp/native-cold-native-symbol-post-ack-offline-leaf-actual-20261005/symfs/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+      "/tmp/native-cold-native-symbol-post-ack-offline-leaf-actual-20261005/symfs/opt/hostedtoolcache/node/22.23.3/x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+      "/tmp/native-cold-native-symbol-post-ack-offline-leaf-actual-20261005/perf.data": "408be969a04e31496b418c707f948391a81211ec691a7cb097d1e100eea99b3d"
+    },
+    "observedExecutables": {
+      "/usr/lib/linux-tools-6.8.0-124/perf": "7ca531e9192adff04c0cda4de8bc7da9206d41376c327bab94634d58ce0619e0"
+    }
+  }
+}
