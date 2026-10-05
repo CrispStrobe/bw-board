@@ -1,0 +1,16 @@
+{
+  "status": "INDEPENDENT_COMPACT_QUALIFICATION_SEVEN_PURE_CONTROLS_PASS_NO_GUEST",
+  "revision": "eb761ad7522275da9125c87e1c0bc0216f19df3b",
+  "ownSourceCount": 18,
+  "roleSourceCount": 290,
+  "sourceGitAndRoleSnapshotsEqual": true,
+  "completeBeforeAfterEqual": true,
+  "parentSha256": "628f519cdc3f2f0fcf7a962ecd85083b225238e870c64b2138b5b78315c182fb",
+  "outerNodeTests": 1,
+  "pythonTests": 7,
+  "pythonExtent": "Raw unittest Ran7/OK; individual names established by frozen source, not emitted in raw output",
+  "skips": 0,
+  "childExitWallSeconds": 0.6279074754565954,
+  "finalAuthInclusiveWallSeconds": 4.043003024533391,
+  "scope": "Saved packet audit only. Historical raw terminal fixture and manufactured compact metadata. No setup, restore, addon, provider, guest, compiler or perf call."
+}

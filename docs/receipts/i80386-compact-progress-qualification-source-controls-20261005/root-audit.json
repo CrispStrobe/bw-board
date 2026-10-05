@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "sourceRevision": "eb761ad7522275da9125c87e1c0bc0216f19df3b",
+  "ownFiles": 18,
+  "materializedRoleFiles": 290,
+  "purePythonMethods": 7,
+  "nodeWrapperPass": 1,
+  "skipped": 0,
+  "beforeAfterEqual": true,
+  "coverage": "No restoration/setup/addon load/guest or speed proof",
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 4.043003024533391,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.6279074754565954,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.5338649999999999,
+      "systemSeconds": 0.09711,
+      "maxRSSKiB": 51308
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  }
+}

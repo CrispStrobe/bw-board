@@ -1,0 +1,37 @@
+{
+  "schema": "bw.compact-progress.source-control-origins.v1",
+  "testedRevision": "eb761ad7522275da9125c87e1c0bc0216f19df3b",
+  "scope": "Actual one Node wrapper/Python Ran7 OK; seven-method extent source-attested; no setup/addon/guest",
+  "records": {
+    "invocation.json": {
+      "bytes": 1161,
+      "sha256": "8cbe03a0da039bb008ac339b4872ff78c2d4c58c032e9cb31eab7d9ffb76a257",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/invocation.json"
+    },
+    "exit.json": {
+      "bytes": 504,
+      "sha256": "800e2aa9e100d3dcf4411d29987439100a816878f044c6007408555cafe2ec98",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/exit.json"
+    },
+    "stdout": {
+      "bytes": 406,
+      "sha256": "cf6e313189d0367ea01df340e626a11b0d336350ab115490e08a399e1e5587ae",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/stdout"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/stderr"
+    },
+    "root-audit.json": {
+      "bytes": 850,
+      "sha256": "92e3c16481edff7f7fa4d983c5ee78a0264a071143f10dcd3c84b3e8bb513e0e",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/root-audit.json"
+    },
+    "independent-audit.json": {
+      "bytes": 803,
+      "sha256": "58868dbdf39c13b380092cf0a98eac8f1e986ddac3cf0cf9ffedadc06b4df540",
+      "origin": "/tmp/native-cold-compact-progress-qualification-source-controls-20261005/independent-audit.json"
+    }
+  }
+}

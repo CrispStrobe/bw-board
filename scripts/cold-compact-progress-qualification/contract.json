@@ -1,6 +1,6 @@
 {
   "schema": "bw.cold-compact-progress.qualification-source.v1",
-  "status": "PENDING_ROOT_REVIEWED_COMPACT_QUALIFICATION",
+  "status": "ROOT_REVIEWED_COMPACT_PROGRESS_QUALIFICATION_READY",
   "guestEnabledByDefault": false,
   "compiledRevision": "e4807d0647ab1e151755811ff8ef53d493ebf6ff",
   "compiledFiles": {
