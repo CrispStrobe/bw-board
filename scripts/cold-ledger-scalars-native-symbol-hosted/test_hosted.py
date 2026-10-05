@@ -18,9 +18,13 @@ class Controls(TestCase):
  def test_complete_maps_bounds_and_owned_ready_with_pending_denials(self):
   c=admission.read(admission.HERE/'contract.json');c['status']='ROOT_REVIEWED_NATIVE_SYMBOL_HOSTED_READY'
   self.assertIs(policy.contract(c),c)
+  role=c['roles']['diagnostic'];self.assertEqual(len(role['files']),92)
+  self.assertFalse(any('/ack-framing-source/' in name for name in role['files']))
+  self.assertEqual(role['sourceSha256'],hashlib.sha256(json.dumps({'revision':role['revision'],'hashes':role['files']},separators=(',',':')).encode()).hexdigest())
+  self.assertEqual(sum(len(v['files']) for v in c['roles'].values()),390)
   pending=json.loads(json.dumps(c));pending['status']='PENDING_ROOT_HOSTED_SOURCE_REVIEW'
   with self.assertRaisesRegex(ValueError,'PENDING'):policy.contract(pending)
-  for mutate in [lambda x:x['roles']['diagnostic'].update(status='PENDING_ROOT_SOURCE_REVIEW'),lambda x:x['roles']['diagnostic'].update(revision='0'*40),lambda x:x['roles']['diagnostic'].update(sourceSha256='0'*64),lambda x:x['roles']['compiled']['files'].pop(next(iter(x['roles']['compiled']['files']))),lambda x:x['observerBounds'].update(fileBytes=128<<20),lambda x:x.update(enabledByDefault=True)]:
+  for mutate in [lambda x:x['roles']['diagnostic'].update(status='PENDING_ROOT_SOURCE_REVIEW'),lambda x:x['roles']['diagnostic'].update(revision='0'*40),lambda x:x['roles']['diagnostic'].update(sourceSha256='0'*64),lambda x:x['roles']['diagnostic']['files'].update({'scripts/cold-native-ledger-scalars-symbol-profile/ack-framing-source/FINDING.md':'0'*64}),lambda x:x['roles']['compiled']['files'].pop(next(iter(x['roles']['compiled']['files']))),lambda x:x['observerBounds'].update(fileBytes=128<<20),lambda x:x.update(enabledByDefault=True)]:
    bad=json.loads(json.dumps(c));mutate(bad)
    with self.assertRaisesRegex(ValueError,'complete source-owned'):policy.contract(bad)
  def test_setup_only_sha_alias_retains_actual_dispatch(self):

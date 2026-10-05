@@ -9,7 +9,7 @@ test('six hosted PURE/MOCK methods retain raw nested streams without real childr
  if(r.stdout)process.stdout.write(r.stdout);if(r.stderr)process.stderr.write(r.stderr);assert.equal(r.status,0);assert.match(r.stderr,/Ran 6 tests/);assert.match(r.stderr,/OK/);
 });
 test('manual source is default disabled and admits roles before downstream checkout',()=>{
- const s=readFileSync(new URL('.github/workflows/i80386-cold-ledger-scalars-native-symbol.yml',repo),'utf8');assert.match(s,/default: false/);assert.match(s,/inputs.enable_profile == true/);assert.ok(s.indexOf('emit-roles.py')<s.indexOf('steps.roles.outputs.diagnostic'));assert.ok(s.includes('node-version: 22.23.3'));assert.ok(!s.includes('apt-get')&&!s.includes('sysctl'));const c=JSON.parse(readFileSync(new URL('contract.json',own)));assert.equal(c.enabledByDefault,false);assert.equal(c.roles.diagnostic.revision,'1391d63e745231fb4921e2d1dd6ec18677987b50');assert.equal(Object.keys(c.roles.diagnostic.files).length,92);
+ const s=readFileSync(new URL('.github/workflows/i80386-cold-ledger-scalars-native-symbol.yml',repo),'utf8');assert.match(s,/default: false/);assert.match(s,/inputs.enable_profile == true/);assert.ok(s.indexOf('emit-roles.py')<s.indexOf('steps.roles.outputs.diagnostic'));assert.ok(s.includes('node-version: 22.23.3'));assert.ok(!s.includes('apt-get')&&!s.includes('sysctl'));const c=JSON.parse(readFileSync(new URL('contract.json',own)));assert.equal(c.enabledByDefault,false);assert.equal(c.roles.diagnostic.revision,'53257a07d013615b5ae6fc9b86652ef39e345c5d');assert.equal(Object.keys(c.roles.diagnostic.files).length,92);
 });
 
 test('seven evidence-export filesystem and failure controls plus owned root cleanup mock',()=>{

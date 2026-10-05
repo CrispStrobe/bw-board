@@ -1,0 +1,9 @@
+{
+  "status": "PASS_TWO_SELECTED_HOSTED_SOURCE_MOCKS",
+  "revision": "12c678b4c0eafea2a13d4e9802f1f772c1040719",
+  "ownSourcePaths": 15,
+  "materializedRolePaths": 390,
+  "pythonMethods": 2,
+  "scope": "One external Node wrapper; five held mechanics hashes and defaultdisabled workflow checks; remaining tests unselected; no setup/perf/addon/guest",
+  "pinsEqual": true
+}
