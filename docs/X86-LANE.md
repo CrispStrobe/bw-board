@@ -349,3 +349,5 @@ Their local bytes were checked against that official revision on 2026-10-04;
 the [provenance receipt](receipts/2026-10-04-msdos2-toolchain-provenance.json)
 retains the exact hashes, matching the historical guest receipt. This release
 license does not cover unrelated later assembler/compiler releases.
+
+The [real N-API key-helper fixture](../scripts/property-key-real-napi-qualification/SOURCE.md) passed its bounded helper-plus-fixture checks; it establishes neither guest parity nor speed. A [separate compact-progress source candidate](../scripts/bochs-cpu3-native-compact-progress/README.md) proposes smaller production returns while retaining requested full snapshots and the immutable diagnostic comparator.
