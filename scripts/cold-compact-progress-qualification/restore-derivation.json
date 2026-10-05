@@ -1,0 +1,222 @@
+{
+  "basePath": "scripts/cold-ledger-scalars-qualification/restore.py",
+  "baseSha256": "b2ebc54577d450f9cbec3f61b83dd3832ae599033a044507fdc95c2c26aeb152",
+  "edits": [
+    {
+      "start": 456,
+      "end": 458,
+      "old": "",
+      "next": "e4"
+    },
+    {
+      "start": 459,
+      "end": 470,
+      "old": "5fc",
+      "next": "07d0647ab1e"
+    },
+    {
+      "start": 472,
+      "end": 488,
+      "old": "",
+      "next": "1755811ff8ef53d4"
+    },
+    {
+      "start": 489,
+      "end": 492,
+      "old": "9a",
+      "next": "3eb"
+    },
+    {
+      "start": 493,
+      "end": 493,
+      "old": "0ee71e32208da9d3",
+      "next": ""
+    },
+    {
+      "start": 494,
+      "end": 496,
+      "old": "caac86daa3b8c",
+      "next": "ff"
+    },
+    {
+      "start": 648,
+      "end": 650,
+      "old": "",
+      "next": "co"
+    },
+    {
+      "start": 651,
+      "end": 661,
+      "old": "",
+      "next": "pact-progr"
+    },
+    {
+      "start": 662,
+      "end": 662,
+      "old": "mory-fu",
+      "next": ""
+    },
+    {
+      "start": 663,
+      "end": 664,
+      "old": "ion",
+      "next": "s"
+    },
+    {
+      "start": 721,
+      "end": 723,
+      "old": "",
+      "next": "co"
+    },
+    {
+      "start": 724,
+      "end": 734,
+      "old": "",
+      "next": "pact-progr"
+    },
+    {
+      "start": 735,
+      "end": 735,
+      "old": "mory-fu",
+      "next": ""
+    },
+    {
+      "start": 736,
+      "end": 737,
+      "old": "ion",
+      "next": "s"
+    },
+    {
+      "start": 3167,
+      "end": 3169,
+      "old": "",
+      "next": "co"
+    },
+    {
+      "start": 3170,
+      "end": 3180,
+      "old": "",
+      "next": "pact-progr"
+    },
+    {
+      "start": 3181,
+      "end": 3181,
+      "old": "mory-fu",
+      "next": ""
+    },
+    {
+      "start": 3182,
+      "end": 3183,
+      "old": "ion",
+      "next": "s"
+    },
+    {
+      "start": 4010,
+      "end": 4012,
+      "old": "51",
+      "next": "63"
+    },
+    {
+      "start": 4043,
+      "end": 4045,
+      "old": "",
+      "next": "ac"
+    },
+    {
+      "start": 4046,
+      "end": 4053,
+      "old": "y",
+      "next": "ual com"
+    },
+    {
+      "start": 4054,
+      "end": 4057,
+      "old": "ed",
+      "next": "act"
+    },
+    {
+      "start": 4275,
+      "end": 4277,
+      "old": "",
+      "next": "co"
+    },
+    {
+      "start": 4278,
+      "end": 4288,
+      "old": "",
+      "next": "pact-progr"
+    },
+    {
+      "start": 4289,
+      "end": 4289,
+      "old": "mory-fu",
+      "next": ""
+    },
+    {
+      "start": 4290,
+      "end": 4291,
+      "old": "ion",
+      "next": "s"
+    },
+    {
+      "start": 7860,
+      "end": 7865,
+      "old": "ld",
+      "next": "mpact"
+    },
+    {
+      "start": 7866,
+      "end": 7871,
+      "old": "m",
+      "next": "progr"
+    },
+    {
+      "start": 7872,
+      "end": 7872,
+      "old": "mory-fu",
+      "next": ""
+    },
+    {
+      "start": 7873,
+      "end": 7874,
+      "old": "ion",
+      "next": "s"
+    },
+    {
+      "start": 9221,
+      "end": 9223,
+      "old": "",
+      "next": "co"
+    },
+    {
+      "start": 9224,
+      "end": 9234,
+      "old": "",
+      "next": "pact-progr"
+    },
+    {
+      "start": 9235,
+      "end": 9235,
+      "old": "mory-fu",
+      "next": ""
+    },
+    {
+      "start": 9236,
+      "end": 9237,
+      "old": "ion",
+      "next": "s"
+    },
+    {
+      "start": 9262,
+      "end": 9323,
+      "old": "",
+      "next": ".v1','progressExportProfile':'bw.cold-native.compact-progress"
+    },
+    {
+      "start": 9616,
+      "end": 9618,
+      "old": "51",
+      "next": "63"
+    }
+  ]
+}
