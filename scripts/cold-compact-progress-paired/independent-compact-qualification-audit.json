@@ -1,0 +1,36 @@
+{
+  "status": "INDEPENDENT_COMPACT_PROGRESS_QUALIFICATION_TERMINAL_PARITY_PASS",
+  "runId": 37263077732,
+  "artifactId": 11325228966,
+  "artifactBytes": 18739693,
+  "artifactSha256": "368b91dbd428ca16df45f4167612aa28e66ec42bec1653ce242c4f5f8afd9ac6",
+  "zipMembers": 56,
+  "sourceInputs": 308,
+  "sourceRoleCounts": {
+    "tooling": 18,
+    "compiled": 163,
+    "driver": 54,
+    "worker": 73
+  },
+  "allSourceGitAndFinalGuardsEqual": true,
+  "nativeTicks": 316562,
+  "successfulQuanta": 316562,
+  "rawResetFinalLastInspectionWords": 166,
+  "actualCompactReturnFields": 9,
+  "requestedLastFinalRaw166Equal": true,
+  "fullTerminalBoardEqual": true,
+  "wholeRamHashEqual": true,
+  "orderedPioEvents": 16475,
+  "provider": {
+    "memoryOuterEntries": 167123,
+    "replyValidations": 167123,
+    "readEffects": 75401,
+    "writeEffects": 91722
+  },
+  "closed": {
+    "native": true,
+    "provider": true
+  },
+  "allChildrenExitZero": true,
+  "scope": "Same official ZIP read only. No helper execution, load, replay. Native raw166 vs held native cuts; JS represented terminal board/RAMhash/orderedPIO. Timing informational only; no paired benefit or physical RTx."
+}

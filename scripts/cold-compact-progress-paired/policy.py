@@ -11,7 +11,7 @@ PROTOCOL={'warmupPairs':2,'measuredPairs':7,'alternating':True,'firstBaseline':T
 CRITERIA={'primaryMetric':'executionProcessCpuSeconds','meanReductionAtLeast':0.10,'allSevenCandidateFaster':True}
 HOOKS=('NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE')
 # Source-owned unbound artifact; no old DSO can authorize this draft.
-COMPILED=None
+COMPILED='e4807d0647ab1e151755811ff8ef53d493ebf6ff'
 def require(condition,message):
     if not condition:raise ValueError(message)
 def sha(data):return hashlib.sha256(data).hexdigest()
@@ -34,7 +34,7 @@ def validate_ready_binding(b):
     require(b['node']['version']=='v22.23.3' and hexpin(b['node']['sha256'],64) and absolute(b['node']['path']),'fixed Node')
     for role in ('capture','independentAudit','armQualificationAudit'):
         require(absolute(b[role]['path']) and hexpin(b[role]['sha256'],64),'approved immutable '+role)
-    require(type(b['compiledFiles']) is dict and len(b['compiledFiles'])>151 and all(hexpin(h,64) for h in b['compiledFiles'].values()),'full compact compiled map')
+    require(type(b['compiledFiles']) is dict and len(b['compiledFiles'])==163 and all(hexpin(h,64) for h in b['compiledFiles'].values()),'full compact compiled map')
     require(type(b['workers']) is dict and set(b['workers'])=={'native','plainJs'},'both worker roles')
     for kind,w in b['workers'].items():
         require(absolute(w['root']),'canonical worker root')
