@@ -143,7 +143,7 @@ class PureControls(unittest.TestCase):
             state=None
             while time.monotonic()<deadline:
                 try:state=Path('/proc',str(child),'stat').read_text().rsplit(')',1)[1].split()[0]
-                except FileNotFoundError:state=None;break
+                except (FileNotFoundError,ProcessLookupError):state=None;break
                 if state=='Z':break
                 time.sleep(.01)
             self.assertIn(state,(None,'Z'),'detached fixture no longer running')

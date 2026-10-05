@@ -1,0 +1,90 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^bounded\\ actual\\ private\\ JS\\ page\\ fault\\ repair\\ CR3\\ reload\\ IRET\\ and\\ once\\-only\\ retry\\ retains\\ genuine\\ effects$",
+    "test/i80386-paged-pagefault-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-source-20261005",
+  "head": "75be9c4aaa9fe08ff2adbffa47ff8cc1335b19d2",
+  "mode": "oracle",
+  "sourceCount": 51,
+  "scope": "one separately approved genuine private JS capture-only purpose after historical all7 childPASS/wrapperFAIL; no unchanged six-case rerun/native",
+  "historicalPrerequisite": {
+    "packet": "/tmp/native-paged-pagefault-source-controls-20261005",
+    "pins": {
+      "parent.py": {
+        "bytes": 7814,
+        "sha256": "c51a54787599c980be0036c61ad09483eb693f5fa0b4ae95cb9324a06e30c5bc"
+      },
+      "invocation.json": {
+        "bytes": 1336,
+        "sha256": "21616b21be9273d576f84c594bd80f021d323bd5ea54575447af324c4548dc1f"
+      },
+      "before.json": {
+        "bytes": 8315,
+        "sha256": "382fa05bf66f667478facc51f624dd3761311f7c5ee2eb2045edcf3d2b0c73d7"
+      },
+      "after.json": {
+        "bytes": 8315,
+        "sha256": "382fa05bf66f667478facc51f624dd3761311f7c5ee2eb2045edcf3d2b0c73d7"
+      },
+      "stdout": {
+        "bytes": 3503,
+        "sha256": "a0ce7c4cab4866230c6a1aed2a0598cd4d122f4345c3969f81189979aaec563a"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exit.json": {
+        "bytes": 629,
+        "sha256": "34741e2ea4de1cda2774f51e36044e2216cd1d5d1903a0a6062c92601b7308d4"
+      },
+      "independent-audit.json": {
+        "bytes": 1298,
+        "sha256": "407d861a24ba6ce44df3d216c3c315e250045a36e9e7df707225bc9a3582350d"
+      }
+    },
+    "wrapperStatus": "FAIL expected6 but childactual7PASS",
+    "actualPriorJavascriptAttempts": 57,
+    "actualPriorCompletedQ": 56,
+    "fullCaptureAbsent": true
+  },
+  "environment": {
+    "PATH": "/tmp/node-v22.23.3-linux-x64/bin:/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": "",
+    "BW_PAGED_PF_CONTROL_OUTPUT": "/tmp/native-paged-pagefault-source-oracle-20261005/js-control.json"
+  },
+  "absentCompilerVariables": [
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH",
+    "CPATH",
+    "C_INCLUDE_PATH",
+    "CPLUS_INCLUDE_PATH",
+    "OBJC_INCLUDE_PATH"
+  ],
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "wait4Scope": "leader plus reaped descendants; whole-child setup/test CPU, no execution-phase speed claim"
+}

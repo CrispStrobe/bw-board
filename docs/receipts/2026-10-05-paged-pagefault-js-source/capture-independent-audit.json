@@ -1,0 +1,37 @@
+{
+  "status": "INDEPENDENT_SAVED_JS_PAGEFAULT_CAPTURE_AUDIT_PASS_NO_NATIVE_PROOF",
+  "captureSha256": "6ea098a534da4681cdbb3bcaadf6918a9ed4a882ab230d87ff16c394e00803c7",
+  "captureBytes": 5913156,
+  "attempts": 57,
+  "completedQ": 56,
+  "frames": 58,
+  "namedCutSummaries": 19,
+  "tenPageByteComparisonsIncludingSettled": 2416640,
+  "ordinaryStores": 37,
+  "bootStores": 31,
+  "frameStores": 4,
+  "repairStores": 1,
+  "retryCommittedStores": 1,
+  "jsAdUpdates": 11,
+  "fault": {
+    "vector": 14,
+    "error": 2,
+    "cr2": 32768,
+    "restartEip": 28675,
+    "completedQ": 0,
+    "attemptOrdinal": 50
+  },
+  "cr3ReloadGeneration": [
+    5,
+    6
+  ],
+  "discardFlags": 134,
+  "iretRestoredFlags": 2,
+  "ramSha256": "041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94",
+  "sourceToolPrepostEqual": true,
+  "limitations": [
+    "Saved actual JS model only; native PF/cache phases and callback order unexecuted.",
+    "Whole RAM hash-only; ten copied physical pages fully retained.",
+    "Earlier seven-test child PASS and wrapper count FAIL unchanged."
+  ]
+}
