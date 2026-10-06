@@ -1,0 +1,40 @@
+{
+  "status": "INDEPENDENT_PAGED_PAGEFAULT_ACTUAL_FAULT_REPAIR_RETRY_PARITY_PASS",
+  "runId": 37269581753,
+  "members": 102,
+  "sourcePaths": 363,
+  "progress": {
+    "n": 57,
+    "q": 56,
+    "dn": 1,
+    "dq": 1,
+    "faults": 1,
+    "attemptOrdinal": 57,
+    "classification": "ORDINARY_COMPLETION",
+    "resumes": 57,
+    "zeroQ": 0
+  },
+  "raw166Boundaries": 59,
+  "comparableBoundaries": 57,
+  "unmatchedBoundaries": 2,
+  "cuts": 19,
+  "comparableCuts": 17,
+  "wholePages": 10,
+  "fullPageComparisonBytes": 2334720,
+  "nativeMemoryEvents": 81,
+  "nativeWrites": {
+    "boot": 31,
+    "ad": 8,
+    "frame": 4,
+    "repair": 1,
+    "retry": 1
+  },
+  "javascriptAdUpdates": 11,
+  "frameHex": "0200037018000200",
+  "ramSha256": "041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94",
+  "storedBytes": 917129,
+  "decodedBytes": 38149335,
+  "storedSha256": "57e0bad4ee9000dbc95eee93bbdfa75c188b8b5e7ebb568be924e03b3af92af3",
+  "decodedSha256": "2e7bc6698347390ae105a68994f1f6aba24de39bb2851170e9b3721548eafe33",
+  "scope": "Sole ZIP read-only stdlib/Git audit; actual finite owned PF14/error2/CR28000/repair/CR3reload/IRET/one retry. Two unmatched phases preserved, owner/cache phase claims source-attested rather than direct native telemetry. No guest replay, OS or speed qualification."
+}

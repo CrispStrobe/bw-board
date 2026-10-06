@@ -2,6 +2,8 @@
 
 For CLI and GUI software-loading workflows, supported disk/config formats and x86 backend boundaries, see [the x86 loading guide](docs/X86-LOADING-GUIDE.md).
 
+The [x86 checkpoint and next lanes](docs/X86-NEXT-LANES.md) records the verified native page-fault recovery, the latest measured speed result, and concrete implementation and acceptance tasks for the next agent.
+
 The circuit simulation and emulated-board engine for Brickwright. It connects
 firmware pin activity to a netlist, solves electrical behavior, updates device
 models and exposes readings for a circuit editor or command-line instruments.

@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "zipSha256": "ce8a93125f2b6a42f5b07691e26b52335449a5d8834e28a3d39fbc61f9174d05",
+  "ordinaryZipCrcMembers": 102,
+  "singleGzipMember": true,
+  "captureDecodedSha256": "2e7bc6698347390ae105a68994f1f6aba24de39bb2851170e9b3721548eafe33",
+  "captureDecodedBytes": 38149335,
+  "full166Boundaries": 59,
+  "comparableCpuBoardTenPagesBoundaries": 57,
+  "cuts": 19,
+  "nativeAttempts": 57,
+  "successfulQuanta": 56,
+  "faults": 1,
+  "nativeEffects": {
+    "boot": 31,
+    "ad": 8,
+    "frame": 4,
+    "repair": 1,
+    "retry": 1
+  },
+  "javascriptStores": 37,
+  "javascriptAdUpdates": 11,
+  "frameHex": "0200037018000200",
+  "repairPte": "0000b003",
+  "retryOnce": true,
+  "ramSha256": "041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94",
+  "guardsEqual": true,
+  "cleanupClosed": true,
+  "scope": "Finite owned same-CPL16 page fault recovery; represented CPU fields and exact boards/pages. No general OS/full386/performance claim; callback owner labels source-inferred, not direct C owner telemetry."
+}
