@@ -530,6 +530,13 @@ All three earlier failed gates are retained. See the
 [discovery-census evidence](docs/receipts/2026-10-04-wasm-discovery-census/README.md).
 Production, pins and physical acknowledgements remain unchanged; CP13 is open.
 
+## Current target handoff
+
+The [2026-10-05 state and next-lane contracts](docs/TARGET-NEXT-LANES.md) separate
+working app routes, engine-native board gaps and remaining active-WASM >=1x
+qualification. Each lane names source files, prerequisites and pass criteria;
+the dated measurements above remain historical evidence, not today's main RTx.
+
 ## Limits
 
 This is not a universal SPICE replacement or a calibrated model of every
