@@ -59,9 +59,12 @@ const ATMEGA328P_ADC = {
   ADMUX: 0x7c, ADCSRA: 0x7a, ADCSRB: 0x7b, ADCL: 0x78, ADCH: 0x79,
   DIDR0: 0x7e, adcInterrupt: 0x2a, numChannels: 8, muxInputMask: 0xf,
   adcReferences: [1/*AREF*/, 0/*AVCC*/, 4/*Reserved*/, 2/*Internal1V1*/],
-  muxChannels: Object.fromEntries(
-    [...Array(8)].map((_, i) => [i, { type: 0/*SingleEnded*/, channel: i }])
-  ),
+  muxChannels: {
+    ...Object.fromEntries(
+      [...Array(8)].map((_, i) => [i, { type: 0/*SingleEnded*/, channel: i }])
+    ),
+    8: { type: 3/*Temperature*/ },  // MUX 1000: the internal sensor (chip-temperature.js)
+  },
 };
 
 /** ADC channel → pin name for analog reads from the board. */
@@ -116,6 +119,7 @@ export const ATMEGA328P = {
   timers: ATMEGA328P_TIMERS,
   adc: ATMEGA328P_ADC,
   adcChannelToPin: ATMEGA328P_ADC_MAP,
+  tempSensor: 'atmega',  // chip-temperature.js
   usart: ATMEGA328P_USART,
   twi: ATMEGA328P_TWI,
   spi: ATMEGA328P_SPI,
@@ -156,6 +160,7 @@ export const ATMEGA88PA = {
   timers: ATMEGA88PA_TIMERS,
   adc: { ...ATMEGA328P_ADC, adcInterrupt: v88(22) },
   adcChannelToPin: ATMEGA328P_ADC_MAP,
+  tempSensor: 'atmega',  // chip-temperature.js
   usart: { ...ATMEGA328P_USART, rxCompleteInterrupt: v88(19),
     dataRegisterEmptyInterrupt: v88(20), txCompleteInterrupt: v88(21) },
   twi: { ...ATMEGA328P_TWI, twiInterrupt: v88(25) },
@@ -336,6 +341,10 @@ const ATTINY85_PINS = {
 // ATtiny85 PORTB at different addresses than ATmega328P
 const attiny85PortBConfig = {
   PIN: 0x36, DDR: 0x37, PORT: 0x38,
+  // Pin change on PB0-PB5: GIMSK.PCIE (bit 5) enables, GIFR.PCIF (bit 5)
+  // flags, PCMSK selects pins; PCINT0 is vector 3, word address 2. The
+  // software UART's receiver is a pin-change interrupt on PB1.
+  pinChange: { PCIE: 5, PCICR: 0x5B, PCIFR: 0x5A, PCMSK: 0x35, pinChangeInterrupt: 2, mask: 0x3f, offset: 0 },
   externalInterrupts: [],
 };
 
@@ -380,9 +389,12 @@ const ATTINY85_ADC = {
   ADMUX: 0x27, ADCSRA: 0x26, ADCSRB: 0x23, ADCL: 0x24, ADCH: 0x25,
   DIDR0: 0x34, adcInterrupt: 0x08, numChannels: 4, muxInputMask: 0x3f,
   adcReferences: [1/*AREF/VCC*/, 0/*AVCC*/, 4/*Reserved*/, 3/*Internal2V56*/],
-  muxChannels: Object.fromEntries(
-    [...Array(4)].map((_, i) => [i, { type: 0/*SingleEnded*/, channel: i }])
-  ),
+  muxChannels: {
+    ...Object.fromEntries(
+      [...Array(4)].map((_, i) => [i, { type: 0/*SingleEnded*/, channel: i }])
+    ),
+    15: { type: 3/*Temperature*/ },  // MUX 1111 (ADC4): the internal sensor (chip-temperature.js)
+  },
 };
 
 // ADC channel → pin name (non-trivial mapping on ATtiny85)
@@ -412,7 +424,12 @@ export const ATTINY85 = {
   attinyTimer1: ATTINY85_TIMER1_CLASS,  // marker for special Timer1 handling
   adc: ATTINY85_ADC,
   adcChannelToPin: ATTINY85_ADC_MAP,
+  tempSensor: 'attiny85',  // chip-temperature.js
   usart: null,  // no USART on ATtiny85
+  // ...so print/ask use a software UART on the analog-comparator pins,
+  // ATTinyCore's convention (TX = AIN0 = PB0, RX = AIN1 = PB1). The adapter
+  // decodes TX edges and drives RX frames (avr8js-adapter.js, softSerial).
+  softSerial: { tx: { port: 'B', bit: 0 }, rx: { port: 'B', bit: 1 }, baud: 9600 },
   usi: ATTINY85_USI,    // USI peripheral for software I2C (TinyWireM)
   // I/O 0x1C-0x1F, one-word vectors: EE_RDY is vect_num 6, word address 6.
   eeprom: { EECR: 0x3C, EEDR: 0x3D, EEARL: 0x3E, EEARH: 0x3F,
@@ -460,11 +477,14 @@ const attiny88PortAConfig = {
   externalInterrupts: [],
 };
 
+// Same register addresses as the ATmega328P, but one-word vectors: PCINT0,
+// PCINT1 and PCINT2 sit at word addresses 3, 4 and 5 (the 328P's 6, 8, 10
+// would jump into the wrong vectors).
 const ATTINY88_PORTS = {
   A: attiny88PortAConfig,
-  B: portBConfig,  // same addresses as ATmega328P
-  C: portCConfig,
-  D: portDConfig,
+  B: { ...portBConfig, pinChange: { ...portBConfig.pinChange, pinChangeInterrupt: 3 } },
+  C: { ...portCConfig, pinChange: { ...portCConfig.pinChange, pinChangeInterrupt: 4 } },
+  D: { ...portDConfig, pinChange: { ...portDConfig.pinChange, pinChangeInterrupt: 5 } },
 };
 
 // Timer0 — simplified 8-bit counter.
@@ -561,6 +581,8 @@ export const ATTINY88 = {
   adc: ATTINY88_ADC,
   adcChannelToPin: ATTINY88_ADC_MAP,
   usart: null,  // no USART
+  // Software UART on AIN0/AIN1 (PD6 TX, PD7 RX), ATTinyCore's convention.
+  softSerial: { tx: { port: 'D', bit: 6 }, rx: { port: 'D', bit: 7 }, baud: 9600 },
   eeprom: ATTINY88_EEPROM,
   twi: ATTINY88_TWI,
 };

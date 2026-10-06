@@ -11,6 +11,7 @@
  * @module
  */
 
+import { avrTemperatureCounts, benchCelsius } from './chip-temperature.js';
 import {
   CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART, PinState,
   ATtinyTimer1, attinyTimer1Config,
@@ -277,6 +278,91 @@ export function createAvr8jsAdapter(opts = {}) {
     });
   }
 
+  // ── Software UART (the ATtinys: no USART) ──
+  // print/ask on these chips bit-bang 9600 8N1 on the chip's softSerial pins.
+  // TX: every edge on the TX pin is stamped with cpu.cycles, and one clock
+  // event 9.5 bit-times after a start bit reads the frame back from those
+  // stamps at the bit centres -- exact, whatever the program's own timing
+  // jitter, as long as it is inside the half-bit a real receiver allows. As
+  // on a real receiver, a start bit needs the line high for a bit-time before
+  // it, and a frame whose stop bit is low is a framing error, not a byte: a
+  // blinking LED on the pin prints nothing (a fast PWM could, as it would on
+  // a real serial monitor wired there).
+  // RX: sendSerial drives the RX pin through each frame on clock events and
+  // owns that pin only while frames are on the line (syncInputsBody skips it).
+  const soft = !chip.usart && chip.softSerial ? chip.softSerial : null;
+  let softRxOwned = false;
+  const softRxQueue = [];
+  let softRxBusy = false;
+  let softRxStart = null;
+  if (soft) {
+    const bitCycles = clockHz / soft.baud;
+    const txPort = ioPorts[soft.tx.port];
+    const rxPort = ioPorts[soft.rx.port];
+    const levelNow = () => (txPort.pinState(soft.tx.bit) === PinState.Low ? 0 : 1);
+    let level = levelNow();
+    let lastChange = -Infinity;                    // idle since power-on
+    let frameStart = -1;
+    let edges = [];
+    const levelAt = (t) => {
+      let l = 0;                                   // the start bit
+      for (const [c, v] of edges) { if (c <= t) l = v; else break; }
+      return l;
+    };
+    const decode = () => {
+      const t0 = frameStart;
+      let byte = 0;
+      for (let i = 0; i < 8; i++) if (levelAt(t0 + bitCycles * (1.5 + i))) byte |= 1 << i;
+      const stop = levelAt(t0 + bitCycles * 9.5);
+      const started = !levelAt(t0 + bitCycles * 0.5);
+      frameStart = -1;
+      edges = [];
+      if (!started) return;                        // a glitch, not a start bit (re-checked mid-bit, as a UART does)
+      if (!stop) return;                           // framing error: not a byte
+      if (serialListener) serialListener(byte);
+    };
+    txPort.addListener(() => {
+      const l = levelNow();
+      if (l === level) return;
+      const c = cpu.cycles;
+      if (frameStart >= 0) {
+        edges.push([c, l]);
+      } else if (l === 0 && c - lastChange >= bitCycles * 0.9) {
+        frameStart = c;
+        edges = [];
+        cpu.addClockEvent(decode, Math.round(bitCycles * 9.5));
+      }
+      level = l;
+      lastChange = c;
+    });
+    const sendFrame = () => {
+      if (!softRxQueue.length) {
+        softRxBusy = false;
+        softRxOwned = false;                       // the board's level again
+        syncInputs();
+        return;
+      }
+      const byte = softRxQueue.shift();
+      const levels = [0];
+      for (let i = 0; i < 8; i++) levels.push((byte >> i) & 1);
+      levels.push(1, 1);                           // stop bit, one bit of idle
+      let i = 0;
+      const step = () => {
+        rxPort.setPin(soft.rx.bit, levels[i] === 1);
+        i++;
+        cpu.addClockEvent(i < levels.length ? step : sendFrame, Math.round(bitCycles));
+      };
+      step();
+    };
+    softRxStart = () => {
+      if (softRxBusy) return;
+      softRxBusy = true;
+      softRxOwned = true;
+      rxPort.setPin(soft.rx.bit, true);            // idle high before the first start bit
+      cpu.addClockEvent(sendFrame, Math.round(bitCycles));
+    };
+  }
+
   // A level a DEVICE changes on its own (an echo ending, a 1-Wire slave's
   // slot) must reach the PIN register when the program reads it, not at the
   // slice end: every PINx read first brings the board up to the CPU's time
@@ -322,6 +408,7 @@ export function createAvr8jsAdapter(opts = {}) {
       const portCfg = chip.ports[def.port];
       const ddr = cpu.data[portCfg.DDR];
       if (ddr & (1 << def.bit)) continue; // MCU-driven
+      if (softRxOwned && def.port === soft.rx.port && def.bit === soft.rx.bit) continue; // a frame is on it
       port.setPin(def.bit, board.readPin(name) === 1);
     }
   }
@@ -331,6 +418,12 @@ export function createAvr8jsAdapter(opts = {}) {
   if (adc) {
     adc.onADCRead = (input) => {
       stats.adcReadCount++;
+      if (input.type === 3/*Temperature*/) {
+        // The chip's own sensor at the bench temperature, in counts against
+        // the internal 1.1 V the datasheets require for this channel.
+        adc.completeADCRead(avrTemperatureCounts(chip.tempSensor, benchCelsius(board)) ?? 0);
+        return;
+      }
       let volts = 0;
       if (board && board.readAnalog && input.channel != null) {
         const pinName = adcMap[input.channel];
@@ -347,8 +440,8 @@ export function createAvr8jsAdapter(opts = {}) {
     chip,
     clockHz,
 
-    /** Receive every byte the program transmits on UART0 (print output).
-     *  No-op on chips without USART (ATtiny85). */
+    /** Receive every byte the program transmits on UART0 (print output);
+     *  on the ATtinys, every byte decoded from the software-UART TX pin. */
     onSerial(cb) { serialListener = cb; },
 
     /** The chip's internal EEPROM (avr8js AVREEPROM), or null. */
@@ -358,11 +451,17 @@ export function createAvr8jsAdapter(opts = {}) {
 
     /**
      * Send bytes TO the program's UART0 (what a serial monitor types). Queued
-     * and delivered at the programmed baud rate; returns false on a chip
-     * without a USART (ATtiny85/88), true otherwise. Not recorded: the AVR
+     * and delivered at the programmed baud rate; on the ATtinys, as 9600 8N1
+     * frames on the software-UART RX pin. False on a chip with neither. Not recorded: the AVR
      * debug target declares no replay surface, so nothing claims to replay it.
      */
     sendSerial(byteOrBytes) {
+      if (!usart && soft) {
+        const bytes = typeof byteOrBytes === 'number' ? [byteOrBytes] : Array.from(byteOrBytes);
+        for (const b of bytes) softRxQueue.push(b & 0xff);
+        softRxStart();
+        return true;
+      }
       if (!usart) return false;
       const bytes = typeof byteOrBytes === 'number' ? [byteOrBytes] : Array.from(byteOrBytes);
       for (const b of bytes) rxQueue.push(b & 0xff);
