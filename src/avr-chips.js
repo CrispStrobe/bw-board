@@ -542,9 +542,10 @@ const ATTINY88_ADC = {
   DIDR0: 0x7E, adcInterrupt: 0x10,  // ADC, vect_num 16
   numChannels: 8, muxInputMask: 0x0F,
   adcReferences: [1/*AREF*/, 0/*AVCC*/, 4/*Reserved*/, 2/*Internal1V1*/],
-  muxChannels: Object.fromEntries(
-    [...Array(8)].map((_, i) => [i, { type: 0, channel: i }])
-  ),
+  muxChannels: {
+    ...Object.fromEntries([...Array(8)].map((_, i) => [i, { type: 0, channel: i }])),
+    8: { type: 3/*Temperature*/ },  // MUX 1000 (ADC8): the internal sensor (chip-temperature.js)
+  },
 };
 
 // ADC channel → pin name (ADC0–5 = PC0–5, ADC6–7 = analog only)
@@ -581,6 +582,7 @@ export const ATTINY88 = {
   adc: ATTINY88_ADC,
   adcChannelToPin: ATTINY88_ADC_MAP,
   usart: null,  // no USART
+  tempSensor: 'attiny88',  // chip-temperature.js
   // Software UART on AIN0/AIN1 (PD6 TX, PD7 RX), ATTinyCore's convention.
   softSerial: { tx: { port: 'D', bit: 6 }, rx: { port: 'D', bit: 7 }, baud: 9600 },
   eeprom: ATTINY88_EEPROM,

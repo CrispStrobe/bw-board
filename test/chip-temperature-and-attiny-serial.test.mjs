@@ -47,6 +47,8 @@ test('the sensor models follow the datasheet typical figures', () => {
     assert.equal(avrTemperatureCounts('atmega', -45), Math.round(242 / 1100 * 1024));
     // ATtiny85: 230 / 300 / 370 LSB at -40 / 25 / 85 C.
     assert.deepEqual([-40, 25, 85].map((t) => avrTemperatureCounts('attiny85', t)), [230, 300, 370]);
+    // ATtiny88: the same table (ATtiny48/88 datasheet 8008H, Table 17-2).
+    assert.deepEqual([-40, 25, 85].map((t) => avrTemperatureCounts('attiny88', t)), [230, 300, 370]);
     assert.equal(avrTemperatureCounts('none', 25), null);
     assert.ok(Math.abs(rp2040TemperatureVolts(27) - 0.706) < 1e-9);
     assert.ok(Math.abs(stm32f0TemperatureVolts(30) - 1.43) < 1e-9);
@@ -262,4 +264,47 @@ describe('ATtiny pin-change receivers', { skip: skipAvr }, () => {
             assert.equal(out, 'Ada 42\rok\r');
         });
     }
+});
+
+// ATtiny88: ADC8 (MUX 1000) with REFS0 = 0 -- on this part that is the
+// internal 1.1 V -- printed over its software UART on PD6.
+const TINY88_TEMP = `
+#include <avr/io.h>
+#include <stdint.h>
+#define BIT_CYCLES (F_CPU / 9600)
+static void tx(uint8_t c) {
+    uint8_t i;
+    PORTD &= ~_BV(6); __builtin_avr_delay_cycles(BIT_CYCLES - 8);
+    for (i = 0; i < 8; i++) {
+        if (c & 1) PORTD |= _BV(6); else PORTD &= ~_BV(6);
+        c >>= 1; __builtin_avr_delay_cycles(BIT_CYCLES - 12);
+    }
+    PORTD |= _BV(6); __builtin_avr_delay_cycles(BIT_CYCLES);
+}
+int main(void) {
+    char b[6]; uint8_t i = 0; uint16_t n;
+    PORTD |= _BV(6); DDRD |= _BV(6);
+    ADMUX = 0x08;                                   /* REFS0 = 0: 1.1 V; MUX 1000: ADC8 */
+    ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1);
+    ADCSRA |= _BV(ADSC); while (ADCSRA & _BV(ADSC)) ;
+    n = ADC;
+    do { b[i++] = '0' + n % 10; n /= 10; } while (n);
+    while (i) tx(b[--i]);
+    tx('\\n');
+    for (;;) ;
+}
+`;
+
+describe('ATtiny88: the temperature channel', { skip: skipAvr }, () => {
+    it('reads 300 LSB at 25 C and 370 LSB at 85 C', () => {
+        const program = build(TINY88_TEMP, 'attiny88', 8_000_000);
+        for (const [celsius, counts] of [[25, 300], [85, 370]]) {
+            const a = createAvr8jsAdapter({ program, chip: 'attiny88' });
+            a.attachBoard(stubBoard(celsius));
+            let out = '';
+            a.onSerial((b) => { out += String.fromCharCode(b); });
+            a.advanceNs(20_000_000);
+            assert.equal(out, `${counts}\n`, `${celsius} C`);
+        }
+    });
 });
