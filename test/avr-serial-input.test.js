@@ -60,9 +60,13 @@ test('a single byte (a number) is accepted too', () => {
   assert.deepEqual(out, [0x42]);
 });
 
-test('a chip without a USART says so instead of swallowing the bytes', () => {
-  const a = createAvr8jsAdapter({ chip: 'attiny85' });
+test('a chip with neither a USART nor a software UART says so instead of swallowing the bytes', () => {
+  // The ATtiny13 has no USART and no softSerial pins; the ATtiny85 used to be
+  // the example here, until it got a software UART (chip-temperature-and-
+  // attiny-serial.test.mjs drives one end to end).
+  const a = createAvr8jsAdapter({ chip: 'attiny13' });
   assert.equal(a.sendSerial(0x41), false);
+  assert.equal(createAvr8jsAdapter({ chip: 'attiny85' }).sendSerial(0x41), true, 'the tiny85 takes it now');
 });
 
 test('under the debugger too: its run loop bypasses advanceNs, and still delivers', async () => {
