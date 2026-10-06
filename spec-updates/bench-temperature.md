@@ -39,3 +39,26 @@ Non-finite input is ignored; a change re-solves and notifies
   params.tempC: 25 holds 0.750 V at any bench temperature.
 - A 5 V → 330 Ω → red LED chain's current rises by the hand-computed
   ΔI = 0.12 V / 330 Ω ≈ 0.36 mA from 25 °C to 85 °C.
+
+## The chips' own sensors (2026-10-06)
+
+A microcontroller sits on the same bench, so its on-die temperature sensor
+reads `board.temperatureC` too (src/chip-temperature.js), with each
+datasheet's TYPICAL curve — an uncalibrated part, which is what generated
+code assumes when it converts back:
+
+- ATmega328P/168P/88PA: ADC MUX 1000 against the internal 1.1 V —
+  242 / 314 / 380 mV at −45 / +25 / +85 °C.
+- ATtiny85: ADC4 (MUX 1111) against 1.1 V — 230 / 300 / 370 LSB at
+  −40 / +25 / +85 °C.
+- RP2040: ADC input 4 — 0.706 V at 27 °C, −1.721 mV/°C.
+- STM32F030: ADC channel 16 once ADC_CCR.TSEN is set — 1.43 V at 30 °C,
+  falling 4.3 mV/°C; unpowered (TSEN clear) it reads 0.
+
+The ATmega2560 and the STC 8051 parts have no sensor. The ATtiny88 has
+one; its typical-case table is not modelled, so it reads as absent rather
+than as an invented curve.
+
+Oracles: test/chip-temperature-and-attiny-serial.test.mjs — compiled AVR
+programs read 292 / 354 counts (ATmega, 25 / 85 °C) and 300 / 370 LSB
+(ATtiny85); the STM32F030 and RP2040 peripherals convert the curve above.

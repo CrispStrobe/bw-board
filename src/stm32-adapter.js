@@ -18,6 +18,7 @@
  */
 
 import { CortexM0Machine } from './cortex-m0-machine.js';
+import { stm32f0TemperatureVolts, benchCelsius } from './chip-temperature.js';
 import { attachStm32F0 } from './stm32f0-board.js';
 
 /** The F030 header pins the codegen can name (armHw stm32 variant):
@@ -83,6 +84,8 @@ export function createStm32F0Adapter (opts = {}) {
       const v = board.readAnalog(`PA${ch}`);
       return typeof v === 'number' && Number.isFinite(v) ? v : 0;
     },
+    // The on-die sensor (channel 16) sees the bench temperature.
+    onTemperature: () => stm32f0TemperatureVolts(benchCelsius(board)),
   });
 
   function syncInputs () {

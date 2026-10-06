@@ -35,6 +35,7 @@
  * @module
  */
 
+import { rp2040TemperatureVolts, benchCelsius } from './chip-temperature.js';
 import { RP2040, GPIOPinState, ConsoleLogger, LogLevel } from 'rp2040js';
 import { buildBootrom } from './rp2040-bootrom.js';
 import { fastExecuteInstruction } from './vendor/rp2040js-fast/execute-instruction.js';
@@ -194,6 +195,10 @@ export function createRp2040jsAdapter(opts = {}) {
       try { volts = board.readAnalog(`GP${26 + channel}`) ?? 0; } catch { volts = 0; }
       rp2040.adc.channelValues[channel] =
         Math.max(0, Math.min(4095, Math.round((volts / vcc) * 4095)));
+    } else if (channel === 4) {
+      // Input 4 is the on-die sensor, at the bench temperature.
+      rp2040.adc.channelValues[4] = Math.max(0, Math.min(4095,
+        Math.round((rp2040TemperatureVolts(benchCelsius(board)) / vcc) * 4095)));
     }
     defaultADCRead(channel);
   };

@@ -418,14 +418,17 @@ export class Stm32Tim14 {
 // its first read, which is the same observable behavior as a 1 µs
 // conversion the tick grid cannot resolve anyway.
 export class Stm32Adc {
-  /** @param {{rcc: Stm32Rcc, onAnalogRead?: (ch: number) => number, vref?: number}} opts */
-  constructor ({ rcc, onAnalogRead, vref = 3.3 }) {
+  /** @param {{rcc: Stm32Rcc, onAnalogRead?: (ch: number) => number,
+   *   onTemperature?: () => number, vref?: number}} opts */
+  constructor ({ rcc, onAnalogRead, onTemperature, vref = 3.3 }) {
     this.base = 0x40012400;
     this.size = 0x400;
     this.rcc = rcc;
     this.onAnalogRead = onAnalogRead || (() => 0);
+    // Channel 16 is the on-die temperature sensor, powered by ADC_CCR.TSEN.
+    this.onTemperature = onTemperature || (() => 1.43);
     this.vref = vref;
-    this.cr = 0; this.isr = 0; this.chselr = 0; this.dr = 0;
+    this.cr = 0; this.isr = 0; this.chselr = 0; this.dr = 0; this.ccr = 0;
   }
 
   _enabled () {
@@ -440,6 +443,7 @@ export class Stm32Adc {
       case 0x00: return this.isr;
       case 0x08: return this.cr;
       case 0x28: return this.chselr;
+      case 0x308: return this.ccr;
       case 0x40: { // DR: reading clears EOC, like the silicon
         this.isr &= ~(1 << 2);
         return this.dr;
@@ -457,9 +461,12 @@ export class Stm32Adc {
         if (this.cr & 1) this.isr |= 1;         // ADEN -> ADRDY
         if (this.cr & (1 << 2)) {               // ADSTART: convert now
           let ch = -1;
-          for (let i = 0; i < 16; i++) if ((this.chselr >>> i) & 1) { ch = i; break; }
+          for (let i = 0; i < 19; i++) if ((this.chselr >>> i) & 1) { ch = i; break; }
           if (ch >= 0) {
-            const volts = this.onAnalogRead(ch);
+            // 16: the temperature sensor (0 V until TSEN powers it);
+            // 17/18 (VREFINT, VBAT) are not modelled and read 0.
+            const volts = ch < 16 ? this.onAnalogRead(ch)
+              : ch === 16 && (this.ccr & (1 << 23)) ? this.onTemperature() : 0;
             const counts = Math.round((Math.max(0, Math.min(this.vref, volts)) / this.vref) * 4095);
             this.dr = counts & 0xfff;
             this.isr |= (1 << 2);               // EOC
@@ -469,6 +476,7 @@ export class Stm32Adc {
         break;
       }
       case 0x28: this.chselr = v >>> 0; break;
+      case 0x308: this.ccr = v >>> 0; break;   // ADC_CCR: TSEN is bit 23
       default: break;
     }
   }
@@ -521,7 +529,7 @@ export class Stm32Usart1 {
  * Assemble the F030 board onto a CortexM0Machine: RCC, GPIOA/B, TIM3,
  * TIM14, ADC, USART1. Returns the peripheral instances for adapters and tests.
  */
-export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRead, onInputRead } = {}) {
+export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRead, onTemperature, onInputRead } = {}) {
   const rcc = new Stm32Rcc();
   const gpioA = new Stm32Gpio({ base: 0x48000000, portIndex: 0, portLetter: 'A', rcc, onPinChange, onInputRead });
   const gpioB = new Stm32Gpio({ base: 0x48000400, portIndex: 1, portLetter: 'B', rcc, onPinChange, onInputRead });
@@ -529,7 +537,7 @@ export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRea
   // owned by its peripheral) — same publish stream as the GPIO's.
   const tim3 = new Stm32Tim3({ rcc, clockHz: machine.clockHz, onPinChange });
   const tim14 = new Stm32Tim14({ rcc, clockHz: machine.clockHz });
-  const adc = new Stm32Adc({ rcc, onAnalogRead });
+  const adc = new Stm32Adc({ rcc, onAnalogRead, onTemperature });
   const usart1 = new Stm32Usart1({ rcc, onByte: onSerialByte });
   for (const p of [rcc, gpioA, gpioB, tim3, tim14, adc, usart1]) machine.addPeripheral(p);
   return { rcc, gpioA, gpioB, tim3, tim14, adc, usart1 };
