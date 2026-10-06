@@ -51,13 +51,14 @@ code assumes when it converts back:
   242 / 314 / 380 mV at −45 / +25 / +85 °C.
 - ATtiny85: ADC4 (MUX 1111) against 1.1 V — 230 / 300 / 370 LSB at
   −40 / +25 / +85 °C.
+- ATtiny88: ADC8 (MUX 1000) against 1.1 V (REFS0 = 0 selects it on this
+  part) — the same 230 / 300 / 370 LSB table (ATtiny48/88 datasheet
+  8008H, Table 17-2; added 2026-10-06).
 - RP2040: ADC input 4 — 0.706 V at 27 °C, −1.721 mV/°C.
 - STM32F030: ADC channel 16 once ADC_CCR.TSEN is set — 1.43 V at 30 °C,
   falling 4.3 mV/°C; unpowered (TSEN clear) it reads 0.
 
-The ATmega2560 and the STC 8051 parts have no sensor. The ATtiny88 has
-one; its typical-case table is not modelled, so it reads as absent rather
-than as an invented curve.
+The ATmega2560 and the STC 8051 parts have no sensor.
 
 Oracles: test/chip-temperature-and-attiny-serial.test.mjs — compiled AVR
 programs read 292 / 354 counts (ATmega, 25 / 85 °C) and 300 / 370 LSB
