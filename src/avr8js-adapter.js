@@ -288,8 +288,10 @@ export function createAvr8jsAdapter(opts = {}) {
   // it, and a frame whose stop bit is low is a framing error, not a byte: a
   // blinking LED on the pin prints nothing (a fast PWM could, as it would on
   // a real serial monitor wired there).
-  // RX: sendSerial drives the RX pin through each frame on clock events and
-  // owns that pin only while frames are on the line (syncInputsBody skips it).
+  // RX: sendSerial drives the RX pin through each frame on clock events. From
+  // the first byte on, a serial monitor is on that pin, and its TX idles HIGH
+  // between frames: the adapter keeps holding the line (syncInputsBody skips
+  // it) rather than handing it back to whatever the bench says.
   const soft = !chip.usart && chip.softSerial ? chip.softSerial : null;
   let softRxOwned = false;
   const softRxQueue = [];
@@ -337,9 +339,7 @@ export function createAvr8jsAdapter(opts = {}) {
     });
     const sendFrame = () => {
       if (!softRxQueue.length) {
-        softRxBusy = false;
-        softRxOwned = false;                       // the board's level again
-        syncInputs();
+        softRxBusy = false;                        // the line stays high: idle
         return;
       }
       const byte = softRxQueue.shift();

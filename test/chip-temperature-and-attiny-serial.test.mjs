@@ -34,10 +34,10 @@ function build(src, mcu, fcpu) {
     return new Uint16Array(padded.buffer, 0, padded.length / 2);
 }
 
-/** A board that only answers what these programs ask: inputs idle high. */
-const stubBoard = (temperatureC) => ({
+/** A board that only answers what these programs ask: inputs high, except `low`. */
+const stubBoard = (temperatureC, low = []) => ({
     temperatureC,
-    setPin() {}, advanceTo() {}, readPin: () => 1, readAnalog: () => 0,
+    setPin() {}, advanceTo() {}, readPin: (name) => (low.includes(name) ? 0 : 1), readAnalog: () => 0,
 });
 
 test('the sensor models follow the datasheet typical figures', () => {
@@ -236,21 +236,30 @@ int main(void) {
 `;
 
 describe('ATtiny pin-change receivers', { skip: skipAvr }, () => {
-    for (const [chip, cfg] of [
+    for (const [chip, cfg, rxName] of [
         ['attiny85', { tx: 0, rx: 1, port: 'B', setup: 'PCMSK |= _BV(PCINT1); GIMSK |= _BV(PCIE)',
-            vector: 'PCINT0_vect', flag: 'GIFR = _BV(PCIF)' }],
+            vector: 'PCINT0_vect', flag: 'GIFR = _BV(PCIF)' }, 'PB1'],
         ['attiny88', { tx: 6, rx: 7, port: 'D', setup: 'PCMSK2 |= _BV(PCINT23); PCICR |= _BV(PCIE2)',
-            vector: 'PCINT2_vect', flag: 'PCIFR = _BV(PCIF2)' }],
+            vector: 'PCINT2_vect', flag: 'PCIFR = _BV(PCIF2)' }, 'PD7'],
     ]) {
         it(`${chip}: a typed line arrives through the interrupt and comes back`, () => {
             const a = createAvr8jsAdapter({ program: build(PCINT_ECHO(cfg), chip, 8_000_000), chip });
-            a.attachBoard(stubBoard(25));
+            // The bench reads RX low (nothing drives it there): the monitor's
+            // line, once attached, is what the pin sees instead.
+            a.attachBoard(stubBoard(25, [rxName]));
             let out = '';
             a.onSerial((b) => { out += String.fromCharCode(b); });
             a.advanceNs(2_000_000);
             a.sendSerial(Array.from('Ada 42\r', (c) => c.charCodeAt(0)));
             a.advanceNs(30_000_000);
             assert.equal(out, 'Ada 42\r');
+            // The monitor stays attached: its idle-high line must not fire the
+            // receiver again (a bench reading low here put a 0x00 in the
+            // queue and corrupted the next line printed -- found by
+            // sb3-creator's ask chain on both chips).
+            a.sendSerial(Array.from('ok\r', (c) => c.charCodeAt(0)));
+            a.advanceNs(30_000_000);
+            assert.equal(out, 'Ada 42\rok\r');
         });
     }
 });
