@@ -58,6 +58,7 @@ normal_tar = tarred([("tool/COPYING", tarfile.REGTYPE, b"owned notice"),
 entries, notices = inventory_tar(normal_tar)
 assert len(entries) == 3 and notices == {"tool/COPYING": b"owned notice"}
 assert entries[-1]["resolved"] == "tool/gcc"
+assert inventory_tar(tarred([("./", tarfile.DIRTYPE, b"")]))[0][0]["type"] == "root-directory"
 denies(lambda: inventory_tar(tarred([("tool/bad", tarfile.SYMTYPE, b"../../escape")])))
 denies(lambda: inventory_tar(tarred([("../bad", tarfile.REGTYPE, b"x")])))
 denies(lambda: inventory_tar(tarred([("tool/x", tarfile.REGTYPE, b"a"),
@@ -78,4 +79,4 @@ denies(lambda: validate_metadata(catalog.replace(b"163,241", b"163,242"), releas
 denies(lambda: validate_metadata(catalog, {**release, "assets": []}, tag))
 denies(lambda: validate_metadata(catalog, release,
                                  {**tag, "object": {"sha": "0" * 40}}))
-print("PASS 16 bounded archive and metadata controls; no remote asset inspected")
+print("PASS 17 bounded archive and metadata controls; no remote asset inspected")

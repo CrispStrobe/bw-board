@@ -143,6 +143,12 @@ def inventory_tar(raw: bytes) -> tuple[list[dict], dict[str, bytes]]:
         for entry in archive:
             if len(members) >= MAX_MEMBERS:
                 raise ValueError("archive member count")
+            if entry.name in (".", "./") and entry.isdir():
+                if "." in seen:
+                    raise ValueError("duplicate archive root")
+                seen.add(".")
+                members.append({"path": ".", "type": "root-directory", "bytes": 0})
+                continue
             name = name_check(entry.name)
             if name in seen:
                 raise ValueError("duplicate archive path")
