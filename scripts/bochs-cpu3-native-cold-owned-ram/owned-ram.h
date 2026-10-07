@@ -94,6 +94,7 @@ public:
  uint64_t acknowledged()const{owner_only();return acknowledged_;}
  uint64_t committed_sequence()const{owner_only();return sequence_;}
  uint64_t next_effect()const{owner_only();return next_effect_;}
+ uint32_t generation_at(uint32_t address)const{owner_only();if(address>=ram_extent)throw std::out_of_range("owned RAM generation address");return generations_[address/4096];}
  unsigned journal_size()const{owner_only();return count_;}
  bool code_pending()const{owner_only();return code_pending_;}
  uint8_t inspect_byte(uint32_t address)const{owner_only();return ram_.at(address);}
