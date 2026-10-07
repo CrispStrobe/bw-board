@@ -35,6 +35,12 @@ test('actual strict386 JS board delivers one PIC IRQ through a translated 16-bit
  assert.deepEqual([...final.pages.stack.subarray(0x100,0x104)],[0x11,0x11,0x22,0x22]);
  const ordinary=final.events.filter(e=>e.kind==='write'&&!e.paging);
  assert.equal(ordinary.length,bootStores.length*4+frameStores.length*2+markerStores.length*2);
+ const expectedOrdinary=[...bootStores.map(e=>({...e,kind:'instruction'})),
+  ...frameStores.map(e=>({...e,kind:'irq-delivery'})),
+  ...markerStores.map(e=>({...e,kind:'instruction'}))]
+  .flatMap(e=>e.bytes.map((value,i)=>[e.raw+i,value,e.kind,e.cs,e.ip]));
+ assert.deepEqual(ordinary.map(e=>[e.raw,e.after,e.phase.kind,e.phase.cs,e.phase.eip]),expectedOrdinary,
+  'exact ordered boot, JS ascending IRQ frame, handler and interrupted stores');
  const paging=final.events.filter(e=>e.kind==='write'&&e.paging);
  assert.equal(paging.length,adTransitions.length*4);
  const dword=bytes=>bytes.reduce((n,b,i)=>(n|b<<(8*i))>>>0,0);
