@@ -1603,7 +1603,9 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             }
             if (space !== 'mem') return { unsupported: `no space '${space}' on 8086` };
             const out = new Uint8Array(len);
-            for (let i = 0; i < len; i++) out[i] = machine._read((addr + i) & 0xfffff);
+            for (let i = 0; i < len; i++) out[i] = machine.cpuBackend === 'i80386-experimental'
+                ? machine._peek386((addr + i) >>> 0)
+                : machine._read((addr + i) & 0xfffff);
             return out;
         },
 
