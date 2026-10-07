@@ -1,0 +1,297 @@
+{
+  "artifact": {
+    "download": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11518548153/zip",
+    "id": 11518548153,
+    "retentionDays": 14,
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11518548153",
+    "zipBytes": 114439,
+    "zipSha256": "2e0859c04158610090237f27fd25134627a6fb2f712a59985e8290e8269591f1"
+  },
+  "audit": {
+    "peer": "PASS; independent standard-library original ZIP/source/observation audit; no producer imports or replay",
+    "root": "PASS; independent standard-library ZIP/source/observation audit"
+  },
+  "compile": {
+    "executable": {
+      "bytes": 179581,
+      "format": {
+        "coff": {
+          "coffOffset": 2048,
+          "flags": 263,
+          "format": "DJGPP i386 COFF",
+          "magic": 332,
+          "optionalHeaderBytes": 28,
+          "optionalMagic": 267,
+          "reference": "https://delorie.com/djgpp/doc/coff/filhdr.html",
+          "sections": 11,
+          "valid": true
+        },
+        "coffOffset": 2048,
+        "format": "DOS MZ stub plus DJGPP i386 COFF",
+        "mzBlocks": 4,
+        "mzHeaderParagraphs": 32,
+        "mzLastBlockBytes": 0,
+        "reference": "https://www.delorie.com/djgpp/doc/exe/",
+        "valid": true
+      },
+      "sha256": "66ce1db6017aff8a491c0775f14639281e780fe31b1ecd6da0005dfd9d31b43b",
+      "uploaded": false
+    },
+    "map": {
+      "bytes": 196305,
+      "sha256": "1de7e8c28b1017fd6bf2758c971e0f8d4795342fc6624e6a89391cb0c7e76dfb"
+    },
+    "object": {
+      "bytes": 1848,
+      "format": {
+        "coffOffset": 0,
+        "flags": 260,
+        "format": "DJGPP i386 COFF",
+        "magic": 332,
+        "optionalHeaderBytes": 0,
+        "reference": "https://delorie.com/djgpp/doc/coff/filhdr.html",
+        "sections": 5,
+        "valid": true
+      },
+      "sha256": "fe150a3ff9a9eb7fe78ace8759ed307ebdaa93af4710363583c2a7d67ccb9315"
+    }
+  },
+  "guest": {
+    "bootPrompt": [
+      "",
+      "FreeCom version 0.86 - WATCOMC - XMS_Swap [Dec 30 2024 22:10:51]",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Welcome to the FreeDOS 1.4 installation program.",
+      "",
+      "FreeDOS is a complete operating system. If you choose to install this on",
+      "your computer, you may  overwrite the operating system you have now",
+      "(for example, Windows.) If this is not what you intend, please stop NOW!",
+      "",
+      "Do you want to proceed [Y,N]?N",
+      "",
+      "The installation of FreeDOS 1.4 has been aborted.",
+      "A:\\>",
+      ""
+    ],
+    "checks": {
+      "currentFinalPrompt": true,
+      "exactSuccessLine": true,
+      "separateInput": true,
+      "separateReturn": true,
+      "zeroErrorlevel": true
+    },
+    "elapsedWallSeconds": 7.901,
+    "finalDiskSha256": "1033fa3aa5e58b76cf39393537a514edca6b10352c7a6ddc0d95644931dd9607",
+    "finalPrompt": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Welcome to the FreeDOS 1.4 installation program.",
+      "",
+      "FreeDOS is a complete operating system. If you choose to install this on",
+      "your computer, you may  overwrite the operating system you have now",
+      "(for example, Windows.) If this is not what you intend, please stop NOW!",
+      "",
+      "Do you want to proceed [Y,N]?N",
+      "",
+      "The installation of FreeDOS 1.4 has been aborted.",
+      "A:\\>c:\\rundp.bat",
+      "BW-DPMI-BATCH-DONE",
+      "C:\\>c:\\verify.bat",
+      "C:\\>"
+    ],
+    "guestFiles": {
+      "fail": null,
+      "ok": {
+        "bytes": 16,
+        "sha256": "e167ee770cd51e3062f72beb109600466762b50e32585e3d36138c70c9d863d2",
+        "text": "BW-DPMI-EXIT-0\r\n"
+      },
+      "output": {
+        "bytes": 29,
+        "sha256": "c521891770a84ca2e2e7130b3cd8be4bc422d822e522b900542129695f8d3163",
+        "text": "BW_DPMI_OK checksum=4225408\r\n"
+      },
+      "returned": {
+        "bytes": 22,
+        "sha256": "423b3a1fb864712e0611895aa56cddfc83f5bb347eabde869e747f3ce343ae1b",
+        "text": "BW-DPMI-SHELL-RETURN\r\n"
+      }
+    },
+    "initialDiskSha256": "04ea4952cbc6d932eae118c805f01974644b171282ecdbcab0fdbe937ed62676",
+    "maxRssBytes": 70279168,
+    "postClientPrompt": [
+      "FreeCom version 0.86 - WATCOMC - XMS_Swap [Dec 30 2024 22:10:51]",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Welcome to the FreeDOS 1.4 installation program.",
+      "",
+      "FreeDOS is a complete operating system. If you choose to install this on",
+      "your computer, you may  overwrite the operating system you have now",
+      "(for example, Windows.) If this is not what you intend, please stop NOW!",
+      "",
+      "Do you want to proceed [Y,N]?N",
+      "",
+      "The installation of FreeDOS 1.4 has been aborted.",
+      "A:\\>c:\\rundp.bat",
+      "BW-DPMI-BATCH-DONE",
+      "C:\\>"
+    ],
+    "processGroupEmpty": true,
+    "qemuExitStatus": 0,
+    "vgaEvidence": {
+      "boot": {
+        "bytes": 4000,
+        "file": "oracle-vga-boot.bin",
+        "sha256": "bd0883eea076537ad1c71d9abcc141c7fdd83f398ee5b49328075299e0b472dc"
+      },
+      "final": {
+        "bytes": 4000,
+        "file": "oracle-vga-final.bin",
+        "sha256": "31b4e84c60a2a31b3dea1fbb44e241a4ba5593aa668d1ab9e05c2472bddbac02"
+      },
+      "post-client": {
+        "bytes": 4000,
+        "file": "oracle-vga-post-client.bin",
+        "sha256": "b06070c5f313ac3af107584838f87aa1dd9833c47ecbee07bed2b88e20e7f571"
+      }
+    }
+  },
+  "kind": "selected actual observations; not a replacement for the original artifact",
+  "limits": [
+    "Independent QEMU pc/486 4 MiB functional control only; AT run remains pending.",
+    "No internal INT 31h order, original 386 instruction-set guarantee, game, mouse, Windows or performance qualification.",
+    "Executable, image and component bytes were not uploaded; their hashes/formats are hosted observations.",
+    "Guest wall time includes boot/input/probing and is not an RTx benchmark.",
+    "No full source-to-binary or redistribution clearance for every linked component."
+  ],
+  "media": {
+    "bytes": 10653696,
+    "compileClientSha256": "66ce1db6017aff8a491c0775f14639281e780fe31b1ecd6da0005dfd9d31b43b",
+    "cwsdpmiSha256": "2de899fecaa90632b8b9bdfc0305cb0375e59ae252c37e32d06c1ed3f98a8f44",
+    "files": {
+      "CLIENT  EXE": {
+        "bytes": 179581,
+        "sha256": "66ce1db6017aff8a491c0775f14639281e780fe31b1ecd6da0005dfd9d31b43b"
+      },
+      "CWSDPMI EXE": {
+        "bytes": 21325,
+        "sha256": "2de899fecaa90632b8b9bdfc0305cb0375e59ae252c37e32d06c1ed3f98a8f44"
+      },
+      "RUNDP   BAT": {
+        "bytes": 203,
+        "sha256": "956a2353ef6aefb55af6b847d05602409e59a0142f52dfa68568c01098279eae"
+      },
+      "VERIFY  BAT": {
+        "bytes": 52,
+        "sha256": "1f01a2a474c5f7cb6aae6633e922db8e35e4a8083c167c5b568b225a5f864ea4"
+      }
+    },
+    "geometry": {
+      "cylinders": 306,
+      "heads": 4,
+      "sectors": 17
+    },
+    "info": {
+      "clusters": 10338,
+      "fatSectors": 41,
+      "firstData": 132,
+      "geometry": {
+        "cylinders": 306,
+        "heads": 4,
+        "sectors": 17
+      },
+      "partSectors": 20791,
+      "rootSectors": 32,
+      "spc": 2,
+      "startLba": 17,
+      "totalSectors": 20808,
+      "used": 199
+    },
+    "schema": "bw.cwsdpmi-owned.qemu-media.v1",
+    "sha256": "04ea4952cbc6d932eae118c805f01974644b171282ecdbcab0fdbe937ed62676"
+  },
+  "profile": "QEMU TCG pc/486, 4 MiB, SeaBIOS/std VGA, FreeDOS 1.4; no AT comparison",
+  "run": {
+    "attempt": 1,
+    "conclusion": "success",
+    "id": 37703391864,
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37703391864"
+  },
+  "runtime": {
+    "bios": {
+      "bytes": 262144,
+      "sha256": "1a9ea4f17bcfb27bda5728e2c21d9fa074cf7947b9b4910bb28213a735c96735"
+    },
+    "qemu": {
+      "bytes": 26359752,
+      "sha256": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5"
+    },
+    "qemuPackage": "qemu-system-x86 1:8.2.2+ds-0ubuntu1.18",
+    "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "schema": "bw.cwsdpmi-owned.qemu-runtime.v1",
+    "seabiosPackage": "seabios 1.16.3-2",
+    "vga": {
+      "bytes": 39424,
+      "sha256": "4eecd8e752efc02c6c0fe87eb92bf66934cb9ea67b0e1bc41e86f8430c8bf8a0"
+    }
+  },
+  "schema": "bw.cwsdpmi-owned.qemu-public-checkpoint.v1",
+  "sourceRoles": {
+    ".github/workflows/i80386-cwsdpmi-compile-only.yml": "3b09b99dea06d22544cb6790a5f887d663828fc01deae3ac68b5bd4da4734c22",
+    ".github/workflows/i80386-cwsdpmi-qemu-owned-actual.yml": "ddc2ea2653c45cb44e175961f2af9ab940e1e255a7d860c9feb12c3d49680259",
+    "scripts/i80386-cwsdpmi-compile-only/QEMU-GATE.md": "e87d45798caac054149e144af820face08aaf533ec5dc7ac15887d8c698f85d4",
+    "scripts/i80386-cwsdpmi-compile-only/README.md": "2612990b412be73d62020855432d14586be57982e9a7c94f9ff14b4876e9d21c",
+    "scripts/i80386-cwsdpmi-compile-only/RESULTS.md": "713555956887a117554e267681d3c5be5885c351d6451b4e293a4baa3a5bcaba",
+    "scripts/i80386-cwsdpmi-compile-only/compile-control.py": "11958f61279151263c20f2855472fc4dc19b2c42fa743243d2644d05a9e9599c",
+    "scripts/i80386-cwsdpmi-compile-only/compile.py": "959931875f090164b2a0d34f07f6eb1b06940d0f34c1ef6c2f7e8c903f87ac51",
+    "scripts/i80386-cwsdpmi-compile-only/source.py": "372757eaecded6d51d92aa0601c4d0f311f914034e382e981fd56c950a616f58",
+    "scripts/i80386-cwsdpmi-owned/acquire.py": "9a47a3be8e0264f7ce1bc9834a230a7ca4d421b61d3c2d8e156b832f2582b69d",
+    "scripts/i80386-cwsdpmi-owned/client.c": "c8c654326633b244c64baac144fe9300ce5a1800c330e52615470c62d8c3bb1d",
+    "scripts/i80386-cwsdpmi-qemu-owned/README.md": "8d340c5a33a0fec872536138a698016b1e6c662151ddbff83b6ab51c514927ae",
+    "scripts/i80386-cwsdpmi-qemu-owned/media-control.mjs": "69e354cce1bed04946e4067d91bdfd7785e605fc37bdc47ec14d469fcb2739b2",
+    "scripts/i80386-cwsdpmi-qemu-owned/media.mjs": "22884993bd294997e97b672529b849887b97d54a3f6305182a3e3acc0fa6d8a8",
+    "scripts/i80386-cwsdpmi-qemu-owned/oracle-control.py": "f87f1727aa565b073b8c8bf617f5db3345df40cd278be1be2f3002305b052b86",
+    "scripts/i80386-cwsdpmi-qemu-owned/oracle.py": "bb30d31db9f841475e9a02b3b0bdb58e37d565a191fa17518d1382a97fe8504a",
+    "scripts/i80386-cwsdpmi-qemu-owned/package-control.py": "1d78acfd2468a37d93f7bf4eb290a788bb7294363b28351cdf083e9e17b8cf51",
+    "scripts/i80386-cwsdpmi-qemu-owned/package.py": "17dd692895e74130606f5bb6bd842e84438c0be7b57f0f94925183ee519b97d0",
+    "scripts/i80386-cwsdpmi-qemu-owned/runtime.py": "e530d19948c2d85ebec809a757fb85214482ecd1e20a4c1ca51505aa7cff54b5",
+    "scripts/i80386-cwsdpmi-qemu-owned/source-control.py": "9ec103a42dc5c788d2eefc662410225a39cb5ae85c1aeb240a6fa499f030e632",
+    "scripts/i80386-cwsdpmi-qemu-owned/source.py": "e5ed66882f06ffad28db19d2cd65b92aa20d4009796ec11f5e4351e4f57f5f19",
+    "scripts/i80386-dos32a-owned/acquire.py": "31fc586e3aaaf4098cd36a3ec2a73a6f1c8c367a63a1ebcc40b8125c1b9524f8",
+    "scripts/i80386-dos32a-owned/media.mjs": "886383bdaaf72dc4b31b1a38b429b9959eb69510aac06be914f6c44be6f750ad",
+    "scripts/i80386-dos32a-owned/oracle.py": "0e03f3fe484d76e4b7c8479fea79f99328a0fcf6aeba0d29157c817ee9533765",
+    "scripts/lib/i80386-free-bios-fat16.mjs": "c6b2bd6f13d264b07b64f517e1dcd6b385e3a71016d1b871dfbadf3855b30cd3"
+  },
+  "testedSource": "64c1cc463ec19d2b8a03df21af2dd4494f7b4497"
+}
