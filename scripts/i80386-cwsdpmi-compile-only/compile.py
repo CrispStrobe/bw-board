@@ -262,7 +262,7 @@ def command(name, argv, cwd, env, out, timeout=120):
         os.set_blocking(state["file"].fileno(), False)
         watched.register(state["file"], selectors.EVENT_READ, label)
     try:
-        while watched.get_map():
+        while watched.get_map() or proc.poll() is None:
             if time.monotonic() - start > timeout:
                 timed_out = True
             if (timed_out or capped) and not killed:
@@ -271,7 +271,10 @@ def command(name, argv, cwd, env, out, timeout=120):
                 except ProcessLookupError:
                     pass
                 killed = True
-            for key, _ in watched.select(0.05):
+            ready = watched.select(0.05) if watched.get_map() else ()
+            if not watched.get_map():
+                time.sleep(0.05)
+            for key, _ in ready:
                 state = streams[key.data]
                 try:
                     chunk = os.read(key.fileobj.fileno(), 65536)

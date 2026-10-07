@@ -75,6 +75,10 @@ def run():
         denies(lambda: gate.command("timeout", [sys.executable, "-c", "import time; time.sleep(2)"],
                                    root, {"PATH": "/usr/bin:/bin"}, out, 0.05))
         assert json.loads((out / "timeout.json").read_text())["timeout"] is True
+        denies(lambda: gate.command("closed-pipes", [sys.executable, "-c",
+                    "import os,time; os.close(1); os.close(2); time.sleep(2)"],
+                    root, {"PATH": "/usr/bin:/bin"}, out, 0.05))
+        assert json.loads((out / "closed-pipes.json").read_text())["timeout"] is True
         denies(lambda: gate.command("chatty", [sys.executable, "-c",
                     "import sys; sys.stdout.write('x'*5000000); sys.stdout.flush()"],
                     root, {"PATH": "/usr/bin:/bin"}, out, 5))
