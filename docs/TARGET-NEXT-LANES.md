@@ -31,6 +31,19 @@ this summary does not replace old failures or reinterpret them as successes.
   **1.2697x**, all five runs >=1x. This is selected active native guest evidence,
   not browser/full-board throughput. PXT micro:bit/Arcade is wall-paced API
   simulation, not CPU RTx.
+- ST7735 colour/parser/inspection and write-driven reset/backlight foundation
+  landed in [LabWired PR161](https://github.com/CrispStrobe/labwired-core/pull/161),
+  merge `f77110d4646cab67cb12be9a19fc787afe3a650b`, reviewed source
+  `90943b8d72957f497d6794913ef43a066b302711`. All 20 enabled checks passed;
+  four authored SAM guest tests passed in both feature configurations.
+  [Fresh native micro:bit run37605866679](https://github.com/CrispStrobe/labwired-core/actions/runs/37605866679)
+  measured five-sample medians **5.6307x** GPIO/display/buttons and **1.1656x**
+  motion/display/buttons (motion minimum **1.1487x**). Tested merge checkout
+  `4e99e37cd4ded9cb932c333418d5935dc1481477` has the landed main's tree.
+  These selected runner-specific native results are not an A/B, PyBadge,
+  complete-board or WASM measurement. The earlier rates above remain historical.
+  [Exact qualification and next rectangular driver/panel lane](https://github.com/CrispStrobe/labwired-core/blob/main/docs/engineering/st7735-color-foundation.md).
+  Production module binding, IRQ/DMA and app adoption remain open; no pin moved.
 - Lite [target run37463042960](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37463042960)
   on `23bc15cf4e9f5910f1f7455425b238cccd4c4834` measured Arduboy **5.561x**,
   ATtiny88 **10.227x**, Uno **5.178x**, micro:bit-class WASM **26.818x** and
@@ -124,8 +137,9 @@ then Lite's explicit vendor-pin/production app lane.
 
 First identify which engine features the shipped adapter actually exposes.
 Upstream PyBadge buttons and blocking SAM SPI are merged (PR151/PR152), but the
-SPI merge has the open idle-performance regression above; native panel/DMA is
-not done. Wire only qualified capabilities with bounded input
+idle regression was repaired by PR159; its measurement-stability follow-up
+remains open. PR161 adds a qualified test-only colour/GPIO foundation, not a
+production panel or DMA driver. Wire only qualified capabilities with bounded input
 validation and debugger-visible actual model output. Build/publish a source-bound
 artifact only after ordinary runtime gates; advance Lite explicitly afterward.
 
