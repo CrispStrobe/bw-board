@@ -3,6 +3,8 @@
 
 import io
 import json
+import os
+import struct
 import sys
 import tempfile
 import zipfile
@@ -73,6 +75,49 @@ def run():
         denies(lambda: gate.command("timeout", [sys.executable, "-c", "import time; time.sleep(2)"],
                                    root, {"PATH": "/usr/bin:/bin"}, out, 0.05))
         assert json.loads((out / "timeout.json").read_text())["timeout"] is True
+        denies(lambda: gate.command("chatty", [sys.executable, "-c",
+                    "import sys; sys.stdout.write('x'*5000000); sys.stdout.flush()"],
+                    root, {"PATH": "/usr/bin:/bin"}, out, 5))
+        chatty = json.loads((out / "chatty.json").read_text())
+        assert chatty["outputCapped"] and chatty["stdoutBytes"] > gate.MAX_LOG
+        assert len((out / "chatty.stdout").read_bytes()) == gate.MAX_LOG
+        role = "assembler"
+        role_path = root / gate.SELECTED[role][0]
+        role_path.parent.mkdir(parents=True)
+        role_path.write_bytes(b"owned assembler")
+        saved_selected = dict(gate.SELECTED)
+        saved_probes = dict(gate.ROLE_PROBES)
+        try:
+            gate.SELECTED.clear(); gate.SELECTED[role] = (saved_selected[role][0], gate.sha(b"owned assembler"))
+            gate.ROLE_PROBES.clear(); gate.ROLE_PROBES[role] = "assembler-probe"
+            (out / "assembler-probe.stdout").write_text("/usr/bin/as\n")
+            denies(lambda: gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"}))
+            assert not json.loads((out / "compiler-resolved-roles.json").read_text())[role]["admitted"]
+            (out / "assembler-probe.stdout").write_text(str(role_path) + "\n")
+            assert gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
+            alias = root / gate.ROLE_ALIASES[role][0]
+            alias.parent.mkdir(parents=True, exist_ok=True)
+            os.link(role_path, alias)
+            (out / "assembler-probe.stdout").write_text(str(alias) + "\n")
+            assert gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
+            alias.unlink()
+            alias.write_bytes(b"owned assembler")
+            denies(lambda: gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"}))
+        finally:
+            gate.SELECTED.clear(); gate.SELECTED.update(saved_selected)
+            gate.ROLE_PROBES.clear(); gate.ROLE_PROBES.update(saved_probes)
+        obj = struct.pack("<HHIIIHH", 0x14c, 1, 0, 0, 0, 0, 0) + bytes(40)
+        assert gate.coff_format(obj)["valid"]
+        assert not gate.coff_format(b"xx" + obj[2:])["valid"]
+        coff = struct.pack("<HHIIIHH", 0x14c, 1, 0, 0, 0, 28, 2) + \
+            struct.pack("<H", 0x010b) + bytes(26 + 40)
+        stub = bytearray(512)
+        stub[0:2] = b"MZ"
+        struct.pack_into("<H", stub, 4, 1)
+        struct.pack_into("<H", stub, 8, 2)
+        assert gate.djgpp_executable_format(bytes(stub) + coff)["valid"]
+        struct.pack_into("<H", stub, 8, 33)
+        assert not gate.djgpp_executable_format(bytes(stub) + coff)["valid"]
         inputs = {name: root / name for name in ("toolchain", *gate.SOURCE, "client")}
         inputs["toolchain"].write_bytes(b"wrong pinned toolchain")
         inputs["client"].write_bytes(b"int main(void){return 0;}\n")

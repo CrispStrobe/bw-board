@@ -7,8 +7,9 @@ import io
 import json
 import os
 import resource
-import shutil
+import selectors
 import signal
+import struct
 import subprocess
 import sys
 import tarfile
@@ -43,6 +44,13 @@ SELECTED = {
 }
 CLIENT = Path("scripts/i80386-cwsdpmi-owned/client.c")
 MAX_LOG = 2 << 20
+ROLE_PROBES = {"assembler": "gcc-as-role", "linker": "gcc-ld-role",
+               "stubify": "gcc-stubify-role", "crt0.o": "gcc-crt0-role",
+               "libc.a": "gcc-libc-role", "libgcc.a": "gcc-libgcc-role"}
+ROLE_ALIASES = {
+    "assembler": ("djgpp/bin/i586-pc-msdosdjgpp-as",),
+    "linker": ("djgpp/bin/i586-pc-msdosdjgpp-ld", "djgpp/bin/i586-pc-msdosdjgpp-ld.bfd"),
+}
 
 
 def sha(raw):
@@ -131,6 +139,87 @@ def source_origins(raw, out):
     return result
 
 
+def coff_format(raw, offset=0, executable=False):
+    result = {"format": "DJGPP i386 COFF", "coffOffset": offset,
+              "reference": "https://delorie.com/djgpp/doc/coff/filhdr.html", "valid": False}
+    if offset < 0 or offset + 20 > len(raw):
+        result["failure"] = "short COFF file header"
+        return result
+    magic, sections, _, _, _, optional, flags = struct.unpack_from("<HHIIIHH", raw, offset)
+    result.update({"magic": magic, "sections": sections, "optionalHeaderBytes": optional,
+                   "flags": flags})
+    if (magic != 0x14c or not 1 <= sections <= 96 or optional > 256 or
+            offset + 20 + optional + sections * 40 > len(raw)):
+        result["failure"] = "COFF file/section header"
+        return result
+    if executable:
+        if optional < 28 or not (flags & 0x0002) or offset + 22 > len(raw):
+            result["failure"] = "COFF executable header"
+            return result
+        result["optionalMagic"] = struct.unpack_from("<H", raw, offset + 20)[0]
+        if result["optionalMagic"] != 0x010b:
+            result["failure"] = "COFF optional ZMAGIC"
+            return result
+    elif optional != 0 or flags & 0x0002:
+        result["failure"] = "relocatable COFF object expected"
+        return result
+    result["valid"] = True
+    return result
+
+
+def djgpp_executable_format(raw):
+    result = {"format": "DOS MZ stub plus DJGPP i386 COFF",
+              "reference": "https://www.delorie.com/djgpp/doc/exe/", "valid": False}
+    if len(raw) < 28 or raw[:2] != b"MZ":
+        result["failure"] = "DOS MZ prefix"
+        return result
+    last, blocks = struct.unpack_from("<HH", raw, 2)
+    paragraphs = struct.unpack_from("<H", raw, 8)[0]
+    offset = blocks * 512 - (512 - last if last else 0)
+    result.update({"mzBlocks": blocks, "mzLastBlockBytes": last,
+                   "mzHeaderParagraphs": paragraphs, "coffOffset": offset})
+    if last > 511 or blocks == 0 or paragraphs == 0 or paragraphs * 16 > offset or offset + 20 > len(raw):
+        result["failure"] = "DOS stub extent"
+        return result
+    coff = coff_format(raw, offset, executable=True)
+    result["coff"] = coff
+    result["valid"] = coff["valid"]
+    if not result["valid"]:
+        result["failure"] = "appended COFF image"
+    return result
+
+
+def resolve_roles(extracted, out, env):
+    result = {}
+    for role, probe in ROLE_PROBES.items():
+        raw = (out / (probe + ".stdout")).read_bytes()
+        value = raw.decode("utf-8", errors="replace").strip()
+        expected_path, expected_hash = SELECTED[role]
+        selected = extracted / expected_path
+        named = Path(value)
+        if named.is_absolute():
+            candidate = named
+        elif named.name == value and value not in ("", ".", ".."):
+            candidate = next((Path(folder) / value for folder in env["PATH"].split(":")
+                              if (Path(folder) / value).is_file()), named)
+        else:
+            candidate = named
+        permitted = [selected, *(extracted / alias for alias in ROLE_ALIASES.get(role, ()))]
+        admitted_path = next((path for path in permitted if candidate == path), None)
+        admissible = ("\n" not in value and admitted_path is not None and
+                      candidate.is_file() and not candidate.is_symlink() and
+                      selected.is_file() and not selected.is_symlink() and
+                      candidate.samefile(selected) and sha(candidate.read_bytes()) == expected_hash)
+        result[role] = {"probe": probe, "reportedPath": value,
+                        "resolvedPath": str(candidate),
+                        "selectedPath": expected_path, "selectedSha256": expected_hash,
+                        "admitted": admissible}
+        write_json(out / "compiler-resolved-roles.json", result)
+    if not all(item["admitted"] for item in result.values()):
+        raise ValueError("compiler implicit role resolution mismatch")
+    return result
+
+
 def extract_checked_tool(raw, members, work):
     target = work / "toolchain"
     target.mkdir()
@@ -165,29 +254,63 @@ def command(name, argv, cwd, env, out, timeout=120):
     proc = subprocess.Popen(argv, cwd=cwd, env=env, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, start_new_session=True,
                             preexec_fn=child_limits)
-    timed_out = False
+    timed_out = capped = killed = False
+    streams = {"stdout": {"file": proc.stdout, "count": 0, "hash": hashlib.sha256(), "saved": bytearray()},
+               "stderr": {"file": proc.stderr, "count": 0, "hash": hashlib.sha256(), "saved": bytearray()}}
+    watched = selectors.DefaultSelector()
+    for label, state in streams.items():
+        os.set_blocking(state["file"].fileno(), False)
+        watched.register(state["file"], selectors.EVENT_READ, label)
     try:
-        stdout, stderr = proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        os.killpg(proc.pid, signal.SIGKILL)
-        stdout, stderr = proc.communicate()
+        while watched.get_map():
+            if time.monotonic() - start > timeout:
+                timed_out = True
+            if (timed_out or capped) and not killed:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                killed = True
+            for key, _ in watched.select(0.05):
+                state = streams[key.data]
+                try:
+                    chunk = os.read(key.fileobj.fileno(), 65536)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    watched.unregister(key.fileobj)
+                    key.fileobj.close()
+                    continue
+                state["count"] += len(chunk)
+                state["hash"].update(chunk)
+                keep = MAX_LOG - len(state["saved"])
+                if keep > 0:
+                    state["saved"].extend(chunk[:keep])
+                if state["count"] > MAX_LOG:
+                    capped = True
+        proc.wait(timeout=5)
     finally:
+        watched.close()
         try:
             os.killpg(proc.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
-    for label, raw in (("stdout", stdout), ("stderr", stderr)):
-        (out / (name + "." + label)).write_bytes(raw[:MAX_LOG])
+        if proc.poll() is None:
+            proc.wait(timeout=5)
+    for label, state in streams.items():
+        (out / (name + "." + label)).write_bytes(state["saved"])
     receipt = {"argv": argv, "exit": proc.returncode, "timeout": timed_out,
+               "outputCapped": capped,
                "elapsedSeconds": time.monotonic() - start,
-               "stdoutBytes": len(stdout), "stdoutSha256": sha(stdout),
-               "stderrBytes": len(stderr), "stderrSha256": sha(stderr),
-               "outputTruncated": max(len(stdout), len(stderr)) > MAX_LOG}
+               "stdoutBytes": streams["stdout"]["count"],
+               "stdoutSha256": streams["stdout"]["hash"].hexdigest(),
+               "stderrBytes": streams["stderr"]["count"],
+               "stderrSha256": streams["stderr"]["hash"].hexdigest(),
+               "outputTruncated": capped}
     write_json(out / (name + ".json"), receipt)
-    if timed_out or proc.returncode != 0 or receipt["outputTruncated"]:
+    if timed_out or capped or proc.returncode != 0:
         raise ValueError(name + " command failed")
-    return stdout, stderr
+    return bytes(streams["stdout"]["saved"]), bytes(streams["stderr"]["saved"])
 
 
 def run(paths, out, work):
@@ -213,8 +336,10 @@ def run(paths, out, work):
     build = work / "build"
     build.mkdir()
     (build / "client.c").write_bytes(client)
-    env = {"PATH": str(prefix / "bin") + ":/usr/bin:/bin", "LC_ALL": "C",
+    env = {"PATH": str(prefix / "i586-pc-msdosdjgpp/bin") + ":" +
+           str(prefix / "bin") + ":/usr/bin:/bin", "LC_ALL": "C",
            "HOME": str(work), "TMPDIR": str(work), "SOURCE_DATE_EPOCH": "0"}
+    write_json(out / "compiler-environment.json", env)
     gcc = str(compiler)
     cflags = ["-std=gnu11", "-O2", "-march=i386", "-mtune=i386",
               "-Wall", "-Wextra", "-Werror", "-fno-lto"]
@@ -233,19 +358,30 @@ def run(paths, out, work):
                        ("gcc-compile-plan", [gcc, "-###", *compile_argv[1:]]),
                        ("gcc-link-plan", [gcc, "-###", *link_argv[1:]])):
         command(name, argv, build, env, out, 30)
+    resolved_roles = resolve_roles(extracted, out, env)
     checkpoint(out, "compile-owned-client")
     command("compile", compile_argv, build, env, out)
     obj = build / "client.o"
     if not obj.is_file() or obj.stat().st_size > 16 << 20:
         raise ValueError("bounded object missing")
-    object_receipt = {"bytes": obj.stat().st_size, "sha256": sha(obj.read_bytes())}
+    object_raw = obj.read_bytes()
+    object_format = coff_format(object_raw)
+    write_json(out / "client-object-format.json", object_format)
+    if not object_format["valid"]:
+        raise ValueError("owned object COFF format")
+    object_receipt = {"bytes": len(object_raw), "sha256": sha(object_raw),
+                      "format": object_format}
     write_json(out / "client-object.json", object_receipt)
     checkpoint(out, "link-owned-client")
     command("link", link_argv, build, env, out)
     exe, map_file = build / "client.exe", build / "client.map"
     if not exe.is_file() or not map_file.is_file() or exe.stat().st_size > 16 << 20 or map_file.stat().st_size > 4 << 20:
         raise ValueError("bounded link outputs missing")
-    header = exe.open("rb").read(64)
+    exe_raw = exe.read_bytes()
+    executable_format = djgpp_executable_format(exe_raw)
+    write_json(out / "client-executable-format.json", executable_format)
+    if not executable_format["valid"]:
+        raise ValueError("linked DJGPP MZ/COFF format")
     map_raw = map_file.read_bytes()
     (out / "client.map").write_bytes(map_raw)
     link_evidence = (map_raw + (out / "gcc-link-plan.stderr").read_bytes() +
@@ -265,10 +401,10 @@ def run(paths, out, work):
               "ownedSource": {"path": str(CLIENT), "sha256": sha(client)},
               "compileArgv": compile_argv, "linkArgv": link_argv,
               "object": object_receipt,
+              "resolvedImplicitRoles": resolved_roles,
               "selectedLinkRoleObservations": observed_roles,
-              "executable": {"bytes": exe.stat().st_size,
-                             "sha256": sha(exe.read_bytes()),
-                             "mzPrefix": header[:2] == b"MZ", "uploaded": False},
+              "executable": {"bytes": len(exe_raw), "sha256": sha(exe_raw),
+                             "format": executable_format, "uploaded": False},
               "map": {"bytes": len(map_raw), "sha256": sha(map_raw)},
               "limits": ["Compiler target is i586; -march/-mtune govern owned object only, not every linked startup/runtime instruction",
                          "No link-component licence or libgcc source-to-binary closure is claimed",
