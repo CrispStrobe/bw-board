@@ -129,14 +129,6 @@ export class VGAMemory {
         return result;
     }
 
-    /** Inspect the CPU-visible aperture without changing the VGA read latches. */
-    peek(address) {
-        if (!Number.isInteger(address) || address < 0xa0000 || address > 0xbffff) return null;
-        const saved = this.latches.slice();
-        try { return this.read(address); }
-        finally { this.latches.set(saved); }
-    }
-
     /** Return false when the selected VGA aperture does not decode address. */
     write(address, value) {
         if (!Number.isInteger(address) || address < 0xa0000 || address > 0xbffff) return false;

@@ -167,13 +167,6 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     return decoded < this.memoryBytes ? this._read(decoded) : 0xff;
   }
 
-  /** Debugger physical read: preserve the guest's VGA read latches. */
-  _peek386(address) {
-    const video = this.vgaMemory?.peek(this._decode386(address));
-    if (video !== undefined && video !== null) return video;
-    return this._read386(address);
-  }
-
   // Paging fetches four bytes at a time. Bypass per-byte decode only inside a
   // wholly mapped RAM page above 1 MiB; everything else keeps the bus path.
   _read386Ram32(address) {
