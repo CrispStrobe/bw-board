@@ -33,7 +33,11 @@ pairs. Every child must have a clean source/media admission and the complete
 existing xv6 semantic projection must agree, including final CPU state,
 reported full RAM and disk hashes, serial/input, bounded interrupt records and
 device state. The only excluded report fields are authenticated source
-identity and revision. The predeclared adoption threshold is mean **whole-child
+identity and revision. Each reported free-BIOS path must equal the exact
+checkout's ROM path and its bytes must match the qualified digest; that one
+authenticated path is compared as the same repository role across checkouts.
+The raw child reports retain their original paths. The predeclared adoption
+threshold is mean **whole-child
 wait4 CPU** after/before at most `0.98`, all seven measured CPU pairs favorable,
 and mean whole-child wall after/before at most `1.02`. These timings include
 startup/report work. They are not guest-execution CPU or a calibrated clock

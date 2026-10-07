@@ -8,7 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from run import CPU_PATH, CPU_ROLE, validate_changed_paths, validate_inventory_delta
+from run import (CPU_PATH, CPU_ROLE, ROM_ROLE, canonical_rom_semantics,
+                 validate_changed_paths, validate_inventory_delta)
 
 
 def rejected(call) -> None:
@@ -29,6 +30,28 @@ validate_inventory_delta(prior, candidate)
 rejected(lambda: validate_inventory_delta(prior, prior))
 rejected(lambda: validate_inventory_delta(prior, {**candidate, "./probe-xv6-stock.mjs": "d" * 64}))
 rejected(lambda: validate_inventory_delta(prior, {CPU_ROLE: "c" * 64}))
+with tempfile.TemporaryDirectory() as directory:
+    source = Path(directory)
+    rom = source / ROM_ROLE
+    rom.parent.mkdir(parents=True)
+    rom.write_bytes(b"R" * 65536)
+    digest = hashlib.sha256(rom.read_bytes()).hexdigest()
+    semantic = {"rom": {"path": str(rom), "sha256": digest},
+                "cpu": {"eax": 1}}
+    canonical = canonical_rom_semantics(semantic, source, digest)
+    assert canonical["rom"] == {"path": ROM_ROLE, "sha256": digest}
+    assert semantic["rom"]["path"] == str(rom) and canonical["cpu"] == semantic["cpu"]
+    rejected(lambda: canonical_rom_semantics(
+        {**semantic, "rom": {**semantic["rom"], "path": str(source / "other")}},
+        source, digest))
+    rejected(lambda: canonical_rom_semantics(
+        {**semantic, "rom": {**semantic["rom"], "path": str(source / ".." / source.name / ROM_ROLE)}},
+        source, digest))
+    rejected(lambda: canonical_rom_semantics(
+        {**semantic, "rom": {**semantic["rom"], "sha256": "0" * 64}},
+        source, digest))
+    rom.write_bytes(b"T" + b"R" * 65535)
+    rejected(lambda: canonical_rom_semantics(semantic, source, digest))
 qualified = Path(__file__).resolve().parents[1] / "xv6-js-acceptance" / "run.py"
 sys.path.insert(0, str(qualified.parent))
 spec = importlib.util.spec_from_file_location("qualified_xv6_run_control", qualified)

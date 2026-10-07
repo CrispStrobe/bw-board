@@ -18,6 +18,7 @@ from snapshot_policy import ARMS, require, summarize
 BASE_HEAD = "6e5662bec11442e373a2489f213bc506438373e8"
 CPU_ROLE = "../src/experimental/i80386.js"
 CPU_PATH = "src/experimental/i80386.js"
+ROM_ROLE = "roms/free-at-bios/BIOS-bochs-legacy"
 HELPERS = ("scripts/xv6-js-acceptance/run.py",
            "scripts/xv6-js-acceptance/policy.py")
 OWN_ROLES = ("scripts/xv6-js-snapshot-paired/README.md",
@@ -65,6 +66,21 @@ def validate_inventory_delta(prior: dict[str, str], candidate: dict[str, str]) -
             "source inventory role set differs")
     differing = {name for name in prior if prior[name] != candidate[name]}
     require(differing == {CPU_ROLE}, "source closure differs beyond the CPU")
+
+
+def canonical_rom_semantics(semantic: dict, source: Path, expected_sha: str) -> dict:
+    """Retain every guest field while binding its ROM origin to this exact checkout."""
+    rom = semantic.get("rom")
+    require(isinstance(rom, dict) and set(rom) == {"path", "sha256"},
+            "guest ROM report shape differs")
+    source = source.resolve(strict=True)
+    file = source / ROM_ROLE
+    require(file.is_file() and not file.is_symlink() and file.stat().st_size == 65536 and
+            file.resolve(strict=True).is_relative_to(source) and
+            rom["path"] == str(file) and
+            rom["sha256"] == expected_sha and sha(file.read_bytes()) == expected_sha,
+            "guest ROM path or bytes differ from exact checkout")
+    return {**semantic, "rom": {"path": ROM_ROLE, "sha256": expected_sha}}
 
 
 def admission(before: Path, after: Path, head: str):
@@ -162,7 +178,9 @@ def main() -> None:
                     ["node", "--max-old-space-size=768", "scripts/probe-xv6-stock.mjs"],
                     source, helper.clean_child_env(image_dir, "ordinary"), child_dir, arm)
                 report = helper.load_json(child_dir / "stdout.json")
-                semantic = helper.validate_report(report, "ordinary", revision, media)
+                semantic = canonical_rom_semantics(
+                    helper.validate_report(report, "ordinary", revision, media),
+                    source, helper.ROM_SHA)
                 require(report["sourceSha256"] == expected,
                         "reported source closure differs from preguest inventory")
                 helper.check_source_inventory(source, report["sourceSha256"])
