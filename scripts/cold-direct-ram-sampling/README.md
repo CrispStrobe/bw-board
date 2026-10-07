@@ -47,6 +47,17 @@ generation-Map copy on each reconcile, including empty batches; that is a
 candidate to measure, not a proven bottleneck. Inspector sampling overhead
 and its sample deltas are not adoption timing or precise CPU cost shares.
 
+The first file-backed hosted attempt preserved four semantically passing
+children but stopped at a raw V8 `timeDeltas` value of -53 microseconds in the
+first direct sample. The [CDP profile definition](https://chromedevtools.github.io/devtools-protocol/tot/Profiler/)
+specifies integer intervals and a first delta relative to `startTime`; the
+[Node 22.23.3 V8 serializer](https://github.com/nodejs/node/blob/v22.23.3/deps/v8/src/profiler/profile-generator.cc#L809-L818)
+emits differences of adjacent sample timestamps. The parser now accepts only
+bounded signed deltas with every cumulative timestamp inside the profile
+window. If any delta is negative, all delta-weighted buckets and fractions
+are unavailable; raw order, signed sum, and sample-count buckets remain.
+The failed attempt is not a completed nine-child diagnostic.
+
 `node --cpu-prof` would include startup and settlement, so this lane brackets
 the execution loop with Inspector instead. `node --prof` is a possible later
 whole-process corroboration, not this gate. The workflow records whether an

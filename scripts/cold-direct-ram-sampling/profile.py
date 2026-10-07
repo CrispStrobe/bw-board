@@ -7,6 +7,7 @@ MAX_BYTES=16*1024*1024
 MAX_NODES=100000
 MAX_SAMPLES=250000
 MAX_MICROSECONDS=360*1000000
+MAX_BACKWARD_MICROSECONDS=1000
 
 def require(ok,message):
     if not ok:raise ValueError(message)
@@ -58,17 +59,21 @@ def load(path):
         active.add(node_id);stack.append((node_id,True))
         stack.extend((child,False) for child in reversed(by_id[node_id].get('children',[])))
     require(len(visited)==len(by_id),'all profile nodes reachable')
-    total=0
+    total=0;negative_count=0;minimum_delta=None
     for sample,delta in zip(samples,deltas):
         require(type(sample) is int and sample in by_id,'sample references node')
-        require(type(delta) is int and 0<=delta<=MAX_MICROSECONDS,'nonnegative bounded delta')
+        require(type(delta) is int and -MAX_BACKWARD_MICROSECONDS<=delta<=MAX_MICROSECONDS,
+                'bounded signed sample delta')
+        if delta<0:negative_count+=1
+        minimum_delta=delta if minimum_delta is None else min(minimum_delta,delta)
         total+=delta
+        require(0<=total<=end-start+1000,'cumulative sample timestamp within profile window')
     require(0<total<=MAX_MICROSECONDS,'positive bounded sampled duration')
     # CDP timeDeltas start at profile start, then count between samples. The
     # last sample precedes stop; one configured 1000-us sample interval covers
     # possible timestamp rounding at the end.
     require(total<=end-start+1000,'sampled duration within profile window')
-    return profile,by_id,parents,total
+    return profile,by_id,parents,total,negative_count,minimum_delta
 
 def role(url,context,cache):
     if url in cache:return cache[url]
@@ -127,7 +132,7 @@ def summarize(path,context):
     require(type(context) is dict and all(key in context for key in
             ('providerLoadedSha256','qualifiedRoot','harnessRoot','derivedRoot')),
             'authenticated profile source roles')
-    profile,by_id,parents,total=load(path)
+    profile,by_id,parents,total,negative_count,minimum_delta=load(path)
     counts={key:{'samples':0,'sampledDeltaMicroseconds':0} for key in
             ('js_reconcile','js_clock_callback','js_board_device','other_js',
              'v8_gc','native_or_unresolved')}
@@ -137,16 +142,24 @@ def summarize(path,context):
         counts[bucket]['samples']+=1;counts[bucket]['sampledDeltaMicroseconds']+=delta
     for bucket in counts.values():
         bucket['fractionOfSamples']=bucket['samples']/len(profile['samples'])
-        bucket['fractionOfSampledDeltas']=bucket['sampledDeltaMicroseconds']/total
+        if negative_count:
+            bucket['sampledDeltaMicroseconds']=None
+            bucket['fractionOfSampledDeltas']=None
+        else:bucket['fractionOfSampledDeltas']=bucket['sampledDeltaMicroseconds']/total
     return {'schema':'bw.cold-direct-ram.inspector-samples.v1',
             'scope':'diagnostic V8 execution-scope samples, not adoption timing or precise CPU cost share',
             'nodeCount':len(by_id),'sampleCount':len(profile['samples']),
             'profileWindowMicroseconds':profile['endTime']-profile['startTime'],
-            'sampledDeltaMicroseconds':total,
+            'sampledDeltaMicroseconds':total if not negative_count else None,
+            'rawSignedDeltaSumMicroseconds':total,
+            'timeDeltaStatus':'MONOTONIC' if not negative_count else 'NONMONOTONIC_COUNTS_ONLY',
+            'negativeTimeDeltaCount':negative_count,
+            'minimumTimeDeltaMicroseconds':minimum_delta,
             'unassignedOrNativeSamples':counts['native_or_unresolved']['samples'],
             'buckets':counts,
             'resolvedUrlRoles':{value:sum(1 for role_name in cache.values() if role_name==value)
              for value in ('authenticated_provider','qualified','derived','harness','node_runtime','unresolved')},
             'limitations':['Blank-URL native/builtin frames remain unresolved even with JS ancestors.',
                            'Reconcile samples do not identify empty versus nonempty batches.',
+                           'Nonmonotonic sample timestamps suppress all delta-weighted bucket values and fractions.',
                            'Sample deltas and profiler bracketing include profiler overhead and do not equal execution CPU.']}

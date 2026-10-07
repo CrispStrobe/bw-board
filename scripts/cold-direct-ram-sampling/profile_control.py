@@ -30,6 +30,7 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-control-') as folder:
     def write(value):profile_path.write_text(json.dumps(value)+'\n')
     write(profile);out=summarize(profile_path,context)
     assert out['sampleCount']==4 and out['buckets']['js_reconcile']['samples']==1
+    assert out['timeDeltaStatus']=='MONOTONIC' and out['sampledDeltaMicroseconds']==4000
     assert out['buckets']['v8_gc']['samples']==1
     assert out['buckets']['native_or_unresolved']['samples']==1
     assert out['buckets']['js_board_device']['samples']==1
@@ -57,6 +58,18 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-control-') as folder:
     write(truncated)
     long_context={**context,'providerLoadedSha256':hashlib.sha256(long_provider).hexdigest()}
     assert summarize(profile_path,long_context)['buckets']['js_reconcile']['samples']==0
+    signed=copy.deepcopy(profile);signed['timeDeltas']=[1000,1000,-53,1000]
+    write(signed);limited=summarize(profile_path,context)
+    assert limited['timeDeltaStatus']=='NONMONOTONIC_COUNTS_ONLY'
+    assert limited['negativeTimeDeltaCount']==1 and limited['minimumTimeDeltaMicroseconds']==-53
+    assert limited['rawSignedDeltaSumMicroseconds']==2947 and limited['sampledDeltaMicroseconds'] is None
+    assert sum(b['samples'] for b in limited['buckets'].values())==4
+    assert all(b['sampledDeltaMicroseconds'] is None and b['fractionOfSampledDeltas'] is None
+               for b in limited['buckets'].values())
+    bad=copy.deepcopy(signed);bad['timeDeltas'][0]=-53;write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(signed);bad['timeDeltas'][2]=-1001;write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(signed);bad['timeDeltas']=[1000,5100,-1000,0]
+    write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['samples'][1]=99;write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['timeDeltas'][0]=-1;write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['nodes'][3]['children']=[2];write(bad);denied(lambda:load(profile_path))
