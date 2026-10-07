@@ -124,8 +124,9 @@ class Bridge {
    require(r.phase==BW_COLD_DIRECT_RAM_RUNNING,"direct RAM running observer phase");
    require((r.kind>=BW_COLD_DIRECT_RAM_ENTRY&&r.kind<=BW_COLD_DIRECT_RAM_RETURN&&
     r.kind!=BW_COLD_DIRECT_RAM_PIC_ACK_FORBIDDEN)||r.kind==BW_COLD_DIRECT_RAM_PIO_IN||
-    r.kind==BW_COLD_DIRECT_RAM_PIO_OUT,"direct RAM reason/PIC ACK");
+    r.kind==BW_COLD_DIRECT_RAM_PIO_OUT||r.kind==BW_COLD_DIRECT_RAM_PAGE_CLOCK,"direct RAM reason/PIC ACK");
    if(r.kind==BW_COLD_DIRECT_RAM_ENTRY||r.kind==BW_COLD_DIRECT_RAM_POST_PIO)require(r.tape_count==0,"direct RAM query tape");
+   if(r.kind==BW_COLD_DIRECT_RAM_PAGE_CLOCK)require(r.tape_count>0,"direct RAM PAGE clock flush tape");
   }
   uint64_t n=r.n_before,q=r.q_before;uint32_t debt=r.debt_before;
   for(uint32_t i=0;i<r.tape_count;++i){

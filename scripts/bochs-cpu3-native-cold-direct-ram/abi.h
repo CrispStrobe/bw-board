@@ -35,7 +35,9 @@ enum bw_cold_direct_ram_boundary_kind {
   BW_COLD_DIRECT_RAM_RETURN = 11,
   BW_COLD_DIRECT_RAM_PIO_IN = 12,
   BW_COLD_DIRECT_RAM_PIO_OUT = 13,
-  BW_COLD_DIRECT_RAM_PAUSED_OBSERVER = 14
+  BW_COLD_DIRECT_RAM_PAUSED_OBSERVER = 14,
+  /* Source clock reason PAGE=4 flushes a tape before the separate page callback. */
+  BW_COLD_DIRECT_RAM_PAGE_CLOCK = 15
 };
 /* Only CPU3 source globals may populate this after the existing clock transfer
    has validated its completed N/Q. JS never supplies these ledger fields.

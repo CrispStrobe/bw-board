@@ -90,6 +90,31 @@ static void preflight_before_ack_and_effect(){
  denies([&]{f.bridge.commit(p,f.view());});
 }
 
+static void page_clock_flush_is_not_page_admission(){
+ Fixture f;uint8_t byte=0x5a;
+ assert(f.bridge.memory(f.write(0x100,byte)).status==BW_COLD_DIRECT_RAM_ACCEPTED);
+ uint32_t tape[]={1,2};auto clock=f.boundary(BW_COLD_DIRECT_RAM_PAGE_CLOCK);
+ clock.tape=tape;clock.tape_count=2;clock.n_after=1;clock.q_after=1;
+ auto malformed=clock;malformed.tape_count=0;
+ denies([&]{f.bridge.prepare(malformed);});
+ malformed=clock;malformed.page_raw=0xf0000;
+ denies([&]{f.bridge.prepare(malformed);});
+ assert(f.bridge.acknowledged()==0&&f.board[0x100]==0&&f.bridge.journal_size()==1);
+ auto prepared=f.bridge.prepare(clock);auto receipt=f.bridge.commit(prepared,f.view());
+ assert(receipt.acknowledged==1&&receipt.n==1&&receipt.q==1&&f.board[0x100]==byte);
+ assert(!f.bridge.page_ticket());
+ denies([&]{f.bridge.rom_execute_page(0xf0000);}); // Clock flush never grants a page ticket.
+ auto page=f.boundary(BW_COLD_DIRECT_RAM_PAGE);page.n_before=page.n_after=1;
+ page.q_before=page.q_after=1;page.debt_before=6;page.page_raw=0;
+ denies([&]{f.bridge.prepare(page);});
+ page.page_raw=0x7000;
+ denies([&]{f.bridge.prepare(page);}); // Actual callback remains ROM-only.
+ assert(!f.bridge.page_ticket()&&f.bridge.acknowledged()==1);
+ page.page_raw=0xf0000;prepared=f.bridge.prepare(page);f.bridge.commit(prepared,f.view());
+ assert(f.bridge.page_ticket());assert(f.bridge.rom_execute_page(0xf0000)[0]==0x42);
+ assert(!f.bridge.page_ticket());f.bridge.close();
+}
+
 static void capacity_retry_and_distinct_ledgers(){
  Fixture f;
  for(unsigned i=0;i<32;++i){uint8_t byte=uint8_t(i+1);auto req=f.write(0x200+i,byte,0);
@@ -161,6 +186,6 @@ static void failstop_reentry_and_thread(){
  assert(other.bridge.failed());denies([&]{other.bridge.prepare(other.boundary());});
 }
 
-int main(){copied_identity_and_decode();preflight_before_ack_and_effect();capacity_retry_and_distinct_ledgers();
+int main(){copied_identity_and_decode();preflight_before_ack_and_effect();page_clock_flush_is_not_page_admission();capacity_retry_and_distinct_ledgers();
  late_batch_conflict_is_atomic();wrong_retry_poison_is_pre_effect();companion_committed_code_fence_is_distinct();failstop_reentry_and_thread();
  std::cout<<"direct-RAM source controls PASS\n";}

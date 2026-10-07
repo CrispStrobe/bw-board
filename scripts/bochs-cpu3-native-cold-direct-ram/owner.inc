@@ -106,7 +106,7 @@ static bool direct_request(BoundaryRequest *out){
  bw_cold_direct_ram_clock_ledger source={};if(!bw_cold_direct_ram_source_clock(&source)){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT clock\n");return false;}
  if(source.mapping_epoch||source.board_a20!=1){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT mapping epoch=%u a20=%u\n",source.mapping_epoch,source.board_a20);return false;}
  BoundaryRequest r{};
- if(direct_scope==DirectScope::clock){r.kind=direct_reason;r.phase=direct_reason==BW_COLD_DIRECT_RAM_INIT?BW_COLD_DIRECT_RAM_PAUSED:BW_COLD_DIRECT_RAM_RUNNING;r.tape=direct_words;r.tape_count=direct_count;}
+ if(direct_scope==DirectScope::clock){r.kind=direct_reason==BW_COLD_DIRECT_RAM_PAGE?uint32_t(BW_COLD_DIRECT_RAM_PAGE_CLOCK):direct_reason;r.phase=direct_reason==BW_COLD_DIRECT_RAM_INIT?BW_COLD_DIRECT_RAM_PAUSED:BW_COLD_DIRECT_RAM_RUNNING;r.tape=direct_words;r.tape_count=direct_count;}
  else if(direct_scope==DirectScope::page){r.kind=BW_COLD_DIRECT_RAM_PAGE;r.phase=BW_COLD_DIRECT_RAM_RUNNING;r.page_raw=direct_page_raw;}
  else if(direct_scope==DirectScope::scalar){
   r.kind=direct_op==BW_DIRECT_PIO_IN8?BW_COLD_DIRECT_RAM_PIO_IN:direct_op==BW_DIRECT_PIO_OUT?BW_COLD_DIRECT_RAM_PIO_OUT:BW_COLD_DIRECT_RAM_PIC_ACK_FORBIDDEN;
