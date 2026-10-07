@@ -6,6 +6,7 @@ import {irqProgress} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
 import {derivePagedIrqComparison,comparisonParentSha256} from '../scripts/bochs-cpu3-native-paged-irq/cpu-comparison.mjs';
 import {readFileSync} from 'node:fs';
 import {runPagedIrqFixture,nextNamedCut} from '../scripts/bochs-cpu3-native-paged-irq/runner.mjs';
+import {sourceIdentity} from '../scripts/bochs-cpu3-native-paged-irq/build-identity.mjs';
 
 test('IRQ driver adapter preserves actual board callbacks and copied read/write order',async()=>{
  const source=deriveDriverProvider();assert.equal(source.parentSha256,profileProviderSha256);
@@ -25,6 +26,18 @@ test('IRQ driver adapter preserves actual board callbacks and copied read/write 
  pages.gdt[first.raw&4095]=99;assert.equal(p.ramPages().gdt[first.raw&4095],first.bytes[0],'copies cannot mutate source RAM');
  events[1].bytes[0]=99;assert.equal(p.memoryEvents()[1].bytes[0],first.bytes[0]);
  p.close();
+});
+
+test('IRQ actual admission binds the imported INT parent and every actual gate source role',()=>{
+ const source=sourceIdentity();
+ for(const path of [
+  'scripts/bochs-cpu3-native-paged-int-iret/runtime.mjs',
+  'scripts/bochs-cpu3-native-paged-int-iret/provider-derivation.mjs',
+  'scripts/bochs-cpu3-native-paged-irq/runner.mjs',
+  'scripts/bochs-cpu3-native-paged-irq/parity.mjs',
+  'scripts/ci-build-i80386-native-paged-irq.py',
+  '.github/workflows/i80386-native-paged-irq-actual.yml',
+ ])assert.match(source.hashes[path],/^[a-f0-9]{64}$/,path);
 });
 
 test('IRQ progress admits only actual zero-Q delivery and keeps the IF phase in comparison',()=>{
