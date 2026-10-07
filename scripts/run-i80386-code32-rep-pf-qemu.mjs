@@ -9,7 +9,7 @@ import path from 'node:path';
 import {assembleCode32RepPfRom} from './i80386-code32-rep-pf-oracle.mjs';
 
 const output=process.argv[2],qemu=process.argv[3]??'/usr/bin/qemu-system-i386';
-assert(output&&process.argv.length<=4,'usage: node scripts/run-i80386-code32-rep-pf-qemu.mjs /new/receipt.json [/pinned/qemu-system-i386]');
+assert(output&&process.argv.length<=4,'usage: node scripts/run-i80386-code32-rep-pf-qemu.mjs output/receipt.json [QEMU_BIN]');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const dir=mkdtempSync(path.join(tmpdir(),'bw-owned-qemu-rep32-'));
 try{

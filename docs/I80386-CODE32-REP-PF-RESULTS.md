@@ -6,14 +6,16 @@ The actual [JavaScript board capture](receipts/2026-10-07-i80386-code32-rep-pf-j
 
 The capture includes the recorded CPU registers, descriptor-cache fields and all configured board-chip state at each attempt, ordered observed byte effects, the delivery frame and ten complete 4 KiB physical pages at delivery and settlement. Its validator independently replays every observed physical write into a fresh ROM/zero-RAM backing, checks the whole-RAM hash and all selected final pages, and rejects missing effects and corrupted frames. The final settled board has zero device debt. The capture gzip is 25,405 bytes, SHA-256 `25bd0e1cb0d7762793e166ef6dca2e2e27ba0789f4424863909cd0b5dbb22b6e`.
 
-The [independent QEMU receipt](receipts/2026-10-07-i80386-code32-rep-pf-qemu.json) uses the same ROM SHA-256 `1f21482dca1cb71e5442946a3f83a6a258ef206ce4bbcd8de51b97e353e17c45`. QEMU 8.2.2, binary SHA-256 `28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5`, ran with a 486 CPU model and TCG. Its raw exception record reports one vector-14 error-2 fault at CS:IP `8:1d6`, CR2 `0x5000`, `ECX=2`, `EDI=0x5000` and `ESI=0`; the real debug-port terminal output is `P32OK`. The receipt records the bounded emulator configuration and raw fault state. It does not expose QEMU's complete internal pages or board state, and a 486 model does not establish exact 386DX behavior. The earlier pinned Bochs CPU3 code16 capture remains separate evidence.
+The [independent QEMU receipt](receipts/2026-10-07-i80386-code32-rep-pf-qemu.json) uses the same ROM SHA-256 `1f21482dca1cb71e5442946a3f83a6a258ef206ce4bbcd8de51b97e353e17c45`. QEMU 8.2.2, binary SHA-256 `28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5`, ran with a 486 CPU model and TCG. Its raw exception record reports one vector-14 error-2 fault at CS:IP `8:1d6`, CR2 `0x5000`, `ECX=2`, `EDI=0x5000` and `ESI=0`; the real debug-port terminal output is `P32OK`. The runner records the emulator hash but does not enforce this historical pin; a run with another build is new evidence, not this pinned result. The receipt records the bounded emulator configuration and raw fault state. It does not expose QEMU's complete internal pages or board state, and a 486 model does not establish exact 386DX behavior. The earlier pinned Bochs CPU3 code16 capture remains separate evidence.
 
 Reproduce the two captures from a clean checkout with GNU binutils, Node and the explicitly recorded QEMU build:
 
 ```sh
 node --test test/i80386-code32-rep-pf.test.mjs
-node scripts/run-i80386-code32-rep-pf-js.mjs /new/js-capture.json.gz
-node scripts/run-i80386-code32-rep-pf-qemu.mjs /new/qemu-receipt.json /path/to/pinned/qemu-system-i386
+mkdir -p output
+QEMU_BIN=path/to/pinned/qemu-system-i386
+node scripts/run-i80386-code32-rep-pf-js.mjs output/js-capture.json.gz
+node scripts/run-i80386-code32-rep-pf-qemu.mjs output/qemu-receipt.json "$QEMU_BIN"
 ```
 
 This finite fixture covers same-CPL32 fault and restart with IF clear. It does not exercise privilege switching, VM86, TSS/task delivery, IRQ during paging, a guest OS, a native CPU3 code32 path or physical timing.
