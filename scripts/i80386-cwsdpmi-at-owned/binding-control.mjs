@@ -45,8 +45,11 @@ const compile = {schema:'bw.cwsdpmi-owned.compile-only.v1',
     'djdev205.zip':{sha256:'4557dfb6c161d326680ae5fa71f0098ac49425a1b11b90a020b83162eb705dda'},
     'djlsr205.zip':{sha256:'80690b6e44ff8bc6c6081fca1f4faeba1591c4490b76ef0ec8b35847baa5deea'},
   },
-  compileArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-march=i386','-mtune=i386'],
-  linkArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-march=i386','-mtune=i386'],
+  compileArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-std=gnu11','-O2',
+    '-march=i386','-mtune=i386','-Wall','-Wextra','-Werror','-fno-lto',
+    '-c','client.c','-o','client.o'],
+  linkArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-march=i386','-mtune=i386',
+    '-Wl,-Map,client.map','-o','client.exe','client.o'],
   resolvedImplicitRoles:Object.fromEntries(['assembler','linker','stubify','crt0.o','libc.a','libgcc.a']
     .map(role=>[role,{admitted:true}])),
   executable:{bytes:exe.length,sha256:hash(exe),uploaded:false},
@@ -83,6 +86,10 @@ assert.equal(admitBoundImage(borrowedExe, borrowedMap, mutatingReceipt).executab
 assert.throws(() => admitBoundImage(Buffer.from(exe).fill(1, 900, 901), map, compile));
 assert.throws(() => admitBoundImage(exe,map,{...compile,ownedSource:{...compile.ownedSource,sha256:'0'.repeat(64)}}));
 assert.throws(() => admitBoundImage(exe,map,{...compile,compileArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-march=i486','-mtune=i486']}));
+assert.throws(() => admitBoundImage(exe,map,{...compile,
+  compileArgv:[...compile.compileArgv,'-march=i486']}));
+assert.throws(() => admitBoundImage(exe,map,{...compile,
+  linkArgv:[...compile.linkArgv,'-mtune=i486']}));
 assert.throws(() => admitBoundImage(exe, Buffer.concat([map, Buffer.from(' ')]), compile));
 const badMember = Buffer.from(map.toString().replace('libc.a(d0501.o)', 'libc.a(d0001.o)'));
 assert.throws(() => admitBoundImage(exe, badMember, {...compile,

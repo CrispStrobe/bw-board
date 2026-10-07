@@ -42,9 +42,14 @@ export function admitBoundImage(executable, mapBytes, compile) {
   // caller-controlled receipt property read.
   executable = Buffer.from(executable);
   mapBytes = Buffer.from(mapBytes);
-  const profile = argv => Array.isArray(argv) &&
-    argv.includes('-march=i386') && argv.includes('-mtune=i386') &&
-    argv[0]?.endsWith('/i586-pc-msdosdjgpp-gcc');
+  const compiler = argv => Array.isArray(argv) &&
+    typeof argv[0] === 'string' && argv[0].endsWith('/i586-pc-msdosdjgpp-gcc');
+  const compileTail = ['-std=gnu11','-O2','-march=i386','-mtune=i386',
+    '-Wall','-Wextra','-Werror','-fno-lto','-c','client.c','-o','client.o'];
+  const linkTail = ['-march=i386','-mtune=i386','-Wl,-Map,client.map',
+    '-o','client.exe','client.o'];
+  const profile = (argv, tail) => compiler(argv) &&
+    argv.length === tail.length + 1 && tail.every((token, i) => argv[i + 1] === token);
   if (!Buffer.isBuffer(executable) || executable.length < 4096 || executable.length > 2 << 20 ||
       !Buffer.isBuffer(mapBytes) || mapBytes.length > 1 << 20 ||
       compile?.schema !== 'bw.cwsdpmi-owned.compile-only.v1' ||
@@ -57,7 +62,7 @@ export function admitBoundImage(executable, mapBytes, compile) {
       compile.toolchain?.sha256 !== TOOL_SHA ||
       Object.keys(compile.sourceArchives ?? {}).sort().join() !== Object.keys(SOURCE_HASHES).sort().join() ||
       Object.entries(SOURCE_HASHES).some(([name,digest]) => compile.sourceArchives[name]?.sha256 !== digest) ||
-      !profile(compile.compileArgv) || !profile(compile.linkArgv) ||
+      !profile(compile.compileArgv, compileTail) || !profile(compile.linkArgv, linkTail) ||
       !['assembler','linker','stubify','crt0.o','libc.a','libgcc.a'].every(role =>
         compile.resolvedImplicitRoles?.[role]?.admitted === true))
     throw new Error('fresh executable/map/compile receipt');
