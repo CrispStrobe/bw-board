@@ -1374,8 +1374,85 @@ export class BoardImpl {
     return this._earliestDeviceDeadline(this.timeNs, tNs) !== null;
   }
 
+  /**
+   * Process a small, resumable live-clock quantum at real event boundaries.
+   * This is a scheduling limit, NOT a renewable whole-analysis work budget.
+   * The caller yields between calls and uses processedTimeNs, not its target.
+   */
+  advanceToLive(tNs, options = {}) {
+    if (this._liveAdvanceContext) {
+      const error = new Error('advanceToLive refuses reentrant clock advancement');
+      this._liveAdvanceContext.failure ||= error;
+      throw error;
+    }
+    if (!options || typeof options !== 'object' || Array.isArray(options)
+      || Object.keys(options).some(key => key !== 'maxSteps')) {
+      throw new Error('advanceToLive requires only maxSteps between 1 and 128');
+    }
+    const requestedSteps = options.maxSteps;
+    const maxSteps = requestedSteps === undefined ? 32 : requestedSteps;
+    if (!Number.isSafeInteger(maxSteps) || maxSteps < 1 || maxSteps > 128) {
+      throw new Error('advanceToLive requires only maxSteps between 1 and 128');
+    }
+    if (typeof tNs !== 'bigint' || tNs < this.timeNs
+      || tNs > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error('advanceToLive requires a nondecreasing safe bigint target');
+    }
+    // Sample options first: a getter must not change analysis authority after
+    // it was checked (for example by completing a finite capture).
+    if (this._boundedAdvanceContext || this._lastBoundedAdvance
+      || this._transientAnalysisProfile.id !== 'interactive-v1') {
+      throw new Error('advanceToLive refuses finite or precision analysis reuse');
+    }
+    const assertHealthy = () => {
+      this._assertMeasurementSolution();
+      if (this._transientAttemptOverflow || this._transientAccuracyUnmet) {
+        throw new Error('advanceToLive refuses failed transient history');
+      }
+    };
+    assertHealthy();
+    const startedTimeNs = this.timeNs;
+    const context = { entering: false, failure: null };
+    this._liveAdvanceContext = context;
+    let steps = 0;
+    try {
+      while (this.timeNs < tNs && steps < maxSteps) {
+        // The fixed span also bounds an interval without device deadlines.
+        const ceiling = this.timeNs + 1_000_000n;
+        let endpoint = ceiling < tNs ? ceiling : tNs;
+        endpoint = this._earliestDeviceDeadline(this.timeNs, endpoint) ?? endpoint;
+        for (const pwm of this.drivenPwm.values()) {
+          const edge = pwmNextEdgeNs(pwm);
+          if (edge !== null && edge < endpoint) endpoint = edge;
+        }
+        if (endpoint <= this.timeNs) throw new Error('advanceToLive requires a future event boundary');
+        // Permit exactly this ordinary entry, never a listener's nested entry.
+        context.entering = true;
+        this.advanceTo(endpoint);
+        if (context.failure) throw context.failure;
+        if (this.timeNs !== endpoint) throw new Error('advanceToLive clock changed during an interval');
+        assertHealthy();
+        steps++;
+      }
+      return Object.freeze({ startedTimeNs: startedTimeNs.toString(),
+        requestedTimeNs: tNs.toString(), processedTimeNs: this.timeNs.toString(),
+        completed: this.timeNs === tNs, steps, maxSteps });
+    } finally {
+      this._liveAdvanceContext = null;
+    }
+  }
+
   /** @param {bigint} tNs */
   advanceTo(tNs) {
+    const live = this._liveAdvanceContext;
+    if (live) {
+      if (!live.entering) {
+        const error = new Error('live clock listener cannot advance time');
+        live.failure ||= error;
+        throw error;
+      }
+      live.entering = false;
+    }
     const context = this._boundedAdvanceContext;
     if (context?.observing) {
       const error = new Error('bounded stream observer cannot advance capture time');

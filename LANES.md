@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-07 cooperative live device clock — CLAIM, Codex bwcx.
+2026-10-07 cooperative live device clock — DONE candidate, Codex bwcx.
 Branch lane/live-device-clock-quantum-20261007, exact base
 1bc294726dbdca6f74aaa6aa2fe1ec25119d4f0a. Four paths only: this ledger,
 src/board.js (new opt-in live advance plus its reentry guard), new
@@ -18,6 +18,25 @@ workflow, CPU, model tuning, reset or deployment changes. Remote claim first;
 one final exact CI/Harris qualification before guarded landing. Previous
 timestamp/refusal fix1bc29472 landed after CI37679327541 and Harris37679327694
 both passed; live GUI completion remains unqualified until consumer adoption.
+Remote claim0160e515 preceded implementation. The opt-in API completes at most
+32 scheduling intervals by default (allowed1–128), each ending at the earliest
+device wake, PWM edge, target or fixed1ms horizon. Frozen receipts distinguish
+requested and processed clocks; no-op does no work. It refuses prior failed
+history, current/completed finite captures and precision analysis, and preserves
+ordinary callback error identity. Nested ordinary/live clock calls are rejected
+before advancement and latch even when swallowed by a listener. Options are
+sampled before checking analysis authority so a getter cannot bypass admission.
+Thirteen new native tests cover actual LM741 event-by-event capture equality
+and independent finite-gain endpoint; scheduled ring histories; exact PWM
+time-first switching; actual RC charge versus its independent exponential;
+span/count/no-op/validation, analysis authority, inconsistent circuit, skipped
+history and reentry/failure cleanup. Combined affected/adjacent65/65 pass,
+zero skips. Four isolated mutants fail real caller assertions (omitted device
+deadline, omitted PWM boundary, false completion, finite-analysis reuse), restored.
+An attempted additional pwm-duty.test.mjs run refused module loading because
+this sparse checkout lacks avr8js; it is not counted as passed or skipped and
+remains required in full hosted CI. No default path/model/budget cap was changed.
+Fresh exact-head CI/Harris required; no GUI, package or performance claim yet.
 
 2026-10-07 device-refusal hosted red1 evidence expansion — DONE candidate, Codex bwcx.
 Existing device-substep-measurement-refusal lane remains the sole owner.
