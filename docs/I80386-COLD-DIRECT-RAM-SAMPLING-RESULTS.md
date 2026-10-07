@@ -74,7 +74,7 @@ ZIP 1,291,397 bytes, SHA256
 The original 1,168-sample direct profile contains that negative delta at index
 1,160; its signed delta sum is 1,254,132 microseconds within a 1,254,723
 microsecond window. Independently checked cumulative timestamps stay within the
-window. File attribution is observed; complete corrected profiling is pending.
+window. File attribution was observed; that run did not complete profiling.
 
 The parser correction preserves raw order, signed values and hashes. It
 validates bounded signed deltas and every cumulative timestamp. For a
