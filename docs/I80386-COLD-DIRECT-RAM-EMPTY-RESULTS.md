@@ -6,7 +6,7 @@ passes the changed-provider cold workload at harness source
 [PR427](https://github.com/CrispStrobe/bw-board/pull/427).
 The unchanged qualified addon source is
 `acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1`.
-**Correctness passed; performance has not been measured.** Ordinary JS remains default.
+**Correctness passed.** The separate [paired timing result](I80386-COLD-DIRECT-RAM-EMPTY-PAIRED-RESULTS.md) passes semantics but fails native adoption. Ordinary JS remains default.
 
 ## Change and observed result
 
@@ -39,12 +39,10 @@ The addon binary is omitted; its hash is a fresh build binding rather than an
 independent rehash from this ZIP. See the [summary receipt](receipts/2026-10-07-cold-direct-ram-empty.json).
 
 The [sampling result](I80386-COLD-DIRECT-RAM-SAMPLING-RESULTS.md) motivated this
-experiment but did not establish the cost of empty Map copies. The earlier
-[paired performance result](I80386-COLD-DIRECT-RAM-PAIRED-RESULTS.md) still fails
-native adoption. Next run a separate source-bound, same-host paired timing gate
-with excluded warm-ups and alternating measured pairs, preserving full semantic
-checks and original failures. If this bounded experiment remains materially
-slower than JS, retain its oracle value and defer native performance integration.
-Prioritize measured functional-backend application costs instead of expanding
-this cold profile into another general backend. No 10x, OS or physical timing
-claim follows from this finite correctness result.
+experiment but did not establish the cost of empty Map copies. The new
+[source-bound paired run](I80386-COLD-DIRECT-RAM-EMPTY-PAIRED-RESULTS.md)
+measures a 2.9052% mean execution-CPU reduction against the unchanged direct
+provider, while the candidate still takes 5.4971× ordinary JS execution CPU.
+The adoption gate fails. Retain this qualified oracle and stop the cold native
+performance lane; prioritize measured functional-JS application costs. No 10x,
+OS or physical timing claim follows from this finite correctness result.
