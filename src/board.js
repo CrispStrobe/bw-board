@@ -1587,6 +1587,13 @@ export class BoardImpl {
       if (steps >= MAX_DEVICE_SUBSTEPS && cursor < tNs) {
         this.timeNs = tNs;
         this._deviceSubstepOverflow = true;
+        // The ordinary clock historically reaches the requested destination,
+        // but the device state did not. Do not certify that gap as integrated.
+        // The bounded wrapper owns its separate refusal/receipt vocabulary.
+        if (!this._boundedAdvanceContext) this._transientAccuracyUnmet ||= {
+          code: 'device-substep-budget-exceeded', timeSec: Number(cursor) / 1e9,
+          requestedTimeSec: Number(tNs) / 1e9, maxDeviceSubsteps: MAX_DEVICE_SUBSTEPS,
+        };
       }
     } else {
       // No devices: original fast path
@@ -1794,6 +1801,11 @@ export class BoardImpl {
 
   /** Instrument validity, not a change to the solver or nodeVoltage API. */
   _assertMeasurementSolution(solution = this._mnaCache) {
+    if (this._deviceSubstepOverflow) {
+      const error = new Error('measurement unavailable: device sub-step budget exhausted; initialize a fresh Board');
+      error.code = 'SOLVE_FAILED_MEASUREMENT';
+      throw error;
+    }
     if (!this._liveSolveError && solution?.converged !== false && !solution?.railConflicts?.length) return;
     const detail = this._liveSolveError ? `: ${this._liveSolveError.message}` : ' or rail conflict';
     const error = new Error(`measurement unavailable: circuit solve failed${detail}`);

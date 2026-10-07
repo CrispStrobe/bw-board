@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-07 incomplete device advancement measurement refusal — CLAIM, Codex bwcx.
+2026-10-07 incomplete device advancement measurement refusal — DONE candidate, Codex bwcx.
 Branch lane/device-substep-measurement-refusal-20261007, exact base
 3d4d28f0cacfe65b51609c9cddf95c5e25972caa. Three new paths of ownership: this
 ledger, src/board.js (ordinary device-overflow status and shared analog measurement
@@ -18,6 +18,18 @@ guard/status mutants. No CPU, scheduler/chunking, digital transition contract,
 current sampling cadence, reset redesign, CUI/Lite/pin/workflow/deployment change.
 Remote claim first. Earlier timestamp candidate stays preserved; no source
 landing until final combined CI/Harris green. GUI completion remains a follow-on.
+Remote claim27a82056 preceded source edits. The timestamp candidate was merged
+unchanged, resolving only the adjacent ledger rows. Three new actual LM741
+controls reproduce the false accuracy status before repair, then prove refused
+existing/fresh envelope, sample and current rings; existing/fresh voltage/current
+means; current sampling; later solve/power/reset non-recovery; successful small
+advances and unchanged bounded incomplete-work receipt semantics. Removing the
+shared validity guard reds actual scope acquisition; removing ordinary failure
+status reds the accuracy assertion. Both mutants restored. Combined new/clock/
+sample/bounded-budget/scheduled-gate surface32/32 passes, zero skips. The200 cap,
+ordinary destination clock and solver/model parameters remain unchanged. Raw
+nodeVoltage and digital transition APIs are not certified histories by this
+change. Fresh combined exact-head CI/Harris remain required before landing.
 
 2026-10-07 wrapped scope envelope clock — DONE candidate, Codex bwcx.
 Branch lane/scope-envelope-clock-20261007, exact base
