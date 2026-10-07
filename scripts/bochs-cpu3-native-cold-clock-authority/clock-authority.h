@@ -124,7 +124,9 @@ class Authority {
   // board mutation. Q may temporarily precede N but Q<=N on completion.
   Clock projected=s_->published;
   for(Word w:c.tape){require(w==Word::native_n||w==Word::quantum||w==Word::rep_quantum,"tape word");
-   if(w==Word::native_n){require(projected.n<400000,"N bound");++projected.n;}
+   if(w==Word::native_n){require(projected.n<400000&&
+    (projected.debt<projected.deadline||projected.n<projected.q),
+    "N bound/due completion");++projected.n;}
    else{require(projected.q<400000&&projected.debt<projected.deadline,"Q due/bound");
     ++projected.q;projected.debt+=6;}
   }
@@ -162,8 +164,12 @@ public:
   require(!words.empty()&&s_->tape.size()+words.size()<=tape_cap,"bounded tape before clock effect");
   Clock next=s_->logical;
   for(Word w:words){require(w==Word::native_n||w==Word::quantum||w==Word::rep_quantum,"source word");
-   if(w==Word::native_n){require(next.n<400000,"source N capacity");++next.n;}
+   if(w==Word::native_n){require(next.n<400000&&
+    (next.debt<next.deadline||next.n<next.q),"source N capacity/due completion");++next.n;}
    else{require(next.q<400000&&next.debt<next.deadline,"source Q before due");++next.q;next.debt+=6;}}
+  const size_t deficit=next.q>next.n?size_t(next.q-next.n):0;
+  require(s_->tape.size()+words.size()+deficit<=tape_cap,
+   "reserve tape slots for unfinished Q/N boundary");
   s_->tape.insert(s_->tape.end(),words.begin(),words.end());s_->logical=next;}
  WriteResult write(Lease&l,uint32_t address,uint8_t after){lease(l);require(!s_->retry_pending,"exact pending write only");
   require(s_->logical.q<=s_->logical.n&&address<ram_size&&
@@ -193,7 +199,8 @@ public:
   s_->retry_pending=false;return write(l,address,after);}
  void source_boundary(Lease&l){lease(l,true);require(s_->has_stop&&
   (s_->stopped==Stop::requested_return||s_->stopped==Stop::paused_observer)&&
-  s_->logical.q<=s_->logical.n,"authenticated completed source boundary");
+  s_->logical.q<=s_->logical.n&&s_->logical.debt<s_->logical.deadline,
+  "authenticated completed source boundary before device due");
   // Source CPU alias publication is independent of owner journal ACK.
   s_->source_aliases.clear();consume(l);}
  void stop(Lease&l,Stop why){lease(l);require(valid_stop(why)&&s_->logical.q<=s_->logical.n,
@@ -230,7 +237,8 @@ public:
   s_->profile_revoked,
   s_->source_aliases,s_->owned,s_->board,s_->source_gen,s_->board_gen};}
  bool failed()const{return s_->failed;}
- void close(){gate();require(!s_->active_lease&&!s_->page_ticket&&!s_->device_ticket&&!s_->retry_pending&&
+ void close(){gate();require(!s_->active_lease&&!s_->page_ticket&&
+  !s_->device_ticket&&!s_->retry_pending&&
   s_->journal.empty()&&s_->tape.empty()&&s_->source_aliases.empty(),"closed no pending extent");s_->closed=true;}
 #ifdef BW_CLOCK_MODEL_TESTING
  void control_next_lease(uint64_t value){gate();require(!s_->active_lease,"test lease seed at rest");s_->next_lease=value;}

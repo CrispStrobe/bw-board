@@ -39,6 +39,7 @@ static void deadline_overshoot_and_rearm(){
  std::vector<Word> words;for(int i=0;i<6;++i){words.push_back(Word::quantum);words.push_back(Word::native_n);}
  a.append(l,words);assert(a.inspect().logical.debt==36&&a.inspect().published.debt==0);
  denies([&]{a.append(l,{Word::quantum});});assert(a.inspect().logical.debt==36);
+ denies([&]{a.append(l,{Word::native_n});});assert(a.inspect().logical.n==6);
  const auto due=a.inspect();denies([&]{a.write(l,0,1);});
  assert(a.inspect().owned==due.owned&&a.inspect().committed==due.committed);
  a.stop(l,Stop::deadline);auto copy=a.copied(l);observe(a,l,copy);
@@ -47,6 +48,33 @@ static void deadline_overshoot_and_rearm(){
  a.device_rearm(32);denies([&]{a.device_rearm(32);});
  auto next=a.issue(Context{});a.append(next,{Word::native_n,Word::quantum});
  a.stop(next,Stop::requested_return);observe(a,next,a.copied(next));a.close();
+}
+static void due_source_boundary_cannot_consume_flush_lease(){
+ Authority a(initial());auto l=a.issue(Context{});
+ std::vector<Word> words;for(int i=0;i<6;++i){words.push_back(Word::quantum);words.push_back(Word::native_n);}
+ a.append(l,words);a.stop(l,Stop::requested_return);const auto due=a.inspect();
+ denies([&]{a.source_boundary(l);});const auto unchanged=a.inspect();
+ assert(unchanged.active&&unchanged.logical.debt==36&&unchanged.published.debt==0&&
+  unchanged.tape_size==due.tape_size&&
+  unchanged.source_aliases.size()==due.source_aliases.size());
+ observe(a,l,a.copied(l));assert(a.inspect().device_ticket);
+ a.device_rearm(32);a.close();
+}
+static void tape_reserves_balancing_n_slots(){
+ Authority a(initial());auto bootstrap=a.issue(Context{});
+ std::vector<Word> six;for(int i=0;i<6;++i){six.push_back(Word::quantum);six.push_back(Word::native_n);}
+ a.append(bootstrap,six);a.stop(bootstrap,Stop::deadline);
+ observe(a,bootstrap,a.copied(bootstrap));a.device_rearm(6000);
+ Context long_deadline{};long_deadline.deadline=6000;auto l=a.issue(long_deadline);
+ const auto before=a.inspect();denies([&]{a.append(l,std::vector<Word>(9,Word::quantum));});
+ const auto rejected=a.inspect();assert(rejected.logical.n==before.logical.n&&
+  rejected.logical.q==before.logical.q&&rejected.tape_size==0);
+ a.append(l,std::vector<Word>(8,Word::quantum));
+ assert(a.inspect().tape_size==8&&a.inspect().logical.q-a.inspect().logical.n==8);
+ denies([&]{a.append(l,{Word::quantum});});
+ a.append(l,std::vector<Word>(8,Word::native_n));
+ assert(a.inspect().tape_size==tape_cap&&a.inspect().logical.q==a.inspect().logical.n);
+ a.stop(l,Stop::full_tape);observe(a,l,a.copied(l));a.close();
 }
 static void journal_overlap_late_tamper_and_alias(){
  Authority a(initial());auto l=a.issue(Context{});
@@ -183,6 +211,14 @@ static void stops_profile_and_capabilities(){
   observe(a,l,a.copied(l));assert(a.inspect().profile_revoked);
   denies([&]{a.issue(Context{});});a.close();
  }
+ {Authority a(initial());auto l=a.issue(Context{});
+  assert(a.write(l,3,7).status==WriteStatus::accepted);
+  a.stop(l,Stop::code_write);observe(a,l,a.copied(l));auto blocked=a.inspect();
+  assert(blocked.profile_revoked&&blocked.acknowledged==1&&blocked.board[3]==7&&
+   blocked.source_aliases.size()==1&&blocked.source_aliases[0].effect==1);
+  denies([&]{a.issue(Context{});});denies([&]{a.close();});
+  auto still=a.inspect();assert(still.source_aliases.size()==1&&still.acknowledged==1);
+ }
  for(Context bad:{Context{Phase::paused},Context{Phase::running,1},Context{Phase::running,0,0},
   Context{Phase::running,0,1,32,true},Context{Phase::running,0,1,32,false,true},
   Context{Phase::running,0,1,32,false,false,true},Context{Phase::running,0,1,32,false,false,false,true}}){
@@ -214,9 +250,10 @@ static void full_tape_abandon_and_overflow(){
 }
 int main(){
  copied_preflight_and_valid_qn();deadline_overshoot_and_rearm();
+ due_source_boundary_cannot_consume_flush_lease();tape_reserves_balancing_n_slots();
  journal_overlap_late_tamper_and_alias();full_journal_retry_once();full_alias_capacity_retry();
  alias_full_after_owner_ack_retry();retry_precheck_preserves_pending();
  page_clock_and_actual_rom_ticket();observer_failure_and_reentry();
  stops_profile_and_capabilities();full_tape_abandon_and_overflow();
- std::cout<<"cold clock-authority SOURCE_ONLY_UNCONNECTED controls PASS (11 groups)\n";
+ std::cout<<"cold clock-authority SOURCE_ONLY_UNCONNECTED controls PASS (13 groups)\n";
 }

@@ -19,8 +19,13 @@ Logical CPU-side N/Q/debt and JS-published N/Q/debt are separate. A bounded
 ordered tape can temporarily begin `[Q,N]`; the complete boundary must satisfy
 Q≤N. A Q is admitted only while debt is below the current device deadline.
 Its indivisible six clocks may end as much as five clocks above that deadline;
-the next source effect waits for a reconciled due cut and a one-use device
+the next independent source effect waits for a reconciled due cut and a one-use device
 rearm. A full tape likewise fences later source effects until reconciliation. The
+one pending N that completes an already admitted Q may follow the crossing Q;
+an unrelated later N cannot pass the due cut. A source return cannot consume
+the only lease while a due clock tape still needs reconciliation. The
+bounded tape reserves a slot for every unfinished Q>N deficit, so a full tape
+cannot strand the completion words required for a valid boundary. The
 source's pending-write alias ledger is independent of the owner journal and
 ACK. An explicitly stopped source return or paused boundary can publish and
 clear source aliases without acknowledging the owner journal; owner ACK does
@@ -48,7 +53,10 @@ full journal/tape, requested return and paused-observer events revoke the
 running lease before the next effect. A changed mapping, A20 or IRQ state is
 not admitted by the fixed cold profile. IRQ, HLT, fault, code, map and A20 cuts
 leave profile authority revoked after reconciliation; this model has no
-unproven reissue or resolution path. Unknown stop codes are rejected.
+unproven reissue or resolution path. It may close as model cleanup only if all
+pending extents are empty. Owner ACK does not clear source aliases; those
+remain visible in the blocked diagnostic snapshot and prevent close. Unknown
+stop codes are rejected.
 
 The small control uses 256 model RAM bytes, 16-byte model pages, one-byte RAM
 writes, one ROM page and test-only counter seeds. These are abstract
