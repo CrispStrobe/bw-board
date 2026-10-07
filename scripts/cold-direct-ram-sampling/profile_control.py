@@ -1,5 +1,5 @@
 """Small adversaries for profile graph, timing and source-role admission."""
-import base64,copy,hashlib,json,tempfile
+import base64,copy,hashlib,json,subprocess,sys,tempfile
 from pathlib import Path
 from profile import load,summarize
 
@@ -10,15 +10,18 @@ def denied(fn):
 
 with tempfile.TemporaryDirectory(prefix='cold-sampling-control-') as folder:
     root=Path(folder);profile_path=root/'control.cpuprofile';qualified=root/'qualified';qualified.mkdir()
+    (root/'harness').mkdir();(root/'derived').mkdir()
     (qualified/'board.mjs').write_text('export const nativeTick=()=>{};\n')
     provider=b'export const reconcile=()=>{};'
     url='data:text/javascript;base64,'+base64.b64encode(provider).decode()
+    def frame(name,url):return {'functionName':name,'url':url,'scriptId':'1',
+                                'lineNumber':1,'columnNumber':0}
     profile={'nodes':[
-        {'id':1,'callFrame':{'functionName':'(root)','url':''},'children':[2,3,5]},
-        {'id':2,'callFrame':{'functionName':'reconcile','url':url},'children':[4]},
-        {'id':3,'callFrame':{'functionName':'(garbage collector)','url':''}},
-        {'id':4,'callFrame':{'functionName':'native addon','url':''}},
-        {'id':5,'callFrame':{'functionName':'nativeTick','url':(qualified/'board.mjs').as_uri()}}],
+        {'id':1,'callFrame':frame('(root)',''),'children':[2,3,5]},
+        {'id':2,'callFrame':frame('reconcile',url),'children':[4]},
+        {'id':3,'callFrame':frame('(garbage collector)','')},
+        {'id':4,'callFrame':frame('native addon','')},
+        {'id':5,'callFrame':frame('nativeTick',(qualified/'board.mjs').as_uri())}],
         'startTime':100,'endTime':5100,'samples':[2,3,4,5],
         'timeDeltas':[1000,1000,1000,1000]}
     context={'qualifiedRoot':str(qualified),'harnessRoot':str(root/'harness'),
@@ -39,4 +42,36 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-control-') as folder:
     bad=copy.deepcopy(profile);bad['endTime']=bad['startTime'];write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['timeDeltas'].pop();write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['nodes'][0]['children']=[2,2,3,5];write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(profile);bad['nodes'][0],bad['nodes'][1]=bad['nodes'][1],bad['nodes'][0]
+    write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(profile);bad['nodes'][2]['callFrame']['url']=(qualified/'board.mjs').as_uri()
+    write(bad);assert summarize(profile_path,context)['buckets']['v8_gc']['samples']==0
+    bad=copy.deepcopy(profile);bad['nodes'][2]['callFrame']['scriptId']='not-a-script'
+    write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(profile);bad['nodes'][2]['callFrame']['lineNumber']=True
+    write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(profile);bad['startTime']=-1;write(bad);denied(lambda:load(profile_path))
+    bad=copy.deepcopy(profile);bad['timeDeltas']=[3000000]*4
+    write(bad);denied(lambda:load(profile_path))
+    outside=root/'outside.mjs';outside.write_text('export const nativeTick=()=>{};\n')
+    (qualified/'link.mjs').symlink_to(outside)
+    bad=copy.deepcopy(profile);bad['nodes'][4]['callFrame']['url']=(qualified/'link.mjs').as_uri()
+    write(bad);assert summarize(profile_path,context)['buckets']['js_board_device']['samples']==0
+    deep={'nodes':[{'id':i,'callFrame':frame('f','node:internal'),
+                    'children':[i+1] if i<1500 else []} for i in range(1,1501)],
+          'startTime':1,'endTime':2000,'samples':[1500],'timeDeltas':[1500]}
+    write(deep);assert summarize(profile_path,context)['nodeCount']==1500
+    actual=root/'actual.cpuprofile'
+    code="""import {Session} from 'node:inspector/promises';
+import {writeFileSync} from 'node:fs';
+const s=new Session();s.connect();await s.post('Profiler.enable');
+await s.post('Profiler.setSamplingInterval',{interval:1000});await s.post('Profiler.start');
+let x=0;for(let i=0;i<2000000;i++)x+=Math.sqrt(i);
+const {profile}=await s.post('Profiler.stop');s.disconnect();
+if(!Number.isFinite(x))throw Error('control loop');
+writeFileSync(process.argv[1],JSON.stringify(profile)+'\\n');"""
+    subprocess.run([sys.argv[1] if len(sys.argv)>1 else 'node','--input-type=module','-e',code,str(actual)],
+                   check=True,timeout=15,capture_output=True)
+    real=load(actual)
+    assert len(real[0]['samples'])>0 and real[3]>0
 print('bounded inspector profile controls PASS')

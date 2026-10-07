@@ -11,7 +11,7 @@ const HELD=Object.freeze({
  'plain.mjs':'d1f4370a2a850c03302c0dc775a11b15f1ca1eb4098fe6cd16a198ffadab2e2b',
  'plain-child.mjs':'17d363ee941cd549e7e23eefd562301b455a00bc2d67e079388891b0ea2cd246'
 });
-const PROFILE=String.raw`
+export const profilePrelude=String.raw`
 import {Session as BWProfileSession} from 'node:inspector/promises';
 import {writeFileSync as bwWriteProfileFileSync} from 'node:fs';
 import {resolve as bwResolveProfile} from 'node:path';
@@ -20,9 +20,11 @@ async function bwStartProfile(){
  if(typeof path!=='string'||!path.startsWith('/')||bwResolveProfile(path)!==path)
   throw Error('exact absolute diagnostic profile path');
  const session=new BWProfileSession();session.connect();
- await session.post('Profiler.enable');
- await session.post('Profiler.setSamplingInterval',{interval:1000});
- await session.post('Profiler.start');return {session,path};
+ try{
+  await session.post('Profiler.enable');
+  await session.post('Profiler.setSamplingInterval',{interval:1000});
+  await session.post('Profiler.start');return {session,path};
+ }catch(error){session.disconnect();throw error;}
 }
 async function bwStopProfile(state){
  try{
@@ -38,7 +40,7 @@ function once(source,old,next,label){
  return source.replace(old,next);
 }
 function deriveNative(original){
- let s=PROFILE+original;
+ let s=profilePrelude+original;
  s=once(s,' const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();',
   ' const bwProfiler=await bwStartProfile();let bwProfileError=null;\n const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();','native execution start');
  s=once(s,'   receipt.resumes=resumes;receipt.zero=zero;receipt.progressQ=q;}',
@@ -48,7 +50,7 @@ function deriveNative(original){
  return s;
 }
 function derivePlain(original){
- let s=PROFILE+original;
+ let s=profilePrelude+original;
  s=once(s,' const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();active=true;',
   ' const bwProfiler=await bwStartProfile();let bwProfileError=null;\n'
   +' const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();active=true;','plain execution start');
@@ -68,7 +70,7 @@ export function materialize(harnessRoot,outDir){
   // This exact inverse removes all diagnostic additions; held semantics remain complete.
   let inverse=normalized;
   if(name!=='plain-child.mjs'){
-   inverse=once(inverse,PROFILE,'',`${name} profile prelude inverse`);
+   inverse=once(inverse,profilePrelude,'',`${name} profile prelude inverse`);
    if(name==='native.mjs'){
     inverse=once(inverse,' const bwProfiler=await bwStartProfile();let bwProfileError=null;\n const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();',
      ' const startCpu=process.cpuUsage(),startWall=process.hrtime.bigint();','native start inverse');
