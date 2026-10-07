@@ -17,13 +17,26 @@ export function derivePagedIrqProvider(bytes=derivePagedIntIretProvider().bytes)
  once('const expected=[5,0x70,0x18,0,2,0];','const expected=[2,0x70,0x18,0,2,2];','IRQ frame physical bytes');
  once("if(next.kind==='frame')this.pagingState.frameWords=next.nextFrameWords;", "if(next.kind==='frame')this.pagingState.frameWords=next.nextFrameWords;if(next.kind==='marker')this.pagingState.markerWords=next.nextMarkerWords;", 'marker write sequence');
  once('frameWords:this.pagingState.frameWords,writes:', 'frameWords:this.pagingState.frameWords,markerWords:this.pagingState.markerWords,irqAcks:this.irqAcks,pic:this.machine._pic.getState(),writes:', 'copied PIC and marker diagnostic state');
- once("assert.ok(!closed&&!active,'clock reentry');assert.ok(words instanceof Uint32Array", "assert.ok(!closed&&!active,'clock reentry');active=true;try{assert.ok(words instanceof Uint32Array", 'guard copied tape preflight from hostile iterator reentry');
+ once("assert.ok(!closed&&!active,'clock reentry');assert.ok(words instanceof Uint32Array", "if(active){poisoned=true;throw Error('clock reentry');}assert.ok(!poisoned&&!closed,'clock reentry');active=true;try{assert.ok(words instanceof Uint32Array", 'guard and latch copied tape preflight reentry');
  once('   }finally{active=false;}\n  }\n });', '   }finally{active=false;}\n   }finally{active=false;}\n  }\n });', 'release preflight guard after all callbacks');
  once('let lease=false,closed=false,initialized=false,entry=false,postPio=false,mappingPending=false,active=false,n=0,q=0;',
- 'let lease=false,closed=false,initialized=false,entry=false,postPio=false,mappingPending=false,active=false,pulsed=false,n=0,q=0;',
+ 'let lease=false,closed=false,initialized=false,entry=false,postPio=false,mappingPending=false,active=false,pulsed=false,poisoned=false,n=0,q=0;',
  'one-shot paused stimulus ledger');
+ once("const callback=fn=>(...args)=>{assert.ok(lease&&!closed&&!active&&!entry&&!postPio&&!mappingPending,'owned callback lease');",
+ "const callback=fn=>(...args)=>{if(active){poisoned=true;throw Error('owned callback lease reentry');}assert.ok(!poisoned&&lease&&!closed&&!entry&&!postPio&&!mappingPending,'owned callback lease');",
+ 'latch callback reentry before any outer tape effects');
+ once(' const state=()=>[board.nativeTicks,board.successfulQuanta,',
+ " const noReentry=()=>{if(active){poisoned=true;throw Error('paused provider reentry');}};\n const state=()=>[board.nativeTicks,board.successfulQuanta,",
+ 'all exposed paused methods latch active callback reentry');
+ once('   n=nextN;q=nextQ;mappingPending=nextMapping;active=true;try{',
+ "   assert.ok(!poisoned,'clock tape reentry before effects');n=nextN;q=nextQ;mappingPending=nextMapping;active=true;try{",
+ 'reject swallowed reentry before clock commit');
  once("  stage(){assert.ok(initialized&&!lease&&!closed&&!active);return call('stageLine');},",
- "  pulse(){assert.ok(initialized&&!lease&&!closed&&!active&&!pulsed&&!board.irqAcks&&!board.lineAsserted,'paused once-only fixture pulse');assert.deepEqual([board.machine._pic.vectorBase,board.machine._pic.imr,board.machine._pic.irr,board.machine._pic.isr],[0,0,0,0]);assert.deepEqual([board.nativeTicks,board.successfulQuanta],[39,39],'actual named N/Q cut');board.machine._pic.setIRQ(0,1);assert.equal(board.machine._pic.intActive,true);pulsed=true;},\n  stage(){assert.ok(initialized&&!lease&&!closed&&!active);return call('stageLine');},", 'paused actual PIC stimulus');
+ "  pulse(){assert.ok(initialized&&!lease&&!closed&&!active&&!poisoned&&!pulsed&&!board.irqAcks&&!board.lineAsserted,'paused once-only fixture pulse');assert.deepEqual([board.machine._pic.vectorBase,board.machine._pic.imr,board.machine._pic.irr,board.machine._pic.isr],[0,0,0,0]);assert.deepEqual([board.nativeTicks,board.successfulQuanta],[39,39],'actual named N/Q cut');board.machine._pic.setIRQ(0,1);assert.equal(board.machine._pic.intActive,true);pulsed=true;},\n  stage(){assert.ok(initialized&&!lease&&!closed&&!active&&!poisoned);return call('stageLine');},", 'paused actual PIC stimulus');
+ once("  begin(){assert.ok(initialized&&!lease&&!closed&&!active);call('beginRun');", "  begin(){assert.ok(initialized&&!lease&&!closed&&!active&&!poisoned);call('beginRun');", 'deny a new run after reentry violation');
+ once("  settleCheckpoint(){assert.ok(!lease&&!active&&!closed);const state=call('settleTerminal');", "  settleCheckpoint(){assert.ok(!lease&&!active&&!closed&&!poisoned);const state=call('settleTerminal');", 'deny effectful settlement after reentry violation');
+ for(const method of ['pulse','stage','begin','end','checkpoint','records','settleCheckpoint','close'])
+  once(`  ${method}(){`,`  ${method}(){noReentry();`,'deny nested paused method '+method);
  let inverse=s;for(const e of [...edits].reverse())if(e.count){assert.equal(inverse.split(e.next).length-1,e.count);inverse=inverse.split(e.next).join(e.old);}else inverse=replacement(inverse,e.next,e.old,'IRQ provider inverse '+e.label);
  assert.equal(sha256(inverse),parentSha256);return {bytes:Buffer.from(s),edits,baseSha256:parentSha256};
 }

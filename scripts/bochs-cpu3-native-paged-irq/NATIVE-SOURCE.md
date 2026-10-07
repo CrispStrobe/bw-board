@@ -27,6 +27,11 @@ while running. The callback tape from the native addon is an owned typed
 array. External direct calls can present a subclass or hostile iterator,
 so the provider enters its reentry guard before it inspects or iterates the
 entire tape, and rejects any later invalid word before board clock effects.
+Even when an iterator swallows a denied nested ACK and supplies otherwise
+valid clock words, the violation is latched: the outer transfer has no effect
+and further callbacks, line staging, pulses, run admission and terminal
+settlement are denied. Paused inspection, ending the current lease and closing
+remain available to record the failure and release the board.
 An ACK without the staged line or with a malformed scalar argument is denied
 before the real PIC changes. The actual PIC ACK clears its request, marks the
 vector in service, and deasserts the source line once.
