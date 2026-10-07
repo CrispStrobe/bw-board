@@ -1,6 +1,9 @@
 # Cold direct-RAM inspector diagnostic
 
-**SOURCE_ONLY_UNRUN.** This is a diagnostic harness for the already
+**FILE-BACKED ATTRIBUTION CHANGE UNRUN.** The first actual diagnostic at the
+preceding harness head passed nine guest semantic checks, but V8 truncated the
+direct provider's data URL to 1,024 characters. Its raw profiles and unresolved
+summary remain unchanged. This is a diagnostic harness for the already
 guest-qualified ABI 5 direct-RAM source and the semantic-gated paired workers.
 It changes no CPU3, N-API addon, ordinary JavaScript machine, board provider,
 ROM, configuration, or shipped runtime. The direct-RAM profile failed its
@@ -19,9 +22,11 @@ children is a diagnostic capacity bound, not a paired timing schedule.
 The workers are derived from fixed SHA-256-checked paired source bytes. Only
 the existing execution-loop anchors acquire `node:inspector` start/stop; the
 plain child retains its original import of the derived plain worker, and the
-native child substitutes an authenticated absolute module URL for its held
-provider import. The materializer proves the inverse transformation and
-records both root-independent normalized bytes and loaded bytes. Profiles
+native child substitutes an authenticated absolute module URL for a small
+diagnostic adapter. The adapter derives the same complete provider bytes and
+loads them from a newly created ordinary file beside the profile. The
+materializer proves the inverse worker transformation and records both
+root-independent normalized bytes and loaded bytes. Profiles
 are written after the execution timing interval, including on a failed guest
 loop when the profiler can stop; failed semantic children cannot contribute a
 profile summary. The parent preserves each bounded child invocation, failure
@@ -29,8 +34,10 @@ receipt, profile SHA-256 and host/resource result.
 
 The bounded parser rejects malformed profile graphs, sample references,
 timing fields and oversized artifacts. It recognizes the direct provider's
-data URL only by the authenticated loaded-module SHA-256, and records raw
-profile hashes while keeping repository paths out of the summary. JS
+canonical file URL only when the file is ordinary, not a symlink, and all
+bytes match the independently derived loaded-module SHA-256. Truncated data
+URLs and blank leaves stay unresolved. It records raw profile hashes while
+keeping host filesystem paths out of the summary. JS
 reconciliation, clock callback, board/device, other JS and V8 GC samples are
 reported separately. Blank-URL native and builtin frames remain unresolved,
 even when their ancestors are JS. The first profile cannot distinguish empty

@@ -13,6 +13,7 @@ EXPECTED_NORMALIZED={
  'plain.mjs':'fa8d5124f659ffbdd4458afff554654a5b73294ac4bcb323c873d32feb91fc25',
  'plain-child.mjs':'17d363ee941cd549e7e23eefd562301b455a00bc2d67e079388891b0ea2cd246'
 }
+EXPECTED_ADAPTER='52faa28cde054a625ad13f99d926e0fd971668d2bfac37bf5b1b16d3445eb3f2'
 ROUNDS=(('direct','companion','plain-js'),
         ('plain-js','direct','companion'),
         ('companion','plain-js','direct'))
@@ -31,6 +32,7 @@ def run(setup_file):
     derivation=json.loads(raw)
     require(derivation['schema']=='bw.cold-direct-ram.sampling-derivation.v1' and
             derivation['normalized']==EXPECTED_NORMALIZED and
+            derivation['adapterSha256']==EXPECTED_ADAPTER and
             set(derivation['loaded'])==set(EXPECTED_NORMALIZED),'authenticated exact worker derivative')
     for name,digest in derivation['loaded'].items():
         require(sha(derived/name)==digest,'exact loaded derivative bytes')
@@ -73,10 +75,18 @@ process.stdout.write(JSON.stringify({loaded:p.loadedModuleSha256,normalized:p.de
                       'executionTiming':result['receipt']['executionTiming']}
                 if sampled:
                     receipt=result['receipt'];provider=receipt.get('providerDerivation') or {}
+                    provider_file=profile_path.with_name('profiled-direct-provider.mjs') if arm=='direct' else None
                     if arm=='direct':
                         require(provider.get('loadedModuleSha256')==expected_provider['loaded'],
                                 'independently recomputed direct provider loaded bytes')
+                        require(provider_file.is_file() and not provider_file.is_symlink() and
+                                provider_file.resolve()==provider_file and
+                                0<provider_file.stat().st_size<=1024*1024 and
+                                sha(provider_file)==expected_provider['loaded'],
+                                'exact ordinary provider profile file bytes')
+                        item['providerFileSha256']=sha(provider_file)
                     context={'providerLoadedSha256':expected_provider['loaded'] if arm=='direct' else None,
+                             'providerFile':str(provider_file) if provider_file else None,
                              'qualifiedRoot':setup['qualifiedRoot'],
                              'harnessRoot':setup['harnessRoot'],'derivedRoot':str(derived)}
                     item['profileSha256']=sha(profile_path)

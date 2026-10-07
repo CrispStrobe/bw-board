@@ -35,6 +35,28 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-control-') as folder:
     assert out['buckets']['js_board_device']['samples']==1
     wrong=copy.deepcopy(context);wrong['providerLoadedSha256']='0'*64
     assert summarize(profile_path,wrong)['buckets']['js_reconcile']['samples']==0
+    provider_folder=root/'receipt';provider_folder.mkdir()
+    provider_file=provider_folder/'profiled-direct-provider.mjs';provider_file.write_bytes(provider)
+    file_context={**context,'providerFile':str(provider_file)}
+    file_profile=copy.deepcopy(profile)
+    file_profile['nodes'][1]['callFrame']['url']=provider_file.as_uri()
+    write(file_profile)
+    assert summarize(profile_path,file_context)['buckets']['js_reconcile']['samples']==1
+    bad_file={**file_context,'providerLoadedSha256':'0'*64}
+    assert summarize(profile_path,bad_file)['buckets']['js_reconcile']['samples']==0
+    provider_file.write_bytes(provider+b' changed')
+    assert summarize(profile_path,file_context)['buckets']['js_reconcile']['samples']==0
+    provider_file.unlink();outside=root/'outside-provider.mjs';outside.write_bytes(provider)
+    provider_file.symlink_to(outside)
+    assert summarize(profile_path,file_context)['buckets']['js_reconcile']['samples']==0
+    provider_file.unlink();provider_file.write_bytes(provider)
+    long_provider=provider+b'/*'+b'x'*2048+b'*/'
+    long_url='data:text/javascript;base64,'+base64.b64encode(long_provider).decode()
+    assert len(long_url)>1024
+    truncated=copy.deepcopy(profile);truncated['nodes'][1]['callFrame']['url']=long_url[:1024]
+    write(truncated)
+    long_context={**context,'providerLoadedSha256':hashlib.sha256(long_provider).hexdigest()}
+    assert summarize(profile_path,long_context)['buckets']['js_reconcile']['samples']==0
     bad=copy.deepcopy(profile);bad['samples'][1]=99;write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['timeDeltas'][0]=-1;write(bad);denied(lambda:load(profile_path))
     bad=copy.deepcopy(profile);bad['nodes'][3]['children']=[2];write(bad);denied(lambda:load(profile_path))

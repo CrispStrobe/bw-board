@@ -11,6 +11,7 @@ const HELD=Object.freeze({
  'plain.mjs':'d1f4370a2a850c03302c0dc775a11b15f1ca1eb4098fe6cd16a198ffadab2e2b',
  'plain-child.mjs':'17d363ee941cd549e7e23eefd562301b455a00bc2d67e079388891b0ea2cd246'
 });
+const FILE_PROVIDER_SHA='52faa28cde054a625ad13f99d926e0fd971668d2bfac37bf5b1b16d3445eb3f2';
 export const profilePrelude=String.raw`
 import {Session as BWProfileSession} from 'node:inspector/promises';
 import {writeFileSync as bwWriteProfileFileSync} from 'node:fs';
@@ -63,7 +64,10 @@ function derivePlain(original){
 function deriveChild(original){return original;}
 export function materialize(harnessRoot,outDir){
  const root=resolve(harnessRoot),out=resolve(outDir),held=resolve(root,'scripts/cold-direct-ram-paired');
- mkdirSync(out,{recursive:true});const report={schema:'bw.cold-direct-ram.sampling-derivation.v1',held:{},normalized:{},loaded:{}};
+ const adapter=resolve(root,'scripts/cold-direct-ram-sampling/file-provider.mjs');
+ assert.equal(sha(readFileSync(adapter)),FILE_PROVIDER_SHA,'held file-backed diagnostic provider adapter');
+ mkdirSync(out,{recursive:true});const report={schema:'bw.cold-direct-ram.sampling-derivation.v1',
+  adapterSha256:FILE_PROVIDER_SHA,held:{},normalized:{},loaded:{}};
  for(const [name,expected] of Object.entries(HELD)){
   const original=readFileSync(join(held,name),'utf8');assert.equal(sha(original),expected,`held ${name}`);
   let normalized=name==='native.mjs'?deriveNative(original):name==='plain.mjs'?derivePlain(original):deriveChild(original);
@@ -92,9 +96,9 @@ export function materialize(harnessRoot,outDir){
   let loaded=normalized;
   if(name==='native.mjs'){
    const relative="'./direct-provider.mjs'";
-   const absolute=`'${pathToFileURL(join(held,'direct-provider.mjs')).href}'`;
-   loaded=once(loaded,relative,absolute,'native import URL');
-   assert.equal(once(loaded,absolute,relative,'native import inverse'),normalized);
+   const adapterUrl=`'${pathToFileURL(adapter).href}'`;
+   loaded=once(loaded,relative,adapterUrl,'native diagnostic adapter URL');
+   assert.equal(once(loaded,adapterUrl,relative,'native import inverse'),normalized);
   }
   writeFileSync(join(out,name),loaded,{flag:'wx'});
   report.held[name]=expected;report.normalized[name]=sha(normalized);report.loaded[name]=sha(loaded);

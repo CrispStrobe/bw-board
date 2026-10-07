@@ -83,13 +83,23 @@ def role(url,context,cache):
         parsed=urlparse(url)
         if parsed.netloc in ('','localhost') and not parsed.query and not parsed.fragment:
             path=Path(unquote(parsed.path))
-            for key,label in (('qualifiedRoot','qualified'),('derivedRoot','derived'),
-                              ('harnessRoot','harness')):
-                root=Path(context[key])
+            provider=context.get('providerFile')
+            if provider is not None and path==Path(provider):
                 try:
-                    if path.resolve(strict=True).is_relative_to(root.resolve(strict=True)) and path.is_file():
-                        result=label;break
-                except (FileNotFoundError,RuntimeError):pass
+                    if (url==Path(provider).as_uri() and not path.is_symlink() and
+                        path.resolve(strict=True)==path and path.is_file() and
+                        0<path.stat().st_size<=1024*1024 and
+                        hashlib.sha256(path.read_bytes()).hexdigest()==context['providerLoadedSha256']):
+                        result='authenticated_provider'
+                except (FileNotFoundError,RuntimeError,ValueError):pass
+            else:
+                for key,label in (('qualifiedRoot','qualified'),('derivedRoot','derived'),
+                                  ('harnessRoot','harness')):
+                    root=Path(context[key])
+                    try:
+                        if path.resolve(strict=True).is_relative_to(root.resolve(strict=True)) and path.is_file():
+                            result=label;break
+                    except (FileNotFoundError,RuntimeError):pass
     elif url.startswith('node:'):result='node_runtime'
     cache[url]=result;return result
 

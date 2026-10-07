@@ -1,5 +1,5 @@
 """Modeled parent control: nine-child schedule, profile gating and failure retention."""
-import json,os,shutil,tempfile
+import hashlib,json,os,shutil,tempfile
 from pathlib import Path
 import run as sampling
 
@@ -17,7 +17,8 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-parent-control-') as fold
     original_check=sampling.subprocess.check_output
     original_metadata=sampling.parent.metadata
     calls=[];fail_at=None
-    provider_loaded='a'*64
+    provider_bytes=b'export const modeledProvider=true;\n'
+    provider_loaded=hashlib.sha256(provider_bytes).hexdigest()
     def auth(setup):return {'officialZipSha256':'b'*64}
     def check_output(cmd,*args,**kwargs):
         if len(cmd)>1 and cmd[1]=='--input-type=module':
@@ -30,6 +31,7 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-parent-control-') as fold
         path=os.environ.get('BW_CPU_PROFILE_PATH')
         if path:
             p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)
+            if arm=='direct':(p.parent/'profiled-direct-provider.mjs').write_bytes(provider_bytes)
             p.write_text(json.dumps({'nodes':[{'id':1,'callFrame':{
              'functionName':'(root)','scriptId':'0','url':'',
              'lineNumber':-1,'columnNumber':-1}}],
