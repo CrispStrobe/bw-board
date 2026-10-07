@@ -46,4 +46,16 @@ for invalid in (raw.replace(module.LEAVE_TERMINAL, b''),
         pass
     else:
         raise AssertionError('terminal cleanup adversary was accepted')
+primary = ValueError('original guest failure')
+secondary = []
+try:
+    try:
+        raise primary
+    finally:
+        module.cleanup_call(secondary, 'mock reap',
+            lambda: (_ for _ in ()).throw(OSError('cleanup failed')))
+except ValueError as observed:
+    assert observed is primary
+assert secondary == [{'operation': 'mock reap', 'error': 'cleanup failed'}]
+assert module.reaped_child_peak_rss() >= 0
 print('live PTY source controls PASS: split frames, redraw isolation, ambient AT role rejection and terminal lifecycle')

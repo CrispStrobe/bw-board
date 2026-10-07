@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import resource
 import select
 import signal
 import struct
@@ -117,6 +118,20 @@ def observed_rss(pid):
     return 0
 
 
+def reaped_child_peak_rss():
+    # Linux ru_maxrss is KiB; RUSAGE_CHILDREN includes the reaped Node child.
+    return resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss * 1024
+
+
+def cleanup_call(errors, label, action):
+    """Keep the first guest failure authoritative if cleanup also fails."""
+    try:
+        return action()
+    except Exception as exc:
+        errors.append({'operation': label, 'error': str(exc)})
+        return None
+
+
 def child_environment(host, config, report_path):
     # Ambient AT_* roles can schedule synthetic keys or select a different CPU.
     env = {key: value for key, value in host.items() if not key.startswith('AT_')}
@@ -213,6 +228,9 @@ def run(config_path):
                 if not readable or eof:
                     break
         require(process.returncode == 0, 'CLI exit status')
+        reaped_peak_rss = reaped_child_peak_rss()
+        peak_rss = max(peak_rss, reaped_peak_rss)
+        require(peak_rss <= MAX_RSS, 'reaped PTY child RSS limit')
         require(not group_alive(process.pid), 'CLI process group closed')
         require(phase == 'await-exit', 'READY, guest echo, redraw and quit sequence')
         require(report_path.is_file() and report_path.stat().st_size <= MAX_REPORT,
@@ -247,6 +265,7 @@ def run(config_path):
                   'transcriptBytes': len(raw), 'terminalBefore': flags(before),
                   'terminalAfter': flags(after), 'terminalLifecycle': lifecycle,
                   'peakObservedRssBytes': peak_rss,
+                  'reapedChildrenPeakRssBytes': reaped_peak_rss,
                   'processGroupEmptyAfterExit': True, 'steps': report['steps'], 'stop': report['stop']}
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
         return result
@@ -254,7 +273,10 @@ def run(config_path):
         error = exc
         raise
     finally:
-        if process is not None:
+        cleanup_errors = []
+        def stop_child():
+            if process is None:
+                return
             if group_alive(process.pid):
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
@@ -262,9 +284,13 @@ def run(config_path):
                     pass
             if process.poll() is None:
                 process.wait(timeout=5)
-        after = termios.tcgetattr(slave)
+        cleanup_call(cleanup_errors, 'stop/reap child group', stop_child)
+        child_peak = cleanup_call(cleanup_errors, 'reaped child RSS', reaped_child_peak_rss)
+        if child_peak is not None:
+            peak_rss = max(peak_rss, child_peak)
+        after = cleanup_call(cleanup_errors, 'terminal attributes', lambda: termios.tcgetattr(slave))
         if not transcript_path.exists():
-            transcript_path.write_bytes(raw)
+            cleanup_call(cleanup_errors, 'original transcript', lambda: transcript_path.write_bytes(raw))
         if error is not None:
             failure = {'schema': 'bw.i80386.cli-pty-failure.v1', 'phase': phase,
                        'error': str(error), 'exitCode': process.returncode if process else None,
@@ -272,11 +298,25 @@ def run(config_path):
                        'redrawFrame': redraw_ordinal, 'transcriptBytes': len(raw),
                        'transcriptSha256': hashlib.sha256(raw).hexdigest(),
                        'peakObservedRssBytes': peak_rss,
-                       'terminalBefore': flags(before), 'terminalAfter': flags(after)}
-            (output / 'failure.json').write_text(json.dumps(failure, indent=2) + '\n')
-        os.close(master)
-        os.close(slave)
-        signal.signal(signal.SIGTERM, old_term)
+                       'reapedChildrenPeakRssBytes': child_peak,
+                       'terminalBefore': flags(before),
+                       'terminalAfter': flags(after) if after is not None else None}
+            cleanup_call(cleanup_errors, 'first-failure receipt',
+                         lambda: (output / 'failure.json').write_text(json.dumps(failure, indent=2) + '\n'))
+        cleanup_call(cleanup_errors, 'close PTY master', lambda: os.close(master))
+        cleanup_call(cleanup_errors, 'close PTY slave', lambda: os.close(slave))
+        cleanup_call(cleanup_errors, 'restore signal handler', lambda: signal.signal(signal.SIGTERM, old_term))
+        if cleanup_errors:
+            if error is None:
+                cleanup_call(cleanup_errors, 'remove invalid PASS result',
+                             lambda: (output / 'result.json').unlink(missing_ok=True))
+            sidecar = {'schema': 'bw.i80386.cli-pty-cleanup-errors.v1',
+                       'primaryError': str(error) if error is not None else None,
+                       'errors': cleanup_errors}
+            cleanup_call(cleanup_errors, 'secondary cleanup receipt',
+                         lambda: (output / 'cleanup-errors.json').write_text(json.dumps(sidecar, indent=2) + '\n'))
+            if error is None:
+                raise RuntimeError('PTY cleanup failed: ' + str(cleanup_errors))
 
 
 if __name__ == '__main__':

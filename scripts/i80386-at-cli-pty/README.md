@@ -44,6 +44,10 @@ console's ordered alternate-screen, cursor, mouse and focus-report setup and
 cleanup bytes as well as restored PTY attributes. The workflow does not
 upload the disk or ROM binaries. A successful hosted guest run and independent
 original-artifact audit are still required before acceptance.
+The driver samples the live child's RSS and also checks the Linux kernel's
+reaped-children peak RSS before accepting a result, so a short peak between
+samples still fails the bound. Cleanup errors are retained separately and
+cannot replace the original guest failure.
 
 The planned PTY acceptance sends three visible keys only after an actual
 `PTY READY>` frame, requires `PTY READY> abc PTY DONE` in a later rendered
