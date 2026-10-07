@@ -1,0 +1,31 @@
+{
+  "schema": "bw.cold-direct-ram.sampling-public-receipt.v1",
+  "date": "2026-10-07",
+  "harnessHead": "97aff55fe60c4ac5506048a5a0c8863898389eb6",
+  "qualifiedHead": "acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37616446785",
+  "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11480796452",
+  "artifactName": "cold-direct-ram-sampling-37616446785-1",
+  "zipBytes": 2136213,
+  "zipSha256": "6aed3a75f0238d268214001c73d457b0c7871ca9214ce25b1e610fa6fd3ae491",
+  "members": 120,
+  "semanticChildren": 9,
+  "retainedProfiles": 6,
+  "independentRawAudits": 2,
+  "status": "SEMANTIC_PASS_WITH_ATTRIBUTION_LIMIT",
+  "adoptionGate": "NOT_RUN",
+  "defaultPath": "ordinary JavaScript",
+  "host": {"cpuModel": "AMD EPYC 7763", "logicalCpus": 4, "node": "22.23.3"},
+  "directProfileLeafCounts": [
+    {"round": 1, "samples": 2100, "truncatedDataUrl": 964, "blankUrl": 811, "gc": 19, "other": 306},
+    {"round": 2, "samples": 2100, "truncatedDataUrl": 987, "blankUrl": 811, "gc": 21, "other": 281}
+  ],
+  "limitations": [
+    "Direct provider URLs truncated to 1024 characters fail complete source authentication.",
+    "Original unresolved buckets combine truncated JavaScript with blank native/builtin leaves.",
+    "Sample counts and deltas are not precise execution CPU cost shares or adoption timing.",
+    "Addon hashes bind build receipts; compiled addon binaries are not retained in this ZIP.",
+    "No physical 16 MHz RTx, cross-host speedup or broader OS qualification follows."
+  ],
+  "nextTask": "Authenticate exact file-backed diagnostic provider bytes, review controls, then run one new changed-instrumentation diagnostic."
+}
