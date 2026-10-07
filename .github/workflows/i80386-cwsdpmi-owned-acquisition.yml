@@ -1,0 +1,125 @@
+name: 386 CWSDPMI/DJGPP candidate acquisition inventory
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-acquisition-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-owned-acquisition' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Authenticate exact source and bounded local controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cwsdpmi-acquisition-evidence"
+          mkdir "$evidence"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout 20s python3 -B scripts/i80386-cwsdpmi-owned/source.py \
+            "$BW_EXPECTED_HEAD" "$evidence/source-before.json"
+          timeout 20s python3 -B scripts/i80386-cwsdpmi-owned/acquire-control.py \
+            > "$evidence/acquire-control.stdout" 2> "$evidence/acquire-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            uname -a
+          } > "$evidence/host.txt"
+      - name: Acquire two candidate archives and published metadata only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cwsdpmi-acquisition-evidence"
+          inputs="$RUNNER_TEMP/cwsdpmi-acquisition-inputs"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$evidence/acquire-step-status.txt"' EXIT
+          mkdir "$inputs"
+          phase=catalog
+          timeout 60s curl --fail --location --silent --show-error --retry 1 --max-time 45 \
+            --max-filesize 200000 -o "$inputs/catalog.html" \
+            https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/html/en/tools/cwsdpmi/20250318.2/index.html \
+            > "$evidence/catalog-fetch.stdout" 2> "$evidence/catalog-fetch.stderr"
+          phase=cwsdpmi
+          timeout 90s curl --fail --location --silent --show-error --retry 1 --max-time 75 \
+            --max-filesize 200000 -o "$inputs/cwsdpmi.zip" \
+            https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/tools/cwsdpmi.zip \
+            > "$evidence/cwsdpmi-fetch.stdout" 2> "$evidence/cwsdpmi-fetch.stderr"
+          phase=release-metadata
+          timeout 30s curl --fail --location --silent --show-error --max-time 20 \
+            --max-filesize 200000 -o "$inputs/release.json" \
+            https://api.github.com/repos/andrewwutw/build-djgpp/releases/tags/v3.4 \
+            > "$evidence/release-fetch.stdout" 2> "$evidence/release-fetch.stderr"
+          phase=tag-metadata
+          timeout 30s curl --fail --location --silent --show-error --max-time 20 \
+            --max-filesize 200000 -o "$inputs/tag.json" \
+            https://api.github.com/repos/andrewwutw/build-djgpp/git/ref/tags/v3.4 \
+            > "$evidence/tag-fetch.stdout" 2> "$evidence/tag-fetch.stderr"
+          phase=toolchain
+          timeout 300s curl --fail --location --silent --show-error --retry 1 --max-time 260 \
+            --max-filesize 81000000 -o "$inputs/djgpp-linux64-gcc1220.tar.bz2" \
+            https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2 \
+            > "$evidence/toolchain-fetch.stdout" 2> "$evidence/toolchain-fetch.stderr"
+          phase=inventory
+          timeout 240s python3 -B scripts/i80386-cwsdpmi-owned/acquire.py \
+            "$inputs/cwsdpmi.zip" "$inputs/djgpp-linux64-gcc1220.tar.bz2" \
+            "$inputs/catalog.html" "$inputs/release.json" "$inputs/tag.json" "$evidence" \
+            > "$evidence/inventory.stdout" 2> "$evidence/inventory.stderr"
+          phase=complete
+      - name: Recheck source and inventory report-only evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/cwsdpmi-acquisition-evidence"
+          mkdir -p "$evidence"
+          python3 -B scripts/i80386-cwsdpmi-owned/source.py \
+            "$BW_EXPECTED_HEAD" "$evidence/source-after.json" \
+            > "$evidence/source-after.stdout" 2> "$evidence/source-after.stderr"
+          if test -f "$evidence/source-before.json"; then
+            cmp "$evidence/source-before.json" "$evidence/source-after.json"
+          fi
+          python3 -B - "$evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);files={};total=0
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  raw=path.read_bytes();total+=len(raw)
+                  if len(raw)>8<<20 or total>16<<20:raise ValueError('report-only artifact cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain bounded reports and text notices, never archives or executables
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-acquisition-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-acquisition-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
