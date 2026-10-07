@@ -13,7 +13,15 @@ def finite(value):return type(value) in (int,float) and math.isfinite(value)
 def load(path):
     p=Path(path);require(p.is_file() and not p.is_symlink() and 0<p.stat().st_size<=MAX_BYTES,
                     'bounded ordinary CPU profile')
-    raw=p.read_bytes();profile=json.loads(raw)
+    raw=p.read_bytes()
+    def unique(pairs):
+        result={}
+        for key,value in pairs:
+            require(key not in result,'duplicate CPU profile JSON key')
+            result[key]=value
+        return result
+    def nonfinite(value):raise ValueError('nonfinite CPU profile JSON constant: '+value)
+    profile=json.loads(raw,object_pairs_hook=unique,parse_constant=nonfinite)
     require(type(profile)==dict and {'nodes','samples','timeDeltas','startTime','endTime'}<=profile.keys(),
             'complete CPU profile fields')
     nodes=profile['nodes'];samples=profile['samples'];deltas=profile['timeDeltas']
@@ -98,7 +106,7 @@ def bucket(frame,mapping):
     if role in ('../src/experimental/i80386-at-machine.js',
                 '../src/experimental/ata16.js','../src/at-8042-a20.js','../src/at-ps2-mouse.js'):
         return 'authenticated_board_device_js'
-    if role is not None:return 'authenticated_other_js'
+    if role is not None and role.endswith(('.js','.mjs')):return 'authenticated_other_js'
     if url.startswith('node:'):return 'node_runtime'
     return 'native_wasm_or_unresolved'
 def summarize(path,source_root,inventory,generated_sha):

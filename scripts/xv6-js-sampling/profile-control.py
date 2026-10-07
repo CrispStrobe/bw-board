@@ -36,6 +36,18 @@ with tempfile.TemporaryDirectory() as temporary:
     assert bucket({**valid['nodes'][1]['callFrame'],'url':'file:///wrong.js'},mapping)=='native_wasm_or_unresolved'
     assert bucket({'url':'','functionName':'garbage collector'},mapping)=='native_wasm_or_unresolved'
     assert bucket({'url':'','functionName':'(garbage collector)'},mapping)=='v8_gc'
+    assert bucket({'url':'file:///code.wasm','functionName':'wasm'},
+                  {'file:///code.wasm':'../wasm/i80386-block-spike.wasm'})=='native_wasm_or_unresolved'
+    assert bucket({'url':'file:///native.c','functionName':'c'},
+                  {'file:///native.c':'../src/experimental/i80386-code16-wasm.c'})=='native_wasm_or_unresolved'
+    path.write_text('{"nodes":[],"nodes":[]}')
+    try:load(path)
+    except ValueError:pass
+    else:raise AssertionError('duplicate JSON key admitted')
+    path.write_text('{"startTime":NaN}')
+    try:load(path)
+    except ValueError:pass
+    else:raise AssertionError('nonfinite JSON constant admitted')
     source=Path(temporary)/'source';(source/'scripts').mkdir(parents=True)
     (source/'src').mkdir();(source/'src/x.js').write_bytes(b'export default 1;')
     generated=source/'scripts/probe-xv6-stock-profile.mjs';generated.write_bytes(b'profile')
