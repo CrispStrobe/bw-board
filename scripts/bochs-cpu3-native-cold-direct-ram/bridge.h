@@ -238,6 +238,9 @@ public:
  uint64_t committed()const{read_gate();return session_.committed_sequence();}
  uint64_t next_effect()const{read_gate();return session_.next_effect();}
  unsigned journal_size()const{read_gate();return session_.journal_size();}
+ bool prepared()const{read_gate();return prepared_.has_value();}
+ bool page_ticket()const{read_gate();return page_ticket_.has_value();}
+ bw_cold_owned_ram::FenceState fence_state()const{read_gate();return session_.fence_state();}
  uint32_t generation_at(uint32_t address)const{read_gate();return session_.generation_at(address);}
  uint8_t owned_byte(uint32_t address)const{read_gate();return session_.inspect_byte(address);}
  bool failed()const{read_gate();return failed_||session_.failed();}

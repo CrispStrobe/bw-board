@@ -21,6 +21,7 @@ export function createDirectRamColdBiosProvider(owner){
   const entries=owner.directDrain();assert.ok(Array.isArray(entries)&&entries.length<=32,'copied bounded native journal');
   assert.equal(entries.epoch,0,'fixed journal epoch');assert.equal(entries.acknowledged,acknowledged,'contiguous prior ACK');
   assert.equal(entries.through,acknowledged+entries.length,'contiguous copied journal through');
+  assert.ok(journalRecords.length+entries.length<=400000,'bounded ordered actual journal evidence');
   assert.equal(typeof entries.sessionIdentity,'bigint');
   if(sessionIdentity===null)sessionIdentity=entries.sessionIdentity;
   else assert.equal(entries.sessionIdentity,sessionIdentity,'one bound owner session');
@@ -91,6 +92,7 @@ export function createDirectRamColdBiosProvider(owner){
   journal(){assert.ok(!lease&&!active&&!closed);return journalRecords.map(e=>({...e,before:[...e.before],after:[...e.after]}));},
   generationEntries(){assert.ok(!lease&&!active&&!closed);return [...board.generations].map(([page,generation])=>[page,generation]);},
   ownerStatus(){return {acknowledged,sessionIdentity:sessionIdentity===null?null:String(sessionIdentity),journalEntries:journalRecords.length};},
+  closedStatus(){return {providerClosed:closed,boardClosed:board.closed};},
   close(){assert.ok(!lease&&!active&&!closed);call('close');closed=true;}
  });
 }

@@ -9,6 +9,8 @@ static std::unique_ptr<Bridge> direct_owner;
 static napi_ref direct_ram_ref=nullptr,direct_ram_buffer_ref=nullptr,direct_gen_ref=nullptr,direct_gen_buffer_ref=nullptr;
 static napi_env direct_owner_env=nullptr;
 static uint64_t direct_memory_reads=0,direct_memory_writes=0,direct_reconciles=0;
+static bool direct_owner_closed=false;
+static uint64_t direct_closed_committed=0,direct_closed_acknowledged=0,direct_closed_next_effect=0;
 enum class DirectScope:uint8_t {none,clock,page,scalar,full,paused};
 static DirectScope direct_scope=DirectScope::none;
 static bool direct_scope_committed=false;
@@ -200,6 +202,36 @@ static napi_value direct_paused_pending(napi_env e,napi_callback_info info){
  size_t argc=0;void *data=nullptr;if(!ok(napi_get_cb_info(e,info,&argc,nullptr,nullptr,&data))||argc)return fail("direct RAM pending arguments");
  try{return number(direct_owner->journal_size());}catch(const std::exception&error){direct_poison();return fail(error.what());}
 }
+static napi_value direct_status(napi_env e,napi_callback_info info){
+ std::unique_lock<std::recursive_mutex> lock(invocation_mutex,std::try_to_lock);
+ if(!lock.owns_lock()||e!=env||!initialized||busy||direct_scope!=DirectScope::none||
+    std::this_thread::get_id()!=owner||(!direct_owner&&!direct_owner_closed)){
+  napi_throw_error(e,nullptr,"direct RAM status scope");return nullptr;
+ }
+ size_t argc=0;if(!ok(napi_get_cb_info(e,info,&argc,nullptr,nullptr,nullptr))||argc)return fail("direct RAM status arguments");
+ try{
+  const uint64_t committed=direct_owner?direct_owner->committed():direct_closed_committed;
+  const uint64_t acknowledged=direct_owner?direct_owner->acknowledged():direct_closed_acknowledged;
+  const uint64_t nextEffect=direct_owner?direct_owner->next_effect():direct_closed_next_effect;
+  const uint64_t pending=direct_owner?direct_owner->journal_size():0;
+  const bool prepared=direct_owner&&direct_owner->prepared();
+  const bool pageTicket=direct_owner&&direct_owner->page_ticket();
+  const auto fence=direct_owner?direct_owner->fence_state():bw_cold_owned_ram::FenceState{};
+  const bool failed=direct_owner&&direct_owner->failed();
+  napi_value out=nullptr;if(!ok(napi_create_object(e,&out)))return nullptr;
+  auto set_u64=[&](const char*key,uint64_t n){napi_value v=nullptr;return ok(napi_create_bigint_uint64(e,n,&v))&&ok(napi_set_named_property(e,out,key,v));};
+  auto set_bool=[&](const char*key,bool b){napi_value v=nullptr;return ok(napi_get_boolean(e,b,&v))&&ok(napi_set_named_property(e,out,key,v));};
+  if(!set_u64("directReads",direct_memory_reads)||!set_u64("directWrites",direct_memory_writes)||
+     !set_u64("reconciliations",direct_reconciles)||!set_u64("committed",committed)||
+     !set_u64("acknowledged",acknowledged)||!set_u64("nextEffect",nextEffect)||
+     !set_u64("journalPending",pending)||!set_bool("prepared",prepared)||
+     !set_bool("pageTicket",pageTicket)||!set_bool("ownerFailed",failed)||
+     !set_bool("uncommittedRetry",fence.uncommitted_retry)||
+     !set_bool("committedCodeFence",fence.committed_code_write)||
+     !set_bool("ownerClosed",direct_owner_closed)||!set_bool("cpuClosed",closed))return nullptr;
+  return out;
+ }catch(const std::exception&error){direct_poison();return fail(error.what());}
+}
 static napi_value direct_paused_reconcile(napi_env e,napi_callback_info info){
  std::unique_lock<std::recursive_mutex> lock(invocation_mutex,std::try_to_lock);
  if(!lock.owns_lock()||e!=direct_owner_env||!initialized||closed||busy||direct_method_active||direct_scope!=DirectScope::none||
@@ -229,7 +261,8 @@ extern "C" int bw_cold_direct_ram_reconcile_full(void){
 }
 static bool direct_close(){
  if(!direct_owner)return false;
- try{direct_owner->close();direct_owner.reset();direct_release_refs();direct_owner_env=nullptr;return true;}
+ try{direct_owner->close();direct_closed_committed=direct_owner->committed();direct_closed_acknowledged=direct_owner->acknowledged();
+  direct_closed_next_effect=direct_owner->next_effect();direct_owner_closed=true;direct_owner.reset();direct_release_refs();direct_owner_env=nullptr;return true;}
  catch(...){direct_poison();return false;}
 }
 static void direct_cleanup(void *data){

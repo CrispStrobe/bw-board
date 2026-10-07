@@ -60,11 +60,18 @@ if(denied.has(caseName)){
 }else{
  const result=addon.create(configuration,rom,callback,false);
  assert.equal(result.boardA20,1);
+ const open=addon.directStatus();assert.equal(open.ownerClosed,false);assert.equal(open.cpuClosed,false);
+ assert.equal(open.prepared,false);assert.equal(open.pageTicket,false);assert.equal(open.journalPending,0n);
+ assert.equal(open.uncommittedRetry,false);assert.equal(open.committedCodeFence,false);
  if(caseName==='rom-detach')assert.equal(rom.byteLength,0);
  if(caseName==='valid-overlap'){
   assert.equal(directRam[0x100],0x31);assert.equal(directRam[0x101],0x32);
   assert.equal(directGenerations[0],2);
  }
  addon.close();
+ const closed=addon.directStatus();assert.equal(closed.ownerClosed,true);assert.equal(closed.cpuClosed,true);
+ assert.equal(closed.prepared,false);assert.equal(closed.pageTicket,false);assert.equal(closed.journalPending,0n);
+ assert.equal(closed.uncommittedRetry,false);assert.equal(closed.committedCodeFence,false);
+ assert.equal(closed.acknowledged,closed.committed);
 }
 console.log('direct-RAM N-API control PASS',caseName);
