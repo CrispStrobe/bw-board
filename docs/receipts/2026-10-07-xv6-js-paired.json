@@ -1,0 +1,41 @@
+{
+  "schema": "bw.xv6-js-paired-result-summary.v1",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37627659600",
+  "source": "22ca742ed60e1350ed96110986a09b2ce84620ac",
+  "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11484909563",
+  "zipBytes": 140040,
+  "zipSha256": "9dbe478782e2a0ddbbc75d19ec6c2389a55473cc9517908d376b476e39740330",
+  "members": 89,
+  "independentAudits": [
+    "root standard-library original-packet audit",
+    "separate reviewer standard-library original-packet audit"
+  ],
+  "childReports": 18,
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "semanticPass": true,
+  "performanceGatePass": true,
+  "steps": 24338279,
+  "dispatchInstructions": 16428211,
+  "gitSourceRoles": 70,
+  "gitHarnessRoles": 7,
+  "cpuRatioDispatchOverOrdinary": 0.7625926506023474,
+  "wallRatioDispatchOverOrdinary": 0.6741370786421781,
+  "favorableCpuPairs": 7,
+  "host": {
+    "cpuModel": "AMD EPYC 9V45 96-Core Processor",
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "python": "3.12.3",
+    "platform": "Linux",
+    "architecture": "x86_64"
+  },
+  "limits": [
+    "Whole-child CPU/wall includes startup and report generation",
+    "Full reported RAM/disk hashes agree; raw RAM/disk/media bytes omitted",
+    "Interrupt records capped at 64, not a complete bus trace",
+    "PSE/APIC-enabled xv6 profile, not strict original 386DX",
+    "No physical timing or general OS/default-adoption claim"
+  ]
+}

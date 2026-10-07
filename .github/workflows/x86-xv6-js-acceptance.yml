@@ -1,0 +1,93 @@
+name: x86 xv6 JavaScript accelerator acceptance
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-xv6-js-acceptance-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  paired-forktest:
+    if: >-
+      github.event.label.name == 'x86-xv6-js-acceptance' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Admit exact source and bounded controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          timeout 30s python3 scripts/xv6-js-acceptance/policy_control.py
+          timeout 30s python3 scripts/xv6-js-acceptance/run_control.py
+          test -z "$(git status --porcelain --untracked-files=all)"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20.20.2'
+      - name: Install bounded xv6 build toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 600s sudo apt-get update
+          timeout 600s sudo apt-get install -y gcc-multilib
+      - name: Fetch exact MIT xv6 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          git init "$RUNNER_TEMP/xv6-public"
+          git -C "$RUNNER_TEMP/xv6-public" remote add origin https://github.com/mit-pdos/xv6-public.git
+          timeout 180s git -C "$RUNNER_TEMP/xv6-public" fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          git -C "$RUNNER_TEMP/xv6-public" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/xv6-public" rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          test -z "$(git -C "$RUNNER_TEMP/xv6-public" status --porcelain --untracked-files=all)"
+      - name: Build one fresh 4 MiB stock xv6 image
+        shell: bash
+        env:
+          XV6_SRC: ${{ runner.temp }}/xv6-public
+          XV6_STOCK_4M_OUT: ${{ runner.temp }}/xv6-stock-4m
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          mkdir -p "$RUNNER_TEMP/xv6-js-acceptance"
+          timeout 900s node scripts/build-xv6-stock-4m.mjs \
+            > "$RUNNER_TEMP/xv6-js-acceptance/build.stdout" \
+            2> "$RUNNER_TEMP/xv6-js-acceptance/build.stderr"
+          cp "$XV6_STOCK_4M_OUT/bw-xv6-stock-4m-receipt.json" \
+            "$RUNNER_TEMP/xv6-js-acceptance/xv6-build.json"
+      - name: Run exact-source same-workload semantic and paired CPU gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 72m python3 scripts/xv6-js-acceptance/run.py \
+            --source "$GITHUB_WORKSPACE" \
+            --image-dir "$RUNNER_TEMP/xv6-stock-4m" \
+            --output "$RUNNER_TEMP/xv6-js-acceptance" \
+            --head "$BW_EXPECTED_HEAD" \
+            > "$RUNNER_TEMP/xv6-js-acceptance/parent.stdout" \
+            2> "$RUNNER_TEMP/xv6-js-acceptance/parent.stderr"
+      - name: Preserve bounded raw evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: x86-xv6-js-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/xv6-js-acceptance/
+          if-no-files-found: warn
+          retention-days: 7
