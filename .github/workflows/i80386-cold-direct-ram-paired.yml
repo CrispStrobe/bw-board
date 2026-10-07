@@ -1,0 +1,218 @@
+name: Cold CPU3 direct RAM paired timing
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cold-direct-ram-paired-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  paired:
+    if: >-
+      github.event.label.name == 'x86-direct-ram-paired' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      BW_EXPECTED_HARNESS_HEAD: ${{ github.event.pull_request.head.sha }}
+      GH_TOKEN: ${{ github.token }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      NODE_V8_COVERAGE: ''
+      BW_HOT_NAPI_PROFILE: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1
+          path: qualified
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authenticate closed source and host
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          mkdir "$RUNNER_TEMP/cold-direct-paired-evidence"
+          test "$(git -C harness rev-parse HEAD)" = "$BW_EXPECTED_HARNESS_HEAD"
+          test "$(git -C qualified rev-parse HEAD)" = acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1
+          test -z "$(git -C harness status --porcelain)"
+          test -z "$(git -C qualified status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          python3 -B harness/scripts/cold-direct-ram-paired/policy_control.py \
+            > "$RUNNER_TEMP/cold-direct-paired-evidence/policy-control.txt"
+          python3 -B harness/scripts/cold-direct-ram-paired/resource-control.py "$(command -v node)" \
+            > "$RUNNER_TEMP/cold-direct-paired-evidence/resource-control.json"
+          {
+            printf 'run=%s attempt=%s event=%s harness=%s qualified=acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HARNESS_HEAD"
+            node --version
+            python3 --version
+            c++ --version
+            uname -a
+            lscpu
+            df -h "$RUNNER_TEMP"
+            sha256sum "$(command -v node)" harness/.github/workflows/i80386-cold-direct-ram-paired.yml
+          } > "$RUNNER_TEMP/cold-direct-paired-evidence/host-and-source.txt"
+          cp harness/scripts/cold-direct-ram-paired/contract.json "$RUNNER_TEMP/cold-direct-paired-evidence/contract.json"
+          cp qualified/roms/free-at-bios/LICENSE "$RUNNER_TEMP/cold-direct-paired-evidence/free-at-bios-LICENSE.txt"
+          cp qualified/roms/free-at-bios/README.md "$RUNNER_TEMP/cold-direct-paired-evidence/free-at-bios-README.txt"
+      - name: Acquire and replay exact qualified actual packet
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 180s gh api /repos/CrispStrobe/bw-board/actions/artifacts/11474662523/zip \
+            > "$RUNNER_TEMP/cold-direct-actual-qualified.zip"
+          python3 -B harness/scripts/cold-direct-ram-paired/reference.py \
+            "$RUNNER_TEMP/cold-direct-actual-qualified.zip" \
+            "$RUNNER_TEMP/cold-direct-paired-evidence/reference.json" \
+            > "$RUNNER_TEMP/cold-direct-paired-evidence/reference-auth.txt"
+      - name: Install bounded native build dependencies and fetch pinned Bochs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev libnode-dev
+          test -r /usr/include/node/node_api.h
+          git init "$RUNNER_TEMP/cold-direct-pristine"
+          git -C "$RUNNER_TEMP/cold-direct-pristine" remote add origin https://github.com/bochs-emu/Bochs.git
+          timeout 180s git -C "$RUNNER_TEMP/cold-direct-pristine" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          git -C "$RUNNER_TEMP/cold-direct-pristine" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/cold-direct-pristine" rev-parse HEAD)" = 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          for notice in COPYING COPYING.LIB LICENSE; do
+            for folder in "$RUNNER_TEMP/cold-direct-pristine" "$RUNNER_TEMP/cold-direct-pristine/bochs"; do
+              if test -f "$folder/$notice"; then
+                cp "$folder/$notice" "$RUNNER_TEMP/cold-direct-paired-evidence/upstream-$(basename "$folder")-$notice.txt"
+              fi
+            done
+          done
+      - name: Rebuild and authenticate qualified direct addon
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-paired-evidence"
+          export BOCHS_386_ROOT="$RUNNER_TEMP/cold-direct-pristine"
+          export BW_EXPECTED_HEAD=acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1
+          cd qualified
+          timeout 180s node scripts/prepare-bochs-cpu3-native-cold-direct-ram.mjs --prepare \
+            "$RUNNER_TEMP/cold-direct-prepared" > "$evidence/prepare.json" 2> "$evidence/prepare.stderr"
+          timeout 60s node scripts/bochs-cpu3-native-cold-direct-ram/verify-build-control.mjs \
+            "$evidence/prepare.json" > "$evidence/metadata-controls.txt"
+          cd "$RUNNER_TEMP/cold-direct-prepared/bochs"
+          timeout 180s ./configure --enable-cpu-level=3 --with-nogui --disable-plugins --disable-debugger \
+            --disable-repeat-speedups --disable-handlers-chaining --enable-instrumentation=instrument/stubs \
+            'CFLAGS=-O2 -fPIC' 'CXXFLAGS=-O2 -fPIC' \
+            > "$evidence/configure.stdout" 2> "$evidence/configure.stderr"
+          timeout 900s nice make -j1 -f Makefile -f bw_direct_addon.mk bw_direct.node \
+            > "$evidence/make.stdout" 2> "$evidence/make.stderr"
+          cd "$GITHUB_WORKSPACE/qualified"
+          timeout 60s node scripts/bochs-cpu3-native-cold-direct-ram/verify-build.mjs \
+            "$evidence/prepare.json" "$RUNNER_TEMP/cold-direct-prepared/bochs/bw_direct.node" \
+            "$evidence/build-auth.json" > "$evidence/build-auth.stdout"
+          sha256sum "$RUNNER_TEMP/cold-direct-prepared/bochs/bw_direct.node" > "$evidence/direct-addon-sha256.txt"
+      - name: Acquire pinned compact addon and compile qualified companion owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-paired-evidence"
+          timeout 180s gh run download 37260140804 --repo CrispStrobe/bw-board \
+            --name cold-compact-progress-build-only-37260140804-1 \
+            --dir "$RUNNER_TEMP/cold-direct-baseline"
+          baseline="$RUNNER_TEMP/cold-direct-baseline/cold-compact-progress-build-evidence/bw_direct.node"
+          printf '%s  %s\n' 0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d "$baseline" | sha256sum -c -
+          timeout 60s c++ -std=c++17 -O1 -fPIC -shared -Wall -Wextra -Werror -I/usr/include/node \
+            qualified/scripts/bochs-cpu3-native-cold-owned-ram/napi.cc \
+            -o "$RUNNER_TEMP/cold-direct-owned_ram.node"
+          sha256sum "$baseline" "$RUNNER_TEMP/cold-direct-owned_ram.node" > "$evidence/comparison-addon-sha256.txt"
+          python3 - "$GITHUB_WORKSPACE/qualified" "$RUNNER_TEMP/cold-direct-owned_ram.node" "$evidence/owner-build.json" <<'PY'
+          import hashlib,json,pathlib,subprocess,sys
+          root=pathlib.Path(sys.argv[1]);addon=pathlib.Path(sys.argv[2]);out=pathlib.Path(sys.argv[3])
+          digest=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+          compiler=pathlib.Path(subprocess.check_output(['which','c++'],text=True).strip()).resolve()
+          report={'schema':'bw.cold-direct-ram.paired-owner-build.v1',
+                  'sourceHead':subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip(),
+                  'sourceSha256':digest(root/'scripts/bochs-cpu3-native-cold-owned-ram/napi.cc'),
+                  'addonSha256':digest(addon),'compilerPath':str(compiler),
+                  'compilerSha256':digest(compiler),
+                  'compilerVersion':subprocess.check_output([str(compiler),'--version'],text=True).splitlines()[0],
+                  'flags':['-std=c++17','-O1','-fPIC','-shared','-Wall','-Wextra','-Werror','-I/usr/include/node']}
+          out.write_text(json.dumps(report,sort_keys=True,indent=2)+'\n')
+          PY
+      - name: Run semantic-gated paired children
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-paired-evidence"
+          node harness/scripts/cold-direct-ram-paired/configuration.mjs \
+            "$GITHUB_WORKSPACE/qualified" "$evidence" > "$evidence/config-auth.json"
+          python3 - "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$BW_EXPECTED_HARNESS_HEAD" <<'PY'
+          import hashlib,json,pathlib,sys
+          workspace=pathlib.Path(sys.argv[1]);temp=pathlib.Path(sys.argv[2]);head=sys.argv[3]
+          evidence=temp/'cold-direct-paired-evidence'
+          reference=evidence/'reference.json'
+          config=json.loads((evidence/'config-auth.json').read_text())
+          data={'schema':'bw.cold-direct-ram.paired-setup.v1','harnessRoot':str(workspace/'harness'),
+                'harnessHead':head,'qualifiedRoot':str(workspace/'qualified'),
+                'directAddon':str(temp/'cold-direct-prepared/bochs/bw_direct.node'),
+                'directAddonSha256':hashlib.sha256((temp/'cold-direct-prepared/bochs/bw_direct.node').read_bytes()).hexdigest(),
+                'directBuildAuth':str(evidence/'build-auth.json'),
+                'directBuildAuthSha256':hashlib.sha256((evidence/'build-auth.json').read_bytes()).hexdigest(),
+                'companionAddon':str(temp/'cold-direct-baseline/cold-compact-progress-build-evidence/bw_direct.node'),
+                'ownerAddon':str(temp/'cold-direct-owned_ram.node'),
+                'ownerAddonSha256':hashlib.sha256((temp/'cold-direct-owned_ram.node').read_bytes()).hexdigest(),
+                'ownerBuildReceipt':str(evidence/'owner-build.json'),
+                'ownerBuildReceiptSha256':hashlib.sha256((evidence/'owner-build.json').read_bytes()).hexdigest(),
+                'configuration':{k:v['path'] for k,v in config.items()},
+                'reference':str(reference),'referenceSha256':hashlib.sha256(reference.read_bytes()).hexdigest(),
+                'output':str(evidence/'pairs')}
+          data['node']=str(pathlib.Path(__import__('shutil').which('node')).resolve())
+          (evidence/'setup.json').write_text(json.dumps(data,indent=2)+'\n')
+          PY
+          python3 -B harness/scripts/cold-direct-ram-paired/parent.py "$evidence/setup.json" \
+            > "$evidence/parent.stdout" 2> "$evidence/parent.stderr"
+          test "$(git -C harness rev-parse HEAD)" = "$BW_EXPECTED_HARNESS_HEAD"
+          test -z "$(git -C harness status --porcelain)"
+          test -z "$(git -C qualified status --porcelain)"
+      - name: Inventory retained evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/cold-direct-paired-evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);root.mkdir(exist_ok=True)
+          files={str(p.relative_to(root)):{'bytes':p.stat().st_size,
+                 'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+                 for p in sorted(root.rglob('*')) if p.is_file() and p.name!='artifact-inventory.json'}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain timing and failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-direct-ram-paired-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cold-direct-paired-evidence/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

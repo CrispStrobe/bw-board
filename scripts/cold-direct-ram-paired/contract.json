@@ -3,6 +3,12 @@
   "status": "SOURCE_ONLY_PENDING_TIMING_QUALIFICATION",
   "qualifiedSourceHead": "acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1",
   "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+  "compactReferenceSha256": "74f365d0ab5a00ab229f29291f46ed15451b7a37a442301eabd88a22fb4153ff",
+  "timingProvider": {
+    "qualifiedSha256": "e529866863d1d7644ee866565b32ceef39cf882ba67bc6f56f9e62ed8ccc6dc6",
+    "derivedSha256": "2a46628a13eb023d41762a807325535e285d68657f1345090108cd54977e0ac5",
+    "loadedModuleSha256": "4fe219da468eb2fb6acd6cdaf263cc7501f422ebf026baa9f00dbc77d9620a1d"
+  },
   "actualQualification": {
     "runId": 37605762900,
     "artifactId": 11474662523,

@@ -13,7 +13,8 @@ for name,arms in [('direct-v-companion',('companion','direct')),
                   ('direct-v-plain-js',('plain-js','direct'))]:
     pairs=[{**p,'arms':{arms[0]:child(100),arms[1]:child(80)}} for p in schedule(name)]
     result=summarize(name,pairs)
-    assert result['quantitativeGatePass'] and result['allSevenFavorable']
+    assert result['allSevenFavorable']
+    assert result['quantitativeGatePass'] is (True if name=='direct-v-plain-js' else None)
     bad=deepcopy(pairs);bad[3]['arms']['direct']['semantic']='FAIL'
     try:summarize(name,bad)
     except ValueError:pass
@@ -24,5 +25,15 @@ for name,arms in [('direct-v-companion',('companion','direct')),
     else:raise AssertionError('nonalternating order admitted')
     slow=deepcopy(pairs);slow[5]['arms']['direct']=child(101)
     result=summarize(name,slow)
-    assert not result['quantitativeGatePass'] and not result['allSevenFavorable']
+    assert not result['allSevenFavorable']
+    assert result['quantitativeGatePass'] is (False if name=='direct-v-plain-js' else None)
+    for key,value in [('cpuSeconds',float('inf')),('wallSeconds',float('nan'))]:
+        bad=deepcopy(pairs);bad[3]['arms']['direct']['wholeChild'][key]=value
+        try:summarize(name,bad)
+        except ValueError:pass
+        else:raise AssertionError('nonfinite child admitted')
+    bad=deepcopy(pairs);bad[3]['arms']['direct']['receipt']['executionTiming']['cpuMicroseconds']['user']=0
+    try:summarize(name,bad)
+    except ValueError:pass
+    else:raise AssertionError('zero execution CPU admitted')
 print('direct-RAM paired policy controls PASS')
