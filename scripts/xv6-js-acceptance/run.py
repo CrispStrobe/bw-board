@@ -8,6 +8,8 @@ import hashlib
 import json
 import os
 import platform
+import posixpath
+import re
 import resource
 import signal
 import stat
@@ -15,7 +17,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from policy import ROM_SHA, compare_reports, require, summarize_pairs, validate_report
+from policy import (ROM_SHA, compare_reports, require, sha256_json,
+                    summarize_pairs, validate_report)
 
 
 XV6_REVISION = "eeb7b415dbcb12cc362d0783e41c3d1f44066b17"
@@ -31,6 +34,15 @@ REQUIRED_SOURCE_ROLES = {
     "../src/experimental/i80386-ram-bridge.js",
     "../wasm/i80386-block-spike.wasm", "../wasm/i80386-ram-bridge.wasm",
 }
+HARNESS_ROLES = (
+    ".github/workflows/x86-xv6-js-acceptance.yml",
+    "scripts/xv6-js-acceptance/README.md",
+    "scripts/xv6-js-acceptance/policy.py",
+    "scripts/xv6-js-acceptance/policy_control.py",
+    "scripts/xv6-js-acceptance/run.py",
+    "scripts/xv6-js-acceptance/run_control.py",
+    "scripts/build-xv6-stock-4m.mjs",
+)
 
 
 def sha_file(file: Path) -> str:
@@ -50,6 +62,62 @@ def ordinary_file(file: Path, maximum: int) -> None:
 def git(source: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(source), *args],
                                    text=True, stderr=subprocess.DEVNULL).strip()
+
+
+def git_blob(source: Path, head: str, path: str) -> bytes:
+    require(path and not path.startswith("/") and ".." not in path.split("/"),
+            "invalid tracked source path")
+    return subprocess.check_output(["git", "-C", str(source), "show", f"{head}:{path}"],
+                                   stderr=subprocess.DEVNULL)
+
+
+SOURCE_SEEDS = re.compile(r"['\"](\.{1,2}/[^'\"\n]+)['\"]")
+STATIC_IMPORT = re.compile(
+    r"\b(?:import|export)\s+(?:[^;]*?\sfrom\s*)?['\"](\.[^'\"]+)['\"]")
+DYNAMIC_IMPORT = re.compile(r"\bimport\s*\(\s*['\"](\.[^'\"]+)['\"]\s*\)")
+
+
+def expected_source_inventory(source: Path, head: str,
+                              verify_live: bool = True) -> dict[str, str]:
+    """Recompute the probe's literal import closure before the first child."""
+    probe = git_blob(source, head, "scripts/probe-xv6-stock.mjs").decode("utf8")
+    anchor = re.search(r"const sourcePaths=\[(.*?)\];", probe, re.DOTALL)
+    require(anchor is not None, "source inventory anchor missing")
+    seeds = SOURCE_SEEDS.findall(anchor.group(1))
+    remainder = SOURCE_SEEDS.sub("", anchor.group(1))
+    require(seeds and all(char.isspace() or char == "," for char in remainder),
+            "nonliteral source inventory seed")
+    queue = [posixpath.normpath(posixpath.join("scripts", seed)) for seed in seeds]
+    found = {}
+    while queue:
+        path = queue.pop()
+        require(path and not path.startswith("../") and path != ".." and
+                not path.startswith("/"), "source import escapes repository")
+        if path in found:
+            continue
+        require(len(found) < 256, "source closure exceeds bound")
+        body = git_blob(source, head, path)
+        require(0 < len(body) <= 4 * 1024 * 1024, "unbounded source role")
+        if verify_live:
+            live = source / path
+            ordinary_file(live, 4 * 1024 * 1024)
+            require(sha_file(live) == sha_file_bytes(body),
+                    f"source differs from exact Git blob: {path}")
+        role = posixpath.relpath(path, "scripts")
+        role = role if role.startswith("..") else "./" + role
+        found[role] = sha_file_bytes(body)
+        if path.endswith((".js", ".mjs")):
+            text = body.decode("utf8")
+            for pattern in (STATIC_IMPORT, DYNAMIC_IMPORT):
+                for specifier in pattern.findall(text):
+                    queue.append(posixpath.normpath(posixpath.join(
+                        posixpath.dirname(path), specifier)))
+    require(REQUIRED_SOURCE_ROLES <= found.keys(), "source closure omits required role")
+    return dict(sorted(found.items()))
+
+
+def sha_file_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def load_json(file: Path, maximum: int = MAX_REPORT) -> dict:
@@ -75,6 +143,22 @@ def write_json(file: Path, data: object) -> None:
     with file.open("x", encoding="utf8") as stream:
         json.dump(data, stream, sort_keys=True, indent=2, allow_nan=False)
         stream.write("\n")
+
+
+def snapshot_inventory(output: Path) -> None:
+    files = {}
+    for file in sorted(output.rglob("*")):
+        if file.is_dir():
+            continue
+        name = file.relative_to(output).as_posix()
+        if name in {"parent.stdout", "parent.stderr"}:
+            continue  # These streams remain open until the parent process exits.
+        info = file.lstat()
+        require(stat.S_ISREG(info.st_mode) and not file.is_symlink() and
+                info.st_size <= 8 * 1024 * 1024, "invalid evidence file")
+        files[name] = {"bytes": info.st_size, "sha256": sha_file(file)}
+    require(len(files) <= 128, "evidence file count exceeds bound")
+    write_json(output / "file-inventory.json", {"files": files})
 
 
 def check_source_inventory(source: Path, inventory: dict[str, str]) -> None:
@@ -131,6 +215,8 @@ def host_metadata() -> dict:
                 break
     return {"platform": platform.system(), "architecture": platform.machine(),
             "cpuModel": model, "logicalCpus": os.cpu_count(),
+            "python": platform.python_version(),
+            "gcc": subprocess.check_output(["gcc", "--version"], text=True).splitlines()[0],
             "node": subprocess.check_output(["node", "--version"], text=True).strip(),
             "loadAverage": os.getloadavg()}
 
@@ -148,6 +234,15 @@ def clean_child_env(image_dir: Path, arm: str) -> dict[str, str]:
     if arm == "dispatch":
         env["XV6_NATIVE_DISPATCH"] = "1"
     return env
+
+
+def rss_exceeds_bound(observed_bytes: int, wait4_maxrss_kib: int,
+                      limit_bytes: int = MAX_CHILD_RSS) -> bool:
+    require(all(isinstance(value, int) and value >= 0 for value in
+                (observed_bytes, wait4_maxrss_kib, limit_bytes)) and limit_bytes > 0,
+            "invalid RSS measurement")
+    # Linux wait4 ru_maxrss is KiB, and can catch spikes between /proc polls.
+    return max(observed_bytes, wait4_maxrss_kib * 1024) > limit_bytes
 
 
 def run_bounded(command: list[str], cwd: Path, env: dict[str, str], output: Path,
@@ -220,6 +315,8 @@ def run_bounded(command: list[str], cwd: Path, env: dict[str, str], output: Path
             os.killpg(child.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
+    rss_exceeded = rss_exceeded or rss_exceeds_bound(observed_rss,
+                                                     usage.ru_maxrss)
     metrics = {"arm": arm, "exitCode": child.returncode,
                "timedOut": timed_out, "rssExceeded": rss_exceeded,
                "processGroupEmptyAfterExit": group_empty,
@@ -250,8 +347,11 @@ def main() -> None:
     image_dir = args.image_dir.resolve(strict=True)
     require(len(args.head) == 40 and all(ch in "0123456789abcdef" for ch in args.head),
             "head must be exact SHA")
-    args.output.mkdir(mode=0o700)
-    baseline_inventory = None
+    args.output.mkdir(mode=0o700, exist_ok=True)
+    require(not any(args.output.glob("pair-*")) and
+            not (args.output / "result.json").exists() and
+            not (args.output / "failure.json").exists(),
+            "output contains a previous comparison")
     pairs = []
     try:
         require(git(source, "rev-parse", "HEAD") == args.head and
@@ -259,13 +359,20 @@ def main() -> None:
                 "source must be exact clean head")
         media = check_media(source, image_dir)
         ordinary_file(image_dir / "kernel", 20 * 1024 * 1024)
+        source_inventory = expected_source_inventory(source, args.head)
         write_json(args.output / "binding.json", {
             "schema": "bw.xv6-js-acceptance-binding.v1", "head": args.head,
             "xv6Revision": XV6_REVISION, "mediaSha256": media,
             "kernelSha256": sha_file(image_dir / "kernel"),
             "romSha256": ROM_SHA, "vgaRomSha256": VGA_SHA,
-            "harnessSha256": {name: sha_file(Path(__file__).parent / name)
-                              for name in ("run.py", "policy.py", "policy_control.py")},
+            "sourceInventoryEntries": len(source_inventory),
+            "sourceInventorySha256": sha256_json(source_inventory),
+            "harnessSha256": {name: sha_file(source / name) for name in HARNESS_ROLES},
+            "workload": {"profile": "4m", "firmware": "bochs",
+                         "lean": True, "fullRamHash": True,
+                         "command": "forktest\r", "stepLimit": 40_000_000,
+                         "stopOnExpectedSerial": "fork test OK\n$ ",
+                         "warmupPairs": 2, "measuredPairs": 7},
             "hostBefore": host_metadata()})
         for index in range(9):
             order = ["ordinary", "dispatch"] if index % 2 == 0 else ["dispatch", "ordinary"]
@@ -276,11 +383,9 @@ def main() -> None:
                 metrics = bounded_child(source, image_dir, arm, child_dir)
                 report = load_json(child_dir / "stdout.json")
                 semantic = validate_report(report, arm, args.head, media)
+                require(report["sourceSha256"] == source_inventory,
+                        "reported source closure differs from preguest authentication")
                 check_source_inventory(source, report["sourceSha256"])
-                if baseline_inventory is None:
-                    baseline_inventory = report["sourceSha256"]
-                require(report["sourceSha256"] == baseline_inventory,
-                        "source inventory changed across children")
                 children[arm] = {**metrics, "semanticSha256":
                                  hashlib.sha256(json.dumps(semantic, sort_keys=True,
                                      separators=(",", ":"), allow_nan=False).encode()).hexdigest()}
@@ -301,10 +406,14 @@ def main() -> None:
         require(not git(source, "status", "--porcelain", "--untracked-files=all") and
                 git(source, "rev-parse", "HEAD") == args.head,
                 "source changed during guest comparison")
+        require(expected_source_inventory(source, args.head) == source_inventory,
+                "source closure changed after guest comparison")
         summary = summarize_pairs(pairs)
         summary["head"] = args.head
+        summary["sourceInventorySha256"] = sha256_json(source_inventory)
         summary["hostAfter"] = host_metadata()
         write_json(args.output / "result.json", summary)
+        snapshot_inventory(args.output)
         print(json.dumps({"result": "PASS" if summary["adoptionGatePass"] else "PERFORMANCE_FAIL",
                           "cpuRatio": summary["meanCpuRatioDispatchOverOrdinary"],
                           "favorablePairs": summary["favorableCpuPairs"]}, sort_keys=True))
@@ -314,6 +423,10 @@ def main() -> None:
                        "message": str(error), "completedPairs": len(pairs)})
         except Exception:
             pass  # Keep the original qualification failure primary.
+        try:
+            snapshot_inventory(args.output)
+        except Exception:
+            pass
         raise
 
 

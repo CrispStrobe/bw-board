@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import unittest
 
-from policy import (COMMON_KEYS, EXPECTED_SERIAL, GUEST_STEPS, ROM_SHA,
+from policy import (COMMON_KEYS, EXPECTED_SERIAL, HISTORICAL_GUEST_STEPS, ROM_SHA,
                     compare_reports, summarize_pairs, validate_report)
 
 
@@ -28,7 +28,7 @@ def report(arm: str) -> dict:
         "rom": {"path": "roms/free-at-bios/BIOS-bochs-legacy", "sha256": ROM_SHA},
         "image": {"path": "guest/xv6.img", "sha256": MEDIA["image"]},
         "slaveImage": {"path": "guest/fs.img", "sha256": MEDIA["slaveImage"]},
-        "steps": GUEST_STEPS, "first32": 1,
+        "steps": HISTORICAL_GUEST_STEPS, "first32": 1,
         "serial": EXPECTED_SERIAL,
         "inputSent": [{"step": index + 5, "byte": byte}
                       for index, byte in enumerate(b"forktest\r")],
@@ -103,7 +103,7 @@ class PolicyControls(unittest.TestCase):
     def test_identity_and_mode_denied(self):
         for field, value in (("executionRevision", "b" * 40),
                              ("profile", "14m"), ("lean", False),
-                             ("steps", GUEST_STEPS - 1),
+                             ("steps", 0),
                              ("expandedGroupedAdmission", True)):
             changed = report("ordinary")
             changed[field] = value
@@ -113,6 +113,15 @@ class PolicyControls(unittest.TestCase):
         native["nativeStats"]["instructions"] = 0
         with self.assertRaises(ValueError):
             validate_report(native, "dispatch", REVISION, MEDIA)
+
+    def test_fresh_build_step_count_may_differ_but_must_match_both_arms(self):
+        ordinary, native = report("ordinary"), report("dispatch")
+        ordinary["steps"] = native["steps"] = HISTORICAL_GUEST_STEPS + 1
+        self.assertEqual(len(compare_reports(ordinary, native, REVISION, MEDIA)
+                             ["semanticSha256"]), 64)
+        native["steps"] += 1
+        with self.assertRaises(ValueError):
+            compare_reports(ordinary, native, REVISION, MEDIA)
 
     def test_source_and_media_denied(self):
         ordinary, native = report("ordinary"), report("dispatch")

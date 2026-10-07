@@ -6,12 +6,15 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from run import REQUIRED_SOURCE_ROLES, check_source_inventory, load_json, run_bounded
+from run import (REQUIRED_SOURCE_ROLES, check_source_inventory, load_json,
+                 expected_source_inventory, rss_exceeds_bound, run_bounded,
+                 snapshot_inventory)
 
 
 class RunnerControls(unittest.TestCase):
@@ -68,6 +71,33 @@ class RunnerControls(unittest.TestCase):
             timeout = json.loads((root / "timeout" / "process.json").read_text())
             self.assertTrue(timeout["timedOut"])
             self.assertTrue(timeout["processGroupEmptyAfterExit"])
+
+    def test_inventory_binds_closed_files_and_skips_live_parent_stream(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "stderr.txt").write_bytes(b"")
+            (root / "receipt.json").write_bytes(b"{}")
+            (root / "parent.stdout").write_bytes(b"before")
+            snapshot_inventory(root)
+            body = load_json(root / "file-inventory.json")
+            self.assertEqual(set(body["files"]), {"stderr.txt", "receipt.json"})
+            self.assertEqual(body["files"]["stderr.txt"]["bytes"], 0)
+
+    def test_wait4_peak_catches_unpolled_short_rss_spike(self):
+        self.assertFalse(rss_exceeds_bound(1, 1024, 2 * 1024 * 1024))
+        self.assertTrue(rss_exceeds_bound(1, 2049, 2 * 1024 * 1024))
+        self.assertTrue(rss_exceeds_bound(2 * 1024 * 1024 + 1, 1,
+                                          2 * 1024 * 1024))
+        with self.assertRaises(ValueError):
+            rss_exceeds_bound(0, -1, 1024)
+
+    def test_exact_git_probe_closure_is_available_before_guest(self):
+        source = Path(__file__).resolve().parents[2]
+        head = subprocess.check_output(["git", "-C", str(source),
+                                        "rev-parse", "HEAD"], text=True).strip()
+        closure = expected_source_inventory(source, head, verify_live=False)
+        self.assertEqual(len(closure), 70)
+        self.assertTrue(REQUIRED_SOURCE_ROLES <= closure.keys())
 
 
 if __name__ == "__main__":

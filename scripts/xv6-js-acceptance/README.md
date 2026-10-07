@@ -15,8 +15,10 @@ protected-mode comparison.
 
 The existing `scripts/probe-xv6-stock.mjs` is unchanged. Each fresh child uses
 `XV6_LEAN=1`, whole-RAM hashing, a 40-million-step cap, `forktest` over COM1,
-and stop-on-exact-returned-prompt. The gate requires the historical 24,338,279
-completed steps and exact terminal serial transcript. It compares every
+and stop-on-exact-returned-prompt. The historical build took 24,338,279 steps;
+a fresh toolchain build may differ. The gate requires positive steps within
+the 40-million cap, exact steps across both arms and all pairs, and the exact
+terminal serial transcript. It compares every
 reported architectural and board outcome: full final CPU snapshot, complete
 4 MiB RAM hash, both final disk hashes, serial and input records, recorded
 interrupt prefixes, LAPIC/IOAPIC fields, screen, clocks and other probe
