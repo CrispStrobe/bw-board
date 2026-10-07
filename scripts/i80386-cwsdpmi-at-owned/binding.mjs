@@ -36,6 +36,12 @@ const number = raw => {
 };
 
 export function admitBoundImage(executable, mapBytes, compile) {
+  if (!Buffer.isBuffer(executable) || !Buffer.isBuffer(mapBytes))
+    throw new Error('executable/map buffers');
+  // Borrowed input buffers cannot change the bytes being admitted during a
+  // caller-controlled receipt property read.
+  executable = Buffer.from(executable);
+  mapBytes = Buffer.from(mapBytes);
   const profile = argv => Array.isArray(argv) &&
     argv.includes('-march=i386') && argv.includes('-mtune=i386') &&
     argv[0]?.endsWith('/i586-pc-msdosdjgpp-gcc');

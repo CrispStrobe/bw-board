@@ -71,6 +71,15 @@ layout.textBytes[3] = originalByte;
 const genuineRead = address => exe[coff + rawPointer + address - base - textAddress];
 assert.equal(bindLoadedText(layout, cpu, genuineRead).main, 0x1400);
 assert.throws(() => bindLoadedText({...layout}, cpu, genuineRead));
+const borrowedExe = Buffer.from(exe), borrowedMap = Buffer.from(map);
+const mutatingReceipt = {...compile};
+Object.defineProperty(mutatingReceipt, 'status', {get() {
+  borrowedExe[coff + rawPointer + 7] ^= 1;
+  borrowedMap[0] ^= 1;
+  return compile.status;
+}});
+assert.equal(admitBoundImage(borrowedExe, borrowedMap, mutatingReceipt).executableSha256,
+  hash(exe));
 assert.throws(() => admitBoundImage(Buffer.from(exe).fill(1, 900, 901), map, compile));
 assert.throws(() => admitBoundImage(exe,map,{...compile,ownedSource:{...compile.ownedSource,sha256:'0'.repeat(64)}}));
 assert.throws(() => admitBoundImage(exe,map,{...compile,compileArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-march=i486','-mtune=i486']}));
