@@ -5,7 +5,7 @@ import {bootStores,layout} from '../scripts/bochs-cpu3-native-paged-irq/profile.
 import {irqProgress} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
 import {derivePagedIrqComparison,comparisonParentSha256} from '../scripts/bochs-cpu3-native-paged-irq/cpu-comparison.mjs';
 import {readFileSync} from 'node:fs';
-import {runPagedIrqFixture} from '../scripts/bochs-cpu3-native-paged-irq/runner.mjs';
+import {runPagedIrqFixture,nextNamedCut} from '../scripts/bochs-cpu3-native-paged-irq/runner.mjs';
 
 test('IRQ driver adapter preserves actual board callbacks and copied read/write order',async()=>{
  const source=deriveDriverProvider();assert.equal(source.parentSha256,profileProviderSha256);
@@ -29,6 +29,8 @@ test('IRQ driver adapter preserves actual board callbacks and copied read/write 
 
 test('IRQ progress admits only actual zero-Q delivery and keeps the IF phase in comparison',()=>{
  assert.equal(typeof runPagedIrqFixture,'function','actual runner import does not load an addon');
+ assert.equal(nextNamedCut([],0x18,0x7002).name,'irq-eligible');
+ assert.equal(nextNamedCut(['irq-eligible'],0x18,0x7002).name,'returned-from-IRET');
  const source=derivePagedIrqComparison(readFileSync(new URL('../scripts/bochs-cpu3-native-cold-bios/parity.mjs',import.meta.url)));
  assert.equal(source.baseSha256,comparisonParentSha256);
  assert.match(source.bytes.toString(),/fixed IRQ IF phase/);

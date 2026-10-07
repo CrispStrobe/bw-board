@@ -17,6 +17,7 @@ import {irqProgress,compareCut,validateNativeMemory,terminal,wholeNativeWords} f
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const json=v=>JSON.stringify(v,(_,x)=>typeof x==='bigint'?x.toString():ArrayBuffer.isView(x)?Array.from(x):x);
 const canon=p=>{assert.ok(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p&&!/[\0\r\n]/.test(p));return p;};
+export function nextNamedCut(seen,cs,eip){assert.ok(Array.isArray(seen));return namedCuts.find(c=>c.cs===cs&&c.eip===eip&&!seen.includes(c.name))??null;}
 function persist(receipt,output){
  const base={schema:'bw.paged-irq.actual-outcome.v1',status:receipt.status,error:receipt.error??null,
   sourceRevision:receipt.source?.revision??null,resumes:receipt.progress?.resumes??0,n:receipt.progress?.n??0,q:receipt.progress?.q??0,bodyComplete:false};
@@ -40,7 +41,7 @@ export async function runPagedIrqFixture(input,configuration,output){
   const board=provider.checkpoint(),js=oracle.checkpoint(),pages=provider.ramPages();
   const comparison=compareCut(native,board,pages,js,label,kind,dq);
   const record={label,native,board,physical:pages,javascript:js,comparison};receipt.boundaries.push(record);
-  const cut=namedCuts.find(c=>c.cs===js.cpu.cs&&c.eip===js.cpu.eip);
+  const cut=nextNamedCut(receipt.namedCuts.map(p=>p.name),js.cpu.cs,js.cpu.eip);
   if(cut&&!receipt.namedCuts.some(c=>c.name===cut.name))receipt.namedCuts.push({name:cut.name,index:receipt.boundaries.length-1,q:js.q,status:comparison.status});
   return record;
  };
@@ -73,6 +74,8 @@ export async function runPagedIrqFixture(input,configuration,output){
    if(native.reason===6){assert.equal(deliveryCut,null,'single actual zero-Q delivery');
     deliveryCut={native,board:provider.checkpoint(),physical:provider.ramPages(),nativeTicks:next.n,successfulQuanta:next.q};
     receipt.boundaries.push({label:'native-IRQ-delivery',...deliveryCut,status:'NATIVE_ZERO_Q_UNMATCHED_UNTIL_JS_NESTED_DELIVERY'});
+    assert.deepEqual([native.state[13],native.state[8]],[selector,0x700a],'actual handler entry');
+    receipt.namedCuts.push({name:'entered-handler',index:receipt.boundaries.length-1,q:next.q,status:'NATIVE_ZERO_Q_PENDING_NESTED_JS_CUT'});
    }else if(next.dq){const step=oracle.step();assert.equal(step.q,next.q);capture('retired-Q'+next.q,'resume',next.dq);}
    else{zeroQ++;receipt.boundaries.push({label:'native-zero-progress',native,board:provider.checkpoint(),physical:provider.ramPages(),javascript:oracle.checkpoint(),status:'UNMATCHED_ZERO_Q'});}
    progress=next;
@@ -87,6 +90,7 @@ export async function runPagedIrqFixture(input,configuration,output){
   const nestedJs={q:nested.q,cpu:nested.after,board:nested.board,pages:nested.pages};
   receipt.irqCutComparison=compareCut(deliveryCut.native,deliveryCut.board,deliveryCut.physical,nestedJs,'hardware delivery','irq-delivery',0);
   assert.equal(receipt.irqCutComparison.status,'ARCHITECTURAL_CUT_PASS');
+  assert.deepEqual(receipt.namedCuts.map(c=>c.name),namedCuts.map(c=>c.name),'all named architectural cuts in order');
   receipt.terminalComparison=terminal(native,nativeFinal.state,provider.ramPages(),settled);
   assert.equal(nativeFinal.ramSha256,settled.ramSha256,'whole physical RAM digest');
   assert.deepEqual(provider.records(),[],'no PIO');
