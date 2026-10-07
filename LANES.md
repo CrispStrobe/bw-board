@@ -1,5 +1,24 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-07 cooperative live device clock — CLAIM, Codex bwcx.
+Branch lane/live-device-clock-quantum-20261007, exact base
+1bc294726dbdca6f74aaa6aa2fe1ec25119d4f0a. Four paths only: this ledger,
+src/board.js (new opt-in live advance plus its reentry guard), new
+test/live-device-clock-quantum.test.mjs, new spec-updates/live-device-clock.md.
+Complete a limited number of real device/PWM intervals and return actual
+processed time, never skipping to an unfinished target. Fixed per-interval
+span ceiling and bounded entry count are scheduling limits, not a wall-time
+or whole-analysis solver-work guarantee. Preserve ordinary advance behavior,
+model/solver defaults, event ordering, caps and failure authority. Refuse
+bounded/precision-analysis reuse and nested clock advancement; do not clear
+failed history. Actual native LM741, scheduled gate, PWM and passive controls;
+partial/completed receipts, continuation, no-op/invalid arguments, failures,
+ordinary-path equivalence and load-bearing mutations. No CUI/Lite/package/pin,
+workflow, CPU, model tuning, reset or deployment changes. Remote claim first;
+one final exact CI/Harris qualification before guarded landing. Previous
+timestamp/refusal fix1bc29472 landed after CI37679327541 and Harris37679327694
+both passed; live GUI completion remains unqualified until consumer adoption.
+
 2026-10-07 device-refusal hosted red1 evidence expansion — DONE candidate, Codex bwcx.
 Existing device-substep-measurement-refusal lane remains the sole owner.
 Expand its envelope by test/ltspice-universal-opamp2.test.mjs only, from exact
