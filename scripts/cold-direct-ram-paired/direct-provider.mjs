@@ -34,6 +34,12 @@ export function deriveDirectTimingProvider(sourceRoot){
   assert.equal(sha(readFileSync(resolve(dirname(file),relative))),expected,'qualified provider dependency');
   modified=exact(modified,`'${relative}'`,`'${pathToFileURL(resolve(dirname(file),relative)).href}'`);
  }
+ let normalizedLoaded=modified;
+ for(const relative of Object.keys(dependencySha256)){
+  normalizedLoaded=exact(normalizedLoaded,
+   `'${pathToFileURL(resolve(dirname(file),relative)).href}'`,`'${relative}'`);
+ }
+ assert.equal(sha(Buffer.from(normalizedLoaded)),derivedSha256,'loaded URL rewrite inverse');
  return {moduleUrl:'data:text/javascript;base64,'+Buffer.from(modified).toString('base64'),
          qualifiedSha256:QUALIFIED_PROVIDER_SHA,derivedSha256,
          loadedModuleSha256:sha(Buffer.from(modified)),dependencySha256,

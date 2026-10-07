@@ -16,6 +16,8 @@ Every child runs in a fresh process, checks its exact source, addon, ROM/config,
 and reference roles, and completes full reset/terminal CPU, board, RAM and
 ordered PIO checks before its duration may enter the summary. Failures preserve
 the child input, invocation, stdout, stderr, partial receipt and exit result.
+The timed ordinary JS child uses the pinned reset model and deterministic
+machine steps; it does not collect a per-step ROM or REP trace.
 The native children observe CPU/provider closure. The ordinary JS machine has
 no close API, so its termination claim is limited to the child's successful
 exit and empty owned process group, measured by the parent with `wait4`.
@@ -23,8 +25,10 @@ exit and empty owned process group, measured by the parent with `wait4`.
 Each comparison has two warm-up pairs and seven measured pairs, alternating
 arm order. `direct-v-companion` is descriptive. Only `direct-v-plain-js` applies
 the lane's 10% lower mean execution CPU and all-seven-faster adoption gate.
-Execution process CPU/wall, process startup CPU/elapsed time, and whole-child
-CPU/wall are separate. The fixed configured clock is not a physical 386 speed
+Execution process CPU/wall, process startup CPU/elapsed time, and Node child
+process CPU/wall from the parent `wait4` are separate. The parent verifies that
+startup plus execution fits the observed child totals. Setup helper processes
+are outside the child CPU measurement. The fixed configured clock is not a physical 386 speed
 calibration.
 
 The timed direct provider is an authenticated derivative of the qualified

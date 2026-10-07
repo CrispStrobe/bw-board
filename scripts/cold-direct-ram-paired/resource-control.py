@@ -1,5 +1,5 @@
 """Node-only bounded process and orphan controls; no addon or guest."""
-import json,sys,tempfile
+import json,os,sys,tempfile
 from pathlib import Path
 from bounded import run_bounded
 
@@ -19,5 +19,16 @@ with tempfile.TemporaryDirectory(prefix='cold-paired-resource-') as folder:
     assert slow['timedOut'] and slow['exitCode']!=0
     orphan=run('orphan',"require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},5000)'],{stdio:'ignore'}).unref()")
     assert orphan['exitCode']==0 and not orphan['processGroupEmptyAfterExit']
+    observed=[]
+    def fail_poll(pid):observed.append(pid);raise RuntimeError('injected monitor failure')
+    try:run_bounded([node,'-e','setTimeout(()=>{},5000)'],root,
+                    root/'failure.stdout',root/'failure.stderr',seconds=5,
+                    cpu_seconds=5,max_rss_bytes=256*1024**2,on_poll=fail_poll)
+    except RuntimeError as error:assert str(error)=='injected monitor failure'
+    else:raise AssertionError('monitor failure not propagated')
+    assert len(observed)==1
+    try:os.killpg(observed[0],0)
+    except ProcessLookupError:pass
+    else:raise AssertionError('monitor failure stranded owned process group')
 print(json.dumps({'schema':'bw.cold-direct-ram.paired-resource-control.v1','status':'PASS',
-                  'cases':['normal','timeout','orphan-process-group']},sort_keys=True))
+                  'cases':['normal','timeout','orphan-process-group','monitor-exception-cleanup']},sort_keys=True))

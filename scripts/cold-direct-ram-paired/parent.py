@@ -43,11 +43,15 @@ def authenticate_setup(setup):
     require(sha(setup['ownerBuildReceipt'])==setup['ownerBuildReceiptSha256'],'owner build receipt')
     owner=json.loads(Path(setup['ownerBuildReceipt']).read_text())
     source=Path(setup['qualifiedRoot'])/'scripts/bochs-cpu3-native-cold-owned-ram/napi.cc'
+    core=Path(setup['qualifiedRoot'])/'scripts/bochs-cpu3-native-cold-owned-ram/owned-ram.h'
     require(owner['schema']=='bw.cold-direct-ram.paired-owner-build.v1' and
             owner['sourceHead']==CONTRACT['qualifiedSourceHead'] and
             owner['sourceSha256']==sha(source) and
             owner['sourceSha256']==hashlib.sha256(subprocess.check_output(['git','-C',setup['qualifiedRoot'],
              'show',CONTRACT['qualifiedSourceHead']+':scripts/bochs-cpu3-native-cold-owned-ram/napi.cc'],timeout=20)).hexdigest() and
+            owner['ownerCoreSha256']==sha(core)==
+            hashlib.sha256(subprocess.check_output(['git','-C',setup['qualifiedRoot'],
+             'show',CONTRACT['qualifiedSourceHead']+':scripts/bochs-cpu3-native-cold-owned-ram/owned-ram.h'],timeout=20)).hexdigest() and
             owner['addonSha256']==setup['ownerAddonSha256'] and
             owner['flags']==['-std=c++17','-O1','-fPIC','-shared','-Wall','-Wextra','-Werror','-I/usr/include/node'] and
             sha(owner['compilerPath'])==owner['compilerSha256'] and
@@ -189,7 +193,14 @@ def run(setup_file):
                 for arm in item['order']:
                     result['arms'][arm]=child(setup,comparison,item['pair'],arm,output,reference)
                 pairs.append(result)
-                write(output/(comparison+'-completed-pairs.json'),pairs)
+                write(output/(comparison+'-completed-pairs.json'),[
+                  {**{k:p[k] for k in ('pair','phase','measuredPair','order')},
+                   'arms':{arm:{'semantic':v['semantic'],'closed':v['closed'],
+                                'receiptSha256':v['receiptSha256'],
+                                'executionTiming':v['receipt']['executionTiming'],
+                                'startupTiming':v['receipt']['startupTiming'],
+                                'wholeChild':v['wholeChild']}
+                           for arm,v in p['arms'].items()}} for p in pairs])
             summaries[comparison]=summarize(comparison,pairs)
             write(output/(comparison+'-summary.json'),summaries[comparison])
     finally:write(output/'host-after.json',metadata())

@@ -6,7 +6,9 @@ def child(cpu):
     return {'semantic':'PASS','closed':True,
       'receipt':{'executionTiming':{'cpuMicroseconds':{'user':cpu,'system':0},
                 'wallNanoseconds':str(cpu*1000),
-                'scope':'Synthetic control interval, never a guest measurement'}},
+                'scope':'Synthetic control interval, never a guest measurement'},
+                 'startupTiming':{'cpuMicroseconds':{'user':50,'system':0},
+                   'elapsedMilliseconds':1,'scope':'Synthetic process startup control only'}},
       'wholeChild':{'exitCode':0,'timedOut':False,'cpuSeconds':cpu/1e6+0.01,'wallSeconds':cpu/1e6+0.02}}
 
 for name,arms in [('direct-v-companion',('companion','direct')),
@@ -36,4 +38,12 @@ for name,arms in [('direct-v-companion',('companion','direct')),
     try:summarize(name,bad)
     except ValueError:pass
     else:raise AssertionError('zero execution CPU admitted')
+    bad=deepcopy(pairs);bad[3]['arms']['direct']['receipt']['startupTiming']['cpuMicroseconds']['user']=10000000
+    try:summarize(name,bad)
+    except ValueError:pass
+    else:raise AssertionError('startup plus execution CPU exceeds whole child')
+    bad=deepcopy(pairs);bad[3]['arms']['direct']['receipt']['startupTiming']['elapsedMilliseconds']=100000
+    try:summarize(name,bad)
+    except ValueError:pass
+    else:raise AssertionError('startup plus execution wall exceeds whole child')
 print('direct-RAM paired policy controls PASS')

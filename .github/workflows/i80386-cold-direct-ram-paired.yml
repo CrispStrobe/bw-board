@@ -59,6 +59,8 @@ jobs:
             > "$RUNNER_TEMP/cold-direct-paired-evidence/policy-control.txt"
           python3 -B harness/scripts/cold-direct-ram-paired/resource-control.py "$(command -v node)" \
             > "$RUNNER_TEMP/cold-direct-paired-evidence/resource-control.json"
+          node harness/scripts/cold-direct-ram-paired/provider-control.mjs \
+            > "$RUNNER_TEMP/cold-direct-paired-evidence/provider-control.json"
           {
             printf 'run=%s attempt=%s event=%s harness=%s qualified=acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1\n' \
               "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HARNESS_HEAD"
@@ -152,6 +154,7 @@ jobs:
           report={'schema':'bw.cold-direct-ram.paired-owner-build.v1',
                   'sourceHead':subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip(),
                   'sourceSha256':digest(root/'scripts/bochs-cpu3-native-cold-owned-ram/napi.cc'),
+                  'ownerCoreSha256':digest(root/'scripts/bochs-cpu3-native-cold-owned-ram/owned-ram.h'),
                   'addonSha256':digest(addon),'compilerPath':str(compiler),
                   'compilerSha256':digest(compiler),
                   'compilerVersion':subprocess.check_output([str(compiler),'--version'],text=True).splitlines()[0],

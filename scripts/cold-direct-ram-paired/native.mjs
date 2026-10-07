@@ -42,6 +42,10 @@ export async function runNative(input){
   const bytes=readFileSync(input.ownerBuildReceipt);assert.equal(sha(bytes),input.ownerBuildReceiptSha256);
   const auth=JSON.parse(bytes);assert.equal(auth.schema,'bw.cold-direct-ram.paired-owner-build.v1');
   assert.equal(auth.sourceHead,input.qualifiedHead);assert.equal(auth.addonSha256,input.ownerAddonSha256);
+  assert.equal(auth.sourceSha256,sha(readFileSync(resolve(input.sourceRoot,
+   'scripts/bochs-cpu3-native-cold-owned-ram/napi.cc'))));
+  assert.equal(auth.ownerCoreSha256,sha(readFileSync(resolve(input.sourceRoot,
+   'scripts/bochs-cpu3-native-cold-owned-ram/owned-ram.h'))));
  }
  assert.equal(sha(readFileSync(input.reference)),input.referenceSha256,'exact qualified reference');
  const reference=JSON.parse(readFileSync(input.reference,'utf8'));

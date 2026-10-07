@@ -3,7 +3,7 @@ import os,resource,signal,subprocess,time
 from pathlib import Path
 
 def run_bounded(cmd,cwd,stdout_path,stderr_path,seconds=300,
-                cpu_seconds=240,max_rss_bytes=1536*1024**2):
+                cpu_seconds=240,max_rss_bytes=1536*1024**2,on_poll=None):
     assert 0<seconds<=300 and 0<cpu_seconds<=245 and 0<max_rss_bytes<=2*1024**3
     def limits():
         os.setsid()
@@ -18,23 +18,32 @@ def run_bounded(cmd,cwd,stdout_path,stderr_path,seconds=300,
         process=subprocess.Popen(cmd,cwd=cwd,stdout=stdout,stderr=stderr,
                                  preexec_fn=limits,env=clean_env)
         timed_out=rss_exceeded=False;peak_rss=0
-        while True:
-            pid,status,usage=os.wait4(process.pid,os.WNOHANG)
-            if pid:
-                code=os.waitstatus_to_exitcode(status);process.returncode=code;break
-            if time.monotonic()-start>seconds:timed_out=True
-            try:
-                for line in Path(f'/proc/{process.pid}/status').read_text().splitlines():
-                    if line.startswith('VmRSS:'):
-                        peak_rss=max(peak_rss,int(line.split()[1])*1024);break
-            except FileNotFoundError:pass
-            if peak_rss>max_rss_bytes:rss_exceeded=True
-            if timed_out or rss_exceeded:
+        reaped=False
+        try:
+            while True:
+                if on_poll is not None:on_poll(process.pid)
+                pid,status,usage=os.wait4(process.pid,os.WNOHANG)
+                if pid:
+                    reaped=True;code=os.waitstatus_to_exitcode(status);process.returncode=code;break
+                if time.monotonic()-start>seconds:timed_out=True
+                try:
+                    for line in Path(f'/proc/{process.pid}/status').read_text().splitlines():
+                        if line.startswith('VmRSS:'):
+                            peak_rss=max(peak_rss,int(line.split()[1])*1024);break
+                except FileNotFoundError:pass
+                if peak_rss>max_rss_bytes:rss_exceeded=True
+                if timed_out or rss_exceeded:
+                    try:os.killpg(process.pid,signal.SIGKILL)
+                    except ProcessLookupError:pass
+                    _,status,usage=os.wait4(process.pid,0)
+                    reaped=True;code=os.waitstatus_to_exitcode(status);process.returncode=code;break
+                time.sleep(0.05)
+        finally:
+            if not reaped:
                 try:os.killpg(process.pid,signal.SIGKILL)
                 except ProcessLookupError:pass
-                _,status,usage=os.wait4(process.pid,0)
-                code=os.waitstatus_to_exitcode(status);process.returncode=code;break
-            time.sleep(0.05)
+                try:os.wait4(process.pid,0)
+                except ChildProcessError:pass
     try:os.killpg(process.pid,0);group_empty=False
     except ProcessLookupError:group_empty=True
     if not group_empty:

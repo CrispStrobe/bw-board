@@ -30,6 +30,18 @@ def checked_timing(receipt):
     return {'cpuMicroseconds':cpu['user']+cpu['system'],
             'wallNanoseconds':int(wall)}
 
+def checked_startup(receipt):
+    start=receipt['startupTiming']
+    require(type(start)==dict and set(start)=={'cpuMicroseconds','elapsedMilliseconds','scope'},'startup fields')
+    cpu=start['cpuMicroseconds']
+    require(type(cpu)==dict and set(cpu)=={'user','system'} and
+            all(type(v)==int and 0<=v<=10**12 for v in cpu.values()),'startup CPU units')
+    require(type(start['elapsedMilliseconds'])==int and 0<=start['elapsedMilliseconds']<=10**9,
+            'startup elapsed units')
+    require(type(start['scope'])==str and 20<=len(start['scope'])<=700,'startup scope')
+    return {'cpuMicroseconds':cpu['user']+cpu['system'],
+            'elapsedNanoseconds':start['elapsedMilliseconds']*1000000}
+
 def summarize(comparison,pairs):
     expected=schedule(comparison)
     require(len(pairs)==len(expected),'exact nine pairs')
@@ -46,7 +58,12 @@ def summarize(comparison,pairs):
             require(child['exitCode']==0 and child['timedOut'] is False,'complete child')
             require(type(child['cpuSeconds']) in (int,float) and math.isfinite(child['cpuSeconds']) and child['cpuSeconds']>0,'whole CPU')
             require(type(child['wallSeconds']) in (int,float) and math.isfinite(child['wallSeconds']) and child['wallSeconds']>0,'whole wall')
-            require(checked_timing(result['receipt'])['cpuMicroseconds']>0,'positive execution CPU')
+            execution=checked_timing(result['receipt']);startup=checked_startup(result['receipt'])
+            require(execution['cpuMicroseconds']>0,'positive execution CPU')
+            require(startup['cpuMicroseconds']+execution['cpuMicroseconds']<=
+                    child['cpuSeconds']*1e6+10000,'startup plus execution within whole-child CPU')
+            require(startup['elapsedNanoseconds']+execution['wallNanoseconds']<=
+                    child['wallSeconds']*1e9+50000000,'startup plus execution within whole-child wall')
         if actual['phase']=='measured':measured.append(actual)
     require(len(measured)==7,'seven measured pairs')
     base=sum(checked_timing(p['arms'][baseline]['receipt'])['cpuMicroseconds'] for p in measured)
