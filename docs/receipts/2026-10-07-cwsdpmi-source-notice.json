@@ -1,0 +1,24 @@
+{
+  "schema": "bw.cwsdpmi-owned.source-notice-result.v1",
+  "status": "CANDIDATE_SOURCE_NOTICE_AUDIT_ONLY",
+  "testedSource": "ad8085bf2e8c36439b9cba198845cbabc0140dbb",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37682399616",
+  "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11510315779",
+  "artifactZipSha256": "f56014ad78ebd503ceb73d38a1e211a1c91075776404cf2af5b4071f7a949f96",
+  "artifactZipMembers": 42,
+  "inventoryEntries": 41,
+  "sourceRoles": 12,
+  "officialCandidates": {
+    "djcrx205.zip": {"bytes": 895256, "sha256": "22274ed8d5ee57cf7ccf161f5e1684fd1c0192068724a7d34e1bde168041ca60", "members": 178},
+    "djdev205.zip": {"bytes": 2509574, "sha256": "4557dfb6c161d326680ae5fa71f0098ac49425a1b11b90a020b83162eb705dda", "members": 190},
+    "djlsr205.zip": {"bytes": 2047171, "sha256": "80690b6e44ff8bc6c6081fca1f4faeba1591c4490b76ef0ec8b35847baa5deea", "members": 1970}
+  },
+  "exactDjcrxToolchainByteMatches": ["include/dpmi.h", "lib/crt0.o", "lib/libc.a"],
+  "unreviewedCopyingLib": {"bytes": 26530, "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"},
+  "limits": [
+    "Original component archives are absent from the report-only artifact; archive and member hashes are hosted observations.",
+    "copying.lib text was not retained or reviewed from this packet.",
+    "GCC libgcc source/runtime-exception and component-specific obligations remain open.",
+    "No compiler, owned client, QEMU, AT guest, or performance execution occurred."
+  ]
+}
