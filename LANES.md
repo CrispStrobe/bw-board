@@ -1,5 +1,24 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-07 incomplete device advancement measurement refusal — CLAIM, Codex bwcx.
+Branch lane/device-substep-measurement-refusal-20261007, exact base
+3d4d28f0cacfe65b51609c9cddf95c5e25972caa. Three new paths of ownership: this
+ledger, src/board.js (ordinary device-overflow status and shared analog measurement
+validity guard only), new test/device-substep-measurement-refusal.test.mjs.
+Stack the independently tested wrapped-envelope label repair79b30b6f without
+changing it; qualify both source fixes on one final exact head before landing.
+Reproduction: a native LM741 sine bench advanced50ms hits200 device steps but
+returns stale numeric scope/meter results with accuracyMet:true. Keep the200 cap,
+advance clock, device model and all solver/profile/budget defaults unchanged;
+refuse analog captures/means after incomplete device work and report a named
+ordinary transient failure. Bounded-advance receipts retain their own authority.
+Test actual LM741 overflow, prior/fresh scopes and meters, later solve/power/reset
+non-recovery, and an actually completed small-step positive control; executable
+guard/status mutants. No CPU, scheduler/chunking, digital transition contract,
+current sampling cadence, reset redesign, CUI/Lite/pin/workflow/deployment change.
+Remote claim first. Earlier timestamp candidate stays preserved; no source
+landing until final combined CI/Harris green. GUI completion remains a follow-on.
+
 2026-10-07 wrapped scope envelope clock — CLAIM, Codex bwcx.
 Branch lane/scope-envelope-clock-20261007, exact base
 a79bca5892efe11742f9d4f4d87d71969e600023. Three paths only: this ledger,
