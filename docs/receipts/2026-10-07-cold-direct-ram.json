@@ -37,7 +37,17 @@
     "initialRamSha256": "ca16abce72391125715971b707a364b422ab94dc8022a933fe49ecfcfc772d0c",
     "finalRamSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
     "journalEntries": 91958,
-    "journalSha256": "a7315ca8af5bd975e1a74d81eea282a69799a80cf1a4cf030fe7fc90bfdcaa5c"
+    "journalSha256": "a7315ca8af5bd975e1a74d81eea282a69799a80cf1a4cf030fe7fc90bfdcaa5c",
+    "nativeExecution": {
+      "attempts": "316167",
+      "completed": "316166",
+      "repIterations": "400",
+      "repPartial": "1",
+      "faults": "0",
+      "portCommits": "16475",
+      "irqDeliveries": "0",
+      "haltIdleCuts": "0"
+    }
   },
   "observedTransport": {
     "nativeDirectReads": 91949,

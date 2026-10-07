@@ -6,7 +6,7 @@ The [public receipt](receipts/2026-10-07-cold-direct-ram.json) identifies the ex
 
 ## Observed parity
 
-All three arms match full reset, requested-last and final native state (20 + 20 + 90 + 30 + 6 words), compact progress, architectural clock/callback/execution counters, complete board state, all 16,475 ordered PIO events and the whole 16 MiB RAM hash. Each reaches 316,562 attempted instructions and completed quanta in 16,524 resumes, with zero fallback. Final RAM SHA-256 is `af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02`.
+All three arms match full reset, requested-last and final native state (20 + 20 + 90 + 30 + 6 words), compact progress, architectural clock/callback/execution counters, complete board state, all 16,475 ordered PIO events and the whole 16 MiB RAM hash. Each reaches 316,562 native ticks and successful quanta (N/Q) in 16,524 resumes, with zero fallback. The distinct instruction counters record 316,167 attempts and 316,166 completions; N/Q must not be relabeled as those counters. Final RAM SHA-256 is `af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02`.
 
 The coordinator, coder and independent reviewer read the original evidence without importing the producer's comparator or rerunning the emulator. They checked the source/generated maps and replayed all 91,958 journal writes from the complete initial RAM: exact before/after bytes, contiguous sequence and acknowledgement, ordered effect IDs, session/epoch, bounded N/Q, page generations and first-touch Map order. Replay reproduces the whole final RAM hash.
 
