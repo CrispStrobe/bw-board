@@ -23,7 +23,8 @@ export function decodeIrqSlice(n){
    n.state[13],n.state[8],n.activityState],'raw slice mirrors represented CPU and accounting');
  for(const [i,key] of ['attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'].entries())
   assert.equal(u64(40+8*i),BigInt(boundedCount(n.execution[key])),key+' raw slice counter');
- assert.equal(u32(148),n.state[9]&0x200?1:0,'raw slice IF mirrors CPU');
+ assert.ok(u32(148)===0||u32(148)===0x200,'raw slice IF mask domain');
+ assert.equal(u32(148),n.state[9]&0x200,'raw slice IF mask mirrors CPU');
  return {cs,eip,pendingIrq:u32(136),irqDelivered:u32(140),irqVector:u32(144),ifFlag:u32(148),activityState:u32(152),pendingEvent:u32(156)};
 }
 export function irqProgress(previous,n){

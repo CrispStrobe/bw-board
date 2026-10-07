@@ -26,5 +26,10 @@ three frame writes and a handler-entry CPU snapshot. Its driver then rejected
 the return because it expected IRQ fields at the top level; ABI4 exposes them
 in the exact 160-byte `sliceBytes` result. The current decoder pins the
 generated ABI header and checks the original captured slice without adding
-exports or inventing fields. It has not been rerun in a guest, so native/JS
-differential parity remains unqualified.
+exports or inventing fields. The [third official run 37620774682](https://github.com/CrispStrobe/bw-board/actions/runs/37620774682)
+advanced through the source ABI decoder until the real post-STI slice, before
+IRQ delivery, exposed
+an IF value of `0x200`, where the driver had expected a Boolean `1`. The
+current decoder checks the exact IF mask against EFLAGS and includes that
+unchanged real 160-byte slice as a control. This correction has not been
+rerun in a guest, so native/JS differential parity remains unqualified.

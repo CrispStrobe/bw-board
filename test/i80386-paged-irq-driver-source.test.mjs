@@ -98,3 +98,21 @@ test('IRQ progress admits only actual zero-Q delivery and keeps the IF phase in 
  assert.throws(()=>irqProgress({n:39,q:39},{...n,reason:6,chargedQuanta:1}));
  const bad=Uint8Array.from(sliceBytes);bad[144]=1;assert.throws(()=>irqProgress({n:39,q:39},{...n,sliceBytes:bad}),/actual ABI4 IRQ cut/);
 });
+
+test('actual post-STI native slice carries exact 0x200 IF mask, never Boolean one',()=>{
+ const actual=JSON.parse(readFileSync(new URL('../scripts/bochs-cpu3-native-paged-irq/saved-native-if-slice.json',import.meta.url),'utf8'));
+ const bytes=Uint8Array.from(Buffer.from(actual.sliceBytesHex,'hex'));
+ assert.equal(createHash('sha256').update(bytes).digest('hex'),actual.sliceBytesSha256,'third original artifact slice unchanged');
+ const state=Array(20).fill(0);state[13]=actual.stateCs;state[8]=actual.stateEip;state[9]=actual.stateEflags;
+ const n={state,extra:Array(20).fill(0),segments:Array(90).fill(0),system:Array(30).fill(0),debug:Array(6).fill(0),
+  sliceBytes:bytes,nativeTicks:actual.nativeTicks,successfulQuanta:actual.successfulQuanta,
+  chargedNativeTicks:actual.chargedNativeTicks,chargedQuanta:actual.chargedQuanta,
+  reason:actual.reason,activityState:actual.activityState,execution:actual.execution,
+  fallback:{bochsRamReads:0,bochsRamWrites:0,bochsDirectPointers:0,bochsPio:0,bochsTimer:0}};
+ assert.equal(decodeIrqSlice(n).ifFlag,0x200);
+ assert.deepEqual(irqProgress({n:37,q:37},n),{n:38,q:38,dn:1,dq:1});
+ const booleanIf=Uint8Array.from(bytes);booleanIf[148]=1;booleanIf[149]=0;
+ assert.throws(()=>decodeIrqSlice({...n,sliceBytes:booleanIf}),/raw slice IF mask domain/);
+ const invalidMask=Uint8Array.from(bytes);invalidMask[148]=0;invalidMask[149]=3;
+ assert.throws(()=>decodeIrqSlice({...n,sliceBytes:invalidMask}),/raw slice IF mask domain/);
+});
