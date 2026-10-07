@@ -67,6 +67,11 @@ deadline/device result and observer preflight, preserve full requested CPU
 inspection, and then run a separate clean guest differential gate before any
 timing or adoption claim.
 
+This model assumes a single owning thread for each Authority and Lease. The
+atomic session-ID allocator only prevents ID reuse; it does not make state,
+lease destruction or observers thread-safe. No cross-thread control is claimed.
+Actual CPU/N-API integration must enforce thread and environment affinity.
+
 `inspect()` is a diagnostic/control snapshot of this model. It is not an
 external board observer or evidence that a real CPU/JavaScript publication
 transaction has occurred. Tape, journal and alias storage reserve their fixed
