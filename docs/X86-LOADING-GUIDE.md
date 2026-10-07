@@ -73,6 +73,8 @@ Replace every hash placeholder with the actual 64-digit hash. The system BIOS mu
 
 For interaction, add `--live` to the same command and run it in a terminal with TTY input and output. Typed keys go to the guest; **Ctrl-]** quits and **Ctrl-L** redraws. The display uses ANSI text or supported VGA graphics, scaled to the terminal. Mouse movement/buttons use xterm SGR mouse reporting when the terminal supports it; guest software must also enable its mouse interface. Terminal state is restored on exit. This is terminal interaction, not a separate SDL window.
 
+The [owned live-PTY acceptance](I80386-CLI-PTY-RESULTS.md) verifies keyboard input, guest text, redraw, quit and terminal restoration on the ordinary JavaScript path. It does not establish interaction with every DOS guest or a guest mouse driver.
+
 Disk writes change the emulated disk in memory. This runner does not write them back to the original image or offer a saved-disk export option. `AT_CONSOLE_REPORT=media/new-report.json` saves the final execution report, including the disk hash, but does not save changed disk bytes.
 
 The console's **different** DOSBox parser accepts one HDD declaration, for example:
