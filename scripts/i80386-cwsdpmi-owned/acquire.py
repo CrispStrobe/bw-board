@@ -294,13 +294,22 @@ def main() -> None:
         catalog_raw = input_bytes(sys.argv[3], 200_000)
         release_raw = input_bytes(sys.argv[4], 200_000)
         tag_raw = input_bytes(sys.argv[5], 200_000)
-        release, tag = strict_json(release_raw), strict_json(tag_raw)
-        validate_metadata(catalog_raw, release, tag)
         metadata_raw = {"catalog.html": catalog_raw, "release.json": release_raw,
                         "tag.json": tag_raw}
+        metadata_inputs = {}
         for name, raw in metadata_raw.items():
-            with (output / name).open("xb") as stream:
-                stream.write(raw)
+            retained = text_notice(raw)
+            metadata_inputs[name] = {"bytes": len(raw), "sha256": sha(raw),
+                                     "retainedAsText": retained}
+            if retained:
+                with (output / name).open("xb") as stream:
+                    stream.write(raw)
+        (output / "metadata-inputs.json").write_text(
+            json.dumps(metadata_inputs, indent=2, sort_keys=True) + "\n")
+        if not all(item["retainedAsText"] for item in metadata_inputs.values()):
+            raise ValueError("nontext metadata input")
+        release, tag = strict_json(release_raw), strict_json(tag_raw)
+        validate_metadata(catalog_raw, release, tag)
         report, notices = acquire(cws, tool, catalog_raw, release, tag)
         report["metadata"]["originalFiles"] = {
             name: {"bytes": len(raw), "sha256": sha(raw)} for name, raw in metadata_raw.items()}

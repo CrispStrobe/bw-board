@@ -2,13 +2,18 @@
 """Small archive/metadata adversaries; no remote acquisition or extraction."""
 
 import io
+import json
+import hashlib
+import sys
 import tarfile
+import tempfile
 import warnings
 import zipfile
+from pathlib import Path
 
 from acquire import (CWSDPMI_SHA1, TOOL_ASSET, TOOL_ASSET_API, TOOL_ASSET_ID,
                      TOOL_BYTES, TOOL_RELEASE_ID, TOOL_TAG, TOOL_TAG_COMMIT,
-                     TOOL_URL, inventory_tar, inventory_zip, strict_json,
+                     TOOL_URL, inventory_tar, inventory_zip, main, strict_json,
                      validate_metadata)
 
 
@@ -87,4 +92,26 @@ denies(lambda: validate_metadata(catalog, release,
                                  {**tag, "object": {**tag["object"], "type": "tag"}}))
 denies(lambda: strict_json(b'{"id":1,"id":2}'))
 denies(lambda: strict_json(b'{"id":NaN}'))
-print("PASS 21 bounded archive and metadata controls; no remote asset inspected")
+
+# A failed metadata admission must retain the original bounded public text and
+# its independent hash before the parser reports the first failure.
+with tempfile.TemporaryDirectory(prefix="cwsdpmi-metadata-control-") as directory:
+    root = Path(directory)
+    output = root / "report"
+    output.mkdir()
+    payloads = {"cws.zip": b"x", "tool.tar.bz2": b"y", "catalog.html": catalog,
+                "release.json": b'{"id":1,"id":2}', "tag.json": json.dumps(tag).encode()}
+    for name, raw in payloads.items():
+        (root / name).write_bytes(raw)
+    original_argv = sys.argv
+    sys.argv = ["acquire.py", *(str(root / name) for name in payloads), str(output)]
+    try:
+        denies(main)
+    finally:
+        sys.argv = original_argv
+    retained = json.loads((output / "metadata-inputs.json").read_text())
+    assert (output / "release.json").read_bytes() == payloads["release.json"]
+    assert retained["release.json"]["bytes"] == len(payloads["release.json"])
+    assert retained["release.json"]["sha256"] == hashlib.sha256(payloads["release.json"]).hexdigest()
+    assert (output / "failure.json").is_file()
+print("PASS 22 bounded archive and metadata controls; no remote asset inspected")

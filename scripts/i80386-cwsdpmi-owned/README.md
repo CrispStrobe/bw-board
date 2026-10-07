@@ -35,3 +35,8 @@ then inventories SHA-256 for both archives and their members. It uploads
 reports and bounded text notices, never the archives or executables. A
 successful inventory does not establish component source correspondence,
 redistribution clearance, a compilable toolchain, or any guest result.
+Original bounded UTF-8 catalog/release/tag metadata is retained with hashes
+even if parsing or identity admission fails. Nontext metadata is excluded from
+the report artifact but its size and hash, plus the rejection, are retained.
+Archive fetch failures retain the failed phase and bounded stdout/stderr;
+archive bytes themselves are never uploaded.
