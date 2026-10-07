@@ -39,6 +39,7 @@ test('denied owned-RAM callbacks leave a native write pending and board shadow u
   ['scalar op',()=>provider.callbacks.packedScalar(99,0,0,0)],
   ['OUT width',()=>provider.callbacks.packedScalar(3,0x402,2,0x41)],
   ['IN port',()=>provider.callbacks.packedScalar(5,0x402,1,0)],
+  ['forbidden PIC ACK',()=>provider.callbacks.packedScalar(4,0,0,0)],
   ['ACK args',()=>provider.callbacks.packedScalar(4,0,0,1)]
  ];
  for(const [label,call] of denied){assert.throws(call,undefined,label);assert.equal(owner.ack,baseline.ack,label+' native ack');assert.equal(owner.drains,baseline.drains,label+' journal drain');assert.equal(owner.journal.length,1,label+' pending write');assert.equal(board.machine.mem[0x100],before,label+' board shadow');assert.equal(board.generations.get(0),baseline.gen,label+' page generation');assert.equal(board.nativeTicks,baseline.ticks,label+' N');assert.equal(board.successfulQuanta,baseline.q,label+' Q');}
