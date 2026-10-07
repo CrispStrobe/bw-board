@@ -1,4 +1,4 @@
-# Target/performance handoff — 2026-10-05
+# Target/performance handoff — 2026-10-07
 
 Read this before resuming this campaign. Refresh `master`, engine `main` and
 open PRs; these proposed lanes are not ownership claims. Public references only
@@ -7,9 +7,31 @@ this summary does not replace old failures or reinterpret them as successes.
 
 ## Current state and meaning of 1x
 
-- The native forty-chip spin suite has source-bound >=1x qualification; selected
-  native micro:bit motion has separate receipts. Neither proves browser/full
-  board throughput. PXT micro:bit/Arcade is wall-paced API simulation, not CPU RTx.
+- The older native forty-chip spin receipts remain valid for their exact source,
+  but current LabWired main `67920fcf8d82c74f3cc63285181fe26db93cf720` has a
+  **new PyBadge regression**: [Core Perf37481145682](https://github.com/CrispStrobe/labwired-core/actions/runs/37481145682)
+  measured **0.05x**, batch **1**, versus generic ATSAMD51 **67.97x**, batch
+  **1023.8**. The relative stage did not run after the absolute RTx failure.
+  The suite now covers 42 chips / 82 board modes; the other 41 chips met the
+  absolute floor. [Issue158](https://github.com/CrispStrobe/labwired-core/issues/158)
+  and [repair PR159](https://github.com/CrispStrobe/labwired-core/pull/159)
+  track the idle SPI walk/batching cause. The repair is not yet qualified.
+- The same main's [native micro:bit qualification37481145769](https://github.com/CrispStrobe/labwired-core/actions/runs/37481145769)
+  passed: GPIO median **6.6944x**; motion median **1.2748x**, minimum
+  **1.2697x**, all five runs >=1x. This is selected active native guest evidence,
+  not browser/full-board throughput. PXT micro:bit/Arcade is wall-paced API
+  simulation, not CPU RTx.
+- Lite [target run37463042960](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37463042960)
+  on `23bc15cf4e9f5910f1f7455425b238cccd4c4834` measured Arduboy **5.561x**,
+  ATtiny88 **10.227x**, Uno **5.178x**, micro:bit-class WASM **26.818x** and
+  PyBadge-class WASM **33.417x**. The two WASM rows are terminal post-boot
+  smoke, not active motion or native games. The shipped engine artifact uses
+  **`31b6f8aade1af3329cf686438acb31bee204e23d`**, before the SPI merge; it must
+  not be attributed the newer native regression or newer capabilities.
+- Source-bound WASM publication [run37438840274](https://github.com/CrispStrobe/bw-board/actions/runs/37438840274)
+  passed independent builds/determinism and **108 tests, zero failures/skips**.
+  Its **motion job was skipped**. Publication success therefore does not close
+  the active WASM floor; obtain ordinary motion/RAM/GPIO receipts in W1.
 - Landed WASM scalar (`c05e8de3`) and bounded cached-run (`43b2d62f`) improvements
   retain controlled gains, but did not close the all-window active WASM floor.
   The bounded-run paired gains were +8.24%, +7.15%, +9.65%; its separate fresh
@@ -47,7 +69,8 @@ SPIKE firmware's newer canonical tasks:
 identified by the discovery-census archive. Read
 [F0 timing](LABWIRED-F0-TIMING.md) and [profiling policy](LABWIRED-WASM-PROFILING.md).
 
-1. Identify current engine source versus distributed artifact source; do not
+1. First qualify the PyBadge repair under the engine's P0 contract. Identify
+   current engine source versus distributed artifact source; do not
    rename `43b2d62f` historical artifacts as a fresh-main build. Build exact
    source twice on hosted CI; retain module/glue/compiler hashes and determinism.
 2. Run ordinary, uninstrumented active motion/RAM/GPIO with frozen guest,
@@ -90,8 +113,9 @@ Reject/rework mixed regressions rather than landing from a cherry-picked gain.
 then Lite's explicit vendor-pin/production app lane.
 
 First identify which engine features the shipped adapter actually exposes.
-Upstream PyBadge buttons are merged; SAM SPI is verified/unmerged PR152 and native
-panel/DMA is not done. Wire only qualified capabilities with bounded input
+Upstream PyBadge buttons and blocking SAM SPI are merged (PR151/PR152), but the
+SPI merge has the open idle-performance regression above; native panel/DMA is
+not done. Wire only qualified capabilities with bounded input
 validation and debugger-visible actual model output. Build/publish a source-bound
 artifact only after ordinary runtime gates; advance Lite explicitly afterward.
 
