@@ -1,4 +1,4 @@
-// Owned cold RAM interface prototype; not connected to an addon or CPU.
+// Owned cold RAM core used by the companion N-API module behind CPU3 JS memory callbacks.
 #ifndef BW_COLD_OWNED_RAM_H
 #define BW_COLD_OWNED_RAM_H
 #include <array>
