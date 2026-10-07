@@ -8,15 +8,25 @@ this summary does not replace old failures or reinterpret them as successes.
 ## Current state and meaning of 1x
 
 - The older native forty-chip spin receipts remain valid for their exact source,
-  but current LabWired main `67920fcf8d82c74f3cc63285181fe26db93cf720` has a
-  **new PyBadge regression**: [Core Perf37481145682](https://github.com/CrispStrobe/labwired-core/actions/runs/37481145682)
+  but pre-repair LabWired `67920fcf8d82c74f3cc63285181fe26db93cf720` had a
+  **PyBadge regression**: [Core Perf37481145682](https://github.com/CrispStrobe/labwired-core/actions/runs/37481145682)
   measured **0.05x**, batch **1**, versus generic ATSAMD51 **67.97x**, batch
   **1023.8**. The relative stage did not run after the absolute RTx failure.
   The suite now covers 42 chips / 82 board modes; the other 41 chips met the
   absolute floor. [Issue158](https://github.com/CrispStrobe/labwired-core/issues/158)
   and [repair PR159](https://github.com/CrispStrobe/labwired-core/pull/159)
-  track the idle SPI walk/batching cause. The repair is not yet qualified.
-- The same main's [native micro:bit qualification37481145769](https://github.com/CrispStrobe/labwired-core/actions/runs/37481145769)
+  track the idle SPI walk/batching cause. PR159 is now merged as
+  `ae127c89b9f60ed8a239f82858859c31ef8255af`, tested source
+  `547da6da814afd0375199b192db7e3e2416042a0`, with identical merge/review trees.
+  All 20 enabled correctness checks passed. Two full native chip-spin runs
+  recovered all 42 chips above 1x: PyBadge medians **61.4713x / 84.1056x**, batch
+  **1023.8**. The first full run failed F411 relative cost; the repeat and two
+  valid isolated candidate comparisons passed unchanged baselines. Preserve
+  that failure and the invalid shared-target diagnostic; measurement stability
+  remains open. [Exact receipts/boundaries](https://github.com/CrispStrobe/labwired-core/blob/main/docs/receipts/2026-10-07-sam-spi-p0/README.md).
+  These runner-specific native spin rates are not an A/B gain, active display,
+  full-board or WASM proof. Full-board GPIO service still pins interval 1.
+- That pre-repair source's [native micro:bit qualification37481145769](https://github.com/CrispStrobe/labwired-core/actions/runs/37481145769)
   passed: GPIO median **6.6944x**; motion median **1.2748x**, minimum
   **1.2697x**, all five runs >=1x. This is selected active native guest evidence,
   not browser/full-board throughput. PXT micro:bit/Arcade is wall-paced API
@@ -69,7 +79,7 @@ SPIKE firmware's newer canonical tasks:
 identified by the discovery-census archive. Read
 [F0 timing](LABWIRED-F0-TIMING.md) and [profiling policy](LABWIRED-WASM-PROFILING.md).
 
-1. First qualify the PyBadge repair under the engine's P0 contract. Identify
+1. Read the merged PyBadge P0 receipt and its open stability follow-up. Identify
    current engine source versus distributed artifact source; do not
    rename `43b2d62f` historical artifacts as a fresh-main build. Build exact
    source twice on hosted CI; retain module/glue/compiler hashes and determinism.
