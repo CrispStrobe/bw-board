@@ -15,8 +15,17 @@ try{
  assert.throws(()=>inventory(root,head,['role.txt']),/clean source checkout/);
  git('checkout','--','role.txt');
  assert.throws(()=>inventory(root,'0'.repeat(40),['role.txt']),/exact source head/);
+ const oldBlob=git('rev-parse','HEAD:role.txt');
+ const replacement=execFileSync('git',['-C',root,'hash-object','-w','--stdin'],
+  {input:'replacement bytes\n',encoding:'utf8'}).trim();
+ git('replace',oldBlob,replacement);
+ assert.equal(git('show','HEAD:role.txt'),'replacement bytes');
+ assert.equal(execFileSync('git',['--no-replace-objects','-C',root,'show','HEAD:role.txt'],
+  {encoding:'utf8'}),'qualified bytes\n');
+ assert.deepEqual(Object.keys(inventory(root,head,['role.txt'])),['role.txt']);
+ git('replace','-d',oldBlob);
  symlinkSync('role.txt',resolve(root,'link.txt'));git('add','link.txt');git('commit','-qm','Symlink');
  head=git('rev-parse','HEAD');
  assert.throws(()=>inventory(root,head,['link.txt']),/ordinary source/);
- console.log('source admission controls PASS: exact Git bytes/head and symlink denial');
+ console.log('source admission controls PASS: exact Git bytes/head, replace-ref resistance and symlink denial');
 }finally{rmSync(root,{recursive:true,force:true});}

@@ -16,7 +16,8 @@ const qualifiedPaths=['scripts/bochs-cpu3-native-cold-direct-ram/',
  'scripts/bochs-cpu3-native-cold-bios/','scripts/bochs-cpu3-native-cold-memory-fusion/',
  'scripts/bochs-cpu3-native-combined-paging-ram/','scripts/bochs-cpu3-native-owned-8042-interface/',
  'src/experimental/','roms/free-at-bios/'];
-const git=(root,args,encoding='utf8')=>execFileSync('git',['-C',root,...args],{encoding,maxBuffer:8*1024*1024,timeout:20000});
+const git=(root,args,encoding='utf8')=>execFileSync('git',['--no-replace-objects','-C',root,...args],
+ {encoding,maxBuffer:8*1024*1024,timeout:20000});
 function ordinary(path){
  const st=lstatSync(path);assert.ok(st.isFile()&&!st.isSymbolicLink()&&st.size<=8*1024*1024,'bounded ordinary source');
  assert.equal(realpathSync(path),path,'canonical source file');return readFileSync(path);
