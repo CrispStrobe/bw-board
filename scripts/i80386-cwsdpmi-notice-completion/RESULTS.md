@@ -37,7 +37,8 @@ blanket redistribution clearance. No compiler or guest ran, and no binary or
 performance result exists.
 
 The next compile-only gate may execute the SHA-pinned cross-toolchain on hosted
-CI after a separate component decision. It must retain the exact command,
+CI. Publication of a linked executable requires the separate component review.
+The gate must retain the exact command,
 implicit startup/link roles, map, warnings, failures and output hash while
 keeping the linked client executable out of the public artifact. QEMU and AT
 guest acceptance remain later steps.
