@@ -1,5 +1,7 @@
 /** Architectural cuts and lossless owned-memory replay for the finite IRQ guest. */
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {boundedCount,wholeNativeWords} from '../bochs-cpu3-native-cold-bios/parity.mjs';
 import {comparePagedIrqCpu} from './cpu-comparison.mjs';
 import {layout,entries,bootStores,markerStores,terminalEip,selector,wordAt,expectedShadow} from './profile.mjs';
@@ -10,13 +12,29 @@ const allPages=Object.keys(layout);
 const value=bytes=>bytes.reduce((n,b,i)=>(n|b<<(8*i))>>>0,0);
 const nativeAd=Object.values(entries).map(e=>({raw:e.raw,before:e.value,after:e.value|(e===entries.stack?0x60:0x20)}));
 const ownPage=raw=>allPages.find(key=>layout[key]===(raw&~4095));
+export const sliceAbiSha256='3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990';
+assert.equal(createHash('sha256').update(readFileSync(new URL('../bochs-cpu3-native-owned-in8/abi.h',import.meta.url))).digest('hex'),sliceAbiSha256,'exact generated ABI4 slice layout');
+export function decodeIrqSlice(n){
+ assert.ok(n.sliceBytes instanceof Uint8Array&&n.sliceBytes.byteLength===160,'exact ABI4 slice bytes');
+ const v=new DataView(n.sliceBytes.buffer,n.sliceBytes.byteOffset,n.sliceBytes.byteLength);
+ const u32=at=>v.getUint32(at,true),u64=at=>v.getBigUint64(at,true),cs=v.getUint16(104,true),eip=u32(108);
+ assert.deepEqual([u32(0),u32(12),u32(20),u64(24),u64(32),cs,eip,u32(152)],
+  [n.reason,n.chargedNativeTicks,n.chargedQuanta,BigInt(boundedCount(n.nativeTicks)),BigInt(boundedCount(n.successfulQuanta)),
+   n.state[13],n.state[8],n.activityState],'raw slice mirrors represented CPU and accounting');
+ for(const [i,key] of ['attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'].entries())
+  assert.equal(u64(40+8*i),BigInt(boundedCount(n.execution[key])),key+' raw slice counter');
+ assert.equal(u32(148),n.state[9]&0x200?1:0,'raw slice IF mirrors CPU');
+ return {cs,eip,pendingIrq:u32(136),irqDelivered:u32(140),irqVector:u32(144),ifFlag:u32(148),activityState:u32(152),pendingEvent:u32(156)};
+}
 export function irqProgress(previous,n){
  wholeNativeWords(n);
+ const slice=decodeIrqSlice(n);
  const ticks=boundedCount(n.nativeTicks),q=boundedCount(n.successfulQuanta),dn=ticks-previous.n,dq=q-previous.q;
  assert.ok((dn===0||dn===1)&&(dq===0||dq===1),'independent N/Q max-one deltas');
  assert.deepEqual([n.chargedNativeTicks,n.chargedQuanta],[dn,dq],'exact charged deltas');
  assert.ok([1,6,7].includes(n.reason),'budget, actual IRQ delivery, or device due');
- if(n.reason===6){assert.deepEqual([dn,dq],[0,0],'zero-Q hardware delivery');assert.equal(n.irqDelivered,1);assert.equal(n.irqVector,0);}else assert.ok(dn||dq||n.reason===7,'no synthetic zero-progress cut');
+ if(n.reason===6){assert.deepEqual([dn,dq],[0,0],'zero-Q hardware delivery');assert.deepEqual([slice.pendingIrq,slice.irqDelivered,slice.irqVector,slice.cs,slice.eip,slice.ifFlag],[1,1,0,selector,0x700a,0],'actual ABI4 IRQ cut');}
+ else{assert.equal(slice.irqDelivered,0,'no hidden duplicate IRQ return');assert.ok(dn||dq||n.reason===7,'no synthetic zero-progress cut');}
  assert.ok(ticks<=nativePagedIrqProfile.maxNativeTicks&&q<=nativePagedIrqProfile.maxQuanta);
  assert.equal(n.activityState,0);
  assert.ok(n.execution&&n.fallback);

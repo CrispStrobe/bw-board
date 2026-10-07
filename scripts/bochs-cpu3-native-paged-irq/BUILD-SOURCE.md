@@ -20,4 +20,11 @@ The guest aborted on the inherited `cold-BIOS-no-ACK` guard before producing a
 guest receipt. The scoped runtime correction removes that guard only from this
 IRQ profile, and the runner now writes an atomic last-paused boundary before
 each native resume. This corrected source has not had another actual guest
-run; native/JS differential parity remains unqualified.
+run at that checkpoint. The next [official run 37619512616](https://github.com/CrispStrobe/bw-board/actions/runs/37619512616)
+reached a real zero-N/Q hardware IRQ delivery at 39/39 with one PIC ACK,
+three frame writes and a handler-entry CPU snapshot. Its driver then rejected
+the return because it expected IRQ fields at the top level; ABI4 exposes them
+in the exact 160-byte `sliceBytes` result. The current decoder pins the
+generated ABI header and checks the original captured slice without adding
+exports or inventing fields. It has not been rerun in a guest, so native/JS
+differential parity remains unqualified.

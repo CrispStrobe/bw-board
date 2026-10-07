@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDriverPagedIrqProvider,deriveDriverProvider,profileProviderSha256} from '../scripts/bochs-cpu3-native-paged-irq/driver-provider.mjs';
 import {bootStores,layout} from '../scripts/bochs-cpu3-native-paged-irq/profile.mjs';
-import {irqProgress} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
+import {irqProgress,decodeIrqSlice} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
 import {derivePagedIrqComparison,comparisonParentSha256} from '../scripts/bochs-cpu3-native-paged-irq/cpu-comparison.mjs';
 import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -38,8 +38,10 @@ test('IRQ actual admission binds the imported INT parent and every actual gate s
  for(const path of [
   'scripts/bochs-cpu3-native-paged-int-iret/runtime.mjs',
   'scripts/bochs-cpu3-native-paged-int-iret/provider-derivation.mjs',
+  'scripts/bochs-cpu3-native-owned-in8/abi.h',
   'scripts/bochs-cpu3-native-paged-irq/runner.mjs',
   'scripts/bochs-cpu3-native-paged-irq/parity.mjs',
+  'scripts/bochs-cpu3-native-paged-irq/saved-native-irq-slice.json',
   'scripts/ci-build-i80386-native-paged-irq.py',
   '.github/workflows/i80386-native-paged-irq-actual.yml',
  ])assert.match(source.hashes[path],/^[a-f0-9]{64}$/,path);
@@ -81,8 +83,18 @@ test('IRQ progress admits only actual zero-Q delivery and keeps the IF phase in 
  assert.equal(source.baseSha256,comparisonParentSha256);
  assert.match(source.bytes.toString(),/fixed IRQ IF phase/);
  assert.doesNotMatch(source.bytes.toString(),/assert\.equal\(j\.eflags&0x200,0\)/);
- const n={state:Array(20).fill(0),extra:Array(20).fill(0),segments:Array(90).fill(0),system:Array(30).fill(0),debug:Array(6).fill(0),nativeTicks:39,successfulQuanta:39,chargedNativeTicks:0,chargedQuanta:0,reason:6,irqDelivered:1,irqVector:0,activityState:0,execution:{attempts:39,completed:39,repIterations:0,repPartial:0,faults:0,portCommits:0,irqDeliveries:1,haltIdleCuts:0},fallback:{bochsRamReads:0,bochsRamWrites:0,bochsDirectPointers:0,bochsPio:0,bochsTimer:0}};
+ const actual=JSON.parse(readFileSync(new URL('../scripts/bochs-cpu3-native-paged-irq/saved-native-irq-slice.json',import.meta.url),'utf8'));
+ const sliceBytes=Uint8Array.from(Buffer.from(actual.sliceBytesHex,'hex'));
+ assert.equal(createHash('sha256').update(sliceBytes).digest('hex'),actual.sliceBytesSha256,'original artifact slice unchanged');
+ const state=Array(20).fill(0);state[13]=actual.stateCs;state[8]=actual.stateEip;
+ const n={state,extra:Array(20).fill(0),segments:Array(90).fill(0),system:Array(30).fill(0),debug:Array(6).fill(0),
+  sliceBytes,nativeTicks:actual.nativeTicks,successfulQuanta:actual.successfulQuanta,
+  chargedNativeTicks:actual.chargedNativeTicks,chargedQuanta:actual.chargedQuanta,
+  reason:actual.reason,activityState:actual.activityState,execution:actual.execution,
+  fallback:{bochsRamReads:0,bochsRamWrites:0,bochsDirectPointers:0,bochsPio:0,bochsTimer:0}};
+ assert.deepEqual(decodeIrqSlice(n),{cs:24,eip:0x700a,pendingIrq:1,irqDelivered:1,irqVector:0,ifFlag:0,activityState:0,pendingEvent:1024});
  assert.deepEqual(irqProgress({n:39,q:39},n),{n:39,q:39,dn:0,dq:0});
  assert.throws(()=>irqProgress({n:39,q:39},{...n,reason:4}));
  assert.throws(()=>irqProgress({n:39,q:39},{...n,reason:6,chargedQuanta:1}));
+ const bad=Uint8Array.from(sliceBytes);bad[144]=1;assert.throws(()=>irqProgress({n:39,q:39},{...n,sliceBytes:bad}),/actual ABI4 IRQ cut/);
 });
