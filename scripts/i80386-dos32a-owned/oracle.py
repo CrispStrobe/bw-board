@@ -414,22 +414,44 @@ def run(inp: dict, output: Path) -> dict:
                 except Exception as secondary:
                     report["vgaFailureRetentionError"] = f"{type(secondary).__name__}: {str(secondary)[:160]}"
         finally:
+            # A second timeout signal must not replace the first guest error
+            # while the owned QEMU group is being killed and reaped.
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
             if monitor is not None:
                 try:
                     monitor.close()
-                except Exception:
-                    pass
+                except Exception as secondary:
+                    report["cleanupMonitorError"] = f"{type(secondary).__name__}: {str(secondary)[:160]}"
             if proc is not None and not reaped:
                 try:
                     os.killpg(proc.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-                try:
-                    _, status, usage = os.wait4(proc.pid, 0)
-                    report["cleanupExitStatus"] = os.waitstatus_to_exitcode(status)
-                    report["maxRssBytes"] = usage.ru_maxrss * 1024
-                except ChildProcessError:
-                    pass
+                except Exception as secondary:
+                    report["cleanupKillError"] = f"{type(secondary).__name__}: {str(secondary)[:160]}"
+                    try:
+                        proc.kill()
+                    except Exception as fallback:
+                        report["cleanupFallbackError"] = f"{type(fallback).__name__}: {str(fallback)[:160]}"
+                cleanup_deadline = time.monotonic() + 5
+                while time.monotonic() < cleanup_deadline:
+                    try:
+                        pid, status, usage = os.wait4(proc.pid, os.WNOHANG)
+                    except ChildProcessError:
+                        reaped = True
+                        break
+                    except Exception as secondary:
+                        report["cleanupWaitError"] = f"{type(secondary).__name__}: {str(secondary)[:160]}"
+                        break
+                    if pid:
+                        reaped = True
+                        report["cleanupExitStatus"] = os.waitstatus_to_exitcode(status)
+                        report["maxRssBytes"] = usage.ru_maxrss * 1024
+                        break
+                    time.sleep(0.05)
+                if not reaped:
+                    report["cleanupIncomplete"] = True
             report["elapsedWallSeconds"] = round(time.monotonic()-start,3)
             try:
                 if oracle_disk.is_file():

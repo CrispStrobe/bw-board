@@ -143,6 +143,7 @@ async function main() {
     let partialFatReads=0;
     const injected=[];
     let lastAcceptedStep=-5_000;
+    let lastOfferedStep=-5_000;
     for(let step=0;step<MAX_STEPS;step++) {
       steps=step;witness.step=step;
       if (step%50000===0) {
@@ -174,10 +175,11 @@ async function main() {
         }
         if(lastFiles?.fail){firstFailure='guest wrote LEFAIL.TXT';break;}
       }
-      if(keyQueue.length && readyForScan({step,lastAcceptedStep,
+      if(keyQueue.length && readyForScan({step,lastOfferedStep,
         ringEmpty:ringEmpty(machine),controllerStatus:machine._a20Controller.readStatus()})){
         const event=keyQueue[0];
         const accepted=machine.keyIn(event.scan);
+        lastOfferedStep=step;
         if(injected.length>=1_000){firstFailure='keyboard attempt cap';break;}
         injected.push({step,scan:event.scan,key:event.key,phase:event.phase,accepted});
         if(accepted){keyQueue.shift();lastAcceptedStep=step;}
@@ -188,7 +190,7 @@ async function main() {
     }
     const screen=rows(machine),after=Buffer.from(machine.ata.mediaBytes()),files=resultFiles(after);
     const keyboard={declined,requested:[FIRST_COMMAND,SECOND_COMMAND],injected,
-      pending:keyQueue.length,lastAcceptedStep};
+      pending:keyQueue.length,lastAcceptedStep,lastOfferedStep};
     const graded=evaluate({witness,files,screen,returned,shutdown:cpu.shutdown,steps,keyboard});
     Object.assign(report,{
       firstFailure:firstFailure??(graded.passed?null:'acceptance checks failed'),

@@ -20,6 +20,6 @@ export function encode(text) {
 // The BIOS data-area queue can be empty before the 8042 has delivered its
 // pending byte. Both must be clear, with a bounded instruction gap between
 // offers, so one command cannot be burst into the controller.
-export function readyForScan({step,lastAcceptedStep,ringEmpty,controllerStatus}) {
-  return step-lastAcceptedStep>=5_000 && ringEmpty && (controllerStatus&1)===0;
+export function readyForScan({step,lastOfferedStep,ringEmpty,controllerStatus}) {
+  return step-lastOfferedStep>=5_000 && ringEmpty && (controllerStatus&1)===0;
 }

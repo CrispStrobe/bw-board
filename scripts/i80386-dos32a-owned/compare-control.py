@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 
 from compare import compare
 
-files = {role: {"bytes": 2, "sha256": role, "text": role} for role in ("output", "ok", "returned")}
+files = {role: {"bytes": len(role), "sha256": hashlib.sha256(role.encode("latin1")).hexdigest(),
+                "text": role} for role in ("output", "ok", "returned")}
 files["fail"] = None
 target = {"schema": "bw.dos32a-owned-le.target.v1", "passed": True,
           "disk": {"initialSha256": "disk"}, "inputHashes": {"floppy": "floppy"},
@@ -18,10 +20,14 @@ oracle = {"schema": "bw.dos32a-owned-le.qemu-oracle.v1", "passed": True,
 assert compare(target, oracle)["passed"]
 for side, path, value in (
     ("target", ("passed",), False), ("oracle", ("passed",), False),
+    ("target", ("passed",), "yes"), ("oracle", ("passed",), 1),
     ("target", ("disk", "initialSha256"), "other"),
     ("oracle", ("floppySha256",), "other"),
     ("oracle", ("guestFiles", "output", "sha256"), "other"),
     ("target", ("guestFiles", "ok"), None),
+    ("target", ("guestFiles", "ok", "bytes"), True),
+    ("target", ("guestFiles", "ok", "sha256"), "0" * 64),
+    ("target", ("guestFiles", "ok", "text"), "\u0100"),
     ("oracle", ("guestFiles", "returned", "text"), "other"),
     ("target", ("guestFiles", "fail"), {"text": "fail"}),
 ):

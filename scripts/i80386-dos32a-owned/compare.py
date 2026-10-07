@@ -4,16 +4,34 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 from pathlib import Path
 
 ROLES = ("output", "ok", "returned")
 
 
+def checked_file(value: object, role: str) -> tuple[int, str, str]:
+    if not isinstance(value, dict) or type(value.get("bytes")) is not int or not 0 <= value["bytes"] <= 65536:
+        raise ValueError("invalid guest file extent " + role)
+    digest, text = value.get("sha256"), value.get("text")
+    if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+        raise ValueError("invalid guest file digest " + role)
+    if not isinstance(text, str):
+        raise ValueError("invalid guest file text " + role)
+    try:
+        raw = text.encode("latin1")
+    except UnicodeEncodeError as error:
+        raise ValueError("guest file text not Latin-1 " + role) from error
+    if len(raw) != value["bytes"] or hashlib.sha256(raw).hexdigest() != digest:
+        raise ValueError("guest file self-hash differs " + role)
+    return value["bytes"], digest, text
+
+
 def compare(target: dict, oracle: dict) -> dict:
-    if target.get("schema") != "bw.dos32a-owned-le.target.v1" or not target.get("passed"):
+    if target.get("schema") != "bw.dos32a-owned-le.target.v1" or target.get("passed") is not True:
         raise ValueError("target guest did not pass its protected-entry gate")
-    if oracle.get("schema") != "bw.dos32a-owned-le.qemu-oracle.v1" or not oracle.get("passed"):
+    if oracle.get("schema") != "bw.dos32a-owned-le.qemu-oracle.v1" or oracle.get("passed") is not True:
         raise ValueError("independent guest did not pass output/exit/return gate")
     if target.get("disk", {}).get("initialSha256") != oracle.get("initialDiskSha256"):
         raise ValueError("initial disk differs")
@@ -25,10 +43,7 @@ def compare(target: dict, oracle: dict) -> dict:
     for role in ROLES:
         left = target.get("guestFiles", {}).get(role)
         right = oracle.get("guestFiles", {}).get(role)
-        if not isinstance(left, dict) or not isinstance(right, dict):
-            raise ValueError("missing guest result " + role)
-        if (left.get("bytes"), left.get("sha256"), left.get("text")) != (
-                right.get("bytes"), right.get("sha256"), right.get("text")):
+        if checked_file(left, "target " + role) != checked_file(right, "oracle " + role):
             raise ValueError("guest output mismatch " + role)
         values[role] = {"bytes": left["bytes"], "sha256": left["sha256"]}
     return {"schema": "bw.dos32a-owned-le.actual-comparison.v1", "passed": True,
