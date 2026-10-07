@@ -11,6 +11,7 @@ Run the bounded source control with no guest or media:
 
 ```sh
 node --test scripts/i80386-at-cli-pty/owned-hdd-control.mjs
+python3 -B scripts/i80386-at-cli-pty/live-pty-control.py
 ```
 
 The source control pins the resulting boot-sector and whole-image hashes,
@@ -19,6 +20,17 @@ nonboot disk byte. This does **not** prove the free Bochs BIOS boots the
 sector, that `--live` delivers keys, or that host terminal state is restored.
 Those require a later exact-source PTY execution with the bundled free BIOS
 and VGA ROM, original terminal transcript and final console report.
+
+`live-pty.py` is the proposed real PTY driver. Its exact-role JSON input names
+the clean source head, Node executable, free BIOS and VGA ROM paths and hashes,
+owned HDD path and pinned image hash, geometry and fresh output directory.
+It starts the unchanged console in a private 100-column PTY, waits for a
+rendered READY frame before sending `abc`, requires a later rendered DONE
+frame, forces a distinct Ctrl-L redraw, sends Ctrl-] to quit, and checks the
+original console report's six accepted Set-1 make/break bytes. It compares
+terminal attributes before and after, requires an empty process group, and
+retains a bounded raw transcript plus the first failure. The driver is
+**unrun against the guest** in this source checkpoint.
 
 The planned PTY acceptance sends three visible keys only after an actual
 `PTY READY>` frame, requires `PTY READY> abc PTY DONE` in a later rendered
