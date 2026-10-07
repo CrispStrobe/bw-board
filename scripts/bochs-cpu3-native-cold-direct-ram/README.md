@@ -1,6 +1,6 @@
 # Cold CPU3 direct-RAM source/control checkpoint
 
-**Source-integrated; guest unqualified.** This directory now derives a distinct ABI 5 CPU3 runtime and N-API translation unit, with a same-DSO RAM/ROM owner and an actual JavaScript cold-board provider. The generated N-API translation unit compiles against a bounded CPU stub, and the C++ model and N-API adversarial controls pass. The generated runtime has not yet been compiled with Bochs; no actual CPU3 addon or affected guest has run for this profile. The existing companion addon and ordinary JS path remain unchanged. No guest parity or speed result follows from these controls.
+**Finite actual cold guest parity passes; timing pending.** Tested source `acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1` passed [actual hosted run 37605762900](https://github.com/CrispStrobe/bw-board/actions/runs/37605762900): pinned Bochs compilation, exact static admission, and complete direct/companion/callback guest parity. Coordinator, coder and independent reviewer audited the original artifact and replayed every journal write. See [results and preserved failures](../../docs/I80386-COLD-DIRECT-RAM-RESULTS.md). This ABI 5 same-DSO profile remains experimental, fixed-A20 and ROM-execution-only, with clock/page/PIO/device callbacks retained. Paired performance is unmeasured; functional JS remains the user baseline.
 
 `bridge.h` compiles the existing `bochs-cpu3-native-cold-owned-ram/owned-ram.h` into the same C++ model. `abi.h` pins the companion header SHA-256, profile, extent and journal capacity. A Session copies the initial 1.5 MiB RAM and 64 KiB ROM, and a unique full-initial Shadow belongs to it. The Bridge admits a single 16 MiB board view with a distinct generation view, and copies its four object/buffer identity tokens; borrowed byte pointers are used only during synchronous binding or commit. The derived N-API retains strong references to the exact typed-array objects and ordinary ArrayBuffers, then re-resolves identity, backing and extent at each synchronous commit.
 
@@ -27,14 +27,20 @@ g++ -std=c++17 -O0 -fPIC -shared -Wall -Wextra -Werror \
   build/direct-ram-control/bochs-cpu3-native-direct-board-adapter/napi.cc \
   build/direct-ram-control/bochs-cpu3-native-cold-direct-ram/napi-control-stub.cc \
   -o build/direct-ram-control/direct-control.node
-for scenario in normal rom-detach recursive-create recursive-commit duplicate-commit \
+for scenario in normal rom-detach recursive-create recursive-commit duplicate-commit malformed-clock-reply page-during-clock \
   valid-overlap late-tamper ticket-mismatch session-mismatch; do
   node scripts/bochs-cpu3-native-cold-direct-ram/napi-control.mjs \
     build/direct-ram-control/direct-control.node "$scenario"
 done
 node scripts/bochs-cpu3-native-cold-direct-ram/provider-control.mjs
+for scenario in normal source-clock-deny page-clock invalid-actual-page; do
+  node scripts/bochs-cpu3-native-cold-direct-ram/napi-provider-control.mjs \
+    build/direct-ram-control/direct-control.node "$scenario"
+done
 ```
 
 The stub verifies same-DSO N-API object/backing binding, ROM copy before getters, swallowed recursive create/commit denial, one-shot commit, copied batch ticket/session checks, pending-write late-byte tamper with zero board/gen publication, and same-page generations. A duplicate after an accepted empty commit is a terminal fail-stop case; it does not claim rollback of that first acknowledgement. The actual provider control separately checks staged overlapping writes and generation Map insertion order against its real cold-board object.
 
-`runtime.mjs` derives the compact/fused source while replacing only its physical-memory callback path. `napi.mjs` derives the compact-progress N-API, retaining full 166-word snapshots and progress. `owner.inc` binds the owner inside that same DSO; `provider.mjs` retains the real cold clock, page, PIO and device callbacks. These derivations authenticate their held inputs and reverse exactly to those inputs. The source alias/publication ledger and owner journal remain separate. A full owner journal uses a distinct native pre-effect retry context, not a synthetic clock query. The source controls still use model arguments; the stub controls do not execute Bochs or prove that every real CPU3 source phase and JavaScript board callback passes. A clean affected cold guest, exact report parity, closed-owner evidence and later same-host paired timing are mandatory next gates.
+`runtime.mjs` derives the compact/fused source while replacing only its physical-memory callback path. `napi.mjs` derives the compact-progress N-API, retaining full 166-word snapshots and progress. `owner.inc` binds the owner inside that same DSO; `provider.mjs` retains the real cold clock, page, PIO and device callbacks. These derivations authenticate their held inputs and reverse exactly to those inputs. The source alias/publication ledger and owner journal remain separate. A full owner journal uses a distinct native pre-effect retry context, not a synthetic clock query. The source controls still use model arguments; the stub controls do not execute Bochs or prove that every real CPU3 source phase and JavaScript board callback passes. The clean affected cold guest, exact report parity and closed-owner gate passed at the tested source above; separate same-host paired timing remains the next gate.
+
+The actual regression identified a distinction the earlier separate controls missed: source clock reason PAGE flushes a tape before the later page-admission callback. Private `PAGE_CLOCK` kind 15 admits that nonempty tape with no page address or ticket. Actual PAGE kind 4 retains strict ROM-only admission and one-use ticket consumption. The model and combined real-provider/N-API controls exercise the clock flush followed by valid and invalid actual pages, and reject page access from a clock callback. The original failed runs remain part of the result record.
