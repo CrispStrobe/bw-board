@@ -36,6 +36,10 @@ if(caseName==='duplicate-commit')callback.clockTransfer=()=>{
  try{addon.directCommit(batch);}catch{}
  return state();
 };
+if(caseName==='malformed-clock-reply')callback.clockTransfer=()=>{
+ const batch=addon.directDrain();addon.directCommit(batch);
+ return new Uint32Array(6);
+};
 if(caseName==='valid-overlap'||caseName==='late-tamper'||caseName==='ticket-mismatch'||caseName==='session-mismatch'||caseName==='recursive-commit')configuration='two-writes';
 if(caseName==='late-tamper')callback.clockTransfer=()=>{
  const batch=addon.directDrain();assert.equal(batch.length,2);batch[1].after[0]^=1;
@@ -52,7 +56,7 @@ if(caseName==='session-mismatch')callback.clockTransfer=()=>{
  try{addon.directCommit(batch);}catch{}
  return state();
 };
-const denied=new Set(['recursive-create','recursive-commit','duplicate-commit','late-tamper','ticket-mismatch','session-mismatch']);
+const denied=new Set(['recursive-create','recursive-commit','duplicate-commit','malformed-clock-reply','late-tamper','ticket-mismatch','session-mismatch']);
 if(denied.has(caseName)){
  assert.throws(()=>addon.create(configuration,rom,callback,false));
  assert.equal(directRam[0x100],0);assert.equal(directRam[0x101],0);

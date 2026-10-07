@@ -26,7 +26,7 @@ export function deriveDirectRamNapi(){
  once('call("admitExecutePage",1,&arg,&r)','direct_call_page(&arg,&r,raw)','page callback scope');
  once('call("packedScalar",4,args,&r)','direct_call_scalar(args,&r,op,a,b,c)','scalar callback scope');
  const returned='napi_close_handle_scope(env,scope);return success;';
- const guarded='const bool scope_ok=ok(napi_close_handle_scope(env,scope));if(!success||!scope_ok){direct_poison();return 0;}return 1;';
+ const guarded='const bool scope_ok=ok(napi_close_handle_scope(env,scope));if(!success||!scope_ok){fprintf(stderr,"BW_DIRECT5_CALLBACK_RETURN_REJECT %s decoded=%u scope=%u\\n",__func__,success?1u:0u,scope_ok?1u:0u);direct_poison();return 0;}return 1;';
  if(s.split(returned).length!==4)throw Error('exact three retained callback return seams');
  s=s.replaceAll(returned,guarded);edits.push({old:returned,next:guarded,label:'fail-stop on post-ACK callback decode/return failure',count:3});
  once('bw_direct_callbacks callbacks={sizeof(bw_direct_callbacks),4,nullptr,clock_transfer,memory,page,scalar};',

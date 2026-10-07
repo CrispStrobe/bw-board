@@ -78,7 +78,7 @@ jobs:
             "$RUNNER_TEMP/cold-direct-napi-control/bochs-cpu3-native-direct-board-adapter/napi.cc" \
             "$RUNNER_TEMP/cold-direct-napi-control/bochs-cpu3-native-cold-direct-ram/napi-control-stub.cc" \
             -o "$RUNNER_TEMP/cold-direct-napi-control/direct-control.node"
-          for scenario in normal rom-detach recursive-create recursive-commit duplicate-commit \
+          for scenario in normal rom-detach recursive-create recursive-commit duplicate-commit malformed-clock-reply \
             valid-overlap late-tamper ticket-mismatch session-mismatch; do
             timeout 15s node scripts/bochs-cpu3-native-cold-direct-ram/napi-control.mjs \
               "$RUNNER_TEMP/cold-direct-napi-control/direct-control.node" "$scenario"
