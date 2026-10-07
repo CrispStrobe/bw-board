@@ -1,13 +1,14 @@
 # x86 checkpoint and next lanes
 
-Updated 2026-10-05. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
+Updated 2026-10-07. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
 
 ## Reached checkpoint
 
 - Functional JavaScript remains the user-facing 386 AT baseline. CLI and GUI media loading exist within the [documented format limits](X86-LOADING-GUIDE.md). The wired Harris 286, independent functional 286, JS 386 dispatchers, and diagnostic Bochs addon are distinct paths. There is no wired 386 implementation.
 - The native [owned paged page-fault recovery fixture](I80386-PAGED-PAGEFAULT-RESULTS.md) passes: 57 attempted instructions, 56 completed quanta, one PF14/error2 at CR2 `8000`, handler PTE repair, CR3 reload, error discard, IRET, one retry, and final readback. Actual full-state records, ten complete memory pages, board state and independent memory-effect tapes are retained. This finite same-CPL16 fixture does not qualify an OS or every protected-mode mechanism.
+- The [code32 REP STOSL page-fault fixture](I80386-CODE32-REP-PF-RESULTS.md) passes its finite JS capture and independent QEMU 8.2.2 486 trace/readback: one PF14/error2 after two completed stores, handler PTE repair and IRETD, then two remaining stores exactly once. The capture retains instruction attempts, full relevant state and memory effects; it does not qualify IRQ delivery or the native CPU3 code32 path.
 - The latest [compact native paired result](I80386-COLD-PAIRED-RESULTS.md) passes terminal semantics but fails the speed gate. On the same GitHub runner, AMD EPYC 9V74 with four logical CPUs, native uses **4.397239× execution CPU** and **7.371981× execution wall time** relative to JS. All seven measured pairs favor JS. Configured-clock RTx is **JS 2.229400 / native 0.302415**; it is not a calibrated physical 16 MHz 386DX result.
-- The native cold capture records 167,123 memory effects and 16,524 resumes. These are counts, not measured cost shares. A RAM/journal optimization is proposed; no integrated or measured speed improvement from it exists yet.
+- The [companion native owned-RAM profile](I80386-COLD-OWNED-RAM-RESULTS.md) passed a local full cold guest comparison against the unchanged callback path: 316,562 N/Q, 16,524 resumes, 16,475 ordered PIO events, full reset/last/final 166-word native state, complete final board and whole RAM hash. A correction also proves that malformed clock/page/scalar callbacks and forbidden PIC ACK cannot acknowledge a pending write before refusal; the full guest retained exact parity. CPU3 still calls JS for every memory effect, which then calls the companion addon. This is a coherence checkpoint, with no direct CPU3 memory path or measured speed improvement. The recorded 167,123 fused memory entries are counts, not measured cost shares.
 - Stock xv6 full usertests have historical JS-path acceptance with later PSE/APIC extensions. Keep that evidence separate from strict 386DX behavior and native qualification. Broader OS/application acceptance remains unfinished.
 
 ## How to take a lane
@@ -16,7 +17,7 @@ Each lane below has an initial deliverable and a completion gate. Work in an iso
 
 ### 1. Native RAM ownership and coherence
 
-**Repository:** bw-board. **Ready to start:** source preparation; depends only on the reached checkpoint.
+**Repository:** bw-board. **Reached:** a distinct companion N-API profile passed local actual full cold callback parity; direct CPU3 memory ownership remains open.
 
 Read `scripts/bochs-cpu3-native-direct-board/runtime.inc` and `scripts/bochs-cpu3-native-cold-memory-fusion/runtime.mjs`. Create a separate proposed `scripts/bochs-cpu3-native-cold-owned-ram/` profile rather than changing an authenticated older addon in place. Copy admitted cold RAM and immutable ROM into native ownership; initially retain every clock callback and device fence. Limit the first profile to fixed A20, ordinary RAM/ROM, no paging, DMA or MMIO ownership.
 
@@ -25,6 +26,8 @@ Implement a unique session-bound shadow initialized from the complete owned RAM,
 **First deliverable:** reviewed interface/source and meaningful pure adversaries in proposed `test/i80386-cold-owned-ram-source.test.mjs`. Cover overlapping writes, untouched initial-byte mismatch, tampered journal batches without partial shadow mutation, capacity refusal/retry, code fences, observer reentry/failure, ROM aliases, open bus and whole-span boundaries. An unconnected prototype is not a usable backend.
 
 **Completion gate:** separately built exact profile passes differential owned cold fixtures against the unchanged callback path, with actual reset/last/final 166-word state, whole final board/RAM hash, 16,475 ordered PIO events, exact N/Q 316562 and closed sessions. Retaining callbacks may yield no speed gain; make no gain claim from ownership alone.
+
+The companion result covers that coherence comparison for the fixed ROM-execution cold target. A direct CPU3-to-owned-RAM profile still needs its own adapter, code-write fences and affected guest qualification before treating lane 1 as a crossing-reduction candidate.
 
 ### 2. Reduce crossings with explicit clock authority
 
