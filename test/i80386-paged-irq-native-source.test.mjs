@@ -17,6 +17,12 @@ test('separate IRQ source derivatives invert exact authenticated parents',()=>{
   assert.ok(source.includes(marker)||marker==='IRQ-prior-attempt'&&source.includes('liveIp==28674&&cs==24&&eip==28673'),marker);
  }
  assert.ok(!source.includes('cold-BIOS-no-IRQ-delivery'));
+ assert.ok(!source.includes('cold-BIOS-no-ACK'),'separate profile reaches scoped native host ACK bridge');
+ const hostAck=source.slice(source.indexOf('static int bw_host_ack_irq('),source.indexOf('static int bw_host_in('));
+ assert.ok(hostAck.includes('if(!vector||!bw_host_irq_line)return 0;if(bw_mapping_pending)'));
+ assert.ok(hostAck.includes('if(supplied!=0)return 0;*vector=(uint8_t)supplied;return 1;'));
+ const scopedAck=source.slice(source.indexOf('unsigned bw_slice_ack_irq(void){'),source.indexOf('void bw_slice_note_irq('));
+ assert.ok(scopedAck.indexOf('paged-IRQ-ack-preflight')<scopedAck.indexOf('bw_callbacks.ack_irq('),'CPU/IF/NQ/line preflight precedes effectful PIC ACK');
  assert.ok(source.includes('if(supplied!=0)return 0;*vector=(uint8_t)supplied;return 1;'),'actual reset PIC vector zero');
  assert.ok(!source.includes('if(supplied!=0x20)return 0;*vector=(uint8_t)supplied;return 1;'));
  assert.equal(nativePagedIrqProfile.maxPortEvents,undefined);

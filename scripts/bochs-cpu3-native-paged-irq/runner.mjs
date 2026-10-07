@@ -13,6 +13,7 @@ import {createPagedIrqOracle} from './reference.mjs';
 import {nativePagedIrqProfile} from './provider-profile.mjs';
 import {namedCuts,layout,selector,interruptEip,terminalEip} from './profile.mjs';
 import {irqProgress,compareCut,validateNativeMemory,terminal,wholeNativeWords} from './parity.mjs';
+import {writePausedEvidence} from './pause-evidence.mjs';
 
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const json=v=>JSON.stringify(v,(_,x)=>typeof x==='bigint'?x.toString():ArrayBuffer.isView(x)?Array.from(x):x);
@@ -37,6 +38,10 @@ export async function runPagedIrqFixture(input,configuration,output){
  const receipt={schema:'bw.paged-irq.actual-native-js.v1',status:'FAIL',source:null,build:null,configuration:null,
   profile:nativePagedIrqProfile,providerAdapterSha256:sha(deriveDriverProvider().bytes),boundaries:[],stages:[],namedCuts:[],cleanup:{}};
  let provider,oracle,api,native,progress={n:0,q:0},resumes=0,zeroQ=0,deliveryCut=null,primary=null;
+ const paused=(phase,sourceLine,jsLine)=>writePausedEvidence(output,{schema:'bw.paged-irq.last-paused-boundary.v1',phase,
+  source:receipt.source,build:receipt.build,configuration:receipt.configuration,input:receipt.input,
+  progress:{...progress,resumes,zeroQ},native,board:provider.checkpoint(),physical:provider.ramPages(),
+  javascript:oracle.checkpoint(),sourceLine,jsLine});
  const capture=(label,kind='resume',dq=1)=>{
   const board=provider.checkpoint(),js=oracle.checkpoint(),pages=provider.ramPages();
   const comparison=compareCut(native,board,pages,js,label,kind,dq);
@@ -66,7 +71,9 @@ export async function runPagedIrqFixture(input,configuration,output){
    else if(deliveryCut)assert.equal(sourceLine.asserted,jsLine.asserted,'PIC level after both real ACKs');
    else assert.deepEqual(sourceLine,jsLine,'real PIC line before actual ACK');
    receipt.stages.push({nativeTicks:progress.n,successfulQuanta:progress.q,sourceLine,jsLine,board:provider.checkpoint(),javascript:oracle.checkpoint(),status:awaitingNested?'UNMATCHED_NATIVE_ACK_AHEAD_OF_JS':'UNMATCHED_LINE_STAGE'});
+   paused('before-line',sourceLine,jsLine);
    if(sourceLine.changed){native=api.setIRQ(sourceLine.asserted);wholeNativeWords(native);receipt.stages.at(-1).native=native;}
+   paused('before-resume',sourceLine,jsLine);
    provider.begin();let resumeError=null;
    try{native=api.resume(1,1,0xffffffffffffffffn);}catch(e){resumeError=e;throw e;}
    finally{try{provider.end();}catch(e){if(!resumeError)throw e;receipt.endError=String(e);}}

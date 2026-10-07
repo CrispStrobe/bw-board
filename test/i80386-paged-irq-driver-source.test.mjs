@@ -4,9 +4,14 @@ import {createDriverPagedIrqProvider,deriveDriverProvider,profileProviderSha256}
 import {bootStores,layout} from '../scripts/bochs-cpu3-native-paged-irq/profile.mjs';
 import {irqProgress} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
 import {derivePagedIrqComparison,comparisonParentSha256} from '../scripts/bochs-cpu3-native-paged-irq/cpu-comparison.mjs';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
 import {runPagedIrqFixture,nextNamedCut} from '../scripts/bochs-cpu3-native-paged-irq/runner.mjs';
 import {sourceIdentity} from '../scripts/bochs-cpu3-native-paged-irq/build-identity.mjs';
+import {writePausedEvidence} from '../scripts/bochs-cpu3-native-paged-irq/pause-evidence.mjs';
 
 test('IRQ driver adapter preserves actual board callbacks and copied read/write order',async()=>{
  const source=deriveDriverProvider();assert.equal(source.parentSha256,profileProviderSha256);
@@ -49,6 +54,23 @@ test('callback tape cap rejects the next read before board or tape effects',asyn
  assert.equal(events.length,1024);assert.equal(state.ram.reads.length,1024,'denied callback did not reach board');
  assert.deepEqual(events.filter(e=>e.direction==='read').map(({direction,ordinal,...e})=>e),state.ram.reads);
  p.close();
+});
+
+test('one atomic paused packet replaces its predecessor and authenticates the original boundary',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'irq-pause-control-'));
+ try{
+  const base={schema:'bw.paged-irq.last-paused-boundary.v1',source:{revision:'a'.repeat(40)},progress:{n:39,q:39},native:{state:[1,2]},board:{pic:{irr:1,isr:0}},physical:{stack:Uint8Array.of(2,0x70)},javascript:{q:39},sourceLine:{asserted:true},jsLine:{asserted:true}};
+  writePausedEvidence(dir,{...base,phase:'before-line'});
+  writePausedEvidence(dir,{...base,phase:'before-resume',native:{state:[3,4]}});
+  const packet=JSON.parse(readFileSync(join(dir,'last-paused-packet.json'),'utf8'));
+  const compressed=Buffer.from(packet.compressedBase64,'base64'),decoded=gunzipSync(compressed);
+  const sha=b=>createHash('sha256').update(b).digest('hex');
+  assert.deepEqual([packet.phase,packet.nativeTicks,packet.successfulQuanta],['before-resume',39,39]);
+  assert.deepEqual([compressed.length,sha(compressed),decoded.length,sha(decoded)],
+   [packet.compressedBytes,packet.compressedSha256,packet.decodedBytes,packet.decodedSha256]);
+  assert.deepEqual(JSON.parse(decoded).native.state,[3,4]);
+  assert.deepEqual(JSON.parse(decoded).physical.stack,[2,0x70]);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
 test('IRQ progress admits only actual zero-Q delivery and keeps the IF phase in comparison',()=>{

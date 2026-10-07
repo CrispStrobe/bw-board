@@ -14,5 +14,10 @@ test/i80386-paged-irq-driver-source.test.mjs` checks pure derivation,
 synthetic metadata denial, callback event copies, IRQ progress admission and
 the exact IF phase source transform. The dedicated labeled PR workflow builds
 from one reviewed head and runs one bounded clean native/JS guest. That
-workflow has not run at this checkpoint: no native compile, guest result or
-differential parity is established by these source controls.
+workflow's first official run, [37618660994](https://github.com/CrispStrobe/bw-board/actions/runs/37618660994),
+compiled the new addon and passed static admission at source `33432b489b9eb344aab85db3ee8b6f31636b708a`.
+The guest aborted on the inherited `cold-BIOS-no-ACK` guard before producing a
+guest receipt. The scoped runtime correction removes that guard only from this
+IRQ profile, and the runner now writes an atomic last-paused boundary before
+each native resume. This corrected source has not had another actual guest
+run; native/JS differential parity remains unqualified.

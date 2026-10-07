@@ -96,6 +96,9 @@ export function derivePagedIrqRuntime(bytes=derivePagedIntIretRuntime().bytes){l
  once(`if(strcmp(sha,"b8b3525d4299ba14dc467144fc743a39f1c04d1a7d92ea3b34da6f4ee601cd30"))return 0;`,`if(strcmp(sha,"${pagedIrqProfile.romSha256}"))return 0;`,'new owned IRQ ROM');
  once(intDomainExpression,irqDomainExpression,'exact IF and opcode positions');
  once(policyHelpers,irqPolicyHelpers,'separate IRQ read/write/AD and marker policy');
+ once('bw_slice_fail("cold-BIOS-no-ACK");if(!vector||!bw_host_irq_line)return 0;if(bw_mapping_pending)',
+ 'if(!vector||!bw_host_irq_line)return 0;if(bw_mapping_pending)',
+ 'remove inherited cold-profile ACK veto only in separate IRQ source');
  once('if(supplied!=0x20)return 0;*vector=(uint8_t)supplied;return 1;',
  'if(supplied!=0)return 0;*vector=(uint8_t)supplied;return 1;',
  'reset PIC vector zero in the exact source ACK bridge');
