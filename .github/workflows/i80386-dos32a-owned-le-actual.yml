@@ -1,0 +1,177 @@
+name: 386 AT FreeDOS owned LE application and QEMU oracle
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-dos32a-owned-le-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  actual:
+    if: >-
+      github.event.label.name == 'x86-dos32a-owned-le-actual' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authenticate source and run bounded controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/dos32a-owned-evidence"
+          mkdir "$evidence"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          timeout 30s python3 -B scripts/i80386-dos32a-owned/source.py "$BW_EXPECTED_HEAD" "$evidence/source-before.json"
+          timeout 30s python3 -B scripts/i80386-dos32a-owned/source-control.py > "$evidence/source-control.stdout" 2> "$evidence/source-control.stderr"
+          timeout 20s python3 -B scripts/i80386-dos32a-owned/control.py > "$evidence/le-control.stdout" 2> "$evidence/le-control.stderr"
+          timeout 20s python3 -B scripts/i80386-dos32a-owned/acquire-control.py > "$evidence/acquire-control.stdout" 2> "$evidence/acquire-control.stderr"
+          timeout 20s python3 -B scripts/i80386-dos32a-owned/compare-control.py > "$evidence/compare-control.stdout" 2> "$evidence/compare-control.stderr"
+          timeout 20s node scripts/i80386-dos32a-owned/grade-control.mjs > "$evidence/grade-control.stdout" 2> "$evidence/grade-control.stderr"
+          timeout 20s node scripts/i80386-dos32a-owned/keyboard-control.mjs > "$evidence/keyboard-control.stdout" 2> "$evidence/keyboard-control.stderr"
+          cp .github/workflows/i80386-dos32a-owned-le-actual.yml "$evidence/workflow.yml"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            node --version
+            python3 --version
+            uname -a
+          } > "$evidence/host-before.txt"
+      - name: Acquire pinned free guest inputs and preserve DOS extender license
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/dos32a-owned-evidence"
+          cd "$RUNNER_TEMP"
+          timeout 180s curl -fL --retry 2 --max-time 120 --output freedos-official.zip \
+            https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.4/FD14-FloppyEdition.zip \
+            > "$evidence/freedos-fetch.stdout" 2> "$evidence/freedos-fetch.stderr"
+          timeout 30s python3 -B "$GITHUB_WORKSPACE/scripts/i80386-dos32a-owned/acquire.py" \
+            freedos-official.zip freedos-floppy.img "$evidence/freedos-input.json"
+          timeout 120s curl -fL --retry 2 --max-time 80 --output dos32a.exe \
+            https://raw.githubusercontent.com/amindlost/dos32a/06d8e3a0b2397d872205d6c99a7de0d6b8628bcc/binw/dos32a.exe \
+            > "$evidence/extender-fetch.stdout" 2> "$evidence/extender-fetch.stderr"
+          timeout 120s curl -fL --retry 2 --max-time 80 --output dos32a-license.txt \
+            https://raw.githubusercontent.com/amindlost/dos32a/06d8e3a0b2397d872205d6c99a7de0d6b8628bcc/license \
+            > "$evidence/license-fetch.stdout" 2> "$evidence/license-fetch.stderr"
+          timeout 20s python3 -B "$GITHUB_WORKSPACE/scripts/i80386-dos32a-owned/build.py" owned-client.le \
+            > "$evidence/owned-client-build.stdout" 2> "$evidence/owned-client-build.stderr"
+          timeout 25s node "$GITHUB_WORKSPACE/scripts/i80386-dos32a-owned/media-control.mjs" \
+            dos32a.exe owned-client.le dos32a-license.txt \
+            > "$evidence/media-control.stdout" 2> "$evidence/media-control.stderr"
+          timeout 25s node "$GITHUB_WORKSPACE/scripts/i80386-dos32a-owned/media.mjs" \
+            dos32a.exe owned-client.le dos32a-license.txt initial-hdd.img "$evidence/media.json" \
+            > "$evidence/media-build.stdout" 2> "$evidence/media-build.stderr"
+          timeout 25s python3 -B "$GITHUB_WORKSPACE/scripts/i80386-dos32a-owned/oracle-control.py" \
+            initial-hdd.img > "$evidence/oracle-control.stdout" 2> "$evidence/oracle-control.stderr"
+          cp dos32a-license.txt "$evidence/DOS32A-LICENSE.txt"
+          printf '%s\n' 'This product uses DOS/32 Advanced DOS Extender technology.' \
+            > "$evidence/DOS32A-ACKNOWLEDGMENT.txt"
+          cp "$GITHUB_WORKSPACE/roms/free-at-bios/LICENSE" "$evidence/free-bios-LICENSE.txt"
+          cp "$GITHUB_WORKSPACE/roms/free-at-bios/README.md" "$evidence/free-bios-README.txt"
+      - name: Install independent free QEMU emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/dos32a-owned-evidence"
+          timeout 180s sudo apt-get update -qq > "$evidence/apt-update.stdout" 2> "$evidence/apt-update.stderr"
+          timeout 180s sudo apt-get install -y --no-install-recommends qemu-system-x86 \
+            > "$evidence/apt-install.stdout" 2> "$evidence/apt-install.stderr"
+          qemu-system-i386 --version | head -1 > "$evidence/qemu-version.txt"
+          dpkg-query -W -f='${Package} ${Version}\n' qemu-system-x86 > "$evidence/qemu-package.txt"
+      - name: Run both real guests once and compare observed output and exit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/dos32a-owned-evidence"
+          mkdir "$RUNNER_TEMP/dos32a-oracle-scratch"
+          python3 - "$evidence" <<'PY'
+          import json,os,pathlib,shutil,sys
+          out=pathlib.Path(sys.argv[1]);root=pathlib.Path(os.environ['GITHUB_WORKSPACE']).resolve()
+          temp=pathlib.Path(os.environ['RUNNER_TEMP']).resolve()
+          media=json.loads((out/'media.json').read_text())
+          common={'bios':str(root/'roms/free-at-bios/BIOS-bochs-legacy'),
+                  'vga':str(root/'roms/free-at-bios/vgabios-lgpl.bin'),
+                  'floppy':str(temp/'freedos-floppy.img'),
+                  'disk':str(temp/'initial-hdd.img'),'diskSha256':media['sha256']}
+          (temp/'target-input.json').write_text(json.dumps({**common,'client':str(temp/'owned-client.le')},indent=2)+'\n')
+          (temp/'oracle-input.json').write_text(json.dumps({**common,
+              'qemu':str(pathlib.Path(shutil.which('qemu-system-i386')).resolve()),
+              'scratch':str(temp/'dos32a-oracle-scratch')},indent=2)+'\n')
+          PY
+          set +e
+          timeout --signal=TERM --kill-after=10s 300s python3 -B scripts/i80386-dos32a-owned/oracle.py \
+            "$RUNNER_TEMP/oracle-input.json" "$evidence/oracle.json" \
+            > "$evidence/oracle.stdout" 2> "$evidence/oracle.stderr"
+          oracle_status=$?
+          timeout --signal=TERM --kill-after=10s 650s node --max-old-space-size=768 \
+            scripts/i80386-dos32a-owned/target.mjs "$RUNNER_TEMP/target-input.json" "$evidence/target.json" \
+            > "$evidence/target.stdout" 2> "$evidence/target.stderr"
+          target_status=$?
+          python3 -B scripts/i80386-dos32a-owned/compare.py \
+            "$evidence/target.json" "$evidence/oracle.json" "$evidence/comparison.json" \
+            > "$evidence/comparison.stdout" 2> "$evidence/comparison.stderr"
+          compare_status=$?
+          printf 'oracle=%s target=%s comparison=%s\n' "$oracle_status" "$target_status" "$compare_status" > "$evidence/child-status.txt"
+          test "$oracle_status" -eq 0 && test "$target_status" -eq 0 && test "$compare_status" -eq 0
+      - name: Authenticate source again
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/dos32a-owned-evidence"
+          mkdir -p "$evidence"
+          python3 -B scripts/i80386-dos32a-owned/source.py "$BW_EXPECTED_HEAD" "$evidence/source-after.json" \
+            > "$evidence/source-after.stdout" 2> "$evidence/source-after.stderr"
+          cmp "$evidence/source-before.json" "$evidence/source-after.json"
+      - name: Inventory original evidence, including first failure
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/dos32a-owned-evidence"
+          mkdir -p "$evidence"
+          python3 - "$evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);files={};total=0
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  raw=path.read_bytes();total+=len(raw)
+                  if len(raw)>12<<20 or total>32<<20:raise ValueError('artifact cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain bounded raw evidence and notices; exclude binaries and images
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-dos32a-owned-le-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dos32a-owned-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
