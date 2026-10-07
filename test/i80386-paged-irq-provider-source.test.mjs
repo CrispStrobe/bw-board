@@ -65,6 +65,13 @@ test('swallowed nested ACK during a valid tape poisons outer clocks before effec
 test('clock commit never revisits caller iterator or accepts changed second-pass words',async()=>{
  const p=await createOwnedPagedIrqProvider(),c=p.callbacks;
  c.clockTransfer(new Uint32Array(),1);p.begin();c.clockTransfer(new Uint32Array(),2);
+ class FalseExtent extends Uint32Array{get length(){return 0;}}
+ assert.throws(()=>c.clockTransfer(new FalseExtent([1,2]),3),{message:'owned tape'});
+ const numericProxy=new Proxy(Uint32Array.of(1,2),{get(target,key){
+  if(key==='0')return 0x100000001;
+  return Reflect.get(target,key,target);
+ }});
+ assert.throws(()=>c.clockTransfer(numericProxy,3),TypeError,'proxy cannot pass intrinsic typed-array metadata');
  let changedPasses=0,lengthReads=0;
  class ChangedSecondPass extends Uint32Array{
  get length(){lengthReads++;return lengthReads===1?super.length:0x40000000;}
