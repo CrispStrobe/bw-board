@@ -58,11 +58,29 @@ host policy was left unchanged.
 
 ## Next bounded task
 
-Load the exact derived provider bytes from a file and bind its canonical URL
-and complete SHA256 to the diagnostic receipt. Preserve the qualified provider
-derivation, guest checks, callback/ACK ordering and the original packet. Controls
-must refuse a wrong file/hash, symlink substitution and truncated data-URL
-authentication; a blank native leaf must stay unresolved.
+The file-backed repair was subsequently tested at
+`0e3ea417241ee61c1598aa8a7f14d173678a62fb` in
+[run 37618929164](https://github.com/CrispStrobe/bw-board/actions/runs/37618929164).
+Its direct sampled child passed semantics and retained the exact provider file
+with a complete URL and matching loaded-source hash. The parent then failed
+because its parser rejected one raw timestamp delta of **−53 microseconds**.
+Four children had completed summaries; the additional direct child retained a
+passing receipt, but the full nine-child diagnostic did not finish.
+
+Preserve this separate [failure artifact 11480674918](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11480674918):
+ZIP 1,291,397 bytes, SHA256
+`90b3ae3e1cb6f4842a4a635af503317478476b584e12d90d20da8268f84ad074`.
+The original 1,168-sample direct profile contains that negative delta at index
+1,160; its signed delta sum is 1,254,132 microseconds within a 1,254,723
+microsecond window. Independently checked cumulative timestamps stay within the
+window. File attribution is observed; complete corrected profiling is pending.
+
+The next change must preserve raw order, signed values and hashes. Validate
+bounded signed deltas and every cumulative timestamp. For a nonmonotonic
+timeline, report sample counts and mark all delta-weighted bucket values and
+fractions unavailable; reject gross bounds violations. Never clamp, drop or
+reorder samples to manufacture timing shares. Retain wrong-file/hash, symlink,
+truncated-URL and blank-native-leaf controls.
 
 After frozen source review, run one new hosted diagnostic for this changed
 instrumentation and independently audit its original artifact. Then select a

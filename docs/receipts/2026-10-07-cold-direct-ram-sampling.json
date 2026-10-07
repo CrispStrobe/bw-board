@@ -27,5 +27,22 @@
     "Addon hashes bind build receipts; compiled addon binaries are not retained in this ZIP.",
     "No physical 16 MHz RTx, cross-host speedup or broader OS qualification follows."
   ],
-  "nextTask": "Authenticate exact file-backed diagnostic provider bytes, review controls, then run one new changed-instrumentation diagnostic."
+  "fileBackedFollowup": {
+    "harnessHead": "0e3ea417241ee61c1598aa8a7f14d173678a62fb",
+    "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37618929164",
+    "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11480674918",
+    "zipBytes": 1291397,
+    "zipSha256": "90b3ae3e1cb6f4842a4a635af503317478476b584e12d90d20da8268f84ad074",
+    "members": 85,
+    "status": "PARENT_FAILED_SIGNED_TIMESTAMP_ADMISSION",
+    "completedChildSummaries": 4,
+    "additionalDirectChildSemantic": "PASS",
+    "providerFileAttribution": "COMPLETE_URL_AND_HASH_OBSERVED",
+    "directProfileSamples": 1168,
+    "negativeDelta": {"index": 1160, "microseconds": -53},
+    "rawSignedDeltaSumMicroseconds": 1254132,
+    "profileWindowMicroseconds": 1254723,
+    "weightedCostShares": "UNAVAILABLE"
+  },
+  "nextTask": "Validate bounded signed cumulative timestamps without changing raw samples; report counts only for nonmonotonic timelines, then run one reviewed changed-instrumentation diagnostic."
 }
