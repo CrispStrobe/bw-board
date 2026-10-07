@@ -31,7 +31,8 @@ struct Copy {uint64_t session=0,lease=0,acknowledged=0;Phase phase=Phase::runnin
  Clock published{},logical{};std::vector<Word> tape;std::vector<Entry> journal;};
 struct Snapshot {Clock logical{},published{};uint64_t acknowledged=0,committed=0,next_effect=1;
  uint32_t source_alias_pending=0;size_t journal_size=0,tape_size=0;
- bool active=false,failed=false,closed=false,page_ticket=false,device_ticket=false,pending_retry=false;
+ bool active=false,failed=false,closed=false,page_ticket=false,device_ticket=false,
+ pending_retry=false,profile_revoked=false;
  std::vector<Alias> source_aliases;
  std::array<uint8_t,ram_size> owned{},board{};
  std::array<uint32_t,ram_size/page_size> source_generations{},board_generations{};};
@@ -46,11 +47,14 @@ struct State {
  std::vector<Word> tape;std::vector<Entry> journal;std::vector<Alias> source_aliases;
  uint64_t next_lease=1,active_lease=0,next_effect=1,committed=0,acknowledged=0;
  bool busy=false,failed=false,closed=false;
+ bool profile_revoked=false;
  bool page_ticket=false,device_ticket=false;uint32_t page_raw=0;
  struct Pending {uint64_t effect;uint32_t address;uint8_t before,after;};
  bool retry_pending=false;Pending retry{};
  Context context{};Stop stopped=Stop::requested_return;bool has_stop=false;
- explicit State(uint64_t id,const std::array<uint8_t,ram_size>&initial):session(id),owned(initial),board(initial){}
+ explicit State(uint64_t id,const std::array<uint8_t,ram_size>&initial):session(id),owned(initial),board(initial){
+  tape.reserve(tape_cap);journal.reserve(journal_cap);source_aliases.reserve(journal_cap);
+ }
 };
 
 class Authority;
@@ -71,6 +75,17 @@ class Authority {
   for(;;){require(old<UINT64_MAX,"session identity capacity");
    if(ids_.compare_exchange_weak(old,old+1,std::memory_order_relaxed))return old+1;}}
  static bool valid_rom_page(uint32_t raw){return raw==0xf0;}
+ static bool valid_stop(Stop why){switch(why){
+  case Stop::deadline:case Stop::full_journal:case Stop::full_tape:
+  case Stop::pio_in:case Stop::pio_out:case Stop::page_clock:case Stop::rom_page:
+  case Stop::irq_eligible:case Stop::irq_delivery:case Stop::halt:case Stop::fault:
+  case Stop::code_write:case Stop::mapping_change:case Stop::a20_change:
+  case Stop::requested_return:case Stop::paused_observer:return true;
+  }return false;}
+ static bool outside_profile(Stop why){switch(why){
+  case Stop::irq_eligible:case Stop::irq_delivery:case Stop::halt:case Stop::fault:
+  case Stop::code_write:case Stop::mapping_change:case Stop::a20_change:return true;
+  default:return false;}}
  void gate()const{if(s_->busy){s_->failed=true;throw std::runtime_error("observer reentry");}
   require(!s_->failed&&!s_->closed,"terminal clock authority");}
  void lease(Lease&l,bool allow_stopped=false)const{
@@ -83,7 +98,7 @@ class Authority {
   a.effect==b.effect&&a.n==b.n&&a.q==b.q&&a.address==b.address&&
   a.generation==b.generation&&a.before==b.before&&a.after==b.after;}
  void preflight(const Copy&c)const{
-  require(c.session==s_->session&&c.lease==s_->active_lease&&c.phase==s_->context.phase&&
+  require(valid_stop(c.reason)&&c.session==s_->session&&c.lease==s_->active_lease&&c.phase==s_->context.phase&&
    c.reason==s_->stopped&&c.epoch==s_->context.epoch&&c.a20==s_->context.a20&&
    c.deadline==s_->context.deadline&&c.irq_eligible==s_->context.irq_eligible,
    "copied lease/session/phase/map/A20/IRQ/deadline");
@@ -135,7 +150,7 @@ class Authority {
 public:
  explicit Authority(const std::array<uint8_t,ram_size>&initial):s_(std::make_shared<State>(issue_id(),initial)){}
  Authority(const Authority&)=delete;Authority&operator=(const Authority&)=delete;
- Lease issue(const Context&context){gate();require(!s_->active_lease&&!s_->page_ticket&&!s_->device_ticket&&
+ Lease issue(const Context&context){gate();require(!s_->profile_revoked&&!s_->active_lease&&!s_->page_ticket&&!s_->device_ticket&&
    s_->logical.debt<s_->logical.deadline,"one lease and no unresolved device/page cut");
   require(context.phase==Phase::running&&context.epoch==0&&context.a20==1&&
    !context.irq_eligible&&!context.memory_observing_device&&!context.dma&&!context.mmio&&
@@ -151,7 +166,9 @@ public:
    else{require(next.q<400000&&next.debt<next.deadline,"source Q before due");++next.q;next.debt+=6;}}
   s_->tape.insert(s_->tape.end(),words.begin(),words.end());s_->logical=next;}
  WriteResult write(Lease&l,uint32_t address,uint8_t after){lease(l);require(!s_->retry_pending,"exact pending write only");
-  require(s_->logical.q<=s_->logical.n&&address<ram_size,"completed source clock/address");
+  require(s_->logical.q<=s_->logical.n&&address<ram_size&&
+   s_->logical.debt<s_->logical.deadline&&s_->tape.size()<tape_cap,
+   "completed source clock/address/boundary cut");
   require(s_->next_effect!=UINT64_MAX&&s_->committed!=UINT64_MAX,"effect/sequence capacity");
   if(s_->journal.size()==journal_cap){s_->retry_pending=true;
    s_->retry={s_->next_effect,address,s_->owned[address],after};s_->stopped=Stop::full_journal;s_->has_stop=true;
@@ -169,14 +186,18 @@ public:
  WriteResult retry(Lease&l,uint64_t effect,uint32_t address,uint8_t after){lease(l);
   require(s_->retry_pending&&effect==s_->retry.effect&&address==s_->retry.address&&
    after==s_->retry.after&&s_->owned[address]==s_->retry.before,"identical uncommitted retry");
-  require(s_->journal.size()<journal_cap&&s_->source_aliases.size()<journal_cap,"retry capacities");
+  require(s_->journal.size()<journal_cap&&s_->source_aliases.size()<journal_cap&&
+   s_->logical.q<=s_->logical.n&&s_->logical.debt<s_->logical.deadline&&
+   s_->tape.size()<tape_cap&&s_->next_effect!=UINT64_MAX&&s_->committed!=UINT64_MAX&&
+   s_->source_gen[address/page_size]!=UINT32_MAX,"retry pre-effect capacities and cut");
   s_->retry_pending=false;return write(l,address,after);}
  void source_boundary(Lease&l){lease(l,true);require(s_->has_stop&&
   (s_->stopped==Stop::requested_return||s_->stopped==Stop::paused_observer)&&
   s_->logical.q<=s_->logical.n,"authenticated completed source boundary");
   // Source CPU alias publication is independent of owner journal ACK.
   s_->source_aliases.clear();consume(l);}
- void stop(Lease&l,Stop why){lease(l);require(s_->logical.q<=s_->logical.n,"completed boundary Q<=N");
+ void stop(Lease&l,Stop why){lease(l);require(valid_stop(why)&&s_->logical.q<=s_->logical.n,
+  "admitted completed boundary Q<=N");
   if(why==Stop::deadline)require(s_->logical.debt>=s_->logical.deadline,"not due");
   if(why==Stop::full_journal)require(s_->journal.size()==journal_cap,"not full journal");
   if(why==Stop::full_tape)require(s_->tape.size()==tape_cap,"not full tape");
@@ -193,6 +214,7 @@ public:
   s_->acknowledged+=copy.journal.size();s_->journal.clear();s_->published=s_->logical;s_->tape.clear();
   if(copy.reason==Stop::rom_page){s_->page_ticket=true;s_->page_raw=copy.raw_page;}
   if(s_->logical.debt>=s_->logical.deadline)s_->device_ticket=true;
+  if(outside_profile(copy.reason))s_->profile_revoked=true;
   consume(l);s_->busy=true;
   try{if(observer)observer();}catch(...){s_->failed=true;s_->busy=false;throw;}
   s_->busy=false;require(!s_->failed,"observer reentry failstop");}
@@ -205,6 +227,7 @@ public:
  Snapshot inspect()const{gate();return {s_->logical,s_->published,s_->acknowledged,s_->committed,
   s_->next_effect,uint32_t(s_->source_aliases.size()),s_->journal.size(),s_->tape.size(),
   s_->active_lease!=0,s_->failed,s_->closed,s_->page_ticket,s_->device_ticket,s_->retry_pending,
+  s_->profile_revoked,
   s_->source_aliases,s_->owned,s_->board,s_->source_gen,s_->board_gen};}
  bool failed()const{return s_->failed;}
  void close(){gate();require(!s_->active_lease&&!s_->page_ticket&&!s_->device_ticket&&!s_->retry_pending&&
@@ -212,6 +235,9 @@ public:
 #ifdef BW_CLOCK_MODEL_TESTING
  void control_next_lease(uint64_t value){gate();require(!s_->active_lease,"test lease seed at rest");s_->next_lease=value;}
  void control_next_effect(uint64_t value){gate();require(!s_->active_lease,"test effect seed at rest");s_->next_effect=value;}
+ void control_source_generation(uint32_t page,uint32_t value){gate();
+  require(!s_->active_lease&&page<s_->source_gen.size(),"test generation seed at rest");
+  s_->source_gen[page]=value;}
  static void control_session_counter(uint64_t value){ids_.store(value,std::memory_order_relaxed);}
 #endif
 };

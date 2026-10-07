@@ -19,7 +19,8 @@ Logical CPU-side N/Q/debt and JS-published N/Q/debt are separate. A bounded
 ordered tape can temporarily begin `[Q,N]`; the complete boundary must satisfy
 Q≤N. A Q is admitted only while debt is below the current device deadline.
 Its indivisible six clocks may end as much as five clocks above that deadline;
-the next Q waits for a reconciled due cut and a one-use device rearm. The
+the next source effect waits for a reconciled due cut and a one-use device
+rearm. A full tape likewise fences later source effects until reconciliation. The
 source's pending-write alias ledger is independent of the owner journal and
 ACK. An explicitly stopped source return or paused boundary can publish and
 clear source aliases without acknowledging the owner journal; owner ACK does
@@ -45,7 +46,9 @@ an admitted actual ROM-page observer produces a one-use page ticket. Deadline,
 PIO, IRQ eligibility/delivery, HLT, fault, code write, mapping/A20 change,
 full journal/tape, requested return and paused-observer events revoke the
 running lease before the next effect. A changed mapping, A20 or IRQ state is
-not admitted by the fixed cold profile.
+not admitted by the fixed cold profile. IRQ, HLT, fault, code, map and A20 cuts
+leave profile authority revoked after reconciliation; this model has no
+unproven reissue or resolution path. Unknown stop codes are rejected.
 
 The small control uses 256 model RAM bytes, 16-byte model pages, one-byte RAM
 writes, one ROM page and test-only counter seeds. These are abstract
@@ -55,6 +58,11 @@ source's actual alias ledger and effect sequence, authenticate the real board
 deadline/device result and observer preflight, preserve full requested CPU
 inspection, and then run a separate clean guest differential gate before any
 timing or adoption claim.
+
+`inspect()` is a diagnostic/control snapshot of this model. It is not an
+external board observer or evidence that a real CPU/JavaScript publication
+transaction has occurred. Tape, journal and alias storage reserve their fixed
+capacities at session creation, before source effects are admitted.
 
 From the repository root, run the bounded control with a C++17 compiler:
 

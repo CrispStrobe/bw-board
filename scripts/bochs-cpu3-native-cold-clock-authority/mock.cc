@@ -39,6 +39,8 @@ static void deadline_overshoot_and_rearm(){
  std::vector<Word> words;for(int i=0;i<6;++i){words.push_back(Word::quantum);words.push_back(Word::native_n);}
  a.append(l,words);assert(a.inspect().logical.debt==36&&a.inspect().published.debt==0);
  denies([&]{a.append(l,{Word::quantum});});assert(a.inspect().logical.debt==36);
+ const auto due=a.inspect();denies([&]{a.write(l,0,1);});
+ assert(a.inspect().owned==due.owned&&a.inspect().committed==due.committed);
  a.stop(l,Stop::deadline);auto copy=a.copied(l);observe(a,l,copy);
  auto s=a.inspect();assert(s.device_ticket&&s.published.debt==36&&s.published.q==6);
  denies([&]{a.issue(Context{});});denies([&]{a.device_rearm(0);});
@@ -118,6 +120,24 @@ static void alias_full_after_owner_ack_retry(){
  a.stop(next,Stop::requested_return);observe(a,next,a.copied(next));
  auto last=a.issue(Context{});a.stop(last,Stop::requested_return);a.source_boundary(last);a.close();
 }
+static void retry_precheck_preserves_pending(){
+ Authority a(initial());auto l=a.issue(Context{});
+ for(int i=1;i<=32;++i)assert(a.write(l,5,uint8_t(i)).status==WriteStatus::accepted);
+ auto deferred=a.write(l,5,33);assert(deferred.status==WriteStatus::pre_effect_retry);
+ observe(a,l,a.copied(l));
+ auto boundary=a.issue(Context{});a.stop(boundary,Stop::requested_return);a.source_boundary(boundary);
+ a.control_source_generation(0,UINT32_MAX);
+ auto retry_lease=a.issue(Context{});const auto before=a.inspect();
+ denies([&]{a.retry(retry_lease,deferred.effect,5,33);});auto after=a.inspect();
+ assert(after.pending_retry&&after.committed==before.committed&&
+  after.acknowledged==before.acknowledged&&after.owned==before.owned&&
+  after.board==before.board&&after.source_alias_pending==before.source_alias_pending);
+ a.stop(retry_lease,Stop::requested_return);observe(a,retry_lease,a.copied(retry_lease));
+ a.control_source_generation(0,32);auto exact=a.issue(Context{});
+ assert(a.retry(exact,deferred.effect,5,33).status==WriteStatus::accepted);
+ a.stop(exact,Stop::requested_return);observe(a,exact,a.copied(exact));
+ auto last=a.issue(Context{});a.stop(last,Stop::requested_return);a.source_boundary(last);a.close();
+}
 static void page_clock_and_actual_rom_ticket(){
  Authority a(initial());auto clock=a.issue(Context{});a.append(clock,{Word::native_n,Word::quantum});
  a.stop(clock,Stop::page_clock);Copy c=a.copied(clock);c.raw_page=0xf0;
@@ -150,6 +170,19 @@ static void stops_profile_and_capabilities(){
   const Snapshot before=a.inspect();denies([&]{observe(a,l,bad);});same_published(before,a.inspect());
   observe(a,l,good);a.close();
  }
+ {Authority a(initial());auto l=a.issue(Context{});
+  const auto before=a.inspect();denies([&]{a.stop(l,static_cast<Stop>(255));});
+  assert(a.inspect().committed==before.committed&&a.inspect().acknowledged==before.acknowledged);
+  a.stop(l,Stop::requested_return);Copy c=a.copied(l);c.reason=static_cast<Stop>(255);
+  int observer=0;denies([&]{a.reconcile(l,c,[&]{++observer;});});assert(observer==0);
+  assert(a.inspect().acknowledged==before.acknowledged);
+  observe(a,l,a.copied(l));a.close();}
+ for(Stop reason:{Stop::irq_eligible,Stop::irq_delivery,Stop::halt,Stop::fault,
+  Stop::code_write,Stop::mapping_change,Stop::a20_change}){
+  Authority a(initial());auto l=a.issue(Context{});a.stop(l,reason);
+  observe(a,l,a.copied(l));assert(a.inspect().profile_revoked);
+  denies([&]{a.issue(Context{});});a.close();
+ }
  for(Context bad:{Context{Phase::paused},Context{Phase::running,1},Context{Phase::running,0,0},
   Context{Phase::running,0,1,32,true},Context{Phase::running,0,1,32,false,true},
   Context{Phase::running,0,1,32,false,false,true},Context{Phase::running,0,1,32,false,false,false,true}}){
@@ -164,7 +197,10 @@ static void stops_profile_and_capabilities(){
 static void full_tape_abandon_and_overflow(){
  {Authority a(initial());auto l=a.issue(Context{});
   a.append(l,std::vector<Word>(tape_cap,Word::native_n));
-  denies([&]{a.append(l,{Word::native_n});});a.stop(l,Stop::full_tape);
+  denies([&]{a.append(l,{Word::native_n});});
+  const auto full=a.inspect();denies([&]{a.write(l,0,1);});
+  assert(a.inspect().owned==full.owned&&a.inspect().committed==full.committed);
+  a.stop(l,Stop::full_tape);
   observe(a,l,a.copied(l));assert(a.inspect().published.n==tape_cap);a.close();}
  {Authority a(initial());{auto l=a.issue(Context{});a.append(l,{Word::native_n});}
   assert(a.failed());denies([&]{a.issue(Context{});});}
@@ -179,8 +215,8 @@ static void full_tape_abandon_and_overflow(){
 int main(){
  copied_preflight_and_valid_qn();deadline_overshoot_and_rearm();
  journal_overlap_late_tamper_and_alias();full_journal_retry_once();full_alias_capacity_retry();
- alias_full_after_owner_ack_retry();
+ alias_full_after_owner_ack_retry();retry_precheck_preserves_pending();
  page_clock_and_actual_rom_ticket();observer_failure_and_reentry();
  stops_profile_and_capabilities();full_tape_abandon_and_overflow();
- std::cout<<"cold clock-authority SOURCE_ONLY_UNCONNECTED controls PASS (10 groups)\n";
+ std::cout<<"cold clock-authority SOURCE_ONLY_UNCONNECTED controls PASS (11 groups)\n";
 }
