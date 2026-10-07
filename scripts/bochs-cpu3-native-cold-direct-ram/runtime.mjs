@@ -30,15 +30,30 @@ static bool bw_rom_observed(uint32_t address,const uint8_t *bytes,unsigned lengt
   bw_cold_direct_ram_memory_reply reply={};
   if(!bw_cold_direct_ram_memory(raw,length,write?data:0,&source,&reply))bw_slice_fail("direct-RAM-memory");
   if(reply.status==BW_COLD_DIRECT_RAM_PRE_EFFECT_RETRY){
+    uint64_t committed=0,acknowledged=0;
+    if(!write||kind!=1||reply.effect!=source.effect||reply.n!=source.n||reply.q!=source.q||
+       reply.sequence!=source.owner_committed_sequence||
+       !bw_cold_direct_ram_watermarks(&committed,&acknowledged)||
+       committed!=source.owner_committed_sequence||acknowledged!=source.owner_acknowledged_sequence)
+      bw_slice_fail("direct-RAM-malformed-pre-effect-retry");
     if(!write||!bw_cold_direct_ram_reconcile_full())bw_slice_fail("direct-RAM-full-reconcile");
     if(!bw_cold_direct_ram_watermarks(&source.owner_committed_sequence,&source.owner_acknowledged_sequence))bw_slice_fail("direct-RAM-retry-watermarks");
     if(!bw_cold_direct_ram_memory(raw,length,data,&source,&reply)||reply.status!=BW_COLD_DIRECT_RAM_ACCEPTED)bw_slice_fail("direct-RAM-exact-retry");
   }
   if(reply.status!=BW_COLD_DIRECT_RAM_ACCEPTED)bw_slice_fail("direct-RAM-committed-code-fence-outside-ROM-profile");
+  uint64_t committed=0,acknowledged=0;
+  if(reply.effect!=source.effect||reply.n!=source.n||reply.q!=source.q||
+     !bw_cold_direct_ram_watermarks(&committed,&acknowledged)||
+     committed!=source.owner_committed_sequence+(write&&kind==1?1:0)||
+     acknowledged!=source.owner_acknowledged_sequence||reply.sequence!=committed)
+    bw_slice_fail("direct-RAM-malformed-post-effect-reply");
   result.decoded=reply.decoded;result.kind=reply.kind;result.effect=reply.effect_kind;
   result.generation=reply.generation;result.mapping_epoch=reply.mapping_epoch;result.board_a20=reply.board_a20;
   memcpy(returned,reply.observed,length);
-  if(write)++bw_cold_direct_effect;`,'same-DSO memory after retained clock transfer, exact pre-effect retry');
+  `,'same-DSO memory after retained clock transfer, exact pre-effect retry');
+ once('  for(unsigned i=0;i<length;++i){tags[i].kind=kind;tags[i].effect=bw_expected_effect(kind,write);}',
+  '  if(write)++bw_cold_direct_effect;\n  for(unsigned i=0;i<length;++i){tags[i].kind=kind;tags[i].effect=bw_expected_effect(kind,write);}',
+  'advance source effect only after complete post-owner validation');
  once('!callbacks||!callbacks->memory||!callbacks->page||!callbacks->scalar||!callbacks->clock_transfer||callbacks->size!=sizeof(*callbacks)||callbacks->version!=4',
   '!callbacks||callbacks->memory||!callbacks->page||!callbacks->scalar||!callbacks->clock_transfer||callbacks->size!=sizeof(*callbacks)||callbacks->version!=BW_COLD_DIRECT_RAM_ABI_VERSION',
   'ABI5 direct-only admission with no JS memory callback');
