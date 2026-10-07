@@ -1,0 +1,20 @@
+# xv6 JavaScript instruction-snapshot experiment
+
+The [corrected hosted run 37650576017](https://github.com/CrispStrobe/bw-board/actions/runs/37650576017) passed its affected page-fault oracle and all 18 stock xv6 `forktest` guest comparisons, but **failed the predeclared performance gate**. The experimental CPU change at `ca41f2675fb8951965e0ee50f5bc26d2ea4c0498` therefore stays out of master. It replaces the per-step six-element segment-cache array with six fields in a fresh rollback snapshot. The observer-facing snapshot retains its original shape and key order. This experiment did not remove the six segment-cache object references or their existing update behavior.
+
+Both arms used ordinary JavaScript, the same freshly built MIT xv6 image, free BIOS, 4 MiB PSE/APIC profile and `forktest` command. The baseline source was `6e5662bec11442e373a2489f213bc506438373e8`. Two alternating warm-up pairs were excluded; seven alternating measured pairs each launched fresh children. On an AMD EPYC 7763 host with four logical CPUs and Node 20.20.2, the raw `wait4` whole-child measurements, including startup and reporting, were:
+
+| Measurement | Baseline | Candidate | Candidate / baseline |
+| --- | ---: | ---: | ---: |
+| Mean CPU seconds | 13.726486 | 13.744998 | 1.001349 |
+| Mean wall seconds | 12.125892 | 12.140246 | 1.001184 |
+
+Only **3 of 7** measured CPU pairs favored the candidate. The declared gate required mean CPU ratio at most `0.98`, all seven CPU pairs favorable, and mean wall ratio at most `1.02`; the CPU conditions failed. These small differences do not establish a speed improvement or a precise cost share for snapshot allocation.
+
+The original [first run 37648491093](https://github.com/CrispStrobe/bw-board/actions/runs/37648491093) stopped in its first warm-up pair because the two raw reports contained distinct, correctly authenticated absolute ROM checkout paths. It had no completed semantic or timing decision. Its [original failure artifact](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11495697841) is 46,289 bytes, SHA-256 `483f3a31a0316a6e12830fe846facd41a5774c3731b27c9bccd6eda2065184fc`. The corrected gate compares that one ROM origin as the same authenticated repository role while retaining both raw paths; it does not normalize other guest fields.
+
+In the corrected packet, the 18 complete reports agree on 24,338,279 steps, CPU instruction snapshot, serial and input, selected device/interrupt records, final screen, and full reported RAM and disk hashes. Only the source revision, its 70-role source inventory, and the authenticated ROM checkout path differ. The affected owned code32 REP page-fault fixture also passed against a separately identified QEMU 486/TCG run with one error-2 fault and `P32OK`; that oracle is narrower than full xv6 machine equivalence. Two independent standard-library audits of the unchanged [corrected artifact](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11496583804) checked its 98 unique members, 83 pair-inventory hashes, exact Git source roles, child admissions, semantic projection and seven-pair arithmetic. The ZIP is 166,860 bytes, SHA-256 `42f01359f1331af7ca3e96b232452a435289cdf71554a85ab7b16d1931bbab12`. The [compact receipt](receipts/2026-10-07-xv6-js-snapshot.json) records both attempts.
+
+The packet omits raw guest RAM, disks and kernel bytes. Equal reported hashes do not independently replay those bytes, and bounded interrupt records are not a complete bus trace. This result is for the explicit PSE/APIC xv6 profile, not strict original 386DX, a game, a physical clock calibration or default adoption.
+
+The next performance step is to **measure** the remaining per-step snapshot and segment-cache object-clone work, then review immutability and rollback/reentry ownership before proposing another change. Keep the existing ordinary-JS CPU and opt-in protected32 dispatcher as the qualified paths. Any new candidate needs an affected oracle, exact same-workload guest semantics and a separately declared paired gate; do not infer a gain from this failed array-only experiment.
