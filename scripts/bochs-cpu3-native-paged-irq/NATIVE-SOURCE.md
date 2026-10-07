@@ -25,8 +25,10 @@ do so once. A paused line-staging call then transfers the actual PIC pending
 state to the native line; the source callback cannot stage or deassert it
 while running. The callback tape from the native addon is an owned typed
 array. External direct calls can present a subclass or hostile iterator,
-so the provider enters its reentry guard before it inspects or iterates the
-entire tape, and rejects any later invalid word before board clock effects.
+so the provider enters its reentry guard, captures the bounded extent once,
+copies numeric words into a private typed array, and validates that entire
+copy before board clock effects. It never invokes the caller iterator during
+commit or rereads caller words after validation.
 Even when an iterator swallows a denied nested ACK and supplies otherwise
 valid clock words, the violation is latched: the outer transfer has no effect
 and further callbacks, line staging, pulses, run admission and terminal
