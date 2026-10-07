@@ -1,0 +1,104 @@
+{
+  "schema": "bw.cold-native.direct-ram-public-checkpoint.v1",
+  "testedSource": "acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1",
+  "pullRequest": "https://github.com/CrispStrobe/bw-board/pull/420",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37605762900",
+  "artifact": {
+    "id": 11474662523,
+    "name": "cold-direct-ram-actual-37605762900-1",
+    "api": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11474662523",
+    "bytes": 2405475,
+    "sha256": "3881456e5dd46f256640cd28af30117f0be1a92f1b2fe9df1712067c3ea31905",
+    "originalMembers": 40
+  },
+  "profile": "bw.cpu3.cold.direct-ram-rom-exec.v1",
+  "abi": 5,
+  "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+  "sourceRoles": 179,
+  "directSourceRoles": 99,
+  "generatedRoles": 7,
+  "reportedAddon": {
+    "sha256": "c22fed4ecc73661fe712937973718ffd0c1424c970cf8dc3f264f37b329f4281",
+    "bytes": 2140056,
+    "uploaded": false,
+    "independentlyRehashedByCoordinator": false
+  },
+  "guest": {
+    "fixture": "roms/free-at-bios/BIOS-bochs-legacy",
+    "licenseRecord": "roms/free-at-bios/LICENSE",
+    "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "configurationSha256": "26f9a70ec5ebb7879bb07c246142333b8f1a8b638ea0b3edbaa2ad13998b791c",
+    "nativeTicks": 316562,
+    "successfulQuanta": 316562,
+    "resumes": 16524,
+    "orderedPortEvents": 16475,
+    "nativeStateWords": 166,
+    "ramBytes": 16777216,
+    "initialRamSha256": "ca16abce72391125715971b707a364b422ab94dc8022a933fe49ecfcfc772d0c",
+    "finalRamSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
+    "journalEntries": 91958,
+    "journalSha256": "a7315ca8af5bd975e1a74d81eea282a69799a80cf1a4cf030fe7fc90bfdcaa5c"
+  },
+  "observedTransport": {
+    "nativeDirectReads": 91949,
+    "nativeDirectWrites": 91958,
+    "javascriptPhysicalMemoryEntries": 0,
+    "clockTransfers": 233122,
+    "ownerReconciliations": 282652
+  },
+  "closure": {
+    "providerClosed": true,
+    "boardClosed": true
+  },
+  "nativeClosure": {
+    "directReads": "91949",
+    "directWrites": "91958",
+    "reconciliations": "282652",
+    "committed": "91958",
+    "acknowledged": "91958",
+    "nextEffect": "91959",
+    "journalPending": "0",
+    "prepared": false,
+    "pageTicket": false,
+    "ownerFailed": false,
+    "uncommittedRetry": false,
+    "committedCodeFence": false,
+    "ownerClosed": true,
+    "cpuClosed": true
+  },
+  "qualification": {
+    "threeArmSemantics": "PASS",
+    "coordinatorIndependentRawAudit": "PASS",
+    "coderIndependentRawAudit": "PASS",
+    "peerIndependentRawAudit": "PASS",
+    "pairedTiming": "NOT_RUN"
+  },
+  "host": {
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "allocatedLogicalCpus": 4,
+    "node": "22.23.3"
+  },
+  "preservedFailures": [
+    {
+      "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37602755657",
+      "source": "26520e5ecce8be4a84f5484e0849ded7c62048a6",
+      "artifact": 11473259006,
+      "zipSha256": "b65a875cc2155c960e0c75d84abed1908a5e5e105c6a92a5e8693a475e8b58b4",
+      "observed": "owned-transfer-callback; subphase not established by original trace"
+    },
+    {
+      "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37604871518",
+      "source": "a265cb54d7fd0dad30abb80a48cf1a7004384934",
+      "artifact": 11474034030,
+      "zipSha256": "81a9b8298c1a9d9edcd3d6659e74a79f5480cd7c1cf7faf421c381814d373c90",
+      "observed": "PAGE clock flush reason4/tape2 rejected by actual ROM-page check"
+    }
+  ],
+  "limits": [
+    "Finite cold ROM-execution fixture; no complete OS or general disk-loader qualification",
+    "Fixed A20 and ordinary RAM/ROM/open bus; MMIO, paging, DMA and RAM execution excluded",
+    "Retained clock/page/PIO/device callbacks; counters are not measured cost shares",
+    "No speedup, fresh RTx or physical 16 MHz calibration",
+    "Diagnostic native addon is not the user-facing CLI/GUI baseline"
+  ]
+}
