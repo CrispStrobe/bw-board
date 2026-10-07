@@ -205,13 +205,24 @@ def resolve_roles(extracted, out, env):
         else:
             candidate = named
         permitted = [selected, *(extracted / alias for alias in ROLE_ALIASES.get(role, ()))]
-        admitted_path = next((path for path in permitted if candidate == path), None)
-        admissible = ("\n" not in value and admitted_path is not None and
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            resolved = None
+        allowed = set()
+        for path in permitted:
+            try:
+                allowed.add(path.resolve(strict=True))
+            except OSError:
+                pass
+        admissible = ("\n" not in value and candidate.is_relative_to(extracted) and
+                      resolved in allowed and
                       candidate.is_file() and not candidate.is_symlink() and
                       selected.is_file() and not selected.is_symlink() and
                       candidate.samefile(selected) and sha(candidate.read_bytes()) == expected_hash)
         result[role] = {"probe": probe, "reportedPath": value,
                         "resolvedPath": str(candidate),
+                        "canonicalPath": str(resolved) if resolved is not None else None,
                         "selectedPath": expected_path, "selectedSha256": expected_hash,
                         "admitted": admissible}
         write_json(out / "compiler-resolved-roles.json", result)

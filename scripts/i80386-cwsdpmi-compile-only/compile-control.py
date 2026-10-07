@@ -86,7 +86,8 @@ def run():
         assert chatty["outputCapped"] and chatty["stdoutBytes"] > gate.MAX_LOG
         assert len((out / "chatty.stdout").read_bytes()) == gate.MAX_LOG
         role = "assembler"
-        role_path = root / gate.SELECTED[role][0]
+        extracted = root / "extracted"
+        role_path = extracted / gate.SELECTED[role][0]
         role_path.parent.mkdir(parents=True)
         role_path.write_bytes(b"owned assembler")
         saved_selected = dict(gate.SELECTED)
@@ -95,18 +96,25 @@ def run():
             gate.SELECTED.clear(); gate.SELECTED[role] = (saved_selected[role][0], gate.sha(b"owned assembler"))
             gate.ROLE_PROBES.clear(); gate.ROLE_PROBES[role] = "assembler-probe"
             (out / "assembler-probe.stdout").write_text("/usr/bin/as\n")
-            denies(lambda: gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"}))
+            denies(lambda: gate.resolve_roles(extracted, out, {"PATH": "/usr/bin:/bin"}))
             assert not json.loads((out / "compiler-resolved-roles.json").read_text())[role]["admitted"]
             (out / "assembler-probe.stdout").write_text(str(role_path) + "\n")
-            assert gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
-            alias = root / gate.ROLE_ALIASES[role][0]
+            assert gate.resolve_roles(extracted, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
+            dotted = str(role_path.parent / ".." / "bin" / role_path.name)
+            (out / "assembler-probe.stdout").write_text(dotted + "\n")
+            assert gate.resolve_roles(extracted, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
+            outsider = root / "outside-as"
+            os.link(role_path, outsider)
+            (out / "assembler-probe.stdout").write_text(str(outsider) + "\n")
+            denies(lambda: gate.resolve_roles(extracted, out, {"PATH": "/usr/bin:/bin"}))
+            alias = extracted / gate.ROLE_ALIASES[role][0]
             alias.parent.mkdir(parents=True, exist_ok=True)
             os.link(role_path, alias)
             (out / "assembler-probe.stdout").write_text(str(alias) + "\n")
-            assert gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
+            assert gate.resolve_roles(extracted, out, {"PATH": "/usr/bin:/bin"})[role]["admitted"]
             alias.unlink()
             alias.write_bytes(b"owned assembler")
-            denies(lambda: gate.resolve_roles(root, out, {"PATH": "/usr/bin:/bin"}))
+            denies(lambda: gate.resolve_roles(extracted, out, {"PATH": "/usr/bin:/bin"}))
         finally:
             gate.SELECTED.clear(); gate.SELECTED.update(saved_selected)
             gate.ROLE_PROBES.clear(); gate.ROLE_PROBES.update(saved_probes)
