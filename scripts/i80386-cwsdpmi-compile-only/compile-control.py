@@ -121,6 +121,12 @@ def run():
         obj = struct.pack("<HHIIIHH", 0x14c, 1, 0, 0, 0, 0, 0) + bytes(40)
         assert gate.coff_format(obj)["valid"]
         assert not gate.coff_format(b"xx" + obj[2:])["valid"]
+        invalid_object = b"xx" + obj[2:]
+        denies(lambda: gate.record_format(invalid_object, out, "bad-object", False))
+        bad_object_receipt = json.loads((out / "bad-object.json").read_text())
+        assert bad_object_receipt["bytes"] == len(invalid_object)
+        assert bad_object_receipt["sha256"] == gate.sha(invalid_object)
+        assert bad_object_receipt["format"]["valid"] is False
         coff = struct.pack("<HHIIIHH", 0x14c, 1, 0, 0, 0, 28, 2) + \
             struct.pack("<H", 0x010b) + bytes(26 + 40)
         stub = bytearray(512)
@@ -130,6 +136,12 @@ def run():
         assert gate.djgpp_executable_format(bytes(stub) + coff)["valid"]
         struct.pack_into("<H", stub, 8, 33)
         assert not gate.djgpp_executable_format(bytes(stub) + coff)["valid"]
+        invalid_exe = bytes(stub) + coff
+        denies(lambda: gate.record_format(invalid_exe, out, "bad-executable", True))
+        bad_exe_receipt = json.loads((out / "bad-executable.json").read_text())
+        assert bad_exe_receipt["bytes"] == len(invalid_exe)
+        assert bad_exe_receipt["sha256"] == gate.sha(invalid_exe)
+        assert bad_exe_receipt["format"]["valid"] is False
         inputs = {name: root / name for name in ("toolchain", *gate.SOURCE, "client")}
         inputs["toolchain"].write_bytes(b"wrong pinned toolchain")
         inputs["client"].write_bytes(b"int main(void){return 0;}\n")

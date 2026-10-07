@@ -189,6 +189,15 @@ def djgpp_executable_format(raw):
     return result
 
 
+def record_format(raw, out, name, executable):
+    parsed = djgpp_executable_format(raw) if executable else coff_format(raw)
+    receipt = {"bytes": len(raw), "sha256": sha(raw), "format": parsed}
+    write_json(out / (name + ".json"), receipt)
+    if not parsed["valid"]:
+        raise ValueError(name + " format")
+    return receipt
+
+
 def resolve_roles(extracted, out, env):
     result = {}
     for role, probe in ROLE_PROBES.items():
@@ -379,23 +388,14 @@ def run(paths, out, work):
     if not obj.is_file() or obj.stat().st_size > 16 << 20:
         raise ValueError("bounded object missing")
     object_raw = obj.read_bytes()
-    object_format = coff_format(object_raw)
-    write_json(out / "client-object-format.json", object_format)
-    if not object_format["valid"]:
-        raise ValueError("owned object COFF format")
-    object_receipt = {"bytes": len(object_raw), "sha256": sha(object_raw),
-                      "format": object_format}
-    write_json(out / "client-object.json", object_receipt)
+    object_receipt = record_format(object_raw, out, "client-object", False)
     checkpoint(out, "link-owned-client")
     command("link", link_argv, build, env, out)
     exe, map_file = build / "client.exe", build / "client.map"
     if not exe.is_file() or not map_file.is_file() or exe.stat().st_size > 16 << 20 or map_file.stat().st_size > 4 << 20:
         raise ValueError("bounded link outputs missing")
     exe_raw = exe.read_bytes()
-    executable_format = djgpp_executable_format(exe_raw)
-    write_json(out / "client-executable-format.json", executable_format)
-    if not executable_format["valid"]:
-        raise ValueError("linked DJGPP MZ/COFF format")
+    executable_receipt = record_format(exe_raw, out, "client-executable", True)
     map_raw = map_file.read_bytes()
     (out / "client.map").write_bytes(map_raw)
     link_evidence = (map_raw + (out / "gcc-link-plan.stderr").read_bytes() +
@@ -417,8 +417,7 @@ def run(paths, out, work):
               "object": object_receipt,
               "resolvedImplicitRoles": resolved_roles,
               "selectedLinkRoleObservations": observed_roles,
-              "executable": {"bytes": len(exe_raw), "sha256": sha(exe_raw),
-                             "format": executable_format, "uploaded": False},
+              "executable": {**executable_receipt, "uploaded": False},
               "map": {"bytes": len(map_raw), "sha256": sha(map_raw)},
               "limits": ["Compiler target is i586; -march/-mtune govern owned object only, not every linked startup/runtime instruction",
                          "No link-component licence or libgcc source-to-binary closure is claimed",
