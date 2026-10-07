@@ -25,6 +25,7 @@ test('standalone NAPI bridge owns copied bytes and isolates concurrent Worker se
   assert.equal(owner.read(0xf0007,1).bytes[0],9);
   assert.equal(owner.read(0xffff0007,1).bytes[0],9);
   assert.equal(owner.read(0xc0000,1).bytes[0],255);
+  assert.throws(()=>owner.write(0,new Uint8Array(new SharedArrayBuffer(1)),0,0),/write raw\/bytes\/N\/Q/);
   for(let i=0;i<32;i++)assert.equal(owner.write(0x200+i,Uint8Array.of(i+1),i+1,i).fence,0);
   assert.equal(owner.write(0x400,Uint8Array.of(99),33,32).fence,1);
   assert.equal(owner.drain().length,32);assert.equal(owner.acknowledge(),32);

@@ -23,7 +23,8 @@ bool u32(napi_env env,napi_value value,uint32_t &out){double number;if(!ok(napi_
 bool bytes(napi_env env,napi_value value,const uint8_t *&data,size_t &length){
  napi_typedarray_type type;napi_value buffer;void *raw;size_t offset;
  if(!ok(napi_get_typedarray_info(env,value,&type,&length,&raw,&buffer,&offset))||type!=napi_uint8_array)return false;
- bool detached=true;if(!ok(napi_is_detached_arraybuffer(env,buffer,&detached))||detached)return false;
+ bool ordinary=false,detached=true;
+ if(!ok(napi_is_arraybuffer(env,buffer,&ordinary))||!ordinary||!ok(napi_is_detached_arraybuffer(env,buffer,&detached))||detached)return false;
  data=static_cast<const uint8_t*>(raw);return true;
 }
 napi_value number(napi_env env,uint32_t value){napi_value out;return ok(napi_create_uint32(env,value,&out))?out:nullptr;}
