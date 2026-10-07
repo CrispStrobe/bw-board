@@ -49,7 +49,7 @@ export function createOwnedRamColdBiosProvider(owner){
    else assert.ok(lease&&!entry&&!postPio&&reason>=3&&reason<=11&&reason!==6,'clock commit phase');
    // Entire bounded tape is preflighted before any board effect.
    let nextMapping=mappingPending,nextN=n,nextQ=q,nn=board.nativeTicks,qq=board.successfulQuanta,debt=board.machine._chipDebt;
-   for(const word of words){assert.ok(word===1||word===2||word===3,'word enum');if(word===1){assert.ok(!nextMapping,'N pending mapping');assert.ok(++nn<=coldBoardProfile.totalNativeTicks&&++nextN<=600,'independent N cap');}else{assert.ok(!nextMapping||word===2,'REP pending mapping');nextMapping=false;assert.ok(debt<board.machine._chipDeadline,'Q after due');assert.ok(++qq<=coldBoardProfile.totalQuanta&&++nextQ<=300,'independent Q cap');debt+=6;}}
+   for(const word of words){assert.ok(word===1||word===2||word===3,'word enum');if(word===1){assert.ok(!nextMapping,'N pending mapping');assert.ok(++nn<=coldBoardProfile.totalNativeTicks&&++nextN<=600,'independent N cap');}else{assert.ok(!nextMapping||word===2,'REP pending mapping');nextMapping=false;assert.ok(debt<board.machine._chipDeadline,'Q after due');assert.ok(++qq<=coldBoardProfile.totalQuanta&&++nextQ<=300&&nextQ<=nextN&&qq<=nn,'Q cap and Q<=N before effects');debt+=6;}}
    reconcile();
    n=nextN;q=nextQ;mappingPending=nextMapping;active=true;try{
     for(const word of words)call(word===1?'nativeTick':'quantum',word===1?[]:[word===3?1:0]);

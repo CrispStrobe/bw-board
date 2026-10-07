@@ -30,6 +30,8 @@ test('denied owned-RAM callbacks leave a native write pending and board shadow u
   ['wrong tape type',()=>provider.callbacks.clockTransfer([1],3)],
   ['tape view',()=>provider.callbacks.clockTransfer(new Uint32Array(new ArrayBuffer(8),4,1),3)],
   ['bad tape word',()=>provider.callbacks.clockTransfer(Uint32Array.of(4),3)],
+  ['Q ahead of N',()=>provider.callbacks.clockTransfer(Uint32Array.of(2),3)],
+  ['N above per-run cap',()=>provider.callbacks.clockTransfer(new Uint32Array(601).fill(1),3)],
   ['wrong query phase',()=>provider.callbacks.clockTransfer(new Uint32Array(),2)],
   ['invalid execute page',()=>provider.callbacks.admitExecutePage(0x100)],
   ['unaligned execute page',()=>provider.callbacks.admitExecutePage(0xf0001)],
