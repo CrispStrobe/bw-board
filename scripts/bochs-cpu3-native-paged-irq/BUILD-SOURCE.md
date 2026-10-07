@@ -32,4 +32,12 @@ IRQ delivery, exposed
 an IF value of `0x200`, where the driver had expected a Boolean `1`. The
 current decoder checks the exact IF mask against EFLAGS and includes that
 unchanged real 160-byte slice as a control. This correction has not been
-rerun in a guest, so native/JS differential parity remains unqualified.
+rerun in a guest at that checkpoint. The [fourth official run 37622053238](https://github.com/CrispStrobe/bw-board/actions/runs/37622053238)
+reached 44 N/Q and passed the recorded IRQ-delivery and returned terminal
+architectural comparisons. Its memory replay then rejected four genuine ROM
+descriptor reads because it classified every callback as an owned RAM page.
+The corrected replay accepts only the exact four read-only descriptor chunks
+from this fixture's authenticated ROM, retaining their order in the full board
+read ledger; all other outside-page callbacks remain forbidden. This replay
+correction has not run in a native guest, so overall native/JS parity remains
+unqualified.

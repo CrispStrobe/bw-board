@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDriverPagedIrqProvider,deriveDriverProvider,profileProviderSha256} from '../scripts/bochs-cpu3-native-paged-irq/driver-provider.mjs';
-import {bootStores,layout} from '../scripts/bochs-cpu3-native-paged-irq/profile.mjs';
-import {irqProgress,decodeIrqSlice} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
+import {bootStores,layout,fixedPagedIrqRom} from '../scripts/bochs-cpu3-native-paged-irq/profile.mjs';
+import {irqProgress,decodeIrqSlice,validateRomRead} from '../scripts/bochs-cpu3-native-paged-irq/parity.mjs';
 import {derivePagedIrqComparison,comparisonParentSha256} from '../scripts/bochs-cpu3-native-paged-irq/cpu-comparison.mjs';
 import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -56,6 +56,21 @@ test('callback tape cap rejects the next read before board or tape effects',asyn
  assert.equal(events.length,1024);assert.equal(state.ram.reads.length,1024,'denied callback did not reach board');
  assert.deepEqual(events.filter(e=>e.direction==='read').map(({direction,ordinal,...e})=>e),state.ram.reads);
  p.close();
+});
+
+test('actual descriptor ROM reads require exact order, bytes, clocks and read-only access',()=>{
+ const rom=fixedPagedIrqRom();
+ const reads=[[0xf0400,2,24],[0xf0402,4,24],[0xf0406,2,25],[0xf0408,4,25]].map(([raw,width,n])=>({
+  direction:'read',raw,bytes:[...rom.subarray(raw-0xf0000,raw-0xf0000+width)],generation:0,nativeTicks:n,successfulQuanta:n
+ }));
+ reads.forEach((read,i)=>validateRomRead(read,i));
+ assert.throws(()=>validateRomRead(reads[0],4),/only four owned ROM descriptor reads/);
+ assert.throws(()=>validateRomRead({...reads[0],direction:'write'},0),/ROM is read-only/);
+ assert.throws(()=>validateRomRead({...reads[0],bytes:[0,0]},0),/owned ROM bytes/);
+ assert.throws(()=>validateRomRead({...reads[0],generation:1},0),/exact ROM descriptor read and clock/);
+ assert.throws(()=>validateRomRead({...reads[0],successfulQuanta:25},0),/exact ROM descriptor read and clock/);
+ assert.throws(()=>validateRomRead({...reads[0],raw:0xf0fff,bytes:[0,0]},0),/exact ROM descriptor read and clock/);
+ assert.throws(()=>validateRomRead(reads[1],0),/exact ROM descriptor read and clock/);
 });
 
 test('one atomic paused packet replaces its predecessor and authenticates the original boundary',()=>{

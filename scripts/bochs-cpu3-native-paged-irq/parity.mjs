@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {boundedCount,wholeNativeWords} from '../bochs-cpu3-native-cold-bios/parity.mjs';
 import {comparePagedIrqCpu} from './cpu-comparison.mjs';
-import {layout,entries,bootStores,markerStores,terminalEip,selector,wordAt,expectedShadow} from './profile.mjs';
+import {layout,entries,bootStores,markerStores,terminalEip,selector,wordAt,expectedShadow,fixedPagedIrqRom} from './profile.mjs';
 import {nativeFrameStores,nativePagedIrqProfile} from './provider-profile.mjs';
 export {wholeNativeWords};
 
@@ -12,6 +12,18 @@ const allPages=Object.keys(layout);
 const value=bytes=>bytes.reduce((n,b,i)=>(n|b<<(8*i))>>>0,0);
 const nativeAd=Object.values(entries).map(e=>({raw:e.raw,before:e.value,after:e.value|(e===entries.stack?0x60:0x20)}));
 const ownPage=raw=>allPages.find(key=>layout[key]===(raw&~4095));
+const rom=fixedPagedIrqRom();
+const romReadPlan=Object.freeze([
+ {raw:0xf0400,width:2,n:24,q:24},{raw:0xf0402,width:4,n:24,q:24},
+ {raw:0xf0406,width:2,n:25,q:25},{raw:0xf0408,width:4,n:25,q:25},
+]);
+export function validateRomRead(event,index){
+ const expected=romReadPlan[index];assert.ok(expected,'only four owned ROM descriptor reads');
+ assert.equal(event.direction,'read','ROM is read-only');
+ assert.deepEqual([event.raw,event.bytes.length,event.generation,event.nativeTicks,event.successfulQuanta],
+  [expected.raw,expected.width,0,expected.n,expected.q],'exact ROM descriptor read and clock');
+ assert.deepEqual(event.bytes,[...rom.subarray(event.raw-0xf0000,event.raw-0xf0000+event.bytes.length)],'owned ROM bytes');
+}
 export const sliceAbiSha256='3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990';
 assert.equal(createHash('sha256').update(readFileSync(new URL('../bochs-cpu3-native-owned-in8/abi.h',import.meta.url))).digest('hex'),sliceAbiSha256,'exact generated ABI4 slice layout');
 export function decodeIrqSlice(n){
@@ -73,13 +85,14 @@ export function compareCut(native,board,physical,js,label,kind='resume',dq=1){
 export function validateNativeMemory(events,board,physical){
  checkPages(physical);assert.ok(Array.isArray(events)&&events.length<=1024);
  const replay=Object.fromEntries(allPages.map(k=>[k,new Uint8Array(4096)]));
- const generations=new Map(),writes=[];let reads=0;
+ const generations=new Map(),writes=[];let reads=0,romReads=0;
  for(const [ordinal,event] of events.entries()){
   assert.equal(event.ordinal,ordinal);assert.ok(event.direction==='read'||event.direction==='write');
   assert.ok(Number.isSafeInteger(event.raw)&&event.raw>=0&&event.raw<=0xffffffff);
   assert.ok(Array.isArray(event.bytes)&&event.bytes.length>=1&&event.bytes.length<=16);
   for(const byte of event.bytes)assert.ok(Number.isInteger(byte)&&byte>=0&&byte<=255);
-  const key=ownPage(event.raw);assert.ok(key,'owned RAM page');
+  const key=ownPage(event.raw);
+  if(!key){validateRomRead(event,romReads++);reads++;continue;}
   const offset=event.raw&4095;assert.ok(offset+event.bytes.length<=4096);
   const page=replay[key];
   if(event.direction==='read'){
@@ -93,6 +106,7 @@ export function validateNativeMemory(events,board,physical){
    page.set(event.bytes,offset);writes.push(event);
   }
  }
+ assert.equal(romReads,romReadPlan.length,'all four actual ROM descriptor reads');
  for(const key of allPages)assert.deepEqual(replay[key],physical[key],'complete physical replay '+key);
  assert.deepEqual(events.filter(e=>e.direction==='read').map(({direction,ordinal,...e})=>e),board.ram.reads);
  assert.deepEqual(events.filter(e=>e.direction==='write').map(({direction,ordinal,...e})=>e),board.ram.writes);
