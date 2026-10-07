@@ -1,6 +1,8 @@
 # Exact missing notice bytes, no executable work
 
 This separate, report-only stage follows the measured [source/notice result](../i80386-cwsdpmi-source-notice/RESULTS.md).
+The first hosted notice run completed at tested source
+`41cb46c82f9de07812d1e8dd372954b7cc665aea`; see its [bounded result](RESULTS.md).
 It acquires only three already measured DJGPP source archives, **not** the
 80 MB cross-toolchain. Each archive must match the preceding hosted SHA-256
 before its members are inspected. The missing `copying.lib` notice must have
