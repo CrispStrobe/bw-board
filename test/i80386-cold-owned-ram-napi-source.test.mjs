@@ -5,9 +5,11 @@ import {tmpdir} from 'node:os';
 import {dirname,join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {createRequire} from 'node:module';
+import {Worker} from 'node:worker_threads';
+import {once} from 'node:events';
 const require=createRequire(import.meta.url);
 
-test('standalone NAPI bridge owns actual copied bytes and journal records',()=>{
+test('standalone NAPI bridge owns copied bytes and isolates concurrent Worker sessions',async()=>{
  const candidates=['/usr/include/node',resolve(dirname(process.execPath),'../include/node')];
  const headers=candidates.find(p=>existsSync(join(p,'node_api.h')));
  assert.ok(headers,'Node N-API headers required for owned RAM bridge');
@@ -29,5 +31,27 @@ test('standalone NAPI bridge owns actual copied bytes and journal records',()=>{
   assert.equal(owner.write(0x400,Uint8Array.of(99),33,32).fence,0);
   const record=owner.drain();assert.equal(record.length,1);assert.equal(record[0].before[0],0);assert.equal(record[0].after[0],99);
   assert.equal(owner.acknowledge(),33);owner.close();
+  const workerSource=`
+    const {parentPort,workerData}=require('node:worker_threads');
+    const owner=require(workerData.binary),ram=new Uint8Array(0x180000),rom=new Uint8Array(0x10000);
+    ram[0]=workerData.initial;owner.create(ram,rom);
+    parentPort.postMessage({ready:true,initial:owner.read(0,1).bytes[0]});
+    parentPort.once('message',()=>{
+      const result=owner.write(0,Uint8Array.of(workerData.initial+1),1,0);
+      const before=owner.drain()[0].before[0],after=owner.drain()[0].after[0],ack=owner.acknowledge();
+      owner.close();parentPort.postMessage({initial:workerData.initial,before,after,ack,fence:result.fence});
+    });`;
+  const workers=[11,22].map(initial=>new Worker(workerSource,{eval:true,workerData:{binary,initial}}));
+  try{
+   const ready=await Promise.all(workers.map(w=>once(w,'message').then(([m])=>m)));
+   assert.deepEqual(ready.map(r=>r.initial).sort((a,b)=>a-b),[11,22]);
+   const done=workers.map(w=>once(w,'message').then(([m])=>m));
+   workers.forEach(w=>w.postMessage('continue'));
+   const results=await Promise.all(done);
+   assert.deepEqual(results.sort((a,b)=>a.initial-b.initial),[
+    {initial:11,before:11,after:12,ack:1,fence:0},
+    {initial:22,before:22,after:23,ack:1,fence:0}
+   ]);
+  }finally{await Promise.all(workers.map(w=>w.terminate()));}
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
