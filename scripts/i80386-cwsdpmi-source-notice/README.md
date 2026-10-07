@@ -15,6 +15,11 @@ the artifact. Source archive SHA-256 values are **new candidate measurements**,
 not compilation pins. The workflow cannot run on an ordinary PR push; the
 dedicated label is applied after review.
 
+`input-manifest.json` records bounded ordinary input sizes and SHA-256 values
+before archive admission. Incremental role/source reports and `failure.json`
+retain the first rejected phase and observed hashes without uploading archives;
+the exact rejected bytes are not retained in this report-only packet.
+
 The pinned [build-djgpp 12.2.0 script](https://github.com/andrewwutw/build-djgpp/blob/0dc28365825f853c3cc6ad0d8f10f8570bed5828/script/12.2.0)
 names DJCRX205, DJDEV205 and DJLSR205, and copies DJCRX `include` and `lib`
 into the target prefix. This audit compares `dpmi.h`, `crt0.o` and `libc.a`

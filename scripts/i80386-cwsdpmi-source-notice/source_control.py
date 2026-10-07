@@ -3,6 +3,7 @@
 
 import hashlib
 import io
+import json
 import tempfile
 import zipfile
 from pathlib import Path
@@ -48,6 +49,22 @@ def run():
         assert audit.matched_origin([fake])["include/dpmi.h"]["exactlyOneByteMatch"] is True
         assert audit.matched_origin([fake, fake])["include/dpmi.h"]["exactlyOneByteMatch"] is False
         assert hashlib.sha256(bytes_).hexdigest() == report["sha256"]
+        inputs = {role: root / role for role in audit.INPUT_CAPS}
+        inputs["cwsdpmi"].write_bytes(b"wrong stage-A archive")
+        failed = root / "failed-audit"
+        denies(lambda: audit.run_audit(inputs, failed))
+        observed = json.loads((failed / "input-manifest.json").read_text())["inputs"]
+        assert observed["cwsdpmi"]["sha256"] == audit.sha(b"wrong stage-A archive")
+        assert observed["djcrx205.zip"]["ordinary"] is False
+        failure = json.loads((failed / "failure.json").read_text())
+        assert failure["stage"] == "admit-stage-a-archives"
+        assert failure["exceptionType"] == "ValueError"
+        bad_role = root / "failed-roles"
+        bad_role.mkdir()
+        denies(lambda: audit.record_roles(bad_role, "toolchain", [fake],
+                                          {"dpmi": ("include/dpmi.h", "0" * 64)}))
+        roles = json.loads((bad_role / "toolchain-roles.json").read_text())
+        assert roles["dpmi"]["observed"][0]["sha256"] == fake["sha256"]
     print("source-notice controls PASS")
 
 
