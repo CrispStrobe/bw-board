@@ -105,6 +105,18 @@ def observed_rss(pid):
     return 0
 
 
+def child_environment(host, config, report_path):
+    # Ambient AT_* roles can schedule synthetic keys or select a different CPU.
+    env = {key: value for key, value in host.items() if not key.startswith('AT_')}
+    env.update({'AT_BIOS_ROM': config['bios'], 'AT_BIOS_SHA256': config['biosSha256'],
+                'VGA_BIOS_ROM': config['vga'], 'VGA_BIOS_SHA256': config['vgaSha256'],
+                'AT_HDD_IMAGE': config['hdd'], 'AT_HDD_SHA256': config['hddSha256'],
+                'AT_CONSOLE_REPORT': str(report_path), 'AT_NATIVE_BLOCKS': '0',
+                'AT_CODE16_WASM': '0', 'AT_CODE16_LOADS': '0', 'NODE_OPTIONS': '',
+                'NODE_PATH': '', 'LD_PRELOAD': '', 'LD_AUDIT': ''})
+    return env
+
+
 def run(config_path):
     config = json.loads(Path(config_path).read_text())
     require(set(config) == {'schema', 'sourceRoot', 'sourceHead', 'node', 'bios',
@@ -129,12 +141,7 @@ def run(config_path):
     command = [config['node'], str(Path(config['sourceRoot']) / 'scripts/run-i80386-at-console.mjs'),
                '--hdd-image', config['hdd'], '--geometry', config['geometry'],
                '--steps', '20000000', '--live']
-    env = {**os.environ, 'AT_BIOS_ROM': config['bios'], 'AT_BIOS_SHA256': config['biosSha256'],
-           'VGA_BIOS_ROM': config['vga'], 'VGA_BIOS_SHA256': config['vgaSha256'],
-           'AT_HDD_IMAGE': config['hdd'], 'AT_HDD_SHA256': config['hddSha256'],
-           'AT_CONSOLE_REPORT': str(report_path), 'AT_NATIVE_BLOCKS': '0',
-           'AT_CODE16_WASM': '0', 'AT_CODE16_LOADS': '0', 'NODE_OPTIONS': '',
-           'NODE_PATH': '', 'LD_PRELOAD': '', 'LD_AUDIT': ''}
+    env = child_environment(os.environ, config, report_path)
     (output / 'invocation.json').write_text(json.dumps({'argv': command, 'cwd': config['sourceRoot'],
         'sourceHead': config['sourceHead'], 'biosSha256': config['biosSha256'],
         'vgaSha256': config['vgaSha256'], 'hddSha256': config['hddSha256'],
@@ -201,10 +208,15 @@ def run(config_path):
         require(report['inputs']['bios'] == config['biosSha256'] and
                 report['inputs']['vga'] == config['vgaSha256'] and
                 report['inputs']['hdd'] == config['hddSha256'] and
-                report['inputs']['geometry'] == [306, 4, 17], 'console media')
+                report['inputs']['geometry'] == [306, 4, 17] and
+                report['inputs']['events'] == hashlib.sha256(b'[]').hexdigest() and
+                report['inputs']['nativeBlocks'] is False and
+                report['inputs']['code16Wasm'] is False, 'console media and empty scheduled events')
         require(report['stop'] == 'user-quit' and 0 < report['steps'] <= 20000000,
                 'clean user quit')
-        keys = [e['code'] for e in report['delivered'] if e.get('type') == 'live-key' and e.get('accepted') is True]
+        require(all(e.get('type') == 'live-key' and e.get('accepted') is True
+                    for e in report['delivered']), 'only accepted live PTY keys')
+        keys = [e['code'] for e in report['delivered']]
         require(keys == [30, 158, 48, 176, 46, 174], 'exact accepted Set-1 make/break')
         require(any(DONE.decode() in line for line in report['textRam']), 'guest final VGA text')
         after = termios.tcgetattr(slave)

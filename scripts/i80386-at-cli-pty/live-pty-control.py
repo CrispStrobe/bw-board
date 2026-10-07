@@ -26,4 +26,12 @@ other = module.Frames()
 other.feed(b'\x1b[H\x1b[2JPTY READY> abc\x1b[H\x1b[2J PTY DONE')
 assert other.ordinal == 2 and module.DONE not in other.text()
 assert module.READY not in other.text()
-print('live PTY frame controls PASS: split escapes, ANSI colors and redraw isolation')
+env = module.child_environment({'PATH': '/bin', 'AT_CONSOLE_EVENTS': '/invented',
+    'AT_NATIVE_BLOCKS': '1', 'AT_HDD_CMOS_TYPE': '2', 'NODE_OPTIONS': '--require=something'},
+    {'bios': '/bios', 'biosSha256': 'b', 'vga': '/vga', 'vgaSha256': 'v',
+     'hdd': '/hdd', 'hddSha256': 'h'}, '/report')
+assert set(key for key in env if key.startswith('AT_')) == {
+    'AT_BIOS_ROM', 'AT_BIOS_SHA256', 'AT_HDD_IMAGE', 'AT_HDD_SHA256',
+    'AT_CONSOLE_REPORT', 'AT_NATIVE_BLOCKS', 'AT_CODE16_WASM', 'AT_CODE16_LOADS'}
+assert env['AT_NATIVE_BLOCKS'] == '0' and env['NODE_OPTIONS'] == ''
+print('live PTY source controls PASS: split frames, redraw isolation and ambient AT role rejection')

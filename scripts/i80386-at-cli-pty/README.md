@@ -27,7 +27,9 @@ owned HDD path and pinned image hash, geometry and fresh output directory.
 It starts the unchanged console in a private 100-column PTY, waits for a
 rendered READY frame before sending `abc`, requires a later rendered DONE
 frame, forces a distinct Ctrl-L redraw, sends Ctrl-] to quit, and checks the
-original console report's six accepted Set-1 make/break bytes. It compares
+original console report's six accepted Set-1 make/break bytes. Ambient `AT_*`
+variables are removed so a scheduled input file cannot supply those keys.
+It compares
 terminal attributes before and after, requires an empty process group, and
 retains a bounded raw transcript plus the first failure. The driver is
 **unrun against the guest** in this source checkpoint.
