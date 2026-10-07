@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {copyFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {createDirectRamColdBiosProvider as heldProvider} from '../bochs-cpu3-native-cold-direct-ram/provider.mjs';
 import {deriveEmptyBatchProvider,heldProviderSha256} from './provider-derivation.mjs';
 
@@ -21,6 +25,19 @@ test('one authenticated expression changes and inverse restores exact held provi
  assert.equal(derivative.heldSha256,heldProviderSha256);
  assert.equal(hash(derivative.normalized),derivative.normalizedSha256);
  assert.match(derivative.normalized,/entries\.length===0\?board\.generations:new Map\(board\.generations\)/);
+});
+
+test('qualified-root materialization rebinds imports without changing normalized provider',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'bw-direct-empty-parent-'));
+ try{
+  const copied=join(directory,'provider.mjs');
+  copyFileSync(new URL('../bochs-cpu3-native-cold-direct-ram/provider.mjs',import.meta.url),copied);
+  const qualified=deriveEmptyBatchProvider(pathToFileURL(copied));
+  assert.equal(qualified.heldSha256,derivative.heldSha256);
+  assert.equal(qualified.normalizedSha256,derivative.normalizedSha256);
+  assert.notEqual(qualified.loadedSha256,derivative.loadedSha256);
+  assert.match(Buffer.from(qualified.moduleUrl.split(',')[1],'base64').toString(),/file:\/\//);
+ }finally{rmSync(directory,{recursive:true,force:true});}
 });
 
 test('empty journal still drains and commits exact ACK, without Map clone',()=>{

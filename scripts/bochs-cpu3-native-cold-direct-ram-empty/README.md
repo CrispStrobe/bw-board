@@ -15,6 +15,18 @@ authenticate a complete addon build or replace the real owner/N-API tests.
 Actual use requires a separate exact-source build/guest qualification and then
 the paired adoption gate.
 
+The draft labeled actual gate keeps a pinned qualified CPU3 checkout and
+rebuilds its unchanged addon with the held static verifier. It authenticates
+the original three-arm free-BIOS packet, materializes an exact held-fixture
+derivative that imports this provider derivative from the qualified source
+tree, and validates the complete source closure before loading the addon. The
+held comparator checks full 166-word CPU state, board, 16 MiB RAM journal
+replay, ordered PIO and closure against the callback and companion arms. A
+second comparison requires every changed direct report field except build and
+configuration admission metadata to match the original direct report. This
+gate has not run; the first successful affected guest remains required before
+any functional claim or paired timing.
+
 Run the bounded source controls with:
 
 ```sh
