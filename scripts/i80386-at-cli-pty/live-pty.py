@@ -274,6 +274,8 @@ def run(config_path):
         raise
     finally:
         cleanup_errors = []
+        cleanup_call(cleanup_errors, 'shield cleanup from repeated SIGTERM',
+                     lambda: signal.signal(signal.SIGTERM, signal.SIG_IGN))
         def stop_child():
             if process is None:
                 return
@@ -289,8 +291,8 @@ def run(config_path):
         if child_peak is not None:
             peak_rss = max(peak_rss, child_peak)
         after = cleanup_call(cleanup_errors, 'terminal attributes', lambda: termios.tcgetattr(slave))
-        if not transcript_path.exists():
-            cleanup_call(cleanup_errors, 'original transcript', lambda: transcript_path.write_bytes(raw))
+        cleanup_call(cleanup_errors, 'original transcript',
+                     lambda: transcript_path.write_bytes(raw) if not transcript_path.exists() else None)
         if error is not None:
             failure = {'schema': 'bw.i80386.cli-pty-failure.v1', 'phase': phase,
                        'error': str(error), 'exitCode': process.returncode if process else None,
