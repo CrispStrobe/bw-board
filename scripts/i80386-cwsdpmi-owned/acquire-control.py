@@ -6,9 +6,10 @@ import tarfile
 import warnings
 import zipfile
 
-from acquire import (CWSDPMI_SHA1, TOOL_ASSET, TOOL_ASSET_ID, TOOL_BYTES,
-                     TOOL_TAG, TOOL_TAG_COMMIT, TOOL_URL, inventory_tar,
-                     inventory_zip, validate_metadata)
+from acquire import (CWSDPMI_SHA1, TOOL_ASSET, TOOL_ASSET_API, TOOL_ASSET_ID,
+                     TOOL_BYTES, TOOL_RELEASE_ID, TOOL_TAG, TOOL_TAG_COMMIT,
+                     TOOL_URL, inventory_tar, inventory_zip, strict_json,
+                     validate_metadata)
 
 
 def denies(action) -> None:
@@ -71,12 +72,19 @@ denies(lambda: inventory_tar(tarred([("tool/a", tarfile.SYMTYPE, b"b"),
 catalog = (f"<div>GNU General Public License, Version 2</div><span>163,241 bytes</span>"
            f"<span>{CWSDPMI_SHA1}</span><a>cwsdpmi.zip</a>").encode()
 asset = {"id": TOOL_ASSET_ID, "name": TOOL_ASSET, "size": TOOL_BYTES,
-         "state": "uploaded", "browser_download_url": TOOL_URL}
-release = {"tag_name": TOOL_TAG, "draft": False, "prerelease": False, "assets": [asset]}
-tag = {"ref": f"refs/tags/{TOOL_TAG}", "object": {"sha": TOOL_TAG_COMMIT}}
+         "state": "uploaded", "browser_download_url": TOOL_URL, "url": TOOL_ASSET_API}
+release = {"id": TOOL_RELEASE_ID, "tag_name": TOOL_TAG, "draft": False,
+           "prerelease": False, "assets": [asset]}
+tag = {"ref": f"refs/tags/{TOOL_TAG}",
+       "object": {"sha": TOOL_TAG_COMMIT, "type": "commit"}}
 assert validate_metadata(catalog, release, tag)["releaseAssetId"] == TOOL_ASSET_ID
 denies(lambda: validate_metadata(catalog.replace(b"163,241", b"163,242"), release, tag))
 denies(lambda: validate_metadata(catalog, {**release, "assets": []}, tag))
 denies(lambda: validate_metadata(catalog, release,
                                  {**tag, "object": {"sha": "0" * 40}}))
-print("PASS 17 bounded archive and metadata controls; no remote asset inspected")
+denies(lambda: validate_metadata(catalog, {**release, "id": 0}, tag))
+denies(lambda: validate_metadata(catalog, release,
+                                 {**tag, "object": {**tag["object"], "type": "tag"}}))
+denies(lambda: strict_json(b'{"id":1,"id":2}'))
+denies(lambda: strict_json(b'{"id":NaN}'))
+print("PASS 21 bounded archive and metadata controls; no remote asset inspected")

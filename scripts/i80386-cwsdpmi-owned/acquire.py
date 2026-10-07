@@ -24,10 +24,12 @@ CWSDPMI_SHA1 = "e1d5569817019bbde41eceeeb0a8bed78e87be28"
 TOOL_REPO = "andrewwutw/build-djgpp"
 TOOL_TAG = "v3.4"
 TOOL_TAG_COMMIT = "0dc28365825f853c3cc6ad0d8f10f8570bed5828"
+TOOL_RELEASE_ID = 108164145
 TOOL_ASSET_ID = 112331481
 TOOL_ASSET = "djgpp-linux64-gcc1220.tar.bz2"
 TOOL_BYTES = 80_596_981
 TOOL_URL = f"https://github.com/{TOOL_REPO}/releases/download/{TOOL_TAG}/{TOOL_ASSET}"
+TOOL_ASSET_API = f"https://api.github.com/repos/{TOOL_REPO}/releases/assets/{TOOL_ASSET_ID}"
 MAX_MEMBERS = 30_000
 MAX_FILE = 256 << 20
 MAX_TOTAL = 3 << 30
@@ -211,18 +213,22 @@ def validate_metadata(catalog: bytes, release: dict, tag: dict) -> dict:
             CWSDPMI_SHA1 not in compact or "163,241bytes" not in compact or
             "cwsdpmi.zip" not in compact):
         raise ValueError("CWSDPMI catalog mismatch")
-    if (release.get("tag_name") != TOOL_TAG or release.get("draft") or
+    if (release.get("id") != TOOL_RELEASE_ID or release.get("tag_name") != TOOL_TAG or
+            release.get("draft") or
             release.get("prerelease")):
         raise ValueError("cross-toolchain release")
     matches = [a for a in release.get("assets", []) if a.get("id") == TOOL_ASSET_ID]
     if (len(matches) != 1 or matches[0].get("name") != TOOL_ASSET or
             matches[0].get("size") != TOOL_BYTES or matches[0].get("state") != "uploaded" or
-            matches[0].get("browser_download_url") != TOOL_URL):
+            matches[0].get("browser_download_url") != TOOL_URL or
+            matches[0].get("url") != TOOL_ASSET_API):
         raise ValueError("cross-toolchain asset metadata")
-    if tag.get("ref") != f"refs/tags/{TOOL_TAG}" or tag.get("object", {}).get("sha") != TOOL_TAG_COMMIT:
+    if (tag.get("ref") != f"refs/tags/{TOOL_TAG}" or
+            tag.get("object", {}).get("sha") != TOOL_TAG_COMMIT or
+            tag.get("object", {}).get("type") != "commit"):
         raise ValueError("cross-toolchain tag identity")
     return {"catalogSha256": sha(catalog), "releaseAssetId": TOOL_ASSET_ID,
-            "tagCommit": TOOL_TAG_COMMIT}
+            "releaseId": TOOL_RELEASE_ID, "tagCommit": TOOL_TAG_COMMIT}
 
 
 def acquire(cws: bytes, tool: bytes, catalog: bytes, release: dict, tag: dict) -> tuple[dict, dict[str, bytes]]:
@@ -262,6 +268,22 @@ def input_bytes(path: str, cap: int) -> bytes:
         os.close(descriptor)
 
 
+def strict_json(raw: bytes) -> dict:
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate metadata key")
+            result[key] = value
+        return result
+
+    value = json.loads(raw, object_pairs_hook=pairs,
+                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite metadata")))
+    if not isinstance(value, dict):
+        raise ValueError("metadata object")
+    return value
+
+
 def main() -> None:
     if len(sys.argv) != 7:
         raise SystemExit("usage: acquire.py cws.zip tool.tar.bz2 catalog.html release.json tag.json output-dir")
@@ -269,9 +291,19 @@ def main() -> None:
     try:
         cws = input_bytes(sys.argv[1], 1 << 20)
         tool = input_bytes(sys.argv[2], 100 << 20)
-        report, notices = acquire(cws, tool, input_bytes(sys.argv[3], 200_000),
-                                  json.loads(input_bytes(sys.argv[4], 200_000)),
-                                  json.loads(input_bytes(sys.argv[5], 200_000)))
+        catalog_raw = input_bytes(sys.argv[3], 200_000)
+        release_raw = input_bytes(sys.argv[4], 200_000)
+        tag_raw = input_bytes(sys.argv[5], 200_000)
+        release, tag = strict_json(release_raw), strict_json(tag_raw)
+        validate_metadata(catalog_raw, release, tag)
+        metadata_raw = {"catalog.html": catalog_raw, "release.json": release_raw,
+                        "tag.json": tag_raw}
+        for name, raw in metadata_raw.items():
+            with (output / name).open("xb") as stream:
+                stream.write(raw)
+        report, notices = acquire(cws, tool, catalog_raw, release, tag)
+        report["metadata"]["originalFiles"] = {
+            name: {"bytes": len(raw), "sha256": sha(raw)} for name, raw in metadata_raw.items()}
         with (output / "acquisition.json").open("x", encoding="utf-8") as stream:
             json.dump(report, stream, indent=2, sort_keys=True)
             stream.write("\n")
