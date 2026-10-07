@@ -1,0 +1,134 @@
+/** Architectural cuts and lossless owned-memory replay for the finite IRQ guest. */
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {boundedCount,wholeNativeWords} from '../bochs-cpu3-native-cold-bios/parity.mjs';
+import {comparePagedIrqCpu} from './cpu-comparison.mjs';
+import {layout,entries,bootStores,markerStores,terminalEip,selector,wordAt,expectedShadow,fixedPagedIrqRom} from './profile.mjs';
+import {nativeFrameStores,nativePagedIrqProfile} from './provider-profile.mjs';
+export {wholeNativeWords};
+
+const allPages=Object.keys(layout);
+const value=bytes=>bytes.reduce((n,b,i)=>(n|b<<(8*i))>>>0,0);
+const nativeAd=Object.values(entries).map(e=>({raw:e.raw,before:e.value,after:e.value|(e===entries.stack?0x60:0x20)}));
+const ownPage=raw=>allPages.find(key=>layout[key]===(raw&~4095));
+const rom=fixedPagedIrqRom();
+const romReadPlan=Object.freeze([
+ {raw:0xf0400,width:2,n:24,q:24},{raw:0xf0402,width:4,n:24,q:24},
+ {raw:0xf0406,width:2,n:25,q:25},{raw:0xf0408,width:4,n:25,q:25},
+]);
+export function validateRomRead(event,index){
+ const expected=romReadPlan[index];assert.ok(expected,'only four owned ROM descriptor reads');
+ assert.equal(event.direction,'read','ROM is read-only');
+ assert.deepEqual([event.raw,event.bytes.length,event.generation,event.nativeTicks,event.successfulQuanta],
+  [expected.raw,expected.width,0,expected.n,expected.q],'exact ROM descriptor read and clock');
+ assert.deepEqual(event.bytes,[...rom.subarray(event.raw-0xf0000,event.raw-0xf0000+event.bytes.length)],'owned ROM bytes');
+}
+export const sliceAbiSha256='3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990';
+assert.equal(createHash('sha256').update(readFileSync(new URL('../bochs-cpu3-native-owned-in8/abi.h',import.meta.url))).digest('hex'),sliceAbiSha256,'exact generated ABI4 slice layout');
+export function decodeIrqSlice(n){
+ assert.ok(n.sliceBytes instanceof Uint8Array&&n.sliceBytes.byteLength===160,'exact ABI4 slice bytes');
+ const v=new DataView(n.sliceBytes.buffer,n.sliceBytes.byteOffset,n.sliceBytes.byteLength);
+ const u32=at=>v.getUint32(at,true),u64=at=>v.getBigUint64(at,true),cs=v.getUint16(104,true),eip=u32(108);
+ assert.deepEqual([u32(0),u32(12),u32(20),u64(24),u64(32),cs,eip,u32(152)],
+  [n.reason,n.chargedNativeTicks,n.chargedQuanta,BigInt(boundedCount(n.nativeTicks)),BigInt(boundedCount(n.successfulQuanta)),
+   n.state[13],n.state[8],n.activityState],'raw slice mirrors represented CPU and accounting');
+ for(const [i,key] of ['attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'].entries())
+  assert.equal(u64(40+8*i),BigInt(boundedCount(n.execution[key])),key+' raw slice counter');
+ assert.ok(u32(148)===0||u32(148)===0x200,'raw slice IF mask domain');
+ assert.equal(u32(148),n.state[9]&0x200,'raw slice IF mask mirrors CPU');
+ return {cs,eip,pendingIrq:u32(136),irqDelivered:u32(140),irqVector:u32(144),ifFlag:u32(148),activityState:u32(152),pendingEvent:u32(156)};
+}
+export function irqProgress(previous,n){
+ wholeNativeWords(n);
+ const slice=decodeIrqSlice(n);
+ const ticks=boundedCount(n.nativeTicks),q=boundedCount(n.successfulQuanta),dn=ticks-previous.n,dq=q-previous.q;
+ assert.ok((dn===0||dn===1)&&(dq===0||dq===1),'independent N/Q max-one deltas');
+ assert.deepEqual([n.chargedNativeTicks,n.chargedQuanta],[dn,dq],'exact charged deltas');
+ assert.ok([1,6,7].includes(n.reason),'budget, actual IRQ delivery, or device due');
+ if(n.reason===6){assert.deepEqual([dn,dq],[0,0],'zero-Q hardware delivery');assert.deepEqual([slice.pendingIrq,slice.irqDelivered,slice.irqVector,slice.cs,slice.eip,slice.ifFlag],[1,1,0,selector,0x700a,0],'actual ABI4 IRQ cut');}
+ else{assert.equal(slice.irqDelivered,0,'no hidden duplicate IRQ return');assert.ok(dn||dq||n.reason===7,'no synthetic zero-progress cut');}
+ assert.ok(ticks<=nativePagedIrqProfile.maxNativeTicks&&q<=nativePagedIrqProfile.maxQuanta);
+ assert.equal(n.activityState,0);
+ assert.ok(n.execution&&n.fallback);
+ assert.deepEqual(Object.keys(n.execution).sort(),['attempts','completed','repIterations','repPartial','faults','portCommits','irqDeliveries','haltIdleCuts'].sort());
+ assert.deepEqual(Object.keys(n.fallback).sort(),['bochsRamReads','bochsRamWrites','bochsDirectPointers','bochsPio','bochsTimer'].sort());
+ for(const v of Object.values(n.fallback))assert.equal(boundedCount(v),0,'no fallback');
+ for(const key of ['repIterations','repPartial','faults','portCommits','haltIdleCuts'])assert.equal(boundedCount(n.execution[key]),0,key+' forbidden');
+ assert.ok(boundedCount(n.execution.irqDeliveries)<=1,'single hardware delivery');
+ return {n:ticks,q,dn,dq};
+}
+export function checkPages(pages){
+ assert.deepEqual(Object.keys(pages).sort(),allPages.sort());
+ for(const page of Object.values(pages))assert.ok(page instanceof Uint8Array&&page.length===4096);
+ return pages;
+}
+export function comparablePhase(kind,js,dq){
+ assert.ok(['reset','resume','line','irq-delivery','final-inspect'].includes(kind));
+ if(kind==='reset'||kind==='final-inspect'||kind==='irq-delivery')return true;
+ if(kind!=='resume'||dq!==1)return false;
+ return !(js.cpu.cr0&0x80000000)||js.cpu.cs===selector&&[0x7001,0x7002,0x7005,0x7008,0x700a,0x700d,0x7010].includes(js.cpu.eip);
+}
+export function compareCut(native,board,physical,js,label,kind='resume',dq=1){
+ wholeNativeWords(native);checkPages(physical);checkPages(js.pages);
+ comparePagedIrqCpu(native,js.cpu);
+ assert.equal(boundedCount(native.successfulQuanta),js.q,label+' native Q');
+ assert.equal(boundedCount(native.nativeTicks),js.q,label+' independent N at completed or delivery cut');
+ assert.equal(board.successfulQuanta,js.q,label+' source Q');
+ assert.equal(board.nativeTicks,js.q,label+' source N');
+ assert.deepEqual([js.cpu.interruptShadow,js.cpu.nmiShadow,js.cpu.debugShadow],expectedShadow(js.cpu.cs,js.cpu.eip));
+ if(!comparablePhase(kind,js,dq))return {label,status:'UNMATCHED_PHASE',q:js.q,coverage:'represented CPU and N/Q only; full board and ten pages retained raw without equality claim'};
+ assert.deepEqual(board.board,js.board,label+' whole board');
+ for(const key of allPages)assert.deepEqual(physical[key],js.pages[key],label+' full physical '+key);
+ return {label,status:'ARCHITECTURAL_CUT_PASS',q:js.q,coverage:'represented CPU, whole board, all ten unmasked physical pages; native-only words retained'};
+}
+export function validateNativeMemory(events,board,physical){
+ checkPages(physical);assert.ok(Array.isArray(events)&&events.length<=1024);
+ const replay=Object.fromEntries(allPages.map(k=>[k,new Uint8Array(4096)]));
+ const generations=new Map(),writes=[];let reads=0,romReads=0;
+ for(const [ordinal,event] of events.entries()){
+  assert.equal(event.ordinal,ordinal);assert.ok(event.direction==='read'||event.direction==='write');
+  assert.ok(Number.isSafeInteger(event.raw)&&event.raw>=0&&event.raw<=0xffffffff);
+  assert.ok(Array.isArray(event.bytes)&&event.bytes.length>=1&&event.bytes.length<=16);
+  for(const byte of event.bytes)assert.ok(Number.isInteger(byte)&&byte>=0&&byte<=255);
+  const key=ownPage(event.raw);
+  if(!key){validateRomRead(event,romReads++);reads++;continue;}
+  const offset=event.raw&4095;assert.ok(offset+event.bytes.length<=4096);
+  const page=replay[key];
+  if(event.direction==='read'){
+   assert.deepEqual(event.bytes,[...page.subarray(offset,offset+event.bytes.length)],'ordered source readback');
+   reads++;
+  }else{
+   const next=(generations.get(key)??0)+1;
+   assert.equal(event.generation,next,'one generation per committed write');
+   generations.set(key,next);
+   if(event.kind==='ad')assert.equal(value(page.subarray(offset,offset+4)),event.before,'AD before actual replay');
+   page.set(event.bytes,offset);writes.push(event);
+  }
+ }
+ assert.equal(romReads,romReadPlan.length,'all four actual ROM descriptor reads');
+ for(const key of allPages)assert.deepEqual(replay[key],physical[key],'complete physical replay '+key);
+ assert.deepEqual(events.filter(e=>e.direction==='read').map(({direction,ordinal,...e})=>e),board.ram.reads);
+ assert.deepEqual(events.filter(e=>e.direction==='write').map(({direction,ordinal,...e})=>e),board.ram.writes);
+ const boot=writes.filter(e=>e.kind==='boot'),frame=writes.filter(e=>e.kind==='frame'),marker=writes.filter(e=>e.kind==='marker'),ad=writes.filter(e=>e.kind==='ad');
+ assert.equal(writes.length,boot.length+frame.length+marker.length+ad.length,'known effects only');
+ assert.deepEqual(boot.map(e=>[e.raw,e.bytes]),bootStores.map(e=>[e.raw,e.bytes]),'all fixed boot writes');
+ assert.deepEqual(frame.map(e=>[e.raw,e.bytes]),nativeFrameStores.map(e=>[e.raw,e.bytes]),'native FLAGS/CS/IP frame order');
+ assert.ok(frame.every(e=>e.nativeTicks===39&&e.successfulQuanta===39),'zero-Q IRQ frame effects');
+ assert.deepEqual(marker.map(e=>[e.raw,e.bytes]),markerStores.map(e=>[e.raw,e.bytes]),'handler then interrupted marker once');
+ assert.deepEqual(ad.map(e=>[e.raw,e.before,e.after]).sort((a,b)=>a[0]-b[0]),
+  nativeAd.map(e=>[e.raw,e.before,e.after]).sort((a,b)=>a[0]-b[0]),'six source-backed native AD writes');
+ assert.deepEqual([board.ram.bootStores,board.ram.frameWords,board.ram.markerWords,board.ram.irqAcks],[20,3,2,1]);
+ assert.equal(board.ram.storeCount,writes.length);
+ assert.deepEqual([board.ram.pic.irr,board.ram.pic.isr,board.ram.pic.vectorBase],[0,1,0]);
+ assert.equal(wordAt(physical.table,entries.stack.raw&4095),0xc063);
+ assert.deepEqual([...physical.stack.subarray(0xffa,0x1000)],[2,0x70,0x18,0,2,2]);
+ assert.deepEqual([...physical.stack.subarray(0x100,0x104)],[0x11,0x11,0x22,0x22]);
+ return {reads,writes:writes.length,boot:boot.length,frame:frame.length,marker:marker.length,ad:ad.length,events:events.length};
+}
+export function terminal(native,board,physical,js){
+ assert.equal(js.cpu.cs,selector);assert.equal(js.cpu.eip,terminalEip);
+ assert.deepEqual([js.deliveries.length,js.acknowledgements.length],[1,1]);
+ assert.equal(boundedCount(native.execution.irqDeliveries),1);
+ return compareCut(native,board,physical,js,'returned pre-HLT','final-inspect');
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "bw.paged-irq.actual-if-slice-control.v1",
+  "officialRun": 37620774682,
+  "officialZipSha256": "ab6159e7e4c3b00f70f43128e62b8aef3726b6c021b502af77745978606c2ec6",
+  "testedSource": "d2fb7b5dc33f23e7582f9acb42f145a2c29544df",
+  "status": "REAL_IF_MASK_512_FOLLOWED_BY_DRIVER_BOOLEAN_ASSUMPTION",
+  "nativeTicks": "38",
+  "successfulQuanta": "38",
+  "reason": 1,
+  "activityState": 0,
+  "chargedNativeTicks": 1,
+  "chargedQuanta": 1,
+  "execution": {
+    "attempts": "38",
+    "completed": "38",
+    "repIterations": "0",
+    "repPartial": "0",
+    "faults": "0",
+    "portCommits": "0",
+    "irqDeliveries": "0",
+    "haltIdleCuts": "0"
+  },
+  "stateCs": 24,
+  "stateEip": 28673,
+  "stateEflags": 514,
+  "sliceBytesHex": "01000000010000000100000001000000010000000100000026000000000000002600000000000000260000000000000026000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001800000001700000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000",
+  "sliceBytesSha256": "506644171a12810f807a831257289bdd5ecfb2b2438c3429916ffe821ada9a70"
+}

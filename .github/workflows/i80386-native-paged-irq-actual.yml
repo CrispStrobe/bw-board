@@ -1,0 +1,130 @@
+name: Paged IRQ0 CPU3 and JS actual correctness
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-paged-irq-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  paged-irq-actual:
+    if: >-
+      github.event.label.name == 'x86-paged-irq-actual' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authenticate checkout and install bounded builder dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          mkdir "$RUNNER_TEMP/paged-irq-context"
+          cp .github/workflows/i80386-native-paged-irq-actual.yml "$RUNNER_TEMP/paged-irq-context/workflow.yml"
+          cp roms/free-at-bios/LICENSE "$RUNNER_TEMP/paged-irq-context/free-at-bios-LICENSE.txt"
+          cp roms/free-at-bios/README.md "$RUNNER_TEMP/paged-irq-context/free-at-bios-README.txt"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev libnode-dev
+          test -r /usr/include/node/node_api.h
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            git rev-parse HEAD
+            node --version
+            g++ --version
+            uname -a
+            lscpu
+            df -h "$RUNNER_TEMP"
+            dpkg-query -W build-essential g++ libc6-dev libltdl-dev libnode-dev
+            sha256sum "$(command -v node)" /usr/include/node/node_api.h .github/workflows/i80386-native-paged-irq-actual.yml
+          } > "$RUNNER_TEMP/paged-irq-context/toolchain.txt"
+      - name: Bounded profile controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 90s node --test test/i80386-paged-irq-source.test.mjs test/i80386-paged-irq-provider-source.test.mjs test/i80386-paged-irq-native-source.test.mjs test/i80386-paged-irq-build-source.test.mjs test/i80386-paged-irq-driver-source.test.mjs > "$RUNNER_TEMP/paged-irq-context/controls.stdout" 2> "$RUNNER_TEMP/paged-irq-context/controls.stderr"
+      - name: Fetch exact upstream Bochs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          git init "$RUNNER_TEMP/paged-irq-pristine"
+          git -C "$RUNNER_TEMP/paged-irq-pristine" remote add origin https://github.com/bochs-emu/Bochs.git
+          timeout 180s git -C "$RUNNER_TEMP/paged-irq-pristine" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          git -C "$RUNNER_TEMP/paged-irq-pristine" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/paged-irq-pristine" rev-parse HEAD)" = 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          for notice in COPYING COPYING.LIB LICENSE; do
+            for folder in "$RUNNER_TEMP/paged-irq-pristine" "$RUNNER_TEMP/paged-irq-pristine/bochs"; do
+              if test -f "$folder/$notice"; then cp "$folder/$notice" "$RUNNER_TEMP/paged-irq-context/upstream-$(basename "$folder")-$notice.txt"; fi
+            done
+          done
+      - name: Prepare, compile and statically authenticate exact IRQ addon
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          python3 -B scripts/ci-build-i80386-native-paged-irq.py \
+            "$GITHUB_WORKSPACE" "$RUNNER_TEMP/paged-irq-build-evidence" \
+            "$RUNNER_TEMP/paged-irq-prepared" "$RUNNER_TEMP/paged-irq-pristine" \
+            > "$RUNNER_TEMP/paged-irq-context/build.stdout" \
+            2> "$RUNNER_TEMP/paged-irq-context/build.stderr"
+      - name: One bounded clean native and JS IRQ guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          node --input-type=module - "$RUNNER_TEMP/paged-irq-build-evidence/prepare.json" "$RUNNER_TEMP/paged-irq-guest.conf" "$RUNNER_TEMP/paged-irq-guest.log" <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {canonicalConfiguration} from './scripts/bochs-cpu3-native-paged-irq/build-identity.mjs';
+          const [, , manifestPath,configPath,logPath]=process.argv;
+          writeFileSync(configPath,canonicalConfiguration(JSON.parse(readFileSync(manifestPath,'utf8')),logPath),{flag:'wx'});
+          JS
+          timeout 120s node --max-old-space-size=128 \
+            scripts/bochs-cpu3-native-paged-irq/runner.mjs \
+            "$RUNNER_TEMP/paged-irq-build-evidence/static-input.json" \
+            "$RUNNER_TEMP/paged-irq-guest.conf" "$RUNNER_TEMP/paged-irq-actual" \
+            > "$RUNNER_TEMP/paged-irq-context/guest.stdout" \
+            2> "$RUNNER_TEMP/paged-irq-context/guest.stderr"
+      - name: Retain original first failure and complete raw result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: paged-irq-actual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/paged-irq-context
+            ${{ runner.temp }}/paged-irq-build-evidence
+            ${{ runner.temp }}/paged-irq-actual
+            ${{ runner.temp }}/paged-irq-guest.conf
+            ${{ runner.temp }}/paged-irq-guest.log
+            !${{ runner.temp }}/paged-irq-build-evidence/*.node
+            !${{ runner.temp }}/paged-irq-build-evidence/*.tar.gz
+            !${{ runner.temp }}/paged-irq-build-evidence/*ROM.bin
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

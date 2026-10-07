@@ -1,0 +1,28 @@
+{
+  "schema": "bw.paged-irq.actual-irq-slice-control.v1",
+  "officialRun": 37619512616,
+  "officialArtifact": 11481112213,
+  "officialZipSha256": "af36cbe19f146688674265a5ade8e6173724cf31feb8fb1b0722615a64f134eb",
+  "testedSource": "573997857645cb372ed068be09fd73cfb4f394d5",
+  "status": "REAL_NATIVE_IRQ_DELIVERY_FOLLOWED_BY_DRIVER_SHAPE_FAILURE",
+  "nativeTicks": "39",
+  "successfulQuanta": "39",
+  "reason": 6,
+  "activityState": 0,
+  "chargedNativeTicks": 0,
+  "chargedQuanta": 0,
+  "execution": {
+    "attempts": "39",
+    "completed": "39",
+    "repIterations": "0",
+    "repPartial": "0",
+    "faults": "0",
+    "portCommits": "0",
+    "irqDeliveries": "1",
+    "haltIdleCuts": "0"
+  },
+  "stateCs": 24,
+  "stateEip": 28682,
+  "sliceBytesHex": "0600000001000000010000000000000001000000000000002700000000000000270000000000000027000000000000002700000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000180000000a700000000000000000000000000000000000000000000000000000010000000100000000000000000000000000000000040000",
+  "sliceBytesSha256": "84ae70f8cfe8761d22695512b389cf5f2d01e7d5b12b78e6c27acc9979b6f8f2"
+}
