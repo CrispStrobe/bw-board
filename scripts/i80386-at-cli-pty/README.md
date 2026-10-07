@@ -1,4 +1,4 @@
-# Owned live-terminal fixture (source checkpoint)
+# Owned live-terminal acceptance
 
 This directory prepares a source-owned 306×4×17 FAT16 HDD for the existing
 `run-i80386-at-console.mjs --live` route. Its boot sector prints `PTY READY> `
@@ -18,10 +18,10 @@ The source control pins the resulting boot-sector and whole-image hashes,
 checks the 55AA signature and preserves the parent FAT16 BPB and every
 nonboot disk byte. This does **not** prove the free Bochs BIOS boots the
 sector, that `--live` delivers keys, or that host terminal state is restored.
-Those require a later exact-source PTY execution with the bundled free BIOS
-and VGA ROM, original terminal transcript and final console report.
+The actual PTY result below supplies separate guest execution evidence with
+the bundled free BIOS and VGA ROM, original transcript and console report.
 
-`live-pty.py` is the proposed real PTY driver. Its exact-role JSON input names
+`live-pty.py` is the real PTY driver. Its exact-role JSON input names
 the clean source head, Node executable, free BIOS and VGA ROM paths and hashes,
 owned HDD path and pinned image hash, geometry and fresh output directory.
 It starts the unchanged console in a private 100-column PTY, waits for a
@@ -31,8 +31,7 @@ original console report's six accepted Set-1 make/break bytes. Ambient `AT_*`
 variables are removed so a scheduled input file cannot supply those keys.
 It compares
 terminal attributes before and after, requires an empty process group, and
-retains a bounded raw transcript plus the first failure. The driver is
-**unrun against the guest** in this source checkpoint.
+retains a bounded raw transcript plus the first failure.
 
 The dedicated `i80386-at-cli-pty-actual.yml` workflow runs only when an
 owned pull request receives the `x86-cli-pty-actual` label. It checks out the
@@ -42,20 +41,31 @@ The original transcript and console report stay in a bounded artifact, along
 with the first failure if acceptance stops. The driver checks the original
 console's ordered alternate-screen, cursor, mouse and focus-report setup and
 cleanup bytes as well as restored PTY attributes. The workflow does not
-upload the disk or ROM binaries. A successful hosted guest run and independent
-original-artifact audit are still required before acceptance.
+upload the disk or ROM binaries.
 The driver samples the live child's RSS and also checks the Linux kernel's
 reaped-children peak RSS before accepting a result, so a short peak between
 samples still fails the bound. Cleanup errors are retained separately and
 cannot replace the original guest failure.
 
-The planned PTY acceptance sends three visible keys only after an actual
+The PTY acceptance sends three visible keys only after an actual
 `PTY READY>` frame, requires `PTY READY> abc PTY DONE` in a later rendered
 frame, sends Ctrl-L and requires a fresh retained frame, then sends Ctrl-]
 and requires `stop=user-quit`, accepted Set-1 make/break codes, a clean exit,
 and restored canonical/echo terminal attributes. It must bound output,
 instruction count, wall time and process group, and retain the first failure.
 Queued host bytes or a source-only test cannot substitute for guest pixels.
+
+The [actual run 37641845715, attempt 2](https://github.com/CrispStrobe/bw-board/actions/runs/37641845715/attempts/2)
+passed at tested source `f03b51bf2475bc77a50af8c43c87512c0317c6fb`.
+Two independent stdlib readers audited the original artifact without importing
+the producer parser or replaying the guest: five terminal frames, READY in
+frame 3, guest DONE in frame 4, redraw in frame 5, six accepted Set-1 events,
+2,450,000 steps, user quit and restored terminal attributes. Attempt 1 failed
+runner acquisition before execution and remains preserved. The
+[public result documentation](https://github.com/CrispStrobe/bw-board/pull/436)
+records the artifact identity and limits. This README update changes no
+executable source; the actual result qualifies this owned BIOS keyboard/text
+fixture, not general DOS, mouse, extender or performance behavior.
 
 The existing 386 CLI takes a raw HDD and BIOS/VGA files; it has no floppy
 attachment option. The prior browser FreeDOS floppy plus marker HDD is not
