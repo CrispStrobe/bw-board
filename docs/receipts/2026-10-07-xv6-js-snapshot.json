@@ -1,0 +1,41 @@
+{
+  "schema": "bw.xv6-js-snapshot-result-summary.v1",
+  "firstAttempt": {
+    "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37648491093",
+    "head": "d13c2b1ebd6192fd6c56bc3a5a9cf659a9aeb890",
+    "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11495697841",
+    "zipBytes": 46289,
+    "zipSha256": "483f3a31a0316a6e12830fe846facd41a5774c3731b27c9bccd6eda2065184fc",
+    "members": 25,
+    "completedPairs": 0,
+    "failure": "First warm-up semantic comparison retained distinct authenticated absolute ROM checkout paths; no timing result"
+  },
+  "correctedAttempt": {
+    "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37650576017",
+    "baselineHead": "6e5662bec11442e373a2489f213bc506438373e8",
+    "candidateHead": "ca41f2675fb8951965e0ee50f5bc26d2ea4c0498",
+    "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11496583804",
+    "zipBytes": 166860,
+    "zipSha256": "42f01359f1331af7ca3e96b232452a435289cdf71554a85ab7b16d1931bbab12",
+    "members": 98,
+    "pairInventoryFiles": 83,
+    "semanticChildren": 18,
+    "semanticSha256": "270d1a93662c924c23355ca49d491bac6e8137f5dacd7e25f1939ce1a13a5e93",
+    "stepsEach": 24338279,
+    "gitSourceRolesPerArm": 70,
+    "gitGateRoles": 8,
+    "gitHelperRoles": 2,
+    "warmupPairs": 2,
+    "measuredPairs": 7,
+    "semanticPass": true,
+    "performanceGatePass": false,
+    "favorableCpuPairs": 3,
+    "meanCpuSeconds": {"baseline": 13.726486428571429, "candidate": 13.744998142857144},
+    "meanWallSeconds": {"baseline": 12.125892224714292, "candidate": 12.14024601357143},
+    "cpuRatioCandidateOverBaseline": 1.0013486127263553,
+    "wallRatioCandidateOverBaseline": 1.0011837305322475,
+    "host": {"cpuModel": "AMD EPYC 7763 64-Core Processor", "logicalCpus": 4, "node": "v20.20.2", "platform": "Linux", "architecture": "x86_64"}
+  },
+  "independentAudits": ["root standard-library original-packet audit", "separate reviewer standard-library original-packet audit"],
+  "limits": ["Whole-child wait4 timing includes startup and reporting", "Full reported RAM and disk hashes agree, but raw guest memory/disk/kernel bytes are omitted", "Interrupt records are bounded, not a complete bus trace", "PSE/APIC xv6 profile is not strict original 386DX", "No measured speed improvement or default adoption"]
+}
