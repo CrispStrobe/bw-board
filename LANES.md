@@ -1,5 +1,17 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-07 device-refusal hosted red1 evidence expansion — CLAIM, Codex bwcx.
+Existing device-substep-measurement-refusal lane remains the sole owner.
+Expand its envelope by test/ltspice-universal-opamp2.test.mjs only, from exact
+master4eb85e003b47e24730ebd9657c2be646e8a5556d. CI37660003629 completed with
+8401 passes,302 skips and three failures in that existing test: current readings
+were acquired after device-step exhaustion. Preserve that red. Repair the test's
+advancement to complete its actual device work, asserting no overflow/accuracy
+failure before reading measurements; preserve every numerical/model bound.
+No new production, model, solver, API, workflow, package or consumer change.
+Publish this claim before editing that test; then merge the original source
+candidate unchanged and qualify one forward replacement with all affected tests.
+
 2026-10-07 incomplete device advancement measurement refusal — CLAIM, Codex bwcx.
 Branch lane/device-substep-measurement-refusal-20261007, exact base
 3d4d28f0cacfe65b51609c9cddf95c5e25972caa. Three new paths of ownership: this
