@@ -1,0 +1,204 @@
+{
+  "schema": "bw.cold-native.direct-ram-paired-public-result.v1",
+  "harnessSource": "447fb5bfbc913db0ef00fca333ecb5be28b0e156",
+  "qualifiedEngineSource": "acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1",
+  "pullRequest": "https://github.com/CrispStrobe/bw-board/pull/421",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37609656584",
+  "artifact": {
+    "id": 11477660366,
+    "name": "cold-direct-ram-paired-37609656584-1",
+    "api": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11477660366",
+    "bytes": 7602908,
+    "sha256": "009ea51900033a6eb16c2779faaab59c4c686dce6a6da9fbad756ff39b3b8fbd",
+    "originalMembers": 319
+  },
+  "host": {
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "allocatedLogicalCpus": 4,
+    "node": "22.23.3"
+  },
+  "schedule": {
+    "comparisons": 2,
+    "warmupPairsPerComparison": 2,
+    "measuredPairsPerComparison": 7,
+    "alternating": true,
+    "freshChildren": 36
+  },
+  "qualification": {
+    "semanticChildren": "36 PASS",
+    "adoptionGate": "FAIL",
+    "ordinaryJavaScriptRemainsDefault": true,
+    "coordinatorIndependentRawAudit": "PASS",
+    "coderIndependentRawAudit": "PASS",
+    "peerIndependentRawAudit": "PASS"
+  },
+  "bindings": {
+    "addonSha256": {
+      "companionAddon": "0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d",
+      "directAddon": "c22fed4ecc73661fe712937973718ffd0c1424c970cf8dc3f264f37b329f4281",
+      "ownerAddon": "3d35c5a7170d761e15092f7c563cb22d0d5285dcee40e62b72332c7f6fbc5583"
+    },
+    "configSha256": {
+      "companion": "7df6f98cb21e7ac53aa399a71555123d847a26fe03e8af8114255060e04351be",
+      "direct": "42b5c379a676d9d8fed9e7990fd9e529f41ed97ea27cc228ff4e6a42343d5c4d"
+    },
+    "directBuildAuthSha256": "8cd8caee9d354968e1fb42e874d3dbee854f52a69cc19eac3d9147edc4d1757c",
+    "harnessHead": "447fb5bfbc913db0ef00fca333ecb5be28b0e156",
+    "officialZipSha256": "3881456e5dd46f256640cd28af30117f0be1a92f1b2fe9df1712067c3ea31905",
+    "ownerBuildReceiptSha256": "e8691046effe920838d24f6b67acfb5cda9500b1bc3556c6815a06733c936adc",
+    "qualifiedSourceHead": "acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1",
+    "referenceSha256": "74f365d0ab5a00ab229f29291f46ed15451b7a37a442301eabd88a22fb4153ff"
+  },
+  "comparisons": {
+    "direct-v-companion": {
+      "allSevenFavorable": false,
+      "baseline": "companion",
+      "baselineMeanExecutionCpuSeconds": 1.5034914285714285,
+      "candidate": "direct",
+      "candidateMeanExecutionCpuSeconds": 1.4206757142857143,
+      "comparison": "direct-v-companion",
+      "interpretation": "descriptive same-host companion comparison",
+      "meanCpuReduction": 0.055082265659740615,
+      "measuredPairs": 7,
+      "quantitativeGatePass": null,
+      "rawRatios": [
+        {
+          "executionCpuCandidateOverBaseline": 1.0190964675467296,
+          "executionWallCandidateOverBaseline": 1.0817909164505124,
+          "pair": 0,
+          "wholeChildCpuCandidateOverBaseline": 1.0201258558189603,
+          "wholeChildWallCandidateOverBaseline": 1.0745874134877706
+        },
+        {
+          "executionCpuCandidateOverBaseline": 1.0007240992436952,
+          "executionWallCandidateOverBaseline": 1.0600959883629353,
+          "pair": 1,
+          "wholeChildCpuCandidateOverBaseline": 1.0028175865205227,
+          "wholeChildWallCandidateOverBaseline": 1.0351855648918362
+        },
+        {
+          "executionCpuCandidateOverBaseline": 0.9063697098108505,
+          "executionWallCandidateOverBaseline": 0.9808259053439806,
+          "pair": 2,
+          "wholeChildCpuCandidateOverBaseline": 0.9158065573187201,
+          "wholeChildWallCandidateOverBaseline": 0.9995532879091266
+        },
+        {
+          "executionCpuCandidateOverBaseline": 0.9381632385693699,
+          "executionWallCandidateOverBaseline": 1.009381844236583,
+          "pair": 3,
+          "wholeChildCpuCandidateOverBaseline": 0.9447821947993693,
+          "wholeChildWallCandidateOverBaseline": 0.9998064408921032
+        },
+        {
+          "executionCpuCandidateOverBaseline": 0.8858496317671292,
+          "executionWallCandidateOverBaseline": 0.9600989446299054,
+          "pair": 4,
+          "wholeChildCpuCandidateOverBaseline": 0.9040925042448272,
+          "wholeChildWallCandidateOverBaseline": 0.9665983629928561
+        },
+        {
+          "executionCpuCandidateOverBaseline": 0.9076648792342682,
+          "executionWallCandidateOverBaseline": 1.003750123601413,
+          "pair": 5,
+          "wholeChildCpuCandidateOverBaseline": 0.9199302158000533,
+          "wholeChildWallCandidateOverBaseline": 0.9993439288670138
+        },
+        {
+          "executionCpuCandidateOverBaseline": 0.9726784849653332,
+          "executionWallCandidateOverBaseline": 1.040460396994502,
+          "pair": 6,
+          "wholeChildCpuCandidateOverBaseline": 0.979991408530202,
+          "wholeChildWallCandidateOverBaseline": 1.036843708577455
+        }
+      ],
+      "scope": "Same-host fixed free BIOS slice; configured clocks are not physical 386 calibration"
+    },
+    "direct-v-plain-js": {
+      "allSevenFavorable": false,
+      "baseline": "plain-js",
+      "baselineMeanExecutionCpuSeconds": 0.26805957142857145,
+      "candidate": "direct",
+      "candidateMeanExecutionCpuSeconds": 1.349727,
+      "comparison": "direct-v-plain-js",
+      "interpretation": "adoption gate",
+      "meanCpuReduction": -4.035175549997682,
+      "measuredPairs": 7,
+      "quantitativeGatePass": false,
+      "rawRatios": [
+        {
+          "executionCpuCandidateOverBaseline": 5.115028214467699,
+          "executionWallCandidateOverBaseline": 10.249275671282959,
+          "pair": 0,
+          "wholeChildCpuCandidateOverBaseline": 3.4678379650615434,
+          "wholeChildWallCandidateOverBaseline": 4.46162217014613
+        },
+        {
+          "executionCpuCandidateOverBaseline": 4.755401437539547,
+          "executionWallCandidateOverBaseline": 9.454731462000408,
+          "pair": 1,
+          "wholeChildCpuCandidateOverBaseline": 3.279039267728466,
+          "wholeChildWallCandidateOverBaseline": 4.45123617323296
+        },
+        {
+          "executionCpuCandidateOverBaseline": 4.868592174145593,
+          "executionWallCandidateOverBaseline": 9.41112171050953,
+          "pair": 2,
+          "wholeChildCpuCandidateOverBaseline": 3.3032946491159745,
+          "wholeChildWallCandidateOverBaseline": 4.4534052403851545
+        },
+        {
+          "executionCpuCandidateOverBaseline": 4.984071377124477,
+          "executionWallCandidateOverBaseline": 9.940334070515533,
+          "pair": 3,
+          "wholeChildCpuCandidateOverBaseline": 3.417638328981952,
+          "wholeChildWallCandidateOverBaseline": 4.39235083525622
+        },
+        {
+          "executionCpuCandidateOverBaseline": 5.1656253484410986,
+          "executionWallCandidateOverBaseline": 9.903435878434761,
+          "pair": 4,
+          "wholeChildCpuCandidateOverBaseline": 3.5067410093979037,
+          "wholeChildWallCandidateOverBaseline": 4.432365036840468
+        },
+        {
+          "executionCpuCandidateOverBaseline": 5.327516110091198,
+          "executionWallCandidateOverBaseline": 10.134945332876624,
+          "pair": 5,
+          "wholeChildCpuCandidateOverBaseline": 3.7079125773266792,
+          "wholeChildWallCandidateOverBaseline": 4.752063106730353
+        },
+        {
+          "executionCpuCandidateOverBaseline": 5.050314824326124,
+          "executionWallCandidateOverBaseline": 10.039212916500786,
+          "pair": 6,
+          "wholeChildCpuCandidateOverBaseline": 3.4138388059441205,
+          "wholeChildWallCandidateOverBaseline": 4.4357901061832115
+        }
+      ],
+      "scope": "Same-host fixed free BIOS slice; configured clocks are not physical 386 calibration"
+    }
+  },
+  "timingProvider": {
+    "qualifiedProviderSha256": "e529866863d1d7644ee866565b32ceef39cf882ba67bc6f56f9e62ed8ccc6dc6",
+    "normalizedDerivedSha256": "2a46628a13eb023d41762a807325535e285d68657f1345090108cd54977e0ac5",
+    "difference": "Per-write JSON diagnostic journal objects removed; scalar bound, native journal, validation, generation Map, ACK and clocks retained"
+  },
+  "limits": [
+    "Finite free BIOS ROM-only workload; no full OS or protected-mode application qualification",
+    "Timing provider derivative differs from the original recording provider",
+    "Uploaded evidence omits compiled addons; reported hashes bind source/build receipts rather than independent binary rehash",
+    "No same-workload VPS/Kaggle/GPU comparison or physical 16 MHz calibration",
+    "Clock-transfer and reconciliation counts do not establish CPU cost share"
+  ],
+  "configuredClock": {
+    "clockHz": 6000000,
+    "clocksPerQuantum": 6,
+    "executionQuanta": 316562,
+    "executionSimulatedSeconds": 0.316562,
+    "definition": "Execution simulated seconds divided by mean measured execution wall; reset cycles excluded",
+    "plainJsRTx": 2.6570230006303124,
+    "directRTx": 0.2691911937087936,
+    "physical16MHzCalibration": false
+  }
+}

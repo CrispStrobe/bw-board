@@ -1,7 +1,9 @@
 # Cold direct RAM paired timing gate
 
-This is a proposed, unrun timing gate for the guest-qualified ABI5 direct RAM
-profile. The qualified CPU3 source is fixed at
+This is the timing gate for the guest-qualified ABI5 direct RAM profile.
+[Run 37609656584](https://github.com/CrispStrobe/bw-board/actions/runs/37609656584)
+passed all 36 semantic children but failed adoption against ordinary JS; see
+[the result](../../docs/I80386-COLD-DIRECT-RAM-PAIRED-RESULTS.md). The qualified CPU3 source is fixed at
 `acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1`. The harness has its own
 reviewed head and never relabels that head as the guest-qualified source.
 
