@@ -1,0 +1,33 @@
+{
+  "schema": "bw.i80386.cli-pty-public-result.v1",
+  "source": "https://github.com/CrispStrobe/bw-board/tree/f03b51bf2475bc77a50af8c43c87512c0317c6fb",
+  "pullRequest": "https://github.com/CrispStrobe/bw-board/pull/434",
+  "actualRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37641845715/attempts/2",
+  "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11494027040",
+  "artifactBytes": 26291,
+  "artifactSha256": "12170a0b47cfe9aa8c77c4a1a04a83f5440a63e0950c1cb61f68f8f26d059011",
+  "members": 20,
+  "inventoryEntries": 19,
+  "attempt1": "Runner acquisition failed before execution; no artifact",
+  "status": "PASS",
+  "backend": "ordinary JavaScript; native and code16 WASM off",
+  "steps": 2450000,
+  "terminalFrames": {
+    "total": 5,
+    "ready": 3,
+    "guestDone": 4,
+    "redraw": 5
+  },
+  "acceptedSet1Codes": [
+    30,
+    158,
+    48,
+    176,
+    46,
+    174
+  ],
+  "terminalAttributesRestored": true,
+  "processGroupEmptyAfterExit": true,
+  "audit": "Two independent stdlib artifact/source/transcript audits; second verifies all 77 console source roles; no producer parser import or guest replay",
+  "scope": "Owned BIOS keyboard/text guest; no general DOS, mouse, extender, performance or full RAM reconstruction claim"
+}
