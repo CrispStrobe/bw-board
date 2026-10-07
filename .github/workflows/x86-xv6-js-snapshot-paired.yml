@@ -22,6 +22,11 @@ jobs:
       BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
       BW_BEFORE_HEAD: 6e5662bec11442e373a2489f213bc506438373e8
       PYTHONDONTWRITEBYTECODE: '1'
+      GIT_NO_REPLACE_OBJECTS: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -33,17 +38,17 @@ jobs:
         run: |
           set -euo pipefail
           ulimit -c 0
-          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
-          test -z "$(git status --porcelain --untracked-files=all)"
-          test "$(git merge-base "$BW_BEFORE_HEAD" "$BW_EXPECTED_HEAD")" = "$BW_BEFORE_HEAD"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git --no-replace-objects status --porcelain --untracked-files=all)"
+          test "$(git --no-replace-objects merge-base "$BW_BEFORE_HEAD" "$BW_EXPECTED_HEAD")" = "$BW_BEFORE_HEAD"
           git worktree add --detach "$RUNNER_TEMP/xv6-js-before" "$BW_BEFORE_HEAD"
-          test "$(git -C "$RUNNER_TEMP/xv6-js-before" rev-parse HEAD)" = "$BW_BEFORE_HEAD"
-          test -z "$(git -C "$RUNNER_TEMP/xv6-js-before" status --porcelain --untracked-files=all)"
+          test "$(git --no-replace-objects -C "$RUNNER_TEMP/xv6-js-before" rev-parse HEAD)" = "$BW_BEFORE_HEAD"
+          test -z "$(git --no-replace-objects -C "$RUNNER_TEMP/xv6-js-before" status --porcelain --untracked-files=all)"
           timeout 30s python3 scripts/xv6-js-snapshot-paired/policy_control.py
           timeout 30s python3 scripts/xv6-js-snapshot-paired/run_control.py
           timeout 30s python3 scripts/xv6-js-acceptance/policy_control.py
           timeout 30s python3 scripts/xv6-js-acceptance/run_control.py
-          test -z "$(git status --porcelain --untracked-files=all)"
+          test -z "$(git --no-replace-objects status --porcelain --untracked-files=all)"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20.20.2'
@@ -90,8 +95,8 @@ jobs:
           git -C "$RUNNER_TEMP/xv6-public" remote add origin https://github.com/mit-pdos/xv6-public.git
           timeout 180s git -C "$RUNNER_TEMP/xv6-public" fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
           git -C "$RUNNER_TEMP/xv6-public" checkout --detach FETCH_HEAD
-          test "$(git -C "$RUNNER_TEMP/xv6-public" rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
-          test -z "$(git -C "$RUNNER_TEMP/xv6-public" status --porcelain --untracked-files=all)"
+          test "$(git --no-replace-objects -C "$RUNNER_TEMP/xv6-public" rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          test -z "$(git --no-replace-objects -C "$RUNNER_TEMP/xv6-public" status --porcelain --untracked-files=all)"
       - name: Build one fresh 4 MiB stock xv6 image
         shell: bash
         env:

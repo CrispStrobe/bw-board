@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -30,13 +31,13 @@ OWN_ROLES = ("scripts/xv6-js-snapshot-paired/README.md",
 
 
 def git(source: Path, *args: str) -> str:
-    return subprocess.check_output(["git", "-C", str(source), *args],
+    return subprocess.check_output(["git", "--no-replace-objects", "-C", str(source), *args],
                                    text=True, stderr=subprocess.DEVNULL).strip()
 
 
 def blob(source: Path, revision: str, name: str) -> bytes:
     return subprocess.check_output(
-        ["git", "-C", str(source), "show", f"{revision}:{name}"],
+        ["git", "--no-replace-objects", "-C", str(source), "show", f"{revision}:{name}"],
         stderr=subprocess.DEVNULL)
 
 
@@ -107,6 +108,8 @@ def inventories(helper, before: Path, after: Path, head: str):
 
 
 def main() -> None:
+    # The qualified helper also invokes Git; keep its reads on immutable objects.
+    os.environ["GIT_NO_REPLACE_OBJECTS"] = "1"
     parser = argparse.ArgumentParser()
     parser.add_argument("--before", type=Path, required=True)
     parser.add_argument("--after", type=Path, required=True)
@@ -203,6 +206,20 @@ def main() -> None:
                 pass
             try:
                 helper.snapshot_inventory(output)
+            except Exception:
+                pass
+        else:
+            try:
+                failure = {"type": type(error).__name__, "message": str(error)[:1000],
+                           "completedPairs": len(pairs)}
+                with (output / "failure.json").open("x", encoding="utf8") as stream:
+                    json.dump(failure, stream, sort_keys=True, indent=2, allow_nan=False)
+                    stream.write("\n")
+                raw = (output / "failure.json").read_bytes()
+                with (output / "file-inventory.json").open("x", encoding="utf8") as stream:
+                    json.dump({"files": {"failure.json": {"bytes": len(raw),
+                               "sha256": sha(raw)}}}, stream, sort_keys=True, indent=2)
+                    stream.write("\n")
             except Exception:
                 pass
         raise
