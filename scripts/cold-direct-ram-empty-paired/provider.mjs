@@ -55,5 +55,6 @@ export function derive(sourceRoot,mode){
 export async function load(sourceRoot,mode){
  const identity=derive(sourceRoot,mode),module=await import(identity.moduleUrl);
  assert.equal(typeof module.createDirectRamColdBiosProvider,'function');
- return {create:module.createDirectRamColdBiosProvider,identity};
+ const {moduleUrl,...derivation}=identity;
+ return {create:module.createDirectRamColdBiosProvider,derivation};
 }
