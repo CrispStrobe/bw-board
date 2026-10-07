@@ -209,6 +209,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const machine = adapter.machine;
     const cpu = machine.cpu;
     const cpuId = opts.cpuId || 'i8086';
+    const readDebugMemory = address => {
+        if (cpuId !== 'i80386') return machine._read(address & 0xfffff);
+        const physical = address >>> 0;
+        const decoded = machine._decode386(physical);
+        const video = machine.vgaMemory;
+        if (video && decoded >= 0xa0000 && decoded <= 0xbffff) {
+            // A VGA read loads latches used by later guest writes. A debugger
+            // observation must return the same byte without changing them.
+            const saved = video.latches.slice();
+            let value;
+            try { value = video.read(decoded); }
+            finally { video.latches.set(saved); }
+            if (value !== undefined && value !== null) return value;
+        }
+        return machine._read386(physical);
+    };
 
     /**
      * THE SHARED EVENT MODULE, which this target was the last one not to use.
@@ -1603,7 +1619,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             }
             if (space !== 'mem') return { unsupported: `no space '${space}' on 8086` };
             const out = new Uint8Array(len);
-            for (let i = 0; i < len; i++) out[i] = machine._read((addr + i) & 0xfffff);
+            for (let i = 0; i < len; i++) out[i] = readDebugMemory(addr + i);
             return out;
         },
 

@@ -69,6 +69,8 @@ Create a bounded real-browser FreeDOS acceptance: media selection, visible promp
 
 **First deliverable:** one reproducible free-media browser scenario with screen/input evidence. **Completion gate:** documented user workflow, actual guest response and restored host terminal/browser state. Publish the exact dependency pin and browser build; update generated matrix inputs through their generator rather than manually asserting support.
 
+**Debugger memory follow-up:** the 386 target's `readMem('mem', ...)` now has a focused VGA aperture and high-physical-RAM regression. Its separate `writeMem('mem', ...)` path still writes the backing array directly; it does not route VGA writes through the 386 bus or its planar aperture. A debugger poke of VGA memory needs its own explicit guest-visible semantics and regression before any GUI memory-edit claim.
+
 ### 6. Free OS and application acceptance
 
 **Repository:** bw-board for guests; brickwright-lite for frontend acceptance. **Ready to start:** one bounded guest at a time.
