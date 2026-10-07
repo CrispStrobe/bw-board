@@ -84,9 +84,15 @@ process.stdout.write(JSON.stringify({loaded:p.loadedModuleSha256,normalized:p.de
                 results.append(item)
                 write(output/'completed.json',results)
     finally:
+        primary=sys.exc_info()[1]
         parent.HERE=PAIRED
         os.environ.pop('BW_CPU_PROFILE_PATH',None)
-        write(output/'host-after.json',parent.metadata())
+        try:write(output/'host-after.json',parent.metadata())
+        except Exception as error:
+            if primary is None:raise
+            try:write(output/'host-after-error.json',{
+                'type':type(error).__name__,'message':str(error)[:512]})
+            except Exception:pass
     require(len(results)==9 and sum(item['sampled'] for item in results)==6,
             'one warm-up and two sampled children per arm')
     report={'schema':'bw.cold-direct-ram.sampling-result.v1',

@@ -68,6 +68,21 @@ with tempfile.TemporaryDirectory(prefix='cold-sampling-parent-control-') as fold
         require(not (root/'fail'/'result.json').exists() and
                 len(json.loads((root/'fail'/'completed.json').read_text()))==3,
                 'no summary after failed semantic child; partial evidence retained')
+        calls.clear();fail_at=4
+        metadata_calls=[0]
+        def failing_metadata():
+            metadata_calls[0]+=1
+            if metadata_calls[0]==2:raise OSError('modeled host-after failure')
+            return {'modeled':True}
+        sampling.parent.metadata=failing_metadata
+        try:sampling.run(setup(root/'fail-host-after'))
+        except ValueError as error:require('semantic failure' in str(error),
+                                         'host-after error must preserve child failure')
+        else:raise AssertionError('host-after masked failed child')
+        require(json.loads((root/'fail-host-after'/'host-after-error.json').read_text())
+                ['type']=='OSError' and
+                len(json.loads((root/'fail-host-after'/'completed.json').read_text()))==3,
+                'secondary host-after failure recorded without semantic summary')
     finally:
         sampling.parent.authenticate_setup=original_auth
         sampling.parent.child=original_child
