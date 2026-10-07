@@ -12,6 +12,18 @@ const net = (id, ...terminals) => ({
   terminals: terminals.map(([part, terminal]) => ({ part, terminal })),
 });
 
+// The model's fastest wake is 10ns. A 1us interval stays below the ordinary
+// 200-device-step cap; a long one-shot advance used to skip work silently.
+function advanceComplete(board, target) {
+  while (board.timeNs < target) {
+    const next = board.timeNs + 1_000n;
+    board.advanceTo(next < target ? next : target);
+    assert.equal(board._deviceSubstepOverflow, false, 'no device history was skipped');
+    assert.equal(board.transientAnalysisStatus().failure, null, 'completed transient work');
+  }
+  assert.equal(board.timeNs, target, 'the requested horizon was actually processed');
+}
+
 function amplifier({ input = 1, params = {}, feedback = true, load = 10000 } = {}) {
   const board = new BoardImpl(5);
   const ground = [['G', 'gnd'], ['VP', 'neg'], ['VN', 'pos'], ['VIN', 'neg'], ['RL', 'b']];
@@ -61,7 +73,7 @@ describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
 
   it('uses the official finite-gain and input-resistance defaults', () => {
     const board = amplifier({ input: 1, load: 1e12 });
-    board.advanceTo(10_000n);
+    advanceComplete(board, 10_000n);
     assert.ok(Math.abs(board.nodeVoltage('out') - (1e6 / 1_000_001)) < 2e-6,
       `default 1 MV/V output ${board.nodeVoltage('out')} V`);
     const current = Math.abs(board.branchCurrent('VIN', 'pos'));
@@ -75,36 +87,36 @@ describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
       load: 1e12,
       params: { a0: 1000, inputOffsetV: 0, inputR: 2e6 },
     });
-    board.advanceTo(10_000n);
+    advanceComplete(board, 10_000n);
     assert.ok(Math.abs(board.nodeVoltage('out') - (1000 / 1001)) < 2e-5,
       `authored gain/offset output ${board.nodeVoltage('out')} V`);
     assert.ok(Math.abs(board.branchCurrent('VIN', 'pos')) > 0.45e-9);
 
     const offset = amplifier({ input: 1, params: { a0: 1000, inputOffsetV: 1e-3 } });
-    offset.advanceTo(10_000n);
+    advanceComplete(offset, 10_000n);
     assert.ok(Math.abs(offset.nodeVoltage('out') - 1) < 2e-5,
       `authored 1 mV offset output ${offset.nodeVoltage('out')} V`);
   });
 
   it('applies symmetric rail headroom and the authored output-current limit', () => {
     const rail = amplifier({ input: 5, params: { railHeadroomV: 1 }, load: 1e12 });
-    rail.advanceTo(10_000n);
+    advanceComplete(rail, 10_000n);
     assert.ok(rail.nodeVoltage('out') <= 4.00001);
 
     const limited = amplifier({ input: 5, load: 10, params: { outputCurrentLimitA: 0.025 } });
-    limited.advanceTo(20_000n);
+    advanceComplete(limited, 20_000n);
     assert.ok(limited.nodeVoltage('out') > 0.249 && limited.nodeVoltage('out') < 0.251,
       `25 mA into 10 ohm gives ${limited.nodeVoltage('out')} V`);
     assert.equal(limited.getDeviceState('U1').outputCurrentLimited, true);
     assert.ok(Math.abs(Math.abs(limited.branchCurrent('RL', 'a')) - 0.025) < 2e-5);
 
     const sinking = amplifier({ input: -5, load: 10, params: { outputCurrentLimitA: 0.025 } });
-    sinking.advanceTo(20_000n);
+    advanceComplete(sinking, 20_000n);
     assert.ok(sinking.nodeVoltage('out') < -0.249 && sinking.nodeVoltage('out') > -0.251,
       `-25 mA into 10 ohm gives ${sinking.nodeVoltage('out')} V`);
 
     const biased = biasedLoadAmplifier();
-    biased.advanceTo(20_000n);
+    advanceComplete(biased, 20_000n);
     assert.ok(biased.nodeVoltage('out') > 2.249 && biased.nodeVoltage('out') < 2.251,
       `25 mA into 10 ohm above a 2 V reference gives ${biased.nodeVoltage('out')} V`);
     assert.ok(Math.abs(Math.abs(biased.branchCurrent('RL', 'a')) - 0.025) < 2e-5);
@@ -112,22 +124,22 @@ describe('LTspice UniversalOpamp2 deterministic Level-2 contract', () => {
 
   it('uses per-instance slew and gain-bandwidth limits', () => {
     const slow = amplifier({ input: 0, params: { slewVPerUs: 0.5, gbwHz: 100e6 } });
-    slow.advanceTo(1_000n);
+    advanceComplete(slow, 1_000n);
     slow.setControl('VIN', 4);
     const t0 = slow.timeNs;
     const v0 = slow.nodeVoltage('out');
-    slow.advanceTo(t0 + 2_000n);
+    advanceComplete(slow, t0 + 2_000n);
     const moved = slow.nodeVoltage('out') - v0;
     assert.ok(moved > 0.9 && moved <= 1.001, `two-us slew moved ${moved} V`);
 
     const narrow = amplifier({ input: 0, params: { slewVPerUs: 100, gbwHz: 100e3 } });
-    narrow.advanceTo(10_000n);
+    advanceComplete(narrow, 10_000n);
     narrow.setControl('VIN', 0.01);
     const n0 = narrow.timeNs;
-    narrow.advanceTo(n0 + 1_000n);
+    advanceComplete(narrow, n0 + 1_000n);
     assert.ok(narrow.nodeVoltage('out') > 0.001 && narrow.nodeVoltage('out') < 0.005,
       `100 kHz one-us response ${narrow.nodeVoltage('out')} V`);
-    narrow.advanceTo(n0 + 10_000n);
+    advanceComplete(narrow, n0 + 10_000n);
     assert.ok(narrow.nodeVoltage('out') > 0.009,
       `100 kHz response eventually approaches the step, got ${narrow.nodeVoltage('out')} V`);
   });

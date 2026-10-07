@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-07 device-refusal hosted red1 evidence expansion — CLAIM, Codex bwcx.
+2026-10-07 device-refusal hosted red1 evidence expansion — DONE candidate, Codex bwcx.
 Existing device-substep-measurement-refusal lane remains the sole owner.
 Expand its envelope by test/ltspice-universal-opamp2.test.mjs only, from exact
 master4eb85e003b47e24730ebd9657c2be646e8a5556d. CI37660003629 completed with
@@ -11,6 +11,15 @@ failure before reading measurements; preserve every numerical/model bound.
 No new production, model, solver, API, workflow, package or consumer change.
 Publish this claim before editing that test; then merge the original source
 candidate unchanged and qualify one forward replacement with all affected tests.
+Remote expansion claim3b63837b preceded evidence edits. Local original test
+reproduced the same three hosted failures. Its fastest model tick is10ns;
+advance in at most1us intervals (at most100 such wakes), asserting no device
+overflow, no transient failure and the exact destination before readings.
+All prior gain/current/headroom/slew/bandwidth assertions are unchanged. Combined
+affected suite38/38 passes, zero skips. Restoring a one-shot advance in the helper
+reds the same three cases at the new skipped-history assertion; restored.
+Board source is byte-identical to33ecef23. No live-clock API or consumer change
+is included; the next exact-head CI/Harris replace, rather than rerun, the red.
 
 2026-10-07 incomplete device advancement measurement refusal — DONE candidate, Codex bwcx.
 Branch lane/device-substep-measurement-refusal-20261007, exact base
