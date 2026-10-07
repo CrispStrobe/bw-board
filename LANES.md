@@ -19,7 +19,7 @@ current sampling cadence, reset redesign, CUI/Lite/pin/workflow/deployment chang
 Remote claim first. Earlier timestamp candidate stays preserved; no source
 landing until final combined CI/Harris green. GUI completion remains a follow-on.
 
-2026-10-07 wrapped scope envelope clock — CLAIM, Codex bwcx.
+2026-10-07 wrapped scope envelope clock — DONE candidate, Codex bwcx.
 Branch lane/scope-envelope-clock-20261007, exact base
 a79bca5892efe11742f9d4f4d87d71969e600023. Three paths only: this ledger,
 src/board.js (_updateScopeChannels wrapped voltage-ring timestamp only), new
@@ -32,6 +32,16 @@ CPU, current-channel sampling, waveform values, API, CUI/Lite/package/pin,
 workflow or deployment change. Remote claim before implementation; exact-head
 CI/Harris qualification precedes guarded landing. The separate stale-capture
 device-step-overflow defect is NOT repaired or claimed qualified by this slice.
+The initial claim push lost a disjoint source-receipt race; refreshed master
+992288a0 was merged without production edits, then remote claim3d4d28f0 landed.
+Four actual Board capture controls reproduce the old error before repair:
+zero/late attachment, two rates, first/exact fill, first/repeated wrap and partial
+buckets. Corrected combined clock/sample suite11/11 passes, zero skips. Restoring
+the old expression reds all four envelope clocks; applying bucket-start semantics
+to point samples reds all four independent sample-clock assertions. Both restored.
+Only the wrapped voltage-ring label expression changes, not stored waveform
+values, scheduling, solver behavior or current channels. Hosted qualification
+pending; the separately observed stale sine capture remains an open defect.
 
 2026-10-05 Motor direction through an H-bridge; the L293D's clamp diodes — DONE candidate, Claude (Lite task B7).
 Worktree `/mnt/volume1/code/wt/b7-actuators-board`, branch `lane/b7-actuators`,

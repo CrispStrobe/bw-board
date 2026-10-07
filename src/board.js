@@ -2390,7 +2390,8 @@ export class BoardImpl {
         // 126 mV disagreement with the closed form that looks exactly like an
         // amplitude error.
         if (ch.count > ch.depth) {
-          ch.startTNs = ch._nextSampleNs - ch.intervalNs * BigInt(ch.depth - 1);
+          ch.startTNs = ch._nextSampleNs - ch.intervalNs * BigInt(
+            ch.capture === 'sample' ? ch.depth - 1 : ch.depth);
         } else if (ch.count === 1) {
           ch.startTNs = ch.capture === 'sample'
             ? ch._nextSampleNs
