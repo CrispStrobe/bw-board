@@ -42,8 +42,9 @@ and hash; a stale prompt elsewhere on screen, CWSDPMI banner or success text
 alone cannot pass. The AT must additionally observe source-bound real-mode
 `INT 2Fh/AX=1687h` discovery (or an explicitly observed pre-existing DPMI
 host), a 32-bit protected code entry, and ordered `INT 31h` service/result
-milestones: selector allocation/configuration, `0501` allocation, checked
-data, `0300` real-mode interrupt simulation, `0502` free and selector release.
+milestones: `0501` allocation, selector allocation/base/limit configuration,
+checked data, `0300` real-mode interrupt simulation, selector release, then
+`0502` free.
 The nonconstant BIOS tick may be retained as raw diagnostic evidence but is
 excluded from exact cross-guest output comparison. `0300` does not qualify
 real-mode callback functions `0303/0304`.
