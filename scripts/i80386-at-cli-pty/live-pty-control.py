@@ -34,4 +34,16 @@ assert set(key for key in env if key.startswith('AT_')) == {
     'AT_BIOS_ROM', 'AT_BIOS_SHA256', 'AT_HDD_IMAGE', 'AT_HDD_SHA256',
     'AT_CONSOLE_REPORT', 'AT_NATIVE_BLOCKS', 'AT_CODE16_WASM', 'AT_CODE16_LOADS'}
 assert env['AT_NATIVE_BLOCKS'] == '0' and env['NODE_OPTIONS'] == ''
-print('live PTY source controls PASS: split frames, redraw isolation and ambient AT role rejection')
+raw = module.ENTER_TERMINAL + module.FRAME + b'PTY READY> abc PTY DONE' + module.LEAVE_TERMINAL
+assert module.terminal_lifecycle(raw) == {'setupOffset': 0,
+    'cleanupOffset': len(module.ENTER_TERMINAL + module.FRAME + b'PTY READY> abc PTY DONE')}
+for invalid in (raw.replace(module.LEAVE_TERMINAL, b''),
+                raw + module.LEAVE_TERMINAL,
+                module.LEAVE_TERMINAL + module.FRAME + module.ENTER_TERMINAL):
+    try:
+        module.terminal_lifecycle(invalid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('terminal cleanup adversary was accepted')
+print('live PTY source controls PASS: split frames, redraw isolation, ambient AT role rejection and terminal lifecycle')

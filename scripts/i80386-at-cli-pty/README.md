@@ -34,6 +34,17 @@ terminal attributes before and after, requires an empty process group, and
 retains a bounded raw transcript plus the first failure. The driver is
 **unrun against the guest** in this source checkpoint.
 
+The dedicated `i80386-at-cli-pty-actual.yml` workflow runs only when an
+owned pull request receives the `x86-cli-pty-actual` label. It checks out the
+exact pull-request head, uses the repository's hashed LGPL BIOS and VGA ROM,
+generates the owned HDD, then runs the real console through a 100-column PTY.
+The original transcript and console report stay in a bounded artifact, along
+with the first failure if acceptance stops. The driver checks the original
+console's ordered alternate-screen, cursor, mouse and focus-report setup and
+cleanup bytes as well as restored PTY attributes. The workflow does not
+upload the disk or ROM binaries. A successful hosted guest run and independent
+original-artifact audit are still required before acceptance.
+
 The planned PTY acceptance sends three visible keys only after an actual
 `PTY READY>` frame, requires `PTY READY> abc PTY DONE` in a later rendered
 frame, sends Ctrl-L and requires a fresh retained frame, then sends Ctrl-]

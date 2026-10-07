@@ -20,6 +20,8 @@ DONE = b'PTY READY> abc PTY DONE'
 MAX_OUTPUT = 16 * 1024 * 1024
 MAX_REPORT = 4 * 1024 * 1024
 MAX_RSS = 1536 * 1024 * 1024
+ENTER_TERMINAL = b'\x1b[?1049h\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1004h'
+LEAVE_TERMINAL = b'\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l'
 
 
 def require(value, reason):
@@ -40,6 +42,16 @@ def canonical(path):
 def visible(frame):
     """Only text inside one actual terminal redraw is a guest observation."""
     return CSI.sub(b'', frame).replace(b'\r', b'')
+
+
+def terminal_lifecycle(raw):
+    """Require the original console's complete, ordered terminal setup/teardown."""
+    require(raw.count(ENTER_TERMINAL) == 1, 'one alternate-screen/cursor/mouse/focus setup')
+    require(raw.count(LEAVE_TERMINAL) == 1, 'one mouse/focus/cursor/alternate-screen cleanup')
+    entered = raw.index(ENTER_TERMINAL)
+    left = raw.index(LEAVE_TERMINAL)
+    require(entered < raw.index(FRAME) < left, 'terminal lifecycle encloses rendered frames')
+    return {'setupOffset': entered, 'cleanupOffset': left}
 
 
 class Frames:
@@ -158,6 +170,9 @@ def run(config_path):
     error = None
     peak_rss = 0
     started = time.monotonic()
+    def interrupted(signum, _frame):
+        raise TimeoutError(f'PTY driver signal {signum}')
+    old_term = signal.signal(signal.SIGTERM, interrupted)
     try:
         process = subprocess.Popen(command, cwd=config['sourceRoot'], env=env,
                                    stdin=slave, stdout=slave, stderr=slave,
@@ -219,6 +234,7 @@ def run(config_path):
         keys = [e['code'] for e in report['delivered']]
         require(keys == [30, 158, 48, 176, 46, 174], 'exact accepted Set-1 make/break')
         require(any(DONE.decode() in line for line in report['textRam']), 'guest final VGA text')
+        lifecycle = terminal_lifecycle(raw)
         after = termios.tcgetattr(slave)
         require(flags(after) == flags(before), 'terminal attributes restored')
         transcript_path.write_bytes(raw)
@@ -229,7 +245,8 @@ def run(config_path):
                   'redrawFrame': redraw_ordinal, 'acceptedKeys': keys,
                   'reportSha256': sha(report_path), 'transcriptSha256': hashlib.sha256(raw).hexdigest(),
                   'transcriptBytes': len(raw), 'terminalBefore': flags(before),
-                  'terminalAfter': flags(after), 'peakObservedRssBytes': peak_rss,
+                  'terminalAfter': flags(after), 'terminalLifecycle': lifecycle,
+                  'peakObservedRssBytes': peak_rss,
                   'processGroupEmptyAfterExit': True, 'steps': report['steps'], 'stop': report['stop']}
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
         return result
@@ -259,6 +276,7 @@ def run(config_path):
             (output / 'failure.json').write_text(json.dumps(failure, indent=2) + '\n')
         os.close(master)
         os.close(slave)
+        signal.signal(signal.SIGTERM, old_term)
 
 
 if __name__ == '__main__':
