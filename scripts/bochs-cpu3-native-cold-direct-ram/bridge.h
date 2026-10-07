@@ -1,4 +1,4 @@
-// Same-DSO cold CPU3 RAM bridge model. CPU3/N-API wiring is a later gate.
+// Same-DSO cold CPU3 RAM bridge. Actual guest qualification is a later gate.
 #ifndef BW_CPU3_COLD_DIRECT_RAM_BRIDGE_H
 #define BW_CPU3_COLD_DIRECT_RAM_BRIDGE_H
 #include "abi.h"
@@ -20,7 +20,7 @@ using Entry = bw_cold_owned_ram::Entry;
 using Batch = bw_cold_owned_ram::Batch;
 using Fence = bw_cold_owned_ram::Fence;
 
-// The eventual N-API wrapper must construct this afresh from napi_get_typedarray_info
+// The ABI5 N-API wrapper constructs this afresh from napi_get_typedarray_info
 // on each synchronous call, after strict object/buffer identity and backing checks.
 // No raw pointer is retained by Bridge between calls.
 struct BoardView {
@@ -118,11 +118,14 @@ class Bridge {
   require(r.tape_count<=900&&(!r.tape_count||r.tape),"direct RAM copied tape extent");
   require(r.n_before==n_&&r.q_before==q_&&r.n_before<=400000&&r.q_before<=r.n_before,"direct RAM starting N/Q");
   require(r.deadline>=1&&r.deadline<=6000&&r.debt_before<=r.deadline+5,"direct RAM clock debt/deadline");
-  if(r.kind==BW_COLD_DIRECT_RAM_PAUSED_OBSERVER){
+  if(r.kind==BW_COLD_DIRECT_RAM_PAUSED_OBSERVER||r.kind==BW_COLD_DIRECT_RAM_INIT){
    require(r.phase==BW_COLD_DIRECT_RAM_PAUSED&&r.tape_count==0,"direct RAM paused observer phase");
   }else{
    require(r.phase==BW_COLD_DIRECT_RAM_RUNNING,"direct RAM running observer phase");
-   require(r.kind>=BW_COLD_DIRECT_RAM_MEMORY&&r.kind<=BW_COLD_DIRECT_RAM_PIO_OUT,"direct RAM reason/PIC ACK");
+   require((r.kind>=BW_COLD_DIRECT_RAM_ENTRY&&r.kind<=BW_COLD_DIRECT_RAM_RETURN&&
+    r.kind!=BW_COLD_DIRECT_RAM_PIC_ACK_FORBIDDEN)||r.kind==BW_COLD_DIRECT_RAM_PIO_IN||
+    r.kind==BW_COLD_DIRECT_RAM_PIO_OUT,"direct RAM reason/PIC ACK");
+   if(r.kind==BW_COLD_DIRECT_RAM_ENTRY||r.kind==BW_COLD_DIRECT_RAM_POST_PIO)require(r.tape_count==0,"direct RAM query tape");
   }
   uint64_t n=r.n_before,q=r.q_before;uint32_t debt=r.debt_before;
   for(uint32_t i=0;i<r.tape_count;++i){
@@ -214,7 +217,8 @@ public:
   try{
    internal_commit_started=true;session_.reconcile_and_ack(p.batch,shadow_);
    // No allocation, JS call or reentry between native acknowledgement and the
-   // already-validated borrowed board writes. The N-API transaction is not yet built.
+   // The ABI5 N-API adapter stages the JavaScript generation Map before this
+   // bounded, callback-free borrowed view commit. Post-ACK host failure is terminal.
    for(const Entry&e:p.batch.entries){memcpy(v.bytes+e.address,e.after.data(),e.length);v.generations[e.address/4096]=e.generation;}
    n_=p.n_after;q_=p.q_after;prepared_.reset();
    const CommitReceipt receipt{session_.acknowledged(),n_,q_,uint32_t(p.batch.entries.size())};
@@ -227,6 +231,10 @@ public:
  void close(){gate();require(!prepared_&&!page_ticket_&&session_.journal_size()==0&&!session_.fence_state().uncommitted_retry&&
   !session_.fence_state().committed_code_write,"direct RAM close pending effect");session_.close(shadow_);closed_=true;}
  uint64_t acknowledged()const{read_gate();return session_.acknowledged();}
+ Batch peek_batch(){gate();require(!prepared_&&!page_ticket_,"direct RAM pending observer/page");return session_.drain();}
+ void fail_stop()noexcept{failed_=true;}
+ uint64_t n()const{read_gate();return n_;}
+ uint64_t q()const{read_gate();return q_;}
  uint64_t committed()const{read_gate();return session_.committed_sequence();}
  uint64_t next_effect()const{read_gate();return session_.next_effect();}
  unsigned journal_size()const{read_gate();return session_.journal_size();}

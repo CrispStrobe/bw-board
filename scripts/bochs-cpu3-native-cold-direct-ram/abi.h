@@ -1,4 +1,4 @@
-/* Experimental cold CPU3 direct-RAM profile. Source/control contract only. */
+/* Experimental cold CPU3 direct-RAM profile. Actual guest qualification pending. */
 #ifndef BW_CPU3_COLD_DIRECT_RAM_ABI_H
 #define BW_CPU3_COLD_DIRECT_RAM_ABI_H
 #include <stdint.h>
@@ -22,12 +22,20 @@ enum bw_cold_direct_ram_phase {
   BW_COLD_DIRECT_RAM_PAUSED = 2
 };
 enum bw_cold_direct_ram_boundary_kind {
-  BW_COLD_DIRECT_RAM_MEMORY = 1,
-  BW_COLD_DIRECT_RAM_PAGE = 2,
-  BW_COLD_DIRECT_RAM_PIO_IN = 3,
-  BW_COLD_DIRECT_RAM_PIO_OUT = 4,
-  BW_COLD_DIRECT_RAM_PAUSED_OBSERVER = 5,
-  BW_COLD_DIRECT_RAM_PIC_ACK_FORBIDDEN = 6
+  BW_COLD_DIRECT_RAM_INIT = 1,
+  BW_COLD_DIRECT_RAM_ENTRY = 2,
+  BW_COLD_DIRECT_RAM_MEMORY = 3,
+  BW_COLD_DIRECT_RAM_PAGE = 4,
+  BW_COLD_DIRECT_RAM_PRE_PIO = 5,
+  BW_COLD_DIRECT_RAM_POST_PIO = 6,
+  BW_COLD_DIRECT_RAM_PIC_ACK_FORBIDDEN = 7,
+  BW_COLD_DIRECT_RAM_FAULT = 8,
+  BW_COLD_DIRECT_RAM_IRQ = 9,
+  BW_COLD_DIRECT_RAM_HLT = 10,
+  BW_COLD_DIRECT_RAM_RETURN = 11,
+  BW_COLD_DIRECT_RAM_PIO_IN = 12,
+  BW_COLD_DIRECT_RAM_PIO_OUT = 13,
+  BW_COLD_DIRECT_RAM_PAUSED_OBSERVER = 14
 };
 /* Only CPU3 source globals may populate this after the existing clock transfer
    has validated its completed N/Q. JS never supplies these ledger fields.
@@ -43,5 +51,22 @@ typedef struct bw_cold_direct_ram_memory_reply {
   uint64_t effect, n, q, sequence;
   uint8_t observed[16];
 } bw_cold_direct_ram_memory_reply;
+typedef struct bw_cold_direct_ram_clock_ledger {
+  uint64_t n,q;
+  uint32_t debt,deadline,mapping_epoch,board_a20,in_resume;
+} bw_cold_direct_ram_clock_ledger;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* Implemented by the owner in the same addon DSO, never by a JS callback. */
+int bw_cold_direct_ram_memory(uint32_t raw,uint32_t length,const uint8_t *operand,
+  const bw_cold_direct_ram_source_ledger *source,bw_cold_direct_ram_memory_reply *reply);
+int bw_cold_direct_ram_reconcile_full(void);
+int bw_cold_direct_ram_watermarks(uint64_t *committed,uint64_t *acknowledged);
+int bw_cold_direct_ram_source_clock(bw_cold_direct_ram_clock_ledger *out);
+#ifdef __cplusplus
+}
+#endif
 
 #endif
