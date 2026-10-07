@@ -12,7 +12,8 @@ assert.ok(mode==='owned'||mode==='callback');
 for(const p of [addonPath,configPath,outputPath])assert.ok(isAbsolute(p)&&resolve(p)===p);
 if(mode==='owned')assert.ok(isAbsolute(ownerPath)&&resolve(ownerPath)===ownerPath);
 else assert.equal(ownerPath,'-');
-const target=Number(targetText);assert.ok(Number.isInteger(target)&&target>=1&&target<=300);
+const target=Number(targetText);assert.ok(Number.isInteger(target)&&target>=1&&target<=400000);
+const compact=target>300;
 const require=createRequire(import.meta.url);
 const addon=require(addonPath);
 assert.equal(addon.abiVersion,4);
@@ -22,15 +23,24 @@ const callbacks=mode==='owned'?memoryFusionCallbacks(provider).callbacks:provide
 let native=addon.create(configPath,provider.rom,callbacks,false);
 const reset={native,board:provider.checkpoint()};
 let q=0,resumes=0,zero=0;
+try{
 while(q<target){
- assert.ok(++resumes<=1200&&zero<=400,'bounded cold guest fixture');
+ assert.ok(++resumes<=800000&&zero<=400000,'bounded cold guest fixture');
  const stage=provider.stage();if(stage.changed)native=addon.setIRQ(stage.asserted);
  provider.begin();let error=null;
- try{native=addon.resume(1,1,0xffffffffffffffffn);}catch(e){error=e;throw e;}finally{try{provider.end();}catch(e){if(!error)throw e;}}
- const next=Number(native.successfulQuanta);assert.ok(next===q||next===q+1,'contiguous guest Q');
+ const maxQ=compact?Math.min(300,target-q):1;
+ try{native=compact?addon.resumeProgress(600,maxQ,0xffffffffffffffffn):addon.resume(1,1,0xffffffffffffffffn);}catch(e){error=e;throw e;}finally{try{provider.end();}catch(e){if(!error)throw e;}}
+ const next=Number(native.successfulQuanta);assert.ok(next>=q&&next<=q+maxQ,'contiguous bounded guest Q');
  if(next===q)zero++;q=next;
+ if(compact&&resumes%1000===0)process.stdout.write(`progress resumes=${resumes} N=${native.nativeTicks} Q=${native.successfulQuanta}\n`);
 }
-const last=native,final=addon.inspect(),settled=provider.settleCheckpoint(),ports=provider.records();
-const report={schema:'bw.cold-native.owned-ram-actual-fixture.v1',mode,target,resumes,zero,reset,last,final,board:settled.state,ramSha256:settled.ramSha256,ports};
+}catch(error){
+ const failure={schema:'bw.cold-native.owned-ram-actual-fixture-failure.v1',mode,target,resumes,q,zero,error:String(error),lastReturnedNative:native};
+ for(const [name,fn] of [['partialNative',()=>addon.inspect()],['partialBoard',()=>provider.checkpoint()],['partialPorts',()=>provider.records()]])try{failure[name]=fn();}catch(e){failure[name+'Error']=String(e);}
+ writeFileSync(outputPath+'.failure.json',JSON.stringify(failure,(_,v)=>typeof v==='bigint'?v.toString():ArrayBuffer.isView(v)?Array.from(v):v)+'\n',{flag:'wx'});
+ throw error;
+}
+const lastReturn=native,last=compact?addon.inspect():native,final=addon.inspect(),settled=provider.settleCheckpoint(),ports=provider.records();
+const report={schema:'bw.cold-native.owned-ram-actual-fixture.v1',mode,target,resumes,zero,reset,lastReturn,last,final,board:settled.state,ramSha256:settled.ramSha256,ports};
 addon.close();provider.close();
 writeFileSync(outputPath,JSON.stringify(report,(_,v)=>typeof v==='bigint'?v.toString():ArrayBuffer.isView(v)?Array.from(v):v)+'\n',{flag:'wx'});
