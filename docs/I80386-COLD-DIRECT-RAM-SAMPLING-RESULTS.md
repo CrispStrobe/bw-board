@@ -1,12 +1,13 @@
-# Cold direct-RAM sampling: first actual diagnostic
+# Cold direct-RAM sampling results and next task
 
-Updated 2026-10-07. All nine children passed their semantic gates in
-[run 37616446785](https://github.com/CrispStrobe/bw-board/actions/runs/37616446785).
-The six retained V8 profiles expose an attribution limit that must be fixed
-before selecting an optimization from their grouped results. This diagnostic
-does not establish a speed improvement or change the default JavaScript path.
+Updated 2026-10-07. The corrected [run 37619955001](https://github.com/CrispStrobe/bw-board/actions/runs/37619955001)
+passed nine semantic children and retained six profiles, with complete direct
+provider attribution. JavaScript reconciliation is the next narrow optimization
+candidate. These diagnostic samples establish no speed improvement; ordinary
+JavaScript remains default. The first URL-attribution limit and the following
+timestamp-parser failure are preserved below alongside the completed result.
 
-## Source and evidence
+## First diagnostic: source and evidence
 
 - Diagnostic harness: `97aff55fe60c4ac5506048a5a0c8863898389eb6`,
   [draft PR425](https://github.com/CrispStrobe/bw-board/pull/425).
@@ -56,7 +57,7 @@ and do not equal execution CPU. No adoption timing or physical 16 MHz RTx was
 computed. Unprivileged `perf` was unavailable with `perf_event_paranoid=4`;
 host policy was left unchanged.
 
-## Next bounded task
+## File-backed follow-up and preserved parser failure
 
 The file-backed repair was subsequently tested at
 `0e3ea417241ee61c1598aa8a7f14d173678a62fb` in
@@ -75,17 +76,50 @@ The original 1,168-sample direct profile contains that negative delta at index
 microsecond window. Independently checked cumulative timestamps stay within the
 window. File attribution is observed; complete corrected profiling is pending.
 
-The next change must preserve raw order, signed values and hashes. Validate
-bounded signed deltas and every cumulative timestamp. For a nonmonotonic
-timeline, report sample counts and mark all delta-weighted bucket values and
-fractions unavailable; reject gross bounds violations. Never clamp, drop or
-reorder samples to manufacture timing shares. Retain wrong-file/hash, symlink,
-truncated-URL and blank-native-leaf controls.
+The parser correction preserves raw order, signed values and hashes. It
+validates bounded signed deltas and every cumulative timestamp. For a
+nonmonotonic timeline, it reports sample counts and marks all delta-weighted
+bucket values and fractions unavailable; gross bounds violations are rejected.
+It never clamps, drops or reorders samples to manufacture timing shares.
+Wrong-file/hash, symlink, truncated-URL and blank-native-leaf controls remain.
 
-After frozen source review, run one new hosted diagnostic for this changed
-instrumentation and independently audit its original artifact. Then select a
-narrow optimization from authenticated samples or explicit counters. Empty
-versus nonempty reconciliation and native callback costs remain unmeasured.
-Any optimization needs affected guest parity followed by the existing separate
-paired adoption gate. The clock-authority model and paged IRQ source drafts
-remain separate unfinished work.
+## Completed corrected diagnostic
+
+[Run 37619955001](https://github.com/CrispStrobe/bw-board/actions/runs/37619955001)
+passed all nine semantic children at harness
+`9198a522965ae35db4aff36aad63655b8a59b6fb`. The six retained profiles have
+monotonic timestamps in this run; both direct profiles authenticate the complete
+provider file URL and SHA256. Root and a separate reviewer independently checked
+the original artifact, source/build/config/reference bindings, full guest
+projections, closure and profile counts. Host: EPYC 9V74, four logical CPUs,
+Node 22.23.3. This is a diagnostic result, not a paired adoption measurement.
+
+Official [artifact 11481841500](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11481841500):
+ZIP 2,136,786 bytes, 122 members, SHA256
+`e054c45a996e15ca4f1373adbdf89e047eb1ee588e5c90c294654a8d4121cbaa`.
+
+| Direct child | Total samples | JS reconciliation | JS clock callbacks | Native/builtin unresolved |
+| --- | ---: | ---: | ---: | ---: |
+| Round 1 | 1,469 | 597 | 87 | 618 |
+| Round 2 | 1,467 | 566 | 102 | 591 |
+
+Reconciliation is a focused optimization candidate. These categories are
+samples in authenticated call paths, not exact CPU cost shares. They do not
+separate empty from nonempty batches or identify a native implementation
+hotspot from its function label. The ordinary JavaScript path remains default.
+
+## Next bounded task
+
+Inspect `scripts/bochs-cpu3-native-cold-direct-ram/provider.mjs`. It copies
+`board.generations` with `new Map(...)` during every reconciliation, including
+empty journals. The actual owner counts record 282,652 successful commits and
+91,958 journal entries. Since each nonempty commit requires at least one entry,
+at least 190,694 commits were empty. This is a count bound, not Map-copy cost.
+
+Prototype an empty-batch path that avoids this copy while retaining
+`directDrain`, exact `directCommit`/ACK, session/epoch/phase validation and
+nonempty overlay validation before mutation. Keep failure/reentry and pending
+write adversaries. Qualify the changed provider against full cold guest state,
+board, RAM, PIO and closure; then use the separate paired adoption gate. No
+speedup is established until that gate passes. The clock-authority model and
+paged IRQ source drafts remain separate unfinished work.

@@ -44,5 +44,25 @@
     "profileWindowMicroseconds": 1254723,
     "weightedCostShares": "UNAVAILABLE"
   },
-  "nextTask": "Validate bounded signed cumulative timestamps without changing raw samples; report counts only for nonmonotonic timelines, then run one reviewed changed-instrumentation diagnostic."
+  "completedCorrectedDiagnostic": {
+    "harnessHead": "9198a522965ae35db4aff36aad63655b8a59b6fb",
+    "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37619955001",
+    "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11481841500",
+    "zipBytes": 2136786,
+    "zipSha256": "e054c45a996e15ca4f1373adbdf89e047eb1ee588e5c90c294654a8d4121cbaa",
+    "members": 122,
+    "semanticChildren": 9,
+    "profiles": 6,
+    "status": "SEMANTIC_PASS_AUTHENTICATED_PROVIDER_DIAGNOSTIC_ONLY",
+    "adoptionGate": "NOT_RUN",
+    "host": {"cpuModel": "AMD EPYC 9V74", "logicalCpus": 4, "node": "22.23.3"},
+    "directSampleCounts": [
+      {"round": 1, "total": 1469, "jsReconcile": 597, "jsClockCallback": 87, "nativeOrUnresolved": 618},
+      {"round": 2, "total": 1467, "jsReconcile": 566, "jsClockCallback": 102, "nativeOrUnresolved": 591}
+    ],
+    "allTimelinesMonotonic": true,
+    "directProviderRoleAuthenticated": true
+  },
+  "emptyCommitCountLowerBound": 190694,
+  "nextTask": "Prototype an empty-journal Map-copy fast path preserving exact owner/session/phase/ACK admission, qualify full guest parity, then run the separate paired adoption gate."
 }
