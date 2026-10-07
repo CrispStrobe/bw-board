@@ -27,7 +27,9 @@ arm order. `direct-v-companion` is descriptive. Only `direct-v-plain-js` applies
 the lane's 10% lower mean execution CPU and all-seven-faster adoption gate.
 Execution process CPU/wall, process startup CPU/elapsed time, and Node child
 process CPU/wall from the parent `wait4` are separate. The parent verifies that
-startup plus execution fits the observed child totals. Setup helper processes
+startup plus execution fits the observed child totals. Linux `wait4` includes
+the Node child's waited helper processes, while the execution process CPU
+interval starts after its setup checks. Parent preflight and build processes
 are outside the child CPU measurement. The fixed configured clock is not a physical 386 speed
 calibration.
 
