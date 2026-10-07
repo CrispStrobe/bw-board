@@ -206,6 +206,8 @@ def main() -> None:
             except Exception:
                 pass
         raise
+    if not summary["adoptionGatePass"]:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

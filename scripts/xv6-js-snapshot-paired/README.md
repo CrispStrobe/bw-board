@@ -3,7 +3,9 @@
 This source changes one internal allocation in `ExperimentalI80386.step()`: the
 fresh rollback snapshot still owns the same six segment-cache references, but
 stores them as fields on the existing state object instead of allocating a
-second six-element array. It does not pool or reuse snapshots. The normal
+second six-element array. The observer-facing `_snapshotInstruction()` keeps
+its original array shape and JSON key order; only `step()` uses the scalar
+form. It does not pool or reuse snapshots. The normal
 JavaScript CPU, memory translation, fault delivery and source media remain the
 same profile. A lower allocation count is a hypothesis until the hosted paired
 result is audited.

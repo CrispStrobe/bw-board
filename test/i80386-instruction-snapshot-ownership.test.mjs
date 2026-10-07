@@ -8,6 +8,24 @@ function fixture() {
   return { cpu, before };
 }
 
+test("public instruction snapshot keeps the established segment-cache array and restores it", () => {
+  const { cpu, before } = fixture();
+  const state = cpu._snapshotInstruction();
+  assert.equal(Array.isArray(state.segmentCaches), true);
+  assert.equal(state.segmentCaches.length, 6);
+  assert.equal(Object.hasOwn(state, "cache0"), false);
+  assert.deepEqual(state.segmentCaches, before);
+  assert.deepEqual(Object.keys(state), [
+    "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "eip", "eflags",
+    "cs", "ds", "es", "ss", "fs", "gs", "halted", "interruptShadow",
+    "nmiShadow", "debugShadow", "nmiActive", "retainedRealCs", "segmentCaches",
+    "repeatContext", "ldtr", "tr", "debugRegisters",
+  ]);
+  cpu.segmentCaches[0] = { ...before[0], base: 0x1234 };
+  cpu._restoreInstruction(state);
+  assert.strictEqual(cpu.segmentCaches[0], before[0]);
+});
+
 test("precommit instruction fault restores all six prior cache identities and registers", () => {
   const { cpu, before } = fixture();
   cpu.eax = 0x12345678;

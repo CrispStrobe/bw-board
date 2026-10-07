@@ -2016,6 +2016,46 @@ export class ExperimentalI80386 {
       debugShadow: this._debugShadow,
       nmiActive: this._nmiActive,
       retainedRealCs: this._retainedRealCs,
+      // Preserve the established observer/report shape and key order.
+      segmentCaches: [
+        this.segmentCaches[0],
+        this.segmentCaches[1],
+        this.segmentCaches[2],
+        this.segmentCaches[3],
+        this.segmentCaches[4],
+        this.segmentCaches[5],
+      ],
+      repeatContext: this._repeatContext,
+      ldtr: this.ldtr,
+      tr: this.tr,
+      debugRegisters: this._debugRegisters,
+    };
+  }
+
+  _snapshotInstructionForStep() {
+    return {
+      eax: this.eax,
+      ecx: this.ecx,
+      edx: this.edx,
+      ebx: this.ebx,
+      esp: this.esp,
+      ebp: this.ebp,
+      esi: this.esi,
+      edi: this.edi,
+      eip: this.eip,
+      eflags: this.eflags,
+      cs: this.cs,
+      ds: this.ds,
+      es: this.es,
+      ss: this.ss,
+      fs: this.fs,
+      gs: this.gs,
+      halted: this.halted,
+      interruptShadow: this._interruptShadow,
+      nmiShadow: this._nmiShadow,
+      debugShadow: this._debugShadow,
+      nmiActive: this._nmiActive,
+      retainedRealCs: this._retainedRealCs,
       // These entries are replaced on updates, never modified in place. Keep
       // their prior references so a fault can still roll back a partial load.
       cache0: this.segmentCaches[0],
@@ -2055,13 +2095,14 @@ export class ExperimentalI80386 {
     this._nmiActive = state.nmiActive;
     this._retainedRealCs = state.retainedRealCs;
     this._debugRegisters = state.debugRegisters;
+    const caches = state.segmentCaches;
     this.segmentCaches = {
-      0: state.cache0,
-      1: state.cache1,
-      2: state.cache2,
-      3: state.cache3,
-      4: state.cache4,
-      5: state.cache5,
+      0: caches ? caches[0] : state.cache0,
+      1: caches ? caches[1] : state.cache1,
+      2: caches ? caches[2] : state.cache2,
+      3: caches ? caches[3] : state.cache3,
+      4: caches ? caches[4] : state.cache4,
+      5: caches ? caches[5] : state.cache5,
     };
     this._repeatContext = state.repeatContext;
     this.ldtr = state.ldtr;
@@ -2746,7 +2787,7 @@ export class ExperimentalI80386 {
 
   step() {
     if (this.halted || this.shutdown) return 0;
-    const state = this._snapshotInstruction(),
+    const state = this._snapshotInstructionForStep(),
       restartEip = this.eip >>> 0;
     const trace = !!(this.eflags & TF),
       debugInhibited = this._debugShadow > 0;
