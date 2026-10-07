@@ -42,7 +42,8 @@ export function runCode32RepPfOracle(){
   const charged=m.step(),completed=m.cpu.cycles-before.cycles;if(completed)q+=completed;
   steps.push({attempt,q,completed,charged,before,after:cpuState(m.cpu),boardBefore,boardAfter:boardState(m),firstOrdinal,lastOrdinal:events.length});
  }
- const result={schema:'bw.i80386-code32-rep-pf-js.v1',source:{revision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),fixtureSha256:hash(readFileSync(path.join(root,source)))},romSha256:hash(rom),symbols,reset,events,steps,deliveries,final:{cpu:cpuState(m.cpu),board:boardState(m),pages:selectedPages(m),memorySha256:hash(m.mem)}};
+ const beforeSettle={cpu:cpuState(m.cpu),board:boardState(m)};m._catchUpChips();
+ const result={schema:'bw.i80386-code32-rep-pf-js.v1',source:{revision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),fixtureSha256:hash(readFileSync(path.join(root,source)))},romSha256:hash(rom),symbols,reset,events,steps,deliveries,beforeSettle,final:{cpu:cpuState(m.cpu),board:boardState(m),pages:selectedPages(m),memorySha256:hash(m.mem)}};
  validateCode32RepPfOracle(result);return result;
 }
 export function validateCode32RepPfOracle(r){
@@ -71,5 +72,6 @@ export function validateCode32RepPfOracle(r){
  eq(r.final.pages[0].slice(0x520,0x534),[0,0x50,0,0,2,0,0,0,0,0x50,0,0,0,0,0,0,1,0,0,0],'guest handler witnesses');
  eq(r.events.filter(e=>e.kind==='pio'&&e.port===0xe9).map(e=>String.fromCharCode(e.value)).join(''),'P32OK','actual terminal marker');
  assert(r.final.cpu.halted&&!r.final.cpu.shutdown,'terminal HLT without shutdown');
+ eq(r.beforeSettle.cpu,r.final.cpu,'settlement does not execute CPU');eq(r.final.board.debt,0,'terminal device debt settled');
  return {attempts:r.steps.length,completed:r.steps.reduce((n,x)=>n+x.completed,0),faults:r.deliveries.length,rep:rep.length,memorySha256:r.final.memorySha256};
 }
