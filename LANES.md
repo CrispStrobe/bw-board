@@ -1,5 +1,19 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-07 wrapped scope envelope clock — CLAIM, Codex bwcx.
+Branch lane/scope-envelope-clock-20261007, exact base
+a79bca5892efe11742f9d4f4d87d71969e600023. Three paths only: this ledger,
+src/board.js (_updateScopeChannels wrapped voltage-ring timestamp only), new
+test/scope-envelope-clock.test.mjs. Envelope timestamps name bucket starts;
+point-sample timestamps name sample instants. Preserve both contracts across
+first fill, exact fill and repeated wrap, including late channel attachment.
+Use actual native captures, distinct sample/envelope clock assertions and a
+restore-old-expression mutant. No scheduling/device-step cap, solver/model,
+CPU, current-channel sampling, waveform values, API, CUI/Lite/package/pin,
+workflow or deployment change. Remote claim before implementation; exact-head
+CI/Harris qualification precedes guarded landing. The separate stale-capture
+device-step-overflow defect is NOT repaired or claimed qualified by this slice.
+
 2026-10-05 Motor direction through an H-bridge; the L293D's clamp diodes — DONE candidate, Claude (Lite task B7).
 Worktree `/mnt/volume1/code/wt/b7-actuators-board`, branch `lane/b7-actuators`,
 base `378abf89`. Owns this row, `setDeviceControl`'s motor `direction` verb and
