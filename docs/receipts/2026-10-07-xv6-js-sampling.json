@@ -1,0 +1,344 @@
+{
+  "run": 37639569357,
+  "harnessHead": "59229dc3bb0f266da2fb1358867cdb1d2ea82f70",
+  "qualifiedHead": "22ca742ed60e1350ed96110986a09b2ce84620ac",
+  "members": 41,
+  "children": 6,
+  "profiles": [
+    {
+      "phase": "sample-1",
+      "arm": "ordinary",
+      "samples": 10015,
+      "negativeDeltas": 1,
+      "buckets": {
+        "native_wasm_or_unresolved": 17,
+        "authenticated_cpu_js": 8050,
+        "authenticated_board_device_js": 975,
+        "authenticated_other_js": 155,
+        "profiled_probe_js": 638,
+        "v8_gc": 179,
+        "node_runtime": 1
+      },
+      "topCpuLeafSamples": [
+        {
+          "function": "_stepInstruction",
+          "line": 2795,
+          "samples": 2446
+        },
+        {
+          "function": "step",
+          "line": 2749,
+          "samples": 1072
+        },
+        {
+          "function": "_translate",
+          "line": 399,
+          "samples": 753
+        },
+        {
+          "function": "_decodeEA",
+          "line": 825,
+          "samples": 744
+        },
+        {
+          "function": "_fetch8",
+          "line": 522,
+          "samples": 428
+        },
+        {
+          "function": "_linear",
+          "line": 345,
+          "samples": 414
+        },
+        {
+          "function": "_operandRead",
+          "line": 883,
+          "samples": 233
+        },
+        {
+          "function": "_fetchN",
+          "line": 531,
+          "samples": 222
+        },
+        {
+          "function": "_string",
+          "line": 1876,
+          "samples": 207
+        },
+        {
+          "function": "_writeLinear",
+          "line": 493,
+          "samples": 131
+        },
+        {
+          "function": "maskFor",
+          "line": 38,
+          "samples": 129
+        },
+        {
+          "function": "notePhysicalWrite",
+          "line": 376,
+          "samples": 108
+        }
+      ]
+    },
+    {
+      "phase": "sample-1",
+      "arm": "dispatch",
+      "samples": 6840,
+      "negativeDeltas": 1,
+      "buckets": {
+        "native_wasm_or_unresolved": 247,
+        "authenticated_cpu_js": 3567,
+        "profiled_probe_js": 371,
+        "authenticated_board_device_js": 399,
+        "authenticated_other_js": 1194,
+        "v8_gc": 113,
+        "authenticated_dispatch_js": 947,
+        "node_runtime": 2
+      },
+      "topCpuLeafSamples": [
+        {
+          "function": "_stepInstruction",
+          "line": 2795,
+          "samples": 1048
+        },
+        {
+          "function": "step",
+          "line": 2749,
+          "samples": 504
+        },
+        {
+          "function": "_translate",
+          "line": 399,
+          "samples": 306
+        },
+        {
+          "function": "_decodeEA",
+          "line": 825,
+          "samples": 243
+        },
+        {
+          "function": "_fetch8",
+          "line": 522,
+          "samples": 144
+        },
+        {
+          "function": "_linear",
+          "line": 345,
+          "samples": 144
+        },
+        {
+          "function": "_push",
+          "line": 984,
+          "samples": 99
+        },
+        {
+          "function": "_writeLinear",
+          "line": 493,
+          "samples": 84
+        },
+        {
+          "function": "_step0f",
+          "line": 3319,
+          "samples": 83
+        },
+        {
+          "function": "_fetchN",
+          "line": 531,
+          "samples": 77
+        },
+        {
+          "function": "_string",
+          "line": 1876,
+          "samples": 75
+        },
+        {
+          "function": "_operandRead",
+          "line": 883,
+          "samples": 70
+        }
+      ]
+    },
+    {
+      "phase": "sample-2",
+      "arm": "dispatch",
+      "samples": 6892,
+      "negativeDeltas": 0,
+      "buckets": {
+        "native_wasm_or_unresolved": 253,
+        "authenticated_cpu_js": 3644,
+        "authenticated_other_js": 1189,
+        "profiled_probe_js": 362,
+        "authenticated_dispatch_js": 893,
+        "authenticated_board_device_js": 433,
+        "v8_gc": 117,
+        "node_runtime": 1
+      },
+      "topCpuLeafSamples": [
+        {
+          "function": "_stepInstruction",
+          "line": 2795,
+          "samples": 987
+        },
+        {
+          "function": "step",
+          "line": 2749,
+          "samples": 528
+        },
+        {
+          "function": "_translate",
+          "line": 399,
+          "samples": 350
+        },
+        {
+          "function": "_decodeEA",
+          "line": 825,
+          "samples": 210
+        },
+        {
+          "function": "_linear",
+          "line": 345,
+          "samples": 175
+        },
+        {
+          "function": "_fetch8",
+          "line": 522,
+          "samples": 143
+        },
+        {
+          "function": "_writeLinear",
+          "line": 493,
+          "samples": 115
+        },
+        {
+          "function": "_fetchN",
+          "line": 531,
+          "samples": 98
+        },
+        {
+          "function": "_readLinear",
+          "line": 474,
+          "samples": 87
+        },
+        {
+          "function": "_step0f",
+          "line": 3319,
+          "samples": 85
+        },
+        {
+          "function": "maskFor",
+          "line": 38,
+          "samples": 79
+        },
+        {
+          "function": "_push",
+          "line": 984,
+          "samples": 78
+        }
+      ]
+    },
+    {
+      "phase": "sample-2",
+      "arm": "ordinary",
+      "samples": 9926,
+      "negativeDeltas": 0,
+      "buckets": {
+        "native_wasm_or_unresolved": 10,
+        "authenticated_cpu_js": 8050,
+        "authenticated_board_device_js": 883,
+        "profiled_probe_js": 640,
+        "authenticated_other_js": 161,
+        "v8_gc": 181,
+        "node_runtime": 1
+      },
+      "topCpuLeafSamples": [
+        {
+          "function": "_stepInstruction",
+          "line": 2795,
+          "samples": 2438
+        },
+        {
+          "function": "step",
+          "line": 2749,
+          "samples": 1110
+        },
+        {
+          "function": "_decodeEA",
+          "line": 825,
+          "samples": 749
+        },
+        {
+          "function": "_translate",
+          "line": 399,
+          "samples": 736
+        },
+        {
+          "function": "_fetch8",
+          "line": 522,
+          "samples": 445
+        },
+        {
+          "function": "_linear",
+          "line": 345,
+          "samples": 436
+        },
+        {
+          "function": "_operandRead",
+          "line": 883,
+          "samples": 240
+        },
+        {
+          "function": "_string",
+          "line": 1876,
+          "samples": 218
+        },
+        {
+          "function": "_fetchN",
+          "line": 531,
+          "samples": 215
+        },
+        {
+          "function": "_writeLinear",
+          "line": 493,
+          "samples": 125
+        },
+        {
+          "function": "maskFor",
+          "line": 38,
+          "samples": 120
+        },
+        {
+          "function": "notePhysicalWrite",
+          "line": 376,
+          "samples": 110
+        }
+      ]
+    }
+  ],
+  "host": {
+    "architecture": "x86_64",
+    "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "loadAverage": [
+      0.90625,
+      0.28271484375,
+      0.10107421875
+    ],
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "platform": "Linux",
+    "python": "3.12.3"
+  },
+  "limits": [
+    "Sampling perturbs execution; counts are observations, not precise CPU cost shares.",
+    "No game, physical timing, default adoption, or independent memory replay."
+  ],
+  "schema": "bw.xv6-js-sampling.public-summary.v1",
+  "status": "SEMANTIC_PASS_DIAGNOSTIC_ONLY",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37639569357",
+  "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11492205431",
+  "zipBytes": 179766,
+  "zipSha256": "903225540f093c353a5436c064bc541c3d8585f7fd106c024c6bf9c17e6b8da1",
+  "independentRawAudits": 2
+}
