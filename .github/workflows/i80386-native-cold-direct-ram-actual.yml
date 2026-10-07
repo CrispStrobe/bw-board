@@ -1,0 +1,214 @@
+name: Cold CPU3 ABI5 direct RAM actual parity
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cold-direct-ram-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  direct-ram-actual:
+    if: >-
+      github.event.label.name == 'x86-direct-ram-actual' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      GH_TOKEN: ${{ github.token }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authenticate exact checkout and install build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          mkdir "$RUNNER_TEMP/cold-direct-evidence"
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          git rev-parse HEAD > "$RUNNER_TEMP/cold-direct-evidence/source-head.txt"
+          cp .github/workflows/i80386-native-cold-direct-ram-actual.yml "$RUNNER_TEMP/cold-direct-evidence/workflow.yml"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev libnode-dev
+          test -r /usr/include/node/node_api.h
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            git rev-parse HEAD
+            node --version
+            g++ --version
+            uname -a
+            lscpu
+            df -h "$RUNNER_TEMP"
+            dpkg-query -W build-essential g++ libltdl-dev libnode-dev
+            sha256sum "$(command -v node)" /usr/include/node/node_api.h .github/workflows/i80386-native-cold-direct-ram-actual.yml
+          } > "$RUNNER_TEMP/cold-direct-evidence/toolchain.txt"
+      - name: Bounded source, N-API and actual-provider controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-evidence"
+          timeout 60s c++ -std=c++17 -O0 -pthread -Wall -Wextra -Werror \
+            scripts/bochs-cpu3-native-cold-direct-ram/mock.cc -o "$evidence/direct-mock"
+          timeout 30s "$evidence/direct-mock" | tee "$evidence/model-control.txt"
+          timeout 30s node scripts/bochs-cpu3-native-cold-direct-ram/napi-control-materialize.mjs \
+            "$RUNNER_TEMP/cold-direct-napi-control"
+          timeout 60s c++ -std=c++17 -O0 -fPIC -shared -Wall -Wextra -Werror \
+            -I/usr/include/node -I"$RUNNER_TEMP/cold-direct-napi-control" \
+            "$RUNNER_TEMP/cold-direct-napi-control/bochs-cpu3-native-direct-board-adapter/napi.cc" \
+            "$RUNNER_TEMP/cold-direct-napi-control/bochs-cpu3-native-cold-direct-ram/napi-control-stub.cc" \
+            -o "$RUNNER_TEMP/cold-direct-napi-control/direct-control.node"
+          for scenario in normal rom-detach recursive-create recursive-commit duplicate-commit malformed-clock-reply page-during-clock \
+            valid-overlap late-tamper ticket-mismatch session-mismatch; do
+            timeout 15s node scripts/bochs-cpu3-native-cold-direct-ram/napi-control.mjs \
+              "$RUNNER_TEMP/cold-direct-napi-control/direct-control.node" "$scenario"
+          done | tee "$evidence/napi-controls.txt"
+          timeout 30s node scripts/bochs-cpu3-native-cold-direct-ram/provider-control.mjs \
+            | tee "$evidence/provider-controls.txt"
+          for scenario in normal source-clock-deny page-clock invalid-actual-page; do
+            timeout 15s node scripts/bochs-cpu3-native-cold-direct-ram/napi-provider-control.mjs \
+              "$RUNNER_TEMP/cold-direct-napi-control/direct-control.node" "$scenario"
+          done | tee "$evidence/napi-provider-controls.txt"
+      - name: Fetch exact upstream Bochs source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          git init "$RUNNER_TEMP/cold-direct-pristine"
+          git -C "$RUNNER_TEMP/cold-direct-pristine" remote add origin https://github.com/bochs-emu/Bochs.git
+          timeout 180s git -C "$RUNNER_TEMP/cold-direct-pristine" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          git -C "$RUNNER_TEMP/cold-direct-pristine" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/cold-direct-pristine" rev-parse HEAD)" = 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          cp roms/free-at-bios/LICENSE "$RUNNER_TEMP/cold-direct-evidence/free-at-bios-LICENSE.txt"
+          cp roms/free-at-bios/README.md "$RUNNER_TEMP/cold-direct-evidence/free-at-bios-README.txt"
+          for notice in COPYING COPYING.LIB LICENSE; do
+            for folder in "$RUNNER_TEMP/cold-direct-pristine" "$RUNNER_TEMP/cold-direct-pristine/bochs"; do
+              if test -f "$folder/$notice"; then
+                cp "$folder/$notice" "$RUNNER_TEMP/cold-direct-evidence/upstream-$(basename "$folder")-$notice.txt"
+              fi
+            done
+          done
+      - name: Prepare and build exact ABI5 same-DSO addon
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          export BOCHS_386_ROOT="$RUNNER_TEMP/cold-direct-pristine"
+          evidence="$RUNNER_TEMP/cold-direct-evidence"
+          printf '%s\n' 'prepare: ABI5 direct source; configure: fixed CPU3 flags; build: nice make -j1 bw_direct.node; static admission before addon load' >> "$evidence/invocations.txt"
+          timeout 180s node scripts/prepare-bochs-cpu3-native-cold-direct-ram.mjs --prepare \
+            "$RUNNER_TEMP/cold-direct-prepared" > "$evidence/prepare.json" 2> "$evidence/prepare.stderr"
+          timeout 60s node scripts/bochs-cpu3-native-cold-direct-ram/verify-build-control.mjs \
+            "$evidence/prepare.json" > "$evidence/metadata-controls.txt"
+          cd "$RUNNER_TEMP/cold-direct-prepared/bochs"
+          timeout 180s ./configure --enable-cpu-level=3 --with-nogui --disable-plugins --disable-debugger \
+            --disable-repeat-speedups --disable-handlers-chaining --enable-instrumentation=instrument/stubs \
+            'CFLAGS=-O2 -fPIC' 'CXXFLAGS=-O2 -fPIC' \
+            > "$evidence/configure.stdout" 2> "$evidence/configure.stderr"
+          timeout 900s nice make -j1 -f Makefile -f bw_direct_addon.mk bw_direct.node \
+            > "$evidence/make.stdout" 2> "$evidence/make.stderr"
+          cd "$GITHUB_WORKSPACE"
+          timeout 60s node scripts/bochs-cpu3-native-cold-direct-ram/verify-build.mjs \
+            "$evidence/prepare.json" "$RUNNER_TEMP/cold-direct-prepared/bochs/bw_direct.node" \
+            "$evidence/build-auth.json" > "$evidence/build-auth.stdout"
+          cp "$RUNNER_TEMP/cold-direct-prepared/bochs/bw_direct.node" "$evidence/direct.node"
+          sha256sum "$evidence/direct.node" > "$evidence/direct-addon-sha256.txt"
+      - name: Acquire pinned comparison addon and compile companion owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-evidence"
+          timeout 180s gh run download 37260140804 --repo CrispStrobe/bw-board \
+            --name cold-compact-progress-build-only-37260140804-1 \
+            --dir "$RUNNER_TEMP/cold-direct-baseline"
+          baseline="$RUNNER_TEMP/cold-direct-baseline/cold-compact-progress-build-evidence/bw_direct.node"
+          printf '%s  %s\n' 0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d "$baseline" | sha256sum -c -
+          timeout 60s c++ -std=c++17 -O1 -fPIC -shared -Wall -Wextra -Werror -I/usr/include/node \
+            scripts/bochs-cpu3-native-cold-owned-ram/napi.cc -o "$evidence/owned_ram.node"
+          sha256sum "$baseline" "$evidence/owned_ram.node" > "$evidence/comparison-addon-sha256.txt"
+      - name: Run same-workload direct, companion and callback guests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -t 120
+          evidence="$RUNNER_TEMP/cold-direct-evidence"
+          baseline="$RUNNER_TEMP/cold-direct-baseline/cold-compact-progress-build-evidence/bw_direct.node"
+          printf '%s\n' 'direct: ABI5 exact build auth, target 316562 Q' 'owned: pinned compact CPU3 plus companion owner, target 316562 Q' 'callback: pinned compact CPU3 and JS memory, target 316562 Q' >> "$evidence/invocations.txt"
+          python3 - "$PWD" "$evidence" <<'PY'
+          import pathlib,sys
+          root=pathlib.Path(sys.argv[1]); out=pathlib.Path(sys.argv[2])
+          for mode in ('direct','owned','callback'):
+              config='\n'.join((
+                  'display_library: nogui','memory: guest=16, host=16',
+                  f'romimage: file={root}/roms/free-at-bios/BIOS-bochs-legacy',
+                  f'vgaromimage: file={root}/roms/free-at-bios/vgabios-lgpl.bin',
+                  'cpu: count=1, ips=10000000','clock: sync=none, time0=946684800',
+                  'boot: disk','port_e9_hack: enabled=1',f'log: {out}/{mode}.bochs.log',
+                  'panic: action=fatal','error: action=report','info: action=report',
+                  'debug: action=ignore','mouse: enabled=0',''))
+              (out/f'{mode}.conf').write_text(config)
+          PY
+          timeout 300s node scripts/bochs-cpu3-native-cold-direct-ram/actual-fixture.mjs \
+            "$evidence/direct.node" "$evidence/build-auth.json" "$evidence/direct.conf" 316562 "$evidence/direct.json" \
+            > "$evidence/direct.stdout" 2> "$evidence/direct.stderr"
+          timeout 300s node scripts/bochs-cpu3-native-cold-owned-ram/actual-fixture.mjs \
+            owned "$baseline" "$evidence/owned_ram.node" "$evidence/owned.conf" 316562 "$evidence/owned.json" \
+            > "$evidence/owned.stdout" 2> "$evidence/owned.stderr"
+          timeout 300s node scripts/bochs-cpu3-native-cold-owned-ram/actual-fixture.mjs \
+            callback "$baseline" - "$evidence/callback.conf" 316562 "$evidence/callback.json" \
+            > "$evidence/callback.stdout" 2> "$evidence/callback.stderr"
+          node scripts/bochs-cpu3-native-cold-direct-ram/compare-fixtures.mjs \
+            "$evidence/direct.json" "$evidence/owned.json" "$evidence/callback.json" \
+            | tee "$evidence/comparison.json"
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain)"
+      - name: Inventory bounded evidence files
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/cold-direct-evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);root.mkdir(exist_ok=True)
+          files={p.name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+                 for p in sorted(root.iterdir()) if p.is_file() and p.name!='artifact-inventory.json'}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain actual and failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-direct-ram-actual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-direct-evidence/*.json
+            ${{ runner.temp }}/cold-direct-evidence/*.txt
+            ${{ runner.temp }}/cold-direct-evidence/*.stdout
+            ${{ runner.temp }}/cold-direct-evidence/*.stderr
+            ${{ runner.temp }}/cold-direct-evidence/*.bochs.log
+            ${{ runner.temp }}/cold-direct-evidence/*.conf
+            ${{ runner.temp }}/cold-direct-evidence/*.yml
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
