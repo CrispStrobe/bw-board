@@ -27,3 +27,11 @@ define the intended calls.
 
 No behavior control or compilation has run for this checkpoint. The next gate
 and unresolved dependencies are in [PLAN.md](PLAN.md).
+
+The separate, label-gated [candidate acquisition workflow](../../.github/workflows/i80386-cwsdpmi-owned-acquisition.yml)
+is also **non-executing**. It accepts the FreeDOS 1.4 CWSDPMI catalog's
+published 163,241-byte/SHA-1 package and one GitHub release asset identity,
+then inventories SHA-256 for both archives and their members. It uploads
+reports and bounded text notices, never the archives or executables. A
+successful inventory does not establish component source correspondence,
+redistribution clearance, a compilable toolchain, or any guest result.

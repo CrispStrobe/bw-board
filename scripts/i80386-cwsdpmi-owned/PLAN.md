@@ -3,12 +3,18 @@
 This plan is prospective. There is no acquired CWSDPMI package, pinned DJGPP
 toolchain, compiled client, or guest evidence for this directory yet.
 
-1. Pin the exact official CWSDPMI and DJGPP packages, hashes, component source,
-   compiler/linker flags, executable format, and redistributable notices before
-   acquisition or compilation. The [FreeDOS CWSDPMI 7a catalog](https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/html/en/tools/cwsdpmi/20250318.2/index.html)
-   identifies GPLv2 copying policy, but the precise package members, source
-   correspondence, and resulting distribution obligations remain unreviewed.
-   Do not bundle binaries or guest images in public results without that review.
+1. First run the separate acquisition-only workflow after exact source review.
+   It checks the [FreeDOS 1.4 CWSDPMI 7a catalog](https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/html/en/tools/cwsdpmi/20250318.2/index.html)
+   published 163,241-byte/SHA-1 package (GPLv2 catalog policy), and the
+   [build-djgpp v3.4 Linux release](https://github.com/andrewwutw/build-djgpp/releases/tag/v3.4)
+   asset identity/80,596,981-byte size. Its builder script is GPL-3.0; the
+   prebuilt archive's individual component licenses and source correspondence
+   remain unreviewed. The asset API does not publish a SHA-256 pin. The first
+   hosted run computes candidate archive/member SHA-256 values but executes
+   nothing. Independently audit that report, then commit verified SHA-256 pins,
+   exact component source and notices, compiler/linker flags, and executable
+   format before compiling. Do not bundle binaries or guest images in public
+   results without the applicable notice/source review.
 2. Compile `client.c` with the pinned DJGPP headers and library. Preserve exact
    compiler output and inspect the generated executable and startup dependency.
    A DJGPP executable's startup may discover a DPMI host through real-mode
