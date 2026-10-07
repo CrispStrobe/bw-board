@@ -95,6 +95,15 @@ jobs:
           timeout 180s git -C "$RUNNER_TEMP/cold-direct-pristine" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
           git -C "$RUNNER_TEMP/cold-direct-pristine" checkout --detach FETCH_HEAD
           test "$(git -C "$RUNNER_TEMP/cold-direct-pristine" rev-parse HEAD)" = 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          cp roms/free-at-bios/LICENSE "$RUNNER_TEMP/cold-direct-evidence/free-at-bios-LICENSE.txt"
+          cp roms/free-at-bios/README.md "$RUNNER_TEMP/cold-direct-evidence/free-at-bios-README.txt"
+          for notice in COPYING COPYING.LIB LICENSE; do
+            for folder in "$RUNNER_TEMP/cold-direct-pristine" "$RUNNER_TEMP/cold-direct-pristine/bochs"; do
+              if test -f "$folder/$notice"; then
+                cp "$folder/$notice" "$RUNNER_TEMP/cold-direct-evidence/upstream-$(basename "$folder")-$notice.txt"
+              fi
+            done
+          done
       - name: Prepare and build exact ABI5 same-DSO addon
         shell: bash
         run: |
@@ -195,7 +204,6 @@ jobs:
             ${{ runner.temp }}/cold-direct-evidence/*.stderr
             ${{ runner.temp }}/cold-direct-evidence/*.bochs.log
             ${{ runner.temp }}/cold-direct-evidence/*.conf
-            ${{ runner.temp }}/cold-direct-evidence/*.node
             ${{ runner.temp }}/cold-direct-evidence/*.yml
           include-hidden-files: true
           if-no-files-found: error
