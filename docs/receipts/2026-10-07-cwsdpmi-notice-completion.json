@@ -1,0 +1,30 @@
+{
+  "schema": "bw.cwsdpmi-owned.notice-completion-result.v1",
+  "status": "EXACT_NOTICES_ONLY_NO_COMPILE_OR_LICENSE_CLOSURE",
+  "testedSource": "41cb46c82f9de07812d1e8dd372954b7cc665aea",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37684000070",
+  "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11510147628",
+  "artifactZipSha256": "0239674ac19f06222051674c364bd5a27988538f0a02af6bfa19800299e037bd",
+  "artifactZipMembers": 34,
+  "inventoryEntries": 33,
+  "sourceRoles": 18,
+  "djgppCopyingLib": {
+    "archiveMatches": ["djcrx205.zip", "djdev205.zip", "djlsr205.zip"],
+    "bytes": 26530,
+    "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551",
+    "rawCopiesIdentical": true,
+    "formFeedCount": 9
+  },
+  "gcc": {
+    "releaseTagObject": "58051b1d9986afc5262c335a42e50b4730bc82b0",
+    "peeledCommit": "2ee5e4300186a92ad73f1a1a64cb918dc76c8d67",
+    "tagResponseSha256": "a571a55867c8038dc1536b3f2a9855cdd1674855613e4e24349a6fb43e6c68c3",
+    "copyingRuntime": {"bytes": 3324, "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"},
+    "copying3": {"bytes": 35147, "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"}
+  },
+  "limits": [
+    "Exact notices do not establish libgcc.a source-to-binary correspondence or runtime-exception applicability.",
+    "Component-specific redistribution obligations require separate review.",
+    "No cross-toolchain download, compiler, linked executable, guest, or performance execution occurred in this run."
+  ]
+}
