@@ -1,4 +1,10 @@
-# Owned LE application gate (pending guest execution)
+# Owned LE application gate
+
+The [first hosted result](../../docs/I80386-DOS32A-OWNED-LE-RESULTS.md) passed
+this finite application gate at source `f8748bcf8dc5c20b37fe62340b7ea42a048cb144`
+in [run 37648932918](https://github.com/CrispStrobe/bw-board/actions/runs/37648932918).
+The original artifact had two independent raw-byte audits; the code below
+remains the reproducible gate rather than a broader compatibility claim.
 
 This opt-in gate runs the [owned LE fixture](README.md) through a real
 FreeDOS 1.4 boot on the experimental AT machine and, separately, QEMU TCG.
@@ -15,8 +21,10 @@ bytes and initial media hashes. A loader banner or printed text alone does not
 pass this gate.
 
 The target uses the current AT compatibility profile, a 386-class flat
-protected-mode fixture with no PSE/APIC dependence. It is not strict 386
-hardware qualification. QEMU uses its own `pc`/486/4 MiB/SeaBIOS/VGA profile, so
+protected-mode fixture with no PSE/APIC dependence. It declares 4 MiB of
+installed guest RAM within a 16 MiB backing/address span retained for high
+ROM aliases. It is not strict 386 hardware qualification. QEMU uses its own
+`pc`/486/4 MiB/SeaBIOS/VGA profile, so
 the comparison establishes this finite application outcome, not cycle, device
 or full architectural-state parity. Whole backing-RAM and disk hashes,
 selected reset/final CPU and device records, exact scan-code offers/acceptance
@@ -34,8 +42,8 @@ source review. It authenticates the exact PR source before and after both
 guests, checks the generated LE and FAT16 image with bounded controls, and
 preserves the original failed result. It uploads reports, hashes, toolchain
 details and license notices, excluding executable binaries and disk images.
-No guest pass is claimed until an official hosted run and independent raw
-evidence audit complete.
+The successful run and independent audits are linked above; further guests
+still require their own affected acceptance.
 
 External inputs are pinned to publicly distributed, freely licensed sources:
 
