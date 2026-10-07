@@ -13,6 +13,7 @@ WORKFLOW = ".github/workflows/i80386-cwsdpmi-qemu-owned-actual.yml"
 INHERITED_PREFIX = "scripts/i80386-cwsdpmi-compile-only/"
 INHERITED = {
     "scripts/i80386-cwsdpmi-owned/client.c",
+    "scripts/i80386-cwsdpmi-owned/acquire.py",
     "scripts/i80386-dos32a-owned/acquire.py",
     "scripts/i80386-dos32a-owned/media.mjs",
     "scripts/i80386-dos32a-owned/oracle.py",

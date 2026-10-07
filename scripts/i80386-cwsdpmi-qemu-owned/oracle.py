@@ -60,6 +60,60 @@ def guest_files(disk):
     return {role: root_file(disk, name) for role, name in NAMES.items()}
 
 
+def initial_file(image, name):
+    """Read an admitted initial FAT file up to 2 MiB; result files keep the 64 KiB cap."""
+    if len(image) != GEOMETRY_BYTES or len(name) != 11 or image[510:512] != b"\x55\xaa":
+        raise ValueError("initial disk geometry/name")
+    part = prior.u32(image, 454)
+    vbr = part * 512
+    if part != 17 or image[vbr + 510:vbr + 512] != b"\x55\xaa":
+        raise ValueError("initial partition")
+    if prior.u16(image, vbr + 11) != 512 or image[vbr + 16] != 2 or prior.u16(image, vbr + 17) != 512:
+        raise ValueError("initial FAT BPB")
+    spc, fat_sectors = image[vbr + 13], prior.u16(image, vbr + 22)
+    if spc not in (2, 4, 8) or not 1 <= fat_sectors <= 512:
+        raise ValueError("initial FAT geometry")
+    fat = (part + 1) * 512
+    root = (part + 1 + 2 * fat_sectors) * 512
+    data = root + 32 * 512
+    found = None
+    for index in range(512):
+        at = root + index * 32
+        if image[at] == 0:
+            break
+        if image[at] == 0xe5 or image[at + 11] & 0x18:
+            continue
+        if image[at:at + 11] == name:
+            if found is not None:
+                raise ValueError("duplicate initial root name")
+            found = (prior.u16(image, at + 26), prior.u32(image, at + 28))
+    if found is None:
+        return None
+    cluster, remaining = found
+    if remaining > 2 << 20:
+        raise ValueError("initial file cap")
+    if remaining == 0:
+        return b""
+    chunks, visited = [], set()
+    while remaining:
+        if cluster < 2 or cluster >= 65528 or cluster in visited:
+            raise ValueError("initial FAT chain")
+        visited.add(cluster)
+        at = data + (cluster - 2) * spc * 512
+        count = min(remaining, spc * 512)
+        if at + count > len(image):
+            raise ValueError("initial FAT extent")
+        chunks.append(image[at:at + count])
+        remaining -= count
+        next_cluster = prior.u16(image, fat + cluster * 2)
+        if remaining and next_cluster >= 0xfff8:
+            raise ValueError("short initial FAT chain")
+        if not remaining and next_cluster < 0xfff8:
+            raise ValueError("long initial FAT chain")
+        cluster = next_cluster
+    return b"".join(chunks)
+
+
 def file_report(files):
     return {role: None if data is None else {"bytes": len(data), "sha256": sha(data),
             "text": data.decode("latin1")} for role, data in files.items()}
@@ -87,10 +141,14 @@ def rss(pid):
     return 0
 
 
+def child_limit_bytes():
+    return GEOMETRY_BYTES + (1 << 20)
+
+
 def child_limits():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     resource.setrlimit(resource.RLIMIT_AS, (64 << 30, 64 << 30))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (1 << 20, 1 << 20))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (child_limit_bytes(), child_limit_bytes()))
 
 
 def run(inputs, output):
@@ -102,7 +160,7 @@ def run(inputs, output):
     media = json.loads(ordinary(Path(inputs["media"]), 1 << 20))
     initial = ordinary(disk_path, GEOMETRY_BYTES, GEOMETRY_BYTES, media["sha256"])
     ordinary(Path(inputs["floppy"]), 1_228_800, 1_228_800, FLOPPY_SHA)
-    initial_files = {name: root_file(initial, name.encode("ascii"))
+    initial_files = {name: initial_file(initial, name.encode("ascii"))
                      for name in media["files"]}
     if set(initial_files) != {"CWSDPMI EXE", "CLIENT  EXE", "RUNDP   BAT", "VERIFY  BAT"}:
         raise ValueError("initial guest file roles")

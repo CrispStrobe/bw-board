@@ -40,7 +40,7 @@ jobs:
           mkdir "$e"
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
           timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-qemu-owned/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
-          for test in package-control.py oracle-control.py; do
+          for test in package-control.py oracle-control.py source-control.py; do
             timeout --signal=TERM --kill-after=5s 20s python3 -B "scripts/i80386-cwsdpmi-qemu-owned/$test" > "$e/$test.stdout" 2> "$e/$test.stderr"
           done
           timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-qemu-owned/media-control.mjs > "$e/media-control.stdout" 2> "$e/media-control.stderr"
@@ -57,9 +57,9 @@ jobs:
           e="$RUNNER_TEMP/cwsdpmi-qemu-evidence"
           phase=apt-update
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/apt-step-status.txt"' EXIT
-          timeout --signal=TERM --kill-after=10s 180s sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 update -qq > "$e/apt-update.stdout" 2> "$e/apt-update.stderr"
+          timeout --signal=TERM --kill-after=10s 180s sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o DPkg::Lock::Timeout=30 update -qq > "$e/apt-update.stdout" 2> "$e/apt-update.stderr"
           phase=apt-install
-          timeout --signal=TERM --kill-after=10s 180s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 install -y --no-install-recommends qemu-system-x86 seabios > "$e/apt-install.stdout" 2> "$e/apt-install.stderr"
+          timeout --signal=TERM --kill-after=10s 180s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o DPkg::Lock::Timeout=30 install -y --no-install-recommends qemu-system-x86 seabios > "$e/apt-install.stdout" 2> "$e/apt-install.stderr"
           phase=complete
       - name: Fetch exact archives, compile internally, build private media and run one QEMU guest
         shell: bash

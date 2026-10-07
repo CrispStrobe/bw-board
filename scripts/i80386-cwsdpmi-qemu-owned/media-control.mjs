@@ -20,6 +20,7 @@ assert.equal(built.manifest.files['CWSDPMI EXE'].sha256, sha256(host));
 assert.deepEqual(readRootFile(built.image, 'CWSDPMI EXE'), host);
 assert.deepEqual(readRootFile(built.image, 'CLIENT  EXE'), client);
 const batch = readRootFile(built.image, 'RUNDP   BAT').toString('ascii');
+assert.ok(batch.startsWith('@ECHO OFF\r\nC:\r\nCD \\\r\n'));
 assert.match(batch, /C:\\CLIENT\.EXE > C:\\DPOUT\.TXT/);
 assert.match(batch, /IF ERRORLEVEL 1 GOTO FAILED/);
 assert.ok(batch.includes(EXIT_OK));

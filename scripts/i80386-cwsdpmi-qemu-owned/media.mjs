@@ -15,6 +15,8 @@ export const SECOND = 'c:\\verify.bat';
 const sourceSha = 'c8c654326633b244c64baac144fe9300ce5a1800c330e52615470c62d8c3bb1d';
 
 const runBatch = Buffer.from('@ECHO OFF\r\n' +
+  'C:\r\n' +
+  'CD \\\r\n' +
   'C:\\CLIENT.EXE > C:\\DPOUT.TXT\r\n' +
   'IF ERRORLEVEL 1 GOTO FAILED\r\n' +
   `ECHO ${EXIT_OK}>C:\\DPOK.TXT\r\n` +
