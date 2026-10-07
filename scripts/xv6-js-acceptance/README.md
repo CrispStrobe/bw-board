@@ -1,8 +1,10 @@
 # Stock xv6 JavaScript accelerator acceptance gate
 
-Status: **source and bounded host controls only**. No guest or timing result is
-established by this directory until a reviewed hosted run publishes its raw
-receipts. The production 386 path remains ordinary JavaScript.
+Status: **finite actual semantic and performance gate passed** at source
+`22ca742ed60e1350ed96110986a09b2ce84620ac` in run 37627659600. Root and
+a separate reviewer independently audited the original packet. See the
+[paired result](../../docs/I80386-XV6-JS-PAIRED-RESULTS.md) for measurements
+and limits. The production default remains ordinary JavaScript.
 
 This gate compares the current repository's ordinary lean JavaScript path with
 its existing opt-in protected-32 native block dispatcher. Both execute the
@@ -44,8 +46,8 @@ physical 386DX timing or a calibrated RTx result.
 Run the small source controls without media or a guest:
 
 ```sh
-python3 scripts/xv6-js-acceptance/policy_control.py
-python3 scripts/xv6-js-acceptance/run_control.py
+python3 -B scripts/xv6-js-acceptance/policy_control.py
+python3 -B scripts/xv6-js-acceptance/run_control.py
 ```
 
 The host runner adapts the bounded fresh-process pattern already used by
