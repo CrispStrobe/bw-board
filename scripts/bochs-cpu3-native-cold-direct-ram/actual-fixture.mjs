@@ -24,7 +24,15 @@ const provider=createDirectRamColdBiosProvider(addon);
 const initialRam=Buffer.from(provider.callbacks.directRam);
 const initialRamSha256=createHash('sha256').update(initialRam).digest('hex');
 const initialRamBase64=initialRam.toString('base64');
-let native=addon.create(configPath,provider.rom,provider.callbacks,false);
+// A native bootstrap failure can abort the process before the fixture catch.
+// Preserve the original exception and report only the failing observer and
+// bounded message; the provider's owned typed-array data properties are reused.
+const observedCallbacks=Object.freeze(Object.fromEntries(Object.entries(provider.callbacks).map(([name,value])=>
+ [name,typeof value==='function'?(...args)=>{
+  try{return Reflect.apply(value,provider.callbacks,args);}
+  catch(error){try{process.stderr.write(`BW_DIRECT5_OBSERVER_FAILURE ${name}: ${String(error?.message??error).replaceAll(/[\r\n]/g,' ').slice(0,240)}\n`);}catch{}throw error;}
+ }:value])));
+let native=addon.create(configPath,provider.rom,observedCallbacks,false);
 const reset={native,board:provider.checkpoint()};
 let q=0,resumes=0,zero=0;
 try{

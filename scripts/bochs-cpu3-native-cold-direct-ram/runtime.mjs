@@ -8,7 +8,13 @@ export function deriveDirectRamRuntime(){
  const once=(old,next,label)=>{s=replacement(s,old,next,label);edits.push({old,next,label});};
  once('static bw_owned_clock_state bw_owned={0,0,4,0,6000,0,1};',String.raw`static bw_owned_clock_state bw_owned={0,0,4,0,6000,0,1};
 extern "C" int bw_cold_direct_ram_source_clock(bw_cold_direct_ram_clock_ledger *out){
- if(!out||bw_owned.n!=bw_ticks||bw_owned.q!=bw_successful_quanta)return 0;
+ if(!out)return 0;
+ if(bw_owned.n!=bw_ticks||bw_owned.q!=bw_successful_quanta){
+  fprintf(stderr,"BW_DIRECT5_SOURCE_CLOCK_MISMATCH owner=%llu,%llu source=%llu,%llu\n",
+   (unsigned long long)bw_owned.n,(unsigned long long)bw_owned.q,
+   (unsigned long long)bw_ticks,(unsigned long long)bw_successful_quanta);
+  return 0;
+ }
  out->n=bw_owned.n;out->q=bw_owned.q;out->debt=bw_owned.debt;out->deadline=bw_owned.deadline;
  out->mapping_epoch=bw_mapping_epoch;out->board_a20=bw_board_a20;out->in_resume=bw_in_resume?1:0;return 1;
 }`,'source-authenticated clock snapshot for same-DSO observer');

@@ -86,7 +86,10 @@ static bool direct_leave(){const bool committed=direct_scope_committed&&(direct_
 static bool direct_call_clock(napi_value *args,napi_value *reply,const uint32_t *words,uint32_t count,uint32_t reason){
  if(!direct_enter(DirectScope::clock))return false;
  direct_words=words;direct_count=count;direct_reason=reason;
- const bool result=call("clockTransfer",2,args,reply);const bool committed=direct_leave();if(!result)direct_poison();return result&&committed;
+ const bool result=call("clockTransfer",2,args,reply);const bool committed=direct_leave();
+ if(!result||!committed)fprintf(stderr,"BW_DIRECT5_CLOCK_CALLBACK_FAILURE reason=%u count=%u called=%u committed=%u\n",reason,count,result?1u:0u,committed?1u:0u);
+ if(!result)direct_poison();
+ return result&&committed;
 }
 static bool direct_call_page(napi_value *arg,napi_value *reply,uint32_t raw){
  if(!direct_enter(DirectScope::page))return false;
@@ -99,8 +102,9 @@ static bool direct_call_scalar(napi_value *args,napi_value *reply,uint32_t op,ui
  const bool result=call("packedScalar",4,args,reply);const bool committed=direct_leave();if(!result)direct_poison();return result&&committed;
 }
 static bool direct_request(BoundaryRequest *out){
- if(!direct_scope_allowed()||!out)return false;
- bw_cold_direct_ram_clock_ledger source={};if(!bw_cold_direct_ram_source_clock(&source)||source.mapping_epoch||source.board_a20!=1)return false;
+ if(!direct_scope_allowed()||!out){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT scope\n");return false;}
+ bw_cold_direct_ram_clock_ledger source={};if(!bw_cold_direct_ram_source_clock(&source)){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT clock\n");return false;}
+ if(source.mapping_epoch||source.board_a20!=1){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT mapping epoch=%u a20=%u\n",source.mapping_epoch,source.board_a20);return false;}
  BoundaryRequest r{};
  if(direct_scope==DirectScope::clock){r.kind=direct_reason;r.phase=direct_reason==BW_COLD_DIRECT_RAM_INIT?BW_COLD_DIRECT_RAM_PAUSED:BW_COLD_DIRECT_RAM_RUNNING;r.tape=direct_words;r.tape_count=direct_count;}
  else if(direct_scope==DirectScope::page){r.kind=BW_COLD_DIRECT_RAM_PAGE;r.phase=BW_COLD_DIRECT_RAM_RUNNING;r.page_raw=direct_page_raw;}
@@ -110,10 +114,10 @@ static bool direct_request(BoundaryRequest *out){
  }else if(direct_scope==DirectScope::full){r.kind=BW_COLD_DIRECT_RAM_MEMORY;r.phase=BW_COLD_DIRECT_RAM_RUNNING;}
  else if(direct_scope==DirectScope::paused){r.kind=BW_COLD_DIRECT_RAM_PAUSED_OBSERVER;r.phase=BW_COLD_DIRECT_RAM_PAUSED;}
  else return false;
- if(bool(source.in_resume)!=(r.phase==BW_COLD_DIRECT_RAM_RUNNING))return false;
+ if(bool(source.in_resume)!=(r.phase==BW_COLD_DIRECT_RAM_RUNNING)){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT phase kind=%u running=%u inResume=%u\n",r.kind,r.phase==BW_COLD_DIRECT_RAM_RUNNING?1u:0u,source.in_resume);return false;}
  r.n_before=direct_owner->n();r.q_before=direct_owner->q();r.n_after=source.n;r.q_after=source.q;
  uint32_t charges=0;for(uint32_t i=0;i<r.tape_count;++i)if(r.tape[i]!=1)++charges;
- if(source.debt<uint64_t(charges)*6)return false;
+ if(source.debt<uint64_t(charges)*6){fprintf(stderr,"BW_DIRECT5_OBSERVER_SOURCE_REJECT debt=%u charges=%u\n",source.debt,charges);return false;}
  r.debt_before=source.debt-charges*6;r.deadline=source.deadline;r.mapping_epoch=source.mapping_epoch;r.board_a20=source.board_a20;
  *out=r;return true;
 }

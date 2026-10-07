@@ -85,6 +85,10 @@ jobs:
           done | tee "$evidence/napi-controls.txt"
           timeout 30s node scripts/bochs-cpu3-native-cold-direct-ram/provider-control.mjs \
             | tee "$evidence/provider-controls.txt"
+          for scenario in normal source-clock-deny; do
+            timeout 15s node scripts/bochs-cpu3-native-cold-direct-ram/napi-provider-control.mjs \
+              "$RUNNER_TEMP/cold-direct-napi-control/direct-control.node" "$scenario"
+          done | tee "$evidence/napi-provider-controls.txt"
       - name: Fetch exact upstream Bochs source
         shell: bash
         run: |

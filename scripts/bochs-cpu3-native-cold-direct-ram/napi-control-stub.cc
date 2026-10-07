@@ -3,14 +3,17 @@
 #include "abi.h"
 #include <cstring>
 
+static bool deny_source_clock=false;
 extern "C" int bw_cold_direct_ram_source_clock(bw_cold_direct_ram_clock_ledger *out){
- if(!out)return 0;
+ if(!out||deny_source_clock)return 0;
  *out={0,0,0,6000,0,1,0};return 1;
 }
 extern "C" int bw_direct_initialize(const char *configuration,const uint8_t *rom,uint32_t length,
  const bw_direct_callbacks *callbacks,int){
- if(!rom||length!=65536||rom[0]!=0xa5||rom[65535]!=0x5a||!callbacks||
+ const bool require_marker=!configuration||(std::strcmp(configuration,"real-provider")!=0&&std::strcmp(configuration,"source-clock-deny")!=0);
+ if(!rom||length!=65536||(require_marker&&(rom[0]!=0xa5||rom[65535]!=0x5a))||!callbacks||
     callbacks->version!=BW_COLD_DIRECT_RAM_ABI_VERSION||callbacks->memory)return 0;
+ deny_source_clock=configuration&&std::strcmp(configuration,"source-clock-deny")==0;
  if(configuration&&std::strcmp(configuration,"two-writes")==0){
   for(uint32_t i=0;i<2;++i){
    bw_cold_direct_ram_source_ledger ledger{};ledger.effect=i+1;ledger.generation_before=i;

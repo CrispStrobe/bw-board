@@ -7,7 +7,7 @@ export function deriveDirectRamNapi(){
  const base=deriveCompactProgressNapi();let s=authenticated(base.bytes,HELD_NAPI_SHA,'compact cold NAPI');const edits=[];
  const once=(old,next,label)=>{s=replacement(s,old,next,label);edits.push({old,next,label});};
  once('#include <mutex>\n#include "../bochs-cpu3-native-direct-board/abi.h"',
-  '#include <mutex>\n#include <array>\n#include <memory>\n#include <vector>\n#include <stdexcept>\n#include "../bochs-cpu3-native-direct-board/abi.h"\n#include "../bochs-cpu3-native-cold-direct-ram/bridge.h"',
+  '#include <mutex>\n#include <array>\n#include <memory>\n#include <vector>\n#include <stdexcept>\n#include <cstdio>\n#include "../bochs-cpu3-native-direct-board/abi.h"\n#include "../bochs-cpu3-native-cold-direct-ram/bridge.h"',
   'same-DSO owner header and fixed storage');
  once('const char *const cached_names[]={"readPhysical","writePhysical","admitExecutePage","packedScalar","clockTransfer","fusedMemory"};',
   'const char *const cached_names[]={"admitExecutePage","packedScalar","clockTransfer","reconcileFull","reconcilePaused"};','retain nonmemory callbacks only');
