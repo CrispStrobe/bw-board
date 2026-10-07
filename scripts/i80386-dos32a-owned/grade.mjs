@@ -6,6 +6,11 @@ const MAX_STEPS = 120_000_000;
 export const prompt = lines => /^[A-Z]:\\>$/.test(
   [...lines].reverse().find(line=>line.trim())?.trim()??'');
 
+export function retainFailure(report, detail) {
+  if(report.firstFailure===null)report.firstFailure=detail;
+  else report.secondaryFailure=detail;
+}
+
 function contains(whole,part) {
   for(let at=0;at<=whole.length-part.length;at++)
     if(part.every((scan,index)=>whole[at+index]===scan))return at;

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {evaluate,prompt} from './grade.mjs';
+import {evaluate,prompt,retainFailure} from './grade.mjs';
 import {SUCCESS,EXIT_OK,RETURN,FIRST_COMMAND,SECOND_COMMAND} from './media.mjs';
 import {encode} from './keyboard.mjs';
 
@@ -13,6 +13,14 @@ const valid={
 };
 assert.equal(evaluate(valid).passed,true);
 assert.equal(prompt(['A:\\>','BW-LE-BATCH-RUNNING']),false);
+const failed={firstFailure:'guest step: first fault',witness:{entry:{linear:0x20000}}};
+retainFailure(failed,'later final FAT parse failure');
+assert.equal(failed.firstFailure,'guest step: first fault');
+assert.equal(failed.secondaryFailure,'later final FAT parse failure');
+assert.equal(failed.witness.entry.linear,0x20000);
+const preflight={firstFailure:null};
+retainFailure(preflight,'input digest mismatch');
+assert.equal(preflight.firstFailure,'input digest mismatch');
 const changed=(field,value)=>({ ...valid,[field]:value });
 for(const broken of [
   changed('steps',120_000_000),changed('shutdown',true),changed('returned',false),

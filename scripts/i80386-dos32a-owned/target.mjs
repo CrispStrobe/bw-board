@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import * as M from '../../src/experimental/i80386-at-machine.js';
 import {GEOMETRY, LE_SHA, FIRST_COMMAND, SECOND_COMMAND, resultFiles} from './media.mjs';
-import {evaluate,prompt} from './grade.mjs';
+import {evaluate,prompt,retainFailure} from './grade.mjs';
 import {encode,readyForScan} from './keyboard.mjs';
 
 const BIOS_SHA = '6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac';
@@ -188,9 +188,12 @@ async function main() {
       try{machine.step();}catch(error){firstFailure=`guest step: ${String(error?.message??error).slice(0,240)}`;break;}
       if(cpu.shutdown){firstFailure='CPU shutdown';break;}
     }
-    const screen=rows(machine),after=Buffer.from(machine.ata.mediaBytes()),files=resultFiles(after);
     const keyboard={declined,requested:[FIRST_COMMAND,SECOND_COMMAND],injected,
       pending:keyQueue.length,lastAcceptedStep,lastOfferedStep};
+    Object.assign(report,{stage,steps,reset,witness,keyboard,partialFatReads});
+    if(firstFailure!==null)report.firstFailure=firstFailure;
+    report.final=cpuState(cpu);
+    const screen=rows(machine),after=Buffer.from(machine.ata.mediaBytes()),files=resultFiles(after);
     const graded=evaluate({witness,files,screen,returned,shutdown:cpu.shutdown,steps,keyboard});
     Object.assign(report,{
       firstFailure:firstFailure??(graded.passed?null:'acceptance checks failed'),
@@ -206,8 +209,7 @@ async function main() {
     report.passed=graded.passed&&firstFailure===null;
   } catch(error) {
     const detail=String(error?.stack??error).slice(0,1500);
-    if(report.firstFailure===null) report.firstFailure=detail;
-    else report.secondaryFailure=detail;
+    retainFailure(report,detail);
   }
   fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n',{flag:'wx'});
   if(!report.passed)process.exitCode=1;
