@@ -84,6 +84,7 @@ Object.defineProperty(mutatingReceipt, 'status', {get() {
 assert.equal(admitBoundImage(borrowedExe, borrowedMap, mutatingReceipt).executableSha256,
   hash(exe));
 assert.throws(() => admitBoundImage(Buffer.from(exe).fill(1, 900, 901), map, compile));
+assert.throws(() => admitBoundImage(Buffer.alloc((2 << 20) + 1), map, compile));
 assert.throws(() => admitBoundImage(exe,map,{...compile,ownedSource:{...compile.ownedSource,sha256:'0'.repeat(64)}}));
 assert.throws(() => admitBoundImage(exe,map,{...compile,compileArgv:['/admitted/i586-pc-msdosdjgpp-gcc','-march=i486','-mtune=i486']}));
 assert.throws(() => admitBoundImage(exe,map,{...compile,

@@ -36,7 +36,9 @@ const number = raw => {
 };
 
 export function admitBoundImage(executable, mapBytes, compile) {
-  if (!Buffer.isBuffer(executable) || !Buffer.isBuffer(mapBytes))
+  if (!Buffer.isBuffer(executable) || executable.length < 4096 ||
+      executable.length > (2 << 20) || !Buffer.isBuffer(mapBytes) ||
+      mapBytes.length > (1 << 20))
     throw new Error('executable/map buffers');
   // Borrowed input buffers cannot change the bytes being admitted during a
   // caller-controlled receipt property read.
