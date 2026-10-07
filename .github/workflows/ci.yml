@@ -176,7 +176,20 @@ jobs:
       # numeric second solver we have -- lcapy is symbolic and cannot model a
       # junction. One apt package, no build, no checkout.
       - name: Install nasm and ngspice (the differential oracles)
-        run: sudo apt-get update && sudo apt-get install -y nasm ngspice
+        run: |
+          set -euo pipefail
+          # A stalled mirror or dpkg lock must fail this job, not defer the
+          # oracle census indefinitely. timeout also terminates the apt group.
+          sudo timeout --signal=TERM --kill-after=15s 4m apt-get \
+            -o Acquire::http::Timeout=20 \
+            -o Acquire::https::Timeout=20 \
+            -o Acquire::Retries=2 \
+            -o DPkg::Lock::Timeout=30 update
+          sudo timeout --signal=TERM --kill-after=15s 6m env DEBIAN_FRONTEND=noninteractive apt-get \
+            -o Acquire::http::Timeout=20 \
+            -o Acquire::https::Timeout=20 \
+            -o Acquire::Retries=2 \
+            -o DPkg::Lock::Timeout=30 install -y nasm ngspice
 
       # AND ASSERT IT ARRIVED. Without this, a failed or silently-skipped
       # install leaves nasm absent, oracle-nasm skips all six tests, and the
