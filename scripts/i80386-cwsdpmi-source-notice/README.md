@@ -5,6 +5,10 @@ not compile the owned client, install or run a toolchain, launch a guest, or
 settle component redistribution obligations. The preceding acquisition run
 measured candidate archive bytes but included no toolchain notices.
 
+The first hosted source/notice inventory completed at tested source
+`ad8085bf2e8c36439b9cba198845cbabc0140dbb`. See [the bounded result](RESULTS.md)
+for exact candidate hashes, three byte matches, and remaining notice gaps.
+
 The dedicated labeled workflow authenticates the exact PR head and unchanged
 stage-A source, then re-downloads the same FreeDOS CWSDPMI and build-djgpp
 toolchain archives. Their stage-A SHA-256 values and selected member hashes are
