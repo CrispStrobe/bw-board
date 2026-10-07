@@ -44,6 +44,11 @@ static void copied_identity_and_decode(){
  auto page=f.boundary(BW_COLD_DIRECT_RAM_PAGE);page.page_raw=0x7000;
  denies([&]{f.bridge.prepare(page);});
  page.page_raw=0xf0000;auto admitted=f.bridge.prepare(page);f.bridge.commit(admitted,f.view());
+ uint8_t blocked_byte=0x7c;auto blocked_write=f.write(0x100,blocked_byte);auto blocked_read=f.read(0x100,1);
+ denies([&]{f.bridge.memory(blocked_write);});denies([&]{f.bridge.memory(blocked_read);});
+ denies([&]{f.bridge.prepare(f.boundary());});denies([&]{f.bridge.close();});
+ assert(f.bridge.owned_byte(0x100)==0&&f.board[0x100]==0&&f.generations[0]==0&&
+  f.bridge.journal_size()==0&&f.bridge.acknowledged()==0&&f.bridge.committed()==0&&f.bridge.next_effect()==1);
  assert(f.bridge.rom_execute_page(0xf0000)[0]==0x42);
  denies([&]{f.bridge.rom_execute_page(0xf0000);}); // Single-use page ticket.
  page.page_raw=0xffff0000;admitted=f.bridge.prepare(page);f.bridge.commit(admitted,f.view());
