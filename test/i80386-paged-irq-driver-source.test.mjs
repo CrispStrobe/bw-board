@@ -40,6 +40,17 @@ test('IRQ actual admission binds the imported INT parent and every actual gate s
  ])assert.match(source.hashes[path],/^[a-f0-9]{64}$/,path);
 });
 
+test('callback tape cap rejects the next read before board or tape effects',async()=>{
+ const p=await createDriverPagedIrqProvider(),c=p.callbacks;
+ c.clockTransfer(new Uint32Array(),1);p.begin();c.clockTransfer(new Uint32Array(),2);
+ for(let i=0;i<1024;i++)c.readPhysical(0x610,8);
+ assert.throws(()=>c.readPhysical(0x610,8),/bounded successful callback tape before read/);
+ p.end();const events=p.memoryEvents(),state=p.checkpoint();
+ assert.equal(events.length,1024);assert.equal(state.ram.reads.length,1024,'denied callback did not reach board');
+ assert.deepEqual(events.filter(e=>e.direction==='read').map(({direction,ordinal,...e})=>e),state.ram.reads);
+ p.close();
+});
+
 test('IRQ progress admits only actual zero-Q delivery and keeps the IF phase in comparison',()=>{
  assert.equal(typeof runPagedIrqFixture,'function','actual runner import does not load an addon');
  assert.equal(nextNamedCut([],0x18,0x7002).name,'irq-eligible');
