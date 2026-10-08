@@ -114,7 +114,9 @@ export class InterruptJournalModel {
       this.#ticket(ticket);
       if(this.#active.record)throw new Error('duplicate staged event');
       const source=this.#active.kind==='external'?'hardware':'software';
-      this.#active.record=delivery(input,source);
+      const copied=delivery(input,source);
+      this.#usable(); // a swallowed descriptor-trap reentry remains terminal
+      this.#active.record=copied;
     }catch(error){this.#failed=true;throw error;}
   });}
   stageIret(ticket,input){return this.#exclusive(()=>{
@@ -123,7 +125,9 @@ export class InterruptJournalModel {
       this.#ticket(ticket);
       if(this.#active.kind!=='step'||this.#active.record)
         throw new Error('IRET outside one-step boundary');
-      this.#active.record=iret(input,this.#frames.at(-1));
+      const copied=iret(input,this.#frames.at(-1));
+      this.#usable();
+      this.#active.record=copied;
     }catch(error){this.#failed=true;throw error;}
   });}
   commit(ticket){return this.#exclusive(()=>{

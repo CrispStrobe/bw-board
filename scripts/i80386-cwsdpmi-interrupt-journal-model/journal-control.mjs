@@ -94,11 +94,16 @@ assert.throws(()=>other.stageDelivery(ticket,software()));
 assert.equal(other.status().failed,true);
 foreign.discard(ticket,{rollback:true});
 const reentry=new InterruptJournalModel();
-ticket=reentry.begin('step');const trapped=software();
-Object.defineProperty(trapped,'vector',{get(){
-  try{reentry.status();}catch{}return 0x31;
+ticket=reentry.begin('step');let nestedAttempt=false;
+const trapped=new Proxy(software(),{getOwnPropertyDescriptor(target,key){
+  if(key==='vector'){
+    nestedAttempt=true;
+    try{reentry.status();}catch{}
+  }
+  return Reflect.getOwnPropertyDescriptor(target,key);
 }});
 assert.throws(()=>reentry.stageDelivery(ticket,trapped));
+assert.equal(nestedAttempt,true);
 assert.equal(reentry.status().failed,true);
 
 console.log('CWSDPMI interrupt journal model controls PASS');
