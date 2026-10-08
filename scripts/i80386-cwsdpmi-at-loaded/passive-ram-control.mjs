@@ -76,6 +76,11 @@ const wrongProfile=fixture();wrongProfile.cpu.cpuProfile='strict386';denies(wron
 const overflow=fixture();denies(overflow,0xfffffffe,4);
 const unpaused=fixture();assert.throws(()=>readOrdinaryLinear(unpaused,
   {linear:0x101000,length:1,sourcePaused:false}));
+const accessor=fixture();let getterCalled=false;
+const request={linear:0x101000,sourcePaused:true};
+Object.defineProperty(request,'length',{get(){getterCalled=true;return 1;}});
+assert.throws(()=>readOrdinaryLinear(accessor,request));
+assert.equal(getterCalled,false);
 
 let reentry;
 const hostile=fixture();

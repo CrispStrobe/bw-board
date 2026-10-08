@@ -86,20 +86,22 @@ export function readOrdinaryLinear(machine,request) {
   state.busy=true;
   try {
     // sourcePaused is a caller obligation, not an authenticated pause lease.
-    if(request?.sourcePaused!==true || !u32(request.linear) ||
-       !Number.isInteger(request.length) || request.length<1 || request.length>MAX_READ ||
-       request.linear+request.length-1>0xffffffff)
+    const sourcePaused=own(request,'sourcePaused'),linearStart=own(request,'linear'),
+      length=own(request,'length');
+    if(sourcePaused!==true || !u32(linearStart) ||
+       !Number.isInteger(length) || length<1 || length>MAX_READ ||
+       linearStart+length-1>0xffffffff)
       throw new Error('paused bounded linear request');
     const c=context(machine),chunks=[];
-    for(let at=0;at<request.length;){
-      const linear=request.linear+at,phys=translate(c,linear);
-      const count=Math.min(request.length-at,0x1000-(linear&0xfff));
+    for(let at=0;at<length;){
+      const linear=linearStart+at,phys=translate(c,linear);
+      const count=Math.min(length-at,0x1000-(linear&0xfff));
       if(phys+count-1>0xffffffff)throw new Error('physical page extent');
       // The whole span and every page-table entry must remain ordinary RAM.
       physical(c,phys);physical(c,phys+count-1);
       chunks.push({at,phys,count});at+=count;
     }
-    const result=Buffer.alloc(request.length);
+    const result=Buffer.alloc(length);
     for(const {at,phys,count} of chunks)
       result.set(c.mem.subarray(phys,phys+count),at);
     if(own(machine,'cpu')!==c.cpu || own(machine,'mem')!==c.mem ||
