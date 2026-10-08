@@ -1,0 +1,34 @@
+{
+  "schema": "bw.cwsdpmi-owned.at-loaded-main-fourth-result.v1",
+  "testedSource": "eebec7259b4f6bc5c1ef35982d3affc4dc8c94d4",
+  "run": {
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37745949286",
+    "conclusion": "FAILURE",
+    "strictWholeTextQualification": "FAIL"
+  },
+  "artifact": {
+    "id": 11536894049,
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11536894049",
+    "bytes": 127355,
+    "sha256": "7e3fbe8d2b86787e6e71a807c388bf19e3279e26d5c1e16c3adf32a0cae5503b",
+    "members": 96
+  },
+  "observed": {
+    "candidateStep": 44605932,
+    "acceptedScans": 34,
+    "firstFailure": "loaded text differs at byte 23472",
+    "changedBytes": 13,
+    "changedSpans": 8,
+    "allEightRequiredCodeRolesReportedEqual": true,
+    "failedObservationUnchanged": true,
+    "sourceRoles": 146,
+    "visitedJsModules": 42,
+    "strictLoadedTextBound": false
+  },
+  "audits": [
+    "root original-packet inventory/source/input/candidate audits PASS",
+    "independent peer original-packet inventory/source/map audit PASS"
+  ],
+  "followUpStatus": "SOURCE_ONLY_UNRUN_SEPARATE_OWNED_CODE_CUT",
+  "inferenceLimit": "Original omitted executable and guest code bytes; reported byte differences cannot be independently recomputed and neither runtime mutation nor binary-to-source correspondence is established."
+}
