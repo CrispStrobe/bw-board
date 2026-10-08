@@ -171,7 +171,32 @@ test('post-delivery step exception cannot publish staged rejection facts', () =>
   f.cpu._stepInstruction = () => { instruction(); throw fault; };
   assert.throws(() => f.cpu.step(), error => error === fault);
   const observation = f.cpu.takeOwned0501FrameObservation(token);
-  assert.equal(observation.failure, 'step-failure');
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('zero-result enclosing step does not publish rejected-delivery facts', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const instruction = f.cpu._stepInstruction.bind(f.cpu);
+  f.cpu._stepInstruction = () => { instruction(); return 0; };
+  assert.equal(f.cpu.step(), 0);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('reset revokes a completed rejection receipt without replacing first failure', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501FrameStatus(token).failure,
+    'unsupported-owned-delivery');
+  f.cpu.reset();
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
   assert.equal(observation.rejectedDelivery, null);
 });
 
@@ -217,6 +242,34 @@ test('swallowed recorder reentry cancels a post-effect rejection receipt', () =>
     Object.freeze = freeze;
   }
   assert.equal(reentered, true);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('direct protected-delivery helper during recording cancels stale facts', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const freeze = Object.freeze;
+  let direct = false;
+  Object.freeze = value => {
+    if (!direct && value?.schema ===
+        'bw.i80386-owned-0501.delivery-rejection.v1') {
+      direct = true;
+      try {
+        f.cpu._deliverProtected(0x31, f.cpu.eip, null, { software: true });
+      } catch { // Either guest-visible effect or original helper refusal cancels.
+      }
+    }
+    return freeze(value);
+  };
+  try {
+    assert.equal(f.cpu.step(), 1);
+  } finally {
+    Object.freeze = freeze;
+  }
+  assert.equal(direct, true);
   const observation = f.cpu.takeOwned0501FrameObservation(token);
   assert.equal(observation.failure, 'unsupported-owned-delivery');
   assert.equal(observation.rejectedDelivery, null);

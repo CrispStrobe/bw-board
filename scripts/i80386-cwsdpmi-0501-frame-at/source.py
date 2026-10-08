@@ -16,8 +16,8 @@ WORKFLOW = ".github/workflows/i80386-cwsdpmi-0501-frame-at.yml"
 POLICY_TEST = "test/i80386-0501-frame-policy.test.mjs"
 ORCHESTRATION_TEST = "test/i80386-0501-frame-orchestration.test.mjs"
 JOURNAL_TEST = "test/i80386-dpmi-frame-journal.test.mjs"
-CPU_SHA = "58ab2f471b76657a91f2f9d3519ab24f36c992a731a033fbf803a4780da7b12e"
-JOURNAL_TEST_SHA = "0dd9430608a76c2575397f94e7b7a0ffe18538ba9eb70fe72a1b4afadf904297"
+CPU_SHA = "1f7e1f98dcdacf55d974c93cb27388c902155c52ff1ba03ebb6f1c49b34ef18b"
+JOURNAL_TEST_SHA = "6215259cd5cf4aac278d177dcbd57710d32ada4e38ba5c9f1397523e45359efa"
 PINNED_CHANGED = {
     "src/experimental/i80386.js": CPU_SHA,
     JOURNAL_TEST: JOURNAL_TEST_SHA,

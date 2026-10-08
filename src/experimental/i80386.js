@@ -2523,6 +2523,8 @@ export class ExperimentalI80386 {
   ) {
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
+    if (owned0501?.rejectionPermit && owned0501.phase === "invalid")
+      owned0501Invalidate(owned0501, "stale-direct-helper-stage");
     const idtCode = (vector << 3) | 2 | (external ? 1 : 0),
       entry = vector * 8;
     if (entry + 7 > this.idtr.limit)
