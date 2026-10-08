@@ -3045,6 +3045,18 @@ export class ExperimentalI80386 {
         throw new I80386Fault(13, 0, "IRET target outside code segment");
       this._markAccessed(descriptor);
       if (stackDescriptor) this._markAccessed(stackDescriptor);
+      // The saved handler cache is about to be replaced by the caller CS.
+      // Recheck after frame/descriptor reads, while live identity is visible.
+      // Observer failure never interrupts the original IRET commit below.
+      if (owned0501?.phase === "open" &&
+          owned0501.profile === OWNED_0501_MIXED_PROFILE) {
+        try {
+          if (!owned0501MixedHandlerMatches(this, owned0501))
+            owned0501Invalidate(owned0501, "owned-handler-context-excursion");
+        } catch {
+          owned0501Invalidate(owned0501, "observer-handler-context-failure");
+        }
+      }
       this.cs = selector;
       this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
