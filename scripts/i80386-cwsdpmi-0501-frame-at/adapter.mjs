@@ -153,8 +153,10 @@ export function run(inputPath,outputPath,progressPath){
       progress:progressReport=>writeProgress(progressPath,{
         schema:report.schema,passed:false,stage:progressReport.stage,
         firstFailure:progressReport.firstFailure,
-        scope:'pending frame qualification; finite client progress only',
-        inputHashes:report.inputHashes,finiteClientProgress:progressReport})},
+        scope:'pending frame qualification; finite client and reached frame milestones',
+        inputHashes:report.inputHashes,
+        frame0501Progress:progressReport.frameProgress??null,
+        finiteClientProgress:progressReport})},
       {machine,layout,token});
     report.finiteClient=finite;
     report.frame0501=finite.frame0501??null;
