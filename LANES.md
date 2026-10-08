@@ -1,5 +1,22 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-08 scope reset capture epoch — CLAIM, Codex bwcx.
+Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
+60b2f39526e7d665f61070f031a6a9418fcbde4d. Four paths only: this ledger,
+src/board.js (reset's attached-channel capture state only), new
+test/scope-reset-capture-epoch.test.mjs, new spec-updates/scope-reset-capture-epoch.md.
+Actual native DC witness: attach100kHz voltage scope at20000ns, reset time to0;
+at10000ns count remains0 and first sample appears30000ns with start20000ns.
+Reset must retain handles/configuration/loads but clear old numeric/digital
+rings, partial buckets and interpolation, re-anchor voltage deadlines and
+establish the new epoch's initial digital level. Prove late/fill/wrap/partial
+envelope/sample/current/digital histories, fresh-board equivalence, retained
+reference/probe load, and actual existing failure refusal after reset. Preserve
+all failure/overflow latches; never turn reset into skipped-history recovery.
+No model reset redesign, meter/current cadence, solver/caps/profiles, scheduler,
+CPU, CUI/Lite/package/pin, workflow or performance change. Remote claim before
+implementation; one final exact CI/Harris set, no local build/browser/benchmark.
+
 2026-10-07 cooperative live device clock — DONE candidate, Codex bwcx.
 Branch lane/live-device-clock-quantum-20261007, exact base
 1bc294726dbdca6f74aaa6aa2fe1ec25119d4f0a. Four paths only: this ledger,
