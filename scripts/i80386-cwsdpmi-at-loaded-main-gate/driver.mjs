@@ -72,7 +72,7 @@ export function passiveRows(machine) {
   const video=machine.vgaMemory,card=machine.chips?.vga1;
   if(!video||video.registerSource!==card||
      !(card.misc&2)||(card.gc[6]&1)||((card.gc[6]>>>2)&3)!==3||
-     card.seq[4]!==6||(card.gc[5]&8)||card.crtc[1]!==79||
+     ![2,6].includes(card.seq[4])||(card.gc[5]&8)||card.crtc[1]!==79||
      !Number.isInteger(card.crtc[0x0c])||!Number.isInteger(card.crtc[0x0d]))
     return null;
   const plane=video.planes?.[0];

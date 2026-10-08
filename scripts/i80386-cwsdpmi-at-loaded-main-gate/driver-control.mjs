@@ -27,6 +27,8 @@ card.crtc[0x0c]=0;card.crtc[0x0d]=40;
 for(const [index,char] of [...'C:\\>'].entries())plane[(40+index)*2]=char.charCodeAt(0);
 assert.equal(passiveRows(machine)?.[0],'C:\\>');
 card.crtc[0x0d]=0;
+card.seq[4]=2;card.gc[6]=0x0e;
+assert.ok(passiveRows(machine)?.[0].startsWith('A:\\>'));
 card.seq[4]=4;assert.equal(passiveRows(machine),null);card.seq[4]=6;
 card.gc[6]=0x0d;assert.equal(passiveRows(machine),null);card.gc[6]=0x0c;
 assert.equal(ringEmpty(machine),true);
