@@ -123,11 +123,19 @@ same-repository PR, checks out that exact head and allows attempt 1 only.
 Source is checked before and after execution; report upload requires successful
 bounded inventory. Root and independent peer reviewed the exact source; all
 20 CPU-free policy/orchestration controls and source-admission controls passed.
-No compiler, CPU or guest execution occurred for this checkpoint.
+No compiler, CPU or guest execution occurred during local preparation.
+Subsequent hosted [push xv6 run 37798349010](https://github.com/CrispStrobe/bw-board/actions/runs/37798349010)
+and [PR xv6 run 37798357864](https://github.com/CrispStrobe/bw-board/actions/runs/37798357864)
+passed at exact `c968428d`. Root and independent peer audited the push run
+original packet and log: all 49 focused controls and three finite guest
+scenarios passed. See the [receipt and limits](receipts/2026-10-08-0501-frame-gate-xv6/README.md).
+These xv6 regressions do not establish an allocation-frame guest result.
 
 Continue with these remaining gates:
 
-1. Wait for every enabled PR463 check on exact `c968428d` to succeed. Preserve
+1. Eleven of twelve enabled PR463 checks passed at exact `c968428d`, including
+   both xv6 runs and both full test jobs. The push-vector job is still queued.
+   Wait for that final check to succeed. Preserve
    any failures and investigate them without rewriting historical receipts.
 2. After exact-head source review and CI, apply the dedicated label once for
    one bounded diagnostic. The workflow has not been dispatched yet.
