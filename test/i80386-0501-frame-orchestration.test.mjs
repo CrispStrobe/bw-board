@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createFrameOrchestration,guardObservation} from '../scripts/i80386-cwsdpmi-0501-frame-at/orchestration.mjs';
+import {MIXED_0501_PROFILE} from '../scripts/i80386-cwsdpmi-0501-frame-at/policy.mjs';
 import {captureReferences,sameReferences} from '../scripts/i80386-cwsdpmi-0501-frame-at/references.mjs';
 
 function sourceShape(){
@@ -70,6 +71,7 @@ function fixture() {
   let phase='armed',observe=null;
   const policy={
     arm(options){calls.push('arm');assert.equal(options.comparison,comparison);
+      assert.equal(options.profile,MIXED_0501_PROFILE);
       return {phase:'armed'};},
     afterStep(){calls.push('poll');return {phase};},
     status(){return {phase,observation:phase==='complete'

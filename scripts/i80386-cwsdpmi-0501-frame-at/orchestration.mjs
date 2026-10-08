@@ -1,5 +1,6 @@
 // CPU-free port policy. The actual driver supplies machine-owned ports and a
 // synchronous passive wrapper observer. Synthetic controls prove ordering only.
+import {MIXED_0501_PROFILE} from './policy.mjs';
 export function guardObservation(operation) {
   let busy=false,failed=false;
   return (...args)=>{
@@ -79,7 +80,8 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
           wrapperReceipt=candidate.receipt??null;
           let state;
           try {state=policy.arm({mainCut:true,comparison:candidate.comparison,
-            cs:candidate.cs,maxActiveSteps:1000000});}
+            cs:candidate.cs,maxActiveSteps:1000000,
+            profile:MIXED_0501_PROFILE});}
           catch(error){firstFailure??='journal arm exception';throw error;}
           if(firstFailure)return fail(firstFailure);
           if(state.phase!=='armed') return fail(state.firstFailure||'journal arm refused');

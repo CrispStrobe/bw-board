@@ -35,6 +35,30 @@ const REG_NAMES = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"];
 // and committed frame below can create an observation.
 const owned0501Sessions = new WeakMap();
 const OWNED_0501_MAX_STEPS = 1_000_000;
+const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
+
+function owned0501MixedHandlerMatches(cpu, session) {
+  const code = cpu.segmentCaches[SEG_CS];
+  const stack = cpu.segmentCaches[SEG_SS];
+  const expected = session.handlerContext;
+  return !!expected && cpu.protectedMode && !cpu.virtual8086 &&
+    cpu.cs === expected.cs && cpu.ss === expected.ss &&
+    cpu.currentPrivilegeLevel === 3 &&
+    code === expected.codeRef && stack === expected.stackRef &&
+    code.base === expected.codeBase && code.limit === expected.codeLimit &&
+    code.default32 === false && code.present === expected.codePresent &&
+    code.code === expected.codeCode && code.readable === expected.codeReadable &&
+    code.writable === expected.codeWritable && code.dpl === expected.codeDpl &&
+    code.conforming === expected.codeConforming &&
+    code.access === expected.codeAccess && code.address === expected.codeAddress &&
+    stack.base === expected.stackBase && stack.limit === expected.stackLimit &&
+    stack.default32 === true && stack.present === expected.stackPresent &&
+    stack.code === expected.stackCode &&
+    stack.expandDown === expected.stackExpandDown &&
+    stack.readable === expected.stackReadable &&
+    stack.writable === expected.stackWritable &&
+    stack.access === expected.stackAccess && stack.address === expected.stackAddress;
+}
 
 function owned0501Invalidate(session, reason) {
   if (session?.phase === "invalid" && reason !== "unsupported-owned-delivery") {
@@ -263,6 +287,12 @@ export class ExperimentalI80386 {
       const startEip = owned0501U32(owned0501Option(options, "startEip"), "startEip");
       const endEip = owned0501U32(owned0501Option(options, "endEip"), "endEip");
       const maxActiveSteps = owned0501Option(options, "maxActiveSteps");
+      const profileField = Object.getOwnPropertyDescriptor(options, "profile");
+      if (profileField && !Object.hasOwn(profileField, "value"))
+        throw new TypeError("owned 0501 profile must be an own data property");
+      const profile = profileField?.value ?? null;
+      if (profile !== null && profile !== OWNED_0501_MIXED_PROFILE)
+        throw new RangeError("unsupported owned 0501 profile");
       if (this.#owned0501AdmissionReentered || cs > 0xffff ||
           startEip >= endEip || !Number.isInteger(maxActiveSteps) ||
           maxActiveSteps < 1 || maxActiveSteps > OWNED_0501_MAX_STEPS)
@@ -273,7 +303,7 @@ export class ExperimentalI80386 {
         phase: "armed", failure: null, busyDepth: 0, delivering: 0,
         intent: null, iretIntent: null, stagedEntry: null, stagedReturn: null,
         entry: null, returned: null, pendingRejectedDelivery: null,
-        rejectionPermit: false,
+        rejectionPermit: false, profile, handlerContext: null,
         rejectedDelivery: null,
       });
       this.#owned0501JournalActive = true;
@@ -294,7 +324,8 @@ export class ExperimentalI80386 {
     if (!session || token !== session.token)
       throw new Error("stale owned 0501 session token");
     return owned0501Frozen({ phase: session.phase, failure: session.failure,
-      activeSteps: session.activeSteps });
+      activeSteps: session.activeSteps,
+      ...(session.profile ? { profile: session.profile } : {}) });
   }
 
   takeOwned0501FrameObservation(token) {
@@ -310,7 +341,8 @@ export class ExperimentalI80386 {
     const result = Object.freeze({ phase: session.phase,
       failure: session.failure, activeSteps: session.activeSteps,
       entry: session.entry, returned: session.returned,
-      rejectedDelivery: session.rejectedDelivery });
+      rejectedDelivery: session.rejectedDelivery,
+      ...(session.profile ? { profile: session.profile } : {}) });
     owned0501Sessions.delete(this);
     this.#owned0501JournalActive = false;
     return result;
@@ -2634,10 +2666,18 @@ export class ExperimentalI80386 {
     if (type === 6 || type === 14) this.eflags &= ~IF;
     if (owned0501?.intent && owned0501.phase === "armed") {
       try {
+        const mixed = owned0501.profile === OWNED_0501_MIXED_PROFILE;
+        const handlerCode = this.segmentCaches[SEG_CS];
+        const handlerStack = this.segmentCaches[SEG_SS];
+        const admittedHandler = mixed
+          ? type === 14 && oldCpl === 3 && targetCpl === 3 &&
+            !innerFrame && handlerCode.default32 === false &&
+            handlerStack.default32 === true &&
+            sameFrame.bytes * sameFrame.values.length === 12
+          : handlerCode.default32 && handlerStack.default32;
         if (!software || vector !== 0x31 || owned0501.delivering !== 1 ||
             width !== 32 || vm86 || errorCode !== null ||
-            !this.segmentCaches[SEG_CS].default32 ||
-            !this.segmentCaches[SEG_SS].default32) {
+            !admittedHandler) {
           owned0501Invalidate(owned0501, "unsupported-owned-delivery");
           owned0501.rejectionPermit = true;
           const rejectedDelivery = owned0501Frozen({
@@ -2658,8 +2698,26 @@ export class ExperimentalI80386 {
             owned0501.pendingRejectedDelivery = rejectedDelivery;
         } else {
           const frame = innerFrame ?? sameFrame;
+          if (mixed) owned0501.handlerContext = {
+            cs: this.cs, ss: this.ss, codeRef: handlerCode,
+            stackRef: handlerStack, codeBase: handlerCode.base,
+            codeLimit: handlerCode.limit, codePresent: handlerCode.present,
+            codeCode: handlerCode.code, codeReadable: handlerCode.readable,
+            codeWritable: handlerCode.writable, codeDpl: handlerCode.dpl,
+            codeConforming: handlerCode.conforming,
+            codeAccess: handlerCode.access, codeAddress: handlerCode.address,
+            stackBase: handlerStack.base, stackLimit: handlerStack.limit,
+            stackPresent: handlerStack.present,
+            stackCode: handlerStack.code,
+            stackExpandDown: handlerStack.expandDown,
+            stackReadable: handlerStack.readable,
+            stackWritable: handlerStack.writable,
+            stackAccess: handlerStack.access, stackAddress: handlerStack.address,
+          };
           owned0501.stagedEntry = owned0501Frozen({
             source: "decoded-software-int31", vector, gateType: type, width,
+            ...(mixed ? { profile: owned0501.profile,
+              handlerCodeDefault32: false, handlerStackDefault32: true } : {}),
             instructionStart: owned0501.intent.instructionStart,
             returnEip: returnEip >>> 0,
             returnCs: owned0501.intent.cs,
@@ -2881,6 +2939,15 @@ export class ExperimentalI80386 {
   _iret(width) {
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
+    if (owned0501?.phase === "open" &&
+        owned0501.profile === OWNED_0501_MIXED_PROFILE) {
+      try {
+        if (!owned0501MixedHandlerMatches(this, owned0501))
+          owned0501Invalidate(owned0501, "owned-handler-context-excursion");
+      } catch {
+        owned0501Invalidate(owned0501, "observer-handler-context-failure");
+      }
+    }
     if (owned0501?.iretIntent &&
         (width !== 32 || !this.protectedMode || this.virtual8086 ||
          this.eflags & NT))
@@ -3020,6 +3087,7 @@ export class ExperimentalI80386 {
         } else {
           owned0501.stagedReturn = owned0501Frozen({
             source: "decoded-protected-iret", width,
+            ...(owned0501.profile ? { profile: owned0501.profile } : {}),
             instructionStart: owned0501.iretIntent.instructionStart,
             handlerCs: owned0501.iretIntent.cs,
             handlerSs: owned0501.iretIntent.ss,
@@ -3060,6 +3128,15 @@ export class ExperimentalI80386 {
         if (owned0501) owned0501Invalidate(owned0501, "cpu-not-running");
         return 0;
       }
+      if (owned0501?.phase === "open" &&
+          owned0501.profile === OWNED_0501_MIXED_PROFILE) {
+        try {
+          if (!owned0501MixedHandlerMatches(this, owned0501))
+            owned0501Invalidate(owned0501, "owned-handler-context-excursion");
+        } catch {
+          owned0501Invalidate(owned0501, "observer-handler-context-failure");
+        }
+      }
       const state = this._snapshotInstruction(),
         restartEip = this.eip >>> 0;
       const trace = !!(this.eflags & TF),
@@ -3083,9 +3160,12 @@ export class ExperimentalI80386 {
         if (owned0501) {
           try {
             if (owned0501.phase === "open" &&
-                (!this.protectedMode || this.virtual8086 ||
-                 !this.segmentCaches[SEG_CS].default32 ||
-                 !this.segmentCaches[SEG_SS].default32))
+                (owned0501.profile === OWNED_0501_MIXED_PROFILE
+                  ? !(owned0501.iretIntent && owned0501.stagedReturn) &&
+                    !owned0501MixedHandlerMatches(this, owned0501)
+                  : !this.protectedMode || this.virtual8086 ||
+                    !this.segmentCaches[SEG_CS].default32 ||
+                    !this.segmentCaches[SEG_SS].default32))
               owned0501Invalidate(owned0501, "owned-frame-mode-excursion");
             owned0501FinishStep(owned0501, result, traced);
           } catch {

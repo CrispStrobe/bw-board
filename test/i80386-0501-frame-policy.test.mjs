@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {create0501Policy} from '../scripts/i80386-cwsdpmi-0501-frame-at/policy.mjs';
+import {create0501Policy,MIXED_0501_PROFILE} from '../scripts/i80386-cwsdpmi-0501-frame-at/policy.mjs';
 import {admitFreshWrapper,compareWrapperSnapshot} from '../scripts/i80386-cwsdpmi-0501-frame-at/admit.mjs';
 
 const wrapper=Object.freeze({schema:'bw.cwsdpmi-0501.wrapper-comparison.v1',
@@ -139,6 +139,57 @@ test('saved, consumed and actual returned flags remain distinct diagnostics',()=
   const g=fixture();arm(g);g.complete();g.policy.afterStep();
   g.returned.consumedFlags=0x203;
   assert.equal(finish(g).phase,'invalid');
+});
+
+test('opt-in mixed profile binds CPU status, entry, return and exact gate14',()=>{
+  const f=fixture();
+  f.cpu.armOwned0501FrameJournal=options=>{
+    assert.equal(options.profile,MIXED_0501_PROFILE);
+    return Object.freeze({});
+  };
+  f.cpu.owned0501FrameStatus=()=>({phase:'complete',failure:null,
+    activeSteps:2,profile:MIXED_0501_PROFILE});
+  f.cpu.takeOwned0501FrameObservation=()=>({phase:'complete',failure:null,
+    activeSteps:2,profile:MIXED_0501_PROFILE,entry:f.entry,returned:f.returned});
+  Object.assign(f.entry,{profile:MIXED_0501_PROFILE,gateType:14,
+    oldCpl:3,newCpl:3,handlerCs:0x0b,handlerSs:0xaf,handlerEsp:0x1ff4,
+    handlerCodeDefault32:false,handlerStackDefault32:true,frameBytes:12});
+  Object.assign(f.returned,{profile:MIXED_0501_PROFILE,
+    handlerCs:0x0b,handlerSs:0xaf,handlerEsp:0x1ff4});
+  const mixed=f.policy.arm({mainCut:true,comparison:wrapper,cs:0xa7,
+    profile:MIXED_0501_PROFILE});
+  assert.equal(mixed.phase,'armed');
+  assert.equal(f.policy.afterStep().phase,'complete');
+  assert.equal(finish(f).phase,'passed');
+
+  const g=fixture();
+  g.cpu.armOwned0501FrameJournal=()=>({});
+  g.cpu.owned0501FrameStatus=()=>({phase:'complete',failure:null,
+    activeSteps:2,profile:MIXED_0501_PROFILE});
+  g.cpu.takeOwned0501FrameObservation=()=>({phase:'complete',failure:null,
+    activeSteps:2,profile:MIXED_0501_PROFILE,entry:g.entry,returned:g.returned});
+  g.policy.arm({mainCut:true,comparison:wrapper,cs:0xa7,profile:MIXED_0501_PROFILE});
+  g.policy.afterStep();
+  assert.equal(finish(g).phase,'invalid'); // default ring0 entry cannot masquerade
+
+  for(const changed of [{handlerSs:0x13},{handlerEsp:0x1ff0}]){
+    const h=fixture();
+    h.cpu.armOwned0501FrameJournal=()=>({});
+    h.cpu.owned0501FrameStatus=()=>({phase:'complete',failure:null,
+      activeSteps:2,profile:MIXED_0501_PROFILE});
+    h.cpu.takeOwned0501FrameObservation=()=>({phase:'complete',failure:null,
+      activeSteps:2,profile:MIXED_0501_PROFILE,entry:h.entry,returned:h.returned});
+    Object.assign(h.entry,{profile:MIXED_0501_PROFILE,gateType:14,
+      oldCpl:3,newCpl:3,handlerCs:0x0b,handlerSs:0xaf,handlerEsp:0x1ff4,
+      handlerCodeDefault32:false,handlerStackDefault32:true,frameBytes:12},changed);
+    Object.assign(h.returned,{profile:MIXED_0501_PROFILE,
+      handlerCs:h.entry.handlerCs,handlerSs:h.entry.handlerSs,
+      handlerEsp:h.entry.handlerEsp});
+    h.policy.arm({mainCut:true,comparison:wrapper,cs:0xa7,
+      profile:MIXED_0501_PROFILE});
+    h.policy.afterStep();
+    assert.equal(finish(h).phase,'invalid');
+  }
 });
 
 test('admitted wrapper bytes survive public-layout mutation on exact and mismatch paths',()=>{
