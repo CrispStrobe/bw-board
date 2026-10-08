@@ -43,6 +43,18 @@ const finalInput={session,batch,files:returnFiles,accepted:[...first,...second],
   secondRows:rows('C:\\>',''),secondStep:101200,pendingKeys:0};
 assert.equal(gradeReturn(finalInput).passed,true);
 assert.equal(fullVerifyEcho(finalInput.echoRows),true);
+const otherSuccess=bytes(SUCCESS.replaceAll('4849664','4849665'));
+assert.notEqual(projectOutput(otherSuccess),null);
+assert.equal(gradeReturn({...finalInput,files:{...returnFiles,output:otherSuccess}}).passed,false);
+const borrowed=Buffer.from(batchFiles.output);
+const borrowedBatch=gradeBatch({...batchInput,files:{...batchFiles,output:borrowed}});
+assert.equal(borrowedBatch.passed,true);
+borrowed[20]^=1;
+assert.equal(gradeReturn({...finalInput,batch:borrowedBatch}).passed,true);
+const getterFiles={...batchFiles};let getterRead=false;
+Object.defineProperty(getterFiles,'output',{get(){getterRead=true;return batchFiles.output;}});
+assert.equal(gradeBatch({...batchInput,files:getterFiles}).passed,false);
+assert.equal(getterRead,false);
 
 for(const change of [
   {initial:{...initial,returned:bytes(RETURN)}},

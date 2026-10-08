@@ -5,6 +5,19 @@ import {encode} from '../i80386-dos32a-owned/keyboard.mjs';
 
 const names=['output','ok','fail','returned'];
 const issuedBatches=new WeakMap();
+function copyFiles(files){
+  if(!files||typeof files!=='object'||
+     Object.keys(files).sort().join()!==names.slice().sort().join())return null;
+  const descriptors=Object.getOwnPropertyDescriptors(files),copied={};
+  for(const name of names){
+    const descriptor=descriptors[name];
+    if(!descriptor||!Object.hasOwn(descriptor,'value'))return null;
+    const value=descriptor.value;
+    if(value!==null&&(!Buffer.isBuffer(value)||value.length>65536))return null;
+    copied[name]=value===null?null:Buffer.from(value);
+  }
+  return copied;
+}
 // DOS command redirection may create/truncate HTOUT before CLIENT reaches main.
 const cutReady=files=>!!files&&typeof files==='object'&&
   Object.hasOwn(files,'output')&&
@@ -74,6 +87,7 @@ function exactFiles(files,returned){
 }
 export function gradeBatch({session,initial,cutFiles,files,rows,accepted,boundStep,step,pendingKeys}){
   const tape=offeredTape(accepted),firstEnd=acceptedAt(tape,FIRST_SCANS);
+  const observed=copyFiles(files);
   const checks={
     session:!!session&&typeof session==='object',
     acceptedTape:tape!==null,
@@ -84,19 +98,21 @@ export function gradeBatch({session,initial,cutFiles,files,rows,accepted,boundSt
     loadedCut:Number.isSafeInteger(boundStep)&&boundStep>=0,
     firstInput:firstEnd!==null&&firstEnd<=boundStep,
     order:Number.isSafeInteger(step)&&step>boundStep,
-    exactFiles:exactFiles(files,false),
+    exactFiles:exactFiles(observed,false),
     batchVisible:rowsOk(rows)&&rows.some(row=>row.trim()===BATCH_DONE),
     currentPrompt:currentCPrompt(rows),
     noPending:pendingKeys===0,
   };
   const result=Object.freeze({checks:Object.freeze(checks),
     passed:Object.values(checks).every(Boolean),step,firstEnd});
-  issuedBatches.set(result,{session,passed:result.passed,step,tape});
+  issuedBatches.set(result,{session,passed:result.passed,step,tape,
+    output:checks.exactFiles?observed.output:null});
   return result;
 }
 export function gradeReturn({session,batch,files,accepted,secondQueuedStep,
   queuedRows,echoRows,echoStep,firstRows,firstStep,secondRows,secondStep,pendingKeys}){
   const held=issuedBatches.get(batch),tape=offeredTape(accepted);
+  const observed=copyFiles(files);
   const queued=Number.isSafeInteger(secondQueuedStep)&&secondQueuedStep>held?.step;
   const secondEnd=acceptedAt(tape,SECOND_SCANS,queued?secondQueuedStep-1:Number.MAX_SAFE_INTEGER);
   const prefix=!!held?.tape&&!!tape&&tape.length>=held.tape.length&&
@@ -112,7 +128,9 @@ export function gradeReturn({session,batch,files,accepted,secondQueuedStep,
     noPreexistingVerifyEcho:rowsOk(queuedRows)&&!fullVerifyEcho(queuedRows),
     durableVerifyEcho:fullVerifyEcho(echoRows)&&currentCPrompt(echoRows)&&
       Number.isSafeInteger(echoStep)&&echoStep>secondEnd&&echoStep<=firstStep,
-    exactFiles:exactFiles(files,true),
+    exactFiles:exactFiles(observed,true),
+    sameOwnedOutput:!!held?.output&&Buffer.isBuffer(observed?.output)&&
+      held.output.equals(observed.output),
     stablePrompt:currentCPrompt(firstRows)&&currentCPrompt(secondRows)&&
       Number.isSafeInteger(firstStep)&&Number.isSafeInteger(secondStep)&&
       firstStep>=secondEnd&&secondStep-firstStep>=100000,
