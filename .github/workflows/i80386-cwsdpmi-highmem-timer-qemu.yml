@@ -105,6 +105,7 @@ jobs:
           allowed={'.json','.stdout','.stderr','.txt','.map'}
           for path in sorted(root.rglob('*')):
               if path.is_symlink(): raise ValueError('artifact symlink')
+              if not path.is_dir() and not path.is_file(): raise ValueError('nonordinary artifact role')
               if path.is_file() and path.name!='artifact-inventory.json':
                   if path.suffix.lower() not in allowed: raise ValueError('non-report artifact role')
                   size=path.stat().st_size
