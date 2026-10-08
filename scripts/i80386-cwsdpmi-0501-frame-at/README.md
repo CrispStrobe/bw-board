@@ -1,11 +1,14 @@
 # AX=0501 frame controller source checkpoint
 
-This unrun source checkpoint prepares a narrow controller for one owned DPMI
+This source checkpoint prepares a narrow controller for one owned DPMI
 `INT 31h` AX=0501 delivery and matching protected 32-bit IRET. The runnable
 adapter accepts the same pinned inputs as the finite high-memory AT gate and
-wraps its unchanged completion scenario. It has no hosted AT guest result.
-A dedicated source-closure gate and label-only hosted workflow are present
-but have not been dispatched. The earlier finite high-memory
+wraps its unchanged completion scenario. The first hosted AT frame attempt,
+run 37814786319 at source `c968428d4d478ae115b8e9cb1065f8a349b7ccbe`,
+failed before journal arm because `cpu.segmentCaches` is a plain object, not
+iterable. This follow-up captures its six own numeric slots without iteration;
+the correction has not run in a guest. A dedicated source-closure gate and
+label-only hosted workflow are present. The earlier finite high-memory
 client result does not establish interrupt-frame ownership.
 
 `admitFreshWrapper` calls the unchanged fresh executable/map/compile admission
@@ -57,4 +60,4 @@ Run the CPU-free controls with:
 node --test test/i80386-0501-frame-policy.test.mjs test/i80386-0501-frame-orchestration.test.mjs
 ```
 
-The adapter, CPU and guest have not been executed for this checkpoint.
+The corrected adapter and guest have not been executed for this follow-up.

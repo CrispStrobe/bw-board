@@ -1,6 +1,67 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createFrameOrchestration,guardObservation} from '../scripts/i80386-cwsdpmi-0501-frame-at/orchestration.mjs';
+import {captureReferences,sameReferences} from '../scripts/i80386-cwsdpmi-0501-frame-at/references.mjs';
+
+function sourceShape(){
+  const segmentCaches={};
+  for(let slot=0;slot<6;slot++)segmentCaches[slot]={slot};
+  const translations=new Array(512),planes=Array.from({length:4},
+    ()=>new Uint8Array(65536));
+  const cpu={segmentCaches,_translations:translations,
+    _translationTablePages:new Set(),_debugRegisters:new Uint32Array(8)};
+  const vgaMemory={registerSource:{},planes,latches:new Uint8Array(4)};
+  return {cpu,mem:new Uint8Array(16<<20),_page:new Uint8Array(4096),
+    config:{},chips:{},vgaMemory};
+}
+test('real plain-object six-slot cache is captured without iterator or getter',()=>{
+  const machine=sourceShape();
+  Object.defineProperty(machine.cpu.segmentCaches,Symbol.iterator,
+    {get(){throw new Error('cache iterator read');}});
+  Object.defineProperty(machine.cpu._translations,Symbol.iterator,
+    {get(){throw new Error('translation iterator read');}});
+  Object.defineProperty(machine.vgaMemory.planes,Symbol.iterator,
+    {get(){throw new Error('VGA iterator read');}});
+  const before=captureReferences(machine);
+  assert.equal(before.cacheValues.length,6);
+  assert.equal(before.cacheValues[5],machine.cpu.segmentCaches[5]);
+  assert.equal(before.translationValues.length,512);
+  assert.equal(sameReferences(before,captureReferences(machine)),true);
+  machine.cpu.segmentCaches[5]={changed:true};
+  assert.equal(sameReferences(before,captureReferences(machine)),false);
+});
+test('translation, VGA and backing replacements are refused by reference comparison',()=>{
+  const machine=sourceShape();
+  const before=captureReferences(machine);
+  machine.cpu._translations[11]={replacement:true};
+  assert.equal(sameReferences(before,captureReferences(machine)),false);
+  machine.cpu._translations[11]=undefined;
+  machine.vgaMemory.registerSource={replacement:true};
+  assert.equal(sameReferences(before,captureReferences(machine)),false);
+  machine.vgaMemory.registerSource={};
+  const second=captureReferences(machine);
+  machine.vgaMemory.planes[2]=new Uint8Array(65536);
+  assert.equal(sameReferences(second,captureReferences(machine)),false);
+  machine.vgaMemory.planes[2]=second.planeValues[2];
+  const third=captureReferences(machine);
+  machine.mem=new Uint8Array(16<<20);
+  assert.equal(sameReferences(third,captureReferences(machine)),false);
+});
+test('accessor slots and iterable cache masquerade are refused without invocation',()=>{
+  const machine=sourceShape();
+  let getterCalls=0;
+  Object.defineProperty(machine.cpu.segmentCaches,'2',{configurable:true,
+    get(){getterCalls++;throw new Error('must not invoke');}});
+  assert.throws(()=>captureReferences(machine),/own-data slot/);
+  assert.equal(getterCalls,0);
+  machine.cpu.segmentCaches=[{},{},{},{},{},{}];
+  assert.throws(()=>captureReferences(machine),/source plain object/);
+  const backing=sourceShape();
+  Object.defineProperty(backing.mem,'buffer',{get(){getterCalls++;
+    throw new Error('must not invoke typed buffer accessor');}});
+  captureReferences(backing);
+  assert.equal(getterCalls,0);
+});
 
 const comparison=Object.freeze({schema:'bw.cwsdpmi-0501.wrapper-comparison.v1',
   address:0x5700,bytes:0x30});
