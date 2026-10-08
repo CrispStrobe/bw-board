@@ -1,0 +1,7 @@
+# AT loaded-main source checkpoint
+
+`cut.mjs` is a bounded, **unconnected** adapter for a future hosted AT runner. Given an already admitted fresh EXE/map layout, it accepts a protected, default-32 client `main` candidate, makes one passive ordinary-RAM copy of the linked `.text` span, and passes only that copy to the unchanged binding model. It checks selected CPU, translation-cache, board scalar, full 16 MiB backing, page-classifier, page-table-page and VGA-plane/latch fingerprints before and after. A swallowed reentry, changed fingerprint or second cut is terminal for that machine's cut session. It does not call bus or chip read methods.
+
+The existing passive reader's `sourcePaused` argument remains a caller assertion. This module cannot authenticate that the actual AT engine is paused; the future runner must provide a synchronous pre-step, owner-thread cut with no async work, hooks or input between the two fingerprints. The chip fingerprint covers direct scalar fields, not all nested device state. The model has no actual loaded-code, guest, DPMI service, IRET, completion or performance result. The original parser artifact excluded the linked EXE, so a future hosted gate must compile and admit a fresh pair in the same job before trying this cut.
+
+Run `node scripts/i80386-cwsdpmi-at-loaded-actual/cut-control.mjs` for the synthetic no-machine-step control. It checks a matching and altered linked text, one-shot admission, an unadmitted page, a swallowed reentry and unchanged observed state. It does not instantiate or execute the AT machine.
