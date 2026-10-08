@@ -36,7 +36,7 @@ artifact. Read the [finite AT result and retained strict-text failure](I80386-DP
 The original source and outcome remain frozen; no rerun was needed. This
 completes the finite application/output gate, not interrupt-frame attribution
 or general compatibility. No CPU/device implementation or consumer dependency
-pin was changed. Next work scopes passive DPMI interrupt-entry/return evidence.
+pin was changed. Next work follows the [single-allocation frame-attribution contract](I80386-DPMI-FRAME-ATTRIBUTION-LANE.md).
 
 ## Fixture and acceptance sequence
 
