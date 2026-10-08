@@ -158,3 +158,57 @@ export function bindLoadedText(layout, cpu, readLinear) {
   return Object.freeze({base, cs: cpu.cs, textSha256: admitted.text.sha256,
     executableSha256: admitted.executableSha256, main: admitted.roles.main.address});
 }
+
+export function admittedMainAddress(layout) {
+  const admitted=admittedLayouts.get(layout);
+  if(!admitted)throw new Error('unadmitted main address');
+  return admitted.roles.main.address;
+}
+
+export function admittedTextExtent(layout) {
+  const admitted=admittedLayouts.get(layout);
+  if(!admitted)throw new Error('unadmitted text extent');
+  return Object.freeze({address:admitted.text.address,bytes:admitted.text.bytes,
+    mainAddress:admitted.roles.main.address});
+}
+
+// Diagnostic only: no exemption, mask, or alternative binding result. The
+// expected bytes and required role extents come from the private admission.
+export function diagnoseLoadedText(layout, copied) {
+  const admitted=admittedLayouts.get(layout);
+  if(!admitted||!Buffer.isBuffer(copied)||copied.length!==admitted.text.bytes)
+    throw new Error('unadmitted diagnostic snapshot');
+  const observed=Buffer.from(copied),expected=admitted.textBytes;
+  let changedBytes=0,firstOffset=null,lastOffset=null,runStart=null,spanCount=0;
+  const spans=[];
+  for(let i=0;i<expected.length;i++){
+    if(observed[i]!==expected[i]){
+      changedBytes++;firstOffset??=i;lastOffset=i;
+      if(runStart===null)runStart=i;
+    }else if(runStart!==null){
+      spanCount++;
+      if(spans.length<32)spans.push(Object.freeze({offset:runStart,length:i-runStart}));
+      runStart=null;
+    }
+  }
+  if(runStart!==null){
+    spanCount++;
+    if(spans.length<32)
+      spans.push(Object.freeze({offset:runStart,length:expected.length-runStart}));
+  }
+  if(!changedBytes)return null;
+  const roles=Object.fromEntries(Object.entries(admitted.roles).map(([name,role])=>{
+    const offset=role.address-admitted.text.address;
+    const a=expected.subarray(offset,offset+role.bytes);
+    const b=observed.subarray(offset,offset+role.bytes);
+    return [name,Object.freeze({address:role.address,bytes:role.bytes,
+      member:role.member,expectedSha256:sha256(a),observedSha256:sha256(b),
+      equal:a.equals(b)})];
+  }));
+  return Object.freeze({schema:'bw.cwsdpmi-owned.loaded-text-mismatch.v1',
+    textAddress:admitted.text.address,textBytes:admitted.text.bytes,
+    expectedSha256:admitted.text.sha256,observedSha256:sha256(observed),
+    changedBytes,firstOffset,lastOffset,spanCount,
+    spansTruncated:spanCount>spans.length,spans:Object.freeze(spans),
+    roles:Object.freeze(roles)});
+}

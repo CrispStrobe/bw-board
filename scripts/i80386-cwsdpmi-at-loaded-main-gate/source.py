@@ -12,13 +12,21 @@ from pathlib import Path
 BASE = "8ae6ba128b8be2e2a807a5e55530e0d83bae21fb"
 NEW = "scripts/i80386-cwsdpmi-at-loaded-main-gate/"
 WORKFLOW = ".github/workflows/i80386-cwsdpmi-at-loaded-main-gate.yml"
-# The signed-CR0 correction changes only these two reviewed reader roles.
+# The reviewed CR0 and diagnostic changes affect only these six held roles.
 # Every other inherited role, including the CPU, remains byte-exact at BASE.
 REVIEWED_OVERRIDES = {
     "scripts/i80386-cwsdpmi-at-loaded/passive-ram.mjs":
         "4cbf40db468b0c22058e224902b3f8c2b705b824a9c49bc5de9bc4c34d98f862",
     "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs":
         "456682b1757ab585a2cc5b4db8738c95c289aa5822db7d83b7cf2f34a994bd1e",
+    "scripts/i80386-cwsdpmi-at-owned/binding.mjs":
+        "a43dba35a39f48a94fd4235578328dd9f3351c23988fbab7299838f49b4d2352",
+    "scripts/i80386-cwsdpmi-at-owned/binding-control.mjs":
+        "ae8a352261e0613c26c728409d04841093b34c7d0af949ef058c8e3941b4b8eb",
+    "scripts/i80386-cwsdpmi-at-loaded-actual/cut.mjs":
+        "f41a800b16d9d51fe5c7c6cd30f1ac46f3457d1ebbf2a15001dab2635e72e192",
+    "scripts/i80386-cwsdpmi-at-loaded-actual/cut-control.mjs":
+        "f5ebcb4a9f5e8dee92da926a3e369b0398474147556b56ae2003b78219acc153",
 }
 INHERITED_PREFIXES = (
     "scripts/i80386-cwsdpmi-compile-only/",
@@ -92,14 +100,14 @@ def admit_inherited(role, raw, original, inherited):
     """Admit exact reviewed helper bytes or the unchanged inherited base."""
     if role in REVIEWED_OVERRIDES:
         if role not in inherited or hashlib.sha256(raw).hexdigest() != REVIEWED_OVERRIDES[role]:
-            raise ValueError("reviewed reader override changed: " + role)
+            raise ValueError("reviewed helper override changed: " + role)
     elif raw != original:
         raise ValueError("inherited source changed: " + role)
 
 
 def require_overrides(names, inherited):
     if not set(REVIEWED_OVERRIDES) <= (names & inherited):
-        raise ValueError("reviewed reader override role missing")
+        raise ValueError("reviewed helper override role missing")
 
 
 def identity(expected):

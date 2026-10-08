@@ -90,10 +90,27 @@ assert.deepEqual(admitted.before,old);
 assert.deepEqual(admitted.after,old);
 assert.deepEqual(observationFingerprint(valid),old);
 assert.throws(()=>bindAtMainCut(valid,layout),/failed AT loaded-main cut/);
+const publicTamper=machine();
+const oldAddress=layout.text.address,oldBytes=layout.text.bytes,
+  oldMain=layout.roles.main.address;
+layout.text.address=0;layout.text.bytes=1;layout.roles.main.address=0;
+assert.equal(candidateAtMain(publicTamper,layout),true);
+assert.equal(bindAtMainCut(publicTamper,layout).binding.main,oldMain);
+layout.text.address=oldAddress;layout.text.bytes=oldBytes;
+layout.roles.main.address=oldMain;
 
 const wrong=machine();wrong.mem[textAddress+7]^=1;
 const wrongBefore=observationFingerprint(wrong);
-assert.throws(()=>bindAtMainCut(wrong,layout),/loaded text differs/);
+let wrongError=null;
+assert.throws(()=>bindAtMainCut(wrong,layout),error=>{
+  wrongError=error;return /loaded text differs/.test(error.message);
+});
+assert.equal(wrongError.textMismatch.changedBytes,1);
+assert.equal(wrongError.textMismatch.firstOffset,7);
+assert.equal(wrongError.textMismatch.spans[0].offset,7);
+assert.equal(wrongError.textMismatch.expectedSha256,layout.text.sha256);
+assert.equal(wrongError.textMismatch.roles.main.equal,true);
+assert.deepEqual(wrongError.observation.before,wrongError.observation.after);
 assert.deepEqual(observationFingerprint(wrong),wrongBefore);
 const falseMain=machine();falseMain.cpu.eip++;
 assert.equal(candidateAtMain(falseMain,layout),false);
@@ -102,7 +119,10 @@ const halted=machine();halted.cpu.halted=true;
 assert.equal(candidateAtMain(halted,layout),false);
 
 const pageDenied=machine();pageDenied._page[1]=0;
-assert.throws(()=>bindAtMainCut(pageDenied,layout),/ordinary RAM/);
+assert.throws(()=>bindAtMainCut(pageDenied,layout),error=>{
+  assert.equal(error.textMismatch,undefined);
+  return /ordinary RAM/.test(error.message);
+});
 const accessor=machine();let getterCalled=false;
 Object.defineProperty(accessor.chips,'vga1',{get(){getterCalled=true;return {};}});
 assert.throws(()=>bindAtMainCut(accessor,layout),/chip map accessor/);

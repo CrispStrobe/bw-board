@@ -129,7 +129,8 @@ const hasSequence=(haystack,needle)=>{
     if(needle.every((value,index)=>value===haystack[at+index]))return true;
   return false;
 };
-const cpuCutState=cpu=>({cs:cpu.cs,eip:cpu.eip,eflags:cpu.eflags,
+const cpuCutState=cpu=>({cs:cpu.cs,ds:cpu.ds,es:cpu.es,ss:cpu.ss,
+  fs:cpu.fs,gs:cpu.gs,eip:cpu.eip,eflags:cpu.eflags,
   cr0:cpu.cr0,cr2:cpu.cr2,cr3:cpu.cr3,cr4:cpu.cr4,
   csDescriptor:{...cpu.segmentCaches[1]},
   cpuProfile:cpu.cpuProfile,cycles:cpu.cycles,
@@ -272,6 +273,9 @@ export function run(inputPath,outputPath,progressPath) {
   }catch(error){
     first(report,boundedText(error));
     if(error?.observation)report.failedObservation=error.observation;
+    if(error?.textMismatch)report.textMismatch=error.textMismatch;
+    if(error?.diagnosticFailure)
+      first(report,'text mismatch diagnostic: '+boundedText(error.diagnosticFailure));
     report.passed=false;
     if(machine){
       try {report.final=cpuCutState(machine.cpu);} catch(secondary){first(report,'final CPU: '+boundedText(secondary));}

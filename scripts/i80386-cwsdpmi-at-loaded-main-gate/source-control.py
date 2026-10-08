@@ -45,17 +45,22 @@ assert "roms/free-at-bios/vgabios-lgpl.bin" in source.BIOS
 
 reader = "scripts/i80386-cwsdpmi-at-loaded/passive-ram.mjs"
 reader_control = "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs"
-inherited = {reader, reader_control, "src/experimental/i80386.js"}
-assert set(source.REVIEWED_OVERRIDES) == {reader, reader_control}
+binding = "scripts/i80386-cwsdpmi-at-owned/binding.mjs"
+binding_control = "scripts/i80386-cwsdpmi-at-owned/binding-control.mjs"
+cut = "scripts/i80386-cwsdpmi-at-loaded-actual/cut.mjs"
+cut_control = "scripts/i80386-cwsdpmi-at-loaded-actual/cut-control.mjs"
+overrides = {reader, reader_control, binding, binding_control, cut, cut_control}
+inherited = overrides | {"src/experimental/i80386.js"}
+assert set(source.REVIEWED_OVERRIDES) == overrides
 source.require_overrides(inherited, inherited)
-for missing in (reader, reader_control):
+for missing in overrides:
     try:
         source.require_overrides(inherited - {missing}, inherited)
     except ValueError:
         pass
     else:
         raise AssertionError("missing reviewed override admitted")
-for override in (reader, reader_control):
+for override in overrides:
     original = source.git("show", f"{source.BASE}:{override}")
     actual = Path(override).read_bytes()
     assert hashlib.sha256(actual).hexdigest() == source.REVIEWED_OVERRIDES[override]
