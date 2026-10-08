@@ -107,11 +107,12 @@ This is runnable source preparation, not an allocation-frame guest result.
 ## Hosted gate preparation checkpoint
 
 [Draft PR463](https://github.com/CrispStrobe/bw-board/pull/463), reviewed head
-[`e20343e1`](https://github.com/CrispStrobe/bw-board/commit/e20343e162765a86c9cd589b5b7281e19c5da816),
+[`c968428d`](https://github.com/CrispStrobe/bw-board/commit/c968428d4d478ae115b8e9cb1065f8a349b7ccbe),
 is stacked on `8b82bde4`. Partial progress now retains the wrapper receipt at
 arm and the full terminal CPU journal at complete/invalid. Later routine
 updates preserve that milestone, and a failed progress write does not replace
-the CPU's invalidation reason. Every partial report remains top-level
+the CPU's invalidation reason. Journal polling stops after the terminal record
+is retained; ordinary machine execution continues. Every partial report remains top-level
 `passed:false`; no raw RAM, executable or disk bytes are retained.
 
 The new source manifest binds 194 Git-matching roles and 61 recursive ESM nodes,
@@ -126,7 +127,7 @@ No compiler, CPU or guest execution occurred for this checkpoint.
 
 Continue with these remaining gates:
 
-1. Wait for every enabled PR463 check on exact `e20343e1` to succeed. Preserve
+1. Wait for every enabled PR463 check on exact `c968428d` to succeed. Preserve
    any failures and investigate them without rewriting historical receipts.
 2. After exact-head source review and CI, apply the dedicated label once for
    one bounded diagnostic. The workflow has not been dispatched yet.
@@ -134,8 +135,8 @@ Continue with these remaining gates:
    imports or guest replay. Require the selected committed pair and same-run
    finite completion; retain partial progress and first failure otherwise.
 
-Use the [current README](https://github.com/CrispStrobe/bw-board/blob/e20343e162765a86c9cd589b5b7281e19c5da816/scripts/i80386-cwsdpmi-0501-frame-at/README.md)
-and [dedicated workflow](https://github.com/CrispStrobe/bw-board/blob/e20343e162765a86c9cd589b5b7281e19c5da816/.github/workflows/i80386-cwsdpmi-0501-frame-at.yml).
+Use the [current README](https://github.com/CrispStrobe/bw-board/blob/c968428d4d478ae115b8e9cb1065f8a349b7ccbe/scripts/i80386-cwsdpmi-0501-frame-at/README.md)
+and [dedicated workflow](https://github.com/CrispStrobe/bw-board/blob/c968428d4d478ae115b8e9cb1065f8a349b7ccbe/.github/workflows/i80386-cwsdpmi-0501-frame-at.yml).
 This checkpoint does not qualify a guest frame, performance or consumer adoption.
 
 ## First deliverable
