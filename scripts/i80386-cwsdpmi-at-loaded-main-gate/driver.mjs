@@ -72,15 +72,20 @@ export function passiveRows(machine) {
   const video=machine.vgaMemory,card=machine.chips?.vga1;
   if(!video||video.registerSource!==card||
      !(card.misc&2)||(card.gc[6]&1)||((card.gc[6]>>>2)&3)!==3||
-     (card.seq[4]&8)||card.crtc[1]!==79) return null;
+     card.seq[4]!==6||(card.gc[5]&8)||card.crtc[1]!==79||
+     !Number.isInteger(card.crtc[0x0c])||!Number.isInteger(card.crtc[0x0d]))
+    return null;
   const plane=video.planes?.[0];
   if(!(plane instanceof Uint8Array)||plane.length!==65536)
     throw new Error('VGA text-plane shape');
   const lines=[];
+  // Text character cells are words at CRTC start; the source VGA renderer's
+  // odd/even path fetches each character from plane 0 at the even byte index.
+  const start=(card.crtc[0x0c]<<8)|card.crtc[0x0d];
   for(let y=0;y<25;y++){
     let line='';
     for(let x=0;x<80;x++){
-      const n=plane[(y*80+x)*2];
+      const n=plane[((start+y*80+x)*2)&0xffff];
       line+=n>=32&&n<=126?String.fromCharCode(n):' ';
     }
     lines.push(line.replace(/\s+$/,''));

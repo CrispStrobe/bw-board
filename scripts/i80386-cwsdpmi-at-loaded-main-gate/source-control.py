@@ -16,6 +16,9 @@ raw = (b"// from './fake.mjs' is only a comment\n"
        b"const documentation = \"from './also-fake.mjs'\";\n")
 assert source.imported(role, raw, names) == {
     "scripts/i80386-cwsdpmi-at-loaded-main-gate/real.mjs"}
+continued = b"import {\n x,\n} from './real.mjs';\n"
+assert source.imported(role, continued, names) == {
+    "scripts/i80386-cwsdpmi-at-loaded-main-gate/real.mjs"}
 for hostile in (b"import('./runtime.mjs');\n",
                 b"import {x} from './unbound.mjs';\n",
                 b"import {x} from 'unbound-package';\n"):

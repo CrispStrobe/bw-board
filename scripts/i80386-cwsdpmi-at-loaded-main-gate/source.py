@@ -37,6 +37,7 @@ BIOS = {
         (38400, "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"),
 }
 IMPORT_FROM = re.compile(r"^\s*(?:import|export)\s+[^\n;]*?\bfrom\s*['\"]([^'\"]+)['\"]", re.M)
+IMPORT_CONTINUED = re.compile(r"^\s*}\s*from\s*['\"]([^'\"]+)['\"]", re.M)
 IMPORT_SIDE = re.compile(r"^\s*import\s*['\"]([^'\"]+)['\"]", re.M)
 IMPORT_DYNAMIC = re.compile(r"\bimport\s*\(")
 
@@ -52,7 +53,8 @@ def imported(role, raw, all_names):
     if IMPORT_DYNAMIC.search(source):
         raise ValueError("unreviewed dynamic JS import: " + role)
     found = set()
-    for specifier in IMPORT_FROM.findall(source) + IMPORT_SIDE.findall(source):
+    for specifier in (IMPORT_FROM.findall(source) + IMPORT_CONTINUED.findall(source) +
+                      IMPORT_SIDE.findall(source)):
         if specifier.startswith("node:"):
             continue
         if not specifier.startswith("."):
