@@ -1,20 +1,25 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readOrdinaryLinear} from './passive-ram.mjs';
+import {VGAMemory} from '../../src/experimental/vga-memory.js';
 
 const BACKING=16<<20,sha=b=>createHash('sha256').update(b).digest('hex');
-function fixture({paging=false,cpl=3}={}) {
+function fixture({paging=false,cpl=3,vga=false}={}) {
   const mem=new Uint8Array(BACKING),pages=new Uint8Array(BACKING>>>12);
   pages.fill(1,0,0xa0);pages.fill(1,0x100,0x460);
-  pages[0xb8]=3;pages[0xf0]=2;
+  pages[0xb8]=vga?0:1;pages[0xf0]=2;
   const cpu={cpuProfile:'compatibility',cr0:paging?0x80000001:1,
     cr3:0x110000,cr4:0,cs:cpl===3?0x1b:0x18,eflags:2,
     cr2:0xfeed0000,_translationGeneration:7,_translations:[{page:4,physicalBase:0x101000}],
     _retainedRealCs:false,segmentCaches:{1:{base:0,default32:true,present:true,code:true}}};
+  const vgaChip={getVideoState(){throw new Error('VGA register reader invoked');}};
   const machine={cpu,mem,_page:pages,memoryBytes:BACKING,
+    chips:vga?{vga1:vgaChip}:{},vgaMemory:vga?new VGAMemory(vgaChip):null,
     _a20Configured:true,_a20Enabled:true,_xv6Mp:null,
     config:{cpuBackend:'i80386-experimental',memoryBytes:BACKING,
+      ...(vga?{experimentalVgaMemory:'vga1'}:{}),
       regions:[{kind:'ram',start:0,end:0x9ffff},
+        ...(!vga?[{kind:'ram',start:0xb8000,end:0xbffff}]:[]),
         {kind:'ram',start:0x100000,end:0x45ffff},
         {kind:'rom',start:0xf0000,end:0xfffff}]},
     boardState:{pio:0,displayRevision:7},
@@ -60,6 +65,11 @@ const pse=fixture({paging:true});pse.cpu.cr4=0x10;denies(pse,0x4000,1);
 const disabled=fixture();disabled._a20Enabled=false;denies(disabled,0x101000,1);
 const rom=fixture();denies(rom,0xf0000,1);
 const mmio=fixture();denies(mmio,0xb8000,1);
+const vga=fixture({vga:true});vga.mem[0x101000]=0x53;
+assert.equal(read(vga,0x101000,1)[0],0x53);
+const vgaAperture=fixture({vga:true});denies(vgaAperture,0xb8000,1);
+const wrongVga=fixture({vga:true});wrongVga.vgaMemory.registerSource={};
+denies(wrongVga,0x101000,1);
 const backingOnly=fixture();denies(backingOnly,0x600000,1);
 const tableRom=fixture({paging:true});tableRom.cpu.cr3=0xf0000;denies(tableRom,0x4000,1);
 const wrongProfile=fixture();wrongProfile.cpu.cpuProfile='strict386';denies(wrongProfile,0x101000,1);

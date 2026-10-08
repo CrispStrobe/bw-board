@@ -1,4 +1,5 @@
 // Single-owner-thread, source-only ordinary-RAM reader. No CPU/bus hooks.
+import {VGAMemory} from '../../src/experimental/vga-memory.js';
 const BACKING = 16 << 20;
 const MAX_READ = 1 << 20;
 const active = new WeakMap();
@@ -26,8 +27,16 @@ function context(machine) {
       pages.length!==(BACKING>>>12) || own(machine,'_xv6Mp')!==null)
     throw new Error('outside ordinary 4 MiB AT backing profile');
   const ram=(config.regions??[]).filter(r=>r.kind==='ram');
-  if(ram.length!==2 || ram[0].start!==0 || ram[0].end!==0x9ffff ||
-     ram[1].start!==0x100000 || ram[1].end!==0x45ffff)
+  const video=own(machine,'vgaMemory');
+  const vga=config.experimentalVgaMemory==='vga1';
+  const high=vga?ram[1]:ram[2];
+  if(ram[0]?.start!==0 || ram[0]?.end!==0x9ffff ||
+     high?.start!==0x100000 || high?.end!==0x45ffff ||
+     (vga ? ram.length!==2 || Object.getPrototypeOf(video)!==VGAMemory.prototype ||
+       own(video,'registerSource')!==own(machine,'chips')?.vga1 :
+       ram.length!==3 || ram[1]?.start!==0xb8000 ||
+       ram[1]?.end!==0xbffff || video!==null ||
+       config.experimentalVgaMemory!==undefined))
     throw new Error('configured RAM ranges');
   if(own(machine,'_a20Configured')!==true || own(machine,'_a20Enabled')!==true)
     throw new Error('A20 source authority not enabled');
