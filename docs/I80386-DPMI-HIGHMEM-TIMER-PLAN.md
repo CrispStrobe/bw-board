@@ -31,10 +31,12 @@ copy of the approved client output. Its declared limits are 120 million steps
 and 640 seconds of scenario wall time.
 
 Its first [hosted AT attempt](https://github.com/CrispStrobe/bw-board/actions/runs/37776895780),
-attempt 1, was queued at 12:26 UTC on 2026-10-08. No AT success is established
-at this checkpoint. Keep that source frozen until the original artifact is
-preserved and independently audited; do not replace the first outcome with
-a rerun. No CPU/device implementation or consumer dependency pin was changed.
+attempt 1, passed; root and peer independently audited the original report-only
+artifact. Read the [finite AT result and retained strict-text failure](I80386-DPMI-HIGHMEM-AT-RESULTS.md).
+The original source and outcome remain frozen; no rerun was needed. This
+completes the finite application/output gate, not interrupt-frame attribution
+or general compatibility. No CPU/device implementation or consumer dependency
+pin was changed. Next work scopes passive DPMI interrupt-entry/return evidence.
 
 ## Fixture and acceptance sequence
 
@@ -43,4 +45,4 @@ a rerun. No CPU/device implementation or consumer dependency pin was changed.
 3. Call `__dpmi_int` for BIOS `INT 1Ah`, `AH=00h` more than once, initializing every input register structure before each call. Retain first/last `CX:DX` values and poll count; require each value below `0x1800B0` and a positive, bounded modulo-day tick difference, including midnight wrap. [DJGPP documents](https://www.delorie.com/djgpp/doc/libc/libc_246.html) that `__dpmi_int` uses DPMI `0300h`; the [BIOS timer contract](https://www.delorie.com/djgpp/doc/rbinter/id/80/22.html) defines the ticks-since-midnight result. Establish a generous finite poll budget on the QEMU control before choosing an AT cap. Cap expiry means progress was not observed within that budget, not that the timer is broken. Do not seed guest ticks from the host, sleep to manufacture progress, or patch an executable or image.
 4. First compile and run the fresh fixture on QEMU TCG with an explicit `pc`/486/4 MiB profile. Require exact fixed success, zero-exit and separate shell-return marker bytes plus a current prompt. Parse variable address and tick diagnostics with a strict bounded grammar and validate their ranges and predicates; do not require whole-output byte equality across machines. Then run the same newly authenticated source/client/media bytes on the AT path with its separately recorded CPU/device profile, requiring an owned-code entry observation, the same fixed markers and parsed predicates, accepted input, and fresh current-prompt evidence. Preserve the first failure and bounded original observations in both runs. Compare the **address and tick predicates**, not absolute linear addresses or timer values across machines; QEMU and AT are not identical hardware profiles.
 
-Passing both finite runs would establish this owned client's high *linear* allocation, pattern readback, advancing reported BIOS ticks, zero exit and shell return under the stated profiles. It would not establish physical high-memory placement, calibrated clock accuracy, `INT 31h` frame/IRET ownership, all DPMI functions, strict 386 hardware equivalence, or general application compatibility. The QEMU result is recorded separately above; the new AT stage remains unqualified.
+Passing both finite runs would establish this owned client's high *linear* allocation, pattern readback, advancing reported BIOS ticks, zero exit and shell return under the stated profiles. It would not establish physical high-memory placement, calibrated clock accuracy, `INT 31h` frame/IRET ownership, all DPMI functions, strict 386 hardware equivalence, or general application compatibility. The QEMU and AT finite outcomes are recorded separately above; interrupt-frame attribution remains unqualified.
