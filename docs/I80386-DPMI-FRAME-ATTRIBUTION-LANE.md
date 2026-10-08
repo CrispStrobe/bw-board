@@ -199,11 +199,25 @@ rejection criteria unchanged in this diagnostic slice.
 
 Use an isolated source branch with an explicit changed-file allowlist and new
 CPU hash; preserve historical manifests and source-bound test cohorts. Hosted
-controls must exercise each rejected condition, a 32-bit gate targeting a
-16-bit-default handler, discarded staging and recorder failure. After review
+controls must exercise reachable width/handler-code/handler-stack rejections,
+a 32-bit gate targeting a 16-bit-default handler, discarded staging and recorder
+failure/reentry. Software/vector/nesting/VM86/error-code guards remain intact;
+do not claim each disjunct was individually executed when decoded intent makes
+it unreachable in this fixture. After review
 and all enabled exact-head checks, run one separately identified actual probe
 and audit its original packet. Use the recorded facts to scope any later
 mixed-width frame/IRET implementation; do not guess it from final registers.
+
+The diagnostic-only implementation is published in [draft PR465](https://github.com/CrispStrobe/bw-board/pull/465)
+at reviewed head [`0714159c`](https://github.com/CrispStrobe/bw-board/commit/0714159c9875ac17bf5ef5a8e5418f5815fa1608),
+stacked on `4c22a574`. Root and independent peer completed source review;
+source controls, syntax and 196-role/62-node source admission passed. Eight
+new focused controls are added for hosted execution. Hosted CPU/xv6/Harris
+checks are pending; no actual diagnostic has been triggered for this head.
+The new rejection field cannot qualify a delivery/return pair. After every
+enabled exact-head check passes, apply the dedicated label once, retain the
+original diagnostic packet, and audit its rejected-delivery facts separately
+from any later mixed-width frame qualification.
 
 ## First deliverable
 
