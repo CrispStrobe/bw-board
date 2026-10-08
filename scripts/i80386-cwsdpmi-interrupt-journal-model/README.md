@@ -40,9 +40,10 @@ and `src/i8086-machine.js` SHA-256
 - `_iret()` has its validated width, old stack, selector/target/flags, outer
   stack, and return CPL before the state update. NT task return and VM86 return
   are outside scope. The model associates nested IRET with the latest open
-  delivery and requires the copied return frame, CS:EIP, SS:ESP, and CPL to
-  agree. A later CPU producer must also establish the actual frame bytes and
-  successful original return.
+  delivery and requires the copied return-frame identity, CS:EIP, SS:ESP, and
+  CPL to agree. It keeps delivered and consumed flags separately because a
+  service may edit saved CF. A later CPU producer must also establish the
+  actual frame bytes, allowed flag restoration, and successful original return.
 - `step()` snapshots instruction state and restores it on ordinary fault;
   `taskCommitted` is distinct and cannot be called a rolled-back instruction.
   `interrupt()` is a separate external delivery entry. The AT machine's

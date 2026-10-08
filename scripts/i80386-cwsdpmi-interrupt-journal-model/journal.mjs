@@ -73,14 +73,20 @@ function iret(input,top){
   const before=state(own(input,'before')),after=state(own(input,'after'));
   const width=scalar(input,'width',n=>n===16||n===32);
   const observed=frame(own(input,'frame'));
-  if(width!==top.frame.width||JSON.stringify(observed)!==JSON.stringify(top.frame)||
+  // A service may edit saved CF before IRET. Keep delivery and consumed flags
+  // separately; all frame identity fields must still match the open delivery.
+  const sameFrame=Object.keys(top.frame).every(key=>
+    key==='returnFlags'||observed[key]===top.frame[key]);
+  if(width!==top.frame.width||!sameFrame||
      before.cs!==top.after.cs||before.cpl!==top.after.cpl||
+     before.ss!==top.frame.frameSs||before.esp!==top.frame.frameEsp||
      after.cs!==top.frame.returnCs||after.eip!==top.frame.returnEip||
      after.ss!==top.frame.returnSs||after.esp!==top.frame.returnEsp||
      after.cpl!==top.frame.oldCpl)
     throw new Error('IRET frame/return mismatch');
   return {kind:'iret',deliveryId:top.id,source:top.source,width,before,after,
-    frame:observed};
+    frame:observed,deliveredReturnFlags:top.frame.returnFlags,
+    consumedReturnFlags:observed.returnFlags};
 }
 
 export class InterruptJournalModel {
@@ -140,6 +146,8 @@ export class InterruptJournalModel {
         this.#active=null;return null;
       }
       if(this.#queue.length>=this.#capacity)throw new Error('journal capacity after effect');
+      if(record.kind==='delivery'&&this.#frames.length>=this.#capacity)
+        throw new Error('nested frame capacity after effect');
       if(kind==='external'&&record.source!=='hardware')throw new Error('external source');
       const emitted={...record,id:++this.#sequence};
       if(record.kind==='delivery')this.#frames.push(emitted);
@@ -149,11 +157,17 @@ export class InterruptJournalModel {
       return emitted.id;
     }catch(error){this.#failed=true;throw error;}
   });}
-  discard(ticket,{rollback=false}={}){return this.#exclusive(()=>{
+  discard(ticket,options={}){return this.#exclusive(()=>{
     this.#usable();
     try{
       this.#ticket(ticket);
-      // Only an authenticated rollback may discard a post-effect stage.
+      const descriptor=Object.getOwnPropertyDescriptor(options,'rollback');
+      if(descriptor&&!Object.hasOwn(descriptor,'value'))
+        throw new Error('rollback accessor');
+      const rollback=descriptor?descriptor.value:false;
+      if(typeof rollback!=='boolean')throw new Error('rollback is not boolean');
+      this.#usable();
+      // Rollback is a caller obligation; this model cannot authenticate it.
       if(this.#active.record&&!rollback)this.#failed=true;
       this.#active=null;
       if(this.#failed)throw new Error('ambiguous post-effect boundary');

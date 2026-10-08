@@ -57,6 +57,17 @@ assert.equal(nested.status().openFrames,0);
 events[0].frame.returnEip=0;
 assert.equal(nested.drain().length,0); // diagnostics are copies
 
+const carryResult=new InterruptJournalModel();
+ticket=carryResult.begin('step');carryResult.stageDelivery(ticket,software());
+carryResult.commit(ticket);
+ticket=carryResult.begin('step');const carryReturn=softwareReturn();
+carryReturn.frame.returnFlags|=1;carryReturn.after.eflags|=1;
+carryResult.stageIret(ticket,carryReturn);carryResult.commit(ticket);
+const [,carryEvent]=carryResult.drain();
+assert.equal(carryEvent.deliveredReturnFlags,0x202);
+assert.equal(carryEvent.consumedReturnFlags,0x203);
+assert.equal(carryEvent.after.eflags&1,1);
+
 const rollback=new InterruptJournalModel();
 ticket=rollback.begin('step');rollback.stageDelivery(ticket,software());
 rollback.discard(ticket,{rollback:true});
@@ -66,6 +77,29 @@ const ambiguous=new InterruptJournalModel();
 ticket=ambiguous.begin('step');ambiguous.stageDelivery(ticket,software());
 assert.throws(()=>ambiguous.discard(ticket));
 assert.equal(ambiguous.status().failed,true);
+const accessorDiscard=new InterruptJournalModel();
+ticket=accessorDiscard.begin('step');accessorDiscard.stageDelivery(ticket,software());
+let accessorRan=false;
+assert.throws(()=>accessorDiscard.discard(ticket,{get rollback(){
+  accessorRan=true;accessorDiscard.commit(ticket);return true;
+}}));
+assert.equal(accessorRan,false);
+assert.equal(accessorDiscard.status().pending,0);
+assert.equal(accessorDiscard.status().failed,true);
+const reentrantDiscard=new InterruptJournalModel();
+ticket=reentrantDiscard.begin('step');reentrantDiscard.stageDelivery(ticket,software());
+let trapRan=false;
+const options=new Proxy({rollback:true},{getOwnPropertyDescriptor(target,key){
+  if(key==='rollback'){
+    trapRan=true;
+    try{reentrantDiscard.commit(ticket);}catch{}
+  }
+  return Reflect.getOwnPropertyDescriptor(target,key);
+}});
+assert.throws(()=>reentrantDiscard.discard(ticket,options));
+assert.equal(trapRan,true);
+assert.equal(reentrantDiscard.status().pending,0);
+assert.equal(reentrantDiscard.status().failed,true);
 
 const full=new InterruptJournalModel(1);
 ticket=full.begin('step');full.stageDelivery(ticket,software());full.commit(ticket);
@@ -87,6 +121,18 @@ const wrongFrame=new InterruptJournalModel();
 ticket=wrongFrame.begin('step');wrongFrame.stageDelivery(ticket,software());wrongFrame.commit(ticket);
 ticket=wrongFrame.begin('step');const badReturn=softwareReturn();badReturn.after.esp++;
 assert.throws(()=>wrongFrame.stageIret(ticket,badReturn));
+const wrongHandlerStack=new InterruptJournalModel();
+ticket=wrongHandlerStack.begin('step');wrongHandlerStack.stageDelivery(ticket,software());
+wrongHandlerStack.commit(ticket);
+ticket=wrongHandlerStack.begin('step');const shifted=softwareReturn();shifted.before.esp++;
+assert.throws(()=>wrongHandlerStack.stageIret(ticket,shifted));
+
+const depth=new InterruptJournalModel(1);
+ticket=depth.begin('step');depth.stageDelivery(ticket,software());depth.commit(ticket);
+depth.drain(); // queue is empty but the first interrupt frame remains open
+ticket=depth.begin('external');depth.stageDelivery(ticket,hardware());
+assert.throws(()=>depth.commit(ticket));
+assert.deepEqual(depth.status(),{failed:true,pending:0,active:true,openFrames:1,sequence:1});
 
 const foreign=new InterruptJournalModel(),other=new InterruptJournalModel();
 ticket=foreign.begin('step');
