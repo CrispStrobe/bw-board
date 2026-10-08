@@ -21,6 +21,10 @@ The [first hosted attempt](FIRST-RESULTS.md) failed before any keyboard input
 or loaded-text cut. Its raw report had no VGA-register snapshot, so the
 follow-up source admits the source VGA text route and retains bounded rejection
 registers without attributing that historical failure to a proven mode value.
+The [second hosted attempt](SECOND-RESULTS.md) accepted keyboard input and
+recorded a protected `main` candidate, then refused the signed JavaScript CR0
+representation before any loaded-text bind. A CR0-only source correction is
+controlled locally but has no hosted result yet.
 
 The labeled hosted workflow authenticates exact Git source, recursive imports,
 dynamic Python helper roles and ROM bytes before the run and after it. It keeps

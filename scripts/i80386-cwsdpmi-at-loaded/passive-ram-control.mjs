@@ -56,6 +56,35 @@ assert.equal(sha(paged.mem),oldRam);
 const supervisor=fixture({paging:true,cpl:0});tables(supervisor,{pde:0x111001,pte4:0x101001});
 supervisor.mem[0x101000]=0x77;assert.equal(read(supervisor,0x4000,1)[0],0x77);
 
+// The real CPU's task-switch `cr0 |= 8` stores PG|PE|TS as signed int32.
+// Both JS representations must read the same bytes without changing raw CR0.
+const signedCr0=fixture({paging:true}),unsignedCr0=fixture({paging:true});
+for(const m of [signedCr0,unsignedCr0]){tables(m);m.mem[0x101000]=0x5a;}
+signedCr0.cpu.cr0=0x80000009|0;
+unsignedCr0.cpu.cr0=0x80000009;
+assert.equal(signedCr0.cpu.cr0,-2147483639);
+const rawSigned=signedCr0.cpu.cr0,rawUnsigned=unsignedCr0.cpu.cr0;
+assert.equal(read(signedCr0,0x4000,1)[0],0x5a);
+assert.equal(read(unsignedCr0,0x4000,1)[0],0x5a);
+assert.equal(signedCr0.cpu.cr0,rawSigned);
+assert.equal(unsignedCr0.cpu.cr0,rawUnsigned);
+const representationSwap=fixture({paging:true});tables(representationSwap);
+representationSwap.cpu.cr0=0x80000009|0;
+const ordinarySubarray=representationSwap.mem.subarray.bind(representationSwap.mem);
+representationSwap.mem.subarray=(start,end)=>{
+  representationSwap.cpu.cr0=0x80000009; // same bits, different raw state
+  return ordinarySubarray(start,end);
+};
+denies(representationSwap,0x4000,1);
+assert.equal(representationSwap.cpu.cr0,0x80000009);
+for(const malformed of [-0x80000001,0x100000000,NaN,Infinity,1.5,'0x80000009']){
+  const m=fixture({paging:true});tables(m);m.cpu.cr0=malformed;
+  denies(m,0x4000,1);
+}
+const signedBadCr4=fixture({paging:true});tables(signedBadCr4);
+signedBadCr4.cpu.cr0=0x80000009|0;signedBadCr4.cpu.cr4=0x10;
+denies(signedBadCr4,0x4000,1);
+
 const absent=fixture({paging:true});tables(absent,{pte4:0});denies(absent,0x4000,1);
 const userDenied=fixture({paging:true});tables(userDenied,{pde:0x111003});denies(userDenied,0x4000,1);
 const userPteDenied=fixture({paging:true});tables(userPteDenied,{pte4:0x101003});

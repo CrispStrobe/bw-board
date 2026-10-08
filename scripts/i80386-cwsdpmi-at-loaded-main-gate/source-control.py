@@ -2,6 +2,7 @@
 """Bounded controls for literal source-import admission; no machine or guest."""
 
 import importlib.util
+import hashlib
 from pathlib import Path
 
 module_path = Path(__file__).with_name("source.py")
@@ -41,4 +42,37 @@ assert set(graph) == set(tree)  # real.mjs was already a known role
 assert "scripts/i80386-cwsdpmi-owned/acquire.py" in source.INHERITED_EXACT
 assert "roms/free-at-bios/BIOS-bochs-legacy" in source.BIOS
 assert "roms/free-at-bios/vgabios-lgpl.bin" in source.BIOS
+
+reader = "scripts/i80386-cwsdpmi-at-loaded/passive-ram.mjs"
+reader_control = "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs"
+inherited = {reader, reader_control, "src/experimental/i80386.js"}
+assert set(source.REVIEWED_OVERRIDES) == {reader, reader_control}
+source.require_overrides(inherited, inherited)
+for missing in (reader, reader_control):
+    try:
+        source.require_overrides(inherited - {missing}, inherited)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("missing reviewed override admitted")
+for override in (reader, reader_control):
+    original = source.git("show", f"{source.BASE}:{override}")
+    actual = Path(override).read_bytes()
+    assert hashlib.sha256(actual).hexdigest() == source.REVIEWED_OVERRIDES[override]
+    source.admit_inherited(override, actual, original, inherited)
+    try:
+        source.admit_inherited(override, actual + b"\n", original, inherited)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("changed reviewed override admitted")
+cpu = "src/experimental/i80386.js"
+cpu_original = source.git("show", f"{source.BASE}:{cpu}")
+source.admit_inherited(cpu, cpu_original, cpu_original, inherited)
+try:
+    source.admit_inherited(cpu, cpu_original + b"\n", cpu_original, inherited)
+except ValueError:
+    pass
+else:
+    raise AssertionError("changed CPU source admitted")
 print("CWSDPMI AT loaded-main source controls PASS")

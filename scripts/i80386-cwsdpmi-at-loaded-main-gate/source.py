@@ -12,6 +12,14 @@ from pathlib import Path
 BASE = "8ae6ba128b8be2e2a807a5e55530e0d83bae21fb"
 NEW = "scripts/i80386-cwsdpmi-at-loaded-main-gate/"
 WORKFLOW = ".github/workflows/i80386-cwsdpmi-at-loaded-main-gate.yml"
+# The signed-CR0 correction changes only these two reviewed reader roles.
+# Every other inherited role, including the CPU, remains byte-exact at BASE.
+REVIEWED_OVERRIDES = {
+    "scripts/i80386-cwsdpmi-at-loaded/passive-ram.mjs":
+        "4cbf40db468b0c22058e224902b3f8c2b705b824a9c49bc5de9bc4c34d98f862",
+    "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs":
+        "456682b1757ab585a2cc5b4db8738c95c289aa5822db7d83b7cf2f34a994bd1e",
+}
 INHERITED_PREFIXES = (
     "scripts/i80386-cwsdpmi-compile-only/",
     "scripts/i80386-cwsdpmi-qemu-owned/",
@@ -80,6 +88,20 @@ def walk_imports(roots, all_names, read):
     return graph
 
 
+def admit_inherited(role, raw, original, inherited):
+    """Admit exact reviewed helper bytes or the unchanged inherited base."""
+    if role in REVIEWED_OVERRIDES:
+        if role not in inherited or hashlib.sha256(raw).hexdigest() != REVIEWED_OVERRIDES[role]:
+            raise ValueError("reviewed reader override changed: " + role)
+    elif raw != original:
+        raise ValueError("inherited source changed: " + role)
+
+
+def require_overrides(names, inherited):
+    if not set(REVIEWED_OVERRIDES) <= (names & inherited):
+        raise ValueError("reviewed reader override role missing")
+
+
 def identity(expected):
     if len(expected) != 40 or any(c not in "0123456789abcdef" for c in expected):
         raise ValueError("expected head shape")
@@ -91,6 +113,7 @@ def identity(expected):
     base_names = set(git("ls-tree", "-r", "--name-only", BASE).decode().splitlines())
     inherited = ({name for name in base_names if name.startswith(INHERITED_PREFIXES)} |
                  INHERITED_EXACT)
+    require_overrides(names, inherited)
     current = {name for name in names if name.startswith(NEW)}
     if not inherited <= names or WORKFLOW not in names or not {
         NEW + "source.py", NEW + "source-control.py",
@@ -118,14 +141,14 @@ def identity(expected):
         if raw != git("show", f"HEAD:{role}"):
             raise ValueError("source differs from Git: " + role)
         if role in inherited or (role.startswith("src/") and role in base_names):
-            if raw != git("show", f"{BASE}:{role}"):
-                raise ValueError("inherited source changed: " + role)
+            admit_inherited(role, raw, git("show", f"{BASE}:{role}"), inherited)
         digest = hashlib.sha256(raw).hexdigest()
         if role in BIOS and (len(raw), digest) != BIOS[role]:
             raise ValueError("free ROM pin changed")
         hashes[role] = digest
     return {"schema": "bw.cwsdpmi-owned.at-loaded-main-source.v1", "head": head,
-            "inheritedBase": BASE, "roles": hashes,
+            "inheritedBase": BASE, "reviewedOverrides": REVIEWED_OVERRIDES,
+            "roles": hashes,
             "recursiveImports": dict(sorted(graph.items()))}
 
 
