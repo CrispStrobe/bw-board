@@ -1,8 +1,9 @@
 /** Hosted-only, separate minor/major collected-object sampling admission. */
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import inspector from 'node:inspector';
 import {writeFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {dirname,resolve} from 'node:path';
 import {constants,PerformanceObserver,performance} from 'node:perf_hooks';
 import {fileURLToPath} from 'node:url';
 
@@ -40,7 +41,7 @@ function pumpMinor(){
  if(last?.length!==1024)throw Error('minor allocation pump');
 }
 const tick=()=>new Promise(accept=>setImmediate(accept));
-async function sampleCase(name,flags,kind){
+async function sampleCase(name,flags,kind,outputRoot){
  global.gc(); // Clear preexisting nursery pressure before measuring this case.
  const session=new inspector.Session();session.connect();
  const command=(method,params={})=>new Promise((accept,reject)=>
@@ -79,15 +80,21 @@ async function sampleCase(name,flags,kind){
   const dead=weak.filter(ref=>ref.deref()===undefined).length;
   assert.equal(dead,weak.length,'every sampled-callsite array became unreachable');
   const {profile}=await command('HeapProfiler.stopSampling');started=false;
+  const raw=Buffer.from(JSON.stringify(profile));
+  assert.ok(raw.length>0&&raw.length<=8*1024*1024,'bounded raw GC control profile');
+  const rawName='gc-'+name+'.heap.json';
+  writeFileSync(resolve(outputRoot,rawName),raw,{flag:'wx'});
   await tick();
   const observed=events.filter(event=>begin<=event.at&&event.at<=end);
+  assert.ok(observed.length<=128,'bounded GC event timeline');
   const minor=observed.filter(event=>
    event.kind===constants.NODE_PERFORMANCE_GC_MINOR).length;
   const major=observed.filter(event=>
    event.kind===constants.NODE_PERFORMANCE_GC_MAJOR).length;
-  const firstMajor=observed.find(event=>
+  const firstMajor=observed.filter(event=>
    event.kind===constants.NODE_PERFORMANCE_GC_MAJOR&&
-   (releaseAt===null||event.at>=releaseAt));
+   (releaseAt===null||event.at>=releaseAt))
+   .sort((a,b)=>a.at-b.at)[0];
   const minorAfterReleaseBeforeMajor=releaseAt===null?null:
    observed.filter(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
     event.at>=releaseAt&&(!firstMajor||event.at<firstMajor.at)).length;
@@ -98,7 +105,10 @@ async function sampleCase(name,flags,kind){
    allocatedObjects:weak.length,collectedObjects:dead,
    minorGcEvents:minor,majorGcEvents:major,
    minorAfterReleaseBeforeMajor,
-   collectedCallsiteSamplePresent:sampleIncludesCollected(profile,dead)};
+   collectedCallsiteSamplePresent:sampleIncludesCollected(profile,dead),
+   begin,end,releaseAt,events:observed,
+   rawProfileName:rawName,rawProfileBytes:raw.length,
+   rawProfileSha256:createHash('sha256').update(raw).digest('hex')};
  }catch(error){firstError=error;throw error;}
  finally{
   observer.disconnect();
@@ -114,6 +124,42 @@ export function supportsBothCases(cases){
   assert.ok(byName[name]&&byName[name].allocatedObjects>0&&
    byName[name].allocatedObjects===byName[name].collectedObjects,
    'all case objects collected');
+ for(const name of ['minor-baseline','minor-enabled','major-baseline','major-enabled']){
+  const item=byName[name];
+  assert.ok(Number.isFinite(item.begin)&&Number.isFinite(item.end)&&
+   item.begin<item.end&&Array.isArray(item.events)&&item.events.length<=128,
+   'bounded GC event window');
+  assert.ok(item.events.every(event=>Number.isFinite(event.at)&&
+   item.begin<=event.at&&event.at<=item.end&&Number.isSafeInteger(event.kind)),
+   'bounded GC event facts');
+  const minor=item.events.filter(event=>
+   event.kind===constants.NODE_PERFORMANCE_GC_MINOR).length;
+  const major=item.events.filter(event=>
+   event.kind===constants.NODE_PERFORMANCE_GC_MAJOR).length;
+  assert.equal(item.minorGcEvents,minor);
+  assert.equal(item.majorGcEvents,major);
+  const expectedName='gc-'+name+'.heap.json';
+  assert.equal(item.rawProfileName,expectedName);
+  assert.ok(Number.isSafeInteger(item.rawProfileBytes)&&
+   item.rawProfileBytes>0&&item.rawProfileBytes<=8*1024*1024&&
+   /^[0-9a-f]{64}$/.test(item.rawProfileSha256),'bounded raw GC profile');
+  if(name.startsWith('minor')){
+   assert.equal(item.releaseAt,null);
+   assert.equal(item.minorAfterReleaseBeforeMajor,null);
+  }else{
+   assert.ok(Number.isFinite(item.releaseAt)&&
+    item.begin<=item.releaseAt&&item.releaseAt<=item.end,
+    'bounded target release');
+   const firstMajor=item.events.filter(event=>
+    event.kind===constants.NODE_PERFORMANCE_GC_MAJOR&&event.at>=item.releaseAt)
+    .sort((a,b)=>a.at-b.at)[0];
+   assert.ok(firstMajor,'major after target release');
+   const intervening=item.events.filter(event=>
+    event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
+    item.releaseAt<=event.at&&event.at<firstMajor.at).length;
+   assert.equal(item.minorAfterReleaseBeforeMajor,intervening);
+  }
+ }
  assert.deepEqual(byName['minor-baseline'].requested,{samplingInterval:interval});
  assert.deepEqual(byName['minor-enabled'].requested,
   {samplingInterval:interval,includeObjectsCollectedByMinorGC:true});
@@ -140,17 +186,19 @@ async function main(){
  let firstError=null;
  try{
   const cases=[
-   await sampleCase('minor-baseline',{},'minor'),
-   await sampleCase('minor-enabled',{includeObjectsCollectedByMinorGC:true},'minor'),
-   await sampleCase('major-baseline',{},'major'),
-   await sampleCase('major-enabled',{includeObjectsCollectedByMajorGC:true},'major')];
+   await sampleCase('minor-baseline',{},'minor',dirname(output)),
+   await sampleCase('minor-enabled',{includeObjectsCollectedByMinorGC:true},'minor',dirname(output)),
+   await sampleCase('major-baseline',{},'major',dirname(output)),
+   await sampleCase('major-enabled',{includeObjectsCollectedByMajorGC:true},'major',dirname(output))];
   supportsBothCases(cases);
-  writeFileSync(output,JSON.stringify({
+  const receipt=Buffer.from(JSON.stringify({
    schema:'bw.xv6-js-rollback-gc-support.v2',
    requestedProduction:{samplingInterval:interval,
     includeObjectsCollectedByMinorGC:true,includeObjectsCollectedByMajorGC:true},
    node:process.version,v8:process.versions.v8,cases,
-   bothFlagsIndependentlyObserved:true})+'\n',{flag:'wx'});
+   bothFlagsIndependentlyObserved:true})+'\n');
+  assert.ok(receipt.length<=65536,'bounded GC support receipt');
+  writeFileSync(output,receipt,{flag:'wx'});
  }catch(error){
   firstError=error;
   try{writeFileSync(output+'.failure.json',JSON.stringify({

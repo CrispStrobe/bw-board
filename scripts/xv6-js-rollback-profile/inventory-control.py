@@ -7,6 +7,8 @@ from inventory import MAX_FILE, allowed, inventory
 assert allowed('results/sample-1/heap-profile.json')
 assert allowed('results/reference/stdout.json')
 assert allowed('gc-support.json')
+assert allowed('gc-minor-enabled.heap.json')
+assert allowed('gc-major-baseline.heap.json')
 for forbidden in (
     'xv6.img', 'kernel', 'client.exe', 'results/sample-1/code.bin',
     'results/other/stdout.json', 'results/sample-1/../../xv6.img',

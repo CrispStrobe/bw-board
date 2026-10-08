@@ -106,6 +106,17 @@ def main():
              support['cases'][3].get('majorGcEvents', 0) > 0 and
              support['cases'][3].get('minorAfterReleaseBeforeMajor') == 0,
              'unverified hosted collected-object sampling')
+        for item in support['cases']:
+            name = 'gc-' + item['name'] + '.heap.json'
+            need(item.get('rawProfileName') == name and
+                 type(item.get('rawProfileBytes')) is int and
+                 0 < item['rawProfileBytes'] <= 8 * 1024 * 1024,
+                 'bounded GC raw profile role')
+            file = args.gc_support.parent / name
+            info = file.lstat()
+            need(stat.S_ISREG(info.st_mode) and info.st_size == item['rawProfileBytes'] and
+                 sha(file) == item.get('rawProfileSha256'),
+                 'GC raw profile differs from support receipt')
         support_sha = sha(args.gc_support)
         source_inventory = accepted.expected_source_inventory(qualified, QUALIFIED)
         generated = qualified / GENERATED

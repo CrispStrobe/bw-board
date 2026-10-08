@@ -6,12 +6,14 @@ import stat
 from pathlib import Path
 
 MAX_FILE = 8 * 1024 * 1024
-MAX_TOTAL = 48 * 1024 * 1024
+MAX_TOTAL = 72 * 1024 * 1024
 MAX_FILES = 48
 ROOT_NAMES = {
     'parent.stdout',
     'parent.stderr', 'build.stdout', 'build.stderr', 'xv6-build.json',
     'gc-support.json', 'gc-support.json.failure.json', 'source.json',
+    'gc-minor-baseline.heap.json', 'gc-minor-enabled.heap.json',
+    'gc-major-baseline.heap.json', 'gc-major-enabled.heap.json',
 }
 RESULT_NAMES = {'binding.json', 'failure.json', 'result.json', 'file-inventory.json'}
 CHILD_NAMES = {
