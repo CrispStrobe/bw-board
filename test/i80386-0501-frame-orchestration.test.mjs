@@ -26,13 +26,16 @@ function fixture() {
 test('no pre-main arm and CPU poll follows ordinary step',()=>{
   const f=fixture();
   f.frame.ports.step();assert.deepEqual(f.calls,['machine-step']);
-  f.frame.ports.bind();f.setOpportunity({comparison,cs:0xa7});
+  f.frame.ports.bind();f.setOpportunity({comparison,cs:0xa7,
+    receipt:{sourceCs:0xa7,sourceEip:0x5700}});
   f.frame.ports.step();
   assert.deepEqual(f.calls,['machine-step','bind','observe','arm','machine-step','poll']);
   f.setPhase('complete');f.frame.ports.step();
   assert.deepEqual(f.calls.slice(-2),['machine-step','poll']);
   const result=f.frame.finish({passed:true,returnDiagnostic:{address:0x4a0000}});
   assert.equal(result.passed,true);assert.equal(result.frame0501.phase,'passed');
+  assert.equal(result.finiteClientPassed,true);
+  assert.equal(result.frame0501.wrapper.sourceEip,0x5700);
 });
 test('successful client without pair fails and retains original earlier failure',()=>{
   const f=fixture();
@@ -40,6 +43,7 @@ test('successful client without pair fails and retains original earlier failure'
     returnDiagnostic:{address:0x4a0000}});
   assert.equal(report.passed,false);
   assert.equal(report.firstFailure,'missing pair');
+  assert.equal(report.finiteClientPassed,true);
   const g=fixture();
   const prior=g.frame.finish({passed:false,firstFailure:'disk first failure'});
   assert.equal(prior.firstFailure,'disk first failure');
@@ -54,11 +58,17 @@ test('invalid journal stops after original machine step; no second attempt',()=>
   assert.deepEqual(f.calls,['bind','observe','arm','machine-step','poll']);
 });
 test('observer refusal happens before step and cannot be retried',()=>{
-  const f=fixture();f.frame.ports.bind();
-  f.setOpportunity({comparison,cs:0xa7});
-  const original=f.frame.ports.step;
-  // Source observer failures are terminal in the actual driver. Here the
-  // injected policy's one-shot arm is exercised without importing a CPU.
-  assert.equal(typeof original,'function');
-  assert.throws(()=>f.frame.ports.bind(),/duplicate/);
+  const calls=[];
+  const ports={bind(){return {ownedCodeAtEntry:'PASS'};},
+    step(){calls.push('machine-step');}};
+  const policy={arm(){throw new Error('must not arm');},
+    afterStep(){throw new Error('must not poll');},
+    finish(){throw new Error('must not finish');},status(){return {phase:'waiting'};}};
+  let observations=0;
+  const f=createFrameOrchestration(ports,{policy,opportunity(){
+    observations++;throw new Error('passive refusal');}});
+  f.ports.bind();
+  assert.throws(()=>f.ports.step(),/passive refusal/);
+  assert.throws(()=>f.ports.step(),/wrapper opportunity exception/);
+  assert.equal(observations,1);assert.deepEqual(calls,[]);
 });
