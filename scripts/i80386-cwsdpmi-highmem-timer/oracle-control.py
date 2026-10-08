@@ -26,15 +26,29 @@ refuses(lambda: oracle.strict_json(b'{"nested":{"one":1,"one":2}}'),
 refuses(lambda: oracle.strict_json(b'{"value":NaN}'), "nonfinite JSON")
 
 command = "c:\\runht.bat"
-ready = ["FreeDOS", "C:\\>c:\\runht.bat", oracle.BATCH_DONE, "C:\\>"]
-assert oracle.client_screen(ready)
-assert not oracle.client_screen(["C:\\>c:\\runht.bat"])
-assert not oracle.client_screen(["C:\\>c:\\runht.bat", "C:\\>"])
-assert not oracle.client_screen(["C:\\>c:\\other.bat", oracle.BATCH_DONE, "C:\\>"])
-assert not oracle.client_screen(["C:\\>", "C:\\>c:\\runht.bat", oracle.BATCH_DONE])
-assert oracle.current_echo(ready, command)
+ready = ["FreeDOS", "A:\\>c:\\runht.bat", oracle.BATCH_DONE, "C:\\>"]
+assert oracle.prompt_drive(["A:\\>"]) == "A"
+assert oracle.prompt_drive(["C:\\>"]) == "C"
+assert oracle.client_screen(ready, "A")
+assert not oracle.client_screen(ready, "C")
+assert not oracle.client_screen(["A:\\>c:\\runht.bat"], "A")
+assert not oracle.client_screen(["A:\\>c:\\runht.bat", "C:\\>"], "A")
+assert not oracle.client_screen(["A:\\>c:\\other.bat", oracle.BATCH_DONE, "C:\\>"], "A")
+assert not oracle.client_screen(["C:\\>", "A:\\>c:\\runht.bat", oracle.BATCH_DONE], "A")
+assert oracle.current_echo(ready, command, "A")
+assert oracle.any_command_echo(ready, command)
+assert not oracle.any_command_echo(["A:\\>"], command)
 assert oracle.return_screen(["C:\\>c:\\verifyht.bat", "C:\\>"])
 assert not oracle.return_screen(["C:\\>c:\\verifyht.bat"])
+assert not oracle.return_screen(["A:\\>c:\\verifyht.bat", "C:\\>"])
+
+candidate = ("disk-hash", "exact-file-hashes")
+assert oracle.advance_pair(None, candidate) == (candidate, False)
+assert oracle.advance_pair(candidate, candidate) == (candidate, True)
+assert oracle.advance_pair(candidate, None) == (None, False)
+assert oracle.advance_pair(oracle.advance_pair(candidate, None)[0], candidate) == (candidate, False)
+assert oracle.advance_pair(candidate, ("different", "exact-file-hashes")) == (
+    ("different", "exact-file-hashes"), False)
 
 raw = b"A" * 65536
 receipt = oracle.files_receipt({"output": raw, "ok": None})

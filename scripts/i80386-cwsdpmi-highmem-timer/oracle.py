@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import signal
 import stat
 import subprocess
@@ -98,20 +99,40 @@ def files_receipt(values):
     return result
 
 
-def current_echo(rows, command):
+def prompt_drive(rows):
+    if not legacy.has_prompt(rows):
+        raise ValueError("current DOS prompt")
+    return next(row.strip()[0].upper() for row in reversed(rows) if row.strip())
+
+
+def any_command_echo(rows, command):
+    pattern = re.compile(r"^[A-Z]:\\>" + re.escape(command) + r"$", re.IGNORECASE)
+    return any(pattern.fullmatch(row.strip()) for row in rows)
+
+
+def current_echo(rows, command, echo_drive):
     if not legacy.has_prompt(rows):
         return False
     nonempty = [row.strip() for row in rows if row.strip()]
     return len(nonempty) >= 2 and nonempty[-1].upper() == "C:\\>" and any(
-        row.lower() == "c:\\>" + command.lower() for row in nonempty[:-1])
+        row.lower() == echo_drive.lower() + ":\\>" + command.lower()
+        for row in nonempty[:-1])
 
 
-def client_screen(rows):
-    return legacy.has_prompt(rows) and BATCH_DONE in rows and current_echo(rows, FIRST.strip())
+def client_screen(rows, boot_drive):
+    return legacy.has_prompt(rows) and BATCH_DONE in rows and current_echo(
+        rows, FIRST.strip(), boot_drive)
 
 
 def return_screen(rows):
-    return current_echo(rows, SECOND.strip())
+    return current_echo(rows, SECOND.strip(), "C")
+
+
+def advance_pair(previous, observed):
+    """Only consecutive eligible observations can form a stable pair."""
+    if observed is None:
+        return None, False
+    return observed, previous == observed
 
 
 def screen_receipt(rows, raw, step):
@@ -249,6 +270,10 @@ def run(inputs, output):
                 now = time.monotonic() - start
                 if legacy.has_prompt(rows):
                     report["screenMilestones"]["boot"] = view
+                    boot_drive = prompt_drive(rows)
+                    report["bootPromptDrive"] = boot_drive
+                    if any_command_echo(rows, FIRST.strip()):
+                        raise ValueError("stale client command echo before offer")
                     break
                 if any("Do you want to proceed" in row for row in rows) and not declined:
                     send("decline-installer", "n\r")
@@ -268,6 +293,7 @@ def run(inputs, output):
                 rows, view = screen()
                 seen = observe()
                 if seen is None:
+                    first = None
                     time.sleep(0.5)
                     continue
                 disk_hash, found = seen
@@ -275,17 +301,19 @@ def run(inputs, output):
                     raise ValueError("guest failure marker")
                 if found["ok"] is not None:
                     parsed = grade(found, False)
-                    if client_screen(rows):
-                        if first is None:
-                            first = (disk_hash, files_receipt(found), parsed)
+                    if client_screen(rows, boot_drive):
+                        first, stable = advance_pair(first, (disk_hash, files_receipt(found), parsed))
+                        if not stable:
                             report["screenMilestones"]["postClientFirst"] = view
-                        elif first == (disk_hash, files_receipt(found), parsed):
+                        else:
                             report["screenMilestones"]["postClientSecond"] = view
                             report["clientFiles"] = files_receipt(found)
                             report["clientDiagnostics"] = parsed
                             break
                     else:
                         first = None
+                else:
+                    first = None
                 if time.monotonic() - start > 200:
                     raise TimeoutError("QEMU client and current prompt")
                 time.sleep(0.5)
@@ -294,7 +322,7 @@ def run(inputs, output):
             if pre_verify is None or pre_verify[1]["returned"] is not None:
                 raise ValueError("return existed before separate command")
             rows, view = screen()
-            if any(row.strip().lower() == "c:\\>" + SECOND.strip() for row in rows):
+            if any_command_echo(rows, SECOND.strip()):
                 raise ValueError("stale VERIFY echo before offer")
             report["preVerify"] = {"diskSha256": pre_verify[0],
                                    "files": files_receipt(pre_verify[1]), "screen": view}
@@ -305,6 +333,7 @@ def run(inputs, output):
                 rows, view = screen()
                 seen = observe()
                 if seen is None:
+                    first = None
                     time.sleep(0.5)
                     continue
                 disk_hash, found = seen
@@ -313,15 +342,17 @@ def run(inputs, output):
                 if found["returned"] is not None:
                     parsed = grade(found, True)
                     if return_screen(rows):
-                        if first is None:
-                            first = (disk_hash, files_receipt(found), parsed)
+                        first, stable = advance_pair(first, (disk_hash, files_receipt(found), parsed))
+                        if not stable:
                             report["screenMilestones"]["returnFirst"] = view
-                        elif first == (disk_hash, files_receipt(found), parsed):
+                        else:
                             report["screenMilestones"]["returnSecond"] = view
                             report["returnFiles"] = files_receipt(found)
                             break
                     else:
                         first = None
+                else:
+                    first = None
                 if time.monotonic() - start > 230:
                     raise TimeoutError("separate return and current prompt")
                 time.sleep(0.5)
