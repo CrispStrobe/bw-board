@@ -19,6 +19,7 @@ function caseData(name,requested,kind,present){
   begin:10,end:20,releaseAt:minor?null:15,
   events:minor?[{at:16,kind:constants.NODE_PERFORMANCE_GC_MINOR}]:
    [{at:16,kind:constants.NODE_PERFORMANCE_GC_MAJOR}],
+  observedGcEventCount:1,eventsTruncated:false,
   minorGcEvents:minor?1:0,majorGcEvents:minor?0:1,
   minorAfterReleaseBeforeMajor:minor?null:0,
   rawProfileName:'gc-'+name+'.heap.json',rawProfileBytes:512,
@@ -46,6 +47,8 @@ for(const [index,patch] of [
  [3,{majorGcEvents:2}],
  [3,{events:[{at:14,kind:constants.NODE_PERFORMANCE_GC_MAJOR}]}],
  [1,{events:[{at:21,kind:constants.NODE_PERFORMANCE_GC_MINOR}]}],
+ [1,{eventsTruncated:true}],
+ [1,{observedGcEventCount:2}],
 ]){
  const other=cases.map((item,at)=>at===index?{...item,...patch}:item);
  assert.throws(()=>supportsBothCases(other));

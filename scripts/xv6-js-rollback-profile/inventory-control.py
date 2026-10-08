@@ -9,6 +9,8 @@ assert allowed('results/reference/stdout.json')
 assert allowed('gc-support.json')
 assert allowed('gc-minor-enabled.heap.json')
 assert allowed('gc-major-baseline.heap.json')
+assert allowed('gc-minor-baseline.facts.json')
+assert allowed('gc-major-enabled.facts.json')
 for forbidden in (
     'xv6.img', 'kernel', 'client.exe', 'results/sample-1/code.bin',
     'results/other/stdout.json', 'results/sample-1/../../xv6.img',

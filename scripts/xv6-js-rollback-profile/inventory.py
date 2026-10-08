@@ -14,6 +14,8 @@ ROOT_NAMES = {
     'gc-support.json', 'gc-support.json.failure.json', 'source.json',
     'gc-minor-baseline.heap.json', 'gc-minor-enabled.heap.json',
     'gc-major-baseline.heap.json', 'gc-major-enabled.heap.json',
+    'gc-minor-baseline.facts.json', 'gc-minor-enabled.facts.json',
+    'gc-major-baseline.facts.json', 'gc-major-enabled.facts.json',
 }
 RESULT_NAMES = {'binding.json', 'failure.json', 'result.json', 'file-inventory.json'}
 CHILD_NAMES = {

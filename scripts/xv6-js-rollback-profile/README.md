@@ -21,8 +21,10 @@ samples of short-lived arrays after the matching observed GC kind, while a
 no-flags baseline does not. Ambiguous GC behavior refuses qualification. The
 major case keeps its targets strongly reachable
 until immediately before a forced major collection and refuses an intervening
-minor collection. All four bounded raw control profiles and a filtered,
-bounded GC event timeline are retained so the result can be recomputed;
+minor collection. Each case writes its bounded raw profile and filtered GC
+timeline/dead-target facts before causal refusal, so an incomplete first run
+still retains those originals. All four control profiles are required for a
+successful support receipt; an independent reader can recompute the result;
 accepting protocol parameters alone is insufficient.
 
 The parser refuses duplicate JSON keys, invalid graph or sample references,

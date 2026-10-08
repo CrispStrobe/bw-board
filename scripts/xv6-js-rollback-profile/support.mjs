@@ -78,7 +78,6 @@ async function sampleCase(name,flags,kind,outputRoot){
   for(let i=0;i<4;i++)await tick();
   const end=performance.now();
   const dead=weak.filter(ref=>ref.deref()===undefined).length;
-  assert.equal(dead,weak.length,'every sampled-callsite array became unreachable');
   const {profile}=await command('HeapProfiler.stopSampling');started=false;
   const raw=Buffer.from(JSON.stringify(profile));
   assert.ok(raw.length>0&&raw.length<=8*1024*1024,'bounded raw GC control profile');
@@ -86,7 +85,6 @@ async function sampleCase(name,flags,kind,outputRoot){
   writeFileSync(resolve(outputRoot,rawName),raw,{flag:'wx'});
   await tick();
   const observed=events.filter(event=>begin<=event.at&&event.at<=end);
-  assert.ok(observed.length<=128,'bounded GC event timeline');
   const minor=observed.filter(event=>
    event.kind===constants.NODE_PERFORMANCE_GC_MINOR).length;
   const major=observed.filter(event=>
@@ -98,17 +96,24 @@ async function sampleCase(name,flags,kind,outputRoot){
   const minorAfterReleaseBeforeMajor=releaseAt===null?null:
    observed.filter(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
     event.at>=releaseAt&&(!firstMajor||event.at<firstMajor.at)).length;
-  if(kind==='minor')assert.ok(minor>0&&major===0,'isolated minor collection');
-  else assert.ok(firstMajor&&minorAfterReleaseBeforeMajor===0,
-   'target release followed directly by major collection');
-  return {name,requested:{samplingInterval:interval,...flags},
+  const facts={name,requested:{samplingInterval:interval,...flags},
    allocatedObjects:weak.length,collectedObjects:dead,
    minorGcEvents:minor,majorGcEvents:major,
    minorAfterReleaseBeforeMajor,
-   collectedCallsiteSamplePresent:sampleIncludesCollected(profile,dead),
-   begin,end,releaseAt,events:observed,
+   collectedCallsiteSamplePresent:dead>0&&sampleIncludesCollected(profile,dead),
+   begin,end,releaseAt,events:observed.slice(0,128),
+   observedGcEventCount:observed.length,eventsTruncated:observed.length>128,
    rawProfileName:rawName,rawProfileBytes:raw.length,
    rawProfileSha256:createHash('sha256').update(raw).digest('hex')};
+  const factBytes=Buffer.from(JSON.stringify(facts)+'\n');
+  assert.ok(factBytes.length<=32768,'bounded GC fact receipt');
+  writeFileSync(resolve(outputRoot,'gc-'+name+'.facts.json'),factBytes,{flag:'wx'});
+  assert.equal(dead,weak.length,'every sampled-callsite array became unreachable');
+  assert.ok(!facts.eventsTruncated,'bounded GC event timeline');
+  if(kind==='minor')assert.ok(minor>0&&major===0,'isolated minor collection');
+  else assert.ok(firstMajor&&minorAfterReleaseBeforeMajor===0,
+   'target release followed directly by major collection');
+  return facts;
  }catch(error){firstError=error;throw error;}
  finally{
   observer.disconnect();
@@ -127,7 +132,8 @@ export function supportsBothCases(cases){
  for(const name of ['minor-baseline','minor-enabled','major-baseline','major-enabled']){
   const item=byName[name];
   assert.ok(Number.isFinite(item.begin)&&Number.isFinite(item.end)&&
-   item.begin<item.end&&Array.isArray(item.events)&&item.events.length<=128,
+   item.begin<item.end&&Array.isArray(item.events)&&item.events.length<=128&&
+   item.eventsTruncated===false&&item.observedGcEventCount===item.events.length,
    'bounded GC event window');
   assert.ok(item.events.every(event=>Number.isFinite(event.at)&&
    item.begin<=event.at&&event.at<=item.end&&Number.isSafeInteger(event.kind)),

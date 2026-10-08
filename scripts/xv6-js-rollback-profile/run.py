@@ -117,6 +117,9 @@ def main():
             need(stat.S_ISREG(info.st_mode) and info.st_size == item['rawProfileBytes'] and
                  sha(file) == item.get('rawProfileSha256'),
                  'GC raw profile differs from support receipt')
+            facts = args.gc_support.parent / ('gc-' + item['name'] + '.facts.json')
+            need(accepted.load_json(facts, 32768) == item,
+                 'GC bounded facts differ from support receipt')
         support_sha = sha(args.gc_support)
         source_inventory = accepted.expected_source_inventory(qualified, QUALIFIED)
         generated = qualified / GENERATED
