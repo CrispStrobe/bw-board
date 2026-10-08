@@ -78,6 +78,9 @@ test('top-level test census refuses a generated or missing test',()=>{
  const files=['test/a.test.mjs','test/b.test.js','test/fixtures/input.json'];
  assert.equal(admitWorkingTestCensus(files,[...files]),2);
  assert.throws(()=>admitWorkingTestCensus(files,[...files,'test/extra.test.mjs']),/working top-level test census/);
+ // The runner passes every directory entry name, including symbolic links;
+ // a link named like a test is therefore refused by the same roster check.
+ assert.throws(()=>admitWorkingTestCensus(files,[...files,'test/alias.test.mjs']),/working top-level test census/);
  assert.throws(()=>admitWorkingTestCensus(files,files.filter(name=>name!=='test/b.test.js')),/working top-level test census/);
 });
 test('literal closure follows a second relative import after a semicolon',()=>{

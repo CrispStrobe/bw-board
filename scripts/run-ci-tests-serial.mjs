@@ -39,7 +39,9 @@ export function serialTestCommand(script){
 const git=(args,{cwd=root}={})=>execFileSync('git',args,{cwd,env:{...process.env,GIT_NO_REPLACE_OBJECTS:'1'},timeout:30000,maxBuffer:16<<20});
 function historicalPlan(selection){
  const names=git(['ls-tree','-r','--name-only','HEAD','test']).toString().trim().split('\n');
- const workingNames=readdirSync(resolve(root,'test'),{withFileTypes:true}).filter(entry=>entry.isFile()).map(entry=>'test/'+entry.name);
+ // Shell globs also see symlinks and special entries; any matching extra name
+ // must be refused rather than silently omitted by a regular-file filter.
+ const workingNames=readdirSync(resolve(root,'test'),{withFileTypes:true}).map(entry=>'test/'+entry.name);
  const testCensus=admitWorkingTestCensus(names,workingNames);
  const plan=splitHistoricalCohorts(selection,names);
  const historicalNames=git(['ls-tree','-r','--name-only',historicalRevision,'test']).toString().trim().split('\n');
