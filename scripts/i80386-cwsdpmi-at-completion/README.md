@@ -53,4 +53,5 @@ reviewed workflow binding the actual machine and exact source closure can make
 those observations eligible. The new workflow has not run. Even a future
 completed-client result would not
 prove INT 31 delivery/IRET ownership, DPMI callback behavior, strict physical
-386 timing, Windows, games, or a performance improvement.
+386 timing, other operating-system or application compatibility, or a
+performance improvement.
