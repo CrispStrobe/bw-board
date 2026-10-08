@@ -7,8 +7,9 @@ unchanged. The new client requests a 4,096-byte DPMI `0501h` block, requires a
 linear start strictly above 1 MiB and a nonwrapping requested span, verifies
 the selector's read-back base/limit before a 256-byte far-pointer checksum,
 then polls simulated BIOS `INT 1Ah/AH=00h` until a positive 1–36 tick
-modulo-day advance or the predeclared 262,144-call cap. All acquired selector
-and block resources are released on later failure, including handle zero.
+modulo-day advance or the predeclared 262,144-call cap. The client attempts
+to release both acquired resources on later failure, including when the block
+handle is zero; cleanup failures are reported.
 The base readback uses [DJGPP's DPMI `0006h` wrapper](https://www.delorie.com/djgpp/doc/libc/libc_237.html);
 the [limit readback](https://www.delorie.com/djgpp/doc/libc/libc_238.html)
 uses the CPU `LSL` instruction, not another `INT 31h` service. The exact
