@@ -14,11 +14,22 @@ frozen AT source. Its reviewed source is
 [`2f979b37`](https://github.com/CrispStrobe/bw-board/commit/2f979b376fdf37cf7126345aa8c9bbd85a4aa3aa).
 Its two-file delta adds the optional private CPU journal and 24 focused CPU
 tests. Root and peer read-only source audits and independent syntax/whitespace
-checks passed. CPU tests were not executed locally; hosted CI remains pending
-at publication. No controller integration, new guest attempt, frame result or
-consumer adoption is qualified by this checkpoint. Fault-fallback and additional
-task/16-bit controls, affected regressions, then the separate controller and
-one reviewed hosted diagnostic remain unfinished.
+checks passed. CPU tests were not executed locally.
+
+The first [PR CI run 37787580143](https://github.com/CrispStrobe/bw-board/actions/runs/37787580143),
+attempt 1 at that exact source, failed in the 386 regression step before the
+xv6 guest ran. Root and peer independently matched all 24 focused journal test
+names to passing log rows. The complete step reported 1,863 tests: 1,836 pass,
+16 fail and 11 skip. All 16 failures concern historical oracle source-identity
+checks comparing the frozen CPU hash with the changed current CPU. Preserve
+this failure and the old receipts; repair the historical tests' immutable-source
+binding without substituting current hashes or treating old captures as current
+CPU qualification.
+
+No controller integration, new guest attempt, frame result or consumer adoption
+is qualified by this checkpoint. Corrected source bindings, fault-fallback and
+additional task/16-bit controls, affected regressions, then the separate
+controller and one reviewed hosted diagnostic remain unfinished.
 
 ## First deliverable
 
