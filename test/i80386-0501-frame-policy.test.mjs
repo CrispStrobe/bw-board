@@ -109,10 +109,13 @@ test('reentrant arm from CPU admission poisons the outer operation',()=>{
 test('saved, consumed and actual returned flags remain distinct diagnostics',()=>{
   const f=fixture();arm(f);f.complete();f.policy.afterStep();
   f.entry.savedFlags=0x203;
-  f.returned.consumedFlags=0x201;
+  f.returned.consumedFlags=0x40202;
   const result=finish(f);
   assert.deepEqual([result.entrySavedFlags,result.returnConsumedFlags,
-    result.actualReturnedFlags],[0x203,0x201,0x202]);
+    result.actualReturnedFlags],[0x203,0x40202,0x202]);
+  const g=fixture();arm(g);g.complete();g.policy.afterStep();
+  g.returned.consumedFlags=0x203;
+  assert.equal(finish(g).phase,'invalid');
 });
 
 test('admitted wrapper bytes survive public-layout mutation on exact and mismatch paths',()=>{

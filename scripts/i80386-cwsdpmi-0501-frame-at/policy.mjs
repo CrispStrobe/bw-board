@@ -122,6 +122,7 @@ export function create0501Policy(cpu) {
           returned.handlerEsp!==entry.handlerEsp ||
           !word(returned.consumedCs) || !dword(returned.consumedEip) ||
           !dword(returned.consumedFlags) ||
+          (returned.consumedFlags&1)!==(returned.returnedFlags&1) ||
           returned.consumedCs!==entry.returnCs ||
           returned.consumedEip!==entry.returnEip ||
           !cpl(returned.returnedCpl) || returned.returnedCpl!==entry.oldCpl ||
