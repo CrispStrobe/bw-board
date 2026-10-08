@@ -101,7 +101,10 @@ def main():
                   'includeObjectsCollectedByMajorGC': True}] and
              support['cases'][1].get('minorGcEvents', 0) > 0 and
              support['cases'][1].get('majorGcEvents') == 0 and
-             support['cases'][3].get('majorGcEvents', 0) > 0,
+             support['cases'][2].get('majorGcEvents', 0) > 0 and
+             support['cases'][2].get('minorAfterReleaseBeforeMajor') == 0 and
+             support['cases'][3].get('majorGcEvents', 0) > 0 and
+             support['cases'][3].get('minorAfterReleaseBeforeMajor') == 0,
              'unverified hosted collected-object sampling')
         support_sha = sha(args.gc_support)
         source_inventory = accepted.expected_source_inventory(qualified, QUALIFIED)

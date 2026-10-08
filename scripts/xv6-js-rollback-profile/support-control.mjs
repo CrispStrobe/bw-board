@@ -5,6 +5,9 @@ const node=(id,functionName,children=[])=>({id,callFrame:{functionName},children
 const profile={head:node(1,'(root)',[node(2,'allocateShortLived')]),
  samples:[{nodeId:2,size:32768,ordinal:1}]};
 assert.equal(sampleIncludesCollected(profile,1024),true);
+assert.equal(sampleIncludesCollected({head:node(1,'(root)',[
+ node(2,'allocateShortLived',[node(3,'Array')])]),
+ samples:[{nodeId:3,size:32768}]},1024),true);
 assert.equal(sampleIncludesCollected({...profile,samples:[]},1024),false);
 assert.equal(sampleIncludesCollected({...profile,samples:[{nodeId:1,size:32768}]},1024),false);
 assert.equal(sampleIncludesCollected({...profile,samples:[{nodeId:2,size:0}]},1024),false);
@@ -18,10 +21,12 @@ const cases=[
   minorGcEvents:2,majorGcEvents:0,collectedCallsiteSamplePresent:true},
  {name:'major-baseline',requested:{samplingInterval:131072},
   allocatedObjects:1024,collectedObjects:1024,
-  minorGcEvents:0,majorGcEvents:1,collectedCallsiteSamplePresent:false},
+  minorGcEvents:0,majorGcEvents:1,minorAfterReleaseBeforeMajor:0,
+  collectedCallsiteSamplePresent:false},
  {name:'major-enabled',requested:{samplingInterval:131072,
     includeObjectsCollectedByMajorGC:true},allocatedObjects:1024,collectedObjects:1024,
-  minorGcEvents:0,majorGcEvents:1,collectedCallsiteSamplePresent:true}];
+  minorGcEvents:0,majorGcEvents:1,minorAfterReleaseBeforeMajor:0,
+  collectedCallsiteSamplePresent:true}];
 assert.equal(supportsBothCases(cases),true);
 for(const [index,patch] of [
  [0,{collectedCallsiteSamplePresent:true}],
@@ -30,6 +35,7 @@ for(const [index,patch] of [
  [2,{collectedCallsiteSamplePresent:true}],
  [3,{collectedCallsiteSamplePresent:false}],
  [3,{majorGcEvents:0}],
+ [3,{minorAfterReleaseBeforeMajor:1}],
  [3,{collectedObjects:1023}],
  [3,{requested:{samplingInterval:131072}}],
 ]){

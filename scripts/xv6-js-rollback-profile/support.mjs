@@ -10,18 +10,27 @@ const interval=131072;
 export function sampleIncludesCollected(profile,deadCount){
  assert.ok(Number.isSafeInteger(deadCount)&&deadCount>0,'collected test objects');
  const ids=new Set();
- const stack=[profile?.head];
+ const stack=[[profile?.head,false]];
  while(stack.length){
-  const node=stack.pop();
+  const [node,parentFactory]=stack.pop();
   if(!node||typeof node!=='object')continue;
-  if(node.callFrame?.functionName==='allocateShortLived')ids.add(node.id);
-  if(Array.isArray(node.children))stack.push(...node.children);
+  const inFactory=parentFactory||node.callFrame?.functionName==='allocateShortLived';
+  if(inFactory)ids.add(node.id);
+  if(Array.isArray(node.children))
+   for(const child of node.children)stack.push([child,inFactory]);
  }
  return Array.isArray(profile?.samples)&&profile.samples.some(sample=>
   ids.has(sample.nodeId)&&Number.isSafeInteger(sample.size)&&sample.size>0);
 }
 function remember(object,weak){weak.push(new WeakRef(object));}
 function allocateShortLived(){return new Array(1024);}
+function allocateHeld(weak,strong){
+ for(let index=0;index<8192;index++){
+  const target=allocateShortLived();
+  remember(target,weak);
+  strong.push(target);
+ }
+}
 function pumpMinor(){
  let last=null;
  for(let index=0;index<2048;index++)last=new Array(1024);
@@ -45,9 +54,18 @@ async function sampleCase(name,flags,kind){
   started=true;
   const begin=performance.now();
   const weak=[];
-  for(let index=0;index<8192;index++)remember(allocateShortLived(),weak);
-  if(kind==='minor')pumpMinor();
-  else global.gc();
+  let releaseAt=null;
+  if(kind==='minor'){
+   for(let index=0;index<8192;index++)remember(allocateShortLived(),weak);
+   pumpMinor();
+  }else{
+   const strong=[];
+   allocateHeld(weak,strong);
+   await tick();
+   releaseAt=performance.now();
+   strong.length=0;
+   global.gc();
+  }
   for(let i=0;i<4;i++)await tick();
   const end=performance.now();
   const dead=weak.filter(ref=>ref.deref()===undefined).length;
@@ -59,11 +77,19 @@ async function sampleCase(name,flags,kind){
    event.kind===constants.NODE_PERFORMANCE_GC_MINOR).length;
   const major=observed.filter(event=>
    event.kind===constants.NODE_PERFORMANCE_GC_MAJOR).length;
+  const firstMajor=observed.find(event=>
+   event.kind===constants.NODE_PERFORMANCE_GC_MAJOR&&
+   (releaseAt===null||event.at>=releaseAt));
+  const minorAfterReleaseBeforeMajor=releaseAt===null?null:
+   observed.filter(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
+    event.at>=releaseAt&&(!firstMajor||event.at<firstMajor.at)).length;
   if(kind==='minor')assert.ok(minor>0&&major===0,'isolated minor collection');
-  else assert.ok(major>0,'observed major collection');
+  else assert.ok(firstMajor&&minorAfterReleaseBeforeMajor===0,
+   'target release followed directly by major collection');
   return {name,requested:{samplingInterval:interval,...flags},
    allocatedObjects:weak.length,collectedObjects:dead,
    minorGcEvents:minor,majorGcEvents:major,
+   minorAfterReleaseBeforeMajor,
    collectedCallsiteSamplePresent:sampleIncludesCollected(profile,dead)};
  }catch(error){firstError=error;throw error;}
  finally{
@@ -92,7 +118,10 @@ export function supportsBothCases(cases){
  assert.equal(byName['major-enabled'].collectedCallsiteSamplePresent,true);
  assert.ok(byName['minor-enabled'].minorGcEvents>0&&
   byName['minor-enabled'].majorGcEvents===0,'minor-only GC evidence');
- assert.ok(byName['major-enabled'].majorGcEvents>0,'major GC evidence');
+ assert.ok(byName['major-baseline'].majorGcEvents>0&&
+  byName['major-baseline'].minorAfterReleaseBeforeMajor===0&&
+  byName['major-enabled'].majorGcEvents>0&&
+  byName['major-enabled'].minorAfterReleaseBeforeMajor===0,'major GC evidence');
  return true;
 }
 async function main(){

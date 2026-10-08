@@ -16,7 +16,9 @@ verifies that removing the three exact edits reproduces the held probe bytes.
 A hosted control checks minor and major collection separately: each
 single-flag case must retain samples of short-lived arrays after the matching
 observed GC kind, while a no-flags baseline does not. Ambiguous GC behavior
-refuses qualification; accepting protocol parameters alone is insufficient.
+refuses qualification. The major case keeps its targets strongly reachable
+until immediately before a forced major collection and refuses an intervening
+minor collection; accepting protocol parameters alone is insufficient.
 
 The parser refuses duplicate JSON keys, invalid graph or sample references,
 nonfinite values, negative or excessive sample sizes, and source roles whose
