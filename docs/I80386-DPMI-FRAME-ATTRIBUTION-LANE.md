@@ -133,19 +133,45 @@ These xv6 regressions do not establish an allocation-frame guest result.
 
 Continue with these remaining gates:
 
-1. Eleven of twelve enabled PR463 checks passed at exact `c968428d`, including
-   both xv6 runs and both full test jobs. The push-vector job is still queued.
-   Wait for that final check to succeed. Preserve
-   any failures and investigate them without rewriting historical receipts.
-2. After exact-head source review and CI, apply the dedicated label once for
-   one bounded diagnostic. The workflow has not been dispatched yet.
-3. Audit its original official packet independently, without producer-helper
-   imports or guest replay. Require the selected committed pair and same-run
-   finite completion; retain partial progress and first failure otherwise.
+1. All twelve standard enabled checks passed at exact `c968428d` before the
+   first dedicated diagnostic. Its first run then failed in observer reference
+   collection, before journal arm. Preserve that original outcome.
+2. Use the reviewed isolated correction in PR464 at `4c22a574`, described
+   below. Do not repeat the already completed reference-helper implementation.
+   Preserve its real-shape, accessor-refusal and replacement controls.
+3. After final source review and every enabled corrected-head check passes,
+   run one separately identified bounded attempt. Independently audit its
+   original packet without producer helpers or replay. Require the selected
+   committed pair and same-run finite completion; preserve failure otherwise.
 
 Use the [current README](https://github.com/CrispStrobe/bw-board/blob/c968428d4d478ae115b8e9cb1065f8a349b7ccbe/scripts/i80386-cwsdpmi-0501-frame-at/README.md)
 and [dedicated workflow](https://github.com/CrispStrobe/bw-board/blob/c968428d4d478ae115b8e9cb1065f8a349b7ccbe/.github/workflows/i80386-cwsdpmi-0501-frame-at.yml).
 This checkpoint does not qualify a guest frame, performance or consumer adoption.
+
+## First actual AT attempt
+
+[Run 37814786319](https://github.com/CrispStrobe/bw-board/actions/runs/37814786319)
+at exact `c968428d`, attempt 1, failed with
+`cpu.segmentCaches is not iterable`. The owned main cut passed; the observer
+then treated the real CPU's plain cache object as an iterable. Execution stopped
+before the passive wrapper copy and journal arm. Root and independent peer
+confirmed the original packet's identity, source/compiler/media/notice bindings
+and pre-arm failure boundary. See the [preserved failure receipt](receipts/2026-10-08-0501-frame-first-at/README.md).
+
+This is an observer defect. No committed frame or finite client completion was
+qualified. [Draft PR464](https://github.com/CrispStrobe/bw-board/pull/464),
+reviewed head [`4c22a574`](https://github.com/CrispStrobe/bw-board/commit/4c22a574ec50a515fe4954a3fda0ff6a947a5068),
+corrects reference capture on an isolated branch stacked on `c968428d`.
+The new CPU-free helper retains the cache parent and six own data slots,
+translation entries and VGA/backing/debug identities without invoking
+iterators or accessors. Root and peer compared these shapes against the
+actual CPU, board and VGA sources. All 23 pure controls and exact source
+admission passed: 195 Git-bound roles and 62 recursive ESM nodes. The CPU,
+workflow and inherited compiler/media/ROM/notice pins are unchanged.
+
+Fresh enabled checks on exact `4c22a574` must pass before a new, separately
+identified attempt. The correction has not run in a guest. Do not replay or
+rewrite the original failed run.
 
 ## First deliverable
 

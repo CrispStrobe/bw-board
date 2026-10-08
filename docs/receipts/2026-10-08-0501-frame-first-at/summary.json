@@ -1,0 +1,33 @@
+{
+  "verdict": "PRESERVED_PRE_ARM_OBSERVER_FAILURE",
+  "source": "c968428d4d478ae115b8e9cb1065f8a349b7ccbe",
+  "run": 37814786319,
+  "attempt": 1,
+  "zipBytes": 139089,
+  "zipSha256": "a7e8b55b76e7c6900b2ff5c14c5f35aba4781bd08f0c770097f55b68ff0a8a94",
+  "members": 112,
+  "sourceRoles": 194,
+  "recursiveJsNodes": 61,
+  "stage": "waiting-batch",
+  "mainCutStep": 44609970,
+  "stopStep": 44609991,
+  "firstFailure": "cpu.segmentCaches is not iterable",
+  "journalPhase": "waiting",
+  "journalObservation": null,
+  "wrapperReceipt": null,
+  "finiteClientPassed": false,
+  "boundary": "Source-bound original reports; observer failed before journal arm and passive wrapper copy; no committed INT31/IRET pair, finite client completion, physical mapping or performance result",
+  "schema": "bw.i80386.frame-first-at-failure.v1",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37814786319",
+  "officialArtifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11566802066",
+  "originalLog": {
+    "bytes": 208801,
+    "sha256": "0547d3ef9f0b2562a086bf5b4364d870d4c524fdf557e2bc92116215c1a46eab"
+  },
+  "audit": {
+    "root": "original packet, inventory, official metadata and immutable Git; compiler/media/notice bindings and pre-arm failure boundary",
+    "peer": "independent original packet/Git/metadata review, including implicit compiler roles and media bindings; same pre-arm observer failure",
+    "producerHelperImports": false,
+    "guestReplay": false
+  }
+}
