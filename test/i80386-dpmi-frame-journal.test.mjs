@@ -216,6 +216,29 @@ test('mixed profile refuses trap gate and outer-CPL delivery', () => {
   }
 });
 
+test('mixed profile refuses gate16 and same-CPL stack16 after guest delivery', () => {
+  for(const variant of ['gate16','stack16']){
+    const f=fixture();
+    f.memory.set(0x208+5,0xfa);
+    f.memory.set(0x208+6,0x8f);
+    if(variant==='stack16'){
+      f.memory.set(0x220+6,0x8f);
+      f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x23,3,
+        {returnPath:true});
+    }
+    f.put(0x300+0x31*8,[0,1,0x0b,0,0,
+      variant==='gate16'?0xe6:0xee,0,0]);
+    const token=f.arm({profile:MIXED_PROFILE});
+    assert.equal(f.cpu.step(),1);
+    const result=f.cpu.takeOwned0501FrameObservation(token);
+    assert.equal(result.failure,'unsupported-owned-delivery');
+    assert.equal(result.entry,null);
+    assert.equal(result.rejectedDelivery.width,variant==='gate16'?16:32);
+    assert.equal(result.rejectedDelivery.handlerStackDefault32,
+      variant==='gate16');
+  }
+});
+
 test('prefix-derived post-immediate return EIP is recorded, not guessed', () => {
   const f = fixture();
   f.put(CODE + START, [0x66, 0x66, 0xcd, 0x31]);
