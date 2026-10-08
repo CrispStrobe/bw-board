@@ -1,8 +1,11 @@
 # Functional-JS rollback allocation diagnostic
 
-Status: proposed measurement contract, not an implemented harness or speed
-result. Refresh the default branch and open PRs before starting. Keep the
-[CWSDPMI frame qualification](I80386-DPMI-FRAME-ATTRIBUTION-LANE.md) separate.
+Status: reviewed source harness in draft [PR467](https://github.com/CrispStrobe/bw-board/pull/467),
+head `3269cf1f2e0c009d8e0a331aa93bee498863bc2a`. Six CPU-free controls,
+source identity and syntax checks passed; hosted CI is pending. The dedicated
+allocation diagnostic has not run. No profiler support, allocation result or
+speed improvement is established. Refresh exact-head checks before execution.
+Keep the [CWSDPMI frame qualification](I80386-DPMI-FRAME-ATTRIBUTION-LANE.md) separate.
 
 ## Question and fixed workload
 
@@ -38,6 +41,15 @@ probe must have an exact reversible edit limited to profiling setup, guest-loop
 boundaries and report collection, with all source/import roles bound to Git.
 No guest-loop substitution, changed rollback behavior or alternate guest is
 admitted. Do not modify other workers' CPU or UI files.
+
+The harness freezes ordinary-JS emulator `22ca742ed60e1350ed96110986a09b2ce84620ac`
+and Node 20.20.2. It requests a 128 KiB sampling interval and caps each raw
+profile at 8 MiB. Four separate GC controls compare each collected-object flag
+with its baseline; raw profiles and bounded GC/dead-target facts are retained
+before causal refusal. Source review and synthetic controls do not prove that
+the hosted runtime supports this protocol or that all guest comparisons pass.
+The next worker must qualify the exact reviewed head, then audit the original
+artifact independently before selecting an optimization.
 
 ## Measurement and refusal rules
 
