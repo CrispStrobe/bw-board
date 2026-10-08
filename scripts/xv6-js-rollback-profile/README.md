@@ -13,10 +13,13 @@ requests both collected-by-minor-GC and collected-by-major-GC flags at a
 predeclared 128 KiB sampling interval, limits the raw profile to 8 MiB,
 preserves the original guest exception before a profiling failure, and
 verifies that removing the three exact edits reproduces the held probe bytes.
-A hosted control checks minor and major collection separately: each
-single-flag case must retain samples of short-lived arrays after the matching
-observed GC kind, while a no-flags baseline does not. Ambiguous GC behavior
-refuses qualification. The major case keeps its targets strongly reachable
+A hosted control checks minor and major collection separately. The minor case
+allocates small batches, crosses an event-loop turn after each WeakRef
+creation, then induces nursery pressure; it requires dead targets, observed
+minor collection and no major collection. Each single-flag case must retain
+samples of short-lived arrays after the matching observed GC kind, while a
+no-flags baseline does not. Ambiguous GC behavior refuses qualification. The
+major case keeps its targets strongly reachable
 until immediately before a forced major collection and refuses an intervening
 minor collection; accepting protocol parameters alone is insufficient.
 

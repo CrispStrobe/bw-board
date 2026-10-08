@@ -24,6 +24,9 @@ export function sampleIncludesCollected(profile,deadCount){
 }
 function remember(object,weak){weak.push(new WeakRef(object));}
 function allocateShortLived(){return new Array(1024);}
+function allocateMinorBatch(weak){
+ for(let index=0;index<256;index++)remember(allocateShortLived(),weak);
+}
 function allocateHeld(weak,strong){
  for(let index=0;index<8192;index++){
   const target=allocateShortLived();
@@ -33,11 +36,12 @@ function allocateHeld(weak,strong){
 }
 function pumpMinor(){
  let last=null;
- for(let index=0;index<2048;index++)last=new Array(1024);
+ for(let index=0;index<1024;index++)last=new Array(1024);
  if(last?.length!==1024)throw Error('minor allocation pump');
 }
 const tick=()=>new Promise(accept=>setImmediate(accept));
 async function sampleCase(name,flags,kind){
+ global.gc(); // Clear preexisting nursery pressure before measuring this case.
  const session=new inspector.Session();session.connect();
  const command=(method,params={})=>new Promise((accept,reject)=>
   session.post(method,params,(error,result)=>error?reject(error):accept(result)));
@@ -56,8 +60,12 @@ async function sampleCase(name,flags,kind){
   const weak=[];
   let releaseAt=null;
   if(kind==='minor'){
-   for(let index=0;index<8192;index++)remember(allocateShortLived(),weak);
-   pumpMinor();
+   for(let batch=0;batch<16;batch++){
+    allocateMinorBatch(weak);
+    await tick(); // WeakRef creation keeps targets alive until this job ends.
+    pumpMinor();
+    await tick();
+   }
   }else{
    const strong=[];
    allocateHeld(weak,strong);
