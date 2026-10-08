@@ -21,6 +21,21 @@ before continuing. The original source and outcome remain frozen; no rerun was
 needed. AT integration of this new client is the next stage. The earlier client
 and AT evidence are unchanged.
 
+The separate AT source gate is published as [draft PR459](https://github.com/CrispStrobe/bw-board/pull/459)
+at [`41db7ba4`](https://github.com/CrispStrobe/bw-board/tree/41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7/scripts/i80386-cwsdpmi-highmem-at).
+Root and peer source review and pure binding, cut, grade, driver and source
+controls passed; source admission binds 184 roles and 53 reachable JavaScript
+modules. The gate pins the QEMU executable, linker map and initial-media hashes,
+authenticates ten owned code extents, and binds later observations to a private
+copy of the approved client output. Its declared limits are 120 million steps
+and 640 seconds of scenario wall time.
+
+Its first [hosted AT attempt](https://github.com/CrispStrobe/bw-board/actions/runs/37776895780),
+attempt 1, was queued at 12:26 UTC on 2026-10-08. No AT success is established
+at this checkpoint. Keep that source frozen until the original artifact is
+preserved and independently audited; do not replace the first outcome with
+a rerun. No CPU/device implementation or consumer dependency pin was changed.
+
 ## Fixture and acceptance sequence
 
 1. Add a new owned client under `scripts/i80386-cwsdpmi-highmem-timer/` with its own source, output markers, media roles, and exact source-binding adapters. Keep the existing client, compiler/package pins and prior receipts unchanged. Record the exact CWSDPMI, FreeDOS, BIOS, toolchain, source and media hashes and the explicit 4 MiB machine profile for each run.
