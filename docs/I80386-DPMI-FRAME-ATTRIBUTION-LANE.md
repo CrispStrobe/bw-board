@@ -50,6 +50,44 @@ allocation-frame guest attempt, frame result or consumer adoption is qualified
 by this checkpoint. Clean affected regressions, then the separate controller
 and one reviewed hosted diagnostic remain unfinished.
 
+## Unconnected controller-policy checkpoint
+
+[Draft PR461](https://github.com/CrispStrobe/bw-board/pull/461), reviewed head
+[`4457eac3`](https://github.com/CrispStrobe/bw-board/commit/4457eac39de441fdff93f0eeaf05a4e4a7826b64),
+is stacked on `13d82f31`. Its four new files add private wrapper admission,
+a CPU-free one-shot policy and normal-test-selection controls. The inherited
+CPU, AT driver, inputs and workflows are unchanged by this slice.
+
+Run its synthetic controls with:
+
+```sh
+node --test test/i80386-0501-frame-policy.test.mjs
+```
+
+Coder, root and independent peer each passed all 12 controls. These check
+public-layout mutation on exact and mismatched text paths, reentry, partial or
+malformed frame context, status/drain counter disagreement, CF/address
+mismatch and preservation of invalid reset/step-cap reasons. Caller-supplied
+snapshots and synthetic records do not authenticate a pause or actual CPU event.
+
+The next implementation belongs in `scripts/i80386-cwsdpmi-0501-frame-at/`:
+
+1. Add an actual driver that preserves the frozen finite-client behavior,
+   owns the same-machine main cut, and privately retains fresh wrapper admission.
+2. At the wrapper opportunity, own the synchronous passive read and unchanged
+   CPU/board/RAM/page-table checks. Arm once; poll and drain only after ordinary
+   returned machine steps. Preserve invalid observations without retry.
+3. Bind the pair to that run's strict output, finite client exit and fresh shell
+   return. Add driver controls for a passing client with no authenticated pair,
+   changed wrapper/state, wrong records and output disagreement.
+4. Add a separately named exact source manifest and hosted workflow retaining
+   inherited input/compiler/notice pins and authenticating the changed CPU.
+   Review the source and all enabled checks before one actual diagnostic, then
+   audit its original artifact independently without producer imports or replay.
+
+Neither this policy checkpoint nor its controls qualifies a guest frame,
+physical mapping, performance or consumer adoption.
+
 ## First deliverable
 
 Observe exactly one owned protected-mode 32-bit `INT 31h`, function `0501h`,
