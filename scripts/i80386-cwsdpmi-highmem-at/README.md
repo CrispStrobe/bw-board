@@ -1,9 +1,10 @@
 # Owned high-linear-memory and timer AT gate
 
-This is a separate source checkpoint for the owned DJGPP client in
-`../i80386-cwsdpmi-highmem-timer/client.c`. Its QEMU `pc`/486/4 MiB
-control reached the finite result described in the public
-`docs/I80386-DPMI-HIGHMEM-TIMER-PLAN.md`. This AT gate has no hosted result
+This is a separate source checkpoint for the
+[owned DJGPP client](../i80386-cwsdpmi-highmem-timer/client.c). Its QEMU
+`pc`/486/4 MiB control reached the finite result in the
+[public QEMU result](https://github.com/CrispStrobe/bw-board/blob/34f096ed37cf335ea3dca7b4bc58f3ee2dec02b2/docs/I80386-DPMI-HIGHMEM-QEMU-RESULTS.md).
+This AT gate has no hosted result
 until its dedicated exact-head workflow runs and its original packet is audited.
 The older client, QEMU gate, AT completion gate, CPU, BIOS, VGA, media and
 compiler helpers remain byte-exact at inherited source `6ec767b5`.
@@ -34,7 +35,8 @@ bounded phase/progress and available CPU, memory, disk, keyboard and screen
 observations. The public artifact contains only reports and notices, not EXE,
 ROM, media, RAM or toolchain bytes.
 
-The parsed result proves a finite **linear** address above 1 MiB, a
+Passing this gate would establish this finite client's **linear** address
+above 1 MiB, a
 nonwrapping requested 4,096-byte span, exact selector base/4,095 limit
 readback, 256-byte checksum and observed 1–36 tick modulo-day advance within
 262,144 calls. It does not prove physical placement above 1 MiB under the
