@@ -43,12 +43,15 @@ inputs. New current fixtures are allowed while all 41 old named fixtures stay
 byte-exact. Root and peer source review and 11 host-only planner/scheduling
 controls passed. Those controls do not execute the emulated CPU.
 
-The original failed runs remain evidence. A new hosted run must establish the
-corrected runner's current and historical outcomes and reach the xv6 guest;
-local controls do not establish those results. No controller integration, new
-allocation-frame guest attempt, frame result or consumer adoption is qualified
-by this checkpoint. Clean affected regressions, then the separate controller
-and one reviewed hosted diagnostic remain unfinished.
+The original failed runs remain evidence. The corrected
+[push run 37792187626](https://github.com/CrispStrobe/bw-board/actions/runs/37792187626)
+passed at exact `13d82f31`: current tests 1,604/1,593 pass/zero fail/11 skip,
+frozen historical tests 288/288 pass/zero fail, then both xv6 memory profiles,
+the filesystem exercise and process-exhaustion regression. Root and independent
+peer matched all 29 journal controls to passing rows and audited the original
+five-JSON guest artifact against Git. See the [bounded receipt and limits](receipts/2026-10-08-0501-journal-xv6/README.md).
+This qualifies those regressions, not an allocation-frame guest or consumer
+adoption. Other enabled PR checks still need exact-head completion.
 
 ## Unconnected controller-policy checkpoint
 
@@ -87,6 +90,37 @@ The next implementation belongs in `scripts/i80386-cwsdpmi-0501-frame-at/`:
 
 Neither this policy checkpoint nor its controls qualifies a guest frame,
 physical mapping, performance or consumer adoption.
+
+## Runnable adapter source checkpoint
+
+[Draft PR462](https://github.com/CrispStrobe/bw-board/pull/462), final source head
+[`8b82bde4`](https://github.com/CrispStrobe/bw-board/commit/8b82bde41f2fffff07279834a333a47bcd8f5a7f),
+adds the pinned `adapter.mjs`, real driver wrapper and CPU-free orchestration
+under `scripts/i80386-cwsdpmi-0501-frame-at/`. The inherited finite AT driver,
+CPU, media and workflows stay frozen. Root and peer reviewed executable source
+`cb6b6c46`; subsequent changes are README-only. All 19 CPU-free policy and
+orchestration controls passed. The adapter itself has not executed.
+
+The driver retains authenticated main-cut CS/code base, checks private wrapper
+bytes and unchanged guest/reference state at its synchronous opportunity, arms
+once, and polls after ordinary machine steps. It preserves the full CPU pair,
+wrapper hashes and separate client/frame verdicts. Reentry, observer failure
+and arm exceptions are terminal even if a caller catches the error.
+
+Before an actual attempt, finish these tasks:
+
+1. Retain wrapper and CPU-journal milestones in bounded partial progress. The
+   current intermediate progress contains only finite-client fields, so an
+   external timeout before final report would lose those frame records.
+2. Add the exact new source manifest and dedicated hosted workflow, preserving
+   inherited compiler/input/notice pins and binding all executable imports.
+3. Review the final source and every enabled exact-head check. Then authorize
+   one bounded diagnostic and audit its original packet without helper imports
+   or replay. Require both the committed pair and same-run finite completion.
+
+The executable invocation and pure-control commands are documented in the
+[new namespace README](https://github.com/CrispStrobe/bw-board/blob/8b82bde41f2fffff07279834a333a47bcd8f5a7f/scripts/i80386-cwsdpmi-0501-frame-at/README.md).
+This is runnable source preparation, not an allocation-frame guest result.
 
 ## First deliverable
 
