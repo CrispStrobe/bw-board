@@ -153,6 +153,30 @@ test('mixed observer descriptor read failure cannot throw into guest IRET', () =
   assert.equal(f.cpu.cs,0x1b);
 });
 
+test('mixed handler mutation during IRET frame read cannot earn a pair', () => {
+  let duringIret=false, changed=false;
+  const f=fixture({onRead(cpu){
+    if(duringIret && !changed){
+      cpu.segmentCaches[1].access ^= 2;
+      changed=true;
+    }
+  }});
+  f.memory.set(0x208+5,0xfa);
+  f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  f.put(HANDLER+0x100,[0x66,0xcf]);
+  const token=f.arm({profile:MIXED_PROFILE});
+  f.cpu.step();
+  assert.equal(f.cpu.owned0501FrameStatus(token).phase,'open');
+  duringIret=true;
+  f.cpu.step();
+  assert.equal(changed,true);
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure,'owned-handler-context-excursion');
+  assert.equal(result.returned,null);
+  assert.equal(f.cpu.cs,0x1b);
+});
+
 test('mixed profile refuses trap gate and outer-CPL delivery', () => {
   for (const gateByte of [0xef,0xee]) {
     const f=fixture();

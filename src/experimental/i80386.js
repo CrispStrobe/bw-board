@@ -37,14 +37,11 @@ const owned0501Sessions = new WeakMap();
 const OWNED_0501_MAX_STEPS = 1_000_000;
 const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
 
-function owned0501MixedHandlerMatches(cpu, session) {
-  const code = cpu.segmentCaches[SEG_CS];
-  const stack = cpu.segmentCaches[SEG_SS];
+function owned0501MixedReferencesMatch(session) {
   const expected = session.handlerContext;
-  return !!expected && cpu.protectedMode && !cpu.virtual8086 &&
-    cpu.cs === expected.cs && cpu.ss === expected.ss &&
-    cpu.currentPrivilegeLevel === 3 &&
-    code === expected.codeRef && stack === expected.stackRef &&
+  if (!expected) return false;
+  const code = expected.codeRef, stack = expected.stackRef;
+  return !!code && !!stack &&
     code.base === expected.codeBase && code.limit === expected.codeLimit &&
     code.default32 === false && code.present === expected.codePresent &&
     code.code === expected.codeCode && code.readable === expected.codeReadable &&
@@ -58,6 +55,16 @@ function owned0501MixedHandlerMatches(cpu, session) {
     stack.readable === expected.stackReadable &&
     stack.writable === expected.stackWritable &&
     stack.access === expected.stackAccess && stack.address === expected.stackAddress;
+}
+
+function owned0501MixedHandlerMatches(cpu, session) {
+  const expected = session.handlerContext;
+  return !!expected && cpu.protectedMode && !cpu.virtual8086 &&
+    cpu.cs === expected.cs && cpu.ss === expected.ss &&
+    cpu.currentPrivilegeLevel === 3 &&
+    cpu.segmentCaches[SEG_CS] === expected.codeRef &&
+    cpu.segmentCaches[SEG_SS] === expected.stackRef &&
+    owned0501MixedReferencesMatch(session);
 }
 
 function owned0501Invalidate(session, reason) {
@@ -3075,7 +3082,10 @@ export class ExperimentalI80386 {
     if (owned0501?.iretIntent && owned0501.phase === "open") {
       try {
         const entry = owned0501.entry;
-        if (owned0501.iretIntent.cs !== entry.handlerCs ||
+        if (owned0501.profile === OWNED_0501_MIXED_PROFILE &&
+            !owned0501MixedReferencesMatch(owned0501)) {
+          owned0501Invalidate(owned0501, "owned-handler-context-excursion");
+        } else if (owned0501.iretIntent.cs !== entry.handlerCs ||
             owned0501.iretIntent.ss !== entry.handlerSs ||
             owned0501.iretIntent.esp !== entry.handlerEsp ||
             (address >>> 0) !== entry.frameLinear ||
