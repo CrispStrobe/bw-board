@@ -21,12 +21,19 @@ function exact(path,limit,expected=null) {
     const before=fs.fstatSync(fd);
     if(!before.isFile()||before.size>limit||before.size<1)
       throw new Error('private input shape');
-    const bytes=fs.readFileSync(fd),after=fs.fstatSync(fd),pathStat=fs.lstatSync(path);
+    const bounded=Buffer.alloc(before.size+1);
+    let count=0;
+    while(count<bounded.length){
+      const got=fs.readSync(fd,bounded,count,bounded.length-count,null);
+      if(got===0)break;
+      count+=got;
+    }
+    const bytes=bounded.subarray(0,count),after=fs.fstatSync(fd),pathStat=fs.lstatSync(path);
     if(!pathStat.isFile()||pathStat.isSymbolicLink()||
        before.dev!==after.dev||before.ino!==after.ino||
        before.size!==after.size||before.mtimeMs!==after.mtimeMs||
        pathStat.dev!==after.dev||pathStat.ino!==after.ino||
-       bytes.length!==before.size)
+       count!==before.size)
       throw new Error('private input changed during read');
     const digest=sha(bytes);
     if(expected&&(bytes.length!==expected.bytes||digest!==expected.sha256))
@@ -144,7 +151,9 @@ export function run(inputPath,outputPath,progressPath) {
       throw new Error('writable guest media differs from pristine input');
     report.reset=cpuCutState(machine.cpu);
     report.stage='boot';
-    const start=Date.now(),queue=[],injected=[];
+    const start=Date.now(),queue=[],injected=[],acceptedScans=[];
+    const commandScans=encode(FIRST+'\r').map(event=>event.scan);
+    let commandAccepted=false;
     let declined=false,menuKicks=0,lastOfferedStep=-5000,
       lastChange=0,previousScreen='',lastScreen=[],unsupportedScreens=0;
     writeProgress(progressPath,report);
@@ -152,8 +161,6 @@ export function run(inputPath,outputPath,progressPath) {
       report.steps=step;
       // This precedes screen reads, keyboard offers, chip-event polling and
       // the next ordinary step. It is a synchronous source-owned cut.
-      const accepted=injected.filter(event=>event.accepted).map(event=>event.scan);
-      const commandAccepted=hasSequence(accepted,encode(FIRST+'\r').map(event=>event.scan));
       if(commandAccepted&&candidateAtMain(machine,layout)){
         report.stage='protected-main-candidate';
         report.keyboard={declined,requested:[FIRST],injected,
@@ -199,7 +206,10 @@ export function run(inputPath,outputPath,progressPath) {
         const event=queue[0],accepted=machine.keyIn(event.scan);
         lastOfferedStep=step;
         injected.push({step,scan:event.scan,key:event.key,phase:event.phase,accepted});
-        if(accepted)queue.shift();
+        if(accepted){
+          queue.shift();acceptedScans.push(event.scan);
+          if(!commandAccepted)commandAccepted=hasSequence(acceptedScans,commandScans);
+        }
       }
       const before={step,eip:machine.cpu.eip,cpuCycles:machine.cpu.cycles,
         machineCycles:machine.cycles};
