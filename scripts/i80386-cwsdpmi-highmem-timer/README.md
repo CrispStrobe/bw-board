@@ -35,6 +35,9 @@ keys through QMP; these offers are not guest keyboard-acceptance evidence.
 Running-disk reads are bounded observations, not atomic disk snapshots. Host
 parser and synthetic media/oracle controls do not establish compiler, DPMI,
 QEMU or AT behavior until the hosted run is reviewed.
+The artifact inventory admits only bounded report roles and the exact
+`package/COPYING.CWS` license notice when package acquisition reached that
+phase. Earlier fetch or compile failures can retain reports without that notice.
 
 The QEMU control is a `pc`/486/4 MiB machine, distinct from the AT
 CPU/device profile and firmware. Even a future successful pair of finite

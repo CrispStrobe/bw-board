@@ -40,7 +40,7 @@ jobs:
           mkdir "$e"
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
           timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-highmem-timer/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
-          for test in compile-adapter-control.py grade-control.py source-control.py oracle-control.py; do
+          for test in compile-adapter-control.py grade-control.py inventory-control.py source-control.py oracle-control.py; do
             timeout --signal=TERM --kill-after=5s 30s python3 -B "scripts/i80386-cwsdpmi-highmem-timer/$test" > "$e/$test.stdout" 2> "$e/$test.stderr"
           done
           timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-highmem-timer/media-control.mjs > "$e/media-control.stdout" 2> "$e/media-control.stderr"
@@ -99,23 +99,7 @@ jobs:
           mkdir -p "$e"
           python3 -B scripts/i80386-cwsdpmi-highmem-timer/source.py "$BW_EXPECTED_HEAD" "$e/source-after.json" > "$e/source-after.stdout" 2> "$e/source-after.stderr"
           if test -f "$e/source-before.json"; then cmp "$e/source-before.json" "$e/source-after.json"; fi
-          python3 -B - "$e" <<'PY'
-          import hashlib,json,pathlib,sys
-          root=pathlib.Path(sys.argv[1]); files={}; total=0
-          allowed={'.json','.stdout','.stderr','.txt','.map'}
-          for path in sorted(root.rglob('*')):
-              if path.is_symlink(): raise ValueError('artifact symlink')
-              if not path.is_dir() and not path.is_file(): raise ValueError('nonordinary artifact role')
-              if path.is_file() and path.name!='artifact-inventory.json':
-                  if path.suffix.lower() not in allowed: raise ValueError('non-report artifact role')
-                  size=path.stat().st_size
-                  if size>5<<20 or total+size>16<<20: raise ValueError('report-only artifact cap')
-                  with path.open('rb') as stream: raw=stream.read((5<<20)+1)
-                  if len(raw)!=size: raise ValueError('artifact changed during inventory')
-                  total+=size
-                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
-          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2,sort_keys=True)+'\n')
-          PY
+          python3 -B scripts/i80386-cwsdpmi-highmem-timer/inventory.py "$e"
       - name: Retain bounded reports and owned observations only
         if: always() && steps.inventory.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
