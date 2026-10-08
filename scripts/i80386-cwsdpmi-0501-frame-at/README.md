@@ -19,6 +19,21 @@ source-closure gate and label-only hosted workflow remain in place. The
 earlier finite high-memory client result does not establish interrupt-frame
 ownership.
 
+The next diagnostic actual, run 37830225406 at source
+`0714159c9875ac17bf5ef5a8e5418f5815fa1608`, retained a committed
+rejection fact: software vector `0x31` through a 32-bit type-14 gate at CPL3,
+same-CPL 12-byte frame and 32-bit stack, entering a 16-bit code segment.
+No entry or IRET was credited. This source follow-up adds an explicit
+`gate14-code16-stack32-same-cpl3.v1` arm profile for that exact observed
+shape. The prior protected32 profile keeps its existing type-14/type-15
+behavior. The mixed profile requires the CPU's decoded 32-bit IRET, a matching
+linear frame/return and unchanged handler code/stack cache identity and
+descriptor fields while the pair is open. A 16-bit IRET, task/VM86 or nested
+delivery, mode excursion, or altered handler context invalidates the observer
+without changing the guest operation. It does not establish identical physical
+frame backing across paging changes, a main-to-wrapper CALL/RET, or any other
+DPMI service frame.
+
 `admitFreshWrapper` calls the unchanged fresh executable/map/compile admission
 and immediately copies the authenticated `allocateMemory` extent and expected
 bytes into private state. Public `layout.roles` and `layout.textBytes` can be
@@ -68,7 +83,7 @@ Run the CPU-free controls with:
 node --test test/i80386-0501-frame-policy.test.mjs test/i80386-0501-frame-orchestration.test.mjs
 ```
 
-The corrected adapter and guest have not been executed for this follow-up.
+The mixed-width adapter and guest have not been executed for this follow-up.
 The new rejection receipt contains only validated primitive delivery facts:
 software/vector/depth, gate type and width, VM86/error-code flags, old and new
 CPL, handler CS/SS descriptor width, and frame kind and size. A recorder

@@ -5,12 +5,13 @@ import I80386, { I80386Fault } from '../src/experimental/i80386.js';
 const START = 0x20;
 const CODE = 0x140000;
 const HANDLER = 0x100000;
+const MIXED_PROFILE = 'gate14-code16-stack32-same-cpl3.v1';
 
 function fixture({ onRead = null } = {}) {
   const memory = new Map();
   const cpu = new I80386({
     read: address => {
-      onRead?.(cpu);
+      onRead?.(cpu, address);
       return memory.get(address >>> 0) ?? 0;
     },
     fetch: address => memory.get(address >>> 0) ?? 0,
@@ -80,6 +81,164 @@ test('decoded owned 0501 delivery and matching IRETD publish one copied pair', (
     result.returned.returnedBx, result.returned.returnedCx],
     [START + 2, 0x1b, 0x23, 0x800, 0x49, 0x1234]);
   assert.throws(() => f.cpu.owned0501FrameStatus(token), /stale/);
+});
+
+test('opt-in gate32 code16 stack32 same-CPL3 records decoded 32-bit IRET', () => {
+  const f = fixture();
+  // Ring-3 handler code with D=0; the gate remains type 14 and width 32.
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
+  f.put(HANDLER + 0x100, [0x66, 0xcf]);
+  const token = f.arm({profile:MIXED_PROFILE});
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501FrameStatus(token).phase, 'open');
+  assert.equal(f.cpu.segmentCaches[1].default32, false);
+  assert.equal(f.cpu.esp, 0x7f4);
+  f.cpu.bx=0x49; f.cpu.cx=0x1234;
+  assert.equal(f.cpu.step(), 1);
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.deepEqual([result.phase,result.profile,result.entry.profile,
+    result.entry.gateType,result.entry.frameBytes,result.entry.oldCpl,
+    result.entry.newCpl,result.returned.width,result.returned.profile],
+    ['complete',MIXED_PROFILE,MIXED_PROFILE,14,12,3,3,32,MIXED_PROFILE]);
+});
+
+test('mixed profile preserves the guest fault from 16-bit IRET on a 32-bit frame', () => {
+  const f=fixture();
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
+  const token=f.arm({profile:MIXED_PROFILE});
+  f.cpu.step();
+  assert.equal(f.cpu.owned0501FrameStatus(token).phase,'open');
+  assert.throws(() => f.cpu.step(), error =>
+    error instanceof I80386Fault && error.vector === 13 &&
+    error.message === 'IRET return privilege');
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.phase,'invalid');
+  assert.equal(result.failure,'unsupported-owned-iret');
+  assert.equal(result.returned,null);
+});
+
+test('mixed handler descriptor change invalidates only observation', () => {
+  const f=fixture();
+  f.memory.set(0x208+5,0xfa);
+  f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  f.put(HANDLER+0x100,[0x66,0xcf]);
+  const token=f.arm({profile:MIXED_PROFILE});
+  f.cpu.step();
+  const cache=f.cpu.segmentCaches[1];
+  cache.access ^= 2;
+  f.cpu.step();
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure,'owned-handler-context-excursion');
+  assert.equal(result.returned,null);
+  assert.equal(f.cpu.cs,0x1b); // original IRET still restored the caller
+});
+
+test('mixed observer descriptor read failure cannot throw into guest IRET', () => {
+  const f=fixture();
+  f.memory.set(0x208+5,0xfa);
+  f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  f.put(HANDLER+0x100,[0x66,0xcf]);
+  const token=f.arm({profile:MIXED_PROFILE});
+  f.cpu.step();
+  Object.defineProperty(f.cpu.segmentCaches[1],'address',{
+    get(){throw new Error('observer-only address read');},configurable:true});
+  assert.equal(f.cpu.step(),1);
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure,'observer-handler-context-failure');
+  assert.equal(result.returned,null);
+  assert.equal(f.cpu.cs,0x1b);
+});
+
+test('mixed handler mutation during IRET frame read cannot earn a pair', () => {
+  let duringIret=false, changed=false;
+  const f=fixture({onRead(cpu,address){
+    if(duringIret && !changed && address>=0x1607f4 && address<0x160800){
+      cpu.segmentCaches[1].access ^= 2;
+      changed=true;
+    }
+  }});
+  f.memory.set(0x208+5,0xfa);
+  f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  f.put(HANDLER+0x100,[0x66,0xcf]);
+  const token=f.arm({profile:MIXED_PROFILE});
+  f.cpu.step();
+  assert.equal(f.cpu.owned0501FrameStatus(token).phase,'open');
+  duringIret=true;
+  f.cpu.step();
+  assert.equal(changed,true);
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure,'owned-handler-context-excursion');
+  assert.equal(result.returned,null);
+  assert.equal(f.cpu.cs,0x1b);
+});
+
+test('mixed live handler-cache replacement during IRET frame read is refused', () => {
+  let duringIret=false,changed=false;
+  const f=fixture({onRead(cpu,address){
+    if(duringIret && !changed && address>=0x1607f4 && address<0x160800){
+      cpu.segmentCaches[1]={...cpu.segmentCaches[1]};
+      changed=true;
+    }
+  }});
+  f.memory.set(0x208+5,0xfa);
+  f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  f.put(HANDLER+0x100,[0x66,0xcf]);
+  const token=f.arm({profile:MIXED_PROFILE});
+  f.cpu.step();
+  duringIret=true;
+  f.cpu.step();
+  assert.equal(changed,true);
+  const result=f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure,'owned-handler-context-excursion');
+  assert.equal(result.returned,null);
+  assert.equal(f.cpu.cs,0x1b);
+});
+
+test('mixed profile refuses trap gate and outer-CPL delivery', () => {
+  for (const gateByte of [0xef,0xee]) {
+    const f=fixture();
+    if(gateByte===0xef){
+      f.memory.set(0x208+5,0xfa);
+      f.memory.set(0x208+6,0x8f);
+    }
+    f.put(0x300+0x31*8,[0,1,gateByte===0xef?0x0b:8,0,0,gateByte,0,0]);
+    const token=f.arm({profile:MIXED_PROFILE});
+    f.cpu.step();
+    const result=f.cpu.takeOwned0501FrameObservation(token);
+    assert.equal(result.failure,'unsupported-owned-delivery');
+    assert.equal(result.entry,null);
+  }
+});
+
+test('mixed profile refuses gate16 and same-CPL stack16 after guest delivery', () => {
+  for(const variant of ['gate16','stack16']){
+    const f=fixture();
+    f.memory.set(0x208+5,0xfa);
+    f.memory.set(0x208+6,0x8f);
+    if(variant==='stack16'){
+      f.memory.set(0x220+6,0x8f);
+      f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x23,3,
+        {returnPath:true});
+    }
+    f.put(0x300+0x31*8,[0,1,0x0b,0,0,
+      variant==='gate16'?0xe6:0xee,0,0]);
+    const token=f.arm({profile:MIXED_PROFILE});
+    assert.equal(f.cpu.step(),1);
+    const result=f.cpu.takeOwned0501FrameObservation(token);
+    assert.equal(result.failure,'unsupported-owned-delivery');
+    assert.equal(result.entry,null);
+    assert.equal(result.rejectedDelivery.width,variant==='gate16'?16:32);
+    assert.equal(result.rejectedDelivery.handlerStackDefault32,
+      variant==='gate16');
+  }
 });
 
 test('prefix-derived post-immediate return EIP is recorded, not guessed', () => {

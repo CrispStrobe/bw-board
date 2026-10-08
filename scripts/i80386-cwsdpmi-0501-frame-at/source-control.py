@@ -11,12 +11,14 @@ real = source.NEW + "real.mjs"
 deep = source.NEW + "deep.mjs"
 names = {role, real, deep}
 assert source.HISTORICAL_BASE == "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
-assert source.BASE == "4c22a574ec50a515fe4954a3fda0ff6a947a5068"
+assert source.BASE == "0714159c9875ac17bf5ef5a8e5418f5815fa1608"
 assert source.WORKFLOW == ".github/workflows/i80386-cwsdpmi-0501-frame-at.yml"
-assert source.CPU_SHA == "1f7e1f98dcdacf55d974c93cb27388c902155c52ff1ba03ebb6f1c49b34ef18b"
-assert source.JOURNAL_TEST_SHA == "6215259cd5cf4aac278d177dcbd57710d32ada4e38ba5c9f1397523e45359efa"
+assert source.CPU_SHA == "a27a0408888c8cabb5e3d13329e0a0105e3a7bd4c8608c0394e80ea588c44d10"
+assert source.JOURNAL_TEST_SHA == "5cbe476eb8dcde4986e1bdf7659f29efea123a609040138f3bd0b96500ff7c3e"
+assert source.POLICY_TEST_SHA == "d831c85f609b07f6679a9fc9f93fd00afcd66aa783f94ab55154f7d0b475b4c6"
+assert source.ORCHESTRATION_TEST_SHA == "9c0c680932c2bfeb07ce490ab40d9283b73677e49744011f5776e2fa98affe3b"
 assert source.POLICY_TEST in source.INHERITED_EXACT
-assert source.ORCHESTRATION_TEST not in source.INHERITED_EXACT
+assert source.ORCHESTRATION_TEST in source.PINNED_CHANGED
 assert "scripts/i80386-cwsdpmi-highmem-at/" in source.INHERITED_PREFIXES
 assert "scripts/i80386-cwsdpmi-owned/acquire.py" in source.INHERITED_EXACT
 assert "scripts/i80386-cwsdpmi-highmem-timer/" in source.INHERITED_PREFIXES
@@ -44,12 +46,19 @@ source.admit_role_provenance(source.JOURNAL_TEST,
                              source.git("show", f"HEAD:{source.JOURNAL_TEST}"),
                              {source.JOURNAL_TEST},
                              source.git("show", f"{source.BASE}:{source.JOURNAL_TEST}"))
+for changed_test in (source.POLICY_TEST, source.ORCHESTRATION_TEST):
+    source.admit_role_provenance(changed_test,
+                                 source.git("show", f"HEAD:{changed_test}"),
+                                 {changed_test},
+                                 source.git("show", f"{source.BASE}:{changed_test}"))
 for bad_role, bad_raw, base_names in (
     (cpu, reviewed + b"\n", {cpu}),
     (source.JOURNAL_TEST, source.git("show", f"HEAD:{source.JOURNAL_TEST}") + b"\n",
      {source.JOURNAL_TEST}),
     ("src/experimental/extra.js", original, {cpu}),
     ("scripts/lib/extra.mjs", original, {cpu}),
+    (source.POLICY_TEST, source.git("show", f"HEAD:{source.POLICY_TEST}") + b"\n",
+     {source.POLICY_TEST}),
 ):
     try:
         source.admit_role_provenance(bad_role, bad_raw, base_names, original)
@@ -58,7 +67,7 @@ for bad_role, bad_raw, base_names in (
     else:
         raise AssertionError("unreviewed inherited or new external role admitted")
 for changed in (".github/workflows/ci.yml",
-                source.POLICY_TEST, "scripts/lib/unreviewed.mjs"):
+                "test/unreviewed-frame.test.mjs", "scripts/lib/unreviewed.mjs"):
     assert not (changed.startswith(source.NEW) or
                 changed in (source.WORKFLOW, source.ORCHESTRATION_TEST) or
                 changed in source.PINNED_CHANGED)

@@ -10,17 +10,21 @@ import sys
 from pathlib import Path
 
 HISTORICAL_BASE = "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
-BASE = "4c22a574ec50a515fe4954a3fda0ff6a947a5068"
+BASE = "0714159c9875ac17bf5ef5a8e5418f5815fa1608"
 NEW = "scripts/i80386-cwsdpmi-0501-frame-at/"
 WORKFLOW = ".github/workflows/i80386-cwsdpmi-0501-frame-at.yml"
 POLICY_TEST = "test/i80386-0501-frame-policy.test.mjs"
 ORCHESTRATION_TEST = "test/i80386-0501-frame-orchestration.test.mjs"
 JOURNAL_TEST = "test/i80386-dpmi-frame-journal.test.mjs"
-CPU_SHA = "1f7e1f98dcdacf55d974c93cb27388c902155c52ff1ba03ebb6f1c49b34ef18b"
-JOURNAL_TEST_SHA = "6215259cd5cf4aac278d177dcbd57710d32ada4e38ba5c9f1397523e45359efa"
+CPU_SHA = "a27a0408888c8cabb5e3d13329e0a0105e3a7bd4c8608c0394e80ea588c44d10"
+JOURNAL_TEST_SHA = "5cbe476eb8dcde4986e1bdf7659f29efea123a609040138f3bd0b96500ff7c3e"
+POLICY_TEST_SHA = "d831c85f609b07f6679a9fc9f93fd00afcd66aa783f94ab55154f7d0b475b4c6"
+ORCHESTRATION_TEST_SHA = "9c0c680932c2bfeb07ce490ab40d9283b73677e49744011f5776e2fa98affe3b"
 PINNED_CHANGED = {
     "src/experimental/i80386.js": CPU_SHA,
     JOURNAL_TEST: JOURNAL_TEST_SHA,
+    POLICY_TEST: POLICY_TEST_SHA,
+    ORCHESTRATION_TEST: ORCHESTRATION_TEST_SHA,
 }
 WORKFLOW_ESM_ROOTS = frozenset({
     "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs",

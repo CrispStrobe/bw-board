@@ -8,6 +8,7 @@ const field = (object,key) => {
   const descriptor = object && Object.getOwnPropertyDescriptor(object,key);
   return descriptor && Object.hasOwn(descriptor,'value') ? descriptor.value : undefined;
 };
+export const MIXED_0501_PROFILE='gate14-code16-stack32-same-cpl3.v1';
 
 export function create0501Policy(cpu) {
   if (!cpu || typeof cpu.armOwned0501FrameJournal !== 'function' ||
@@ -15,7 +16,8 @@ export function create0501Policy(cpu) {
       typeof cpu.takeOwned0501FrameObservation !== 'function')
     throw new Error('journal API required');
   let phase='waiting', token=null, terminal=null, firstFailure=null;
-  let wrapperStart=null, wrapperEnd=null, armedCs=null, armedCap=null;
+  let wrapperStart=null, wrapperEnd=null, armedCs=null, armedCap=null,
+    armedProfile=null;
   let busy=false, reentered=false;
   function fail(reason) {
     firstFailure ??= reason;
@@ -42,6 +44,9 @@ export function create0501Policy(cpu) {
       const mainCut=field(options,'mainCut'),comparison=field(options,'comparison'),
         cs=field(options,'cs');
       const suppliedCap=field(options,'maxActiveSteps');
+      const profile=field(options,'profile');
+      if(profile!==undefined && profile!==MIXED_0501_PROFILE)
+        return fail('wrapper-profile-not-admitted');
       const maxActiveSteps=suppliedCap===undefined?1000000:suppliedCap;
       if (mainCut!==true || field(comparison,'schema')!==
           'bw.cwsdpmi-0501.wrapper-comparison.v1' ||
@@ -55,11 +60,12 @@ export function create0501Policy(cpu) {
       const endEip=startEip+field(comparison,'bytes');
       if (endEip>0xffffffff) return fail('wrapper-range-overflow');
       try {
-        token=cpu.armOwned0501FrameJournal({cs,startEip,endEip,maxActiveSteps});
+        token=cpu.armOwned0501FrameJournal({cs,startEip,endEip,maxActiveSteps,
+          ...(profile ? {profile} : {})});
         if (!token || !['object','function'].includes(typeof token))
           return fail('cpu-arm-token-missing');
         wrapperStart=startEip; wrapperEnd=endEip;
-        armedCs=cs; armedCap=maxActiveSteps;
+        armedCs=cs; armedCap=maxActiveSteps; armedProfile=profile??null;
         phase='armed';
       } catch { return fail('cpu-arm-refused'); }
       return Object.freeze({phase, startEip, endEip});
@@ -70,6 +76,9 @@ export function create0501Policy(cpu) {
       let state;
       try { state=cpu.owned0501FrameStatus(token); }
       catch { return fail('cpu-status-refused'); }
+      if (state?.phase==='armed' || state?.phase==='open')
+        if(armedProfile && state.profile!==armedProfile)
+          return fail('cpu-profile-mismatch');
       if (state?.phase==='armed' || state?.phase==='open')
         return Object.freeze({phase, cpuPhase:state.phase});
       if (state?.phase!=='complete' && state?.phase!=='invalid')
@@ -82,6 +91,9 @@ export function create0501Policy(cpu) {
           terminal.activeSteps!==state.activeSteps ||
           terminal.activeSteps<0 || terminal.activeSteps>armedCap+1)
         return fail('cpu-drain-mismatch');
+      if(armedProfile &&
+          (state.profile!==armedProfile || terminal.profile!==armedProfile))
+        return fail('cpu-profile-mismatch');
       if (terminal.phase==='invalid')
         return fail(typeof terminal.failure==='string' && terminal.failure.length
           ? terminal.failure : 'cpu-invalid');
@@ -113,6 +125,13 @@ export function create0501Policy(cpu) {
           !word(entry.returnSs) || !dword(entry.returnEsp) ||
           !dword(entry.savedFlags) || !cpl(entry.oldCpl) ||
           !cpl(entry.newCpl) || entry.newCpl>entry.oldCpl ||
+          (armedProfile===MIXED_0501_PROFILE &&
+            (entry.profile!==armedProfile || returned.profile!==armedProfile ||
+             entry.gateType!==14 || entry.oldCpl!==3 || entry.newCpl!==3 ||
+             entry.frameBytes!==12 || entry.handlerCodeDefault32!==false ||
+             entry.handlerStackDefault32!==true ||
+             entry.handlerSs!==entry.returnSs ||
+             entry.handlerEsp!==((entry.returnEsp-12)>>>0))) ||
           entry.oldCpl!==(entry.returnCs&3) ||
           entry.oldCpl!==(entry.returnSs&3) ||
           ![14,15].includes(entry.gateType) ||
