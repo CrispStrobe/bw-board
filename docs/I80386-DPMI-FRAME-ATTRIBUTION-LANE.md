@@ -174,8 +174,36 @@ All 12 enabled checks on exact `4c22a574` passed, with only the two declared
 audited [three-scenario xv6 regression](receipts/2026-10-08-0501-reference-fix-xv6/README.md).
 After those gates, the dedicated label was applied once to PR464, creating
 [new actual run 37818842928](https://github.com/CrispStrobe/bw-board/actions/runs/37818842928).
-Its corrected AT result is pending. Do not replay or rewrite the original
-failed run, or infer allocation-frame success from CI or xv6.
+The corrected AT run failed with `unsupported-owned-delivery` after the wrapper
+copy passed and the journal armed. Its [preserved failure receipt](receipts/2026-10-08-0501-reference-fix-at/README.md)
+records the observed boundary. The compound guard does not retain which
+predicate failed; the next task is a bounded diagnostic rejection receipt,
+without relaxing unsupported cases. Neither attempt qualifies a committed
+allocation-frame pair or finite client completion. Do not replay or rewrite
+either original run, or infer allocation-frame success from CI or xv6.
+
+## Immediate task: explain rejected delivery
+
+Start from reviewed `4c22a574`; preserve both original failed attempts. Add a
+bounded immutable diagnostic record for `unsupported-owned-delivery` containing
+the actual software/vector/nesting flags, gate type and width, VM86/error-code
+status, old and target CPL, handler CS/SS and their default sizes, and frame
+kind/size. These are rejection facts, not a successful journal entry.
+
+Stage the facts after ordinary delivery effects, then expose them only when
+the enclosing CPU instruction completes normally. Fault, reentry, trace,
+zero-result and step-cap paths must discard uncommitted facts. Preserve the
+first failure, invalid journal state, guest effects and disabled-path behavior.
+A recorder failure must never turn into a guest fault. Keep task/VM86/width
+rejection criteria unchanged in this diagnostic slice.
+
+Use an isolated source branch with an explicit changed-file allowlist and new
+CPU hash; preserve historical manifests and source-bound test cohorts. Hosted
+controls must exercise each rejected condition, a 32-bit gate targeting a
+16-bit-default handler, discarded staging and recorder failure. After review
+and all enabled exact-head checks, run one separately identified actual probe
+and audit its original packet. Use the recorded facts to scope any later
+mixed-width frame/IRET implementation; do not guess it from final registers.
 
 ## First deliverable
 
