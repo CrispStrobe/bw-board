@@ -1,0 +1,130 @@
+name: 386 owned CWSDPMI AT loaded-main cut
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-at-loaded-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  loaded-main:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-at-loaded-main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit exact source and pure controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-at-loaded-evidence"
+          mkdir "$e"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-at-loaded-main-gate/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
+          timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-at-loaded-main-gate/source-control.py > "$e/source-control.stdout" 2> "$e/source-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-owned/binding-control.mjs > "$e/binding-control.stdout" 2> "$e/binding-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs > "$e/passive-ram-control.stdout" 2> "$e/passive-ram-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-loaded-actual/cut-control.mjs > "$e/cut-control.stdout" 2> "$e/cut-control.stderr"
+          TMPDIR="$RUNNER_TEMP" timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-loaded-main-gate/driver-control.mjs > "$e/driver-control.stdout" 2> "$e/driver-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            node --version
+            uname -a
+          } > "$e/host.txt"
+      - name: Fetch pinned inputs, compile owned client, and attempt one AT cut
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-at-loaded-evidence"
+          i="$RUNNER_TEMP/cwsdpmi-at-loaded-inputs"
+          w="$RUNNER_TEMP/cwsdpmi-at-loaded-work"
+          mkdir "$i" "$w"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/guest-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout --signal=TERM --kill-after=10s "$2" curl --fail --location --silent --show-error --retry 1 --max-time "$3" --max-filesize "$4" -o "$i/$5" "$6" > "$e/$1-fetch.stdout" 2> "$e/$1-fetch.stderr"
+          }
+          fetch toolchain 240s 210 81000000 toolchain.tar.bz2 https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+          fetch djcrx 65s 55 3000000 djcrx205.zip https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 65s 55 3000000 djdev205.zip https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 65s 55 3000000 djlsr205.zip https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          fetch cwsdpmi 65s 55 1000000 cwsdpmi.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/tools/cwsdpmi.zip
+          fetch freedos 135s 120 33554432 freedos.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.4/FD14-FloppyEdition.zip
+          phase=compile
+          timeout --signal=TERM --kill-after=10s 360s python3 -B scripts/i80386-cwsdpmi-compile-only/compile.py "$i/toolchain.tar.bz2" "$i/djcrx205.zip" "$i/djdev205.zip" "$i/djlsr205.zip" scripts/i80386-cwsdpmi-owned/client.c "$e/compile-audit" "$w/compile" > "$e/compile.stdout" 2> "$e/compile.stderr"
+          phase=host-and-floppy
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-qemu-owned/package.py "$i/cwsdpmi.zip" "$e/package" "$w/package-private" > "$e/package.stdout" 2> "$e/package.stderr"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-dos32a-owned/acquire.py "$i/freedos.zip" "$w/freedos-floppy.img" "$e/freedos-input.json" > "$e/freedos.stdout" 2> "$e/freedos.stderr"
+          phase=media
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-qemu-owned/media.mjs "$w/package-private/CWSDPMI.EXE" "$w/compile/build/client.exe" "$e/compile-audit/compile-report.json" "$w/initial-hdd.img" "$e/media.json" > "$e/media.stdout" 2> "$e/media.stderr"
+          phase=AT-loaded-main
+          python3 -B - "$i" "$w" "$e" <<'PY'
+          import json,pathlib,sys
+          inputs,work,evidence=map(pathlib.Path,sys.argv[1:])
+          roles={'bios':pathlib.Path('roms/free-at-bios/BIOS-bochs-legacy'),
+                 'vga':pathlib.Path('roms/free-at-bios/vgabios-lgpl.bin'),
+                 'floppy':work/'freedos-floppy.img',
+                 'host':work/'package-private/CWSDPMI.EXE',
+                 'client':work/'compile/build/client.exe',
+                 'map':work/'compile/build/client.map',
+                 'compileReport':evidence/'compile-audit/compile-report.json',
+                 'mediaReport':evidence/'media.json',
+                 'disk':work/'initial-hdd.img'}
+          (work/'driver-input.json').write_text(json.dumps({key:str(path.resolve(strict=True)) for key,path in roles.items()})+'\n')
+          PY
+          timeout --signal=TERM --kill-after=10s 700s node --max-old-space-size=768 scripts/i80386-cwsdpmi-at-loaded-main-gate/driver.mjs "$w/driver-input.json" "$e/loaded-main.json" "$e/progress.json" > "$e/driver.stdout" 2> "$e/driver.stderr"
+          phase=complete
+      - name: Recheck source and inventory safe report-only evidence
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-at-loaded-evidence"
+          mkdir -p "$e"
+          python3 -B scripts/i80386-cwsdpmi-at-loaded-main-gate/source.py "$BW_EXPECTED_HEAD" "$e/source-after.json" > "$e/source-after.stdout" 2> "$e/source-after.stderr"
+          if test -f "$e/source-before.json"; then cmp "$e/source-before.json" "$e/source-after.json"; fi
+          python3 -B - "$e" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);files={};total=0
+          forbidden={'.exe','.o','.a','.zip','.img','.bin','.bz2','.tar','.node'}
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  if path.suffix.lower() in forbidden:raise ValueError('binary/archive in evidence')
+                  raw=path.read_bytes();total+=len(raw)
+                  if len(raw)>5<<20 or total>16<<20:raise ValueError('report-only evidence cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2,sort_keys=True)+'\n')
+          PY
+      - name: Retain bounded reports and progress only
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-at-loaded-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-at-loaded-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
