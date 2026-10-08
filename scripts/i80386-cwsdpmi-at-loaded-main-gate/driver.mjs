@@ -67,14 +67,35 @@ function machineFor({bios,vga,floppy,disk}) {
   m.reset();
   return m;
 }
-// Source-backed VGA text-plane view: no VGA read, latch load or chip method.
-export function passiveRows(machine) {
+// Source-backed VGA text route. The source _route ignores sequencer bit 0;
+// bit 2 only affects writes. For even character offsets, either read route
+// must select plane 0. This inspection never invokes VGA or board methods.
+export function vgaTextAdmission(machine) {
   const video=machine.vgaMemory,card=machine.chips?.vga1;
-  if(!video||video.registerSource!==card||
-     !(card.misc&2)||(card.gc[6]&1)||((card.gc[6]>>>2)&3)!==3||
-     ![2,6].includes(card.seq[4])||(card.gc[5]&8)||card.crtc[1]!==79||
-     !Number.isInteger(card.crtc[0x0c])||!Number.isInteger(card.crtc[0x0d]))
-    return null;
+  const registers={videoPresent:!!video,cardPresent:!!card,
+    registerMatches:!!video&&!!card&&video.registerSource===card,
+    misc:card?.misc??null,seq4:card?.seq?.[4]??null,
+    gc4:card?.gc?.[4]??null,gc5:card?.gc?.[5]??null,
+    gc6:card?.gc?.[6]??null,crtc1:card?.crtc?.[1]??null,
+    crtcStartHi:card?.crtc?.[0x0c]??null,
+    crtcStartLo:card?.crtc?.[0x0d]??null};
+  const {misc,seq4,gc4,gc5,gc6,crtc1,crtcStartHi,crtcStartLo}=registers;
+  let reason=null;
+  if(!registers.registerMatches)reason='VGA source identity';
+  else if(!(misc&2))reason='VGA memory disabled';
+  else if((gc6&1)||((gc6>>>2)&3)!==3)reason='B8000 text aperture';
+  else if(!(seq4&2)||(seq4&8))reason='unsupported sequencer route';
+  else if(gc5&8)reason='VGA read compare mode';
+  else if(((gc5&0x10)?(gc4&2):(gc4&3))!==0)reason='character read plane';
+  else if(crtc1!==79||!Number.isInteger(crtcStartHi)||
+          !Number.isInteger(crtcStartLo))reason='80-column CRTC';
+  return {admitted:reason===null,reason,registers};
+}
+
+export function passiveRows(machine) {
+  const route=vgaTextAdmission(machine);
+  if(!route.admitted)return null;
+  const video=machine.vgaMemory,card=machine.chips.vga1;
   const plane=video.planes?.[0];
   if(!(plane instanceof Uint8Array)||plane.length!==65536)
     throw new Error('VGA text-plane shape');
@@ -161,6 +182,7 @@ export function run(inputPath,outputPath,progressPath) {
     let commandAccepted=false;
     let declined=false,menuKicks=0,lastOfferedStep=-5000,
       lastChange=0,previousScreen='',lastScreen=[],unsupportedScreens=0;
+    const vgaRejections={count:0,first:null,last:null,reasons:{}};
     writeProgress(progressPath,report);
     for(let step=0;step<MAX_STEPS;step++){
       report.steps=step;
@@ -183,7 +205,16 @@ export function run(inputPath,outputPath,progressPath) {
       if(step%50000===0){
         if(Date.now()-start>MAX_WALL_MS){first(report,'AT wall bound before main');break;}
         const screen=passiveRows(machine);
-        if(screen===null)unsupportedScreens++;
+        if(screen===null){
+          unsupportedScreens++;
+          const rejection=vgaTextAdmission(machine);
+          const reason=rejection.reason??'unclassified screen refusal';
+          const observation={step,reason,registers:rejection.registers};
+          vgaRejections.count++;
+          vgaRejections.first??=observation;
+          vgaRejections.last=observation;
+          vgaRejections.reasons[reason]=(vgaRejections.reasons[reason]??0)+1;
+        }
         else {
           lastScreen=screen;
           const visible=lastScreen.join('\n').replace(/\s/g,'');
@@ -200,7 +231,8 @@ export function run(inputPath,outputPath,progressPath) {
         if(step%200000===0){
           report.progress={step,stage:report.stage,declined,queuedKeys:queue.length,
             acceptedKeys:injected.filter(event=>event.accepted).length,
-            screen:lastScreen,lastChange,unsupportedScreens,cpu:cpuCutState(machine.cpu),
+            screen:lastScreen,lastChange,unsupportedScreens,
+            vgaRejections,cpu:cpuCutState(machine.cpu),
             machineCycles:machine.cycles};
           writeProgress(progressPath,report);
         }
@@ -226,6 +258,7 @@ export function run(inputPath,outputPath,progressPath) {
     }
     report.keyboard={declined,requested:[FIRST],injected,
       pending:queue.length,lastOfferedStep,unsupportedScreens};
+    report.vgaRejections=vgaRejections;
     if(!report.passed&&report.firstFailure===null)first(report,'main not reached within step bound');
     report.final=cpuCutState(machine.cpu);
     report.disk={initialSha256:report.inputHashes.pristineDisk,

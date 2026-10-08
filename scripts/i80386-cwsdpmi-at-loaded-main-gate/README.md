@@ -17,9 +17,14 @@ interrupt before executing another CPU instruction. A passing cut establishes
 loaded text identity at that architectural state, not a startup call, first
 `main` instruction, INT 2F/INT 31 service, client completion, or performance.
 
+The [first hosted attempt](FIRST-RESULTS.md) failed before any keyboard input
+or loaded-text cut. Its raw report had no VGA-register snapshot, so the
+follow-up source admits the source VGA text route and retains bounded rejection
+registers without attributing that historical failure to a proven mode value.
+
 The labeled hosted workflow authenticates exact Git source, recursive imports,
 dynamic Python helper roles and ROM bytes before the run and after it. It keeps
 bounded compile, package, input, progress, and guest reports; binaries, images,
 archives, and toolchain bytes are excluded from the artifact. A failure before
 the cut is retained as a failure. No actual AT run is qualified by this source
-checkpoint; root and peer review are required before a hosted label is applied.
+checkpoint; the follow-up requires a separately reviewed hosted run.

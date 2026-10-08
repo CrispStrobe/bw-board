@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {passiveRows,ringEmpty,controllerStatus,run} from './driver.mjs';
+import {passiveRows,vgaTextAdmission,ringEmpty,controllerStatus,run} from './driver.mjs';
 
 const sha=raw=>createHash('sha256').update(raw).digest('hex');
 const plane=new Uint8Array(65536),latches=Uint8Array.from([5,6,7,8]);
@@ -29,7 +29,29 @@ assert.equal(passiveRows(machine)?.[0],'C:\\>');
 card.crtc[0x0d]=0;
 card.seq[4]=2;card.gc[6]=0x0e;
 assert.ok(passiveRows(machine)?.[0].startsWith('A:\\>'));
-card.seq[4]=4;assert.equal(passiveRows(machine),null);card.seq[4]=6;
+// Actual earlier owned FreeDOS AT VGA register mode: sequencer bit 0 is set,
+// while source _route ignores it for character fetches.
+card.misc=103;card.seq[4]=3;card.gc[4]=0;card.gc[5]=16;card.gc[6]=14;
+assert.equal(vgaTextAdmission(machine).admitted,true);
+assert.ok(passiveRows(machine)?.[0].startsWith('A:\\>'));
+assert.deepEqual({latches:sha(latches),memory:sha(memory)},
+  {latches:before.latches,memory:before.memory});
+card.gc[4]=1;
+assert.equal(vgaTextAdmission(machine).admitted,true);
+card.gc[5]=0;
+assert.equal(vgaTextAdmission(machine).reason,'character read plane');
+card.gc[4]=0;card.gc[5]=16;
+card.gc[4]=2;
+assert.equal(vgaTextAdmission(machine).reason,'character read plane');
+assert.equal(passiveRows(machine),null);card.gc[4]=0;
+card.seq[4]=11;
+assert.equal(vgaTextAdmission(machine).reason,'unsupported sequencer route');
+assert.equal(passiveRows(machine),null);
+card.seq[4]=1;
+assert.equal(vgaTextAdmission(machine).reason,'unsupported sequencer route');
+card.seq[4]=3;card.gc[5]=24;
+assert.equal(vgaTextAdmission(machine).reason,'VGA read compare mode');
+card.gc[5]=16;
 card.gc[6]=0x0d;assert.equal(passiveRows(machine),null);card.gc[6]=0x0c;
 assert.equal(ringEmpty(machine),true);
 memory[0x41c]=1;assert.equal(ringEmpty(machine),false);

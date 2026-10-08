@@ -1,0 +1,31 @@
+{
+  "schema": "bw.cwsdpmi-owned.at-loaded-main-first-result.v1",
+  "testedSource": "6b7ae1090a6ac23c0ffa66974523c3a5c489aab5",
+  "run": {
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37735362417",
+    "conclusion": "FAILURE",
+    "qualification": "FAIL"
+  },
+  "artifact": {
+    "id": 11532462204,
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11532462204",
+    "bytes": 121760,
+    "sha256": "cc303a4c876748ce234c5d3976a057ee16a565ebb9e6ad24896d151bae81057e"
+  },
+  "observed": {
+    "steps": 120000000,
+    "unsupportedScreens": 2400,
+    "offeredKeys": 0,
+    "acceptedKeys": 0,
+    "eligibleMainCandidateRecorded": false,
+    "loadedTextCut": false,
+    "initialDiskEqualsFinalDisk": true,
+    "sourceRoles": 140
+  },
+  "audits": [
+    "root original-packet inventory/source/compile/media audit PASS",
+    "independent peer original-packet integrity audit PASS"
+  ],
+  "inferenceLimit": "Failed-run VGA registers were not retained; prior mode-3 observation supports but does not prove an observer predicate mismatch.",
+  "correctionStatus": "SOURCE_ONLY_UNRUN"
+}
