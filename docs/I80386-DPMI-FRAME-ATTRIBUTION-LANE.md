@@ -7,6 +7,19 @@ and preserve its [first finite application result](I80386-DPMI-HIGHMEM-AT-RESULT
 Use a separate branch and script/workflow namespace. Do not modify or rerun the
 original qualification to manufacture additional evidence.
 
+## CPU-only source checkpoint
+
+[Draft PR460](https://github.com/CrispStrobe/bw-board/pull/460) is stacked on the
+frozen AT source. Its reviewed source is
+[`2f979b37`](https://github.com/CrispStrobe/bw-board/commit/2f979b376fdf37cf7126345aa8c9bbd85a4aa3aa).
+Its two-file delta adds the optional private CPU journal and 24 focused CPU
+tests. Root and peer read-only source audits and independent syntax/whitespace
+checks passed. CPU tests were not executed locally; hosted CI remains pending
+at publication. No controller integration, new guest attempt, frame result or
+consumer adoption is qualified by this checkpoint. Fault-fallback and additional
+task/16-bit controls, affected regressions, then the separate controller and
+one reviewed hosted diagnostic remain unfinished.
+
 ## First deliverable
 
 Observe exactly one owned protected-mode 32-bit `INT 31h`, function `0501h`,
@@ -19,7 +32,9 @@ Require AX `0501h` and BX:CX `4096` at that instruction.
 
 The committed delivery record must identify its software origin, gate width,
 old/new CPL, handler CS:EIP and SS:ESP, saved return CS:EIP and flags, and the
-validated stack/frame location. The matching return record must contain the
+validated linear stack/frame location. Compare that linear location at return;
+this first slice does not establish unchanged physical backing or mapping
+stability between delivery and IRET. The matching return record must contain the
 validated consumed frame and actual restored CS:EIP, SS:ESP, CPL and flags.
 Require return to the recorded post-immediate wrapper EIP with the original
 CS and SS:ESP, clear returned CF, and returned BX:CX matching the same run's
@@ -48,9 +63,11 @@ Use a private step-scoped transaction: stage from actual validated CPU locals,
 publish only after the enclosing instruction commits, and discard on ordinary
 rollback. A zero return from `step`, a fallback fault, an external interrupt
 notification, or a direct helper call must not mint a successful software
-entry ticket. Treat task-committed exceptions distinctly. No foreign callback,
-getter, guest-memory reread or observer reentry may execute inside delivery,
-IRET or fault handling.
+entry ticket. Preserve the original CPU behavior for ordinary rollback and
+task-committed exceptions; both leave journal attribution unqualified. No
+observer-supplied callback or getter, guest-memory reread or observer reentry
+may execute inside delivery, IRET or fault handling. Record construction uses
+the reviewed ordinary CPU objects and validated locals.
 
 The controller may select an admitted wrapper range; only the CPU's actual
 decoded instruction and committed transaction authenticate the event. Keep
