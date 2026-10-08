@@ -182,7 +182,7 @@ without relaxing unsupported cases. Neither attempt qualifies a committed
 allocation-frame pair or finite client completion. Do not replay or rewrite
 either original run, or infer allocation-frame success from CI or xv6.
 
-## Immediate task: explain rejected delivery
+## Reached diagnostic task: explain rejected delivery
 
 Start from reviewed `4c22a574`; preserve both original failed attempts. Add a
 bounded immutable diagnostic record for `unsupported-owned-delivery` containing
@@ -219,10 +219,38 @@ enabled exact-head checks subsequently passed, with only the two declared
 `vectors-full` skips. After checking those gates and confirming no prior
 actual for this source, the dedicated label was applied once to PR465, creating
 [diagnostic run 37830225406](https://github.com/CrispStrobe/bw-board/actions/runs/37830225406).
-Its result is pending. The new rejection field cannot qualify a delivery/return
-pair. Retain and independently audit the original diagnostic packet; do not
-relabel or replay this source. Scope any later mixed-width frame qualification
-from the observed facts, keeping it separate from this rejection receipt.
+The [audited diagnostic receipt](receipts/2026-10-08-0501-delivery-rejection-facts/README.md)
+records gate type 14/width 32, handler code size 16, stack size 32, CPL 3 to
+CPL 3 and a 12-byte frame. Only the handler code-size guard failed. The run
+remains invalid with null entry/return and no finite completion. Do not relabel
+or replay this source; the rejected facts cannot qualify a delivery/return pair.
+
+## Next source task: observed handler profile
+
+Start from reviewed `0714159c`. Add an explicit opt-in observer profile for
+interrupt gate type 14/width 32, handler code size 16, stack size 32, same CPL 3
+and a 12-byte frame. Preserve the existing default profile. Bind selection
+through own data properties from orchestration to policy and CPU admission;
+require the matching profile in the completed receipt. Retain the actual
+decoded software-interrupt origin, committed entry and post-immediate return
+EIP. A rejected or mismatched profile grants no frame credit.
+
+Keep handler context continuity bounded to the selected profile. Require an
+actual decoded IRET with effective width 32, the same validated linear frame,
+consumed CS/EIP/flags, restored caller CS/SS/ESP/CPL and returned CF/address.
+Keep saved flags, consumed flags and returned flags distinct. Do not infer
+IRET width from handler code defaults. Handler excursions may leave this
+narrow observer profile unqualified without implying a guest CPU defect.
+
+Hosted controls must cover the prefixed 32-bit IRET positive case, default
+profile rejection, gate 15/16-bit gates, 16-bit IRET, outer CPL, 16-bit stack,
+frame/return mismatches, context excursions, task/VM86/nested delivery and
+transaction/observer failures. Keep client/media/machine/workflow unchanged;
+use fresh exact source-policy hashes and an isolated branch. Complete source
+review and every enabled exact-head check before one new actual run. The
+profile implementation is in progress; no reviewed source or guest result is
+claimed at this checkpoint. Refresh open PRs before duplicating it. Outer-CPL
+16-bit return semantics and other combinations remain separate tasks.
 
 ## First deliverable
 
