@@ -102,13 +102,16 @@ jobs:
           python3 -B - "$e" <<'PY'
           import hashlib,json,pathlib,sys
           root=pathlib.Path(sys.argv[1]); files={}; total=0
-          forbidden={'.exe','.o','.obj','.a','.elf','.com','.iso','.qcow2','.zip','.img','.bin','.bz2','.tar','.node'}
+          allowed={'.json','.stdout','.stderr','.txt','.map'}
           for path in sorted(root.rglob('*')):
               if path.is_symlink(): raise ValueError('artifact symlink')
               if path.is_file() and path.name!='artifact-inventory.json':
-                  if path.suffix.lower() in forbidden: raise ValueError('binary/image in artifact')
-                  raw=path.read_bytes(); total+=len(raw)
-                  if len(raw)>5<<20 or total>16<<20: raise ValueError('report-only artifact cap')
+                  if path.suffix.lower() not in allowed: raise ValueError('non-report artifact role')
+                  size=path.stat().st_size
+                  if size>5<<20 or total+size>16<<20: raise ValueError('report-only artifact cap')
+                  with path.open('rb') as stream: raw=stream.read((5<<20)+1)
+                  if len(raw)!=size: raise ValueError('artifact changed during inventory')
+                  total+=size
                   files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
           (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2,sort_keys=True)+'\n')
           PY
