@@ -265,8 +265,10 @@ The first hosted source `94ecaacb` failed one new test in both CI and the xv6
 workflow: a 16-bit IRET on a 32-bit frame raised the original guest #GP, which
 the test had not expected. The [preserved failure and correction receipt](receipts/2026-10-08-0501-mixed-profile-ci-correction/README.md)
 records both runs. Reviewed `1ecb987b` corrects that expectation and source pins
-only; CPU code is unchanged. Fresh hosted checks and a real guest frame pair
-remain pending; no new speed measurement is claimed.
+only; CPU code is unchanged. Its [corrected-source xv6 run](receipts/2026-10-08-0501-mixed-profile-xv6/README.md)
+passes all three finite guests and all 69 focused regressions. Other required
+exact-head checks and a real CWSDPMI guest frame pair remain pending; no new
+speed measurement is claimed.
 Refresh open PRs and exact-head checks before duplicating work. Outer-CPL
 16-bit return semantics and other combinations remain separate tasks.
 
