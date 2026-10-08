@@ -37,6 +37,10 @@ const owned0501Sessions = new WeakMap();
 const OWNED_0501_MAX_STEPS = 1_000_000;
 
 function owned0501Invalidate(session, reason) {
+  if (session?.phase === "invalid" && reason !== "unsupported-owned-delivery") {
+    session.pendingRejectedDelivery = null;
+    session.rejectionPermit = false;
+  }
   if (session && session.phase !== "invalid" &&
       (session.phase !== "complete" || reason === "observer-reentry")) {
     session.phase = "invalid";
@@ -66,7 +70,19 @@ function owned0501Frozen(record) {
 }
 
 function owned0501FinishStep(session, result, traced) {
-  if (!session || session.phase === "invalid" || session.phase === "complete") return;
+  if (!session) return;
+  if (session.phase === "invalid") {
+    // A rejected delivery is a diagnostic, never an entry event. It becomes
+    // visible only after the original enclosing instruction commits cleanly.
+    if (session.rejectionPermit && session.pendingRejectedDelivery &&
+        result > 0 && !traced &&
+        session.activeSteps < session.maxActiveSteps)
+      session.rejectedDelivery = session.pendingRejectedDelivery;
+    session.pendingRejectedDelivery = null;
+    session.rejectionPermit = false;
+    return;
+  }
+  if (session.phase === "complete") return;
   session.activeSteps++;
   if (session.activeSteps > session.maxActiveSteps || traced || result === 0) {
     owned0501Invalidate(session, session.activeSteps > session.maxActiveSteps
@@ -166,6 +182,11 @@ export class ExperimentalI80386 {
 
   reset() {
     const owned0501 = owned0501Sessions.get(this);
+    if (owned0501) {
+      owned0501.pendingRejectedDelivery = null;
+      owned0501.rejectionPermit = false;
+      owned0501.rejectedDelivery = null;
+    }
     if (owned0501 && owned0501.phase !== "invalid") {
       owned0501.phase = "invalid";
       owned0501.failure = "cpu-reset";
@@ -251,7 +272,9 @@ export class ExperimentalI80386 {
         token, cs, startEip, endEip, maxActiveSteps, activeSteps: 0,
         phase: "armed", failure: null, busyDepth: 0, delivering: 0,
         intent: null, iretIntent: null, stagedEntry: null, stagedReturn: null,
-        entry: null, returned: null,
+        entry: null, returned: null, pendingRejectedDelivery: null,
+        rejectionPermit: false,
+        rejectedDelivery: null,
       });
       this.#owned0501JournalActive = true;
       return token;
@@ -286,7 +309,8 @@ export class ExperimentalI80386 {
     if (session.phase === "armed" || session.phase === "open") return null;
     const result = Object.freeze({ phase: session.phase,
       failure: session.failure, activeSteps: session.activeSteps,
-      entry: session.entry, returned: session.returned });
+      entry: session.entry, returned: session.returned,
+      rejectedDelivery: session.rejectedDelivery });
     owned0501Sessions.delete(this);
     this.#owned0501JournalActive = false;
     return result;
@@ -2499,6 +2523,8 @@ export class ExperimentalI80386 {
   ) {
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
+    if (owned0501?.rejectionPermit && owned0501.phase === "invalid")
+      owned0501Invalidate(owned0501, "stale-direct-helper-stage");
     const idtCode = (vector << 3) | 2 | (external ? 1 : 0),
       entry = vector * 8;
     if (entry + 7 > this.idtr.limit)
@@ -2613,6 +2639,23 @@ export class ExperimentalI80386 {
             !this.segmentCaches[SEG_CS].default32 ||
             !this.segmentCaches[SEG_SS].default32) {
           owned0501Invalidate(owned0501, "unsupported-owned-delivery");
+          owned0501.rejectionPermit = true;
+          const rejectedDelivery = owned0501Frozen({
+            schema: "bw.i80386-owned-0501.delivery-rejection.v1",
+            source: "owned-intent-delivery-attempt", software: !!software,
+            vector, delivering: owned0501.delivering,
+            gateType: type, width, vm86: !!vm86,
+            errorCodePresent: errorCode !== null,
+            oldCpl, newCpl: targetCpl,
+            handlerCs: this.cs, handlerSs: this.ss,
+            handlerCodeDefault32: !!this.segmentCaches[SEG_CS].default32,
+            handlerStackDefault32: !!this.segmentCaches[SEG_SS].default32,
+            frameKind: innerFrame ? "inner" : "same",
+            frameBytes: (innerFrame ?? sameFrame).bytes *
+              (innerFrame ?? sameFrame).values.length,
+          });
+          if (owned0501.rejectionPermit && this.#owned0501JournalActive)
+            owned0501.pendingRejectedDelivery = rejectedDelivery;
         } else {
           const frame = innerFrame ?? sameFrame;
           owned0501.stagedEntry = owned0501Frozen({
@@ -3007,7 +3050,8 @@ export class ExperimentalI80386 {
     if (owned0501) {
       if (owned0501.busyDepth) owned0501Invalidate(owned0501, "cpu-step-reentry");
       if (owned0501.intent || owned0501.iretIntent ||
-          owned0501.stagedEntry || owned0501.stagedReturn)
+          owned0501.stagedEntry || owned0501.stagedReturn ||
+          owned0501.pendingRejectedDelivery || owned0501.rejectionPermit)
         owned0501Invalidate(owned0501, "stale-direct-helper-stage");
       owned0501.busyDepth++;
     }
@@ -3053,6 +3097,8 @@ export class ExperimentalI80386 {
         return result;
       } catch (error) {
         if (owned0501) {
+          owned0501.pendingRejectedDelivery = null;
+          owned0501.rejectionPermit = false;
           owned0501Invalidate(owned0501, "step-failure");
           this.#owned0501JournalActive = false;
         }
@@ -3078,6 +3124,8 @@ export class ExperimentalI80386 {
       }
     } catch (error) {
       if (owned0501) {
+        owned0501.pendingRejectedDelivery = null;
+        owned0501.rejectionPermit = false;
         owned0501Invalidate(owned0501, "step-exception");
         this.#owned0501JournalActive = false;
       }

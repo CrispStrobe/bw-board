@@ -109,8 +109,19 @@ test('a 32-bit gate with a 16-bit handler stack is excluded after delivery', () 
   const token = f.arm();
   f.cpu.step();
   assert.deepEqual([f.cpu.cs, f.cpu.eip], [8, 0x100]);
-  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
-    'unsupported-owned-delivery');
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.entry, null);
+  assert.deepEqual([observation.rejectedDelivery.schema,
+    observation.rejectedDelivery.source, observation.rejectedDelivery.vector,
+    observation.rejectedDelivery.gateType, observation.rejectedDelivery.width,
+    observation.rejectedDelivery.handlerCodeDefault32,
+    observation.rejectedDelivery.handlerStackDefault32,
+    observation.rejectedDelivery.frameKind,
+    observation.rejectedDelivery.frameBytes],
+  ['bw.i80386-owned-0501.delivery-rejection.v1',
+    'owned-intent-delivery-attempt', 0x31, 14, 32, true, false, 'inner', 20]);
+  assert.equal(Object.isFrozen(observation.rejectedDelivery), true);
 });
 
 test('a 32-bit gate into 16-bit handler code is not a protected32 frame', () => {
@@ -118,8 +129,150 @@ test('a 32-bit gate into 16-bit handler code is not a protected32 frame', () => 
   f.memory.set(0x208 + 6, 0x8f);
   const token = f.arm();
   f.cpu.step();
-  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.deepEqual([observation.rejectedDelivery.gateType,
+    observation.rejectedDelivery.width,
+    observation.rejectedDelivery.handlerCodeDefault32,
+    observation.rejectedDelivery.handlerStackDefault32], [14, 32, false, true]);
+});
+
+test('a successful 16-bit gate effect records width but no frame entry', () => {
+  const f = fixture();
+  f.put(0x300 + 0x31 * 8, [0, 1, 8, 0, 0, 0xe6, 0, 0]);
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.deepEqual([observation.failure, observation.entry,
+    observation.rejectedDelivery.gateType,
+    observation.rejectedDelivery.width],
+  ['unsupported-owned-delivery', null, 6, 16]);
+});
+
+test('rejected delivery at the active-step cap cannot publish a diagnostic', () => {
+  const f = fixture();
+  f.put(CODE + START, [0x90, 0xcd, 0x31]);
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm({ maxActiveSteps: 1 });
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501FrameStatus(token).activeSteps, 1);
+  assert.equal(f.cpu.step(), 1);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('post-delivery step exception cannot publish staged rejection facts', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const instruction = f.cpu._stepInstruction.bind(f.cpu);
+  const fault = new Error('test host interruption after delivery');
+  f.cpu._stepInstruction = () => { instruction(); throw fault; };
+  assert.throws(() => f.cpu.step(), error => error === fault);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('zero-result enclosing step does not publish rejected-delivery facts', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const instruction = f.cpu._stepInstruction.bind(f.cpu);
+  f.cpu._stepInstruction = () => { instruction(); return 0; };
+  assert.equal(f.cpu.step(), 0);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('reset revokes a completed rejection receipt without replacing first failure', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501FrameStatus(token).failure,
     'unsupported-owned-delivery');
+  f.cpu.reset();
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('rejection-record failure leaves delivered guest frame intact', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const freeze = Object.freeze;
+  Object.freeze = value => {
+    if (value?.schema === 'bw.i80386-owned-0501.delivery-rejection.v1')
+      throw new Error('observer');
+    return freeze(value);
+  };
+  try {
+    assert.equal(f.cpu.step(), 1);
+  } finally {
+    Object.freeze = freeze;
+  }
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp],
+    [8, 0x100, 0x10, 0x3ec]);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('swallowed recorder reentry cancels a post-effect rejection receipt', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const freeze = Object.freeze;
+  let reentered = false;
+  Object.freeze = value => {
+    if (!reentered && value?.schema ===
+        'bw.i80386-owned-0501.delivery-rejection.v1') {
+      reentered = true;
+      assert.equal(f.cpu.owned0501FrameStatus(token).phase, 'invalid');
+    }
+    return freeze(value);
+  };
+  try {
+    assert.equal(f.cpu.step(), 1);
+  } finally {
+    Object.freeze = freeze;
+  }
+  assert.equal(reentered, true);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
+});
+
+test('direct protected-delivery helper during recording cancels stale facts', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  const freeze = Object.freeze;
+  let direct = false;
+  Object.freeze = value => {
+    if (!direct && value?.schema ===
+        'bw.i80386-owned-0501.delivery-rejection.v1') {
+      direct = true;
+      try {
+        f.cpu._deliverProtected(0x31, f.cpu.eip, null, { software: true });
+      } catch { // Either guest-visible effect or original helper refusal cancels.
+      }
+    }
+    return freeze(value);
+  };
+  try {
+    assert.equal(f.cpu.step(), 1);
+  } finally {
+    Object.freeze = freeze;
+  }
+  assert.equal(direct, true);
+  const observation = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(observation.failure, 'unsupported-owned-delivery');
+  assert.equal(observation.rejectedDelivery, null);
 });
 
 test('wrong request, rejected gate, and direct delivery cannot mint a pair', () => {
