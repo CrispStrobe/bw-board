@@ -10,9 +10,11 @@ role = source.NEW + "probe.mjs"
 real = source.NEW + "real.mjs"
 deep = source.NEW + "deep.mjs"
 names = {role, real, deep}
-assert source.BASE == "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
+assert source.HISTORICAL_BASE == "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
+assert source.BASE == "4c22a574ec50a515fe4954a3fda0ff6a947a5068"
 assert source.WORKFLOW == ".github/workflows/i80386-cwsdpmi-0501-frame-at.yml"
-assert source.CPU_SHA == "4791aeb192aef93be0d27ccb69ac4022e092eae97dc092764e3b578d36a49002"
+assert source.CPU_SHA == "58ab2f471b76657a91f2f9d3519ab24f36c992a731a033fbf803a4780da7b12e"
+assert source.JOURNAL_TEST_SHA == "0dd9430608a76c2575397f94e7b7a0ffe18538ba9eb70fe72a1b4afadf904297"
 assert source.POLICY_TEST in source.INHERITED_EXACT
 assert source.ORCHESTRATION_TEST not in source.INHERITED_EXACT
 assert "scripts/i80386-cwsdpmi-highmem-at/" in source.INHERITED_PREFIXES
@@ -36,9 +38,16 @@ tree = {role: b"import {x} from './real.mjs';",
 assert set(source.walk_imports([role], names, lambda name: tree[name])) == names
 cpu = "src/experimental/i80386.js"
 original = source.git("show", f"{source.BASE}:{cpu}")
-source.admit_role_provenance(cpu, original, {cpu}, original)
+reviewed = source.git("show", f"HEAD:{cpu}")
+source.admit_role_provenance(cpu, reviewed, {cpu}, original)
+source.admit_role_provenance(source.JOURNAL_TEST,
+                             source.git("show", f"HEAD:{source.JOURNAL_TEST}"),
+                             {source.JOURNAL_TEST},
+                             source.git("show", f"{source.BASE}:{source.JOURNAL_TEST}"))
 for bad_role, bad_raw, base_names in (
-    (cpu, original + b"\n", {cpu}),
+    (cpu, reviewed + b"\n", {cpu}),
+    (source.JOURNAL_TEST, source.git("show", f"HEAD:{source.JOURNAL_TEST}") + b"\n",
+     {source.JOURNAL_TEST}),
     ("src/experimental/extra.js", original, {cpu}),
     ("scripts/lib/extra.mjs", original, {cpu}),
 ):
@@ -48,12 +57,14 @@ for bad_role, bad_raw, base_names in (
         pass
     else:
         raise AssertionError("unreviewed inherited or new external role admitted")
-for changed in ("src/experimental/i80386.js", ".github/workflows/ci.yml",
+for changed in (".github/workflows/ci.yml",
                 source.POLICY_TEST, "scripts/lib/unreviewed.mjs"):
     assert not (changed.startswith(source.NEW) or
-                changed in (source.WORKFLOW, source.ORCHESTRATION_TEST))
+                changed in (source.WORKFLOW, source.ORCHESTRATION_TEST) or
+                changed in source.PINNED_CHANGED)
 assert all(changed.startswith(source.NEW) or
-           changed in (source.WORKFLOW, source.ORCHESTRATION_TEST) for changed in
+           changed in (source.WORKFLOW, source.ORCHESTRATION_TEST) or
+           changed in source.PINNED_CHANGED for changed in
            (source.NEW + "adapter.mjs", source.WORKFLOW,
-            source.ORCHESTRATION_TEST))
+            source.ORCHESTRATION_TEST, cpu, source.JOURNAL_TEST))
 print("CWSDPMI owned 0501 AT frame source controls PASS")

@@ -7,9 +7,17 @@ wraps its unchanged completion scenario. The first hosted AT frame attempt,
 run 37814786319 at source `c968428d4d478ae115b8e9cb1065f8a349b7ccbe`,
 failed before journal arm because `cpu.segmentCaches` is a plain object, not
 iterable. This follow-up captures its six own numeric slots without iteration;
-the correction has not run in a guest. A dedicated source-closure gate and
-label-only hosted workflow are present. The earlier finite high-memory
-client result does not establish interrupt-frame ownership.
+the corrected source `4c22a574ec50a515fe4954a3fda0ff6a947a5068` then
+reached the wrapper and armed the journal in run 37818842928. That run
+refused the selected delivery as `unsupported-owned-delivery` after nine
+active CPU steps. The retained terminal CPU has a 16-bit code descriptor,
+but the report does not identify which delivery predicate failed or establish
+the gate width. This follow-up retains a bounded rejection-fact diagnostic
+after the original CPU step commits. It keeps the same invalid result, does
+not credit an entry or return, and has not run in a guest. A dedicated
+source-closure gate and label-only hosted workflow remain in place. The
+earlier finite high-memory client result does not establish interrupt-frame
+ownership.
 
 `admitFreshWrapper` calls the unchanged fresh executable/map/compile admission
 and immediately copies the authenticated `allocateMemory` extent and expected
@@ -61,3 +69,9 @@ node --test test/i80386-0501-frame-policy.test.mjs test/i80386-0501-frame-orches
 ```
 
 The corrected adapter and guest have not been executed for this follow-up.
+The new rejection receipt contains only validated primitive delivery facts:
+software/vector/depth, gate type and width, VM86/error-code flags, old and new
+CPL, handler CS/SS descriptor width, and frame kind and size. A recorder
+failure or competing observer reentry cannot change the guest's delivered
+effect or turn the refused event into a committed AX=0501 pair. The previous
+failure remains first even when this optional diagnostic cannot be retained.

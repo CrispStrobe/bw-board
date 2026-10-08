@@ -9,12 +9,19 @@ import subprocess
 import sys
 from pathlib import Path
 
-BASE = "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
+HISTORICAL_BASE = "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
+BASE = "4c22a574ec50a515fe4954a3fda0ff6a947a5068"
 NEW = "scripts/i80386-cwsdpmi-0501-frame-at/"
 WORKFLOW = ".github/workflows/i80386-cwsdpmi-0501-frame-at.yml"
 POLICY_TEST = "test/i80386-0501-frame-policy.test.mjs"
 ORCHESTRATION_TEST = "test/i80386-0501-frame-orchestration.test.mjs"
-CPU_SHA = "4791aeb192aef93be0d27ccb69ac4022e092eae97dc092764e3b578d36a49002"
+JOURNAL_TEST = "test/i80386-dpmi-frame-journal.test.mjs"
+CPU_SHA = "58ab2f471b76657a91f2f9d3519ab24f36c992a731a033fbf803a4780da7b12e"
+JOURNAL_TEST_SHA = "0dd9430608a76c2575397f94e7b7a0ffe18538ba9eb70fe72a1b4afadf904297"
+PINNED_CHANGED = {
+    "src/experimental/i80386.js": CPU_SHA,
+    JOURNAL_TEST: JOURNAL_TEST_SHA,
+}
 WORKFLOW_ESM_ROOTS = frozenset({
     "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs",
     "scripts/i80386-cwsdpmi-highmem-timer/media-control.mjs",
@@ -111,6 +118,10 @@ def admit_inherited(role, raw, original):
 
 
 def admit_role_provenance(role, raw, base_names, base_raw):
+    if role in PINNED_CHANGED:
+        if hashlib.sha256(raw).hexdigest() != PINNED_CHANGED[role]:
+            raise ValueError("reviewed frame diagnostic role differs: " + role)
+        return
     if role.startswith(NEW) or role in (WORKFLOW, ORCHESTRATION_TEST):
         return
     if role not in base_names:
@@ -128,7 +139,8 @@ def identity(expected):
     names = set(git("ls-tree", "-r", "--name-only", "HEAD").decode().splitlines())
     base_names = set(git("ls-tree", "-r", "--name-only", BASE).decode().splitlines())
     changed = set(git("diff", "--name-only", BASE, "HEAD").decode().splitlines())
-    if any(not (role.startswith(NEW) or role in (WORKFLOW, ORCHESTRATION_TEST))
+    if any(not (role.startswith(NEW) or role in (WORKFLOW, ORCHESTRATION_TEST) or
+                role in PINNED_CHANGED)
            for role in changed):
         raise ValueError("changed source outside reviewed frame gate namespace")
     inherited = ({name for name in base_names if name.startswith(INHERITED_PREFIXES)} |
@@ -141,7 +153,8 @@ def identity(expected):
         NEW + "admit.mjs", NEW + "policy.mjs"
     } <= current:
         raise ValueError("inherited/new source role missing")
-    roles = inherited | current | {WORKFLOW, POLICY_TEST, ORCHESTRATION_TEST}
+    roles = inherited | current | {WORKFLOW, POLICY_TEST, ORCHESTRATION_TEST,
+                                   JOURNAL_TEST}
     # Close every relative ESM edge reachable from the new driver/control,
     # including the real VGA class and AT CPU. Inherited unused roles remain
     # byte-authenticated separately; their comment examples are not imports.
@@ -172,7 +185,8 @@ def identity(expected):
             raise ValueError("free ROM pin changed")
         hashes[role] = digest
     return {"schema": "bw.cwsdpmi-0501-frame.at-source.v1", "head": head,
-            "inheritedBase": BASE,
+            "inheritedBase": BASE, "historicalJournalBase": HISTORICAL_BASE,
+            "reviewedDiagnosticRoles": PINNED_CHANGED,
             "roles": hashes,
             "recursiveImports": dict(sorted(graph.items()))}
 
