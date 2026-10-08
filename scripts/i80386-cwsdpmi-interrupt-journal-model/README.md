@@ -32,11 +32,16 @@ and `src/i8086-machine.js` SHA-256
 - `src/experimental/i80386.js` `_stepInstruction()` has the source
   `instructionStart`, software opcode and vector, and post-immediate return
   EIP for `CC`, `CD`, and `CE`. The `CD` path checks VM/IOPL before `_deliver`.
+  The future producer must use the CPU's decoded bytes, prefixes, and actual
+  post-immediate EIP; this model does not authenticate a supplied opcode or
+  derive instruction length. Assuming a fixed `+1` or `+2` fails for prefixed
+  instructions.
 - `_deliverProtected()` validates gate type 6/7/14/15, width, old/target CPL,
   saved flags, and the prepared same/inner stack frame before committing it.
   Task gate type 5 is outside this first journal profile. `_deliver()` returns
   after the original delivery succeeds. The future producer must copy those
-  existing validated locals; it must not reread guest memory for diagnostics.
+  existing validated locals, including 16-bit gate offset truncation; it must
+  not reread guest memory for diagnostics.
 - `_iret()` has its validated width, old stack, selector/target/flags, outer
   stack, and return CPL before the state update. NT task return and VM86 return
   are outside scope. The model associates nested IRET with the latest open
