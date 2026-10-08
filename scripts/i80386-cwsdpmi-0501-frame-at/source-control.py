@@ -14,7 +14,7 @@ assert source.HISTORICAL_BASE == "8b82bde41f2fffff07279834a333a47bcd8f5a7f"
 assert source.BASE == "0714159c9875ac17bf5ef5a8e5418f5815fa1608"
 assert source.WORKFLOW == ".github/workflows/i80386-cwsdpmi-0501-frame-at.yml"
 assert source.CPU_SHA == "a27a0408888c8cabb5e3d13329e0a0105e3a7bd4c8608c0394e80ea588c44d10"
-assert source.JOURNAL_TEST_SHA == "0ffbd577972538985aa7c0cbcfe3e608cfbf48aad8a170a523a2d8070228752b"
+assert source.JOURNAL_TEST_SHA == "5cbe476eb8dcde4986e1bdf7659f29efea123a609040138f3bd0b96500ff7c3e"
 assert source.POLICY_TEST_SHA == "d831c85f609b07f6679a9fc9f93fd00afcd66aa783f94ab55154f7d0b475b4c6"
 assert source.ORCHESTRATION_TEST_SHA == "9c0c680932c2bfeb07ce490ab40d9283b73677e49744011f5776e2fa98affe3b"
 assert source.POLICY_TEST in source.INHERITED_EXACT

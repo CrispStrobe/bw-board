@@ -104,7 +104,7 @@ test('opt-in gate32 code16 stack32 same-CPL3 records decoded 32-bit IRET', () =>
     ['complete',MIXED_PROFILE,MIXED_PROFILE,14,12,3,3,32,MIXED_PROFILE]);
 });
 
-test('mixed profile refuses a 16-bit IRET without changing its guest effect', () => {
+test('mixed profile preserves the guest fault from 16-bit IRET on a 32-bit frame', () => {
   const f=fixture();
   f.memory.set(0x208 + 5, 0xfa);
   f.memory.set(0x208 + 6, 0x8f);
@@ -112,7 +112,9 @@ test('mixed profile refuses a 16-bit IRET without changing its guest effect', ()
   const token=f.arm({profile:MIXED_PROFILE});
   f.cpu.step();
   assert.equal(f.cpu.owned0501FrameStatus(token).phase,'open');
-  f.cpu.step();
+  assert.throws(() => f.cpu.step(), error =>
+    error instanceof I80386Fault && error.vector === 13 &&
+    error.message === 'IRET return privilege');
   const result=f.cpu.takeOwned0501FrameObservation(token);
   assert.equal(result.phase,'invalid');
   assert.equal(result.failure,'unsupported-owned-iret');
