@@ -29,6 +29,15 @@ for hostile in (b"import('./runtime.mjs');\n",
     else:
         raise AssertionError("unbound/dynamic import admitted")
 
+tree = {
+    role: b"import {x} from './real.mjs';\n",
+    "scripts/i80386-cwsdpmi-at-loaded-main-gate/real.mjs":
+        b"import {y} from './deep.mjs';\nimport fs from 'fs';\n",
+    "scripts/i80386-cwsdpmi-at-loaded-main-gate/deep.mjs": b"export const y=1;\n",
+}
+graph = source.walk_imports([role], set(tree), lambda name: tree[name])
+assert set(graph) == set(tree)  # real.mjs was already a known role
+
 assert "scripts/i80386-cwsdpmi-owned/acquire.py" in source.INHERITED_EXACT
 assert "roms/free-at-bios/BIOS-bochs-legacy" in source.BIOS
 assert "roms/free-at-bios/vgabios-lgpl.bin" in source.BIOS

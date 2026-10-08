@@ -55,7 +55,7 @@ def imported(role, raw, all_names):
     found = set()
     for specifier in (IMPORT_FROM.findall(source) + IMPORT_CONTINUED.findall(source) +
                       IMPORT_SIDE.findall(source)):
-        if specifier.startswith("node:"):
+        if specifier.startswith("node:") or specifier == "fs":
             continue
         if not specifier.startswith("."):
             raise ValueError("unbound JS import: " + role)
@@ -64,6 +64,20 @@ def imported(role, raw, all_names):
             raise ValueError("missing/broad JS import: " + role)
         found.add(resolved)
     return found
+
+
+def walk_imports(roots, all_names, read):
+    """Walk reachable literal ESM edges, even when a role was already listed."""
+    queue = sorted(roots)
+    graph = {}
+    while queue:
+        role = queue.pop()
+        if role in graph:
+            continue
+        deps = imported(role, read(role), all_names)
+        graph[role] = sorted(deps)
+        queue.extend(dependency for dependency in deps if dependency not in graph)
+    return graph
 
 
 def identity(expected):
@@ -87,19 +101,10 @@ def identity(expected):
     # Close every relative ESM edge reachable from the new driver/control,
     # including the real VGA class and AT CPU. Inherited unused roles remain
     # byte-authenticated separately; their comment examples are not imports.
-    queue = sorted(role for role in current if role.endswith((".mjs", ".js")))
-    graph = {}
-    while queue:
-        role = queue.pop()
-        if role in graph:
-            continue
-        raw = git("show", f"HEAD:{role}")
-        deps = imported(role, raw, names)
-        graph[role] = sorted(deps)
-        for dependency in deps:
-            if dependency not in roles:
-                roles.add(dependency)
-                queue.append(dependency)
+    graph = walk_imports(
+        (role for role in current if role.endswith((".mjs", ".js"))),
+        names, lambda role: git("show", f"HEAD:{role}"))
+    roles.update(graph)
     if "src/experimental/vga-memory.js" not in roles or \
        "src/experimental/i80386-at-machine.js" not in roles or \
        "scripts/i80386-cwsdpmi-owned/acquire.py" not in roles:
