@@ -1,6 +1,7 @@
 // Hosted fresh-compile parser admission. No guest memory or CPU observation.
 import {createHash} from 'node:crypto';
-import {lstatSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync,
+  readFileSync, readSync, writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {admitBoundImage} from '../i80386-cwsdpmi-at-owned/binding.mjs';
@@ -14,9 +15,22 @@ function ordinary(path, role) {
   const st=lstatSync(path);
   if(!st.isFile()||st.isSymbolicLink()||st.size>limits[role])
     throw new Error(`nonordinary or unbounded ${role}`);
-  const bytes=readFileSync(path);
-  if(bytes.length!==st.size)throw new Error(`${role} changed size`);
-  return bytes;
+  const fd=openSync(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+  try {
+    const opened=fstatSync(fd);
+    if(!opened.isFile()||opened.dev!==st.dev||opened.ino!==st.ino||
+       opened.size!==st.size)throw new Error(`${role} changed before read`);
+    const bounded=Buffer.alloc(st.size+1);
+    let used=0;
+    while(used<bounded.length){
+      const n=readSync(fd,bounded,used,bounded.length-used,null);
+      if(!n)break;
+      used+=n;
+    }
+    if(used!==st.size||fstatSync(fd).size!==st.size)
+      throw new Error(`${role} changed size`);
+    return bounded.subarray(0,used);
+  } finally {closeSync(fd);}
 }
 
 export function formatObservation(exe) {
