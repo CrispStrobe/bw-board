@@ -15,7 +15,7 @@ caller-supplied whole-text copy against that private wrapper. It also checks
 the inherited private diagnostic on a whole-text mismatch, while the
 whole-text exact case is checked directly. The result is a byte-comparison
 receipt. It does not authenticate that the caller paused the real machine,
-read ordinary RAM, or preserved CPU/board state. A future driver must own the
+read ordinary RAM, or preserved CPU/board state. Driver integration must own the
 synchronous between-step passive read and unchanged-state fingerprint.
 
 The CPU-free policy accepts one source-owned opportunity after an admitted
@@ -31,9 +31,13 @@ returned flags remain separate fields. A pre-step wrapper PC is only an
 opportunity: the board can service an IRQ before the CPU executes the next
 instruction. The CPU's decoded committed event must establish delivery.
 
-The adapter entry point is `node scripts/i80386-cwsdpmi-0501-frame-at/adapter.mjs
-input.json report.json progress.json`. This invocation is source-only and
-unrun. Reports keep the finite-client verdict separate from the frame verdict
+The adapter entry point is:
+
+```sh
+node scripts/i80386-cwsdpmi-0501-frame-at/adapter.mjs input.json report.json progress.json
+```
+
+This invocation is unrun. Reports keep the finite-client verdict separate from the frame verdict
 and retain the two CPU journal records and wrapper observation hashes. Partial
 progress always reports top-level `passed:false`; no raw executable, RAM or
 disk bytes are report fields. A dedicated source-closure gate and hosted
@@ -46,7 +50,10 @@ would lose those frame milestones on an external timeout.
 The pure test supplies synthetic records. It verifies policy ordering and
 negative cases; it does not import or execute the CPU, establish guest
 provenance, prove physical frame identity, or qualify other DPMI services.
-Run the CPU-free controls with
-`node --test test/i80386-0501-frame-policy.test.mjs
-test/i80386-0501-frame-orchestration.test.mjs`. The adapter, CPU and guest have
-not been executed for this checkpoint.
+Run the CPU-free controls with:
+
+```sh
+node --test test/i80386-0501-frame-policy.test.mjs test/i80386-0501-frame-orchestration.test.mjs
+```
+
+The adapter, CPU and guest have not been executed for this checkpoint.
