@@ -1,0 +1,105 @@
+name: 386 owned CWSDPMI fresh EXE/map admission
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-at-binding-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  binding-admission:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-at-binding-actual' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit exact source and pure controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-at-binding-evidence"
+          mkdir "$e"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-at-binding-actual/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-owned/binding-control.mjs > "$e/binding-control.stdout" 2> "$e/binding-control.stderr"
+          TMPDIR="$RUNNER_TEMP" timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-binding-actual/admit-control.mjs > "$e/admit-control.stdout" 2> "$e/admit-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            node --version
+            uname -a
+          } > "$e/host.txt"
+      - name: Fetch pinned compiler inputs and compile owned client internally
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-at-binding-evidence"
+          i="$RUNNER_TEMP/cwsdpmi-at-binding-inputs"
+          w="$RUNNER_TEMP/cwsdpmi-at-binding-work"
+          mkdir "$i"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/build-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout --signal=TERM --kill-after=10s "$2" curl --fail --location --silent --show-error --retry 1 --max-time "$3" --max-filesize "$4" -o "$i/$5" "$6" > "$e/$1-fetch.stdout" 2> "$e/$1-fetch.stderr"
+          }
+          fetch toolchain 300s 260 81000000 toolchain.tar.bz2 https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+          fetch djcrx 90s 75 3000000 djcrx205.zip https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 90s 75 3000000 djdev205.zip https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 90s 75 3000000 djlsr205.zip https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          phase=compile
+          timeout --signal=TERM --kill-after=10s 360s python3 -B scripts/i80386-cwsdpmi-compile-only/compile.py "$i/toolchain.tar.bz2" "$i/djcrx205.zip" "$i/djdev205.zip" "$i/djlsr205.zip" scripts/i80386-cwsdpmi-owned/client.c "$e/compile-audit" "$w" > "$e/compile.stdout" 2> "$e/compile.stderr"
+          phase=fresh-format-map-admission
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-at-binding-actual/admit.mjs "$w/build/client.exe" "$w/build/client.map" "$e/compile-audit/client.map" "$e/compile-audit/compile-report.json" "$e/admission" > "$e/admission.stdout" 2> "$e/admission.stderr"
+          phase=complete
+      - name: Recheck source and inventory report-only evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-at-binding-evidence"
+          mkdir -p "$e"
+          python3 -B scripts/i80386-cwsdpmi-at-binding-actual/source.py "$BW_EXPECTED_HEAD" "$e/source-after.json" > "$e/source-after.stdout" 2> "$e/source-after.stderr"
+          if test -f "$e/source-before.json"; then cmp "$e/source-before.json" "$e/source-after.json"; fi
+          python3 -B - "$e" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);files={};total=0
+          forbidden={'.exe','.o','.zip','.img','.bz2','.tar','.node','.a'}
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  if path.suffix.lower() in forbidden:raise ValueError('binary/archive in evidence')
+                  raw=path.read_bytes();total+=len(raw)
+                  if len(raw)>5<<20 or total>12<<20:raise ValueError('report-only evidence cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2,sort_keys=True)+'\n')
+          PY
+      - name: Retain bounded reports, maps and format headers only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-at-binding-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-at-binding-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
