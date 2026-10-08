@@ -5,7 +5,8 @@ import {GEOMETRY,CWSDPMI,SUCCESS,EXIT_OK,RETURN,FIRST,SECOND,buildMedia} from '.
 import {readRootFile} from '../i80386-dos32a-owned/media.mjs';
 import {encode,readyForScan} from '../i80386-dos32a-owned/keyboard.mjs';
 import {admitBoundImage} from '../i80386-cwsdpmi-at-owned/binding.mjs';
-import {candidateAtMain,bindAtMainCut} from '../i80386-cwsdpmi-at-loaded-actual/cut.mjs';
+import {candidateAtMain} from '../i80386-cwsdpmi-at-loaded-actual/cut.mjs';
+import {bindOwnedCodeAtMain} from '../i80386-cwsdpmi-at-owned-code/cut.mjs';
 import {passiveRows,ringEmpty,controllerStatus} from '../i80386-cwsdpmi-at-loaded-main-gate/driver.mjs';
 import {FIRST_SCANS,SECOND_SCANS,gradeBatch,gradeReturn,currentPrompt} from './grade.mjs';
 
@@ -54,6 +55,8 @@ const fileSummary=files=>Object.fromEntries(Object.entries(FILE_NAMES).map(([nam
   return [name,out];
 }));
 const fileKey=files=>sha(Buffer.from(JSON.stringify(fileSummary(files))));
+const fileMilestone=(step,phase,observed,key)=>Object.freeze({step,phase,
+  imageSha256:observed.imageSha256,key,files:fileSummary(observed.files)});
 
 function exact(path,limit,pin=null){
   const fd=fs.openSync(path,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);
@@ -133,7 +136,7 @@ function writeProgress(path,report){
 export function runScenario(ports,options={}){
   const limits={...LIMITS,...options};
   const report={schema:'bw.cwsdpmi-owned.at-completion-source.v1',passed:false,
-    scope:'same-machine AT owned-client completion after strict loaded-main cut; no INT31 attribution or RTx',
+    scope:'same-machine AT owned-client completion after separate exact owned-code-at-entry cut; strict whole-text result retained; no INT31 attribution or RTx',
     stage:'setup',firstFailure:null,steps:0};
   const session=Object.freeze({}),queue=[],offered=[],acceptedScans=[],requested=[];
   const start=ports.now(),startCpu=ports.cpuUsage(),startState=ports.state();
@@ -190,6 +193,7 @@ export function runScenario(ports,options={}){
       if(stage==='batch-approved'&&step>batch.step){
         queue.push(...encode(SECOND+'\r'));secondQueuedStep=step;
         requested.push({command:SECOND,step});
+        (report.screenMilestones??={}).verifyQueued={step,rows:[...lastScreen]};
         stage='verify-queued';report.stage=stage;
         report.secondQueuedStep=step;record();
       }
@@ -201,7 +205,7 @@ export function runScenario(ports,options={}){
         if(!cutUnwritten(atCut.files))throw new Error('result files already written at main cut');
         cutFiles=atCut.files;
         report.cutFiles=fileSummary(cutFiles);
-        loaded=ports.bind(); // strict existing exact whole-text binding only
+        loaded=ports.bind(); // strict whole-text result plus separate exact owned-code cut
         boundStep=step;report.loaded=loaded;stage='waiting-batch';
         report.stage=stage;report.boundStep=step;record();
       }
@@ -226,6 +230,7 @@ export function runScenario(ports,options={}){
             }else if(declined&&queue.length===0&&currentPrompt(rows)){
               if(marked(rows))throw new Error('stale batch marker before first command');
               queue.push(...encode(FIRST+'\r'));requested.push({command:FIRST,step});
+              (report.screenMilestones??={}).firstQueued={step,rows:[...rows]};
               stage='first-queued';
               report.stage=stage;report.firstQueuedStep=step;record();
             }
@@ -235,6 +240,8 @@ export function runScenario(ports,options={}){
           }else if((stage==='verify-queued'||stage==='waiting-return')&&
                    secondQueuedStep!==null&&step>=secondQueuedStep){
             if(!currentPrompt(rows)){
+              if(!sawNonPromptSinceSecondQueue)
+                (report.screenMilestones??={}).firstNonPromptAfterVerifyQueue={step,rows:[...rows]};
               sawNonPromptSinceSecondQueue=true;
               firstRows=null;firstRowsStep=null;secondRows=null;secondRowsStep=null;
             }else if(secondCommandAccepted&&sawNonPromptSinceSecondQueue){
@@ -256,8 +263,16 @@ export function runScenario(ports,options={}){
             if(files.returned!==null)throw new Error('return marker before verify');
             if(batchExact(files)){
               incompleteSince=null;incompleteCount=0;
-              if(batchCandidate?.key!==key)batchCandidate={key,step};
+              if(batchCandidate?.key!==key)
+                batchCandidate={key,step,receipt:fileMilestone(step,stage,observed,key)};
               else if(step-batchCandidate.step>=limits.diskEvery&&batchPrompt){
+                report.batchPair={first:batchCandidate.receipt,
+                  second:fileMilestone(step,stage,observed,key)};
+                report.diskMilestones=[
+                  {kind:'batch-first',...report.batchPair.first},
+                  {kind:'batch-second',...report.batchPair.second}];
+                (report.screenMilestones??={}).batchPrompt=
+                  {step:batchPrompt.step,rows:[...batchPrompt.rows]};
                 batch=gradeBatch({session,initial:initial.files,cutFiles,files,
                   rows:batchPrompt.rows,accepted:offered,boundStep,step,
                   pendingKeys:queue.length});
@@ -280,8 +295,17 @@ export function runScenario(ports,options={}){
           }else if(stage==='waiting-return'){
             if(returnExact(files)){
               incompleteSince=null;incompleteCount=0;
-              if(returnCandidate?.key!==key)returnCandidate={key,step};
+              if(returnCandidate?.key!==key)
+                returnCandidate={key,step,receipt:fileMilestone(step,stage,observed,key)};
               else if(step-returnCandidate.step>=limits.diskEvery&&secondRows){
+                report.returnPair={first:returnCandidate.receipt,
+                  second:fileMilestone(step,stage,observed,key)};
+                report.diskMilestones.push(
+                  {kind:'return-first',...report.returnPair.first},
+                  {kind:'return-second',...report.returnPair.second});
+                (report.screenMilestones??={}).verifyPrompts={
+                  first:{step:firstRowsStep,rows:[...firstRows]},
+                  second:{step:secondRowsStep,rows:[...secondRows]}};
                 verifyPrompt=gradeReturn({session,batch,files,accepted:offered,
                   secondQueuedStep,firstRows,firstStep:firstRowsStep,
                   secondRows,secondStep:secondRowsStep,pendingKeys:queue.length});
@@ -394,7 +418,7 @@ export function run(inputPath,outputPath,progressPath){
     const actual=runScenario({machine,now:()=>Date.now(),cpuUsage:prior=>process.cpuUsage(prior),
       state:()=>state(machine),readFiles:()=>sampleFiles(machine),
       screen:()=>passiveRows(machine),candidate:()=>candidateAtMain(machine,layout),
-      bind:()=>bindAtMainCut(machine,layout),
+      bind:()=>bindOwnedCodeAtMain(machine,layout),
       ready:(step,last)=>readyForScan({step,lastOfferedStep:last,
         ringEmpty:ringEmpty(machine),controllerStatus:controllerStatus(machine)}),
       offer:scan=>machine.keyIn(scan),step:()=>machine.step(),

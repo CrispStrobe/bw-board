@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {SUCCESS,EXIT_OK,RETURN} from '../i80386-cwsdpmi-qemu-owned/media.mjs';
 import {FIRST_SCANS,SECOND_SCANS} from './grade.mjs';
 import {runScenario} from './driver.mjs';
 
 const bytes=text=>Buffer.from(text+'\r\n','ascii');
+const sha=buffer=>createHash('sha256').update(buffer).digest('hex');
 const absent={output:null,ok:null,fail:null,returned:null};
 const cut={...absent,output:Buffer.alloc(0)};
 const batch={output:bytes(SUCCESS),ok:bytes(EXIT_OK),fail:null,returned:null};
@@ -61,7 +63,9 @@ function fixture({initialFiles=absent,cutFiles=cut,bindFailure=false,transient=f
     bind:()=>{bindCalls++;if(bindFailure){const error=new Error('loaded text differs at byte 23472');
       error.textMismatch={changedBytes:1};throw error;}
       bound=true;machine.cpu.eip=0x125a0;
-      return {binding:{main:0x125a0},loadedSha256:'a'.repeat(64)};},
+      return {schema:'bw.cwsdpmi-owned.code-at-entry.v1',
+        strictWholeText:'FAIL',ownedCodeAtEntry:'PASS',binding:null,
+        textMismatch:{changedBytes:1},before:{},after:{}};},
     ready:()=>true,
     offer:scan=>{offered++;
       if(offered>4&&firstAccepted<FIRST_SCANS.length)firstAccepted++;
@@ -82,8 +86,32 @@ assert.equal(passed.result.firstFailure,null);
 assert.equal(passed.bindCalls,1);
 assert.equal(passed.result.batchGrade.passed,true);
 assert.equal(passed.result.returnGrade.passed,true);
+assert.equal(passed.result.loaded.strictWholeText,'FAIL');
+assert.equal(passed.result.loaded.ownedCodeAtEntry,'PASS');
 assert.equal(passed.result.guestFiles.output.text,SUCCESS+'\r\n');
 assert.equal(passed.result.guestFiles.returned.text,RETURN+'\r\n');
+assert(passed.result.batchPair.second.step-passed.result.batchPair.first.step>=options.diskEvery);
+assert(passed.result.returnPair.second.step-passed.result.returnPair.first.step>=options.diskEvery);
+for(const pair of [passed.result.batchPair,passed.result.returnPair]){
+  assert.equal(pair.first.key,pair.second.key);
+  assert.deepEqual(pair.first.files,pair.second.files);
+  assert.match(pair.first.imageSha256,/^[0-9]{64}$/);
+  assert.match(pair.second.imageSha256,/^[0-9]{64}$/);
+}
+assert.deepEqual(passed.result.diskMilestones.map(value=>value.kind),
+  ['batch-first','batch-second','return-first','return-second']);
+assert.deepEqual(passed.result.diskMilestones.map(value=>value.step),
+  [passed.result.batchPair.first.step,passed.result.batchPair.second.step,
+   passed.result.returnPair.first.step,passed.result.returnPair.second.step]);
+assert.equal(passed.result.batchPair.first.files.output.sha256,sha(bytes(SUCCESS)));
+assert.equal(passed.result.batchPair.first.files.ok.sha256,sha(bytes(EXIT_OK)));
+assert.equal(passed.result.returnPair.second.files.returned.sha256,sha(bytes(RETURN)));
+const milestones=passed.result.screenMilestones;
+assert(milestones.firstQueued.step<milestones.batchPrompt.step);
+assert(milestones.batchPrompt.step<=milestones.verifyQueued.step);
+assert(milestones.verifyQueued.step<=milestones.firstNonPromptAfterVerifyQueue.step);
+assert(milestones.firstNonPromptAfterVerifyQueue.step<milestones.verifyPrompts.first.step);
+assert(milestones.verifyPrompts.first.step<milestones.verifyPrompts.second.step);
 assert(passed.reports.some(value=>value.stage==='protected-main-candidate'));
 assert(passed.reports.some(value=>value.stage==='waiting-batch'));
 assert(passed.reports.some(value=>value.stage==='waiting-return'));
@@ -129,6 +157,7 @@ assert.match(unstable.result.firstFailure,/settled batch has wrong/);
 const interrupted=fixture({interruptSnapshot:true,markerAt:80});
 assert.equal(interrupted.result.passed,true);
 assert(interrupted.result.batchGrade.step>=80);
+assert(interrupted.result.batchPair.second.step>=80);
 const unfinished=fixture({partialOutput:true,noBatchMarker:true});
 assert.equal(unfinished.result.passed,false);
 assert.match(unfinished.result.firstFailure,/incomplete batch files exceeded bound/);
