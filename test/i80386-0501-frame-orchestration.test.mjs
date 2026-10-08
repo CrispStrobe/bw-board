@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createFrameOrchestration} from '../scripts/i80386-cwsdpmi-0501-frame-at/orchestration.mjs';
+import {createFrameOrchestration,guardObservation} from '../scripts/i80386-cwsdpmi-0501-frame-at/orchestration.mjs';
 
 const comparison=Object.freeze({schema:'bw.cwsdpmi-0501.wrapper-comparison.v1',
   address:0x5700,bytes:0x30});
@@ -71,4 +71,41 @@ test('observer refusal happens before step and cannot be retried',()=>{
   assert.throws(()=>f.ports.step(),/passive refusal/);
   assert.throws(()=>f.ports.step(),/wrapper opportunity exception/);
   assert.equal(observations,1);assert.deepEqual(calls,[]);
+});
+test('swallowed nested observation poisons the outer receipt and future calls',()=>{
+  let observed;
+  observed=guardObservation(()=>{
+    try{observed();}catch{}
+    return {comparison};
+  });
+  assert.throws(()=>observed(),/swallowed wrapper observer reentry/);
+  assert.throws(()=>observed(),/reentered\/failed/);
+});
+test('CPU arm exception is terminal even if caller catches and retries',()=>{
+  let armCalls=0,steps=0;
+  const ports={bind:()=>({ownedCodeAtEntry:'PASS'}),step:()=>{steps++;}};
+  const policy={arm(){armCalls++;throw new Error('CPU refused');},
+    afterStep(){throw new Error('unexpected poll');},
+    finish(){throw new Error('unexpected finish');},status(){return {phase:'waiting'};}};
+  const frame=createFrameOrchestration(ports,{policy,
+    opportunity:()=>({comparison,cs:0xa7})});
+  frame.ports.bind();
+  assert.throws(()=>frame.ports.step(),/CPU refused/);
+  assert.throws(()=>frame.ports.step(),/journal arm exception/);
+  assert.deepEqual([armCalls,steps],[1,0]);
+});
+test('swallowed nested port step cannot publish a successful outer step',()=>{
+  let frame,steps=0;
+  const ports={bind:()=>({ownedCodeAtEntry:'PASS'}),step(){
+    steps++;
+    try{frame.ports.step();}catch{}
+  }};
+  const policy={arm(){throw new Error('must not arm');},
+    afterStep(){throw new Error('must not poll');},
+    finish(){throw new Error('must not finish');},status(){return {phase:'waiting'};}};
+  frame=createFrameOrchestration(ports,{policy,opportunity:()=>null});
+  assert.throws(()=>frame.ports.step(),/frame port reentry/);
+  assert.equal(steps,1);
+  assert.throws(()=>frame.ports.step(),/frame port reentry/);
+  assert.equal(steps,1);
 });

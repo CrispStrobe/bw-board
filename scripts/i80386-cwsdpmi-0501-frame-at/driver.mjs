@@ -4,7 +4,7 @@ import {observationFingerprint} from '../i80386-cwsdpmi-highmem-at/strict-cut.mj
 import {readOrdinaryLinear} from '../i80386-cwsdpmi-at-loaded/passive-ram.mjs';
 import {admittedWrapperRange,compareWrapperSnapshot} from './admit.mjs';
 import {create0501Policy} from './policy.mjs';
-import {createFrameOrchestration} from './orchestration.mjs';
+import {createFrameOrchestration,guardObservation} from './orchestration.mjs';
 
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function references(machine) {
@@ -17,6 +17,7 @@ function references(machine) {
     translations:cpu._translations,
     translationValues:[...cpu._translations],
     tablePages:cpu._translationTablePages,vga,
+    registerSource:vga?.registerSource,
     planes:vga?.planes,planeValues:vga?.planes?[...vga.planes]:null,
     planeBuffers:vga?.planes?vga.planes.map(plane=>plane.buffer):null,
     latches:vga?.latches,latchBuffer:vga?.latches?.buffer,
@@ -43,7 +44,7 @@ export function runFrameScenario(ports,{machine,layout,token}) {
      range.address<extent.address || range.address+range.bytes>extent.address+extent.bytes)
     throw new Error('private wrapper/text mismatch');
   const cpu=machine.cpu,policy=create0501Policy(cpu);
-  let mainCs=null,mainBase=null,observerBusy=false,observerFailed=false;
+  let mainCs=null,mainBase=null;
   let machineStepCount=0,opportunityCount=0;
   const bind=()=>{
     const loaded=ports.bind();
@@ -51,11 +52,7 @@ export function runFrameScenario(ports,{machine,layout,token}) {
     mainCs=cpu.cs;mainBase=cpu.segmentCaches[1].base;
     return loaded;
   };
-  const opportunity=()=>{
-    if(observerBusy||observerFailed){observerFailed=true;
-      throw new Error('reentered/failed wrapper observer');}
-    observerBusy=true;
-    try {
+  const opportunity=guardObservation(()=>{
     opportunityCount++;
     // Cheap pre-step selection. This PC does not assert that CPU.step will
     // execute the wrapper next: machine.step can service an IRQ first.
@@ -87,9 +84,7 @@ export function runFrameScenario(ports,{machine,layout,token}) {
         sourceCs:cpu.cs,sourceCodeBase:base,sourceEip:cpu.eip,
         cpuCycles:cpu.cycles,machineCycles:machine.cycles,
         comparison,before,after,referenceEqual})});
-    } catch(error){observerFailed=true;throw error;}
-    finally{observerBusy=false;}
-  };
+  });
   const wrapped=createFrameOrchestration({...ports,bind,
     step:()=>{if(machine.cpu!==cpu)throw new Error('frame CPU owner changed');
       ports.step();machineStepCount++; }}, {policy,opportunity});
