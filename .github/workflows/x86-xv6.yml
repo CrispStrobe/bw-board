@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Fetch exact pre-journal CPU for historical source-bound tests
+        run: git fetch --no-tags --depth=1 origin 41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7
       - name: Fetch exact compiled source of fixed PIC IMR profile
         run: git fetch --no-tags --depth=1 origin a6f605280f778b2bc409ef97ac3b40e15874530c
       - name: Fetch fixed native dispatch baseline for source reconstruction controls
@@ -62,7 +64,7 @@ jobs:
           git -C /tmp/xv6-public fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
           git -C /tmp/xv6-public checkout --detach FETCH_HEAD
           test "$(git -C /tmp/xv6-public rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
-      - run: node --test test/i80386*.test.mjs
+      - run: node scripts/run-ci-tests-serial.mjs --i80386-only
       - run: node scripts/build-xv6-stock-4m.mjs
         env:
           XV6_SRC: /tmp/xv6-public

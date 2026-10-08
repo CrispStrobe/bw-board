@@ -45,6 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Fetch exact pre-journal CPU for historical source-bound x86 tests
+        run: git fetch --no-tags --depth=1 origin 41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7
       - name: Fetch exact compiled source of fixed PIC IMR profile
         run: git fetch --no-tags --depth=1 origin a6f605280f778b2bc409ef97ac3b40e15874530c
       - name: Fetch fixed native dispatch baseline for source reconstruction controls

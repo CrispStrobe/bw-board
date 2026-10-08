@@ -30,6 +30,71 @@ const SEG_ES = 0,
   SEG_GS = 5;
 const REG_NAMES = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"];
 
+// A disabled CPU has no session and allocates no per-instruction journal data.
+// The controller supplies a candidate range; only the decoded CPU instruction
+// and committed frame below can create an observation.
+const owned0501Sessions = new WeakMap();
+const OWNED_0501_MAX_STEPS = 1_000_000;
+
+function owned0501Invalidate(session, reason) {
+  if (session && session.phase !== "invalid" &&
+      (session.phase !== "complete" || reason === "observer-reentry")) {
+    session.phase = "invalid";
+    session.failure = reason;
+    session.intent = null;
+    session.iretIntent = null;
+    session.stagedEntry = null;
+    session.stagedReturn = null;
+  }
+}
+
+function owned0501Option(options, key) {
+  const field = Object.getOwnPropertyDescriptor(options, key);
+  if (!field || !Object.hasOwn(field, "value"))
+    throw new TypeError(`owned 0501 ${key} must be an own data property`);
+  return field.value;
+}
+
+function owned0501U32(value, key) {
+  if (!Number.isInteger(value) || value < 0 || value > 0xffffffff)
+    throw new RangeError(`owned 0501 ${key} must be uint32`);
+  return value >>> 0;
+}
+
+function owned0501Frozen(record) {
+  return Object.freeze({ ...record });
+}
+
+function owned0501FinishStep(session, result, traced) {
+  if (!session || session.phase === "invalid" || session.phase === "complete") return;
+  session.activeSteps++;
+  if (session.activeSteps > session.maxActiveSteps || traced || result === 0) {
+    owned0501Invalidate(session, session.activeSteps > session.maxActiveSteps
+      ? "active-step-cap" : traced ? "post-instruction-trace" : "zero-step-result");
+    return;
+  }
+  if (session.intent) {
+    if (!session.stagedEntry ||
+        session.stagedEntry.returnEip !== session.intent.returnEip)
+      owned0501Invalidate(session, "uncommitted-owned-delivery");
+    else {
+      session.entry = session.stagedEntry;
+      session.phase = "open";
+    }
+  } else if (session.iretIntent) {
+    if (!session.stagedReturn)
+      owned0501Invalidate(session, "uncommitted-owned-iret");
+    else {
+      session.returned = session.stagedReturn;
+      session.phase = "complete";
+    }
+  }
+  session.intent = null;
+  session.iretIntent = null;
+  session.stagedEntry = null;
+  session.stagedReturn = null;
+}
+
 function parity8(v) {
   v &= 255;
   v ^= v >> 4;
@@ -40,6 +105,11 @@ function maskFor(width) {
 }
 
 export class ExperimentalI80386 {
+  #owned0501JournalActive = false;
+  #owned0501ExecutionDepth = 0;
+  #owned0501AdmissionBusy = false;
+  #owned0501AdmissionReentered = false;
+
   constructor(bus = {}, options = {}) {
     this.cpuProfile = options.cpuProfile ?? "compatibility";
     if (this.cpuProfile !== "compatibility" && this.cpuProfile !== "strict386")
@@ -95,6 +165,18 @@ export class ExperimentalI80386 {
   }
 
   reset() {
+    const owned0501 = owned0501Sessions.get(this);
+    if (owned0501 && owned0501.phase !== "invalid") {
+      owned0501.phase = "invalid";
+      owned0501.failure = "cpu-reset";
+      owned0501.entry = null;
+      owned0501.returned = null;
+      owned0501.intent = null;
+      owned0501.iretIntent = null;
+      owned0501.stagedEntry = null;
+      owned0501.stagedReturn = null;
+    }
+    this.#owned0501JournalActive = false;
     if (this._translationCacheEnabled) {
       this._translations = new Array(512);
       this._translationGeneration = 1;
@@ -138,6 +220,76 @@ export class ExperimentalI80386 {
         code: id === SEG_CS,
         writable: id !== SEG_CS,
       };
+  }
+
+  armOwned0501FrameJournal(options) {
+    const prior = owned0501Sessions.get(this);
+    if (this.#owned0501ExecutionDepth || this.#owned0501AdmissionBusy ||
+        prior?.busyDepth) {
+      owned0501Invalidate(prior, "observer-reentry");
+      if (this.#owned0501AdmissionBusy)
+        this.#owned0501AdmissionReentered = true;
+      this.#owned0501JournalActive = false;
+      return null;
+    }
+    if (prior) throw new Error("consume the previous owned 0501 session first");
+    this.#owned0501AdmissionBusy = true;
+    this.#owned0501AdmissionReentered = false;
+    try {
+      if (!options || typeof options !== "object")
+        throw new TypeError("owned 0501 arm options must be an object");
+      const cs = owned0501U32(owned0501Option(options, "cs"), "cs");
+      const startEip = owned0501U32(owned0501Option(options, "startEip"), "startEip");
+      const endEip = owned0501U32(owned0501Option(options, "endEip"), "endEip");
+      const maxActiveSteps = owned0501Option(options, "maxActiveSteps");
+      if (this.#owned0501AdmissionReentered || cs > 0xffff ||
+          startEip >= endEip || !Number.isInteger(maxActiveSteps) ||
+          maxActiveSteps < 1 || maxActiveSteps > OWNED_0501_MAX_STEPS)
+        throw new RangeError("owned 0501 arm range, cap, or admission is invalid");
+      const token = Object.freeze({});
+      owned0501Sessions.set(this, {
+        token, cs, startEip, endEip, maxActiveSteps, activeSteps: 0,
+        phase: "armed", failure: null, busyDepth: 0, delivering: 0,
+        intent: null, iretIntent: null, stagedEntry: null, stagedReturn: null,
+        entry: null, returned: null,
+      });
+      this.#owned0501JournalActive = true;
+      return token;
+    } finally {
+      this.#owned0501AdmissionBusy = false;
+      this.#owned0501AdmissionReentered = false;
+    }
+  }
+
+  owned0501FrameStatus(token) {
+    const session = owned0501Sessions.get(this);
+    if (this.#owned0501ExecutionDepth || session?.busyDepth) {
+      owned0501Invalidate(session, "observer-reentry");
+      this.#owned0501JournalActive = false;
+      return { phase: "invalid", failure: session?.failure ?? "observer-reentry" };
+    }
+    if (!session || token !== session.token)
+      throw new Error("stale owned 0501 session token");
+    return owned0501Frozen({ phase: session.phase, failure: session.failure,
+      activeSteps: session.activeSteps });
+  }
+
+  takeOwned0501FrameObservation(token) {
+    const session = owned0501Sessions.get(this);
+    if (this.#owned0501ExecutionDepth || session?.busyDepth) {
+      owned0501Invalidate(session, "observer-reentry");
+      this.#owned0501JournalActive = false;
+      return null;
+    }
+    if (!session || token !== session.token)
+      throw new Error("stale owned 0501 session token");
+    if (session.phase === "armed" || session.phase === "open") return null;
+    const result = Object.freeze({ phase: session.phase,
+      failure: session.failure, activeSteps: session.activeSteps,
+      entry: session.entry, returned: session.returned });
+    owned0501Sessions.delete(this);
+    this.#owned0501JournalActive = false;
+    return result;
   }
 
   get protectedMode() {
@@ -1506,6 +1658,10 @@ export class ExperimentalI80386 {
     saveFlags = this.eflags,
     descriptorFaultVector = null,
   } = {}) {
+    const owned0501 = this.#owned0501JournalActive
+      ? owned0501Sessions.get(this) : null;
+    if (owned0501 && (owned0501.phase === "open" || owned0501.intent))
+      owned0501Invalidate(owned0501, "task-switch-during-owned-frame");
     const returning = kind === "iret";
     const taskFaultVector = descriptorFaultVector ?? (returning ? 10 : 13);
     const incoming = this._taskDescriptor(selector, {
@@ -2341,6 +2497,8 @@ export class ExperimentalI80386 {
     errorCode,
     { software = false, external = false, fault = false } = {},
   ) {
+    const owned0501 = this.#owned0501JournalActive
+      ? owned0501Sessions.get(this) : null;
     const idtCode = (vector << 3) | 2 | (external ? 1 : 0),
       entry = vector * 8;
     if (entry + 7 > this.idtr.limit)
@@ -2365,6 +2523,7 @@ export class ExperimentalI80386 {
         saveFlags: fault ? this.eflags | RF : this.eflags,
         descriptorFaultVector: 10,
       });
+      if (owned0501?.intent) owned0501Invalidate(owned0501, "task-gate-delivery");
       return;
     }
     if (![6, 7, 14, 15].includes(type) || b[4] !== 0)
@@ -2447,13 +2606,57 @@ export class ExperimentalI80386 {
     this.eip = width === 32 ? offset : offset & 0xffff;
     this.eflags &= ~(TF | NT | RF | 0x20000);
     if (type === 6 || type === 14) this.eflags &= ~IF;
+    if (owned0501?.intent && owned0501.phase === "armed") {
+      try {
+        if (!software || vector !== 0x31 || owned0501.delivering !== 1 ||
+            width !== 32 || vm86 || errorCode !== null ||
+            !this.segmentCaches[SEG_CS].default32 ||
+            !this.segmentCaches[SEG_SS].default32) {
+          owned0501Invalidate(owned0501, "unsupported-owned-delivery");
+        } else {
+          const frame = innerFrame ?? sameFrame;
+          owned0501.stagedEntry = owned0501Frozen({
+            source: "decoded-software-int31", vector, gateType: type, width,
+            instructionStart: owned0501.intent.instructionStart,
+            returnEip: returnEip >>> 0,
+            returnCs: owned0501.intent.cs,
+            returnSs: owned0501.intent.ss,
+            returnEsp: owned0501.intent.esp,
+            savedFlags: savedFlags >>> 0,
+            oldCpl, newCpl: targetCpl,
+            handlerCs: this.cs, handlerEip: this.eip >>> 0,
+            handlerSs: this.ss, handlerEsp: this.esp >>> 0,
+            frameLinear: (this.segmentCaches[SEG_SS].base +
+              (innerFrame ? innerFrame.esp : sameFrame.next)) >>> 0,
+            frameBytes: frame.bytes * frame.values.length,
+            entryAx: owned0501.intent.ax,
+            entryBx: owned0501.intent.bx,
+            entryCx: owned0501.intent.cx,
+          });
+        }
+      } catch {
+        owned0501Invalidate(owned0501, "observer-entry-record-failure");
+      }
+    }
   }
 
   _deliver(vector, returnEip, errorCode = null, options = {}) {
-    if (this.protectedMode)
-      this._deliverProtected(vector, returnEip, errorCode, options);
-    else this._deliverReal(vector, returnEip);
-    this.halted = false;
+    const owned0501 = this.#owned0501JournalActive
+      ? owned0501Sessions.get(this) : null;
+    if (owned0501) {
+      owned0501.delivering++;
+      if (owned0501.delivering !== 1 ||
+          owned0501.phase === "open" && !owned0501.intent)
+        owned0501Invalidate(owned0501, "nested-or-external-delivery");
+    }
+    try {
+      if (this.protectedMode)
+        this._deliverProtected(vector, returnEip, errorCode, options);
+      else this._deliverReal(vector, returnEip);
+      this.halted = false;
+    } finally {
+      if (owned0501) owned0501.delivering--;
+    }
   }
 
   _deliverFault(fault, returnEip, { trap = false, external = false } = {}) {
@@ -2494,6 +2697,10 @@ export class ExperimentalI80386 {
         : !(this.eflags & IF) || this._interruptShadow)
     )
       return false;
+    if (this.#owned0501AdmissionBusy)
+      this.#owned0501AdmissionReentered = true;
+    this.#owned0501ExecutionDepth++;
+    try {
     if (nmi) this._nmiActive = true;
     this._repeatContext = null;
     try {
@@ -2506,6 +2713,9 @@ export class ExperimentalI80386 {
       }
       this._deliverFault(error, this.eip, { external: true });
       return !this.shutdown;
+    }
+    } finally {
+      this.#owned0501ExecutionDepth--;
     }
   }
 
@@ -2626,6 +2836,12 @@ export class ExperimentalI80386 {
   }
 
   _iret(width) {
+    const owned0501 = this.#owned0501JournalActive
+      ? owned0501Sessions.get(this) : null;
+    if (owned0501?.iretIntent &&
+        (width !== 32 || !this.protectedMode || this.virtual8086 ||
+         this.eflags & NT))
+      owned0501Invalidate(owned0501, "unsupported-owned-iret");
     if (this.protectedMode && !this.virtual8086 && this.eflags & NT) {
       if (!this.tr.present || this.tr.limit < 1)
         throw new I80386Fault(10, this.tr.selector & 0xfffc, "current TSS backlink");
@@ -2658,6 +2874,8 @@ export class ExperimentalI80386 {
       return;
     }
     if (this.protectedMode && currentCpl === 0 && flags & 0x20000) {
+      if (owned0501?.phase === "open")
+        owned0501Invalidate(owned0501, "vm86-return-during-owned-frame");
       if (width !== 32)
         throw new I80386Fault(13, 0, "VM86 return requires IRETD");
       this._linear(SEG_SS, old, 9 * 4);
@@ -2744,51 +2962,129 @@ export class ExperimentalI80386 {
     this.eflags = (restored | 2) >>> 0;
     this._preserveRf = true;
     this._nmiActive = false;
+    if (owned0501?.iretIntent && owned0501.phase === "open") {
+      try {
+        const entry = owned0501.entry;
+        if (owned0501.iretIntent.cs !== entry.handlerCs ||
+            owned0501.iretIntent.ss !== entry.handlerSs ||
+            owned0501.iretIntent.esp !== entry.handlerEsp ||
+            (address >>> 0) !== entry.frameLinear ||
+            selector !== entry.returnCs || target >>> 0 !== entry.returnEip ||
+            this.cs !== entry.returnCs || this.eip !== entry.returnEip ||
+            this.ss !== entry.returnSs || this.esp !== entry.returnEsp ||
+            this.currentPrivilegeLevel !== entry.oldCpl) {
+          owned0501Invalidate(owned0501, "owned-iret-frame-mismatch");
+        } else {
+          owned0501.stagedReturn = owned0501Frozen({
+            source: "decoded-protected-iret", width,
+            instructionStart: owned0501.iretIntent.instructionStart,
+            handlerCs: owned0501.iretIntent.cs,
+            handlerSs: owned0501.iretIntent.ss,
+            handlerEsp: owned0501.iretIntent.esp,
+            consumedFrameLinear: address >>> 0,
+            consumedEip: target >>> 0,
+            consumedCs: selector,
+            consumedFlags: flags >>> 0,
+            returnedCs: this.cs, returnedEip: this.eip >>> 0,
+            returnedSs: this.ss, returnedEsp: this.esp >>> 0,
+            returnedCpl: this.currentPrivilegeLevel,
+            returnedFlags: this.eflags >>> 0,
+            returnedBx: this.bx, returnedCx: this.cx,
+          });
+        }
+      } catch {
+        owned0501Invalidate(owned0501, "observer-return-record-failure");
+      }
+    }
   }
 
   step() {
-    if (this.halted || this.shutdown) return 0;
-    const state = this._snapshotInstruction(),
-      restartEip = this.eip >>> 0;
-    const trace = !!(this.eflags & TF),
-      debugInhibited = this._debugShadow > 0;
-    this._suppressTrace = false;
-    this._preserveRf = false;
+    if (this.#owned0501AdmissionBusy)
+      this.#owned0501AdmissionReentered = true;
+    this.#owned0501ExecutionDepth++;
+    const owned0501 = this.#owned0501JournalActive
+      ? owned0501Sessions.get(this) : null;
+    if (owned0501) {
+      if (owned0501.busyDepth) owned0501Invalidate(owned0501, "cpu-step-reentry");
+      if (owned0501.intent || owned0501.iretIntent ||
+          owned0501.stagedEntry || owned0501.stagedReturn)
+        owned0501Invalidate(owned0501, "stale-direct-helper-stage");
+      owned0501.busyDepth++;
+    }
     try {
-      const result = this._stepInstruction();
-      this.eip >>>= 0;
-      const suppressDebug = debugInhibited || this._debugShadow > 0;
-      if (this._interruptShadow) this._interruptShadow--;
-      if (this._nmiShadow) this._nmiShadow--;
-      if (this._debugShadow) this._debugShadow--;
-      if (!this._preserveRf) this.eflags &= ~RF;
-      if (trace && !suppressDebug && !this._suppressTrace)
-        this._repeatContext = null;
-      if (trace && !suppressDebug && !this._suppressTrace)
-        this._deliverFault(new I80386Fault(1, null, "single-step"), this.eip, {
-          trap: true,
-        });
-      return result;
-    } catch (error) {
-      if (error instanceof UnsupportedI80386) {
+      if (this.halted || this.shutdown) {
+        if (owned0501) owned0501Invalidate(owned0501, "cpu-not-running");
+        return 0;
+      }
+      const state = this._snapshotInstruction(),
+        restartEip = this.eip >>> 0;
+      const trace = !!(this.eflags & TF),
+        debugInhibited = this._debugShadow > 0;
+      this._suppressTrace = false;
+      this._preserveRf = false;
+      try {
+        const result = this._stepInstruction();
+        this.eip >>>= 0;
+        const suppressDebug = debugInhibited || this._debugShadow > 0;
+        if (this._interruptShadow) this._interruptShadow--;
+        if (this._nmiShadow) this._nmiShadow--;
+        if (this._debugShadow) this._debugShadow--;
+        if (!this._preserveRf) this.eflags &= ~RF;
+        const traced = trace && !suppressDebug && !this._suppressTrace;
+        if (traced) this._repeatContext = null;
+        if (traced)
+          this._deliverFault(new I80386Fault(1, null, "single-step"), this.eip, {
+            trap: true,
+          });
+        if (owned0501) {
+          try {
+            if (owned0501.phase === "open" &&
+                (!this.protectedMode || this.virtual8086 ||
+                 !this.segmentCaches[SEG_CS].default32 ||
+                 !this.segmentCaches[SEG_SS].default32))
+              owned0501Invalidate(owned0501, "owned-frame-mode-excursion");
+            owned0501FinishStep(owned0501, result, traced);
+          } catch {
+            owned0501Invalidate(owned0501, "observer-step-record-failure");
+          }
+          if (owned0501.phase === "complete" || owned0501.phase === "invalid")
+            this.#owned0501JournalActive = false;
+        }
+        return result;
+      } catch (error) {
+        if (owned0501) {
+          owned0501Invalidate(owned0501, "step-failure");
+          this.#owned0501JournalActive = false;
+        }
+        if (error instanceof UnsupportedI80386) {
+          if (!error.taskCommitted) this._restoreInstruction(state);
+          throw error;
+        }
+        if (!(error instanceof I80386Fault)) throw error;
+        const repeatFlags =
+          error.repeatFlags ??
+          (state.repeatContext?.cs === state.cs &&
+          state.repeatContext?.eip === restartEip
+            ? state.repeatContext.flags
+            : null);
         if (!error.taskCommitted) this._restoreInstruction(state);
-        throw error;
+        if (repeatFlags !== null) {
+          this.eflags = repeatFlags >>> 0;
+          this._repeatContext = null;
+        }
+        if (!this.deliverFaults) throw error;
+        this._deliverFault(error, error.taskCommitted ? this.eip : restartEip);
+        return 0;
       }
-      if (!(error instanceof I80386Fault)) throw error;
-      const repeatFlags =
-        error.repeatFlags ??
-        (state.repeatContext?.cs === state.cs &&
-        state.repeatContext?.eip === restartEip
-          ? state.repeatContext.flags
-          : null);
-      if (!error.taskCommitted) this._restoreInstruction(state);
-      if (repeatFlags !== null) {
-        this.eflags = repeatFlags >>> 0;
-        this._repeatContext = null;
+    } catch (error) {
+      if (owned0501) {
+        owned0501Invalidate(owned0501, "step-exception");
+        this.#owned0501JournalActive = false;
       }
-      if (!this.deliverFaults) throw error;
-      this._deliverFault(error, error.taskCommitted ? this.eip : restartEip);
-      return 0;
+      throw error;
+    } finally {
+      if (owned0501) owned0501.busyDepth--;
+      this.#owned0501ExecutionDepth--;
     }
   }
 
@@ -3245,6 +3541,32 @@ export class ExperimentalI80386 {
       this._deliver(3, this.eip, null, { software: true });
     } else if (op === 0xcd) {
       const vector = this._fetch8();
+      const owned0501 = this.#owned0501JournalActive
+        ? owned0501Sessions.get(this) : null;
+      if (owned0501?.phase === "armed" &&
+          this.#owned0501ExecutionDepth === 1 &&
+          owned0501.busyDepth === 1 && vector === 0x31 &&
+          this.cs === owned0501.cs &&
+          instructionStart >= owned0501.startEip &&
+          instructionStart < owned0501.endEip) {
+        if (this.eip <= instructionStart ||
+            this.eip > owned0501.endEip ||
+            !this.protectedMode || this.virtual8086 ||
+            !this.segmentCaches[SEG_CS].default32 || this.ax !== 0x0501 ||
+            (((this.bx << 16) | this.cx) >>> 0) !== 4096) {
+          owned0501Invalidate(owned0501, "owned-0501-instruction-profile");
+        } else {
+          try {
+            owned0501.intent = owned0501Frozen({
+              instructionStart, returnEip: this.eip >>> 0,
+              cs: this.cs, ss: this.ss, esp: this.esp >>> 0,
+              ax: this.ax, bx: this.bx, cx: this.cx,
+            });
+          } catch {
+            owned0501Invalidate(owned0501, "observer-intent-failure");
+          }
+        }
+      }
       this._checkVmIopl("INT");
       this._suppressTrace = true;
       this._deliver(vector, this.eip, null, { software: true });
@@ -3253,7 +3575,22 @@ export class ExperimentalI80386 {
         this._suppressTrace = true;
         this._deliver(4, this.eip, null, { software: true });
       }
-    } else if (op === 0xcf) this._iret(width);
+    } else if (op === 0xcf) {
+      const owned0501 = this.#owned0501JournalActive
+        ? owned0501Sessions.get(this) : null;
+      if (owned0501?.phase === "open" &&
+          this.#owned0501ExecutionDepth === 1 &&
+          owned0501.busyDepth === 1)
+        try {
+          owned0501.iretIntent = owned0501Frozen({
+            instructionStart, cs: this.cs, ss: this.ss,
+            esp: this.esp >>> 0,
+          });
+        } catch {
+          owned0501Invalidate(owned0501, "observer-iret-intent-failure");
+        }
+      this._iret(width);
+    }
     else if (op === 0xfa) {
       if (this.protectedMode && this.currentPrivilegeLevel > ((this.eflags >>> 12) & 3))
         throw new I80386Fault(13, 0, "CLI requires CPL <= IOPL");
