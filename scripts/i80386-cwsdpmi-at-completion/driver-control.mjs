@@ -20,8 +20,9 @@ function fixture({initialFiles=absent,cutFiles=cut,bindFailure=false,transient=f
   wrongBatch=false,unstableBatch=false,partialOutput=false,
   noBatchMarker=false,alwaysTransient=false,fastVerify=false,
   returnRebusy=false,interruptSnapshot=false,markerAt=60,
-  finalAccountingFailure=false}={}){
-  let step=0,reads=0,bound=false,offered=0,verified=false,
+  finalAccountingFailure=false,screenEvery=options.screenEvery,
+  staleEchoOnly=false,prequeueAlreadyEcho=false,preVerifyStale=false}={}){
+  let step=0,reads=0,bound=false,offered=0,verified=false,verifiedAt=null,
     bindCalls=0,firstAccepted=0,secondAccepted=0;
   const reports=[];
   const machine={cpu:{eip:0x7c00,cycles:0,shutdown:false},cycles:0};
@@ -34,10 +35,12 @@ function fixture({initialFiles=absent,cutFiles=cut,bindFailure=false,transient=f
     state:()=>({eip:machine.cpu.eip,cycles:machine.cpu.cycles,
       machineCycles:machine.cycles,shutdown:machine.cpu.shutdown}),
     progress:report=>reports.push({stage:report.stage,step:report.steps}),
-    readFiles:()=>{
+    readFiles:phase=>{
       reads++;
       if(reads===1)return {files:initialFiles,imageSha256:'0'.repeat(64)};
       if(!bound)return {files:cutFiles,imageSha256:'1'.repeat(64)};
+      if(preVerifyStale&&phase==='pre-verify')
+        return {files:returned,imageSha256:'f'.repeat(64)};
       if(permanent&&reads===3)throw new Error('FAT image geometry mismatch');
       if(alwaysTransient)throw new Error('FAT chain truncated');
       if(transient&&reads===3)throw new Error('FAT chain truncated');
@@ -51,13 +54,22 @@ function fixture({initialFiles=absent,cutFiles=cut,bindFailure=false,transient=f
     screen:()=>{
       if(step<10)return screen('Do you want to proceed?');
       if(!bound)return screen('A:\\>');
-      if(!verified&&secondAccepted>0&&!staleReturnPrompt)return screen('VERIFY TYPING');
-      if(!verified)return step<markerAt||noBatchMarker?
-        screen('RUNNING'):screen('C:\\>','BW-DPMI-BATCH-DONE');
-      if(returnRebusy&&step>=130&&step<140)return screen('VERIFY RUNNING AGAIN');
-      if(fastVerify)return screen('C:\\>');
-      return staleReturnPrompt?screen('C:\\>'):
-        (step<120?screen('VERIFY RUNNING'):screen('C:\\>'));
+      if(!verified&&secondAccepted>0&&!staleReturnPrompt)
+        return staleEchoOnly?screen('VERIFY TYPING','C:\\>c:\\verify.bat'):
+          screen('VERIFY TYPING');
+      if(!verified){
+        if(step<markerAt||noBatchMarker)return screen('RUNNING');
+        const visible=screen('C:\\>','BW-DPMI-BATCH-DONE');
+        if(prequeueAlreadyEcho)visible[22]='C:\\>c:\\verify.bat';
+        return visible;
+      }
+      const busyUntil=Math.max(120,verifiedAt+20);
+      if(returnRebusy&&step>=busyUntil+10&&step<busyUntil+20)
+        return screen('VERIFY RUNNING AGAIN');
+      if(fastVerify)return screen('C:\\>','C:\\>c:\\verify.bat');
+      return staleReturnPrompt||staleEchoOnly?screen('C:\\>'):
+        (step<busyUntil?screen('VERIFY RUNNING'):
+          screen('C:\\>','C:\\>c:\\verify.bat'));
     },
     candidate:()=>step>=40,
     bind:()=>{bindCalls++;if(bindFailure){const error=new Error('loaded text differs at byte 23472');
@@ -70,13 +82,15 @@ function fixture({initialFiles=absent,cutFiles=cut,bindFailure=false,transient=f
     offer:scan=>{offered++;
       if(offered>4&&firstAccepted<FIRST_SCANS.length)firstAccepted++;
       else if(bound&&firstAccepted===FIRST_SCANS.length){
-        secondAccepted++;if(secondAccepted===SECOND_SCANS.length)verified=true;
+        secondAccepted++;if(secondAccepted===SECOND_SCANS.length){
+          verified=true;verifiedAt=step;
+        }
       }
       return true;
     },
     step:()=>{step++;machine.cpu.cycles+=6;machine.cycles+=6;},
   };
-  const result=runScenario(ports,options);
+  const result=runScenario(ports,{...options,screenEvery});
   return {result,bindCalls,reports,firstAccepted,secondAccepted,reads};
 }
 
@@ -103,6 +117,9 @@ assert.deepEqual(passed.result.diskMilestones.map(value=>value.kind),
 assert.deepEqual(passed.result.diskMilestones.map(value=>value.step),
   [passed.result.batchPair.first.step,passed.result.batchPair.second.step,
    passed.result.returnPair.first.step,passed.result.returnPair.second.step]);
+assert(passed.result.preVerifyDisk.step>=passed.result.batchPair.second.step);
+assert.equal(passed.result.preVerifyDisk.files.returned,null);
+assert.equal(passed.result.preVerifyDisk.files.fail,null);
 assert.equal(passed.result.batchPair.first.files.output.sha256,sha(bytes(SUCCESS)));
 assert.equal(passed.result.batchPair.first.files.ok.sha256,sha(bytes(EXIT_OK)));
 assert.equal(passed.result.returnPair.second.files.returned.sha256,sha(bytes(RETURN)));
@@ -110,7 +127,8 @@ const milestones=passed.result.screenMilestones;
 assert(milestones.firstQueued.step<milestones.batchPrompt.step);
 assert(milestones.batchPrompt.step<=milestones.verifyQueued.step);
 assert(milestones.verifyQueued.step<=milestones.firstNonPromptAfterVerifyQueue.step);
-assert(milestones.firstNonPromptAfterVerifyQueue.step<milestones.verifyPrompts.first.step);
+assert(milestones.firstNonPromptAfterVerifyQueue.step<milestones.verifyEchoPrompt.step);
+assert(milestones.verifyEchoPrompt.step<=milestones.verifyPrompts.first.step);
 assert(milestones.verifyPrompts.first.step<milestones.verifyPrompts.second.step);
 assert(passed.reports.some(value=>value.stage==='protected-main-candidate'));
 assert(passed.reports.some(value=>value.stage==='waiting-batch'));
@@ -131,6 +149,14 @@ assert.equal(strict.result.passed,false);
 assert.match(strict.result.firstFailure,/loaded text differs/);
 assert.equal(strict.result.textMismatch.changedBytes,1);
 assert.equal(strict.secondAccepted,0);
+const beforeVerify=fixture({preVerifyStale:true});
+assert.equal(beforeVerify.result.passed,false);
+assert.match(beforeVerify.result.firstFailure,/batch files changed before VERIFY queue/);
+assert.deepEqual(beforeVerify.result.keyboard.requested.map(value=>value.command),
+  ['c:\\rundp.bat']);
+const staleQueuedEcho=fixture({prequeueAlreadyEcho:true});
+assert.equal(staleQueuedEcho.result.passed,false);
+assert.match(staleQueuedEcho.result.firstFailure,/stale full VERIFY echo before queue/);
 const secondary=fixture({bindFailure:true,finalAccountingFailure:true});
 assert.match(secondary.result.firstFailure,/loaded text differs/);
 assert(secondary.result.secondaryFailures.some(value=>/final accounting/.test(value)));
@@ -167,9 +193,16 @@ assert.match(chain.result.firstFailure,/FAT chain truncated/);
 const oldPrompt=fixture({staleReturnPrompt:true});
 assert.equal(oldPrompt.result.passed,false);
 assert.equal(oldPrompt.result.returnGrade,undefined);
-const quick=fixture({fastVerify:true});
+// A durable full command echo and later current prompt can survive a fast
+// VERIFY batch even when no post-break nonprompt frame is sampled.
+const quick=fixture({fastVerify:true,screenEvery:1});
 assert.equal(quick.result.passed,true);
-assert.equal(quick.result.promptEpoch.nonPromptSinceSecondQueue,true);
+assert.equal(quick.result.screenMilestones?.firstNonPromptAfterVerifyQueue,undefined);
+assert(quick.result.screenMilestones.verifyEchoPrompt.step>quick.result.secondAcceptedStep);
+const prematureEcho=fixture({staleEchoOnly:true,screenEvery:1});
+assert.equal(prematureEcho.result.passed,false);
+assert.equal(prematureEcho.result.returnGrade,undefined);
+assert.equal(prematureEcho.result.screenMilestones?.verifyEchoPrompt,undefined);
 const rebound=fixture({returnRebusy:true});
 assert.equal(rebound.result.passed,true);
 assert(rebound.result.promptEpoch.firstStep>=140);

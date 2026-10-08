@@ -50,6 +50,12 @@ BIOS = {
 }
 IMPORT_FROM = re.compile(r"^\s*(?:import|export)\s+[^\n;]*?\bfrom\s*['\"]([^'\"]+)['\"]", re.M)
 IMPORT_CONTINUED = re.compile(r"^\s*}\s*from\s*['\"]([^'\"]+)['\"]", re.M)
+# The reviewed helper control uses a named import with the closing brace and
+# `from` on separate lines. Bound this exact literal grammar without treating
+# comment examples or arbitrary source text as import declarations.
+IMPORT_NAMED_MULTILINE = re.compile(
+    r"^\s*(?:import|export)\s*\{[A-Za-z0-9_$,\s]{0,4096}\}\s*from\s*['\"]([^'\"]+)['\"]",
+    re.M)
 IMPORT_SIDE = re.compile(r"^\s*import\s*['\"]([^'\"]+)['\"]", re.M)
 IMPORT_DYNAMIC = re.compile(r"\bimport\s*\(")
 
@@ -66,6 +72,7 @@ def imported(role, raw, all_names):
         raise ValueError("unreviewed dynamic JS import: " + role)
     found = set()
     for specifier in (IMPORT_FROM.findall(source) + IMPORT_CONTINUED.findall(source) +
+                      IMPORT_NAMED_MULTILINE.findall(source) +
                       IMPORT_SIDE.findall(source)):
         if specifier.startswith("node:") or specifier == "fs":
             continue
@@ -106,6 +113,19 @@ def admit_helper(role, raw, reviewed, helper):
         raise ValueError("reviewed owned-code helper changed: " + role)
 
 
+def admit_helper_namespace(current, reviewed):
+    if not reviewed or current != reviewed:
+        raise ValueError("reviewed owned-code helper namespace changed")
+
+
+def admit_role_provenance(role, raw, base_names, inherited, helper, base_raw):
+    if role.startswith(NEW) or role == WORKFLOW or role in helper:
+        return
+    if role not in base_names:
+        raise ValueError("unreviewed imported/source role: " + role)
+    admit_inherited(role, raw, base_raw, inherited)
+
+
 def require_overrides(names, inherited):
     if not set(REVIEWED_OVERRIDES) <= (names & inherited):
         raise ValueError("reviewed helper override role missing")
@@ -123,6 +143,7 @@ def identity(expected):
     inherited = ({name for name in base_names if name.startswith(INHERITED_PREFIXES)} |
                  INHERITED_EXACT)
     helper = set(git("ls-tree", "-r", "--name-only", HELPER_HEAD, HELPER).decode().splitlines())
+    admit_helper_namespace({name for name in names if name.startswith(HELPER)}, helper)
     require_overrides(names, inherited)
     current = {name for name in names if name.startswith(NEW)}
     if not inherited <= names or not helper or not helper <= names or \
@@ -151,8 +172,8 @@ def identity(expected):
         raw = path.read_bytes()
         if raw != git("show", f"HEAD:{role}"):
             raise ValueError("source differs from Git: " + role)
-        if role in inherited or (role.startswith("src/") and role in base_names):
-            admit_inherited(role, raw, git("show", f"{BASE}:{role}"), inherited)
+        admit_role_provenance(role, raw, base_names, inherited, helper,
+                              git("show", f"{BASE}:{role}") if role in base_names else None)
         if role in helper:
             admit_helper(role, raw, git("show", f"{HELPER_HEAD}:{role}"), helper)
         digest = hashlib.sha256(raw).hexdigest()

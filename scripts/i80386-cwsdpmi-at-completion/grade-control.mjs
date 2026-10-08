@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {SUCCESS,EXIT_OK,RETURN} from '../i80386-cwsdpmi-qemu-owned/media.mjs';
-import {FIRST_SCANS,SECOND_SCANS,gradeBatch,gradeReturn,currentPrompt} from './grade.mjs';
+import {FIRST_SCANS,SECOND_SCANS,gradeBatch,gradeReturn,currentPrompt,
+  fullVerifyEcho} from './grade.mjs';
 
 const bytes=text=>Buffer.from(text+'\r\n','ascii');
 const initial={output:null,ok:null,fail:null,returned:null};
@@ -20,9 +21,12 @@ assert.equal(gradeBatch({...batchInput,cutFiles:{...initial,output:Buffer.alloc(
 assert.equal(currentPrompt(rows('C:\\>')),true);
 assert.equal(currentPrompt(rows('Still running','A:\\>')),false);
 const finalInput={session,batch,files:returnFiles,accepted:[...first,...second],
-  secondQueuedStep:1100,firstRows:rows('C:\\>',''),firstStep:1200,
+  secondQueuedStep:1100,queuedRows:rows('C:\\>',''),
+  echoRows:rows('C:\\>','C:\\>c:\\verify.bat'),echoStep:1200,
+  firstRows:rows('C:\\>','C:\\>c:\\verify.bat'),firstStep:1200,
   secondRows:rows('C:\\>',''),secondStep:101200,pendingKeys:0};
 assert.equal(gradeReturn(finalInput).passed,true);
+assert.equal(fullVerifyEcho(finalInput.echoRows),true);
 
 for(const change of [
   {initial:{...initial,returned:bytes(RETURN)}},
@@ -56,6 +60,10 @@ for(const change of [
   {accepted:[{...first[0],scan:first[0].scan^1},...first.slice(1),...second]},
   {accepted:[...first,{scan:0x1e,step:999,accepted:true},...second]},
   {secondQueuedStep:1000},
+  {queuedRows:rows('C:\\>','C:\\>c:\\verify.bat')},
+  {echoRows:rows('C:\\>','')},
+  {echoRows:rows('VERIFY RUNNING','C:\\>c:\\verify.bat')},
+  {echoStep:1100},
   {batch:{...batch,passed:true}},
   {session:{}},
   {firstRows:rows('RUNNING','A:\\>')},

@@ -29,11 +29,16 @@ After a successful owned-code cut, two identical complete file snapshots at leas
 one million ordinary steps apart must show the exact 29-byte success line and
 16-byte zero-exit marker, with no failure or return marker. A newly visible
 batch-done line and current last-row prompt precede a separate VERIFY command.
-After its full accepted scan sequence, two more identical snapshots must also
-show the exact 22-byte return marker, and a nonprompt-to-current-prompt
-transition must stabilize for at least 100,000 ordinary steps. The driver
-retains accepted and rejected scan offers, four ordered file-snapshot receipts
-with steps, hashes and small owned text, bounded screen/prompt milestone rows,
+At the queue boundary, another coherent disk copy must still show the exact
+batch files and no return or failure marker, while a fresh screen has no full
+`C:\>c:\verify.bat` echo. After the full VERIFY scan sequence is accepted,
+a later screen must show that exact command echo on an earlier row and a
+current last-row prompt. A second current prompt at least 100,000 ordinary
+steps later and two identical complete file snapshots must show the exact
+22-byte return marker. A partial typing screen or an older prompt alone
+cannot satisfy this witness. The driver retains accepted and rejected scan
+offers, four ordered file-pair receipts plus the pre-VERIFY disk copy with
+steps, hashes and small owned text, bounded screen/prompt milestone rows,
 bounded partial FAT diagnostics, input and final media hashes, and
 the first failure. It rejects malformed settled FAT/files and does not publish
 images, executables, raw RAM, or toolchain bytes. Its 120-million-step and

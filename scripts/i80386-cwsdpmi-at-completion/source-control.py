@@ -20,8 +20,16 @@ assert source.imported(role, raw, names) == {
 continued = b"import {\n x,\n} from './real.mjs';\n"
 assert source.imported(role, continued, names) == {
     "scripts/i80386-cwsdpmi-at-completion/real.mjs"}
+reviewed_form = (b"import {controlLayout as layout,controlMachine as machine,\n"
+                 b"  controlTextAddress as textAddress} from\n"
+                 b"  './real.mjs';\n")
+assert source.imported(role, reviewed_form, names) == {
+    "scripts/i80386-cwsdpmi-at-completion/real.mjs"}
+assert source.imported(role, b"// " + reviewed_form + raw, names) == {
+    "scripts/i80386-cwsdpmi-at-completion/real.mjs"}
 for hostile in (b"import('./runtime.mjs');\n",
                 b"import {x} from './unbound.mjs';\n",
+                b"import {known as x,\n another as y} from\n './unbound.mjs';\n",
                 b"import {x} from 'unbound-package';\n"):
     try:
         source.imported(role, hostile, names)
@@ -78,9 +86,30 @@ except ValueError:
     pass
 else:
     raise AssertionError("changed CPU source admitted")
+source.admit_role_provenance(cpu, cpu_original, {cpu}, inherited, set(), cpu_original)
+for graph_role, graph_raw, base_roles in (
+    ("src/experimental/unreviewed-runtime.js", b"export const x=1;", {cpu}),
+    ("scripts/lib/new-runtime.mjs", b"export const x=1;", {cpu}),
+    (cpu, cpu_original + b"\n", {cpu}),
+):
+    try:
+        source.admit_role_provenance(graph_role, graph_raw, base_roles,
+                                     inherited, set(), cpu_original)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unreviewed/changed graph role admitted")
 helper = "scripts/i80386-cwsdpmi-at-owned-code/cut.mjs"
 held = source.git("show", f"{source.HELPER_HEAD}:{helper}")
 assert held == Path(helper).read_bytes()
+source.admit_helper_namespace({helper}, {helper})
+for current in (set(), {helper, source.HELPER + "forged.mjs"}):
+    try:
+        source.admit_helper_namespace(current, {helper})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("missing/extra reviewed helper role admitted")
 source.admit_helper(helper, held, held, {helper})
 for role, raw in ((helper, held + b"\n"), ("scripts/not-reviewed.mjs", held)):
     try:

@@ -8,7 +8,8 @@ import {admitBoundImage} from '../i80386-cwsdpmi-at-owned/binding.mjs';
 import {candidateAtMain} from '../i80386-cwsdpmi-at-loaded-actual/cut.mjs';
 import {bindOwnedCodeAtMain} from '../i80386-cwsdpmi-at-owned-code/cut.mjs';
 import {passiveRows,ringEmpty,controllerStatus} from '../i80386-cwsdpmi-at-loaded-main-gate/driver.mjs';
-import {FIRST_SCANS,SECOND_SCANS,gradeBatch,gradeReturn,currentPrompt} from './grade.mjs';
+import {FIRST_SCANS,SECOND_SCANS,gradeBatch,gradeReturn,currentPrompt,
+  fullVerifyEcho} from './grade.mjs';
 
 const BIOS={bytes:65536,sha256:'6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac'};
 const VGA={bytes:38400,sha256:'76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1'};
@@ -144,7 +145,8 @@ export function runScenario(ports,options={}){
   let stage='boot',declined=false,menuKicks=0,lastOfferedStep=-5000,
     lastScreen=[],firstCommandAccepted=false,
     secondCommandAccepted=false,boundStep=null,cutFiles=null,batch=null,
-    secondQueuedStep=null,batchPrompt=null,verifyPrompt=null,
+    secondQueuedStep=null,secondAcceptedStep=null,batchPrompt=null,verifyPrompt=null,
+    verifyQueuedRows=null,verifyEchoRows=null,verifyEchoStep=null,
     sawNonPromptSinceSecondQueue=false,
     lastDiskStep=-limits.diskEvery,partialFatAttempts=0,firstPartialStep=null,
     firstPartialError=null,
@@ -161,7 +163,7 @@ export function runScenario(ports,options={}){
   const record=()=>ports.progress(report);
   const snapshot=(step,phase)=>{
     try{
-      const observed=ports.readFiles();
+      const observed=ports.readFiles(phase);
       lastDiskStep=step;lastFiles=observed.files;lastDiskSha=observed.imageSha256;
       report.guestFiles=fileSummary(lastFiles);
       report.diskObservation={step,phase,sha256:lastDiskSha};
@@ -191,9 +193,21 @@ export function runScenario(ports,options={}){
     for(let step=0;step<limits.steps;step++){
       report.steps=step;
       if(stage==='batch-approved'&&step>batch.step){
+        const beforeVerify=snapshot(step,'pre-verify');
+        if(!batchExact(beforeVerify.files))
+          throw new Error('batch files changed before VERIFY queue');
+        report.preVerifyDisk=fileMilestone(step,'pre-verify',beforeVerify,
+          fileKey(beforeVerify.files));
+        const queueRows=ports.screen();
+        if(!Array.isArray(queueRows)||queueRows.length!==25)
+          throw new Error('unsupported VERIFY queue screen');
+        if(!currentPrompt(queueRows)||!marked(queueRows))
+          throw new Error('batch prompt changed before VERIFY queue');
+        if(fullVerifyEcho(queueRows))throw new Error('stale full VERIFY echo before queue');
+        verifyQueuedRows=[...queueRows];lastScreen=[...queueRows];
         queue.push(...encode(SECOND+'\r'));secondQueuedStep=step;
         requested.push({command:SECOND,step});
-        (report.screenMilestones??={}).verifyQueued={step,rows:[...lastScreen]};
+        (report.screenMilestones??={}).verifyQueued={step,rows:[...queueRows]};
         stage='verify-queued';report.stage=stage;
         report.secondQueuedStep=step;record();
       }
@@ -240,14 +254,22 @@ export function runScenario(ports,options={}){
           }else if((stage==='verify-queued'||stage==='waiting-return')&&
                    secondQueuedStep!==null&&step>=secondQueuedStep){
             if(!currentPrompt(rows)){
-              if(!sawNonPromptSinceSecondQueue)
-                (report.screenMilestones??={}).firstNonPromptAfterVerifyQueue={step,rows:[...rows]};
-              sawNonPromptSinceSecondQueue=true;
-              firstRows=null;firstRowsStep=null;secondRows=null;secondRowsStep=null;
-            }else if(secondCommandAccepted&&sawNonPromptSinceSecondQueue){
+              if(secondCommandAccepted&&step>secondAcceptedStep){
+                if(!sawNonPromptSinceSecondQueue)
+                  (report.screenMilestones??={}).firstNonPromptAfterVerifyQueue={step,rows:[...rows]};
+                sawNonPromptSinceSecondQueue=true;
+                firstRows=null;firstRowsStep=null;secondRows=null;secondRowsStep=null;
+              }
+            }else if(secondCommandAccepted&&step>secondAcceptedStep){
+              if(verifyEchoRows===null&&fullVerifyEcho(rows)){
+                verifyEchoRows=[...rows];verifyEchoStep=step;
+                (report.screenMilestones??={}).verifyEchoPrompt={step,rows:[...rows]};
+              }
+              if(verifyEchoRows!==null){
               if(firstRows===null){firstRows=[...rows];firstRowsStep=step;}
               else if(step-firstRowsStep>=limits.stableSteps){
                 secondRows=[...rows];secondRowsStep=step;
+              }
               }
             }
           }
@@ -307,11 +329,13 @@ export function runScenario(ports,options={}){
                   first:{step:firstRowsStep,rows:[...firstRows]},
                   second:{step:secondRowsStep,rows:[...secondRows]}};
                 verifyPrompt=gradeReturn({session,batch,files,accepted:offered,
-                  secondQueuedStep,firstRows,firstStep:firstRowsStep,
+                  secondQueuedStep,queuedRows:verifyQueuedRows,
+                  echoRows:verifyEchoRows,echoStep:verifyEchoStep,
+                  firstRows,firstStep:firstRowsStep,
                   secondRows,secondStep:secondRowsStep,pendingKeys:queue.length});
                 report.returnGrade=verifyPrompt;
                 report.promptEpoch={firstStep:firstRowsStep,secondStep:secondRowsStep,
-                  nonPromptSinceSecondQueue:sawNonPromptSinceSecondQueue};
+                  verifyEchoStep,nonPromptSinceSecondQueue:sawNonPromptSinceSecondQueue};
                 if(!verifyPrompt.passed)throw new Error('return grade refused');
                 stage='done';report.stage=stage;report.passed=true;record();break;
               }
@@ -342,7 +366,9 @@ export function runScenario(ports,options={}){
              hasSequence(acceptedScans,FIRST_SCANS))firstCommandAccepted=true;
           if(stage==='verify-queued'&&!secondCommandAccepted&&
              hasSequence(acceptedScans,SECOND_SCANS)){
-            secondCommandAccepted=true;stage='waiting-return';report.stage=stage;
+            secondCommandAccepted=true;secondAcceptedStep=step;
+            stage='waiting-return';report.stage=stage;
+            report.secondAcceptedStep=step;
             record();
           }
         }

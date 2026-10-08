@@ -16,6 +16,8 @@ const rowsOk=rows=>Array.isArray(rows)&&rows.length===25&&
   rows.every(row=>typeof row==='string'&&row.length<=80);
 const last=rows=>rowsOk(rows)?[...rows].reverse().find(row=>row.trim())?.trim()??'':'';
 export const currentPrompt=rows=>/^[A-Z]:\\>$/.test(last(rows));
+export const fullVerifyEcho=rows=>rowsOk(rows)&&rows.some(row=>
+  row.trim().toLowerCase()===('C:\\>'+SECOND).toLowerCase());
 const scans=text=>encode(text+'\r').map(event=>event.scan);
 export const FIRST_SCANS=Object.freeze(scans(FIRST));
 export const SECOND_SCANS=Object.freeze(scans(SECOND));
@@ -76,7 +78,7 @@ export function gradeBatch({session,initial,cutFiles,files,rows,accepted,boundSt
   return result;
 }
 export function gradeReturn({session,batch,files,accepted,secondQueuedStep,
-  firstRows,firstStep,secondRows,secondStep,pendingKeys}){
+  queuedRows,echoRows,echoStep,firstRows,firstStep,secondRows,secondStep,pendingKeys}){
   const held=issuedBatches.get(batch),tape=offeredTape(accepted);
   const queued=Number.isSafeInteger(secondQueuedStep)&&secondQueuedStep>held?.step;
   const secondEnd=acceptedAt(tape,SECOND_SCANS,queued?secondQueuedStep-1:Number.MAX_SAFE_INTEGER);
@@ -90,6 +92,9 @@ export function gradeReturn({session,batch,files,accepted,secondQueuedStep,
     newEventsAfterBatch:prefix&&tape.slice(held.tape.length).every(event=>event.step>held.step),
     commandQueued:queued,
     secondInput:secondEnd!==null&&secondEnd>=secondQueuedStep,
+    noPreexistingVerifyEcho:rowsOk(queuedRows)&&!fullVerifyEcho(queuedRows),
+    durableVerifyEcho:fullVerifyEcho(echoRows)&&currentPrompt(echoRows)&&
+      Number.isSafeInteger(echoStep)&&echoStep>secondEnd&&echoStep<=firstStep,
     exactFiles:exactFiles(files,true),
     stablePrompt:currentPrompt(firstRows)&&currentPrompt(secondRows)&&
       Number.isSafeInteger(firstStep)&&Number.isSafeInteger(secondStep)&&
