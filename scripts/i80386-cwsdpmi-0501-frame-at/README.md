@@ -37,8 +37,16 @@ unrun. Reports keep the finite-client verdict separate from the frame verdict
 and retain the two CPU journal records and wrapper observation hashes. Partial
 progress always reports top-level `passed:false`; no raw executable, RAM or
 disk bytes are report fields. A dedicated source-closure gate and hosted
-workflow still need review before any actual dispatch.
+workflow still need review before any actual dispatch. Before that first
+dispatch, partial progress must also retain the bounded wrapper receipt and
+CPU journal observation after each completed ordinary step: the current
+intermediate progress contains only the inherited finite-client fields and
+would lose those frame milestones on an external timeout.
 
 The pure test supplies synthetic records. It verifies policy ordering and
 negative cases; it does not import or execute the CPU, establish guest
 provenance, prove physical frame identity, or qualify other DPMI services.
+Run the CPU-free controls with
+`node --test test/i80386-0501-frame-policy.test.mjs
+test/i80386-0501-frame-orchestration.test.mjs`. The adapter, CPU and guest have
+not been executed for this checkpoint.
