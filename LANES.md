@@ -20,6 +20,14 @@ actual startup and switching traces with independent electrical controls and
 named mutations before any implementation landing. No CPU, device-model,
 workflow, CUI/Lite source, consumer pin or deployment change. Keep the Lite
 adoption frozen until owning upstream qualification and guarded adoption.
+Baseline checkpoint: the new standalone electrical suite has two real
+weak-drive failures and one passing independent strong-drive RL control.
+These are desired-behavior regressions, not expected-failure passes. Both
+unqualified integration drafts were removed; runtime source bytes remain
+identical to the base. The scoped specification records the native reduction,
+rejected experiments, limited independent SPICE control and remaining proof.
+Only the lane branch receives this deliberately red checkpoint; no production
+implementation or consumer adoption is released by it.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
