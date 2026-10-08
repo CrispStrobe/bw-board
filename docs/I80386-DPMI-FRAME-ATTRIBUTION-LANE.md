@@ -169,9 +169,13 @@ actual CPU, board and VGA sources. All 23 pure controls and exact source
 admission passed: 195 Git-bound roles and 62 recursive ESM nodes. The CPU,
 workflow and inherited compiler/media/ROM/notice pins are unchanged.
 
-Fresh enabled checks on exact `4c22a574` must pass before a new, separately
-identified attempt. The correction has not run in a guest. Do not replay or
-rewrite the original failed run.
+All 12 enabled checks on exact `4c22a574` passed, with only the two declared
+`vectors-full` skips. The corrected source also passed the independently
+audited [three-scenario xv6 regression](receipts/2026-10-08-0501-reference-fix-xv6/README.md).
+After those gates, the dedicated label was applied once to PR464, creating
+[new actual run 37818842928](https://github.com/CrispStrobe/bw-board/actions/runs/37818842928).
+Its corrected AT result is pending. Do not replay or rewrite the original
+failed run, or infer allocation-frame success from CI or xv6.
 
 ## First deliverable
 
