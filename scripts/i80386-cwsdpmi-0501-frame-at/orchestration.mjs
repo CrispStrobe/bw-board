@@ -16,11 +16,14 @@ export function guardObservation(operation) {
 
 export function createFrameOrchestration(ports,{policy,opportunity}) {
   if (!ports || typeof ports.bind!=='function' || typeof ports.step!=='function' ||
+      typeof ports.progress!=='function' ||
       !policy || typeof policy.arm!=='function' ||
       typeof policy.afterStep!=='function' || typeof policy.finish!=='function' ||
       typeof opportunity!=='function')
     throw new Error('frame port contract');
-  let bound=false,armed=false,firstFailure=null,wrapperReceipt=null;
+  let bound=false,armed=false,terminalEmitted=false,
+    firstFailure=null,wrapperReceipt=null;
+  let lastProgress=null,stepCalls=0;
   let busy=false,reentered=false;
   const fail=reason=>{
     firstFailure??=reason;
@@ -35,7 +38,20 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
       return result;
     }finally{busy=false;}
   };
+  const emitFrameMilestone=event=>{
+    if(!lastProgress) return fail('frame milestone lacks finite-client progress');
+    const status=policy.status();
+    const frameProgress=Object.freeze({event,stepCalls,
+      wrapper:wrapperReceipt,cpuJournal:status});
+    // The adapter wraps this in a top-level pending/false report. Keep the
+    // inherited partial result and its first failure alongside the frame.
+    ports.progress({...lastProgress,frameProgress});
+  };
   const wrapped={...ports,
+    progress(value){
+      lastProgress=value;
+      ports.progress(value);
+    },
     bind(){return exclusive(()=>{
       if(firstFailure) return fail(firstFailure);
       if(bound) return fail('duplicate owned-main cut');
@@ -65,16 +81,24 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
           catch(error){firstFailure??='journal arm exception';throw error;}
           if(firstFailure)return fail(firstFailure);
           if(state.phase!=='armed') return fail(state.firstFailure||'journal arm refused');
+          try {emitFrameMilestone('armed');}
+          catch(error){firstFailure??='frame arm progress exception';throw error;}
         }
       }
       try {ports.step();}
       catch(error){firstFailure??='machine step exception';throw error;}
       if(firstFailure)return fail(firstFailure);
+      stepCalls++;
       if(armed){
         let state;
         try {state=policy.afterStep();}
         catch(error){firstFailure??='journal poll exception';throw error;}
         if(firstFailure)return fail(firstFailure);
+        if(!terminalEmitted&&(state.phase==='complete'||state.phase==='invalid')){
+          try {emitFrameMilestone(state.phase);}
+          catch(error){firstFailure??='frame terminal progress exception';throw error;}
+          terminalEmitted=true;
+        }
         if(state.phase==='invalid')
           return fail(state.firstFailure||'journal invalid');
       }

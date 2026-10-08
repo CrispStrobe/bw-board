@@ -154,7 +154,9 @@ export function run(inputPath,outputPath,progressPath){
         schema:report.schema,passed:false,stage:progressReport.stage,
         firstFailure:progressReport.firstFailure,
         scope:'pending frame qualification; finite client progress only',
-        inputHashes:report.inputHashes,finiteClientProgress:progressReport})},
+        inputHashes:report.inputHashes,
+        frame0501Progress:progressReport.frameProgress??null,
+        finiteClientProgress:progressReport})},
       {machine,layout,token});
     report.finiteClient=finite;
     report.frame0501=finite.frame0501??null;
