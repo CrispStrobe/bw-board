@@ -89,8 +89,8 @@ jobs:
           save()
           if len(raw)!=2047171 or sha(raw)!='80690b6e44ff8bc6c6081fca1f4faeba1591c4490b76ef0ec8b35847baa5deea':
               raise ValueError('source archive pin')
-          targets={'src/libc/go32/exceptn.s':('c0e40d70a9439aea6498c16a0f523c3fbded61093eeb83899579bb9663939720',12198),
-                   'src/libc/go32/dpmiexcp.c':('53161981a15802bfe7a20495d2f30432ae7fb134752312fa441ee361226653c5',20322)}
+          targets={'src/libc/go32/exceptn.s':('src/libc/go32/exceptn.S','c0e40d70a9439aea6498c16a0f523c3fbded61093eeb83899579bb9663939720',12198),
+                   'src/libc/go32/dpmiexcp.c':('src/libc/go32/dpmiexcp.c','53161981a15802bfe7a20495d2f30432ae7fb134752312fa441ee361226653c5',20322)}
           with zipfile.ZipFile(io.BytesIO(raw)) as z:
               infos=z.infolist()
               if len(infos)>2500:raise ValueError('source archive member cap')
@@ -98,7 +98,7 @@ jobs:
               for item in infos:
                   key=item.filename.casefold()
                   if key not in targets:continue
-                  if key in found or item.filename!=key or item.filename.startswith('/') or '..' in pathlib.PurePosixPath(item.filename).parts:
+                  if key in found or item.filename!=targets[key][0] or item.filename.startswith('/') or '..' in pathlib.PurePosixPath(item.filename).parts:
                       raise ValueError('source member identity')
                   if item.is_dir() or stat.S_IFMT(item.external_attr>>16)==stat.S_IFLNK or item.file_size>100000:
                       raise ValueError('source member shape')
@@ -108,7 +108,7 @@ jobs:
               for key,item in sorted(found.items()):
                   member=z.read(item)
                   if len(member)!=item.file_size:raise ValueError('source member length')
-                  expected,size=targets[key]
+                  _,expected,size=targets[key]
                   selected[item.filename]={'bytes':len(member),'sha256':sha(member),
                     'equalsReviewedMirror':len(member)==size and sha(member)==expected}
           receipt['members']=selected
