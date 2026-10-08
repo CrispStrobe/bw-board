@@ -130,7 +130,7 @@ function state(machine){
     machineCycles:machine.cycles,shutdown:cpu.shutdown};
 }
 function writeProgress(path,report){
-  const temporary=path+'.pending';
+  const temporary=path+'.pending.json';
   fs.writeFileSync(temporary,JSON.stringify(report,null,2)+'\n');
   fs.renameSync(temporary,path);
 }
