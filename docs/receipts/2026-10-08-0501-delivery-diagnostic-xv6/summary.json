@@ -36,5 +36,35 @@
     "peer": "independent original packet/log/Git and source/build/image/input review",
     "producerHelperImports": false,
     "guestReplay": false
+  },
+  "fullCI": {
+    "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37822517504",
+    "event": "push",
+    "attempt": 1,
+    "source": "0714159c9875ac17bf5ef5a8e5418f5815fa1608",
+    "originalLog": {
+      "bytes": 4882054,
+      "sha256": "e70d5e929554516d55c5f3ec1b776266cdb7219167572cd0c44c151ffafaf6d0"
+    },
+    "current": {
+      "tests": 8479,
+      "pass": 8177,
+      "fail": 0,
+      "skip": 302
+    },
+    "historical": {
+      "tests": 288,
+      "pass": 288,
+      "fail": 0,
+      "skip": 0
+    },
+    "precedingVectorAdmission": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skip": 0
+    },
+    "focusedPassingNames": 60,
+    "audit": "root and independent peer original-log/official-metadata/immutable-Git review; no replay or helper imports"
   }
 }

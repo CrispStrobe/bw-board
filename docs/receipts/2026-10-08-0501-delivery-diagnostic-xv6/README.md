@@ -21,3 +21,11 @@ This is a regression under the existing CR4 `0x10` compatibility profile. It
 does not qualify a strict physical 386DX, the actual rejected-delivery diagnostic,
 a completed allocation-frame pair, performance or consumer adoption. See the
 [frame attribution lane](../../I80386-DPMI-FRAME-ATTRIBUTION-LANE.md).
+
+The same reviewed source passed [full push CI 37822517504](https://github.com/CrispStrobe/bw-board/actions/runs/37822517504),
+attempt 1: 8,479 current tests, 8,177 pass, zero fail and 302 skip; all 288
+historical tests pass, with 2/2 preceding vector-admission controls. Root and
+independent peer checked the original log and all 60 focused names against
+immutable Git. Its original log hash and counts are retained separately in the
+summary. This single full-CI result does not establish that every enabled PR
+check has finished, or qualify the actual delivery diagnostic.
