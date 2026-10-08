@@ -16,6 +16,7 @@ const rowsOk=rows=>Array.isArray(rows)&&rows.length===25&&
   rows.every(row=>typeof row==='string'&&row.length<=80);
 const last=rows=>rowsOk(rows)?[...rows].reverse().find(row=>row.trim())?.trim()??'':'';
 export const currentPrompt=rows=>/^[A-Z]:\\>$/.test(last(rows));
+export const currentCPrompt=rows=>last(rows)==='C:\\>';
 export const fullVerifyEcho=rows=>rowsOk(rows)&&rows.some(row=>
   row.trim().toLowerCase()===('C:\\>'+SECOND).toLowerCase());
 const scans=text=>encode(text+'\r').map(event=>event.scan);
@@ -53,7 +54,7 @@ const diagnostic=/^BW_HMT_OK\r\nBW_HMT_VALUES address=(0|[1-9][0-9]*) requested=
 export function projectOutput(output){
   if(!Buffer.isBuffer(output)||output.length>256||output.some(byte=>byte>127))return null;
   const match=diagnostic.exec(output.toString('ascii'));
-  if(!match)return null;
+  if(!match||match[0].length!==output.length)return null;
   const fields=Object.fromEntries(['address','requested','selector_base','selector_limit',
     'first','last','polls','delta','checksum'].map((key,index)=>[key,Number(match[index+1])]));
   if(Object.values(fields).some(value=>!Number.isSafeInteger(value)||value>0xffffffff))return null;
@@ -66,7 +67,7 @@ export function projectOutput(output){
   return Object.freeze(fields);
 }
 function exactFiles(files,returned){
-  if(!files||typeof files!=='object'||!names.every(name=>
+  if(!files||typeof files!=='object'||Object.keys(files).sort().join()!==names.slice().sort().join()||!names.every(name=>
     Object.hasOwn(files,name)))return false;
   return projectOutput(files.output)!==null&&exact(files.ok,EXIT_OK)&&
     files.fail===null&&(returned?exact(files.returned,RETURN):files.returned===null);
@@ -85,7 +86,7 @@ export function gradeBatch({session,initial,cutFiles,files,rows,accepted,boundSt
     order:Number.isSafeInteger(step)&&step>boundStep,
     exactFiles:exactFiles(files,false),
     batchVisible:rowsOk(rows)&&rows.some(row=>row.trim()===BATCH_DONE),
-    currentPrompt:currentPrompt(rows),
+    currentPrompt:currentCPrompt(rows),
     noPending:pendingKeys===0,
   };
   const result=Object.freeze({checks:Object.freeze(checks),
@@ -109,10 +110,10 @@ export function gradeReturn({session,batch,files,accepted,secondQueuedStep,
     commandQueued:queued,
     secondInput:secondEnd!==null&&secondEnd>=secondQueuedStep,
     noPreexistingVerifyEcho:rowsOk(queuedRows)&&!fullVerifyEcho(queuedRows),
-    durableVerifyEcho:fullVerifyEcho(echoRows)&&currentPrompt(echoRows)&&
+    durableVerifyEcho:fullVerifyEcho(echoRows)&&currentCPrompt(echoRows)&&
       Number.isSafeInteger(echoStep)&&echoStep>secondEnd&&echoStep<=firstStep,
     exactFiles:exactFiles(files,true),
-    stablePrompt:currentPrompt(firstRows)&&currentPrompt(secondRows)&&
+    stablePrompt:currentCPrompt(firstRows)&&currentCPrompt(secondRows)&&
       Number.isSafeInteger(firstStep)&&Number.isSafeInteger(secondStep)&&
       firstStep>=secondEnd&&secondStep-firstStep>=100000,
     noPending:pendingKeys===0,

@@ -17,7 +17,7 @@ for(const bad of [
   SUCCESS.replace('last=732238','last=732237'),
   SUCCESS.replace('checksum=4225408','checksum=4225409'),
   SUCCESS.replace('address=4849664','address=04849664'),
-  SUCCESS+'\r\n',SUCCESS+' extra',SUCCESS.replace('address=4849664','address=-1'),
+  SUCCESS+'\r\n',SUCCESS+'\r\n\n',SUCCESS+' extra',SUCCESS.replace('address=4849664','address=-1'),
 ]) assert.equal(projectOutput(bytes(bad)),null,bad);
 assert.equal(projectOutput(Buffer.concat([bytes(SUCCESS),Buffer.from([0xff])])),null);
 const initial={output:null,ok:null,fail:null,returned:null};
@@ -54,6 +54,8 @@ for(const change of [
   {files:{...batchFiles,ok:bytes('prefix '+EXIT_OK)}},
   {files:{...batchFiles,fail:bytes('BW-DPMI-EXIT-FAIL')}},
   {files:{...batchFiles,returned:bytes(RETURN)}},
+  {files:{...batchFiles,extra:null}},
+  {rows:rows('A:\\>')},
   {rows:rows('running')},
   {rows:rows('C:\\>','other marker')},
   {rows:rows('running','A:\\>')}, // stale old prompt above active line
@@ -71,6 +73,8 @@ assert.equal(gradeBatch({...batchInput,accepted:[{scan:0x1e,step:1,accepted:true
 for(const change of [
   {files:{...returnFiles,returned:bytes('prefix '+RETURN)}},
   {files:{...returnFiles,fail:bytes('BW-DPMI-EXIT-FAIL')}},
+  {files:{...returnFiles,extra:null}},
+  {secondRows:rows('A:\\>')},
   {accepted:[...first,...second.slice(0,-1)]},
   {accepted:[...first, ...accepted(SECOND_SCANS,1098)]},
   {accepted:[{...first[0],scan:first[0].scan^1},...first.slice(1),...second]},
