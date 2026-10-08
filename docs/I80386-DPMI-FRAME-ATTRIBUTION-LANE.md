@@ -250,7 +250,7 @@ use fresh exact source-policy hashes and an isolated branch. Complete source
 review and every enabled exact-head check before one new actual run. The
 profile implementation is published in [draft PR466](https://github.com/CrispStrobe/bw-board/pull/466)
 at source-review checkpoint
-[`94ecaacb`](https://github.com/CrispStrobe/bw-board/commit/94ecaacbdc0ba84c422062c4e7995539a714ec12),
+[`1ecb987b`](https://github.com/CrispStrobe/bw-board/commit/1ecb987b86217c7c549fffc1d3b7ff498898b9dd),
 stacked on PR465's `0714159c`. It preserves the default observer and selects
 `gate14-code16-stack32-same-cpl3.v1` explicitly through the controller.
 The observer checks handler descriptor contents and live cache identity after
@@ -261,8 +261,12 @@ plus selected-profile gate16 and stack16 rejection.
 
 Source controls, syntax checks, all 24 CPU-free policy/orchestration controls,
 and exact-head source identity (196 roles, 62 recursive JavaScript nodes) pass.
-CPU-focused regressions and a real guest frame pair remain pending hosted
-qualification; no local CPU execution or new speed measurement is claimed.
+The first hosted source `94ecaacb` failed one new test in both CI and the xv6
+workflow: a 16-bit IRET on a 32-bit frame raised the original guest #GP, which
+the test had not expected. The [preserved failure and correction receipt](receipts/2026-10-08-0501-mixed-profile-ci-correction/README.md)
+records both runs. Reviewed `1ecb987b` corrects that expectation and source pins
+only; CPU code is unchanged. Fresh hosted checks and a real guest frame pair
+remain pending; no new speed measurement is claimed.
 Refresh open PRs and exact-head checks before duplicating work. Outer-CPL
 16-bit return semantics and other combinations remain separate tasks.
 
