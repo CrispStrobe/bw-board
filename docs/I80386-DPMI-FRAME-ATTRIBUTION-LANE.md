@@ -73,20 +73,9 @@ malformed frame context, status/drain counter disagreement, CF/address
 mismatch and preservation of invalid reset/step-cap reasons. Caller-supplied
 snapshots and synthetic records do not authenticate a pause or actual CPU event.
 
-The next implementation belongs in `scripts/i80386-cwsdpmi-0501-frame-at/`:
-
-1. Add an actual driver that preserves the frozen finite-client behavior,
-   owns the same-machine main cut, and privately retains fresh wrapper admission.
-2. At the wrapper opportunity, own the synchronous passive read and unchanged
-   CPU/board/RAM/page-table checks. Arm once; poll and drain only after ordinary
-   returned machine steps. Preserve invalid observations without retry.
-3. Bind the pair to that run's strict output, finite client exit and fresh shell
-   return. Add driver controls for a passing client with no authenticated pair,
-   changed wrapper/state, wrong records and output disagreement.
-4. Add a separately named exact source manifest and hosted workflow retaining
-   inherited input/compiler/notice pins and authenticating the changed CPU.
-   Review the source and all enabled checks before one actual diagnostic, then
-   audit its original artifact independently without producer imports or replay.
+The follow-up runnable adapter is recorded in the next section. Continue
+from its remaining gates rather than repeating this policy slice or creating
+another driver namespace. The final acceptance checks below still apply.
 
 Neither this policy checkpoint nor its controls qualifies a guest frame,
 physical mapping, performance or consumer adoption.
