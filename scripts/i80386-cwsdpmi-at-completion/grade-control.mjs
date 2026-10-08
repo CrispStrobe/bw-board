@@ -16,6 +16,7 @@ const batchInput={session,initial,cutFiles:initial,files:batchFiles,rows:rows(),
   boundStep:500,step:1000,pendingKeys:0};
 const batch=gradeBatch(batchInput);
 assert.equal(batch.passed,true);
+assert.equal(gradeBatch({...batchInput,cutFiles:{...initial,output:Buffer.alloc(0)}}).passed,true);
 assert.equal(currentPrompt(rows('C:\\>')),true);
 assert.equal(currentPrompt(rows('Still running','A:\\>')),false);
 const finalInput={session,batch,files:returnFiles,accepted:[...first,...second],
@@ -26,6 +27,9 @@ assert.equal(gradeReturn(finalInput).passed,true);
 for(const change of [
   {initial:{...initial,returned:bytes(RETURN)}},
   {cutFiles:{...initial,output:bytes(SUCCESS)}},
+  {cutFiles:{...initial,ok:bytes(EXIT_OK)}},
+  {cutFiles:{...initial,fail:bytes('BW-DPMI-EXIT-FAIL')}},
+  {cutFiles:{...initial,returned:bytes(RETURN)}},
   {files:{...batchFiles,output:Buffer.concat([batchFiles.output,Buffer.from('x')])}},
   {files:{...batchFiles,ok:bytes('prefix '+EXIT_OK)}},
   {files:{...batchFiles,fail:bytes('BW-DPMI-EXIT-FAIL')}},

@@ -5,6 +5,11 @@ import {encode} from '../i80386-dos32a-owned/keyboard.mjs';
 
 const names=['output','ok','fail','returned'];
 const issuedBatches=new WeakMap();
+// DOS command redirection may create/truncate DPOUT before CLIENT reaches main.
+const cutReady=files=>!!files&&typeof files==='object'&&
+  Object.hasOwn(files,'output')&&
+  (files.output===null||(Buffer.isBuffer(files.output)&&files.output.length===0))&&
+  ['ok','fail','returned'].every(name=>Object.hasOwn(files,name)&&files[name]===null);
 const exact=(value,text)=>Buffer.isBuffer(value)&&
   value.equals(Buffer.from(text+'\r\n','ascii'));
 const rowsOk=rows=>Array.isArray(rows)&&rows.length===25&&
@@ -56,7 +61,7 @@ export function gradeBatch({session,initial,cutFiles,files,rows,accepted,boundSt
     tapeBeforeBatch:tape!==null&&Number.isSafeInteger(step)&&
       tape.every(event=>event.step<=step),
     initialAbsent:!!initial&&names.every(name=>Object.hasOwn(initial,name)&&initial[name]===null),
-    cutAbsent:!!cutFiles&&names.every(name=>Object.hasOwn(cutFiles,name)&&cutFiles[name]===null),
+    cutUnwritten:cutReady(cutFiles),
     loadedCut:Number.isSafeInteger(boundStep)&&boundStep>=0,
     firstInput:firstEnd!==null&&firstEnd<=boundStep,
     order:Number.isSafeInteger(step)&&step>boundStep,
