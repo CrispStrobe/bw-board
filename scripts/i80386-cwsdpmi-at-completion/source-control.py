@@ -48,6 +48,7 @@ graph = source.walk_imports([role], set(tree), lambda name: tree[name])
 assert set(graph) == set(tree)  # real.mjs was already a known role
 
 assert "scripts/i80386-cwsdpmi-owned/acquire.py" in source.INHERITED_EXACT
+assert "scripts/i80386-cwsdpmi-at-owned-code/cut-control.mjs" in source.WORKFLOW_ESM_ROOTS
 assert "roms/free-at-bios/BIOS-bochs-legacy" in source.BIOS
 assert "roms/free-at-bios/vgabios-lgpl.bin" in source.BIOS
 

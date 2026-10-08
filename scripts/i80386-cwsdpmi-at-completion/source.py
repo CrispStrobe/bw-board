@@ -14,6 +14,11 @@ HELPER_HEAD = "8673b496dbfac889aa6b8058da9d4b1c97b5f07b"
 NEW = "scripts/i80386-cwsdpmi-at-completion/"
 HELPER = "scripts/i80386-cwsdpmi-at-owned-code/"
 WORKFLOW = ".github/workflows/i80386-cwsdpmi-at-completion.yml"
+WORKFLOW_ESM_ROOTS = frozenset({
+    "scripts/i80386-cwsdpmi-at-owned/binding-control.mjs",
+    "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs",
+    "scripts/i80386-cwsdpmi-at-owned-code/cut-control.mjs",
+})
 # Only the two reviewed strict-cut helper roles differ from diagnostic BASE.
 # Every other inherited role, including CPU, ROM, media and compiler code,
 # remains byte-exact at BASE. The separate helper's five files equal its head.
@@ -157,7 +162,8 @@ def identity(expected):
     # including the real VGA class and AT CPU. Inherited unused roles remain
     # byte-authenticated separately; their comment examples are not imports.
     graph = walk_imports(
-        (role for role in current if role.endswith((".mjs", ".js"))),
+        {role for role in current if role.endswith((".mjs", ".js"))} |
+        WORKFLOW_ESM_ROOTS,
         names, lambda role: git("show", f"HEAD:{role}"))
     roles.update(graph)
     if "src/experimental/vga-memory.js" not in roles or \
