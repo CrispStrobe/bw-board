@@ -4,6 +4,9 @@ const BACKING = 16 << 20;
 const MAX_READ = 1 << 20;
 const active = new WeakMap();
 const u32 = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
+// CPU task-switch bookkeeping uses `cr0 |= 8`, which can store the same
+// 32-bit CR0 bits as signed int32. No other source scalar is widened here.
+const cr0Word = n => Number.isInteger(n) && n >= -0x80000000 && n <= 0xffffffff;
 
 function own(object,key) {
   const d = object && Object.getOwnPropertyDescriptor(object,key);
@@ -43,7 +46,8 @@ function context(machine) {
   const cr0=own(cpu,'cr0'),cr3=own(cpu,'cr3'),cr4=own(cpu,'cr4'),
     cs=own(cpu,'cs'),eflags=own(cpu,'eflags'),cache=own(cpu,'segmentCaches');
   const code=own(cache,1);
-  if(own(cpu,'cpuProfile')!=='compatibility' || ![cr0,cr3,cr4,cs,eflags].every(u32) ||
+  if(own(cpu,'cpuProfile')!=='compatibility' || !cr0Word(cr0) ||
+     ![cr3,cr4,cs,eflags].every(u32) ||
      !(cr0&1) || cr4!==0 || (eflags&0x20000) || own(cpu,'_retainedRealCs')!==false ||
      own(code,'default32')!==true || own(code,'present')!==true ||
      own(code,'code')!==true || !u32(own(code,'base')))

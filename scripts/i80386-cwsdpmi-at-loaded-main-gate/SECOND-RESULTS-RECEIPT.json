@@ -1,0 +1,39 @@
+{
+  "schema": "bw.cwsdpmi-owned.at-loaded-main-second-result.v1",
+  "testedSource": "052e0b684ca7362300b99b9c609506725347fdf8",
+  "run": {
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37738630130",
+    "conclusion": "FAILURE",
+    "qualification": "FAIL"
+  },
+  "artifact": {
+    "id": 11533659864,
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11533659864",
+    "bytes": 124705,
+    "sha256": "d31398a13c8caa9f7e8eeb82662e21c654cab2393a19079ed5e9e06615dd55ea",
+    "members": 95
+  },
+  "observed": {
+    "steps": 44605932,
+    "acceptedScans": 34,
+    "candidateStep": 44605932,
+    "candidateCs": 167,
+    "candidateEip": 75168,
+    "candidateCr0Raw": -2147483639,
+    "candidateCr0Bits": "0x80000009",
+    "candidateCr3": 229376,
+    "candidateCr4": 0,
+    "candidateA20Enabled": true,
+    "failedObservationUnchanged": true,
+    "firstFailure": "unsupported protected 32-bit paging profile",
+    "loadedTextBound": false,
+    "sourceRoles": 142,
+    "visitedJsModules": 42
+  },
+  "audits": [
+    "root original-packet integrity/source and input/candidate audits PASS",
+    "independent peer original-packet integrity/source/candidate audit PASS"
+  ],
+  "correctionStatus": "SOURCE_ONLY_UNRUN",
+  "inferenceLimit": "A mapped pre-step candidate was observed, but no loaded-text bind or first main instruction was proven."
+}
