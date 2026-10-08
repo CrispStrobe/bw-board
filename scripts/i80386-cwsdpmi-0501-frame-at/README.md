@@ -1,10 +1,11 @@
 # AX=0501 frame controller source checkpoint
 
-This source-only checkpoint prepares a narrow controller for one owned DPMI
+This unrun source checkpoint prepares a narrow controller for one owned DPMI
 `INT 31h` AX=0501 delivery and matching protected 32-bit IRET. The runnable
 adapter accepts the same pinned inputs as the finite high-memory AT gate and
-wraps its unchanged completion scenario. It has no hosted AT guest result,
-workflow, or source-closure admission yet. The earlier finite high-memory
+wraps its unchanged completion scenario. It has no hosted AT guest result.
+A dedicated source-closure gate and label-only hosted workflow are present
+but have not been dispatched. The earlier finite high-memory
 client result does not establish interrupt-frame ownership.
 
 `admitFreshWrapper` calls the unchanged fresh executable/map/compile admission
@@ -44,7 +45,7 @@ disk bytes are report fields. The adapter retains the bounded wrapper receipt
 at arm and the full terminal CPU journal at complete/invalid, each as a
 separate progress milestone, so an external timeout does not erase a reached
 frame observation. It does not rewrite the progress file on every step. A
-dedicated source-closure gate and hosted workflow still need review before
+source-closure gate and hosted workflow require exact-head review before
 any actual dispatch.
 
 The pure test supplies synthetic records. It verifies policy ordering and

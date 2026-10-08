@@ -17,6 +17,11 @@ ORCHESTRATION_TEST = "test/i80386-0501-frame-orchestration.test.mjs"
 CPU_SHA = "4791aeb192aef93be0d27ccb69ac4022e092eae97dc092764e3b578d36a49002"
 WORKFLOW_ESM_ROOTS = frozenset({
     "scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs",
+    "scripts/i80386-cwsdpmi-highmem-timer/media-control.mjs",
+    "scripts/i80386-cwsdpmi-highmem-at/binding-control.mjs",
+    "scripts/i80386-cwsdpmi-highmem-at/cut-control.mjs",
+    "scripts/i80386-cwsdpmi-highmem-at/grade-control.mjs",
+    "scripts/i80386-cwsdpmi-highmem-at/driver-control.mjs",
     POLICY_TEST, ORCHESTRATION_TEST,
 })
 INHERITED_PREFIXES = (
