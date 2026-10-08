@@ -12,6 +12,13 @@ The separate frozen historical cohort passed all 288 tests. Both child exits
 were zero and cleanup succeeded. All 24 original journal controls and five
 additional boundary controls have passing exact-name TAP rows.
 
+The same source also passed [full push CI 37792187810](https://github.com/CrispStrobe/bw-board/actions/runs/37792187810):
+8,448 current tests, 8,146 pass, zero fail and 302 skip; all 288 historical
+tests passed. Root checked its original log and official metadata read-only;
+the summary records that separate log's byte count and hash. All 12 enabled
+PR460 checks passed, with two declared `vectors-full` skips. The draft remains
+unmerged, and this is not qualification of the later frame adapter.
+
 The original five-JSON artifact records the 4 MiB shell/filesystem exercise,
 14 MiB shell boot and 4 MiB `forktest` completion, each bound to the executed
 source and pinned MIT xv6 source `eeb7b415dbcb12cc362d0783e41c3d1f44066b17`.

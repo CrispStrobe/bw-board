@@ -30,7 +30,7 @@ The follow-up source checkpoint
 [`13d82f31`](https://github.com/CrispStrobe/bw-board/commit/13d82f3116107a1c4d8dff421db747eaa1bfef23)
 adds five CPU boundary controls: fault fallback, successful task delivery,
 post-commit task failure, excluded 16-bit return and same-CPL 32-bit return.
-These five controls await hosted execution. The CPU bytes remain identical to
+All five passed the corrected hosted run described below. The CPU bytes remain identical to
 `2f979b37`.
 
 CI now partitions the selected tests without omissions: current tests run on
@@ -51,7 +51,11 @@ the filesystem exercise and process-exhaustion regression. Root and independent
 peer matched all 29 journal controls to passing rows and audited the original
 five-JSON guest artifact against Git. See the [bounded receipt and limits](receipts/2026-10-08-0501-journal-xv6/README.md).
 This qualifies those regressions, not an allocation-frame guest or consumer
-adoption. Other enabled PR checks still need exact-head completion.
+adoption. The full [push CI run 37792187810](https://github.com/CrispStrobe/bw-board/actions/runs/37792187810)
+also passed: current cohort 8,448 tests, 8,146 pass, zero fail and 302 skip;
+historical cohort 288/288 pass. All 12 enabled PR460 checks have now passed at
+`13d82f31`; the two declared `vectors-full` jobs skipped. This does not merge
+the draft source or qualify the later adapter.
 
 ## Unconnected controller-policy checkpoint
 
@@ -96,20 +100,43 @@ once, and polls after ordinary machine steps. It preserves the full CPU pair,
 wrapper hashes and separate client/frame verdicts. Reentry, observer failure
 and arm exceptions are terminal even if a caller catches the error.
 
-Before an actual attempt, finish these tasks:
-
-1. Retain wrapper and CPU-journal milestones in bounded partial progress. The
-   current intermediate progress contains only finite-client fields, so an
-   external timeout before final report would lose those frame records.
-2. Add the exact new source manifest and dedicated hosted workflow, preserving
-   inherited compiler/input/notice pins and binding all executable imports.
-3. Review the final source and every enabled exact-head check. Then authorize
-   one bounded diagnostic and audit its original packet without helper imports
-   or replay. Require both the committed pair and same-run finite completion.
-
 The executable invocation and pure-control commands are documented in the
 [new namespace README](https://github.com/CrispStrobe/bw-board/blob/8b82bde41f2fffff07279834a333a47bcd8f5a7f/scripts/i80386-cwsdpmi-0501-frame-at/README.md).
 This is runnable source preparation, not an allocation-frame guest result.
+
+## Hosted gate preparation checkpoint
+
+[Draft PR463](https://github.com/CrispStrobe/bw-board/pull/463), reviewed head
+[`e20343e1`](https://github.com/CrispStrobe/bw-board/commit/e20343e162765a86c9cd589b5b7281e19c5da816),
+is stacked on `8b82bde4`. Partial progress now retains the wrapper receipt at
+arm and the full terminal CPU journal at complete/invalid. Later routine
+updates preserve that milestone, and a failed progress write does not replace
+the CPU's invalidation reason. Every partial report remains top-level
+`passed:false`; no raw RAM, executable or disk bytes are retained.
+
+The new source manifest binds 194 Git-matching roles and 61 recursive ESM nodes,
+including the actual driver and all invoked JavaScript controls. The CPU and
+inherited compiler, input, media, ROM and notice pins are unchanged. The
+dedicated workflow accepts the `x86-cwsdpmi-0501-frame-at` label on a
+same-repository PR, checks out that exact head and allows attempt 1 only.
+Source is checked before and after execution; report upload requires successful
+bounded inventory. Root and independent peer reviewed the exact source; all
+20 CPU-free policy/orchestration controls and source-admission controls passed.
+No compiler, CPU or guest execution occurred for this checkpoint.
+
+Continue with these remaining gates:
+
+1. Wait for every enabled PR463 check on exact `e20343e1` to succeed. Preserve
+   any failures and investigate them without rewriting historical receipts.
+2. After exact-head source review and CI, apply the dedicated label once for
+   one bounded diagnostic. The workflow has not been dispatched yet.
+3. Audit its original official packet independently, without producer-helper
+   imports or guest replay. Require the selected committed pair and same-run
+   finite completion; retain partial progress and first failure otherwise.
+
+Use the [current README](https://github.com/CrispStrobe/bw-board/blob/e20343e162765a86c9cd589b5b7281e19c5da816/scripts/i80386-cwsdpmi-0501-frame-at/README.md)
+and [dedicated workflow](https://github.com/CrispStrobe/bw-board/blob/e20343e162765a86c9cd589b5b7281e19c5da816/.github/workflows/i80386-cwsdpmi-0501-frame-at.yml).
+This checkpoint does not qualify a guest frame, performance or consumer adoption.
 
 ## First deliverable
 
