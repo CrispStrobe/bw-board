@@ -74,6 +74,47 @@ jobs:
           fetch freedos 135s 120 33554432 freedos.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.4/FD14-FloppyEdition.zip
           phase=compile
           timeout --signal=TERM --kill-after=10s 360s python3 -B scripts/i80386-cwsdpmi-compile-only/compile.py "$i/toolchain.tar.bz2" "$i/djcrx205.zip" "$i/djdev205.zip" "$i/djlsr205.zip" scripts/i80386-cwsdpmi-owned/client.c "$e/compile-audit" "$w/compile" > "$e/compile.stdout" 2> "$e/compile.stderr"
+          phase=source-slot-observation
+          timeout --signal=TERM --kill-after=5s 20s python3 -B - "$i/djlsr205.zip" "$e/source-slot-observation.json" <<'PY'
+          import hashlib,io,json,pathlib,stat,sys,zipfile
+          archive,output=map(pathlib.Path,sys.argv[1:])
+          sha=lambda raw:hashlib.sha256(raw).hexdigest()
+          with archive.open('rb') as source:
+              raw=source.read(2047172)
+              if source.read(1):raise ValueError('source archive size cap')
+          receipt={'schema':'bw.cwsdpmi-owned.source-slot-observation.v1',
+                   'archive':{'bytes':len(raw),'sha256':sha(raw)},
+                   'status':'INPUT_OBSERVED_NO_BINARY_CORRESPONDENCE'}
+          def save():output.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+          save()
+          if len(raw)!=2047171 or sha(raw)!='80690b6e44ff8bc6c6081fca1f4faeba1591c4490b76ef0ec8b35847baa5deea':
+              raise ValueError('source archive pin')
+          targets={'src/libc/go32/exceptn.s':('src/libc/go32/exceptn.S','c0e40d70a9439aea6498c16a0f523c3fbded61093eeb83899579bb9663939720',12198),
+                   'src/libc/go32/dpmiexcp.c':('src/libc/go32/dpmiexcp.c','53161981a15802bfe7a20495d2f30432ae7fb134752312fa441ee361226653c5',20322)}
+          with zipfile.ZipFile(io.BytesIO(raw)) as z:
+              infos=z.infolist()
+              if len(infos)>2500:raise ValueError('source archive member cap')
+              found={}
+              for item in infos:
+                  key=item.filename.casefold()
+                  if key not in targets:continue
+                  if key in found or item.filename!=targets[key][0] or item.filename.startswith('/') or '..' in pathlib.PurePosixPath(item.filename).parts:
+                      raise ValueError('source member identity')
+                  if item.is_dir() or stat.S_IFMT(item.external_attr>>16)==stat.S_IFLNK or item.file_size>100000:
+                      raise ValueError('source member shape')
+                  found[key]=item
+              if set(found)!=set(targets):raise ValueError('source members absent')
+              selected={}
+              for key,item in sorted(found.items()):
+                  member=z.read(item)
+                  if len(member)!=item.file_size:raise ValueError('source member length')
+                  _,expected,size=targets[key]
+                  selected[item.filename]={'bytes':len(member),'sha256':sha(member),
+                    'equalsReviewedMirror':len(member)==size and sha(member)==expected}
+          receipt['members']=selected
+          receipt['status']='PINNED_SOURCE_MEMBERS_OBSERVED_NO_BINARY_CORRESPONDENCE'
+          save()
+          PY
           phase=host-and-floppy
           timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-qemu-owned/package.py "$i/cwsdpmi.zip" "$e/package" "$w/package-private" > "$e/package.stdout" 2> "$e/package.stderr"
           timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-dos32a-owned/acquire.py "$i/freedos.zip" "$w/freedos-floppy.img" "$e/freedos-input.json" > "$e/freedos.stdout" 2> "$e/freedos.stderr"

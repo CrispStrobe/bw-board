@@ -23,8 +23,11 @@ follow-up source admits the source VGA text route and retains bounded rejection
 registers without attributing that historical failure to a proven mode value.
 The [second hosted attempt](SECOND-RESULTS.md) accepted keyboard input and
 recorded a protected `main` candidate, then refused the signed JavaScript CR0
-representation before any loaded-text bind. A CR0-only source correction is
-controlled locally but has no hosted result yet.
+representation before any loaded-text bind. A CR0-only source correction was
+then exercised by the third hosted attempt.
+The [third hosted attempt](THIRD-RESULTS.md) passed that CR0 guard and failed
+strict whole-text binding at linked text offset 23,472. The follow-up adds
+bounded mismatch metadata only; it keeps the exact-byte acceptance rule.
 
 The labeled hosted workflow authenticates exact Git source, recursive imports,
 dynamic Python helper roles and ROM bytes before the run and after it. It keeps

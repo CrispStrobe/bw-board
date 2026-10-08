@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {admitBoundImage, bindLoadedText} from './binding.mjs';
+import {admitBoundImage,admittedMainAddress,admittedTextExtent,
+  bindLoadedText,diagnoseLoadedText} from './binding.mjs';
 
 const hash = raw => createHash('sha256').update(raw).digest('hex');
 const textAddress = 0x1000, textSize = 0x800, coff = 512, rawPointer = 128;
@@ -102,4 +103,34 @@ assert.throws(() => bindLoadedText(layout, {...cpu,eip:0x1401}, read));
 assert.throws(() => bindLoadedText(layout, {...cpu,protectedMode:false}, read));
 assert.throws(() => bindLoadedText(layout, cpu, address =>
   address === base + layout.text.address + 3 ? 0 : read(address)));
+const expectedText=Buffer.from(exe.subarray(coff+rawPointer,coff+rawPointer+textSize));
+assert.equal(diagnoseLoadedText(layout,expectedText),null);
+layout.textBytes.fill(0);layout.roles.main.bytes=1;layout.text.sha256='0'.repeat(64);
+assert.equal(diagnoseLoadedText(layout,expectedText),null); // private admission wins
+const changed=Buffer.from(expectedText);
+changed[0x100]^=1;changed[0x401]^=1;changed[0x598]^=1;
+const diagnostic=diagnoseLoadedText(layout,changed);
+assert.equal(diagnostic.changedBytes,3);
+assert.deepEqual(diagnostic.spans,[
+  {offset:0x100,length:1},{offset:0x401,length:1},{offset:0x598,length:1}]);
+assert.equal(diagnostic.firstOffset,0x100);
+assert.equal(diagnostic.lastOffset,0x598);
+assert.equal(diagnostic.expectedSha256,hash(expectedText));
+assert.equal(diagnostic.observedSha256,hash(changed));
+assert.equal(diagnostic.roles.allocateMemory.equal,false);
+assert.equal(diagnostic.roles.main.equal,false);
+assert.equal(diagnostic.roles.freeMemory.equal,true);
+assert.equal(admittedMainAddress(layout),0x1400);
+assert.deepEqual(admittedTextExtent(layout),
+  {address:textAddress,bytes:textSize,mainAddress:0x1400});
+assert.throws(()=>diagnoseLoadedText({...layout},changed),/unadmitted/);
+assert.throws(()=>admittedTextExtent({...layout}),/unadmitted/);
+assert.throws(()=>diagnoseLoadedText(layout,changed.subarray(1)),/unadmitted/);
+const many=Buffer.from(expectedText);
+for(let n=0;n<33;n++)many[0x500+n*2]^=1;
+const capped=diagnoseLoadedText(layout,many);
+assert.equal(capped.spanCount,33);
+assert.equal(capped.spans.length,32);
+assert.equal(capped.spansTruncated,true);
+assert.equal(capped.changedBytes,33);
 console.log('CWSDPMI AT map/loaded-text controls PASS');

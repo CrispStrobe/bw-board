@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {readOrdinaryLinear} from '../i80386-cwsdpmi-at-loaded/passive-ram.mjs';
-import {bindLoadedText} from '../i80386-cwsdpmi-at-owned/binding.mjs';
+import {admittedMainAddress,admittedTextExtent,bindLoadedText,diagnoseLoadedText} from '../i80386-cwsdpmi-at-owned/binding.mjs';
 
 // A single synchronous, runner-owned pre-step cut. This module does not install
 // hooks, call the bus, or grant a pause lease to another caller.
@@ -62,8 +62,8 @@ const cacheFields = ['generation','page','cr3','cr4','physicalBase','userPage',
 
 export function candidateAtMain(machine, layout) {
   const cpu = own(machine, 'cpu'), caches = own(cpu, 'segmentCaches');
-  const code = own(caches, 1), main = layout?.roles?.main;
-  return !!main && Number.isInteger(main.address) && ownScalar(cpu, 'eip') === main.address &&
+  const code = own(caches, 1), mainAddress = admittedMainAddress(layout);
+  return ownScalar(cpu, 'eip') === mainAddress &&
     !!(ownScalar(cpu, 'cr0') & 1) && !(ownScalar(cpu, 'eflags') & 0x20000) &&
     ownScalar(cpu,'halted') === false && ownScalar(cpu,'shutdown') === false &&
     ownScalar(cpu, '_retainedRealCs') === false && ownScalar(code, 'default32') === true &&
@@ -172,16 +172,17 @@ export function bindAtMainCut(machine, layout) {
   try {
     if (!candidateAtMain(machine, layout)) throw new Error('not at protected 32-bit main');
     const cpu = own(machine,'cpu'), code = own(own(cpu,'segmentCaches'),1);
-    const base = own(code,'base'), address = layout.text.address;
+    const extent=admittedTextExtent(layout);
+    const base = own(code,'base'), address = extent.address;
     if (!Number.isInteger(base) || !Number.isInteger(address) ||
-        base < 0 || base + address + layout.text.bytes > 0x100000000)
+        base < 0 || base + address + extent.bytes > 0x100000000)
       throw new Error('loaded text linear span');
     const linear = base + address;
     references=identities(machine);
     before = observationFingerprint(machine);
     let copy = null, binding = null, failed = null;
     try {
-      copy = readOrdinaryLinear(machine,{sourcePaused:true,linear,length:layout.text.bytes});
+      copy = readOrdinaryLinear(machine,{sourcePaused:true,linear,length:extent.bytes});
       binding = bindLoadedText(layout,cpu,at => {
         if (at < linear || at >= linear + copy.length) throw new Error('snapshot reader extent');
         return copy[at - linear];
@@ -191,7 +192,20 @@ export function bindAtMainCut(machine, layout) {
     if (state.failed || !sameIdentities(references,identities(machine)) ||
         JSON.stringify(before) !== JSON.stringify(after))
       throw new Error('loaded-code observation mutated CPU/board/RAM');
-    if (failed) throw failed;
+    if (failed) {
+      // The strict binding still fails. Diagnose only from the one copied
+      // snapshot, after unchanged-state and reference-identity checks pass.
+      if (copy && /^loaded text differs at byte [0-9]+$/.test(failed.message)) {
+        try { failed.textMismatch=diagnoseLoadedText(layout,copy); }
+        catch(diagnosticError) {
+          let detail='diagnostic failed';
+          try {detail=String(diagnosticError?.message??diagnosticError).slice(0,200);}
+          catch {}
+          failed.diagnosticFailure=detail;
+        }
+      }
+      throw failed;
+    }
     state.completed=true;
     return {binding,loadedBytes:copy.length,loadedSha256:sha(copy),before,after};
   } catch(error) {

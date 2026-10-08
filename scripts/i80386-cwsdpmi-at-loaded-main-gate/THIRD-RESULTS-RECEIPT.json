@@ -1,0 +1,34 @@
+{
+  "schema": "bw.cwsdpmi-owned.at-loaded-main-third-result.v1",
+  "testedSource": "27ff49068baae8af7c54457c422fbb25a5ecfa2d",
+  "run": {
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37742758925",
+    "conclusion": "FAILURE",
+    "qualification": "FAIL"
+  },
+  "artifact": {
+    "id": 11535096751,
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11535096751",
+    "bytes": 124925,
+    "sha256": "c005fff4bcd33d1caa948c30c9d6413c8be1fd56eb5f274039c1978cc9fbb19a",
+    "members": 95
+  },
+  "observed": {
+    "candidateStep": 44605932,
+    "acceptedScans": 34,
+    "firstFailure": "loaded text differs at byte 23472",
+    "textOffset": 23472,
+    "mapAddress": "0x7598",
+    "mapSymbol": "__djgpp_our_DS",
+    "failedObservationUnchanged": true,
+    "loadedTextBound": false,
+    "sourceRoles": 144,
+    "visitedJsModules": 42
+  },
+  "audits": [
+    "root original-packet integrity/source and selected input/candidate audits PASS",
+    "independent peer original-packet integrity/source/candidate audit PASS"
+  ],
+  "correctionStatus": "SOURCE_ONLY_UNRUN_DIAGNOSTIC_STRICT_BINDING",
+  "inferenceLimit": "Map symbol association does not prove runtime mutation, binary-to-source correspondence, or an emulator fault; no raw EXE or guest code bytes were retained."
+}
