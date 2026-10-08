@@ -21,7 +21,7 @@ ownership.
 
 The next diagnostic actual, run 37830225406 at source
 `0714159c9875ac17bf5ef5a8e5418f5815fa1608`, retained a committed
-rejection fact: software vector 31 through a 32-bit type-14 gate at CPL3,
+rejection fact: software vector `0x31` through a 32-bit type-14 gate at CPL3,
 same-CPL 12-byte frame and 32-bit stack, entering a 16-bit code segment.
 No entry or IRET was credited. This source follow-up adds an explicit
 `gate14-code16-stack32-same-cpl3.v1` arm profile for that exact observed
