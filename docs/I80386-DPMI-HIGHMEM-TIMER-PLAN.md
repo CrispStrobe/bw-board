@@ -18,8 +18,8 @@ The first [hosted QEMU attempt](https://github.com/CrispStrobe/bw-board/actions/
 attempt 1, passed; root and peer independently audited its original report-only
 artifact. Read the [finite QEMU result and evidence boundary](I80386-DPMI-HIGHMEM-QEMU-RESULTS.md)
 before continuing. The original source and outcome remain frozen; no rerun was
-needed. AT integration of this new client is the next stage. The earlier client
-and AT evidence are unchanged.
+needed. The subsequent AT outcome is recorded below. The earlier client
+and its AT evidence are unchanged.
 
 The separate AT source gate is published as [draft PR459](https://github.com/CrispStrobe/bw-board/pull/459)
 at [`41db7ba4`](https://github.com/CrispStrobe/bw-board/tree/41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7/scripts/i80386-cwsdpmi-highmem-at).
