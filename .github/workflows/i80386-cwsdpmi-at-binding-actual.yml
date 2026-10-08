@@ -73,6 +73,7 @@ jobs:
           timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-at-binding-actual/admit.mjs "$w/build/client.exe" "$w/build/client.map" "$e/compile-audit/client.map" "$e/compile-audit/compile-report.json" "$e/admission" > "$e/admission.stdout" 2> "$e/admission.stderr"
           phase=complete
       - name: Recheck source and inventory report-only evidence
+        id: inventory
         if: always()
         shell: bash
         run: |
@@ -95,7 +96,7 @@ jobs:
           (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2,sort_keys=True)+'\n')
           PY
       - name: Retain bounded reports, maps and format headers only
-        if: always()
+        if: always() && steps.inventory.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: i80386-cwsdpmi-at-binding-${{ github.run_id }}-${{ github.run_attempt }}
