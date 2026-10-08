@@ -26,10 +26,29 @@ this failure and the old receipts; repair the historical tests' immutable-source
 binding without substituting current hashes or treating old captures as current
 CPU qualification.
 
-No controller integration, new guest attempt, frame result or consumer adoption
-is qualified by this checkpoint. Corrected source bindings, fault-fallback and
-additional task/16-bit controls, affected regressions, then the separate
-controller and one reviewed hosted diagnostic remain unfinished.
+The follow-up source checkpoint
+[`13d82f31`](https://github.com/CrispStrobe/bw-board/commit/13d82f3116107a1c4d8dff421db747eaa1bfef23)
+adds five CPU boundary controls: fault fallback, successful task delivery,
+post-commit task failure, excluded 16-bit return and same-CPL 32-bit return.
+These five controls await hosted execution. The CPU bytes remain identical to
+`2f979b37`.
+
+CI now partitions the selected tests without omissions: current tests run on
+current source; the ten unchanged historical test files run in a detached
+`41db7ba4` checkout with the original CPU. Admission checks bind their test,
+lockfile, literal dependency and named fixture bytes, plus the current selected
+test bytes and CPU. The literal dependency scan is not a claim of exhaustive
+computed dependency discovery; the frozen checkout supplies all historical
+inputs. New current fixtures are allowed while all 41 old named fixtures stay
+byte-exact. Root and peer source review and 11 host-only planner/scheduling
+controls passed. Those controls do not execute the emulated CPU.
+
+The original failed runs remain evidence. A new hosted run must establish the
+corrected runner's current and historical outcomes and reach the xv6 guest;
+local controls do not establish those results. No controller integration, new
+allocation-frame guest attempt, frame result or consumer adoption is qualified
+by this checkpoint. Clean affected regressions, then the separate controller
+and one reviewed hosted diagnostic remain unfinished.
 
 ## First deliverable
 
