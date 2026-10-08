@@ -103,8 +103,12 @@ The controller may select an admitted wrapper range; only the CPU's actual
 decoded instruction and committed transaction authenticate the event. Keep
 session/ticket ownership private, reject stale or cross-session records, and
 recheck selected wrapper identity through the admitted passive reader before
-arming. Arm at an owned synchronous pause near that wrapper, rather than
-collecting every timer poll from main entry. Declare finite queue, nesting and
+arming. Public nested layout fields are mutable and do not supply private
+wrapper authority; handle both clean and mismatched whole-text paths through
+authenticated admission. Arm at an owned synchronous pause near that wrapper, rather than
+collecting every timer poll from main entry. A board step may service an IRQ
+before executing the CPU instruction: the pre-step PC is only an arming
+opportunity, while the committed CPU record proves what executed. Declare finite queue, nesting and
 event caps before the hosted attempt; retain the first failure on overflow.
 After a guest effect has committed, journal failure must latch an invalid
 observation and stop the controller outside the original CPU step. Never throw
