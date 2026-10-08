@@ -69,6 +69,8 @@ function machine() {
   Object.defineProperty(cpu,'protectedMode',{get(){return !!(this.cr0&1);}});
   const videoChip={displayRevision:1,getVideoState(){throw new Error('VGA hook invoked');}};
   const m={cpu,mem,_page:page,memoryBytes:16<<20,cycles:5000,
+    _chipDebt:11,_chipDeadline:60,displayRevision:3,
+    _nmiPending:false,_nmiMasked:false,_cpuResetPending:false,
     chips:{vga1:videoChip},vgaMemory:new VGAMemory(videoChip),
     _a20Configured:true,_a20Enabled:true,_xv6Mp:null,
     config:{cpuBackend:'i80386-experimental',memoryBytes:16<<20,
@@ -96,15 +98,44 @@ assert.deepEqual(observationFingerprint(wrong),wrongBefore);
 const falseMain=machine();falseMain.cpu.eip++;
 assert.equal(candidateAtMain(falseMain,layout),false);
 assert.throws(()=>bindAtMainCut(falseMain,layout),/not at/);
+const halted=machine();halted.cpu.halted=true;
+assert.equal(candidateAtMain(halted,layout),false);
 
 const pageDenied=machine();pageDenied._page[1]=0;
 assert.throws(()=>bindAtMainCut(pageDenied,layout),/ordinary RAM/);
-const reentrant=machine();let nested=false;
-Object.defineProperty(reentrant.chips,'vga1',{get(){
-  try {bindAtMainCut(reentrant,layout);} catch {nested=true;}
-  return reentrant.vgaMemory.registerSource;
+const accessor=machine();let getterCalled=false;
+Object.defineProperty(accessor.chips,'vga1',{get(){getterCalled=true;return {};}});
+assert.throws(()=>bindAtMainCut(accessor,layout),/chip map accessor/);
+assert.equal(getterCalled,false);
+const object=machine();let serialized=false;
+object.cpu.eax={toJSON(){serialized=true;return 0;}};
+assert.throws(()=>observationFingerprint(object),/nonprimitive observed scalar/);
+assert.equal(serialized,false);
+
+const changedBase=machine();let changed=false,configReads=0;
+const changedMachine=new Proxy(changedBase,{getOwnPropertyDescriptor(target,key){
+  if(key==='config'&&++configReads===2){changed=true;target._chipDebt++;}
+  return Reflect.getOwnPropertyDescriptor(target,key);
 }});
-assert.throws(()=>bindAtMainCut(reentrant,layout));
+assert.throws(()=>bindAtMainCut(changedMachine,layout),/observation mutated/);
+assert.equal(changed,true);
+
+const swappedBase=machine();let pageReads=0;
+const swapped=new Proxy(swappedBase,{getOwnPropertyDescriptor(target,key){
+  if(key==='_page'&&++pageReads===5)target._page=Uint8Array.from(target._page);
+  return Reflect.getOwnPropertyDescriptor(target,key);
+}});
+assert.throws(()=>bindAtMainCut(swapped,layout),/observation mutated/);
+assert.equal(pageReads>=5,true);
+
+const reentryBase=machine();let nested=false;
+const reentrant=new Proxy(reentryBase,{getOwnPropertyDescriptor(target,key){
+  if(key==='config'&&!nested){
+    try {bindAtMainCut(reentrant,layout);} catch {nested=true;}
+  }
+  return Reflect.getOwnPropertyDescriptor(target,key);
+}});
+assert.throws(()=>bindAtMainCut(reentrant,layout),/observation mutated/);
 assert.equal(nested,true);
 assert.throws(()=>bindAtMainCut(reentrant,layout),/failed AT loaded-main cut/);
 console.log('CWSDPMI AT loaded-main cut controls PASS');

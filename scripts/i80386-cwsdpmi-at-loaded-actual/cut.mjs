@@ -6,6 +6,7 @@ import {bindLoadedText} from '../i80386-cwsdpmi-at-owned/binding.mjs';
 // hooks, call the bus, or grant a pause lease to another caller.
 const active = new WeakMap();
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+const setSize = Object.getOwnPropertyDescriptor(Set.prototype,'size').get;
 const own = (object, key) => {
   const descriptor = object && Object.getOwnPropertyDescriptor(object, key);
   if (!descriptor || !Object.hasOwn(descriptor, 'value'))
@@ -18,6 +19,15 @@ const optional = (object, key) => {
   if (!Object.hasOwn(descriptor, 'value')) throw new Error(`accessor ${String(key)}`);
   return descriptor.value;
 };
+const scalar = value => {
+  if (value !== null && !['number','string','boolean','undefined'].includes(typeof value))
+    throw new Error('nonprimitive observed scalar');
+  if (typeof value === 'number' && !Number.isFinite(value))
+    throw new Error('nonfinite observed scalar');
+  return value ?? null;
+};
+const ownScalar = (object,key) => scalar(own(object,key));
+const optionalScalar = (object,key) => scalar(optional(object,key));
 function plain(object, maximum = 64) {
   if (!object || typeof object !== 'object') throw new Error('record object');
   const descriptors = Object.getOwnPropertyDescriptors(object), keys = Reflect.ownKeys(descriptors);
@@ -43,17 +53,48 @@ const cpuFields = ['eax','ecx','edx','ebx','esp','ebp','esi','edi','eip','eflags
   '_translationGeneration'];
 const boardFields = ['cycles','memoryBytes','_a20Configured','_a20Enabled',
   '_fastA20Latch','_mpReady','_lapicTimerNext','_lapicTimerInterval',
-  '_lapicTimerPending','_apicIrqMask'];
+  '_lapicTimerPending','_apicIrqMask','_chipDebt','_chipDeadline',
+  'displayRevision','_nmiPending','_nmiMasked','_cpuResetPending'];
+const requiredBoardFields = new Set(['cycles','_chipDebt','_chipDeadline',
+  'displayRevision','_nmiPending','_nmiMasked','_cpuResetPending']);
 const cacheFields = ['generation','page','cr3','cr4','physicalBase','userPage',
   'writable','dirty','dirtyAddress','dirtyValue'];
 
 export function candidateAtMain(machine, layout) {
   const cpu = own(machine, 'cpu'), caches = own(cpu, 'segmentCaches');
   const code = own(caches, 1), main = layout?.roles?.main;
-  return !!main && Number.isInteger(main.address) && own(cpu, 'eip') === main.address &&
-    !!(own(cpu, 'cr0') & 1) && !(own(cpu, 'eflags') & 0x20000) &&
-    own(cpu, '_retainedRealCs') === false && own(code, 'default32') === true &&
+  return !!main && Number.isInteger(main.address) && ownScalar(cpu, 'eip') === main.address &&
+    !!(ownScalar(cpu, 'cr0') & 1) && !(ownScalar(cpu, 'eflags') & 0x20000) &&
+    ownScalar(cpu,'halted') === false && ownScalar(cpu,'shutdown') === false &&
+    ownScalar(cpu, '_retainedRealCs') === false && ownScalar(code, 'default32') === true &&
     own(code, 'present') === true && own(code, 'code') === true;
+}
+
+function identities(machine) {
+  const cpu=own(machine,'cpu'),mem=own(machine,'mem'),page=own(machine,'_page');
+  const caches=own(cpu,'segmentCaches'),translations=own(cpu,'_translations');
+  const tablePages=own(cpu,'_translationTablePages'),vga=own(machine,'vgaMemory');
+  const planes=vga===null?null:own(vga,'planes');
+  const latches=vga===null?null:own(vga,'latches');
+  const debug=own(cpu,'_debugRegisters');
+  return {cpu,mem,memBuffer:mem.buffer,page,pageBuffer:page.buffer,caches,
+    cacheValues:[0,1,2,3,4,5].map(n=>own(caches,n)),
+    translations,translationValues:Array.from({length:512},(_,n)=>optional(translations,n)),
+    tablePages,config:own(machine,'config'),chips:own(machine,'chips'),
+    vga,planes,registerSource:vga===null?null:own(vga,'registerSource'),
+    planeValues:planes===null?null:[...planes],
+    planeBuffers:planes===null?null:planes.map(plane=>plane.buffer),
+    latches,latchBuffer:latches?.buffer??null,debug,debugBuffer:debug.buffer};
+}
+function sameIdentities(before,after) {
+  for (const key of ['cpu','mem','memBuffer','page','pageBuffer','caches',
+    'translations','tablePages','config','chips','vga','planes','registerSource',
+    'latches','latchBuffer','debug','debugBuffer'])
+    if (before[key]!==after[key]) return false;
+  for (const key of ['cacheValues','translationValues','planeValues','planeBuffers'])
+    if (before[key]!==null && (after[key]===null || before[key].length!==after[key].length ||
+        before[key].some((value,index)=>value!==after[key][index]))) return false;
+  return true;
 }
 
 export function observationFingerprint(machine) {
@@ -61,8 +102,8 @@ export function observationFingerprint(machine) {
   if (memory?.constructor !== Uint8Array || page?.constructor !== Uint8Array ||
       memory.length !== 16 << 20 || page.length !== 4096)
     throw new Error('unexpected AT backing for observation');
-  const fields = Object.fromEntries(cpuFields.map(key => [key, own(cpu, key)]));
-  fields._pagingBitWrite = optional(cpu,'_pagingBitWrite');
+  const fields = Object.fromEntries(cpuFields.map(key => [key, ownScalar(cpu, key)]));
+  fields._pagingBitWrite = optionalScalar(cpu,'_pagingBitWrite');
   const caches = own(cpu, 'segmentCaches');
   const translations = own(cpu, '_translations');
   if (!Array.isArray(translations) || translations.length !== 512)
@@ -73,10 +114,10 @@ export function observationFingerprint(machine) {
     const keys = Object.keys(entry).sort();
     if (keys.join() !== cacheFields.slice().sort().join())
       throw new Error('translation entry shape');
-    return Object.fromEntries(cacheFields.map(key => [key, own(entry, key)]));
+    return Object.fromEntries(cacheFields.map(key => [key, ownScalar(entry, key)]));
   });
   const tablePages = own(cpu, '_translationTablePages');
-  if (Object.getPrototypeOf(tablePages) !== Set.prototype || tablePages.size > 4096)
+  if (Object.getPrototypeOf(tablePages) !== Set.prototype || setSize.call(tablePages) > 4096)
     throw new Error('table-page ledger shape');
   const pages = [...Set.prototype.values.call(tablePages)].sort((a,b)=>a-b);
   if (pages.some(n => !Number.isInteger(n) || n < 0 || n >= 4096))
@@ -86,16 +127,22 @@ export function observationFingerprint(machine) {
   pages.sort((a,b)=>a-b);
   const tableHash = createHash('sha256');
   for (const index of pages) tableHash.update(memory.subarray(index << 12, (index + 1) << 12));
-  const board = Object.fromEntries(boardFields.map(key => [key, optional(machine,key)]));
+  const board = Object.fromEntries(boardFields.map(key => [key,
+    requiredBoardFields.has(key)?ownScalar(machine,key):optionalScalar(machine,key)]));
   const chips = own(machine, 'chips');
-  const chipScalars = Object.fromEntries(Object.entries(chips).sort(([a],[b]) => a.localeCompare(b))
+  const chipDescriptors=Object.getOwnPropertyDescriptors(chips);
+  if (Reflect.ownKeys(chipDescriptors).length > 64 ||
+      Object.values(chipDescriptors).some(d=>!Object.hasOwn(d,'value')))
+    throw new Error('chip map accessor/bound');
+  const chipScalars = Object.fromEntries(Object.entries(chipDescriptors)
+    .map(([name,descriptor])=>[name,descriptor.value]).sort(([a],[b]) => a.localeCompare(b))
     .map(([name, chip]) => {
       const descriptors = Object.getOwnPropertyDescriptors(chip);
       if (Reflect.ownKeys(descriptors).length > 256) throw new Error('chip field bound');
       return [name, Object.fromEntries(Object.entries(descriptors)
       .filter(([, descriptor]) => Object.hasOwn(descriptor,'value') &&
         (descriptor.value === null || ['number','string','boolean'].includes(typeof descriptor.value)))
-      .map(([key, descriptor]) => [key, descriptor.value]).sort(([a],[b]) => a.localeCompare(b)))];
+      .map(([key, descriptor]) => [key, scalar(descriptor.value)]).sort(([a],[b]) => a.localeCompare(b)))];
     }));
   const vga = own(machine, 'vgaMemory');
   const vgaHash = vga === null ? null : {
@@ -110,7 +157,7 @@ export function observationFingerprint(machine) {
     boardSha256:sha(Buffer.from(JSON.stringify({board,chipScalars,vgaHash}))),
     ramSha256:byteHash(memory),pageClassSha256:byteHash(page),
     pageTableSha256:tableHash.digest('hex'),tablePageCount:pages.length,
-    machineCycles:own(machine,'cycles'),cpuCycles:own(cpu,'cycles')};
+    machineCycles:ownScalar(machine,'cycles'),cpuCycles:ownScalar(cpu,'cycles')};
 }
 
 export function bindAtMainCut(machine, layout) {
@@ -121,7 +168,7 @@ export function bindAtMainCut(machine, layout) {
     throw new Error('reentered/failed AT loaded-main cut');
   }
   state.busy=true;
-  let before = null, after = null;
+  let before = null, after = null, references = null;
   try {
     if (!candidateAtMain(machine, layout)) throw new Error('not at protected 32-bit main');
     const cpu = own(machine,'cpu'), code = own(own(cpu,'segmentCaches'),1);
@@ -130,6 +177,7 @@ export function bindAtMainCut(machine, layout) {
         base < 0 || base + address + layout.text.bytes > 0x100000000)
       throw new Error('loaded text linear span');
     const linear = base + address;
+    references=identities(machine);
     before = observationFingerprint(machine);
     let copy = null, binding = null, failed = null;
     try {
@@ -140,7 +188,8 @@ export function bindAtMainCut(machine, layout) {
       });
     } catch(error) { failed = error; }
     after = observationFingerprint(machine);
-    if (state.failed || JSON.stringify(before) !== JSON.stringify(after))
+    if (state.failed || !sameIdentities(references,identities(machine)) ||
+        JSON.stringify(before) !== JSON.stringify(after))
       throw new Error('loaded-code observation mutated CPU/board/RAM');
     if (failed) throw failed;
     state.completed=true;
