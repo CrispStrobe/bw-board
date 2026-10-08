@@ -1,0 +1,69 @@
+{
+  "schema": "bw.cwsdpmi-owned.at-completion-selected-public.v1",
+  "testedSource": "cc5b2ac7a40788f7d0100c4a1b5b5a9996bc2c66",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/456",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37754070825",
+  "artifact": {
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11540453437",
+    "bytes": 133396,
+    "sha256": "e609bc8361906055df44b6f74d2527b8b23cb9747a708f8f62dadc14d355d1ee"
+  },
+  "audit": {
+    "root": "PASS original packet, inputs and completion boundary",
+    "independentPeer": "PASS at bounded completion boundary",
+    "zipMembers": 99,
+    "sourceRoles": 158,
+    "recursiveJsRoles": 51,
+    "limit": "Report-only packet; linked executable, raw guest RAM and disk images were not uploaded or independently replayed."
+  },
+  "result": {
+    "workflow": "SUCCESS",
+    "firstFailure": null,
+    "finalStep": 48605933,
+    "strictWholeText": "FAIL",
+    "ownedCodeAtEntry": "PASS",
+    "ownedCodeRolesEqual": 8,
+    "strictMismatch": {"changedBytes": 13, "spans": 8, "firstOffset": 23472, "lastOffset": 23572},
+    "cutStep": 44605932,
+    "cutFiles": {"outputBytes": 0, "exitAbsent": true, "failureAbsent": true, "returnAbsent": true},
+    "acceptedScans": 64,
+    "firstCommandAcceptedEnd": 40785000,
+    "verifyQueuedStep": 46605933,
+    "verifyAcceptedEnd": 46750933,
+    "verifyEchoAndCurrentPromptStep": 46950000,
+    "stableCurrentPromptStep": 48600000,
+    "diskMilestones": [
+      {"kind": "batch-first", "step": 45605932, "imageSha256": "b7ff9937f9d4b69bcf5e7bced46a26bd172b74f6b4809736725829248a6a0c1b"},
+      {"kind": "batch-second", "step": 46605932, "imageSha256": "b7ff9937f9d4b69bcf5e7bced46a26bd172b74f6b4809736725829248a6a0c1b"},
+      {"kind": "pre-verify", "step": 46605933, "imageSha256": "b7ff9937f9d4b69bcf5e7bced46a26bd172b74f6b4809736725829248a6a0c1b", "returnAbsent": true},
+      {"kind": "return-first", "step": 47605933, "imageSha256": "616ebc7048da168d16821a179ecd4281b2ef741b1628e6ef8ac6a58171ada6c0"},
+      {"kind": "return-second", "step": 48605933, "imageSha256": "616ebc7048da168d16821a179ecd4281b2ef741b1628e6ef8ac6a58171ada6c0"}
+    ],
+    "files": {
+      "output": {"bytes": 29, "sha256": "c521891770a84ca2e2e7130b3cd8be4bc422d822e522b900542129695f8d3163", "text": "BW_DPMI_OK checksum=4225408\r\n"},
+      "exitZero": {"bytes": 16, "sha256": "e167ee770cd51e3062f72beb109600466762b50e32585e3d36138c70c9d863d2", "text": "BW-DPMI-EXIT-0\r\n"},
+      "failure": null,
+      "shellReturn": {"bytes": 22, "sha256": "423b3a1fb864712e0611895aa56cddfc83f5bb347eabde869e747f3ce343ae1b", "text": "BW-DPMI-SHELL-RETURN\r\n"}
+    }
+  },
+  "profile": {
+    "configuredGuestRamBytes": 4194304,
+    "backingBytes": 16777216,
+    "hostCpu": "AMD EPYC 9V74 80-Core Processor",
+    "hostLogicalCpus": 4,
+    "node": "22.23.3"
+  },
+  "diagnosticExecution": {
+    "wallMilliseconds": 21104,
+    "processCpuMicroseconds": 21061253,
+    "scope": "Synchronous post-reset scenario including observation and grading, excluding acquisition, media build and machine construction; not an RTx or adoption measurement."
+  },
+  "notEstablished": [
+    "physical allocation above 1 MiB",
+    "advancing BIOS timer ticks",
+    "INT 31h delivery or IRET ownership",
+    "whole-libc identity",
+    "general application compatibility",
+    "strict 386 hardware timing or performance adoption"
+  ]
+}
