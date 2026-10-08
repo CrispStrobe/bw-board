@@ -159,3 +159,8 @@ assert.throws(()=>bindAtMainCut(reentrant,layout),/observation mutated/);
 assert.equal(nested,true);
 assert.throws(()=>bindAtMainCut(reentrant,layout),/failed AT loaded-main cut/);
 console.log('CWSDPMI AT loaded-main cut controls PASS');
+
+// The separate narrow-profile control uses the same admitted executable/map
+// and source-shaped machine; these exports are test fixtures only.
+export {layout as controlLayout,machine as controlMachine,
+  textAddress as controlTextAddress,specs as controlRoleSpecs};

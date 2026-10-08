@@ -5,6 +5,10 @@ import {admittedMainAddress,admittedTextExtent,bindLoadedText,diagnoseLoadedText
 // A single synchronous, runner-owned pre-step cut. This module does not install
 // hooks, call the bus, or grant a pause lease to another caller.
 const active = new WeakMap();
+// A strict mismatch is usable by a narrower profile only when this module
+// actually compared its private admitted bytes at an unchanged source cut.
+// Public Error fields never carry authority.
+const verifiedMismatches = new WeakMap();
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const setSize = Object.getOwnPropertyDescriptor(Set.prototype,'size').get;
 const own = (object, key) => {
@@ -161,10 +165,10 @@ export function observationFingerprint(machine) {
 }
 
 export function bindAtMainCut(machine, layout) {
-  const state = active.get(machine) ?? {busy:false,failed:false,completed:false};
+  const state = active.get(machine) ?? {busy:false,failed:false,completed:false,reentered:false};
   active.set(machine,state);
   if (state.busy || state.failed || state.completed) {
-    state.failed=true;
+    state.failed=true;state.reentered=true;
     throw new Error('reentered/failed AT loaded-main cut');
   }
   state.busy=true;
@@ -178,25 +182,47 @@ export function bindAtMainCut(machine, layout) {
         base < 0 || base + address + extent.bytes > 0x100000000)
       throw new Error('loaded text linear span');
     const linear = base + address;
+    // bindLoadedText reads CPU fields through ordinary property access. Pass a
+    // plain own-data view so a caller Proxy cannot forge its mismatch Error
+    // after the passive copy has completed.
+    const binderCpu={protectedMode:!!(own(cpu,'cr0')&1),
+      segmentCaches:[null,{base,default32:own(code,'default32')}],
+      eip:own(cpu,'eip'),cs:own(cpu,'cs')};
+    const binderViewMatches=()=>binderCpu.protectedMode===!!(own(cpu,'cr0')&1) &&
+      binderCpu.eip===own(cpu,'eip') && binderCpu.cs===own(cpu,'cs') &&
+      binderCpu.segmentCaches[1].base===own(code,'base') &&
+      binderCpu.segmentCaches[1].default32===own(code,'default32');
     references=identities(machine);
     before = observationFingerprint(machine);
+    if(!binderViewMatches())throw new Error('binding CPU source changed before read');
     let copy = null, binding = null, failed = null;
     try {
       copy = readOrdinaryLinear(machine,{sourcePaused:true,linear,length:extent.bytes});
-      binding = bindLoadedText(layout,cpu,at => {
+      binding = bindLoadedText(layout,binderCpu,at => {
         if (at < linear || at >= linear + copy.length) throw new Error('snapshot reader extent');
         return copy[at - linear];
       });
     } catch(error) { failed = error; }
     after = observationFingerprint(machine);
-    if (state.failed || !sameIdentities(references,identities(machine)) ||
+    if (state.failed || !binderViewMatches() ||
+        !sameIdentities(references,identities(machine)) ||
         JSON.stringify(before) !== JSON.stringify(after))
       throw new Error('loaded-code observation mutated CPU/board/RAM');
     if (failed) {
       // The strict binding still fails. Diagnose only from the one copied
       // snapshot, after unchanged-state and reference-identity checks pass.
       if (copy && /^loaded text differs at byte [0-9]+$/.test(failed.message)) {
-        try { failed.textMismatch=diagnoseLoadedText(layout,copy); }
+        try {
+          const diagnostic=diagnoseLoadedText(layout,copy);
+          const offset=Number(failed.message.slice('loaded text differs at byte '.length));
+          if(!diagnostic||diagnostic.firstOffset!==offset)
+            throw new Error('strict mismatch and private diagnostic disagree');
+          failed.textMismatch=diagnostic;
+          if(state.reentered)throw new Error('reentered strict mismatch diagnostic');
+          verifiedMismatches.set(failed,{machine,layout,references,
+            before:Object.freeze({...before}),after:Object.freeze({...after}),
+            diagnostic,busy:false,poisoned:false});
+        }
         catch(diagnosticError) {
           let detail='diagnostic failed';
           try {detail=String(diagnosticError?.message??diagnosticError).slice(0,200);}
@@ -213,4 +239,30 @@ export function bindAtMainCut(machine, layout) {
     if (before) error.observation = {before,after};
     throw error;
   } finally {state.busy=false;}
+}
+
+// Consume the private proof once, for the exact machine/layout/error, before
+// any intervening ordinary step. A wrong owner lookup leaves the real ticket
+// available; an attempted reentry or changed source poisons it.
+export function consumeVerifiedTextMismatch(machine,layout,error) {
+  const ticket=verifiedMismatches.get(error);
+  if(!ticket||ticket.machine!==machine||ticket.layout!==layout)
+    throw new Error('unverified text mismatch owner');
+  if(ticket.busy){ticket.poisoned=true;throw new Error('text mismatch consume reentry');}
+  ticket.busy=true;
+  try {
+    if(active.get(machine)?.busy || !active.get(machine)?.failed ||
+        active.get(machine)?.reentered ||
+        !candidateAtMain(machine,layout) ||
+        !sameIdentities(ticket.references,identities(machine)) ||
+        JSON.stringify(observationFingerprint(machine))!==JSON.stringify(ticket.after) ||
+        ticket.poisoned)
+      throw new Error('text mismatch source changed before consume');
+    verifiedMismatches.delete(error);
+    return Object.freeze({diagnostic:ticket.diagnostic,
+      before:ticket.before,after:ticket.after});
+  } catch(cause) {
+    verifiedMismatches.delete(error);
+    throw cause;
+  } finally {ticket.busy=false;}
 }
