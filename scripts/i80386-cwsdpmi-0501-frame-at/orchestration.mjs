@@ -91,7 +91,7 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
       catch(error){firstFailure??='machine step exception';throw error;}
       if(firstFailure)return fail(firstFailure);
       stepCalls++;
-      if(armed){
+      if(armed&&!terminalEmitted){
         let state;
         try {state=policy.afterStep();}
         catch(error){firstFailure??='journal poll exception';throw error;}

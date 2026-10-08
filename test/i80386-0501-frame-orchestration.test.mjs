@@ -44,6 +44,7 @@ test('no pre-main arm and CPU poll follows ordinary step',()=>{
   assert.equal(f.progressReports[2].frameProgress.cpuJournal.observation.entry.entryAx,0x501);
   f.frame.ports.step();
   assert.equal(f.progressReports.length,3); // no per-step terminal rewrite
+  assert.equal(f.calls.at(-1),'machine-step'); // no post-terminal journal poll
   f.frame.ports.progress({steps:99});
   assert.equal(f.progressReports[3].frameProgress.event,'complete');
   assert.equal(f.progressReports[3].frameProgress.cpuJournal.observation.entry.entryAx,0x501);
