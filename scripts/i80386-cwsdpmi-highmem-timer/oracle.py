@@ -135,6 +135,23 @@ def advance_pair(previous, observed):
     return observed, previous == observed
 
 
+def pair_observation(disk_hash, found, parsed, view, start):
+    return {"screenSample": view["sample"], "elapsedWallSeconds": round(
+                time.monotonic() - start, 3), "diskSha256": disk_hash,
+            "files": files_receipt(found), "diagnostics": parsed}
+
+
+def pre_verify_projection(found, client_files, client_diagnostics, rows, boot_drive):
+    parsed = grade(found, False)
+    if parsed != client_diagnostics or files_receipt(found) != client_files:
+        raise ValueError("client files changed before VERIFY")
+    if not client_screen(rows, boot_drive):
+        raise ValueError("current post-client prompt before VERIFY")
+    if any_command_echo(rows, SECOND.strip()):
+        raise ValueError("stale VERIFY echo before offer")
+    return parsed
+
+
 def screen_receipt(rows, raw, step):
     if len(raw) != 4000 or len(rows) != 25 or any(len(row) > 80 for row in rows):
         raise ValueError("screen receipt extent")
@@ -199,6 +216,7 @@ def run(inputs, output):
               "mediaCwsdpmiSha256": media["cwsdpmiSha256"],
               "components": components, "floppySha256": FLOPPY_SHA,
               "stage": "launch", "screenMilestones": {},
+              "clientPair": {}, "returnPair": {},
               "events": [], "limits": {"wallSeconds": WALL_LIMIT, "rssBytes": RSS_LIMIT,
               "screenProbes": 480, "partialFatReads": 20}}
     start = time.monotonic()
@@ -294,6 +312,7 @@ def run(inputs, output):
                 seen = observe()
                 if seen is None:
                     first = None
+                    report["clientPair"] = {}
                     time.sleep(0.5)
                     continue
                 disk_hash, found = seen
@@ -305,27 +324,34 @@ def run(inputs, output):
                         first, stable = advance_pair(first, (disk_hash, files_receipt(found), parsed))
                         if not stable:
                             report["screenMilestones"]["postClientFirst"] = view
+                            report["clientPair"] = {"first": pair_observation(
+                                disk_hash, found, parsed, view, start)}
                         else:
                             report["screenMilestones"]["postClientSecond"] = view
+                            report["clientPair"]["second"] = pair_observation(
+                                disk_hash, found, parsed, view, start)
                             report["clientFiles"] = files_receipt(found)
                             report["clientDiagnostics"] = parsed
                             break
                     else:
                         first = None
+                        report["clientPair"] = {}
                 else:
                     first = None
+                    report["clientPair"] = {}
                 if time.monotonic() - start > 200:
                     raise TimeoutError("QEMU client and current prompt")
                 time.sleep(0.5)
 
             pre_verify = observe()
-            if pre_verify is None or pre_verify[1]["returned"] is not None:
-                raise ValueError("return existed before separate command")
+            if pre_verify is None:
+                raise ValueError("pre-VERIFY FAT unavailable")
             rows, view = screen()
-            if any_command_echo(rows, SECOND.strip()):
-                raise ValueError("stale VERIFY echo before offer")
+            pre_parsed = pre_verify_projection(pre_verify[1], report["clientFiles"],
+                                               report["clientDiagnostics"], rows, boot_drive)
             report["preVerify"] = {"diskSha256": pre_verify[0],
-                                   "files": files_receipt(pre_verify[1]), "screen": view}
+                                   "files": files_receipt(pre_verify[1]),
+                                   "diagnostics": pre_parsed, "screen": view}
             send(SECOND.strip(), SECOND)
             report["stage"] = "shell-return"
             first = None
@@ -334,6 +360,7 @@ def run(inputs, output):
                 seen = observe()
                 if seen is None:
                     first = None
+                    report["returnPair"] = {}
                     time.sleep(0.5)
                     continue
                 disk_hash, found = seen
@@ -345,14 +372,20 @@ def run(inputs, output):
                         first, stable = advance_pair(first, (disk_hash, files_receipt(found), parsed))
                         if not stable:
                             report["screenMilestones"]["returnFirst"] = view
+                            report["returnPair"] = {"first": pair_observation(
+                                disk_hash, found, parsed, view, start)}
                         else:
                             report["screenMilestones"]["returnSecond"] = view
+                            report["returnPair"]["second"] = pair_observation(
+                                disk_hash, found, parsed, view, start)
                             report["returnFiles"] = files_receipt(found)
                             break
                     else:
                         first = None
+                        report["returnPair"] = {}
                 else:
                     first = None
+                    report["returnPair"] = {}
                 if time.monotonic() - start > 230:
                     raise TimeoutError("separate return and current prompt")
                 time.sleep(0.5)

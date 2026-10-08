@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import oracle
@@ -49,6 +50,31 @@ assert oracle.advance_pair(candidate, None) == (None, False)
 assert oracle.advance_pair(oracle.advance_pair(candidate, None)[0], candidate) == (candidate, False)
 assert oracle.advance_pair(candidate, ("different", "exact-file-hashes")) == (
     ("different", "exact-file-hashes"), False)
+
+output = (b"BW_HMT_OK\r\nBW_HMT_VALUES address=1048577 requested=4096 "
+          b"selector_base=1048577 selector_limit=4095 first=3 last=4 "
+          b"polls=2 delta=1 checksum=4225408\r\n")
+found = {"output": output, "ok": b"BW-HMT-EXIT-0\r\n",
+         "fail": None, "returned": None}
+diagnostics = oracle.grade(found, False)
+file_receipt = oracle.files_receipt(found)
+assert oracle.pre_verify_projection(found, file_receipt, diagnostics, ready, "A") == diagnostics
+refuses(lambda: oracle.pre_verify_projection(found, file_receipt, diagnostics, ready, "C"),
+        "wrong boot echo drive before VERIFY")
+refuses(lambda: oracle.pre_verify_projection(found, file_receipt, diagnostics,
+                                            ready[:-1] + ["C:\\>c:\\verifyht.bat", "C:\\>"], "A"),
+        "preexisting VERIFY echo")
+refuses(lambda: oracle.pre_verify_projection(dict(found, returned=b"stale"),
+                                            file_receipt, diagnostics, ready, "A"),
+        "preexisting RETURN")
+refuses(lambda: oracle.pre_verify_projection(dict(found, output=output + b"extra"),
+                                            file_receipt, diagnostics, ready, "A"),
+        "altered output")
+first_receipt = oracle.pair_observation("disk-hash", found, diagnostics,
+                                        {"sample": 5}, time.monotonic())
+assert first_receipt["screenSample"] == 5
+assert first_receipt["files"] == file_receipt
+assert first_receipt["diagnostics"] == diagnostics
 
 raw = b"A" * 65536
 receipt = oracle.files_receipt({"output": raw, "ok": None})
