@@ -212,8 +212,10 @@ The diagnostic-only implementation is published in [draft PR465](https://github.
 at reviewed head [`0714159c`](https://github.com/CrispStrobe/bw-board/commit/0714159c9875ac17bf5ef5a8e5418f5815fa1608),
 stacked on `4c22a574`. Root and independent peer completed source review;
 source controls, syntax and 196-role/62-node source admission passed. Eight
-new focused controls are added for hosted execution. Hosted CPU/xv6/Harris
-checks are pending; no actual diagnostic has been triggered for this head.
+new focused controls are added for hosted execution. The independently audited
+[three-scenario xv6 regression](receipts/2026-10-08-0501-delivery-diagnostic-xv6/README.md)
+passed, including all 60 focused names; both Harris checks passed. The remaining
+full CI gate is pending; no actual diagnostic has been triggered for this head.
 The new rejection field cannot qualify a delivery/return pair. After every
 enabled exact-head check passes, apply the dedicated label once, retain the
 original diagnostic packet, and audit its rejected-delivery facts separately
