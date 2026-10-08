@@ -1,5 +1,26 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-08 NPN winding transient boundary — CLAIM, Codex bwcx.
+Branch lane/npn-winding-transient-boundary-20261008, isolated worktree, exact
+base ac7595b609daa75717c696830982f59940c97e8b. Five-path envelope:
+this ledger, src/board.js transient boundary handling, src/mna.js authoritative
+nonlinear-region diagnostics if required, new
+test/npn-winding-transient-boundary.test.mjs and new
+spec-updates/npn-winding-transient-boundary.md. Reproduce the motor winding
+startup failure without consumer/UI dependencies, distinguish a physical
+switching boundary from integration or convergence error, and implement only
+an independently justified repair. Installed Lite Build37833383585 confirms
+the clock stops on minimum-step-accuracy-unmet; its scope-reset journey passes.
+Native isolation identifies the quasi-high motor-control pin and electrical
+winding inductance; zero back-EMF does not remove the failure. Refining the
+diagnostic instance floor from10ns to1ns or100ps still fails at the same
+transition, so a smaller floor is not a repair. Preserve model equations,
+profiles/tolerances/floors/work ceilings and genuine failure latches. Prove
+actual startup and switching traces with independent electrical controls and
+named mutations before any implementation landing. No CPU, device-model,
+workflow, CUI/Lite source, consumer pin or deployment change. Keep the Lite
+adoption frozen until owning upstream qualification and guarded adoption.
+
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
 60b2f39526e7d665f61070f031a6a9418fcbde4d. Four paths only: this ledger,
