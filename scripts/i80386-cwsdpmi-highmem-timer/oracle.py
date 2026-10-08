@@ -260,17 +260,20 @@ def run(inputs, output):
             def observe():
                 nonlocal partial_fat
                 ensure()
-                disk = ordinary(oracle_disk, GEOMETRY_BYTES, GEOMETRY_BYTES)
-                disk_hash = sha(disk)
+                disk_hash = None
                 try:
+                    disk = ordinary(oracle_disk, GEOMETRY_BYTES, GEOMETRY_BYTES)
+                    disk_hash = sha(disk)
                     found = files(disk)
                     report["lastObservedDisk"] = {"sha256": disk_hash,
                                                   "files": files_receipt(found)}
                     return disk_hash, found
                 except ValueError as error:
                     partial_fat += 1
-                    report["lastUnparseableDiskSha256"] = disk_hash
-                    report.setdefault("partialFat", {"first": type(error).__name__, "observations": 0})
+                    if disk_hash is not None:
+                        report["lastUnparseableDiskSha256"] = disk_hash
+                    report.setdefault("partialFat", {"first": f"{type(error).__name__}: {str(error)[:120]}",
+                                                      "observations": 0})
                     report["partialFat"]["observations"] = partial_fat
                     if partial_fat > 20:
                         raise ValueError("QEMU FAT remained malformed") from error
