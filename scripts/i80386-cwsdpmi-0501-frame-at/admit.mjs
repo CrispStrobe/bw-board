@@ -44,3 +44,10 @@ export function compareWrapperSnapshot(token, copiedText) {
     observedSha256:digest(observed), wholeText:mismatch?'DIFFERS':'EXACT',
     textAddress:held.text.address, textBytes:held.text.bytes});
 }
+
+export function admittedWrapperRange(token) {
+  const held=admitted.get(token);
+  if (!held) throw new Error('unadmitted wrapper range');
+  return Object.freeze({address:held.address,bytes:held.bytes,
+    textAddress:held.text.address,textBytes:held.text.bytes});
+}
