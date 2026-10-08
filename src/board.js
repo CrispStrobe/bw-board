@@ -4872,6 +4872,26 @@ export class BoardImpl {
     this.ledCurrents.clear();
     this.inductorCurrents.clear();
 
+    // Clock reset starts a new capture epoch on the SAME configured handles.
+    // Keep failure latches: clearing a ring cannot reconstruct refused history.
+    for (const ch of this._scopeChannels.values()) {
+      ch.writeIndex = 0;
+      ch.count = 0;
+      if (ch.type === 'digital') {
+        ch.trans.fill(NaN);
+        ch._lastLevel = null;
+      } else {
+        ch.samples.fill(NaN);
+        ch.startTNs = 0n;
+        ch._bucketMin = Infinity;
+        ch._bucketMax = -Infinity;
+        ch._nextSampleNs = ch.intervalNs;
+        ch._prevTNs = 0n;
+        ch._prevExactTimeSec = null;
+        ch._prevVal = null;
+      }
+    }
+
     // Re-initialize cap voltages and LED/buzzer tracking
     for (const p of this.parts) {
       if (p.kind === 'led') this.ledHistory.set(p.id, []);
@@ -4881,6 +4901,9 @@ export class BoardImpl {
 
     this._solve();
     this._recordLedSamples();
+    for (const ch of this._scopeChannels.values()) {
+      if (ch.type === 'digital') this._feedDigital(ch, 0n);
+    }
     this._notifyChange('reset');
   }
 

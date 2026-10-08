@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-08 scope reset capture epoch — CLAIM, Codex bwcx.
+2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
 60b2f39526e7d665f61070f031a6a9418fcbde4d. Four paths only: this ledger,
 src/board.js (reset's attached-channel capture state only), new
@@ -16,6 +16,17 @@ all failure/overflow latches; never turn reset into skipped-history recovery.
 No model reset redesign, meter/current cadence, solver/caps/profiles, scheduler,
 CPU, CUI/Lite/package/pin, workflow or performance change. Remote claim before
 implementation; one final exact CI/Harris set, no local build/browser/benchmark.
+Remote claim7fca6c99 preceded implementation. Unchanged source reproduced nine
+new failures with the existing refusal control passing. The repair resets only
+attached-channel capture state and records the solved initial digital level;
+voltage sampling retains fresh-board acquisition behavior. Ten new tests plus
+four adjacent suites pass38/38, zero skips. Three isolated source mutants red
+on actual caller assertions: retained old voltage deadline (six fresh-board
+comparisons fail), uncleared numeric ring (manual-current history fails), and
+retained digital level (initial transition missing). Each restored; final suite
+passes. Existing finite/device refusal authority remains load-bearing. Hosted
+CI/Harris qualification and guarded landing remain pending; no installed GUI,
+consumer adoption, deployment or performance claim.
 
 2026-10-07 cooperative live device clock — DONE candidate, Codex bwcx.
 Branch lane/live-device-clock-quantum-20261007, exact base
