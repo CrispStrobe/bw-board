@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import I80386 from '../src/experimental/i80386.js';
+import I80386, { I80386Fault } from '../src/experimental/i80386.js';
 
 const START = 0x20;
 const CODE = 0x140000;
@@ -113,6 +113,15 @@ test('a 32-bit gate with a 16-bit handler stack is excluded after delivery', () 
     'unsupported-owned-delivery');
 });
 
+test('a 32-bit gate into 16-bit handler code is not a protected32 frame', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 6, 0x8f);
+  const token = f.arm();
+  f.cpu.step();
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
+    'unsupported-owned-delivery');
+});
+
 test('wrong request, rejected gate, and direct delivery cannot mint a pair', () => {
   const wrong = fixture();
   wrong.cpu.cx = 4095;
@@ -185,6 +194,37 @@ test('completed pair is invalidated by reset before consumption', () => {
   assert.equal(f.cpu.takeOwned0501FrameObservation(token).phase, 'invalid');
 });
 
+test('reset preserves the first invalid reason and partial entry', () => {
+  const f = fixture();
+  const token = f.arm({ maxActiveSteps: 1 });
+  f.cpu.step();
+  f.cpu.step();
+  assert.equal(f.cpu.owned0501FrameStatus(token).failure, 'active-step-cap');
+  f.cpu.reset();
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'active-step-cap');
+  assert.equal(result.entry.returnEip, START + 2);
+});
+
+test('a public shadow property cannot disable private active-session accounting', () => {
+  const f = fixture();
+  const token = f.arm();
+  f.cpu._owned0501JournalActive = false;
+  f.cpu.step();
+  f.cpu._owned0501JournalActive = true;
+  f.cpu.step();
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).phase, 'complete');
+});
+
+test('a task-switch attempt while a selected frame is open invalidates it', () => {
+  const f = fixture();
+  const token = f.arm();
+  f.cpu.step();
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'));
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
+    'task-switch-during-owned-frame');
+});
+
 test('refused hardware interrupt leaves the pair open; accepted delivery invalidates it', () => {
   const f = fixture();
   const token = f.arm();
@@ -234,6 +274,15 @@ test('a handler-edited saved CF is recorded separately from delivery flags', () 
   assert.equal(result.returned.returnedFlags & 1, 1);
 });
 
+test('IRETD into VM86 cannot later be credited as the protected32 pair', () => {
+  const f = fixture();
+  const token = f.arm();
+  f.cpu.step();
+  f.memory.set(0x1203ec + 10, 0x02);
+  f.cpu.step();
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).phase, 'invalid');
+});
+
 test('a post-IRET trace delivery cannot mint a clean pair', () => {
   const f = fixture();
   f.put(0x300 + 8, [0, 1, 8, 0, 0, 0xee, 0, 0]);
@@ -253,6 +302,37 @@ test('disabled plain-object throw preserves identity and never reads taskCommitt
   assert.equal(getterReads, 0);
 });
 
+test('active journal adds no read of a recognized fault taskCommitted getter', () => {
+  let enabled = false, getterReads = 0;
+  const fault = new I80386Fault(13, 0, 'synthetic bus fault');
+  Object.defineProperty(fault, 'taskCommitted', {
+    get() { getterReads++; return false; },
+  });
+  const f = fixture({ onRead: () => { if (enabled) throw fault; } });
+  const token = f.arm();
+  enabled = true;
+  assert.throws(() => f.cpu.step(), error => error === fault);
+  assert.equal(getterReads, 1);
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).phase, 'invalid');
+});
+
+test('taskCommitted fault preserves original CPU effect while refusing journal success', () => {
+  let enabled = false;
+  const fault = new I80386Fault(13, 0, 'synthetic committed fault');
+  fault.taskCommitted = true;
+  const f = fixture({ onRead: cpu => {
+    if (enabled) {
+      cpu.eax = 0x12345678;
+      throw fault;
+    }
+  } });
+  const token = f.arm();
+  enabled = true;
+  assert.throws(() => f.cpu.step(), error => error === fault);
+  assert.equal(f.cpu.eax, 0x12345678);
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).phase, 'invalid');
+});
+
 test('a bus callback cannot consume or arm the active session inside delivery', () => {
   let duringStep = false, token, calls = 0;
   const f = fixture({ onRead: cpu => {
@@ -268,4 +348,43 @@ test('a bus callback cannot consume or arm the active session inside delivery', 
   f.cpu.step();
   assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
     'observer-reentry');
+});
+
+test('an observer-only allocation failure after delivery leaves guest effects intact', () => {
+  const f = fixture();
+  const token = f.arm();
+  const freeze = Object.freeze;
+  Object.freeze = value => {
+    if (value?.source === 'decoded-software-int31') throw new Error('observer');
+    return freeze(value);
+  };
+  try {
+    assert.equal(f.cpu.step(), 1);
+  } finally {
+    Object.freeze = freeze;
+  }
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp],
+    [8, 0x100, 0x10, 0x3ec]);
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
+    'observer-entry-record-failure');
+});
+
+test('an observer-only allocation failure after IRET does not undo the return', () => {
+  const f = fixture();
+  const token = f.arm();
+  f.cpu.step();
+  const freeze = Object.freeze;
+  Object.freeze = value => {
+    if (value?.source === 'decoded-protected-iret') throw new Error('observer');
+    return freeze(value);
+  };
+  try {
+    assert.equal(f.cpu.step(), 1);
+  } finally {
+    Object.freeze = freeze;
+  }
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp],
+    [0x1b, START + 2, 0x23, 0x800]);
+  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
+    'observer-return-record-failure');
 });
