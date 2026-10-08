@@ -1,0 +1,105 @@
+name: xv6 JavaScript rollback allocation diagnostic
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xv6-js-rollback-profile-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  sampled-forktest:
+    if: >-
+      github.event.label.name == 'xv6-js-rollback-profile' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20.20.2'
+      - name: Admit exact source and CPU-free controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          mkdir -p "$RUNNER_TEMP/xv6-js-rollback-profile"
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          timeout 120s git fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git d268109214f0d23ff9197b0ce737c5dc233b7759
+          timeout 120s git fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git 22ca742ed60e1350ed96110986a09b2ce84620ac
+          git worktree add --detach "$RUNNER_TEMP/xv6-qualified" 22ca742ed60e1350ed96110986a09b2ce84620ac
+          test "$(git -C "$RUNNER_TEMP/xv6-qualified" rev-parse HEAD)" = 22ca742ed60e1350ed96110986a09b2ce84620ac
+          test -z "$(git -C "$RUNNER_TEMP/xv6-qualified" status --porcelain --untracked-files=all)"
+          timeout 20s python3 -B scripts/xv6-js-rollback-profile/source-control.py
+          timeout 20s node scripts/xv6-js-rollback-profile/derive-control.mjs "$RUNNER_TEMP/xv6-qualified"
+          timeout 20s node scripts/xv6-js-rollback-profile/support-control.mjs
+          timeout 20s python3 -B scripts/xv6-js-rollback-profile/profile-control.py
+          timeout 20s python3 -B scripts/xv6-js-rollback-profile/run-control.py
+          timeout 20s python3 -B scripts/xv6-js-rollback-profile/inventory-control.py
+          timeout 30s python3 -B scripts/xv6-js-rollback-profile/source.py --source "$GITHUB_WORKSPACE" --head "$BW_EXPECTED_HEAD" --qualified "$RUNNER_TEMP/xv6-qualified" > "$RUNNER_TEMP/xv6-js-rollback-profile/source.json"
+          test -z "$(git status --porcelain --untracked-files=all)"
+      - name: Verify hosted short-lived allocation sampling
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          mkdir -p "$RUNNER_TEMP/xv6-js-rollback-profile"
+          timeout 45s node --expose-gc --max-old-space-size=768 scripts/xv6-js-rollback-profile/support.mjs "$RUNNER_TEMP/xv6-js-rollback-profile/gc-support.json"
+      - name: Install bounded xv6 image toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 600s sudo apt-get update
+          timeout 600s sudo apt-get install -y gcc-multilib
+      - name: Fetch exact MIT xv6 and build fresh 4 MiB image
+        shell: bash
+        env:
+          XV6_SRC: ${{ runner.temp }}/xv6-public
+          XV6_STOCK_4M_OUT: ${{ runner.temp }}/xv6-stock-4m
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          git init "$XV6_SRC"
+          git -C "$XV6_SRC" remote add origin https://github.com/mit-pdos/xv6-public.git
+          timeout 180s git -C "$XV6_SRC" fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          git -C "$XV6_SRC" checkout --detach FETCH_HEAD
+          test "$(git -C "$XV6_SRC" rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          test -z "$(git -C "$XV6_SRC" status --porcelain --untracked-files=all)"
+          timeout 900s node "$RUNNER_TEMP/xv6-qualified/scripts/build-xv6-stock-4m.mjs" > "$RUNNER_TEMP/xv6-js-rollback-profile/build.stdout" 2> "$RUNNER_TEMP/xv6-js-rollback-profile/build.stderr"
+          cp "$XV6_STOCK_4M_OUT/bw-xv6-stock-4m-receipt.json" "$RUNNER_TEMP/xv6-js-rollback-profile/xv6-build.json"
+      - name: Run one reference and two fresh sampled children
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 18m python3 -B scripts/xv6-js-rollback-profile/run.py --harness "$GITHUB_WORKSPACE" --qualified "$RUNNER_TEMP/xv6-qualified" --image-dir "$RUNNER_TEMP/xv6-stock-4m" --gc-support "$RUNNER_TEMP/xv6-js-rollback-profile/gc-support.json" --output "$RUNNER_TEMP/xv6-js-rollback-profile/results" --head "$BW_EXPECTED_HEAD" > "$RUNNER_TEMP/xv6-js-rollback-profile/parent.stdout" 2> "$RUNNER_TEMP/xv6-js-rollback-profile/parent.stderr"
+      - name: Admit report-only artifact inventory
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 30s python3 -B scripts/xv6-js-rollback-profile/inventory.py "$RUNNER_TEMP/xv6-js-rollback-profile"
+      - name: Upload bounded original evidence
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: xv6-js-rollback-profile-${{ github.run_id }}
+          path: ${{ runner.temp }}/xv6-js-rollback-profile/
+          if-no-files-found: error
+          retention-days: 7

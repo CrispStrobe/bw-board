@@ -21,7 +21,7 @@ const heapCommand=(method,params={})=>new Promise((accept,reject)=>heapSession.p
 let heapStarted=false,heapGuestError=null,heapTerminalError=null;
 try {
   await heapCommand('HeapProfiler.enable');
-  await heapCommand('HeapProfiler.startSampling',{samplingInterval:32768,
+  await heapCommand('HeapProfiler.startSampling',{samplingInterval:131072,
     includeObjectsCollectedByMinorGC:true,includeObjectsCollectedByMajorGC:true});
   heapStarted=true;
 } catch(error) {heapSession.disconnect();throw error;}

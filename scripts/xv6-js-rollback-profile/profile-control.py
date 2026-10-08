@@ -52,6 +52,12 @@ def check():
         assert result['buckets']['authenticated_cpu_js']['sampledBytes'] == 32768
         assert result['locations'][0]['sourceRole'] == '../src/experimental/i80386.js'
         assert sum(item['sampledBytes'] for item in result['buckets'].values()) == 32768
+        out_of_order = copy.deepcopy(baseline)
+        out_of_order['samples'] = [
+            {'size': 1, 'nodeId': 2, 'ordinal': 8},
+            {'size': 2, 'nodeId': 2, 'ordinal': 3}]
+        write(out_of_order)
+        assert load(path)[2] == 3
         for mutate, reason in (
             (lambda p: p['head']['children'][0].update(id=1), 'unique bounded heap node ID'),
             (lambda p: p['samples'][0].update(nodeId=99), 'sample references heap node'),
@@ -59,7 +65,7 @@ def check():
             (lambda p: p['samples'][0].update(size=0), 'positive bounded sample size'),
             (lambda p: p['samples'][0].update(size=1 << 40), 'positive bounded sample size'),
             (lambda p: p['samples'].append({'size': 1, 'nodeId': 2, 'ordinal': 1}),
-             'ordered bounded sample ordinal'),
+             'unique bounded sample ordinal'),
             (lambda p: p['head']['callFrame'].update(url=7), 'bounded frame URL'),
         ):
             case = copy.deepcopy(baseline)

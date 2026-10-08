@@ -108,7 +108,7 @@ def load(path):
         nodes[ident] = node
         stack.extend((child, depth + 1) for child in reversed(children))
     total = 0
-    last_ordinal = -1
+    ordinals = set()
     for sample in samples:
         require(type(sample) is dict and set(sample) ==
                 {'size', 'nodeId', 'ordinal'}, 'exact heap sample fields')
@@ -116,9 +116,9 @@ def load(path):
         require(type(size) is int and 0 < size <= MAX_SAMPLE_SIZE,
                 'positive bounded sample size')
         require(type(ident) is int and ident in nodes, 'sample references heap node')
-        require(type(ordinal) is int and last_ordinal < ordinal <= MAX_ORDINAL,
-                'ordered bounded sample ordinal')
-        last_ordinal = ordinal
+        require(type(ordinal) is int and 0 <= ordinal <= MAX_ORDINAL and
+                ordinal not in ordinals, 'unique bounded sample ordinal')
+        ordinals.add(ordinal)
         total += size
         require(total <= MAX_TOTAL_SIZE, 'bounded sampled bytes')
     return nodes, samples, total, sha(raw)

@@ -1,9 +1,10 @@
-# Stock xv6 rollback-allocation diagnostic: source checkpoint
+# Stock xv6 rollback-allocation diagnostic
 
-This checkpoint contains an exact reversible heap-sampling derivative of the
-held stock probe and a bounded sampling-heap parser. It is **not connected to a
-hosted guest runner or workflow**. No xv6 child, profiler support control, guest
-comparison, allocation result, or performance result has run for this branch.
+This source checkpoint contains an exact reversible heap-sampling derivative of
+the held stock probe, a bounded sampling-heap parser, and a dedicated hosted
+runner and label-only workflow. **The hosted gate has not run.** No xv6 child,
+profiler support control, guest comparison, allocation result, or performance
+result has been observed for this branch.
 
 The derivative admits only the held probe SHA-256
 `0f283611891e0afbee5359e51b246a2572637257c297815f7ae2c6917ddfc93a`.
@@ -20,16 +21,29 @@ bytes differ from the admitted inventory. It reports sampled allocation bytes
 by exact source role and unresolved frames separately. These are diagnostic
 samples, not total allocations or measured CPU cost.
 
-CPU-free local checks:
+The hosted runner authenticates a pinned free MIT xv6 4 MiB PSE/APIC image,
+the held ordinary-JavaScript emulator revision and probe, one unprofiled fresh
+reference and two fresh sampled children. It requires the same complete
+reported CPU, RAM/disk hashes, serial/input and interrupt/device projection
+for all three. These are reported hashes; the runner does not independently
+reconstruct guest RAM. The source manifest binds the exact new harness paths,
+immutable qualified helper bytes, and the inherited recursive guest source
+inventory. The artifact inventory excludes executable and image roles even on
+failure.
+
+CPU-free checks:
 
 ```sh
 node scripts/xv6-js-rollback-profile/derive-control.mjs "$PWD"
 PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/xv6-js-rollback-profile/profile-control.py
+node scripts/xv6-js-rollback-profile/support-control.mjs
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/xv6-js-rollback-profile/source-control.py
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/xv6-js-rollback-profile/run-control.py
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/xv6-js-rollback-profile/inventory-control.py
 ```
 
-The next source slice must bind a fresh free MIT xv6 4 MiB PSE/APIC workload,
-one unprofiled reference and at least two sampled children to the same
-authenticated emulator, media, command, and semantic projection; verify both
-GC flags on the hosted Node runtime; retain raw profiles and first failures;
-and gate report-only artifacts before upload. No speedup or adoption follows
-from this checkpoint.
+The first hosted run must establish whether Node 20.20.2 actually samples
+collected short-lived objects with both requested flags. Unsupported behavior,
+missing samples, malformed profiles or a semantic difference refuse
+qualification and retain bounded original reports. This experiment does not
+time a performance candidate or establish a speedup.
