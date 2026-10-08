@@ -44,6 +44,9 @@ test('no pre-main arm and CPU poll follows ordinary step',()=>{
   assert.equal(f.progressReports[2].frameProgress.cpuJournal.observation.entry.entryAx,0x501);
   f.frame.ports.step();
   assert.equal(f.progressReports.length,3); // no per-step terminal rewrite
+  f.frame.ports.progress({steps:99});
+  assert.equal(f.progressReports[3].frameProgress.event,'complete');
+  assert.equal(f.progressReports[3].frameProgress.cpuJournal.observation.entry.entryAx,0x501);
   const result=f.frame.finish({passed:true,returnDiagnostic:{address:0x4a0000}});
   assert.equal(result.passed,true);assert.equal(result.frame0501.phase,'passed');
   assert.equal(result.finiteClientPassed,true);
@@ -122,4 +125,24 @@ test('swallowed nested port step cannot publish a successful outer step',()=>{
   assert.equal(steps,1);
   assert.throws(()=>frame.ports.step(),/frame port reentry/);
   assert.equal(steps,1);
+});
+test('CPU invalid reason survives a failing terminal progress write',()=>{
+  let phase='armed',writes=0;
+  const ports={bind:()=>({ownedCodeAtEntry:'PASS'}),step(){phase='invalid';},
+    progress(report){writes++;if(report.frameProgress?.event==='invalid')
+      throw new Error('output write failed');}};
+  const policy={arm:()=>({phase:'armed'}),
+    afterStep:()=>({phase:'invalid',firstFailure:'nested-hardware-delivery'}),
+    status:()=>({phase,firstFailure:phase==='invalid'?'nested-hardware-delivery':null,
+      observation:phase==='invalid'?{phase:'invalid',failure:'nested-hardware-delivery'}:null}),
+    finish(){throw new Error('must not finish');}};
+  const frame=createFrameOrchestration(ports,{policy,
+    opportunity:()=>({comparison,cs:0xa7,receipt:{sourceEip:0x5700}})});
+  frame.ports.bind();frame.ports.progress({steps:1});
+  assert.throws(()=>frame.ports.step(),/output write failed/);
+  const report=frame.finish({passed:false,firstFailure:'output write failed'});
+  assert.equal(report.firstFailure,'nested-hardware-delivery');
+  assert.deepEqual(report.secondaryFailures,['output write failed']);
+  assert.equal(report.frame0501.cpuJournal.observation.failure,'nested-hardware-delivery');
+  assert.equal(writes,3);
 });

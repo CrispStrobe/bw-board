@@ -23,7 +23,8 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
     throw new Error('frame port contract');
   let bound=false,armed=false,terminalEmitted=false,
     firstFailure=null,wrapperReceipt=null;
-  let lastProgress=null,stepCalls=0;
+  let lastProgress=null,lastFrameProgress=null,stepCalls=0;
+  let journalInvalidReason=null;
   let busy=false,reentered=false;
   const fail=reason=>{
     firstFailure??=reason;
@@ -43,6 +44,7 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
     const status=policy.status();
     const frameProgress=Object.freeze({event,stepCalls,
       wrapper:wrapperReceipt,cpuJournal:status});
+    lastFrameProgress=frameProgress;
     // The adapter wraps this in a top-level pending/false report. Keep the
     // inherited partial result and its first failure alongside the frame.
     ports.progress({...lastProgress,frameProgress});
@@ -50,7 +52,7 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
   const wrapped={...ports,
     progress(value){
       lastProgress=value;
-      ports.progress(value);
+      ports.progress(lastFrameProgress?{...value,frameProgress:lastFrameProgress}:value);
     },
     bind(){return exclusive(()=>{
       if(firstFailure) return fail(firstFailure);
@@ -94,6 +96,10 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
         try {state=policy.afterStep();}
         catch(error){firstFailure??='journal poll exception';throw error;}
         if(firstFailure)return fail(firstFailure);
+        if(state.phase==='invalid'){
+          journalInvalidReason=state.firstFailure||'journal invalid';
+          firstFailure??=journalInvalidReason;
+        }
         if(!terminalEmitted&&(state.phase==='complete'||state.phase==='invalid')){
           try {emitFrameMilestone(state.phase);}
           catch(error){firstFailure??='frame terminal progress exception';throw error;}
@@ -113,7 +119,10 @@ export function createFrameOrchestration(ports,{policy,opportunity}) {
       result.finiteClientFirstFailure=report.firstFailure??null;
       if(firstFailure){
         result.passed=false;
-        result.firstFailure??=firstFailure;
+        if(journalInvalidReason && result.firstFailure &&
+           result.firstFailure!==journalInvalidReason)
+          result.secondaryFailures=[...(result.secondaryFailures??[]),result.firstFailure];
+        result.firstFailure=journalInvalidReason??result.firstFailure??firstFailure;
         result.frame0501={phase:'invalid',firstFailure,wrapper:wrapperReceipt,
           cpuJournal:policy.status()};
         return result;
