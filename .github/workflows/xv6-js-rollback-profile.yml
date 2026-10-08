@@ -57,7 +57,7 @@ jobs:
           set -euo pipefail
           ulimit -c 0
           mkdir -p "$RUNNER_TEMP/xv6-js-rollback-profile"
-          timeout 45s node --expose-gc --max-old-space-size=768 scripts/xv6-js-rollback-profile/support.mjs "$RUNNER_TEMP/xv6-js-rollback-profile/gc-support.json"
+          timeout 90s node --expose-gc --max-old-space-size=768 --max-semi-space-size=4 scripts/xv6-js-rollback-profile/support.mjs "$RUNNER_TEMP/xv6-js-rollback-profile/gc-support.json"
       - name: Install bounded xv6 image toolchain
         shell: bash
         run: |

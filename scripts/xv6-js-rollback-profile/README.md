@@ -9,11 +9,14 @@ result has been observed for this branch.
 The derivative admits only the held probe SHA-256
 `0f283611891e0afbee5359e51b246a2572637257c297815f7ae2c6917ddfc93a`.
 It brackets the original guest loop with Inspector `HeapProfiler` sampling,
-requests both collected-by-minor-GC and collected-by-major-GC flags, limits the
-raw profile to 8 MiB, preserves the original guest exception before a profiling
-failure, and verifies that removing the three exact edits reproduces the held
-probe bytes. A hosted short-lived-allocation control must verify support for
-both flags; merely accepting their protocol parameters is insufficient.
+requests both collected-by-minor-GC and collected-by-major-GC flags at a
+predeclared 128 KiB sampling interval, limits the raw profile to 8 MiB,
+preserves the original guest exception before a profiling failure, and
+verifies that removing the three exact edits reproduces the held probe bytes.
+A hosted control checks minor and major collection separately: each
+single-flag case must retain samples of short-lived arrays after the matching
+observed GC kind, while a no-flags baseline does not. Ambiguous GC behavior
+refuses qualification; accepting protocol parameters alone is insufficient.
 
 The parser refuses duplicate JSON keys, invalid graph or sample references,
 nonfinite values, negative or excessive sample sizes, and source roles whose

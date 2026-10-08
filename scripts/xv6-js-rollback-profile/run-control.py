@@ -1,7 +1,7 @@
 """CPU-free three-child schedule and semantic refusal controls."""
 import copy
 
-from run import SCHEDULE, semantic_gate
+from run import SCHEDULE, semantic_gate, snapshot_failure_if_admitted
 
 assert SCHEDULE == (('reference', False), ('sample-1', True), ('sample-2', True))
 baseline = {'steps': 24338279, 'ram': 'a' * 64, 'disk': 'b' * 64,
@@ -20,4 +20,14 @@ for changed in (
         assert 'guest semantic projection differs' in str(error)
     else:
         raise AssertionError('changed guest projection admitted')
+class Admitted:
+    def __init__(self):
+        self.seen = []
+    def snapshot_inventory(self, value):
+        self.seen.append(value)
+
+snapshot_failure_if_admitted(None, 'unadmitted')
+admitted = Admitted()
+snapshot_failure_if_admitted(admitted, 'admitted')
+assert admitted.seen == ['admitted']
 print('rollback runner policy controls PASS')

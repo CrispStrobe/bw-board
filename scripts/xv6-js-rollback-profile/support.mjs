@@ -1,12 +1,12 @@
-/** Hosted-only short-lived allocation check for Node's collected-object flags. */
+/** Hosted-only, separate minor/major collected-object sampling admission. */
 import assert from 'node:assert/strict';
 import inspector from 'node:inspector';
 import {writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
+import {constants,PerformanceObserver,performance} from 'node:perf_hooks';
 import {fileURLToPath} from 'node:url';
 
-const requested=Object.freeze({samplingInterval:131072,
- includeObjectsCollectedByMinorGC:true,includeObjectsCollectedByMajorGC:true});
+const interval=131072;
 export function sampleIncludesCollected(profile,deadCount){
  assert.ok(Number.isSafeInteger(deadCount)&&deadCount>0,'collected test objects');
  const ids=new Set();
@@ -20,45 +20,105 @@ export function sampleIncludesCollected(profile,deadCount){
  return Array.isArray(profile?.samples)&&profile.samples.some(sample=>
   ids.has(sample.nodeId)&&Number.isSafeInteger(sample.size)&&sample.size>0);
 }
+function remember(object,weak){weak.push(new WeakRef(object));}
+function allocateShortLived(){return new Array(1024);}
+function pumpMinor(){
+ let last=null;
+ for(let index=0;index<2048;index++)last=new Array(1024);
+ if(last?.length!==1024)throw Error('minor allocation pump');
+}
+const tick=()=>new Promise(accept=>setImmediate(accept));
+async function sampleCase(name,flags,kind){
+ const session=new inspector.Session();session.connect();
+ const command=(method,params={})=>new Promise((accept,reject)=>
+  session.post(method,params,(error,result)=>error?reject(error):accept(result)));
+ const events=[];
+ const observer=new PerformanceObserver(list=>{
+  for(const entry of list.getEntries())
+   if(entry.entryType==='gc')events.push({at:entry.startTime,kind:entry.detail?.kind});
+ });
+ observer.observe({entryTypes:['gc']});
+ let started=false,firstError=null;
+ try{
+  await command('HeapProfiler.enable');
+  await command('HeapProfiler.startSampling',{samplingInterval:interval,...flags});
+  started=true;
+  const begin=performance.now();
+  const weak=[];
+  for(let index=0;index<8192;index++)remember(allocateShortLived(),weak);
+  if(kind==='minor')pumpMinor();
+  else global.gc();
+  for(let i=0;i<4;i++)await tick();
+  const end=performance.now();
+  const dead=weak.filter(ref=>ref.deref()===undefined).length;
+  assert.equal(dead,weak.length,'every sampled-callsite array became unreachable');
+  const {profile}=await command('HeapProfiler.stopSampling');started=false;
+  await tick();
+  const observed=events.filter(event=>begin<=event.at&&event.at<=end);
+  const minor=observed.filter(event=>
+   event.kind===constants.NODE_PERFORMANCE_GC_MINOR).length;
+  const major=observed.filter(event=>
+   event.kind===constants.NODE_PERFORMANCE_GC_MAJOR).length;
+  if(kind==='minor')assert.ok(minor>0&&major===0,'isolated minor collection');
+  else assert.ok(major>0,'observed major collection');
+  return {name,requested:{samplingInterval:interval,...flags},
+   allocatedObjects:weak.length,collectedObjects:dead,
+   minorGcEvents:minor,majorGcEvents:major,
+   collectedCallsiteSamplePresent:sampleIncludesCollected(profile,dead)};
+ }catch(error){firstError=error;throw error;}
+ finally{
+  observer.disconnect();
+  if(started)try{await command('HeapProfiler.stopSampling');}catch(error){if(!firstError)throw error;}
+  try{session.disconnect();}catch(error){if(!firstError)throw error;}
+ }
+}
+export function supportsBothCases(cases){
+ assert.ok(Array.isArray(cases)&&cases.length===4,'four independent GC cases');
+ const byName=Object.fromEntries(cases.map(item=>[item.name,item]));
+ assert.equal(Object.keys(byName).length,4,'unique GC cases');
+ for(const name of ['minor-baseline','minor-enabled','major-baseline','major-enabled'])
+  assert.ok(byName[name]&&byName[name].allocatedObjects>0&&
+   byName[name].allocatedObjects===byName[name].collectedObjects,
+   'all case objects collected');
+ assert.deepEqual(byName['minor-baseline'].requested,{samplingInterval:interval});
+ assert.deepEqual(byName['minor-enabled'].requested,
+  {samplingInterval:interval,includeObjectsCollectedByMinorGC:true});
+ assert.deepEqual(byName['major-baseline'].requested,{samplingInterval:interval});
+ assert.deepEqual(byName['major-enabled'].requested,
+  {samplingInterval:interval,includeObjectsCollectedByMajorGC:true});
+ assert.equal(byName['minor-baseline'].collectedCallsiteSamplePresent,false);
+ assert.equal(byName['major-baseline'].collectedCallsiteSamplePresent,false);
+ assert.equal(byName['minor-enabled'].collectedCallsiteSamplePresent,true);
+ assert.equal(byName['major-enabled'].collectedCallsiteSamplePresent,true);
+ assert.ok(byName['minor-enabled'].minorGcEvents>0&&
+  byName['minor-enabled'].majorGcEvents===0,'minor-only GC evidence');
+ assert.ok(byName['major-enabled'].majorGcEvents>0,'major GC evidence');
+ return true;
+}
 async function main(){
  assert.equal(process.argv.length,3,'one absolute receipt path');
  const output=process.argv[2];
  assert.equal(resolve(output),output,'absolute receipt path');
  assert.equal(typeof global.gc,'function','--expose-gc required');
- const session=new inspector.Session();session.connect();
- const command=(method,params={})=>new Promise((accept,reject)=>
-  session.post(method,params,(error,result)=>error?reject(error):accept(result)));
- let started=false,profile=null,firstError=null;
- const weak=[];
+ let firstError=null;
  try{
-  await command('HeapProfiler.enable');
-  await command('HeapProfiler.startSampling',requested);started=true;
-  function allocateShortLived(){
-   for(let index=0;index<1024;index++)weak.push(new WeakRef(new Array(8192).fill(index)));
-  }
-  allocateShortLived();
-  for(let round=0;round<8;round++){
-   await new Promise(accept=>setImmediate(accept));
-   global.gc();
-  }
-  const dead=weak.filter(ref=>ref.deref()===undefined).length;
-  assert.ok(dead===weak.length&&dead>0,'short-lived objects collected');
-  ({profile}=await command('HeapProfiler.stopSampling'));started=false;
-  assert.ok(sampleIncludesCollected(profile,dead),'collected-object samples absent');
-  const receipt={schema:'bw.xv6-js-rollback-gc-support.v1',requested,
-   node:process.version,v8:process.versions.v8,
-   allocatedObjects:weak.length,collectedObjects:dead,
-   collectedCallsiteSamplePresent:true};
-  writeFileSync(output,JSON.stringify(receipt)+'\n',{flag:'wx'});
+  const cases=[
+   await sampleCase('minor-baseline',{},'minor'),
+   await sampleCase('minor-enabled',{includeObjectsCollectedByMinorGC:true},'minor'),
+   await sampleCase('major-baseline',{},'major'),
+   await sampleCase('major-enabled',{includeObjectsCollectedByMajorGC:true},'major')];
+  supportsBothCases(cases);
+  writeFileSync(output,JSON.stringify({
+   schema:'bw.xv6-js-rollback-gc-support.v2',
+   requestedProduction:{samplingInterval:interval,
+    includeObjectsCollectedByMinorGC:true,includeObjectsCollectedByMajorGC:true},
+   node:process.version,v8:process.versions.v8,cases,
+   bothFlagsIndependentlyObserved:true})+'\n',{flag:'wx'});
  }catch(error){
   firstError=error;
   try{writeFileSync(output+'.failure.json',JSON.stringify({
    type:error?.name??'Error',message:String(error).slice(0,4096)})+'\n',{flag:'wx'});}catch{}
   throw error;
- }
- finally{
-  if(started)try{await command('HeapProfiler.stopSampling');}catch(error){if(!firstError)throw error;}
-  try{session.disconnect();}catch(error){if(!firstError)throw error;}
  }
 }
 if(process.argv[1]&&resolve(process.argv[1])===resolve(fileURLToPath(import.meta.url)))

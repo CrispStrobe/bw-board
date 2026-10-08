@@ -47,6 +47,11 @@ def semantic_gate(baseline, candidate):
          'guest semantic projection differs')
 
 
+def snapshot_failure_if_admitted(accepted, output):
+    if accepted is not None:
+        accepted.snapshot_inventory(output)
+
+
 def main():
     parser = argparse.ArgumentParser()
     for arg in ('harness', 'qualified', 'image-dir', 'output'):
@@ -57,6 +62,7 @@ def main():
     output = args.output.resolve()
     output.mkdir(mode=0o700, exist_ok=False)
     completed = []
+    accepted = None
     try:
         harness = args.harness.resolve(strict=True)
         qualified = args.qualified.resolve(strict=True)
@@ -71,15 +77,31 @@ def main():
         media = accepted.check_media(qualified, args.image_dir.resolve(strict=True))
         accepted.ordinary_file(args.image_dir / 'kernel', 20 * 1024 * 1024)
         support = accepted.load_json(args.gc_support.resolve(strict=True), 65536)
-        need(support.get('schema') == 'bw.xv6-js-rollback-gc-support.v1' and
-             support.get('requested') == {
+        need(support.get('schema') == 'bw.xv6-js-rollback-gc-support.v2' and
+             support.get('requestedProduction') == {
                  'samplingInterval': 131072,
                  'includeObjectsCollectedByMinorGC': True,
                  'includeObjectsCollectedByMajorGC': True} and
-             support.get('collectedCallsiteSamplePresent') is True and
-             type(support.get('allocatedObjects')) is int and
-             support.get('allocatedObjects') == support.get('collectedObjects') and
-             support.get('allocatedObjects') > 0,
+             support.get('bothFlagsIndependentlyObserved') is True and
+             type(support.get('cases')) is list and
+             [item.get('name') for item in support['cases'] if type(item) is dict] ==
+             ['minor-baseline', 'minor-enabled', 'major-baseline', 'major-enabled'] and
+             len(support['cases']) == 4 and
+             all(type(item.get('allocatedObjects')) is int and
+                 item['allocatedObjects'] == item.get('collectedObjects') and
+                 item['allocatedObjects'] > 0 for item in support['cases']) and
+             [item.get('collectedCallsiteSamplePresent') for item in support['cases']] ==
+             [False, True, False, True] and
+             [item.get('requested') for item in support['cases']] == [
+                 {'samplingInterval': 131072},
+                 {'samplingInterval': 131072,
+                  'includeObjectsCollectedByMinorGC': True},
+                 {'samplingInterval': 131072},
+                 {'samplingInterval': 131072,
+                  'includeObjectsCollectedByMajorGC': True}] and
+             support['cases'][1].get('minorGcEvents', 0) > 0 and
+             support['cases'][1].get('majorGcEvents') == 0 and
+             support['cases'][3].get('majorGcEvents', 0) > 0,
              'unverified hosted collected-object sampling')
         support_sha = sha(args.gc_support)
         source_inventory = accepted.expected_source_inventory(qualified, QUALIFIED)
@@ -160,10 +182,7 @@ def main():
         except Exception:
             pass
         try:
-            qualified = args.qualified.resolve(strict=True)
-            sys.path.insert(0, str(qualified / 'scripts/xv6-js-acceptance'))
-            import run as accepted
-            accepted.snapshot_inventory(output)
+            snapshot_failure_if_admitted(accepted, output)
         except Exception:
             pass
         raise
