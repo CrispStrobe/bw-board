@@ -248,8 +248,22 @@ frame/return mismatches, context excursions, task/VM86/nested delivery and
 transaction/observer failures. Keep client/media/machine/workflow unchanged;
 use fresh exact source-policy hashes and an isolated branch. Complete source
 review and every enabled exact-head check before one new actual run. The
-profile implementation is in progress; no reviewed source or guest result is
-claimed at this checkpoint. Refresh open PRs before duplicating it. Outer-CPL
+profile implementation is published in [draft PR466](https://github.com/CrispStrobe/bw-board/pull/466)
+at source-review checkpoint
+[`94ecaacb`](https://github.com/CrispStrobe/bw-board/commit/94ecaacbdc0ba84c422062c4e7995539a714ec12),
+stacked on PR465's `0714159c`. It preserves the default observer and selects
+`gate14-code16-stack32-same-cpl3.v1` explicitly through the controller.
+The observer checks handler descriptor contents and live cache identity after
+IRET frame/descriptor reads, before restoring the caller. These are instruction
+and return-commit boundary checks, not a continuous physical-memory lease.
+Focused authored regressions include in-place mutation and cache replacement during frame reads,
+plus selected-profile gate16 and stack16 rejection.
+
+Source controls, syntax checks, all 24 CPU-free policy/orchestration controls,
+and exact-head source identity (196 roles, 62 recursive JavaScript nodes) pass.
+CPU-focused regressions and a real guest frame pair remain pending hosted
+qualification; no local CPU execution or new speed measurement is claimed.
+Refresh open PRs and exact-head checks before duplicating work. Outer-CPL
 16-bit return semantics and other combinations remain separate tasks.
 
 ## First deliverable
