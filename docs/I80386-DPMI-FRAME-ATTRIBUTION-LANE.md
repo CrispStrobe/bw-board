@@ -214,12 +214,15 @@ stacked on `4c22a574`. Root and independent peer completed source review;
 source controls, syntax and 196-role/62-node source admission passed. Eight
 new focused controls are added for hosted execution. The independently audited
 [three-scenario xv6 regression](receipts/2026-10-08-0501-delivery-diagnostic-xv6/README.md)
-passed, including all 60 focused names; both Harris checks passed. The remaining
-full CI gate is pending; no actual diagnostic has been triggered for this head.
-The new rejection field cannot qualify a delivery/return pair. After every
-enabled exact-head check passes, apply the dedicated label once, retain the
-original diagnostic packet, and audit its rejected-delivery facts separately
-from any later mixed-width frame qualification.
+passed, including all 60 focused names; both Harris checks passed. All twelve
+enabled exact-head checks subsequently passed, with only the two declared
+`vectors-full` skips. After checking those gates and confirming no prior
+actual for this source, the dedicated label was applied once to PR465, creating
+[diagnostic run 37830225406](https://github.com/CrispStrobe/bw-board/actions/runs/37830225406).
+Its result is pending. The new rejection field cannot qualify a delivery/return
+pair. Retain and independently audit the original diagnostic packet; do not
+relabel or replay this source. Scope any later mixed-width frame qualification
+from the observed facts, keeping it separate from this rejection receipt.
 
 ## First deliverable
 
