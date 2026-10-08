@@ -33,7 +33,7 @@ def project(output):
     address, requested = fields["address"], fields["requested"]
     if address <= 0x100000 or requested != 4096 or address + requested - 1 > UINT32:
         raise ValueError("linear allocation predicate")
-    if fields["selector_base"] != address or fields["selector_limit"] < requested - 1:
+    if fields["selector_base"] != address or fields["selector_limit"] != requested - 1:
         raise ValueError("selector readback predicate")
     if not 0 <= fields["first"] < DAY or not 0 <= fields["last"] < DAY:
         raise ValueError("BIOS tick range")

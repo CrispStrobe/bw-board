@@ -28,6 +28,7 @@ for bad in (
     result(address=0x100000), result(address=0xfffff001),
     result(requested=4095), result(requested=4097),
     result(selector_base=0x100002), result(selector_limit=4094),
+    result(selector_limit=4096), result(selector_limit=0xffffffff),
     result(first=DAY), result(last=DAY), result(last=3, delta=0),
     result(last=40, delta=37), result(polls=1), result(polls=262145),
     result(checksum=1), result() + result(), result() + b"extra\r\n",

@@ -7,7 +7,7 @@ export const GEOMETRY = Object.freeze({cylinders: 306, heads: 4, sectors: 17});
 export const HOST = Object.freeze({bytes: 21325,
   sha256: '2de899fecaa90632b8b9bdfc0305cb0375e59ae252c37e32d06c1ed3f98a8f44'});
 export const CLIENT_PATH = 'scripts/i80386-cwsdpmi-highmem-timer/client.c';
-export const CLIENT_SHA = 'fdc4884b74485cdac6ee066512f8854bd1966b78f16c2fa22d0730ace113b7cb';
+export const CLIENT_SHA = '77b41b9c9633d8fea932786230ee24facc8d05549a8912a36afb0f55b71afc07';
 export const FIRST = 'c:\\runht.bat';
 export const SECOND = 'c:\\verifyht.bat';
 export const EXIT_OK = 'BW-HMT-EXIT-0';
@@ -39,9 +39,13 @@ export function buildMedia({host, client, compile, rawCompile, source, hostPin =
       compile.executable.sha256 !== sha256(client) ||
       compile.executable.format?.valid !== true ||
       compile.executable.format.coff?.valid !== true ||
+      rawCompile?.schema !== 'bw.cwsdpmi-owned.compile-only.v1' ||
+      rawCompile.status !== 'COMPILED_NO_GUEST_NO_BINARY_PUBLICATION' ||
       rawCompile?.ownedSource?.path !== CLIENT_PATH ||
       rawCompile.ownedSource.sha256 !== CLIENT_SHA ||
-      rawCompile.executable?.sha256 !== sha256(client))
+      rawCompile.executable?.uploaded !== false ||
+      JSON.stringify(rawCompile.executable) !== JSON.stringify(compile.executable) ||
+      JSON.stringify(rawCompile.map) !== JSON.stringify(compile.map))
     throw new Error('new compile profile/client mismatch');
   const coff = compile.executable.format.coffOffset;
   if (client.readUInt16LE(0) !== 0x5a4d || !Number.isInteger(coff) ||
@@ -68,9 +72,26 @@ function ordinary(path, maximum) {
   const stat = fs.lstatSync(path);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maximum)
     throw new Error('media input shape');
-  const raw = fs.readFileSync(path);
-  if (raw.length !== stat.size)throw new Error('media input changed');
-  return raw;
+  const fd = fs.openSync(path, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW |
+    fs.constants.O_NONBLOCK);
+  try {
+    const before = fs.fstatSync(fd);
+    if (!before.isFile() || before.dev !== stat.dev || before.ino !== stat.ino ||
+        before.size !== stat.size) throw new Error('media input changed');
+    const raw = Buffer.alloc(stat.size + 1);
+    let offset = 0;
+    while (offset < raw.length) {
+      const count = fs.readSync(fd, raw, offset, raw.length - offset, null);
+      if (count === 0) break;
+      offset += count;
+    }
+    const after = fs.fstatSync(fd);
+    if (offset !== stat.size || after.size !== stat.size)
+      throw new Error('media input changed');
+    return raw.subarray(0, offset);
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {

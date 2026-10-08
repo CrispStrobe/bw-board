@@ -47,7 +47,7 @@ int main(void)
         goto cleanup;
     }
     selector_limit = __dpmi_get_segment_limit(selector);
-    if (selector_base != block.address || selector_limit < BLOCK_BYTES - 1) {
+    if (selector_base != block.address || selector_limit != BLOCK_BYTES - 1) {
         puts("BW_HMT_FAIL SELECTOR_READBACK");
         result = 12;
         goto cleanup;
