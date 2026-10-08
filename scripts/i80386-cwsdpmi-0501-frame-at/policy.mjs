@@ -79,9 +79,15 @@ export function create0501Policy(cpu) {
       if (!terminal || terminal.phase!==state.phase ||
           terminal.failure!==state.failure ||
           !Number.isInteger(terminal.activeSteps) ||
-          terminal.activeSteps<1 || terminal.activeSteps>armedCap)
+          terminal.activeSteps!==state.activeSteps ||
+          terminal.activeSteps<0 || terminal.activeSteps>armedCap+1)
         return fail('cpu-drain-mismatch');
-      if (terminal.phase==='invalid') return fail(terminal.failure || 'cpu-invalid');
+      if (terminal.phase==='invalid')
+        return fail(typeof terminal.failure==='string' && terminal.failure.length
+          ? terminal.failure : 'cpu-invalid');
+      if (terminal.failure!==null || terminal.activeSteps<1 ||
+          terminal.activeSteps>armedCap)
+        return fail('cpu-complete-malformed');
       phase='complete';
       return Object.freeze({phase});
     });},
@@ -107,9 +113,13 @@ export function create0501Policy(cpu) {
           !word(entry.returnSs) || !dword(entry.returnEsp) ||
           !dword(entry.savedFlags) || !cpl(entry.oldCpl) ||
           !cpl(entry.newCpl) || entry.newCpl>entry.oldCpl ||
+          entry.oldCpl!==(entry.returnCs&3) ||
+          entry.oldCpl!==(entry.returnSs&3) ||
           ![14,15].includes(entry.gateType) ||
           !word(entry.handlerCs) || !dword(entry.handlerEip) ||
           !word(entry.handlerSs) || !dword(entry.handlerEsp) ||
+          entry.newCpl!==(entry.handlerCs&3) ||
+          entry.newCpl!==(entry.handlerSs&3) ||
           !dword(entry.frameLinear) ||
           entry.frameBytes!==(entry.newCpl<entry.oldCpl?20:12) ||
           !word(entry.entryBx) || !word(entry.entryCx) ||

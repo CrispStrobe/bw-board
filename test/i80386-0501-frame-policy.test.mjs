@@ -7,7 +7,7 @@ import {admitFreshWrapper,compareWrapperSnapshot} from '../scripts/i80386-cwsdpm
 const wrapper=Object.freeze({schema:'bw.cwsdpmi-0501.wrapper-comparison.v1',
   address:0x5700,bytes:0x30});
 function fixture(override={}) {
-  let phase='armed', armCount=0, drainCount=0;
+  let phase='armed', armCount=0, drainCount=0, activeSteps=2;
   const entry={source:'decoded-software-int31',vector:0x31,width:32,
     instructionStart:0x571e,entryAx:0x0501,entryBx:0,entryCx:4096,returnCs:0xa7,
     returnEip:0x5720,returnSs:0xaf,returnEsp:0x2000,
@@ -30,13 +30,14 @@ function fixture(override={}) {
         maxActiveSteps:1000000});
       return Object.freeze({});
     },
-    owned0501FrameStatus(){return {phase,failure:phase==='invalid'?'synthetic-invalid':null};},
+    owned0501FrameStatus(){return {phase,failure:phase==='invalid'?'synthetic-invalid':null,
+      activeSteps};},
     takeOwned0501FrameObservation(){drainCount++;return {phase,
-      failure:phase==='invalid'?'synthetic-invalid':null,activeSteps:2,entry,returned};},
+      failure:phase==='invalid'?'synthetic-invalid':null,activeSteps,entry,returned};},
   };
   return {cpu,entry,returned,
     policy:create0501Policy(cpu),
-    complete(){phase='complete';},invalid(){phase='invalid';},
+    complete(){phase='complete';},invalid(steps=2){phase='invalid';activeSteps=steps;},
     counts(){return {armCount,drainCount};}, ...override};
 }
 const arm=f=>f.policy.arm({mainCut:true,comparison:wrapper,cs:0xa7});
@@ -62,6 +63,24 @@ test('invalid CPU observation cannot be rescued by client output or second arm',
   assert.equal(finish(f).phase,'invalid');
   assert.equal(arm(f).phase,'invalid');
   assert.deepEqual(f.counts(),{armCount:1,drainCount:1});
+});
+test('preserves CPU reset and active-step-cap invalidation counters',()=>{
+  const reset=fixture();arm(reset);reset.invalid(0);
+  assert.deepEqual(reset.policy.afterStep(),
+    {phase:'invalid',firstFailure:'synthetic-invalid'});
+  const cap=fixture();arm(cap);cap.invalid(1000001);
+  assert.deepEqual(cap.policy.afterStep(),
+    {phase:'invalid',firstFailure:'synthetic-invalid'});
+});
+test('refuses inconsistent status and drained counters',()=>{
+  let reads=0;
+  const cpu={armOwned0501FrameJournal:()=>({}),
+    owned0501FrameStatus:()=>({phase:'complete',failure:null,activeSteps:2}),
+    takeOwned0501FrameObservation:()=>({phase:'complete',failure:null,
+      activeSteps:++reads,entry:{},returned:{}})};
+  const policy=create0501Policy(cpu);
+  policy.arm({mainCut:true,comparison:wrapper,cs:0xa7});
+  assert.equal(policy.afterStep().firstFailure,'cpu-drain-mismatch');
 });
 test('refuses pre-main or forged opportunity and does not arm',()=>{
   const f=fixture();
@@ -91,6 +110,10 @@ test('missing frame context cannot pass via undefined equality',()=>{
   const g=fixture();arm(g);g.complete();g.policy.afterStep();
   g.returned.consumedEip=0x5721;
   assert.equal(finish(g).phase,'invalid');
+  const h=fixture();arm(h);h.complete();h.policy.afterStep();
+  h.entry.handlerCs=0xb;
+  h.returned.handlerCs=0xb;
+  assert.equal(finish(h).phase,'invalid');
 });
 test('reentrant arm from CPU admission poisons the outer operation',()=>{
   let policy;
@@ -169,6 +192,7 @@ test('admitted wrapper bytes survive public-layout mutation on exact and mismatc
   layout.roles.allocateMemory.address=0x1400;
   layout.textBytes.fill(0);
   layout.text.address=0x1234;
+  assert.equal(compareWrapperSnapshot(token,copied).wholeText,'EXACT');
   const runtime=Buffer.from(copied);runtime[0x500]^=1;
   assert.equal(compareWrapperSnapshot(token,runtime).wholeText,'DIFFERS');
   runtime[0x100]^=1;
