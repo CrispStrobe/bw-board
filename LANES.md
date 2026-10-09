@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-09 winding turn-off oracle — CLAIM, Codex bwcx.
+2026-10-09 winding turn-off oracle — CLAIM, red evidence checkpoint, Codex bwcx.
 Branch lane/winding-turnoff-oracle-20261009, isolated owned worktree, exact base
 00fe5f1b55ca004c1eb2322c8eaa98ee43a3dc5e. Three-path evidence-only envelope:
 this ledger, new test/winding-turnoff-oracle.test.mjs and new
@@ -14,6 +14,16 @@ reference sensitivity. No full-waveform qualification or physical scope claim.
 No production equation/profile/work-limit, GUI, package/pin, CPU, workflow or
 deployment changes. Canonical remote claim before repository implementation;
 one exact CI/Harris qualification before guarded landing of this evidence.
+Canonical claim d81597f9 preceded implementation. New independently authored
+ngspice100/50 ns reference-refinement gate passes for seven settled/flyback/
+restart samples with explicit intermediate observation endpoints; wrong-L and
+wrong-pulse actual electrical controls fail against that unchanged oracle.
+The separate desired no-intermediate-checkpoint regression fails honestly:
+1 ms live span exhausts20,000 integration attempts at2.0821217125 ms. Suite
+1 pass/1 fail/0 skips. Preserve this RED branch-only checkpoint; no hosted
+dispatch, master implementation landing, package adoption or complete waveform
+claim. Live-work scheduling repair requires a separately expanded remote claim;
+late-ring reference convergence and finite precision refusal remain open.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
