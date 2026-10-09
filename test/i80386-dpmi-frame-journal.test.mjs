@@ -1058,6 +1058,321 @@ test('mode status wrong-token reentry is latched before token rejection', () => 
   assert.equal(observed.modeChanges.length, 0);
 });
 
+function retainedProtectedModeForFar() {
+  const f = openedMixedMode();
+  // The mixed-entry descriptor at selector 8 is DPL3. After PE is re-enabled
+  // with retained CS, CPL is zero, so a separate DPL0 target is required.
+  // Keep this code16 so 0x66 exercises the decoded 32-bit offset path.
+  f.put(0x228, [0xff, 0xff, 0, 0, 0x10, 0x9a, 0x8f, 0]);
+  // A synthetic committed task-core transfer supplies a source-visible CPL0
+  // context before privileged MOV CR0. It is a hosted control, not evidence
+  // that the earlier AT guest took this transfer or any subsequent opcode.
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.deepEqual([selector, kind], [0x38, 'jmp']);
+    assert.throws(() => core.call(this, 0, kind, options), I80386Fault);
+    this.tr = { selector: 0x38, base: 0x700, limit: 0x67,
+      present: true, type: 11 };
+    this.cs = 0x28; this.ss = 0x10; this.eip = 0x120; this.esp = 0x400;
+    this.segmentCaches[1] = this._ringCodeDescriptor(0x28);
+    this.segmentCaches[2] = this._ringStackDescriptor(0x10, 0,
+      { returnPath: true });
+    return 7;
+  };
+  f.cpu._stepInstruction = function () {
+    this._taskSwitch(0x38, 'jmp'); return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501TaskModeStatus(f.modeToken).transitions, 1);
+  assert.equal(f.cpu.owned0501FrameStatus(f.frameToken).failure,
+    'task-switch-during-owned-frame');
+  delete f.cpu._taskSwitchCore;
+  delete f.cpu._stepInstruction;
+  // These two separately decoded MOV CR0 writes are already supported by the
+  // opt-in recorder. They establish retained-real-CS without pretending that
+  // the earlier AT guest's refused instruction has been decoded here.
+  for (const value of [0, 1]) {
+    f.cpu.eax = value;
+    f.cpu._fetch8 = (() => { const bytes = [0x22, 0xc0];
+      return () => bytes.shift(); })();
+    f.cpu._stepInstruction = function () {
+      this._step0f(false, null, 32); return 1;
+    };
+    assert.equal(f.cpu.step(), 1);
+  }
+  delete f.cpu._fetch8;
+  delete f.cpu._stepInstruction;
+  assert.equal(f.cpu.cr0, 1);
+  assert.equal(f.cpu._retainedRealCs, true);
+  assert.equal(f.cpu.currentPrivilegeLevel, 0);
+  assert.equal(f.cpu.owned0501TaskModeStatus(f.modeToken).modeChanges, 2);
+  return f;
+}
+
+test('only decoded immediate direct far jump earns committed CS-reload ticket', () => {
+  const f = retainedProtectedModeForFar();
+  const beforeCs = f.cpu.cs, beforeEip = f.cpu.eip;
+  f.put(HANDLER + beforeEip, [0xea, 0x05, 0x01, 0x28, 0x00]);
+  assert.equal(f.cpu.step(), 1);
+  const status = f.cpu.owned0501TaskModeStatus(f.modeToken);
+  assert.equal(status.phase, 'observing');
+  assert.equal(status.modeChanges, 3);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  const third = result.modeChanges[2];
+  assert.deepEqual([third.operation.kind, third.operation.source,
+    third.operation.operandWidth, third.operation.selector,
+    third.operation.target, third.operation.instructionStart,
+    third.before.cs, third.after.cs, third.before.retainedRealCs,
+    third.after.retainedRealCs, third.enclosingStepCommitted],
+    ['decoded-direct-far-cs-reload', 'ea-immediate', 16, 0x28, 0x105,
+      beforeEip, beforeCs, 0x28, true, false, true]);
+  assert.equal(result.frameReturnQualified, false);
+  assert.equal(f.cpu.owned0501FrameStatus(f.frameToken).phase, 'invalid');
+});
+
+test('decoded FF /5 indirect direct far jump has its own source tag', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xff, 0x2e, 0x00, 0x05]);
+  f.put(0x500, [0x05, 0x01, 0x28, 0x00]);
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.modeChanges[2].operation.source, 'ff-far-indirect');
+  assert.equal(result.modeChanges[2].operation.target, 0x105);
+  assert.equal(result.modeChanges[2].enclosingStepCommitted, true);
+});
+
+test('operand-size-prefixed EA decodes a 32-bit direct far reload', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip,
+    [0x66, 0xea, 0x05, 0x01, 0, 0, 0x28, 0]);
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  const third = result.modeChanges[2];
+  assert.deepEqual([third.operation.source, third.operation.operandWidth,
+    third.operation.selector, third.operation.target, third.after.cs],
+  ['ea-immediate', 32, 0x28, 0x105, 0x28]);
+});
+
+test('operand-size-prefixed FF /5 reads a 32-bit far pointer from DS', () => {
+  const f = retainedProtectedModeForFar();
+  assert.equal(f.cpu.segmentCaches[3].base, 0);
+  f.put(HANDLER + f.cpu.eip, [0x66, 0xff, 0x2e, 0, 5]);
+  f.put(0x500, [0x05, 0x01, 0, 0, 0x28, 0]);
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  const third = result.modeChanges[2];
+  assert.deepEqual([third.operation.source, third.operation.operandWidth,
+    third.operation.selector, third.operation.target, third.after.cs],
+  ['ff-far-indirect', 32, 0x28, 0x105, 0x28]);
+});
+
+test('active decoder does not expose its source marker through public helper override', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0]);
+  const original = f.cpu._protectedFarTransfer;
+  const captured = [];
+  f.cpu._protectedFarTransfer = function (...args) {
+    captured.push(args); return original.apply(this, args);
+  };
+  assert.equal(f.cpu.step(), 1);
+  assert.deepEqual(captured, []);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  assert.equal(f.cpu.takeOwned0501TaskModeObservation(f.modeToken)
+    .modeChanges[2].operation.source, 'ea-immediate');
+});
+
+test('active FF /5 decoder also bypasses the overridable public helper', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xff, 0x2e, 0, 5]);
+  f.put(0x500, [0x05, 0x01, 0x28, 0]);
+  const original = f.cpu._protectedFarTransfer;
+  const originalGroup = f.cpu._group5;
+  const captured = [];
+  f.cpu._protectedFarTransfer = function (...args) {
+    captured.push(args); return original.apply(this, args);
+  };
+  f.cpu._group5 = function (...args) {
+    captured.push(args); return originalGroup.apply(this, args);
+  };
+  assert.equal(f.cpu.step(), 1);
+  assert.deepEqual(captured, []);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  assert.equal(f.cpu.takeOwned0501TaskModeObservation(f.modeToken)
+    .modeChanges[2].operation.source, 'ff-far-indirect');
+});
+
+test('direct public group-5 helper cannot forge a decoded FF /5 ticket', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0x2e, 0, 5]);
+  f.put(0x500, [0x05, 0x01, 0x28, 0]);
+  f.cpu._stepInstruction = function () {
+    this._group5(0xff, 16, false, null); return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'unattributed-mode-change');
+  assert.equal(result.modeRefusal.operation, null);
+  assert.deepEqual([f.cpu.cs, f.cpu.eip], [0x28, 0x105]);
+});
+
+test('public helper ignores a replayed fifth argument during active mode recording', () => {
+  const f = retainedProtectedModeForFar();
+  f.cpu._stepInstruction = function () {
+    this._protectedFarTransfer(0x28, 0x105, 16, false,
+      Symbol('decoded EA far jump')); return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'unattributed-mode-change');
+  assert.equal(result.modeRefusal.operation, null);
+  assert.deepEqual([f.cpu.cs, f.cpu.eip], [0x28, 0x105]);
+});
+
+test('direct helper call cannot forge a decoded far source tag', () => {
+  const f = retainedProtectedModeForFar();
+  f.cpu._stepInstruction = function () {
+    this._protectedFarTransfer(0x28, 0x105, 16, false); return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'unattributed-mode-change');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(result.modeRefusal.operation, null);
+  assert.equal(f.cpu.cs, 0x28);
+  assert.equal(f.cpu.eip, 0x105);
+});
+
+test('decoded far call changes guest state but has no non-call reload ticket', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0x9a, 0x05, 0x01, 0x28, 0x00]);
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'unattributed-mode-change');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(result.modeRefusal.operation, null);
+  assert.equal(f.cpu.cs, 0x28);
+});
+
+test('far descriptor fault before commit cannot mint a mode ticket', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0, 0]);
+  assert.throws(() => f.cpu.step(), error =>
+    error instanceof I80386Fault && error.vector === 13);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'step-failure');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(result.uncommittedModes.some(item =>
+    item.operation?.kind === 'decoded-direct-far-cs-reload'), false);
+  assert.equal(f.cpu._retainedRealCs, true);
+});
+
+test('two decoder far reloads in one step cannot replace the first ticket', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0x00]);
+  f.put(HANDLER + 0x105, [0xea, 0x0c, 0x01, 0x28, 0]);
+  const decode = f.cpu._stepInstruction;
+  f.cpu._stepInstruction = function (...args) {
+    decode.call(this, ...args);decode.call(this, ...args);return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'mode-operation-reentry');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(f.cpu.eip, 0x10c);
+});
+
+test('nested observer call during far descriptor read refuses only the ticket', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0x00]);
+  const originalRead = f.cpu.read;
+  let nested = false;
+  f.cpu.read = address => {
+    if(!nested && address >= 0x228 && address < 0x230) {
+      nested = true;
+      assert.throws(() => f.cpu.owned0501TaskModeStatus({}), /stale/);
+    }
+    return originalRead(address);
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(nested, true);
+  assert.equal(result.firstFailure, 'observer-reentry');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(f.cpu.cs, 0x28);
+});
+
+test('far ticket refuses a second source change after decoded CS reload', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0x00]);
+  const decode = f.cpu._stepInstruction;
+  f.cpu._stepInstruction = function (...args) {
+    const result = decode.call(this, ...args);
+    this.cr3 = 0x1000;
+    return result;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'mode-operation-context-mismatch');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(f.cpu.cr3, 0x1000);
+});
+
+test('far ticket cannot disappear when a later same-step mutation hides the mode change', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0x00]);
+  const decode = f.cpu._stepInstruction;
+  f.cpu._stepInstruction = function (...args) {
+    const result = decode.call(this, ...args);
+    this._retainedRealCs = true;
+    return result;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'mode-operation-context-mismatch');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(f.cpu._retainedRealCs, true);
+});
+
+test('decoded far reload in a nonpositive step remains uncommitted', () => {
+  const f = retainedProtectedModeForFar();
+  f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0x00]);
+  const decode = f.cpu._stepInstruction;
+  f.cpu._stepInstruction = function (...args) {
+    decode.call(this, ...args); return 0;
+  };
+  assert.equal(f.cpu.step(), 0);
+  const result = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(result.firstFailure, 'uncommitted-step');
+  assert.equal(result.modeChanges.length, 2);
+  assert.equal(result.uncommittedModes.at(-1).operation.kind,
+    'decoded-direct-far-cs-reload');
+  assert.equal(result.uncommittedModes.at(-1).enclosingStepCommitted, false);
+  assert.equal(f.cpu.cs, 0x28); // Refusal does not roll back the guest.
+});
+
+test('disabled mode journal leaves the decoded far jump guest result alone', () => {
+  const f = fixture();
+  f.cpu.cs = 8;
+  f.cpu.eip = 0x100;
+  f.cpu.segmentCaches[1] = {...f.cpu._ringCodeDescriptor(8),default32:false};
+  f.cpu._retainedRealCs = true;
+  f.put(HANDLER + 0x100, [0xea, 0x05, 0x01, 0x08, 0x00]);
+  const original = f.cpu._protectedFarTransfer;
+  let publicCalls = 0;
+  f.cpu._protectedFarTransfer = function (...args) {
+    publicCalls++;
+    return original.apply(this, args);
+  };
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(publicCalls, 1);
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu._retainedRealCs],
+    [8, 0x105, false]);
+});
+
 test('protected-only excursion still rejects PE clear', () => {
   const f = openedMixedExcursion();
   f.cpu._stepInstruction = function () { this.cr0 = 0; return 1; };

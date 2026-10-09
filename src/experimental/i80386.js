@@ -43,6 +43,10 @@ const OWNED_0501_EXCURSION_TRANSITIONS = 16;
 const OWNED_0501_EXCURSION_DELIVERIES = 32;
 const OWNED_0501_MODE_CHANGES = 32;
 const OWNED_0501_MODE_PROFILE = "task-mode-crossing-diagnostic.v1";
+// Decoder call sites alone possess these tags. A direct public call to the
+// transfer helper cannot claim that an opcode was decoded.
+const OWNED_0501_FAR_EA = Symbol("decoded EA far jump");
+const OWNED_0501_FAR_FF5 = Symbol("decoded FF /5 far jump");
 const OWNED_0501_EXCURSION_ABORT_REASONS = Object.freeze([
   "observer-wall-bound", "observer-step-bound",
   "observer-machine-step-exception", "observer-owner-change",
@@ -272,6 +276,32 @@ function owned0501ModeChanged(a, b) {
     a.retainedRealCs !== b.retainedRealCs;
 }
 
+function owned0501FarTicketMatches(before, post, operation, pendingTask) {
+  if (pendingTask || !["ea-immediate", "ff-far-indirect"].includes(operation.source) ||
+      ![16, 32].includes(operation.operandWidth) ||
+      operation.instructionStart !== before.eip ||
+      !Number.isInteger(operation.selector) || operation.selector < 0 ||
+      operation.selector > 0xffff ||
+      !Number.isInteger(operation.target) || operation.target < 0 ||
+      operation.target > 0xffffffff ||
+      operation.target !== post.eip ||
+      operation.afterCs !== post.cs ||
+      operation.afterCs !== ((operation.selector & 0xfffc) | before.cpl) ||
+      !owned0501ModeSame(operation.after, post) ||
+      !before.protectedMode || before.vm86 || !before.retainedRealCs ||
+      !post.protectedMode || post.vm86 || post.retainedRealCs ||
+      before.rawCr0 !== post.rawCr0 || before.rawFlags !== post.rawFlags ||
+      before.ss !== post.ss || before.esp !== post.esp ||
+      before.cr3 !== post.cr3 ||
+      before.trSelector !== post.trSelector ||
+      before.trType !== post.trType || before.trBase !== post.trBase ||
+      before.trLimit !== post.trLimit ||
+      before.trPresent !== post.trPresent)
+    return false;
+  return OWNED_0501_MODE_CACHE_FIELDS.every(key =>
+    before.stackCache[key] === post.stackCache[key]);
+}
+
 function owned0501ModeRecordUncommitted(cpu, session) {
   const post = owned0501ModeFacts(cpu);
   if (session.phase !== "observing") return;
@@ -296,6 +326,12 @@ function owned0501ModeSettle(cpu, session, result, traced) {
       "uncommitted-step");
     return;
   }
+  if (session.pendingModeOperation?.kind ===
+      "decoded-direct-far-cs-reload" &&
+      !owned0501ModeChanged(session.modeBefore, post)) {
+    owned0501ExcursionFail(session, "mode-operation-context-mismatch");
+    return;
+  }
   if (owned0501ModeChanged(session.modeBefore, post)) {
     const operation = session.pendingModeOperation ??
       (session.pendingTask?.outcome === "core-return"
@@ -310,6 +346,12 @@ function owned0501ModeSettle(cpu, session, result, traced) {
            (!session.modeBefore.protectedMode && post.protectedMode ? true :
              !post.protectedMode ? false :
                session.modeBefore.retainedRealCs))) {
+      owned0501ExcursionFail(session, "mode-operation-context-mismatch");
+      return;
+    }
+    if (operation?.kind === "decoded-direct-far-cs-reload" &&
+        !owned0501FarTicketMatches(session.modeBefore, post, operation,
+          session.pendingTask)) {
       owned0501ExcursionFail(session, "mode-operation-context-mismatch");
       return;
     }
@@ -2222,6 +2264,10 @@ export class ExperimentalI80386 {
   }
 
   _group5(op, width, address32, override) {
+    return this.#group5(op, width, address32, override, false);
+  }
+
+  #group5(op, width, address32, override, decoded) {
     const operandWidth = op === 0xfe ? 8 : width;
     const ea = this._decodeEA(address32, override);
     if (ea.reg === 0 || ea.reg === 1) {
@@ -2245,8 +2291,13 @@ export class ExperimentalI80386 {
       const address = this._linear(ea.seg, ea.off, bytes + 2);
       const target = this._readLinear(address, bytes);
       const selector = this._readLinear((address + bytes) >>> 0, 2);
-      if (this.protectedMode && !this.virtual8086)
-        this._protectedFarTransfer(selector, target, width, ea.reg === 3);
+      if (this.protectedMode && !this.virtual8086) {
+        if (ea.reg === 5 && decoded && this.#owned0501ExcursionActive &&
+            owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+          this.#protectedFarTransfer(selector, target, width, false,
+            OWNED_0501_FAR_FF5);
+        else this._protectedFarTransfer(selector, target, width, ea.reg === 3);
+      }
       else this._farRealTransfer(selector, target, width, ea.reg === 3);
       return;
     }
@@ -2626,6 +2677,11 @@ export class ExperimentalI80386 {
   }
 
   _protectedFarTransfer(selector, offset, operandWidth, call) {
+    return this.#protectedFarTransfer(selector, offset, operandWidth, call, null);
+  }
+
+  #protectedFarTransfer(selector, offset, operandWidth, call,
+      decodedSource) {
     const cpl = this.currentPrivilegeLevel,
       errorCode = selector & 0xfffc;
     if (!errorCode) throw new I80386Fault(13, 0, "null far selector");
@@ -2652,6 +2708,40 @@ export class ExperimentalI80386 {
       this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       this.eip = target;
+      // The decoded EA and FF /5 paths enter this private implementation. A
+      // public helper override cannot capture or replay the source marker.
+      // The guest transfer above has already committed; observer failure
+      // cannot change its result. No extra guest memory or TSS is read.
+      if (!call && this.#owned0501ExcursionActive &&
+          (decodedSource === OWNED_0501_FAR_EA ||
+           decodedSource === OWNED_0501_FAR_FF5)) {
+        const mode = owned0501Excursions.get(this);
+        if (mode?.profile === OWNED_0501_MODE_PROFILE &&
+            mode.phase === "observing" && mode.modeBefore.retainedRealCs) {
+          try {
+            if (this.#owned0501ExecutionDepth !== 1 || mode.busyDepth !== 1 ||
+                mode.pendingTask || mode.pendingModeOperation)
+              owned0501ExcursionFail(mode, "mode-operation-reentry");
+            else {
+              const after = owned0501ModeFacts(this);
+              if (mode.phase === "observing" &&
+                  after.cs === ((selector & 0xfffc) | cpl) &&
+                  after.eip === target && !after.retainedRealCs)
+                mode.pendingModeOperation = owned0501Frozen({
+                  kind: "decoded-direct-far-cs-reload",
+                  source: decodedSource === OWNED_0501_FAR_EA ?
+                    "ea-immediate" : "ff-far-indirect",
+                  instructionStart: mode.modeBefore.eip,
+                  operandWidth, selector: selector & 0xffff,
+                  target, afterCs: after.cs, after,
+                });
+              else owned0501ExcursionFail(mode,
+                "mode-operation-context-mismatch");
+            }
+          } catch { owned0501ExcursionFail(mode,
+            "mode-operation-observer-failure"); }
+        }
+      }
       return;
     }
     if (![4, 12].includes(type)) {
@@ -4384,7 +4474,10 @@ export class ExperimentalI80386 {
       if (ea.reg !== 0) throw new UnsupportedI80386("C7 extension");
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
     } else if (op === 0xfe || op === 0xff) {
-      this._group5(op, width, address32, override);
+      if (this.#owned0501ExcursionActive &&
+          owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+        this.#group5(op, width, address32, override, true);
+      else this._group5(op, width, address32, override);
     } else if (op === 0xf6 || op === 0xf7) {
       this._group3(op, width, address32, override);
     } else if (op === 0x80 || op === 0x81 || op === 0x82 || op === 0x83) {
@@ -4644,7 +4737,11 @@ export class ExperimentalI80386 {
         off = width === 32 ? raw : raw & 0xffff,
         sel = this._fetchN(2);
       if (this.protectedMode && !this.virtual8086) {
-        this._protectedFarTransfer(sel, off, width, false);
+        if (this.#owned0501ExcursionActive &&
+            owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+          this.#protectedFarTransfer(sel, off, width, false,
+            OWNED_0501_FAR_EA);
+        else this._protectedFarTransfer(sel, off, width, false);
       } else {
         if (off > 0xffff)
           throw new UnsupportedI80386("real-mode far target exceeds CS limit");
