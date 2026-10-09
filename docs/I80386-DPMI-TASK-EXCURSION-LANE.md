@@ -248,7 +248,12 @@ Exactly three paths change: `src/experimental/i80386.js`, the existing journal
 test, and `scripts/i80386-cwsdpmi-0501-far-attribution/README.md`. Root and
 independent source/syntax review passed. The journal has 102 authored named
 cases, including 17 new controls; these CPU controls have not run locally.
-Hosted affected CPU and xv6 checks remain pending.
+The [first automatic hosted failure](receipts/2026-10-09-far-attribution-cpu-failure/README.md)
+records 16 fixture-setup refusals at CPL3 before xv6 build or boot. The
+test-only correction `6191a70650142ea46552c2d417eb7eb62aa08e38`
+establishes explicit synthetic ring-0 task context before MOV CR0 and fixes
+a code16 competing jump. Production CPU bytes are unchanged; corrected
+hosted CPU and xv6 checks remain pending.
 
 Only the active mode profile enters private direct-transfer and group-5
 decoder paths. Public helper wrappers cannot expose or replay the private
