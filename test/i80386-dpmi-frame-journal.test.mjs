@@ -584,6 +584,23 @@ test('task-switch diagnostic never invokes an accessor or changes first refusal'
   assert.equal(result.entry.source, 'decoded-software-int31');
 });
 
+test('NT task-return attempt keeps the original TSS fault and first refusal', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.eflags |= 0x4000;
+  assert.throws(() => f.cpu._taskSwitch(0, 'iret'), error =>
+    error instanceof I80386Fault && error.vector === 10);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.returned, null);
+  assert.deepEqual([result.taskSwitchAttempt.kind,
+    result.taskSwitchAttempt.selector, result.taskSwitchAttempt.nt,
+    result.taskSwitchAttempt.trSelector, result.taskSwitchAttempt.activeSteps],
+    ['iret', 0, true, 0x30, 1]);
+});
+
 test('disabled journal leaves original invalid task-switch fault untouched', () => {
   const f = fixture();
   assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error =>

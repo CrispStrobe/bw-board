@@ -1729,8 +1729,8 @@ export class ExperimentalI80386 {
       owned0501Invalidate(owned0501, "task-switch-during-owned-frame");
       // Diagnostic only: this is the attempted path before task descriptor
       // validation, not evidence that the task switch later committed.
-      // Own-data reads cannot invoke a guest-facing accessor. If observation
-      // fails, keep the original first refusal and guest execution unchanged.
+      // Own-data reads avoid getters on the source-owned plain CPU records.
+      // If observation fails, keep the original first refusal unchanged.
       if (!owned0501.taskSwitchAttempt) try {
         const sourceCs = owned0501Option(this, "cs");
         const attemptEip = owned0501Option(this, "eip");
