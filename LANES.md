@@ -126,6 +126,9 @@ CUI/Lite source/pin or deployment change. Fresh remote master is exact
 4e4cf9c45b7083efec4b94bc44d20fcbea92f319. Publish this expanded claim before
 the policy implementation, then focused/budget/source/instrument/mutation
 checks and one exact hosted CI/Harris qualification before guarded landing.
+One typing-only path is also required: src/types.js adds interactive-v2 to
+the existing configureTransientAnalysis ID union. No other API/model surface
+changes. This brings the declared final envelope to nine paths.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
