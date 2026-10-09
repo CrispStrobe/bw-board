@@ -864,10 +864,12 @@ test('task excursion source commit is separate from strict frame refusal', () =>
   assert.equal(f.cpu.step(), 1);
   assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,
     'candidate');
-  f.cpu.reset();
+  f.cpu._stepInstruction=function(){this.eip=0x101;return 1;};
+  assert.equal(f.cpu.step(),1);
+  assert.equal(f.cpu.eip,0x101);
   const diagnostic=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
   assert.equal(diagnostic.phase, 'invalid');
-  assert.equal(diagnostic.firstFailure, 'cpu-reset');
+  assert.equal(diagnostic.firstFailure, 'post-candidate-step');
   assert.equal(diagnostic.transitions.length, 2);
   assert.equal(diagnostic.transitions.every(x => x.enclosingStepCommitted), true);
   assert.deepEqual([diagnostic.resumeCandidate.originalTr,
@@ -1017,6 +1019,26 @@ test('task fault accessors are not invoked by excursion records', () => {
   assert.equal(reads,0);
   assert.equal(result.firstFailure,'task-core-exception');
   assert.equal(result.uncommittedTransitions[0].fault.available,false);
+  assert.equal(result.frameReturnQualified,false);
+});
+
+test('step-catch fault facts refuse accessors without replacing the guest fault', () => {
+  const f=openedMixedExcursion();
+  const fault=new I80386Fault(13,0x38,'synthetic instruction fault');
+  let reads=0;
+  for(const name of ['vector','errorCode'])
+    Object.defineProperty(fault,name,{configurable:true,
+      get(){reads++;throw new Error('observer accessor');}});
+  f.cpu._stepInstruction=()=>{throw fault;};
+  assert.throws(()=>f.cpu.step(),error=>error===fault);
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(reads,0);
+  assert.equal(result.firstFailure,'step-failure');
+  assert.equal(result.deliveries.length,1);
+  assert.deepEqual([result.deliveries[0].kind,
+    result.deliveries[0].fault.available,
+    result.deliveries[0].enclosingStepCommitted],
+    ['cpu-fault',false,false]);
   assert.equal(result.frameReturnQualified,false);
 });
 

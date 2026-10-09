@@ -122,7 +122,8 @@ function owned0501ExcursionHandlerCandidate(cpu, session) {
 function owned0501ExcursionFail(session, reason) {
   if (!session || (session.phase !== "observing" &&
       !(session.phase === "candidate" &&
-        (reason === "cpu-reset" || reason === "observer-reentry")))) return;
+        (reason === "cpu-reset" || reason === "observer-reentry" ||
+          reason === "post-candidate-step")))) return;
   session.phase = "invalid";
   session.firstFailure = reason;
   if (session.pendingTask) {
@@ -3627,6 +3628,8 @@ export class ExperimentalI80386 {
     const excursion = this.#owned0501ExcursionActive
       ? owned0501Excursions.get(this) : null;
     if (excursion) {
+      if (excursion.phase === "candidate")
+        owned0501ExcursionFail(excursion, "post-candidate-step");
       if (excursion.busyDepth)
         owned0501ExcursionFail(excursion, "cpu-step-reentry");
       excursion.busyDepth++;
@@ -3699,7 +3702,7 @@ export class ExperimentalI80386 {
         } catch {
           owned0501ExcursionFail(excursion, "observer-step-record-failure");
         }
-        if (excursion && excursion.phase !== "observing")
+        if (excursion && excursion.phase === "invalid")
           this.#owned0501ExcursionActive = false;
         return result;
       } catch (error) {
