@@ -1062,7 +1062,32 @@ function retainedProtectedModeForFar() {
   const f = openedMixedMode();
   // The mixed-entry descriptor at selector 8 is DPL3. After PE is re-enabled
   // with retained CS, CPL is zero, so a separate DPL0 target is required.
-  f.put(0x228, [0xff, 0xff, 0, 0, 0x10, 0x9a, 0xcf, 0]);
+  // Keep this code16 so 0x66 exercises the decoded 32-bit offset path.
+  f.put(0x228, [0xff, 0xff, 0, 0, 0x10, 0x9a, 0x8f, 0]);
+  // A synthetic committed task-core transfer supplies a source-visible CPL0
+  // context before privileged MOV CR0. It is a hosted control, not evidence
+  // that the earlier AT guest took this transfer or any subsequent opcode.
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.deepEqual([selector, kind], [0x38, 'jmp']);
+    assert.throws(() => core.call(this, 0, kind, options), I80386Fault);
+    this.tr = { selector: 0x38, base: 0x700, limit: 0x67,
+      present: true, type: 11 };
+    this.cs = 0x28; this.ss = 0x10; this.eip = 0x120; this.esp = 0x400;
+    this.segmentCaches[1] = this._ringCodeDescriptor(0x28);
+    this.segmentCaches[2] = this._ringStackDescriptor(0x10, 0,
+      { returnPath: true });
+    return 7;
+  };
+  f.cpu._stepInstruction = function () {
+    this._taskSwitch(0x38, 'jmp'); return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501TaskModeStatus(f.modeToken).transitions, 1);
+  assert.equal(f.cpu.owned0501FrameStatus(f.frameToken).failure,
+    'task-switch-during-owned-frame');
+  delete f.cpu._taskSwitchCore;
+  delete f.cpu._stepInstruction;
   // These two separately decoded MOV CR0 writes are already supported by the
   // opt-in recorder. They establish retained-real-CS without pretending that
   // the earlier AT guest's refused instruction has been decoded here.
@@ -1079,6 +1104,7 @@ function retainedProtectedModeForFar() {
   delete f.cpu._stepInstruction;
   assert.equal(f.cpu.cr0, 1);
   assert.equal(f.cpu._retainedRealCs, true);
+  assert.equal(f.cpu.currentPrivilegeLevel, 0);
   assert.equal(f.cpu.owned0501TaskModeStatus(f.modeToken).modeChanges, 2);
   return f;
 }
