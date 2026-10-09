@@ -109,3 +109,21 @@ compiler's version string alone is insufficient executable identity. Only
 after the four fresh support cases qualify may the unchanged xv6 comparison
 run. Preserve PR471's original source checkpoint and both failed Inspector
 actuals; do not relabel them as the direct sampler.
+
+
+## Report-only preflight source checkpoint
+
+[Draft PR473](https://github.com/CrispStrobe/bw-board/pull/473) at
+`869c3c72cb40b66c135621f297eb66638166b69d`, stacked on PR471, publishes
+the six-path hosted authority-preflight slice. Root and a separate Sol reviewer
+checked exact source, syntax and synthetic controls. **The hosted preflight
+has not run**; Node, compiler and addon runtime support remain unqualified.
+
+The dedicated workflow authenticates the exact source before and after, fetches
+only the pinned official Node/header archives, hashes tool executable targets
+around identity probes, retains bounded original failure output, and uploads
+a closed report-only inventory. It stops before compilation, addon loading,
+support sampling or guests. After every enabled exact-head check succeeds
+(with only the declared optional vectors-full skips), launch the dedicated
+preflight once and independently audit its original packet. Review its observed
+authorities before proposing the separate first build/support workflow.
