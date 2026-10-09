@@ -412,3 +412,16 @@ The [original receipt](receipts/2026-10-09-task-attempt-and-gc-support/README.md
 preserves exact source, packet and audit scope. Earlier pending-check notes are
 historical. The next source slice is a bounded post-core return/fault outcome
 receipt, not a task-aware frame profile or relaxed ownership rule.
+
+The four-path outcome slice is published as [draft PR470](https://github.com/CrispStrobe/bw-board/pull/470),
+reviewed head `4df698af9a7791dd4edb59d6e975cd98c02459da`, stacked on PR468.
+It distinguishes normal core return, recognized faults with or without the
+core's own `taskCommitted` marker, and unclassified throws while preserving
+the original result, fault identity and guest effects. Absence of that marker
+does not prove absence of earlier task-state writes. Accessor/reentrant
+observations refuse; the first frame guard remains unchanged. Source and
+syntax controls pass; hosted CPU/guest checks and an actual outcome packet
+remain pending. After all 12 enabled checks pass with only the two declared
+optional skips, apply the existing diagnostic label once at that exact head
+and independently audit its original report. Do not infer task completion
+from the preceding attempt ticket or relax frame ownership at this stage.

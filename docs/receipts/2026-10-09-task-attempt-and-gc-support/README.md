@@ -71,5 +71,5 @@ flags. This failed fixture does not prove those flags unsupported.
 Next: separately review a direct V8 sampler without forced GC, a fixed cohort
 with native weak-handle callbacks, matching pre/post sample IDs and GC events
 covering retrieval. Keep the emulated workload unchanged and retain complete
-semantic comparison. No allocation hotspot, speedup, RTx, Windows or source
+semantic comparison. No allocation hotspot, speedup, RTx or source
 adoption claim follows from either failed diagnostic.
