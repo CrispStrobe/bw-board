@@ -142,6 +142,22 @@ assert.equal(refused.committedOutgoing,false);
 assert.equal(refused.firstFailure,'committed outgoing task transition absent');
 assert.equal(missingTransition.stepCalls,2);
 
+const missingAbortFault=fixture('task-switch-during-owned-frame',null,false,false);
+missingAbortFault.observer.ports.bind();missingAbortFault.observer.ports.step();
+assert.throws(()=>missingAbortFault.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+missingAbortFault.machine.cpu.abortOwned0501TaskMode=()=>{
+  throw new Error('synthetic abort refusal');
+};
+const missingAbortReceipt=missingAbortFault.observer.continue(missingAbortFault.machine);
+assert.equal(missingAbortReceipt.firstFailure,
+  'committed outgoing task transition absent');
+assert.equal(missingAbortReceipt.status.phase,'observing');
+assert.equal(missingAbortReceipt.observation,null);
+assert.equal(missingAbortReceipt.committedOutgoing,false);
+assert.equal(missingAbortFault.observer.terminal().modeResult,missingAbortReceipt);
+assert.equal(missingAbortFault.stepCalls,2);
+
 const timed=fixture();
 timed.observer.ports.bind();timed.observer.ports.step();
 assert.throws(()=>timed.observer.ports.step(),/task-switch-during-owned-frame/);

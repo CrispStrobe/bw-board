@@ -107,13 +107,29 @@ export function createTaskModeOrchestration(ports,{cpu,opportunity,progress}) {
           try{observation=cpu.takeOwned0501TaskModeObservation(taskToken);}
           catch{diagnosticLatch('observer-take-failure');}
         };
+        const finish=()=>{
+          drain();
+          const outgoing=observation?.transitions?.[0];
+          const committedOutgoing=outgoing?.enclosingStepCommitted===true &&
+            Number.isInteger(outgoing.step)&&outgoing.step>=1;
+          if(!committedOutgoing)
+            diagnosticLatch('committed outgoing task transition absent');
+          terminalResult={status,observation,committedOutgoing,steps:n,
+            lastPolledStatus,firstFailure:diagnosticFailure,
+            frameReturnQualified:false};
+          try{progress({event:'task-mode-terminal',steps:steps+n,strict,
+            modeStatus:status,lastPolledModeStatus:lastPolledStatus,
+            modeObservation:observation});}
+          catch{diagnosticLatch('observer-progress-failure');}
+          if(poisoned)diagnosticLatch('observer-port-reentry');
+          terminalResult.firstFailure=diagnosticFailure;
+          return terminalResult;
+        };
         if(!poll()){
           try{status=cpu.abortOwned0501TaskMode(taskToken,
             'observer-preflight-refused');}
           catch{diagnosticLatch('observer-abort-failure');}
-          drain();
-          return {status,lastPolledStatus,observation,committedOutgoing:false,steps:0,
-            firstFailure:diagnosticFailure,frameReturnQualified:false};
+          return finish();
         }
         if(!['observing','candidate','invalid'].includes(status?.phase)||
            !Number.isInteger(status.transitions)||status.transitions<1||
@@ -122,6 +138,7 @@ export function createTaskModeOrchestration(ports,{cpu,opportunity,progress}) {
            status.postOutgoingSteps<0){
           diagnosticLatch('committed outgoing task transition absent');
           abort('observer-preflight-refused');
+          return finish();
         }
         try{
           const start=now();ensure();
@@ -157,21 +174,7 @@ export function createTaskModeOrchestration(ports,{cpu,opportunity,progress}) {
           abort(reason);
         }
         if(poisoned)abort('observer-port-reentry');
-        drain();
-        const outgoing=observation?.transitions?.[0];
-        const committedOutgoing=outgoing?.enclosingStepCommitted===true &&
-          Number.isInteger(outgoing.step) && outgoing.step>=1;
-        if(!committedOutgoing)
-          diagnosticLatch('committed outgoing task transition absent');
-        terminalResult={status,observation,committedOutgoing,steps:n,
-          lastPolledStatus,firstFailure:diagnosticFailure,
-          frameReturnQualified:false};
-        try {progress({event:'task-mode-terminal',steps:steps+n,strict,modeStatus:status,
-          lastPolledModeStatus:lastPolledStatus,modeObservation:observation});}
-        catch {diagnosticLatch('observer-progress-failure');}
-        if(poisoned)diagnosticLatch('observer-port-reentry');
-        terminalResult.firstFailure=diagnosticFailure;
-        return terminalResult;
+        return finish();
       },{allowPoisonedResult:true});
     }});
 }
