@@ -166,6 +166,8 @@ assert.throws(()=>snapshotRefused.observer.ports.step(),
   /task-switch-during-owned-frame/);
 assert.equal(snapshotRefused.observer.terminal().firstFailure,
   'task-switch-during-owned-frame');
+assert.equal(snapshotRefused.observer.terminal().diagnosticFailure,
+  'strict entry snapshot unavailable');
 assert.equal(snapshotRefused.observer.terminal().strict.returned,null);
 assert.throws(()=>snapshotRefused.observer.armFaultAtStrictTerminal(),
   /strict|AX=0501/);
@@ -186,6 +188,8 @@ assert.throws(()=>accessorRefused.observer.ports.step(),
   /task-switch-during-owned-frame/);
 assert.equal(accessorRefused.observer.terminal().firstFailure,
   'task-switch-during-owned-frame');
+assert.equal(accessorRefused.observer.terminal().diagnosticFailure,
+  'strict entry snapshot unavailable');
 assert.throws(()=>accessorRefused.observer.armFaultAtStrictTerminal(),
   /snapshot unavailable/);
 assert.equal(accessorReads,0);

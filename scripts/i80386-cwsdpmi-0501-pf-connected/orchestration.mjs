@@ -135,7 +135,7 @@ export function createPfConnectedOrchestration(ports,{cpu,opportunity,progress})
   };
   return Object.freeze({ports:Object.freeze(wrapped),
     terminal(){return {steps,wrapper,strict,firstFailure,
-      modeArmed:!!taskToken,modeResult:terminalResult};},
+      diagnosticFailure,modeArmed:!!taskToken,modeResult:terminalResult};},
     faultTerminal(){return {token:faultToken,arm:faultArm};},
     armFaultAtStrictTerminal({maxActiveSteps=100_000}={}){
       return exclusive(()=>{

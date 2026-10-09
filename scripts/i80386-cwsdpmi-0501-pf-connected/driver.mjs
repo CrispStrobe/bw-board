@@ -91,7 +91,8 @@ export function runPfConnectedScenario(ports,{machine,layout,token}) {
          !sameReferences(refs,captureReferences(machine)))
         throw new Error('PF arm progress changed guest source state');
     } catch {
-      pfFailure='PF arm or progress refused';
+      pfFailure=wrapped.terminal().diagnosticFailure??
+        'PF arm or progress refused';
       const retained=wrapped.faultTerminal();
       if(retained.token&&retained.arm)
         pfArm={token:retained.token,...retained.arm};
