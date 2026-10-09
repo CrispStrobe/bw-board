@@ -1,0 +1,56 @@
+{
+  "schema": "bw.direct-v8-first-build-failure-public-receipt.v1",
+  "source": "77fd5fbbc132d48622eb0790c0b2d66a6e66a5a4",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/484",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37963686779",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 10,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37963686779,
+    "artifact": 11634335287,
+    "bytes": 9482,
+    "sha256": "c0bc17e7d15056e45300bad49dd3240047b03c0f5a2b581d52dce407eacf8e87"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11634335287",
+  "rawLog": {
+    "bytes": 35761,
+    "sha256": "007e7df9fbf5c240263f9cec52398f4dfef78974e5cc9791fae20a68443b7d19"
+  },
+  "packetMembers": 9,
+  "sourceRoles": 51,
+  "classification": "UNQUALIFIED_OFFICIAL_RUN_FAILURE",
+  "firstFailure": {
+    "stage": "compile-returned",
+    "reason": "compiler-exit",
+    "type": "ValueError"
+  },
+  "compiler": {
+    "complete": true,
+    "timedOut": false,
+    "outputBound": false,
+    "exitCode": 1,
+    "stdoutBytes": 0,
+    "stderrBytes": 8146,
+    "stderrSha256": "4cfdd564364db127e573a174d2894cf019662b96608d1bf3dd688b4eedf5cff1"
+  },
+  "postToolRoles": ["as", "cc1plus", "collect2", "g++", "ld"],
+  "postToolIdentitiesMatched": 5,
+  "postToolFailures": [],
+  "addonReported": false,
+  "diagnosticBoundary": "Incomplete v8::HeapProfiler and undeclared AllocationProfile declarations support a missing v8-profiler.h include; further compilation remains untested.",
+  "next": "Separate reviewed header-closure correction and fresh pinned build before any addon load or lifetime-support qualification.",
+  "auditors": [
+    {
+      "role": "root retained-original stdlib audit",
+      "scriptSha256": "0720705feb48a75d4740200107def912acdfc08b3cbf8dbd5586dadfd86ee5e2"
+    },
+    {
+      "role": "independent retained-original audit",
+      "scriptSha256": "9b05ca81f13e5ccfbe93922c909e67dfcd59e40e51826e0fb3eaa179855e20ba"
+    }
+  ]
+}

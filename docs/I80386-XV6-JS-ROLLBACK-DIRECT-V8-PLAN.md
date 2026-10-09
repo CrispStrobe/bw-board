@@ -290,10 +290,30 @@ profiles are excluded from the artifact. The only successful status is
 `BUILT_UNLOADED_UNQUALIFIED`; no addon load or tool-subprocess provenance follows.
 
 All ten enabled exact-head checks passed, with only the two declared optional
-skips. The single [first-build run37963686779](https://github.com/CrispStrobe/bw-board/actions/runs/37963686779)
-was launched at reviewed source `77fd5fbbc132d48622eb0790c0b2d66a6e66a5a4`;
-it was queued at the last check. Its original result and independent audit are
-pending. Do not credit a compiled addon or advance the gate from checks alone.
+skips, before the single [first-build original](receipts/2026-10-09-direct-v8-first-build-failure/README.md)
+at reviewed source `77fd5fbbc132d48622eb0790c0b2d66a6e66a5a4`.
+Root and independent retained-original audits passed within its official
+**failure** boundary: nine closed members and 51 source roles. The first
+failure is `compiler-exit` after a complete exit-1 compiler return, zero
+stdout bytes and 8,146 stderr bytes; all five post-compile tool observations
+matched. The diagnostics show incomplete `v8::HeapProfiler` and undeclared
+`AllocationProfile` declarations. The source omits `v8-profiler.h`, supporting
+a narrow header correction, but later compiler results remain untested. No
+addon was reported or loaded. Preserve this first
+failure; a separately reviewed correction needs a fresh pinned build before
+the next support profile. Do not credit compiler-subprocess delegation or
+profiler behavior from matching tool identities alone.
+
+The separate [draft PR485 profiler-header correction](https://github.com/CrispStrobe/bw-board/pull/485),
+reviewed source `765415cb6b437f08267de2e11ced41781b158e39`, adds nine new
+paths and admits 60 source roles, with all 51 inherited roles unchanged.
+Its derived addon adds only `#include <v8-profiler.h>`; both source admission
+and the runner reject any other native delta. Root and independent source/
+syntax/workflow review and three CPU-free controls passed. Git authenticates
+the source module before execution. Compiler/tool/archive/header authority,
+closed environment, bounds, first failures and all five post-tool observations
+remain required. Hosted checks and a fresh unloaded-build original are pending;
+no compile or support success follows from this source checkpoint.
 
 After an audited unloaded-build result, a **separate** support profile must
 compile and load the addon in one hosted run: the unloaded binary is not in the

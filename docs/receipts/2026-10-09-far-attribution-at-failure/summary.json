@@ -1,0 +1,73 @@
+{
+  "schema": "bw.far-attribution-at-failure-public-receipt.v1",
+  "source": "72d0b32e8bd7d658447745129119e2300ad6bec1",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/483",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37963673934",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 10,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37963673934,
+    "artifact": 11633835578,
+    "bytes": 149927,
+    "sha256": "db951cd86caf6c0846d22867eea3bcf54f34c486564f548a8874e87bd77eb576"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11633835578",
+  "rawLog": {
+    "bytes": 218224,
+    "sha256": "f2d3edb988d5ade03cf1cc9de4af68305972ef256b740aeed779ffafc4c1cdc5"
+  },
+  "packetMembers": 119,
+  "sourceRoles": 224,
+  "recursiveJsNodes": 64,
+  "reportSha256": "91f7b8e073f87a84094e4e8d07c68d9829dfff7f33e6844ff3ef9264e7a22a2b",
+  "farReceiptSha256": "93e7a2ce16a20ee5ef691e2169600bdcd50227c0aa6c02f8653218440ed18f56",
+  "classification": "UNQUALIFIED_ATTRIBUTION_REFUSED",
+  "gradeFirstFailure": "bounded transition and mode tape",
+  "strictFailure": "task-switch-during-owned-frame",
+  "strictReturned": null,
+  "frameReturnQualified": false,
+  "taskTransitions": 15,
+  "committedModeChanges": 15,
+  "uncommittedModeChanges": 0,
+  "sourceIssuedPrefix": [
+    { "step": 47, "source": "0f-22-cr0" },
+    { "step": 442, "source": "0f-22-cr0" },
+    { "step": 443, "source": "ea-immediate" }
+  ],
+  "sourceIssuedEaTicketSteps": [443, 887, 1184, 1488, 1781],
+  "observer": {
+    "firstFailure": "step-failure",
+    "activeSteps": 1858,
+    "postOutgoingSteps": 1847,
+    "continuationCalls": 1848
+  },
+  "uncommittedFaultFact": {
+    "step": 1859,
+    "vector": 14,
+    "errorCodePresent": true,
+    "errorCodeValueReported": false,
+    "enclosingStepCommitted": false
+  },
+  "resumeCandidate": {
+    "step": 1820,
+    "originalTr": true,
+    "savedContinuation": false,
+    "handlerContext": false
+  },
+  "boundary": "The frozen exact-two grader refuses the 15-transition original. The source-issued prefix and later fault fact do not establish owned frame return, fault service or a CPU defect.",
+  "next": "Separate immutable full-tape prefix audit and bounded source-owned fault-outcome diagnostic; preserve the strict failure and original bytes.",
+  "auditors": [
+    {
+      "role": "root retained-original stdlib audit",
+      "scriptSha256": "4e4d9e1ecc36bab08dcfd412e2bb65bc6caf3fcaf4a08b2134d4fe557d2a77f6"
+    },
+    {
+      "role": "independent retained-original audit",
+      "scriptSha256": "0bb06225a4e8ffb226be480c6904738c3d8ef933d260b9393bcf50c56d807fd7"
+    }
+  ]
+}

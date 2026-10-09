@@ -299,9 +299,26 @@ refuse; the original report and first failure remain visible. The separate
 and `frameReturnQualified` stay false, with a null frame return.
 
 All ten enabled exact-head checks passed, with only the two declared optional
-skips. The single [connected far-reload run37963673934](https://github.com/CrispStrobe/bw-board/actions/runs/37963673934)
-was launched at reviewed source `72d0b32e8bd7d658447745129119e2300ad6bec1`;
-it was queued at the last check. Its original outcome and independent audit are
-pending. Do not reuse frozen PR478 for the changed CPU or infer the previously
-refused opcode. No completed DPMI frame, broader OS/application result, speedup
-or adoption follows from source review and enabled checks.
+skips, before the single [connected far-reload original](receipts/2026-10-09-far-attribution-at-failure/README.md)
+at reviewed source `72d0b32e8bd7d658447745129119e2300ad6bec1`.
+Root and independent retained-original audits passed within its official
+**failure** boundary: 119 closed members, 224 source roles and 64 JS nodes.
+The frozen exact-two grader returns `UNQUALIFIED_ATTRIBUTION_REFUSED` because
+the bounded original contains 15 committed task transfers and 15 committed
+mode changes. Source-issued MOV CR0 tickets at steps 47 and 442 followed by
+an EA ticket at step 443 form an observed prefix; five EA tickets appear in
+the full tape. This is not whole-tape qualification, and the grader remains
+unchanged. Strict frame failure `task-switch-during-owned-frame`, null return
+and `frameReturnQualified:false` remain.
+
+The observer's first later refusal is `step-failure`. A step-1859 CPU fault
+fact reports vector 14 and error-code presence, without an error-code value
+or committed enclosing step. The original does not establish fault servicing,
+its cause or a CPU defect. A step-1820 original-TR candidate lacks saved
+continuation and handler-context agreement. Next, a separately named bounded
+full-tape prefix audit can describe the repeated sequence, and a distinct
+source-owned fault-outcome diagnostic can establish what happened after the
+fault attempt. Neither may relax this frozen exact-two result or strict frame
+guard. Do not reuse frozen PR478 for the changed CPU or infer its old refused
+opcode. No completed DPMI frame, broader OS/application result, speedup or
+adoption follows.
