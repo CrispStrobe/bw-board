@@ -338,9 +338,14 @@ def require_clean_child(result, role, maximum=4096):
 
 
 def require_compile(result):
-    if result["timedOut"] or result["outputBound"] or not result["complete"] or \
-            result["exitCode"] != 0 or result["stdout"] or result["stderr"]:
-        raise ValueError("bounded compiler result refused")
+    for condition, reason in ((result["timedOut"], "compiler-timeout"),
+                              (result["outputBound"], "compiler-output-bound"),
+                              (not result["complete"], "compiler-incomplete"),
+                              (result["exitCode"] != 0, "compiler-exit"),
+                              (bool(result["stdout"]), "compiler-stdout"),
+                              (bool(result["stderr"]), "compiler-stderr")):
+        if condition:
+            raise ValueError(reason)
 
 
 def identity_roster(authority, work, env, publish):
@@ -389,6 +394,50 @@ def recheck_roster(authority, records):
             raise ValueError("same-run tool identity changed")
 
 
+def postcompile_observations(authority, records):
+    """Attempt every target after the child, retaining later failures too."""
+    observations = {}
+    failures = []
+    for name in TOOLS:
+        item = {"selectedPath": authority["tools"][name]["selectedPath"],
+                "observed": None, "matched": False, "error": None}
+        try:
+            actual = pinned_target(item["selectedPath"])
+            item["observed"] = {key: actual[key] for key in
+                                ("realpath", "bytes", "sha256", "device", "inode")}
+            authority_tool(actual, authority["tools"][name])
+            if actual != records[name]:
+                raise ValueError("same-run tool identity changed")
+            item["matched"] = True
+        except Exception as error:
+            item["error"] = {"type": type(error).__name__,
+                             "reason": str(error)[:200]}
+            failures.append({"role": name, **item["error"]})
+        observations[name] = item
+    return observations, failures
+
+
+def compile_or_post_failure(result, failures):
+    """The child's first refusal wins over later tool-observer refusals."""
+    try:
+        require_compile(result)
+    except ValueError as error:
+        return error
+    if failures:
+        return ValueError("postcompile-tool-" + failures[0]["role"] + "-refusal")
+    return None
+
+
+def latch_failure(report, error, stage):
+    receipt = {"type": type(error).__name__, "reason": str(error)[:200],
+               "stage": stage}
+    if report["firstFailure"] is None:
+        report["firstFailure"] = receipt
+    elif (report["firstFailure"]["type"], report["firstFailure"]["reason"]) != \
+            (receipt["type"], receipt["reason"]):
+        report["secondaryFailures"].append(receipt)
+
+
 def write_receipt(path, report):
     raw = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
     if not 0 < len(raw) <= MAX_REPORT:
@@ -417,6 +466,8 @@ def main():
               "authoritySha256": None, "node": None, "headers": None,
               "addonSourceSha256": None, "tools": {}, "rosterComplete": False,
               "environment": None, "arguments": ARGS, "compile": None,
+              "postTools": None, "postToolFailures": [],
+              "secondaryFailures": [],
               "addon": None, "sourceEndRecheck": False,
               "host": {"imageOS": os.environ.get("ImageOS"),
                        "imageVersion": os.environ.get("ImageVersion"),
@@ -490,10 +541,18 @@ def main():
         command = [compiler, *ARGS]
         result = run_bounded(command, work, env, 90)
         report["compile"] = child_receipt(result, ["pinned-g++", *ARGS])
-        report["stage"] = "compile-returned"
+        compile_failure = compile_or_post_failure(result, [])
+        if compile_failure is not None:
+            latch_failure(report, compile_failure, "compile-returned")
+        # The bounded child has returned. All five observations are attempted
+        # even if its result already refused; they cannot replace that reason.
+        report["postTools"], report["postToolFailures"] = \
+            postcompile_observations(authority, records)
+        report["stage"] = "compile-and-posttools-retained"
         write_receipt(report_path, report)
-        require_compile(result)
-        recheck_roster(authority, records)
+        failure = compile_or_post_failure(result, report["postToolFailures"])
+        if failure is not None:
+            raise failure
         binary = read_ordinary(work / "rollback_sampler.node", 2_000_000)
         report["addon"] = {"bytes": len(binary), "sha256": sha(binary),
                            "loaded": False, "artifactUploaded": False}
@@ -509,8 +568,7 @@ def main():
         report["status"] = "BUILT_UNLOADED_UNQUALIFIED"
         write_receipt(report_path, report)
     except BaseException as error:
-        report["firstFailure"] = {"type": type(error).__name__,
-                                  "reason": str(error)[:200], "stage": report["stage"]}
+        latch_failure(report, error, report["stage"])
         write_receipt(report_path, report)
         raise
 

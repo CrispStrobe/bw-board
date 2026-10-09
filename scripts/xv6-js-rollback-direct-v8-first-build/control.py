@@ -160,11 +160,46 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-first-build-pure-") as temp:
         assert len(roster) == 5 and sum(kind == "identity" for kind, _ in rows) == 5
         assert sum(kind == "locator" for kind, _ in rows) == 4
         module.recheck_roster(authority, roster)
+        post, failures = module.postcompile_observations(authority, roster)
+        assert set(post) == set(module.TOOLS) and not failures
+        assert all(row["matched"] and row["error"] is None for row in post.values())
+        assert module.compile_or_post_failure(good, failures) is None
         for name in module.TOOLS:
             before = copy.deepcopy(mock_identity[authority["tools"][name]["selectedPath"]])
             mock_identity[authority["tools"][name]["selectedPath"]]["sha256"] = "0" * 64
             refuse(lambda: module.recheck_roster(authority, roster))
+            post, failures = module.postcompile_observations(authority, roster)
+            assert len(post) == 5 and [item["role"] for item in failures] == [name]
+            assert post[name]["observed"]["sha256"] == "0" * 64
+            assert post[name]["matched"] is False
+            assert str(module.compile_or_post_failure(good, failures)) == \
+                "postcompile-tool-" + name + "-refusal"
+            for refused in ({"exitCode": 7}, {"stderr": b"diagnostic"},
+                            {"timedOut": True}, {"outputBound": True}):
+                reason = str(module.compile_or_post_failure({**good, **refused}, failures))
+                assert reason.startswith("compiler-") and name not in reason
             mock_identity[authority["tools"][name]["selectedPath"]] = before
+        attempted = []
+        def refuse_first_post(value, *_args):
+            attempted.append(str(value))
+            if str(value) == authority["tools"]["g++"]["selectedPath"]:
+                raise ValueError("post pin refused")
+            return fake_pin(value)
+        module.pinned_target = refuse_first_post
+        post, failures = module.postcompile_observations(authority, roster)
+        assert len(attempted) == 5 and list(post) == list(module.TOOLS)
+        assert [item["role"] for item in failures] == ["g++"]
+        assert post["g++"]["observed"] is None and post["ld"]["matched"]
+        module.pinned_target = fake_pin
+        report_failure = {"firstFailure": None, "secondaryFailures": []}
+        compile_failure = module.compile_or_post_failure({**good, "timedOut": True}, failures)
+        module.latch_failure(report_failure, compile_failure, "compile-returned")
+        module.latch_failure(report_failure, ValueError("post pin refused"),
+                             "compile-and-posttools-retained")
+        assert report_failure["firstFailure"]["reason"] == "compiler-timeout"
+        assert len(report_failure["secondaryFailures"]) == 1
+        module.latch_failure(report_failure, compile_failure, "later-duplicate")
+        assert len(report_failure["secondaryFailures"]) == 1
         module.run_bounded = lambda *_args: {**good, "stdout": b"/other/tool\n"}
         refuse(lambda: module.identity_roster(authority, root, env, lambda *_: None))
         module.run_bounded = fake_run

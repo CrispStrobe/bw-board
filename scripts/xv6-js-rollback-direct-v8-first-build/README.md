@@ -6,6 +6,8 @@ On a fresh Ubuntu 24.04 runner the new build runner downloads only the exact off
 
 The inherited `build.py` main function is not invoked: it resolves `g++` anew through `shutil.which`. This profile owns an explicit bounded process runner with a 90-second compile and a 32 KiB combined output cap. A positive build requires a complete exit-zero child with empty diagnostics and a bounded ordinary `.node` file. Only its SHA-256 and size enter the receipt. Pre/post tool hashes do not prove which subtool subprocess executed, and the addon is never loaded. Even a successful receipt says `BUILT_UNLOADED_UNQUALIFIED`.
 
+After a bounded compiler child returns, the runner attempts and retains **all five** post-compile tool observations. A compiler timeout, output cap, nonzero exit or diagnostic stays the first failure; later tool changes or read refusals are separately recorded as secondary facts. If the compiler result is clean, any post-tool refusal blocks the unloaded-build status. A failure before the child returns has no fabricated post-compile receipt.
+
 The dedicated same-repository, exact-head, attempt-one workflow retains a bounded report and first failure. The closed artifact inventory rejects binaries, raw archives, headers, media and profiles. Pure controls are source/file/process-mock tests; they do not compile or execute Node:
 
 ```sh
