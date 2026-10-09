@@ -204,12 +204,18 @@ function owned0501ModeCache(source) {
   for (const key of OWNED_0501_MODE_CACHE_FIELDS) {
     const field = Object.getOwnPropertyDescriptor(source, key);
     if (!field) { copy[key] = null; continue; }
-    if (!Object.hasOwn(field, "value") ||
-        (typeof field.value !== "number" &&
-          typeof field.value !== "boolean") ||
-        (typeof field.value === "number" && !Number.isFinite(field.value)))
+    if (!Object.hasOwn(field, "value"))
       throw new TypeError("invalid source-owned task mode cache scalar");
-    copy[key] = field.value;
+    const value = field.value;
+    if (["base", "limit", "address"].includes(key)
+      ? !Number.isInteger(value) || value < 0 || value > 0xffffffff
+      : key === "access"
+        ? !Number.isInteger(value) || value < 0 || value > 255
+        : key === "dpl"
+          ? !Number.isInteger(value) || value < 0 || value > 3
+          : typeof value !== "boolean")
+      throw new TypeError("invalid source-owned task mode cache scalar");
+    copy[key] = value;
   }
   if (!["base", "limit", "default32", "present", "code"].every(key =>
       copy[key] !== null))

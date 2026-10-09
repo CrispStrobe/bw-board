@@ -1013,6 +1013,20 @@ test('mode profile refuses mutated between-step descriptor scalars', () => {
     observed.modeRefusal.after.codeCache.limit);
 });
 
+test('mode profile rejects malformed numeric and boolean cache roles', () => {
+  for (const [key, value] of [['base', 1.5], ['default32', 7]]) {
+    const f = openedMixedMode();
+    f.cpu._stepInstruction = function () {
+      this.segmentCaches[1][key] = value; return 1;
+    };
+    assert.equal(f.cpu.step(), 1);
+    const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+    assert.equal(observed.firstFailure, 'observer-step-record-failure');
+    assert.equal(observed.modeChanges.length, 0);
+    assert.equal(f.cpu.segmentCaches[1][key], value);
+  }
+});
+
 test('mode profile reports VM86 as CPL3 but refuses unattributed entry', () => {
   const f = openedMixedMode();
   f.cpu._stepInstruction = function () {
