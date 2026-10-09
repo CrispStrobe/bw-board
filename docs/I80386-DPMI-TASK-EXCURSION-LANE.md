@@ -107,3 +107,34 @@ the candidate-reset control gap as a focused test follow-up; do not infer real
 task continuity from the synthetic two-switch control. Qualify a new exact
 source head and independently audit its first original guest packet before
 proposing any later task-aware ownership acceptance.
+
+
+## Derivative diagnostic source checkpoint published
+
+[Draft PR474](https://github.com/CrispStrobe/bw-board/pull/474) at
+`89eadb8c2449ff769b157ee6a4b78ccb833c3610`, stacked on PR472, publishes
+the separate adapter, driver, private orchestration, source admission, closed
+inventory and dedicated workflow under
+`scripts/i80386-cwsdpmi-0501-task-excursion/`. Its 12-path change also adds
+the narrow CPU diagnostic-abort method and focused journal controls, including
+the missing candidate-reset case. Root and a separate Sol reviewer checked
+source, syntax and pure mock controls; source admission binds 205 Git roles
+and 64 JavaScript modules. **New CPU controls and the guest diagnostic are
+pending hosted execution.**
+
+The driver retains the original strict frame refusal and partial finite-client
+report. Before any continuation step it requires a source-committed outgoing
+task record, then continues the same machine under the 100,000-call and
+120-second limits. Bounds, exceptions and callback reentry close only the
+private diagnostic recorder and retain its partial facts. The abort method
+does not reset the guest or change the strict frame. Candidates remain
+diagnostic observations; `frameReturnQualified` remains false.
+
+Next refresh the exact PR474 head and every enabled check. After hosted CPU
+and finite regressions pass, apply the distinct
+`x86-cwsdpmi-0501-task-excursion` label once. Independently audit the original
+report-only packet, including source-before/after, unchanged wrapper/media
+admission, the committed outgoing event, every intervening transition/delivery
+and the final candidate or refusal. Preserve the first run even if failed;
+never reapply an old frame label or replace an original with a replay. Only
+that evidence can motivate a later, separately reviewed ownership profile.

@@ -116,14 +116,52 @@ actuals; do not relabel them as the direct sampler.
 [Draft PR473](https://github.com/CrispStrobe/bw-board/pull/473) at
 `869c3c72cb40b66c135621f297eb66638166b69d`, stacked on PR471, publishes
 the six-path hosted authority-preflight slice. Root and a separate Sol reviewer
-checked exact source, syntax and synthetic controls. **The hosted preflight
-has not run**; Node, compiler and addon runtime support remain unqualified.
+checked exact source, syntax and synthetic controls. The [first original hosted preflight](receipts/2026-10-09-direct-v8-preflight/README.md)
+failed its header closure check before Node/compiler probes. Node, compiler
+and addon runtime support remain unqualified.
 
 The dedicated workflow authenticates the exact source before and after, fetches
 only the pinned official Node/header archives, hashes tool executable targets
 around identity probes, retains bounded original failure output, and uploads
 a closed report-only inventory. It stops before compilation, addon loading,
-support sampling or guests. After every enabled exact-head check succeeds
-(with only the declared optional vectors-full skips), launch the dedicated
-preflight once and independently audit its original packet. Review its observed
-authorities before proposing the separate first build/support workflow.
+support sampling or guests. The first dedicated preflight completed with the retained refusal below.
+Preserve its frozen source and original packet; finish the separate header
+census before proposing a corrected preflight. Any new gate needs every
+enabled exact-head check to succeed (with only declared optional vectors-full
+skips), a single launch and an independent original-packet audit. Complete
+observed build authorities remain a prerequisite for the first build/support
+workflow.
+
+The first preflight was launched once after all ten enabled checks passed,
+with only two declared optional skips. Its original packet and raw log are
+independently audited and preserved; the duplicate-versus-expansion cause
+remains unresolved. Next inspect the exact official header archive with a
+separately named bounded data-only census. Do not relax `build.py` or invoke
+the addon from this partial receipt.
+
+
+## Data-only header census source checkpoint
+
+[Draft PR475](https://github.com/CrispStrobe/bw-board/pull/475), exact
+`90c4de590325f59c8d164cefc37fa036740f189a`, publishes six added census paths
+stacked on PR473. All 14 inherited roles remain unchanged; source admission
+binds 20 Git roles. Root and a separate Sol reader checked source, syntax and
+pure controls, including a reproduced escaped-name report-limit failure and
+its retained-partial-record fix. **The hosted census has not run.**
+
+The source downloads only the same pinned 512,152-byte official header archive
+on the hosted runner. It records source-order names, types, sizes and hashes
+and the first exact frozen admission predicate under a separate 128 MiB
+data-only regular-byte ceiling, 20,000-member ceiling, 2,000,000-byte member
+ceiling, 8 MiB JSON ceiling and 16 MiB artifact ceiling. It writes no extracted
+headers and executes no Node/compiler/addon/guest. The original 32,000,000-byte
+admission limit and `build.py` remain unchanged.
+
+Next refresh PR475's exact source/checks, then launch
+`xv6-js-rollback-direct-v8-header-census` once after every enabled check passes
+with only the declared optional skips. Independently audit its original closed
+packet and distinguish the first legacy refusal from complete data-census
+coverage. A complete census can support a reviewed admission correction; it
+cannot establish build/runtime support. A corrected authority preflight,
+separate first build and four support children remain required before xv6
+allocation sampling.
