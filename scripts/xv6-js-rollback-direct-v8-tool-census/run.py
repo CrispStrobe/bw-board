@@ -200,27 +200,43 @@ def probe(argv, cwd, timeout=10, display_argv=None):
 
 
 def resolved_tool(name, compiler, compiler_identity, work, publish):
+    record = {"locator": None, "locatorStatus": "PENDING_UNQUALIFIED",
+              "selectedPath": None, "identity": None,
+              "versionStatus": "PENDING_UNQUALIFIED", "versionProbe": None,
+              "postProbeIdentity": None, "postProbeError": None}
+    publish(name, record)
     if pinned_file(compiler) != compiler_identity:
         raise ValueError("compiler changed before tool locator")
     if name == "g++":
         path = compiler
-        locator = None
+        record["locatorStatus"] = "NOT_APPLICABLE"
+        record["selectedPath"] = path
+        publish(name, record)
     else:
-        locator = probe([compiler, "-print-prog-name=" + name], work)
-        if pinned_file(compiler) != compiler_identity:
-            raise ValueError("compiler changed across tool locator")
+        try:
+            locator = probe([compiler, "-print-prog-name=" + name], work)
+        except ProbeFailure as error:
+            record["locator"] = error.receipt
+            record["locatorStatus"] = "REFUSED_UNQUALIFIED"
+            publish(name, record)
+            raise
+        record["locator"] = locator
+        record["locatorStatus"] = "OBSERVED"
+        publish(name, record)
         value = locator["stdoutText"].strip()
         if not value or "\n" in value or "\r" in value:
             raise ValueError("compiler subtool path refused")
         path = value if os.path.isabs(value) else shutil.which(value)
+        record["selectedPath"] = path or value
+        publish(name, record)
+        if pinned_file(compiler) != compiler_identity:
+            raise ValueError("compiler changed across tool locator")
         if not path:
             raise ValueError("compiler subtool missing")
     before = pinned_file(path)
     if name == "g++" and before != compiler_identity:
         raise ValueError("compiler changed before version probe")
-    record = {"identity": before, "locator": locator,
-              "versionStatus": "PENDING_UNQUALIFIED", "versionProbe": None,
-              "postProbeIdentity": None, "postProbeError": None}
+    record["identity"] = before
     publish(name, record)
     refusal = None
     try:
