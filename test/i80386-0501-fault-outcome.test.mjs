@@ -33,6 +33,26 @@ test('default-off PF delivery keeps the old real-mode effect and no session', ()
   assert.equal(cpu.esp, 0x7fa);
 });
 
+test('default-off method lookup precedes marker and EIP argument reads', () => {
+  const { cpu } = fixture();
+  const fault = new I80386Fault(14, 2);
+  let calls = 0;
+  cpu._stepInstruction = () => { throw fault; };
+  Object.defineProperty(cpu, '_deliverFault', {
+    get() {
+      calls++;
+      fault.taskCommitted = true;
+      cpu.eip = 0x567;
+      return (received, returnEip) => {
+        assert.equal(received, fault);
+        assert.equal(returnEip, 0x567);
+      };
+    },
+  });
+  assert.equal(cpu.step(), 0);
+  assert.equal(calls, 1);
+});
+
 test('opt-in PF records source facts, actual rollback and returned delivery', () => {
   const { cpu } = fixture();
   const token = cpu.armOwned0501FaultOutcome({ maxActiveSteps: 2 });
@@ -92,6 +112,63 @@ test('taskCommitted fault preserves the guest state and chosen return EIP', () =
   assert.deepEqual([result.fault.taskCommitted, result.delivery.restored,
     result.delivery.returnEip, result.delivery.post.eip],
     [true, false, 0x456, 0x789]);
+});
+
+test('opt-in method lookup still precedes the committed EIP argument', () => {
+  const { cpu } = fixture();
+  const token = cpu.armOwned0501FaultOutcome({ maxActiveSteps: 1 });
+  const fault = new I80386Fault(14, 2);
+  fault.taskCommitted = true;
+  cpu._stepInstruction = () => { cpu.eip = 0x456; throw fault; };
+  Object.defineProperty(cpu, '_deliverFault', {
+    get() {
+      cpu.eip = 0x567;
+      return (_fault, returnEip) => assert.equal(returnEip, 0x567);
+    },
+  });
+  assert.equal(cpu.step(), 0);
+  const result = cpu.takeOwned0501FaultOutcome(token);
+  assert.equal(result.phase, 'complete');
+  assert.equal(result.delivery.returnEip, 0x567);
+  assert.equal(result.delivery.pre.eip, 0x567);
+});
+
+test('method lookup throw retains partial fault without false call credit', () => {
+  const { cpu } = fixture();
+  const token = cpu.armOwned0501FaultOutcome({ maxActiveSteps: 1 });
+  const fault = new I80386Fault(14, 2);
+  const thrown = new Error('method lookup');
+  cpu._stepInstruction = () => { throw fault; };
+  Object.defineProperty(cpu, '_deliverFault', { get() { throw thrown; } });
+  assert.throws(() => cpu.step(), error => error === thrown);
+  const result = cpu.takeOwned0501FaultOutcome(token);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.firstFailure, 'delivery-call-setup-threw');
+  assert.equal(result.fault.vector, 14);
+  assert.equal(result.delivery, null);
+});
+
+test('argument getter throw also retains partial fault without call credit', () => {
+  const { cpu } = fixture();
+  const token = cpu.armOwned0501FaultOutcome({ maxActiveSteps: 1 });
+  const fault = new I80386Fault(14, 2);
+  const thrown = new Error('second marker read');
+  let called = false;
+  cpu._stepInstruction = () => { throw fault; };
+  Object.defineProperty(cpu, '_deliverFault', {
+    get() {
+      Object.defineProperty(fault, 'taskCommitted', {
+        get() { throw thrown; },
+      });
+      return () => { called = true; };
+    },
+  });
+  assert.throws(() => cpu.step(), error => error === thrown);
+  assert.equal(called, false);
+  const result = cpu.takeOwned0501FaultOutcome(token);
+  assert.equal(result.firstFailure, 'delivery-call-setup-threw');
+  assert.equal(result.fault.vector, 14);
+  assert.equal(result.delivery, null);
 });
 
 test('delivery throw is retained without replacing its original object', () => {

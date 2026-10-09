@@ -4422,24 +4422,48 @@ export class ExperimentalI80386 {
             this.#owned0501FaultOutcomeActive = false;
           throw error;
         }
-        const deliveryCommitted = error.taskCommitted;
-        const deliveryReturnEip = deliveryCommitted ? this.eip : restartEip;
-        if (faultOutcome?.phase === "capturing" &&
-            (faultOutcome.fault.taskCommitted !== !!deliveryCommitted ||
-              faultOutcome.fault.taskCommitted === restored)) {
-          owned0501FaultOutcomeFail(faultOutcome, "task-marker-changed");
-          this.#owned0501FaultOutcomeActive = false;
+        // Preserve the original member-lookup/argument order for the disabled
+        // or already-refused observer, including a callable accessor override.
+        if (faultOutcome?.phase !== "capturing") {
+          this._deliverFault(error, error.taskCommitted ? this.eip : restartEip);
+          return 0;
         }
-        if (faultOutcome?.phase === "capturing")
-          owned0501FaultOutcomeBeforeDelivery(this, faultOutcome,
-            restored, deliveryReturnEip,
-            this.#owned0501ExecutionDepth === 1 &&
-              faultOutcome.busyDepth === 1);
-        if (faultOutcome?.phase === "invalid")
-          this.#owned0501FaultOutcomeActive = false;
+        let deliveryReturnEip = null, deliveryArgumentEvaluated = false;
+        const selectDeliveryReturn = () => {
+          // This is the original second argument, evaluated after the method
+          // lookup. Observer work cannot throw into the guest call.
+          const deliveryCommitted = error.taskCommitted;
+          const selected = deliveryCommitted ? this.eip : restartEip;
+          deliveryReturnEip = selected;
+          deliveryArgumentEvaluated = true;
+          try {
+            if (faultOutcome.phase === "capturing" &&
+                (faultOutcome.fault.taskCommitted !== !!deliveryCommitted ||
+                  faultOutcome.fault.taskCommitted === restored))
+              owned0501FaultOutcomeFail(faultOutcome, "task-marker-changed");
+            if (faultOutcome.phase === "capturing")
+              owned0501FaultOutcomeBeforeDelivery(this, faultOutcome,
+                restored, selected,
+                this.#owned0501ExecutionDepth === 1 &&
+                  faultOutcome.busyDepth === 1);
+            if (faultOutcome.phase === "invalid")
+              this.#owned0501FaultOutcomeActive = false;
+          } catch {
+            owned0501FaultOutcomeFail(faultOutcome,
+              "pre-delivery-observer-failure");
+            this.#owned0501FaultOutcomeActive = false;
+          }
+          return selected;
+        };
         try {
-          this._deliverFault(error, deliveryReturnEip);
+          this._deliverFault(error, selectDeliveryReturn());
         } catch (deliveryError) {
+          if (!deliveryArgumentEvaluated) {
+            owned0501FaultOutcomeFail(faultOutcome,
+              "delivery-call-setup-threw");
+            this.#owned0501FaultOutcomeActive = false;
+            throw deliveryError;
+          }
           if (faultOutcome?.phase === "capturing") {
             owned0501FaultOutcomeFinish(this, faultOutcome,
               true, "threw", deliveryReturnEip, restored, deliveryError,
