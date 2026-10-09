@@ -238,3 +238,35 @@ hosted CPU/xv6 controls before a separately named connected diagnostic and one
 new original. Preserve all earlier results without relabeling or replay. No
 IRET, original frame return, physical placement or broader application
 compatibility is qualified here.
+
+
+## Separate direct CS-reload attribution source checkpoint
+
+[Draft PR480](https://github.com/CrispStrobe/bw-board/pull/480), reviewed source
+`33a8f62a8ac3613007e80f2f3ee066d6ea987edf`, is stacked on frozen PR478.
+Exactly three paths change: `src/experimental/i80386.js`, the existing journal
+test, and `scripts/i80386-cwsdpmi-0501-far-attribution/README.md`. Root and
+independent source/syntax review passed. The journal has 102 authored named
+cases, including 17 new controls; these CPU controls have not run locally.
+Hosted affected CPU and xv6 checks remain pending.
+
+Only the active mode profile enters private direct-transfer and group-5
+decoder paths. Public helper wrappers cannot expose or replay the private
+source marker; off-profile execution keeps the existing public dispatch.
+Source-issued tickets identify actual immediate `EA` or indirect `FF /5`
+non-call code-descriptor commits. The recorder requires copied post-context
+agreement, retained-CS exit, unchanged CR0/flags/TR/CR3/stack, and a committed
+enclosing step. Competing, reentrant, uncommitted and unrelated changes remain
+refused. The controls cover both operand widths, public capture/replay/helper
+paths, precommit faults, competing transfers, mutation and disabled behavior.
+Initial source-review defects in marker exposure and target-fixture privilege
+were corrected before publication; syntax review is not control execution.
+
+Keep the original strict frame and protected-only observer unchanged. Finish
+every enabled exact-head check and audit the first original affected CPU/xv6
+result before a separately named adapter/workflow/source-inventory profile
+connects these tickets. The existing frozen PR478 admission is not a runner
+for this changed CPU source. Review that new connection and all enabled checks
+before one distinct guest actual. Do not infer the opcode of the old refused
+step or claim frame return, compatibility, adoption or speedup from this
+source-only checkpoint.
