@@ -383,3 +383,15 @@ preserves source/run/artifact/log identities and independent audit scope.
 Next scope is bounded primitive facts at the existing guard; do not relax task
 exclusion or assume a kind/target/outcome from final registers. Earlier pending
 qualification paragraphs above are historical checkpoints, not current status.
+
+The diagnostic-only follow-up is published as [draft PR468](https://github.com/CrispStrobe/bw-board/pull/468),
+reviewed head `f3b8b31d6e403020089f1dee31eaece45c06ac25`, stacked on frozen
+PR466. Four paths change: CPU observer, existing journal tests and exact source
+pins. It records one bounded attempted-task fact at the existing refusal guard:
+kind/selector, current CS:EIP, CPL/NT, TR selector/type, active steps and profile.
+Current EIP is not claimed as a decoded instruction start. It reads no task
+descriptor and grants no task commit or frame return credit. Source review,
+syntax and CPU-free source controls pass; hosted CPU/guest qualification is
+pending. Require all 12 enabled checks successful and only the two declared
+optional skips, then apply the dedicated label once on that unchanged head.
+Audit original source/packet and attempted-task facts before changing ownership.

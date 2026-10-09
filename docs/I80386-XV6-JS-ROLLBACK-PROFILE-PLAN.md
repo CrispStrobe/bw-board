@@ -95,3 +95,25 @@ gate with two warm-up pairs and seven alternating fresh-child measured pairs,
 following [PR429](https://github.com/CrispStrobe/bw-board/pull/429). Declare the
 performance threshold before running; report whole-child CPU/wall ratios and
 all individual pairs. This plan establishes no speedup, physical RTx or adoption.
+
+## Reviewed support-fixture correction awaiting hosted qualification
+
+[Draft PR469](https://github.com/CrispStrobe/bw-board/pull/469), reviewed head
+`f2971d8ae7bd67a30f13baa45b63956790d9b975`, is stacked on the frozen first
+attempt. Six support/workflow/source-admission paths change; the held emulator,
+probe derivative, image tooling and guest runner remain unchanged. The minor
+fixture uses two fixed cohorts of 64 targets, each with at most eight blocks of
+128 pressure allocations. Strong references keep targets alive across the
+first turn; after release it excludes all GC during the gap before pressure,
+then requires an observed minor collection and every cohort target dead.
+Any major collection still refuses the minor case. Major cases and independent
+baseline/flag comparisons remain required.
+
+The support process alone uses validated `--no-turbo-inlining`, with exact
+Node/V8/argv facts retained in each raw case receipt before refusal. The guest
+processes do not acquire this setting. Root and separate Sol source review and
+CPU-free controls pass. Hosted support and guest comparison remain unrun at
+this head. After all 10 enabled checks pass with only the two declared optional
+skips, apply the diagnostic label once and audit its original artifact. Preserve
+the first failure and any corrected-run refusal; do not silently adjust the
+predeclared cohort or pressure limits to obtain a pass.

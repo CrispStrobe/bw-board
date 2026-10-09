@@ -53,3 +53,8 @@ as evidence that collected target allocations were sampled.
 
 No new RTx, speedup, Windows, complete AT or general application claim follows
 from these diagnostics. Neither source was merged or adopted.
+
+Separate reviewed follow-up sources are [PR468](https://github.com/CrispStrobe/bw-board/pull/468)
+(task-attempt facts) and [PR469](https://github.com/CrispStrobe/bw-board/pull/469)
+(support-fixture correction). Source reviews and CPU-free controls passed;
+hosted qualification remains pending. They do not replace these frozen failures.
