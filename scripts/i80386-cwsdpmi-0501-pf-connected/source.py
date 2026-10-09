@@ -229,7 +229,7 @@ def identity(expected):
         if role in BIOS and (len(raw), digest) != BIOS[role]:
             raise ValueError("free ROM pin changed")
         hashes[role] = digest
-    if len(roles) != 238 or len(graph) != 70:
+    if len(roles) != 238 or len(graph) != 71:
         raise ValueError("PF-connected source closure census")
     return {"schema": "bw.cwsdpmi-0501-pf-connected.at-source.v1", "head": head,
             "inheritedBase": HELD_BASE, "reviewedPfBase": BASE,
