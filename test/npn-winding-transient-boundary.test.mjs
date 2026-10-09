@@ -67,6 +67,46 @@ test('default NPN winding startup completes without clearing or ignoring failed 
   assert.ok(b.inductorCurrents.get('L') > .018, 'the winding is actually energized');
 });
 
+// Diagnostic instances only: this is not configureTransientAnalysis authority,
+// not a production profile change, and not a replacement for the two ordinary
+// startup regressions. The recorded profile must disclose the altered floor.
+for (const vceSat of [.2,null]) {
+  test(`diagnostic 1 fs floor resolves ${vceSat === null ? 'default' : 'fixed-clamp'} startup without weakening accuracy scales`, () => {
+    const b = winding({vceSat});
+    const ordinary = b.transientAnalysisStatus().profile;
+    b._transientAnalysisProfile = Object.freeze({...ordinary,minStepSec:1e-15});
+    assert.equal(b.advanceToLive(1000000n,{maxSteps:16}).completed,true);
+    const status = b.transientAnalysisStatus();
+    assert.equal(status.accuracyMet,true);
+    assert.equal(status.failure,null);
+    assert.deepEqual(status.profile,{...ordinary,minStepSec:1e-15});
+    assert.ok(status.work.attempts<ordinary.maxAttempts,'unchanged attempt ceiling');
+    const u = (Math.sqrt(1+4*22700*4.325)-1)/(2*22700);
+    const steady = 100*u*u/(1+1e-9*10);
+    assert.ok(Math.abs(b.inductorCurrents.get('L')-steady)<1e-9,
+      'independent leakage-inclusive active current');
+    assert.ok(Math.abs(b.nodeVoltage('collector')-(5-10*steady))<1e-6,
+      'independent winding endpoint voltage');
+  });
+}
+
+test('diagnostic 1 fs floor retains winding flyback and restart through actual live-clock calls', () => {
+  const b = winding({vceSat:null});
+  b._transientAnalysisProfile = Object.freeze({...b._transientAnalysisProfile,minStepSec:1e-15});
+  assert.equal(b.advanceToLive(1000000n,{maxSteps:16}).completed,true);
+  const energized = b.inductorCurrents.get('L');
+  b.setPin('P1.4','quasi',false);
+  assert.equal(b.advanceToLive(1000100n,{maxSteps:16}).completed,true);
+  assert.ok(b.inductorCurrents.get('L')>energized*.99,'current is not erased at turn-off');
+  assert.ok(b.nodeVoltage('collector')>5,'flyback actually raises the collector above supply');
+  assert.equal(b.advanceToLive(2000000n,{maxSteps:16}).completed,true);
+  assert.ok(Math.abs(b.inductorCurrents.get('L'))<1e-8,'winding discharges before restart');
+  b.setPin('P1.4','quasi',true);
+  assert.equal(b.advanceToLive(3000000n,{maxSteps:16}).completed,true);
+  assert.equal(b.transientAnalysisStatus().accuracyMet,true);
+  assert.ok(Math.abs(b.inductorCurrents.get('L')-energized)<1e-9);
+});
+
 test('weak-drive fixed-clamp startup agrees with independent RL before its calculated boundary', () => {
   const u = (Math.sqrt(1+4*22700*4.325)-1)/(2*22700);
   const limit = 100*u*u;

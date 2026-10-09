@@ -101,6 +101,17 @@ Second-order L-stable SDIRK prototype also fails both desired startup cases
 and is removed; board integrator source remains unchanged. Combined suite
 19 pass/2 unresolved startup failures/0 skip; adjacent suites16/16 green.
 No event exemption, model upgrade, successful repair, adoption or landing.
+Working diagnostic control now resolves both startups at1 fs with the
+original integrator and unchanged accuracy scales/work ceilings:97/147
+attempts, independent settled current/voltage agreement. Actual held motor
+fixture loaded through Circuit.fromJSON with explicit lane-engine injection
+also completes start/off/restart/10 ms healthy. Three persistent subfloor
+controls preserve these facts; ordinary-profile regressions remain red.
+Earlier100 ps failure did not prove all finer floors fail. Combined suite
+22 pass/2 ordinary-policy failures/0 skip. Third-order SDIRK substitution
+also failed and was removed. Shipping the successful route needs an explicit
+revision of the current floor-preservation contract and broader qualification;
+no public profile/default, package, browser or deployment change is made here.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base

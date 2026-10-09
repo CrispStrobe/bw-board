@@ -95,7 +95,8 @@ These were diagnostic instances or uncommitted drafts, not production changes:
 - Removing back-EMF does not remove the failure. Removing winding inductance
   does, but removes the modeled phenomenon and is not a repair.
 - Tightening the diagnostic instance's step floor from10 ns to1 ns and100 ps
-  still fails at the transition. No profile change is adopted.
+  still fails at the transition. This did not establish that every smaller
+  floor fails: the later1 fs control below succeeds. No profile change is adopted.
 - A draft region-aware short restart plus error-controlled backward-Euler
   fallback still fails. The draft was removed; `src/board.js` and `src/mna.js`
   remain byte-identical to the claimed baseline.
@@ -264,6 +265,55 @@ norm1443.490878, both at10 ns. The prototype was removed completely;
 `src/board.js` remains unchanged. Blanket damping-method substitution is
 not a justified repair. Adjacent BJT/readback suites pass16/16; the combined
 startup/readback suite remains19 pass/2 genuine startup fail/0 skip.
+
+### Working subfloor control; production-policy decision required
+
+A later local third-order stiffly accurate SDIRK experiment used the
+[Alexander tableau described by Butcher](https://www.math.auckland.ac.nz/~butcher/ODE-book-2008/Tutorials/IRK.pdf),
+with diagonal0.435866521508459. It also fails both startup cases at the
+unchanged10 ns floor: fixed clamp20.230842814 us/norm2011.474131;
+default19.865851469 us/norm4388.699607. The prototype is fully removed.
+Higher-order blanket damping substitution is not the repair demonstrated here.
+
+**The original integrator does complete both startups when the diagnostic
+instance alone permits refinement to1 fs.** Relative and absolute tolerances,
+1 ns seed,100 us maximum step,20000-attempt ceiling, equations and all failure
+latches remain unchanged. The fixed-clamp control uses97 attempts/289 solves;
+the default uses147/439. Both reach1 ms with `accuracyMet:true`, no failure,
+winding current18.992153104533 mA and collector4.81007847 V, agreeing with
+the independent leakage-inclusive steady equations. The three new diagnostic
+tests assert that only the reported minimum step differs, verify both actual
+live-clock startups, and retain current continuity, an above-supply flyback
+voltage, discharge and re-energization. The original ordinary-profile startup
+tests remain intact and red. The combined suite is22 pass/2 fail/0 skip.
+
+The held Lite motor fixture was also loaded through the installed
+`Circuit.fromJSON` path with the lane's board source explicitly injected,
+not by a hand-built wire union or an installed package refresh. Existing
+Inputs: board source5c72704e1446fd55a610800c3f8e694c3eb37ca4;
+CUI pin5f336b24447351ce80742c0e71078cdd23e7912b; Lite fixture at
+1aa59e51681a721689e63c3be9b3362421168b4a,
+`overlay/scratch-gui/examples/54-motor-driver/circuit.stc12c5a60s2.json`
+(Git blobdff6c5395df84a5a89c838f0af4e3f29e44fa7c7). The existing
+10 ns policy reproduces the original19.863126165 us/norm6.267316675 failure.
+The1 fs diagnostic control completes1 ms in146 attempts/436 solves without
+a failure. Turning the actual motor pin off to2 ms, back on to3 ms, and
+continuing to10 ms retains `accuracyMet:true` throughout; the final work
+record is411 attempts/1225 solves. This is native model/consumer-path evidence,
+not installed-browser, package-adoption, deployment or performance evidence.
+
+This corrects the earlier inference that finer stepping cannot repair the
+case. The previously tested100 ps floor was still20 times the independently
+derived5 ps mode. The successful1 fs experiment is a diagnostic control,
+not a public configuration option: it deliberately changes a private instance
+profile and is never advertised as an approved `interactive-v1` profile.
+The current lane contract preserves existing floors. Shipping this route
+requires an explicit revised precision policy, rather than silently changing
+the profile or accepting floor errors. Recommended next decision: a reviewed
+bounded stiff-capable interactive policy, retaining the old named policy for
+compatibility, the existing accuracy scales/work caps and strict failure
+refusal. It still needs broader negative/budget/source-corner/instrument
+regressions, exact hosted qualification and the real installed browser journey.
 
 ### Fixed-clamp boundary established independently
 
