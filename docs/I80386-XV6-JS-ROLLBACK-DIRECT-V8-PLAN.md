@@ -120,7 +120,8 @@ the six-path hosted authority-preflight slice. Root and a separate Sol reviewer
 checked exact source, syntax and synthetic controls. The [first original hosted preflight](receipts/2026-10-09-direct-v8-preflight/README.md)
 failed its header closure check before Node/compiler probes. Node, compiler
 and addon runtime support were unqualified at this failed checkpoint; the
-single corrected preflight below is launched; its original result is pending.
+single corrected preflight below completed with the separately preserved
+silent-component version-probe refusal.
 
 The dedicated workflow authenticates the exact source before and after, fetches
 only the pinned official Node/header archives, hashes tool executable targets
@@ -177,7 +178,9 @@ qualifying revised admission or any native execution.
 Source and pure synthetic controls passed root and independent review. All
 ten enabled exact-head checks passed, with only two declared optional skips,
 before the single [report-only run37919948310](https://github.com/CrispStrobe/bw-board/actions/runs/37919948310)
-was launched; its original result is pending. The [official release
+was launched. The [independently audited original failure](receipts/2026-10-09-direct-v8-64m-preflight-failure/README.md)
+admitted the reported header map and Node versions, then refused the silent
+`cc1plus --version` probe. Complete tool authority remains unqualified. The [official release
 checksum-text comparison](receipts/2026-10-09-node-release-pins/README.md)
 independently matches both archive pins, without raw archive or signature
 verification. It uses one shared
@@ -191,8 +194,14 @@ records and uploading no archives, extracted headers, executable or addon.
 The corrected profile has separate source admission, schema, dedicated
 label/workflow and pure boundary/adversarial controls. Its shared receipt cap
 is 1 MiB; the closed report-only inventory caps each file at 1 MiB and its
-total at 2 MiB. Review the final exact
-source and every enabled check before one original report-only preflight, then
-independently audit its tool/runtime authority facts. A separate first build
+total at 2 MiB. Preserve the frozen failed original. Next review a separately named report-only
+tool-probe census that retains executable and locator identities before each
+probe. Only the observed complete exit-zero, empty stdout/stderr `cc1plus`
+case may report `VERSION_UNAVAILABLE_EMPTY`; generic strict probes stay unchanged.
+Rehash each tool after its probe and the complete set at the end. Pure controls
+must cover other empty outputs, partial failures and identity changes. This is
+identity observation with unavailable version output, not validated version support.
+Review its exact source and all enabled checks before one distinct actual, then
+independently audit original tool/runtime facts. A separate first build
 and four fresh support children remain later gates before xv6 allocation
 sampling; no allocation hotspot or speedup is established by the census.
