@@ -305,14 +305,19 @@ the next support profile. Do not credit compiler-subprocess delegation or
 profiler behavior from matching tool identities alone.
 
 The separate [draft PR485 profiler-header correction](https://github.com/CrispStrobe/bw-board/pull/485),
-reviewed source `765415cb6b437f08267de2e11ced41781b158e39`, adds nine new
+reviewed source `b8ce3eb36d6022eb82415c80fdbcf9b37e23284f`, adds nine new
 paths and admits 60 source roles, with all 51 inherited roles unchanged.
 Its derived addon adds only `#include <v8-profiler.h>`; both source admission
 and the runner reject any other native delta. Root and independent source/
 syntax/workflow review and three CPU-free controls passed. Git authenticates
 the source module before execution. Compiler/tool/archive/header authority,
 closed environment, bounds, first failures and all five post-tool observations
-remain required. Hosted checks and a fresh unloaded-build original are pending;
+remain required. The final one-line workflow change shortens its launch label
+to `xv6-js-rollback-direct-v8-profiler-header-build`, within GitHub’s label
+length limit; native and runner bytes remain unchanged. Root and independent
+review passed for the one-shot launch guard and the prospective original-result
+reader, including CPU-free refusal controls. The label is created but unapplied.
+Hosted checks and a fresh unloaded-build original are pending;
 no compile or support success follows from this source checkpoint.
 
 After an audited unloaded-build result, a **separate** support profile must
