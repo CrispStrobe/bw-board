@@ -117,3 +117,17 @@ this head. After all 10 enabled checks pass with only the two declared optional
 skips, apply the diagnostic label once and audit its original artifact. Preserve
 the first failure and any corrected-run refusal; do not silently adjust the
 predeclared cohort or pressure limits to obtain a pass.
+
+## Corrected fixture actual refused; stop pressure tuning
+
+Reviewed `f2971d8a` passed all ten enabled checks, then the first actual refused:
+64 targets, zero unreachable after six minor collections and no major in its
+recorded pre-retrieval window. No guest ran. The
+[original receipt and pinned-source diagnosis](receipts/2026-10-09-task-attempt-and-gc-support/README.md)
+explain JSWeakRef strong traversal during minor GC and Inspector's forced-GC
+retrieval. Preserve this failure; more pump blocks do not repair the proof.
+Both flags are present in the pinned implementation, so do not report an
+unsupported protocol from this fixture. The next lane is a separate reviewed
+no-forced-GC sampler and native lifetime witness, with complete event windows
+and unchanged guest workload. It remains a proposed diagnostic, not a measured
+hotspot or performance candidate.

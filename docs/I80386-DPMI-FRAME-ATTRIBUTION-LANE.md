@@ -401,3 +401,14 @@ focused names; [original receipt](receipts/2026-10-09-0501-task-attempt-xv6/READ
 binds the executed PR merge tree to reviewed `f3b8b31d`. Root and a separate Sol
 reader audited original packet/log/Git roles. Other required checks and the
 actual attempted-task ticket diagnostic remain pending at this checkpoint.
+
+## Task-attempt actual reached; outcome remains unknown
+
+PR468's reviewed `f3b8b31d` cleared all 12 enabled checks, then actual
+[run37893093332](https://github.com/CrispStrobe/bw-board/actions/runs/37893093332)
+recorded a JMP attempt to selector `0x70` from CPL3 with NT clear and current
+TR `0x60`. The first task guard refusal and null return remain unchanged.
+The [original receipt](receipts/2026-10-09-task-attempt-and-gc-support/README.md)
+preserves exact source, packet and audit scope. Earlier pending-check notes are
+historical. The next source slice is a bounded post-core return/fault outcome
+receipt, not a task-aware frame profile or relaxed ownership rule.
