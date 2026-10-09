@@ -319,8 +319,12 @@ review passed for the one-shot launch guard and the prospective original-result
 reader, including CPU-free refusal controls. All ten enabled exact-head checks
 passed, with only the two declared optional `vectors-full` skips. The guarded
 label was applied once; [corrected unloaded-build run37979252708](https://github.com/CrispStrobe/bw-board/actions/runs/37979252708)
-is queued. Preserve that sole invocation; do not remove/reapply its label or
-dispatch a duplicate. No corrected compile or support result exists yet.
+completed successfully. The [original unloaded-build receipt](receipts/2026-10-09-direct-v8-profiler-header-build/README.md)
+passes coordinator and independent audit: complete exit-zero compile, empty
+streams, matching five post-tool identities and final source recheck. It reports
+a 33,896-byte addon explicitly unloaded and not uploaded. Preserve that sole
+invocation; do not remove/reapply its label or dispatch a duplicate. This is an
+unloaded-build checkpoint; sampler support and performance remain unqualified.
 
 After an audited unloaded-build result, a **separate** support profile must
 compile and load the addon in one hosted run: the unloaded binary is not in the
@@ -332,3 +336,17 @@ facts, child failures and a closed report-only inventory; upload no Node or
 addon binary. Require all four source-bound lifetime and sample-ID predicates
 before attempting the unchanged three-child xv6 comparison. Even a passing
 support control does not measure allocation CPU share or establish a speedup.
+
+
+The separate [draft PR488 corrected support source](https://github.com/CrispStrobe/bw-board/pull/488)
+is published at reviewed `ff8038de317569de3df8e7f6743a901a1f530c97`:
+ten new paths and seventy admitted roles, with all sixty inherited roles
+unchanged. Coordinator and independent source review and four CPU-free Python
+control groups passed. It builds the corrected addon and materializes the
+pinned Node executable in the same hosted job, verifies pre-child/final leases,
+and grades four fresh raw support cases. Its closed inventory excludes binaries.
+Load state distinguishes no attempt, an attempt with unknown outcome, and a
+verified child load; failures retain their first reason and partial records.
+Hosted exact-head gates and an independently reviewed prospective result reader
+are still required before its single support actual. No support child or guest
+has run at this checkpoint, and no allocation hotspot or speedup follows.

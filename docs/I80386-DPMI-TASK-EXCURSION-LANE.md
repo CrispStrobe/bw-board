@@ -364,3 +364,17 @@ RAM, TSS or handler inspection. Review the prospective result reader and
 closed artifact inventory before one connected actual. Do not run the frozen
 PR483 workflow against this changed CPU or claim a completed DPMI frame from
 the unconnected source checkpoint.
+
+
+The separate connection is now [draft PR487](https://github.com/CrispStrobe/bw-board/pull/487)
+at reviewed `05bb1cb17634c407015e9617db7d931bf462ba2a`: twelve new paths,
+238 source roles and 71 recursive JavaScript nodes, with inherited CPU, media,
+client and runner bytes unchanged. Coordinator and independent source reviews
+passed. Python source/inventory controls and static workflow checks passed;
+JavaScript mock controls are authored and reviewed but were not run locally.
+The review added fault-time/pre-delivery CR0/CR2/CR3 joins and retained snapshot
+refusal as a secondary diagnostic without replacing the first strict failure.
+The dedicated workflow has produced no diagnostic evidence. Require its
+hosted gates and prospective-reader review before one original diagnostic,
+then independently audit that retained result.
+No connected actual has been launched; the strict frame remains unqualified.
