@@ -27,6 +27,11 @@ unchanged. Prove resumed actual clocks, ordinary matching partitions, closed-
 form RC and direct winding restart; restoring old span must red real callers.
 The expanded remote claim precedes any scheduler edit. Late-ring global
 accuracy and finite precision failure remain separately open.
+One test-only path expansion: test/npn-winding-transient-boundary.test.mjs
+must resume its existing sampled-scope caller at reported actual times. Its
+old single-call completion assumption no longer applies to100 kHz sample-grid
+quanta; retain all100 samples, waveform/meter assertions and genuine failures.
+No numerical expectation or tolerance is weakened. Final envelope: six paths.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
