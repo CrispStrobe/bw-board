@@ -37,6 +37,11 @@ startup samples within1 microamp/1 mV at unchanged accuracy settings.
 The generic2N2222 card contains no VAF, so this is not a silent lesson-model
 replacement. Suite remains deliberately red3 pass/2 fail/0 skip; event
 location and consistent post-event state remain the required repair.
+Further local event/L-stable prototype passes the fixed-clamp regression but
+not the default-model regression. The latter has a measured pre-event
+saturated voltage accuracy failure, not a saturated-to-active event. Draft
+removed; production source remains baseline-identical. No broader event
+exemption, latch clearing, profile change or consumer release authorized.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base

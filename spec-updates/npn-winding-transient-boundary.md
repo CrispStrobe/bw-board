@@ -53,6 +53,37 @@ These were diagnostic instances or uncommitted drafts, not production changes:
 - A draft region-aware short restart plus error-controlled backward-Euler
   fallback still fails. The draft was removed; `src/board.js` and `src/mna.js`
   remain byte-identical to the claimed baseline.
+- A subsequent diagnostic event draft obtains authoritative saturated/active
+  regions from MNA, tests backward-Euler full/half storage-state agreement at
+  a floor-sized region crossing, and uses error-controlled backward Euler
+  after that crossing. The fixed-clamp regression passes in this experiment,
+  but the default-model regression still fails; this is not a release repair.
+  The draft is removed from runtime source and not published as implementation.
+
+The latter experiment separates two remaining issues. For the fixed clamp,
+one tiny backward-Euler restart leaves about0.01999 V in winding-voltage
+history even after current has reached the active limit. Trapezoidal trials
+then ring between collector endpoints4.83003 V and4.79025 V, normalized
+error82.20. Continued **error-controlled** backward Euler gives endpoints
+4.81006848 V and4.81007845 V, normalized error0.02069, then settles. This
+supports an L-stable post-event method but does not justify suppressing
+node-voltage error at arbitrary regime changes.
+
+The default drive-dependent clamp has a distinct pre-event failure. At an
+interval starting19.853126816 us, both trapezoidal endpoint solves remain
+saturated. Their collector voltages are0.369706783 V and0.369945089 V;
+their winding currents differ by11.76 nA. The normalized voltage error is
+6.27212 at the unchanged10 ns floor. A backward-Euler full/half comparison
+also fails, normalized error19.1967. The saturated-to-active crossing occurs
+in the following interval. Treating this earlier failure as a switching jump
+would be false event attribution; clearing the latch at the later event would
+hide a real accuracy failure. Including the derived saturation-clamp change
+in the Newton convergence delta did not remove it either.
+
+Consequently the fixed-clamp experiment is only a partial proof. Completion
+of the default model requires an independently justified way to resolve its
+sharp pre-event voltage dynamics at the existing profile, not a broader
+event exemption, blanket method substitution or fixture-model swap.
 
 An independent ngspice42 Gummel-Poon topology control with explicit
 `IS=1e-16 BF=100 BR=1`, the same external R/L network and a1 ns drive rise
