@@ -182,12 +182,16 @@ def probe(argv, cwd, timeout=10, display_argv=None):
     return receipt
 
 
-def resolved_tool(name, compiler, work):
+def resolved_tool(name, compiler, compiler_identity, work):
+    if pinned_file(compiler) != compiler_identity:
+        raise ValueError("compiler changed before tool locator")
     if name == "g++":
         path = compiler
         locator = None
     else:
         locator = probe([compiler, "-print-prog-name=" + name], work)
+        if pinned_file(compiler) != compiler_identity:
+            raise ValueError("compiler changed across tool locator")
         value = locator["stdoutText"].strip()
         if not value or "\n" in value or "\r" in value:
             raise ValueError("compiler subtool path refused")
@@ -195,11 +199,20 @@ def resolved_tool(name, compiler, work):
         if not path:
             raise ValueError("compiler subtool missing")
     before = pinned_file(path)
+    if name == "g++" and before != compiler_identity:
+        raise ValueError("compiler changed before version probe")
     version = probe([before["realpath"], "--version"], work)
     after = pinned_file(path)
     if before != after:
         raise ValueError("compiler tool changed across probe")
     return {"identity": before, "version": version, "locator": locator}
+
+
+def recheck_tools(tools):
+    for name in TOOLS:
+        if name not in tools or pinned_file(tools[name]["identity"]["realpath"]) != \
+                tools[name]["identity"]:
+            raise ValueError("recorded tool set changed")
 
 
 def write_receipt(path, data):
@@ -295,9 +308,13 @@ def main():
         compiler = shutil.which("g++")
         if not compiler:
             raise ValueError("compiler unavailable")
+        compiler_identity = pinned_file(compiler)
+        compiler = compiler_identity["realpath"]
         for name in TOOLS:
-            report["tools"][name] = resolved_tool(name, compiler, work)
+            report["tools"][name] = resolved_tool(name, compiler,
+                                                   compiler_identity, work)
             write_receipt(report_path, report)
+        recheck_tools(report["tools"])
         if sha(read_bounded(evidence / "source.json", 32_000)) != report["sourceReceiptSha256"]:
             raise ValueError("source receipt changed during preflight")
         if source != source_identity():

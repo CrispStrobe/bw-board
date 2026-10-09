@@ -82,6 +82,29 @@ try:
         raise AssertionError("failed probe lost its original bounded output")
 finally:
     preflight_module.run_bounded = original_run
+original_pin = preflight_module.pinned_file
+original_probe = preflight_module.probe
+try:
+    initial = {"realpath": "/synthetic/g++", "bytes": 1, "sha256": "a"}
+    changed = {"realpath": "/synthetic/g++", "bytes": 1, "sha256": "b"}
+    calls = [initial, changed]
+    preflight_module.pinned_file = lambda *_args: calls.pop(0)
+    preflight_module.probe = lambda *_args: {"stdoutText": "/synthetic/cc1plus\n"}
+    refuse(lambda: preflight_module.resolved_tool(
+        "cc1plus", "/synthetic/g++", initial, "."))
+    assert not calls
+    roles = {name: {"identity": {"realpath": "/synthetic/" + name,
+                                 "bytes": 1, "sha256": name}}
+             for name in preflight_module.TOOLS}
+    snapshots = {name: item["identity"].copy() for name, item in roles.items()}
+    preflight_module.pinned_file = lambda path: snapshots[Path(path).name]
+    preflight_module.recheck_tools(roles)
+    roles["ld"]["identity"] = {"realpath": "/synthetic/ld", "bytes": 1,
+                               "sha256": "changed"}
+    refuse(lambda: preflight_module.recheck_tools(roles))
+finally:
+    preflight_module.pinned_file = original_pin
+    preflight_module.probe = original_probe
 with tempfile.TemporaryDirectory(prefix="direct-v8-preflight-pure-") as name:
     root = Path(name)
     executable = root / "ordinary"
