@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import I80386, { I80386Fault } from '../src/experimental/i80386.js';
+import I80386, { I80386Fault, UnsupportedI80386 } from '../src/experimental/i80386.js';
 
 const START = 0x20;
 const CODE = 0x140000;
@@ -666,6 +666,42 @@ test('synthetic taskCommitted fault remains the same thrown object', () => {
   assert.equal(result.failure, 'task-switch-during-owned-frame');
   assert.equal(result.taskSwitchOutcome.status, 'fault-with-taskCommitted');
   assert.equal(result.taskSwitchOutcome.postTrSelector, 0x48);
+  assert.equal(result.returned, null);
+});
+
+test('unsupported task fault with an own marker is distinguished from completion', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  const fault = new UnsupportedI80386('synthetic marked task refusal');
+  fault.taskCommitted = true;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    throw fault;
+  };
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error => error === fault);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'fault-with-taskCommitted');
+  assert.equal(result.returned, null);
+});
+
+test('unclassified null throw cannot be mistaken for a normal core return', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    throw null;
+  };
+  let caught = Symbol('not thrown');
+  try { f.cpu._taskSwitch(0, 'jmp'); } catch (error) { caught = error; }
+  assert.equal(caught, null);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'unclassified-throw');
   assert.equal(result.returned, null);
 });
 
