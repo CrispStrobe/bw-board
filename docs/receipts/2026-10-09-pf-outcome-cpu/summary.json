@@ -1,0 +1,67 @@
+{
+  "run": 37970304717,
+  "head": "33d53542aa4375f9eb4c3c508ecf9bc8b1bba0d9",
+  "attempt": 1,
+  "officialConclusion": "success",
+  "artifactId": 11638648173,
+  "zipBytes": 21029,
+  "zipSha256": "ddc0e4c22c3ee01c494a2a479e6833c3d2585c1cefe40510cb8b3c52731a11c5",
+  "rawLogBytes": 1627839,
+  "rawLogSha256": "a636012730cfef948b3a81969cd24888924addcfcf802c5330f3d691c7c02049",
+  "current": {
+    "tests": 1726,
+    "pass": 1715,
+    "fail": 0,
+    "skipped": 11
+  },
+  "historical": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skipped": 0
+  },
+  "listedGitRolesVerified": 76,
+  "scenarios": [
+    {
+      "member": "xv6-stock-free-bios-boot.json",
+      "profile": "4m",
+      "steps": 14643086,
+      "marker": "BW_XV6_FREE_BIOS_FS_OK",
+      "userModeEntries": 16,
+      "cr4": 16
+    },
+    {
+      "member": "xv6-stock-14m-free-bios-boot.json",
+      "profile": "14m",
+      "steps": 10962834,
+      "marker": "BW_XV6_14M_FREE_OK",
+      "userModeEntries": 16,
+      "cr4": 16
+    },
+    {
+      "member": "xv6-stock-free-bios-forktest.json",
+      "profile": "4m",
+      "steps": 24338279,
+      "marker": "fork test OK",
+      "userModeEntries": 16,
+      "cr4": 16
+    }
+  ],
+  "origin": {
+    "run": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37970304717",
+    "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11638648173/zip",
+    "logs": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37970304717/logs"
+  },
+  "focusedTests": {
+    "newFaultOutcome": 20,
+    "related": 131,
+    "total": 151
+  },
+  "audit": {
+    "root": "PASS",
+    "independentPeer": "PASS"
+  },
+  "enabledExactHeadChecks": 12,
+  "optionalSkips": 2,
+  "scope": "Existing finite xv6 compatibility profile with PSE/APIC extensions; not strict physical 386DX, connected DPMI fault delivery, frame return, broader application acceptance or performance qualification."
+}

@@ -340,14 +340,25 @@ shutdown. Returned delivery alone is not fault service or a completed frame.
 
 Root and independent static review passed after correcting absent-marker
 normalization, falsey throws, method/argument evaluation order and noncallable
-setup credit. Twenty focused tests are authored but have not been executed
-locally. Hosted CPU checks and the existing finite free xv6 gate are pending.
+setup credit. The [original hosted CPU/xv6 qualification](receipts/2026-10-09-pf-outcome-cpu/README.md)
+passed all twenty new tests, 131 related focused controls and three finite
+free xv6 scenarios. Root and independent original-packet audits passed.
+All twelve enabled exact-head checks passed, with only the two declared
+optional `vectors-full` skips. No CPU or guest test was executed locally.
 The default-off delivery expression and the strict frame guard stay unchanged;
 the opt-in malformed noncallable-hook TypeError wording limit is documented.
 
-After exact-head hosted qualification, implement a separately named driver,
-source admission and workflow that bind this CPU/session to the owned client,
-entry and same-machine execution. Preserve the earlier original failure and
+The prerequisite is qualified; implement a separately named driver, source
+admission and workflow that bind this CPU/session to the owned client,
+entry and same-machine execution. The inherited driver continues before its
+exported function returns: add an explicit fail-closed arm-result gate between
+the strict terminal refusal and task-mode continuation. A throwing progress
+callback alone cannot prevent that continuation. Bind the opaque recorder to
+the trusted admitted wrapper, committed entry and exact CPU/machine/session.
+Capture mode counters and continuation-call counters at arm; PF attempted
+steps include the faulting call, whereas mode committed steps exclude it.
+Drain after the existing terminal step, without an extra guest step or reset.
+Discard a partial session with its fresh machine rather than reusing it. Preserve the earlier original failure and
 strict frame refusal; retain numeric fault-time, pre-delivery and post-delivery facts without
 RAM, TSS or handler inspection. Review the prospective result reader and
 closed artifact inventory before one connected actual. Do not run the frozen

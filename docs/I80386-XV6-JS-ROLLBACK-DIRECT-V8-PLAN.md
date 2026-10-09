@@ -316,9 +316,11 @@ remain required. The final one-line workflow change shortens its launch label
 to `xv6-js-rollback-direct-v8-profiler-header-build`, within GitHub’s label
 length limit; native and runner bytes remain unchanged. Root and independent
 review passed for the one-shot launch guard and the prospective original-result
-reader, including CPU-free refusal controls. The label is created but unapplied.
-Hosted checks and a fresh unloaded-build original are pending;
-no compile or support success follows from this source checkpoint.
+reader, including CPU-free refusal controls. All ten enabled exact-head checks
+passed, with only the two declared optional `vectors-full` skips. The guarded
+label was applied once; [corrected unloaded-build run37979252708](https://github.com/CrispStrobe/bw-board/actions/runs/37979252708)
+is queued. Preserve that sole invocation; do not remove/reapply its label or
+dispatch a duplicate. No corrected compile or support result exists yet.
 
 After an audited unloaded-build result, a **separate** support profile must
 compile and load the addon in one hosted run: the unloaded binary is not in the
