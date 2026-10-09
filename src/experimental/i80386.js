@@ -311,7 +311,7 @@ export class ExperimentalI80386 {
         intent: null, iretIntent: null, stagedEntry: null, stagedReturn: null,
         entry: null, returned: null, pendingRejectedDelivery: null,
         rejectionPermit: false, profile, handlerContext: null,
-        rejectedDelivery: null,
+        rejectedDelivery: null, taskSwitchAttempt: null,
       });
       this.#owned0501JournalActive = true;
       return token;
@@ -349,6 +349,8 @@ export class ExperimentalI80386 {
       failure: session.failure, activeSteps: session.activeSteps,
       entry: session.entry, returned: session.returned,
       rejectedDelivery: session.rejectedDelivery,
+      ...(session.taskSwitchAttempt
+        ? { taskSwitchAttempt: session.taskSwitchAttempt } : {}),
       ...(session.profile ? { profile: session.profile } : {}) });
     owned0501Sessions.delete(this);
     this.#owned0501JournalActive = false;
@@ -1723,8 +1725,37 @@ export class ExperimentalI80386 {
   } = {}) {
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
-    if (owned0501 && (owned0501.phase === "open" || owned0501.intent))
+    if (owned0501 && (owned0501.phase === "open" || owned0501.intent)) {
       owned0501Invalidate(owned0501, "task-switch-during-owned-frame");
+      // Diagnostic only: this is the attempted path before task descriptor
+      // validation, not evidence that the task switch later committed.
+      // Own-data reads cannot invoke a guest-facing accessor. If observation
+      // fails, keep the original first refusal and guest execution unchanged.
+      if (!owned0501.taskSwitchAttempt) try {
+        const sourceCs = owned0501Option(this, "cs");
+        const attemptEip = owned0501Option(this, "eip");
+        const sourceFlags = owned0501Option(this, "eflags");
+        const task = owned0501Option(this, "tr");
+        const trSelector = owned0501Option(task, "selector");
+        const trType = owned0501Option(task, "type");
+        if (Number.isInteger(sourceCs) && sourceCs >= 0 && sourceCs <= 0xffff &&
+            Number.isInteger(attemptEip) && attemptEip >= 0 &&
+            attemptEip <= 0xffffffff && Number.isInteger(sourceFlags) &&
+            sourceFlags >= -0x80000000 && sourceFlags <= 0xffffffff &&
+            Number.isInteger(trSelector) && trSelector >= 0 &&
+            trSelector <= 0xffff && Number.isInteger(trType) &&
+            trType >= 0 && trType <= 15 && Number.isInteger(selector) &&
+            selector >= 0 && selector <= 0xffff &&
+            (kind === "call" || kind === "jmp" || kind === "iret"))
+          owned0501.taskSwitchAttempt = owned0501Frozen({
+            schema: "bw.i80386-owned-0501.task-switch-attempt.v1",
+            kind, selector, sourceCs, attemptEip,
+            sourceCpl: sourceCs & 3, nt: !!(sourceFlags & NT),
+            trSelector, trType, activeSteps: owned0501.activeSteps,
+            ...(owned0501.profile ? { profile: owned0501.profile } : {}),
+          });
+      } catch { /* A refused observation must not replace the guest result. */ }
+    }
     const returning = kind === "iret";
     const taskFaultVector = descriptorFaultVector ?? (returning ? 10 : 13);
     const incoming = this._taskDescriptor(selector, {
