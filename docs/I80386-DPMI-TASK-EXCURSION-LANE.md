@@ -298,8 +298,10 @@ refuse; the original report and first failure remain visible. The separate
 `attributionQualified` predicate is report consistency only. Strict `passed`
 and `frameReturnQualified` stay false, with a null frame return.
 
-Hosted checks and the first connected guest original are pending. Finish every
-enabled exact-head check, then run the dedicated profile once and independently
-audit its retained original before choosing the next task-resume/frame boundary.
-Do not reuse frozen PR478 for the changed CPU or infer its refused opcode. No
-completed DPMI frame, broader OS/application result, speedup or adoption follows.
+All ten enabled exact-head checks passed, with only the two declared optional
+skips. The single [connected far-reload run37963673934](https://github.com/CrispStrobe/bw-board/actions/runs/37963673934)
+was launched at reviewed source `72d0b32e8bd7d658447745129119e2300ad6bec1`;
+it was queued at the last check. Its original outcome and independent audit are
+pending. Do not reuse frozen PR478 for the changed CPU or infer the previously
+refused opcode. No completed DPMI frame, broader OS/application result, speedup
+or adoption follows from source review and enabled checks.

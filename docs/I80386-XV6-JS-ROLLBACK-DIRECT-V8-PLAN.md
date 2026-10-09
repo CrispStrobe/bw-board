@@ -289,7 +289,19 @@ bounded unloaded addon hash/size. Binaries, raw archives, headers, media and
 profiles are excluded from the artifact. The only successful status is
 `BUILT_UNLOADED_UNQUALIFIED`; no addon load or tool-subprocess provenance follows.
 
-Hosted exact-head checks and the first build are pending. Complete every
-enabled check before one hosted original, independently audit its diagnostics
-and unloaded output boundary, then qualify fresh addon-load/profiler support
-cases before guest sampling. No allocation CPU share or new speedup is measured.
+All ten enabled exact-head checks passed, with only the two declared optional
+skips. The single [first-build run37963686779](https://github.com/CrispStrobe/bw-board/actions/runs/37963686779)
+was launched at reviewed source `77fd5fbbc132d48622eb0790c0b2d66a6e66a5a4`;
+it was queued at the last check. Its original result and independent audit are
+pending. Do not credit a compiled addon or advance the gate from checks alone.
+
+After an audited unloaded-build result, a **separate** support profile must
+compile and load the addon in one hosted run: the unloaded binary is not in the
+first-build artifact. Materialize and reverify the pinned Node executable from
+its verified archive, rehash the same-run addon immediately before loading it,
+then run four fresh isolated support children: minor baseline/enabled and major
+baseline/enabled. Retain bounded raw pre/post profiles, GC and weak-callback
+facts, child failures and a closed report-only inventory; upload no Node or
+addon binary. Require all four source-bound lifetime and sample-ID predicates
+before attempting the unchanged three-child xv6 comparison. Even a passing
+support control does not measure allocation CPU share or establish a speedup.
