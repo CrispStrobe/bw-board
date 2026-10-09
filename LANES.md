@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-09 winding turn-off oracle — CLAIM, Codex bwcx.
+Branch lane/winding-turnoff-oracle-20261009, isolated owned worktree, exact base
+00fe5f1b55ca004c1eb2322c8eaa98ee43a3dc5e. Three-path evidence-only envelope:
+this ledger, new test/winding-turnoff-oracle.test.mjs and new
+spec-updates/winding-turnoff-oracle.md. Independently authored matched ngspice
+deck and public default Board API; prove settled, flyback-decay and restart
+samples, with reference refinement and executable wrong-value negatives.
+Explicit 12 pF/10 Mohm probe loading is part of BOTH modeled circuits, not a
+repair or claim about the unloaded motor lesson. Preserve measured unloaded
+convergence and finite precision-capture failures, plus unresolved late-ring
+reference sensitivity. No full-waveform qualification or physical scope claim.
+No production equation/profile/work-limit, GUI, package/pin, CPU, workflow or
+deployment changes. Canonical remote claim before repository implementation;
+one exact CI/Harris qualification before guarded landing of this evidence.
+
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
 d268109214f0d23ff9197b0ce737c5dc233b7759. Three-path envelope: this ledger,
