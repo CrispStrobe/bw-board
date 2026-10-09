@@ -86,6 +86,26 @@ def required(condition, reason):
         raise Refusal(reason)
 
 
+CACHE_FIELDS = ("base", "limit", "default32", "present", "code",
+                "readable", "writable", "dpl", "conforming", "access",
+                "address", "expandDown", "null")
+
+
+def cache(value, name):
+    value = record(value, name)
+    required(set(value) == set(CACHE_FIELDS), name + " fields")
+    for key, item in value.items():
+        required(item is None or (
+            integer(item, 0, 0xffffffff) if key in ("base", "limit", "address")
+            else integer(item, 0, 255) if key == "access"
+            else integer(item, 0, 3) if key == "dpl"
+            else type(item) is bool), name + " " + key)
+    required(all(value[key] is not None for key in
+                 ("base", "limit", "default32", "present", "code")),
+             name + " required fields")
+    return value
+
+
 def context(value, name):
     value = record(value, name)
     for key, maximum in (("cs", 0xffff), ("eip", 0xffffffff),
@@ -97,7 +117,28 @@ def context(value, name):
         required(integer(value.get(key), 0, maximum), name + " " + key)
     for key in ("protectedMode", "vm86", "retainedRealCs", "trPresent"):
         required(type(value.get(key)) is bool, name + " " + key)
-    required(type(value.get("stackCache")) is dict, name + " stack cache")
+    required(type(value.get("nt")) is bool and
+             value.get("mode") == ("pe-clear" if not value["protectedMode"] else
+                                   "vm86" if value["vm86"] else "protected") and
+             value["cpl"] == (3 if value["vm86"] else
+                              0 if not value["protectedMode"] or
+                                   value["retainedRealCs"] else value["cs"] & 3),
+             name + " mode context")
+    cache(value.get("codeCache"), name + " code cache")
+    cache(value.get("stackCache"), name + " stack cache")
+    return value
+
+
+def task_context(value, name):
+    value = record(value, name)
+    for key, maximum in (("cs", 0xffff), ("eip", 0xffffffff),
+                         ("ss", 0xffff), ("esp", 0xffffffff),
+                         ("cr3", 0xffffffff), ("trSelector", 0xffff),
+                         ("trType", 15), ("trBase", 0xffffffff),
+                         ("trLimit", 0xffffffff), ("cpl", 3)):
+        required(integer(value.get(key), 0, maximum), name + " " + key)
+    for key in ("trPresent", "vm86", "nt", "protectedMode"):
+        required(type(value.get(key)) is bool, name + " " + key)
     return value
 
 
@@ -131,10 +172,21 @@ def grade(task):
              type(changes) is list and 3 <= len(changes) <= MAX_CHANGES,
              "bounded transition and mode tape")
     outgoing = record(transitions[0], "outgoing task transition")
-    required(outgoing.get("enclosingStepCommitted") is True and
-             outgoing.get("outcome") == "core-return" and
-             integer(outgoing.get("step"), 1, 1_000_000),
-             "committed outgoing task source")
+    prior_transition_step = 0
+    for transition in transitions:
+        transition = record(transition, "task transition")
+        step = transition.get("step")
+        source = task_context(transition.get("source"), "task source")
+        post = task_context(transition.get("post"), "task post")
+        required(integer(step, prior_transition_step + 1, 1_000_000) and
+                 transition.get("enclosingStepCommitted") is True and
+                 transition.get("outcome") == "core-return" and
+                 transition.get("kind") == "jmp" and
+                 integer(transition.get("selector"), 1, 0xffff) and
+                 transition["selector"] == post["trSelector"] and
+                 source["trSelector"] != post["trSelector"],
+                 "committed task transition source")
+        prior_transition_step = step
     active = observation.get("activeSteps")
     required(integer(active, 3, 1_000_000), "mode active-step bound")
     steps = []
@@ -150,6 +202,15 @@ def grade(task):
         context(change.get("after"), "mode after")
     required(outgoing["step"] < steps[0], "outgoing predecessor order")
     first, second, selected = changes[:3]
+    required(prior_transition_step < steps[0] and
+             first["after"]["trSelector"] == second["before"]["trSelector"] ==
+             second["after"]["trSelector"] == selected["before"]["trSelector"] ==
+             transitions[-1]["post"]["trSelector"] and
+             first["after"]["cr3"] == second["before"]["cr3"] ==
+             second["after"]["cr3"] == selected["before"]["cr3"] and
+             selected["step"] == second["step"] + 1 and
+             second["after"] == selected["before"],
+             "committed mode predecessor continuity")
     first_operation = record(first.get("operation"), "first MOV CR0")
     second_operation = record(second.get("operation"), "second MOV CR0")
     required(all(operation.get("kind") == "decoded-mov-cr0" and
