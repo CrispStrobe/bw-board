@@ -16,13 +16,15 @@ predeclared 128 KiB sampling interval, limits the raw profile to 8 MiB,
 preserves the original guest exception before a profiling failure, and
 verifies that removing the three exact edits reproduces the held probe bytes.
 A hosted control checks minor and major collection separately. The corrected
-minor case uses two fixed 64-target cohorts, crosses an event-loop turn after
-each WeakRef creation, and bounds each cohort to eight 128-array pressure
-blocks. It requires every target in each cohort to die after an observed minor
-collection, with no major collection anywhere in the case. The support-only
+minor case uses two fixed 64-target cohorts, holds each cohort strongly across
+an event-loop turn after WeakRef creation, then releases it and crosses another
+turn before up to eight 128-array pressure blocks. It refuses any GC between
+release and pressure, and requires every target in each cohort to die after an
+observed minor collection, with no major collection anywhere in the case. The support-only
 child uses a pinned Node 20.20.2 anti-inlining flag to keep the allocation
 factory visible in sampled stacks; it checks the actual V8 option list and
-records its process arguments before sampling. This flag does not alter the
+records its Node/V8 versions and process arguments in each retained case fact,
+including a failed first case. This flag does not alter the
 qualified guest probe. Each single-flag case must retain
 samples of short-lived arrays after the matching observed GC kind, while a
 no-flags baseline does not. Ambiguous GC behavior refuses qualification. The

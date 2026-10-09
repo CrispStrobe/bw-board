@@ -15,14 +15,17 @@ assert.equal(sampleIncludesCollected({...profile,samples:[{nodeId:2,size:0}]},10
 assert.throws(()=>sampleIncludesCollected(profile,0),/collected test objects/);
 function caseData(name,requested,kind,present){
  const minor=kind==='minor';
- const stages=minor?[{cohort:0,targets:64,pumpBlocks:2,releaseAt:12,
-  firstMinorAt:13,deadAfterMinor:64},
-  {cohort:1,targets:64,pumpBlocks:2,releaseAt:16,
-   firstMinorAt:17,deadAfterMinor:64}]:[];
+ const stages=minor?[{cohort:0,targets:64,pumpBlocks:2,strongHeldAcrossTurn:true,
+  releaseAt:12,pressureStartedAt:12.5,firstMinorAt:13,deadAfterMinor:64},
+  {cohort:1,targets:64,pumpBlocks:2,strongHeldAcrossTurn:true,
+   releaseAt:16,pressureStartedAt:16.5,firstMinorAt:17,deadAfterMinor:64}]:[];
  const events=minor?[{at:13,kind:constants.NODE_PERFORMANCE_GC_MINOR},
   {at:17,kind:constants.NODE_PERFORMANCE_GC_MINOR}]:
   [{at:16,kind:constants.NODE_PERFORMANCE_GC_MAJOR}];
- return {name,requested,allocatedObjects:128,collectedObjects:128,
+ const runtime={node:'v20.20.2',v8:'11.3.244.8-node.38',
+  antiInliningFlag:'--no-turbo-inlining',
+  execArgv:['--no-turbo-inlining'],v8FlagAvailable:true};
+ return {name,requested,runtime,allocatedObjects:128,collectedObjects:128,
   begin:10,end:20,releaseAt:minor?null:15,
   events,minorStages:stages,
   observedGcEventCount:events.length,eventsTruncated:false,
@@ -44,17 +47,23 @@ for(const [patch,reason] of [
  [{...cases[0].minorStages[0],deadAfterMinor:63},/died/],
  [{...cases[0].minorStages[0],firstMinorAt:11},/minor after/],
  [{...cases[0].minorStages[0],pumpBlocks:9},/pressure/],
+ [{...cases[0].minorStages[0],strongHeldAcrossTurn:false},/strong-held/],
+ [{...cases[0].minorStages[0],pressureStartedAt:11},/no GC between/],
 ])assert.throws(()=>minorStageAdmitted(
  [patch,cases[0].minorStages[1]],cases[0].events,10,20),reason);
 assert.throws(()=>minorStageAdmitted(cases[0].minorStages,
  [...cases[0].events,{at:18,kind:constants.NODE_PERFORMANCE_GC_MAJOR}],10,20),
  /major GC/);
-const runtime=admittedRuntime('v20.20.2',['--no-turbo-inlining'],
+assert.throws(()=>minorStageAdmitted(cases[0].minorStages,
+ [...cases[0].events,{at:12.25,kind:2}],10,20),/no GC between/);
+const runtime=admittedRuntime('v20.20.2','11.3.244.8-node.38',
+ ['--no-turbo-inlining'],
  '  --turbo-inlining (enable inlining in TurboFan)');
 assert.equal(runtime.antiInliningFlag,'--no-turbo-inlining');
-assert.throws(()=>admittedRuntime('v20.20.2',[],
+assert.throws(()=>admittedRuntime('v20.20.2','11.3.244.8-node.38',[],
  '  --turbo-inlining (enable inlining in TurboFan)'),/anti-inlining/);
-assert.throws(()=>admittedRuntime('v20.20.2',['--no-turbo-inlining'],'no flag'),
+assert.throws(()=>admittedRuntime('v20.20.2','11.3.244.8-node.38',
+ ['--no-turbo-inlining'],'no flag'),
  /does not expose/);
 for(const [index,patch] of [
  [0,{collectedCallsiteSamplePresent:true}],
@@ -72,6 +81,7 @@ for(const [index,patch] of [
  [1,{events:[{at:21,kind:constants.NODE_PERFORMANCE_GC_MINOR}]}],
  [1,{eventsTruncated:true}],
  [1,{observedGcEventCount:3}],
+ [1,{runtime:{...cases[1].runtime,antiInliningFlag:'--turbo-inlining'}}],
 ]){
  const other=cases.map((item,at)=>at===index?{...item,...patch}:item);
  assert.throws(()=>supportsBothCases(other));

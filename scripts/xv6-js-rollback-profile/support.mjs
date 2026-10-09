@@ -14,13 +14,14 @@ const minorTargetsPerCohort=64;
 const minorPumpBlocks=8;
 const minorPumpArraysPerBlock=128;
 const antiInliningFlag='--no-turbo-inlining';
-export function admittedRuntime(node,execArgv,v8Options){
+export function admittedRuntime(node,v8,execArgv,v8Options){
  assert.equal(node,'v20.20.2','pinned hosted Node');
+ assert.match(v8,/^[0-9A-Za-z.-]{1,64}$/,'bounded V8 release');
  assert.ok(Array.isArray(execArgv)&&execArgv.includes(antiInliningFlag),
   'support-only anti-inlining flag absent');
  assert.match(v8Options,/^\s+--turbo-inlining\s/m,
   'pinned V8 does not expose the anti-inlining flag');
- return {node,antiInliningFlag,execArgv:[...execArgv],
+ return {node,v8,antiInliningFlag,execArgv:[...execArgv],
   v8FlagAvailable:true};
 }
 export function sampleIncludesCollected(profile,deadCount){
@@ -40,9 +41,12 @@ export function sampleIncludesCollected(profile,deadCount){
 }
 function remember(object,weak){weak.push(new WeakRef(object));}
 function allocateShortLived(){return new Array(1024);}
-function allocateMinorBatch(weak){
- for(let index=0;index<minorTargetsPerCohort;index++)
-  remember(allocateShortLived(),weak);
+function allocateMinorBatch(weak,strong){
+ for(let index=0;index<minorTargetsPerCohort;index++){
+  const target=allocateShortLived();
+  remember(target,weak);
+  strong.push(target);
+ }
 }
 function allocateHeld(weak,strong){
  for(let index=0;index<8192;index++){
@@ -75,8 +79,15 @@ export function minorStageAdmitted(stages,events,begin,end){
   assert.ok(Number.isFinite(stage.releaseAt)&&
    begin<=stage.releaseAt&&stage.releaseAt<=end,
    'cross-job target release');
+  assert.equal(stage.strongHeldAcrossTurn,true,'strong-held target release');
+  assert.ok(Number.isFinite(stage.pressureStartedAt)&&
+   stage.releaseAt<stage.pressureStartedAt&&
+   stage.pressureStartedAt<=end&&
+   !events.some(event=>stage.releaseAt<=event.at&&
+    event.at<stage.pressureStartedAt),
+   'no GC between target release and pressure');
   assert.ok(Number.isFinite(stage.firstMinorAt)&&
-   stage.releaseAt<=stage.firstMinorAt&&stage.firstMinorAt<=end&&
+   stage.pressureStartedAt<=stage.firstMinorAt&&stage.firstMinorAt<=end&&
    events.some(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
     event.at===stage.firstMinorAt),'minor after target release');
   assert.equal(stage.deadAfterMinor,minorTargetsPerCohort,
@@ -84,7 +95,7 @@ export function minorStageAdmitted(stages,events,begin,end){
  }
  return true;
 }
-async function sampleCase(name,flags,kind,outputRoot){
+async function sampleCase(name,flags,kind,outputRoot,runtime){
  global.gc(); // Clear preexisting nursery pressure before measuring this case.
  const session=new inspector.Session();session.connect();
  const command=(method,params={})=>new Promise((accept,reject)=>
@@ -107,15 +118,19 @@ async function sampleCase(name,flags,kind,outputRoot){
   if(kind==='minor'){
    for(let batch=0;batch<minorCohorts;batch++){
     const first=weak.length;
-    allocateMinorBatch(weak);
-    await tick(); // WeakRef creation keeps targets alive until this job ends.
+    const strong=[];
+    allocateMinorBatch(weak,strong);
+    await tick(); // Target arrays remain strongly held across this turn.
     const released=performance.now();
+    strong.length=0;
+    await tick(); // End the release job before exerting nursery pressure.
+    const pressureStartedAt=performance.now();
     let firstMinorAt=null,deadAfterMinor=0,pumps=0;
     for(let block=0;block<minorPumpBlocks;block++){
      pumpMinor();pumps++;
      await tick();
      const seen=events.find(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
-      event.at>=released);
+      event.at>=pressureStartedAt);
      if(seen){
       firstMinorAt??=seen.at;
       deadAfterMinor=weak.slice(first).filter(ref=>ref.deref()===undefined).length;
@@ -126,7 +141,8 @@ async function sampleCase(name,flags,kind,outputRoot){
      await tick(); // End any WeakRef deref keepalive before the next pressure block.
     }
     minorStages.push({cohort:batch,targets:minorTargetsPerCohort,
-     pumpBlocks:pumps,releaseAt:released,firstMinorAt,deadAfterMinor});
+     pumpBlocks:pumps,strongHeldAcrossTurn:true,
+     releaseAt:released,pressureStartedAt,firstMinorAt,deadAfterMinor});
     if(deadAfterMinor!==minorTargetsPerCohort||
        events.some(event=>event.kind===constants.NODE_PERFORMANCE_GC_MAJOR&&
         event.at>=begin))break;
@@ -160,7 +176,7 @@ async function sampleCase(name,flags,kind,outputRoot){
   const minorAfterReleaseBeforeMajor=releaseAt===null?null:
    observed.filter(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
     event.at>=releaseAt&&(!firstMajor||event.at<firstMajor.at)).length;
-  const facts={name,requested:{samplingInterval:interval,...flags},
+  const facts={name,requested:{samplingInterval:interval,...flags},runtime,
    allocatedObjects:weak.length,collectedObjects:dead,
    minorGcEvents:minor,majorGcEvents:major,
    minorAfterReleaseBeforeMajor,
@@ -199,6 +215,15 @@ export function supportsBothCases(cases){
    'all case objects collected');
  for(const name of ['minor-baseline','minor-enabled','major-baseline','major-enabled']){
   const item=byName[name];
+  assert.ok(item.runtime?.node==='v20.20.2'&&
+   /^[0-9A-Za-z.-]{1,64}$/.test(item.runtime?.v8)&&
+   item.runtime?.antiInliningFlag===antiInliningFlag&&
+   item.runtime?.v8FlagAvailable===true&&
+   Array.isArray(item.runtime?.execArgv)&&
+   item.runtime.execArgv.includes(antiInliningFlag),
+   'retained pinned support runtime');
+  assert.deepEqual(item.runtime,byName['minor-baseline'].runtime,
+   'same support runtime across cases');
   assert.ok(Number.isFinite(item.begin)&&Number.isFinite(item.end)&&
    item.begin<item.end&&Array.isArray(item.events)&&item.events.length<=128&&
    item.eventsTruncated===false&&item.observedGcEventCount===item.events.length,
@@ -263,12 +288,15 @@ async function main(){
   const options=spawnSync(process.execPath,['--v8-options'],
    {encoding:'utf8',timeout:3000,maxBuffer:2*1024*1024});
   assert.equal(options.status,0,'bounded pinned V8 option probe');
-  const runtime=admittedRuntime(process.version,process.execArgv,options.stdout);
+  const runtime=admittedRuntime(process.version,process.versions.v8,
+   process.execArgv,options.stdout);
   const cases=[
-   await sampleCase('minor-baseline',{},'minor',dirname(output)),
-   await sampleCase('minor-enabled',{includeObjectsCollectedByMinorGC:true},'minor',dirname(output)),
-   await sampleCase('major-baseline',{},'major',dirname(output)),
-   await sampleCase('major-enabled',{includeObjectsCollectedByMajorGC:true},'major',dirname(output))];
+   await sampleCase('minor-baseline',{},'minor',dirname(output),runtime),
+   await sampleCase('minor-enabled',{includeObjectsCollectedByMinorGC:true},
+    'minor',dirname(output),runtime),
+   await sampleCase('major-baseline',{},'major',dirname(output),runtime),
+   await sampleCase('major-enabled',{includeObjectsCollectedByMajorGC:true},
+    'major',dirname(output),runtime)];
   supportsBothCases(cases);
   const receipt=Buffer.from(JSON.stringify({
    schema:'bw.xv6-js-rollback-gc-support.v2',
