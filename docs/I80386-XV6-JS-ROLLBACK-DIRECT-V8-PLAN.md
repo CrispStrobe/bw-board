@@ -147,7 +147,10 @@ the addon from this partial receipt.
 stacked on PR473. All 14 inherited roles remain unchanged; source admission
 binds 20 Git roles. Root and a separate Sol reader checked source, syntax and
 pure controls, including a reproduced escaped-name report-limit failure and
-its retained-partial-record fix. **The hosted census has not run.**
+its retained-partial-record fix. All ten enabled exact-head checks passed,
+with only the two declared `vectors-full` skips. The label was applied once;
+[original census run37911209291](https://github.com/CrispStrobe/bw-board/actions/runs/37911209291)
+is queued. **Its data result remains pending.**
 
 The source downloads only the same pinned 512,152-byte official header archive
 on the hosted runner. It records source-order names, types, sizes and hashes
@@ -157,10 +160,9 @@ ceiling, 8 MiB JSON ceiling and 16 MiB artifact ceiling. It writes no extracted
 headers and executes no Node/compiler/addon/guest. The original 32,000,000-byte
 admission limit and `build.py` remain unchanged.
 
-Next refresh PR475's exact source/checks, then launch
-`xv6-js-rollback-direct-v8-header-census` once after every enabled check passes
-with only the declared optional skips. Independently audit its original closed
-packet and distinguish the first legacy refusal from complete data-census
+Next refresh that original run; do not remove/reapply the
+`xv6-js-rollback-direct-v8-header-census` label or launch a second actual.
+Once complete, independently audit its original closed packet and distinguish the first legacy refusal from complete data-census
 coverage. A complete census can support a reviewed admission correction; it
 cannot establish build/runtime support. A corrected authority preflight,
 separate first build and four support children remain required before xv6
