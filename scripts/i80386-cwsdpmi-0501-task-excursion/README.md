@@ -10,7 +10,7 @@ After a committed owned INT 31h entry, the derivative driver privately arms
 the separate CPU task-excursion recorder. If the strict journal refuses with
 `task-switch-during-owned-frame`, the original partial finite-client report,
 entry, null return and first refusal remain in the result. The same machine
-then takes at most 100,001 ordinary `machine.step()` calls with a 120-second
+then takes at most 100,000 ordinary `machine.step()` calls with a 120-second
 wall bound, polling the CPU recorder only between steps. A candidate is
 consumed before any further step. Only a committed outgoing transition may
 support a diagnostic resumption candidate. Neither the candidate nor a

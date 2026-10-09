@@ -82,7 +82,7 @@ const bounded=fixture();
 bounded.observer.ports.bind();bounded.observer.ports.step();
 assert.throws(()=>bounded.observer.ports.step(),/task-switch-during-owned-frame/);
 const expired=bounded.observer.continue(bounded.machine,
-  {now:()=>1,wallMs:0,maxSteps:0});
+  {now:()=>1,wallMs:1,maxSteps:0});
 assert.equal(expired.status.phase,'invalid');
 assert.equal(expired.firstFailure,'observer-step-bound');
 assert.equal(expired.observation.transitions[0].enclosingStepCommitted,true);
@@ -142,7 +142,7 @@ timed.observer.ports.bind();timed.observer.ports.step();
 assert.throws(()=>timed.observer.ports.step(),/task-switch-during-owned-frame/);
 let tick=0;
 const wall=timed.observer.continue(timed.machine,
-  {now:()=>tick++,wallMs:0});
+  {now:()=>tick++*2,wallMs:1});
 assert.equal(wall.firstFailure,'observer-wall-bound');
 assert.equal(wall.observation.phase,'invalid');
 assert.equal(timed.stepCalls,2);
@@ -155,5 +155,36 @@ const ownerReceipt=owner.observer.continue(owner.machine);
 assert.equal(ownerReceipt.firstFailure,'observer-owner-change');
 assert.equal(ownerReceipt.observation.phase,'invalid');
 assert.equal(owner.stepCalls,2);
+
+const invalidBound=fixture();
+invalidBound.observer.ports.bind();invalidBound.observer.ports.step();
+assert.throws(()=>invalidBound.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+assert.throws(()=>invalidBound.observer.continue(invalidBound.machine,
+  {maxSteps:100_001}),/continuation bound/);
+assert.equal(invalidBound.stepCalls,2);
+
+const backward=fixture();
+backward.observer.ports.bind();backward.observer.ports.step();
+assert.throws(()=>backward.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+let clock=2;
+const backwardReceipt=backward.observer.continue(backward.machine,
+  {now:()=>clock--});
+assert.equal(backwardReceipt.firstFailure,'observer-wall-bound');
+assert.equal(backward.stepCalls,2);
+
+const finalReentry=fixture('task-switch-during-owned-frame',(value,observer)=>{
+  if(value.event==='task-terminal')
+    assert.throws(()=>observer.ports.step(),/task port reentry/);
+});
+finalReentry.observer.ports.bind();finalReentry.observer.ports.step();
+assert.throws(()=>finalReentry.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+const terminalReceipt=finalReentry.observer.continue(finalReentry.machine);
+assert.equal(terminalReceipt.firstFailure,'observer-port-reentry');
+assert.equal(terminalReceipt.observation.phase,'candidate');
+assert.equal(terminalReceipt.observation.frameReturnQualified,false);
+assert.equal(finalReentry.stepCalls,3);
 
 process.stdout.write('task orchestration controls PASS\n');

@@ -10,16 +10,18 @@ export function createTaskOrchestration(ports,{cpu,opportunity,progress}) {
   const latch=reason=>{firstFailure??=reason;return firstFailure;};
   const diagnosticLatch=reason=>{diagnosticFailure??=reason;return diagnosticFailure;};
   const ensure=()=>{
-    if(poisoned)throw new Error(latch('task port reentry'));
+    if(poisoned){latch('task port reentry');throw new Error('task port reentry');}
   };
   const exclusive=(fn,{allowPoisonedResult=false}={})=>{
-    if(busy){poisoned=true;throw new Error(latch('task port reentry'));}
-    if(poisoned)throw new Error(latch('task port reentry'));
+    if(busy){poisoned=true;latch('task port reentry');
+      throw new Error('task port reentry');}
+    if(poisoned){latch('task port reentry');
+      throw new Error('task port reentry');}
     busy=true;
     try{
       const value=fn();
-      if(poisoned&&!allowPoisonedResult)
-        throw new Error(latch('task port reentry'));
+      if(poisoned&&!allowPoisonedResult){latch('task port reentry');
+        throw new Error('task port reentry');}
       return value;
     }finally{busy=false;}
   };
@@ -75,8 +77,12 @@ export function createTaskOrchestration(ports,{cpu,opportunity,progress}) {
   };
   return Object.freeze({ports:Object.freeze(wrapped),
     terminal(){return {steps,wrapper,strict,firstFailure,taskArmed:!!taskToken};},
-    continue(machine,{maxSteps=100_001,now=Date.now,wallMs=120_000}={}){
+    continue(machine,{maxSteps=100_000,now=Date.now,wallMs=120_000}={}){
       return exclusive(()=>{
+        if(!Number.isInteger(maxSteps)||maxSteps<0||maxSteps>100_000||
+           !Number.isInteger(wallMs)||wallMs<1||wallMs>120_000||
+           typeof now!=='function')
+          throw new Error('task continuation bound');
         if(!taskToken||!strict||strict.phase!=='invalid'||
            strict.failure!=='task-switch-during-owned-frame')
           throw new Error('task continuation requires strict refusal');
@@ -101,9 +107,13 @@ export function createTaskOrchestration(ports,{cpu,opportunity,progress}) {
         let n=0;
         try{
           const start=now();ensure();
+          if(!Number.isSafeInteger(start)||start<0)
+            abort('observer-wall-bound');
           for(;n<maxSteps&&status.phase==='observing';n++){
             const elapsed=now()-start;ensure();
-            if(elapsed>wallMs){abort('observer-wall-bound');break;}
+            if(!Number.isSafeInteger(elapsed)||elapsed<0||elapsed>wallMs){
+              abort('observer-wall-bound');break;
+            }
             if(machine.cpu!==cpu){abort('observer-owner-change');break;}
             ensure();
             try{machine.step();}
@@ -136,6 +146,7 @@ export function createTaskOrchestration(ports,{cpu,opportunity,progress}) {
         try {progress({event:'task-terminal',steps:steps+n,strict,taskStatus:status,
           taskObservation:observation});}
         catch {diagnosticLatch('observer-progress-failure');}
+        if(poisoned)diagnosticLatch('observer-port-reentry');
         return {status,observation,committedOutgoing,
           firstFailure:diagnosticFailure};
       },{allowPoisonedResult:true});

@@ -79,8 +79,6 @@ ALLOWED = frozenset((
     'driver-control.stdout',
     'driver.stderr',
     'driver.stdout',
-    'frame-orchestration-test.stderr',
-    'frame-orchestration-test.stdout',
     'frame-policy-test.stderr',
     'frame-policy-test.stdout',
     'freedos-fetch.stderr',
