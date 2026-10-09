@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import {constants} from 'node:perf_hooks';
-import {admittedRuntime,minorStageAdmitted,sampleIncludesCollected,
- supportsBothCases} from './support.mjs';
+import {admittedRuntime,minorStageAdmitted,sampleIncludesCollected,supportsBothCases} from './support.mjs';
 
 const node=(id,functionName,children=[])=>({id,callFrame:{functionName},children});
 const profile={head:node(1,'(root)',[node(2,'allocateShortLived')]),
