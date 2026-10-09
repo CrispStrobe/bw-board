@@ -1273,7 +1273,7 @@ test('far descriptor fault before commit cannot mint a mode ticket', () => {
 test('two decoder far reloads in one step cannot replace the first ticket', () => {
   const f = retainedProtectedModeForFar();
   f.put(HANDLER + f.cpu.eip, [0xea, 0x05, 0x01, 0x28, 0x00]);
-  f.put(HANDLER + 0x105, [0xea, 0x0c, 0x01, 0, 0, 0x28, 0]);
+  f.put(HANDLER + 0x105, [0xea, 0x0c, 0x01, 0x28, 0]);
   const decode = f.cpu._stepInstruction;
   f.cpu._stepInstruction = function (...args) {
     decode.call(this, ...args);decode.call(this, ...args);return 1;
