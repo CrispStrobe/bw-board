@@ -1,5 +1,6 @@
 /** Hosted-only, separate minor/major collected-object sampling admission. */
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import inspector from 'node:inspector';
 import {writeFileSync} from 'node:fs';
@@ -8,6 +9,20 @@ import {constants,PerformanceObserver,performance} from 'node:perf_hooks';
 import {fileURLToPath} from 'node:url';
 
 const interval=131072;
+const minorCohorts=2;
+const minorTargetsPerCohort=64;
+const minorPumpBlocks=8;
+const minorPumpArraysPerBlock=128;
+const antiInliningFlag='--no-turbo-inlining';
+export function admittedRuntime(node,execArgv,v8Options){
+ assert.equal(node,'v20.20.2','pinned hosted Node');
+ assert.ok(Array.isArray(execArgv)&&execArgv.includes(antiInliningFlag),
+  'support-only anti-inlining flag absent');
+ assert.match(v8Options,/^\s+--turbo-inlining\s/m,
+  'pinned V8 does not expose the anti-inlining flag');
+ return {node,antiInliningFlag,execArgv:[...execArgv],
+  v8FlagAvailable:true};
+}
 export function sampleIncludesCollected(profile,deadCount){
  assert.ok(Number.isSafeInteger(deadCount)&&deadCount>0,'collected test objects');
  const ids=new Set();
@@ -26,7 +41,8 @@ export function sampleIncludesCollected(profile,deadCount){
 function remember(object,weak){weak.push(new WeakRef(object));}
 function allocateShortLived(){return new Array(1024);}
 function allocateMinorBatch(weak){
- for(let index=0;index<256;index++)remember(allocateShortLived(),weak);
+ for(let index=0;index<minorTargetsPerCohort;index++)
+  remember(allocateShortLived(),weak);
 }
 function allocateHeld(weak,strong){
  for(let index=0;index<8192;index++){
@@ -37,10 +53,37 @@ function allocateHeld(weak,strong){
 }
 function pumpMinor(){
  let last=null;
- for(let index=0;index<1024;index++)last=new Array(1024);
+ for(let index=0;index<minorPumpArraysPerBlock;index++)last=new Array(1024);
  if(last?.length!==1024)throw Error('minor allocation pump');
 }
 const tick=()=>new Promise(accept=>setImmediate(accept));
+export function minorStageAdmitted(stages,events,begin,end){
+ assert.ok(Array.isArray(stages)&&stages.length===minorCohorts,
+  'exact bounded minor cohorts');
+ assert.ok(Array.isArray(events)&&events.every(event=>
+  Number.isFinite(event.at)&&begin<=event.at&&event.at<=end&&
+  Number.isSafeInteger(event.kind)),'bounded GC timeline');
+ assert.ok(!events.some(event=>event.kind===constants.NODE_PERFORMANCE_GC_MAJOR),
+  'minor case included major GC');
+ for(let index=0;index<minorCohorts;index++){
+  const stage=stages[index];
+  assert.equal(stage.cohort,index,'ordered minor cohort');
+  assert.equal(stage.targets,minorTargetsPerCohort,'fixed target cohort');
+  assert.ok(Number.isSafeInteger(stage.pumpBlocks)&&
+   stage.pumpBlocks>=1&&stage.pumpBlocks<=minorPumpBlocks,
+   'bounded minor pressure');
+  assert.ok(Number.isFinite(stage.releaseAt)&&
+   begin<=stage.releaseAt&&stage.releaseAt<=end,
+   'cross-job target release');
+  assert.ok(Number.isFinite(stage.firstMinorAt)&&
+   stage.releaseAt<=stage.firstMinorAt&&stage.firstMinorAt<=end&&
+   events.some(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
+    event.at===stage.firstMinorAt),'minor after target release');
+  assert.equal(stage.deadAfterMinor,minorTargetsPerCohort,
+   'every cohort target died in a minor-only window');
+ }
+ return true;
+}
 async function sampleCase(name,flags,kind,outputRoot){
  global.gc(); // Clear preexisting nursery pressure before measuring this case.
  const session=new inspector.Session();session.connect();
@@ -60,12 +103,33 @@ async function sampleCase(name,flags,kind,outputRoot){
   const begin=performance.now();
   const weak=[];
   let releaseAt=null;
+  const minorStages=[];
   if(kind==='minor'){
-   for(let batch=0;batch<16;batch++){
+   for(let batch=0;batch<minorCohorts;batch++){
+    const first=weak.length;
     allocateMinorBatch(weak);
     await tick(); // WeakRef creation keeps targets alive until this job ends.
-    pumpMinor();
-    await tick();
+    const released=performance.now();
+    let firstMinorAt=null,deadAfterMinor=0,pumps=0;
+    for(let block=0;block<minorPumpBlocks;block++){
+     pumpMinor();pumps++;
+     await tick();
+     const seen=events.find(event=>event.kind===constants.NODE_PERFORMANCE_GC_MINOR&&
+      event.at>=released);
+     if(seen){
+      firstMinorAt??=seen.at;
+      deadAfterMinor=weak.slice(first).filter(ref=>ref.deref()===undefined).length;
+      if(deadAfterMinor===minorTargetsPerCohort)break;
+     }
+     if(events.some(event=>event.kind===constants.NODE_PERFORMANCE_GC_MAJOR&&
+      event.at>=released))break;
+     await tick(); // End any WeakRef deref keepalive before the next pressure block.
+    }
+    minorStages.push({cohort:batch,targets:minorTargetsPerCohort,
+     pumpBlocks:pumps,releaseAt:released,firstMinorAt,deadAfterMinor});
+    if(deadAfterMinor!==minorTargetsPerCohort||
+       events.some(event=>event.kind===constants.NODE_PERFORMANCE_GC_MAJOR&&
+        event.at>=begin))break;
    }
   }else{
    const strong=[];
@@ -100,6 +164,7 @@ async function sampleCase(name,flags,kind,outputRoot){
    allocatedObjects:weak.length,collectedObjects:dead,
    minorGcEvents:minor,majorGcEvents:major,
    minorAfterReleaseBeforeMajor,
+   minorStages,
    collectedCallsiteSamplePresent:dead>0&&sampleIncludesCollected(profile,dead),
    begin,end,releaseAt,events:observed.slice(0,128),
    observedGcEventCount:observed.length,eventsTruncated:observed.length>128,
@@ -110,7 +175,10 @@ async function sampleCase(name,flags,kind,outputRoot){
   writeFileSync(resolve(outputRoot,'gc-'+name+'.facts.json'),factBytes,{flag:'wx'});
   assert.equal(dead,weak.length,'every sampled-callsite array became unreachable');
   assert.ok(!facts.eventsTruncated,'bounded GC event timeline');
-  if(kind==='minor')assert.ok(minor>0&&major===0,'isolated minor collection');
+  if(kind==='minor'){
+   minorStageAdmitted(minorStages,observed,begin,end);
+   assert.ok(minor>0&&major===0,'isolated minor collection');
+  }
   else assert.ok(firstMajor&&minorAfterReleaseBeforeMajor===0,
    'target release followed directly by major collection');
   return facts;
@@ -152,6 +220,7 @@ export function supportsBothCases(cases){
   if(name.startsWith('minor')){
    assert.equal(item.releaseAt,null);
    assert.equal(item.minorAfterReleaseBeforeMajor,null);
+   minorStageAdmitted(item.minorStages,item.events,item.begin,item.end);
   }else{
    assert.ok(Number.isFinite(item.releaseAt)&&
     item.begin<=item.releaseAt&&item.releaseAt<=item.end,
@@ -188,9 +257,13 @@ async function main(){
  assert.equal(process.argv.length,3,'one absolute receipt path');
  const output=process.argv[2];
  assert.equal(resolve(output),output,'absolute receipt path');
- assert.equal(typeof global.gc,'function','--expose-gc required');
  let firstError=null;
  try{
+  assert.equal(typeof global.gc,'function','--expose-gc required');
+  const options=spawnSync(process.execPath,['--v8-options'],
+   {encoding:'utf8',timeout:3000,maxBuffer:2*1024*1024});
+  assert.equal(options.status,0,'bounded pinned V8 option probe');
+  const runtime=admittedRuntime(process.version,process.execArgv,options.stdout);
   const cases=[
    await sampleCase('minor-baseline',{},'minor',dirname(output)),
    await sampleCase('minor-enabled',{includeObjectsCollectedByMinorGC:true},'minor',dirname(output)),
@@ -202,6 +275,7 @@ async function main(){
    requestedProduction:{samplingInterval:interval,
     includeObjectsCollectedByMinorGC:true,includeObjectsCollectedByMajorGC:true},
    node:process.version,v8:process.versions.v8,cases,
+   runtime,
    bothFlagsIndependentlyObserved:true})+'\n');
   assert.ok(receipt.length<=65536,'bounded GC support receipt');
   writeFileSync(output,receipt,{flag:'wx'});

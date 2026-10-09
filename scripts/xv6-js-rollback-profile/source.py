@@ -8,7 +8,8 @@ import stat
 import subprocess
 from pathlib import Path
 
-BASE = 'd268109214f0d23ff9197b0ce737c5dc233b7759'
+BASE = '3269cf1f2e0c009d8e0a331aa93bee498863bc2a'
+ORIGINAL_BASE = 'd268109214f0d23ff9197b0ce737c5dc233b7759'
 QUALIFIED = '22ca742ed60e1350ed96110986a09b2ce84620ac'
 PREFIX = 'scripts/xv6-js-rollback-profile/'
 WORKFLOW = '.github/workflows/xv6-js-rollback-profile.yml'
@@ -19,6 +20,9 @@ NEW = {
         'source.py', 'source-control.py', 'run.py', 'run-control.py',
         'inventory.py', 'inventory-control.py')
 } | {WORKFLOW}
+DELTA = {PREFIX + name for name in
+         ('README.md', 'support.mjs', 'support-control.mjs',
+          'source.py', 'source-control.py')} | {WORKFLOW}
 HELPERS = {
     'scripts/xv6-js-acceptance/run.py':
         '9286b1d3702995d02c6d5ef702f0b7c200418d1ef86d43c4d214e2af58fb2a0a',
@@ -37,11 +41,11 @@ def need(ok, reason):
 
 
 def admit_delta(changes):
-    need(type(changes) is list and len(changes) == len(NEW) and
+    need(type(changes) is list and len(changes) == len(DELTA) and
          all(type(item) is tuple and len(item) == 2 and
              type(item[0]) is str and type(item[1]) is str for item in changes) and
-         {role for kind, role in changes if kind == 'A'} == NEW,
-         'exact added source/workflow path set')
+         {role for kind, role in changes if kind == 'M'} == DELTA,
+         'exact modified support source/workflow path set')
 
 
 IMPORT = re.compile(
@@ -97,6 +101,9 @@ def identity(root, head, qualified=None):
     admit_delta([tuple(item) for item in changes])
     result = {}
     for role in sorted(NEW):
+        if role not in DELTA:
+            need(blob(root, head, role) == blob(root, BASE, role),
+                 'inherited diagnostic role changed: ' + role)
         result[role] = ordinary(root, role, blob(root, head, role))
     edges = []
     for role in sorted(path for path in NEW if path.endswith(('.mjs', '.js'))):
@@ -111,7 +118,7 @@ def identity(root, head, qualified=None):
                  'wrong qualified checkout')
             result['qualified:' + role] = ordinary(qroot, role, blob(qroot, QUALIFIED, role))
     return {'schema': 'bw.xv6-js-rollback-source.v1', 'head': head,
-            'base': BASE, 'qualified': QUALIFIED,
+            'base': BASE, 'originalBase': ORIGINAL_BASE, 'qualified': QUALIFIED,
             'roles': result, 'roleCount': len(result), 'jsImportEdges': edges}
 
 

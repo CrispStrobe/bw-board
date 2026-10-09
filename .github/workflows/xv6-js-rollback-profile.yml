@@ -38,7 +38,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/xv6-js-rollback-profile"
           test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
           test -z "$(git status --porcelain --untracked-files=all)"
-          timeout 120s git fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git d268109214f0d23ff9197b0ce737c5dc233b7759
+          timeout 120s git fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git 3269cf1f2e0c009d8e0a331aa93bee498863bc2a
           timeout 120s git fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git 22ca742ed60e1350ed96110986a09b2ce84620ac
           git worktree add --detach "$RUNNER_TEMP/xv6-qualified" 22ca742ed60e1350ed96110986a09b2ce84620ac
           test "$(git -C "$RUNNER_TEMP/xv6-qualified" rev-parse HEAD)" = 22ca742ed60e1350ed96110986a09b2ce84620ac
@@ -57,7 +57,7 @@ jobs:
           set -euo pipefail
           ulimit -c 0
           mkdir -p "$RUNNER_TEMP/xv6-js-rollback-profile"
-          timeout 90s node --expose-gc --max-old-space-size=768 --max-semi-space-size=4 scripts/xv6-js-rollback-profile/support.mjs "$RUNNER_TEMP/xv6-js-rollback-profile/gc-support.json"
+          timeout 90s node --expose-gc --max-old-space-size=768 --max-semi-space-size=4 --no-turbo-inlining scripts/xv6-js-rollback-profile/support.mjs "$RUNNER_TEMP/xv6-js-rollback-profile/gc-support.json"
       - name: Install bounded xv6 image toolchain
         shell: bash
         run: |
