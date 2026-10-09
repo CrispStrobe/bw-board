@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 
@@ -44,8 +45,17 @@ def committed_and_live(root, head, role):
     raw = git("show", f"{head}:{role}")
     if not raw or len(raw) > MAX_ROLE:
         raise ValueError("bounded source role refused")
-    fd = os.open(root / role, os.O_RDONLY | os.O_NOFOLLOW)
+    path = root / role
+    listed = path.lstat()
+    if not stat.S_ISREG(listed.st_mode) or listed.st_size != len(raw):
+        raise ValueError("ordinary source role required")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or \
+                (before.st_dev, before.st_ino, before.st_size) != \
+                (listed.st_dev, listed.st_ino, listed.st_size):
+            raise ValueError("source role replaced before read")
         live = bytearray()
         while len(live) <= MAX_ROLE:
             part = os.read(fd, min(65536, MAX_ROLE + 1 - len(live)))
@@ -54,6 +64,13 @@ def committed_and_live(root, head, role):
             live.extend(part)
         if live != raw:
             raise ValueError("live source role differs")
+        after = os.fstat(fd)
+        listed_after = path.lstat()
+        snapshot = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+        if (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) != snapshot or \
+                (listed_after.st_dev, listed_after.st_ino, listed_after.st_size,
+                 listed_after.st_mtime_ns) != snapshot:
+            raise ValueError("source role changed during read")
     finally:
         os.close(fd)
     return raw
