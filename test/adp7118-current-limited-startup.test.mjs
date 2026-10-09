@@ -94,7 +94,8 @@ test('explicit current-limited ADP startup matches independently transitioned RC
     b.advanceTo(1200000n);
     const status=b.transientAnalysisStatus();
     assert.equal(status.accuracyMet,true);assert.equal(status.failure,null);
-    assert.equal(status.profile.maxAttempts,20000);assert.equal(status.profile.minStepSec,1e-8);
+    assert.equal(status.profile.id,'interactive-v2');
+    assert.equal(status.profile.maxAttempts,20000);assert.equal(status.profile.minStepSec,1e-15);
     assert.equal(b._deviceSubstepOverflow,false);assert.notEqual(b._transientAttemptOverflow,true);
     const data=b.getScopeData(h),pairs=Array.from(data.samples).filter(Number.isFinite);
     assert.equal(data.count,120);assert.equal(pairs.length,240);

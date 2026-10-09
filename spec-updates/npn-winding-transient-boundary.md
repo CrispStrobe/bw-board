@@ -1,9 +1,40 @@
-# NPN winding startup: unresolved transient qualification
+# NPN winding startup: bounded interactive refinement
 
-Status: reproducer checkpoint, **not a repair or qualified implementation**.
-Baseline source: `ac7595b609daa75717c696830982f59940c97e8b`.
+Status: repair candidate; local qualification complete, hosted qualification pending.
+Diagnostic baseline: `ac7595b609daa75717c696830982f59940c97e8b`.
 
-## Current readback prerequisite repair
+## Current repair candidate
+
+After explicit approval of the precision-policy revision, `interactive-v2`
+becomes the default and permits refinement down to1 fs. Accuracy scales,
+seed, maximum step,20000-attempt ceiling, integrator, device equations and
+failure latches are unchanged. Explicit `interactive-v1` and `precision-v1`
+retain their original settings; precision and finite-history live reuse remain
+refused. The floor is a refinement bound, not a fixed timestep or a claim of
+physical femtosecond fidelity. See [the policy](adaptive-transient.md).
+
+Both original desired startup regressions now pass without private overrides.
+Legacy-v1 controls preserve the genuine failure and subsequent live refusal.
+The consolidated focused suite passes114/114, zero skips: startup, readback,
+live clocks, scope reset/capture, meters, ADP7118, adaptive integration,
+conditioning, selective shunts, finite streams and whole-advance budgets.
+Three isolated source mutations fail actual caller assertions: restoring the
+10 ns default floor (three failures), admitting precision live reuse (one),
+and exceeding the attempt ceiling by one (one). Each source was restored
+before the final green run.
+
+The original motor fixture also completes1 ms startup,2 ms off,3 ms restart
+and10 ms continuation using the default public policy and shared
+`armBoardForRun`, with candidate-engine injection through `Circuit.fromJSON`.
+No fixture, installed package or consumer source was changed. This native
+consumer-model check is not an installed-browser, adoption or deployment claim.
+Hosted CI/Harris and then a separately qualified consumer refresh are required.
+
+## Qualified readback prerequisite and historical checkpoints
+
+The sections below retain earlier failures and experiments. Their suite counts
+and unchanged-source statements describe those checkpoints, not the current
+repair candidate above.
 
 The isolated prerequisite is now on upstream master at
 `4e4cf9c45b7083efec4b94bc44d20fcbea92f319`, after
@@ -266,7 +297,7 @@ norm1443.490878, both at10 ns. The prototype was removed completely;
 not a justified repair. Adjacent BJT/readback suites pass16/16; the combined
 startup/readback suite remains19 pass/2 genuine startup fail/0 skip.
 
-### Working subfloor control; production-policy decision required
+### Historical working subfloor control; policy decision subsequently approved
 
 A later local third-order stiffly accurate SDIRK experiment used the
 [Alexander tableau described by Butcher](https://www.math.auckland.ac.nz/~butcher/ODE-book-2008/Tutorials/IRK.pdf),
@@ -289,7 +320,7 @@ tests remain intact and red. The combined suite is22 pass/2 fail/0 skip.
 
 The held Lite motor fixture was also loaded through the installed
 `Circuit.fromJSON` path with the lane's board source explicitly injected,
-not by a hand-built wire union or an installed package refresh. Existing
+not by a hand-built wire union or an installed package refresh.
 Inputs: board source5c72704e1446fd55a610800c3f8e694c3eb37ca4;
 CUI pin5f336b24447351ce80742c0e71078cdd23e7912b; Lite fixture at
 1aa59e51681a721689e63c3be9b3362421168b4a,

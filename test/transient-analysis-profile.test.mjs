@@ -65,7 +65,11 @@ function sineRcExact(t, amplitude, frequency, tau) {
 describe('bounded transient numerical-analysis profile', () => {
   it('is explicit, fixed, copy-safe, and selectable only on a fresh board', () => {
     const board = new BoardImpl(5);
-    assert.equal(board.transientAnalysisStatus().profile.id, 'interactive-v1');
+    assert.deepEqual(board.transientAnalysisStatus().profile,{
+      id:'interactive-v2',relativeTolerance:1e-4,absoluteVoltage:1e-6,
+      absoluteCurrent:1e-9,minStepSec:1e-15,seedStepSec:1e-9,
+      maxStepSec:1e-4,maxAttempts:20000,
+    });
     assert.equal(board.transientAnalysisStatus().accuracyMet, null,
       'an untouched board has no measured accuracy result');
     const selected = board.configureTransientAnalysis('precision-v1');
@@ -79,6 +83,20 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.throws(() => board.configureTransientAnalysis('anything-else'), /unsupported profile/);
     board.advanceTo(1n);
     assert.throws(() => board.configureTransientAnalysis('precision-v1'), /fresh board/);
+  });
+
+  it('retains the exact legacy policy and shares the reviewed v2 policy between construction and configuration', () => {
+    const board = new BoardImpl(5);
+    const defaultPolicy = board.transientAnalysisStatus().profile;
+    assert.deepEqual(board.configureTransientAnalysis('interactive-v1'),{
+      id:'interactive-v1',relativeTolerance:1e-4,absoluteVoltage:1e-6,
+      absoluteCurrent:1e-9,minStepSec:1e-8,seedStepSec:1e-9,
+      maxStepSec:1e-4,maxAttempts:20000,
+    });
+    assert.deepEqual(board.configureTransientAnalysis('interactive-v2'),defaultPolicy);
+    assert.equal(Object.isFrozen(defaultPolicy),true);
+    assert.throws(()=>board.configureTransientAnalysis('interactive-v2',{minStepSec:0}),/unsupported option/);
+    assert.throws(()=>board.configureTransientAnalysis('interactive-v2',{maxStepSec:1e-16}),/at least/);
   });
 
   it('honours a bounded internal maximum step without inventing public advances', () => {
@@ -149,7 +167,7 @@ describe('bounded transient numerical-analysis profile', () => {
     const params = { wave: 'spice-pulse', v1: 0, v2: 5,
       td: 1e-6, tr: 1e-9, tf: 1e-9, pw: 19e-6, per: 20e-6 };
     const board = rcBoard(params, 1000, 1e-9, 'precision-v1');
-    const interactive = rcBoard(params, 1000, 1e-9);
+    const interactive = rcBoard(params, 1000, 1e-9, 'interactive-v1');
     for (let ns = 200; ns <= 2200; ns += 200) {
       board.advanceTo(BigInt(ns)); interactive.advanceTo(BigInt(ns));
     }
@@ -160,7 +178,7 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.ok(precisionError <= tolerance,
       `precision result ${board.nodeVoltage('out')} vs closed-form ${expected}`);
     assert.ok(interactiveError > 1e-4 && interactiveError < 5e-4,
-      `interactive-v1 remains the shipped speed/accuracy tradeoff (${interactiveError} V)`);
+      `explicit interactive-v1 retains its historical speed/accuracy tradeoff (${interactiveError} V)`);
     assert.ok(precisionError < interactiveError / 20,
       `precision-v1 must materially improve integration error (${precisionError} vs ${interactiveError} V)`);
     assert.deepEqual(board.transientAnalysisStatus().failure, null);
@@ -227,6 +245,21 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.equal(status.accuracyMet, false);
     assert.equal(status.failure.code, 'step-attempt-budget-exceeded');
     assert.equal(status.work.attempts, status.profile.maxAttempts);
+  });
+
+  it('keeps the v2 attempt backstop binding and refuses renewable live work after exhaustion', () => {
+    const board = rcBoard({wave:'spice-sine',offset:0,amplitude:2,freq:16000,
+      td:0,theta:0,phase:0},5000,1e-9,'interactive-v2');
+    board.advanceTo(100000000n);
+    const status = board.transientAnalysisStatus();
+    assert.equal(status.accuracyMet,false);
+    assert.equal(status.failure.code,'step-attempt-budget-exceeded');
+    assert.equal(status.profile.maxAttempts,20000);
+    assert.equal(status.work.attempts,20000,'no extra attempt past the reviewed cap');
+    const time = board.getTime();
+    assert.throws(()=>board.advanceToLive(time+1n),/failed transient history/);
+    assert.equal(board.getTime(),time);
+    assert.deepEqual(board.transientAnalysisStatus().failure,status.failure);
   });
 
   it('keeps scope and authored ceilings independent from source anti-aliasing', () => {

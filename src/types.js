@@ -99,7 +99,7 @@
  *
  * @typedef {object} Board
  * @property {(parts: Part[], nets: Net[]) => void} setNetlist
- * @property {(id: 'interactive-v1'|'precision-v1', options?: {maxStepSec?:number}) =>
+ * @property {(id: 'interactive-v1'|'interactive-v2'|'precision-v1', options?: {maxStepSec?:number}) =>
  *   Readonly<Record<string, number|string>>} configureTransientAnalysis Select a fixed bounded integration profile
  *   on a fresh board, optionally tightening (never widening) its maximum internal step.
  * @property {() => {profile: Readonly<Record<string, number|string>>,

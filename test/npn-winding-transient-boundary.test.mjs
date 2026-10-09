@@ -67,19 +67,16 @@ test('default NPN winding startup completes without clearing or ignoring failed 
   assert.ok(b.inductorCurrents.get('L') > .018, 'the winding is actually energized');
 });
 
-// Diagnostic instances only: this is not configureTransientAnalysis authority,
-// not a production profile change, and not a replacement for the two ordinary
-// startup regressions. The recorded profile must disclose the altered floor.
 for (const vceSat of [.2,null]) {
-  test(`diagnostic 1 fs floor resolves ${vceSat === null ? 'default' : 'fixed-clamp'} startup without weakening accuracy scales`, () => {
+  test(`explicit interactive-v2 resolves ${vceSat === null ? 'default' : 'fixed-clamp'} startup with unchanged accuracy scales`, () => {
     const b = winding({vceSat});
-    const ordinary = b.transientAnalysisStatus().profile;
-    b._transientAnalysisProfile = Object.freeze({...ordinary,minStepSec:1e-15});
+    const ordinary = b.configureTransientAnalysis('interactive-v1');
+    b.configureTransientAnalysis('interactive-v2');
     assert.equal(b.advanceToLive(1000000n,{maxSteps:16}).completed,true);
     const status = b.transientAnalysisStatus();
     assert.equal(status.accuracyMet,true);
     assert.equal(status.failure,null);
-    assert.deepEqual(status.profile,{...ordinary,minStepSec:1e-15});
+    assert.deepEqual(status.profile,{...ordinary,id:'interactive-v2',minStepSec:1e-15});
     assert.ok(status.work.attempts<ordinary.maxAttempts,'unchanged attempt ceiling');
     const u = (Math.sqrt(1+4*22700*4.325)-1)/(2*22700);
     const steady = 100*u*u/(1+1e-9*10);
@@ -88,11 +85,23 @@ for (const vceSat of [.2,null]) {
     assert.ok(Math.abs(b.nodeVoltage('collector')-(5-10*steady))<1e-6,
       'independent winding endpoint voltage');
   });
+  test(`legacy interactive-v1 retains genuine ${vceSat === null ? 'default' : 'fixed-clamp'} startup failure and refusal`, () => {
+    const b = winding({vceSat});
+    b.configureTransientAnalysis('interactive-v1');
+    assert.throws(()=>b.advanceToLive(1000000n,{maxSteps:16}),/failed transient history/);
+    const status = b.transientAnalysisStatus(),time = b.getTime();
+    assert.equal(status.accuracyMet,false);
+    assert.equal(status.profile.minStepSec,1e-8);
+    assert.equal(status.failure.code,'minimum-step-accuracy-unmet');
+    assert.throws(()=>b.advanceToLive(time+1n),/failed transient history/);
+    assert.equal(b.getTime(),time);
+    assert.deepEqual(b.transientAnalysisStatus().failure,status.failure);
+  });
 }
 
-test('diagnostic 1 fs floor retains winding flyback and restart through actual live-clock calls', () => {
+test('default interactive-v2 retains winding flyback and restart through actual live-clock calls', () => {
   const b = winding({vceSat:null});
-  b._transientAnalysisProfile = Object.freeze({...b._transientAnalysisProfile,minStepSec:1e-15});
+  assert.equal(b.transientAnalysisStatus().profile.id,'interactive-v2');
   assert.equal(b.advanceToLive(1000000n,{maxSteps:16}).completed,true);
   const energized = b.inductorCurrents.get('L');
   b.setPin('P1.4','quasi',false);
@@ -105,6 +114,22 @@ test('diagnostic 1 fs floor retains winding flyback and restart through actual l
   assert.equal(b.advanceToLive(3000000n,{maxSteps:16}).completed,true);
   assert.equal(b.transientAnalysisStatus().accuracyMet,true);
   assert.ok(Math.abs(b.inductorCurrents.get('L')-energized)<1e-9);
+});
+
+test('stiff winding startup populates actual scope samples and an integrated meter without failure', () => {
+  const b = winding();
+  const handle = b.addScopeChannel({type:'voltage',netId:'collector',referenceNetId:'zero',
+    sampleRateHz:100000,capture:'sample',depth:256});
+  b.meterVoltage('collector','zero');
+  assert.equal(b.advanceToLive(1000000n,{maxSteps:16}).completed,true);
+  const data = b.getScopeData(handle), samples = [...data.samples].filter(Number.isFinite);
+  assert.equal(data.count,100);
+  assert.equal(samples.length,200);
+  for(let index=8;index<samples.length;index++)
+    assert.ok(Math.abs(samples[index]-4.810078468954673)<.002,'actual settled collector capture');
+  const mean = b.meterVoltage('collector','zero');
+  assert.ok(mean>4.7 && mean<4.83,'meter integrates the low-voltage startup and high-voltage plateau');
+  assert.equal(b.transientAnalysisStatus().accuracyMet,true);
 });
 
 test('weak-drive fixed-clamp startup agrees with independent RL before its calculated boundary', () => {

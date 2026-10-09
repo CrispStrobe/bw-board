@@ -1,5 +1,25 @@
 # Spec-update: adaptive transient stepping with trapezoidal integration
 
+## Current interactive policy
+
+The default is `interactive-v2`: relative local-error scale1e-4, absolute
+voltage1 microvolt/current1 nanoamp,1 ns restart seed,100 us maximum step
+and20000 attempts per advance. Its minimum adaptive step is1 fs so the
+unchanged integrator can resolve picosecond modes in existing model stamps.
+It is a lower refinement bound, not a fixed simulation timestep or a claim
+of femtosecond physical fidelity. Easy intervals still grow normally.
+
+Explicit `interactive-v1` retains its10 ns floor and all previous settings;
+`precision-v1` is unchanged. A fresh board can select these fixed policies
+through `configureTransientAnalysis()`. Neither arbitrary caller tolerances
+nor unlimited work are admitted. Both interactive policies support the live
+clock; precision/finite-analysis reuse remains refused. All convergence,
+accuracy-floor, skipped-history and work-limit failures remain authoritative.
+See [the winding qualification](npn-winding-transient-boundary.md) for the
+working control, independent electrical references and remaining hosted and
+installed-consumer acceptance requirements. The proposal below is historical,
+not the current profile parameter table.
+
 ## Problem
 
 `_integrateTransientMNA` uses a fixed 100 µs backward-Euler sub-step, hard-capped at
@@ -51,8 +71,9 @@ with reuse that is a numeric refactor, not a rebuild). Interacts with
 6. Full existing oracle suite green; scope traces show no NaN gaps introduced.
 ## Numerical-analysis profile
 
-Interactive simulation keeps the established `interactive-v1` local-error and
-step limits. A fresh board may explicitly select `precision-v1` through
+Interactive simulation defaults to the stiff-capable `interactive-v2` policy
+above; explicitly selected `interactive-v1` retains its established limits.
+A fresh board may explicitly select `precision-v1` through
 `configureTransientAnalysis()` before a source-declared numerical analysis.
 The fixed profile is deliberately not an arbitrary tolerance object: it bounds
 relative/absolute local error, minimum/seed/maximum step, and attempts per

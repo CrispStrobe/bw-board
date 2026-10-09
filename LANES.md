@@ -26,7 +26,7 @@ original knee function used by region classification remain byte-identical.
 The commit containing this row is the candidate identity; one automatic
 exact-head CI/Harris set remains required before guarded landing.
 
-2026-10-08 NPN winding transient boundary — CLAIM, Codex bwcx.
+2026-10-08 NPN winding transient boundary — DONE candidate, Codex bwcx.
 Branch lane/npn-winding-transient-boundary-20261008, isolated worktree, exact
 base ac7595b609daa75717c696830982f59940c97e8b. Five-path envelope:
 this ledger, src/board.js transient boundary handling, src/mna.js authoritative
@@ -129,6 +129,18 @@ checks and one exact hosted CI/Harris qualification before guarded landing.
 One typing-only path is also required: src/types.js adds interactive-v2 to
 the existing configureTransientAnalysis ID union. No other API/model surface
 changes. This brings the declared final envelope to nine paths.
+Final local qualification:114/114 focused tests pass, zero skips. Both original
+startup regressions pass with default interactive-v2; legacy-v1 still refuses
+failed history. Actual scope/meter capture, flyback/restart, finite/precision
+refusals and the20000-attempt backstop are covered. Three isolated source
+mutations red actual callers: restore10 ns floor (3), allow precision live
+reuse (1), exceed attempt ceiling by one (1); restored before final green.
+Original motor fixture through Circuit.fromJSON and shared armBoardForRun,
+with explicit candidate-engine injection and no private profile override,
+completes start/off/restart/10 ms. Native consumer-model evidence only;
+installed GUI/package adoption remains held. The commit containing this
+row is the frozen candidate identity. One automatic exact-head CI/Harris
+qualification and guarded normal fast-forward remain required for landing.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base

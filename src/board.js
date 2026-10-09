@@ -197,6 +197,30 @@ const METER_WINDOW_NS = 100_000_000n;
 /** A meter watch nobody has read for this long (sim time) is dropped. */
 const METER_IDLE_NS = 2_000_000_000n;
 
+// Fixed policies, not arbitrary caller-supplied accuracy or work knobs.
+// v2 allows the existing controller to resolve picosecond model modes;
+// easy intervals still grow normally, and the attempt cap remains binding.
+const TRANSIENT_ANALYSIS_PROFILES = Object.freeze({
+  'interactive-v2': Object.freeze({
+    id: 'interactive-v2', relativeTolerance: 1e-4,
+    absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
+    minStepSec: 1e-15, seedStepSec: 1e-9,
+    maxStepSec: 1e-4, maxAttempts: 20000,
+  }),
+  'interactive-v1': Object.freeze({
+    id: 'interactive-v1', relativeTolerance: 1e-4,
+    absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
+    minStepSec: 1e-8, seedStepSec: 1e-9,
+    maxStepSec: 1e-4, maxAttempts: 20000,
+  }),
+  'precision-v1': Object.freeze({
+    id: 'precision-v1', relativeTolerance: 1e-8,
+    absoluteVoltage: 1e-10, absoluteCurrent: 1e-13,
+    minStepSec: 1e-12, seedStepSec: 1e-12,
+    maxStepSec: 1e-5, maxAttempts: 20000,
+  }),
+});
+
 /**
  * The next edge time of a driven PWM (BoardImpl.drivenPwm entry), or null for
  * a steady 0 % / 100 % level, which has none.
@@ -323,16 +347,11 @@ export class BoardImpl {
     /** Last accepted adaptive step size (seconds); seeds the next call. */
     this._transH = 1e-4;
     /**
-     * Transient integration policy. The interactive default is deliberately
-     * unchanged; source-declared numerical analysis can opt into the bounded
-     * precision profile through configureTransientAnalysis().
+     * Transient integration policy. The stiff-capable interactive default
+     * retains v1 accuracy/work limits but can refine fast model modes.
+     * The legacy and precision profiles remain explicitly selectable.
      */
-    this._transientAnalysisProfile = Object.freeze({
-      id: 'interactive-v1', relativeTolerance: 1e-4,
-      absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
-      minStepSec: 1e-8, seedStepSec: 1e-9,
-      maxStepSec: 1e-4, maxAttempts: 20000,
-    });
+    this._transientAnalysisProfile = TRANSIENT_ANALYSIS_PROFILES['interactive-v2'];
     this._transientAccuracyUnmet = null;
     this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
 
@@ -1401,7 +1420,7 @@ export class BoardImpl {
     // Sample options first: a getter must not change analysis authority after
     // it was checked (for example by completing a finite capture).
     if (this._boundedAdvanceContext || this._lastBoundedAdvance
-      || this._transientAnalysisProfile.id !== 'interactive-v1') {
+      || !['interactive-v1','interactive-v2'].includes(this._transientAnalysisProfile.id)) {
       throw new Error('advanceToLive refuses finite or precision analysis reuse');
     }
     const assertHealthy = () => {
@@ -1719,7 +1738,7 @@ export class BoardImpl {
    * output is globally accurate to the same tolerance.
    *
    * Must be selected on a fresh board, before transient state exists.
-   * @param {'interactive-v1'|'precision-v1'} id
+   * @param {'interactive-v1'|'interactive-v2'|'precision-v1'} id
    * @param {{maxStepSec?: number}} [options]
    * @returns {Readonly<Record<string, number|string>>}
    */
@@ -1727,20 +1746,7 @@ export class BoardImpl {
     if (this.timeNs !== 0n || this._trapValid || this.capCurrents.size || this.inductorVoltages.size) {
       throw new Error('configureTransientAnalysis: requires a fresh board at time zero');
     }
-    const profiles = {
-      'interactive-v1': {
-        id: 'interactive-v1', relativeTolerance: 1e-4,
-        absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
-        minStepSec: 1e-8, seedStepSec: 1e-9,
-        maxStepSec: 1e-4, maxAttempts: 20000,
-      },
-      'precision-v1': {
-        id: 'precision-v1', relativeTolerance: 1e-8,
-        absoluteVoltage: 1e-10, absoluteCurrent: 1e-13,
-        minStepSec: 1e-12, seedStepSec: 1e-12,
-        maxStepSec: 1e-5, maxAttempts: 20000,
-      },
-    };
+    const profiles = TRANSIENT_ANALYSIS_PROFILES;
     if (!Object.prototype.hasOwnProperty.call(profiles, id)) {
       throw new Error(`configureTransientAnalysis: unsupported profile ${String(id)}`);
     }
