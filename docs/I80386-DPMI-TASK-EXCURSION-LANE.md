@@ -170,8 +170,8 @@ records the out-of-range increment and test-only correction
 The [corrected original hosted CPU/xv6 result](receipts/2026-10-09-task-mode-cpu-success/README.md)
 passes root and independent audit: 114 focused controls and three finite xv6
 scenarios, with executed/reviewed tree equality. All twelve enabled exact-head checks passed, with only the two declared
-optional `vectors-full` skips. **This recorder has no connected guest driver or actual
-task-mode qualification.**
+optional `vectors-full` skips. The connected diagnostic and its limited original result are recorded below;
+this does not qualify an owned-frame return.
 
 The distinct `armOwned0501TaskMode`, `owned0501TaskModeStatus`,
 `abortOwned0501TaskMode` and `takeOwned0501TaskModeObservation` APIs use private
@@ -205,8 +205,9 @@ CS reload or other unhooked operation remains an explicit refusal boundary.
 Root and an independent reviewer verified the ten-path delta, 215 source roles
 and 64-node recursive import graph. CPU and inherited PR474 implementation,
 compiler/media/helper pins and strict frame rules remain unchanged. Source,
-inventory and CPU-free controller/input-admission controls passed; hosted
-checks are pending and no task-mode guest actual has run.
+inventory and CPU-free controller/input-admission controls passed.
+All ten enabled exact-head checks passed, with only the two declared optional
+skips, before the independently audited original below.
 
 The derivative adapter arms the new mode API after committed strict entry,
 requires the original task-switch refusal and outgoing transition before
@@ -220,13 +221,20 @@ records; a killed process does not establish complete history. Pure controls
 cover zero-extra-step refusals, callback reentry, bounds, failed drains, and
 FIFO/symlink/inode/size input races without importing the emulator.
 
-Next wait for all ten enabled exact-head checks, with only the two declared
-optional `vectors-full` skips, then launch the distinct
-`x86-cwsdpmi-0501-task-mode-at` label once. The unchanged CPU did not trigger
-an additional xv6 job for this ten-file derivative. Audit the first official
-original packet independently: source/input closure, preserved strict refusal,
-committed mode-operation attribution, task/delivery/mode bounds, partial
-failures and any protected-handler candidate. A candidate still does not
-qualify an IRET, original owned-frame return, physical memory placement or
-broader OS/application compatibility. Preserve the earlier diagnostic and
-failed controls; do not relabel or replay them as this profile.
+The single [original run37938657230](receipts/2026-10-09-task-mode-at/README.md)
+completed with preserved strict refusal. Root and independent audits agree on
+two task transfers and two source-attributed MOV CR0 changes: PE cleared, then
+was set again with retained real-mode CS context. The next committed CS reload
+has no operation ticket and refuses `unattributed-mode-change` at active step
+443. The packet records no original-task resume candidate. Its official failure
+and finite observer boundary do not identify a CPU fault or terminal opcode.
+
+Next implement the separately reviewed bounded CS-transfer attribution slice
+defined in that receipt. Explicit decode tickets must match source-owned
+before/after context and a committed direct non-call code-descriptor transfer.
+Gate/task/call/return and competing or uncommitted paths stay refused. Keep
+strict frame rules and the protected-only observer unchanged; run affected
+hosted CPU/xv6 controls before a separately named connected diagnostic and one
+new original. Preserve all earlier results without relabeling or replay. No
+IRET, original frame return, physical placement or broader application
+compatibility is qualified here.
