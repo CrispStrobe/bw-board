@@ -15,6 +15,8 @@ import tarfile
 import urllib.request
 
 from build import ARGS, run_bounded
+from header_budget import (HEADER_REPORT_LIMIT, HEADER_TOTAL_LIMIT,
+                           within_header_budget, within_header_report)
 
 NODE_NAME = "node-v20.20.2-linux-x64.tar.xz"
 NODE_SHA = "df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d"
@@ -24,7 +26,7 @@ ORIGIN = "https://nodejs.org/dist/v20.20.2/"
 MAX_NODE_ARCHIVE = 32 * 1024 * 1024
 MAX_NODE_BINARY = 110 * 1024 * 1024
 MAX_HEADERS_ARCHIVE = 1_000_000
-MAX_HEADER_TOTAL = 32_000_000
+MAX_HEADER_TOTAL = HEADER_TOTAL_LIMIT
 MAX_MEMBERS = 20_000
 MAX_TOOL = 100 * 1024 * 1024
 TOOLS = ("g++", "cc1plus", "collect2", "as", "ld")
@@ -41,8 +43,8 @@ class ProbeFailure(ValueError):
 
 
 def source_identity():
-    path = Path(__file__).with_name("preflight-source.py")
-    spec = importlib.util.spec_from_file_location("direct_v8_authority_source", path)
+    path = Path(__file__).with_name("preflight-64m-source.py")
+    spec = importlib.util.spec_from_file_location("direct_v8_authority_64m_source", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.identity()
@@ -105,7 +107,7 @@ def archive_records(raw, expected_sha, role):
                 if not member.isfile() or member.size < 0 or member.size > 2_000_000:
                     raise ValueError("header member type or size refused")
                 total += member.size
-                if total > MAX_HEADER_TOTAL or member.name in members:
+                if not within_header_budget(total) or member.name in members:
                     raise ValueError("header closure refused")
                 data = archive.extractfile(member).read(member.size + 1)
                 if len(data) != member.size:
@@ -217,7 +219,7 @@ def recheck_tools(tools):
 
 def write_receipt(path, data):
     encoded = json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
-    if len(encoded) > 250_000:
+    if not within_header_report(encoded):
         raise ValueError("preflight receipt bound")
     pending = path.with_name("preflight.pending.json")
     with pending.open("wb") as out:
@@ -237,7 +239,7 @@ def main():
     report_path = evidence / "preflight.json"
     if report_path.exists() or (evidence / "preflight.pending.json").exists():
         raise ValueError("preflight receipt already exists")
-    report = {"schema": "bw.direct-v8.authority-preflight.v1",
+    report = {"schema": "bw.direct-v8.authority-preflight-64m.v1",
               "status": "INCOMPLETE_UNQUALIFIED", "firstFailure": None,
               "nodeArchive": None, "headersArchive": None, "nodeExecutable": None,
               "nodeProbes": None, "tools": {}, "sourceReceiptSha256": None,
@@ -254,9 +256,9 @@ def main():
         source_raw = read_bounded(evidence / "source.json", 32_000)
         source = json.loads(source_raw)
         if (type(source) is not dict or
-                source.get("schema") != "bw.direct-v8.authority-preflight-source.v1" or
+                source.get("schema") != "bw.direct-v8.authority-preflight-64m-source.v1" or
                 source.get("head") != os.environ.get("BW_EXPECTED_HEAD") or
-                source.get("qualification") != "REPORT_ONLY_NO_BUILD_OR_NATIVE_CONTROL"):
+                source.get("qualification") != "REPORT_ONLY_64M_NO_BUILD_OR_NATIVE_CONTROL"):
             raise ValueError("source admission receipt mismatch")
         if source != source_identity():
             raise ValueError("source receipt differs from independently recomputed Git identity")
