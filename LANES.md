@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-09 RLC instrument oracle — CLAIM, Codex bwcx.
+2026-10-09 RLC instrument oracle — DONE candidate, Codex bwcx.
 Branch lane/rlc-instrument-oracle-20261009, fresh exact base
 f9da7cbe29d6cc79f308e6d71c5bd231f76c5376. Four-path evidence-only envelope:
 this ledger, new test/rlc-instrument-oracle.test.mjs, new
@@ -16,6 +16,17 @@ claim. No runtime, GUI, workflow, CPU, package/pin or deployment edits.
 Canonical remote claim precedes implementation; one exact CI/Harris set and
 guarded normal fast-forward. Consumer adoption of the prior live-span repair
 remains separate and is not implied by these upstream tests.
+Canonical claim1f40565f preceded implementation. Final focused regression and
+census identity/coverage checks pass22/22, zero skips. Eight actual captures
+retain200 samples each: default and public precision positive controls, wrong
+L, wrong phase, wrong scope/meter nodes and reversed scope/meter polarity.
+Each incorrect observer retains the other instrument's independently correct
+result. Precision uses unchanged finite ceilings and public0.5ns max-step;
+default stays default. Independent analytic mean quadrature refines below1nV;
+live SPICE125ps/62.5ps refinement precedes nine-point reference agreement.
+The new live external caller is registered in the census in the same commit.
+Only the declared four evidence paths change. Candidate identity is this
+commit; exact hosted CI/Harris remains required before guarded landing.
 
 2026-10-09 winding turn-off oracle — DONE candidate, Codex bwcx.
 Evidence branch lane/winding-turnoff-oracle-20261009; repair branch
