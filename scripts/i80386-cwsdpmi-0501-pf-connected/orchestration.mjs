@@ -117,10 +117,15 @@ export function createPfConnectedOrchestration(ports,{cpu,opportunity,progress})
         const state=cpu.owned0501FrameStatus(frameToken);
         if(state.phase==='invalid'||state.phase==='complete'){
           strict=cpu.takeOwned0501FrameObservation(frameToken);
-          strictEntryRef=strict?.entry??null;
-          strictEntryCopy=strictEntryRef?copyEntry(strictEntryRef):null;
           frameToken=null;
           const reason=latch(strict?.failure??'strict frame terminal');
+          try {
+            strictEntryRef=strict?.entry??null;
+            strictEntryCopy=strictEntryRef?copyEntry(strictEntryRef):null;
+          } catch {
+            strictEntryRef=null;strictEntryCopy=null;
+            diagnosticLatch('strict entry snapshot unavailable');
+          }
           progress({event:'strict-terminal',steps,wrapper,strict});
           ensure();
           throw new Error(reason);
@@ -136,6 +141,8 @@ export function createPfConnectedOrchestration(ports,{cpu,opportunity,progress})
       return exclusive(()=>{
         if(faultToken||faultArm||continued)
           throw new Error('PF arm already attempted or continuation begun');
+        if(!strictEntryCopy||!strictEntryRef)
+          throw new Error('PF arm strict entry snapshot unavailable');
         if(!taskToken||frameToken||!strict||strict.phase!=='invalid'||
            strict.failure!=='task-switch-during-owned-frame'||
            strict.returned!==null||!strict.entry||

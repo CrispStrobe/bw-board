@@ -102,7 +102,10 @@ export function gradePfOutcome({finiteClient,strict,taskMode,pfOutcome}){
        typeof fault.taskCommitted!=='boolean'||!ctx(fault.source)||
        !delivery||typeof delivery.restored!=='boolean'||
        delivery.restored===fault.taskCommitted||
-       !ctx(delivery.pre)||!ctx(delivery.post))
+       !ctx(delivery.pre)||!ctx(delivery.post)||
+       fault.source.cr0!==delivery.pre.cr0||
+       fault.source.cr2!==delivery.pre.cr2||
+       fault.source.cr3!==delivery.pre.cr3)
       return fail('source PF/context/restore fact');
     if(delivery.attempted===true){
       if(!['returned','threw'].includes(delivery.outcome)||

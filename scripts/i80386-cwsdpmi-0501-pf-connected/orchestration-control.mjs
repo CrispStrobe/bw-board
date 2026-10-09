@@ -154,6 +154,44 @@ assert.throws(()=>changedEntry.observer.armFaultAtStrictTerminal(),
 assert.equal(changedEntry.pfArmCalls,0);
 assert.equal(changedEntry.stepCalls,2);
 
+const snapshotRefused=fixture();
+snapshotRefused.observer.ports.bind();snapshotRefused.observer.ports.step();
+const originalTake=snapshotRefused.machine.cpu.takeOwned0501FrameObservation;
+snapshotRefused.machine.cpu.takeOwned0501FrameObservation=token=>{
+  const value=originalTake(token);
+  return {...value,entry:new Proxy(value.entry,{
+    getPrototypeOf(){throw new Error('observer reflection trap');}})};
+};
+assert.throws(()=>snapshotRefused.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+assert.equal(snapshotRefused.observer.terminal().firstFailure,
+  'task-switch-during-owned-frame');
+assert.equal(snapshotRefused.observer.terminal().strict.returned,null);
+assert.throws(()=>snapshotRefused.observer.armFaultAtStrictTerminal(),
+  /strict|AX=0501/);
+assert.equal(snapshotRefused.stepCalls,2);
+assert.equal(snapshotRefused.pfArmCalls,0);
+
+const accessorRefused=fixture();
+accessorRefused.observer.ports.bind();accessorRefused.observer.ports.step();
+let accessorReads=0;
+const accessorTake=accessorRefused.machine.cpu.takeOwned0501FrameObservation;
+accessorRefused.machine.cpu.takeOwned0501FrameObservation=token=>{
+  const value=accessorTake(token);
+  Object.defineProperty(value.entry,'entryAx',{configurable:true,
+    get(){accessorReads++;throw new Error('untrusted entry getter');}});
+  return value;
+};
+assert.throws(()=>accessorRefused.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+assert.equal(accessorRefused.observer.terminal().firstFailure,
+  'task-switch-during-owned-frame');
+assert.throws(()=>accessorRefused.observer.armFaultAtStrictTerminal(),
+  /snapshot unavailable/);
+assert.equal(accessorReads,0);
+assert.equal(accessorRefused.stepCalls,2);
+assert.equal(accessorRefused.pfArmCalls,0);
+
 const poisonedAfterArm=fixture();
 poisonedAfterArm.observer.ports.bind();poisonedAfterArm.observer.ports.step();
 assert.throws(()=>poisonedAfterArm.observer.ports.step(),

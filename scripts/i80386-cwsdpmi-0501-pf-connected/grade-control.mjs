@@ -55,6 +55,13 @@ negative('cloned entry session',r=>{
   r.taskMode.observation.cookie.entry={...r.strict.strict.entry};
 });
 negative('malformed CPU context',r=>{r.pfOutcome.observation.fault.source.cr3=1.5;});
+for(const field of ['cr0','cr2','cr3'])
+  negative(`valid but changed ${field} before delivery`,r=>{
+    r.pfOutcome.observation.delivery.pre={
+      ...r.pfOutcome.observation.delivery.pre,
+      [field]:r.pfOutcome.observation.delivery.pre[field]+
+        (field==='cr0'?2:1)};
+  });
 negative('missing strict refusal',r=>{r.strict.strict.failure='other';});
 negative('false full client',r=>{r.finiteClient.passed=true;});
 negative('step without continuation',r=>{r.pfOutcome.continuationCalls=0;});
