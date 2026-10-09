@@ -1,5 +1,22 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-09 RLC instrument oracle — CLAIM, Codex bwcx.
+Branch lane/rlc-instrument-oracle-20261009, fresh exact base
+f9da7cbe29d6cc79f308e6d71c5bd231f76c5376. Four-path evidence-only envelope:
+this ledger, new test/rlc-instrument-oracle.test.mjs, new
+spec-updates/rlc-instrument-oracle.md and scripts/oracle-census.mjs (register
+the new live ngspice caller only). Authored passive RLC ramp with explicit
+12pF/10Mohm physical load; public zero operating-point initialization, finite
+unchanged work ceilings, actual sampled scope and watched DC mean. Independent
+closed-form response/quadrature and separately refined ngspice reference;
+prove wrong inductance, excitation phase and each instrument's wrong wiring
+red against unchanged expected output. Preserve measured default versus
+precision differences; no global late-ring, nonlinear or physical scope
+claim. No runtime, GUI, workflow, CPU, package/pin or deployment edits.
+Canonical remote claim precedes implementation; one exact CI/Harris set and
+guarded normal fast-forward. Consumer adoption of the prior live-span repair
+remains separate and is not implied by these upstream tests.
+
 2026-10-09 winding turn-off oracle — DONE candidate, Codex bwcx.
 Evidence branch lane/winding-turnoff-oracle-20261009; repair branch
 lane/reactive-live-span-20261009, isolated owned worktree, exact base
