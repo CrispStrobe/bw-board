@@ -1004,12 +1004,14 @@ test('mode profile retains fault facts before uncommitted mode attempt', () => {
 
 test('mode profile refuses mutated between-step descriptor scalars', () => {
   const f = openedMixedMode();
-  f.cpu.segmentCaches[1].limit++;
+  // The fixture starts at the largest valid uint32 limit. Keep this changed
+  // scalar in range so the test reaches between-step identity comparison.
+  f.cpu.segmentCaches[1].limit--;
   f.cpu._stepInstruction = () => 1;
   assert.equal(f.cpu.step(), 1);
   const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
   assert.equal(observed.firstFailure, 'unattributed-between-step-change');
-  assert.equal(observed.modeRefusal.before.codeCache.limit + 1,
+  assert.equal(observed.modeRefusal.before.codeCache.limit - 1,
     observed.modeRefusal.after.codeCache.limit);
 });
 
