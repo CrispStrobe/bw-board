@@ -549,7 +549,7 @@ test('a task-switch attempt while a selected frame is open invalidates it', () =
   assert.deepEqual(result.taskSwitchOutcome, {
     schema: 'bw.i80386-owned-0501.task-switch-outcome.v1',
     status: 'fault-without-taskCommitted', postCs: 8, postEip: 0x100,
-    postCpl: 0, postNt: false, postTrSelector: 0x30,
+    postCpl: 0, postVm86: false, postNt: false, postTrSelector: 0x30,
     postTrType: 11, activeSteps: 1,
   });
   assert.equal(Object.isFrozen(result.taskSwitchOutcome), true);
@@ -643,7 +643,7 @@ test('synthetic core return records post-task primitives without frame credit', 
   assert.deepEqual(result.taskSwitchOutcome, {
     schema: 'bw.i80386-owned-0501.task-switch-outcome.v1',
     status: 'core-return', postCs: 0x23, postEip: 0x1234,
-    postCpl: 3, postNt: true, postTrSelector: 0x48,
+    postCpl: 3, postVm86: false, postNt: true, postTrSelector: 0x48,
     postTrType: 11, activeSteps: 1,
   });
   assert.equal(result.returned, null);
@@ -667,6 +667,51 @@ test('synthetic taskCommitted fault remains the same thrown object', () => {
   assert.equal(result.taskSwitchOutcome.status, 'fault-with-taskCommitted');
   assert.equal(result.taskSwitchOutcome.postTrSelector, 0x48);
   assert.equal(result.returned, null);
+});
+
+test('synthetic VM86 core return reports CPL3 even with ring-zero CS bits', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    this.cs = 0x20;
+    this.eip = 0x4321;
+    this.eflags |= 0x20000;
+    return 5;
+  };
+  assert.equal(f.cpu._taskSwitch(0, 'jmp'), 5);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'core-return');
+  assert.deepEqual([result.taskSwitchOutcome.postCs,
+    result.taskSwitchOutcome.postVm86, result.taskSwitchOutcome.postCpl],
+    [0x20, true, 3]);
+  assert.equal(result.returned, null);
+});
+
+test('task outcome refuses mode accessors without changing the guest fault', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  let reads = 0;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    try { return core.call(this, selector, kind, options); }
+    catch (error) {
+      Object.defineProperty(this, '_retainedRealCs', {
+        configurable: true,
+        get() { reads++; throw new Error('mode accessor'); },
+      });
+      throw error;
+    }
+  };
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), I80386Fault);
+  assert.equal(reads, 0);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome, undefined);
 });
 
 test('unsupported task fault with an own marker is distinguished from completion', () => {

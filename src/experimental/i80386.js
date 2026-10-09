@@ -119,20 +119,28 @@ function owned0501TaskSwitchOutcome(cpu, session, priorTicket, completed, error)
   const cs = owned0501Option(cpu, "cs");
   const eip = owned0501Option(cpu, "eip");
   const flags = owned0501Option(cpu, "eflags");
+  const cr0 = owned0501Option(cpu, "cr0");
+  const retainedRealCs = owned0501Option(cpu, "_retainedRealCs");
   const task = owned0501Option(cpu, "tr");
   const trSelector = owned0501Option(task, "selector");
   const trType = owned0501Option(task, "type");
   if (!Number.isInteger(cs) || cs < 0 || cs > 0xffff ||
       !Number.isInteger(eip) || eip < 0 || eip > 0xffffffff ||
       !Number.isInteger(flags) || flags < -0x80000000 ||
-      flags > 0xffffffff || !Number.isInteger(trSelector) ||
+      flags > 0xffffffff || !Number.isInteger(cr0) ||
+      cr0 < -0x80000000 || cr0 > 0xffffffff ||
+      typeof retainedRealCs !== "boolean" ||
+      !Number.isInteger(trSelector) ||
       trSelector < 0 || trSelector > 0xffff || !Number.isInteger(trType) ||
       trType < 0 || trType > 15) return;
   if (session.taskSwitchReentered || session.taskSwitchOutcome ||
       owned0501Sessions.get(cpu) !== session) return;
+  const postVm86 = !!((cr0 & 1) && (flags & 0x20000));
+  const postCpl = postVm86 ? 3 :
+    (!(cr0 & 1) || retainedRealCs ? 0 : cs & 3);
   session.taskSwitchOutcome = owned0501Frozen({
     schema: "bw.i80386-owned-0501.task-switch-outcome.v1",
-    status, postCs: cs, postEip: eip, postCpl: cs & 3,
+    status, postCs: cs, postEip: eip, postCpl, postVm86,
     postNt: !!(flags & NT), postTrSelector: trSelector,
     postTrType: trType, activeSteps: session.activeSteps,
   });
