@@ -1,6 +1,6 @@
 # Owned DPMI allocation frame attribution
 
-Status: proposed implementation contract; no CPU-produced service-frame result
+Status: implemented observer with a finite committed entry and refused return; no completed service-frame pair
 is qualified yet. Start from the frozen [AT source
 41db7ba4](https://github.com/CrispStrobe/bw-board/tree/41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7)
 and preserve its [first finite application result](I80386-DPMI-HIGHMEM-AT-RESULTS.md).
@@ -370,3 +370,16 @@ It does not qualify every DPMI service, pre-main discovery, physical placement,
 calibrated timer rate, general application compatibility or performance adoption.
 Only then scope another service or a separate task/VM86/16-bit fixture from its
 actual observed boundary.
+
+## First mixed-profile actual: task-switch attempt boundary
+
+Reviewed source `1ecb987b86217c7c549fffc1d3b7ff498898b9dd` passed all 12 enabled
+checks and the first dedicated actual recorded the owned INT31/AX0501 entry.
+It then refused `task-switch-during-owned-frame` at active step20, with no
+return or finite client completion. The guard executes before task descriptor
+validation, so the observed path is an attempt, not a committed switch.
+The [original packet receipt](receipts/2026-10-09-x86-first-actual-diagnostics/README.md)
+preserves source/run/artifact/log identities and independent audit scope.
+Next scope is bounded primitive facts at the existing guard; do not relax task
+exclusion or assume a kind/target/outcome from final registers. Earlier pending
+qualification paragraphs above are historical checkpoints, not current status.

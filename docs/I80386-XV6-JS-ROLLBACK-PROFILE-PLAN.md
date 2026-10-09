@@ -1,10 +1,12 @@
 # Functional-JS rollback allocation diagnostic
 
 Status: reviewed source harness in draft [PR467](https://github.com/CrispStrobe/bw-board/pull/467),
-head `3269cf1f2e0c009d8e0a331aa93bee498863bc2a`. Six CPU-free controls,
-source identity and syntax checks passed; hosted CI is pending. The dedicated
-allocation diagnostic has not run. No profiler support, allocation result or
-speed improvement is established. Refresh exact-head checks before execution.
+head `3269cf1f2e0c009d8e0a331aa93bee498863bc2a`. All 10 enabled checks
+passed, with two declared optional skips. Its first actual diagnostic refused
+the GC-support fixture before any guest child; see the
+[original failure receipt](receipts/2026-10-09-x86-first-actual-diagnostics/README.md).
+No profiler support, allocation result or speed improvement is established.
+Preserve that source/run and qualify a separate support-fixture correction.
 Keep the [CWSDPMI frame qualification](I80386-DPMI-FRAME-ATTRIBUTION-LANE.md) separate.
 
 ## Question and fixed workload
