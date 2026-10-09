@@ -41,6 +41,8 @@ const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
 const OWNED_0501_EXCURSION_STEPS = 100_000;
 const OWNED_0501_EXCURSION_TRANSITIONS = 16;
 const OWNED_0501_EXCURSION_DELIVERIES = 32;
+const OWNED_0501_MODE_CHANGES = 32;
+const OWNED_0501_MODE_PROFILE = "task-mode-crossing-diagnostic.v1";
 const OWNED_0501_EXCURSION_ABORT_REASONS = Object.freeze([
   "observer-wall-bound", "observer-step-bound",
   "observer-machine-step-exception", "observer-owner-change",
@@ -192,11 +194,106 @@ function owned0501ExcursionContext(cpu) {
     nt: !!(flags & NT), protectedMode: !!(cr0 & 1) });
 }
 
+// Only source-owned primitive CPU fields are sampled. This is a logical mode
+// observation, not a read of the TSS, stack frame, or physical backing.
+function owned0501ModeFacts(cpu) {
+  const context = owned0501ExcursionContext(cpu);
+  const rawCr0 = owned0501Option(cpu, "cr0");
+  const rawFlags = owned0501Option(cpu, "eflags");
+  const retainedRealCs = owned0501Option(cpu, "_retainedRealCs");
+  const caches = owned0501Option(cpu, "segmentCaches");
+  const codeCache = owned0501ExcursionDescriptor(owned0501Option(caches,
+    SEG_CS), OWNED_0501_CODE_FIELDS);
+  const stackCache = owned0501ExcursionDescriptor(owned0501Option(caches,
+    SEG_SS), OWNED_0501_STACK_FIELDS);
+  const check = owned0501ExcursionContext(cpu);
+  const checkCaches = owned0501Option(cpu, "segmentCaches");
+  const checkCode = owned0501ExcursionDescriptor(owned0501Option(checkCaches,
+    SEG_CS), OWNED_0501_CODE_FIELDS);
+  const checkStack = owned0501ExcursionDescriptor(owned0501Option(checkCaches,
+    SEG_SS), OWNED_0501_STACK_FIELDS);
+  if (Object.keys(context).some(key => context[key] !== check[key]) ||
+      OWNED_0501_CODE_FIELDS.some(key => codeCache[key] !== checkCode[key]) ||
+      OWNED_0501_STACK_FIELDS.some(key => stackCache[key] !== checkStack[key]) ||
+      context.protectedMode !== !!(rawCr0 & 1) ||
+      context.vm86 !== !!((rawCr0 & 1) && (rawFlags & 0x20000)) ||
+      context.cpl !== (context.vm86 ? 3 :
+        (!(rawCr0 & 1) || retainedRealCs ? 0 : context.cs & 3)))
+    throw new Error("task mode source context changed during capture");
+  return owned0501Frozen({ ...context, rawCr0: rawCr0 >>> 0,
+    rawFlags: rawFlags >>> 0, retainedRealCs, codeCache, stackCache,
+    mode: !context.protectedMode ? "pe-clear" :
+      context.vm86 ? "vm86" : "protected" });
+}
+
+function owned0501ModeSame(a, b) {
+  return Object.keys(a).every(key => key === "codeCache" ||
+    key === "stackCache" || a[key] === b[key]) &&
+    OWNED_0501_CODE_FIELDS.every(key => a.codeCache[key] === b.codeCache[key]) &&
+    OWNED_0501_STACK_FIELDS.every(key => a.stackCache[key] === b.stackCache[key]);
+}
+
+function owned0501ModeChanged(a, b) {
+  return a.protectedMode !== b.protectedMode || a.vm86 !== b.vm86 ||
+    a.retainedRealCs !== b.retainedRealCs;
+}
+
+function owned0501ModeRecordUncommitted(cpu, session) {
+  const post = owned0501ModeFacts(cpu);
+  if (session.pendingModeOperation || owned0501ModeChanged(session.modeBefore, post))
+    session.uncommittedModes.push(owned0501Frozen({
+      step: session.activeSteps + 1, before: session.modeBefore, after: post,
+      operation: session.pendingModeOperation,
+      enclosingStepCommitted: false }));
+}
+
+function owned0501ModeSettle(cpu, session, result, traced) {
+  if (session.phase !== "observing") return;
+  const post = owned0501ModeFacts(cpu);
+  if (result <= 0 || traced) {
+    if (session.pendingModeOperation || owned0501ModeChanged(session.modeBefore, post))
+      session.uncommittedModes.push(owned0501Frozen({
+        step: session.activeSteps, before: session.modeBefore, after: post,
+        operation: session.pendingModeOperation,
+        enclosingStepCommitted: false }));
+    owned0501ExcursionFail(session, traced ? "post-instruction-trace" :
+      "uncommitted-step");
+    return;
+  }
+  if (owned0501ModeChanged(session.modeBefore, post)) {
+    const operation = session.pendingModeOperation ??
+      (session.pendingTask?.outcome === "core-return"
+        ? owned0501Frozen({ kind: "task-core-return" }) : null);
+    if (!operation) {
+      session.modeRefusal = owned0501Frozen({
+        step: session.activeSteps, before: session.modeBefore, after: post,
+        operation: null, enclosingStepCommitted: true });
+      owned0501ExcursionFail(session, "unattributed-mode-change");
+      return;
+    }
+    if (session.modeChanges.length >= OWNED_0501_MODE_CHANGES) {
+      owned0501ExcursionFail(session, "mode-change-cap");
+      return;
+    }
+    session.modeChanges.push(owned0501Frozen({ step: session.activeSteps,
+      before: session.modeBefore, after: post, operation,
+      enclosingStepCommitted: true }));
+  }
+  session.modeLast = post;
+  session.pendingModeOperation = null;
+}
+
 function owned0501ExcursionCommit(cpu, session, result, traced) {
   if (!session || session.phase !== "observing") return;
   if (result <= 0 || traced) {
+    if (session.profile === OWNED_0501_MODE_PROFILE)
+      owned0501ModeSettle(cpu, session, result, traced);
     owned0501ExcursionFail(session, traced ? "post-instruction-trace" : "uncommitted-step");
     return;
+  }
+  if (session.profile === OWNED_0501_MODE_PROFILE) {
+    owned0501ModeSettle(cpu, session, result, traced);
+    if (session.phase !== "observing") return;
   }
   let reachedCandidate = false;
   if (session.pendingTask) {
@@ -251,8 +348,9 @@ function owned0501ExcursionCommit(cpu, session, result, traced) {
   session.pendingDeliveries.length = 0;
   const cr0 = owned0501Option(cpu, "cr0"),
     flags = owned0501Option(cpu, "eflags");
-  if (!Number.isInteger(cr0) || !Number.isInteger(flags) ||
-      !(cr0 & 1) || flags & 0x20000) {
+  if (session.profile !== OWNED_0501_MODE_PROFILE &&
+      (!Number.isInteger(cr0) || !Number.isInteger(flags) ||
+      !(cr0 & 1) || flags & 0x20000)) {
     owned0501ExcursionFail(session, "unsupported-task-excursion-mode");
     return;
   }
@@ -642,7 +740,7 @@ export class ExperimentalI80386 {
     return result;
   }
 
-  armOwned0501TaskExcursion(frameToken) {
+  #armOwned0501TaskExcursion(frameToken, profile) {
     const frame = owned0501Sessions.get(this);
     const prior = owned0501Excursions.get(this);
     if (this.#owned0501ExecutionDepth || this.#owned0501AdmissionBusy ||
@@ -687,6 +785,8 @@ export class ExperimentalI80386 {
       };
       const handlerCandidate = owned0501ExcursionHandlerCandidate(this,
         { handlerDescriptors });
+      const modeLast = profile === OWNED_0501_MODE_PROFILE
+        ? owned0501ModeFacts(this) : null;
       const after = owned0501ExcursionContext(this);
       if (this.#owned0501ExcursionAdmissionReentered ||
           this.#owned0501ExecutionDepth || frame.busyDepth ||
@@ -694,6 +794,8 @@ export class ExperimentalI80386 {
           frame.phase !== "open" || frame.entry !== cookie.entry ||
           owned0501ExcursionUsedEntries.has(frame.entry) ||
           Object.keys(context).some(key => context[key] !== after[key]) ||
+          (modeLast && !owned0501ModeSame(modeLast,
+            owned0501ModeFacts(this))) ||
           !handlerCandidate)
         throw new Error("owned task excursion changed during admission");
       owned0501ExcursionUsedEntries.add(frame.entry);
@@ -705,6 +807,11 @@ export class ExperimentalI80386 {
         transitions: [], uncommittedTransitions: [], deliveries: [],
         truncated: false, outgoing: null,
         resumeCandidate: null,
+        ...(profile === OWNED_0501_MODE_PROFILE ? {
+          profile, modeLast, modeBefore: modeLast, modeChanges: [],
+          uncommittedModes: [], pendingModeOperation: null,
+          modeRefusal: null,
+        } : {}),
       });
       this.#owned0501ExcursionActive = true;
       return token;
@@ -714,8 +821,107 @@ export class ExperimentalI80386 {
     }
   }
 
+  armOwned0501TaskExcursion(frameToken) {
+    return this.#armOwned0501TaskExcursion(frameToken, null);
+  }
+
+  // Separately named diagnostic profile. The existing protected-only arm and
+  // its strict refusal remain unchanged for callers of the old API.
+  armOwned0501TaskMode(frameToken) {
+    return this.#armOwned0501TaskExcursion(frameToken,
+      OWNED_0501_MODE_PROFILE);
+  }
+
+  owned0501TaskModeStatus(token) {
+    const session = owned0501Excursions.get(this);
+    if (this.#owned0501ExcursionAdmissionBusy)
+      this.#owned0501ExcursionAdmissionReentered = true;
+    if (this.#owned0501ExecutionDepth ||
+        this.#owned0501ExcursionAdmissionBusy || session?.busyDepth) {
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+    }
+    if (!session || session.token !== token ||
+        session.profile !== OWNED_0501_MODE_PROFILE)
+      throw new Error("stale task mode token");
+    return owned0501Frozen({ phase: session.phase,
+      firstFailure: session.firstFailure, activeSteps: session.activeSteps,
+      transitions: session.transitions.length,
+      deliveries: session.deliveries.length,
+      modeChanges: session.modeChanges.length });
+  }
+
+  abortOwned0501TaskMode(token, reason) {
+    const session = owned0501Excursions.get(this);
+    if (this.#owned0501ExecutionDepth || this.#owned0501ExcursionAdmissionBusy ||
+        session?.busyDepth) {
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+    }
+    if (!session || session.token !== token ||
+        session.profile !== OWNED_0501_MODE_PROFILE)
+      throw new Error("stale task mode token");
+    if (this.#owned0501ExecutionDepth || this.#owned0501ExcursionAdmissionBusy ||
+        session.busyDepth) {
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+      throw new Error("task mode abort outside owner pause");
+    }
+    if (typeof reason !== "string" ||
+        !OWNED_0501_EXCURSION_ABORT_REASONS.includes(reason))
+      throw new Error("unreviewed task mode abort reason");
+    owned0501ExcursionFail(session, reason);
+    if (session.phase === "invalid") this.#owned0501ExcursionActive = false;
+    return owned0501Frozen({ phase: session.phase,
+      firstFailure: session.firstFailure, activeSteps: session.activeSteps });
+  }
+
+  takeOwned0501TaskModeObservation(token) {
+    const session = owned0501Excursions.get(this);
+    if (this.#owned0501ExcursionAdmissionBusy)
+      this.#owned0501ExcursionAdmissionReentered = true;
+    if (this.#owned0501ExecutionDepth ||
+        this.#owned0501ExcursionAdmissionBusy || session?.busyDepth) {
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+      return null;
+    }
+    if (!session || session.token !== token ||
+        session.profile !== OWNED_0501_MODE_PROFILE)
+      throw new Error("stale task mode token");
+    if (session.phase === "observing") return null;
+    const result = owned0501Frozen({
+      schema: "bw.i80386-owned-0501.task-mode-diagnostic.v1",
+      phase: session.phase, firstFailure: session.firstFailure,
+      activeSteps: session.activeSteps,
+      cookie: session.cookie,
+      transitions: Object.freeze([...session.transitions]),
+      uncommittedTransitions: Object.freeze([...session.uncommittedTransitions]),
+      deliveries: Object.freeze([...session.deliveries]),
+      modeChanges: Object.freeze([...session.modeChanges]),
+      uncommittedModes: Object.freeze([...session.uncommittedModes]),
+      modeRefusal: session.modeRefusal,
+      resumeCandidate: session.resumeCandidate,
+      truncated: session.truncated, frameReturnQualified: false,
+    });
+    owned0501Excursions.delete(this);
+    this.#owned0501ExcursionActive = false;
+    return result;
+  }
+
   owned0501TaskExcursionStatus(token) {
     const session = owned0501Excursions.get(this);
+    if (session?.profile === OWNED_0501_MODE_PROFILE) {
+      if (this.#owned0501ExecutionDepth || session.busyDepth) {
+        owned0501ExcursionFail(session, "observer-reentry");
+        this.#owned0501ExcursionActive = false;
+      }
+      throw new Error("task mode token requires task mode API");
+    }
     if (this.#owned0501ExecutionDepth || session?.busyDepth) {
       owned0501ExcursionFail(session, "observer-reentry");
       this.#owned0501ExcursionActive = false;
@@ -734,6 +940,16 @@ export class ExperimentalI80386 {
   // AX=0501 frame journal or guest state. The first diagnostic failure wins.
   abortOwned0501TaskExcursion(token, reason) {
     const session = owned0501Excursions.get(this);
+    if (session?.profile === OWNED_0501_MODE_PROFILE) {
+      if (this.#owned0501ExecutionDepth || session.busyDepth ||
+          this.#owned0501ExcursionAdmissionBusy) {
+        if (this.#owned0501ExcursionAdmissionBusy)
+          this.#owned0501ExcursionAdmissionReentered = true;
+        owned0501ExcursionFail(session, "observer-reentry");
+        this.#owned0501ExcursionActive = false;
+      }
+      throw new Error("task mode token requires task mode API");
+    }
     if (!session || session.token !== token) {
       if (this.#owned0501ExcursionAdmissionBusy)
         this.#owned0501ExcursionAdmissionReentered = true;
@@ -759,6 +975,13 @@ export class ExperimentalI80386 {
 
   takeOwned0501TaskExcursionObservation(token) {
     const session = owned0501Excursions.get(this);
+    if (session?.profile === OWNED_0501_MODE_PROFILE) {
+      if (this.#owned0501ExecutionDepth || session.busyDepth) {
+        owned0501ExcursionFail(session, "observer-reentry");
+        this.#owned0501ExcursionActive = false;
+      }
+      throw new Error("task mode token requires task mode API");
+    }
     if (this.#owned0501ExecutionDepth || session?.busyDepth) {
       owned0501ExcursionFail(session, "observer-reentry");
       this.#owned0501ExcursionActive = false;
@@ -3668,6 +3891,20 @@ export class ExperimentalI80386 {
       if (excursion.busyDepth)
         owned0501ExcursionFail(excursion, "cpu-step-reentry");
       excursion.busyDepth++;
+      if (excursion.profile === OWNED_0501_MODE_PROFILE &&
+          excursion.phase === "observing") try {
+        const before = owned0501ModeFacts(this);
+        if (!owned0501ModeSame(excursion.modeLast, before)) {
+          excursion.modeRefusal = owned0501Frozen({
+            step: excursion.activeSteps + 1,
+            before: excursion.modeLast, after: before,
+            operation: null, enclosingStepCommitted: false });
+          owned0501ExcursionFail(excursion, "unattributed-between-step-change");
+        } else {
+          excursion.modeBefore = before;
+          excursion.pendingModeOperation = null;
+        }
+      } catch { owned0501ExcursionFail(excursion, "mode-before-observer-failure"); }
     }
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
@@ -3754,6 +3991,10 @@ export class ExperimentalI80386 {
             }));
           }
         } catch { /* The original guest exception takes priority. */ }
+        if (excursion?.profile === OWNED_0501_MODE_PROFILE &&
+            excursion.phase === "observing") try {
+          owned0501ModeRecordUncommitted(this, excursion);
+        } catch { /* Preserve the original guest exception and fault facts. */ }
         owned0501ExcursionFail(excursion, "step-failure");
         this.#owned0501ExcursionActive = false;
         if (owned0501) {
@@ -4700,6 +4941,20 @@ export class ExperimentalI80386 {
         if (control === 0) {
           if (!wasProtected && this.protectedMode) this._retainedRealCs = true;
           else if (!this.protectedMode) this._retainedRealCs = false;
+          const mode = this.#owned0501ExcursionActive
+            ? owned0501Excursions.get(this) : null;
+          if (mode?.profile === OWNED_0501_MODE_PROFILE &&
+              mode.phase === "observing") try {
+            if (this.#owned0501ExecutionDepth !== 1 || mode.busyDepth !== 1 ||
+                mode.pendingModeOperation)
+              owned0501ExcursionFail(mode, "mode-operation-reentry");
+            else mode.pendingModeOperation = owned0501Frozen({
+              kind: "decoded-mov-cr0", source: "0f-22-cr0",
+              instructionStart: mode.modeBefore.eip,
+              beforeCr0: mode.modeBefore.rawCr0,
+              afterCr0: this.cr0 >>> 0,
+            });
+          } catch { owned0501ExcursionFail(mode, "mode-operation-observer-failure"); }
         }
       }
       return;

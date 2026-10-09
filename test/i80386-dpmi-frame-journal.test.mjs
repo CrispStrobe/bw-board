@@ -810,6 +810,146 @@ function openedMixedExcursion() {
   return { ...f, frameToken, excursionToken };
 }
 
+function openedMixedMode() {
+  const f = fixture();
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0xee, 0, 0]);
+  f.put(HANDLER + 0x100, [0x66, 0xcf]);
+  const frameToken = f.arm({ profile: MIXED_PROFILE });
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501FrameStatus(frameToken).phase, 'open');
+  const modeToken = f.cpu.armOwned0501TaskMode(frameToken);
+  assert.ok(modeToken);
+  return { ...f, frameToken, modeToken };
+}
+
+test('mode arm ignores overridden public excursion method and prior session', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0xee, 0, 0]);
+  f.put(HANDLER + 0x100, [0x66, 0xcf]);
+  const frameToken = f.arm({ profile: MIXED_PROFILE });
+  assert.equal(f.cpu.step(), 1);
+  let invoked = 0;
+  f.cpu.armOwned0501TaskExcursion = () => { invoked++; return {}; };
+  const modeToken = f.cpu.armOwned0501TaskMode(frameToken);
+  assert.ok(modeToken);
+  assert.equal(invoked, 0);
+  assert.equal(f.cpu.owned0501TaskModeStatus(modeToken).phase, 'observing');
+  assert.throws(() => f.cpu.armOwned0501TaskMode(frameToken), /consume prior/);
+  assert.equal(f.cpu.owned0501TaskModeStatus(modeToken).phase, 'observing');
+});
+
+test('separate mode profile records committed decoded MOV CR0, not frame return', () => {
+  const f = openedMixedMode();
+  assert.throws(() => f.cpu.takeOwned0501TaskExcursionObservation(f.modeToken),
+    /task mode/);
+  // A prior committed task transfer can enter CPL0. This test supplies only
+  // that source-visible post-state; the hosted guest must prove the transfer.
+  f.cpu._stepInstruction = function () {
+    this.cs = 0x18; this.eip = 0x120; return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.eax = 0;
+  f.cpu._fetch8 = (() => { const bytes = [0x22, 0xc0];
+    return () => bytes.shift(); })();
+  f.cpu._stepInstruction = function () {
+    this._step0f(false, null, 32); return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const status = f.cpu.owned0501TaskModeStatus(f.modeToken);
+  assert.equal(status.phase, 'observing');
+  assert.equal(status.modeChanges, 1);
+  f.cpu.abortOwned0501TaskMode(f.modeToken, 'observer-step-bound');
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.schema, 'bw.i80386-owned-0501.task-mode-diagnostic.v1');
+  assert.equal(observed.modeChanges[0].operation.kind, 'decoded-mov-cr0');
+  assert.deepEqual([observed.modeChanges[0].before.mode,
+    observed.modeChanges[0].after.mode], ['protected', 'pe-clear']);
+  assert.equal(observed.modeChanges[0].enclosingStepCommitted, true);
+  assert.equal(observed.frameReturnQualified, false);
+  assert.equal(f.cpu.owned0501FrameStatus(f.frameToken).phase, 'invalid');
+});
+
+test('mode profile refuses unattributed changes while preserving guest step', () => {
+  const f = openedMixedMode();
+  f.cpu._stepInstruction = function () { this.cr0 = 0; return 1; };
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'unattributed-mode-change');
+  assert.deepEqual(observed.modeChanges, []);
+  assert.equal(observed.modeRefusal.enclosingStepCommitted, true);
+  assert.deepEqual([observed.modeRefusal.before.mode,
+    observed.modeRefusal.after.mode], ['protected', 'pe-clear']);
+  assert.equal(f.cpu.cr0, 0);
+  assert.equal(observed.frameReturnQualified, false);
+});
+
+test('mode profile refuses between-step source changes and wrong tokens', () => {
+  const f = openedMixedMode();
+  assert.throws(() => f.cpu.owned0501TaskModeStatus({}), /stale/);
+  f.cpu.cr0 = 0;
+  f.cpu._stepInstruction = () => 1;
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'unattributed-between-step-change');
+  assert.equal(observed.modeChanges.length, 0);
+  assert.equal(observed.modeRefusal.enclosingStepCommitted, false);
+});
+
+test('mode profile retains fault facts before uncommitted mode attempt', () => {
+  const f = openedMixedMode();
+  f.cpu._stepInstruction = function () {
+    this.cr0 = 0;
+    throw new I80386Fault(13, 0, 'synthetic mode fault');
+  };
+  assert.throws(() => f.cpu.step(), error =>
+    error instanceof I80386Fault && error.vector === 13);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'step-failure');
+  assert.deepEqual([observed.deliveries[0].kind,
+    observed.deliveries[0].fault.vector,
+    observed.deliveries[0].enclosingStepCommitted],
+    ['cpu-fault', 13, false]);
+  assert.equal(observed.uncommittedModes.length, 1);
+  assert.equal(observed.uncommittedModes[0].enclosingStepCommitted, false);
+  assert.equal(observed.modeChanges.length, 0);
+});
+
+test('mode profile refuses mutated between-step descriptor scalars', () => {
+  const f = openedMixedMode();
+  f.cpu.segmentCaches[1].limit++;
+  f.cpu._stepInstruction = () => 1;
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'unattributed-between-step-change');
+  assert.equal(observed.modeRefusal.before.codeCache.limit + 1,
+    observed.modeRefusal.after.codeCache.limit);
+});
+
+test('mode profile reports VM86 as CPL3 but refuses unattributed entry', () => {
+  const f = openedMixedMode();
+  f.cpu._stepInstruction = function () {
+    this.cs = 0x18; this.eflags |= 0x20000; return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'unattributed-mode-change');
+  assert.deepEqual([observed.modeRefusal.after.mode,
+    observed.modeRefusal.after.cpl], ['vm86', 3]);
+  assert.equal(observed.frameReturnQualified, false);
+});
+
+test('protected-only excursion still rejects PE clear', () => {
+  const f = openedMixedExcursion();
+  f.cpu._stepInstruction = function () { this.cr0 = 0; return 1; };
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(observed.firstFailure, 'unsupported-task-excursion-mode');
+});
+
 test('task excursion requires a committed private mixed frame and one arm', () => {
   const f = fixture();
   const frameToken = f.arm({ profile: MIXED_PROFILE });
