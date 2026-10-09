@@ -6,4 +6,4 @@ The census repeats exact pinned Node and header admission, then records each too
 
 The dedicated workflow is same-repository, exact-head, attempt-one and label-only. It uploads only a closed bounded JSON/text inventory, including partial reports on failure. Source identity is recomputed at the start and, for a completed census, at the end; a failed partial report does not claim an end-source recheck. It does not compile, load an addon, sample allocations or execute an emulator or guest. The source checkpoint is unrun; no hosted tool authority has yet been established by it.
 
-Pure controls: `python3 -B scripts/xv6-js-rollback-direct-v8-tool-census/control.py`, `source-control.py`, and `inventory-control.py`. The full Git source identity requires a complete clean checkout and is checked by the hosted workflow before and after observation.
+Pure controls: `python3 -B scripts/xv6-js-rollback-direct-v8-tool-census/control.py`, `source-control.py`, and `inventory-control.py`. The full Git source identity requires a complete clean checkout. The hosted workflow checks it before observation; the runner checks it again only after a completed census.
