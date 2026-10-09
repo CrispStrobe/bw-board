@@ -70,7 +70,7 @@ with TemporaryDirectory(prefix="task-mode-source-control-") as tmp:
     except ValueError: pass
     else: raise AssertionError("source symlink accepted")
     replacement = Path(tmp) / "replacement.mjs"
-    replacement.write_bytes(b"different immutable input\n")
+    replacement.write_bytes(b"owned immutable input\n")
     original_open = os.open
     def swap_on_open(name, flags, *args, **kwargs):
         path.unlink()
@@ -79,5 +79,41 @@ with TemporaryDirectory(prefix="task-mode-source-control-") as tmp:
     with patch.object(source.os, "open", side_effect=swap_on_open):
         try: source.live_role(str(path))
         except ValueError: pass
-        else: raise AssertionError("source role swap accepted")
+        else: raise AssertionError("same-byte source inode swap accepted")
+    replacement2 = Path(tmp) / "replacement2.mjs"
+    replacement2.write_bytes(b"owned immutable input\n")
+    original_fstat = os.fstat
+    def swap_after_read(fd):
+        nonlocal_calls[0] += 1
+        result = original_fstat(fd)
+        if nonlocal_calls[0] == 2:
+            path.unlink()
+            replacement2.rename(path)
+        return result
+    nonlocal_calls = [0]
+    with patch.object(source.os, "fstat", side_effect=swap_after_read):
+        try: source.live_role(str(path))
+        except ValueError: pass
+        else: raise AssertionError("same-byte post-read source path swap accepted")
+    original_open = os.open
+    def fifo_on_open(name, flags, *args, **kwargs):
+        path.unlink()
+        os.mkfifo(path)
+        return original_open(name, flags, *args, **kwargs)
+    with patch.object(source.os, "open", side_effect=fifo_on_open):
+        try: source.live_role(str(path))
+        except ValueError: pass
+        else: raise AssertionError("raced source FIFO accepted")
+    path.unlink()
+    path.write_bytes(b"owned immutable input\n")
+    target = Path(tmp) / "target.mjs"
+    target.write_bytes(path.read_bytes())
+    def symlink_on_open(name, flags, *args, **kwargs):
+        path.unlink()
+        path.symlink_to(target)
+        return original_open(name, flags, *args, **kwargs)
+    with patch.object(source.os, "open", side_effect=symlink_on_open):
+        try: source.live_role(str(path))
+        except (ValueError, OSError): pass
+        else: raise AssertionError("raced source symlink accepted")
 print("CWSDPMI task-mode source controls PASS")

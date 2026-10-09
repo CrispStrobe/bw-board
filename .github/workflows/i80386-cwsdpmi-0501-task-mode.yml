@@ -1,4 +1,4 @@
-name: 386 owned CWSDPMI AX=0501 bounded task excursion AT diagnostic
+name: 386 owned CWSDPMI AX=0501 task-mode AT observation
 
 on:
   pull_request:

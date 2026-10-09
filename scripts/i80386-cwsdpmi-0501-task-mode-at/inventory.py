@@ -139,11 +139,12 @@ def bounded(path, maximum):
     before = path.lstat()
     if not stat.S_ISREG(before.st_mode) or before.st_size > maximum:
         raise ValueError("nonordinary or oversized artifact role")
+    identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
     fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
         opened = os.fstat(fd)
-        if (not stat.S_ISREG(opened.st_mode) or opened.st_dev != before.st_dev or
-                opened.st_ino != before.st_ino or opened.st_size != before.st_size):
+        if (not stat.S_ISREG(opened.st_mode) or
+                (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns) != identity):
             raise ValueError("artifact changed before inventory")
         raw = bytearray()
         while len(raw) <= maximum:
@@ -152,8 +153,13 @@ def bounded(path, maximum):
                 break
             raw.extend(part)
         after = os.fstat(fd)
+        after_path = path.lstat()
         if (len(raw) != before.st_size or len(raw) > maximum or
-                after.st_size != before.st_size):
+                not stat.S_ISREG(after.st_mode) or
+                not stat.S_ISREG(after_path.st_mode) or
+                (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) != identity or
+                (after_path.st_dev, after_path.st_ino,
+                 after_path.st_size, after_path.st_mtime_ns) != identity):
             raise ValueError("artifact changed during inventory")
         return bytes(raw)
     finally:
