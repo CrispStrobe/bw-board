@@ -121,7 +121,18 @@ test('stiff winding startup populates actual scope samples and an integrated met
   const handle = b.addScopeChannel({type:'voltage',netId:'collector',referenceNetId:'zero',
     sampleRateHz:100000,capture:'sample',depth:256});
   b.meterVoltage('collector','zero');
-  assert.equal(b.advanceToLive(1000000n,{maxSteps:16}).completed,true);
+  let receipt=b.advanceToLive(1000000n,{maxSteps:16});
+  assert.equal(receipt.completed,false,'sample-grid quanta yield before1ms');
+  assert.equal(receipt.processedTimeNs,'160000');
+  let calls=1;
+  while(!receipt.completed) {
+    const previous=b.getTime();
+    receipt=b.advanceToLive(1000000n,{maxSteps:16});
+    assert.equal(receipt.startedTimeNs,previous.toString());
+    assert.equal(receipt.processedTimeNs,b.getTime().toString());
+    assert.ok(b.getTime()>previous&&++calls<=7,'bounded actual-clock continuation');
+  }
+  assert.equal(b.getTime(),1000000n);
   const data = b.getScopeData(handle), samples = [...data.samples].filter(Number.isFinite);
   assert.equal(data.count,100);
   assert.equal(samples.length,200);

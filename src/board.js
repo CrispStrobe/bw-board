@@ -1436,8 +1436,18 @@ export class BoardImpl {
     let steps = 0;
     try {
       while (this.timeNs < tNs && steps < maxSteps) {
-        // The fixed span also bounds an interval without device deadlines.
-        const ceiling = this.timeNs + 1_000_000n;
+        // Reactive MNA can need many adaptive solves inside one scheduling
+        // interval (e.g. a probe-loaded flyback ring). Yield at its existing
+        // public waveform/analysis bound, rather than making callers insert
+        // measurement endpoints to avoid exhausting the integration backstop.
+        // This bounds CLOCK span, not CPU work: all solver limits and genuine
+        // failures still apply. Unbounded/static and nonreactive paths retain
+        // their historical 1 ms span. Board clocks have nanosecond resolution.
+        const reactiveBound = this._hasReactive() && this._needsMNA()
+          ? this._transientStepBound().maxStepSec : null;
+        const spanNs = reactiveBound === null ? 1_000_000n
+          : BigInt(Math.max(1, Math.floor(Math.min(1e-3, reactiveBound) * 1e9)));
+        const ceiling = this.timeNs + spanNs;
         let endpoint = ceiling < tNs ? ceiling : tNs;
         endpoint = this._earliestDeviceDeadline(this.timeNs, endpoint) ?? endpoint;
         for (const pwm of this.drivenPwm.values()) {

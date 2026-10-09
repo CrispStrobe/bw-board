@@ -1,7 +1,8 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-09 winding turn-off oracle — CLAIM, Codex bwcx.
-Branch lane/winding-turnoff-oracle-20261009, isolated owned worktree, exact base
+2026-10-09 winding turn-off oracle — DONE candidate, Codex bwcx.
+Evidence branch lane/winding-turnoff-oracle-20261009; repair branch
+lane/reactive-live-span-20261009, isolated owned worktree, exact base
 00fe5f1b55ca004c1eb2322c8eaa98ee43a3dc5e. Three-path evidence-only envelope:
 this ledger, new test/winding-turnoff-oracle.test.mjs and new
 spec-updates/winding-turnoff-oracle.md. Independently authored matched ngspice
@@ -32,6 +33,19 @@ must resume its existing sampled-scope caller at reported actual times. Its
 old single-call completion assumption no longer applies to100 kHz sample-grid
 quanta; retain all100 samples, waveform/meter assertions and genuine failures.
 No numerical expectation or tolerance is weakened. Final envelope: six paths.
+Expanded canonical claims5fe05713 andc720e1f3 preceded their respective edits.
+Final local affected gate89/89 passes, zero skips: actual direct winding
+restart, independently refined SPICE settled/flyback/restart samples, sampled
+scope/meter, closed-form RC, identical ordinary partitions, clock receipts,
+PWM/device barriers, reentry, old failures and finite whole-capture budgets.
+Two isolated source mutations red real callers: restore1 ms span (2 failures)
+and ignore authored20 us bound (1); both restored. Idle/static-unbounded and
+nonreactive1 ms paths remain unchanged; sub-ns solver bounds yield a positive
+1 ns clock quantum. This is temporal scheduling, NOT independently CPU-work-
+bounded integration or global late-ring accuracy. The original deliberately
+red checkpoint56c32063 is preserved. Candidate identity is the commit holding
+this row; one exact hosted CI/Harris set remains required before guarded
+landing. No consumer pin or deployment change in this upstream lane.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base

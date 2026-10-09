@@ -169,6 +169,54 @@ test('invalid targets/options refuse before any state is advanced',()=>{
   b.advanceToLive(1000n);assert.throws(()=>b.advanceToLive(999n),/bigint target/);
 });
 
+test('reactive waveform quanta use public bounds and resume at actual committed times',()=>{
+  function rig(maxStepSec) {
+    const b=new BoardImpl(5);
+    if(maxStepSec!==undefined)b.configureTransientAnalysis('interactive-v2',{maxStepSec});
+    b.setNetlist([
+      {id:'V',kind:'vsource',params:{wave:'spice-pulse',v1:0,v2:1,td:0,tr:1e-6,tf:1e-6,pw:.001,per:.003},terminals:['pos','neg']},
+      {id:'G',kind:'gnd',params:{},terminals:['gnd']},
+      {id:'R',kind:'resistor',params:{ohms:1000},terminals:['a','b']},
+      {id:'C',kind:'capacitor',params:{farads:1e-6},terminals:['a','b']},
+    ],[net('zero',['G','gnd'],['V','neg'],['C','b']),
+      net('input',['V','pos'],['R','a']),net('out',['R','b'],['C','a'])]);
+    b.setPower(true);return b;
+  }
+  for(const [authored,span] of [[undefined,100000n],[20e-6,20000n]]) {
+    const live=rig(authored),ordinary=rig(authored),endpoints=[];
+    live.onChange(e=>{if(e.type==='time')endpoints.push(live.getTime());});
+    const first=live.advanceToLive(500000n,{maxSteps:1});
+    assert.equal(first.processedTimeNs,String(span));
+    assert.equal(first.steps,1);assert.equal(first.completed,false);
+    finish(live,500000n,2);
+    let previous=0n;
+    for(const at of endpoints){assert.ok(at>previous&&at-previous<=span);ordinary.advanceTo(at);previous=at;}
+    assert.equal(previous,500000n);
+    assert.equal(live.nodeVoltage('out'),ordinary.nodeVoltage('out'));
+    // Closed-form response to the authored 1 us linear rise then constant 1 V.
+    const tau=.001,rise=1e-6,t=.0005;
+    const atRise=1-tau/rise*(1-Math.exp(-rise/tau));
+    const expected=1+(atRise-1)*Math.exp(-(t-rise)/tau);
+    assert.ok(Math.abs(live.nodeVoltage('out')-expected)<1e-4);
+    assert.equal(live.transientAnalysisStatus().failure,null);
+    assert.equal(live.transientAnalysisStatus().profile.maxAttempts,20000);
+  }
+  const subNs=rig(1e-10);
+  assert.equal(subNs.advanceToLive(10n,{maxSteps:1}).processedTimeNs,'1',
+    'sub-nanosecond solver bound cannot create a zero-span clock loop');
+});
+
+test('time-varying algebraic circuits retain the historical1ms live span',()=>{
+  const b=new BoardImpl(5);
+  b.setNetlist([
+    {id:'V',kind:'vsource',params:{wave:'spice-sine',offset:1,amplitude:.5,freq:100,td:0,theta:0,phase:0},terminals:['pos','neg']},
+    {id:'G',kind:'gnd',params:{},terminals:['gnd']},
+    {id:'R',kind:'resistor',params:{ohms:1000},terminals:['a','b']},
+  ],[net('zero',['G','gnd'],['V','neg'],['R','b']),net('out',['V','pos'],['R','a'])]);
+  assert.equal(b.advanceToLive(5000000n,{maxSteps:1}).processedTimeNs,'1000000');
+  assert.ok(Math.abs(b.nodeVoltage('out')-(1+.5*Math.sin(2*Math.PI*.1)))<1e-8);
+});
+
 test('precision and completed finite analysis cannot become renewable live work',()=>{
   const precision=new BoardImpl(5);precision.configureTransientAnalysis('precision-v1');
   assert.throws(()=>precision.advanceToLive(1000n),/analysis reuse/);
