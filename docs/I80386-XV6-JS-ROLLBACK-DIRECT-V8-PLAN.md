@@ -86,3 +86,26 @@ short hosted addon control before a single label-triggered same-workload run.
 If the pinned V8 callbacks or sampled-ID comparison cannot establish the
 minor case, record that limit and do not claim an all-allocation hotspot or
 change the support rule after seeing the result.
+
+## First source checkpoint published; hosted authority still pending
+
+[Draft PR471](https://github.com/CrispStrobe/bw-board/pull/471) at
+`ff2b916e1899d6042f9b1a3e2701ea1ec4f708d7` publishes eight files under
+`scripts/xv6-js-rollback-direct-v8/`, stacked on the frozen support source.
+The addon, four-case fixture, bounded build recipe and pure admission controls
+are **source-only, uncompiled and unrun**. Root and a separate Sol reviewer
+checked exact source, public API signatures and pure controls. Review corrected
+GC export windows, one-shot sampler reuse, source-factory attribution, prior
+major-GC exclusion in minor cases, and cleanup of an exited compiler leader's
+remaining owned process group. Those controls do not establish native behavior.
+
+Next implement a separately identified report-only hosted authority preflight.
+Bind the exact official Node executable/header archives, installed compiler
+and linker executable hashes/versions/arguments, source and runner identity.
+Retain original refusal records and a closed report-only inventory, then stop
+before compilation, addon loading, support sampling or guests. Review and pin
+those observed build inputs before a separate first build/control run. The
+compiler's version string alone is insufficient executable identity. Only
+after the four fresh support cases qualify may the unchanged xv6 comparison
+run. Preserve PR471's original source checkpoint and both failed Inspector
+actuals; do not relabel them as the direct sampler.

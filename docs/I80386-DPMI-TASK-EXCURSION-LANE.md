@@ -77,3 +77,32 @@ all INT 31h calls, physical frame stability, a complete 386DX machine,
 general applications, games or performance. Source-only and synthetic controls cannot
 replace one exact-head hosted guest run with an independently audited original
 packet.
+
+## CPU architecture checkpoint published; driver still unconnected
+
+[Draft PR472](https://github.com/CrispStrobe/bw-board/pull/472) at
+`d1ca2763ce30dc91df0c29e888590ab1d8135256`, stacked on PR470, contains only
+the CPU observer and focused journal controls. Root and a separate Sol reviewer
+checked source and syntax; **CPU tests are pending hosted execution**. There
+is no runnable excursion driver, source-admission packet or actual return
+receipt at this checkpoint. The original frame refusal is unchanged.
+
+The separate private session binds a committed entry once, stages task facts
+and credits them only after the ordinary enclosing step succeeds. Candidate
+resumption compares saved outgoing continuation and descriptor scalar roles,
+allowing only the descriptor Accessed-bit difference on reload. It preserves
+original results and faults, refuses accessor/reentry observations, and caps
+steps and records. A later step or reset makes an unconsumed candidate stale
+while retaining historical facts. This is an observation candidate, never
+an accepted owned frame return.
+
+After exact-source hosted CPU checks pass, implement the separate driver and
+admission/workflow slice. The inherited frame policy hides its token and stops
+on the first strict refusal; wrapping its exported runner is insufficient.
+Use a reviewed derivative with unchanged media/machine/owned-wrapper admission,
+arm against its private committed entry, retain the old terminal frame report,
+and continue only bounded ordinary machine steps for this diagnostic. Retain
+the candidate-reset control gap as a focused test follow-up; do not infer real
+task continuity from the synthetic two-switch control. Qualify a new exact
+source head and independently audit its first original guest packet before
+proposing any later task-aware ownership acceptance.
