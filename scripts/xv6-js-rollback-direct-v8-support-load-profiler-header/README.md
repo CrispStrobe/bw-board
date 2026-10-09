@@ -16,10 +16,13 @@ addon and retains their SHA-256/size leases. It starts fresh isolated
 `minor-baseline`, `minor-enabled`, `major-baseline` and `major-enabled`
 processes using the unchanged owned support case. Major cases alone use
 `--expose-gc`. Each child has a 45-second wall and 32-KiB combined-output
-bound. A child refusal stops before later cases and keeps bounded partial raw
-reports. The CPU-free grader checks exact four result roles, reviewed factory
-callsite, pre/post sample IDs, collection-window and weak-callback predicates,
-and closed unpoisoned native facts. The original compiler refusal remains the
+bound. The report records a load attempt before each child; if the first child
+fails, whether it loaded the addon remains unknown. A later refusal retains
+an earlier independently graded load. Refusal stops before later cases and
+keeps bounded partial raw reports. The CPU-free grader checks exact four result
+roles, reviewed factory callsite, pre/post sample IDs, collection-window and
+weak-callback predicates, and closed unpoisoned native facts. The original
+compiler refusal remains the
 first failure ahead of any later post-tool refusal.
 
 The dedicated workflow admits only the exact reviewed source, same-repository

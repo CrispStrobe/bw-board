@@ -118,9 +118,10 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-support-pure-") as name:
     # every later case; no native runtime is launched in this synthetic test.
     class FakeChild:
         read_ordinary = staticmethod(module._read_bootstrap)
-        def __init__(self, timeout=False):
+        def __init__(self, timeout=False, success=False):
             self.calls = 0
             self.timeout = timeout
+            self.success = success
         def run_bounded(self, argv, _work, _env, _timeout):
             self.calls += 1
             out = Path(argv[-1])
@@ -128,7 +129,7 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-support-pure-") as name:
             (out / "pre.json").write_bytes(b'{"partial":true}')
             return {"timedOut": self.timeout, "outputBound": False,
                     "complete": not self.timeout,
-                    "exitCode": -15 if self.timeout else 7,
+                    "exitCode": -15 if self.timeout else (0 if self.success else 7),
                     "stdout": b"", "stderr": b""}
         def child_receipt(self, value, argv):
             return {**value, "argv": argv, "stdout": {}, "stderr": {}}
@@ -142,11 +143,13 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-support-pure-") as name:
              for role in ("support-case.mjs", "support-policy.mjs")}
     auth = {"nodeExecutable": {"sha256": module.sha(b"synthetic node"),
                                "bytes": len(b"synthetic node")}}
-    support_report = {"build": {"addon": {"sha256": expected,
-                                          "bytes": len(b"synthetic addon"),
-                                          "loaded": False}},
-                      "cases": [], "firstFailure": None,
-                      "secondaryFailures": [], "stage": "ready"}
+    def fresh_report():
+        return {"build": {"addon": {"sha256": expected,
+                                    "bytes": len(b"synthetic addon"),
+                                    "loadAttempted": False, "loaded": False}},
+                "cases": [], "firstFailure": None,
+                "secondaryFailures": [], "stage": "ready"}
+    support_report = fresh_report()
     case_evidence = root / "case-evidence"
     case_evidence.mkdir()
     try:
@@ -160,14 +163,14 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-support-pure-") as name:
         "bytes": 16, "sha256": module.sha(b'{"partial":true}')}
     assert support_report["firstFailure"]["reason"] == \
         "bounded support child refused: minor-baseline"
+    assert support_report["build"]["addon"]["loadAttempted"] is True
+    assert support_report["build"]["addon"]["loaded"] is None
     assert support_report["cases"][0]["nodeLease"]["sha256"] == \
         module.sha(b"synthetic node")
     assert support_report["cases"][0]["addonLease"]["sha256"] == expected
 
     timeout_child = FakeChild(timeout=True)
-    timeout_report = {"build": support_report["build"], "cases": [],
-                      "firstFailure": None, "secondaryFailures": [],
-                      "stage": "ready"}
+    timeout_report = fresh_report()
     timeout_evidence = root / "timeout-evidence"
     timeout_evidence.mkdir()
     try:
@@ -180,4 +183,50 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-support-pure-") as name:
     assert timeout_report["cases"][0]["raw"]["pre.json"] == {
         "bytes": 16, "sha256": module.sha(b'{"partial":true}')}
     assert timeout_report["cases"][0]["child"]["timedOut"] is True
+    assert timeout_report["build"]["addon"]["loadAttempted"] is True
+    assert timeout_report["build"]["addon"]["loaded"] is None
+
+    class RefusingGrade:
+        def grade_case(self, *_args):
+            raise ValueError("synthetic raw grade refused")
+    grade_report = fresh_report()
+    grade_child = FakeChild(success=True)
+    grade_evidence = root / "grade-evidence"
+    grade_evidence.mkdir()
+    try:
+        module.run_cases(grade_child, RefusingGrade(), roles, auth,
+                         grade_report, receipt, root, grade_evidence,
+                         {}, node, addon)
+    except ValueError as error:
+        assert str(error) == "synthetic raw grade refused"
+    else: raise AssertionError("raw-grade refusal admitted")
+    assert grade_child.calls == 1 and len(grade_report["cases"]) == 1
+    assert grade_report["firstFailure"]["reason"] == \
+        "synthetic raw grade refused"
+    assert grade_report["build"]["addon"]["loadAttempted"] is True
+    assert grade_report["build"]["addon"]["loaded"] is None
+
+    class PassFirstGrade:
+        def grade_case(self, kind, _raw):
+            return {"kind": kind}
+    class FirstPassSecondFail(FakeChild):
+        def run_bounded(self, argv, work, env, timeout):
+            self.success = self.calls == 0
+            return super().run_bounded(argv, work, env, timeout)
+    later_child = FirstPassSecondFail()
+    later_report = fresh_report()
+    later_evidence = root / "later-evidence"
+    later_evidence.mkdir()
+    try:
+        module.run_cases(later_child, PassFirstGrade(), roles, auth,
+                         later_report, receipt, root, later_evidence,
+                         {}, node, addon)
+    except ValueError as error:
+        assert str(error) == "bounded support child refused: minor-enabled"
+    else: raise AssertionError("later child refusal admitted")
+    assert later_child.calls == 2 and len(later_report["cases"]) == 2
+    assert later_report["build"]["addon"]["loadAttempted"] is True
+    assert later_report["build"]["addon"]["loaded"] is True
+    assert later_report["firstFailure"]["reason"] == \
+        "bounded support child refused: minor-enabled"
 print("direct V8 support-load runner controls PASS")

@@ -166,6 +166,10 @@ def run_cases(helper, grade_mod, roles, authority, report, path, work, evidence,
         row = {"kind": kind, "loadAttempted": True,
                "nodeLease": node_lease, "addonLease": addon_lease,
                "child": None, "raw": {}, "grade": None}
+        addon_fact = report["build"]["addon"]
+        addon_fact["loadAttempted"] = True
+        if addon_fact["loaded"] is False:
+            addon_fact["loaded"] = None  # Child may load before any refusal.
         report["cases"].append(row)
         report["stage"] = "case-" + kind
         write_report(path, report)
@@ -183,8 +187,13 @@ def run_cases(helper, grade_mod, roles, authority, report, path, work, evidence,
         write_report(path, report)
         if child_error is not None:
             raise child_error
-        row["grade"] = grade_mod.grade_case(kind, raw)
-        report["build"]["addon"]["loaded"] = True
+        try:
+            row["grade"] = grade_mod.grade_case(kind, raw)
+        except BaseException as error:
+            latch(report, error, report["stage"])
+            write_report(path, report)
+            raise
+        addon_fact["loaded"] = True
         write_report(path, report)
 
 
@@ -313,7 +322,8 @@ def main():
         addon_bytes = helper.read_ordinary(addon_path, 2_000_000)
         report["build"]["addon"] = {"bytes": len(addon_bytes),
                                       "sha256": sha(addon_bytes),
-                                      "loaded": False, "artifactUploaded": False}
+                                      "loadAttempted": False, "loaded": False,
+                                      "artifactUploaded": False}
         del addon_bytes
         if (helper.read_ordinary(evidence / "source.json", 32000) != source_raw or
                 source_mod.identity() != source or
