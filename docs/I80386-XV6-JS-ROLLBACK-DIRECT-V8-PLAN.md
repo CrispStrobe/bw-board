@@ -21,12 +21,14 @@ prove those flags in the hosted runtime.
 
 Implement one small, hosted-only C++ addon using the exact Node 20.20.2 V8
 headers. Use the public [sampling API](https://raw.githubusercontent.com/nodejs/node/v20.20.2/deps/v8/include/v8-profiler.h)
-with `kSamplingNoFlags` or exactly one collected-object flag, **never**
-`kSamplingForceGC`. Use this same direct sampler for the isolated support
-children and the two sampled xv6 children. Do not load the addon into the
-emulator as a guest component, change the emulator or probe loop, or treat a
-native profiler control as a native emulator speedup. Direct V8 addons need
-an explicit ABI and build review; compilation success alone is not admission.
+in four fresh, isolated support cases: no flags and the minor flag, then no
+flags and the major flag. Each of the two sampled xv6 children requests **both**
+collected-object bits together. Neither support nor guest sampling sets
+`kSamplingForceGC`. Use this same direct sampler for the support and xv6
+children. Do not load the addon into the emulator as a guest component or change
+the emulator or probe loop. A native profiler control is not a native emulator
+speedup. Direct V8 addons need an explicit ABI and build review; compilation
+success alone is not admission.
 
 For each support case, create a fixed, small cohort in a single reviewed
 allocation factory. Hold the objects strongly across a pre-release profile,
@@ -36,13 +38,15 @@ for every target, with a callback that only records bounded primitive facts
 and resets its handle. Release the strong handles at a recorded cut. Record
 [V8 GC callback types](https://raw.githubusercontent.com/nodejs/node/v20.20.2/deps/v8/include/v8-callbacks.h)
 through the [isolate's prologue and epilogue callbacks](https://raw.githubusercontent.com/nodejs/node/v20.20.2/deps/v8/include/v8-isolate.h).
-For a minor case, require every target's weak-global callback after a minor
-collection and before any major collection; require no collection between
+For a minor case, require every target's weak-global callback to be attributable
+to a minor collection before any major collection; require no collection between
 release and the designated collection. Require the same pre-release sampled
 IDs to disappear without the minor flag and to remain with that flag in each
 case's post-release profile. Numeric sample IDs are compared within one case,
-never across separate processes. Apply the corresponding major-only cut and
-comparison to the major flag, excluding an intervening minor collection.
+never across separate processes. For the major cases, require every native
+weak callback to be attributable to the designated major collection and no
+minor collection between release and that collection, then compare pre/post
+IDs without and with the major flag.
 Missing samples, callbacks, or a clean collector ordering mean **unsupported**,
 not a passing flag. A callback is a collection witness, not a guarantee that
 V8 will collect within the bound.
