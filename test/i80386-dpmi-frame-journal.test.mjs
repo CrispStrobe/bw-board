@@ -814,7 +814,7 @@ function openedMixedMode() {
   const f = fixture();
   f.memory.set(0x208 + 5, 0xfa);
   f.memory.set(0x208 + 6, 0x8f);
-  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0xee, 0, 0]);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
   f.put(HANDLER + 0x100, [0x66, 0xcf]);
   const frameToken = f.arm({ profile: MIXED_PROFILE });
   assert.equal(f.cpu.step(), 1);
@@ -828,7 +828,7 @@ test('mode arm ignores overridden public excursion method and prior session', ()
   const f = fixture();
   f.memory.set(0x208 + 5, 0xfa);
   f.memory.set(0x208 + 6, 0x8f);
-  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0xee, 0, 0]);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
   f.put(HANDLER + 0x100, [0x66, 0xcf]);
   const frameToken = f.arm({ profile: MIXED_PROFILE });
   assert.equal(f.cpu.step(), 1);
@@ -840,6 +840,49 @@ test('mode arm ignores overridden public excursion method and prior session', ()
   assert.equal(f.cpu.owned0501TaskModeStatus(modeToken).phase, 'observing');
   assert.throws(() => f.cpu.armOwned0501TaskMode(frameToken), /consume prior/);
   assert.equal(f.cpu.owned0501TaskModeStatus(modeToken).phase, 'observing');
+});
+
+test('mode arm checks reentry after its final source reflection', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
+  f.put(HANDLER + 0x100, [0x66, 0xcf]);
+  const frameToken = f.arm({ profile: MIXED_PROFILE });
+  assert.equal(f.cpu.step(), 1);
+  const originalTr = f.cpu.tr;
+  let reflected = 0, nested = 0;
+  f.cpu.tr = new Proxy(originalTr, {
+    getOwnPropertyDescriptor(target, key) {
+      if (++reflected === 21) {
+        try { f.cpu.owned0501TaskModeStatus({}); }
+        catch { nested++; }
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  assert.throws(() => f.cpu.armOwned0501TaskMode(frameToken), /changed/);
+  assert.equal(nested, 1);
+  assert.ok(reflected >= 21);
+  assert.equal(f.cpu.owned0501FrameStatus(frameToken).phase, 'open');
+  f.cpu.tr = originalTr;
+  const token = f.cpu.armOwned0501TaskMode(frameToken);
+  assert.ok(token);
+});
+
+test('mode arm never coerces malformed primitive data', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
+  f.put(HANDLER + 0x100, [0x66, 0xcf]);
+  const frameToken = f.arm({ profile: MIXED_PROFILE });
+  assert.equal(f.cpu.step(), 1);
+  let invoked = 0;
+  f.cpu.cr0 = { valueOf() { invoked++; return 1; } };
+  assert.throws(() => f.cpu.armOwned0501TaskMode(frameToken),
+    /invalid source-owned task excursion context/);
+  assert.equal(invoked, 0);
 });
 
 test('separate mode profile records committed decoded MOV CR0, not frame return', () => {
@@ -892,6 +935,26 @@ test('mode ticket must match final source-owned CR0 in the same step', () => {
   assert.equal(observed.firstFailure, 'mode-operation-context-mismatch');
   assert.equal(observed.modeChanges.length, 0);
   assert.equal(f.cpu.cr0, 2);
+});
+
+test('MOV CR0 ticket cannot attribute a co-occurring VM86 flag change', () => {
+  const f = openedMixedMode();
+  f.cpu._stepInstruction = function () {
+    this.cs = 0x18; this.eip = 0x120; return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.eax = 0;
+  f.cpu._fetch8 = (() => { const bytes = [0x22, 0xc0];
+    return () => bytes.shift(); })();
+  f.cpu._stepInstruction = function () {
+    this._step0f(false, null, 32);
+    this.eflags |= 0x20000;
+    return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'mode-operation-context-mismatch');
+  assert.equal(observed.modeChanges.length, 0);
 });
 
 test('mode profile refuses unattributed changes while preserving guest step', () => {

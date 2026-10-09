@@ -201,18 +201,30 @@ function owned0501ModeFacts(cpu) {
   const rawCr0 = owned0501Option(cpu, "cr0");
   const rawFlags = owned0501Option(cpu, "eflags");
   const retainedRealCs = owned0501Option(cpu, "_retainedRealCs");
+  if (![rawCr0, rawFlags].every(value => Number.isInteger(value) &&
+      value >= -0x80000000 && value <= 0xffffffff) ||
+      typeof retainedRealCs !== "boolean")
+    throw new TypeError("invalid source-owned task mode primitive");
   const caches = owned0501Option(cpu, "segmentCaches");
   const codeCache = owned0501ExcursionDescriptor(owned0501Option(caches,
     SEG_CS), OWNED_0501_CODE_FIELDS);
   const stackCache = owned0501ExcursionDescriptor(owned0501Option(caches,
     SEG_SS), OWNED_0501_STACK_FIELDS);
+  if ([...Object.values(codeCache), ...Object.values(stackCache)].some(value =>
+      typeof value === "number" && !Number.isFinite(value)))
+    throw new TypeError("invalid source-owned task mode cache scalar");
   const check = owned0501ExcursionContext(cpu);
   const checkCaches = owned0501Option(cpu, "segmentCaches");
   const checkCode = owned0501ExcursionDescriptor(owned0501Option(checkCaches,
     SEG_CS), OWNED_0501_CODE_FIELDS);
   const checkStack = owned0501ExcursionDescriptor(owned0501Option(checkCaches,
     SEG_SS), OWNED_0501_STACK_FIELDS);
+  const finalCr0 = owned0501Option(cpu, "cr0");
+  const finalFlags = owned0501Option(cpu, "eflags");
+  const finalRetained = owned0501Option(cpu, "_retainedRealCs");
   if (Object.keys(context).some(key => context[key] !== check[key]) ||
+      rawCr0 !== finalCr0 || rawFlags !== finalFlags ||
+      retainedRealCs !== finalRetained ||
       OWNED_0501_CODE_FIELDS.some(key => codeCache[key] !== checkCode[key]) ||
       OWNED_0501_STACK_FIELDS.some(key => stackCache[key] !== checkStack[key]) ||
       context.protectedMode !== !!(rawCr0 & 1) ||
@@ -269,7 +281,13 @@ function owned0501ModeSettle(cpu, session, result, traced) {
     if (operation?.kind === "decoded-mov-cr0" &&
         (operation.instructionStart !== session.modeBefore.eip ||
          operation.beforeCr0 !== session.modeBefore.rawCr0 ||
-         operation.afterCr0 !== post.rawCr0)) {
+         operation.afterCr0 !== post.rawCr0 ||
+         !!(session.modeBefore.rawFlags & 0x20000) !==
+           !!(post.rawFlags & 0x20000) ||
+         post.retainedRealCs !==
+           (!session.modeBefore.protectedMode && post.protectedMode ? true :
+             !post.protectedMode ? false :
+               session.modeBefore.retainedRealCs))) {
       owned0501ExcursionFail(session, "mode-operation-context-mismatch");
       return;
     }
@@ -797,14 +815,14 @@ export class ExperimentalI80386 {
       const modeLast = profile === OWNED_0501_MODE_PROFILE
         ? owned0501ModeFacts(this) : null;
       const after = owned0501ExcursionContext(this);
+      const finalMode = modeLast ? owned0501ModeFacts(this) : null;
       if (this.#owned0501ExcursionAdmissionReentered ||
           this.#owned0501ExecutionDepth || frame.busyDepth ||
           owned0501Sessions.get(this) !== frame || frame.token !== frameToken ||
           frame.phase !== "open" || frame.entry !== cookie.entry ||
           owned0501ExcursionUsedEntries.has(frame.entry) ||
           Object.keys(context).some(key => context[key] !== after[key]) ||
-          (modeLast && !owned0501ModeSame(modeLast,
-            owned0501ModeFacts(this))) ||
+          (modeLast && !owned0501ModeSame(modeLast, finalMode)) ||
           !handlerCandidate)
         throw new Error("owned task excursion changed during admission");
       owned0501ExcursionUsedEntries.add(frame.entry);
@@ -855,6 +873,7 @@ export class ExperimentalI80386 {
       throw new Error("stale task mode token");
     return owned0501Frozen({ phase: session.phase,
       firstFailure: session.firstFailure, activeSteps: session.activeSteps,
+      postOutgoingSteps: session.postOutgoingSteps,
       transitions: session.transitions.length,
       deliveries: session.deliveries.length,
       modeChanges: session.modeChanges.length });
@@ -907,6 +926,7 @@ export class ExperimentalI80386 {
       schema: "bw.i80386-owned-0501.task-mode-diagnostic.v1",
       phase: session.phase, firstFailure: session.firstFailure,
       activeSteps: session.activeSteps,
+      postOutgoingSteps: session.postOutgoingSteps,
       cookie: session.cookie,
       transitions: Object.freeze([...session.transitions]),
       uncommittedTransitions: Object.freeze([...session.uncommittedTransitions]),
