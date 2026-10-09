@@ -862,8 +862,12 @@ test('task excursion source commit is separate from strict frame refusal', () =>
   assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,
     'observing');
   assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,
+    'candidate');
+  f.cpu.reset();
   const diagnostic=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
-  assert.equal(diagnostic.phase, 'candidate');
+  assert.equal(diagnostic.phase, 'invalid');
+  assert.equal(diagnostic.firstFailure, 'cpu-reset');
   assert.equal(diagnostic.transitions.length, 2);
   assert.equal(diagnostic.transitions.every(x => x.enclosingStepCommitted), true);
   assert.deepEqual([diagnostic.resumeCandidate.originalTr,

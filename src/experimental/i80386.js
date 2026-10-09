@@ -120,7 +120,9 @@ function owned0501ExcursionHandlerCandidate(cpu, session) {
 }
 
 function owned0501ExcursionFail(session, reason) {
-  if (!session || session.phase !== "observing") return;
+  if (!session || (session.phase !== "observing" &&
+      !(session.phase === "candidate" &&
+        (reason === "cpu-reset" || reason === "observer-reentry")))) return;
   session.phase = "invalid";
   session.firstFailure = reason;
   if (session.pendingTask) {
