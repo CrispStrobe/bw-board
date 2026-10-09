@@ -1016,13 +1016,17 @@ test('mode profile refuses mutated between-step descriptor scalars', () => {
 test('mode profile reports VM86 as CPL3 but refuses unattributed entry', () => {
   const f = openedMixedMode();
   f.cpu._stepInstruction = function () {
-    this.cs = 0x18; this.eflags |= 0x20000; return 1;
+    this.cs = 0x18; this.eflags |= 0x20000;
+    this.segmentCaches[1] = this._virtualSegmentCache(1, this.cs);
+    this.segmentCaches[2] = this._virtualSegmentCache(2, this.ss);
+    return 1;
   };
   assert.equal(f.cpu.step(), 1);
   const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
   assert.equal(observed.firstFailure, 'unattributed-mode-change');
   assert.deepEqual([observed.modeRefusal.after.mode,
     observed.modeRefusal.after.cpl], ['vm86', 3]);
+  assert.equal(observed.modeRefusal.after.codeCache.access, null);
   assert.equal(observed.frameReturnQualified, false);
 });
 

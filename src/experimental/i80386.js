@@ -57,6 +57,9 @@ const OWNED_0501_STACK_FIELDS = Object.freeze([
   "base", "limit", "default32", "present", "code", "expandDown",
   "readable", "writable", "access", "address",
 ]);
+const OWNED_0501_MODE_CACHE_FIELDS = Object.freeze([...new Set([
+  ...OWNED_0501_CODE_FIELDS, ...OWNED_0501_STACK_FIELDS, "null",
+])]);
 
 function owned0501ExcursionDescriptor(source, fields) {
   const copy = {};
@@ -196,6 +199,24 @@ function owned0501ExcursionContext(cpu) {
 
 // Only source-owned primitive CPU fields are sampled. This is a logical mode
 // observation, not a read of the TSS, stack frame, or physical backing.
+function owned0501ModeCache(source) {
+  const copy = {};
+  for (const key of OWNED_0501_MODE_CACHE_FIELDS) {
+    const field = Object.getOwnPropertyDescriptor(source, key);
+    if (!field) { copy[key] = null; continue; }
+    if (!Object.hasOwn(field, "value") ||
+        (typeof field.value !== "number" &&
+          typeof field.value !== "boolean") ||
+        (typeof field.value === "number" && !Number.isFinite(field.value)))
+      throw new TypeError("invalid source-owned task mode cache scalar");
+    copy[key] = field.value;
+  }
+  if (!["base", "limit", "default32", "present", "code"].every(key =>
+      copy[key] !== null))
+    throw new TypeError("incomplete source-owned task mode cache");
+  return owned0501Frozen(copy);
+}
+
 function owned0501ModeFacts(cpu) {
   const context = owned0501ExcursionContext(cpu);
   const rawCr0 = owned0501Option(cpu, "cr0");
@@ -206,27 +227,21 @@ function owned0501ModeFacts(cpu) {
       typeof retainedRealCs !== "boolean")
     throw new TypeError("invalid source-owned task mode primitive");
   const caches = owned0501Option(cpu, "segmentCaches");
-  const codeCache = owned0501ExcursionDescriptor(owned0501Option(caches,
-    SEG_CS), OWNED_0501_CODE_FIELDS);
-  const stackCache = owned0501ExcursionDescriptor(owned0501Option(caches,
-    SEG_SS), OWNED_0501_STACK_FIELDS);
-  if ([...Object.values(codeCache), ...Object.values(stackCache)].some(value =>
-      typeof value === "number" && !Number.isFinite(value)))
-    throw new TypeError("invalid source-owned task mode cache scalar");
+  const codeCache = owned0501ModeCache(owned0501Option(caches, SEG_CS));
+  const stackCache = owned0501ModeCache(owned0501Option(caches, SEG_SS));
   const check = owned0501ExcursionContext(cpu);
   const checkCaches = owned0501Option(cpu, "segmentCaches");
-  const checkCode = owned0501ExcursionDescriptor(owned0501Option(checkCaches,
-    SEG_CS), OWNED_0501_CODE_FIELDS);
-  const checkStack = owned0501ExcursionDescriptor(owned0501Option(checkCaches,
-    SEG_SS), OWNED_0501_STACK_FIELDS);
+  const checkCode = owned0501ModeCache(owned0501Option(checkCaches, SEG_CS));
+  const checkStack = owned0501ModeCache(owned0501Option(checkCaches, SEG_SS));
   const finalCr0 = owned0501Option(cpu, "cr0");
   const finalFlags = owned0501Option(cpu, "eflags");
   const finalRetained = owned0501Option(cpu, "_retainedRealCs");
   if (Object.keys(context).some(key => context[key] !== check[key]) ||
       rawCr0 !== finalCr0 || rawFlags !== finalFlags ||
       retainedRealCs !== finalRetained ||
-      OWNED_0501_CODE_FIELDS.some(key => codeCache[key] !== checkCode[key]) ||
-      OWNED_0501_STACK_FIELDS.some(key => stackCache[key] !== checkStack[key]) ||
+      OWNED_0501_MODE_CACHE_FIELDS.some(key =>
+        codeCache[key] !== checkCode[key] ||
+        stackCache[key] !== checkStack[key]) ||
       context.protectedMode !== !!(rawCr0 & 1) ||
       context.vm86 !== !!((rawCr0 & 1) && (rawFlags & 0x20000)) ||
       context.cpl !== (context.vm86 ? 3 :
@@ -241,8 +256,9 @@ function owned0501ModeFacts(cpu) {
 function owned0501ModeSame(a, b) {
   return Object.keys(a).every(key => key === "codeCache" ||
     key === "stackCache" || a[key] === b[key]) &&
-    OWNED_0501_CODE_FIELDS.every(key => a.codeCache[key] === b.codeCache[key]) &&
-    OWNED_0501_STACK_FIELDS.every(key => a.stackCache[key] === b.stackCache[key]);
+    OWNED_0501_MODE_CACHE_FIELDS.every(key =>
+      a.codeCache[key] === b.codeCache[key] &&
+      a.stackCache[key] === b.stackCache[key]);
 }
 
 function owned0501ModeChanged(a, b) {
