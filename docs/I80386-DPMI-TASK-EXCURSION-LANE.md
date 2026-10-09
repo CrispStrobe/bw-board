@@ -367,14 +367,20 @@ the unconnected source checkpoint.
 
 
 The separate connection is now [draft PR487](https://github.com/CrispStrobe/bw-board/pull/487)
-at reviewed `05bb1cb17634c407015e9617db7d931bf462ba2a`: twelve new paths,
+at reviewed `6c342303f619035b5037426cef335d059628e3dc`: twelve new paths,
 238 source roles and 71 recursive JavaScript nodes, with inherited CPU, media,
 client and runner bytes unchanged. Coordinator and independent source reviews
 passed. Python source/inventory controls and static workflow checks passed;
 JavaScript mock controls are authored and reviewed but were not run locally.
 The review added fault-time/pre-delivery CR0/CR2/CR3 joins and retained snapshot
 refusal as a secondary diagnostic without replacing the first strict failure.
-The dedicated workflow has produced no diagnostic evidence. Require its
-hosted gates and prospective-reader review before one original diagnostic,
-then independently audit that retained result.
+A subsequent grading correction rejects a disabled delivery as a positive
+PF-call result while retaining its complete recorder facts and original strict
+failure. The standalone prospective reader passed coordinator and independent
+review with five positive and 47 negative synthetic cases. The one-shot launch
+guard also passed both reviews; it rejects any earlier dedicated run on this
+branch, changed source or reader, an existing label and incomplete checks.
+The dedicated workflow has produced no diagnostic evidence. All ten enabled
+exact-head checks must pass, with only the two declared optional skips, before
+the label is applied once. Independently audit that retained original result.
 No connected actual has been launched; the strict frame remains unqualified.

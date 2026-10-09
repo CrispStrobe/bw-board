@@ -347,6 +347,12 @@ pinned Node executable in the same hosted job, verifies pre-child/final leases,
 and grades four fresh raw support cases. Its closed inventory excludes binaries.
 Load state distinguishes no attempt, an attempt with unknown outcome, and a
 verified child load; failures retain their first reason and partial records.
-Hosted exact-head gates and an independently reviewed prospective result reader
-are still required before its single support actual. No support child or guest
+The standalone prospective reader and one-shot launch guard passed coordinator
+and independent review with CPU-free synthetic controls. The reader requires
+the reported raw case to match all retained observations and independently
+grades the four support cases; missing build materialization or added callback
+identities cannot receive support credit. The guard rejects a dedicated run on
+any earlier branch head, changed source or reader, an existing label and
+incomplete checks. All ten enabled exact-head checks must pass, with only the
+two declared optional skips, before the label is applied once. No support child or guest
 has run at this checkpoint, and no allocation hotspot or speedup follows.
