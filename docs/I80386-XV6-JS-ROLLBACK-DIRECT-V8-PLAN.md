@@ -62,7 +62,7 @@ the first hosted run. Persist bounded raw pre/post profiles and primitive GC
 facts on refusal as well as success, preserving the first failure.
 
 Keep the qualified workload gate from
-[`scripts/xv6-js-rollback-profile/`](../scripts/xv6-js-rollback-profile/):
+[`scripts/xv6-js-rollback-profile/`](https://github.com/CrispStrobe/bw-board/tree/f2971d8ae7bd67a30f13baa45b63956790d9b975/scripts/xv6-js-rollback-profile):
 one fresh unprofiled reference plus two fresh sampled children using the same
 pinned free MIT xv6 image, ordinary JavaScript CPU and exact reversible probe
 loop. Require the same complete reported CPU, RAM/disk hashes, serial/input,
