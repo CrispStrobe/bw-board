@@ -52,10 +52,15 @@ def source_identity():
 
 
 def read_bounded(path, limit):
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    listed = Path(path).lstat()
+    if not stat.S_ISREG(listed.st_mode) or not 0 < listed.st_size <= limit:
+        raise ValueError("bounded ordinary receipt required")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= limit:
+        if not stat.S_ISREG(info.st_mode) or \
+                (info.st_dev, info.st_ino, info.st_size) != \
+                (listed.st_dev, listed.st_ino, listed.st_size):
             raise ValueError("bounded ordinary receipt required")
         raw = bytearray()
         while len(raw) <= limit:
@@ -64,6 +69,13 @@ def read_bounded(path, limit):
                 break
             raw.extend(block)
         if len(raw) != info.st_size:
+            raise ValueError("receipt changed while reading")
+        after = os.fstat(fd)
+        listed_after = Path(path).lstat()
+        snapshot = (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+        if (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) != snapshot or \
+                (listed_after.st_dev, listed_after.st_ino, listed_after.st_size,
+                 listed_after.st_mtime_ns) != snapshot:
             raise ValueError("receipt changed while reading")
         return bytes(raw)
     finally:
@@ -136,10 +148,12 @@ def pinned_file(path, limit=MAX_TOOL):
     before = path.stat()
     if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= limit:
         raise ValueError("tool target type or size refused")
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         opened = os.fstat(fd)
-        if (opened.st_dev, opened.st_ino, opened.st_size) != (before.st_dev, before.st_ino, before.st_size):
+        if not stat.S_ISREG(opened.st_mode) or \
+                (opened.st_dev, opened.st_ino, opened.st_size) != \
+                (before.st_dev, before.st_ino, before.st_size):
             raise ValueError("tool target changed before read")
         digest = hashlib.sha256()
         count = 0
